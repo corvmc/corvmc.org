@@ -149,9 +149,64 @@ A regional music calendar with three event layers: venue events auto-populated f
 
 **Progress:** Phases 1 and 2 shipped. Phase 1 made `/events` a unified gig guide: next-3 CMC hero posters plus a poster-forward list of CMC and member-band events, a compact mini-calendar date-jumper, and band events rendering on `/events/[id]` with band attribution (`docs/specs/community-calendar-spec.md`). Phase 2 added the third layer the extension point was left for — members author `source='community'` listings for off-site shows, publishing directly until staff uphold a report against them, after which their listings queue for review; anyone with no account can send an "Event Tip" through the contact form into the staff inbox. Cancelled events now stay on the guide marked cancelled instead of vanishing (`docs/specs/community-events-spec.md`). Still to come: partner feed imports and `.ics`/RSS syndication (no calendar UI package was needed — built on the already-installed `@internationalized/date`).
 
+### Staff Events: Productions vs Listings
+
+`/staff/events` is two jobs on one page. **Moderating listings** is reactive: a member or band posts
+a show, almost all go straight to the public guide untouched, but a member whose standing is flagged
+has theirs held at `pending_review` and staff get pinged. The questions are fixed — what is this,
+who's behind it, is anything wrong — and the work is done when the queue is empty. **Running a
+production** is the opposite shape: nobody pings you, one show is touched repeatedly over weeks, and
+the characteristic failure is something quietly missing — no room held, no poster, no volunteers —
+until it's too late to fix.
+
+One page can't be shaped for both. Today it toggles between them with a `TabBar` and a source
+`Select`, and the detail page carries every card for every source: a community listing at another
+venue still renders "Space Reservation: no space held" and a "Volunteer Shifts: + schedule one" form
+for a show CMC neither produces nor staffs. Meanwhile the review queue never shows who posted the
+thing, which is the first fact a moderator needs.
+
+The split is by **source**, not status. `/staff/events` becomes **Productions** (`source='cmc'`) — no
+queue, New Event as the primary action, a status filter, and the Space column promoted so an unheld
+room is visible while scanning. A new `/staff/listings` becomes **Listings** (`band` + `community`) —
+opens on Needs review, badged in the sidebar from the `listingsPending` count `getStaffLayout`
+already computes and nothing reads, with a **Posted by** column carrying the accountable party: the
+band's chip for a band gig, the member for a community listing.
+
+The detail page stays at **one route**. `entity-href.ts` sends every event ref to
+`/staff/events/{id}` and `EventRef` carries no `source`, so two detail routes would mean adding
+`source` to every event-ref producer. Gating the production cards on `source === 'cmc'` removes the
+dead UI for a fraction of that cost. Both indexes should scope by an explicit allow-list rather than
+by exclusion, so a future source lands on neither page until someone chooses — a group event going
+missing is a visible bug, whereas one quietly appearing in the moderation queue is a wrong answer
+nobody notices.
+
+Losing the combined index costs less than it appears. The cross-source view staff actually want is
+day-level — _is anything else on that night?_ — and that already exists as the public gig guide,
+which is all-source by design and whose mini-calendar dots exist to answer exactly that. What the
+staff index adds is the non-public rows, and those divide cleanly: a CMC draft is Productions, a
+listing awaiting or refused review is Listings. The one real gap is scheduling against an
+_unannounced_ show, which belongs in `checkConflicts` — today it guards the room, not the night.
+
+**Progress:** Designed, unbuilt, and deliberately sequenced after Groups (see
+[Club Management](#club-management)). That module renames `band` to `band_profile` and
+`event.bandId` to `event.groupId`, which is precisely the join the Posted by column reads, and
+extends `eventSources` with `'group'` — a club's jazz night is production-shaped, since it's a
+staff-sanctioned program that holds the room free. Building this first means rebuilding it after.
+Groups also independently prescribes the same `sources: EventSource[]` allow-list refactor for its
+own source filters, so the two converge.
+
 ### Club Management
 
 Tools for member-run clubs (jazz night, open mic, songwriter circle, etc.). Each club gets a dedicated space for managing a recurring event series, a member roster, and a simplified email/announcement system for communicating with club members. Club organizers can also share resources (files, links, lesson materials) with their members, similar to the teacher panel. Builds on top of the existing event and email marketing infrastructure without requiring club organizers to use the full staff tools.
+
+**Progress:** Designed as the **Groups** module in `docs/specs/groups-spec.md`, unbuilt — the Real
+Book Club jazz jam is that spec's driving case. It generalizes today's `band` table into `group`
+(kind, roster, announcements, documents, events) plus `band_profile` (the musical identity a club
+has no use for), so clubs and committees reuse the roster machinery without inheriting band-shaped
+columns. Three kinds: `band | club | committee`. Bands stay member self-service; clubs and
+committees are staff-created, which is what makes free room time safe to grant by kind — a program
+gets the room through its event rather than a credit balance, and the abuse case is closed
+structurally instead of by a check someone has to remember.
 
 ### Poster Art Repository
 
