@@ -1,6 +1,6 @@
 # Laravel → Svelte Parity Report
 
-Last updated: 2026-08-15
+Last updated: 2026-08-23
 
 This document tracks feature coverage between the Laravel app (corvmc-redux) and the Svelte rebuild (corvmc-svelte). Use it to plan what to build next and to avoid re-discovering gaps.
 
@@ -298,7 +298,7 @@ Features are grouped by dependency. The notification system is foundational — 
 5. ~~**Email marketing**~~ — ✅ Complete. Audiences with opt-in control, campaigns with markdown editor + live preview, broadcast sending via Postmark, public subscribe pages, member account subscriptions, HMAC-signed unsubscribe links, send-campaigns cron.
 6. ~~**Equipment module**~~ — ✅ Complete. Three tables (equipment_category, equipment, equipment_loan). Staff catalog + category management, loan lifecycle (request/schedule/checkout/return/cancel), member catalog browsing + loan requests (specific + free-form), equipment credits (1:1 with subscription, deducted on return), pricing tiers (major $5/day, accessory $1/day, sustaining members get free accessories).
 7. ~~**Bands module**~~ — ✅ Complete. Schema, service, member panel, band panel, dashboard integration, public directory.
-8. ~~**Volunteering module**~~ — ✅ Phase 1 complete. Two tables (`volunteer_role`, `volunteer_hour_log`). Staff-managed roles with markdown job descriptions, member hour submission, staff approval queue, and a date-ranged report by member/role/month. Approved hours are tracking only — no credit tie-in, with a test enforcing it. The `volunteering` flag gates the member surface only. Phase 2 (opportunities/shifts, member sign-up, per-event staffing, the daily shift-reminder cron) is designed in `docs/specs/volunteering-spec.md` but not built.
+8. ~~**Volunteering module**~~ — ✅ Complete, both phases. Phase 1: two tables (`volunteer_role`, `volunteer_hour_log`), staff-managed roles with markdown job descriptions, member hour submission, staff approval queue, and a date-ranged report by member/role/month. Phase 2 (#235): six more tables — `volunteer_shift`, `volunteer_signup`, `volunteer_shift_feedback` and the three certification tables — with member sign-up at `/member/volunteer/start`, staff shifts/certifications/clearances pages, a shift attachable to the event it staffs, post-shift feedback, and three crons (`shift-reminders`, `complete-shifts`, `shift-feedback`). Approved hours are tracking only — no credit tie-in, with a test enforcing it. The `volunteering` flag gates the member surface only. Spec: `docs/specs/volunteering-spec.md`.
 9. ~~**Tickets**~~ — ✅ Complete. Schema, service, public purchase with Stripe checkout, staff check-in, member My Tickets, email stubs.
 10. **Productions + venues** — 📋 Designed, not built. Five tables, staff-only, behind the `productions` flag. Unifies four IDEAS.md entries (Booking Request Pipeline, Tech Rider Management, Event Settlement, Venues) into one workflow from booking through cleanup. Spec: `docs/specs/production-workflow-spec.md`.
 11. **Everything else** — Sponsors, CMS, kiosk, activity log, reports, bylaws.
