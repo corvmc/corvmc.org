@@ -37,6 +37,27 @@ export interface UpdateMemberData {
 }
 
 // ---------------------------------------------------------------------------
+// Shared fragments
+// ---------------------------------------------------------------------------
+
+/**
+ * Active members of the band in the surrounding query, as a correlated scalar
+ * subquery.
+ *
+ * Three call sites each carried a copy of this written as a SQL string, which
+ * `pnpm check` cannot see inside: the table and column names went unverified,
+ * so a schema rename would compile cleanly and throw at runtime. Expressed
+ * through the query builder they are back under the type checker, and the
+ * duplication is gone with them.
+ *
+ * The subquery's own `FROM band_member` shadows the outer one in `listForUser`,
+ * which selects from the same table — correct, because the only correlation
+ * wanted here is on `band.id`.
+ */
+const activeMemberCount = () =>
+	db.$count(bandMember, and(eq(bandMember.bandId, band.id), eq(bandMember.status, 'active')));
+
+// ---------------------------------------------------------------------------
 // Errors
 // ---------------------------------------------------------------------------
 
@@ -214,10 +235,7 @@ export async function listForUser(
 		avatarKey: band.avatarKey,
 		role: bandMember.role,
 		status: bandMember.status,
-		memberCount: sql<number>`(
-		select count(*) from band_member bm
-		where bm.band_id = ${band.id} and bm.status = 'active'
-	)`
+		memberCount: activeMemberCount()
 	}
 ) {
 	return db
@@ -642,10 +660,7 @@ export async function listAll(
 			ref: bandRefColumns(),
 			owner: memberRefColumns(),
 			tier: band.tier,
-			memberCount: sql<number>`(
-				select count(*) from band_member bm
-				where bm.band_id = ${band.id} and bm.status = 'active'
-			)`,
+			memberCount: activeMemberCount(),
 			createdAt: band.createdAt,
 			deletedAt: band.deletedAt
 		})
@@ -683,10 +698,7 @@ export async function getByIdWithDetails(bandId: string) {
 			createdAt: band.createdAt,
 			updatedAt: band.updatedAt,
 			deletedAt: band.deletedAt,
-			memberCount: sql<number>`(
-				select count(*) from band_member bm
-				where bm.band_id = ${band.id} and bm.status = 'active'
-			)`
+			memberCount: activeMemberCount()
 		})
 		.from(band)
 		.innerJoin(user, eq(user.id, band.ownerId))

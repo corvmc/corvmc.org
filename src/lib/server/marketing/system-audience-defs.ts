@@ -1,4 +1,6 @@
 import { sql, type SQL } from 'drizzle-orm';
+import { band, bandMember } from '$lib/server/db/schema/band';
+import { user } from '$lib/server/db/schema/authentication';
 
 // ---------------------------------------------------------------------------
 // Built-in ("system") audience definitions
@@ -44,19 +46,25 @@ type SystemAudienceDef = {
 const SUSTAINING = sql`"user"."subscription" is not null`;
 
 /**
- * Correlated EXISTS over band membership. Written as raw SQL with the outer
- * reference (`"user"."id"`) qualified by hand: drizzle renders an interpolated
- * outer Column without its table prefix in some subquery positions, and both
- * `band` and `band_member` have their own `id`, so an unqualified reference
- * would silently bind to the wrong table instead of failing loudly.
+ * Correlated EXISTS over band membership.
+ *
+ * Every table and column is interpolated rather than written as a string, so
+ * `pnpm check` can see inside the predicate and a schema rename cannot leave it
+ * compiling but broken. That also removes the aliases an earlier version needed:
+ * each table appears once here, so the fully qualified names are unambiguous on
+ * their own, and drizzle renders the correlated outer reference as
+ * `"user"."id"` — prefix intact — which is the part that has to stay qualified.
+ * Both `band` and `band_member` have their own `id`, so an unqualified outer
+ * reference would silently bind to the wrong table instead of failing loudly;
+ * `system-audiences.spec.ts` asserts the rendered SQL to keep it that way.
  */
 const LEADS_A_BAND = sql`exists (
-	select 1 from "band_member" bm
-	inner join "band" b on b."id" = bm."band_id"
-	where bm."user_id" = "user"."id"
-		and bm."role" in ('owner', 'admin')
-		and bm."status" = 'active'
-		and b."deleted_at" is null
+	select 1 from ${bandMember}
+	inner join ${band} on ${band.id} = ${bandMember.bandId}
+	where ${bandMember.userId} = ${user.id}
+		and ${bandMember.role} in ('owner', 'admin')
+		and ${bandMember.status} = 'active'
+		and ${band.deletedAt} is null
 )`;
 
 /** Active (not soft-deleted) member accounts. */
