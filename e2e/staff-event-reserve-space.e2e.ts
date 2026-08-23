@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
+	bookingDate,
 	SEED_CONFLICT_DATE,
 	SEED_CONFLICT_END,
 	SEED_CONFLICT_START,
@@ -60,6 +61,14 @@ const RESERVE_TOGGLE = 'input[name="b:reserveSpace"]';
 
 // The window and title prefix come from the fixture, which clears the previous
 // run's event first — its reservation would otherwise conflict with this one.
+//
+// That sweep runs once per *run*, though, and CI retries a failed test twice.
+// Every test below that submits a hold therefore draws its day from
+// `bookingDate(base, retry)` rather than booking the base day three times: a
+// test may not write to the state directory the preview server holds, so a
+// retry cannot clear the hold the attempt before it raised, and re-booking the
+// same window is rejected as a genuine double-booking. Uniquifying the title
+// with `Date.now()` is not enough — the *slot* is what collides.
 const EVENT_DATE = SEED_EVENT_DATE;
 const EVENT_START = SEED_EVENT_START;
 const EVENT_END = SEED_EVENT_END;
@@ -84,14 +93,16 @@ test.describe('staff event creation — reserve space', () => {
 		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
 	});
 
-	test('creating the event books the space and links it to the event', async ({ page }) => {
+	test('creating the event books the space and links it to the event', async ({ page }, {
+		retry
+	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/events');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
 		const title = `${SEED_EVENT_TITLE_PREFIX} ${Date.now()}`;
 		await page.locator('input[name="title"]').fill(title);
-		await page.locator('input[name="eventDate"]').fill(EVENT_DATE);
+		await page.locator('input[name="eventDate"]').fill(bookingDate(EVENT_DATE, retry));
 		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
 		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
 		await page.locator(RESERVE_TOGGLE).check();
@@ -136,14 +147,15 @@ test.describe('staff event creation — reserve space', () => {
 
 	test('the reservation list links an event hold to its event, not to the booker', async ({
 		page
-	}) => {
+	}, { retry }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/events');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
+		const eventDate = bookingDate(SEED_LIST_LINK_DATE, retry);
 		const title = `${SEED_EVENT_TITLE_PREFIX} ${Date.now()}`;
 		await page.locator('input[name="title"]').fill(title);
-		await page.locator('input[name="eventDate"]').fill(SEED_LIST_LINK_DATE);
+		await page.locator('input[name="eventDate"]').fill(eventDate);
 		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
 		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
 		await page.locator(RESERVE_TOGGLE).check();
@@ -157,8 +169,8 @@ test.describe('staff event creation — reserve space', () => {
 		// member and band names, so an event hold was unfindable by its show.
 		await page.getByPlaceholder('Search member, band, or event...').fill(title);
 		// The date bounds keep the row off a later page of the 50-row list.
-		await page.getByLabel('From date').fill(SEED_LIST_LINK_DATE);
-		await page.getByLabel('To date').fill(SEED_LIST_LINK_DATE);
+		await page.getByLabel('From date').fill(eventDate);
+		await page.getByLabel('To date').fill(eventDate);
 
 		const row = page.locator('tr', { has: page.getByRole('link', { name: title }) });
 		await expect(row.getByRole('link', { name: title })).toHaveAttribute(
@@ -214,14 +226,16 @@ test.describe('staff event creation — reserve space', () => {
 test.describe('staff event edit — reserve space', () => {
 	const RESERVE_CHECKBOX = { name: 'Reserve practice space' };
 
-	test('an event created without space can book it from the edit form', async ({ page }) => {
+	test('an event created without space can book it from the edit form', async ({ page }, {
+		retry
+	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/events');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
 		const title = `${SEED_EVENT_TITLE_PREFIX} edit ${Date.now()}`;
 		await page.locator('input[name="title"]').fill(title);
-		await page.locator('input[name="eventDate"]').fill(SEED_EDIT_EVENT_DATE);
+		await page.locator('input[name="eventDate"]').fill(bookingDate(SEED_EDIT_EVENT_DATE, retry));
 		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
 		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
 		// Deliberately left unchecked — this is the state prod is full of.
@@ -251,14 +265,16 @@ test.describe('staff event edit — reserve space', () => {
 		});
 	});
 
-	test('re-timing an event does not report its own hold as a conflict', async ({ page }) => {
+	test('re-timing an event does not report its own hold as a conflict', async ({ page }, {
+		retry
+	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/events');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
 		const title = `${SEED_EVENT_TITLE_PREFIX} self ${Date.now()}`;
 		await page.locator('input[name="title"]').fill(title);
-		await page.locator('input[name="eventDate"]').fill(SEED_SELF_CONFLICT_DATE);
+		await page.locator('input[name="eventDate"]').fill(bookingDate(SEED_SELF_CONFLICT_DATE, retry));
 		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
 		await page.locator('input[name="eventEndTime"]').fill(EVENT_END);
 		await page.locator(RESERVE_TOGGLE).check();
