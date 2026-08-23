@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bandNavItems, type BandNavInput } from './nav-items';
+import { activeBandNavKey, bandNavItems, type BandNavInput } from './nav-items';
 
 /**
  * The band panel's nav gating has been wrong twice in the same file, both times
@@ -95,5 +95,58 @@ describe('bandNavItems', () => {
 		}).find((i) => i.key === 'staff-tools');
 
 		expect(item?.href).toBe('/staff/bands/band-1');
+	});
+});
+
+describe('activeBandNavKey', () => {
+	const input: BandNavInput = {
+		slug: 'the-velvet-underground',
+		bandId: 'band-1',
+		tier: 'premium',
+		userRole: 'owner',
+		isStaff: false,
+		features: { bandPremium: true }
+	};
+
+	it('lights the section a detail page belongs to', () => {
+		// Both of these lit nothing at all before — `NavItem` matched exactly.
+		expect(activeBandNavKey(input, '/band/the-velvet-underground/events/abc')).toBe('events');
+		expect(activeBandNavKey(input, '/band/the-velvet-underground/page-editor/epk')).toBe(
+			'page-editor'
+		);
+	});
+
+	it('lights the dashboard only on the band root', () => {
+		expect(activeBandNavKey(input, '/band/the-velvet-underground')).toBe('dashboard');
+	});
+
+	it('never picks View Live Site, whose href leaves the origin', () => {
+		// The layout fills that href in; it is empty in the data, and an empty
+		// prefix would otherwise match every path.
+		for (const path of ['/band/the-velvet-underground', '/band/the-velvet-underground/members']) {
+			expect(activeBandNavKey(input, path)).not.toBe('live-site');
+		}
+	});
+
+	it('lights nothing for another band', () => {
+		expect(activeBandNavKey(input, '/band/some-other-band/members')).toBeNull();
+	});
+
+	it('falls back to the dashboard for a row the viewer cannot see', () => {
+		// Settings is not in a plain member's nav, so the band root is the longest
+		// href that still matches. The page guards itself; the nav simply has
+		// nothing better to highlight.
+		const member: BandNavInput = { ...input, userRole: 'member', features: {} };
+		expect(activeBandNavKey(member, '/band/the-velvet-underground/settings')).toBe('dashboard');
+	});
+
+	it('resolves every visible row to its own key, for every role', () => {
+		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
+			const forRole = { ...input, userRole, isStaff: userRole === 'staff' };
+			for (const item of bandNavItems(forRole)) {
+				if (item.external) continue;
+				expect(activeBandNavKey(forRole, item.href)).toBe(item.key);
+			}
+		}
 	});
 });

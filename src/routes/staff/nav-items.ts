@@ -13,6 +13,13 @@
  * administer a feature before it is switched on for everyone else.
  */
 
+import {
+	activeNavKey as resolveActiveNavKey,
+	childHrefsFor as resolveChildHrefs,
+	flattenNav,
+	type NavNode
+} from '$lib/components/shared/Nav/active-nav';
+
 export type StaffNavKey =
 	| 'dashboard'
 	| 'inbox'
@@ -55,10 +62,8 @@ export type StaffNavSectionKey =
  */
 export type StaffNavBadgeKey = 'inboxUnread' | 'suggestionsAwaiting' | 'volunteerPending';
 
-export interface StaffNavItem {
-	key: StaffNavKey;
+export interface StaffNavItem extends NavNode<StaffNavKey> {
 	label: string;
-	href: string;
 	badgeKey?: StaffNavBadgeKey;
 	/** Present ⇒ the layout renders this row as a `Nav.Collapsible`. */
 	children?: StaffNavItem[];
@@ -170,16 +175,10 @@ export const staffNavSections: StaffNavSection[] = [
 
 /** Every row in the panel, parents and children alike, in render order. */
 export function allStaffNavItems(): StaffNavItem[] {
-	const flat: StaffNavItem[] = [];
-	const walk = (items: StaffNavItem[]) => {
-		for (const item of items) {
-			flat.push(item);
-			if (item.children) walk(item.children);
-		}
-	};
-	walk(staffNavTop);
-	for (const section of staffNavSections) walk(section.items);
-	return flat;
+	return flattenNav<StaffNavKey>([
+		...staffNavTop,
+		...staffNavSections.flatMap((s) => s.items)
+	]) as StaffNavItem[];
 }
 
 /**
@@ -187,7 +186,7 @@ export function allStaffNavItems(): StaffNavItem[] {
  * parent counts — being on `/staff/volunteer` itself keeps its children visible.
  */
 export function childHrefsFor(item: StaffNavItem): string[] {
-	return [item.href, ...(item.children ?? []).map((c) => c.href)];
+	return resolveChildHrefs(item);
 }
 
 export function sectionHasKey(section: StaffNavSection, key: StaffNavKey | null): boolean {
@@ -195,25 +194,10 @@ export function sectionHasKey(section: StaffNavSection, key: StaffNavKey | null)
 	return section.items.some((i) => i.key === key || i.children?.some((c) => c.key === key));
 }
 
-/**
- * Which single row to light up for a pathname, by longest matching href.
- *
- * Exact equality — what `NavItem` does on its own — leaves every detail page
- * with no highlighted row at all. Longest-wins resolves `/staff` against
- * everything below it and `/staff/equipment` against `/staff/equipment/loans`
- * without depending on declaration order, and the `href + '/'` test keeps
- * `/staff/users` from claiming a would-be `/staff/usersomething`.
- */
+/** Which single row to light up for a pathname. See `active-nav.ts`. */
 export function activeNavKey(pathname: string): StaffNavKey | null {
-	const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
-	let best: StaffNavKey | null = null;
-	let bestLength = -1;
-	for (const item of allStaffNavItems()) {
-		if (path !== item.href && !path.startsWith(item.href + '/')) continue;
-		if (item.href.length > bestLength) {
-			bestLength = item.href.length;
-			best = item.key;
-		}
-	}
-	return best;
+	return resolveActiveNavKey<StaffNavKey>(
+		[...staffNavTop, ...staffNavSections.flatMap((s) => s.items)],
+		pathname
+	);
 }

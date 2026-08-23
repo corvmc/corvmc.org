@@ -13,7 +13,6 @@
 		type: 'member' | 'staff' | 'band';
 	}
 
-	// eslint-disable-next-line svelte/no-unused-props -- `user` is accepted for caller (AppShell) API compatibility; not rendered here
 	let {
 		drawerId,
 		panels,
@@ -22,7 +21,6 @@
 		drawerId: string;
 		panels: PanelTab[];
 		activePanel: string;
-		user?: { name: string; email: string };
 	} = $props();
 
 	const primaryPanels = $derived(panels.filter((p) => p.type !== 'band'));
