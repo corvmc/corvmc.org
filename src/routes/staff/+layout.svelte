@@ -30,6 +30,7 @@
 		IconCalendarTime
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
+	import { panelTabs } from '$lib/components/shared/panel-tabs';
 	import {
 		activeNavKey,
 		childHrefsFor,
@@ -45,16 +46,11 @@
 
 	let layout = $derived(await getStaffLayout());
 
-	const panels = $derived([
-		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },
-		{ key: 'staff', label: 'Staff', href: '/staff', type: 'staff' as const },
-		...layout.userBands.map((b) => ({
-			key: b.slug,
-			label: b.name,
-			href: `/band/${b.slug}`,
-			type: 'band' as const
-		}))
-	]);
+	const panels = $derived(
+		// Staff is unconditional here: `getStaffLayout` has already redirected
+		// anyone without the role, so reaching this layout proves `isStaff`.
+		panelTabs({ isStaff: true, userBands: layout.userBands })
+	);
 
 	// The rows live in `nav-items.ts`; these two maps are the only things that
 	// need a Svelte file. Keeping the counts here means a renamed field on
@@ -125,7 +121,7 @@
 	{/if}
 {/snippet}
 
-<AppShell drawerId="staff-drawer" user={layout.user} {panels} activePanel="staff">
+<AppShell drawerId="staff-drawer" {panels} activePanel="staff">
 	{#snippet navigation()}
 		{#each staffNavTop as item (item.key)}
 			{@render row(item)}
