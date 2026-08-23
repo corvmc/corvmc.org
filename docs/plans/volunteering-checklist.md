@@ -1,6 +1,6 @@
 # Volunteering module Phase 1 — progress checklist
 
-Design: `docs/specs/volunteering-spec.md`. Plan: `~/.claude/plans/investigate-current-plans-for-cheeky-wave.md` (approved).
+Design: `docs/specs/shipped/volunteering-spec.md`. Plan: `~/.claude/plans/investigate-current-plans-for-cheeky-wave.md` (approved).
 Branch: `claude/volunteer-system-plans-5b2b17` (off `main`).
 
 ## Model recap
@@ -26,7 +26,7 @@ Branch: `claude/volunteer-system-plans-5b2b17` (off `main`).
 
 ## Step 1 — Design spec
 
-- [x] `docs/specs/volunteering-spec.md`
+- [x] `docs/specs/shipped/volunteering-spec.md`
 - [x] `IDEAS.md` — `**Progress:**` line under Volunteer Coordination
 - [x] `docs/README.md` — spec table row
 - [x] this checklist

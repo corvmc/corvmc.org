@@ -169,7 +169,7 @@ export async function restrictStanding(params: RestrictStandingParams): Promise<
  * still answerable afterwards — flipping the status is what marks it forgiven.
  *
  * The shape (`{ userId, scope, staffId }`) is deliberately what an appeal needs
- * to call; see `docs/specs/member-standing-spec.md`.
+ * to call; see `docs/specs/shipped/member-standing-spec.md`.
  */
 export async function restoreStanding(params: {
 	userId: string;

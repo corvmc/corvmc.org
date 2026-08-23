@@ -30,31 +30,31 @@ in tables, routes and services; it does not mean every deferred idea inside the 
 
 ### Shipped — 23
 
-| Spec                                                                            | PRs              | Evidence in the tree                                                                                                                                                                  | Doc destination                                    |
-| ------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| [reservation-system-spec.md](../specs/reservation-system-spec.md)               | #78              | `reservation` table, `/member/reservations/*`, `reservation-service.ts`, lock integration                                                                                             | business-workflows §1 (already linked)             |
-| [recurring-reservations-spec.md](../specs/recurring-reservations-spec.md)       | #78              | `recurring_series`, `/staff/recurring`, `generate-recurring-reservations` cron                                                                                                        | business-workflows §2 (already linked)             |
-| [staff-reservations-spec.md](../specs/staff-reservations-spec.md)               | #78              | `/staff/reservations`, `/staff/reservations/[id]`, resolve + create modals                                                                                                            | business-workflows §1 — needs a staff subsection   |
-| [bands-spec.md](../specs/bands-spec.md)                                         | #78, #241        | `band`, `band_member`, `band_slug_history`, `/band/[slug]/*`                                                                                                                          | business-workflows §4 (already linked)             |
-| [staff-bands-spec.md](../specs/staff-bands-spec.md)                             | #78              | `/staff/bands`, `/staff/bands/[id]`, tier comp/revoke                                                                                                                                 | business-workflows §4 (already linked)             |
-| [tickets-spec.md](../specs/tickets-spec.md)                                     | #78              | `ticket` table, `/events/[id]/tickets`, `/staff/events/[id]/check-in`                                                                                                                 | business-workflows §5 (already linked)             |
-| [directory-profiles-spec.md](../specs/directory-profiles-spec.md)               | #78              | `user_instrument`, `user_genre`, `band_genre`, `/directory/*`, `/member/profile`                                                                                                      | manual — `profile-directory` (7 articles, covered) |
-| [membership-page-spec.md](../specs/membership-page-spec.md)                     | #78              | `/member/membership`, `subscription-service`, `credit_transaction`                                                                                                                    | business-workflows §3 (already linked)             |
-| [member-dashboard-spec.md](../specs/member-dashboard-spec.md)                   | #78              | `/member` landing page                                                                                                                                                                | manual — `getting-started` (covered)               |
-| [email-marketing-spec.md](../specs/email-marketing-spec.md)                     | #78, #185        | `audience`, `campaign`, `subscriber`, `/staff/marketing/*`, `send-campaigns` cron                                                                                                     | business-workflows §7 (already linked)             |
-| [finance-spec.md](../specs/finance-spec.md)                                     | #78, #131        | `payment_cache`, `credit_transaction`, Stripe-first payment service                                                                                                                   | business-workflows §3 + architecture/overview      |
-| [member-standing-spec.md](../specs/member-standing-spec.md)                     | #224             | `member_standing` table; the three per-domain tables are gone                                                                                                                         | **new** business-workflows §Moderation             |
-| [member-portal-chat-spec.md](../specs/member-portal-chat-spec.md)               | #204, #234       | `inbox_participant`, `/member/messages`, `portal` channel                                                                                                                             | **new** business-workflows §Messaging              |
-| [direct-messages-spec.md](../specs/direct-messages-spec.md)                     | #213, #224, #234 | `user_block`, `user.acceptsDirectMessages`, `direct-service.ts`                                                                                                                       | **new** business-workflows §Messaging              |
-| [member-suggestions-spec.md](../specs/member-suggestions-spec.md)               | #212, #217, #224 | `suggestion`, `suggestion_vote`, `suggestion_edit`, `/member/suggestions`, `/staff/suggestions`                                                                                       | **new** business-workflows §Moderation             |
-| [community-calendar-spec.md](../specs/community-calendar-spec.md)               | #145 → #207      | `/events` gig guide, `event.source`, `idx_event_source`                                                                                                                               | **new** business-workflows §Gig guide              |
-| [community-events-spec.md](../specs/community-events-spec.md)                   | #207, #224, #241 | `source='community'`, `/member/events/submit`, cancelled-not-hidden                                                                                                                   | **new** business-workflows §Gig guide              |
-| [event-lineup-spec.md](../specs/event-lineup-spec.md)                           | #197             | `event_band` table, confirm/decline slot, `/band/[slug]/events`                                                                                                                       | **new** business-workflows §Gig guide              |
-| [event-moderation-spec.md](../specs/event-moderation-spec.md)                   | #146, #197, #207 | `'event'` in `flagEntityTypes` ([flag.ts:12](../../src/lib/server/db/schema/flag.ts:12)), `/staff/flags`                                                                              | **new** business-workflows §Moderation             |
-| [band-domains-spec.md](../specs/band-domains-spec.md)                           | #183, #186       | `band.customDomain*` columns ([band.ts:98](../../src/lib/server/db/schema/band.ts:98)), `/band-site/[slug]`                                                                           | business-workflows §4                              |
-| [band-sites-launch.md](../specs/band-sites-launch.md)                           | #152             | Shipped and then **superseded** by `band-domains-spec.md`                                                                                                                             | archive only — no fold                             |
-| [staff-user-detail-context-spec.md](../specs/staff-user-detail-context-spec.md) | #164, #211, #233 | 8 tabs in [tabs.ts](../../src/routes/staff/users/[id]/tabs.ts), 9 panel components                                                                                                    | manual — `staff-guide`                             |
-| [volunteering-spec.md](../specs/volunteering-spec.md)                           | #177 → #235      | **Phase 1 _and_ Phase 2 _and_ certifications.** 9 tables, `/staff/volunteer/{roles,shifts,certifications,clearances,report}`, `/member/volunteer/{start,interests,feedback}`, 3 crons | **new** business-workflows §Volunteering           |
+| Spec                                                                                    | PRs              | Evidence in the tree                                                                                                                                                                  | Doc destination                                    |
+| --------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| [reservation-system-spec.md](../specs/shipped/reservation-system-spec.md)               | #78              | `reservation` table, `/member/reservations/*`, `reservation-service.ts`, lock integration                                                                                             | business-workflows §1 (already linked)             |
+| [recurring-reservations-spec.md](../specs/shipped/recurring-reservations-spec.md)       | #78              | `recurring_series`, `/staff/recurring`, `generate-recurring-reservations` cron                                                                                                        | business-workflows §2 (already linked)             |
+| [staff-reservations-spec.md](../specs/shipped/staff-reservations-spec.md)               | #78              | `/staff/reservations`, `/staff/reservations/[id]`, resolve + create modals                                                                                                            | business-workflows §1 — needs a staff subsection   |
+| [bands-spec.md](../specs/shipped/bands-spec.md)                                         | #78, #241        | `band`, `band_member`, `band_slug_history`, `/band/[slug]/*`                                                                                                                          | business-workflows §4 (already linked)             |
+| [staff-bands-spec.md](../specs/shipped/staff-bands-spec.md)                             | #78              | `/staff/bands`, `/staff/bands/[id]`, tier comp/revoke                                                                                                                                 | business-workflows §4 (already linked)             |
+| [tickets-spec.md](../specs/shipped/tickets-spec.md)                                     | #78              | `ticket` table, `/events/[id]/tickets`, `/staff/events/[id]/check-in`                                                                                                                 | business-workflows §5 (already linked)             |
+| [directory-profiles-spec.md](../specs/shipped/directory-profiles-spec.md)               | #78              | `user_instrument`, `user_genre`, `band_genre`, `/directory/*`, `/member/profile`                                                                                                      | manual — `profile-directory` (7 articles, covered) |
+| [membership-page-spec.md](../specs/shipped/membership-page-spec.md)                     | #78              | `/member/membership`, `subscription-service`, `credit_transaction`                                                                                                                    | business-workflows §3 (already linked)             |
+| [member-dashboard-spec.md](../specs/shipped/member-dashboard-spec.md)                   | #78              | `/member` landing page                                                                                                                                                                | manual — `getting-started` (covered)               |
+| [email-marketing-spec.md](../specs/shipped/email-marketing-spec.md)                     | #78, #185        | `audience`, `campaign`, `subscriber`, `/staff/marketing/*`, `send-campaigns` cron                                                                                                     | business-workflows §7 (already linked)             |
+| [finance-spec.md](../specs/shipped/finance-spec.md)                                     | #78, #131        | `payment_cache`, `credit_transaction`, Stripe-first payment service                                                                                                                   | business-workflows §3 + architecture/overview      |
+| [member-standing-spec.md](../specs/shipped/member-standing-spec.md)                     | #224             | `member_standing` table; the three per-domain tables are gone                                                                                                                         | **new** business-workflows §Moderation             |
+| [member-portal-chat-spec.md](../specs/shipped/member-portal-chat-spec.md)               | #204, #234       | `inbox_participant`, `/member/messages`, `portal` channel                                                                                                                             | **new** business-workflows §Messaging              |
+| [direct-messages-spec.md](../specs/shipped/direct-messages-spec.md)                     | #213, #224, #234 | `user_block`, `user.acceptsDirectMessages`, `direct-service.ts`                                                                                                                       | **new** business-workflows §Messaging              |
+| [member-suggestions-spec.md](../specs/shipped/member-suggestions-spec.md)               | #212, #217, #224 | `suggestion`, `suggestion_vote`, `suggestion_edit`, `/member/suggestions`, `/staff/suggestions`                                                                                       | **new** business-workflows §Moderation             |
+| [community-calendar-spec.md](../specs/shipped/community-calendar-spec.md)               | #145 → #207      | `/events` gig guide, `event.source`, `idx_event_source`                                                                                                                               | **new** business-workflows §Gig guide              |
+| [community-events-spec.md](../specs/shipped/community-events-spec.md)                   | #207, #224, #241 | `source='community'`, `/member/events/submit`, cancelled-not-hidden                                                                                                                   | **new** business-workflows §Gig guide              |
+| [event-lineup-spec.md](../specs/shipped/event-lineup-spec.md)                           | #197             | `event_band` table, confirm/decline slot, `/band/[slug]/events`                                                                                                                       | **new** business-workflows §Gig guide              |
+| [event-moderation-spec.md](../specs/shipped/event-moderation-spec.md)                   | #146, #197, #207 | `'event'` in `flagEntityTypes` ([flag.ts:12](../../src/lib/server/db/schema/flag.ts:12)), `/staff/flags`                                                                              | **new** business-workflows §Moderation             |
+| [band-domains-spec.md](../specs/shipped/band-domains-spec.md)                           | #183, #186       | `band.customDomain*` columns ([band.ts:98](../../src/lib/server/db/schema/band.ts:98)), `/band-site/[slug]`                                                                           | business-workflows §4                              |
+| [band-sites-launch.md](../specs/shipped/band-sites-launch.md)                           | #152             | Shipped and then **superseded** by `band-domains-spec.md`                                                                                                                             | archive only — no fold                             |
+| [staff-user-detail-context-spec.md](../specs/shipped/staff-user-detail-context-spec.md) | #164, #211, #233 | 8 tabs in [tabs.ts](../../src/routes/staff/users/[id]/tabs.ts), 9 panel components                                                                                                    | manual — `staff-guide`                             |
+| [volunteering-spec.md](../specs/shipped/volunteering-spec.md)                           | #177 → #235      | **Phase 1 _and_ Phase 2 _and_ certifications.** 9 tables, `/staff/volunteer/{roles,shifts,certifications,clearances,report}`, `/member/volunteer/{start,interests,feedback}`, 3 crons | **new** business-workflows §Volunteering           |
 
 Carve-outs deliberately left unbuilt inside otherwise-shipped specs: staff impersonation
 (`staff-bands-spec.md`), partner feed imports and `.ics`/RSS syndication (`community-calendar-spec.md`).
@@ -88,39 +88,70 @@ Five of the seven (`audit-log`, `admin-vs-staff`, `staff-email-change`, `reactiv
 
 ---
 
-## 2. The transition: where the shipped specs go
+## 2. The transition — done
 
-The agreed shape is **fold and archive**: behavior moves into the documentation that is meant to
-carry it, and the spec file relocates to `docs/specs/shipped/` rather than being deleted, so the
-design rationale — the "why we rejected the other option" that no manual article will ever hold —
-survives. When that pass runs, `docs/specs/` is left holding design intent and nothing else.
+The agreed shape was **fold and archive**: behavior moves into the documentation meant to carry it,
+and the spec file relocates to `docs/specs/shipped/` rather than being deleted, so the design
+rationale — the "why we rejected the other option" that no manual article will ever hold — survives.
 
-**Eight already have a home.** [business-workflows.md](../development/business-workflows.md) traces
-eight workflows and already links the specs for reservations, recurring, membership, finance, bands,
-staff-bands, tickets and email-marketing. Those fold into the section that cites them today.
+That is now complete. `docs/specs/` holds 8 files: the 7 unbuilt designs, plus Phase 3 of the
+confirmation window. `docs/specs/shipped/` holds the other 23.
 
-**Four domains have no section at all.** Nothing in business-workflows.md covers:
+### Where the behavior went
 
-- **Gig guide & community listings** — `community-calendar`, `community-events`, `event-lineup`, `event-moderation`
-- **Messaging** — `member-portal-chat`, `direct-messages`
-- **Moderation** — `member-standing`, `member-suggestions`, and the flag queue
-- **Volunteering** — the whole module, both phases
+**business-workflows.md grew from 8 sections to 12.** The eight that existed already linked their
+specs (reservations, recurring, membership, finance, bands, staff-bands, tickets, email-marketing)
+and §1 gained a **staff side** subsection for `staff-reservations-spec`. Four domains had no section
+at all and now do:
 
-**The blocking gap is the user manual, not the developer docs.** `docs/manual/README.md` lists 10
-help categories and `src/content/help/` has exactly those 10 directories. None of them covers
-`/member/messages`, `/member/suggestions` or `/member/events/submit` — three shipped member-facing
-surfaces with no user documentation whatsoever. `volunteering` has **2** articles against a module
-that now ships shifts, sign-up, certifications, clearances and post-shift feedback.
+| New section                                                 | Folds in                                                                     |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| §9 The gig guide and community listings                     | `community-calendar`, `community-events`, `event-lineup`, `event-moderation` |
+| §10 Messaging: portal threads and direct messages           | `member-portal-chat`, `direct-messages`                                      |
+| §11 Moderation: reports, standing, and the suggestion board | `member-standing`, `member-suggestions`, the flag queue                      |
+| §12 Volunteering                                            | `volunteering`, both phases                                                  |
 
-So "transition these specs into the docs" is mostly a writing job — roughly a dozen help articles and
-four new workflow sections — and only incidentally a file move. That is the real cost, and it is why
-this pass stopped at the audit.
+**The user manual gained 5 articles and 2 categories.** The first pass of this audit claimed four
+member surfaces had no coverage. Reading the articles rather than counting them corrected two of
+those:
 
-**Inbound references a move would break** (~40, all resolving today):
+- ~~Community-event submission~~ — **already covered**, and well, by
+  `events-tickets/member-events.md`, including the review path an upheld report puts you on.
+- ~~Volunteering~~ — **already covered**. Two articles, but between them they carry both phases:
+  shifts, clearances and the day-after survey are all there. File count was the wrong measure.
 
-- **5 code comments** naming a spec path: [directory-service.ts:175](../../src/lib/server/directory/directory-service.ts:175), [event-service.ts:944](../../src/lib/server/event/event-service.ts:944), [standing-service.ts:172](../../src/lib/server/moderation/standing-service.ts:172), [moderation-service.ts:116](../../src/lib/server/moderation/moderation-service.ts:116), [direct-messages.remote.ts:315](../../src/lib/remote/direct-messages.remote.ts:315), plus [reserved-slugs.ts:58](../../src/lib/reserved-slugs.ts:58) and its spec — those last two point at `groups-spec.md`, which is not moving.
-- **1 user-visible string** — [staff/users/+page.svelte:215](../../src/routes/staff/users/+page.svelte:215) names `staff-bands-spec.md` in rendered copy.
-- **Docs** — the spec links in business-workflows.md, `docs/plans/volunteering{,-phase-2}-checklist.md`, `docs/checklists/staff-feature-enablement.md`, `docs/reports/staff-user-management-audit.md`, `docs/reports/revenue-audit.md`, `docs/manual/README.md`, `README.md`, and the pointers in `IDEAS.md` and `CHORES.md`.
+The other three were real. Five articles close them — messaging needed two, and moderation needed
+a member-facing half and a staff-facing one:
+
+| Article                                     | Category         | Closes                         |
+| ------------------------------------------- | ---------------- | ------------------------------ |
+| `messaging/messages-overview.md`            | **new** category | `/member/messages`             |
+| `messaging/direct-messages.md`              | **new** category | the consent model, blocks      |
+| `suggestions/suggestions-overview.md`       | **new** category | `/member/suggestions`          |
+| `getting-started/reporting-and-standing.md` | existing         | reporting, and scoped standing |
+| `staff-guide/staff-moderation.md`           | existing         | `/staff/flags`, the idea board |
+
+The two new categories are seeded in `scripts/seed-dev.ts`. Adding them surfaced a defect worth its
+own note: `src/routes/member/help/+page.svelte` mapped 8 icon names while the seed used 10, so
+`user`, `layout`, `package`, `heart` and `heart-handshake` all silently fell back to the book icon —
+half the help centre wearing one icon. The map now covers every seeded value and carries a comment
+saying to keep the two lists in step.
+
+### Inbound references, rewritten
+
+All ~40 in one pass, and every relative link in every tracked markdown file was verified to resolve
+afterwards:
+
+- **5 code comments** naming a spec path — [directory-service.ts:175](../../src/lib/server/directory/directory-service.ts:175), [event-service.ts:944](../../src/lib/server/event/event-service.ts:944), [standing-service.ts:172](../../src/lib/server/moderation/standing-service.ts:172), [moderation-service.ts:116](../../src/lib/server/moderation/moderation-service.ts:116), [direct-messages.remote.ts:315](../../src/lib/remote/direct-messages.remote.ts:315). [reserved-slugs.ts:58](../../src/lib/reserved-slugs.ts:58) points at `groups-spec.md`, which did not move.
+- **1 user-visible string** — [staff/users/+page.svelte:215](../../src/routes/staff/users/+page.svelte:215) named `staff-bands-spec.md` in rendered copy.
+- **Docs** — business-workflows.md, both volunteering checklists, `docs/reports/{parity-report,revenue-audit,staff-user-management-audit}.md`, `docs/manual/README.md`, `docs/README.md`, `IDEAS.md`.
+- **Specs citing each other across the split** — a shipped spec pointing at an unbuilt one now
+  climbs out (`../groups-spec.md`); an unbuilt one pointing at a shipped one goes down
+  (`shipped/bands-spec.md`). Same-side links were left alone, since they moved together.
+
+The link sweep also turned up 25 broken links that predate this work — `component-style-audit.md`
+and `sentry-triage.md` both linked source files with a prefix that resolved inside `docs/` — fixed
+in passing.
 
 ---
 
@@ -128,12 +159,12 @@ this pass stopped at the audit.
 
 Four documents asserted things the code contradicts. All four are fixed as part of this audit.
 
-| Where                                       | Claimed                                                                      | Actually                                                                                                                                                                                                                                                 |
-| ------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `docs/specs/volunteering-spec.md` §intro    | Phase 2 and certifications are "**not built**"                               | Both shipped in #235. `volunteer_shift`, `volunteer_signup`, `volunteer_shift_feedback`, `volunteer_certification`, `member_certification`, `volunteer_role_certification` all exist; `docs/plans/volunteering-phase-2-checklist.md` is 41 of 42 checked |
-| `docs/specs/volunteering-spec.md` §hour log | `shiftId` is "a bare text column, not a foreign key" and "always null today" | It is a real FK with `onDelete: 'set null'` ([volunteer.ts:342](../../src/lib/server/db/schema/volunteer.ts:342))                                                                                                                                        |
-| `docs/reports/parity-report.md` item 8      | Volunteering Phase 2 "designed … but not built"                              | Same error. Its `Last updated` predated #235, #245 and #247                                                                                                                                                                                              |
-| `docs/README.md` volunteering row           | "shifts + certifications designed, unbuilt"                                  | Same error, third copy                                                                                                                                                                                                                                   |
+| Where                                               | Claimed                                                                      | Actually                                                                                                                                                                                                                                                 |
+| --------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/specs/shipped/volunteering-spec.md` §intro    | Phase 2 and certifications are "**not built**"                               | Both shipped in #235. `volunteer_shift`, `volunteer_signup`, `volunteer_shift_feedback`, `volunteer_certification`, `member_certification`, `volunteer_role_certification` all exist; `docs/plans/volunteering-phase-2-checklist.md` is 41 of 42 checked |
+| `docs/specs/shipped/volunteering-spec.md` §hour log | `shiftId` is "a bare text column, not a foreign key" and "always null today" | It is a real FK with `onDelete: 'set null'` ([volunteer.ts:342](../../src/lib/server/db/schema/volunteer.ts:342))                                                                                                                                        |
+| `docs/reports/parity-report.md` item 8              | Volunteering Phase 2 "designed … but not built"                              | Same error. Its `Last updated` predated #235, #245 and #247                                                                                                                                                                                              |
+| `docs/README.md` volunteering row                   | "shifts + certifications designed, unbuilt"                                  | Same error, third copy                                                                                                                                                                                                                                   |
 
 All three volunteering errors are one PR's un-swept wake: #235 shipped the feature and updated
 neither the spec's own intro nor the two documents that quote it.
@@ -201,19 +232,24 @@ Tech Rider Management, Event Settlement.
 
 ---
 
-## 6. Execution order for the transition
+## 6. Execution order — as it ran
 
-Sequenced so no step lands on a moving target.
+1. ~~**Correct the stale claims**~~ — ✅ spec, parity report, IDEAS, docs README.
+2. ~~**Sweep the finished chores**~~ — ✅ two moved to Done.
+3. ~~**Write the missing manual coverage**~~ — ✅ 5 articles, 2 new categories, and the icon-map fix
+   that makes categories render as themselves.
+4. ~~**Add the new `business-workflows.md` sections**~~ — ✅ four sections plus the staff subsection
+   under §1.
+5. ~~**Split `reservation-confirmation-window.md`**~~ — ✅ it is now a Phase 3 spec, with the shipped
+   phases pointing at business-workflows §1 and a note on the lock's finite user table, which is the
+   constraint that decides whether Phase 3 is safe to build.
+6. ~~**Move the 23 and rewrite the references**~~ — ✅ in one commit, with a repo-wide link check.
 
-1. ~~**Correct the stale claims**~~ — ✅ done in this pass (spec, parity report, IDEAS, docs README).
-2. ~~**Sweep the finished chores**~~ — ✅ done in this pass.
-3. **Write the four missing manual categories** — messaging/DMs, suggestions, community-event
-   submission, moderation & standing — and bring `volunteering` up from 2 articles to cover shifts,
-   clearances and feedback. Largest step by far; `docs/manual/README.md` is the checklist.
-4. **Add the four new `business-workflows.md` sections** — gig guide, messaging, moderation,
-   volunteering — plus a staff subsection under §1 for `staff-reservations`.
-5. **Split `reservation-confirmation-window.md`** — Phase 3 is the only part that is still a spec.
-6. **Move the 23 into `docs/specs/shipped/`** and rewrite all inbound references in one pass, so no
-   intermediate commit has a dangling link. `pnpm docs:check` and `pnpm lint` are the gates.
+### What is left
 
-Steps 3 and 4 are the work. Step 6 is an afternoon.
+- **Phase 3 of the confirmation window** — the only half-built thing left in `docs/specs/`.
+- **Keeping the split honest.** Nothing enforces it: a feature can ship and leave its spec in
+  `docs/specs/`, which is exactly how the drift this audit found got started. Moving the spec is now
+  the last line of the feature checklist in
+  [conventions.md](../development/conventions.md#the-feature-checklist); a `docs:check` rule that
+  compares spec names against shipped routes would be the mechanical version, and does not exist.

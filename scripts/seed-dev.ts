@@ -2795,6 +2795,22 @@ async function seedHelp() {
 				icon: 'heart-handshake',
 				sortOrder: 9,
 				minRole: 'member'
+			},
+			{
+				name: 'Messages',
+				slug: 'messaging',
+				description: 'Talking to staff, and to other members',
+				icon: 'message',
+				sortOrder: 10,
+				minRole: 'member'
+			},
+			{
+				name: 'Suggestions',
+				slug: 'suggestions',
+				description: 'The member idea board and how staff answer it',
+				icon: 'bulb',
+				sortOrder: 11,
+				minRole: 'member'
 			}
 		],
 		9

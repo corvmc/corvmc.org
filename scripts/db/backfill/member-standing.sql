@@ -21,7 +21,7 @@
 -- `source` is not carried across. It was three copies of one fact: a member row
 -- becomes a preference (below), a report row is identified by
 -- `triggering_flag_id`, and anything else was staff. See
--- `docs/specs/member-standing-spec.md`.
+-- `docs/specs/shipped/member-standing-spec.md`.
 
 -- Community listings. `requires_review = 0` can only mean staff restored it, so
 -- the row is kept as a cleared standing rather than dropped — "we looked at this

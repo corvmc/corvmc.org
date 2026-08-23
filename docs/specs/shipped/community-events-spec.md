@@ -3,7 +3,7 @@
 ## Purpose
 
 Phase 2 of the community calendar (IDEAS.md "Community Calendar", building on
-`docs/specs/community-calendar-spec.md`). A signed-in member can put an off-site
+`docs/specs/shipped/community-calendar-spec.md`). A signed-in member can put an off-site
 show on the public gig guide — a gig at another venue, a house show, a festival
 — as a third source layer alongside CMC events and member bands' gigs.
 
@@ -26,7 +26,7 @@ slots into the existing public queries with no structural change to them.
   which is itself the edit form.
 - Optional lineup credits through the existing `event_band` table, so a credit
   naming a platform band lands `pending` and never reaches that band's profile
-  until they confirm (`docs/specs/event-lineup-spec.md`, unchanged).
+  until they confirm (`docs/specs/shipped/event-lineup-spec.md`, unchanged).
 - Per-member publishing standing (`member_standing` at scope `community_event`;
   originally `community_event_standing`) and a staff review
   queue at `/staff/events` → "Needs review".
@@ -47,7 +47,7 @@ slots into the existing public queries with no structural change to them.
 ## Decisions
 
 - **Trust by default, verify after a first offense.** Publishing is direct — no
-  staff in the loop — matching band events. `docs/specs/event-moderation-spec.md`
+  staff in the loop — matching band events. `docs/specs/shipped/event-moderation-spec.md`
   rejected a blanket pre-approval queue and that still holds. What is added is
   narrower: when staff _resolve_ (uphold) a report against a member's community
   listing, that member's future listings queue for review instead. A _dismissed_
@@ -151,7 +151,7 @@ slots into the existing public queries with no structural change to them.
   auth, billing, credits and directory-profile concerns. `volunteer_profile` is
   the precedent for a per-user gating record, and a table gives room for the FK
   to the upheld flag. (That table is now the shared, scoped `member_standing` —
-  see `docs/specs/member-standing-spec.md`. The argument is unchanged; only the
+  see `docs/specs/shipped/member-standing-spec.md`. The argument is unchanged; only the
   table's name and key are.)
 
 - **404, not 403, for someone else's listing.** "This exists but isn't yours"
@@ -175,7 +175,7 @@ NULL` (was `source = 'band' OR …`). Only CMC events hold the room; a member
   **Superseded:** merged into `member_standing`, keyed `(userId, scope)` with
   `requiresReview` becoming `status: 'restricted'`. Read it with
   `getStanding(userId, 'community_event')`; see
-  `docs/specs/member-standing-spec.md`.
+  `docs/specs/shipped/member-standing-spec.md`.
 
 `src/lib/server/db/schema/inbox.ts` — `submitContactFormSchema` gains four
 optional tip fields plus `EVENT_TIP_SUBJECT`.

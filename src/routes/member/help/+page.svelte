@@ -13,23 +13,40 @@
 		IconSettings,
 		IconCalendar,
 		IconUsers,
+		IconUser,
 		IconMusic,
 		IconHelp,
 		IconTicket,
-		IconTool
+		IconTool,
+		IconLayout,
+		IconPackage,
+		IconHeart,
+		IconHeartHandshake,
+		IconMessage,
+		IconBulb
 	} from '@tabler/icons-svelte';
 
 	let categories = $derived(await getMemberCategories());
 
+	// Keys are the `icon` values seeded in scripts/seed-dev.ts. A category whose
+	// icon is not here silently renders as IconBook, so half the help centre once
+	// wore the same icon — keep the two lists in step.
 	const iconMap: Record<string, typeof IconBook> = {
 		book: IconBook,
 		settings: IconSettings,
 		calendar: IconCalendar,
 		users: IconUsers,
+		user: IconUser,
 		music: IconMusic,
 		help: IconHelp,
 		ticket: IconTicket,
-		tool: IconTool
+		tool: IconTool,
+		layout: IconLayout,
+		package: IconPackage,
+		heart: IconHeart,
+		'heart-handshake': IconHeartHandshake,
+		message: IconMessage,
+		bulb: IconBulb
 	};
 
 	function handleSelect(slug: string) {
