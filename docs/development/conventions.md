@@ -148,9 +148,9 @@ Every script in `package.json`:
 
 | Script                          | What it does                                                                                                                                                          |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dev`                           | Vite dev server on :5173                                                                                                                                              |
+| `dev`                           | Vite dev server on :5173 (a worktree gets its own port — `scripts/lib/checkout-ports.ts`)                                                                             |
 | `build`                         | `vite build` (output: `.svelte-kit/cloudflare/`)                                                                                                                      |
-| `preview`                       | Serve the production build on :4173                                                                                                                                   |
+| `preview`                       | Serve the production build on :4173 (a worktree gets its own port)                                                                                                    |
 | `prepare`                       | (auto on install) svelte-kit sync + lefthook install                                                                                                                  |
 | `check` / `check:watch`         | svelte-check type checking                                                                                                                                            |
 | `test:unit`                     | Vitest (watch mode; `--run` for one-shot)                                                                                                                             |

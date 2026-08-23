@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { E2E_PREVIEW_PORT } from './state-dir';
 import {
 	SEED_PUBLIC_BAND_SLUG,
 	SEED_PUBLIC_BAND_NAME,
@@ -13,10 +14,10 @@ import {
  * to their directory profile — so a band can hand out the address either way.
  *
  * The base domain comes from PUBLIC_SITE_URL, which playwright.config.ts pins
- * to http://localhost:4173, making {slug}.localhost:4173 a real band address
- * that exercises the same hooks as {slug}.corvmc.org in production.
+ * to this checkout's preview origin, making {slug}.localhost:<port> a real band
+ * address that exercises the same hooks as {slug}.corvmc.org in production.
  */
-const PORT = 4173;
+const PORT = E2E_PREVIEW_PORT;
 const subdomain = (slug: string) => `http://${slug}.localhost:${PORT}`;
 
 test('a free band subdomain redirects to its directory profile', async ({ page }) => {
