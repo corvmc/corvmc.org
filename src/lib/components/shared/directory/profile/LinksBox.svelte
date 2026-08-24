@@ -66,7 +66,7 @@
 						<a
 							href={item.link.url}
 							target="_blank"
-							rel="noopener noreferrer"
+							rel="external noopener noreferrer"
 							class="links-box__ico"
 							title={item.name}
 							aria-label={item.name}
@@ -85,7 +85,7 @@
 						<a
 							href={item.link.url}
 							target="_blank"
-							rel="noopener noreferrer"
+							rel="external noopener noreferrer"
 							class="links-box__row"
 						>
 							<Icon size={16} class="links-box__row-ico" />

@@ -7,7 +7,7 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
-	import { toast } from 'svelte-sonner';
+	import Form from '$lib/components/shared/Form/Form.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { getBandLayout } from '$lib/remote/layout.remote';
@@ -60,18 +60,7 @@
 			>
 		</EmptyState>
 	{:else}
-		<form
-			{...saveBandEpk.enhance(async (form) => {
-				try {
-					if (await form.submit()) {
-						toast.success('EPK saved');
-						invalidateAll();
-					}
-				} catch {
-					toast.error('Failed to save EPK');
-				}
-			})}
-		>
+		<Form remote={saveBandEpk} successToast="EPK saved" onsuccess={() => invalidateAll()}>
 			<input {...saveBandEpk.fields.slug.as('hidden', band.slug)} />
 			<input {...saveBandEpk.fields.epk.as('hidden', epkJson)} />
 
@@ -380,6 +369,6 @@
 					<Button variant="primary">Save EPK</Button>
 				</div>
 			</div>
-		</form>
+		</Form>
 	{/if}
 </PageContent>

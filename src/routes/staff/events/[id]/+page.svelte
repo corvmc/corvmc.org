@@ -792,8 +792,11 @@
 		{/if}
 
 		{#if evt.externalTicketUrl}
-			<a href={evt.externalTicketUrl} class="link text-sm" target="_blank" rel="noopener noreferrer"
-				>Tickets ↗</a
+			<a
+				href={evt.externalTicketUrl}
+				class="link text-sm"
+				target="_blank"
+				rel="external noopener noreferrer">Tickets ↗</a
 			>
 		{/if}
 

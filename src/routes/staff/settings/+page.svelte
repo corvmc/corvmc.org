@@ -829,12 +829,9 @@
 									<p class="text-subtle">{meta.description}</p>
 								</div>
 							</div>
-							<form
-								{...toggleForm.enhance(async ({ submit }) => {
-									if (await submit()) {
-										toast.success(`${meta.label} ${enabled ? 'disabled' : 'enabled'}`);
-									}
-								})}
+							<Form
+								remote={toggleForm}
+								onsuccess={() => toast.success(`${meta.label} ${enabled ? 'disabled' : 'enabled'}`)}
 							>
 								<input {...toggleForm.fields.flag.as('hidden', flag)} />
 								<input {...toggleForm.fields.enabled.as('hidden', enabled ? 'false' : 'true')} />
@@ -846,7 +843,7 @@
 								>
 									{enabled ? 'Disable' : 'Enable'}
 								</Button>
-							</form>
+							</Form>
 						</div>
 					</CardBody>
 				</Card>
@@ -876,12 +873,10 @@
 							{#if isAlwaysOn}
 								<span class="badge badge-success badge-sm">Always On</span>
 							{:else}
-								<form
-									{...toggleForm.enhance(async ({ submit }) => {
-										if (await submit()) {
-											toast.success(`${meta.label} ${cfg.enabled ? 'disabled' : 'enabled'}`);
-										}
-									})}
+								<Form
+									remote={toggleForm}
+									onsuccess={() =>
+										toast.success(`${meta.label} ${cfg.enabled ? 'disabled' : 'enabled'}`)}
 								>
 									<input {...toggleForm.fields.channel.as('hidden', cfg.channel)} />
 									<input
@@ -895,7 +890,7 @@
 									>
 										{cfg.enabled ? 'Disable' : 'Enable'}
 									</Button>
-								</form>
+								</Form>
 							{/if}
 						</div>
 						{#if !isAlwaysOn}

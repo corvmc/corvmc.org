@@ -126,7 +126,7 @@
 										href={evt.externalTicketUrl}
 										class="gig-row__tickets"
 										target="_blank"
-										rel="noopener noreferrer"
+										rel="external noopener noreferrer"
 									>
 										<IconTicket size={13} />
 										Tickets

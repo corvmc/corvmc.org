@@ -60,16 +60,12 @@ vi.mock('$app/server', () => ({
 	}),
 	// SvelteKit validates that every export of a .remote.ts file is a remote
 	// function, so the stubs have to carry the same marker the real ones do.
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	form: (_schema: unknown, handler: (...args: any[]) => any) => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(handler as any).__ = { type: 'form' };
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(handler as any).for = () => handler;
 		return handler;
 	},
 	query: (...args: unknown[]) => {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const handler = (typeof args[0] === 'function' ? args[0] : args[1]) as any;
 		handler.__ = { type: 'query' };
 		return handler;

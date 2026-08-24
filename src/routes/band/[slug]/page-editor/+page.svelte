@@ -8,6 +8,7 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
 	import { toast } from 'svelte-sonner';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -167,17 +168,10 @@
 			<Button href="../subscription" variant="primary" class="mt-4">Upgrade to Premium</Button>
 		</EmptyState>
 	{:else}
-		<form
-			{...saveBandPageConfig.enhance(async (form) => {
-				try {
-					if (await form.submit()) {
-						toast.success('Page config saved');
-						invalidateAll();
-					}
-				} catch {
-					toast.error('Failed to save');
-				}
-			})}
+		<Form
+			remote={saveBandPageConfig}
+			successToast="Page config saved"
+			onsuccess={() => invalidateAll()}
 			class="space-y-6"
 		>
 			<input {...saveBandPageConfig.fields.slug.as('hidden', band.slug)} />
@@ -588,13 +582,14 @@
 
 			<!-- Save -->
 			<div class="flex justify-between items-center">
-				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- absolute URL on the band's own subdomain, not a route in this app -->
-				<a href={siteUrl} target="_blank" rel="noopener" class="link text-sm">
+				<!-- The band's own subdomain, so this leaves the app: rel="external" is both the
+				     correct annotation and what keeps it out of the router. -->
+				<a href={siteUrl} target="_blank" rel="external noopener" class="link text-sm">
 					View your page at {siteUrl.replace(/^https?:\/\//, '')} &rarr;
 				</a>
 				<Button variant="primary">Save Changes</Button>
 			</div>
-		</form>
+		</Form>
 
 		<!-- Media upload section -->
 		<Card class="mt-6">

@@ -13,6 +13,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
 	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Table from '$lib/components/shared/Table.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -76,11 +77,10 @@
 						<td class="w-px">
 							{#if m.role !== 'owner' && m.status === 'active'}
 								{@const rf = updateMemberRole.for(m.id)}
-								<form
-									{...rf.enhance(async ({ submit }) => {
-										if (await submit()) toast.success('Role updated');
-										else toast.error('Failed to update role');
-									})}
+								<Form
+									remote={rf}
+									successToast="Role updated"
+									onfailure={() => toast.error('Failed to update role')}
 								>
 									<input {...rf.fields.memberId.as('hidden', m.id)} />
 									<Select
@@ -94,7 +94,7 @@
 										<option value="member">Member</option>
 										<option value="admin">Admin</option>
 									</Select>
-								</form>
+								</Form>
 							{:else}
 								<Badge size="sm" variant="outline">{m.role}</Badge>
 							{/if}

@@ -46,9 +46,9 @@ export default defineConfig(
 			// typescript-eslint strongly recommend that you do not use the no-undef lint rule on TypeScript projects.
 			// see: https://typescript-eslint.io/troubleshooting/faqs/eslint/#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
 			'no-undef': 'off',
-			// Downgraded from the typescript-eslint recommended default (error). The codebase has
-			// ~200 pre-existing `any` usages; treat as a warning so it stays visible without
-			// blocking CI, to be paid down incrementally rather than in this lint-cleanup pass.
+			// Downgraded from the typescript-eslint recommended default (error) so the remaining
+			// `any` usages stay visible without blocking CI, to be paid down incrementally. See
+			// the override below for why test files are exempt rather than counted.
 			'@typescript-eslint/no-explicit-any': 'warn',
 			// Honour the conventional `_`-prefix for intentionally-unused bindings (e.g.
 			// `{#each items as _, i}`, unused catch params). The rule still errors on all
@@ -85,6 +85,21 @@ export default defineConfig(
 	{
 		// Register the custom plugin once, globally; the blocks below only enable rules.
 		plugins: { custom: customPlugin }
+	},
+	{
+		// `no-explicit-any` exists to pay down `any` in *shipped* code. It has no purchase on a
+		// test double: the dominant shape here is
+		// `vi.mocked(db.select).mockReturnValue({ from } as any)` — a one-method stub cast to
+		// drizzle's full query-builder chain type, which is not expressible in less code than the
+		// test itself. Measured at 5b45863: 428 warnings, of which 377 were tests/scripts/e2e and
+		// only 51 were production source. The 377 buried the 51 well enough that the count grew
+		// from ~200 to 428 unnoticed, so the number had stopped meaning anything.
+		//
+		// This is bookkeeping, not a safety gain — it silences warnings rather than typing
+		// anything. It is narrow, though: `vi.mocked(db.select)` stays typed, and only the mock's
+		// *return shape* is cast, so a signature change in the code under test still fails.
+		files: ['**/*.spec.ts', '**/*.test.ts', 'scripts/**', 'e2e/**'],
+		rules: { '@typescript-eslint/no-explicit-any': 'off' }
 	},
 	{
 		files: ['**/+page.svelte'],
