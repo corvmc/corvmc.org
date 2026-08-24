@@ -4,7 +4,7 @@
 		getUserCredits,
 		getUserCreditHistory,
 		getUserPayments,
-		getUserOverview
+		getUserPage
 	} from '$lib/remote/users.remote';
 	import { RelatedList } from '$lib/components/shared/entity';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -32,7 +32,7 @@
 	function refreshCredits() {
 		void getUserCredits(id).refresh();
 		void getUserCreditHistory({ userId: id, page: creditPage }).refresh();
-		void getUserOverview(id).refresh();
+		void getUserPage(id).refresh();
 	}
 </script>
 

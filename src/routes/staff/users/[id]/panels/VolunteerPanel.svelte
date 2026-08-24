@@ -1,15 +1,14 @@
 <script lang="ts">
 	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
+	import GrantCertificationAction from './GrantCertificationAction.svelte';
 	import {
 		getUserVolunteerProfile,
 		getUserShifts,
 		getUserHourLogs,
 		getMemberCertifications,
-		getActiveCertifications,
-		grantCertification,
 		revokeCertification
 	} from '$lib/remote/volunteer.remote';
-	import { getUserOverview } from '$lib/remote/users.remote';
+	import { getUserPage } from '$lib/remote/users.remote';
 	import { RelatedList } from '$lib/components/shared/entity';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
@@ -23,7 +22,7 @@
 	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
-	import { clubToday, formatVolunteerHours } from '$lib/config';
+	import { formatVolunteerHours } from '$lib/config';
 	import { formatDateShortYear } from '$lib/utils/format';
 
 	let { id }: { id: string } = $props();
@@ -33,7 +32,7 @@
 	// otherwise the badge keeps claiming an expired clearance that just went.
 	function refreshCertifications() {
 		void getMemberCertifications(id).refresh();
-		void getUserOverview(id).refresh();
+		void getUserPage(id).refresh();
 	}
 </script>
 
@@ -90,48 +89,12 @@
 	These Actions used to sit inside the page-level profile <Form>, where their
 	triggers were type=submit and each click saved the account.
 -->
-{#await Promise.all([getMemberCertifications(id), getActiveCertifications()]) then [held, catalog]}
+{#await getMemberCertifications(id) then held}
 	<InfoCard title="Certifications">
 		{#snippet header(title: string)}
 			<div class="flex items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>
-				{#if catalog.length > 0}
-					<Action
-						action={grantCertification}
-						label="Grant"
-						variant="default"
-						size="sm"
-						modalTitle="Grant a certification"
-						submitLabel="Grant"
-						successToast="Certification granted"
-						onsuccess={refreshCertifications}
-					>
-						{#snippet form()}
-							<input type="hidden" name="userId" value={id} />
-							<FormField
-								name="certificationId"
-								label="Certification"
-								type="select"
-								options={catalog.map((c) => ({ value: c.id, label: c.name }))}
-							/>
-							<FormField
-								name="grantedOn"
-								label="Granted on"
-								type="date"
-								value={clubToday()}
-								max={clubToday()}
-								description="Expiry is worked out from this date and locked in now — later edits to the catalog won't move it."
-							/>
-							<FormField
-								name="reference"
-								label="Card or licence number"
-								type="text"
-								description="For an external card. Leave blank for a CMC clearance."
-							/>
-							<FormField name="notes" label="Notes" type="textarea" />
-						{/snippet}
-					</Action>
-				{/if}
+				<GrantCertificationAction userId={id} onsuccess={refreshCertifications} />
 			</div>
 		{/snippet}
 
