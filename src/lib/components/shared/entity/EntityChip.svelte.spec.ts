@@ -57,11 +57,22 @@ describe('EntityChip', () => {
 	 * second layout for that is a second thing to keep true.
 	 */
 	describe('preview', () => {
+		/**
+		 * `.first()` is the chip's own link. Once the preview is open it contains
+		 * two more links to the same record, and the pointer can already be over
+		 * the chip when this runs — the previous test left it there — so the
+		 * preview is sometimes open before the locator resolves. Matching all
+		 * three is a strict-mode violation, and which one is hovered does not
+		 * matter: they are the same record.
+		 */
 		it('opens on hover and shows the record identity', async () => {
 			await render(Harness, {
 				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' })
 			});
-			await page.getByRole('link', { name: /Velvet Underground/ }).hover();
+			await page
+				.getByRole('link', { name: /Velvet Underground/ })
+				.first()
+				.hover();
 			await expect.element(page.getByText('4 members')).toBeVisible();
 		});
 
@@ -69,7 +80,7 @@ describe('EntityChip', () => {
 			await render(Harness, {
 				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' })
 			});
-			const link = page.getByRole('link', { name: /Velvet Underground/ });
+			const link = page.getByRole('link', { name: /Velvet Underground/ }).first();
 			await link.element().focus();
 			await expect.element(page.getByText('4 members')).toBeVisible();
 		});
