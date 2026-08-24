@@ -2,7 +2,7 @@
 	import {
 		getUser,
 		getAllRoles,
-		getUserOverview,
+		getUserPage,
 		getUserSessions,
 		deactivateUser,
 		reactivateUser,
@@ -32,8 +32,8 @@
 	// Deactivating cancels bookings and the subscription, so the scoreboard and
 	// the needs-attention list are both wrong until the overview is re-read.
 	function refreshAccount() {
-		void getUser(id).refresh();
-		void getUserOverview(id).refresh();
+		// One refresh: the page reads both halves through `getUserPage`.
+		void getUserPage(id).refresh();
 	}
 </script>
 

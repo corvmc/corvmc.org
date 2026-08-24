@@ -346,7 +346,7 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 
 	await db.batch(ops as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
 
-	void getUser(id).refresh();
+	void getUserPage(id).refresh();
 
 	return { success: true };
 });
@@ -424,7 +424,7 @@ export const deactivateUser = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getUser(data.id).refresh();
+		void getUserPage(data.id).refresh();
 		return { success: true };
 	}
 );
@@ -453,7 +453,7 @@ export const reactivateUser = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getUser(data.id).refresh();
+		void getUserPage(data.id).refresh();
 		return { success: true };
 	}
 );
@@ -607,6 +607,23 @@ export const getMemberDashboard = query(async () => {
 export const getUserOverview = query(z.string(), async (userId) => {
 	await requireStaff();
 	return getUserOverviewService(userId);
+});
+
+/**
+ * The staff member page's one load-bearing query.
+ *
+ * Both halves are first paint: `getUser` backs the identity header, and the
+ * overview backs the scoreboard, every tab badge and the whole Overview tab.
+ * Reading them as two queries from the component made the page wait on the
+ * slower of two round trips; assembled here they are one request and two
+ * local reads. See `custom/no-concurrent-remote-queries`.
+ */
+export const getUserPage = query(z.string(), async (id) => {
+	await requireStaff();
+
+	const [member, overview] = await Promise.all([getUser(id), getUserOverview(id)]);
+
+	return { member, overview };
 });
 
 export const getUserReservations = query(z.string(), async (userId) => {

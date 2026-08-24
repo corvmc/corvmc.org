@@ -70,6 +70,7 @@ import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
 import { formatDateShortYear } from '$lib/utils/format';
+import { getShifts, getVolunteerRoles } from './volunteer.remote';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -750,6 +751,35 @@ export const previewRecurringEvents = query(
 );
 
 /** The recurring series an event belongs to, if any (staff). */
+/**
+ * Everything the staff event detail page needs, in one round trip.
+ *
+ * The page used to read four queries and await them together with
+ * `Promise.all` in the component. That is one HTTP request per query — four
+ * round trips the browser pays on every visit — and past kit 2.64 it also
+ * drives the page into `effect_update_depth_exceeded`: any shape that puts the
+ * four in flight at once loops (bisected to kit#15991, "dedupe remote data").
+ *
+ * Fanning out here instead costs one request. The four still run in parallel,
+ * but on the server where they are a local D1 hop rather than a network one,
+ * and the client holds a single query instance with nothing to race.
+ *
+ * Each callee re-guards; `requireStaff()` here is the boundary for this
+ * function itself, not a substitute for theirs.
+ */
+export const getStaffEventPage = query(z.string(), async (id) => {
+	await requireStaff();
+
+	const [detail, recurringSeries, shifts, volunteerRoles] = await Promise.all([
+		getStaffEventDetail(id),
+		getEventRecurringSeries(id),
+		getShifts({ eventId: id }),
+		getVolunteerRoles()
+	]);
+
+	return { detail, recurringSeries, shifts, volunteerRoles };
+});
+
 export const getEventRecurringSeries = query(z.string(), async (eventId) => {
 	await requireStaff();
 	const series = await getByEvent(eventId);

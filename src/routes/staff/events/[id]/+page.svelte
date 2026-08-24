@@ -19,11 +19,10 @@
 		CompTicketsAction
 	} from '$lib/components/shared/actions';
 	import {
-		getStaffEventDetail,
+		getStaffEventPage,
 		updateEvent,
 		checkRebook,
 		checkConflicts,
-		getEventRecurringSeries,
 		cancelEventSeries
 	} from '$lib/remote/events.remote';
 	const { fields } = updateEvent;
@@ -53,7 +52,7 @@
 	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import ShiftFormFields from '$lib/components/shared/volunteer/ShiftFormFields.svelte';
-	import { getShifts, getVolunteerRoles, createShift } from '$lib/remote/volunteer.remote';
+	import { createShift } from '$lib/remote/volunteer.remote';
 
 	const rejectFields = rejectListing.fields;
 
@@ -78,19 +77,12 @@
 	 * staffed", and a called-off shift is not staffing. The shift list is where
 	 * you go to see what was called off.
 	 */
-	const loaded = $derived(
-		await Promise.all([
-			getStaffEventDetail(id),
-			getEventRecurringSeries(id),
-			getShifts({ eventId: id }),
-			getVolunteerRoles()
-		])
-	);
+	const loaded = $derived(await getStaffEventPage(id));
 
-	let data = $derived(loaded[0]);
-	const recurringSeries = $derived(loaded[1]);
-	const shifts = $derived(loaded[2]);
-	const volunteerRoles = $derived(loaded[3]);
+	let data = $derived(loaded.detail);
+	const recurringSeries = $derived(loaded.recurringSeries);
+	const shifts = $derived(loaded.shifts);
+	const volunteerRoles = $derived(loaded.volunteerRoles);
 
 	const evt = $derived(data.event);
 	const isBandEvent = $derived(evt.source === 'band');
@@ -269,7 +261,7 @@
 		reserveSpace = false;
 		hasConflicts = false;
 		overrideConflicts = false;
-		void getStaffEventDetail(id).refresh();
+		void getStaffEventPage(id).refresh();
 	}
 
 	async function handlePosterUpload(e: Event) {
@@ -287,7 +279,7 @@
 			});
 			if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
 			toast.success('Poster updated');
-			void getStaffEventDetail(id).refresh();
+			void getStaffEventPage(id).refresh();
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to upload poster');
 		}
@@ -403,7 +395,7 @@
 				<Form
 					remote={cancelEventSeries}
 					successToast="Series cancelled"
-					onsuccess={() => void getEventRecurringSeries(id).refresh()}
+					onsuccess={() => void getStaffEventPage(id).refresh()}
 				>
 					<input {...cancelEventSeries.fields.seriesId.as('hidden', recurringSeries.id)} />
 					<SubmitButton label="Cancel series" variant="ghost" size="xs" class="text-error" />
@@ -966,7 +958,7 @@
 						modalTitle="Schedule a shift for {evt.title}"
 						submitLabel="Create"
 						successToast="Shift scheduled"
-						onsuccess={() => getShifts({ eventId: id }).refresh()}
+						onsuccess={() => getStaffEventPage(id).refresh()}
 					>
 						{#snippet form()}
 							<!--

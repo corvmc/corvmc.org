@@ -4,6 +4,8 @@ import noRawFormElements from './eslint-rules/no-raw-form-elements.js';
 import noUtilitySoup from './eslint-rules/no-utility-soup.js';
 import noDuplicateFieldNames from './eslint-rules/no-duplicate-field-names.js';
 import noDbTransaction from './eslint-rules/no-db-transaction.js';
+import noConcurrentRemoteQueries from './eslint-rules/no-concurrent-remote-queries.js';
+import refreshTheComposedQuery from './eslint-rules/refresh-the-composed-query.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -26,7 +28,9 @@ const customPlugin = {
 		'no-raw-form-elements': noRawFormElements,
 		'no-utility-soup': noUtilitySoup,
 		'no-duplicate-field-names': noDuplicateFieldNames,
-		'no-db-transaction': noDbTransaction
+		'no-db-transaction': noDbTransaction,
+		'no-concurrent-remote-queries': noConcurrentRemoteQueries,
+		'refresh-the-composed-query': refreshTheComposedQuery
 	}
 };
 
@@ -107,7 +111,14 @@ export default defineConfig(
 	},
 	{
 		files: ['**/*.svelte'],
-		rules: { 'custom/no-duplicate-field-names': 'error' }
+		rules: {
+			'custom/no-duplicate-field-names': 'error',
+			'custom/no-concurrent-remote-queries': 'error'
+		}
+	},
+	{
+		files: ['src/lib/remote/**/*.remote.ts'],
+		rules: { 'custom/refresh-the-composed-query': 'error' }
 	},
 	{
 		files: ['src/lib/server/**/*.ts'],

@@ -11,12 +11,10 @@
 	import { resolve } from '$app/paths';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
 	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
 	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';
+	import AssignControl from './AssignControl.svelte';
 	import ThreadStatusActions from '$lib/components/inbox/ThreadStatusActions.svelte';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
 	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
@@ -24,13 +22,12 @@
 	import { formatDateTime } from '$lib/utils/format';
 	import {
 		getInboxThread,
+		getInboxEnabledChannels,
 		replyToThread,
 		addThreadNote,
 		updateThreadStatus,
 		setThreadAwaiting,
-		assignThread,
-		getInboxEnabledChannels,
-		getAssignableStaff
+		assignThread
 	} from '$lib/remote/inbox.remote';
 
 	const threadId = $derived(page.params.id!);
@@ -38,12 +35,10 @@
 	// One await over all three, rather than three awaited deriveds: separate async
 	// deriveds resolve at different times and the template can't read the early
 	// ones until the last lands, which Svelte reports as a waterfall.
-	const data = $derived(
-		await Promise.all([getInboxThread(threadId), getInboxEnabledChannels(), getAssignableStaff()])
-	);
-	const t = $derived(data[0]);
-	const enabledChannels = $derived(data[1]);
-	const staffUsers = $derived(data[2]);
+	// The page's one load-bearing query. The channel config and the assignable
+	// staff list both load lazily, in the controls that need them — see
+	// `custom/no-concurrent-remote-queries`.
+	const t = $derived(await getInboxThread(threadId));
 
 	const replyForm = replyToThread.for('reply');
 	const noteForm = addThreadNote.for('note');
@@ -56,27 +51,6 @@
 	const awaitingForm = setThreadAwaiting.for('awaiting');
 
 	const ChannelIcon = $derived(channelIcon(t.channel));
-
-	// Always-on channels deliver through the site itself, so they are never
-	// disabled: a web thread replies by email to the address the contact form
-	// captured, and a portal thread's reply is the message row itself.
-	const channelDisabled = $derived(
-		!isAlwaysEnabledChannel(t.channel) && !enabledChannels.includes(t.channel)
-	);
-
-	const replyBlockedReason = $derived.by(() => {
-		if ((t.channel === 'web' || t.channel === 'email') && !t.contactEmail) {
-			return 'This conversation has no contact email, so there is nowhere to send a reply. Leave an internal note instead.';
-		}
-		if (channelDisabled)
-			return `Replies are turned off for the ${channelLabel(t.channel)} channel.`;
-		return undefined;
-	});
-
-	const staffOptions = $derived([
-		{ value: '', label: 'Unassigned' },
-		...staffUsers.map((s) => ({ value: s.id, label: s.name }))
-	]);
 </script>
 
 <div class="flex h-full min-h-0 flex-col gap-4">
@@ -128,18 +102,7 @@
 					<span class="opacity-50">Created {formatDateTime(t.createdAt)}</span>
 				</div>
 
-				<Form remote={assignForm} successToast="Assignment updated" class="flex items-end gap-2">
-					<input {...assignForm.fields.threadId.as('hidden', t.id)} />
-					<FormField
-						name="userId"
-						label="Assigned to"
-						type="select"
-						options={staffOptions}
-						value={t.assignedToUserId ?? ''}
-						class="flex-1"
-					/>
-					<SubmitButton label="Update" variant="default" size="sm" />
-				</Form>
+				<AssignControl action={assignForm} threadId={t.id} assignedToUserId={t.assignedToUserId} />
 			</div>
 		</details>
 	</ThreadHeader>
@@ -148,20 +111,40 @@
 		<ThreadTimeline messages={t.messages} notes={t.notes} contactName={t.contactName} />
 	</div>
 
-	<div class="flex flex-col gap-2">
-		{#if channelDisabled}
-			<Alert type="warning" href={resolve('/staff/settings')}>
-				The {channelLabel(t.channel)} channel is disabled. Enable it in Settings → Inbox Channels to send
-				replies.
-			</Alert>
-		{/if}
+	<!--
+		Channel config gates the composer but nothing above the fold needs it, so it
+		loads here rather than in the page's query. Keeping it a query the page
+		reads directly is also what keeps it fresh: `updateInboxChannelConfig`
+		refreshes it, and a wrapper query keyed by thread id could not be.
 
-		<ThreadComposer
-			threadId={t.id}
-			{replyForm}
-			{noteForm}
-			{replyBlockedReason}
-			onsent={() => getInboxThread(threadId).refresh()}
-		/>
-	</div>
+		Always-on channels deliver through the site itself, so they are never
+		disabled: a web thread replies by email to the address the contact form
+		captured, and a portal thread's reply is the message row itself.
+	-->
+	{#await getInboxEnabledChannels() then enabledChannels}
+		{@const channelDisabled =
+			!isAlwaysEnabledChannel(t.channel) && !enabledChannels.includes(t.channel)}
+		{@const replyBlockedReason =
+			(t.channel === 'web' || t.channel === 'email') && !t.contactEmail
+				? 'This conversation has no contact email, so there is nowhere to send a reply. Leave an internal note instead.'
+				: channelDisabled
+					? `Replies are turned off for the ${channelLabel(t.channel)} channel.`
+					: undefined}
+		<div class="flex flex-col gap-2">
+			{#if channelDisabled}
+				<Alert type="warning" href={resolve('/staff/settings')}>
+					The {channelLabel(t.channel)} channel is disabled. Enable it in Settings → Inbox Channels to
+					send replies.
+				</Alert>
+			{/if}
+
+			<ThreadComposer
+				threadId={t.id}
+				{replyForm}
+				{noteForm}
+				{replyBlockedReason}
+				onsent={() => getInboxThread(threadId).refresh()}
+			/>
+		</div>
+	{/await}
 </div>
