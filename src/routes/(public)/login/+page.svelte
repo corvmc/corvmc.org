@@ -21,8 +21,16 @@
 	// failed" because no token is produced. Reading `.current` keeps the redirect
 	// check without gating the markup.
 	const me = getMe();
+
+	// `handleSubmit` owns the navigation for a sign-in performed *here*. Without
+	// this flag its `invalidateAll` refreshes `getMe()`, `me.current` flips, and
+	// this effect fires a SECOND `goto` a few hundred ms behind the first one.
+	// SvelteKit treats the later navigation as superseding, so it aborts whatever
+	// navigation is in flight at that moment — including the first link the member
+	// clicks after landing, which then silently does nothing.
+	let navigatingAfterSignIn = false;
 	$effect(() => {
-		if (me.current) goto(resolve('/member'));
+		if (me.current && !navigatingAfterSignIn) goto(resolve('/member'));
 	});
 
 	let inviteToken = $derived(page.url.searchParams.get('invite'));
@@ -108,6 +116,7 @@
 		}
 
 		const redirectTo = new URLSearchParams(window.location.search).get('redirect') ?? '/member';
+		navigatingAfterSignIn = true;
 		await goto(redirectTo, { invalidateAll: true });
 	}
 </script>
