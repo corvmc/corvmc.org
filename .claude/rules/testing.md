@@ -39,9 +39,18 @@ test that asserts nothing fails.
   than borrowing one another spec asserts on. Restoring at the end of the test is not a substitute:
   a success toast is often the _previous_ save's, so the assertion passes instantly and the restore
   can still be in flight when Playwright closes the page.
-- Kill an orphaned `:4173` preview before debugging failures — `reuseExistingServer` will happily
-  serve a stale build.
+- **Ports are per-checkout.** The main checkout keeps :5173/:4173; a worktree gets its own pair,
+  derived from its path by `scripts/lib/checkout-ports.ts` and bound with `strictPort` so a
+  collision is loud rather than a silent bump to the next number. So an orphaned preview you need
+  to kill is one in _this_ checkout — `reuseExistingServer` can no longer adopt a sibling
+  worktree's server, because it is not on this checkout's port.
+- **One suite per machine.** `e2e/lock.ts` refuses a second run before it builds, naming the
+  checkout that holds the lock. Ports and state are isolated per checkout, but CPU is not, and
+  these assertions are load-dominated: two overlapping suites redden whole spec files in both runs
+  with failure sets that barely intersect. If a run died and left the lock, the error prints the
+  `rm` for it.
 - A whole-suite red run can still be workerd dying on `SQLITE_BUSY_RECOVERY` — but since the state
-  directory is the suite's own, that means a second `pnpm test:e2e` is running, not a dev server.
+  directory is the suite's own, that means a second `pnpm test:e2e` in this same checkout, not a
+  dev server, and the lock above should now have refused it first.
 - `playwright.config.ts` spawns `npm run build && npm run preview` for its web server. That is
   fine — it only delegates to `package.json`. Leave it alone.

@@ -14,7 +14,13 @@
  * next run clears it before seeding anyway, so nothing accumulates.
  */
 import { spawnSync } from 'node:child_process';
+import { acquireE2eLock, releaseE2eLock, releaseE2eLockOnExit } from './lock';
 import { resetE2eDatabase } from './reset-db';
+
+// Adopt the lock `e2e/prepare.ts` took: it exited when its seeding finished, so
+// the run this wrapper is about to start has to carry it the rest of the way.
+acquireE2eLock('run');
+releaseE2eLockOnExit();
 
 const result = spawnSync('pnpm', ['exec', 'playwright', 'test', ...process.argv.slice(2)], {
 	stdio: 'inherit'
@@ -45,4 +51,5 @@ if (status === 0) {
 	);
 }
 
+releaseE2eLock();
 process.exit(status);

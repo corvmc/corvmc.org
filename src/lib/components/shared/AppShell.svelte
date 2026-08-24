@@ -12,14 +12,12 @@
 
 	let {
 		drawerId,
-		user,
 		panels,
 		activePanel,
 		navigation: navSnippet,
 		children
 	}: {
 		drawerId: string;
-		user: { name: string; email: string };
 		panels: PanelTab[];
 		activePanel: string;
 		navigation: Snippet;
@@ -38,7 +36,7 @@
 	<input id={drawerId} type="checkbox" class="drawer-toggle" />
 
 	<div class="drawer-content flex h-screen flex-col overflow-hidden">
-		<AppTopbar {drawerId} {user} {panels} {activePanel} />
+		<AppTopbar {drawerId} {panels} {activePanel} />
 		<div class="tri-stripe"></div>
 
 		<main class="flex-1 overflow-x-hidden overflow-y-auto p-6 pt-0">
