@@ -2,5 +2,6 @@
   "Name": "Inbox Reply",
   "Alias": "inbox-reply",
   "Subject": "{{subject}}",
-  "TemplateType": "Standard"
+  "TemplateType": "Standard",
+  "LayoutTemplate": null
 }
