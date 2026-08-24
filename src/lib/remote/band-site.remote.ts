@@ -80,6 +80,7 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 		.select({
 			id: bandMember.id,
 			userName: user.name,
+			alias: bandMember.alias,
 			userImage: user.image,
 			position: bandMember.position,
 			role: bandMember.role
@@ -131,7 +132,8 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 			: null,
 		members: members.map((m) => ({
 			id: m.id,
-			name: m.userName,
+			// The band's own site credits people the way the band credits them.
+			name: m.alias ?? m.userName,
 			image: resolveImageUrl(m.userImage),
 			position: m.position,
 			role: m.role

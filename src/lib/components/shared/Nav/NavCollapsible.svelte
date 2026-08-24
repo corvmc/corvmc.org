@@ -7,6 +7,7 @@
 		label,
 		icon,
 		badge,
+		active,
 		childHrefs,
 		children
 	}: {
@@ -15,16 +16,18 @@
 		icon?: Snippet;
 		/** Queue count on the parent row, same treatment as Nav.Item. */
 		badge?: number;
+		/** Overrides the built-in exact-pathname match; see Nav.Item. */
+		active?: boolean;
 		childHrefs: string[];
 		children: Snippet;
 	} = $props();
 
 	let isOpen = $derived(childHrefs.some((href) => page.url.pathname.startsWith(href)));
-	let active = $derived(page.url.pathname === href);
+	let isActive = $derived(active ?? page.url.pathname === href);
 </script>
 
 <li>
-	<a {href} class:active>
+	<a {href} class:active={isActive}>
 		{@render icon?.()}
 		<span class="grow">{label}</span>
 		{#if badge}

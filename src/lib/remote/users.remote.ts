@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { titleCase } from '$lib/utils/format';
+import { SHORT_TEXT_MAX } from '$lib/config';
+import { mapDomainError } from '$lib/server/errors';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
@@ -23,12 +26,13 @@ import {
 	and
 } from 'drizzle-orm';
 import { getUserRoles } from '$lib/server/authorization';
-import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { paginate } from '$lib/server/db/paginate';
 import { jsonArrayField } from '$lib/utils/zod-json';
 import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
 import {
 	getAllBalances,
+	getBalance,
 	getUsageSinceLastAllocation,
 	addCredits,
 	deductCredits,
@@ -44,11 +48,7 @@ import {
 	deactivateUser as deactivateUserService,
 	deactivateUsers as deactivateUsersService,
 	reactivateUser as reactivateUserService,
-	purgeUser as purgeUserService,
-	UserNotFoundError,
-	UserNotDeactivatedError,
-	UserHasOwnedBandsError,
-	UserHasLinkedRecordsError
+	purgeUser as purgeUserService
 } from '$lib/server/user/user-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { isProfileComplete } from '$lib/server/directory/directory-service';
@@ -74,7 +74,7 @@ export const getStaffDashboard = query(async () => {
 		db.select({ value: count() }).from(role),
 		db.select({ value: count() }).from(user).where(gte(user.createdAt, startOfMonth)),
 		db
-			.select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt })
+			.select({ member: memberRefColumns(), createdAt: user.createdAt })
 			.from(user)
 			.orderBy(desc(user.createdAt))
 			.limit(5)
@@ -86,7 +86,11 @@ export const getStaffDashboard = query(async () => {
 			totalRoles: totalRolesResult[0].value,
 			newUsersThisMonth: newUsersResult[0].value
 		},
-		recentUsers
+		recentUsers: recentUsers.map((u) => ({
+			id: u.member.id,
+			createdAt: u.createdAt,
+			ref: toMemberRef(u.member)
+		}))
 	};
 });
 
@@ -117,13 +121,9 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 
 	const dataQ = db
 		.select({
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			pronouns: user.pronouns,
+			member: memberRefColumns(),
 			deletedAt: user.deletedAt,
-			createdAt: user.createdAt,
-			sustaining: isSustainingMemberSql(user.id)
+			createdAt: user.createdAt
 		})
 		.from(user)
 		.where(where)
@@ -137,24 +137,22 @@ export const getStaffUsers = query(staffUsersFilters, async (filters) => {
 		pageSize: 20
 	});
 
-	const userIds = users.map((u) => u.id);
-	const roleMap: Record<string, string[]> = {};
-
-	if (userIds.length > 0) {
-		const roleRows = await db
-			.select({ userId: modelHasRole.userId, roleName: role.name })
-			.from(modelHasRole)
-			.innerJoin(role, eq(role.id, modelHasRole.roleId))
-			.where(or(...userIds.map((id) => eq(modelHasRole.userId, id)))!);
-
-		for (const row of roleRows) {
-			if (!roleMap[row.userId]) roleMap[row.userId] = [];
-			roleMap[row.userId].push(row.roleName);
-		}
-	}
-
+	// The page used to be handed every role name of every row, from a second
+	// query, so that it could work out which glyph to draw. `memberRefColumns`
+	// answers that in the same statement, and the answer is the ref.
 	return {
-		rows: users.map((u) => ({ ...u, sustaining: !!u.sustaining, roles: roleMap[u.id] ?? [] })),
+		rows: users.map((u) => ({
+			// Kept alongside the ref: selection, the row link and the actions menu
+			// key off a definitely-present id, where `ref.id` is nullable because a
+			// ref may describe a member who is gone.
+			id: u.member.id,
+			email: u.member.email,
+			deletedAt: u.deletedAt,
+			createdAt: u.createdAt,
+			// Deactivation is the row's status, not a badge the page bolts on: it
+			// then rides the avatar like every other status in the app.
+			ref: { ...toMemberRef(u.member), status: u.deletedAt ? 'deactivated' : null }
+		})),
 		pagination
 	};
 });
@@ -275,7 +273,7 @@ const updateUserSchema = z.object({
 	// `x-sveltekit-pathname` header, so params are request input, not a
 	// trustworthy identifier. Matches deactivateUser/reactivateUser/purgeUser.
 	id: z.string().min(1),
-	name: z.string().trim().min(1).max(255),
+	name: z.string().trim().min(1).max(SHORT_TEXT_MAX),
 	pronouns: z.string().trim().max(50),
 	phone: z.string().trim().max(30),
 	// No `.catch([])` here: silently coercing a malformed roles field to an empty
@@ -353,6 +351,18 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 	return { success: true };
 });
 
+/**
+ * The one message for "you asked to deduct more than they have", used both by
+ * the pre-check and by the race that slips past it.
+ *
+ * Deliberately not `InsufficientCreditsError.message`, which reads
+ * "Insufficient free_hours: requested 300, available 200" — that leaks the raw
+ * enum into something a staff member reads.
+ */
+function overdrawn(type: CreditType, available: number, requested: number): string {
+	return `${titleCase(type)} balance is ${available} — cannot deduct ${requested}.`;
+}
+
 export const adjustCredits = form(
 	z.object({
 		userId: z.string(),
@@ -360,7 +370,7 @@ export const adjustCredits = form(
 		amount: z.string(),
 		description: z.string().min(1)
 	}),
-	async (data) => {
+	async (data, issue) => {
 		await requireStaff();
 
 		const userId = data.userId as string;
@@ -368,25 +378,32 @@ export const adjustCredits = form(
 		const amount = Number(data.amount);
 		const description = data.description as string;
 
-		if (!Number.isFinite(amount)) throw error(400, 'Amount must be a number');
-		if (amount === 0) throw error(400, 'Amount cannot be zero');
+		// Everything a staffer can get wrong here is a field they can see and fix,
+		// so all of it resolves to an issue on `amount` rather than a thrown
+		// status. A thrown error tears the modal down through the error boundary
+		// and takes the description they already typed with it.
+		if (!Number.isFinite(amount)) invalid(issue.amount('Enter a number.'));
+		if (amount === 0) invalid(issue.amount('Enter an amount above or below zero.'));
 
 		if (amount > 0) {
 			await addCredits(userId, type, amount, 'admin_adjustment', undefined, description);
 		} else {
+			const units = Math.abs(amount);
+
+			// Checked before deducting so the staffer gets the balance under the
+			// field. deductCredits still guards the write — this read only exists to
+			// produce a better message than "the request failed".
+			const available = await getBalance(userId, type);
+			if (units > available) invalid(issue.amount(overdrawn(type, available, units)));
+
 			try {
-				await deductCredits(
-					userId,
-					type,
-					Math.abs(amount),
-					'admin_adjustment',
-					undefined,
-					description
-				);
+				await deductCredits(userId, type, units, 'admin_adjustment', undefined, description);
 			} catch (e) {
-				// Deducting more than the member holds is an ordinary staff mistake,
-				// not a server fault — surface the balance instead of a 500.
-				if (e instanceof InsufficientCreditsError) throw error(409, e.message);
+				// Someone spent between the read above and this write. Same message,
+				// re-read so the number in it is the one that actually applies.
+				if (e instanceof InsufficientCreditsError) {
+					invalid(issue.amount(overdrawn(type, await getBalance(userId, type), units)));
+				}
 				throw e;
 			}
 		}
@@ -405,8 +422,7 @@ export const deactivateUser = form(
 		try {
 			await deactivateUserService(data.id);
 		} catch (err) {
-			if (err instanceof UserNotFoundError) error(404, err.message);
-			throw err;
+			mapDomainError(err);
 		}
 		void getUser(data.id).refresh();
 		return { success: true };
@@ -435,8 +451,7 @@ export const reactivateUser = form(
 		try {
 			await reactivateUserService(data.id);
 		} catch (err) {
-			if (err instanceof UserNotFoundError) error(404, err.message);
-			throw err;
+			mapDomainError(err);
 		}
 		void getUser(data.id).refresh();
 		return { success: true };
@@ -452,11 +467,10 @@ export const purgeUser = form(
 		try {
 			await purgeUserService(data.id);
 		} catch (err) {
-			if (err instanceof UserNotFoundError) error(404, err.message);
-			if (err instanceof UserNotDeactivatedError) error(409, err.message);
-			if (err instanceof UserHasOwnedBandsError) error(409, err.message);
-			if (err instanceof UserHasLinkedRecordsError) error(409, err.message);
-			throw err;
+			// Every refusal purgeUser can raise carries its own status now, including
+			// the published-listings guard that a hand-written ladder here once
+			// omitted (and so returned 500). See errors.spec.ts.
+			mapDomainError(err);
 		}
 		return { success: true };
 	}

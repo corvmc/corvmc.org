@@ -26,26 +26,26 @@
 
 <div class="flex items-center gap-4">
 	{#if prevHref}
-		<Button href={prevHref} class="btn-ghost btn-sm" title="Previous (←)">
+		<Button href={prevHref} variant="ghost" size="sm" title="Previous (←)">
 			<IconArrowLeft size={16} />
 			Prev
 		</Button>
 	{:else}
-		<Button disabled class="btn-ghost btn-sm">
+		<Button disabled variant="ghost" size="sm">
 			<IconArrowLeft size={16} />
 			Prev
 		</Button>
 	{/if}
 
 	{#if nextHref}
-		<Button href={nextHref} class="btn-ghost btn-sm" title="Next (→)">
+		<Button href={nextHref} variant="ghost" size="sm" title="Next (→)">
 			Next
 			<IconArrowRight size={16} />
 		</Button>
 	{:else if endLabel}
 		<span class="text-xs opacity-50">{endLabel}</span>
 	{:else}
-		<Button disabled class="btn-ghost btn-sm">
+		<Button disabled variant="ghost" size="sm">
 			Next
 			<IconArrowRight size={16} />
 		</Button>

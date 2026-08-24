@@ -28,10 +28,19 @@
 	} from '$lib/remote/suggestions.remote';
 
 	let id = $derived(page.params.id!);
+
+	// Above the `await`s on purpose. Declared after one, `candidates` is compiled
+	// as "blocked", and `{#each await candidates}` below then becomes
+	// `$.async(node, [blocker], [expression], …)` — the shape that crashes with
+	// `null is not an object (evaluating 'c.async_deriveds')` and takes the page
+	// down (JAVASCRIPT-SVELTEKIT-25). See the longer note in
+	// routes/member/reservations/+page.svelte and the guard in
+	// async-effect-shape.spec.ts.
+	let candidates = $derived(getMergeCandidates(id));
+
 	let s = $derived(await getStaffSuggestionDetail(id));
 
 	let isMerged = $derived(!!s.mergedIntoId);
-	let candidates = $derived(getMergeCandidates(id));
 	let pendingEdit = $derived(await getSuggestionPendingEdit(id));
 
 	function refresh() {
@@ -94,7 +103,7 @@
 
 	{#if s.visibility === 'pending_review'}
 		<InfoCard title="Review" class="bg-base-200 shadow-none">
-			<p class="mb-3 text-sm opacity-70">
+			<p class="mb-3 text-muted">
 				This member posts under review, so nobody can see this yet. Approving puts it on the board;
 				rejecting hides it. Either way they're told.
 			</p>
@@ -104,7 +113,8 @@
 				modalTitle="Review suggestion"
 				submitLabel="Save"
 				successToast="Reviewed"
-				class="btn-primary btn-sm"
+				variant="primary"
+				size="sm"
 				onsuccess={refresh}
 			>
 				{#snippet form()}
@@ -112,10 +122,7 @@
 					<div class="space-y-3">
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Decision</span></div>
-							<Select
-								class="select-bordered w-full"
-								{...reviewSuggestion.fields.decision.as('select')}
-							>
+							<Select class="w-full" {...reviewSuggestion.fields.decision.as('select')}>
 								<option value="approve">Approve — put it on the board</option>
 								<option value="reject">Reject — hide it</option>
 							</Select>
@@ -123,7 +130,7 @@
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Note to the member (optional)</span></div>
 							<textarea
-								class="textarea textarea-bordered w-full"
+								class="textarea w-full"
 								rows="3"
 								{...reviewSuggestion.fields.note.as('text')}
 							></textarea>
@@ -136,7 +143,7 @@
 
 	{#if pendingEdit}
 		<InfoCard title="Proposed edit" class="bg-base-200 shadow-none">
-			<p class="mb-3 text-sm opacity-70">
+			<p class="mb-3 text-muted">
 				{pendingEdit.requestedByName ?? 'The author'} wants to change this after
 				{s.voteCount} member{s.voteCount === 1 ? '' : 's'} already voted for it. Approving replaces the
 				text below; the votes stay either way.
@@ -146,11 +153,11 @@
 			     the failure this whole flow exists to prevent. -->
 			<div class="grid gap-4 md:grid-cols-2">
 				<div>
-					<h3 class="mb-1 text-sm font-medium opacity-60">What members voted for</h3>
+					<h3 class="mb-1 text-muted font-medium">What members voted for</h3>
 					<div class="rounded border border-base-300 p-3">
 						<p class="font-medium">{pendingEdit.originalTitle}</p>
 						<p class="mt-1 text-sm whitespace-pre-wrap">{pendingEdit.originalBody}</p>
-						<p class="mt-2 text-xs opacity-60">
+						<p class="mt-2 text-subtle">
 							{suggestionCategoryLabels[
 								pendingEdit.originalCategory as keyof typeof suggestionCategoryLabels
 							] ?? pendingEdit.originalCategory}
@@ -158,11 +165,11 @@
 					</div>
 				</div>
 				<div>
-					<h3 class="mb-1 text-sm font-medium opacity-60">Proposed</h3>
+					<h3 class="mb-1 text-muted font-medium">Proposed</h3>
 					<div class="rounded border border-primary/40 p-3">
 						<p class="font-medium">{pendingEdit.proposedTitle}</p>
 						<p class="mt-1 text-sm whitespace-pre-wrap">{pendingEdit.proposedBody}</p>
-						<p class="mt-2 text-xs opacity-60">
+						<p class="mt-2 text-subtle">
 							{suggestionCategoryLabels[
 								pendingEdit.proposedCategory as keyof typeof suggestionCategoryLabels
 							] ?? pendingEdit.proposedCategory}
@@ -178,7 +185,8 @@
 					modalTitle="Review the proposed edit"
 					submitLabel="Save"
 					successToast="Edit reviewed"
-					class="btn-primary btn-sm"
+					variant="primary"
+					size="sm"
 					onsuccess={refresh}
 				>
 					{#snippet form()}
@@ -187,10 +195,7 @@
 						<div class="space-y-3">
 							<label class="form-control w-full">
 								<div class="label"><span class="label-text">Decision</span></div>
-								<Select
-									class="select-bordered w-full"
-									{...reviewSuggestionEdit.fields.decision.as('select')}
-								>
+								<Select class="w-full" {...reviewSuggestionEdit.fields.decision.as('select')}>
 									<option value="approve">Approve — replace the text</option>
 									<option value="reject">Reject — keep what members voted for</option>
 								</Select>
@@ -200,7 +205,7 @@
 									<span class="label-text">Note to the member (optional)</span>
 								</div>
 								<textarea
-									class="textarea textarea-bordered w-full"
+									class="textarea w-full"
 									rows="3"
 									{...reviewSuggestionEdit.fields.notes.as('text')}
 								></textarea>
@@ -215,11 +220,11 @@
 	<InfoCard title="Response">
 		{#if s.responseBody}
 			<p class="whitespace-pre-wrap">{s.responseBody}</p>
-			<p class="mt-2 text-sm opacity-60">
+			<p class="mt-2 text-muted">
 				{s.responderName ?? 'Staff'}{s.responseAt ? ` · ${formatDateTime(s.responseAt)}` : ''}
 			</p>
 		{:else}
-			<p class="text-sm opacity-70">Nobody has written back yet.</p>
+			<p class="text-muted">Nobody has written back yet.</p>
 		{/if}
 
 		<div class="mt-3">
@@ -229,7 +234,8 @@
 				modalTitle="Respond to suggestion"
 				submitLabel="Save"
 				successToast="Response saved"
-				class="btn-primary btn-sm"
+				variant="primary"
+				size="sm"
 				onsuccess={refresh}
 			>
 				{#snippet form()}
@@ -237,10 +243,7 @@
 					<div class="space-y-3">
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Status</span></div>
-							<Select
-								class="select-bordered w-full"
-								{...respondToSuggestion.fields.status.as('select', s.status)}
-							>
+							<Select class="w-full" {...respondToSuggestion.fields.status.as('select', s.status)}>
 								{#each suggestionStatuses as st (st)}
 									<option value={st}>{suggestionStatusLabels[st]}</option>
 								{/each}
@@ -249,14 +252,14 @@
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Public reply</span></div>
 							<textarea
-								class="textarea textarea-bordered w-full"
+								class="textarea w-full"
 								rows="4"
 								{...respondToSuggestion.fields.response.as('text', s.responseBody ?? '')}
 							></textarea>
 						</label>
 						<!-- Status and reply are one form on purpose: split, the normal
 						     workflow would send the member two notifications for one act. -->
-						<p class="text-sm opacity-70">
+						<p class="text-muted">
 							This is shown on the suggestion for everyone to read, and the member who posted it
 							gets one notification.
 						</p>
@@ -269,7 +272,7 @@
 	{#if !isMerged}
 		<div class="grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Moderation" class="bg-base-200 shadow-none">
-				<p class="mb-3 text-sm opacity-70">
+				<p class="mb-3 text-muted">
 					{#if s.visibility === 'hidden'}
 						Put this back on the board if it was taken down by mistake.
 					{:else}
@@ -298,7 +301,7 @@
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Reason (shown to the member)</span></div>
 							<textarea
-								class="textarea textarea-bordered w-full"
+								class="textarea w-full"
 								rows="3"
 								{...setSuggestionVisibility.fields.note.as('text')}
 							></textarea>
@@ -308,7 +311,7 @@
 			</InfoCard>
 
 			<InfoCard title="Merge" class="bg-base-200 shadow-none">
-				<p class="mb-3 text-sm opacity-70">
+				<p class="mb-3 text-muted">
 					Fold this into the suggestion it duplicates. Its votes move across, and anyone who voted
 					for both is only counted once.
 				</p>
@@ -318,7 +321,9 @@
 					modalTitle="Merge suggestion"
 					submitLabel="Merge"
 					successToast="Merged"
-					class="btn-outline btn-sm"
+					variant="default"
+					size="sm"
+					outline
 					onsuccess={(r) => {
 						if (r && typeof r === 'object' && 'targetId' in r) {
 							void goto(resolve(`/staff/suggestions/${r.targetId as string}`));
@@ -329,16 +334,13 @@
 						<input {...mergeSuggestion.fields.sourceId.as('hidden', id)} />
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Merge into</span></div>
-							<Select
-								class="select-bordered w-full"
-								{...mergeSuggestion.fields.targetId.as('select')}
-							>
+							<Select class="w-full" {...mergeSuggestion.fields.targetId.as('select')}>
 								{#each await candidates as c (c.id)}
 									<option value={c.id}>{c.title} ({c.voteCount})</option>
 								{/each}
 							</Select>
 						</label>
-						<p class="mt-3 text-sm opacity-70">
+						<p class="mt-3 text-muted">
 							This suggestion comes off the board and points at the one you pick. There's no undo.
 						</p>
 					{/snippet}

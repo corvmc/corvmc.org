@@ -155,6 +155,40 @@ export async function listMembers(filters?: MemberFilters) {
 	return rows.map(mapMemberRow);
 }
 
+/**
+ * Typeahead candidates for the message composer.
+ *
+ * Deliberately *not* `listMembers`: that eager-loads instruments, genres and
+ * every band membership for every matching member, with no limit — fine for a
+ * directory page rendered once, ruinous for a query that fires on each
+ * keystroke. This selects the three columns a picker draws and stops at `limit`.
+ *
+ * It reuses `memberWhereConditions('members', …)`, so it can only ever surface
+ * members the viewer could already browse in the directory. That is the whole
+ * privacy argument for the picker: it shows nothing new.
+ *
+ * Note what it does **not** filter on: `acceptsDirectMessages`. Hiding or
+ * greying out members who have messaging off would tell a sender exactly what
+ * `startDirectThread`'s silent drops exist to withhold — a sender who can spot a
+ * closed door can tell a decline from an unopened request. Sending stays
+ * silently dropped instead. Same reasoning keeps the directory Message button
+ * visible for everyone; see `docs/specs/shipped/direct-messages-spec.md`.
+ */
+export async function searchDirectoryMembers(search: string, viewerId: string, limit = 10) {
+	// `tagline` rides along because two members called Chris are otherwise
+	// indistinguishable in the list, and picking the wrong recipient for a private
+	// message is not a recoverable mistake. It is a directory-public field, so it
+	// widens nothing.
+	return db.query.user.findMany({
+		where: {
+			AND: [memberWhereConditions('members', { search }), { id: { ne: viewerId } }]
+		},
+		orderBy: { name: 'asc' },
+		limit,
+		columns: { id: true, name: true, tagline: true }
+	});
+}
+
 /** Public directory — only directoryVisibility = 'public' */
 export async function listPublicMembers(filters?: MemberFilters) {
 	const rows = await db.query.user.findMany({

@@ -58,7 +58,7 @@
 			</div>
 		{/if}
 
-		<div class="mt-6 text-xs" style="color: var(--fg-3)">
+		<div class="mt-6 text-xs text-fg-3">
 			<p>&copy; {new Date().getFullYear()} Corvallis Music Collective. All rights reserved.</p>
 			<p class="mt-1">
 				501(c)(3) Nonprofit{#if addressLine}&nbsp;&middot; {addressLine}{/if}

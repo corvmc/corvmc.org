@@ -54,7 +54,37 @@ export const RESERVED_SLUGS = new Set([
 	'store',
 	'donate',
 	'corvmc',
-	'cmc'
+	'cmc',
+	// Group vocabulary, reserved ahead of the groups module (docs/specs/groups-spec.md).
+	// A word is free to reserve while nothing holds it and impossible to reclaim
+	// afterwards, so these land before the first group exists rather than after.
+	// `class`/`classes` are here even though classes are out of scope, for that
+	// reason alone; `act`/`acts` protect the contact-sheet root at /act/{token}.
+	'group',
+	'groups',
+	'club',
+	'clubs',
+	'class',
+	'classes',
+	'committee',
+	'committees',
+	'file',
+	'files',
+	'act',
+	'acts',
+	// Live top-level route roots. These never collided as *paths* — a band slug
+	// only ever appears nested, under /band/{slug} or /directory/bands/{slug} —
+	// but this set governs subdomains, so without them a band could hold
+	// membership.corvmc.org or contribute.corvmc.org.
+	'about',
+	'contact',
+	'contribute',
+	'local-resources',
+	'membership',
+	'programs',
+	'show-tonight',
+	'subscribe',
+	'unsubscribe'
 ]);
 
 export function isReservedSlug(slug: string): boolean {

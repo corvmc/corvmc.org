@@ -89,6 +89,17 @@ vi.mock('./event-service', () => ({
 	setEventLineup: (...a: unknown[]) => setEventLineup(...(a as []))
 }));
 
+// Standing lives in one shared service now, so it is a mock here rather than
+// another row in the select queue. What this file cares about is which branch a
+// standing sends a listing down; the storage is standing-service.spec.ts's.
+//
+// `vi.hoisted` because the imports below are hoisted above this line: a plain
+// `const` would still be in its temporal dead zone when the factory runs.
+const { getStandingMock } = vi.hoisted(() => ({ getStandingMock: vi.fn() }));
+vi.mock('$lib/server/moderation/standing-service', () => ({
+	getStanding: (...a: unknown[]) => getStandingMock(...(a as []))
+}));
+
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import { db } from '$lib/server/db';
 import {
@@ -101,7 +112,6 @@ import {
 	approveSubmission,
 	rejectSubmission,
 	listPendingSubmissions,
-	getCommunityStanding,
 	ListingNotFoundError,
 	NotListingOwnerError,
 	ListingStatusError,
@@ -128,14 +138,28 @@ function listing(overrides: Record<string, unknown> = {}) {
 
 /** No standing row = trusted, which is the default everything is built around. */
 function trusted() {
-	selectResultQueue.push([]);
+	getStandingMock.mockResolvedValue({
+		status: 'none',
+		reason: null,
+		triggeringFlagId: null,
+		updatedAt: null
+	});
 }
 function reviewRequired(reason: string | null = null) {
-	selectResultQueue.push([{ requiresReview: true, reason, updatedAt: new Date() }]);
+	getStandingMock.mockResolvedValue({
+		status: 'restricted',
+		reason,
+		triggeringFlagId: null,
+		updatedAt: new Date()
+	});
 }
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	// Trusted is the default everything is built around, and mockResolvedValue
+	// outlives clearAllMocks — so reset it rather than leaking one test's
+	// probation into the next.
+	trusted();
 	selectResult = [];
 	selectResultQueue = [];
 	insertResult = [{ id: 'evt-1', posterKey: null }];
@@ -418,23 +442,5 @@ describe('listPendingSubmissions', () => {
 		);
 		expect(rendered).toContain('"status"');
 		expect(params).toEqual(['pending_review']);
-	});
-});
-
-describe('getCommunityStanding', () => {
-	it('treats an absent row as trusted — the case the whole feature assumes', async () => {
-		selectResult = [];
-		await expect(getCommunityStanding(OWNER)).resolves.toEqual({
-			requiresReview: false,
-			reason: null,
-			updatedAt: null
-		});
-	});
-
-	it('reports a revoked member as review-required, with the staff note', async () => {
-		selectResult = [{ requiresReview: true, reason: 'Upheld report', updatedAt: new Date(0) }];
-		const standing = await getCommunityStanding(OWNER);
-		expect(standing.requiresReview).toBe(true);
-		expect(standing.reason).toBe('Upheld report');
 	});
 });

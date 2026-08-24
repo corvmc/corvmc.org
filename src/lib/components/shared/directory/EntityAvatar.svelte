@@ -1,19 +1,25 @@
 <script lang="ts">
 	import { Avatar } from 'bits-ui';
 	import { hashPattern } from '$lib/utils/patterns';
+	import { imageSrc, type ImagePreset } from '$lib/utils/images';
 
 	let {
 		shape = 'round',
 		name,
 		image,
+		size = 'avatar-md',
 		class: className = ''
 	}: {
 		/** member = round, band = square — the directory-wide convention */
 		shape?: 'round' | 'square';
 		name: string;
 		image?: string | null;
+		/** Match the CSS size this is rendered at, so the fetched image isn't oversized. */
+		size?: ImagePreset;
 		class?: string;
 	} = $props();
+
+	const img = $derived(imageSrc(image, size));
 
 	const initials = $derived(
 		name
@@ -33,7 +39,8 @@
 		<span class="avatar-initials">{initials}</span>
 	</Avatar.Fallback>
 	<Avatar.Image
-		src={image ?? undefined}
+		src={img.src}
+		srcset={img.srcset}
 		alt={name}
 		class="absolute inset-0 size-full object-cover"
 	/>

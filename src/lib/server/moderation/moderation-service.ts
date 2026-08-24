@@ -1,12 +1,7 @@
 import { db } from '$lib/server/db';
-import {
-	userBlock,
-	messagingStanding,
-	type UserBlockSource,
-	type MessagingStatus,
-	type MessagingStandingSource
-} from '$lib/server/db/schema/moderation';
+import { userBlock, type UserBlockSource } from '$lib/server/db/schema/moderation';
 import { user } from '$lib/server/db/schema/authentication';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import { eq, and, or, desc, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 
@@ -108,132 +103,57 @@ export async function listBlockedBy(blockerUserId: string): Promise<BlockedMembe
 }
 
 // ---------------------------------------------------------------------------
-// Messaging standing
+// Messaging policy
 // ---------------------------------------------------------------------------
 
-export interface MessagingStandingState {
-	status: MessagingStatus;
-	source: MessagingStandingSource | null;
-	reason: string | null;
-	updatedAt: Date | null;
-}
+// Two halves decide whether a member can be messaged, and they are deliberately
+// different things:
+//
+//   - their `messaging` standing, which staff or an upheld report imposed, and
+//   - `user.acceptsDirectMessages`, which is the member's own preference.
+//
+// Only the second is theirs to change. Keeping them apart is why neither needs
+// to record who set it — see `docs/specs/shipped/member-standing-spec.md`.
 
-const UNRESTRICTED: MessagingStandingState = {
-	status: 'none',
-	source: null,
-	reason: null,
-	updatedAt: null
-};
-
-/**
- * No row means no restriction — the overwhelmingly common case, and the default
- * the whole feature is built around. Same contract as `getCommunityStanding`.
- */
-export async function getMessagingStanding(userId: string): Promise<MessagingStandingState> {
-	const [row] = await db
-		.select({
-			status: messagingStanding.status,
-			source: messagingStanding.source,
-			reason: messagingStanding.reason,
-			updatedAt: messagingStanding.updatedAt
-		})
-		.from(messagingStanding)
-		.where(eq(messagingStanding.userId, userId))
-		.limit(1);
-
-	if (!row) return UNRESTRICTED;
-	return row;
-}
-
-/** May this member start new conversations? */
+/** May this member start new conversations? Restriction only; a preference doesn't stop them replying. */
 export async function canInitiateMessages(userId: string): Promise<boolean> {
-	const { status } = await getMessagingStanding(userId);
+	const { status } = await getStanding(userId, 'messaging');
 	return status === 'none';
 }
 
-/** May anyone message this member at all, in either direction? */
-export async function messagingIsDisabled(userId: string): Promise<boolean> {
-	const { status } = await getMessagingStanding(userId);
-	return status === 'disabled';
-}
-
-export interface SetMessagingStandingParams {
-	userId: string;
-	status: MessagingStatus;
-	source: MessagingStandingSource;
-	reason?: string | null;
-	/** Who made the change. Null when the member changed their own. */
-	actorUserId?: string | null;
-	/** The upheld report, when a report is what caused this. */
-	flagId?: string | null;
-}
-
-export class MessagingStandingNotYoursError extends Error {
-	constructor() {
-		super('This restriction was applied by staff and cannot be changed here.');
-		this.name = 'MessagingStandingNotYoursError';
-	}
+/** The member's own switch, on its own. Defaults to reachable for a row that isn't there. */
+export async function acceptsDirectMessages(userId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ acceptsDirectMessages: user.acceptsDirectMessages })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	return row?.acceptsDirectMessages ?? true;
 }
 
 /**
- * Write a member's messaging standing.
+ * May anyone message this member at all, in either direction?
  *
- * A member switching their own messaging off — and back on — goes through here
- * with `source: 'member'`, and may only ever write over an absent row or one
- * they set themselves. Without that check, "turn my messages back on" would
- * also clear a restriction staff imposed, which is the entire point of having
- * imposed it.
- *
- * Lifting sets `status: 'none'` rather than deleting the row, so a member who
- * was restricted and later cleared still reads differently from one who never
- * was.
+ * True when staff switched messaging off *or* the member did. The caller cannot
+ * tell which, and shouldn't: both answers are "not reachable", and telling a
+ * sender which one it was would leak either a moderation decision or a personal
+ * preference.
  */
-export async function setMessagingStanding(params: SetMessagingStandingParams): Promise<void> {
-	if (params.source === 'member') {
-		const existing = await getMessagingStanding(params.userId);
-		const theirOwn = existing.status === 'none' || existing.source === 'member';
-		if (!theirOwn) throw new MessagingStandingNotYoursError();
-	}
-
-	const values = {
-		userId: params.userId,
-		status: params.status,
-		source: params.source,
-		reason: params.reason ?? null,
-		triggeringFlagId: params.flagId ?? null,
-		updatedByUserId: params.actorUserId ?? null,
-		updatedAt: new Date()
-	};
-
-	await db
-		.insert(messagingStanding)
-		.values(values)
-		.onConflictDoUpdate({
-			target: messagingStanding.userId,
-			set: {
-				status: values.status,
-				source: values.source,
-				reason: values.reason,
-				triggeringFlagId: values.triggeringFlagId,
-				updatedByUserId: values.updatedByUserId,
-				updatedAt: values.updatedAt
-			}
-		});
+export async function messagingIsDisabled(userId: string): Promise<boolean> {
+	if (!(await acceptsDirectMessages(userId))) return true;
+	const { status } = await getStanding(userId, 'messaging');
+	return status === 'disabled';
 }
 
-/** Called from flag-service when staff uphold a report about a conversation. */
-export async function restrictMessaging(params: {
-	userId: string;
-	flagId: string;
-	staffId: string;
-	reason?: string | null;
-}): Promise<void> {
-	await setMessagingStanding({
-		userId: params.userId,
-		status: 'restricted',
-		source: 'report',
-		reason: params.reason ?? null,
-		actorUserId: params.staffId,
-		flagId: params.flagId
-	});
+/** The member's own switch. Never touches standing, so it cannot lift a restriction. */
+export async function setAcceptsDirectMessages(userId: string, accepts: boolean): Promise<void> {
+	await db.update(user).set({ acceptsDirectMessages: accepts }).where(eq(user.id, userId));
+}
+
+/** What the member sees on their own account page: their switch, plus any restriction on them. */
+export async function getMessagingState(userId: string) {
+	return {
+		acceptsDirectMessages: await acceptsDirectMessages(userId),
+		standing: await getStanding(userId, 'messaging')
+	};
 }

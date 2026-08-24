@@ -1,14 +1,17 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
 	import { getBandUpcoming } from '$lib/remote/bands.remote';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import StatCard from '$lib/components/shared/StatCard.svelte';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 
@@ -27,18 +30,9 @@
 	{:then sessions}
 		<!-- Band overview -->
 		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-			<div class="stat bg-base-100 shadow rounded-box">
-				<div class="stat-title">Members</div>
-				<div class="stat-value text-2xl">{band.memberCount}</div>
-			</div>
-			<div class="stat bg-base-100 shadow rounded-box">
-				<div class="stat-title">Upcoming Sessions</div>
-				<div class="stat-value text-2xl">{sessions.length}</div>
-			</div>
-			<div class="stat bg-base-100 shadow rounded-box">
-				<div class="stat-title">Your Role</div>
-				<div class="stat-value text-2xl capitalize">{layout.userRole}</div>
-			</div>
+			<StatCard title="Members" value={band.memberCount} size="sm" />
+			<StatCard title="Upcoming Sessions" value={sessions.length} size="sm" />
+			<StatCard title="Your Role" value={layout.userRole} size="sm" valueClass="capitalize" />
 		</div>
 
 		<!-- Upcoming reservations -->
@@ -55,27 +49,22 @@
 			{:else}
 				<div class="grid grid-cols-1 gap-3">
 					{#each sessions as res (res.id)}
-						<div class="card bg-base-100 shadow">
-							<div class="card-body py-4 flex-row items-center justify-between">
-								<div>
-									<p class="font-medium">
-										{formatDate(res.startsAt)} &middot; {formatTime(res.startsAt)}–{formatTime(
-											res.endsAt
-										)}
-									</p>
-									<p class="text-sm opacity-60">
-										{formatDuration(res.startsAt, res.endsAt)}
-										{#if res.bookedByName}
-											&middot; Booked by {res.bookedByName}
+						<Card>
+							<CardBody row class="py-4">
+								<EntityIdentity ref={res.ref} size="md">
+									{#snippet subtitle()}
+										{res.ref.subtitle}
+										{#if res.bookedBy.id}
+											&middot; Booked by {res.bookedBy.title}
 										{/if}
 										{#if res.notes}
 											&middot; {res.notes}
 										{/if}
-									</p>
-								</div>
+									{/snippet}
+								</EntityIdentity>
 								<StatusBadge status={res.status} />
-							</div>
-						</div>
+							</CardBody>
+						</Card>
 					{/each}
 				</div>
 			{/if}
@@ -83,9 +72,13 @@
 
 		<!-- Quick links -->
 		<div class="flex gap-3">
-			<Button href="/band/{band.slug}/members" class="btn-outline btn-sm">Manage Members</Button>
+			<Button href="/band/{band.slug}/members" variant="default" size="sm" outline
+				>Manage Members</Button
+			>
 			{#if isOwnerOrAdmin}
-				<Button href="/band/{band.slug}/edit" class="btn-outline btn-sm">Edit Band Profile</Button>
+				<Button href="/band/{band.slug}/edit" variant="default" size="sm" outline
+					>Edit Band Profile</Button
+				>
 			{/if}
 		</div>
 	{/await}

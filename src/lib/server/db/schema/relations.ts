@@ -65,20 +65,22 @@ export const relations = defineRelations(schema, (t) => ({
 		})
 	},
 	// Two FKs to user (the member, and the staffer who last changed it), so both
-	// need an alias to say which one they follow.
-	communityEventStanding: {
+	// need an alias to say which one they follow. One entry covers every scope —
+	// this replaced communityEventStanding, suggestionStanding and
+	// messagingStanding, which had this same shape three times.
+	memberStanding: {
 		user: t.one.user({
-			from: t.communityEventStanding.userId,
+			from: t.memberStanding.userId,
 			to: t.user.id,
-			alias: 'communityEventStanding_user'
+			alias: 'memberStanding_user'
 		}),
 		updatedBy: t.one.user({
-			from: t.communityEventStanding.updatedByUserId,
+			from: t.memberStanding.updatedByUserId,
 			to: t.user.id,
-			alias: 'communityEventStanding_updatedBy'
+			alias: 'memberStanding_updatedBy'
 		}),
 		triggeringFlag: t.one.contentFlag({
-			from: t.communityEventStanding.triggeringFlagId,
+			from: t.memberStanding.triggeringFlagId,
 			to: t.contentFlag.id
 		})
 	},
@@ -93,24 +95,6 @@ export const relations = defineRelations(schema, (t) => ({
 			from: t.userBlock.blockedUserId,
 			to: t.user.id,
 			alias: 'userBlock_blocked'
-		})
-	},
-	// Same shape as communityEventStanding: the member, plus whoever last
-	// changed it.
-	messagingStanding: {
-		user: t.one.user({
-			from: t.messagingStanding.userId,
-			to: t.user.id,
-			alias: 'messagingStanding_user'
-		}),
-		updatedBy: t.one.user({
-			from: t.messagingStanding.updatedByUserId,
-			to: t.user.id,
-			alias: 'messagingStanding_updatedBy'
-		}),
-		triggeringFlag: t.one.contentFlag({
-			from: t.messagingStanding.triggeringFlagId,
-			to: t.contentFlag.id
 		})
 	},
 	equipmentCategory: {
@@ -207,13 +191,6 @@ export const relations = defineRelations(schema, (t) => ({
 	suggestionEdit: {
 		suggestion: t.one.suggestion({ from: t.suggestionEdit.suggestionId, to: t.suggestion.id }),
 		requestedBy: t.one.user({ from: t.suggestionEdit.requestedByUserId, to: t.user.id })
-	},
-	suggestionStanding: {
-		user: t.one.user({ from: t.suggestionStanding.userId, to: t.user.id }),
-		triggeringFlag: t.one.contentFlag({
-			from: t.suggestionStanding.triggeringFlagId,
-			to: t.contentFlag.id
-		})
 	},
 	helpCategory: {
 		articles: t.many.helpArticle()

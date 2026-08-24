@@ -1,7 +1,6 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
-import { contentFlag } from './flag';
 import { suggestionCategories, suggestionStatuses, suggestionVisibilities } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -181,33 +180,6 @@ export const suggestionEdit = sqliteTable(
 	]
 );
 
-/**
- * Posting trust. A row exists only once a member has had a report upheld
- * against one of their suggestions; absence means good standing.
- *
- * Mirrors `communityEventStanding` rather than sharing it: an upheld report
- * about an event listing should not silently put someone on probation for
- * suggestions. Two domains isn't a pattern — when a third needs standing,
- * merge all three into a scoped `member_standing`.
- */
-export const suggestionStanding = sqliteTable('suggestion_standing', {
-	userId: text('user_id')
-		.primaryKey()
-		.references(() => user.id, { onDelete: 'cascade' }),
-	requiresReview: integer('requires_review', { mode: 'boolean' }).notNull().default(true),
-	/** The staff note from the upheld report, shown to the member. */
-	reason: text('reason'),
-	/** The report that cost them trust. Kept for "why am I in review?". */
-	triggeringFlagId: text('triggering_flag_id').references(() => contentFlag.id, {
-		onDelete: 'set null'
-	}),
-	updatedByUserId: text('updated_by_user_id').references(() => user.id, { onDelete: 'set null' }),
-	updatedAt: integer('updated_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`(unixepoch())`)
-});
-
 export type Suggestion = typeof suggestion.$inferSelect;
 export type SuggestionVote = typeof suggestionVote.$inferSelect;
-export type SuggestionStanding = typeof suggestionStanding.$inferSelect;
 export type SuggestionEdit = typeof suggestionEdit.$inferSelect;

@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/private';
+import { DEFAULT_WIDTH, transformOptions } from '$lib/utils/images';
 
 export const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -75,12 +76,29 @@ export async function copyObject(srcKey: string, destKey: string): Promise<strin
 	return destKey;
 }
 
+/**
+ * Formats Cloudflare Image Transformations can actually decode. Non-image
+ * uploads — rider and stage-plot PDFs from the band media endpoint — must fall
+ * through to the plain R2 URL, since wrapping them yields a broken link.
+ *
+ * Gating on the key's extension rather than on a caller-supplied flag keeps this
+ * a property of the single chokepoint every one of the ~48 `resolveImageUrl`
+ * callers already funnels through, so a new call site can't forget it. The
+ * extension is trustworthy: every key builder derives it from the validated
+ * content type (see `extensionForType`), never from a user-supplied filename.
+ */
+const TRANSFORMABLE = /\.(jpe?g|png|webp|gif|avif)$/i;
+
 export function getPublicUrl(key: string): string {
 	if (/^https?:\/\//i.test(key)) return key; // already resolved — don't double-prefix
 
 	const transformUrl = env.R2_TRANSFORM_URL;
-	if (transformUrl) {
-		return `${transformUrl}/width=1200,format=webp/${key}`;
+	if (transformUrl && TRANSFORMABLE.test(key)) {
+		// `R2_TRANSFORM_SOURCE_ABSOLUTE` switches the source from a bare key to a
+		// full URL, for the case where transformations are served from the apex
+		// zone rather than from the bucket's own custom domain.
+		const source = env.R2_TRANSFORM_SOURCE_ABSOLUTE ? `${env.R2_PUBLIC_URL}/${key}` : key;
+		return `${transformUrl}/${transformOptions(DEFAULT_WIDTH)}/${source}`;
 	}
 
 	const publicUrl = env.R2_PUBLIC_URL;

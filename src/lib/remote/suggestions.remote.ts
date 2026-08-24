@@ -1,8 +1,10 @@
 import { z } from 'zod';
+import { toGenericRef, toMemberRef } from '$lib/server/entity/refs';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import { allowRateLimited } from '$lib/server/rate-limit';
 import {
 	suggestionCategories,
@@ -16,7 +18,6 @@ import {
 import {
 	listSuggestions,
 	getSuggestion,
-	getSuggestionStanding,
 	listMergeCandidates,
 	createSuggestion as createSuggestionSvc,
 	toggleVote,
@@ -24,7 +25,6 @@ import {
 	reviewSuggestion as reviewSuggestionSvc,
 	setVisibility,
 	mergeSuggestions,
-	restoreSuggestionTrust as restoreSuggestionTrustSvc,
 	getEditableState,
 	editSuggestion as editSuggestionSvc,
 	cancelEditRequest,
@@ -62,7 +62,7 @@ export const getSuggestionBoard = query(boardFiltersSchema, async (filters) => {
 	// depend on zod stripping unknown keys — a library default, and one a future
 	// `.passthrough()` or a looser schema would quietly undo. Naming the four
 	// fields the board is allowed to filter on keeps the rule local and visible.
-	return listSuggestions(
+	const { rows, pagination } = await listSuggestions(
 		{
 			category: filters.category,
 			status: filters.status,
@@ -72,6 +72,13 @@ export const getSuggestionBoard = query(boardFiltersSchema, async (filters) => {
 		{ page: filters.page ?? 1, pageSize: BOARD_PAGE_SIZE },
 		me.id
 	);
+	return {
+		rows: rows.map((s) => ({
+			...s,
+			ref: toGenericRef('suggestion', { id: s.id, title: s.title })
+		})),
+		pagination
+	};
 });
 
 export const getSuggestionDetail = query(z.string(), async (id) => {
@@ -109,7 +116,7 @@ export const getMySuggestionStanding = query(async () => {
 	const me = requireUser();
 	// viewerUserId rides along so the board can tell which cards are the member's
 	// own (you don't flag your own post) without a second round trip.
-	return { ...(await getSuggestionStanding(me.id)), viewerUserId: me.id };
+	return { ...(await getStanding(me.id, 'suggestion')), viewerUserId: me.id };
 });
 
 // ---------------------------------------------------------------------------
@@ -123,7 +130,25 @@ const staffFiltersSchema = boardFiltersSchema.extend({
 
 export const getSuggestionsQueue = query(staffFiltersSchema, async (filters) => {
 	await requireStaff();
-	return listSuggestions(filters, { page: filters.page ?? 1, pageSize: STAFF_PAGE_SIZE });
+	const { rows, pagination } = await listSuggestions(filters, {
+		page: filters.page ?? 1,
+		pageSize: STAFF_PAGE_SIZE
+	});
+	// Projected here rather than in `listSuggestions`: the member-facing board
+	// reads the same service and draws the author its own way.
+	return {
+		rows: rows.map((s) => ({
+			...s,
+			ref: toGenericRef('suggestion', { id: s.id, title: s.title }),
+			// "A former member", not the generic fallback: a suggestion outlives the
+			// account that made it, and that is worth saying precisely.
+			author: {
+				...toMemberRef({ id: s.authorUserId, name: s.authorName }),
+				title: s.authorName ?? 'A former member'
+			}
+		})),
+		pagination
+	};
 });
 
 export const getStaffSuggestionDetail = query(z.string(), async (id) => {
@@ -138,17 +163,21 @@ export const getMergeCandidates = query(z.string(), async (excludeId) => {
 
 export const getPendingSuggestionEdits = query(async () => {
 	await requireStaff();
-	return listPendingEdits();
+	const rows = await listPendingEdits();
+	return rows.map((e) => ({
+		...e,
+		// The row is a proposed change; it opens the suggestion it would change.
+		ref: toGenericRef('suggestion', { id: e.suggestionId, title: e.proposedTitle }),
+		requestedBy: {
+			...toMemberRef(e.requestedBy),
+			title: e.requestedByName ?? 'A former member'
+		}
+	}));
 });
 
 export const getSuggestionPendingEdit = query(z.string(), async (suggestionId) => {
 	await requireStaff();
 	return getPendingEditFor(suggestionId);
-});
-
-export const getSuggestionStandingFor = query(z.string(), async (userId) => {
-	await requireStaff();
-	return getSuggestionStanding(userId);
 });
 
 // ---------------------------------------------------------------------------
@@ -373,16 +402,6 @@ export const reviewSuggestionEdit = form(
 		void getStaffSuggestionDetail(data.suggestionId).refresh();
 		void getSuggestionPendingEdit(data.suggestionId).refresh();
 		void getPendingSuggestionEdits().refresh();
-		return { success: true };
-	}
-);
-
-export const restoreSuggestionTrust = form(
-	z.object({ userId: z.string().min(1) }),
-	async (data) => {
-		const staff = await requireStaff();
-		await restoreSuggestionTrustSvc({ userId: data.userId, staffId: staff.id });
-		void getSuggestionStandingFor(data.userId).refresh();
 		return { success: true };
 	}
 );

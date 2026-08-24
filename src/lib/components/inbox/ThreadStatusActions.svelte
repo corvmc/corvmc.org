@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * Status controls for one thread: resolve, reopen, snooze.
+	 * Status controls for one thread: resolve, reopen, snooze, awaiting reply.
 	 *
 	 * This replaced a `<select>` + "Update Status" button, which took two
 	 * interactions to do the one thing anyone does from here. Each action is its
@@ -9,7 +9,13 @@
 	 */
 	import type { RemoteForm } from '@sveltejs/kit';
 	import { addDays, format, nextMonday } from 'date-fns';
-	import { IconAlarmSnooze, IconCheck, IconRotate } from '@tabler/icons-svelte';
+	import {
+		IconAlarmSnooze,
+		IconCheck,
+		IconRotate,
+		IconInbox,
+		IconSend
+	} from '@tabler/icons-svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
@@ -23,23 +29,29 @@
 	};
 	/** What `.for(key)` returns — a form instance with its own pending state. */
 	type StatusFormInstance = Omit<RemoteForm<StatusInput, unknown>, 'for'>;
+	type AwaitingInput = { threadId: string; awaiting: 'true' | 'false' };
 
 	let {
 		threadId,
 		status,
 		snoozedUntil,
+		awaitingReplySince,
 		resolveForm,
 		reopenForm,
-		snoozeForm
+		snoozeForm,
+		awaitingForm
 	}: {
 		threadId: string;
 		status: 'open' | 'resolved' | 'snoozed';
 		snoozedUntil?: Date | null;
+		/** Set while we are waiting on the contact — see thread-status.ts. */
+		awaitingReplySince?: Date | null;
 		/** Separate instances so each button tracks its own pending state. */
 		resolveForm: StatusFormInstance;
 		reopenForm: StatusFormInstance;
 		/** `Action` needs the full form (it renders its own `<Form>`). */
 		snoozeForm: RemoteForm<StatusInput, unknown>;
+		awaitingForm: Omit<RemoteForm<AwaitingInput, unknown>, 'for'>;
 	} = $props();
 
 	// Values are the dates themselves, so picking a preset *is* picking a date and
@@ -65,7 +77,7 @@
 		<Form remote={resolveForm} successToast="Marked resolved" class="contents">
 			<input {...resolveForm.fields.threadId.as('hidden', threadId)} />
 			<input {...resolveForm.fields.status.as('hidden', 'resolved')} />
-			<SubmitButton label="Resolve" successLabel="Resolved" class="btn-primary btn-sm">
+			<SubmitButton label="Resolve" successLabel="Resolved" variant="primary" size="sm">
 				{#snippet icon()}<IconCheck size={16} />{/snippet}
 			</SubmitButton>
 		</Form>
@@ -78,9 +90,32 @@
 			<SubmitButton
 				label={status === 'snoozed' ? 'Unsnooze' : 'Reopen'}
 				successLabel="Reopened"
-				class="btn-sm"
+				variant="default"
+				size="sm"
 			>
 				{#snippet icon()}<IconRotate size={16} />{/snippet}
+			</SubmitButton>
+		</Form>
+	{/if}
+
+	<!--
+		Replying sets this by itself; the button is for the conversation that was
+		answered off the platform, and for taking a marked thread back.
+	-->
+	{#if awaitingReplySince}
+		<Form remote={awaitingForm} successToast="Back in the queue" class="contents">
+			<input {...awaitingForm.fields.threadId.as('hidden', threadId)} />
+			<input {...awaitingForm.fields.awaiting.as('hidden', 'false')} />
+			<SubmitButton label="Needs a reply" successLabel="Back in queue" variant="ghost" size="sm">
+				{#snippet icon()}<IconInbox size={16} />{/snippet}
+			</SubmitButton>
+		</Form>
+	{:else if status === 'open'}
+		<Form remote={awaitingForm} successToast="Marked awaiting reply" class="contents">
+			<input {...awaitingForm.fields.threadId.as('hidden', threadId)} />
+			<input {...awaitingForm.fields.awaiting.as('hidden', 'true')} />
+			<SubmitButton label="Awaiting reply" successLabel="Awaiting reply" variant="ghost" size="sm">
+				{#snippet icon()}<IconSend size={16} />{/snippet}
 			</SubmitButton>
 		</Form>
 	{/if}
@@ -92,16 +127,15 @@
 			modalTitle="Snooze conversation"
 			submitLabel="Snooze"
 			successToast="Snoozed"
-			class="btn-ghost btn-sm"
+			variant="ghost"
+			size="sm"
 			maxWidth="max-w-sm"
 		>
 			{#snippet icon()}<IconAlarmSnooze size={16} />{/snippet}
 			{#snippet form()}
 				<input {...snoozeForm.fields.threadId.as('hidden', threadId)} />
 				<input {...snoozeForm.fields.status.as('hidden', 'snoozed')} />
-				<p class="text-sm opacity-70">
-					It leaves the open queue and returns on the morning you pick.
-				</p>
+				<p class="text-muted">It leaves the open queue and returns on the morning you pick.</p>
 				<FormField
 					name="snoozedUntil"
 					label="Bring it back"
@@ -116,8 +150,13 @@
 </div>
 
 {#if status === 'snoozed' && snoozedUntil}
-	<p class="flex items-center gap-1.5 text-sm opacity-70">
+	<p class="flex items-center gap-1.5 text-muted">
 		<IconAlarmSnooze size={14} />
 		Returns {formatDate(new Date(snoozedUntil))}
+	</p>
+{:else if awaitingReplySince}
+	<p class="flex items-center gap-1.5 text-muted">
+		<IconSend size={14} />
+		Waiting on a reply since {formatDate(new Date(awaitingReplySince))}
 	</p>
 {/if}

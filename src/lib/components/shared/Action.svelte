@@ -4,6 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import Modal from './Modal.svelte';
 	import Button from './Button.svelte';
+	import type { ButtonShape, ButtonSize, ButtonVariant } from './Button.svelte';
 	import Form from './Form/Form.svelte';
 	import SubmitButton from './Form/SubmitButton.svelte';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
@@ -33,12 +34,16 @@
 		body,
 		trigger,
 		submitLabel,
-		submitClass,
+		submitVariant,
 		noFooter = false,
 		successToast,
 		maxWidth = 'max-w-lg',
 		flashDuration = 1500,
-		class: className = 'btn-primary',
+		variant = 'primary',
+		size = 'md',
+		shape,
+		outline = false,
+		class: className = '',
 		disabled = false,
 		onsuccess,
 		onfailure,
@@ -65,11 +70,16 @@
 		body?: Snippet<[{ close: () => void; run: () => void; status: Status }]>;
 		trigger?: Snippet<[TriggerProps]>;
 		submitLabel?: string;
-		submitClass?: string;
+		/** Colour of the modal's submit button; defaults to the trigger's `variant`. */
+		submitVariant?: ButtonVariant;
 		noFooter?: boolean;
 		maxWidth?: string;
 		successToast?: string;
 		flashDuration?: number;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
+		shape?: ButtonShape;
+		outline?: boolean;
 		class?: string;
 		disabled?: boolean;
 		onsuccess?: (result?: unknown) => void;
@@ -157,6 +167,10 @@
 		aria-label={iconOnly ? label : undefined}
 		disabled={disabled || status === 'pending'}
 		onclick={handleClick}
+		{variant}
+		{size}
+		{shape}
+		{outline}
 		class={className}
 		{...rest}
 	>
@@ -196,14 +210,14 @@
 				{@render formSnippet?.({ close })}
 				{#if !noFooter}
 					<div class="flex justify-end pt-2">
-						<SubmitButton label={submitLabel ?? label} class={submitClass ?? className} />
+						<SubmitButton label={submitLabel ?? label} variant={submitVariant ?? variant} />
 					</div>
 				{/if}
 			</Form>
 		{:else if confirm}
 			<p class="py-4">{confirm}</p>
 			<div class="modal-action">
-				<Button type="button" class="btn-outline" onclick={close}>Dismiss</Button>
+				<Button type="button" variant="default" outline onclick={close}>Dismiss</Button>
 				<Button type="button" variant="primary" onclick={run}>
 					{@render icon?.()}
 					{label}

@@ -246,7 +246,23 @@ export async function cancel(
 	reservationId: string,
 	userId: string,
 	reason?: string,
-	options?: { staffOverride?: boolean }
+	options?: {
+		/**
+		 * Staff acting on someone else's booking. Skips the ownership check AND
+		 * the already-started check, and records the cancellation as staff-made.
+		 */
+		staffOverride?: boolean;
+		/**
+		 * The caller has already established that this user may cancel this
+		 * booking on someone else's behalf — today, a band admin cancelling one of
+		 * their own band's sessions. Deliberately narrower than `staffOverride`:
+		 * it waives *only* the ownership check. A band admin still cannot cancel a
+		 * session that has already started, and the cancellation is still recorded
+		 * as `member` — the waitlist and notification listeners key on that, so
+		 * reusing `staffOverride` here would misattribute it.
+		 */
+		authorizedActor?: boolean;
+	}
 ): Promise<void> {
 	// Read current state to check authorization and determine refund eligibility
 	const [row] = await db
@@ -259,7 +275,7 @@ export async function cancel(
 		throw new ReservationNotFoundError();
 	}
 
-	if (!options?.staffOverride && row.createdByUserId !== userId) {
+	if (!options?.staffOverride && !options?.authorizedActor && row.createdByUserId !== userId) {
 		throw new ReservationAuthorizationError('Not authorized to cancel this reservation');
 	}
 

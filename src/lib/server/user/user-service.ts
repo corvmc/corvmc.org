@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { DomainError } from '../domain-error';
 import { user, session } from '$lib/server/db/schema/authentication';
 import { band } from '$lib/server/db/schema/band';
 import { reservation } from '$lib/server/db/schema/reservation';
@@ -11,35 +12,45 @@ import { isValidPhone, normalizePhone } from '$lib/utils/phone';
 // Errors
 // ---------------------------------------------------------------------------
 
-export class UserNotFoundError extends Error {
+export class UserNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+
 	constructor() {
 		super('User not found');
 		this.name = 'UserNotFoundError';
 	}
 }
 
-export class UserHasOwnedBandsError extends Error {
+export class UserHasOwnedBandsError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('User still owns one or more bands; transfer or remove them before purging');
 		this.name = 'UserHasOwnedBandsError';
 	}
 }
 
-export class UserHasPublishedListingsError extends Error {
+export class UserHasPublishedListingsError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('This member has community listings on the public calendar');
 		this.name = 'UserHasPublishedListingsError';
 	}
 }
 
-export class UserNotDeactivatedError extends Error {
+export class UserNotDeactivatedError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('User must be deactivated before it can be purged');
 		this.name = 'UserNotDeactivatedError';
 	}
 }
 
-export class UserHasLinkedRecordsError extends Error {
+export class UserHasLinkedRecordsError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('User has linked records that prevent permanent deletion');
 		this.name = 'UserHasLinkedRecordsError';
@@ -69,6 +80,12 @@ export async function deactivateUser(userId: string) {
 	// Purge the user's existing sessions so a deactivated account can't keep
 	// riding a live session. The per-request hook gate is the primary defense;
 	// this removes the now-inert rows instead of letting them expire naturally.
+	//
+	// Neither is immediate any more: with `session.cookieCache` enabled (auth.ts)
+	// better-auth serves the session from the signed cookie without reading these
+	// rows, so a user already holding one keeps access until it ages out — up to
+	// 60s. Acceptable for offboarding; if a hard cut ever matters, disable the
+	// cache rather than adding a second gate.
 	await db.delete(session).where(eq(session.userId, userId));
 
 	// Cancel all future personal reservations booked by this user. Scoped to

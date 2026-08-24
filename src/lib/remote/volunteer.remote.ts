@@ -68,7 +68,7 @@ import {
 	listShifts,
 	countUnfilledByRole,
 	listOpenShiftsForMember,
-	getShiftById
+	getShiftDetail
 } from '$lib/server/volunteer/volunteer-shift-service';
 import {
 	claimShift as claimShiftService,
@@ -1097,6 +1097,7 @@ async function refreshCertificationViews() {
 
 const shiftFilters = z.object({
 	volunteerRoleId: z.string().optional(),
+	eventId: z.string().optional(),
 	from: z.string().optional(),
 	to: z.string().optional(),
 	includeCancelled: z.boolean().optional()
@@ -1106,6 +1107,7 @@ export const getShifts = query(shiftFilters, async (f) => {
 	await requireStaff();
 	return listShifts({
 		volunteerRoleId: f.volunteerRoleId || undefined,
+		eventId: f.eventId || undefined,
 		from: f.from ? new Date(f.from) : undefined,
 		to: f.to ? new Date(f.to) : undefined,
 		includeCancelled: f.includeCancelled
@@ -1114,7 +1116,7 @@ export const getShifts = query(shiftFilters, async (f) => {
 
 export const getShift = query(z.string(), async (id) => {
 	await requireStaff();
-	const shift = await getShiftById(id);
+	const shift = await getShiftDetail(id);
 	if (!shift) throw error(404, 'Shift not found');
 	const claimants = await listClaimants(id);
 	return { shift, claimants };

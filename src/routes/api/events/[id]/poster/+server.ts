@@ -2,6 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
 import { uploadFile, deleteObject, validateUpload } from '$lib/server/storage';
+import { mediaKey } from '$lib/server/storage-keys';
 import { getById } from '$lib/server/event/event-service';
 import { db } from '$lib/server/db';
 import { event } from '$lib/server/db/schema/event';
@@ -33,9 +34,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		await deleteObject(existing.posterKey);
 	}
 
-	// Determine extension from content type
-	const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
-	const key = `events/posters/${params.id}.${ext}`;
+	const key = mediaKey('events/posters', params.id, contentType);
 
 	await uploadFile(buffer, key, contentType);
 

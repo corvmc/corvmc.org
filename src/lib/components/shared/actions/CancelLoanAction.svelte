@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { cancelLoan } from '$lib/remote/equipment.remote';
 
@@ -9,13 +10,17 @@
 		loanId,
 		label = 'Cancel',
 		confirm: confirmText = 'Cancel this loan?',
-		class: className = 'btn-ghost btn-sm text-error',
+		variant = 'ghost',
+		size = 'sm',
+		class: className = 'text-error',
 		onsuccess,
 		...rest
 	}: {
 		loanId: string;
 		label?: string;
 		confirm?: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -27,6 +32,8 @@
 	{label}
 	modalTitle="Confirm"
 	successToast="Loan cancelled"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

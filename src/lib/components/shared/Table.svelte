@@ -3,7 +3,7 @@
 	 * Table chrome only — the scroll wrapper, the daisyUI modifiers, and the
 	 * `thead`/`tbody` boilerplate. It owns no columns: pages write their own
 	 * `<th>`/`<td>`, because every staff table has bespoke cells (StatusBadge
-	 * glyphs, MemberLink, action clusters, group-header rows).
+	 * glyphs, EntityIdentity, action clusters, group-header rows).
 	 *
 	 * Column visibility is handled with the `col-support` / `col-extra` utilities
 	 * in layout.css, applied to a column's `<th>` and its `<td>`s alike.

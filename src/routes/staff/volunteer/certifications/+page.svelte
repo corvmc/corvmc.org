@@ -27,7 +27,7 @@
 </script>
 
 <PageHeader title="Certifications" subtitle="Staff" backHref="/staff/volunteer">
-	<Button href="/staff/volunteer/clearances" class="btn-ghost btn-sm">Who's cleared</Button>
+	<Button href="/staff/volunteer/clearances" variant="ghost" size="sm">Who's cleared</Button>
 	<Action
 		action={createCertification}
 		label="New Certification"
@@ -83,7 +83,7 @@
 
 						<td class="cell-primary">
 							<div class="truncate font-medium">{cert.name}</div>
-							<div class="truncate text-xs opacity-60">
+							<div class="truncate text-subtle">
 								{cert.issuedBy ?? 'Granted by CMC'}
 							</div>
 						</td>
@@ -101,7 +101,8 @@
 									label="Edit"
 									iconOnly
 									icon={pencilIcon}
-									class="btn-ghost btn-sm"
+									variant="ghost"
+									size="sm"
 									modalTitle="Edit {cert.name}"
 									successToast="Certification updated"
 								>
@@ -146,7 +147,8 @@
 										label="Archive"
 										iconOnly
 										icon={archiveIcon}
-										class="btn-ghost btn-sm"
+										variant="ghost"
+										size="sm"
 										modalTitle="Archive {cert.name}?"
 										submitLabel="Archive"
 										successToast="Certification archived"
@@ -165,7 +167,8 @@
 										label="Restore"
 										iconOnly
 										icon={unarchiveIcon}
-										class="btn-ghost btn-sm"
+										variant="ghost"
+										size="sm"
 										modalTitle="Restore {cert.name}?"
 										submitLabel="Restore"
 										successToast="Certification restored"
@@ -188,10 +191,12 @@
 										label="Delete"
 										iconOnly
 										icon={trashIcon}
-										class="btn-ghost btn-sm text-error"
+										variant="ghost"
+										size="sm"
+										class="text-error"
 										modalTitle="Delete {cert.name}?"
 										submitLabel="Delete"
-										submitClass="btn-error"
+										submitVariant="error"
 										successToast="Certification deleted"
 									>
 										{#snippet form()}

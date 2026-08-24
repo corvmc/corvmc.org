@@ -23,6 +23,34 @@ export const SEARCH_LIMIT = 20;
 export const LIST_LIMIT = 100;
 
 // ---------------------------------------------------------------------------
+// Text field limits
+// ---------------------------------------------------------------------------
+//
+// These are *application* conventions, not database constraints — every text
+// column in the schema is a bare SQLite `text()` with no length at all. The 255
+// is inherited from the Laravel/MySQL app this replaced, where it meant
+// varchar(255). Kept because it is a sane cap and changing it would be churn,
+// but do not read it as something the database enforces.
+//
+// Named per *kind of field*, deliberately, rather than one constant reused
+// everywhere the number happens to be the same. A shared constant asserts that
+// two fields must change together; that is true of "every single-line name in
+// the app" and false of, say, a flag reason, which has its own limit next to
+// the rest of the flag rules.
+
+/** Single-line text: names, titles, slugs, locations. */
+export const SHORT_TEXT_MAX = 255;
+
+/** A one-or-two-sentence field: summaries, short bios, availability notes. */
+export const BLURB_MAX = 500;
+
+/** Multi-paragraph prose: descriptions, longer bios. */
+export const LONG_TEXT_MAX = 2000;
+
+/** Free-text staff/member notes attached to a record. */
+export const NOTES_MAX = 1000;
+
+// ---------------------------------------------------------------------------
 // Finance
 // ---------------------------------------------------------------------------
 
@@ -222,6 +250,58 @@ export const DIRECT_MESSAGE_BODY_MAX = 5000;
 export function isAlwaysEnabledChannel(channel: string): boolean {
 	return (alwaysEnabledInboxChannels as readonly string[]).includes(channel);
 }
+
+// ---------------------------------------------------------------------------
+// Member standing
+// ---------------------------------------------------------------------------
+
+/**
+ * The privileges a member can be put on probation for, one per domain that
+ * reads standing. Exactly three, and each one has a code path that consults it
+ * — a scope nothing reads is a column that lies. `member_profile` and
+ * `band_profile` reports cost nobody anything on uphold today, so they get no
+ * scope; `scopeForFlag` maps them to null.
+ */
+export const standingScopes = ['community_event', 'suggestion', 'messaging'] as const;
+export type StandingScope = (typeof standingScopes)[number];
+
+/**
+ * One ladder for every scope.
+ *
+ * `none`       — no restriction. Also what a lifted one becomes, so "we looked
+ *                at this and cleared it" still reads differently from "this
+ *                never came up".
+ * `restricted` — you may still act, but with a gate. For the two posting
+ *                scopes that gate is staff review; for messaging it is
+ *                reply-only.
+ * `disabled`   — you may not act at all.
+ */
+export const standingStatuses = ['none', 'restricted', 'disabled'] as const;
+export type StandingStatus = (typeof standingStatuses)[number];
+
+/**
+ * Which rungs each scope may actually hold, and what to call it on screen.
+ *
+ * Only messaging has a use for `disabled` — staff switching it off wholesale,
+ * which is how the occasional under-18 member is handled. "You may not post
+ * community listings at all" is not a thing anyone can do, so `setStanding`
+ * rejects it rather than leaving an unreachable value lying in the column.
+ */
+export const standingScopeConfig: Record<
+	StandingScope,
+	{ statuses: readonly StandingStatus[]; label: string }
+> = {
+	community_event: { statuses: ['none', 'restricted'], label: 'Community listings' },
+	suggestion: { statuses: ['none', 'restricted'], label: 'Suggestions' },
+	messaging: { statuses: ['none', 'restricted', 'disabled'], label: 'Direct messages' }
+};
+
+/**
+ * Longest staff note stored on a standing. 500 was already the cap on both the
+ * staff messaging form and `revokeSuggestionTrust`; community listings trimmed
+ * nowhere, which was the outlier.
+ */
+export const STANDING_REASON_MAX = 500;
 
 // ---------------------------------------------------------------------------
 // Volunteering
@@ -447,3 +527,82 @@ export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
 	value,
 	label: suggestionStatusLabels[value]
 }));
+
+// ---------------------------------------------------------------------------
+// Entity vocabulary
+// ---------------------------------------------------------------------------
+
+/**
+ * Every record type the app renders a reference to — a chip, a list row, a
+ * card, or a detail page.
+ *
+ * This is the client-side half of the entity presentation system. It lives in
+ * `config.ts` rather than beside the tables because `$lib/server` cannot be
+ * imported from the browser, and every one of these values is read by a
+ * `.svelte` file. The rendering half (icon, avatar shape) lives in
+ * `$lib/components/shared/entity/registry.ts`, which carries Svelte icon
+ * components and so cannot be imported by server code.
+ *
+ * Adding a value here without adding it to `entityKinds` fails
+ * `registry.spec.ts`.
+ */
+export const entityTypes = [
+	'member',
+	'band',
+	'event',
+	'reservation',
+	'suggestion',
+	'thread',
+	'flag',
+	'campaign',
+	'audience',
+	'equipment',
+	'loan',
+	'shift',
+	'role',
+	'recurring',
+	'help'
+] as const;
+export type EntityType = (typeof entityTypes)[number];
+
+/**
+ * What to call one, and what to call several.
+ *
+ * Domain-specific wording at a call site ("Waiting on DNS" rather than
+ * "Pending") stays at the call site — the same rule `StatusBadge` follows.
+ */
+export const entityLabels: Record<EntityType, { one: string; many: string }> = {
+	member: { one: 'Member', many: 'Members' },
+	band: { one: 'Band', many: 'Bands' },
+	event: { one: 'Event', many: 'Events' },
+	reservation: { one: 'Reservation', many: 'Reservations' },
+	suggestion: { one: 'Suggestion', many: 'Suggestions' },
+	thread: { one: 'Conversation', many: 'Conversations' },
+	flag: { one: 'Report', many: 'Reports' },
+	campaign: { one: 'Campaign', many: 'Campaigns' },
+	audience: { one: 'Audience', many: 'Audiences' },
+	equipment: { one: 'Equipment', many: 'Equipment' },
+	loan: { one: 'Loan', many: 'Loans' },
+	shift: { one: 'Shift', many: 'Shifts' },
+	role: { one: 'Volunteer role', many: 'Volunteer roles' },
+	recurring: { one: 'Recurring series', many: 'Recurring series' },
+	help: { one: 'Help article', many: 'Help articles' }
+};
+
+/**
+ * `contentFlag.entityType` has its own vocabulary, older and narrower than
+ * `entityTypes` — it names the *profile* rather than the record behind it.
+ * This is the bridge, and it is what lets a flag link to what it reports
+ * instead of re-deriving the route with a nested ternary.
+ *
+ * Keyed by string rather than `FlagEntityType` because that type lives in
+ * `$lib/server/db/schema/flag` and cannot be imported here.
+ * `registry.spec.ts` asserts every value of it is covered.
+ */
+export const flagEntityTypeToEntity: Record<string, EntityType> = {
+	member_profile: 'member',
+	band_profile: 'band',
+	event: 'event',
+	suggestion: 'suggestion',
+	inbox_thread: 'thread'
+};

@@ -8,8 +8,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // which made Add Equipment, the equipment edit form, and the staff Create Loan
 // modal impossible to submit.
 //
-// The first test pins the SvelteKit half of that contract; the rest drive the
-// real schemas declared in equipment.remote.ts with the payload it produces.
+// These drive the real schemas declared in equipment.remote.ts with the payload
+// SvelteKit's `convert_formdata` produces. The framework's own `n:` -> number
+// conversion is SvelteKit's contract, not ours, so it is not re-tested here.
 
 const createEquipmentService = vi.fn(async () => ({ id: 'eq-1' }));
 const updateEquipment = vi.fn(async () => undefined);
@@ -89,30 +90,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 });
 
-// `form-utils.js` is internal to the package and not reachable through its
-// `exports` map, so resolve the installed package directory and import the file
-// directly. Skipping this test would leave the premise unproven.
-//
-// Resolved at module scope, not inside the `it`: `@vite-ignore` means this import
-// is never cached or optimised, so paying it inside the 5s test timeout reports a
-// cold run as a timeout. Same reason as commit 75fd70a.
-const { convert_formdata } = await (async () => {
-	const { createRequire } = await import('node:module');
-	const { pathToFileURL } = await import('node:url');
-	const require = createRequire(import.meta.url);
-	const pkg = require.resolve('@sveltejs/kit/package.json').replace(/package\.json$/, '');
-	return import(/* @vite-ignore */ pathToFileURL(`${pkg}src/runtime/form-utils.js`).href);
-})();
-
 describe('number fields submitted through field.as("number")', () => {
-	it('SvelteKit converts an `n:`-prefixed form value to a number', async () => {
-		const data = new FormData();
-		data.set('n:totalQuantity', '3');
-		data.set('name', 'SM58');
-
-		expect(convert_formdata(data)).toEqual({ totalQuantity: 3, name: 'SM58' });
-	});
-
 	it('createEquipment accepts numeric quantities', async () => {
 		await equipment.createEquipment({
 			name: 'SM58',

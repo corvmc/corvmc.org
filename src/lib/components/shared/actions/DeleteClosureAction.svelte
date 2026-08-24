@@ -1,15 +1,20 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { deleteClosure } from '$lib/remote/closures.remote';
 
 	let {
 		closureId,
-		class: className = 'btn-ghost btn-sm text-error',
+		variant = 'ghost',
+		size = 'sm',
+		class: className = 'text-error',
 		onsuccess,
 		...rest
 	}: {
 		closureId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -23,6 +28,8 @@
 	label="Delete"
 	modalTitle="Confirm"
 	successToast="Closure deleted"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

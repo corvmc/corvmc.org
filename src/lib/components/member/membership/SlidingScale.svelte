@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	const tiers = [
 		{ amount: '$10/month', hours: '2 free hours' },
 		{ amount: '$25/month', hours: '5 free hours' },
@@ -15,8 +17,8 @@
 		</p>
 	</div>
 
-	<div class="card mx-auto max-w-3xl bg-base-100 shadow-sm">
-		<div class="card-body">
+	<Card class="mx-auto max-w-3xl">
+		<CardBody>
 			<div class="mb-8 text-center">
 				<div class="mb-4 text-6xl font-bold text-primary">1 hour = $5</div>
 			</div>
@@ -41,9 +43,9 @@
 				</p>
 			</div>
 
-			<p class="mt-6 text-center text-sm opacity-60">
+			<p class="mt-6 text-center text-muted">
 				Change or cancel anytime. No commitments, no awkward conversations.
 			</p>
-		</div>
-	</div>
+		</CardBody>
+	</Card>
 </div>

@@ -7,6 +7,8 @@ import {
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import type { MemberRef } from '$lib/types/entity';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { clubToday, CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '$lib/config';
 import type { MemberCertification } from '$lib/server/db/schema/volunteer';
@@ -394,8 +396,7 @@ export async function missingRequirements(
 
 export interface ClearanceRow {
 	userId: string;
-	userName: string;
-	userEmail: string;
+	member: MemberRef;
 	certificationId: string;
 	certificationName: string;
 	grantedAt: Date;
@@ -416,8 +417,7 @@ export async function listClearances(
 	const rows = await db
 		.select({
 			userId: memberCertification.userId,
-			userName: user.name,
-			userEmail: user.email,
+			member: memberRefColumns(),
 			certificationId: memberCertification.certificationId,
 			certificationName: volunteerCertification.name,
 			grantedAt: memberCertification.grantedAt,
@@ -450,8 +450,7 @@ export async function listClearances(
 	const today = atNoon(clubToday());
 	const out = [...newest.values()].map((r) => ({
 		userId: r.userId,
-		userName: r.userName,
-		userEmail: r.userEmail,
+		member: toMemberRef(r.member),
 		certificationId: r.certificationId,
 		certificationName: r.certificationName,
 		grantedAt: r.grantedAt,

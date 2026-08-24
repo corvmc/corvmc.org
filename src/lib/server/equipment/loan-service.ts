@@ -3,7 +3,7 @@ import { equipmentLoan, equipment, equipmentCategory } from '$lib/server/db/sche
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, sql, like, or, desc, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { primaryRoleFor } from '$lib/server/authorization';
+import { memberRefColumns, toGenericRef, toMemberRef } from '$lib/server/entity/refs';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { getBalance, deductCredits } from '$lib/server/finance/credit-service';
 import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
@@ -432,10 +432,7 @@ export async function getLoanById(id: string) {
 			equipmentName: equipment.name,
 			categoryName: equipmentCategory.name,
 			pricingTier: equipmentCategory.pricingTier,
-			userName: user.name,
-			userEmail: user.email,
-			userPronouns: user.pronouns,
-			userRole: primaryRoleFor(user.id)
+			member: memberRefColumns()
 		})
 		.from(equipmentLoan)
 		.innerJoin(user, eq(equipmentLoan.userId, user.id))
@@ -451,10 +448,7 @@ export async function getLoanById(id: string) {
 		equipmentName: row.equipmentName,
 		categoryName: row.categoryName,
 		pricingTier: row.pricingTier,
-		userName: row.userName,
-		userEmail: row.userEmail,
-		userPronouns: row.userPronouns,
-		userRole: row.userRole,
+		member: toMemberRef(row.member),
 		isOverdue:
 			row.loan.status === 'checked_out' && row.loan.dueDate != null && row.loan.dueDate < new Date()
 	};
@@ -483,10 +477,7 @@ export async function listLoans(opts: ListLoansOptions = {}, pagination: Paginat
 		.select({
 			loan: equipmentLoan,
 			equipmentName: equipment.name,
-			userName: user.name,
-			userEmail: user.email,
-			userPronouns: user.pronouns,
-			userRole: primaryRoleFor(user.id)
+			member: memberRefColumns()
 		})
 		.from(equipmentLoan)
 		.innerJoin(user, eq(equipmentLoan.userId, user.id))
@@ -507,10 +498,14 @@ export async function listLoans(opts: ListLoansOptions = {}, pagination: Paginat
 		rows: result.rows.map((row) => ({
 			...row.loan,
 			equipmentName: row.equipmentName,
-			userName: row.userName,
-			userEmail: row.userEmail,
-			userPronouns: row.userPronouns,
-			userRole: row.userRole,
+			// The loan is the row; what was borrowed is its title. A free-form
+			// request has no equipment record behind it, so it says so and does
+			// not link.
+			ref: toGenericRef('loan', {
+				id: row.loan.id,
+				title: row.equipmentName ?? '(free-form request)'
+			}),
+			member: toMemberRef(row.member),
 			isOverdue:
 				row.loan.status === 'checked_out' &&
 				row.loan.dueDate != null &&

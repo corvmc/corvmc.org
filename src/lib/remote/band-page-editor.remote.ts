@@ -1,10 +1,8 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
-import { requireUser } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
-import { requireBandAdmin } from '$lib/server/band/band-context';
-import { getBySlug } from '$lib/server/band/band-service';
+import { requireBandAdmin, requireBandMemberOrStaff } from '$lib/server/band/band-context';
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
 import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
 import { db } from '$lib/server/db';
@@ -18,9 +16,12 @@ import { jsonArrayField, jsonObjectField } from '$lib/utils/zod-json';
 
 export const getBandPageEditor = query(z.string(), async (slug) => {
 	await requireFeature('bandPremium');
-	requireUser();
-	const band = await getBySlug(slug);
-	if (!band) throw error(404, 'Band not found');
+	// `requireUser()` alone served any premium band's theme, custom CSS, blocks
+	// and — the part that actually matters — its `epk`, the band's private press
+	// kit, to any signed-in account that knew a slug. The blocks are semi-public
+	// (the microsite renders them); the EPK never was.
+	const { band } = await requireBandMemberOrStaff();
+	if (band.slug !== slug) error(403, 'Not authorized');
 
 	const [config] = await db
 		.select()

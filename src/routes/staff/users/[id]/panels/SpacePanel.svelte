@@ -2,7 +2,7 @@
 	import { getUserReservations } from '$lib/remote/users.remote';
 	import { getUserRecurringSeries } from '$lib/remote/reservations.remote';
 	import { getUserLoans } from '$lib/remote/equipment.remote';
-	import AsyncCard from './AsyncCard.svelte';
+	import { RelatedList } from '$lib/components/shared/entity';
 	import Table from '$lib/components/shared/Table.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
@@ -15,7 +15,7 @@
 	let { id }: { id: string } = $props();
 </script>
 
-<AsyncCard title="Reservations" result={getUserReservations(id)}>
+<RelatedList title="Reservations" result={getUserReservations(id)}>
 	{#snippet children(data)}
 		{#if data.counts.upcoming === 0 && data.counts.past === 0}
 			<EmptyState
@@ -23,7 +23,7 @@
 				description="Nothing booked by this member, or by a band they're in."
 			/>
 		{:else}
-			<p class="mb-3 text-sm opacity-60">
+			<p class="mb-3 text-muted">
 				{data.counts.upcoming} upcoming · {data.counts.past} past
 				{#if data.counts.unpaid > 0}
 					· <span class="text-warning">{data.counts.unpaid} unpaid</span>
@@ -32,7 +32,7 @@
 
 			{#each [{ label: 'Upcoming', rows: data.upcoming }, { label: 'Past', rows: data.past }] as group (group.label)}
 				{#if group.rows.length > 0}
-					<h4 class="mt-3 mb-1 text-xs font-semibold uppercase opacity-60">{group.label}</h4>
+					<h4 class="mt-3 mb-1 text-subtle font-semibold uppercase">{group.label}</h4>
 					<Table>
 						{#snippet head()}
 							<th class="w-px"><span class="sr-only">Status</span></th>
@@ -50,7 +50,7 @@
 									>
 										{formatDateTimeShort(r.startsAt)}
 									</a>
-									<div class="text-sm opacity-60">
+									<div class="text-muted">
 										{formatTimeRange(r.startsAt, r.endsAt)}
 										<!-- Cancellations are kept in this list on purpose, and the
 										     reason is the whole value of keeping them. -->
@@ -81,9 +81,9 @@
 			{/each}
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Recurring bookings" result={getUserRecurringSeries(id)}>
+<RelatedList title="Recurring bookings" result={getUserRecurringSeries(id)}>
 	{#snippet children(series)}
 		{#if series.length === 0}
 			<EmptyState title="No recurring bookings" description="No standing weekly or monthly slot." />
@@ -110,9 +110,9 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Equipment loans" result={getUserLoans(id)}>
+<RelatedList title="Equipment loans" result={getUserLoans(id)}>
 	{#snippet children(loans)}
 		{#if loans.length === 0}
 			<EmptyState title="No loans" description="This member has never borrowed equipment." />
@@ -132,7 +132,7 @@
 								{loan.equipmentName ?? 'Removed item'}
 							</a>
 							{#if loan.quantity > 1}
-								<div class="text-sm opacity-60">×{loan.quantity}</div>
+								<div class="text-muted">×{loan.quantity}</div>
 							{/if}
 						</td>
 						<td class="col-support whitespace-nowrap">
@@ -153,4 +153,4 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>

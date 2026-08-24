@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { refundReservation } from '$lib/remote/reservations.remote';
@@ -7,11 +8,17 @@
 
 	let {
 		reservation,
-		class: className = 'btn-error btn-outline btn-sm',
+		variant = 'error',
+		size = 'sm',
+		outline = true,
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		reservation: { id: string; startsAt: Date; endsAt: Date; memberName?: string };
+		variant?: ButtonVariant;
+		size?: ButtonSize;
+		outline?: boolean;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -22,8 +29,11 @@
 	action={refundReservation}
 	label="Refund"
 	modalTitle="Refund Payment"
-	submitClass="btn-error"
+	submitVariant="error"
 	successToast="Payment refunded"
+	{variant}
+	{size}
+	{outline}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

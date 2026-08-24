@@ -37,7 +37,9 @@
 				<IconClock size={18} class="shrink-0 opacity-40" />
 				<span>Get free practice hours each month with a sustaining membership.</span>
 			</div>
-			<Button href="/member/membership" class="self-end btn-sm sm:self-auto">Learn More</Button>
+			<Button href="/member/membership" variant="default" size="sm" class="self-end sm:self-auto"
+				>Learn More</Button
+			>
 		{/if}
 	{/await}
 </div>

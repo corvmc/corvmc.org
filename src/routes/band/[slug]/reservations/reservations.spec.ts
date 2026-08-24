@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '$lib/server/db/test-factory';
+import { sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -47,7 +48,14 @@ const reservationServiceMock = {
 		startsAt: new Date(),
 		endsAt: new Date()
 	})),
-	cancel: vi.fn(async () => undefined)
+	cancel: vi.fn(
+		async (
+			_id: string,
+			_userId: string,
+			_reason?: string,
+			_options?: { staffOverride?: boolean; authorizedActor?: boolean }
+		) => undefined
+	)
 };
 
 vi.mock('$lib/server/reservation/reservation-service', () => reservationServiceMock);
@@ -76,7 +84,10 @@ vi.mock('$lib/server/db/schema/recurring', () => ({
 
 vi.mock('$lib/server/authorization', () => ({
 	requireUser: vi.fn(() => ({ id: 'user-owner', name: 'Test Owner' })),
-	hasAnyRole: vi.fn(async () => false)
+	hasAnyRole: vi.fn(async () => false),
+	// `memberRefColumns()` selects this as a correlated subquery. The value is
+	// never asserted here — only that building the projection doesn't throw.
+	primaryRoleFor: vi.fn(() => sql`null`)
 }));
 
 vi.mock('$lib/server/feature-flags', () => ({
@@ -84,7 +95,9 @@ vi.mock('$lib/server/feature-flags', () => ({
 }));
 
 const subscriptionServiceMock = {
-	getSubscription: vi.fn(async () => null as { id: string; status: string } | null)
+	getSubscription: vi.fn(async () => null as { id: string; status: string } | null),
+	/** Same as `primaryRoleFor`: a SQL fragment `memberRefColumns()` projects. */
+	isSustainingMemberSql: vi.fn(() => sql`0`)
 };
 
 vi.mock('$lib/server/finance/subscription-service', () => subscriptionServiceMock);
@@ -169,39 +182,46 @@ vi.mock('$app/server', () => ({
 }));
 
 const {
-	getBandSlots: getSlots,
 	bookBandReservation: bookReservation,
 	cancelBandReservation,
-	getBandMembershipStatus
+	getBandMembershipStatus,
+	getBandReservations
 } = (await import('$lib/remote/reservations.remote')) as any;
+
+const { hasAnyRole } = (await import('$lib/server/authorization')) as unknown as {
+	hasAnyRole: ReturnType<typeof vi.fn>;
+};
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	bandServiceMock.getUserRole.mockResolvedValue('member');
 	ensureContactPhone.mockResolvedValue(true);
+	hasAnyRole.mockResolvedValue(false);
 	selectResult = [];
 });
+
+/** A row shaped like the entity-ref projection `getBandReservations` selects. */
+function reservationRow(createdByUserId: string, status = 'scheduled') {
+	return {
+		id: 'res-1',
+		status,
+		startsAt: new Date(),
+		endsAt: new Date(),
+		notes: null,
+		createdByUserId,
+		ref: { id: 'res-1', startsAt: new Date(), endsAt: new Date(), status },
+		bookedBy: { id: createdByUserId, name: 'Someone', email: null }
+	};
+}
+
+/** The row `cancelBandReservation` reads before authorizing. */
+function bandReservationRow(createdByUserId = 'user-owner', bookerId = 'band-1') {
+	return [{ bookerType: 'band', bookerId, createdByUserId }];
+}
 
 // ---------------------------------------------------------------------------
 // Remote handlers
 // ---------------------------------------------------------------------------
-
-describe('getSlots', () => {
-	it('returns available slots and config', async () => {
-		const result = await getSlots('2026-06-15');
-
-		expect(conflictServiceMock.getAvailableSlots).toHaveBeenCalled();
-		expect(result.slots).toHaveLength(3);
-		expect(result.config.hourlyRateCents).toBe(1500);
-		expect(result.config.slotMinutes).toBe(30);
-	});
-
-	it('requires band membership', async () => {
-		bandServiceMock.getUserRole.mockResolvedValue(null);
-
-		await expect(getSlots('2026-06-15')).rejects.toThrow();
-	});
-});
 
 describe('bookReservation', () => {
 	it('creates reservation with band as booker', async () => {
@@ -238,11 +258,138 @@ describe('bookReservation', () => {
 });
 
 describe('cancelBandReservation', () => {
-	it('cancels the reservation', async () => {
+	it('cancels a reservation the caller booked', async () => {
+		selectResult = bandReservationRow('user-owner');
+
 		const result = await cancelBandReservation({ reservationId: 'res-42' });
 
-		expect(reservationServiceMock.cancel).toHaveBeenCalledWith('res-42', 'user-owner');
+		expect(reservationServiceMock.cancel).toHaveBeenCalledWith(
+			'res-42',
+			'user-owner',
+			undefined,
+			undefined
+		);
 		expect(result.success).toBe(true);
+	});
+
+	// The page rendered Cancel on every row, but `cancel()` authorizes on
+	// `createdByUserId` — so a bandmate who hadn't booked got an error toast from
+	// a button they were offered. A band admin is allowed; a plain member is not.
+	it('lets a band admin cancel a bandmate booking', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+		selectResult = bandReservationRow('user-2');
+
+		await cancelBandReservation({ reservationId: 'res-42' });
+
+		expect(reservationServiceMock.cancel).toHaveBeenCalled();
+	});
+
+	it('refuses a plain member cancelling a bandmate booking', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('member');
+		selectResult = bandReservationRow('user-2');
+
+		await expect(cancelBandReservation({ reservationId: 'res-42' })).rejects.toMatchObject({
+			status: 403
+		});
+		expect(reservationServiceMock.cancel).not.toHaveBeenCalled();
+	});
+
+	// Nothing checked that the reservation belonged to the guarded band, so an id
+	// from another band reached `cancel()` and was refused there — or, for a band
+	// admin, would not have been.
+	it('404s a reservation belonging to another band', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+		selectResult = bandReservationRow('user-2', 'band-other');
+
+		await expect(cancelBandReservation({ reservationId: 'res-42' })).rejects.toMatchObject({
+			status: 404
+		});
+		expect(reservationServiceMock.cancel).not.toHaveBeenCalled();
+	});
+
+	it('404s a reservation that is not a band booking at all', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+		selectResult = [{ bookerType: 'user', bookerId: 'user-2', createdByUserId: 'user-2' }];
+
+		await expect(cancelBandReservation({ reservationId: 'res-42' })).rejects.toMatchObject({
+			status: 404
+		});
+	});
+
+	// `staffOverride` would ALSO waive the already-started check and stamp the
+	// domain event `cancelledBy: 'staff'`, misattributing a member cancellation
+	// in every downstream listener. The admin path must use the narrow option.
+	it('uses authorizedActor and never staffOverride for a band admin', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+		selectResult = bandReservationRow('user-2');
+
+		await cancelBandReservation({ reservationId: 'res-42' });
+
+		const options = reservationServiceMock.cancel.mock.calls[0][3];
+		expect(options).toEqual({ authorizedActor: true });
+		expect(options).not.toHaveProperty('staffOverride');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// getBandReservations — previously `requireUser()` only, so any signed-in
+// account could read any band's practice schedule, booker names and notes.
+// ---------------------------------------------------------------------------
+
+describe('getBandReservations', () => {
+	it('returns upcoming and past for a member', async () => {
+		const result = await getBandReservations('the-velvet-underground');
+
+		expect(result).toHaveProperty('upcoming');
+		expect(result).toHaveProperty('past');
+	});
+
+	it('refuses a signed-in non-member', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+
+		await expect(getBandReservations('the-velvet-underground')).rejects.toMatchObject({
+			status: 403
+		});
+	});
+
+	it('allows staff who are not band members', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		hasAnyRole.mockResolvedValue(true);
+
+		await expect(getBandReservations('the-velvet-underground')).resolves.toBeDefined();
+	});
+
+	// The guard resolves its band from `params.slug`; the query takes a slug of
+	// its own. Without the cross-check those two could name different bands.
+	it('refuses a slug that is not the guarded band', async () => {
+		await expect(getBandReservations('some-other-band')).rejects.toMatchObject({ status: 403 });
+	});
+
+	it('marks a row cancellable only for its booker', async () => {
+		selectResult = [reservationRow('user-2')];
+
+		const result = await getBandReservations('the-velvet-underground');
+
+		expect(result.upcoming[0].canCancel).toBe(false);
+	});
+
+	it('marks every row cancellable for a band admin', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+		selectResult = [reservationRow('user-2')];
+
+		const result = await getBandReservations('the-velvet-underground');
+
+		expect(result.upcoming[0].canCancel).toBe(true);
+	});
+
+	// Past sessions are never cancellable, whoever is looking.
+	it('never marks a past row cancellable', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('owner');
+		selectResult = [reservationRow('user-owner', 'completed')];
+
+		const result = await getBandReservations('the-velvet-underground');
+
+		expect(result.past[0].canCancel).toBe(false);
 	});
 });
 

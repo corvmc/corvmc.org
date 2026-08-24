@@ -34,9 +34,9 @@
 	</a>
 {:else}
 	<div class="alert {typeClass[type]} {className}" role="alert">
-		<p>{@render children()}</p>
+		<div>{@render children()}</div>
 		{#if reset}
-			<Button class="btn-sm" onclick={reset}>Retry</Button>
+			<Button variant="default" size="sm" onclick={reset}>Retry</Button>
 		{:else if action}
 			{@render action()}
 		{/if}

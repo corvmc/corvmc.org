@@ -7,7 +7,9 @@
 	import { parseGigImport, GIG_IMPORT_MAX_LINES } from '$lib/utils/gig-import';
 	import { invalidateAll } from '$app/navigation';
 
-	let { open = $bindable(false), bandSlug }: { open?: boolean; bandSlug: string } = $props();
+	// No band prop: `importGigsForm` resolves the band from the route guard, and
+	// the `slug` field it used to carry was never read by the handler.
+	let { open = $bindable(false) }: { open?: boolean } = $props();
 
 	const fields = importGigsForm.fields;
 
@@ -29,19 +31,17 @@
 		}}
 		class="space-y-4"
 	>
-		<input {...fields.slug.as('hidden', bandSlug)} />
-
 		<FormField name="text" label="One gig per line">
 			<textarea
 				{...fields.text.as('text')}
 				bind:value={text}
-				class="textarea textarea-bordered w-full font-mono text-xs"
+				class="textarea w-full font-mono text-xs"
 				rows="10"
 				placeholder="2024-03-14 | Bombs Away Cafe | w/ Paper Wolves&#10;2023-11-02 | The Majestic Theatre"
 			></textarea>
 		</FormField>
 
-		<p class="text-xs opacity-60">
+		<p class="text-subtle">
 			<code>date | venue | title | ticket link</code> — only the date is required. Start a title
 			with
 			<code>w/</code> to list the other acts. Gigs must be in the past, {GIG_IMPORT_MAX_LINES} at a time.
@@ -82,7 +82,7 @@
 		<div class="flex justify-end gap-2">
 			<SubmitButton
 				label={preview.rows.length > 0 ? `Import ${preview.rows.length} gigs` : 'Import'}
-				class="btn-primary"
+				variant="primary"
 				disabled={preview.rows.length === 0}
 			/>
 		</div>

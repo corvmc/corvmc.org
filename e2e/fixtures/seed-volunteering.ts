@@ -17,7 +17,7 @@
  * Mirrors the D1 access pattern in seed-staff-user.ts.
  */
 import { eq, inArray } from 'drizzle-orm';
-import { withPlatformDb, withPlatformEnv } from './platform-db';
+import { readLocalDb, withPlatformEnv } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import {
@@ -32,6 +32,7 @@ import {
 	volunteerSignup,
 	volunteerShiftFeedback
 } from '../../src/lib/server/db/schema/volunteer';
+import { event } from '../../src/lib/server/db/schema/event';
 import { scryptHash } from './seed-pay-reservation';
 
 export const SEED_VOL_MEMBER_ID = 'e2e-vol-member';
@@ -135,11 +136,24 @@ export const SEED_VOL_BLOCKED_MINOR_LAST = 'Almeida';
 export const SEED_VOL_SHIFT_DONE_ID = 'e2e-vol-shift-done';
 export const SEED_VOL_SIGNUP_DONE_ID = 'e2e-vol-signup-done';
 
+/**
+ * A published show, and a shift attached to it.
+ *
+ * Kept off SEED_VOL_SHIFT_OPEN_ID on purpose: that one is the member board's
+ * happy-path claim, and hanging an event title on its card would change the
+ * text every existing claim assertion reads. The link is worth testing on a
+ * shift nothing else depends on.
+ */
+export const SEED_VOL_EVENT_ID = 'e2e-vol-event';
+export const SEED_VOL_EVENT_TITLE = 'E2E Sludgefest';
+export const SEED_VOL_SHIFT_EVENT_ID = 'e2e-vol-shift-event';
+
 const SHIFT_IDS = [
 	SEED_VOL_SHIFT_OPEN_ID,
 	SEED_VOL_SHIFT_GATED_ID,
 	SEED_VOL_SHIFT_FULL_ID,
-	SEED_VOL_SHIFT_DONE_ID
+	SEED_VOL_SHIFT_DONE_ID,
+	SEED_VOL_SHIFT_EVENT_ID
 ];
 
 /** Days out, at a fixed hour, so the board always has a future shift to claim. */
@@ -157,6 +171,9 @@ const LOG_IDS = [
 	SEED_VOL_LOG_REJECTED_ID
 ];
 const ROLE_IDS = [SEED_VOL_ROLE_ID, SEED_VOL_ARCHIVED_ROLE_ID];
+
+/** Every role this fixture owns — what a shift left behind by the UI hangs off. */
+const ALL_ROLE_IDS = [...ROLE_IDS, SEED_VOL_GATED_ROLE_ID];
 
 /** Members added by this fixture on top of SEED_VOL_MEMBER_ID. */
 const EXTRA_MEMBER_IDS = [SEED_VOL_NEW_MEMBER_ID, SEED_VOL_MINOR_ID, SEED_VOL_BLOCKED_MINOR_ID];
@@ -179,11 +196,36 @@ export async function seedVolunteering(): Promise<void> {
 
 		// Child before parent: the role FK is ON DELETE RESTRICT, and signups and
 		// held certifications both point at rows recreated below.
-		await db
-			.delete(volunteerShiftFeedback)
-			.where(eq(volunteerShiftFeedback.signupId, SEED_VOL_SIGNUP_DONE_ID));
-		await db.delete(volunteerSignup).where(inArray(volunteerSignup.shiftId, SHIFT_IDS));
-		await db.delete(volunteerShift).where(inArray(volunteerShift.id, SHIFT_IDS));
+		//
+		// Shifts are collected by *role* rather than taken from SHIFT_IDS, because
+		// the suite creates shifts through the real UI and those carry random ids.
+		// Deleting only the known ones left an orphan pointing at a seeded role,
+		// and the next run failed on the ON DELETE RESTRICT — a red suite that had
+		// nothing to do with the code under test.
+		const staleShifts = await db
+			.select({ id: volunteerShift.id })
+			.from(volunteerShift)
+			.where(inArray(volunteerShift.volunteerRoleId, ALL_ROLE_IDS));
+		const shiftIds = [...new Set([...SHIFT_IDS, ...staleShifts.map((r) => r.id)])];
+
+		const staleSignups = await db
+			.select({ id: volunteerSignup.id })
+			.from(volunteerSignup)
+			.where(inArray(volunteerSignup.shiftId, shiftIds));
+
+		if (staleSignups.length > 0) {
+			await db.delete(volunteerShiftFeedback).where(
+				inArray(
+					volunteerShiftFeedback.signupId,
+					staleSignups.map((r) => r.id)
+				)
+			);
+		}
+		await db.delete(volunteerSignup).where(inArray(volunteerSignup.shiftId, shiftIds));
+		await db.delete(volunteerShift).where(inArray(volunteerShift.id, shiftIds));
+		// After the shifts: the FK is ON DELETE SET NULL, so deleting the event
+		// first would silently unlink the very row the linked-shift tests assert on.
+		await db.delete(event).where(eq(event.id, SEED_VOL_EVENT_ID));
 		await db
 			.delete(volunteerRoleCertification)
 			.where(eq(volunteerRoleCertification.certificationId, SEED_VOL_CERT_ID));
@@ -421,6 +463,34 @@ export async function seedVolunteering(): Promise<void> {
 			}
 		]);
 
+		// A published show with one shift on it. Both the staff event page's
+		// Volunteer Shifts card and the shift detail page's Event fact read this.
+		await db.insert(event).values({
+			id: SEED_VOL_EVENT_ID,
+			title: SEED_VOL_EVENT_TITLE,
+			description: 'E2E fixture show.',
+			startsAt: daysFromNow(6, 2),
+			endsAt: daysFromNow(6, 6),
+			doorsAt: daysFromNow(6, 1),
+			status: 'published',
+			publishedAt: now,
+			source: 'cmc',
+			createdByUserId: SEED_VOL_MEMBER_ID,
+			createdAt: now,
+			updatedAt: now
+		});
+
+		await db.insert(volunteerShift).values({
+			id: SEED_VOL_SHIFT_EVENT_ID,
+			volunteerRoleId: SEED_VOL_ROLE_ID,
+			eventId: SEED_VOL_EVENT_ID,
+			startsAt: daysFromNow(6, 1),
+			endsAt: daysFromNow(6, 6),
+			capacity: 2,
+			createdAt: now,
+			updatedAt: now
+		});
+
 		// Ended yesterday, completed, unreviewed — exactly what the day-after
 		// survey cron would have asked about.
 		await db.insert(volunteerShift).values({
@@ -509,13 +579,32 @@ export async function seedVolunteering(): Promise<void> {
 
 /** The member's signup status on a shift, for assertions the UI cannot make. */
 export async function readSignupStatus(shiftId: string): Promise<string | null> {
-	return withPlatformDb(async (db) => {
+	return readLocalDb(async (db) => {
 		const [row] = await db
 			.select({ status: volunteerSignup.status })
 			.from(volunteerSignup)
 			.where(eq(volunteerSignup.shiftId, shiftId))
 			.limit(1);
 		return row?.status ?? null;
+	});
+}
+
+/**
+ * The event a shift is attached to, or null.
+ *
+ * Read from the database rather than the page because the failure this guards
+ * is invisible on screen: a cleared picker that posts no field at all leaves the
+ * old `event_id` in place while the form reports success, and the page only
+ * shows the stale value again after a reload.
+ */
+export async function readShiftEventId(shiftId: string): Promise<string | null> {
+	return readLocalDb(async (db) => {
+		const [row] = await db
+			.select({ eventId: volunteerShift.eventId })
+			.from(volunteerShift)
+			.where(eq(volunteerShift.id, shiftId))
+			.limit(1);
+		return row?.eventId ?? null;
 	});
 }
 
@@ -526,7 +615,7 @@ export async function readVolunteerState(): Promise<{
 }> {
 	const { creditTransaction } = await import('../../src/lib/server/db/schema/finance');
 
-	return withPlatformDb(async (db) => {
+	return readLocalDb(async (db) => {
 		const [log] = await db
 			.select({ status: volunteerHourLog.status })
 			.from(volunteerHourLog)

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { createEquipment } from '$lib/remote/equipment.remote';
 	import { Field } from '../Form';
@@ -9,11 +10,15 @@
 
 	let {
 		categories,
-		class: className = 'btn-primary btn-sm',
+		variant = 'primary',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		categories: { id: string; name: string }[];
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -25,6 +30,8 @@
 	label="Add Equipment"
 	modalTitle="Add Equipment"
 	successToast="Equipment added"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

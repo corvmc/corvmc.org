@@ -19,10 +19,12 @@ The list opens on **Open**, so it reads as a work queue — resolved conversatio
 are out of the way until you ask for them. The tabs across the top switch between
 **Open**, **Snoozed**, **Resolved** and **All**, and each carries a count.
 
-Below that you can **search** by sender or subject, and filter by **channel** and
-by who a conversation is **assigned to** (including _Unassigned_ and _Assigned to
-me_). Your filters live in the address bar, so opening a conversation and coming
-back leaves you where you were.
+Below that you can **search** by sender or subject, and filter by **channel**, by
+who a conversation is **assigned to** (including _Unassigned_ and _Assigned to
+me_), and by who it is **waiting on** — _Needs a reply_ for the ones still owed an
+answer, _Awaiting their reply_ for the ones you have already answered. Your
+filters live in the address bar, so opening a conversation and coming back leaves
+you where you were.
 
 ## Inside a conversation
 
@@ -55,11 +57,21 @@ The sidebar carries the actions:
   Monday or two weeks, and the conversation drops out of the open queue and
   returns to it on the morning you chose.
 - **Reopen** / **Unsnooze** to pull one back by hand.
+- **Awaiting reply** marks a conversation as waiting on the other person. Sending a
+  reply does this for you — the button is for the times you answered somewhere the
+  inbox cannot see, like a phone call. **Needs a reply** takes it back.
 - **Assignment** puts a conversation on a specific staff member, who is notified.
+
+An awaiting conversation is still open and still sits in the Open tab; it just
+stops counting towards the number on the Inbox nav item, which is there to say how
+much is waiting on _you_. That is why the two numbers can differ. Anything the
+contact sends clears the mark on its own, whatever channel it arrives on.
 
 ## Tips
 
 - Resolve threads once handled so the Open queue stays honest.
+- If someone never writes back, resolve or snooze it rather than leaving it marked
+  awaiting forever — nothing sweeps those up for you.
 - Snooze rather than leaving something open that you can't act on yet.
 - For performance/booking inquiries from the contact form, route the person to the
   right next step (membership, a reservation, or an event).

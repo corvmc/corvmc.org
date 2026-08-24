@@ -1,4 +1,5 @@
 import { domainEvents } from '$lib/server/events/event-bus';
+import { formatCents } from '$lib/utils/format';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { captureException } from '$lib/server/sentry';
 import { listStaffUsers } from '$lib/server/authorization';
@@ -40,10 +41,6 @@ function formatPickupDate(value: string): string {
 		month: 'long',
 		day: 'numeric'
 	});
-}
-
-function formatMoney(cents: number): string {
-	return `$${(cents / 100).toFixed(2)}`;
 }
 
 /** Display hours for email copy. 3 → "3 hours", 1.5 → "1.5 hours", 1 → "1 hour". */
@@ -172,11 +169,11 @@ export function registerAllNotificationListeners(): void {
 				// how they get their codes back if they lose it. That page keys off
 				// the purchase id alone (no session), which is what makes it work.
 				orderId: event.purchaseId.slice(0, 8).toUpperCase(),
-				unitPrice: formatMoney(event.unitPriceCents),
-				subtotal: formatMoney(event.subtotalCents),
+				unitPrice: formatCents(event.unitPriceCents),
+				subtotal: formatCents(event.subtotalCents),
 				feesCovered: event.feesCents > 0,
-				fees: formatMoney(event.feesCents),
-				total: formatMoney(event.totalCents),
+				fees: formatCents(event.feesCents),
+				total: formatCents(event.totalCents),
 				ticketsUrl: `${siteUrl}/events/${event.eventId}/tickets/success?purchase_id=${event.purchaseId}`
 			}
 		});
@@ -512,11 +509,11 @@ export function registerAllNotificationListeners(): void {
 		if (event.totalChargeCents > 0) {
 			const breakdown =
 				event.creditsCents > 0
-					? ` (credits ${formatMoney(event.creditsCents)}, cash ${formatMoney(event.cashCents)})`
+					? ` (credits ${formatCents(event.creditsCents)}, cash ${formatCents(event.cashCents)})`
 					: '';
 			details.push({
 				label: 'Total charge',
-				value: `${formatMoney(event.totalChargeCents)}${breakdown}`
+				value: `${formatCents(event.totalChargeCents)}${breakdown}`
 			});
 		}
 

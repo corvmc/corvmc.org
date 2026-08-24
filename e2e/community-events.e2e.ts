@@ -76,9 +76,9 @@ test.describe('community listings', () => {
 		// Straight to the queue by URL, the way the staff notification links —
 		// if the tab didn't read the URL this would silently assert the All tab.
 		await page.goto('/staff/events?status=pending_review');
-		// TabBar renders ToggleGroup.Item, which is role=radio in a single-select
-		// group — not role=button.
-		await expect(page.getByRole('radio', { name: /Needs review/ })).toHaveClass(/latched/);
+		// TabBar's client-state mode is a real tablist, so its items are role=tab.
+		// They were role=radio, from a bits-ui ToggleGroup.
+		await expect(page.getByRole('tab', { name: /Needs review/ })).toHaveClass(/latched/);
 		await expect(page.getByText(SEED_CE_DRAFT_TITLE)).toHaveCount(0);
 	});
 

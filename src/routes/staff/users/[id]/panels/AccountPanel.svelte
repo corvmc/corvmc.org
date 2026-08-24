@@ -10,13 +10,15 @@
 	} from '$lib/remote/users.remote';
 	import { getUserDirectoryProfile } from '$lib/remote/directory.remote';
 	import StaffUserForm from '../StaffUserForm.svelte';
-	import AsyncCard from './AsyncCard.svelte';
+	import { RelatedList } from '$lib/components/shared/entity';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
@@ -48,14 +50,13 @@
 	<StaffUserForm {member} {roleOptions} {initialRoles} {id} />
 {/await}
 
-<AsyncCard title="Directory profile" result={getUserDirectoryProfile(id)}>
+<RelatedList title="Directory profile" result={getUserDirectoryProfile(id)}>
 	{#snippet children(data)}
 		{#if !data.profile}
 			<EmptyState title="No profile" description="This account has no directory profile row." />
 		{:else}
-			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-				<dt class="opacity-60">Visibility</dt>
-				<dd class="flex items-center gap-2">
+			<DefinitionList>
+				<Fact label="Visibility" class="flex items-center gap-2">
 					<Badge
 						size="sm"
 						variant={data.profile.directoryVisibility === 'hidden' ? 'ghost' : 'info'}
@@ -65,34 +66,29 @@
 					{#if !data.complete}
 						<span class="opacity-60">Profile incomplete</span>
 					{/if}
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Tagline</dt>
-				<dd>{data.profile.tagline || '—'}</dd>
+				<Fact label="Tagline">{data.profile.tagline || '—'}</Fact>
 
-				<dt class="opacity-60">Hometown</dt>
-				<dd>{data.profile.hometown || '—'}</dd>
+				<Fact label="Hometown">{data.profile.hometown || '—'}</Fact>
 
-				<dt class="opacity-60">Instruments</dt>
-				<dd class="flex flex-wrap gap-1">
+				<Fact label="Instruments" class="flex flex-wrap gap-1">
 					{#each data.profile.instruments as i (i)}
 						<Badge size="sm">{i}</Badge>
 					{:else}
 						—
 					{/each}
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Genres</dt>
-				<dd class="flex flex-wrap gap-1">
+				<Fact label="Genres" class="flex flex-wrap gap-1">
 					{#each data.profile.genres as g (g)}
 						<Badge size="sm">{g}</Badge>
 					{:else}
 						—
 					{/each}
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Open to</dt>
-				<dd class="flex flex-wrap gap-1">
+				<Fact label="Open to" class="flex flex-wrap gap-1">
 					{#if data.profile.lookingForBand}<Badge size="sm">Looking for a band</Badge>{/if}
 					{#if data.profile.availableForHire}<Badge size="sm">For hire</Badge>{/if}
 					{#if data.profile.teachesLessons}<Badge size="sm">Teaches lessons</Badge>{/if}
@@ -100,24 +96,24 @@
 					{#if !data.profile.lookingForBand && !data.profile.availableForHire && !data.profile.teachesLessons && !data.profile.openToCollaboration}
 						—
 					{/if}
-				</dd>
-			</dl>
+				</Fact>
+			</DefinitionList>
 			<div class="mt-3">
-				<Button href={resolve(`/member/directory/members/${id}`)} class="btn-ghost btn-sm">
+				<Button href={resolve(`/member/directory/members/${id}`)} variant="ghost" size="sm">
 					View public profile
 				</Button>
 			</div>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
 <!--
 	Read-only. Revoking a session would be a new mutation, and the one lever staff
 	already have for cutting off access — deactivation — deletes them all.
 -->
-<AsyncCard title="Sign-in activity" result={getUserSessions(id)}>
+<RelatedList title="Sign-in activity" result={getUserSessions(id)}>
 	{#snippet children(data)}
-		<p class="mb-3 text-sm opacity-60">
+		<p class="mb-3 text-muted">
 			Last sign-in: {data.lastLoginAt ? formatDateTimeShort(data.lastLoginAt) : 'never on record'}
 		</p>
 		{#if data.sessions.length === 0}
@@ -136,7 +132,7 @@
 					<tr class="hover">
 						<td class="cell-primary">
 							<div class="font-medium whitespace-nowrap">{formatDateTimeShort(s.createdAt)}</div>
-							<div class="truncate text-sm opacity-60">{s.userAgent ?? 'Unknown device'}</div>
+							<div class="truncate text-muted">{s.userAgent ?? 'Unknown device'}</div>
 						</td>
 						<td class="col-support font-mono text-xs">{s.ipAddress ?? '—'}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(s.expiresAt)}</td>
@@ -145,35 +141,29 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
 <InfoCard title="Details" class="bg-base-200 shadow-none">
-	<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-		<dt class="opacity-60">User ID</dt>
-		<dd class="font-mono text-xs">{member.id}</dd>
+	<DefinitionList>
+		<Fact label="User ID" mono>{member.id}</Fact>
 
-		<dt class="opacity-60">Member no.</dt>
-		<dd>{member.memberNumber ?? '—'}</dd>
+		<Fact label="Member no.">{member.memberNumber ?? '—'}</Fact>
 
-		<dt class="opacity-60">Email verified</dt>
-		<dd>{member.emailVerified ? 'Yes' : 'No'}</dd>
+		<Fact label="Email verified">{member.emailVerified ? 'Yes' : 'No'}</Fact>
 
-		<dt class="opacity-60">Stripe ID</dt>
-		<dd class="font-mono text-xs">{member.stripeId ?? '—'}</dd>
+		<Fact label="Stripe ID" mono>{member.stripeId ?? '—'}</Fact>
 
-		<dt class="opacity-60">Joined</dt>
-		<dd>{new Date(member.createdAt).toLocaleString()}</dd>
+		<Fact label="Joined">{new Date(member.createdAt).toLocaleString()}</Fact>
 
 		{#if member.deletedAt}
-			<dt class="opacity-60">Deactivated</dt>
-			<dd>{new Date(member.deletedAt).toLocaleString()}</dd>
+			<Fact label="Deactivated">{new Date(member.deletedAt).toLocaleString()}</Fact>
 		{/if}
-	</dl>
+	</DefinitionList>
 </InfoCard>
 
 <InfoCard title="Danger Zone" class="mt-6 border border-error/30 bg-error/5 shadow-none">
 	{#if member.deletedAt}
-		<p class="mb-3 text-sm opacity-70">
+		<p class="mb-3 text-muted">
 			This account is deactivated. Reactivate it to restore access, or permanently delete it.
 		</p>
 		<div class="flex gap-2">
@@ -181,7 +171,8 @@
 				action={reactivateUser}
 				label="Reactivate"
 				successToast="Account reactivated"
-				class="btn-success btn-sm"
+				variant="success"
+				size="sm"
 				onsuccess={refreshAccount}
 			>
 				{#snippet form()}
@@ -193,7 +184,8 @@
 				action={purgeUser}
 				label="Delete permanently"
 				successToast="Account deleted"
-				class="btn-error btn-sm"
+				variant="error"
+				size="sm"
 				onsuccess={() => goto(resolve('/staff/users'))}
 			>
 				{#snippet form()}
@@ -206,7 +198,7 @@
 			</Action>
 		</div>
 	{:else}
-		<p class="mb-3 text-sm opacity-70">
+		<p class="mb-3 text-muted">
 			Deactivating signs this member out, hides them from the directory, cancels all of their future
 			reservations, and cancels their membership subscription. Reactivating restores their access,
 			but <strong>the cancelled reservations and subscription are not restored</strong> — they would have
@@ -216,7 +208,8 @@
 			action={deactivateUser}
 			label="Deactivate"
 			successToast="Account deactivated"
-			class="btn-error btn-sm"
+			variant="error"
+			size="sm"
 			onsuccess={refreshAccount}
 		>
 			{#snippet form()}

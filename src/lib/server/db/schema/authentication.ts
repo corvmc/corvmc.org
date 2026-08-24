@@ -91,6 +91,19 @@ export const user = sqliteTable(
 		openToCollaboration: integer('open_to_collaboration', { mode: 'boolean' })
 			.notNull()
 			.default(false),
+		/**
+		 * "Members can send me a message request from the directory."
+		 *
+		 * A preference the member owns outright, which is why it lives here beside
+		 * the other directory switches rather than in `member_standing`. Standing
+		 * is a record of what staff or an upheld report did *to* someone; being
+		 * reachable is the member's own call, and holding both in one row is what
+		 * forced `messaging_standing` to carry a `source` column. Staff cannot set
+		 * this, and turning it off never lifts a restriction.
+		 */
+		acceptsDirectMessages: integer('accepts_direct_messages', { mode: 'boolean' })
+			.notNull()
+			.default(true),
 		directoryVisibility: text('directory_visibility').notNull().default('members'),
 		directoryContact: text('directory_contact', { mode: 'json' }),
 		links: text('links', { mode: 'json' })

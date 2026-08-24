@@ -177,7 +177,18 @@ export const bandMember = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		role: text('role', { enum: bandRoles }).notNull(),
+		/** Instrument or job in this band — "Bass", "Vocals". The band's word for the role. */
 		position: text('position'),
+		/**
+		 * A per-band stage name. Distinct from `user.name`, which is one identity
+		 * across the whole platform, and from `event_band.name`, which is an act on
+		 * a bill rather than a person. Null means "use the account name" — the
+		 * roster falls back rather than storing a copy that goes stale the moment
+		 * someone renames their account.
+		 *
+		 * Self-set only. An admin can say what you play; they cannot rename you.
+		 */
+		alias: text('alias'),
 		status: text('status', { enum: bandMemberStatuses }).notNull(),
 		invitedById: text('invited_by_id').references(() => user.id, { onDelete: 'set null' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })
@@ -187,7 +198,16 @@ export const bandMember = sqliteTable(
 	(t) => [
 		unique('band_member_band_user_unique').on(t.bandId, t.userId),
 		index('idx_band_member_user').on(t.userId),
-		index('idx_band_member_status').on(t.status)
+		index('idx_band_member_status').on(t.status),
+		// Ownership is stored twice — here and on `band.ownerId` — and only
+		// `create()` writes both in one batch. This caps a band at one owner row
+		// so the second drift path (a `transferOwnership` whose demote matched
+		// nothing) can't silently produce two. It cannot enforce that a band has
+		// *at least* one owner, nor that the row agrees with `band.ownerId`:
+		// SQLite has no cross-table constraint. Both stay code-level. See CHORES.
+		uniqueIndex('idx_band_member_single_owner')
+			.on(t.bandId)
+			.where(sql`role = 'owner'`)
 	]
 );
 

@@ -8,6 +8,8 @@
 	import Action from '$lib/components/shared/Action.svelte';
 	import { formatTimeRange, formatDate } from '$lib/utils/format';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { getSeries, getSeriesHistory, cancelDetailSeries } from '$lib/remote/recurring.remote';
 	const { fields: cancelFields } = cancelDetailSeries;
 
@@ -25,7 +27,9 @@
 			label="Cancel Series"
 			modalTitle="Confirm"
 			successToast="Series cancelled"
-			class="btn-error btn-outline btn-sm"
+			variant="error"
+			size="sm"
+			outline
 			onsuccess={() => invalidateAll()}
 		>
 			{#snippet form()}
@@ -46,29 +50,25 @@
 
 	<!-- Current schedule -->
 	<InfoCard title="Schedule">
-		<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-			<dt class="opacity-60">RRULE</dt>
-			<dd class="font-mono text-xs">{series.rrule}</dd>
+		<DefinitionList>
+			<Fact label="RRULE" mono>{series.rrule}</Fact>
 
-			<dt class="opacity-60">Prototype Time</dt>
-			<dd>{formatTimeRange(series.prototypeStartsAt, series.prototypeEndsAt)}</dd>
+			<Fact label="Prototype Time"
+				>{formatTimeRange(series.prototypeStartsAt, series.prototypeEndsAt)}</Fact
+			>
 
-			<dt class="opacity-60">Booker</dt>
-			<dd>{series.prototypeBookerType}: {series.prototypeBookerId}</dd>
+			<Fact label="Booker">{series.prototypeBookerType}: {series.prototypeBookerId}</Fact>
 
 			{#if series.prototypeNotes}
-				<dt class="opacity-60">Notes</dt>
-				<dd>{series.prototypeNotes}</dd>
+				<Fact label="Notes">{series.prototypeNotes}</Fact>
 			{/if}
 
-			<dt class="opacity-60">Created</dt>
-			<dd>{formatDate(series.createdAt)}</dd>
+			<Fact label="Created">{formatDate(series.createdAt)}</Fact>
 
 			{#if series.cancelledAt}
-				<dt class="opacity-60">Cancelled</dt>
-				<dd>{formatDate(series.cancelledAt)}</dd>
+				<Fact label="Cancelled">{formatDate(series.cancelledAt)}</Fact>
 			{/if}
-		</dl>
+		</DefinitionList>
 	</InfoCard>
 
 	<!-- History -->

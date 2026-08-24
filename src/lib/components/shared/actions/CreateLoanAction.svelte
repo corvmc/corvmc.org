@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { createLoan, getAvailableEquipment } from '$lib/remote/equipment.remote';
 	import { Field } from '../Form';
@@ -8,10 +9,14 @@
 	const { fields } = createLoan;
 
 	let {
-		class: className = 'btn-sm btn-primary',
+		variant = 'primary',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -44,6 +49,8 @@
 	label="New Loan"
 	modalTitle="Create Loan Request"
 	successToast="Loan request created"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
@@ -57,7 +64,8 @@
 						<span class="font-medium">{userName}</span>
 						<Button
 							type="button"
-							class="btn-ghost btn-xs"
+							variant="ghost"
+							size="xs"
 							onclick={() => {
 								userId = '';
 								userName = '';
@@ -69,7 +77,7 @@
 						<div class="label"><span class="label-text">Member</span></div>
 						<input
 							type="text"
-							class="input input-bordered w-full"
+							class="input w-full"
 							bind:value={query}
 							oninput={handleMemberSearch}
 							placeholder="Search by name or email..."

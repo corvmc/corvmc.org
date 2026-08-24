@@ -12,6 +12,7 @@
  * window where their live site is down waiting on us.
  */
 import { env } from '$env/dynamic/private';
+import { DomainError } from '../domain-error';
 import { env as publicEnv } from '$env/dynamic/public';
 import { eq, and, isNull, ne } from 'drizzle-orm';
 import { db } from '$lib/server/db';
@@ -22,7 +23,9 @@ import type { CustomDomainStatus, CustomDomainVerification } from '$lib/server/d
 
 const API_BASE = 'https://api.cloudflare.com/client/v4';
 
-export class CustomDomainError extends Error {}
+export class CustomDomainError extends DomainError {
+	readonly httpStatus = 400;
+}
 
 /**
  * Where bands point their domain. A CNAME at our zone rather than the fallback

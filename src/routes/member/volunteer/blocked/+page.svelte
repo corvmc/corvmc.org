@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	/**
 	 * Where an under-18 sign-up lands.
 	 *
@@ -34,8 +35,8 @@
 				automatically.
 			</p>
 			<div class="flex flex-wrap gap-2 pt-2">
-				<a href={resolve('/contact')} class="btn btn-primary btn-sm">Get in touch</a>
-				<a href={resolve('/member')} class="btn btn-ghost btn-sm">Back to dashboard</a>
+				<Button href={resolve('/contact')} variant="primary" size="sm">Get in touch</Button>
+				<Button href={resolve('/member')} variant="ghost" size="sm">Back to dashboard</Button>
 			</div>
 		</InfoCard>
 	{/await}

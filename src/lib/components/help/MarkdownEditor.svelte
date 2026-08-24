@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import MarkdownPreview from './MarkdownPreview.svelte';
 	import { IconPhoto } from '@tabler/icons-svelte';
 
@@ -27,30 +28,36 @@
 
 <div class="border border-base-300 rounded-box overflow-hidden">
 	<div class="flex items-center gap-1 border-b border-base-300 px-2 py-1 bg-base-200/50">
-		<button
+		<Button
 			type="button"
-			class="btn btn-ghost btn-xs {activeTab === 'write' ? 'btn-active' : ''}"
+			variant="ghost"
+			size="xs"
+			class={activeTab === 'write' ? 'btn-active' : ''}
 			onclick={() => (activeTab = 'write')}
 		>
 			Write
-		</button>
-		<button
+		</Button>
+		<Button
 			type="button"
-			class="btn btn-ghost btn-xs {activeTab === 'preview' ? 'btn-active' : ''}"
+			variant="ghost"
+			size="xs"
+			class={activeTab === 'preview' ? 'btn-active' : ''}
 			onclick={() => (activeTab = 'preview')}
 		>
 			Preview
-		</button>
+		</Button>
 		<div class="flex-1"></div>
 		{#if uploadImage}
-			<button
+			<Button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square"
+				variant="ghost"
+				size="xs"
+				shape="square"
 				title="Insert image"
 				onclick={() => fileInput.click()}
 			>
 				<IconPhoto size={14} />
-			</button>
+			</Button>
 			<input
 				type="file"
 				accept="image/*"

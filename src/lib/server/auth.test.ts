@@ -6,6 +6,8 @@ vi.mock('$lib/server/db', () => ({ db: {} }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
 import {
+	AUTH_IP_ADDRESS_HEADERS,
+	authRateLimitEnabled,
 	buildVerifyPasswordUrl,
 	deriveSignInAnomaly,
 	isDeactivated,
@@ -135,5 +137,41 @@ describe('isDeactivated', () => {
 
 	it('is true when deletedAt is a date', () => {
 		expect(isDeactivated(new Date('2026-01-01'))).toBe(true);
+	});
+});
+
+describe('client IP resolution', () => {
+	// better-auth's default is `x-forwarded-for`, which a caller can append to.
+	// It resolves no IP from a multi-entry header without a trustedProxies list,
+	// and since 1.6.17 an unresolved IP means one shared rate-limit bucket rather
+	// than a skipped check — so a single visitor sending their own XFF could hold
+	// site-wide sign-in to better-auth's built-in 3 requests per 10 seconds.
+	// CF-Connecting-IP is written by the edge and cannot be forged from outside.
+	it('reads the client IP from a header the caller cannot forge', () => {
+		expect(AUTH_IP_ADDRESS_HEADERS).toEqual(['cf-connecting-ip']);
+		expect(AUTH_IP_ADDRESS_HEADERS).not.toContain('x-forwarded-for');
+	});
+});
+
+describe('authRateLimitEnabled', () => {
+	it('keeps rate limiting on for a deployed origin', () => {
+		expect(authRateLimitEnabled('https://corvmc.org')).toBe(true);
+		expect(authRateLimitEnabled('https://corvmc.devon-cash.workers.dev')).toBe(true);
+	});
+
+	// Nothing sets CF-Connecting-IP off Cloudflare, so under `vite preview` no IP
+	// resolves and every sign-in in the e2e suite shares one bucket. Leaving the
+	// limiter on there costs ~30 tests to timeouts on the login redirect.
+	it('turns rate limiting off for a local preview or dev server', () => {
+		expect(authRateLimitEnabled('http://localhost:4173')).toBe(false);
+		expect(authRateLimitEnabled('http://localhost:5173')).toBe(false);
+		expect(authRateLimitEnabled('http://some-band.localhost:4173')).toBe(false);
+	});
+
+	// isLocalOrigin fails open for Sentry's sake; here that direction is also the
+	// safe one — an origin we cannot read keeps its limits.
+	it('keeps rate limiting on when the origin is missing or unparseable', () => {
+		expect(authRateLimitEnabled(undefined)).toBe(true);
+		expect(authRateLimitEnabled('not-a-url')).toBe(true);
 	});
 });

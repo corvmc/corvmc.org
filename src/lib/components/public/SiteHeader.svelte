@@ -43,12 +43,14 @@
 			<!-- Actions -->
 			<div class="flex items-center gap-2" style="grid-row: 1 / 3; grid-column: 3">
 				{#if user}
-					<Button href="/member" class="btn-sm">My Account</Button>
+					<Button href="/member" variant="default" size="sm">My Account</Button>
 				{:else}
-					<Button href="/login" class="btn-sm">Sign In</Button>
+					<Button href="/login" variant="default" size="sm">Sign In</Button>
 				{/if}
 				<Button
-					class="btn-sm btn-ghost lg:hidden"
+					variant="ghost"
+					size="sm"
+					class="lg:hidden"
 					onclick={() => (menuOpen = !menuOpen)}
 					aria-label="Toggle menu"
 				>
@@ -83,13 +85,16 @@
 						{link.label}
 					</a>
 				{/each}
-				<a
+				<Button
 					href={resolve('/contribute')}
-					class="btn btn-sm btn-outline ml-3"
+					variant="default"
+					size="sm"
+					outline
+					class="ml-3"
 					style="--btn-fill: var(--bg-page)"
 				>
 					Contribute
-				</a>
+				</Button>
 			</nav>
 		</div>
 	</nav>

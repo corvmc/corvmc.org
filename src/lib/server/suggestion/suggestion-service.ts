@@ -1,8 +1,8 @@
 import { db } from '$lib/server/db';
+import { memberRefColumns } from '$lib/server/entity/refs';
 import {
 	suggestion,
 	suggestionVote,
-	suggestionStanding,
 	suggestionEdit,
 	type Suggestion,
 	type SuggestionCategory,
@@ -16,6 +16,7 @@ import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/errors';
 import { domainEvents, type DomainEvents } from '$lib/server/events/event-bus';
 import { captureException } from '$lib/server/sentry';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import {
 	SUGGESTION_TITLE_MAX,
 	SUGGESTION_BODY_MAX,
@@ -162,8 +163,9 @@ export async function createSuggestion(params: CreateSuggestionParams): Promise<
 
 	// A member who has had a report upheld posts under review until staff lift
 	// it. Absence of a standing row is the common case and means trusted.
-	const standing = await getSuggestionStanding(params.authorUserId);
-	const visibility: SuggestionVisibility = standing.requiresReview ? 'pending_review' : 'visible';
+	const standing = await getStanding(params.authorUserId, 'suggestion');
+	const requiresReview = standing.status !== 'none';
+	const visibility: SuggestionVisibility = requiresReview ? 'pending_review' : 'visible';
 
 	const [row] = await db
 		.insert(suggestion)
@@ -173,7 +175,7 @@ export async function createSuggestion(params: CreateSuggestionParams): Promise<
 			body,
 			category: params.category,
 			visibility,
-			visibilityChangedAt: standing.requiresReview ? new Date() : null
+			visibilityChangedAt: requiresReview ? new Date() : null
 		})
 		.returning();
 
@@ -713,7 +715,10 @@ export async function listPendingEdits() {
 			proposedTitle: suggestionEdit.proposedTitle,
 			originalTitle: suggestionEdit.originalTitle,
 			createdAt: suggestionEdit.createdAt,
-			requestedByName: requester.name
+			requestedByName: requester.name,
+			// The `user` join is aliased here — one query, two people, if the
+			// suggestion's own author is ever added beside the requester.
+			requestedBy: memberRefColumns(requester)
 		})
 		.from(suggestionEdit)
 		.leftJoin(requester, eq(requester.id, suggestionEdit.requestedByUserId))
@@ -727,76 +732,6 @@ export async function countPendingEdits(): Promise<number> {
 		.from(suggestionEdit)
 		.where(eq(suggestionEdit.status, 'pending'));
 	return row?.count ?? 0;
-}
-
-// ---------------------------------------------------------------------------
-// Standing
-// ---------------------------------------------------------------------------
-
-export interface SuggestionStandingResult {
-	requiresReview: boolean;
-	reason: string | null;
-	triggeringFlagId: string | null;
-	updatedAt: Date | null;
-}
-
-/**
- * Whether this member's suggestions publish directly or queue for staff.
- *
- * No row means trusted, which is the overwhelmingly common case — a row only
- * appears once staff have upheld a report against one of their suggestions.
- */
-export async function getSuggestionStanding(userId: string): Promise<SuggestionStandingResult> {
-	const [row] = await db
-		.select({
-			requiresReview: suggestionStanding.requiresReview,
-			reason: suggestionStanding.reason,
-			triggeringFlagId: suggestionStanding.triggeringFlagId,
-			updatedAt: suggestionStanding.updatedAt
-		})
-		.from(suggestionStanding)
-		.where(eq(suggestionStanding.userId, userId))
-		.limit(1);
-
-	if (!row) return { requiresReview: false, reason: null, triggeringFlagId: null, updatedAt: null };
-	return row;
-}
-
-/** Called from flag-service when staff uphold a report. Idempotent. */
-export async function revokeSuggestionTrust(params: {
-	userId: string;
-	flagId: string;
-	staffId: string;
-	reason?: string | null;
-}): Promise<void> {
-	const values = {
-		requiresReview: true as const,
-		reason: params.reason ? trimTo(params.reason, SUGGESTION_NOTE_MAX) : null,
-		triggeringFlagId: params.flagId,
-		updatedByUserId: params.staffId,
-		updatedAt: new Date()
-	};
-
-	await db
-		.insert(suggestionStanding)
-		.values({ userId: params.userId, ...values })
-		.onConflictDoUpdate({ target: suggestionStanding.userId, set: values });
-}
-
-/**
- * Give a member their direct-publish rights back.
- *
- * Flips the flag rather than deleting the row, so "this was looked at and
- * forgiven" stays distinguishable from "this never happened".
- */
-export async function restoreSuggestionTrust(params: {
-	userId: string;
-	staffId: string;
-}): Promise<void> {
-	await db
-		.update(suggestionStanding)
-		.set({ requiresReview: false, updatedByUserId: params.staffId, updatedAt: new Date() })
-		.where(eq(suggestionStanding.userId, params.userId));
 }
 
 // ---------------------------------------------------------------------------

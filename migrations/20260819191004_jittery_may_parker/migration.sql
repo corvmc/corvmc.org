@@ -1,0 +1,1 @@
+ALTER TABLE `inbox_thread` ADD `awaiting_reply_since` integer;

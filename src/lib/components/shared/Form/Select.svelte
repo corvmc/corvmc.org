@@ -10,8 +10,9 @@
 	 * disabled styling never matches at all. Hence: the class goes on this wrapper,
 	 * the element inside stays bare.
 	 *
-	 * Sizing/variant/width classes (`select-sm`, `w-full`, `ghost`) belong on the
-	 * wrapper via `class`; `id`, `name`, `disabled` and ARIA attributes are forwarded
+	 * `size` covers the one modifier that was ever used in anger — `select-sm`, on
+	 * every filter bar in the app. Other wrapper classes (`w-full`, `ghost`) still
+	 * go through `class`; `id`, `name`, `disabled` and ARIA attributes are forwarded
 	 * to the inner `<select>` so labels and validation still target the control.
 	 *
 	 * Multi-selects are deliberately not covered: daisyUI's `&[multiple]` rule drops
@@ -22,18 +23,20 @@
 
 	let {
 		value = $bindable(),
+		size = 'md',
 		class: className = '',
 		children,
 		...rest
 	}: {
 		value?: unknown;
+		size?: 'sm' | 'md';
 		class?: string;
 		children: Snippet;
 		[key: string]: unknown;
 	} = $props();
 </script>
 
-<div class="select {className}">
+<div class="select {size === 'sm' ? 'select-sm' : ''} {className}">
 	<select bind:value {...rest}>
 		{@render children()}
 	</select>

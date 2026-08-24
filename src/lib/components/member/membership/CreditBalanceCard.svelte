@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { IconMusic, IconCircleCheck } from '@tabler/icons-svelte';
 	import type { SubscriptionInfo, Credits } from '$lib/server/db/schema/finance';
 	import { creditsToHours } from '$lib/config';
@@ -27,22 +29,22 @@
 	);
 </script>
 
-<div class="card bg-base-100 shadow-sm">
-	<div class="card-body">
+<Card>
+	<CardBody>
 		<div class="flex items-center gap-4">
 			<div class="flex size-12 items-center justify-center rounded-full bg-primary/10">
 				<IconMusic size={24} class="text-primary" />
 			</div>
 			<div>
 				<h3 class="text-xl font-semibold">Free Practice Hours</h3>
-				<p class="text-sm opacity-60">Your monthly allocation</p>
+				<p class="text-muted">Your monthly allocation</p>
 			</div>
 		</div>
 
 		<div class="mt-4 grid gap-4 sm:grid-cols-3">
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
 				<div class="text-3xl font-bold text-primary">{allocatedHours}</div>
-				<div class="text-sm opacity-60">Total This Month</div>
+				<div class="text-muted">Total This Month</div>
 			</div>
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
 				<div
@@ -52,16 +54,16 @@
 				>
 					{remaining}
 				</div>
-				<div class="text-sm opacity-60">Remaining</div>
+				<div class="text-muted">Remaining</div>
 			</div>
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
 				<div class="text-3xl font-bold">{usedHours}</div>
-				<div class="text-sm opacity-60">Used</div>
+				<div class="text-muted">Used</div>
 			</div>
 		</div>
 
 		<div class="mt-4 rounded-lg bg-primary/5 p-3 text-center">
-			<p class="text-sm opacity-70">Your hours refresh on <strong>{refreshDate}</strong></p>
+			<p class="text-muted">Your hours refresh on <strong>{refreshDate}</strong></p>
 		</div>
 
 		<div class="mt-4 space-y-2 border-t border-base-200 pt-4">
@@ -74,5 +76,5 @@
 				<span><strong>Priority booking</strong> when last-minute openings pop up</span>
 			</div>
 		</div>
-	</div>
-</div>
+	</CardBody>
+</Card>

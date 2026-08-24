@@ -35,6 +35,7 @@
 		input,
 		description,
 		readonly,
+		display,
 		issues: propIssues,
 		children,
 		upload,
@@ -55,6 +56,15 @@
 		class?: string;
 		value?: any;
 		readonly?: boolean;
+		/**
+		 * What to show in place of the input when `readonly`. Without it the
+		 * readonly branch prints `value` raw, which is the wrong thing for
+		 * anything the form stores differently from how a person reads it — a
+		 * date is `2026-08-20`, a time is `19:30`, a price is `10.00`. Pass a
+		 * string for a formatted scalar, or a snippet when the value is a link,
+		 * a list, or anything else with structure.
+		 */
+		display?: string | Snippet;
 		issues?: RemoteFormIssue[] | null;
 		upload?: (file: File) => Promise<string>;
 		accept?: string;
@@ -92,14 +102,21 @@
 	// Resolve field attributes from SvelteKit field definition when provided
 	let fieldAttrs = $derived.by(() => {
 		if (!field) return null;
+		// `file` maps to itself: a deferred upload submits a real File on a real
+		// file input, and `.as('text')` would register the field as a string and
+		// hand the handler the filename instead. The other three are text under
+		// the hood — a textarea, a JSON blob, a date string.
 		const asType = isBooleanInput
 			? 'checkbox'
-			: type === 'textarea' || type === 'tags' || type === 'calendar' || type === 'file'
-				? 'text'
-				: (type ?? 'text');
+			: type === 'file'
+				? 'file'
+				: type === 'textarea' || type === 'tags' || type === 'calendar'
+					? 'text'
+					: (type ?? 'text');
 		// Forward the supplied value so plain inputs render pre-filled from existing
 		// data (edit forms). `.as(type, value)` controls the rendered value.
-		return ownsValue || value === undefined
+		// A file field has no renderable value to forward — the browser owns it.
+		return ownsValue || value === undefined || asType === 'file'
 			? field.as(asType as any)
 			: field.as(asType as any, value);
 	});
@@ -153,22 +170,36 @@
 	{:else if description}
 		<p class="text-muted text-sm">{@render description()}</p>
 	{/if}
-	{#if children}
+	<!--
+		`readonly` comes first on purpose. It used to sit after `children` and
+		`input`, which meant it was silently ignored on every field using
+		custom-input mode — exactly the fields that need it most (a long
+		description, a chip editor, a file input). A read-only field also renders
+		no `[name]` input at all, so it cannot post.
+	-->
+	{#if readonly}
+		{#if typeof display !== 'string' && display}
+			<div class="input h-auto min-h-12 w-full items-start py-3">
+				<div class="grow whitespace-pre-wrap">{@render display()}</div>
+				<IconPencilOff class="size-5 shrink-0 opacity-20" />
+			</div>
+		{:else if type === 'textarea'}
+			<div class="input h-auto min-h-12 w-full items-start py-3">
+				<span class="grow whitespace-pre-wrap">{display ?? value}</span>
+				<IconPencilOff class="size-5 shrink-0 opacity-20" />
+			</div>
+		{:else}
+			<p class="input w-full">
+				<span class="grow">{display ?? value}</span>
+				<IconPencilOff class="size-5 opacity-20" />
+			</p>
+		{/if}
+	{:else if children}
 		{@render children()}
 	{:else if input}
 		{@render input(resolvedId)}
-	{:else if readonly}
-		<p class="input-bordered input w-full">
-			<span class="grow">{value}</span>
-			<IconPencilOff class="size-5 opacity-20" />
-		</p>
 	{:else if type === 'textarea'}
-		<textarea
-			class="textarea-bordered textarea w-full"
-			class:ghost={readonly}
-			{...inputProps}
-			bind:value
-		></textarea>
+		<textarea class="textarea w-full" class:ghost={readonly} {...inputProps} bind:value></textarea>
 	{:else if type === 'tags'}
 		<!-- `value` is its own prop, so it is not in `...rest` and must be forwarded
 		     explicitly — without it TagInput starts empty and submits `[]`. -->
@@ -199,14 +230,22 @@
 			/>
 			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
 		</label>
-	{:else if type === 'file' && upload}
+	{:else if type === 'file' && (upload || field)}
+		<!-- Two modes. With `upload`, the file posts immediately and the returned
+		     key is what submits (a band avatar). With a remote `field` and no
+		     `upload`, the File rides this form — which is the only option when the
+		     record it belongs to does not exist yet. -->
 		<FileUpload
 			name={resolvedName}
 			{upload}
+			inputProps={upload ? undefined : (fieldAttrs ?? undefined)}
 			{accept}
 			{value}
 			{src}
 			orientation={rest.orientation}
+			previewClass={rest.previewClass}
+			emptyLabel={rest.emptyLabel}
+			replaceLabel={rest.replaceLabel}
 			disabled={pending || readonly}
 		/>
 	{:else if type === 'select' && rest.multiple}
@@ -216,7 +255,7 @@
 			value={JSON.stringify(Array.isArray(value) ? value : [])}
 		/>
 		<select
-			class="select-bordered select w-full"
+			class="select w-full"
 			class:ghost={readonly}
 			multiple
 			disabled={pending || readonly}
@@ -238,7 +277,7 @@
 			{/each}
 		</select>
 	{:else if type === 'select'}
-		<Select class="select-bordered w-full {readonly ? 'ghost' : ''}" {...selectProps} bind:value>
+		<Select class="w-full {readonly ? 'ghost' : ''}" {...selectProps} bind:value>
 			{#if rest.placeholder}
 				<option value="">{rest.placeholder}</option>
 			{/if}
@@ -248,7 +287,7 @@
 		</Select>
 	{:else if field && fieldAttrs}
 		<input
-			class="input-bordered input w-full"
+			class="input w-full"
 			class:ghost={readonly}
 			{...rest}
 			{...fieldAttrs}
@@ -256,12 +295,6 @@
 			disabled={pending || readonly}
 		/>
 	{:else}
-		<input
-			class="input-bordered input w-full"
-			class:ghost={readonly}
-			{...rest}
-			{...inputProps}
-			bind:value
-		/>
+		<input class="input w-full" class:ghost={readonly} {...rest} {...inputProps} bind:value />
 	{/if}
 </fieldset>

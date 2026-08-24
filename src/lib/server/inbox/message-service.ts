@@ -21,6 +21,11 @@ export interface AddInboundMessageParams {
  * count, move the clock. Shared so a second kind of message cannot drift from
  * the first — a thread whose lastMessageAt does not move is a thread whose
  * unread cursor silently stops working.
+ *
+ * Clearing `awaitingReplySince` belongs here rather than in `addInboundMessage`:
+ * every channel's inbound path funnels through this one update, so the marker
+ * cannot survive an answer on a channel someone forgot about. Peer messages
+ * clear a column that direct threads never set, which costs nothing.
  */
 async function touchThread(threadId: string, body: string): Promise<void> {
 	await db
@@ -29,6 +34,7 @@ async function touchThread(threadId: string, body: string): Promise<void> {
 			preview: truncatePreview(body),
 			messageCount: sql`${inboxThread.messageCount} + 1`,
 			lastMessageAt: new Date(),
+			awaitingReplySince: null,
 			updatedAt: new Date()
 		})
 		.where(eq(inboxThread.id, threadId));
@@ -210,6 +216,11 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 			preview: truncatePreview(params.body),
 			messageCount: sql`${inboxThread.messageCount} + 1`,
 			lastMessageAt: new Date(),
+			// We have said our piece, so the thread is now waiting on them. Read off
+			// the row already selected above rather than a second query. A reply sent
+			// after resolving leaves no marker — the badge only means something on a
+			// thread that is still open.
+			awaitingReplySince: thread.status === 'resolved' ? null : new Date(),
 			updatedAt: new Date()
 		})
 		.where(eq(inboxThread.id, params.threadId));

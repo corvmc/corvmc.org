@@ -24,7 +24,7 @@
 			<input type="hidden" name="slug" value={data.audience.slug} />
 			<Field name="email" type="email" label="Email" placeholder="your@email.com" />
 			<Field name="name" type="text" label="Name (optional)" placeholder="Your name" />
-			<SubmitButton label="Subscribe" class="btn-primary w-full" />
+			<SubmitButton label="Subscribe" variant="primary" class="w-full" />
 		</Form>
 	{/if}
 </div>

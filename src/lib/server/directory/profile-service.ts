@@ -3,6 +3,7 @@ import { user, userInstrument, userGenre } from '$lib/server/db/schema/authentic
 import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
 import { eq, and } from 'drizzle-orm';
 import { deleteObject, uploadFile } from '$lib/server/storage';
+import { mediaKey } from '$lib/server/storage-keys';
 import { sanitizeBio } from '$lib/utils/markdown';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type {
@@ -235,12 +236,6 @@ export async function updateBandProfile(bandId: string, userId: string, data: Ba
 // Member avatar
 // ---------------------------------------------------------------------------
 
-const AVATAR_EXTENSIONS: Record<string, string> = {
-	'image/jpeg': 'jpg',
-	'image/png': 'png',
-	'image/webp': 'webp'
-};
-
 /** Upload a user's avatar to storage and persist its key on `user.image`. */
 export async function setUserAvatar(userId: string, buffer: ArrayBuffer, contentType: string) {
 	const [row] = await db
@@ -258,8 +253,7 @@ export async function setUserAvatar(userId: string, buffer: ArrayBuffer, content
 		}
 	}
 
-	const ext = AVATAR_EXTENSIONS[contentType] ?? 'jpg';
-	const key = `users/avatars/${userId}.${ext}`;
+	const key = mediaKey('users/avatars', userId, contentType);
 	await uploadFile(buffer, key, contentType);
 
 	await db.update(user).set({ image: key, updatedAt: new Date() }).where(eq(user.id, userId));

@@ -118,11 +118,39 @@ describe('storage', () => {
 		});
 
 		it('returns transform URL when R2_TRANSFORM_URL is set', () => {
-			(env as any).R2_TRANSFORM_URL = 'https://img.example.com';
+			(env as any).R2_TRANSFORM_URL = 'https://img.example.com/cdn-cgi/image';
 
 			const url = getPublicUrl('events/posters/evt-1.jpg');
-			expect(url).toBe('https://img.example.com/width=1200,format=webp/events/posters/evt-1.jpg');
+			expect(url).toBe(
+				'https://img.example.com/cdn-cgi/image/width=1200,fit=scale-down,format=auto,quality=85/events/posters/evt-1.jpg'
+			);
 
+			(env as any).R2_TRANSFORM_URL = '';
+		});
+
+		it('does not wrap a non-image key in a transform URL', () => {
+			(env as any).R2_TRANSFORM_URL = 'https://img.example.com/cdn-cgi/image';
+
+			// Rider/stage-plot uploads may be PDFs; running one through an image
+			// transformation produces a broken URL.
+			expect(getPublicUrl('bands/b1/media/rider/x.pdf')).toBe(
+				'https://pub.example.com/bands/b1/media/rider/x.pdf'
+			);
+
+			(env as any).R2_TRANSFORM_URL = '';
+		});
+
+		it('does not wrap a key with no extension', () => {
+			(env as any).R2_TRANSFORM_URL = 'https://img.example.com/cdn-cgi/image';
+			expect(getPublicUrl('legacy/no-extension')).toBe(
+				'https://pub.example.com/legacy/no-extension'
+			);
+			(env as any).R2_TRANSFORM_URL = '';
+		});
+
+		it('wraps a gif, which the band media endpoint accepts', () => {
+			(env as any).R2_TRANSFORM_URL = 'https://img.example.com/cdn-cgi/image';
+			expect(getPublicUrl('bands/b1/media/image/a.gif')).toContain('/cdn-cgi/');
 			(env as any).R2_TRANSFORM_URL = '';
 		});
 

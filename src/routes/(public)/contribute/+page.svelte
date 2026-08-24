@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Hero from '$lib/components/shared/marketing/Hero.svelte';
+	import Section from '$lib/components/shared/marketing/Section.svelte';
+	import SectionHeading from '$lib/components/shared/marketing/SectionHeading.svelte';
 	import {
 		IconBuildingCommunity,
 		IconCoin,
@@ -113,20 +116,10 @@
 </svelte:head>
 
 <!-- Hero -->
-<section class="sunburst section-tint-secondary py-24 px-6 text-center">
-	<div class="max-w-2xl mx-auto flex flex-col items-center gap-4">
-		<h1
-			class="text-5xl font-bold leading-tight tracking-tight text-balance"
-			style="color: var(--cmc-navy)"
-		>
-			Help Us Keep the Music Going
-		</h1>
-		<p class="text-lg leading-relaxed" style="color: var(--fg-2)">
-			CMC is a 501(c)(3) nonprofit. Every membership, donation, and volunteer hour goes directly
-			toward affordable practice space and programs for local musicians.
-		</p>
-	</div>
-</section>
+<Hero title="Help Us Keep the Music Going">
+	CMC is a 501(c)(3) nonprofit. Every membership, donation, and volunteer hour goes directly toward
+	affordable practice space and programs for local musicians.
+</Hero>
 
 <!--
 	Volunteering leads the page: it's the ask with the lowest barrier and the one
@@ -138,87 +131,82 @@
 	section directly below opens at $10/month, and without the word an unqualified
 	"sign up" reads as "pay us" to anyone skimming.
 -->
-<section class="py-16 px-6">
-	<div class="max-w-5xl mx-auto">
-		<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4 mb-12">
-			<h2 class="text-4xl font-bold tracking-tight">Volunteer with Us</h2>
-			<p class="text-base leading-relaxed" style="color: var(--fg-2)">
-				Volunteers are the beating heart of our organization! Every show, every piece of gear, and
-				every program is made possible by the time and energy of our members. No experience is
-				necessary — just a willingness to help. Create a free account to get started.
-			</p>
-		</div>
-
-		<div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
-			{#each volunteerGroups as group (group.title)}
-				<div
-					class="flex flex-col gap-3 rounded-lg p-6"
-					style="background: var(--surface); border: 1px solid var(--surface-border)"
-				>
-					<div class="flex items-center gap-2" style="color: var(--cmc-navy)">
-						<group.icon size={24} />
-						<h3 class="text-lg font-bold">{group.title}</h3>
-					</div>
-					{#if group.desc}
-						<p class="text-sm leading-relaxed" style="color: var(--fg-3)">{group.desc}</p>
-					{/if}
-					<ul class="flex flex-col gap-2">
-						{#each group.roles as role (role.name)}
-							<li class="text-sm leading-relaxed">
-								<span class="font-bold">{role.name}</span>
-								<span style="color: var(--fg-2)"> — {role.desc}</span>
-							</li>
-						{/each}
-					</ul>
-				</div>
-			{/each}
-		</div>
-
-		<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4">
-			<Button href={VOLUNTEER_SIGNUP_URL} class="btn-lg">Create a Free Account to Volunteer</Button>
-		</div>
+<Section>
+	<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4 mb-12">
+		<h2 class="text-4xl font-bold tracking-tight">Volunteer with Us</h2>
+		<p class="text-base leading-relaxed text-fg-2">
+			Volunteers are the beating heart of our organization! Every show, every piece of gear, and
+			every program is made possible by the time and energy of our members. No experience is
+			necessary — just a willingness to help. Create a free account to get started.
+		</p>
 	</div>
-</section>
+
+	<div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
+		{#each volunteerGroups as group (group.title)}
+			<div class="flex flex-col gap-3 rounded-lg p-6 surface">
+				<div class="flex items-center gap-2 text-cmc-navy">
+					<group.icon size={24} />
+					<h3 class="text-lg font-bold">{group.title}</h3>
+				</div>
+				{#if group.desc}
+					<p class="text-sm leading-relaxed text-fg-3">{group.desc}</p>
+				{/if}
+				<ul class="flex flex-col gap-2">
+					{#each group.roles as role (role.name)}
+						<li class="text-sm leading-relaxed">
+							<span class="font-bold">{role.name}</span>
+							<span class="text-fg-2"> — {role.desc}</span>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/each}
+	</div>
+
+	<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4">
+		<Button href={VOLUNTEER_SIGNUP_URL} variant="default" size="lg"
+			>Create a Free Account to Volunteer</Button
+		>
+	</div>
+</Section>
 
 <!-- Become a Sustaining Member (pointer to /membership) -->
 <section class="section-tint-secondary py-16 px-6">
 	<div class="max-w-2xl mx-auto text-center flex flex-col items-center gap-4">
 		<h2 class="text-4xl font-bold tracking-tight">Become a Sustaining Member</h2>
-		<p class="text-base leading-relaxed" style="color: var(--fg-2)">
+		<p class="text-base leading-relaxed text-fg-2">
 			The most direct way to support the space is a monthly contribution on a sliding scale —
 			starting at $10/month. Sustaining members earn free practice hours every month, can lock in a
 			recurring weekly practice slot, and get discounts on show tickets and gear. Your contribution
 			keeps the doors open.
 		</p>
-		<Button href="/membership" class="btn-lg">Explore Membership</Button>
+		<Button href="/membership" variant="default" size="lg">Explore Membership</Button>
 	</div>
 </section>
 
 <!-- Other Ways to Contribute -->
-<section class="section-tint-warning py-16 px-6">
-	<div class="max-w-5xl mx-auto">
-		<div class="text-center mb-12">
-			<h2 class="text-4xl font-bold tracking-tight mb-3">Other Ways to Contribute</h2>
-		</div>
-		<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-			{#each otherWays as item (item.title)}
-				<div
-					class="flex flex-col items-center text-center gap-3 rounded-lg p-6"
-					style="background: var(--surface); border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))"
-				>
-					<div style="color: var(--cmc-navy)">
-						<item.icon size={40} />
-					</div>
-					<h3 class="text-lg font-bold">{item.title}</h3>
-					<p class="text-sm leading-relaxed" style="color: var(--fg-2)">{item.desc}</p>
-					<Button
-						href={item.href}
-						class="btn-sm mt-auto"
-						target={item.external ? '_blank' : undefined}
-						rel={item.external ? 'noopener noreferrer' : undefined}>{item.cta}</Button
-					>
+<Section tint="warning">
+	<SectionHeading title="Other Ways to Contribute" />
+	<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+		{#each otherWays as item (item.title)}
+			<div
+				class="flex flex-col items-center text-center gap-3 rounded-lg p-6"
+				style="background: var(--surface); border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))"
+			>
+				<div class="text-cmc-navy">
+					<item.icon size={40} />
 				</div>
-			{/each}
-		</div>
+				<h3 class="text-lg font-bold">{item.title}</h3>
+				<p class="text-muted leading-relaxed">{item.desc}</p>
+				<Button
+					href={item.href}
+					variant="default"
+					size="sm"
+					class="mt-auto"
+					target={item.external ? '_blank' : undefined}
+					rel={item.external ? 'noopener noreferrer' : undefined}>{item.cta}</Button
+				>
+			</div>
+		{/each}
 	</div>
-</section>
+</Section>

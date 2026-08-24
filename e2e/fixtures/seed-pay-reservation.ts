@@ -4,22 +4,22 @@
  * password verifies against the app's scrypt path so the e2e test can log in
  * through the real better-auth UI flow.
  *
- * Run by the Playwright global setup (see playwright.config.ts → globalSetup).
+ * Run by `e2e/prepare.ts`, before Playwright starts the preview server.
  *
  * Idempotent: deletes and recreates the seeded user (and its cascade-owned
  * reservation/account/session rows) on every run, so reruns start clean.
  *
- * Mirrors the D1 access pattern in scripts/seed-dev.ts (getPlatformProxy → drizzle/d1)
- * so it talks to the same `.wrangler/state/v3/d1` SQLite file that the adapter's
- * emulated platform bindings expose to the preview server.
+ * Writes through `withPlatformDb` (getPlatformProxy → drizzle/d1, as in
+ * scripts/seed-dev.ts) so it lands in the same D1 file the adapter's emulated
+ * bindings later hand to the preview server — the suite's own state directory,
+ * not the `.wrangler/state` a dev server uses.
  */
 import 'dotenv/config';
 import { scrypt, randomBytes } from 'node:crypto';
-import { getPlatformProxy } from 'wrangler';
-import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
+import { withPlatformDb } from './platform-db';
 
 // Inlined copy of the app's scrypt password hashing (src/lib/server/auth.ts).
 // Re-implemented here rather than imported because auth.ts pulls in SvelteKit
@@ -46,10 +46,7 @@ export const SEED_USER_ID = 'e2e-pay-user';
 export const SEED_RESERVATION_ID = 'e2e-pay-reservation';
 
 export async function seedPayReservation(): Promise<void> {
-	const { env, dispose } = await getPlatformProxy();
-	const db = drizzle((env as { DB: D1Database }).DB);
-
-	try {
+	await withPlatformDb(async (db) => {
 		// Clean slate. Deleting the user cascades to its account/session/reservation rows,
 		// but delete explicitly to be safe across FK-disabled local D1.
 		await db.delete(reservation).where(eq(reservation.id, SEED_RESERVATION_ID));
@@ -102,7 +99,5 @@ export async function seedPayReservation(): Promise<void> {
 			createdAt: now,
 			updatedAt: now
 		});
-	} finally {
-		await dispose();
-	}
+	});
 }

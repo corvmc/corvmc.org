@@ -50,7 +50,7 @@
 		<FormField name="description" label="Description">
 			<textarea
 				{...fields.description.as('text')}
-				class="textarea textarea-bordered w-full"
+				class="textarea w-full"
 				rows="4"
 				maxlength="5000"
 				placeholder="Who's playing, what it sounds like, anything worth knowing..."
@@ -99,7 +99,7 @@
 			<input
 				{...fields.posterFile.as('file')}
 				accept="image/jpeg,image/png,image/webp"
-				class="file-input file-input-bordered w-full"
+				class="file-input w-full"
 			/>
 		</FormField>
 
@@ -126,7 +126,7 @@
 		</div>
 
 		<div class="flex justify-end pt-4">
-			<SubmitButton label="Save draft" class="btn-primary" />
+			<SubmitButton label="Save draft" variant="primary" />
 		</div>
 	</Form>
 </PageContent>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import ProfileSection from './ProfileSection.svelte';
 	import GigList from '$lib/components/shared/events/GigList.svelte';
 	import type { CalendarEntry } from '$lib/types/calendar';
@@ -84,9 +85,9 @@
 		<GigList events={pastRows} {eventBase} {bandBase} {showByline} />
 		{#if hasMore && loadMorePast}
 			<div class="shows__more">
-				<button type="button" class="btn btn-ghost btn-sm" disabled={loading} onclick={showMore}>
+				<Button type="button" variant="ghost" size="sm" disabled={loading} onclick={showMore}>
 					{loading ? 'Loading…' : 'Show more'}
-				</button>
+				</Button>
 			</div>
 		{/if}
 	{:else}

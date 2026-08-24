@@ -202,6 +202,8 @@ export async function validateBooking(
 
 export interface ConflictDetail {
 	type: 'reservation' | 'closure';
+	/** Set for reservations only — lets a caller drop its own hold from the list. */
+	id?: string;
 	startsAt: Date;
 	endsAt: Date;
 	label: string;
@@ -215,6 +217,7 @@ export async function getConflictDetails(startsAt: Date, endsAt: Date): Promise<
 
 	const reservationConflicts = await db
 		.select({
+			id: reservation.id,
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			userName: user.name
@@ -243,6 +246,7 @@ export async function getConflictDetails(startsAt: Date, endsAt: Date): Promise<
 	for (const r of reservationConflicts) {
 		details.push({
 			type: 'reservation',
+			id: r.id,
 			startsAt: r.startsAt,
 			endsAt: r.endsAt,
 			label: r.userName

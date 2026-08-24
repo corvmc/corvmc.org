@@ -3,10 +3,10 @@
 	import { bookAndPayReservation } from '$lib/remote/reservations.remote';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import DateTimeStep from './DateTimeStep.svelte';
-	import ConfirmStep from './ConfirmStep.svelte';
-	import PaymentStep from './PaymentStep.svelte';
-	import BookingConflict from './BookingConflict.svelte';
+	import DateTimeStep from '$lib/components/shared/reservations/booking/DateTimeStep.svelte';
+	import ConfirmStep from '$lib/components/shared/reservations/booking/ConfirmStep.svelte';
+	import PaymentStep from '$lib/components/shared/reservations/booking/PaymentStep.svelte';
+	import BookingConflict from '$lib/components/shared/reservations/booking/BookingConflict.svelte';
 
 	const { fields } = bookAndPayReservation;
 
@@ -31,7 +31,7 @@
 	label="Reserve Space"
 	modalTitle="Book a Session"
 	noFooter
-	class="btn-primary"
+	variant="primary"
 	maxWidth="max-w-md"
 	onsuccess={async (result) => {
 		const r = result as {

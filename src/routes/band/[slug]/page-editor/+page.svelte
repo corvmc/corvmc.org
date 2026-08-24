@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -161,7 +164,7 @@
 				The page editor is available with a premium band subscription. Build a custom band page with
 				drag-and-drop blocks, genre themes, and custom CSS.
 			</p>
-			<Button href="../subscription" class="btn-primary mt-4">Upgrade to Premium</Button>
+			<Button href="../subscription" variant="primary" class="mt-4">Upgrade to Premium</Button>
 		</EmptyState>
 	{:else}
 		<form
@@ -183,63 +186,67 @@
 			<input {...saveBandPageConfig.fields.blocks.as('hidden', JSON.stringify(blocks))} />
 
 			<!-- Theme selector -->
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body">
-					<h2 class="card-title text-lg">Theme</h2>
+			<Card>
+				<CardBody>
+					<CardTitle size="lg" level={2}>Theme</CardTitle>
 					<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
 						{#each BAND_THEMES as theme (theme)}
-							<button
+							<Button
 								type="button"
-								class="btn btn-sm capitalize {selectedTheme === theme
-									? 'btn-primary'
-									: 'btn-outline'}"
+								variant={selectedTheme === theme ? 'primary' : 'default'}
+								outline={selectedTheme !== theme}
+								size="sm"
+								class="capitalize"
 								onclick={() => {
 									selectedTheme = theme;
 								}}
 							>
 								{theme}
-							</button>
+							</Button>
 						{/each}
 					</div>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
 			<!-- Blocks editor -->
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body">
+			<Card>
+				<CardBody>
 					<div class="flex items-center justify-between">
-						<h2 class="card-title text-lg">Blocks</h2>
-						<button
+						<CardTitle size="lg" level={2}>Blocks</CardTitle>
+						<Button
 							type="button"
-							class="btn btn-sm btn-primary"
+							variant="primary"
+							size="sm"
 							onclick={() => {
 								showBlockPicker = !showBlockPicker;
 							}}
 						>
 							{showBlockPicker ? 'Cancel' : 'Add Block'}
-						</button>
+						</Button>
 					</div>
 
 					<!-- Block type picker -->
 					{#if showBlockPicker}
 						<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 p-4 bg-base-200 rounded-lg">
 							{#each BLOCK_TYPES as bt (bt.type)}
-								<button
+								<Button
 									type="button"
-									class="btn btn-sm btn-ghost justify-start text-left h-auto py-2"
+									variant="ghost"
+									size="sm"
+									class="justify-start text-left h-auto py-2"
 									onclick={() => addBlock(bt.type)}
 								>
 									<div>
 										<p class="font-medium text-sm">{bt.label}</p>
-										<p class="text-xs opacity-60">{bt.description}</p>
+										<p class="text-subtle">{bt.description}</p>
 									</div>
-								</button>
+								</Button>
 							{/each}
 						</div>
 					{/if}
 
 					{#if blocks.length === 0}
-						<p class="text-sm opacity-60 mt-4">
+						<p class="text-muted mt-4">
 							No blocks configured yet. Add blocks to build your custom page. Your page will show a
 							default layout until you add blocks.
 						</p>
@@ -251,33 +258,38 @@
 									<div class="flex items-center gap-2 p-3">
 										<span class="text-sm font-mono opacity-40">{i + 1}</span>
 										<span class="badge badge-sm capitalize">{block.type}</span>
-										<span class="flex-1 text-sm opacity-60 truncate">{blockLabel(block)}</span>
+										<span class="flex-1 text-muted truncate">{blockLabel(block)}</span>
 										<div class="flex items-center gap-1">
-											<button
+											<Button
 												type="button"
-												class="btn btn-xs btn-ghost"
+												variant="ghost"
+												size="xs"
 												onclick={() => moveBlock(i, 'up')}
-												disabled={i === 0}>&uarr;</button
+												disabled={i === 0}>&uarr;</Button
 											>
-											<button
+											<Button
 												type="button"
-												class="btn btn-xs btn-ghost"
+												variant="ghost"
+												size="xs"
 												onclick={() => moveBlock(i, 'down')}
-												disabled={i === blocks.length - 1}>&darr;</button
+												disabled={i === blocks.length - 1}>&darr;</Button
 											>
-											<button
+											<Button
 												type="button"
-												class="btn btn-xs btn-ghost"
+												variant="ghost"
+												size="xs"
 												onclick={() => {
 													editingBlockId = editingBlockId === block.id ? null : block.id;
 												}}
 											>
 												{editingBlockId === block.id ? 'Close' : 'Edit'}
-											</button>
-											<button
+											</Button>
+											<Button
 												type="button"
-												class="btn btn-xs btn-ghost text-error"
-												onclick={() => removeBlock(i)}>&times;</button
+												variant="ghost"
+												size="xs"
+												class="text-error"
+												onclick={() => removeBlock(i)}>&times;</Button
 											>
 										</div>
 									</div>
@@ -290,7 +302,7 @@
 													<span class="label-text text-xs">Image Key (R2 path or URL)</span>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														value={block.imageKey}
 														oninput={(e) => {
 															block.imageKey = e.currentTarget.value;
@@ -301,7 +313,7 @@
 													<span class="label-text text-xs">Headline</span>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														value={block.headline ?? ''}
 														oninput={(e) => {
 															block.headline = e.currentTarget.value || undefined;
@@ -312,7 +324,7 @@
 													<span class="label-text text-xs">Subtitle</span>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														value={block.subtitle ?? ''}
 														oninput={(e) => {
 															block.subtitle = e.currentTarget.value || undefined;
@@ -323,7 +335,7 @@
 												<label class="form-control">
 													<span class="label-text text-xs">Content (HTML/Markdown)</span>
 													<textarea
-														class="textarea textarea-bordered w-full text-sm"
+														class="textarea w-full text-sm"
 														rows="5"
 														value={block.content}
 														oninput={(e) => {
@@ -335,7 +347,8 @@
 												<label class="form-control">
 													<span class="label-text text-xs">Style</span>
 													<Select
-														class="select-bordered select-sm w-full"
+														size="sm"
+														class="w-full"
 														value={block.style}
 														onchange={(e: Event) => {
 															block.style = (e.currentTarget as HTMLSelectElement).value as
@@ -366,7 +379,7 @@
 													<span class="label-text text-xs">Max events to show</span>
 													<input
 														type="number"
-														class="input input-bordered input-sm w-24"
+														class="input input-sm w-24"
 														min="1"
 														max="20"
 														value={block.limit ?? 5}
@@ -387,7 +400,7 @@
 													/>
 													<span class="text-sm">Allow downloads (press-quality)</span>
 												</label>
-												<p class="text-xs opacity-60">
+												<p class="text-subtle">
 													Gallery images are pulled from your uploaded media. Use the media section
 													below to upload images.
 												</p>
@@ -396,7 +409,7 @@
 													<span class="label-text text-xs">Platform</span>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														placeholder="spotify, youtube, soundcloud"
 														value={block.platform}
 														oninput={(e) => {
@@ -408,7 +421,7 @@
 													<span class="label-text text-xs">URL</span>
 													<input
 														type="url"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														placeholder="https://open.spotify.com/track/..."
 														value={block.url}
 														oninput={(e) => {
@@ -420,7 +433,8 @@
 												<label class="form-control">
 													<span class="label-text text-xs">Height</span>
 													<Select
-														class="select-bordered select-sm w-full"
+														size="sm"
+														class="w-full"
 														value={block.height}
 														onchange={(e: Event) => {
 															block.height = (e.currentTarget as HTMLSelectElement).value as
@@ -438,7 +452,7 @@
 												<label class="form-control">
 													<span class="label-text text-xs">HTML Content (sanitized on save)</span>
 													<textarea
-														class="textarea textarea-bordered w-full font-mono text-sm"
+														class="textarea w-full font-mono text-sm"
 														rows="6"
 														value={block.content}
 														oninput={(e) => {
@@ -460,28 +474,28 @@
 														>Show contact form (messages are emailed to your booking contact)</span
 													>
 												</label>
-												<p class="text-sm opacity-60">
+												<p class="text-muted">
 													Contact people render from your EPK.
 													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
 														>Edit EPK data &rarr;</a
 													>
 												</p>
 											{:else if block.type === 'press' || block.type === 'achievements' || block.type === 'tech_rider'}
-												<p class="text-sm opacity-60">
+												<p class="text-muted">
 													This block renders data from your EPK.
 													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
 														>Edit EPK data &rarr;</a
 													>
 												</p>
 											{:else if block.type === 'merch'}
-												<p class="text-xs opacity-60 mb-2">
+												<p class="text-subtle mb-2">
 													Add merchandise items with links to your store.
 												</p>
 												{#each block.items as item, mi (mi)}
 													<div class="flex gap-2 items-start">
 														<input
 															type="text"
-															class="input input-bordered input-sm flex-1"
+															class="input input-sm flex-1"
 															placeholder="Title"
 															value={item.title}
 															oninput={(e) => {
@@ -490,7 +504,7 @@
 														/>
 														<input
 															type="url"
-															class="input input-bordered input-sm flex-1"
+															class="input input-sm flex-1"
 															placeholder="URL"
 															value={item.url}
 															oninput={(e) => {
@@ -499,28 +513,32 @@
 														/>
 														<input
 															type="text"
-															class="input input-bordered input-sm w-20"
+															class="input input-sm w-20"
 															placeholder="$25"
 															value={item.price ?? ''}
 															oninput={(e) => {
 																item.price = e.currentTarget.value || undefined;
 															}}
 														/>
-														<button
+														<Button
 															type="button"
-															class="btn btn-xs btn-ghost text-error"
+															variant="ghost"
+															size="xs"
+															class="text-error"
 															onclick={() => {
 																block.items = block.items.filter((_, j) => j !== mi);
-															}}>&times;</button
+															}}>&times;</Button
 														>
 													</div>
 												{/each}
-												<button
+												<Button
 													type="button"
-													class="btn btn-xs btn-ghost mt-1"
+													variant="ghost"
+													size="xs"
+													class="mt-1"
 													onclick={() => {
 														block.items = [...block.items, { title: '', url: '' }];
-													}}>+ Add item</button
+													}}>+ Add item</Button
 												>
 											{/if}
 
@@ -529,7 +547,7 @@
 												<span class="label-text text-xs">CSS Class (optional)</span>
 												<input
 													type="text"
-													class="input input-bordered input-sm w-full"
+													class="input input-sm w-full"
 													placeholder="custom-class"
 													value={block.cssClass ?? ''}
 													oninput={(e) => {
@@ -543,18 +561,18 @@
 							{/each}
 						</div>
 					{/if}
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
 			<!-- Custom CSS -->
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body">
-					<h2 class="card-title text-lg">Custom CSS</h2>
-					<p class="text-sm opacity-60">
+			<Card>
+				<CardBody>
+					<CardTitle size="lg" level={2}>Custom CSS</CardTitle>
+					<p class="text-muted">
 						Add custom styles to your page. CSS is scoped to your band site container.
 					</p>
 					<textarea
-						class="textarea textarea-bordered w-full font-mono text-sm mt-2"
+						class="textarea w-full font-mono text-sm mt-2"
 						rows="8"
 						placeholder={`.band-site-container {\n  /* your styles here */\n}`}
 						value={customCss}
@@ -565,8 +583,8 @@
 					<p class="text-xs opacity-40 mt-1">
 						Max 50KB. External imports and scripts are stripped.
 					</p>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
 			<!-- Save -->
 			<div class="flex justify-between items-center">
@@ -574,15 +592,15 @@
 				<a href={siteUrl} target="_blank" rel="noopener" class="link text-sm">
 					View your page at {siteUrl.replace(/^https?:\/\//, '')} &rarr;
 				</a>
-				<button class="btn btn-primary">Save Changes</button>
+				<Button variant="primary">Save Changes</Button>
 			</div>
 		</form>
 
 		<!-- Media upload section -->
-		<div class="card bg-base-100 shadow-sm mt-6">
-			<div class="card-body">
-				<h2 class="card-title text-lg">Media</h2>
-				<p class="text-sm opacity-60">
+		<Card class="mt-6">
+			<CardBody>
+				<CardTitle size="lg" level={2}>Media</CardTitle>
+				<p class="text-muted">
 					Upload images for your gallery, hero sections, and tech rider. Supported formats: JPEG,
 					PNG, WebP, GIF. Max 10MB per file.
 				</p>
@@ -592,7 +610,7 @@
 							<span class="label-text text-xs font-medium">Gallery Images</span>
 							<input
 								type="file"
-								class="file-input file-input-bordered file-input-sm w-full mt-1"
+								class="file-input file-input-sm w-full mt-1"
 								accept="image/*"
 								multiple
 								onchange={async (e) => {
@@ -622,7 +640,7 @@
 							<span class="label-text text-xs font-medium">Hero Image</span>
 							<input
 								type="file"
-								class="file-input file-input-bordered file-input-sm w-full mt-1"
+								class="file-input file-input-sm w-full mt-1"
 								accept="image/*"
 								onchange={async (e) => {
 									const file = e.currentTarget.files?.[0];
@@ -651,7 +669,7 @@
 							<span class="label-text text-xs font-medium">Stage Plot</span>
 							<input
 								type="file"
-								class="file-input file-input-bordered file-input-sm w-full mt-1"
+								class="file-input file-input-sm w-full mt-1"
 								accept="image/*"
 								onchange={async (e) => {
 									const file = e.currentTarget.files?.[0];
@@ -680,7 +698,7 @@
 							<span class="label-text text-xs font-medium">Tech Rider (PDF/Image)</span>
 							<input
 								type="file"
-								class="file-input file-input-bordered file-input-sm w-full mt-1"
+								class="file-input file-input-sm w-full mt-1"
 								accept="image/*,.pdf"
 								onchange={async (e) => {
 									const file = e.currentTarget.files?.[0];
@@ -705,24 +723,27 @@
 						</label>
 					</div>
 				</div>
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 
 		<!-- EPK Editor link -->
-		<div class="card bg-base-100 shadow-sm mt-6">
-			<div class="card-body">
+		<Card class="mt-6">
+			<CardBody>
 				<div class="flex items-center justify-between">
 					<div>
-						<h2 class="card-title text-lg">Electronic Press Kit</h2>
-						<p class="text-sm opacity-60">
+						<CardTitle size="lg" level={2}>Electronic Press Kit</CardTitle>
+						<p class="text-muted">
 							Manage your EPK data — contacts, press quotes, achievements, and tech rider.
 						</p>
 					</div>
-					<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="btn btn-sm btn-outline"
-						>Edit EPK</a
+					<Button
+						href={resolve(`/band/${band.slug}/page-editor/epk`)}
+						variant="default"
+						size="sm"
+						outline>Edit EPK</Button
 					>
 				</div>
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 	{/if}
 </PageContent>

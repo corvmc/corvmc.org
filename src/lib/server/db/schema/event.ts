@@ -5,7 +5,6 @@ import { user } from './authentication';
 import { band } from './band';
 import { reservation } from './reservation';
 import { recurringSeries, RECURRING_FREQUENCIES } from './recurring';
-import { contentFlag } from './flag';
 
 /**
  * Where a listing sits between "nobody has seen it" and "it is on the guide".
@@ -187,40 +186,6 @@ export type LineupEntry = z.infer<typeof lineupEntrySchema>;
 // ---------------------------------------------------------------------------
 // Community submission standing
 // ---------------------------------------------------------------------------
-
-/**
- * Whether a member's community listings publish directly or queue for staff.
- *
- * Absence of a row means trusted — the overwhelmingly common case, and the
- * default the whole feature is built around. A row appears the first time staff
- * *uphold* a report against one of the member's listings; a dismissed report
- * writes nothing, which is what stops an anonymous accusation from being a
- * griefing tool.
- *
- * Restoring trust flips `requiresReview` to false rather than deleting the row,
- * so "this was looked at and forgiven" stays distinguishable from "this never
- * happened".
- */
-export const communityEventStanding = sqliteTable('community_event_standing', {
-	userId: text('user_id')
-		.primaryKey()
-		.references(() => user.id, { onDelete: 'cascade' }),
-	requiresReview: integer('requires_review', { mode: 'boolean' }).notNull().default(true),
-	/** The staff note from the upheld report, shown to the member. */
-	reason: text('reason'),
-	/** The report that cost them trust. Kept for "why am I in review?". */
-	triggeringFlagId: text('triggering_flag_id').references(() => contentFlag.id, {
-		onDelete: 'set null'
-	}),
-	updatedByUserId: text('updated_by_user_id').references(() => user.id, {
-		onDelete: 'set null'
-	}),
-	updatedAt: integer('updated_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`(unixepoch())`)
-});
-
-export type CommunityEventStanding = typeof communityEventStanding.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Form schemas

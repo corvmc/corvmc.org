@@ -11,13 +11,6 @@ export interface PaginatedResult<T> {
 	pagination: Pagination;
 }
 
-export function parsePagination(url: URL, defaultPageSize = 50): PaginationInput {
-	return {
-		page: Math.max(1, Number(url.searchParams.get('page') ?? 1)),
-		pageSize: defaultPageSize
-	};
-}
-
 export async function paginate<T extends SQLiteSelect>(
 	dataQuery: T,
 	countQuery: Promise<{ count: number }[]>,

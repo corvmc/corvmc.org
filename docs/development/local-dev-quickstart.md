@@ -102,17 +102,27 @@ pnpm db:studio    # drizzle-kit studio (needs CLOUDFLARE_* vars → points at RE
 
 ## 5. Tests
 
-| Command                | What runs                                                                                                                                                             |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test:unit`       | Vitest, watch mode — `server` project (node, `src/**/*.{test,spec}.ts` + `scripts/**`) and `client` project (real Chromium browser, `src/**/*.svelte.{test,spec}.ts`) |
-| `pnpm test:components` | One-shot client + storybook story tests                                                                                                                               |
-| `pnpm test:e2e`        | Playwright — builds, runs `vite preview` on :4173, seeds local D1 via `e2e/global-setup.ts`, runs `e2e/**/*.e2e.ts`                                                   |
-| `pnpm test`            | Everything (unit one-shot + e2e) — what CI runs                                                                                                                       |
+| Command                | What runs                                                                                                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm test:unit`       | Vitest, watch mode — `server` project (node, `src/**/*.{test,spec}.ts` + `scripts/**` + `e2e/**` helpers) and `client` project (real Chromium browser, `src/**/*.svelte.{test,spec}.ts`)   |
+| `pnpm test:components` | One-shot client + storybook story tests                                                                                                                                                    |
+| `pnpm test:e2e`        | Playwright — builds, runs `vite preview` on :4173 (a worktree gets its own port), migrates + seeds its own D1 via `e2e/prepare.ts`, runs `e2e/**/*.e2e.ts`, then clears the database again |
+| `pnpm test`            | Everything (unit one-shot + e2e) — what CI runs                                                                                                                                            |
 
 Notes: every test must make at least one assertion (`expect.requireAssertions` is on
 globally in `vite.config.ts`). The e2e web server injects dummy Stripe/auth env so it runs
-without real keys (see `playwright.config.ts`). Run the minimum tests you need while
-iterating; save `pnpm test` for pre-commit.
+without real keys (see `playwright.config.ts`). It keeps its database in
+`.wrangler/e2e-state`, not the `.wrangler/state` your dev server uses — the suite never
+touches your dev data, and `pnpm dev` can keep running while it does. Delete that directory
+to force a rebuild; `e2e/prepare.ts` rebuilds it by itself whenever the migrations change.
+
+A passing run empties that database on the way out (`e2e/run.ts` → `e2e/reset-db.ts`), so it
+is not left holding the run's rows. A **failing** run keeps them, because what the app wrote
+is usually the most useful thing you have — clear it by hand with `pnpm tsx e2e/reset-db.ts`
+when you're done looking. Either way `e2e/prepare.ts` clears it again before seeding, so a
+crash or a Ctrl-C can't leave rows for the next run to trip over.
+
+Run the minimum tests you need while iterating; save `pnpm test` for pre-commit.
 
 Lint/format: `pnpm lint` (check), `pnpm format` (write), `pnpm lint:changed` (only files
 changed vs `origin/main` — what PR CI runs).
@@ -146,7 +156,7 @@ step, and confirm-without-payment flows are fully testable.
 | Sign-up rejected with "Verification failed"                | Turnstile keys are set but wrong; blank both keys locally to use the always-pass test mode                                                        |
 | Commit mangled / files reformatted on commit               | That's lefthook's prettier/eslint `--fix` pre-commit hook doing its job                                                                           |
 | Email layout changes not showing                           | The MJML layout compiles at `prepare`/`build` — run `pnpm tsx scripts/compile-email-layouts.ts` or restart after `pnpm install`                   |
-| Port 5173 busy                                             | Another dev server is running; find it or `pnpm dev -- --port 5174` (update `ORIGIN` to match)                                                    |
+| Port 5173 busy                                             | Another dev server is in the _same_ checkout (worktrees get their own port). Stop it, or `PORT=5174 pnpm dev` (update `ORIGIN` to match)          |
 | Storybook stories fail in vitest                           | The `storybook` vitest project needs the Chromium install: `pnpm exec playwright install chromium`                                                |
 
 ## Where to next

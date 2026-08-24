@@ -8,7 +8,7 @@
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { CERT_EXPIRY_WARNING_DAYS } from '$lib/config';
@@ -67,42 +67,41 @@
 
 <PageContent>
 	{#await allRows then all}
-		<div class="mb-4 overflow-x-auto pb-1">
-			<TabBar
-				class="w-max"
-				tabs={[
-					{
-						key: 'current',
-						label: stateLabels.current,
-						badge: all.filter((r) => r.state === 'current').length
-					},
-					{
-						key: 'expiring',
-						label: stateLabels.expiring,
-						badge: all.filter((r) => r.state === 'expiring').length
-					},
-					{
-						key: 'expired',
-						label: stateLabels.expired,
-						badge: all.filter((r) => r.state === 'expired').length
-					},
-					{
-						key: 'revoked',
-						label: stateLabels.revoked,
-						badge: all.filter((r) => r.state === 'revoked').length
-					},
-					{ key: 'all', label: 'All', badge: all.length }
-				]}
-				active={stateView}
-				onchange={(key) => (stateView = key as StateView)}
-			/>
-		</div>
+		<TabBar
+			class="mb-4"
+			collapse
+			tabs={[
+				{
+					key: 'current',
+					label: stateLabels.current,
+					badge: all.filter((r) => r.state === 'current').length
+				},
+				{
+					key: 'expiring',
+					label: stateLabels.expiring,
+					badge: all.filter((r) => r.state === 'expiring').length
+				},
+				{
+					key: 'expired',
+					label: stateLabels.expired,
+					badge: all.filter((r) => r.state === 'expired').length
+				},
+				{
+					key: 'revoked',
+					label: stateLabels.revoked,
+					badge: all.filter((r) => r.state === 'revoked').length
+				},
+				{ key: 'all', label: 'All', badge: all.length }
+			]}
+			active={stateView}
+			onchange={(key) => (stateView = key as StateView)}
+		/>
 	{/await}
 
 	<FilterBar activeCount={certFilter ? 1 : 0} onclear={() => (certFilter = '')}>
 		{#await certifications then certs}
 			<Select
-				class="select-bordered select-sm"
+				size="sm"
 				aria-label="Certification"
 				value={certFilter}
 				onchange={(e: Event) => {
@@ -141,16 +140,7 @@
 							<span class="badge badge-sm {badgeClass[row.state]}">{row.state}</span>
 						</td>
 						<td class="whitespace-nowrap">
-							<MemberLink
-								variant="inline"
-								member={{
-									name: row.userName,
-									email: row.userEmail,
-									pronouns: null,
-									role: null,
-									userId: row.userId
-								}}
-							/>
+							<EntityIdentity ref={row.member} />
 						</td>
 						<td class="col-support cell-primary">{row.certificationName}</td>
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(row.grantedAt)}</td>

@@ -24,7 +24,7 @@ import { resolve } from 'path';
 import postgres from 'postgres';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
-import { sql } from 'drizzle-orm';
+import { sql, and, eq, ne } from 'drizzle-orm';
 
 import {
 	user,
@@ -630,7 +630,66 @@ async function migrateBands() {
 			.onConflictDoNothing();
 	}
 
-	console.log(`  ✓ Migrated ${bands.length} bands, ${members.length} members`);
+	// Reconcile ownership. `band.owner_id` and the `band_member` row whose role is
+	// 'owner' are two records of the same fact, and they arrive here from two
+	// different legacy tables: `band_profiles.owner_id` above, and
+	// `band_profile_members.role` in the loop just before this. Nothing upstream
+	// keeps them in step, and the app reads only the member row —
+	// `requireBandOwner` resolves through `requireBandMember()` — so a band whose
+	// owner is recorded as 'admin' here, or who is missing from
+	// `band_profile_members` entirely, has no owner at all once migrated: no
+	// address change, no delete, no transfer, no subscription, no custom domain.
+	// That is exactly what happened to 5 of 16 bands on the first cutover.
+	// Repaired retroactively by `scripts/backfill-band-owners.ts`; this keeps a
+	// re-run of the migrator from reintroducing it.
+	let ownersFixed = 0;
+	for (const b of bands) {
+		const bandId = mapId('band_profiles', b.id);
+		const ownerId = lookupId('users', b.owner_id);
+		if (!ownerId) continue;
+
+		// Another user already holding 'owner' is left alone: two records
+		// disagreeing about who owns the band is not something to guess at.
+		const [conflict] = await db
+			.select({ id: bandMember.id })
+			.from(bandMember)
+			.where(
+				and(
+					eq(bandMember.bandId, bandId),
+					eq(bandMember.role, 'owner'),
+					ne(bandMember.userId, ownerId)
+				)
+			)
+			.limit(1);
+		if (conflict) {
+			console.warn(`  ! ${b.slug ?? b.name}: another member already holds owner; left as-is`);
+			continue;
+		}
+
+		const [existing] = await db
+			.select({ id: bandMember.id, role: bandMember.role, status: bandMember.status })
+			.from(bandMember)
+			.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, ownerId)))
+			.limit(1);
+
+		if (!existing) {
+			await db
+				.insert(bandMember)
+				.values({ bandId, userId: ownerId, role: 'owner', status: 'active' })
+				.onConflictDoNothing();
+			ownersFixed++;
+		} else if (existing.role !== 'owner' || existing.status !== 'active') {
+			await db
+				.update(bandMember)
+				.set({ role: 'owner', status: 'active' })
+				.where(eq(bandMember.id, existing.id));
+			ownersFixed++;
+		}
+	}
+
+	console.log(
+		`  ✓ Migrated ${bands.length} bands, ${members.length} members${ownersFixed ? `, reconciled ${ownersFixed} owner row(s)` : ''}`
+	);
 }
 
 /**

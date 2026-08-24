@@ -21,5 +21,5 @@
 
 <PageHeader title="Band Profile" subtitle={band.name} />
 <PageContent width="3xl">
-	<BandProfileForm {band} {profile} {genreSuggestions} />
+	<BandProfileForm {band} {profile} {genreSuggestions} isOwner={layout.userRole === 'owner'} />
 </PageContent>

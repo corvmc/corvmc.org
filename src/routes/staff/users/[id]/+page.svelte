@@ -17,6 +17,7 @@
 	import VolunteerPanel from './panels/VolunteerPanel.svelte';
 	import MoneyPanel from './panels/MoneyPanel.svelte';
 	import CommsPanel from './panels/CommsPanel.svelte';
+	import ModerationPanel from './panels/ModerationPanel.svelte';
 	import AccountPanel from './panels/AccountPanel.svelte';
 
 	let id = $derived(page.params.id!);
@@ -61,15 +62,26 @@
 		}
 	});
 
-	// Badges state a size, and are omitted at zero — a "0" on every tab of a new
-	// member's record is noise that hides the one tab with something in it.
+	// Jumping from an attention item used to flip the tab and leave you wherever
+	// you had scrolled to, which on a phone is most of a screen below the top of
+	// the panel you just asked for. The scroller is <main>, not the window.
+	let tabBarEl = $state<HTMLElement | null>(null);
+
+	function jump(next: TabKey) {
+		tab = next;
+		tabBarEl?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+	}
+
+	// Badges mean one thing: something here wants a staff member. A count of
+	// upcoming bookings or of bands is a size, not a task, and rendering it in the
+	// same token as "3 unresolved reports" made the token say nothing at all.
 	const badge = (n: number) => (n > 0 ? n : undefined);
 
 	const attentionCount = $derived(
 		[
 			!!member.deletedAt,
-			overview.standing.requiresReview,
-			overview.suggestionStanding.requiresReview,
+			overview.standings.community_event.status !== 'none',
+			overview.standings.suggestion.status !== 'none',
 			overview.counts.openFlagsAgainst > 0,
 			overview.counts.overdueLoans > 0,
 			overview.counts.unpaidReservations > 0,
@@ -85,24 +97,35 @@
 
 	const tabs = $derived([
 		{ key: 'overview', label: TAB_LABELS.overview, badge: badge(attentionCount) },
-		{ key: 'space', label: TAB_LABELS.space, badge: badge(overview.counts.upcomingReservations) },
-		{ key: 'bands', label: TAB_LABELS.bands, badge: badge(overview.counts.bands) },
+		{ key: 'space', label: TAB_LABELS.space },
+		{ key: 'bands', label: TAB_LABELS.bands, badge: badge(overview.counts.pendingBandInvites) },
 		{
 			key: 'volunteer',
 			label: TAB_LABELS.volunteer,
 			badge: badge(overview.counts.pendingHourLogs)
 		},
 		{ key: 'money', label: TAB_LABELS.money },
+		{ key: 'comms', label: TAB_LABELS.comms, badge: badge(overview.counts.unreadThreads) },
 		{
-			key: 'comms',
-			label: TAB_LABELS.comms,
-			badge: badge(overview.counts.openThreads + overview.counts.openFlagsAgainst)
+			key: 'moderation',
+			label: TAB_LABELS.moderation,
+			badge: badge(overview.counts.openFlagsAgainst)
 		},
 		{ key: 'account', label: TAB_LABELS.account }
 	]);
+
+	const activeBands = $derived(overview.bands.filter((b) => b.status === 'active'));
 </script>
 
+<!--
+	One identity block, not two. The avatar rides in the header rather than in a
+	strip below it, because the strip's only reason to restate the name was to
+	have something to put beside the picture.
+-->
 <PageHeader subtitle="Member" title={member.name} backHref="/staff/users">
+	{#snippet leading()}
+		<Avatar src={member.avatarUrl ?? undefined} name={member.name} class="size-12" />
+	{/snippet}
 	{#if member.deletedAt}
 		<Badge variant="error" size="md">Deactivated</Badge>
 	{/if}
@@ -115,56 +138,124 @@
 </PageHeader>
 
 <PageContent width="full">
-	<!-- Identity strip. Everything here is true regardless of which tab is open,
-	     which is exactly why it sits above the TabBar rather than inside a tab. -->
-	<div class="flex flex-wrap items-center gap-4">
-		<Avatar src={member.avatarUrl ?? undefined} name={member.name} class="size-16" />
-		<div class="min-w-0">
-			<div class="flex flex-wrap items-baseline gap-2">
-				<span class="text-lg font-medium">{member.name}</span>
-				{#if member.pronouns}
-					<span class="text-sm opacity-60">{member.pronouns}</span>
-				{/if}
-				{#if member.memberNumber}
-					<span class="text-sm opacity-60">#{member.memberNumber}</span>
-				{/if}
-			</div>
-			<div class="text-sm opacity-60">
-				<a class="link" href="mailto:{member.email}">{member.email}</a>
-				{#if member.phone}
-					· <a class="link" href="tel:{member.phone}">{member.phone}</a>
-				{/if}
-			</div>
-		</div>
+	<!--
+		What is left once the header has the name: the things you would act on, and
+		the bands, which are worth more as names you can click than as a number.
+	-->
+	<div class="flex flex-wrap gap-x-3 gap-y-1 text-muted">
+		<a class="link" href="mailto:{member.email}">{member.email}</a>
+		{#if member.phone}
+			<a class="link" href="tel:{member.phone}">{member.phone}</a>
+		{/if}
+		{#if member.pronouns}
+			<span>{member.pronouns}</span>
+		{/if}
+		{#if member.memberNumber}
+			<span>#{member.memberNumber}</span>
+		{/if}
 	</div>
+
+	{#if overview.bands.length > 0}
+		<div class="flex flex-wrap items-center gap-1">
+			{#each activeBands as b (b.id)}
+				<a href={resolve(`/staff/bands/${b.id}`)}>
+					<Badge size="sm">{b.name}</Badge>
+				</a>
+			{/each}
+			{#if overview.counts.pendingBandInvites > 0}
+				<Badge size="sm" variant="warning">
+					{overview.counts.pendingBandInvites} invite{overview.counts.pendingBandInvites === 1
+						? ''
+						: 's'} pending
+				</Badge>
+			{/if}
+		</div>
+	{/if}
 
 	<UserScoreboard {overview} />
 
-	<TabBar {tabs} active={tab} onchange={(key) => (tab = key as TabKey)} />
+	<div bind:this={tabBarEl}>
+		<TabBar {tabs} active={tab} collapse onchange={(key) => (tab = key as TabKey)} />
+	</div>
 
 	{#if visited.has('overview')}
-		<div class="space-y-6" class:hidden={tab !== 'overview'}>
-			<OverviewPanel {overview} {member} onjump={(next) => (tab = next)} />
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-overview"
+			class="space-y-6"
+			class:hidden={tab !== 'overview'}
+		>
+			<OverviewPanel {overview} {member} onjump={jump} />
 		</div>
 	{/if}
 	{#if visited.has('space')}
-		<div class="space-y-6" class:hidden={tab !== 'space'}><SpacePanel {id} /></div>
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-space"
+			class="space-y-6"
+			class:hidden={tab !== 'space'}
+		>
+			<SpacePanel {id} />
+		</div>
 	{/if}
 	{#if visited.has('bands')}
-		<div class="space-y-6" class:hidden={tab !== 'bands'}><BandsPanel {id} /></div>
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-bands"
+			class="space-y-6"
+			class:hidden={tab !== 'bands'}
+		>
+			<BandsPanel {id} />
+		</div>
 	{/if}
 	{#if visited.has('volunteer')}
-		<div class="space-y-6" class:hidden={tab !== 'volunteer'}><VolunteerPanel {id} /></div>
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-volunteer"
+			class="space-y-6"
+			class:hidden={tab !== 'volunteer'}
+		>
+			<VolunteerPanel {id} />
+		</div>
 	{/if}
 	{#if visited.has('money')}
-		<div class="space-y-6" class:hidden={tab !== 'money'}><MoneyPanel {id} /></div>
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-money"
+			class="space-y-6"
+			class:hidden={tab !== 'money'}
+		>
+			<MoneyPanel {id} />
+		</div>
 	{/if}
 	{#if visited.has('comms')}
-		<div class="space-y-6" class:hidden={tab !== 'comms'}>
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-comms"
+			class="space-y-6"
+			class:hidden={tab !== 'comms'}
+		>
 			<CommsPanel {id} email={member.email} />
 		</div>
 	{/if}
+	{#if visited.has('moderation')}
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-moderation"
+			class="space-y-6"
+			class:hidden={tab !== 'moderation'}
+		>
+			<ModerationPanel {id} />
+		</div>
+	{/if}
 	{#if visited.has('account')}
-		<div class="space-y-6" class:hidden={tab !== 'account'}><AccountPanel {id} {member} /></div>
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-account"
+			class="space-y-6"
+			class:hidden={tab !== 'account'}
+		>
+			<AccountPanel {id} {member} />
+		</div>
 	{/if}
 </PageContent>

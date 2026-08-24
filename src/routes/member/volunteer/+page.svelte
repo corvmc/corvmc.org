@@ -80,7 +80,8 @@
 				action={saveVolunteerInterests}
 				label="Interests"
 				icon={heartIcon}
-				class="btn-ghost btn-sm"
+				variant="ghost"
+				size="sm"
 				modalTitle="What you can help with"
 				submitLabel="Save"
 				successToast="Saved — we'll be in touch"
@@ -100,7 +101,8 @@
 			action={updateVolunteerProfile}
 			label="Profile"
 			icon={profileIcon}
-			class="btn-ghost btn-sm"
+			variant="ghost"
+			size="sm"
 			modalTitle="Your volunteer profile"
 			submitLabel="Save"
 			successToast="Profile updated"
@@ -182,12 +184,13 @@
 						<li class="flex flex-wrap items-center justify-between gap-3">
 							<div class="min-w-0">
 								<span class="font-medium">{done.roleName}</span>
-								<span class="text-sm opacity-70"> — {formatDateShort(done.startsAt)}</span>
+								<span class="text-muted"> — {formatDateShort(done.startsAt)}</span>
 							</div>
 							<Action
 								action={submitVolunteerHours.for(done.signupId)}
 								label="Log these hours"
-								class="btn-primary btn-sm"
+								variant="primary"
+								size="sm"
 								modalTitle="Log hours for {done.roleName}"
 								submitLabel="Submit for review"
 								successToast="Hours submitted for review"
@@ -252,7 +255,7 @@
 							<td class="w-px"><StatusBadge status={log.status} /></td>
 							<td class="cell-primary">
 								<div class="truncate font-medium">{log.roleName}</div>
-								<div class="truncate text-xs opacity-60" title={log.description}>
+								<div class="truncate text-subtle" title={log.description}>
 									{log.description}
 								</div>
 								{#if log.status === 'rejected' && log.reviewNotes}
@@ -271,7 +274,8 @@
 												label="Edit"
 												iconOnly
 												icon={pencilIcon}
-												class="btn-ghost btn-sm"
+												variant="ghost"
+												size="sm"
 												modalTitle="Edit hours"
 												successToast="Hours updated"
 											>
@@ -313,7 +317,9 @@
 												label="Withdraw"
 												iconOnly
 												icon={trashIcon}
-												class="btn-ghost btn-sm text-error"
+												variant="ghost"
+												size="sm"
+												class="text-error"
 												modalTitle="Withdraw these hours?"
 												submitLabel="Withdraw"
 												successToast="Hours withdrawn"

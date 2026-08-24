@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { CalendarDate, today as todayIn, getLocalTimeZone } from '@internationalized/date';
 	import { IconChevronLeft, IconChevronRight } from '@tabler/icons-svelte';
 	import { getPublicCalendar } from '$lib/remote/calendar.remote';
@@ -82,23 +83,27 @@
 
 <div class="mini-cal">
 	<div class="mini-cal__head">
-		<button
+		<Button
 			type="button"
-			class="btn btn-ghost btn-xs btn-square"
+			variant="ghost"
+			size="xs"
+			shape="square"
 			aria-label="Previous month"
 			onclick={() => shiftMonth(-1)}
 		>
 			<IconChevronLeft size={16} />
-		</button>
+		</Button>
 		<span class="mini-cal__label">{monthLabel}</span>
-		<button
+		<Button
 			type="button"
-			class="btn btn-ghost btn-xs btn-square"
+			variant="ghost"
+			size="xs"
+			shape="square"
 			aria-label="Next month"
 			onclick={() => shiftMonth(1)}
 		>
 			<IconChevronRight size={16} />
-		</button>
+		</Button>
 	</div>
 	<div class="mini-cal__weekdays">
 		{#each weekdays as day, i (i)}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
@@ -12,10 +13,7 @@ import {
 	createFlag,
 	resolveFlag as resolveFlagSvc,
 	FLAG_REASON_MAX,
-	FLAG_DESCRIPTION_MAX,
-	FlagNotFoundError,
-	FlagTargetNotFoundError,
-	FlagAlreadyResolvedError
+	FLAG_DESCRIPTION_MAX
 } from '$lib/server/flag/flag-service';
 
 // ---------------------------------------------------------------------------
@@ -41,8 +39,7 @@ export const getFlagDetail = query(z.string(), async (flagId) => {
 	try {
 		return await getFlag(flagId);
 	} catch (err) {
-		if (err instanceof FlagNotFoundError) error(404, err.message);
-		throw err;
+		mapDomainError(err);
 	}
 });
 
@@ -67,9 +64,7 @@ export const resolveFlag = form(resolveSchema, async (data) => {
 			unpublishEvent: data.unpublishEvent
 		});
 	} catch (err) {
-		if (err instanceof FlagNotFoundError) error(404, err.message);
-		if (err instanceof FlagAlreadyResolvedError) error(409, err.message);
-		throw err;
+		mapDomainError(err);
 	}
 	// Only the detail query is refreshed here. The queue is keyed by its filter
 	// args — `getFlagsQueue({})` is not the entry the list page holds, so that
@@ -109,8 +104,7 @@ export const submitFlag = form(submitSchema, async (data) => {
 			description: data.description
 		});
 	} catch (err) {
-		if (err instanceof FlagTargetNotFoundError) error(404, err.message);
-		throw err;
+		mapDomainError(err);
 	}
 	return { success: true };
 });
@@ -153,8 +147,7 @@ export const submitEventReport = form(submitEventReportSchema, async (data, issu
 			description: data.description
 		});
 	} catch (err) {
-		if (err instanceof FlagTargetNotFoundError) error(404, err.message);
-		throw err;
+		mapDomainError(err);
 	}
 	return { success: true };
 });

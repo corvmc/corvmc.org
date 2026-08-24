@@ -42,7 +42,6 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// always shows every feature — so they all start off.
 	'feature.staffInbox': false,
 	'feature.bandPremium': false,
-	'feature.bandReservations': false,
 	'feature.emailMarketing': false,
 	'feature.equipment': false,
 	'feature.helpArticles': false,

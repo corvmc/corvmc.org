@@ -31,12 +31,6 @@ const svc = {
 		visibility: 'visible',
 		authorUserId: 'other-member'
 	})),
-	getSuggestionStanding: vi.fn(async () => ({
-		requiresReview: false,
-		reason: null,
-		triggeringFlagId: null,
-		updatedAt: null
-	})),
 	listMergeCandidates: vi.fn(async () => []),
 	createSuggestion: vi.fn(async () => ({ id: 's1', visibility: 'visible' })),
 	toggleVote: vi.fn(async () => ({ voted: true, voteCount: 1 })),
@@ -44,7 +38,6 @@ const svc = {
 	reviewSuggestion: vi.fn(async () => undefined),
 	setVisibility: vi.fn(async () => undefined),
 	mergeSuggestions: vi.fn(async () => ({ transferred: 0 })),
-	restoreSuggestionTrust: vi.fn(async () => undefined),
 	getEditableState: vi.fn(async () => ({ canEdit: true, direct: true, pendingEditId: null })),
 	editSuggestion: vi.fn(async () => ({ applied: true, editId: null })),
 	cancelEditRequest: vi.fn(async () => undefined),
@@ -55,6 +48,19 @@ const svc = {
 	SuggestionNotFoundError: class extends Error {}
 };
 vi.mock('$lib/server/suggestion/suggestion-service', () => svc);
+
+// Standing moved out of the domain services into one shared one. It stays a
+// spy here for the same reason the others are: a guard that runs late would
+// show up as a service call on a rejected request.
+const standingSvc = {
+	getStanding: vi.fn(async () => ({
+		status: 'none' as const,
+		reason: null,
+		triggeringFlagId: null,
+		updatedAt: null
+	}))
+};
+vi.mock('$lib/server/moderation/standing-service', () => standingSvc);
 
 const createFlag = vi.fn(async () => ({ id: 'f1' }));
 vi.mock('$lib/server/flag/flag-service', () => ({
@@ -163,7 +169,6 @@ const staffEndpoints: Array<[string, () => Promise<unknown>]> = [
 	['getSuggestionsQueue', () => remote.getSuggestionsQueue({ sort: 'top' })],
 	['getStaffSuggestionDetail', () => remote.getStaffSuggestionDetail('s1')],
 	['getMergeCandidates', () => remote.getMergeCandidates('s1')],
-	['getSuggestionStandingFor', () => remote.getSuggestionStandingFor('m1')],
 	[
 		'respondToSuggestion',
 		() => remote.respondToSuggestion({ suggestionId: 's1', status: 'planned' })
@@ -174,7 +179,6 @@ const staffEndpoints: Array<[string, () => Promise<unknown>]> = [
 		() => remote.setSuggestionVisibility({ suggestionId: 's1', visibility: 'hidden' })
 	],
 	['mergeSuggestion', () => remote.mergeSuggestion({ sourceId: 's1', targetId: 's2' })],
-	['restoreSuggestionTrust', () => remote.restoreSuggestionTrust({ userId: 'm1' })],
 	['getPendingSuggestionEdits', () => remote.getPendingSuggestionEdits()],
 	['getSuggestionPendingEdit', () => remote.getSuggestionPendingEdit('s1')],
 	[

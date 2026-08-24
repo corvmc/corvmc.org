@@ -336,18 +336,15 @@ export async function countUnfilledByRole(from = new Date()): Promise<Map<string
 }
 
 /**
- * The staff list. Counts only the signups that hold a place, so a cancelled
- * claim reopens the slot rather than leaving the shift looking full.
+ * The shift row as every staff surface wants it: the role's name, the title of
+ * the show it staffs (null for a work party), and how many places are taken.
+ *
+ * The event join is a `leftJoin` and has to stay one — `eventId` is nullable by
+ * design, and an inner join would quietly drop every shift that isn't attached
+ * to a show.
  */
-export async function listShifts(
-	filters: {
-		volunteerRoleId?: string;
-		from?: Date;
-		to?: Date;
-		includeCancelled?: boolean;
-	} = {}
-): Promise<ShiftWithCounts[]> {
-	const rows = await db
+function shiftRowsQuery() {
+	return db
 		.select({
 			shift: volunteerShift,
 			roleName: volunteerRole.name,
@@ -361,13 +358,30 @@ export async function listShifts(
 		})
 		.from(volunteerShift)
 		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
-		.leftJoin(event, eq(event.id, volunteerShift.eventId))
+		.leftJoin(event, eq(event.id, volunteerShift.eventId));
+}
+
+/**
+ * The staff list. Counts only the signups that hold a place, so a cancelled
+ * claim reopens the slot rather than leaving the shift looking full.
+ */
+export async function listShifts(
+	filters: {
+		volunteerRoleId?: string;
+		eventId?: string;
+		from?: Date;
+		to?: Date;
+		includeCancelled?: boolean;
+	} = {}
+): Promise<ShiftWithCounts[]> {
+	const rows = await shiftRowsQuery()
 		.where(
 			and(
 				filters.includeCancelled ? undefined : isNull(volunteerShift.cancelledAt),
 				filters.volunteerRoleId
 					? eq(volunteerShift.volunteerRoleId, filters.volunteerRoleId)
 					: undefined,
+				filters.eventId ? eq(volunteerShift.eventId, filters.eventId) : undefined,
 				filters.from ? gte(volunteerShift.startsAt, filters.from) : undefined,
 				filters.to ? lte(volunteerShift.startsAt, filters.to) : undefined
 			)
@@ -375,6 +389,22 @@ export async function listShifts(
 		.orderBy(asc(volunteerShift.startsAt));
 
 	return withCounts(rows);
+}
+
+/**
+ * One shift, with the same trimmings as a list row.
+ *
+ * Separate from `getShiftById`, which returns the bare table row: the signup
+ * service branches on that shape, and widening it there would push the role and
+ * event joins onto every claim, confirm and no-show. This is the read for a
+ * page that is *showing* a shift to somebody.
+ *
+ * Cancelled shifts are included. The detail page is exactly where you go to
+ * find out what was called off.
+ */
+export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null> {
+	const rows = await shiftRowsQuery().where(eq(volunteerShift.id, id)).limit(1);
+	return withCounts(rows)[0] ?? null;
 }
 
 export interface OpenShift extends ShiftWithCounts {

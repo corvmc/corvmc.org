@@ -2,6 +2,7 @@
 	import { formatDate, formatTime } from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import { hashPattern, darkTextPatterns } from '$lib/utils/patterns';
+	import { imageSrc } from '$lib/utils/images';
 
 	interface Props {
 		href: string;
@@ -52,6 +53,8 @@
 
 	const tagList = $derived(parseTags(tags));
 
+	const poster = $derived(imageSrc(posterUrl, 'poster'));
+
 	// `isFree` is an explicit override (member ticket lists); otherwise the price
 	// comes from the event's own ticketing fields.
 	const price = $derived(
@@ -78,7 +81,7 @@
 		{/if}
 		<figure class="poster-card__figure">
 			{#if posterUrl}
-				<img src={posterUrl} alt={title} />
+				<img src={poster.src} srcset={poster.srcset} sizes={poster.sizes} alt={title} />
 			{:else}
 				<div class="poster-gen {patternClass}">
 					<span class="poster-gen__eyebrow">{formatDate(startsAt)}</span>
@@ -110,7 +113,7 @@
 		{/if}
 		<figure class="poster-card__figure">
 			{#if posterUrl}
-				<img src={posterUrl} alt={title} />
+				<img src={poster.src} srcset={poster.srcset} sizes={poster.sizes} alt={title} />
 			{:else}
 				<div class="poster-gen {patternClass}">
 					<span class="poster-gen__eyebrow">{formatDate(startsAt)}</span>

@@ -7,9 +7,17 @@ CI already; nothing new needs to be configured.
 Run the fast component loop (skips the Node `server` project and Playwright e2e):
 
 ```sh
+pnpm test:changed             # only what your working-tree diff affects — start here
 pnpm test:components          # client + storybook projects, headless, one shot
+pnpm test:server              # the Node `server` project only
 pnpm test:unit                # watch mode (all vitest projects)
 ```
+
+Reach for the narrowest one that covers your change. A full `server` run is ~30s
+warm and ~65s cold, and almost none of that is your assertions — the 1,800 server
+tests execute in about 3s, with the rest going to Vite transforming and evaluating
+the app's module graph once per test file. So the cost tracks the number of _files_
+pulled in, not the number of tests, and scoping the run is what actually helps.
 
 CI runs `pnpm test`, which executes the same files via `vitest --run`.
 

@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { toGenericRef } from '$lib/server/entity/refs';
+import { BLURB_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
@@ -77,7 +79,14 @@ export const searchHelp = query(z.string(), async (q) => {
 
 export const getStaffArticles = query(z.void(), async () => {
 	await requireStaff();
-	return listAllArticles();
+	const rows = await listAllArticles();
+	// The published/draft state is the row's status column, so the ref carries
+	// none. `slug` matters: the staff editor is keyed by id but the member-facing
+	// article is addressed by slug, and the ref has to reach both.
+	return rows.map((a) => ({
+		...a,
+		ref: toGenericRef('help', { id: a.id, title: a.title, slug: a.slug })
+	}));
 });
 
 export const getStaffCategories = query(z.void(), async () => {
@@ -96,9 +105,9 @@ export const getStaffArticle = query(z.string(), async (id) => {
 
 const createArticleSchema = z.object({
 	categoryId: z.string().min(1),
-	title: z.string().trim().min(1).max(255),
-	slug: z.string().trim().max(255).optional().default(''),
-	summary: z.string().trim().max(500).optional(),
+	title: z.string().trim().min(1).max(SHORT_TEXT_MAX),
+	slug: z.string().trim().max(SHORT_TEXT_MAX).optional().default(''),
+	summary: z.string().trim().max(BLURB_MAX).optional(),
 	content: z.string().min(1),
 	minRole: z.string().default('member'),
 	published: z.boolean().default(false)
@@ -117,9 +126,9 @@ export const createArticle = form(createArticleSchema, async (data) => {
 const updateArticleSchema = z.object({
 	id: z.string().min(1),
 	categoryId: z.string().min(1),
-	title: z.string().trim().min(1).max(255),
-	slug: z.string().trim().min(1).max(255),
-	summary: z.string().trim().max(500).optional(),
+	title: z.string().trim().min(1).max(SHORT_TEXT_MAX),
+	slug: z.string().trim().min(1).max(SHORT_TEXT_MAX),
+	summary: z.string().trim().max(BLURB_MAX).optional(),
 	content: z.string().min(1),
 	minRole: z.string(),
 	published: z.boolean().default(false)
@@ -136,7 +145,11 @@ export const updateArticle = form(updateArticleSchema, async (data) => {
 export const setArticlesPublishedForm = form(
 	z.object({
 		ids: z.array(z.string().min(1)).min(1).max(200),
-		published: z.boolean()
+		// Both call sites post this as a hidden input, so a value always arrives
+		// and the default never fires. It has to be optional regardless: kit
+		// rejects a required boolean in a form schema, because an unchecked
+		// checkbox sends nothing at all.
+		published: z.boolean().optional().default(false)
 	}),
 	async (data) => {
 		await requireStaff();

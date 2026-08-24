@@ -1,0 +1,1 @@
+ALTER TABLE `band_member` ADD `alias` text;

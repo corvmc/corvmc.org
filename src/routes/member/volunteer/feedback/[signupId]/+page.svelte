@@ -90,7 +90,7 @@
 						description="Optional. Goes to staff without your name attached to the rollup."
 					/>
 
-					<SubmitButton label="Send it" class="btn-primary" />
+					<SubmitButton label="Send it" variant="primary" />
 				</Form>
 			</InfoCard>
 		{/if}

@@ -1,4 +1,5 @@
 <script module lang="ts">
+	import Button from './Button.svelte';
 	import type { ComponentProps } from 'svelte';
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import PageHeader from './PageHeader.svelte';
@@ -15,16 +16,16 @@
 {#snippet actionsTemplate(args: ComponentProps<typeof PageHeader>)}
 	<PageHeader {...args}>
 		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static demo href in a story -->
-		<a href="/member/bands/new" class="btn btn-primary btn-sm">New band</a>
+		<Button href="/member/bands/new" variant="primary" size="sm">New band</Button>
 	</PageHeader>
 {/snippet}
 
 <!-- Several actions must stay grouped opposite the title, not spread across the header. -->
 {#snippet manyActionsTemplate(args: ComponentProps<typeof PageHeader>)}
 	<PageHeader {...args}>
-		<button class="btn btn-ghost btn-sm">Interests</button>
-		<button class="btn btn-ghost btn-sm">Profile</button>
-		<button class="btn btn-primary btn-sm">Log Hours</button>
+		<Button variant="ghost" size="sm">Interests</Button>
+		<Button variant="ghost" size="sm">Profile</Button>
+		<Button variant="primary" size="sm">Log Hours</Button>
 	</PageHeader>
 {/snippet}
 

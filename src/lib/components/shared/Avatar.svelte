@@ -1,8 +1,16 @@
 <script lang="ts">
 	import { Avatar } from 'bits-ui';
 	import { hashPattern } from '$lib/utils/patterns';
+	import { imageSrc, type ImagePreset } from '$lib/utils/images';
 
-	const { src, name, ...rest }: { src?: string; name: string; [key: string]: any } = $props();
+	const {
+		src,
+		name,
+		size = 'avatar-md',
+		...rest
+	}: { src?: string; name: string; size?: ImagePreset; [key: string]: any } = $props();
+
+	const img = $derived(imageSrc(src, size));
 
 	const initials = $derived(
 		name
@@ -20,7 +28,12 @@
 	<Avatar.Fallback class="avatar-pattern poster-gen {patternClass}">
 		<span class="avatar-initials">{initials}</span>
 	</Avatar.Fallback>
-	<Avatar.Image {src} alt={name} class="absolute inset-0 size-full object-cover" />
+	<Avatar.Image
+		src={img.src}
+		srcset={img.srcset}
+		alt={name}
+		class="absolute inset-0 size-full object-cover"
+	/>
 </Avatar.Root>
 
 <style>

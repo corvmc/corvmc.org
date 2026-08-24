@@ -101,7 +101,7 @@
 	{#if hasFilters}
 		<EmptyState>
 			<p>No {noun} match your filters.</p>
-			<Button class="btn-ghost btn-sm mt-2" onclick={clearFilters}>Clear filters</Button>
+			<Button variant="ghost" size="sm" class="mt-2" onclick={clearFilters}>Clear filters</Button>
 		</EmptyState>
 	{:else}
 		<EmptyState message="No {noun} in the directory yet." />
@@ -125,7 +125,7 @@
 				type="text"
 				placeholder="Search by name..."
 				aria-label="Search by name"
-				class="input input-bordered flex-1"
+				class="input flex-1"
 				bind:value={search}
 			/>
 			{#if tab === 'members'}
@@ -219,7 +219,7 @@
 
 	{#if remaining > 0}
 		<div class="flex justify-center">
-			<Button class="btn-outline btn-sm" onclick={showMore}>
+			<Button variant="default" size="sm" outline onclick={showMore}>
 				Show more ({remaining} left)
 			</Button>
 		</div>

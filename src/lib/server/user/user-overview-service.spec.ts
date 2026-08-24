@@ -16,7 +16,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // which are the band-membership and account lookups the rest of the function
 // branches on. They are issued before the count fan-out, in that order.
 let selectCall = 0;
-let memberships: Array<{ bandId: string; status: string }> = [];
+let memberships: Array<{ bandId: string; name: string; status: string }> = [];
 let directoryVisibility = 'members';
 
 const dbSelect = vi.fn(() => {
@@ -55,13 +55,21 @@ vi.mock('$lib/server/finance/subscription-service', () => ({
 	)
 }));
 
-vi.mock('$lib/server/event/community-event-service', () => ({
-	getCommunityStanding: vi.fn(async () => ({ requiresReview: true, reason: 'Upheld report' }))
-}));
-
-let suggestionStanding = { requiresReview: false, reason: null as string | null };
-vi.mock('$lib/server/suggestion/suggestion-service', () => ({
-	getSuggestionStanding: vi.fn(async () => suggestionStanding)
+// One call now covers every scope, which is the point of the merge: the
+// overview used to make one round trip per domain.
+const standing = (status: string, reason: string | null = null) => ({
+	status,
+	reason,
+	triggeringFlagId: null,
+	updatedAt: null
+});
+let standings = {
+	community_event: standing('restricted', 'Upheld report'),
+	suggestion: standing('none'),
+	messaging: standing('none')
+};
+vi.mock('$lib/server/moderation/standing-service', () => ({
+	getStandings: vi.fn(async () => standings)
 }));
 
 vi.mock('$lib/server/volunteer/hour-log-service', () => ({
@@ -95,12 +103,7 @@ vi.mock('$lib/server/marketing/subscriber-service', () => ({
 }));
 
 vi.mock('$lib/server/inbox/portal-service', () => ({
-	countOpenPortalThreads: vi.fn(async () => 2),
 	countPortalUnread: vi.fn(async () => 1)
-}));
-
-vi.mock('$lib/server/notification/in-app-service', () => ({
-	getUnreadCount: vi.fn(async () => 5)
 }));
 
 vi.mock('./user-service', () => ({
@@ -118,52 +121,64 @@ beforeEach(() => {
 	certifications = [];
 	volunteerProfile = null;
 	subscriber = null;
-	suggestionStanding = { requiresReview: false, reason: null };
+	standings = {
+		community_event: standing('restricted', 'Upheld report'),
+		suggestion: standing('none'),
+		messaging: standing('none')
+	};
 });
 
 describe('getUserOverview', () => {
-	it('counts active band memberships and pending invitations separately', async () => {
-		// A never-accepted invitation is not a band they are in, but it is
-		// something staff need to see — so it gets its own count rather than
-		// inflating the one the Bands badge reads.
+	it('returns band names, and keeps pending invitations out of the active list', async () => {
+		// The record shows bands as links, so the names ride out on the join that
+		// was already resolving membership — a count would have sent staff to a
+		// tab to find out which bands it meant. A never-accepted invitation is not
+		// a band they are in, but it is something staff need to see, so it stays
+		// in the list carrying its own status and is counted separately.
 		memberships = [
-			{ bandId: 'b1', status: 'active' },
-			{ bandId: 'b2', status: 'active' },
-			{ bandId: 'b3', status: 'pending' }
+			{ bandId: 'b1', name: 'The Hague', status: 'active' },
+			{ bandId: 'b2', name: 'Wet Dog', status: 'active' },
+			{ bandId: 'b3', name: 'Slow Corners', status: 'pending' }
 		];
 
 		const overview = await getUserOverview('u1');
 
-		expect(overview.counts.bands).toBe(2);
+		expect(overview.bands).toEqual([
+			{ id: 'b1', name: 'The Hague', status: 'active' },
+			{ id: 'b2', name: 'Wet Dog', status: 'active' },
+			{ id: 'b3', name: 'Slow Corners', status: 'pending' }
+		]);
 		expect(overview.counts.pendingBandInvites).toBe(1);
 	});
 
-	it('reports no shows for a member in no bands without querying for them', async () => {
-		// Show credits are reached through band membership. With no bands the
-		// join has nothing to match, and issuing it anyway would be two wasted
-		// round trips on every solo member's record.
-		memberships = [];
-		const before = dbSelect.mock.calls.length;
+	/**
+	 * Regression: this function fanned out to ~29 statements on every member
+	 * view, a third of them feeding a twelve-tile grid on the Overview tab that
+	 * only restated what each tab already showed. The grid is gone. Nothing here
+	 * should be computed because it might be interesting — every count must have
+	 * a reader, and this is the guard that says so.
+	 */
+	it('reads nothing it does not return', async () => {
+		memberships = [{ bandId: 'b1', name: 'The Hague', status: 'active' }];
 
 		const overview = await getUserOverview('u1');
 
-		expect(overview.counts.upcomingShows).toBe(0);
-		expect(overview.counts.pastShows).toBe(0);
-		// Two reads for memberships/account, then the count fan-out — but no
-		// event join among them.
-		expect(dbSelect.mock.calls.length).toBeGreaterThan(before);
-	});
-
-	it('counts held certifications excluding revoked ones', async () => {
-		certifications = [
-			{ state: 'current', revokedAt: null },
-			{ state: 'expiring', revokedAt: null },
-			{ state: 'revoked', revokedAt: new Date('2026-01-01') }
-		];
-
-		const overview = await getUserOverview('u1');
-
-		expect(overview.counts.certsHeld).toBe(2);
+		// Two lookups (memberships, account) plus one statement per count that
+		// comes from the database: reservations upcoming/unpaid, overdue loans,
+		// pending hour logs, open flags, lifetime paid.
+		expect(dbSelect.mock.calls).toHaveLength(8);
+		expect(Object.keys(overview.counts).sort()).toEqual([
+			'approvedMinutesThisYear',
+			'certsNeedingAttention',
+			'lifetimePaidCents',
+			'openFlagsAgainst',
+			'overdueLoans',
+			'pendingBandInvites',
+			'pendingHourLogs',
+			'unpaidReservations',
+			'unreadThreads',
+			'upcomingReservations'
+		]);
 	});
 
 	it('treats expiring and expired clearances as needing attention, but not revoked ones', async () => {
@@ -198,13 +213,13 @@ describe('getUserOverview', () => {
 		// An upheld report about an event must not cost someone their
 		// suggestion-posting rights, or the reverse — so the two are read and
 		// reported independently rather than folded into one flag.
-		suggestionStanding = { requiresReview: true, reason: 'Off-topic posts' };
+		standings = { ...standings, suggestion: standing('restricted', 'Off-topic posts') };
 
 		const overview = await getUserOverview('u1');
 
-		expect(overview.standing.requiresReview).toBe(true);
-		expect(overview.suggestionStanding).toEqual({
-			requiresReview: true,
+		expect(overview.standings.community_event.status).toBe('restricted');
+		expect(overview.standings.suggestion).toMatchObject({
+			status: 'restricted',
 			reason: 'Off-topic posts'
 		});
 	});
@@ -230,11 +245,13 @@ describe('getUserOverview', () => {
 
 		const overview = await getUserOverview('u1');
 
-		expect(overview.standing).toEqual({ requiresReview: true, reason: 'Upheld report' });
+		expect(overview.standings.community_event).toMatchObject({
+			status: 'restricted',
+			reason: 'Upheld report'
+		});
 		expect(overview.directory).toEqual({ visibility: 'hidden', profileComplete: false });
 		expect(overview.lastLoginAt).toEqual(new Date('2026-08-01T10:00:00Z'));
 		expect(overview.counts.approvedMinutesThisYear).toBe(300);
-		expect(overview.counts.openThreads).toBe(2);
-		expect(overview.counts.unreadNotifications).toBe(5);
+		expect(overview.counts.unreadThreads).toBe(1);
 	});
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
+	import { EntityViewer } from '$lib/components/shared/entity';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
 	import {
@@ -29,134 +30,121 @@
 		IconCalendarTime
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
+	import { panelTabs } from '$lib/components/shared/panel-tabs';
+	import {
+		activeNavKey,
+		childHrefsFor,
+		sectionHasKey,
+		staffNavSections,
+		staffNavTop,
+		type StaffNavBadgeKey,
+		type StaffNavItem,
+		type StaffNavKey
+	} from './nav-items';
 
 	let { children } = $props();
 
 	let layout = $derived(await getStaffLayout());
 
-	const panels = $derived([
-		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },
-		{ key: 'staff', label: 'Staff', href: '/staff', type: 'staff' as const },
-		...layout.userBands.map((b) => ({
-			key: b.slug,
-			label: b.name,
-			href: `/band/${b.slug}`,
-			type: 'band' as const
-		}))
-	]);
+	const panels = $derived(
+		// Staff is unconditional here: `getStaffLayout` has already redirected
+		// anyone without the role, so reaching this layout proves `isStaff`.
+		panelTabs({ isStaff: true, userBands: layout.userBands })
+	);
+
+	// The rows live in `nav-items.ts`; these two maps are the only things that
+	// need a Svelte file. Keeping the counts here means a renamed field on
+	// `getStaffLayout` is a type error rather than a badge that quietly stops.
+	const icons: Record<StaffNavKey, typeof IconLayoutDashboard> = {
+		dashboard: IconLayoutDashboard,
+		inbox: IconInbox,
+		users: IconUsers,
+		bands: IconMusic,
+		volunteer: IconHeartHandshake,
+		'volunteer-shifts': IconCalendarTime,
+		'volunteer-roles': IconListDetails,
+		'volunteer-certifications': IconCertificate,
+		'volunteer-report': IconReportAnalytics,
+		reservations: IconClipboardCheck,
+		recurring: IconRepeat,
+		closures: IconBan,
+		equipment: IconTool,
+		'equipment-loans': IconPackage,
+		events: IconCalendarEvent,
+		flags: IconFlag,
+		suggestions: IconBulb,
+		campaigns: IconMail,
+		audiences: IconMailbox,
+		help: IconBook,
+		payments: IconCash,
+		credits: IconCoins,
+		settings: IconSettings
+	};
+
+	let badges = $derived({
+		inboxUnread: layout.inboxUnread,
+		suggestionsAwaiting: layout.suggestionsAwaiting,
+		volunteerPending: layout.volunteerPending
+	} satisfies Record<StaffNavBadgeKey, number>);
+
+	let activeKey = $derived(activeNavKey(page.url.pathname));
+
+	function badgeFor(item: StaffNavItem): number | undefined {
+		return item.badgeKey ? badges[item.badgeKey] : undefined;
+	}
 </script>
 
-<AppShell drawerId="staff-drawer" user={layout.user} {panels} activePanel="staff">
-	{#snippet brand()}
-		<div class="flex items-center gap-2 px-6 py-5">
-			<span class="truncate text-xl font-bold">CorvMC</span>
-			<Badge variant="primary">Staff</Badge>
-		</div>
-	{/snippet}
+{#snippet row(item: StaffNavItem)}
+	{@const Icon = icons[item.key]}
+	{#if item.children}
+		<Nav.Collapsible
+			href={item.href}
+			label={item.label}
+			childHrefs={childHrefsFor(item)}
+			badge={badgeFor(item)}
+			active={activeKey === item.key}
+		>
+			{#snippet icon()}<Icon />{/snippet}
+			{#each item.children as child (child.key)}
+				{@render row(child)}
+			{/each}
+		</Nav.Collapsible>
+	{:else}
+		<Nav.Item
+			href={item.href}
+			label={item.label}
+			badge={badgeFor(item)}
+			active={activeKey === item.key}
+		>
+			{#snippet icon()}<Icon />{/snippet}
+		</Nav.Item>
+	{/if}
+{/snippet}
+
+<AppShell drawerId="staff-drawer" {panels} activePanel="staff">
 	{#snippet navigation()}
-		<Nav.Item href="/staff" label="Dashboard">
-			{#snippet icon()}<IconLayoutDashboard />{/snippet}
-		</Nav.Item>
-		<Nav.Item href="/staff/inbox" label="Inbox" badge={layout.inboxUnread}>
-			{#snippet icon()}<IconInbox />{/snippet}
-		</Nav.Item>
+		{#each staffNavTop as item (item.key)}
+			{@render row(item)}
+		{/each}
 
-		<Nav.Group title="Operations">
-			<Nav.Item href="/staff/users" label="Users">
-				{#snippet icon()}<IconUsers />{/snippet}
-			</Nav.Item>
-			<Nav.Collapsible
-				href="/staff/reservations"
-				label="Reservations"
-				childHrefs={['/staff/reservations', '/staff/recurring', '/staff/closures']}
+		{#each staffNavSections as section (section.key)}
+			<Nav.Group
+				title={section.title}
+				collapsible
+				persistKey={section.key}
+				containsActive={sectionHasKey(section, activeKey)}
 			>
-				{#snippet icon()}<IconClipboardCheck />{/snippet}
-				<Nav.Item href="/staff/recurring" label="Recurring">
-					{#snippet icon()}<IconRepeat />{/snippet}
-				</Nav.Item>
-				<Nav.Item href="/staff/closures" label="Closures">
-					{#snippet icon()}<IconBan />{/snippet}
-				</Nav.Item>
-			</Nav.Collapsible>
-			<Nav.Item href="/staff/events" label="Events">
-				{#snippet icon()}<IconCalendarEvent />{/snippet}
-			</Nav.Item>
-			<Nav.Item href="/staff/bands" label="Bands">
-				{#snippet icon()}<IconMusic />{/snippet}
-			</Nav.Item>
-			<Nav.Item href="/staff/flags" label="Content Flags">
-				{#snippet icon()}<IconFlag />{/snippet}
-			</Nav.Item>
-			<Nav.Item href="/staff/suggestions" label="Suggestions" badge={layout.suggestionsAwaiting}>
-				{#snippet icon()}<IconBulb />{/snippet}
-			</Nav.Item>
-			<Nav.Collapsible
-				href="/staff/equipment/loans"
-				label="Equipment"
-				childHrefs={['/staff/equipment/loans', '/staff/equipment']}
-			>
-				{#snippet icon()}<IconTool />{/snippet}
-				<Nav.Item href="/staff/equipment" label="Inventory">
-					{#snippet icon()}<IconPackage />{/snippet}
-				</Nav.Item>
-			</Nav.Collapsible>
-			<Nav.Collapsible
-				href="/staff/volunteer"
-				label="Volunteering"
-				childHrefs={[
-					'/staff/volunteer',
-					'/staff/volunteer/shifts',
-					'/staff/volunteer/roles',
-					'/staff/volunteer/certifications',
-					'/staff/volunteer/clearances',
-					'/staff/volunteer/report'
-				]}
-				badge={layout.volunteerPending}
-			>
-				{#snippet icon()}<IconHeartHandshake />{/snippet}
-				<Nav.Item href="/staff/volunteer/shifts" label="Shifts">
-					{#snippet icon()}<IconCalendarTime />{/snippet}
-				</Nav.Item>
-				<Nav.Item href="/staff/volunteer/roles" label="Roles">
-					{#snippet icon()}<IconListDetails />{/snippet}
-				</Nav.Item>
-				<Nav.Item href="/staff/volunteer/certifications" label="Certifications">
-					{#snippet icon()}<IconCertificate />{/snippet}
-				</Nav.Item>
-				<Nav.Item href="/staff/volunteer/report" label="Report">
-					{#snippet icon()}<IconReportAnalytics />{/snippet}
-				</Nav.Item>
-			</Nav.Collapsible>
-		</Nav.Group>
-
-		<Nav.Group title="Marketing">
-			<Nav.Item href="/staff/marketing/campaigns" label="Campaigns">
-				{#snippet icon()}<IconMail />{/snippet}
-			</Nav.Item>
-			<Nav.Item href="/staff/marketing/audiences" label="Audiences">
-				{#snippet icon()}<IconMailbox />{/snippet}
-			</Nav.Item>
-		</Nav.Group>
-
-		<Nav.Group title="Content">
-			<Nav.Item href="/staff/help" label="Help Articles">
-				{#snippet icon()}<IconBook />{/snippet}
-			</Nav.Item>
-		</Nav.Group>
-
-		<Nav.Group title="System">
-			<Nav.Item href="/staff/payments" label="Payments">
-				{#snippet icon()}<IconCash />{/snippet}
-			</Nav.Item>
-			<Nav.Item href="/staff/credits" label="Credits">
-				{#snippet icon()}<IconCoins />{/snippet}
-			</Nav.Item>
-			<Nav.Item href="/staff/settings" label="Settings">
-				{#snippet icon()}<IconSettings />{/snippet}
-			</Nav.Item>
-		</Nav.Group>
+				{#each section.items as item (item.key)}
+					{@render row(item)}
+				{/each}
+			</Nav.Group>
+		{/each}
 	{/snippet}
 	<ErrorToastBoundary>
-		{@render children()}
+		<!-- `getStaffLayout` redirects anyone without the role, so reaching this
+		     markup is itself the proof that the viewer is staff. -->
+		<EntityViewer panel="staff" userId={layout.user.id} isStaff bands={layout.userBands}>
+			{@render children()}
+		</EntityViewer>
 	</ErrorToastBoundary>
 </AppShell>

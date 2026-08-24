@@ -123,7 +123,10 @@ vi.mock('$lib/server/events/event-bus', () => ({
 
 vi.mock('$lib/server/storage', () => ({
 	uploadFile: vi.fn().mockResolvedValue('events/posters/evt-1.jpg'),
-	deleteObject: vi.fn().mockResolvedValue(undefined)
+	deleteObject: vi.fn().mockResolvedValue(undefined),
+	// Returns the destination key on success, null when the source is gone —
+	// the real contract in storage.ts.
+	copyObject: vi.fn((_src: string, dest: string) => Promise.resolve(dest))
 }));
 
 const mockTicketsSold = vi.fn().mockResolvedValue(0);
@@ -146,7 +149,7 @@ import {
 	cancel as cancelReservation
 } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
-import { uploadFile, deleteObject } from '$lib/server/storage';
+import { uploadFile, deleteObject, copyObject } from '$lib/server/storage';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 
 describe('EventService', () => {
@@ -277,7 +280,7 @@ describe('EventService', () => {
 
 			expect(uploadFile).toHaveBeenCalledWith(
 				posterBuffer,
-				`events/posters/${result.id}.jpg`,
+				expect.stringMatching(new RegExp(`^events/posters/${result.id}-[0-9a-f]{8}\\.jpg$`)),
 				'image/jpeg'
 			);
 		});
@@ -651,7 +654,11 @@ describe('EventService', () => {
 			expect(staffCreate).toHaveBeenCalled();
 		});
 
-		it('does not rebook when no reservationId on event', async () => {
+		// This used to assert the opposite — that an event without a reservation was
+		// left alone. That silence was the bug: an event created without a hold had
+		// no way to acquire one, so a calendar of reservation-less events piled up
+		// with nothing in the app able to repair them.
+		it('books the space for an event that has none', async () => {
 			selectResult = [{ ...mockEventRow, status: 'published', reservationId: null }];
 
 			await update('evt-1', {
@@ -664,8 +671,54 @@ describe('EventService', () => {
 				}
 			});
 
+			// Nothing to release — this is an add, not a replace.
+			expect(cancelReservation).not.toHaveBeenCalled();
+			expect(staffCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					bookerType: 'event',
+					bookerId: 'evt-1',
+					status: 'confirmed'
+				})
+			);
+			expect(lastUpdateSet?.reservationId).toBe('res-1');
+		});
+
+		// The conflict check used to run *after* the cancellation, so a rejected
+		// window released the room and left the event pointing at a cancelled
+		// reservation, with nothing re-created and no compensating write.
+		it('leaves the existing hold intact when the new window conflicts', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+			vi.mocked(hasConflict).mockResolvedValueOnce(true);
+
+			await expect(
+				update('evt-1', {
+					rebook: {
+						userId: 'staff-1',
+						reservationStartsAt: new Date('2025-07-15T00:00:00Z'),
+						reservationEndsAt: new Date('2025-07-15T07:00:00Z'),
+						overrideConflicts: false
+					}
+				})
+			).rejects.toThrow('Time slot is not available');
+
 			expect(cancelReservation).not.toHaveBeenCalled();
 			expect(staffCreate).not.toHaveBeenCalled();
+		});
+
+		// An event must not collide with its own hold when it is only being re-timed.
+		it('excludes the event current reservation from the conflict check', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+
+			await update('evt-1', {
+				rebook: {
+					userId: 'staff-1',
+					reservationStartsAt: new Date('2025-07-15T00:00:00Z'),
+					reservationEndsAt: new Date('2025-07-15T07:00:00Z'),
+					overrideConflicts: false
+				}
+			});
+
+			expect(hasConflict).toHaveBeenCalledWith(expect.any(Date), expect.any(Date), 'res-1');
 		});
 	});
 
@@ -781,7 +834,11 @@ describe('EventService', () => {
 			createdByUserId: 'member-1'
 		};
 
-		it('deletes the poster when it pulls a community listing', async () => {
+		// The poster used to be deleted outright here. It has to stop being
+		// reachable at its guessable public key — that was the point — but a
+		// takedown is a moderation decision, not a reason to destroy the member's
+		// artwork. Rotating the key satisfies the first without the second.
+		it('rotates a community listing’s poster to an unguessable key instead of deleting it', async () => {
 			selectResultQueue = [
 				[publishedCommunityListing],
 				[{ ...mockEventRow, status: 'published' }],
@@ -790,8 +847,45 @@ describe('EventService', () => {
 
 			await unpublishWithNotice('evt-1', { notes: 'No venue given' });
 
+			const withheldKey = expect.stringMatching(
+				/^events\/posters\/withheld\/evt-1-[0-9a-f-]{36}\.jpg$/
+			);
+			expect(copyObject).toHaveBeenCalledWith('events/posters/evt-1.jpg', withheldKey);
+			// The guessable key is what goes away.
 			expect(deleteObject).toHaveBeenCalledWith('events/posters/evt-1.jpg');
-			expect(lastUpdateSet).toMatchObject({ posterKey: null, reviewNotes: 'No venue given' });
+			expect(lastUpdateSet).toMatchObject({
+				posterKey: withheldKey,
+				reviewNotes: 'No venue given'
+			});
+		});
+
+		it('nulls posterKey only when the object is already gone', async () => {
+			vi.mocked(copyObject).mockResolvedValueOnce(null);
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1', { notes: 'No venue given' });
+
+			// Nothing to preserve, so don't leave the row pointing at a dead key.
+			expect(deleteObject).not.toHaveBeenCalled();
+			expect(lastUpdateSet).toMatchObject({ posterKey: null });
+		});
+
+		// Same principle one column over: a takedown with no note used to write
+		// `reviewNotes: null`, wiping whatever reason was already on the row.
+		it('leaves an existing reviewNotes alone when no note is given', async () => {
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1');
+
+			expect(lastUpdateSet).not.toHaveProperty('reviewNotes');
 		});
 
 		it('notifies the member who posted it, with the staff note', async () => {

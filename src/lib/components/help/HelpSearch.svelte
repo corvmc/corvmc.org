@@ -45,7 +45,7 @@
 		<input
 			type="text"
 			placeholder="Search help articles..."
-			class="input input-bordered w-full pl-9"
+			class="input w-full pl-9"
 			bind:value={query}
 			oninput={handleInput}
 			onfocus={() => {
@@ -71,7 +71,7 @@
 				>
 					<p class="font-medium text-sm">{result.title}</p>
 					{#if result.summary}
-						<p class="text-xs opacity-60 truncate">{result.summary}</p>
+						<p class="text-subtle truncate">{result.summary}</p>
 					{/if}
 				</button>
 			{/each}

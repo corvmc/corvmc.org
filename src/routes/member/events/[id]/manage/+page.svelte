@@ -23,7 +23,8 @@
 		withdrawListing,
 		deleteListing
 	} from '$lib/remote/community-events.remote';
-	import { formatDateShort } from '$lib/utils/format';
+	import { formatDateShort, formatDollars } from '$lib/utils/format';
+	import { imageSrc } from '$lib/utils/images';
 
 	// Declared before the awaited query below — see the note on the create page.
 	const fields = updateListing.fields;
@@ -40,7 +41,7 @@
 		listing?.status === 'draft' ? await findDuplicateListing(eventId) : null
 	);
 
-	const requiresReview = $derived(listing?.standing.requiresReview ?? false);
+	const requiresReview = $derived(listing?.standing.status !== 'none');
 
 	// A button that silently does something other than what it says is worse
 	// than the delay itself.
@@ -67,7 +68,7 @@
 		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 	}
 	function toDollars(cents: number | null): string {
-		return cents == null ? '' : (cents / 100).toFixed(2);
+		return cents == null ? '' : formatDollars(cents);
 	}
 </script>
 
@@ -130,7 +131,8 @@
 					action={publishListing}
 					label={publishLabel}
 					successToast={requiresReview ? 'Sent to staff' : 'Published'}
-					class="btn-primary btn-sm"
+					variant="primary"
+					size="sm"
 					onsuccess={() => invalidateAll()}
 				>
 					{#snippet form()}
@@ -150,7 +152,8 @@
 					action={deleteListing}
 					label="Delete"
 					successToast="Listing deleted"
-					class="btn-ghost btn-sm"
+					variant="ghost"
+					size="sm"
 					onsuccess={() => goto(resolve('/member/events'))}
 				>
 					{#snippet form()}
@@ -165,7 +168,8 @@
 					action={unpublishListing}
 					label="Take it down"
 					successToast="Back in your drafts"
-					class="btn-ghost btn-sm"
+					variant="ghost"
+					size="sm"
 					onsuccess={() => invalidateAll()}
 				>
 					{#snippet form()}
@@ -180,7 +184,8 @@
 					action={withdrawListing}
 					label="Cancel the show"
 					successToast="Marked as cancelled"
-					class="btn-warning btn-sm"
+					variant="warning"
+					size="sm"
 					onsuccess={() => invalidateAll()}
 				>
 					{#snippet form()}
@@ -225,7 +230,7 @@
 			<FormField name="description" label="Description">
 				<textarea
 					{...fields.description.as('text', listing.description ?? '')}
-					class="textarea textarea-bordered w-full"
+					class="textarea w-full"
 					rows="4"
 					maxlength="5000"
 				></textarea>
@@ -289,8 +294,10 @@
 
 			<FormField name="posterFile" label="Replace poster">
 				{#if listing.posterUrl}
+					{@const current = imageSrc(listing.posterUrl, 'thumb')}
 					<img
-						src={listing.posterUrl}
+						src={current.src}
+						srcset={current.srcset}
 						alt=""
 						class="mb-2 h-32 w-auto rounded border"
 						style="border-color: var(--surface-border)"
@@ -299,7 +306,7 @@
 				<input
 					{...fields.posterFile.as('file')}
 					accept="image/jpeg,image/png,image/webp"
-					class="file-input file-input-bordered w-full"
+					class="file-input w-full"
 				/>
 			</FormField>
 
@@ -321,7 +328,7 @@
 			</div>
 
 			<div class="flex justify-end pt-4">
-				<SubmitButton label="Save changes" class="btn-primary" />
+				<SubmitButton label="Save changes" variant="primary" />
 			</div>
 		</Form>
 	</PageContent>

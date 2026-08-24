@@ -23,7 +23,8 @@
 	modalTitle="Report this conversation"
 	submitLabel="Submit report"
 	successToast="Report submitted — thank you"
-	class="btn-ghost btn-sm"
+	variant="ghost"
+	size="sm"
 	canSubmit={reason.trim().length > 0}
 	onsuccess={() => {
 		reason = '';
@@ -34,7 +35,7 @@
 	{#snippet form()}
 		<input {...fields.threadId.as('hidden', threadId)} />
 		<div class="space-y-3">
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Staff will be able to read this conversation so they can review it. This person will also be
 				blocked, and the conversation will close.
 			</p>
@@ -42,7 +43,7 @@
 				<div class="label"><span class="label-text">Reason</span></div>
 				<input
 					{...fields.reason.as('text')}
-					class="input input-bordered w-full"
+					class="input w-full"
 					bind:value={reason}
 					maxlength="100"
 					placeholder="e.g. Harassment, spam, impersonation"
@@ -52,7 +53,7 @@
 				<div class="label"><span class="label-text">Details (optional)</span></div>
 				<textarea
 					{...fields.description.as('text')}
-					class="textarea textarea-bordered w-full"
+					class="textarea w-full"
 					rows="3"
 					maxlength="1000"
 					bind:value={description}

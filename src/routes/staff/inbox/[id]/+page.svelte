@@ -1,9 +1,14 @@
 <script lang="ts">
+	/**
+	 * One staff conversation — the thread pane of the two-pane inbox.
+	 *
+	 * The details/status/assignment sidebar this page used to carry is now a
+	 * collapsible strip under the header. Three columns (queue │ thread │
+	 * sidebar) do not fit at ordinary widths, and of the three the sidebar is the
+	 * one you consult rather than read.
+	 */
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -11,8 +16,10 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
 	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
+	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';
 	import ThreadStatusActions from '$lib/components/inbox/ThreadStatusActions.svelte';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
+	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { formatDateTime } from '$lib/utils/format';
 	import {
@@ -20,6 +27,7 @@
 		replyToThread,
 		addThreadNote,
 		updateThreadStatus,
+		setThreadAwaiting,
 		assignThread,
 		getInboxEnabledChannels,
 		getAssignableStaff
@@ -45,6 +53,7 @@
 	const resolveForm = updateThreadStatus.for('resolve');
 	const reopenForm = updateThreadStatus.for('reopen');
 	const snoozeForm = updateThreadStatus;
+	const awaitingForm = setThreadAwaiting.for('awaiting');
 
 	const ChannelIcon = $derived(channelIcon(t.channel));
 
@@ -70,96 +79,89 @@
 	]);
 </script>
 
-<PageHeader
-	title={t.contactUserName ?? t.contactName ?? t.contactEmail ?? 'Conversation'}
-	subtitle={t.subject ?? channelLabel(t.channel)}
-	backHref="/staff/inbox"
->
-	<StatusBadge status={t.status} label />
-</PageHeader>
-<PageContent>
-	<div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
-		<div class="space-y-4 lg:col-span-3">
-			<ThreadTimeline messages={t.messages} notes={t.notes} contactName={t.contactName} />
-
-			{#if channelDisabled}
-				<Alert type="warning" href={resolve('/staff/settings')}>
-					The {channelLabel(t.channel)} channel is disabled. Enable it in Settings → Inbox Channels to
-					send replies.
-				</Alert>
-			{/if}
-
-			<ThreadComposer
+<div class="flex h-full min-h-0 flex-col gap-4">
+	<ThreadHeader
+		title={t.contactUserName ?? t.contactName ?? t.contactEmail ?? 'Conversation'}
+		subtitle={t.subject ?? channelLabel(t.channel)}
+		backHref="/staff/inbox"
+	>
+		{#snippet subtitleIcon()}<ChannelIcon size={14} />{/snippet}
+		{#snippet actions()}
+			<StatusBadge status={threadDisplayStatus(t)} label />
+			<ThreadStatusActions
 				threadId={t.id}
-				{replyForm}
-				{noteForm}
-				{replyBlockedReason}
-				onsent={() => getInboxThread(threadId).refresh()}
+				status={t.status}
+				snoozedUntil={t.snoozedUntil}
+				awaitingReplySince={t.awaitingReplySince}
+				{resolveForm}
+				{reopenForm}
+				{snoozeForm}
+				{awaitingForm}
 			/>
-		</div>
+		{/snippet}
 
-		<div class="space-y-4">
-			<InfoCard title="Details">
-				<div class="flex items-center gap-2 text-sm">
-					<ChannelIcon size={16} class="opacity-60" />
-					{channelLabel(t.channel)}
+		<!-- Consulted rather than read, so it is closed by default. A plain
+		     <details> keeps it keyboard-operable with no JS. -->
+		<details class="collapse-arrow collapse rounded-box bg-base-200/50">
+			<summary class="collapse-title min-h-0 py-2 text-sm font-medium">Details</summary>
+			<div class="collapse-content flex flex-col gap-3 text-sm">
+				<div class="flex flex-wrap gap-x-6 gap-y-1">
+					<span><span class="opacity-60">Channel:</span> {channelLabel(t.channel)}</span>
+					<span><span class="opacity-60">Messages:</span> {t.messageCount}</span>
+					{#if t.contactUserId}
+						<span>
+							<span class="opacity-60">Member:</span>
+							<a href={resolve(`/staff/users/${t.contactUserId}`)} class="link link-primary">
+								{t.contactUserName ?? t.contactName}
+							</a>
+						</span>
+					{/if}
+					{#if t.contactEmail}
+						<span>
+							<span class="opacity-60">Email:</span>
+							<a href="mailto:{t.contactEmail}" class="link link-primary">{t.contactEmail}</a>
+						</span>
+					{/if}
+					{#if t.contactPhone}
+						<span><span class="opacity-60">Phone:</span> {t.contactPhone}</span>
+					{/if}
+					<span class="opacity-50">Created {formatDateTime(t.createdAt)}</span>
 				</div>
 
-				{#if t.contactUserId}
-					<div class="text-sm">
-						<span class="opacity-60">Member:</span>
-						<a href={resolve(`/staff/users/${t.contactUserId}`)} class="link link-primary">
-							{t.contactUserName ?? t.contactName}
-						</a>
-					</div>
-				{/if}
-
-				{#if t.contactEmail}
-					<div class="text-sm">
-						<span class="opacity-60">Email:</span>
-						<a href="mailto:{t.contactEmail}" class="link link-primary">{t.contactEmail}</a>
-					</div>
-				{/if}
-
-				{#if t.contactPhone}
-					<div class="text-sm">
-						<span class="opacity-60">Phone:</span>
-						{t.contactPhone}
-					</div>
-				{/if}
-
-				<div class="text-sm">
-					<span class="opacity-60">Messages:</span>
-					{t.messageCount}
-				</div>
-
-				<div class="text-xs opacity-50">Created {formatDateTime(t.createdAt)}</div>
-			</InfoCard>
-
-			<InfoCard title="Status">
-				<ThreadStatusActions
-					threadId={t.id}
-					status={t.status}
-					snoozedUntil={t.snoozedUntil}
-					{resolveForm}
-					{reopenForm}
-					{snoozeForm}
-				/>
-			</InfoCard>
-
-			<InfoCard title="Assignment">
-				<Form remote={assignForm} successToast="Assignment updated" class="flex flex-col gap-2">
+				<Form remote={assignForm} successToast="Assignment updated" class="flex items-end gap-2">
 					<input {...assignForm.fields.threadId.as('hidden', t.id)} />
 					<FormField
 						name="userId"
-						label=""
+						label="Assigned to"
 						type="select"
 						options={staffOptions}
 						value={t.assignedToUserId ?? ''}
+						class="flex-1"
 					/>
-					<SubmitButton label="Update" class="btn-sm" />
+					<SubmitButton label="Update" variant="default" size="sm" />
 				</Form>
-			</InfoCard>
-		</div>
+			</div>
+		</details>
+	</ThreadHeader>
+
+	<div class="min-h-0 flex-1 overflow-y-auto">
+		<ThreadTimeline messages={t.messages} notes={t.notes} contactName={t.contactName} />
 	</div>
-</PageContent>
+
+	<div class="flex flex-col gap-2">
+		{#if channelDisabled}
+			<Alert type="warning" href={resolve('/staff/settings')}>
+				The {channelLabel(t.channel)} channel is disabled. Enable it in Settings → Inbox Channels to send
+				replies.
+			</Alert>
+		{/if}
+
+		<ThreadComposer
+			threadId={t.id}
+			{replyForm}
+			{noteForm}
+			{replyBlockedReason}
+			onsent={() => getInboxThread(threadId).refresh()}
+		/>
+	</div>
+</div>

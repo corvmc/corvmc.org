@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	/**
 	 * One box for both outbound replies and internal notes.
 	 *
@@ -12,6 +13,12 @@
 	 * `<form>` element, so the textarea is never remounted. That also buys the
 	 * pending state for free: `SubmitButton` spins and disables for the whole
 	 * round-trip, which for an email reply is a real wait.
+	 *
+	 * With no `noteForm` it is a plain reply box, which is what the member side
+	 * uses: notes are staff-private, and a member has nothing to switch between.
+	 * Sharing the component rather than hand-rolling a second composer is what
+	 * keeps the draft handling, the `mod+enter` shortcut and the
+	 * disabled-until-non-empty rule in one place.
 	 */
 	import type { RemoteForm } from '@sveltejs/kit';
 	import { IconNote, IconSend } from '@tabler/icons-svelte';
@@ -30,7 +37,8 @@
 	}: {
 		threadId: string;
 		replyForm: Omit<RemoteForm<{ threadId: string; body: string }, unknown>, 'for'>;
-		noteForm: Omit<RemoteForm<{ threadId: string; body: string }, unknown>, 'for'>;
+		/** Omitted on member-facing timelines: internal notes are staff-only. */
+		noteForm?: Omit<RemoteForm<{ threadId: string; body: string }, unknown>, 'for'>;
 		replyBlockedReason?: string;
 		onsent?: () => void;
 	} = $props();
@@ -40,36 +48,38 @@
 
 	// When replying is impossible the composer is a note box regardless of what
 	// was last picked — a channel can be disabled while the page is open, and the
-	// draft should not end up pointed at a target it can't reach.
-	const isNote = $derived(requestedMode === 'note' || !!replyBlockedReason);
+	// draft should not end up pointed at a target it can't reach. With no note
+	// form there is nowhere else to go, so it stays a reply box and the caller is
+	// expected to have hidden it (the member page shows an Alert instead).
+	const isNote = $derived(!!noteForm && (requestedMode === 'note' || !!replyBlockedReason));
 	const mode = $derived(isNote ? 'note' : 'reply');
-	const activeForm = $derived(isNote ? noteForm : replyForm);
-
-	const tabs = $derived([
-		{ key: 'reply', label: 'Reply' },
-		{ key: 'note', label: 'Internal note' }
-	]);
+	const activeForm = $derived(isNote && noteForm ? noteForm : replyForm);
 </script>
 
 <div
 	class="card border {isNote ? 'border-warning/40 bg-warning/5' : 'border-base-300 bg-base-100'}"
 >
-	<div class="card-body gap-3 p-4">
-		<div class="flex flex-wrap items-center justify-between gap-2">
-			<TabBar
-				{tabs}
-				active={mode}
-				onchange={(key) => {
-					if (key === 'reply' && replyBlockedReason) return;
-					requestedMode = key as 'reply' | 'note';
-				}}
-			/>
-			{#if isNote}
-				<span class="flex items-center gap-1 text-xs opacity-60">
-					<IconNote size={14} /> Staff only — the contact never sees this
-				</span>
-			{/if}
-		</div>
+	<CardBody padding="sm" class="gap-3">
+		{#if noteForm}
+			<div class="flex flex-wrap items-center justify-between gap-2">
+				<TabBar
+					tabs={[
+						{ key: 'reply', label: 'Reply' },
+						{ key: 'note', label: 'Internal note' }
+					]}
+					active={mode}
+					onchange={(key) => {
+						if (key === 'reply' && replyBlockedReason) return;
+						requestedMode = key as 'reply' | 'note';
+					}}
+				/>
+				{#if isNote}
+					<span class="flex items-center gap-1 text-subtle">
+						<IconNote size={14} /> Staff only — the contact never sees this
+					</span>
+				{/if}
+			</div>
+		{/if}
 
 		{#if replyBlockedReason}
 			<p class="text-warning text-xs">{replyBlockedReason}</p>
@@ -85,14 +95,21 @@
 			class="flex flex-col gap-2"
 		>
 			<input {...activeForm.fields.threadId.as('hidden', threadId)} />
-			<FormField
-				name="body"
-				type="textarea"
-				label=""
-				rows={isNote ? 2 : 4}
-				placeholder={isNote ? 'Add an internal note…' : 'Type your reply…'}
-				bind:value={draft}
-			/>
+			<!-- The `input` snippet rather than `type="textarea"`: that branch spreads
+			     only `inputProps`, so `rows` and `placeholder` were silently dropped and
+			     the box has been sized wrong since this was written. -->
+			<FormField name="body" label="">
+				{#snippet input(id)}
+					<textarea
+						{id}
+						name="body"
+						class="textarea w-full"
+						rows={isNote ? 2 : 4}
+						placeholder={isNote ? 'Add an internal note…' : 'Type your reply…'}
+						bind:value={draft}
+					></textarea>
+				{/snippet}
+			</FormField>
 			<div class="flex justify-end">
 				<SubmitButton
 					label={isNote ? 'Add Note' : 'Send Reply'}
@@ -107,5 +124,5 @@
 				</SubmitButton>
 			</div>
 		</Form>
-	</div>
+	</CardBody>
 </div>

@@ -1,13 +1,18 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { createAudience } from '$lib/remote/marketing.remote';
 	import { Field } from '../Form';
 
 	let {
-		class: className = 'btn-primary btn-sm',
+		variant = 'primary',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: (result: unknown) => void;
 		[key: string]: unknown;
@@ -39,6 +44,8 @@
 	submitLabel="Create Audience"
 	canSubmit={!!name.trim()}
 	successToast="Audience created"
+	{variant}
+	{size}
 	class={className}
 	maxWidth="max-w-md"
 	onsuccess={(result) => {
@@ -60,10 +67,10 @@
 				name="slug"
 				bind:value={slug}
 				placeholder="newsletter"
-				class="input-bordered input w-full font-mono text-sm"
+				class="input w-full font-mono text-sm"
 				oninput={() => (slugManuallyEdited = true)}
 			/>
-			<p class="text-xs opacity-60 mt-1">Used in the signup URL: /subscribe/{slug || '...'}</p>
+			<p class="text-subtle mt-1">Used in the signup URL: /subscribe/{slug || '...'}</p>
 		</fieldset>
 		<Field name="description" type="textarea" label="Description" bind:value={description} />
 		<Field

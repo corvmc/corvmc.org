@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { cancelReservation } from '$lib/remote/reservations.remote';
@@ -8,12 +9,18 @@
 	let {
 		reservation,
 		showReasonInput = false,
-		class: className = 'btn-error btn-outline btn-sm',
+		variant = 'error',
+		size = 'sm',
+		outline = true,
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		reservation: Reservation;
 		showReasonInput?: boolean;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
+		outline?: boolean;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -26,8 +33,11 @@
 	action={cancelReservation}
 	label="Cancel"
 	modalTitle="Cancel Reservation"
-	submitClass="btn-error"
+	submitVariant="error"
 	successToast="Cancelled"
+	{variant}
+	{size}
+	{outline}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
@@ -40,7 +50,7 @@
 			<input
 				{...fields.reason.as('text')}
 				placeholder="Reason (optional)"
-				class="input-bordered input input-sm w-full"
+				class="input input-sm w-full"
 			/>
 		{/if}
 	{/snippet}

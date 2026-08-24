@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '$lib/server/db/test-factory';
+import { error } from '@sveltejs/kit';
 import { isStaff } from '$lib/server/authorization';
 
 // Regression: staff confirming/pricing a reservation on a member's behalf must key
@@ -39,12 +40,24 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({
-	requireUser: () => staffUser,
-	requireStaff: vi.fn(async () => undefined),
-	isStaff: vi.fn(async () => true),
-	primaryRoleFor: vi.fn()
-}));
+vi.mock('$lib/server/authorization', async () => {
+	const isStaffMock = vi.fn(async () => true);
+	return {
+		requireUser: () => staffUser,
+		requireStaff: vi.fn(async () => undefined),
+		isStaff: isStaffMock,
+		// Mirrors the real helper: owner short-circuits, otherwise defer to
+		// isStaff so the staff/member cases below still drive this the same way
+		// they drive every other authorisation check in this file.
+		requireStaffOrOwner: vi.fn(async (userId?: string, ownerUserId?: string) => {
+			if (!userId) throw error(401, 'Not authenticated');
+			if (userId === ownerUserId) return 'owner';
+			if (await isStaffMock()) return 'staff';
+			throw error(403, 'Not authorized');
+		}),
+		primaryRoleFor: vi.fn()
+	};
+});
 
 vi.mock('$lib/server/reservation/config', () => ({
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
@@ -112,6 +125,12 @@ const { confirmReservation, getReservationPricing } =
 	(await import('$lib/remote/reservations.remote')) as any;
 
 beforeEach(() => {
+	// requireStaffOrOwner short-circuits on ownership without consulting isStaff,
+	// so a `mockResolvedValueOnce(false)` queued by an owner-path test is never
+	// consumed and would otherwise leak into the next test's staff case. Reset to
+	// the suite default rather than letting one-shots accumulate.
+	vi.mocked(isStaff).mockReset();
+	vi.mocked(isStaff).mockResolvedValue(true);
 	commitReservationCredits.mockClear();
 	confirm.mockClear();
 	getBalance.mockClear();

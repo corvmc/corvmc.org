@@ -44,6 +44,7 @@
 							shape={item.avatarShape}
 							name={item.name}
 							image={item.image}
+							size="avatar-sm"
 							class="rel-row__av"
 						/>
 						<div class="rel-row__meta">
@@ -60,6 +61,7 @@
 							shape={item.avatarShape}
 							name={item.name}
 							image={item.image}
+							size="avatar-sm"
 							class="rel-row__av"
 						/>
 						<div class="rel-row__meta">

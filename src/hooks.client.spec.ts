@@ -104,6 +104,43 @@ describe('existing noise filters', () => {
 	});
 });
 
+describe('stale remote response', () => {
+	// Asserted through beforeSend rather than the predicate (which has its own
+	// spec) so the wiring is covered: a filter that isn't called filters nothing.
+	async function getBeforeSend() {
+		vi.resetModules();
+		try {
+			const sentry = await import('@sentry/sveltekit');
+			await import('./hooks.client');
+			const init = sentry.init as unknown as ReturnType<typeof vi.fn>;
+			return init.mock.calls[0][0].beforeSend as (
+				event: ErrorEvent,
+				hint: { originalException: unknown }
+			) => ErrorEvent | null;
+		} finally {
+			vi.resetModules();
+		}
+	}
+
+	// A tab left open across a deploy POSTs to a remote endpoint whose build hash
+	// is gone, gets an HTML error page back, and devalue.parse throws
+	// (JAVASCRIPT-SVELTEKIT-24). Form.svelte reloads onto the new build; this is
+	// the backstop so the parse failure never lands in Sentry as a bug.
+	it('is dropped by beforeSend', async () => {
+		const beforeSend = await getBeforeSend();
+		const err = new SyntaxError(
+			'JSON.parse: unexpected character at line 1 column 1 of the JSON data'
+		);
+		expect(beforeSend(emptyEvent, { originalException: err })).toBeNull();
+	});
+
+	it('still reports a SyntaxError unrelated to JSON parsing', async () => {
+		const beforeSend = await getBeforeSend();
+		const err = new SyntaxError('Invalid regular expression flags');
+		expect(beforeSend(emptyEvent, { originalException: err })).toBe(emptyEvent);
+	});
+});
+
 describe('framework control-flow rejections', () => {
 	// Both payloads are copied from the real Sentry events. Neither is an Error,
 	// so they carry no message and no stack — every message-based filter misses

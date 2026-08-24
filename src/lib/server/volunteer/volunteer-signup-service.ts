@@ -10,7 +10,8 @@ import { and, asc, desc, eq, gte, inArray, isNull, lt, ne, sql } from 'drizzle-o
 import { DomainError } from '$lib/server/errors';
 import { requireActiveVolunteer } from './volunteer-profile-service';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
-import { primaryRoleFor } from '$lib/server/authorization';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import type { MemberRef } from '$lib/types/entity';
 import { getShiftById } from './volunteer-shift-service';
 import { missingRequirements } from './member-certification-service';
 import type { VolunteerSignup } from '$lib/server/db/schema/volunteer';
@@ -286,10 +287,7 @@ async function reloadSignup(id: string): Promise<VolunteerSignup> {
 export interface ShiftClaimant {
 	signupId: string;
 	userId: string;
-	name: string;
-	email: string;
-	pronouns: string | null;
-	role: string | null;
+	member: MemberRef;
 	status: VolunteerSignupStatus;
 	claimedAt: Date;
 }
@@ -299,10 +297,7 @@ export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
 		.select({
 			signupId: volunteerSignup.id,
 			userId: volunteerSignup.userId,
-			name: user.name,
-			email: user.email,
-			pronouns: user.pronouns,
-			role: primaryRoleFor(user.id),
+			member: memberRefColumns(),
 			status: volunteerSignup.status,
 			claimedAt: volunteerSignup.claimedAt
 		})
@@ -311,7 +306,7 @@ export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
 		.where(and(eq(volunteerSignup.shiftId, shiftId), ne(volunteerSignup.status, 'cancelled')))
 		.orderBy(asc(volunteerSignup.claimedAt));
 
-	return rows;
+	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));
 }
 
 /** Confirmed signups for shifts starting inside a window — the reminder cron. */

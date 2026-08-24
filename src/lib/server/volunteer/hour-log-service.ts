@@ -3,7 +3,8 @@ import { volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, or, like, gte, lte, desc, count, sql, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
-import { primaryRoleFor } from '$lib/server/authorization';
+import { memberRefColumns, toMemberRef, type MemberRefRow } from '$lib/server/entity/refs';
+import type { MemberRef } from '$lib/types/entity';
 import { buildDateInTz, formatDateInTz } from '$lib/server/reservation/timezone';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { captureException } from '$lib/server/sentry';
@@ -389,10 +390,8 @@ export interface HourLogFilters {
 export interface HourLogRow {
 	id: string;
 	userId: string;
-	userName: string;
-	userEmail: string;
-	userPronouns: string | null;
-	userRole: string | null;
+	/** Who logged the hours. The `user` join is already here for the search. */
+	member: MemberRef;
 	volunteerRoleId: string;
 	roleName: string;
 	roleIsActive: boolean;
@@ -434,16 +433,13 @@ function buildFilters(filters: HourLogFilters): SQL[] {
 	return conditions;
 }
 
-// A function, not a module-level const: `primaryRoleFor()` builds a correlated
-// subquery, and evaluating it at import time makes merely importing this module
-// do work — which broke every spec that partially mocks `authorization`.
+// A function, not a module-level const: `memberRefColumns()` builds correlated
+// subqueries, and evaluating them at import time makes merely importing this
+// module do work — which broke every spec that partially mocks `authorization`.
 function hourLogSelect() {
 	return {
 		log: volunteerHourLog,
-		userName: user.name,
-		userEmail: user.email,
-		userPronouns: user.pronouns,
-		userRole: primaryRoleFor(user.id),
+		member: memberRefColumns(),
 		roleName: volunteerRole.name,
 		roleIsActive: volunteerRole.isActive,
 		// Correlated subquery rather than a second join on `user`, which would
@@ -456,10 +452,7 @@ function hourLogSelect() {
 
 type HourLogSelectRow = {
 	log: VolunteerHourLog;
-	userName: string;
-	userEmail: string;
-	userPronouns: string | null;
-	userRole: string | null;
+	member: MemberRefRow;
 	roleName: string;
 	roleIsActive: boolean;
 	reviewedByName: string | null;
@@ -469,10 +462,7 @@ function toHourLogRow(row: HourLogSelectRow): HourLogRow {
 	return {
 		id: row.log.id,
 		userId: row.log.userId,
-		userName: row.userName,
-		userEmail: row.userEmail,
-		userPronouns: row.userPronouns,
-		userRole: row.userRole,
+		member: toMemberRef(row.member),
 		volunteerRoleId: row.log.volunteerRoleId,
 		roleName: row.roleName,
 		roleIsActive: row.roleIsActive,

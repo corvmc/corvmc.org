@@ -4,7 +4,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { getStaffDashboard } from '$lib/remote/users.remote';
@@ -33,10 +33,10 @@
 			{/snippet}
 			{#each data.recentUsers as u (u.id)}
 				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/users/${u.id}`)}>
-					<!-- MemberLink already renders the email under the name, so the
+					<!-- The ref already carries the email as its subline, so the
 					     separate Email column is gone. -->
 					<td class="cell-primary">
-						<MemberLink variant="inline" member={{ name: u.name, email: u.email, userId: u.id }} />
+						<EntityIdentity ref={u.ref} />
 					</td>
 					<td class="col-support whitespace-nowrap">{formatDateShortYear(u.createdAt)}</td>
 				</tr>

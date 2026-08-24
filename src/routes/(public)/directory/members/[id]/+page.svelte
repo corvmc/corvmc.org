@@ -74,7 +74,7 @@
 <div class="profile-page">
 	<!-- Carries the tab: bands are the directory's default, so a bare /directory
 	     would drop you somewhere other than where you came from. -->
-	<a href="/directory?tab=musicians" class="link text-sm opacity-60">&larr; Back to Directory</a>
+	<a href="/directory?tab=musicians" class="link text-muted">&larr; Back to Directory</a>
 
 	<ProfileHeader avatarShape="round" name={member.name} {subtitle} image={member.image} {pills} />
 

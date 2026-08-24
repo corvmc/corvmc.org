@@ -42,7 +42,7 @@
 					<input
 						name="title"
 						type="text"
-						class="input input-bordered w-full"
+						class="input w-full"
 						placeholder="Article title"
 						bind:value={titleValue}
 					/>
@@ -51,7 +51,7 @@
 					<input
 						name="slug"
 						type="text"
-						class="input input-bordered w-full"
+						class="input w-full"
 						placeholder={autoSlug || 'auto-generated'}
 					/>
 				</FormField>
@@ -94,7 +94,7 @@
 			</FormField>
 
 			<div class="flex justify-end gap-2">
-				<Button href="/staff/help" class="btn-ghost">Cancel</Button>
+				<Button href="/staff/help" variant="ghost">Cancel</Button>
 				<SubmitButton label="Create Article" />
 			</div>
 		</div>

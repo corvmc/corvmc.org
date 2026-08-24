@@ -62,18 +62,13 @@ export const tableOrder = [
 	'inbox_participant',
 	'content_flag',
 	// After content_flag as well as user: it carries the report that cost the
-	// member their standing.
-	'community_event_standing',
-	// Same shape: messaging_standing carries the report that restricted them.
-	'messaging_standing',
+	// member their standing, in whichever scope. One table where there were three
+	// (community_event_standing, messaging_standing, suggestion_standing).
+	'member_standing',
 	'user_block',
 	'suggestion',
 	'suggestion_vote',
 	'suggestion_edit',
-	// After content_flag as well as user, for the same reason as
-	// community_event_standing: it carries the report that cost the member their
-	// posting trust.
-	'suggestion_standing',
 	'volunteer_hour_log',
 	'volunteer_profile',
 	'volunteer_role_interest',

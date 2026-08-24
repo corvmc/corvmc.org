@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { subscribe } from '$lib/remote/account.remote';
 
@@ -8,12 +9,16 @@
 	let {
 		audienceId,
 		name,
-		class: className = 'btn-primary btn-xs',
+		variant = 'primary',
+		size = 'xs',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		audienceId: string;
 		name: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -25,6 +30,8 @@
 	label="Subscribe"
 	modalTitle="Subscribe"
 	successToast={`Subscribed to ${name}`}
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

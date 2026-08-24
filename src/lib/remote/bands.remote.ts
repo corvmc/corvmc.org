@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
+import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
@@ -7,12 +9,19 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc, gt, ne } from 'drizzle-orm';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listAll, listForUser } from '$lib/server/band/band-service';
-import { resolveImageUrl } from '$lib/server/storage';
+import {
+	memberRefColumns,
+	reservationRefColumns,
+	toBandRef,
+	toMemberRef,
+	toReservationRef
+} from '$lib/server/entity/refs';
 import {
 	getByIdWithDetails,
 	getMembers,
 	update,
 	updateMember,
+	updateOwnMembership,
 	create,
 	acceptInvitation,
 	declineInvitation,
@@ -28,9 +37,7 @@ import {
 	setTier,
 	setBandAvatar,
 	clearBandAvatar,
-	BandNotFoundError,
-	BandMemberExistsError,
-	BandTierManagedByStripeError
+	BandMemberExistsError
 } from '$lib/server/band/band-service';
 import { bandTiers } from '$lib/server/db/schema/band';
 import { getBandLayout } from '$lib/remote/layout.remote';
@@ -40,7 +47,6 @@ import {
 	revoke as revokePlatformInviteService
 } from '$lib/server/band/platform-invite-service';
 import {
-	requireBandBySlug,
 	requireBandMember,
 	requireBandAdmin,
 	requireBandOwner
@@ -132,14 +138,15 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 	const { band } = await requireBandMember();
 	if (band.id !== bandId) error(403, 'Not authorized');
 	const now = new Date();
-	return db
+	const rows = await db
 		.select({
 			id: reservation.id,
 			status: reservation.status,
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
-			bookedByName: user.name
+			ref: reservationRefColumns(),
+			bookedBy: memberRefColumns()
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
@@ -153,11 +160,18 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 		)
 		.orderBy(reservation.startsAt)
 		.limit(10);
+
+	return rows.map((r) => ({
+		...r,
+		ref: toReservationRef(r.ref, band),
+		bookedBy: toMemberRef(r.bookedBy)
+	}));
 });
 
 export const getBandMembersList = query(z.string(), async (bandId) => {
 	const { band } = await requireBandMember();
 	if (band.id !== bandId) error(403, 'Not authorized');
+	// `getMembers` already returns a presentation ref per row, alias included.
 	const members = await getMembers(bandId);
 	return {
 		active: members.filter((m) => m.status === 'active'),
@@ -191,8 +205,8 @@ export const getMemberBands = query(async () => {
 
 export const updateStaffBand = form(
 	z.object({
-		name: z.string().trim().min(1).max(255),
-		bio: z.string().trim().max(2000)
+		name: z.string().trim().min(1).max(SHORT_TEXT_MAX),
+		bio: z.string().trim().max(LONG_TEXT_MAX)
 	}),
 	async (data) => {
 		await requireStaff();
@@ -272,9 +286,7 @@ export const setBandTier = form(
 		try {
 			await setTier(data.id, data.tier);
 		} catch (err) {
-			if (err instanceof BandNotFoundError) error(404, err.message);
-			if (err instanceof BandTierManagedByStripeError) error(409, err.message);
-			throw err;
+			mapDomainError(err);
 		}
 		void getStaffBand(data.id).refresh();
 		return { success: true };
@@ -374,7 +386,7 @@ export const revokePlatformInvite = form(
 export const createBand = form(
 	z.object({
 		name: z.string().min(1, 'Band name is required').max(255),
-		bio: z.string().max(2000).optional().default('')
+		bio: z.string().max(LONG_TEXT_MAX).optional().default('')
 	}),
 	async (data) => {
 		const currentUser = requireUser();
@@ -426,7 +438,7 @@ export const declineInvite = form(
 export const updateBand = form(
 	z.object({
 		name: z.string().min(1, 'Name is required').max(200),
-		bio: z.string().max(2000).optional().default('')
+		bio: z.string().max(LONG_TEXT_MAX).optional().default('')
 	}),
 	async (data) => {
 		const { band } = await requireBandAdmin();
@@ -439,7 +451,10 @@ export const updateBand = form(
 	}
 );
 
-export const deleteBand = form(z.object({}), async () => {
+// A form with no fields of its own. `z.object({})` no longer resolves against
+// kit's schema overload, and there is nothing here to validate anyway — the
+// guard on the first line of the handler is the whole check.
+export const deleteBand = form('unchecked', async () => {
 	const { band } = await requireBandOwner();
 	await deleteBandService(band.id);
 	return { success: true };
@@ -464,7 +479,11 @@ export const removeMember = form(
 	}),
 	async (data) => {
 		const { band } = await requireBandAdmin();
-		await removeMemberService(data.memberId, band.id);
+		try {
+			await removeMemberService(data.memberId, band.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -475,11 +494,23 @@ export const revokeInvitation = form(
 	}),
 	async (data) => {
 		const { band } = await requireBandAdmin();
-		await revokeInvitationService(data.memberId, band.id);
+		try {
+			await revokeInvitationService(data.memberId, band.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
 
+/**
+ * An admin editing somebody else's row: their role in the band, and the band's
+ * word for what they do.
+ *
+ * Deliberately no `alias`. A stage name is self-identification — an admin can
+ * say you play bass, but cannot rename you. That path is
+ * `updateMyBandMembership` below, and it is scoped to the caller's own row.
+ */
 export const updateMemberRemote = form(
 	z.object({
 		memberId: z.string().min(1),
@@ -500,21 +531,64 @@ export const updateMemberRemote = form(
 	}
 );
 
+/**
+ * A member editing their own membership: their stage name and what they play.
+ *
+ * `position` has been settable only at invite time since bands shipped, and
+ * `alias` is new — so this is the only way either can be changed by the person
+ * they describe.
+ *
+ * There is no `memberId` in the schema on purpose. The row comes from the
+ * guard's `(band.id, user.id)`, which is unique; keying a mutation on a
+ * caller-supplied id when the guard already knows the row is how one member
+ * ends up editing another.
+ */
+export const updateMyBandMembership = form(
+	z.object({
+		alias: z.string().trim().max(100).optional(),
+		position: z.string().trim().max(100).optional()
+	}),
+	async (data) => {
+		const { user, band } = await requireBandMember();
+		try {
+			await updateOwnMembership(band.id, user.id, {
+				alias: data.alias !== undefined ? data.alias || null : undefined,
+				position: data.position !== undefined ? data.position || null : undefined
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
+	}
+);
+
 export const transferOwner = form(
 	z.object({
 		newOwnerId: z.string().min(1)
 	}),
 	async (data) => {
 		const { user, band } = await requireBandOwner();
-		await transferOwnershipService(band.id, data.newOwnerId, user.id);
+		try {
+			await transferOwnershipService(band.id, data.newOwnerId, user.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
 
-export const leave = form(z.object({}), async () => {
-	const user = requireUser();
-	const band = await requireBandBySlug();
-	await leaveBandService(band.id, user.id);
+// No fields to validate — see `deleteBand` above.
+export const leave = form('unchecked', async () => {
+	// `requireBandBySlug()` + `requireUser()` let a non-member's submission reach
+	// the service, which threw a plain Error — a 500 and a generic toast for what
+	// is really a 403. The owner case was worse: `OwnerCannotLeaveError` already
+	// maps to 422, but nothing routed it through `mapDomainError`.
+	const { user, band } = await requireBandMember();
+	try {
+		await leaveBandService(band.id, user.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 
@@ -550,8 +624,14 @@ export const revokePlatformInviteRemote = form(
 		inviteId: z.string().min(1)
 	}),
 	async (data) => {
-		await requireBandAdmin();
-		await revokePlatformInviteService(data.inviteId);
+		// Scoped to this band: the service used to take an invite id alone, so a
+		// band admin holding another band's invite id could revoke it.
+		const { band } = await requireBandAdmin();
+		try {
+			await revokePlatformInviteService(data.inviteId, band.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );
@@ -567,7 +647,8 @@ export const uploadBandAvatar = form(z.object({ file: z.instanceof(File) }), asy
 	return { success: true };
 });
 
-export const removeBandAvatar = form(z.object({}), async () => {
+// No fields to validate — see `deleteBand` above.
+export const removeBandAvatar = form('unchecked', async () => {
 	const { band } = await requireBandAdmin();
 	await clearBandAvatar(band.id);
 	void getBandLayout(band.slug).refresh();
@@ -586,5 +667,13 @@ export const getUserBands = query(z.string(), async (userId) => {
 	// listForUser is unfiltered by status, so pending invitations come through
 	// too — a staff member needs to see an invite that was never accepted.
 	const bands = await listForUser(userId);
-	return bands.map((b) => ({ ...b, avatarUrl: resolveImageUrl(b.avatarKey) }));
+	return bands.map((b) => ({
+		...b,
+		// The member count is what qualifies a band in this list, so it takes the
+		// ref's subline rather than a column of its own.
+		ref: {
+			...toBandRef({ ...b, image: b.avatarKey }),
+			subtitle: `${b.memberCount} active members`
+		}
+	}));
 });

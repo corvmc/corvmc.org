@@ -78,8 +78,10 @@
 		draft: 'badge-warning',
 		pending_review: 'badge-info',
 		published: 'badge-success',
-		// Inbox
+		// Inbox. `awaiting_reply` is ghost against open's info on purpose: the
+		// thread is still open work, but nothing is owed from this end today.
 		open: 'badge-info',
+		awaiting_reply: 'badge-ghost',
 		resolved: 'badge-success',
 		dismissed: 'badge-ghost',
 		snoozed: 'badge-ghost',
@@ -159,8 +161,10 @@
 		// `rejected` is shared with volunteer hour logs below — same meaning
 		// (sent back to its author to fix), same glyph, labelled "Returned".
 
-		// Inbox statuses
+		// Inbox statuses. `awaiting_reply` is derived, not stored — see
+		// threadDisplayStatus() in components/inbox/thread-status.ts.
 		open: { icon: IconClock, color: 'text-info' },
+		awaiting_reply: { icon: IconSend, color: 'text-base-content' },
 		resolved: { icon: IconInboxOff, color: 'text-success' },
 		dismissed: { icon: IconCircleX, color: 'text-base-content' },
 		snoozed: { icon: IconAlarmSnooze, color: 'text-base-content' },
@@ -238,6 +242,20 @@
 	 * state — rendering a red X made available equipment read as broken.
 	 */
 	const fallback: StatusVariant = { icon: IconPointFilled, color: 'text-base-content/40' };
+
+	/**
+	 * What a status is called on screen: an override from `labels` where the
+	 * humanised enum reads wrong, otherwise the enum with its underscores
+	 * removed.
+	 *
+	 * Exported because anything else drawing a status glyph needs the same
+	 * string for its accessible name, and two copies of this would drift.
+	 */
+	export function statusLabel(status: string): string {
+		if (labels[status]) return labels[status];
+		const s = status.replace(/_/g, ' ');
+		return s.charAt(0).toUpperCase() + s.slice(1);
+	}
 </script>
 
 <script lang="ts">
@@ -254,11 +272,7 @@
 	} = $props();
 
 	const variant = $derived(variants[status] ?? fallback);
-	const label = $derived.by(() => {
-		if (labels[status]) return labels[status];
-		const s = status.replace(/_/g, ' ');
-		return s.charAt(0).toUpperCase() + s.slice(1);
-	});
+	const label = $derived(statusLabel(status));
 </script>
 
 {#if showLabel}
@@ -267,7 +281,14 @@
 		{label}
 	</span>
 {:else}
-	<span class="tooltip tooltip-right" data-tip={label}>
+	<!--
+		`role="img"` + `aria-label` because `data-tip` is daisyUI's CSS-only
+		tooltip: it draws through ::before, so assistive tech never sees it. Without
+		this the icon-only form has no accessible name at all — every staff table's
+		status column announced its header and then nothing for each value, and the
+		entity cards carry status as a glyph alone.
+	-->
+	<span class="tooltip tooltip-right" data-tip={label} role="img" aria-label={label}>
 		<variant.icon {size} class="{variant.color} {className}" />
 	</span>
 {/if}

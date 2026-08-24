@@ -107,7 +107,7 @@
 	<p class="pb-2 text-center text-xs font-medium">{heading}</p>
 	<div class="grid grid-cols-7 pb-1">
 		{#each weekdays as day, i (i)}
-			<span class="text-center text-xs font-medium opacity-60">{day}</span>
+			<span class="text-center text-subtle font-medium">{day}</span>
 		{/each}
 	</div>
 	{#each weeks as week, wi (wi)}

@@ -31,6 +31,20 @@ let selectResultQueue: unknown[][] = [];
 let deleteResult = { rowCount: 1 };
 let deleteReturning: unknown[] = [{ id: 'member-1' }];
 let insertError: Error | null = null;
+/**
+ * What `create()` / `transferOwnership()` actually wrote, so a test can assert
+ * on the rows rather than on the fact that `db.batch` was called at all.
+ * Ownership lives in two places, and "batch was invoked" is exactly the
+ * assertion that would still pass if the owner row went missing.
+ */
+let writes: { table: string; op: 'insert' | 'update'; values: Record<string, unknown> }[] = [];
+
+/** Drizzle stores a table's name under a well-known symbol. */
+function tableName(table: unknown): string {
+	if (!table || typeof table !== 'object') return 'unknown';
+	const sym = Object.getOwnPropertySymbols(table).find((s) => s.description === 'drizzle:Name');
+	return sym ? String((table as Record<symbol, unknown>)[sym]) : 'unknown';
+}
 
 function chainable(result?: unknown[]) {
 	const proxy: any = new Proxy(() => proxy, {
@@ -51,20 +65,26 @@ function chainable(result?: unknown[]) {
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: () => chainable(),
-		insert: vi.fn(() => ({
-			values: vi.fn(() => ({
-				returning: vi.fn(() => {
-					if (insertError) return Promise.reject(insertError);
-					return Promise.resolve([{ ...mockMember }]);
-				})
-			}))
+		insert: vi.fn((table: unknown) => ({
+			values: vi.fn((values: Record<string, unknown>) => {
+				writes.push({ table: tableName(table), op: 'insert', values });
+				return {
+					returning: vi.fn(() => {
+						if (insertError) return Promise.reject(insertError);
+						return Promise.resolve([{ ...mockMember }]);
+					})
+				};
+			})
 		})),
-		update: vi.fn(() => ({
-			set: vi.fn(() => ({
-				where: vi.fn(() => ({
-					returning: vi.fn(() => Promise.resolve([{ ...mockBand }]))
-				}))
-			}))
+		update: vi.fn((table: unknown) => ({
+			set: vi.fn((values: Record<string, unknown>) => {
+				writes.push({ table: tableName(table), op: 'update', values });
+				return {
+					where: vi.fn(() => ({
+						returning: vi.fn(() => Promise.resolve([{ ...mockBand }]))
+					}))
+				};
+			})
 		})),
 		delete: vi.fn(() => ({
 			// Awaitable directly (revokeInvitation) or via .returning()
@@ -141,6 +161,7 @@ describe('BandService', () => {
 		selectResultQueue = [];
 		deleteResult = { rowCount: 1 };
 		insertError = null;
+		writes = [];
 	});
 
 	// -----------------------------------------------------------------------
@@ -187,6 +208,32 @@ describe('BandService', () => {
 			selectResult = [];
 
 			await expect(create('user-owner', { name: 'Ghost Band' })).rejects.toThrow(BandNotFoundError);
+		});
+
+		// Ownership is recorded twice — `band.ownerId` and a `band_member` row with
+		// role 'owner' — and only the member row is read by the guards
+		// (`requireBandOwner` resolves through `requireBandMember()`). A band
+		// created with just the column has no owner in practice: no address
+		// change, no delete, no transfer, no subscription, no Settings nav. That
+		// is what the Postgres migrator did to 5 of 16 production bands, so the
+		// one path that gets it right is worth pinning to the rows it writes,
+		// not merely to the fact that `db.batch` was called.
+		it('writes exactly one active owner member row agreeing with band.ownerId', async () => {
+			selectResult = [{ ...mockBand }];
+
+			await create('user-owner', { name: 'The Velvet Underground' });
+
+			const bandRows = writes.filter((w) => w.table === 'band' && w.op === 'insert');
+			const ownerRows = writes.filter(
+				(w) => w.table === 'band_member' && w.op === 'insert' && w.values.role === 'owner'
+			);
+
+			expect(bandRows).toHaveLength(1);
+			expect(ownerRows).toHaveLength(1);
+			expect(ownerRows[0].values.userId).toBe(bandRows[0].values.ownerId);
+			expect(ownerRows[0].values.userId).toBe('user-owner');
+			expect(ownerRows[0].values.status).toBe('active');
+			expect(ownerRows[0].values.bandId).toBe(bandRows[0].values.id);
 		});
 	});
 
@@ -501,6 +548,27 @@ describe('BandService', () => {
 				'New owner must be an active band member'
 			);
 		});
+
+		// The transfer is the other way ownership can drift: the demote is scoped
+		// by `actorId`, which the staff wrapper feeds from `band.ownerId`. If that
+		// column and the member row ever disagreed, the demote would match nothing
+		// and leave the band with two owner rows. Exactly one promote, exactly one
+		// demote, and `band.ownerId` moved with them.
+		it('leaves exactly one owner: one promote, one demote, and band.ownerId moved', async () => {
+			selectResult = [{ status: 'active' }];
+
+			await transferOwnership('band-1', 'user-2', 'user-owner');
+
+			const memberWrites = writes.filter((w) => w.table === 'band_member' && w.op === 'update');
+			const promotes = memberWrites.filter((w) => w.values.role === 'owner');
+			const demotes = memberWrites.filter((w) => w.values.role === 'admin');
+			const bandWrites = writes.filter((w) => w.table === 'band' && w.op === 'update');
+
+			expect(promotes).toHaveLength(1);
+			expect(demotes).toHaveLength(1);
+			expect(bandWrites).toHaveLength(1);
+			expect(bandWrites[0].values.ownerId).toBe('user-2');
+		});
 	});
 
 	// -----------------------------------------------------------------------
@@ -550,17 +618,14 @@ describe('BandService', () => {
 	});
 
 	describe('setBandAvatar', () => {
-		it('uploads the file and returns the extension-mapped key', async () => {
+		it('uploads the file and returns a cache-busting, extension-mapped key', async () => {
 			selectResult = [{ avatarKey: null }];
 
 			const key = await setBandAvatar('band-1', new ArrayBuffer(8), 'image/png');
 
-			expect(uploadFile).toHaveBeenCalledWith(
-				expect.any(ArrayBuffer),
-				'bands/avatars/band-1.png',
-				'image/png'
-			);
-			expect(key).toBe('bands/avatars/band-1.png');
+			// The per-upload token is what stops a replaced avatar reusing its URL.
+			expect(key).toMatch(/^bands\/avatars\/band-1-[0-9a-f]{8}\.png$/);
+			expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), key, 'image/png');
 		});
 
 		it('deletes the previous avatar before replacing it', async () => {
@@ -571,7 +636,7 @@ describe('BandService', () => {
 			expect(deleteObject).toHaveBeenCalledWith('bands/avatars/band-1.jpg');
 			expect(uploadFile).toHaveBeenCalledWith(
 				expect.any(ArrayBuffer),
-				'bands/avatars/band-1.webp',
+				expect.stringMatching(/^bands\/avatars\/band-1-[0-9a-f]{8}\.webp$/),
 				'image/webp'
 			);
 		});

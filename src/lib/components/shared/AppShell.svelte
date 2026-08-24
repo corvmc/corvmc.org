@@ -10,21 +10,16 @@
 	import Button from './Button.svelte';
 	import Select from './Form/Select.svelte';
 
-	// eslint-disable-next-line svelte/no-unused-props -- `brand` is accepted for caller API compatibility; the sidebar renders its own brand
 	let {
 		drawerId,
-		user,
 		panels,
 		activePanel,
 		navigation: navSnippet,
 		children
 	}: {
 		drawerId: string;
-		user: { name: string; email: string };
 		panels: PanelTab[];
 		activePanel: string;
-		/** Accepted for caller compatibility; the sidebar renders its own brand. */
-		brand?: Snippet;
 		navigation: Snippet;
 		children: Snippet;
 	} = $props();
@@ -41,7 +36,7 @@
 	<input id={drawerId} type="checkbox" class="drawer-toggle" />
 
 	<div class="drawer-content flex h-screen flex-col overflow-hidden">
-		<AppTopbar {drawerId} {user} {panels} {activePanel} />
+		<AppTopbar {drawerId} {panels} {activePanel} />
 		<div class="tri-stripe"></div>
 
 		<main class="flex-1 overflow-x-hidden overflow-y-auto p-6 pt-0">
@@ -56,7 +51,11 @@
 				<span class="block flex h-[48px] items-center justify-between px-3">
 					<img src={logo} alt="CorvMC" class="h-full p-2" />
 					<Button
-						class="latched btn-square btn-outline btn-sm"
+						variant="default"
+						size="sm"
+						shape="square"
+						outline
+						class="latched"
 						title="To Public Site"
 						aria-label="To Public Site"
 						href="/"
@@ -68,7 +67,8 @@
 				<!-- Mobile panel nav -->
 				<div class="border-b border-base-300 px-4 py-2 lg:hidden">
 					<Select
-						class="select-bordered w-full select-sm"
+						size="sm"
+						class="w-full"
 						value={activePanel}
 						onchange={(e: Event) => {
 							const key = (e.currentTarget as HTMLSelectElement).value;

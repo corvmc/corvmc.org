@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { publishEvent } from '$lib/remote/events.remote';
 
@@ -7,11 +8,15 @@
 
 	let {
 		eventId,
-		class: className = 'btn-success btn-sm',
+		variant = 'success',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		eventId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -22,6 +27,8 @@
 	action={publishEvent}
 	label="Publish"
 	successToast="Published"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

@@ -3,8 +3,10 @@
 	import type { TabKey } from '../tabs';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { formatDateShortYear, formatDateTimeShort } from '$lib/utils/format';
-	import { formatVolunteerHours } from '$lib/config';
+	import { standingScopeConfig } from '$lib/config';
 
 	let {
 		overview,
@@ -14,8 +16,6 @@
 		overview: Awaited<ReturnType<typeof getUserOverview>>;
 		member: {
 			createdAt: Date;
-			memberNumber: number | null;
-			roles: string[];
 			deletedAt: Date | null;
 		};
 		onjump: (tab: TabKey) => void;
@@ -38,24 +38,21 @@
 				tone: 'error'
 			});
 		}
-		if (overview.standing.requiresReview) {
+		// One line per restricted scope, in a fixed order so the list doesn't
+		// reshuffle between members.
+		for (const scope of ['community_event', 'suggestion'] as const) {
+			const standing = overview.standings[scope];
+			if (standing.status === 'none') continue;
 			items.push({
-				text: `Community listings are held for review${overview.standing.reason ? ` — ${overview.standing.reason}` : ''}.`,
-				tab: 'comms',
-				tone: 'warning'
-			});
-		}
-		if (overview.suggestionStanding.requiresReview) {
-			items.push({
-				text: `Suggestions are held for review${overview.suggestionStanding.reason ? ` — ${overview.suggestionStanding.reason}` : ''}.`,
-				tab: 'comms',
+				text: `${standingScopeConfig[scope].label} are held for review${standing.reason ? ` — ${standing.reason}` : ''}.`,
+				tab: 'moderation',
 				tone: 'warning'
 			});
 		}
 		if (c.openFlagsAgainst > 0) {
 			items.push({
 				text: `${c.openFlagsAgainst} unresolved report${c.openFlagsAgainst === 1 ? '' : 's'} against this member.`,
-				tab: 'comms',
+				tab: 'moderation',
 				tone: 'error'
 			});
 		}
@@ -124,62 +121,19 @@
 		}
 		return items;
 	});
-
-	// The index. Each tile states a size and jumps to the tab that holds it, so
-	// the cross-section is navigable without reading seven tabs to find what a
-	// member actually takes part in.
-	const programs = $derived([
-		{
-			label: 'Reservations',
-			value: `${overview.counts.upcomingReservations} upcoming · ${overview.counts.pastReservations} past`,
-			tab: 'space' as const
-		},
-		{
-			label: 'Equipment loans',
-			value: `${overview.counts.openLoans} open`,
-			tab: 'space' as const
-		},
-		{ label: 'Bands', value: `${overview.counts.bands} active`, tab: 'bands' as const },
-		{
-			label: 'Shows played',
-			value: `${overview.counts.upcomingShows} upcoming · ${overview.counts.pastShows} past`,
-			tab: 'bands' as const
-		},
-		{
-			label: 'Community listings',
-			value: `${overview.counts.listings} submitted`,
-			tab: 'bands' as const
-		},
-		{
-			label: 'Tickets & RSVPs',
-			value: `${overview.counts.tickets} tickets · ${overview.counts.rsvps} RSVPs`,
-			tab: 'bands' as const
-		},
-		{
-			label: 'Volunteer shifts',
-			value: `${overview.counts.upcomingShifts} upcoming`,
-			tab: 'volunteer' as const
-		},
-		{
-			label: 'Volunteer hours',
-			value: formatVolunteerHours(overview.counts.approvedMinutes),
-			tab: 'volunteer' as const
-		},
-		{
-			label: 'Clearances',
-			value: `${overview.counts.certsHeld} held`,
-			tab: 'volunteer' as const
-		},
-		{ label: 'Payments', value: `${overview.counts.payments} on record`, tab: 'money' as const },
-		{
-			label: 'Conversations',
-			value: `${overview.counts.openThreads} open`,
-			tab: 'comms' as const
-		},
-		{ label: 'Reports filed', value: `${overview.counts.flagsFiled}`, tab: 'comms' as const }
-	]);
 </script>
 
+<!--
+	There used to be a third card here: a twelve-tile "Programs" grid stating the
+	size of every domain and jumping to the tab that held it. It was a table of
+	contents for a tab bar sitting one row above it, and every tile restated a
+	number the destination tab shows in full. Cutting it also orphaned ten counts
+	in `getUserOverview`, which is why the first paint of this page got cheaper by
+	deleting a card that cost nothing to render.
+
+	What is left is the pair that Overview is actually for: what wants doing, and
+	who this is.
+-->
 {#if attention.length > 0}
 	<InfoCard title="Needs attention">
 		<ul class="flex flex-col gap-2">
@@ -201,64 +155,39 @@
 	</InfoCard>
 {/if}
 
+<!--
+	Roles, member number and a sustaining membership are all badges in the header
+	already; repeating them here as rows was the same duplication the identity
+	strip had, one card down. What stays is what the header has no room to say.
+-->
 <InfoCard title="At a glance">
-	<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-		<dt class="opacity-60">Joined</dt>
-		<dd>{formatDateShortYear(member.createdAt)}</dd>
+	<DefinitionList>
+		<Fact label="Joined">{formatDateShortYear(member.createdAt)}</Fact>
 
-		<dt class="opacity-60">Last sign-in</dt>
-		<dd>
+		<Fact label="Last sign-in">
 			{#if overview.lastLoginAt}
 				{formatDateTimeShort(overview.lastLoginAt)}
 			{:else}
 				<span class="opacity-60">Never, or signed out everywhere</span>
 			{/if}
-		</dd>
+		</Fact>
 
-		<dt class="opacity-60">Member no.</dt>
-		<dd>{member.memberNumber ?? '—'}</dd>
-
-		<dt class="opacity-60">Roles</dt>
-		<dd class="flex flex-wrap gap-1">
-			{#each member.roles as role (role)}
-				<Badge size="sm">{role}</Badge>
-			{:else}
-				<span class="opacity-60">Member</span>
-			{/each}
-		</dd>
-
-		<dt class="opacity-60">Membership</dt>
-		<dd>
+		<!-- Sustaining is a header badge; the free tier has no badge, so it says so. -->
+		<Fact label="Membership">
 			{#if overview.membership.sustaining}
-				Sustaining{overview.membership.hoursPerReset
-					? ` · ${overview.membership.hoursPerReset / 2} hrs a month`
-					: ''}
+				{overview.membership.hoursPerReset
+					? `${overview.membership.hoursPerReset / 2} hrs a month`
+					: 'Sustaining'}
 			{:else}
 				Free tier
 			{/if}
-		</dd>
+		</Fact>
 
-		<dt class="opacity-60">Directory</dt>
-		<dd>
+		<Fact label="Directory">
 			{overview.directory.visibility}
 			{#if !overview.directory.profileComplete}
 				<span class="opacity-60"> · profile incomplete</span>
 			{/if}
-		</dd>
-	</dl>
-</InfoCard>
-
-<InfoCard title="Programs">
-	<div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-		{#each programs as p (p.label)}
-			<button
-				type="button"
-				class="rounded-box border border-base-300 px-3 py-2 text-left hover:bg-base-200"
-				onclick={() => onjump(p.tab)}
-			>
-				<div class="text-xs opacity-60">{p.label}</div>
-				<div class="text-sm font-medium">{p.value}</div>
-			</button>
-		{/each}
-	</div>
+		</Fact>
+	</DefinitionList>
 </InfoCard>

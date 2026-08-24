@@ -33,6 +33,12 @@ export { default as PublishEventAction } from './PublishEventAction.svelte';
 export { default as UnpublishEventAction } from './UnpublishEventAction.svelte';
 export { default as CancelEventAction } from './CancelEventAction.svelte';
 export { default as DeleteEventAction } from './DeleteEventAction.svelte';
+// Band-panel events. Same operations as the four above, different remote module
+// and a different guard — see the note in each component.
+export { default as BandPublishEventAction } from './BandPublishEventAction.svelte';
+export { default as BandUnpublishEventAction } from './BandUnpublishEventAction.svelte';
+export { default as BandCancelEventAction } from './BandCancelEventAction.svelte';
+export { default as RemoveEventPosterAction } from './RemoveEventPosterAction.svelte';
 export { default as CompTicketsAction } from './CompTicketsAction.svelte';
 export { default as CancelTicketAction } from './CancelTicketAction.svelte';
 

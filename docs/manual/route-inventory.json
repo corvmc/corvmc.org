@@ -32,10 +32,6 @@
 		"panel": "band"
 	},
 	{
-		"route": "/band/[slug]/events/create",
-		"panel": "band"
-	},
-	{
 		"route": "/band/[slug]/members",
 		"panel": "band"
 	},
@@ -52,10 +48,6 @@
 		"panel": "band"
 	},
 	{
-		"route": "/band/[slug]/reservations/new",
-		"panel": "band"
-	},
-	{
 		"route": "/band/[slug]/settings",
 		"panel": "band"
 	},
@@ -69,14 +61,6 @@
 	},
 	{
 		"route": "/contribute",
-		"panel": "public"
-	},
-	{
-		"route": "/demo",
-		"panel": "public"
-	},
-	{
-		"route": "/demo/playwright",
 		"panel": "public"
 	},
 	{

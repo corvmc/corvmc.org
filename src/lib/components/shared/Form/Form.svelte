@@ -42,6 +42,7 @@
 	import type { Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { reportError } from '$lib/report-error';
+	import { recoverFromStaleDeploy } from '$lib/stale-deploy-recovery';
 	import { getErrorBoundary } from '../ErrorToastBoundary.svelte';
 	import FormGuard from './FormGuard.svelte';
 
@@ -72,6 +73,23 @@
 	const errorBoundary = getErrorBoundary();
 
 	let formEl: HTMLFormElement | undefined = $state();
+
+	/**
+	 * A form carrying a real `<input type="file">` has to be multipart, and
+	 * SvelteKit *throws* rather than warns when it isn't — which aborts the
+	 * submit before any request leaves the browser. The symptom is a Save button
+	 * that silently does nothing, which is how band and staff event posters have
+	 * never actually uploaded.
+	 *
+	 * Set here rather than asked of every caller: forms that need it are exactly
+	 * the forms that contain one, and that is something this component can see.
+	 * Harmless where there is no file input, since it only applies then.
+	 */
+	$effect(() => {
+		if (formEl?.querySelector('input[type="file"]')) {
+			formEl.enctype = 'multipart/form-data';
+		}
+	});
 	let changeCount = $state(0);
 	let actionIssues = $state<RemoteFormIssue[] | null>(null);
 	let currentStep = $state(0);
@@ -212,9 +230,16 @@
 					status = 'error';
 				}
 			} catch (err) {
+				await delay(150 - (performance.now() - start));
+
+				// A tab left open across a deploy POSTs to a remote endpoint whose URL
+				// hash is gone; the server returns HTML and Kit's devalue.parse throws
+				// a SyntaxError (JAVASCRIPT-SVELTEKIT-24). That's recoverable, not a
+				// bug — reload onto the new build instead of reporting it.
+				if (await recoverFromStaleDeploy(err)) return;
+
 				// Genuine submission failure (network/server). Capture it: forms with
 				// an onfailure handler bypass the error boundary, so report directly.
-				await delay(150 - (performance.now() - start));
 				if (onfailure) {
 					reportError(err);
 					onfailure(ctx.issues);

@@ -59,7 +59,7 @@
 			onsuccess={() => toast.success('Photo removed')}
 			onfailure={() => toast.error('Failed to remove')}
 		>
-			<SubmitButton label="Remove" class="btn-ghost btn-xs text-error" />
+			<SubmitButton label="Remove" variant="ghost" size="xs" class="text-error" />
 		</Form>
 	{/if}
 </div>

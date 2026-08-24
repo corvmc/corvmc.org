@@ -52,25 +52,29 @@ vi.mock('$lib/server/event/event-service', () => ({
 	getById: (...args: unknown[]) => getByIdMock(...args)
 }));
 
-// Standing changes are the community service's job; here we assert only that
-// resolving reaches for it and dismissing does not.
-const revokeTrustMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/event/community-event-service', () => ({
-	revokeCommunityTrust: (...args: unknown[]) => revokeTrustMock(...args)
+// Standing is one service now, whatever the domain, so one mock covers all
+// three arms. What this file asserts is which *scope* the queue charges and
+// when — the storage itself is standing-service.spec.ts's job.
+//
+// `scopeForFlag` is deliberately NOT mocked. It is the mapping under test here:
+// stubbing it would leave the "an event report only costs standing when the
+// event is a community listing" rule asserted against a fake.
+const restrictStandingMock = vi.fn().mockResolvedValue(undefined);
+vi.mock('$lib/server/moderation/standing-service', async () => ({
+	...(await vi.importActual('$lib/server/moderation/standing-service')),
+	restrictStanding: (...args: unknown[]) => restrictStandingMock(...args)
 }));
 
-// Same arrangement for suggestions: the visibility and standing changes belong
-// to the suggestion service, so here we assert only which of them the queue
-// reaches for — and, crucially, that dismissing RESTORES rather than doing
-// nothing (the deliberate asymmetry with event reports).
+// The visibility changes belong to the suggestion service, so here we assert
+// only which of them the queue reaches for — and, crucially, that dismissing
+// RESTORES rather than doing nothing (the deliberate asymmetry with event
+// reports).
 const withholdMock = vi.fn().mockResolvedValue(undefined);
 const setVisibilityMock = vi.fn().mockResolvedValue(undefined);
-const revokeSuggestionTrustMock = vi.fn().mockResolvedValue(undefined);
 const getSuggestionForModerationMock = vi.fn().mockResolvedValue(null);
 vi.mock('$lib/server/suggestion/suggestion-service', () => ({
 	withholdForReview: (...args: unknown[]) => withholdMock(...args),
 	setVisibility: (...args: unknown[]) => setVisibilityMock(...args),
-	revokeSuggestionTrust: (...args: unknown[]) => revokeSuggestionTrustMock(...args),
 	getSuggestionForModeration: (...args: unknown[]) => getSuggestionForModerationMock(...args)
 }));
 
@@ -88,12 +92,11 @@ beforeEach(() => {
 	updateResult = [];
 	emitMock.mockClear();
 	unpublishMock.mockClear();
-	revokeTrustMock.mockClear();
+	restrictStandingMock.mockClear();
 	getByIdMock.mockReset();
 	getByIdMock.mockResolvedValue(null);
 	withholdMock.mockClear();
 	setVisibilityMock.mockClear();
-	revokeSuggestionTrustMock.mockClear();
 	getSuggestionForModerationMock.mockReset();
 	getSuggestionForModerationMock.mockResolvedValue(null);
 });
@@ -288,8 +291,9 @@ describe('resolveFlag', () => {
 			notes: 'No venue given'
 		});
 
-		expect(revokeTrustMock).toHaveBeenCalledWith({
+		expect(restrictStandingMock).toHaveBeenCalledWith({
 			userId: 'member-1',
+			scope: 'community_event',
 			flagId: 'f1',
 			staffId: 's1',
 			reason: 'No venue given'
@@ -307,7 +311,7 @@ describe('resolveFlag', () => {
 
 		await resolveFlag('f1', { resolution: 'dismissed', staffId: 's1' });
 
-		expect(revokeTrustMock).not.toHaveBeenCalled();
+		expect(restrictStandingMock).not.toHaveBeenCalled();
 	});
 
 	it('does not touch standing for a band gig — there is no member to hold responsible', async () => {
@@ -321,7 +325,7 @@ describe('resolveFlag', () => {
 
 		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1' });
 
-		expect(revokeTrustMock).not.toHaveBeenCalled();
+		expect(restrictStandingMock).not.toHaveBeenCalled();
 	});
 
 	it('leaves standing alone for a flagged member profile', async () => {
@@ -330,7 +334,7 @@ describe('resolveFlag', () => {
 
 		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1' });
 
-		expect(revokeTrustMock).not.toHaveBeenCalled();
+		expect(restrictStandingMock).not.toHaveBeenCalled();
 		expect(getByIdMock).not.toHaveBeenCalled();
 	});
 });
@@ -384,8 +388,13 @@ describe('suggestion reports', () => {
 			'sg1',
 			expect.objectContaining({ visibility: 'hidden', note: 'Not acceptable' })
 		);
-		expect(revokeSuggestionTrustMock).toHaveBeenCalledWith(
-			expect.objectContaining({ userId: 'member-1', flagId: 'f1', staffId: 's1' })
+		expect(restrictStandingMock).toHaveBeenCalledWith(
+			expect.objectContaining({
+				userId: 'member-1',
+				scope: 'suggestion',
+				flagId: 'f1',
+				staffId: 's1'
+			})
 		);
 	});
 
@@ -402,7 +411,7 @@ describe('suggestion reports', () => {
 			'sg1',
 			expect.objectContaining({ visibility: 'visible' })
 		);
-		expect(revokeSuggestionTrustMock).not.toHaveBeenCalled();
+		expect(restrictStandingMock).not.toHaveBeenCalled();
 	});
 
 	it('upholds without a standing change when the author has deleted their account', async () => {
@@ -413,7 +422,7 @@ describe('suggestion reports', () => {
 		await resolveFlag('f1', { resolution: 'resolved', staffId: 's1' });
 
 		expect(setVisibilityMock).toHaveBeenCalled();
-		expect(revokeSuggestionTrustMock).not.toHaveBeenCalled();
+		expect(restrictStandingMock).not.toHaveBeenCalled();
 	});
 
 	it('refuses to act twice on a report that is already resolved', async () => {

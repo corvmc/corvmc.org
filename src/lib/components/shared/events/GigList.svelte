@@ -9,6 +9,7 @@
 	} from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import { hashPattern } from '$lib/utils/patterns';
+	import { imageSrc } from '$lib/utils/images';
 	import { groupGigs } from '$lib/utils/gig-groups';
 	import type { CalendarEntry } from '$lib/types/calendar';
 
@@ -67,7 +68,14 @@
 						</div>
 						<a {href} class="gig-row__thumb" aria-hidden="true" tabindex="-1">
 							{#if evt.posterUrl}
-								<img src={evt.posterUrl} alt="" loading="lazy" />
+								{@const thumb = imageSrc(evt.posterUrl, 'thumb')}
+								<img
+									src={thumb.src}
+									srcset={thumb.srcset}
+									sizes={thumb.sizes}
+									alt=""
+									loading="lazy"
+								/>
 							{:else}
 								<div class="poster-gen poster-gen--{hashPattern(evt.title)}"></div>
 							{/if}

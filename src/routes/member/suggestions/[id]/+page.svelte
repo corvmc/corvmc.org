@@ -84,7 +84,8 @@
 					submitLabel="Withdraw edit"
 					modalTitle="Withdraw your edit?"
 					successToast="Edit withdrawn"
-					class="btn-ghost btn-xs"
+					variant="ghost"
+					size="xs"
 					onsuccess={refresh}
 				>
 					{#snippet form()}
@@ -118,7 +119,7 @@
 						s.category}
 				</Badge>
 				<p class="whitespace-pre-wrap">{s.body}</p>
-				<div class="text-sm opacity-60">
+				<div class="text-muted">
 					Suggested by {s.authorName ?? 'a former member'} · {formatDateTime(s.createdAt)}
 					{#if s.editedAt}
 						· edited {formatDateTime(s.editedAt)}
@@ -134,7 +135,9 @@
 					modalTitle={editState.direct ? 'Edit your suggestion' : 'Request an edit'}
 					submitLabel={editState.direct ? 'Save' : 'Send to staff'}
 					successToast={editState.direct ? 'Updated' : 'Sent to staff'}
-					class="btn-ghost btn-sm shrink-0"
+					variant="ghost"
+					size="sm"
+					class="shrink-0"
 					onsuccess={refresh}
 				>
 					{#snippet icon()}<IconPencil size={16} />{/snippet}
@@ -143,7 +146,7 @@
 						{#if !editState.direct}
 							<!-- Say why, plainly. Being told "this needs review" without a
 							     reason reads as the site distrusting you personally. -->
-							<p class="mb-3 text-sm opacity-70">
+							<p class="mb-3 text-muted">
 								Other members have already voted for this, so staff check changes before they go
 								live — otherwise the words people backed could be swapped out from under them. Your
 								suggestion stays up unchanged in the meantime.
@@ -173,13 +176,15 @@
 					modalTitle="Flag for review"
 					submitLabel="Send report"
 					successToast="Reported — staff will take a look"
-					class="btn-ghost btn-sm shrink-0"
+					variant="ghost"
+					size="sm"
+					class="shrink-0"
 					onsuccess={refresh}
 				>
 					{#snippet icon()}<IconFlag size={16} />{/snippet}
 					{#snippet form()}
 						<input {...flag.fields.suggestionId.as('hidden', s.id)} />
-						<p class="mb-3 text-sm opacity-70">
+						<p class="mb-3 text-muted">
 							This takes the suggestion off the board straight away while staff look at it. If they
 							don't agree with the report, it goes back up.
 						</p>
@@ -194,7 +199,7 @@
 	{#if s.responseBody}
 		<InfoCard title="Official response">
 			<p class="whitespace-pre-wrap">{s.responseBody}</p>
-			<p class="mt-2 text-sm opacity-60">
+			<p class="mt-2 text-muted">
 				{s.responderName ?? 'Staff'}{s.responseAt ? ` · ${formatDateTime(s.responseAt)}` : ''}
 			</p>
 		</InfoCard>

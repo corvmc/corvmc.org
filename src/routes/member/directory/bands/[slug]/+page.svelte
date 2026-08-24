@@ -72,7 +72,7 @@
 	<div class="flex items-center justify-between">
 		<!-- Carries the tab: members are this directory's default, so a bare
 		     /member/directory would drop you somewhere other than where you came from. -->
-		<a href="{resolve('/member/directory')}?tab=bands" class="link text-sm opacity-60"
+		<a href="{resolve('/member/directory')}?tab=bands" class="link text-muted"
 			>&larr; Back to Directory</a
 		>
 		{#if canReport}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { createBandApi } from '$lib/remote/bands.remote';
@@ -9,10 +10,14 @@
 	const { fields } = createBandApi;
 
 	let {
-		class: className = 'btn-primary btn-sm',
+		variant = 'primary',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: (result?: unknown) => void;
 		[key: string]: unknown;
@@ -34,6 +39,8 @@
 	canSubmit={!!selectedOwner}
 	maxWidth="max-w-md"
 	successToast="Band created"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ??
 		(async (result) => {

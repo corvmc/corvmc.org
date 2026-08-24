@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
@@ -7,6 +8,7 @@
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
@@ -31,16 +33,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-		}, 300);
-	}
-
 	// `pending_review` and `under_review` are two different reasons for the same
 	// member-visible fact, so the review tab runs them as two queries and shows
 	// them together rather than pretending they're one state.
@@ -102,16 +94,17 @@
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search suggestions..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
 			/>
 		{/snippet}
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Category"
 			value={categoryFilter}
 			onchange={(e: Event) => {
@@ -125,7 +118,7 @@
 			{/each}
 		</Select>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Status"
 			value={statusFilter}
 			onchange={(e: Event) => {
@@ -141,7 +134,7 @@
 	</FilterBar>
 
 	{#if tab === 'review'}
-		<p class="text-sm opacity-70">
+		<p class="text-muted">
 			Nothing here is visible to members. Reported suggestions are resolved in
 			<a class="link" href={resolve('/staff/flags')}>Content Flags</a>, not here.
 		</p>
@@ -157,6 +150,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Suggestion</th>
+					<th>Author</th>
 					<th class="col-support w-px">Category</th>
 					<th class="col-support w-px cell-num">Votes</th>
 					<th class="col-extra whitespace-nowrap">Posted</th>
@@ -167,11 +161,9 @@
 						<td class="w-px">
 							<StatusBadge status={s.mergedIntoId ? 'merged' : s.status} />
 						</td>
-						<td class="cell-primary">
-							<a {href} class="block truncate font-medium hover:underline">{s.title}</a>
-							<div class="truncate text-sm opacity-60">{s.authorName ?? 'A former member'}</div>
-						</td>
-						<td class="col-support w-px">
+						<td class="cell-primary"><EntityIdentity ref={s.ref} /></td>
+						<td class="min-w-0"><EntityChip ref={s.author} icon={false} /></td>
+						<td class="col-support w-px whitespace-nowrap">
 							<Badge size="xs" variant="ghost">
 								{suggestionCategoryLabels[s.category as keyof typeof suggestionCategoryLabels] ??
 									s.category}
@@ -186,7 +178,7 @@
 	</DataList>
 
 	{#if tab === 'review' && pendingEdits.length > 0}
-		<h2 class="text-sm font-medium opacity-70">Edits waiting on approval</h2>
+		<h2 class="text-muted font-medium">Edits waiting on approval</h2>
 		<!-- These sit apart from the two lists above: the suggestion itself is
 		     still on the board and untouched, it's only the proposed change that
 		     is waiting. -->
@@ -194,6 +186,7 @@
 			{#snippet head()}
 				<th class="w-px"><span class="sr-only">Status</span></th>
 				<th>Proposed change</th>
+				<th>Requested by</th>
 				<th class="col-extra whitespace-nowrap">Requested</th>
 			{/snippet}
 			{#each pendingEdits as e (e.id)}
@@ -201,11 +194,11 @@
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="w-px"><StatusBadge status="pending_review" /></td>
 					<td class="cell-primary">
-						<a {href} class="block truncate font-medium hover:underline">{e.proposedTitle}</a>
-						<div class="truncate text-sm opacity-60">
-							was "{e.originalTitle}" · {e.requestedByName ?? 'A former member'}
-						</div>
+						<EntityIdentity ref={e.ref}>
+							{#snippet subtitle()}was "{e.originalTitle}"{/snippet}
+						</EntityIdentity>
 					</td>
+					<td class="min-w-0"><EntityChip ref={e.requestedBy} icon={false} /></td>
 					<td class="col-extra whitespace-nowrap">{relativeDay(e.createdAt)}</td>
 				</tr>
 			{/each}
@@ -213,13 +206,14 @@
 	{/if}
 
 	{#if tab === 'review'}
-		<h2 class="text-sm font-medium opacity-70">Reported and pulled from the board</h2>
+		<h2 class="text-muted font-medium">Reported and pulled from the board</h2>
 		<DataList result={underReview} empty="No reported suggestions">
 			{#snippet children(rows)}
 				<Table>
 					{#snippet head()}
 						<th class="w-px"><span class="sr-only">Status</span></th>
 						<th>Suggestion</th>
+						<th>Author</th>
 						<th class="col-support w-px cell-num">Votes</th>
 						<th class="col-extra whitespace-nowrap">Posted</th>
 					{/snippet}
@@ -227,10 +221,8 @@
 						{@const href = resolve(`/staff/suggestions/${s.id}`)}
 						<tr class="hover cursor-pointer" use:rowLink={href}>
 							<td class="w-px"><StatusBadge status="under_review" /></td>
-							<td class="cell-primary">
-								<a {href} class="block truncate font-medium hover:underline">{s.title}</a>
-								<div class="truncate text-sm opacity-60">{s.authorName ?? 'A former member'}</div>
-							</td>
+							<td class="cell-primary"><EntityIdentity ref={s.ref} /></td>
+							<td class="min-w-0"><EntityChip ref={s.author} icon={false} /></td>
 							<td class="col-support w-px cell-num">{s.voteCount}</td>
 							<td class="col-extra whitespace-nowrap">{relativeDay(s.createdAt)}</td>
 						</tr>

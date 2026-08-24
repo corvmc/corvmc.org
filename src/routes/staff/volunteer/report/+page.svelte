@@ -10,7 +10,7 @@
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { formatVolunteerHours } from '$lib/config';
@@ -87,22 +87,22 @@
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<div class="flex flex-wrap items-center gap-2">
-				<label class="text-sm opacity-70" for="report-from">From</label>
+				<label class="text-muted" for="report-from">From</label>
 				<input
 					id="report-from"
 					type="date"
-					class="input input-bordered input-sm"
+					class="input input-sm"
 					value={fromDate}
 					onchange={(e) => {
 						fromDate = (e.currentTarget as HTMLInputElement).value;
 						pageNumber = 1;
 					}}
 				/>
-				<label class="text-sm opacity-70" for="report-to">To</label>
+				<label class="text-muted" for="report-to">To</label>
 				<input
 					id="report-to"
 					type="date"
-					class="input input-bordered input-sm"
+					class="input input-sm"
 					value={toDate}
 					onchange={(e) => {
 						toDate = (e.currentTarget as HTMLInputElement).value;
@@ -196,10 +196,7 @@
 					{#each members as m (m.userId)}
 						<tr class="hover">
 							<td class="cell-primary">
-								<MemberLink
-									variant="inline"
-									member={{ name: m.userName, email: m.userEmail, userId: m.userId }}
-								/>
+								<EntityIdentity ref={m.member} />
 							</td>
 							<td class="cell-num">{formatVolunteerHours(m.minutes)}</td>
 							<td class="col-support cell-num">{m.logCount}</td>
@@ -233,7 +230,7 @@
 							<td class="cell-primary">
 								<div class="truncate font-medium">{role.roleName}</div>
 								{#if role.latestComments.length > 0}
-									<div class="truncate text-xs opacity-60" title={role.latestComments[0].comment}>
+									<div class="truncate text-subtle" title={role.latestComments[0].comment}>
 										"{role.latestComments[0].comment}"
 									</div>
 								{/if}

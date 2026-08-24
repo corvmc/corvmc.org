@@ -1,12 +1,14 @@
 import { db } from '$lib/server/db';
-import { event, communityEventStanding, type LineupEntry } from '$lib/server/db/schema/event';
+import { event, type LineupEntry } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, getTableColumns, gte, inArray, like, ne } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { uploadFile, deleteObject } from '$lib/server/storage';
+import { mediaKey } from '$lib/server/storage-keys';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { captureException } from '$lib/server/sentry';
 import { allowRateLimited } from '$lib/server/rate-limit';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import { DomainError } from '$lib/server/errors';
 import {
 	getById,
@@ -33,7 +35,7 @@ import {
 //      sells.
 //
 //   2. Publishing is direct until a member gives us a reason it shouldn't be.
-//      `community_event_standing` records that reason; see resolveStanding.
+//      `member_standing` scoped to `community_event` records that reason.
 //
 // Authorization lives in the remote layer, as it does across this codebase.
 // What lives here is *ownership*, threaded through the arguments the same way
@@ -75,88 +77,6 @@ export class PublishRateLimitedError extends DomainError {
 }
 
 export type { EventRow } from './event-service';
-
-// ---------------------------------------------------------------------------
-// Standing
-// ---------------------------------------------------------------------------
-
-export interface CommunityStanding {
-	requiresReview: boolean;
-	reason: string | null;
-	updatedAt: Date | null;
-}
-
-/**
- * Whether this member's listings publish directly or queue for staff.
- *
- * No row means trusted, which is the overwhelmingly common case — a row only
- * appears once staff have upheld a report against one of their listings.
- */
-export async function getCommunityStanding(userId: string): Promise<CommunityStanding> {
-	const [row] = await db
-		.select({
-			requiresReview: communityEventStanding.requiresReview,
-			reason: communityEventStanding.reason,
-			updatedAt: communityEventStanding.updatedAt
-		})
-		.from(communityEventStanding)
-		.where(eq(communityEventStanding.userId, userId))
-		.limit(1);
-
-	if (!row) return { requiresReview: false, reason: null, updatedAt: null };
-	return { requiresReview: row.requiresReview, reason: row.reason, updatedAt: row.updatedAt };
-}
-
-export interface RevokeTrustParams {
-	userId: string;
-	flagId: string;
-	staffId: string;
-	reason?: string;
-}
-
-/** Called from flag-service when staff uphold a report. Idempotent. */
-export async function revokeCommunityTrust(params: RevokeTrustParams): Promise<void> {
-	await db
-		.insert(communityEventStanding)
-		.values({
-			userId: params.userId,
-			requiresReview: true,
-			reason: params.reason ?? null,
-			triggeringFlagId: params.flagId,
-			updatedByUserId: params.staffId,
-			updatedAt: new Date()
-		})
-		.onConflictDoUpdate({
-			target: communityEventStanding.userId,
-			set: {
-				requiresReview: true,
-				reason: params.reason ?? null,
-				triggeringFlagId: params.flagId,
-				updatedByUserId: params.staffId,
-				updatedAt: new Date()
-			}
-		});
-}
-
-/**
- * Give a member their direct-publish rights back.
- *
- * Flips the flag rather than deleting the row, so "this was looked at and
- * forgiven" stays distinguishable from "this never happened".
- */
-export async function restoreCommunityTrust(params: {
-	userId: string;
-	staffId: string;
-}): Promise<void> {
-	await db
-		.update(communityEventStanding)
-		.set({
-			requiresReview: false,
-			updatedByUserId: params.staffId,
-			updatedAt: new Date()
-		})
-		.where(eq(communityEventStanding.userId, params.userId));
-}
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -392,8 +312,8 @@ export async function updateCommunityEvent(
 	// a typo fix would punish the correction.
 	let requeued = false;
 	if (existing.status === 'published') {
-		const standing = await getCommunityStanding(userId);
-		if (standing.requiresReview) {
+		const standing = await getStanding(userId, 'community_event');
+		if (standing.status !== 'none') {
 			updates.status = 'pending_review';
 			updates.publishedAt = null;
 			requeued = true;
@@ -446,9 +366,9 @@ export async function publishCommunityEvent(
 	);
 	if (!allowed) throw new PublishRateLimitedError();
 
-	const standing = await getCommunityStanding(userId);
+	const standing = await getStanding(userId, 'community_event');
 
-	if (standing.requiresReview) {
+	if (standing.status !== 'none') {
 		// The member has edited since; the previous reason is stale, and leaving it
 		// on screen would tell them to fix something they just fixed.
 		await db
@@ -636,24 +556,11 @@ function assertValidTicketPrice(price: number | null | undefined): void {
 	}
 }
 
-function extensionFromType(contentType: string): string {
-	switch (contentType) {
-		case 'image/jpeg':
-			return 'jpg';
-		case 'image/png':
-			return 'png';
-		case 'image/webp':
-			return 'webp';
-		default:
-			return 'bin';
-	}
-}
-
 async function uploadPosterKey(
 	eventId: string,
 	file: { buffer: ArrayBuffer; contentType: string }
 ): Promise<string> {
-	const key = `events/posters/${eventId}.${extensionFromType(file.contentType)}`;
+	const key = mediaKey('events/posters', eventId, file.contentType);
 	await uploadFile(file.buffer, key, file.contentType);
 	return key;
 }

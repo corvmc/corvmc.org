@@ -56,7 +56,7 @@
 					description="Under-18 volunteers are welcome — we just need to set things up with you first."
 				/>
 
-				<SubmitButton label="Continue" class="btn-primary" />
+				<SubmitButton label="Continue" variant="primary" />
 			</Form>
 		</InfoCard>
 	{/await}

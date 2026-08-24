@@ -1,8 +1,10 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
 	import { sanitizeBio } from '$lib/utils/markdown';
 	import { page } from '$app/state';
 	import { bandSiteHref } from '$lib/utils/band-site-url';
+	import { imageSrc } from '$lib/utils/images';
 
 	let data = $derived(await getBandSiteData(page.params.slug!));
 	const band = $derived(data.band);
@@ -40,18 +42,20 @@
 
 <!-- Print button (hidden in print) -->
 <div class="no-print fixed top-4 right-4 z-50 flex gap-2">
-	<button class="btn btn-primary btn-sm" onclick={() => window.print()}>
-		Download / Print PDF
-	</button>
-	<a href={bandSiteHref(band.slug, '', page.url)} class="btn btn-ghost btn-sm"> &larr; Back </a>
+	<Button variant="primary" size="sm" onclick={() => window.print()}>Download / Print PDF</Button>
+	<Button href={bandSiteHref(band.slug, '', page.url)} variant="ghost" size="sm">
+		&larr; Back
+	</Button>
 </div>
 
 <div class="epk-page max-w-3xl mx-auto px-8 py-12 bg-white text-gray-900 min-h-screen">
 	<!-- Header -->
 	<header class="text-center pb-8 border-b-2 border-gray-200 mb-8">
 		{#if band.avatarUrl}
+			{@const avatar = imageSrc(band.avatarUrl, 'avatar-lg')}
 			<img
-				src={band.avatarUrl}
+				src={avatar.src}
+				srcset={avatar.srcset}
 				alt={band.name}
 				class="w-28 h-28 rounded-full mx-auto mb-4 object-cover"
 			/>
@@ -133,8 +137,15 @@
 			<div class="grid grid-cols-3 gap-2">
 				{#each galleryMedia.slice(0, 6) as img (img.id)}
 					{#if img.url}
+						{@const shot = imageSrc(img.url, 'gallery')}
 						<div class="aspect-square overflow-hidden rounded">
-							<img src={img.url} alt={img.caption ?? ''} class="w-full h-full object-cover" />
+							<img
+								src={shot.src}
+								srcset={shot.srcset}
+								sizes={shot.sizes}
+								alt={img.caption ?? ''}
+								class="w-full h-full object-cover"
+							/>
 						</div>
 					{/if}
 				{/each}

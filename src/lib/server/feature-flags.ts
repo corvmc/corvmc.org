@@ -4,7 +4,6 @@ import { config, getConfigsByPrefix } from './site-config/site-config-service';
 export type FeatureFlag =
 	| 'staffInbox'
 	| 'bandPremium'
-	| 'bandReservations'
 	| 'emailMarketing'
 	| 'equipment'
 	| 'helpArticles'
@@ -15,7 +14,6 @@ export type FeatureFlag =
 export const ALL_FLAGS: FeatureFlag[] = [
 	'staffInbox',
 	'bandPremium',
-	'bandReservations',
 	'emailMarketing',
 	'equipment',
 	'helpArticles',

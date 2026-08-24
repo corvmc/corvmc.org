@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { updateClosure } from '$lib/remote/closures.remote';
 
@@ -8,7 +9,9 @@
 		reason,
 		startsAt,
 		endsAt,
-		class: className = 'btn-primary btn-sm',
+		variant = 'primary',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
@@ -16,6 +19,8 @@
 		reason: string;
 		startsAt: string;
 		endsAt: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -28,6 +33,8 @@
 	action={updateClosure}
 	label="Save"
 	successToast="Closure updated"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

@@ -5,6 +5,7 @@
 	import { getFormContext } from './Form.svelte';
 	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
+	import type { ButtonSize, ButtonVariant } from '$lib/components/shared/Button.svelte';
 
 	let {
 		shortcut,
@@ -13,7 +14,9 @@
 		continueLabel = 'Continue',
 		successLabel = 'Saved',
 		errorLabel = 'Error',
-		class: className = 'btn-primary',
+		variant = 'primary',
+		size = 'md',
+		class: className = '',
 		disabled = false,
 		...rest
 	}: {
@@ -23,6 +26,9 @@
 		continueLabel?: string;
 		successLabel?: string;
 		errorLabel?: string;
+		/** Idle colour. The success/error flash overrides it while it lasts. */
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		disabled?: boolean;
 		[key: string]: unknown;
@@ -46,6 +52,12 @@
 			(ctx.status !== 'idle' && ctx.status !== 'dirty')
 	);
 
+	// The status flash outranks the caller's colour: a destructive `variant="error"`
+	// submit that has just succeeded should read as success, not stay red.
+	const activeVariant = $derived(
+		ctx.status === 'success' ? 'success' : ctx.status === 'error' ? 'error' : variant
+	);
+
 	let keys = useShortcut(
 		() => shortcut,
 		() => {
@@ -59,13 +71,13 @@
 
 <div class="flex items-center gap-2">
 	{#if ctx.currentStep > 0}
-		<Button type="button" class="btn-ghost" onclick={() => ctx.back()}>Back</Button>
+		<Button type="button" variant="ghost" onclick={() => ctx.back()}>Back</Button>
 	{/if}
-	<button
+	<Button
 		type={isLastStep ? 'submit' : 'button'}
-		class="btn {className} {ctx.status === 'success' ? 'btn-success' : ''} {ctx.status === 'error'
-			? 'btn-error'
-			: ''}"
+		variant={activeVariant}
+		{size}
+		class={className}
 		disabled={isDisabled}
 		onclick={isLastStep ? undefined : () => ctx.next()}
 		{...rest}
@@ -87,5 +99,5 @@
 			{/if}
 			{activeLabel}
 		{/if}
-	</button>
+	</Button>
 </div>

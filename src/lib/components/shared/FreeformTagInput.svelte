@@ -58,7 +58,7 @@
 	{#if value.length > 0}
 		<div class="flex flex-wrap gap-1">
 			{#each value as tag (tag)}
-				<Button class="btn-xs" type="button" onclick={() => removeTag(tag)}>
+				<Button variant="default" size="xs" type="button" onclick={() => removeTag(tag)}>
 					{tag}
 					<IconX class="size-3" />
 				</Button>
@@ -69,7 +69,7 @@
 	<div class="relative">
 		<input
 			type="text"
-			class="input-bordered input w-full"
+			class="input w-full"
 			{placeholder}
 			bind:value={input}
 			onkeydown={handleKeydown}

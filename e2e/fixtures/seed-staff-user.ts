@@ -15,7 +15,7 @@
  *  - enough filler members that `/staff/users` (page size 20) paginates, which
  *    the bulk-selection test needs.
  *
- * Run by the Playwright global setup (see playwright.config.ts → globalSetup).
+ * Run by `e2e/prepare.ts`, before Playwright starts the preview server.
  *
  * Idempotent: deletes and recreates the seeded users and their role assignments
  * on every run. Roles themselves are shared with the dev seed, so they are
@@ -24,12 +24,12 @@
  * Mirrors the D1 access pattern in seed-pay-reservation.ts.
  */
 import 'dotenv/config';
-import { getPlatformProxy } from 'wrangler';
-import { drizzle } from 'drizzle-orm/d1';
 import { eq, inArray } from 'drizzle-orm';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { scryptHash } from './seed-pay-reservation';
+import { withPlatformDb } from './platform-db';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
 export const SEED_STAFF_EMAIL = 'e2e.staff@example.com';
 export const SEED_STAFF_PASSWORD = 'e2e-password-123';
@@ -54,7 +54,7 @@ const ALL_IDS = [
 
 /** Look the role up by name, inserting it if the dev seed hasn't run. */
 async function ensureRole(
-	db: ReturnType<typeof drizzle>,
+	db: DrizzleD1Database,
 	name: string
 ): Promise<{ id: number; name: string }> {
 	const [existing] = await db
@@ -72,10 +72,7 @@ async function ensureRole(
 }
 
 export async function seedStaffUser(): Promise<void> {
-	const { env, dispose } = await getPlatformProxy();
-	const db = drizzle((env as { DB: D1Database }).DB);
-
-	try {
+	await withPlatformDb(async (db) => {
 		// Clean slate. Delete explicitly (FKs may be disabled on local D1).
 		await db.delete(modelHasRole).where(inArray(modelHasRole.userId, ALL_IDS));
 		await db.delete(account).where(inArray(account.userId, ALL_IDS));
@@ -142,7 +139,5 @@ export async function seedStaffUser(): Promise<void> {
 		for (let i = 0; i < fillers.length; i += CHUNK) {
 			await db.insert(user).values(fillers.slice(i, i + CHUNK));
 		}
-	} finally {
-		await dispose();
-	}
+	});
 }

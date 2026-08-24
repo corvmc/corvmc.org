@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { createRawSnippet } from 'svelte';
 import FormField from './FormField.svelte';
 
 // Minimal stand-in for a SvelteKit RemoteFormField. The real object's `.as(type, value)`
@@ -160,5 +161,131 @@ describe('FormField', () => {
 
 		const hidden = container.querySelector('input[name="roles"]') as HTMLInputElement;
 		expect(JSON.parse(hidden.value)).toEqual([]);
+	});
+
+	// -----------------------------------------------------------------------
+	// file
+	//
+	// SvelteKit *throws* — not warns — when a form holds an `<input type="file">`
+	// without `enctype="multipart/form-data"`, and the throw happens before the
+	// request is built. The visible symptom is a Save that does nothing at all,
+	// which is why band and staff event posters never uploaded. `Form` sets the
+	// attribute when it can see a file input; these pin the field half of it.
+	// -----------------------------------------------------------------------
+
+	describe('file (deferred upload)', () => {
+		it('renders a real file input carrying the field name, so the File submits', async () => {
+			const field = create_field_proxy(
+				{},
+				() => ({}),
+				() => {},
+				() => ({}),
+				['posterFile']
+			);
+			const { container } = render(FormField, { field, type: 'file', label: 'Poster' });
+
+			const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+			expect(input).not.toBeNull();
+			expect(input.name).toBe('posterFile');
+		});
+
+		// A same-named hidden input alongside the file input would be submitted
+		// too and clobber the File with an empty string.
+		it('renders no second input under the same name', async () => {
+			const field = create_field_proxy(
+				{},
+				() => ({}),
+				() => {},
+				() => ({}),
+				['posterFile']
+			);
+			const { container } = render(FormField, { field, type: 'file', label: 'Poster' });
+
+			expect(container.querySelectorAll('[name="posterFile"]')).toHaveLength(1);
+		});
+
+		it('offers a labelled control rather than a bare file picker', async () => {
+			const field = create_field_proxy(
+				{},
+				() => ({}),
+				() => {},
+				() => ({}),
+				['posterFile']
+			);
+			render(FormField, { field, type: 'file', label: 'Poster', emptyLabel: 'Add a poster' });
+
+			await expect.element(page.getByText('Add a poster')).toBeInTheDocument();
+		});
+	});
+
+	// -----------------------------------------------------------------------
+	// readonly
+	//
+	// The readonly branch used to sit *after* `children` and `input`, so a field
+	// in custom-input mode ignored it entirely and rendered a live, submittable
+	// control to someone who was supposed to be looking, not editing.
+	// -----------------------------------------------------------------------
+
+	describe('readonly', () => {
+		it('wins over a custom-input child', async () => {
+			// The regression this pins: with the branch ordered `children` first,
+			// this renders the live textarea and ignores `readonly` completely.
+			const customInput = createRawSnippet(() => ({
+				render: () => `<textarea name="bio">editable</textarea>`
+			}));
+
+			const { container } = render(FormField, {
+				name: 'bio',
+				label: 'Bio',
+				readonly: true,
+				value: 'Just looking',
+				children: customInput
+			});
+
+			expect(container.querySelector('textarea')).toBeNull();
+			expect(container.querySelector('[name="bio"]')).toBeNull();
+			await expect.element(page.getByText('Just looking')).toBeInTheDocument();
+		});
+
+		it('renders no submittable input, so a read-only field cannot post', async () => {
+			const { container } = render(FormField, {
+				name: 'title',
+				type: 'text',
+				label: 'Title',
+				readonly: true,
+				value: 'Fixed'
+			});
+
+			expect(container.querySelector('[name="title"]')).toBeNull();
+		});
+
+		// A date field stores `2026-08-20` and a price stores `10.00`; neither is
+		// what a person should be shown. `display` is how the caller supplies the
+		// formatted form without giving up the field's identity.
+		it('shows `display` instead of the raw value', async () => {
+			render(FormField, {
+				name: 'eventDate',
+				type: 'date',
+				label: 'Date',
+				readonly: true,
+				value: '2026-08-20',
+				display: 'August 20, 2026'
+			});
+
+			await expect.element(page.getByText('August 20, 2026')).toBeInTheDocument();
+		});
+
+		it('keeps long text on its own lines rather than in a single-line input', async () => {
+			const { container } = render(FormField, {
+				name: 'description',
+				type: 'textarea',
+				label: 'Description',
+				readonly: true,
+				value: 'first line\nsecond line'
+			});
+
+			expect(container.querySelector('textarea')).toBeNull();
+			expect(container.querySelector('.whitespace-pre-wrap')).not.toBeNull();
+		});
 	});
 });

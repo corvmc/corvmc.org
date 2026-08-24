@@ -58,9 +58,10 @@ test.describe('staff user management', () => {
 		// cross-section rather than a form. Panels mount on first selection, so
 		// nothing renders a roles input until this click.
 		//
-		// `radio`, not `button`: TabBar's client-state mode is a bits-ui
-		// ToggleGroup, whose items expose the radio role.
-		await page.getByRole('radio', { name: 'Account' }).click();
+		// `tab`: TabBar's client-state mode is a real tablist. It was a bits-ui
+		// ToggleGroup, which exposed its items as radios — a tab UI announcing
+		// itself as a set of radio buttons.
+		await page.getByRole('tab', { name: 'Account' }).click();
 
 		// TagInput serialises the selection into a hidden input — this is the exact
 		// value updateUser rewrites model_has_roles from.
@@ -103,7 +104,7 @@ test.describe('staff user management', () => {
 		// are absent from the DOM rather than merely hidden.
 		await expect(page.getByRole('heading', { name: 'Credit history' })).toHaveCount(0);
 
-		await page.getByRole('radio', { name: 'Money' }).click();
+		await page.getByRole('tab', { name: 'Money' }).click();
 		await expect(page.getByRole('heading', { name: 'Credit history' })).toBeVisible();
 		await expect(page).toHaveURL(/[?&]tab=money/);
 	});
@@ -132,11 +133,57 @@ test.describe('staff user management', () => {
 		const draft = `555${Date.now().toString().slice(-7)}`;
 		await page.locator('input[name="phone"]').fill(draft);
 
-		await page.getByRole('radio', { name: 'Money' }).click();
+		await page.getByRole('tab', { name: 'Money' }).click();
 		await expect(page.getByRole('heading', { name: 'Credit history' })).toBeVisible();
 
-		await page.getByRole('radio', { name: 'Account' }).click();
+		await page.getByRole('tab', { name: 'Account' }).click();
 		await expect(page.locator('input[name="phone"]')).toHaveValue(draft);
+	});
+
+	test('moderation is its own tab, and no longer offers to set a standing', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto(`/staff/users/${SEED_TARGET_ID}?tab=comms`);
+
+		// Comms answers one question: how we reach them. Reports used to sit at
+		// the top of this panel alongside the mailing lists.
+		await expect(page.getByRole('heading', { name: 'Conversations' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Email lists' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Reports against this member' })).toHaveCount(0);
+
+		// A standing is applied by an upheld report and lifted through the appeal
+		// workflow. Setting one by hand from a member's record is a non-goal, and
+		// the card that did it — "Direct messages" — went with the actions.
+		await page.getByRole('tab', { name: 'Moderation' }).click();
+		await expect(page.getByRole('heading', { name: 'Reports against this member' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Direct messages' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: /Switch messaging off/ })).toHaveCount(0);
+		await expect(page).toHaveURL(/[?&]tab=moderation/);
+	});
+
+	/**
+	 * Regression: `TabBar` rendered a daisyUI `join`, which does not wrap, inside
+	 * an `overflow-x-hidden` <main>. Eight tabs are far wider than a phone, so
+	 * the last of them were clipped off the edge with no way to reach them — not
+	 * scrolled off, gone. This is the pin that every tab stays reachable at 375px.
+	 */
+	test('every tab is reachable on a phone', async ({ page }) => {
+		await page.setViewportSize({ width: 375, height: 812 });
+		await loginAsStaff(page);
+		await page.goto(`/staff/users/${SEED_TARGET_ID}`);
+
+		// The button group is the desktop half and is display:none at this width.
+		await expect(page.getByRole('tablist')).toBeHidden();
+
+		// In its place, one control naming the tab you are on.
+		const trigger = page.getByRole('button', { name: /Overview/ });
+		await expect(trigger).toBeVisible();
+
+		// The tab that used to fall off the end of the bar.
+		await trigger.click();
+		await page.getByRole('menuitem', { name: /Account/ }).click();
+
+		await expect(page).toHaveURL(/[?&]tab=account/);
+		await expect(page.locator('input[name="phone"]')).toBeVisible();
 	});
 
 	test('bulk selection does not survive paging to rows you cannot see', async ({ page }) => {

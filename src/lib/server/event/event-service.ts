@@ -35,7 +35,8 @@ import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
-import { uploadFile, deleteObject } from '$lib/server/storage';
+import { uploadFile, deleteObject, copyObject } from '$lib/server/storage';
+import { mediaKey } from '$lib/server/storage-keys';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/events/event-bus';
 import {
@@ -193,8 +194,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 
 	// Upload poster outside the transaction (non-critical, idempotent)
 	if (posterFile) {
-		const ext = extensionFromType(posterFile.contentType);
-		const key = `events/posters/${row.id}.${ext}`;
+		const key = mediaKey('events/posters', row.id, posterFile.contentType);
 		await uploadFile(posterFile.buffer, key, posterFile.contentType);
 		await db
 			.update(event)
@@ -369,28 +369,36 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		updates.ticketQuantity = params.ticketQuantity;
 	}
 
-	// Handle reservation rebooking if requested
-	if (params.rebook && existing.reservationId) {
+	// Hold the space, or move an existing hold. Both live here because they differ
+	// only by whether there is an old reservation to release first: an event that
+	// was created without space is otherwise unfixable, since nothing else in the
+	// app can attach one after the fact.
+	if (params.rebook) {
 		const { userId, reservationStartsAt, reservationEndsAt, overrideConflicts } = params.rebook;
 
-		// Cancel existing reservation
-		try {
-			await cancelReservation(existing.reservationId, userId, 'Event times changed — rebooking', {
-				staffOverride: true
-			});
-		} catch {
-			// Already cancelled — continue
-		}
-
-		// Create new reservation
+		// Conflict check first. Cancelling ahead of it meant a rejected window left
+		// the event pointing at a reservation we had already released, with nothing
+		// re-created and no compensating write — the room lost and the link dead.
+		// Excluding the current reservation keeps an event from conflicting with
+		// its own hold.
 		if (!overrideConflicts) {
 			const conflict = await hasConflict(
 				reservationStartsAt,
 				reservationEndsAt,
-				existing.reservationId
+				existing.reservationId ?? undefined
 			);
 			if (conflict) {
 				throw new ReservationConflictError();
+			}
+		}
+
+		if (existing.reservationId) {
+			try {
+				await cancelReservation(existing.reservationId, userId, 'Event times changed — rebooking', {
+					staffOverride: true
+				});
+			} catch {
+				// Already cancelled — continue
 			}
 		}
 
@@ -414,8 +422,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		if (existing.posterKey) {
 			await deleteObject(existing.posterKey);
 		}
-		const ext = extensionFromType(params.posterFile.contentType);
-		const key = `events/posters/${eventId}.${ext}`;
+		const key = mediaKey('events/posters', eventId, params.posterFile.contentType);
 		await uploadFile(params.posterFile.buffer, key, params.posterFile.contentType);
 		updates.posterKey = key;
 	}
@@ -507,27 +514,63 @@ export async function unpublishWithNotice(
 	await unpublish(eventId);
 
 	if (row.source === 'community') {
-		// Take the poster down with the listing. Posters are served straight from
-		// R2 at a guessable key, and that URL consults nothing — not status, not
-		// source — so leaving the object in place would mean "unpublish" removed
-		// the row from the guide while the image stayed world-readable forever.
-		// That's tolerable when only staff and band admins can write to the
-		// bucket; it is not once any member can, because this path is the kill
-		// switch and an image is the riskiest thing on the page.
+		// Take the poster off its public URL with the listing. The object is served
+		// straight from R2 and that URL consults nothing — not status, not source —
+		// so leaving the key in place would mean "unpublish" removed the row from
+		// the guide while the image stayed readable to anyone holding the link.
+		// This path is the kill switch and an image is the riskiest thing on the
+		// page, so the link has to stop working.
+		//
+		// This used to delete the object outright, which achieved that and created
+		// a worse problem: a takedown is a moderation decision about whether
+		// something should be public, not a licence to destroy the member's
+		// artwork. Restoring a listing could never restore its poster, and an
+		// unpublish done in error was unrecoverable.
+		//
+		// So rotate the key instead. The old URL stops resolving — which is the
+		// property that matters, since anyone who saw the listing may have the link
+		// — while the bytes survive, and republishing brings the poster back with
+		// the listing.
+		//
+		// Note this is no longer about *guessability*: `mediaKey` gives every
+		// upload its own random token, so the key was never derivable from the
+		// event id to begin with. What rotation buys is invalidating links already
+		// handed out, which a random-on-upload key does nothing about.
+		let nextPosterKey: string | null = null;
 		if (row.posterKey) {
 			try {
-				await deleteObject(row.posterKey);
+				// Not `mediaKey`: that builds a key from a content type, and here we
+				// only have the existing key. Carrying its extension across is both
+				// simpler and more faithful than re-deriving one.
+				const ext = row.posterKey.split('.').pop() ?? 'jpg';
+				const withheldKey = `events/posters/withheld/${eventId}-${crypto.randomUUID()}.${ext}`;
+				// copyObject returns null when the source is already gone, in which
+				// case there is nothing to preserve and nothing to delete.
+				const moved = await copyObject(row.posterKey, withheldKey);
+				if (moved) {
+					await deleteObject(row.posterKey);
+					nextPosterKey = moved;
+				}
 			} catch (err) {
-				captureException(err, { event: 'community_event.poster_delete', eventId });
+				captureException(err, { event: 'community_event.poster_withhold', eventId });
 			}
 		}
 
 		// Keep the staff note on the row, not just in the email — the member lands
 		// on the manage page to fix the listing, and that is where the reason
 		// needs to be.
+		//
+		// Only written when one was given. Unconditionally setting it meant a
+		// takedown with no note erased whatever reason was already there, so a
+		// member could lose the explanation of an earlier decision to an unrelated
+		// later one.
 		await db
 			.update(event)
-			.set({ posterKey: null, reviewNotes: opts.notes || null, updatedAt: new Date() })
+			.set({
+				posterKey: nextPosterKey,
+				...(opts.notes ? { reviewNotes: opts.notes } : {}),
+				updatedAt: new Date()
+			})
 			.where(eq(event.id, eventId));
 
 		const [submitter] = await db
@@ -898,7 +941,7 @@ export async function listAll(
 //
 // So a band can credit anyone on its own bill (it's their factual statement
 // about their own show) without that credit appearing on the named band's
-// profile until they agree. See `docs/specs/event-lineup-spec.md`.
+// profile until they agree. See `docs/specs/shipped/event-lineup-spec.md`.
 
 export interface LineupRow {
 	id: string;
@@ -1305,8 +1348,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 	}
 
 	if (posterFile) {
-		const ext = extensionFromType(posterFile.contentType);
-		const key = `events/posters/${row.id}.${ext}`;
+		const key = mediaKey('events/posters', row.id, posterFile.contentType);
 		await uploadFile(posterFile.buffer, key, posterFile.contentType);
 		await db
 			.update(event)
@@ -1364,8 +1406,7 @@ export async function updateBandEvent(
 		if (existing.posterKey) {
 			await deleteObject(existing.posterKey);
 		}
-		const ext = extensionFromType(params.posterFile.contentType);
-		const key = `events/posters/${eventId}.${ext}`;
+		const key = mediaKey('events/posters', eventId, params.posterFile.contentType);
 		await uploadFile(params.posterFile.buffer, key, params.posterFile.contentType);
 		updates.posterKey = key;
 	}
@@ -1549,6 +1590,9 @@ export async function listBandEventsPast(
 }
 
 export interface MemberShowRow extends EventRow {
+	/** The credited band, whose id makes the byline reachable rather than text.
+	 *  `null` when the event has no confirmed credit. */
+	bandId: string | null;
 	bandName: string;
 	bandSlug: string;
 }
@@ -1593,6 +1637,7 @@ async function withMemberBylines(rows: EventRow[], userId: string): Promise<Memb
 		.select({
 			eventId: eventBand.eventId,
 			billingOrder: eventBand.billingOrder,
+			bandId: eventBand.bandId,
 			bandName: band.name,
 			bandSlug: band.slug
 		})
@@ -1617,14 +1662,18 @@ async function withMemberBylines(rows: EventRow[], userId: string): Promise<Memb
 		)
 		.orderBy(asc(eventBand.billingOrder));
 
-	const byEvent = new Map<string, { bandName: string; bandSlug: string }>();
+	const byEvent = new Map<string, { bandId: string | null; bandName: string; bandSlug: string }>();
 	for (const c of credits) {
 		if (!byEvent.has(c.eventId))
-			byEvent.set(c.eventId, { bandName: c.bandName, bandSlug: c.bandSlug });
+			byEvent.set(c.eventId, { bandId: c.bandId, bandName: c.bandName, bandSlug: c.bandSlug });
 	}
 
 	return rows.map((r) => ({
 		...r,
+		// An event with no confirmed credit keeps its empty byline; `null` for the
+		// id rather than '' so a ref built from it renders unlinked instead of
+		// pointing at a band that does not exist.
+		bandId: byEvent.get(r.id)?.bandId ?? null,
 		bandName: byEvent.get(r.id)?.bandName ?? '',
 		bandSlug: byEvent.get(r.id)?.bandSlug ?? ''
 	}));
@@ -1750,16 +1799,3 @@ export async function listPublicUpcomingEvents(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function extensionFromType(contentType: string): string {
-	switch (contentType) {
-		case 'image/jpeg':
-			return 'jpg';
-		case 'image/png':
-			return 'png';
-		case 'image/webp':
-			return 'webp';
-		default:
-			return 'bin';
-	}
-}

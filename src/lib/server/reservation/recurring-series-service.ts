@@ -3,9 +3,27 @@ import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
+import { band } from '$lib/server/db/schema/band';
+
+/**
+ * `bookerId` points at a band only when `bookerType` says so, so the type check
+ * belongs in the join — without it a band whose id happened to match a user's
+ * would attach to the wrong row. Mirrors `reservations.remote.ts`.
+ */
+const bandBookerJoin = and(eq(reservation.bookerType, 'band'), eq(band.id, reservation.bookerId));
+const eventBookerJoin = and(
+	eq(reservation.bookerType, 'event'),
+	eq(event.id, reservation.bookerId)
+);
 import { eq, and, isNull, sql, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { primaryRoleFor } from '$lib/server/authorization';
+import {
+	bandRefColumns,
+	eventRefColumns,
+	memberRefColumns,
+	toBookerRef
+} from '$lib/server/entity/refs';
+import type { EntityRef } from '$lib/types/entity';
 import { buildRRule, describeFrequency, monthlyModeOf, type MonthlyMode } from './rrule-helpers';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 
@@ -66,9 +84,12 @@ export interface SeriesListItem {
 	createdAt: Date;
 	seriesEndsAt: Date | null;
 	cancelledAt: Date | null;
-	userName: string;
-	userPronouns: string | null;
-	userRole: string | null;
+	/**
+	 * Who the series is *for* — a member, a band or an event, exactly as on the
+	 * bookings it generates. `createdBy` is who set it up, which is not the same
+	 * question and lives on the detail page.
+	 */
+	booker: EntityRef;
 	bookerType: string;
 	bookerId: string;
 	startsAt: Date;
@@ -354,9 +375,9 @@ export async function listActive(opts?: { forUser?: string }): Promise<SeriesLis
 			createdAt: recurringSeries.createdAt,
 			seriesEndsAt: recurringSeries.endsAt,
 			cancelledAt: recurringSeries.cancelledAt,
-			userName: user.name,
-			userPronouns: user.pronouns,
-			userRole: primaryRoleFor(user.id),
+			member: memberRefColumns(),
+			band: bandRefColumns(),
+			event: eventRefColumns(),
 			bookerType: reservation.bookerType,
 			bookerId: reservation.bookerId,
 			startsAt: reservation.startsAt,
@@ -365,10 +386,13 @@ export async function listActive(opts?: { forUser?: string }): Promise<SeriesLis
 		.from(recurringSeries)
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.leftJoin(band, bandBookerJoin)
+		.leftJoin(event, eventBookerJoin)
 		.where(and(...conditions));
 
-	return rows.map((r) => ({
+	return rows.map(({ member, band: bandRow, event: eventRow, ...r }) => ({
 		...r,
+		booker: toBookerRef({ bookerType: r.bookerType, member, band: bandRow, event: eventRow }),
 		frequencyLabel: describeFrequency(r.rrule),
 		monthlyMode: monthlyModeOf(r.rrule)
 	}));
@@ -399,9 +423,9 @@ export async function listAll(opts?: { filter?: string }, pagination: Pagination
 			createdAt: recurringSeries.createdAt,
 			seriesEndsAt: recurringSeries.endsAt,
 			cancelledAt: recurringSeries.cancelledAt,
-			userName: user.name,
-			userPronouns: user.pronouns,
-			userRole: primaryRoleFor(user.id),
+			member: memberRefColumns(),
+			band: bandRefColumns(),
+			event: eventRefColumns(),
 			bookerType: reservation.bookerType,
 			bookerId: reservation.bookerId,
 			startsAt: reservation.startsAt,
@@ -410,6 +434,8 @@ export async function listAll(opts?: { filter?: string }, pagination: Pagination
 		.from(recurringSeries)
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.leftJoin(band, bandBookerJoin)
+		.leftJoin(event, eventBookerJoin)
 		.where(where)
 		.$dynamic();
 
@@ -422,8 +448,9 @@ export async function listAll(opts?: { filter?: string }, pagination: Pagination
 	const result = await paginate(dataQ, countQ, pagination);
 	return {
 		...result,
-		rows: result.rows.map((r) => ({
+		rows: result.rows.map(({ member, band: bandRow, event: eventRow, ...r }) => ({
 			...r,
+			booker: toBookerRef({ bookerType: r.bookerType, member, band: bandRow, event: eventRow }),
 			frequencyLabel: describeFrequency(r.rrule),
 			monthlyMode: monthlyModeOf(r.rrule)
 		}))

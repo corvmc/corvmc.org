@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { untrack } from 'svelte';
 	import { browser } from '$app/environment';
 	import { Editor } from '@tiptap/core';
@@ -110,78 +111,94 @@
 <div class="rounded-box border border-base-300">
 	{#if editor}
 		<div class="join flex flex-wrap border-b border-base-300 rounded-b-none">
-			<button
+			<Button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square join-item rounded-b-none"
-				class:btn-active={isActive('bold')}
+				variant="ghost"
+				size="xs"
+				shape="square"
+				class="join-item rounded-b-none {isActive('bold') ? 'btn-active' : ''}"
 				aria-label="Bold"
 				onclick={() => editor!.chain().focus().toggleBold().run()}
 			>
 				<IconBold size={16} />
-			</button>
-			<button
+			</Button>
+			<Button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square join-item"
-				class:btn-active={isActive('italic')}
+				variant="ghost"
+				size="xs"
+				shape="square"
+				class="join-item {isActive('italic') ? 'btn-active' : ''}"
 				aria-label="Italic"
 				onclick={() => editor!.chain().focus().toggleItalic().run()}
 			>
 				<IconItalic size={16} />
-			</button>
-			<button
+			</Button>
+			<Button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square join-item"
-				class:btn-active={isActive('underline')}
+				variant="ghost"
+				size="xs"
+				shape="square"
+				class="join-item {isActive('underline') ? 'btn-active' : ''}"
 				aria-label="Underline"
 				onclick={() => editor!.chain().focus().toggleUnderline().run()}
 			>
 				<IconUnderline size={16} />
-			</button>
-			<button
+			</Button>
+			<Button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square join-item"
-				class:btn-active={isActive('heading', { level: 3 })}
+				variant="ghost"
+				size="xs"
+				shape="square"
+				class="join-item {isActive('heading', { level: 3 }) ? 'btn-active' : ''}"
 				aria-label="Heading"
 				onclick={() => editor!.chain().focus().toggleHeading({ level: 3 }).run()}
 			>
 				<IconH3 size={16} />
-			</button>
-			<button
+			</Button>
+			<Button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square join-item"
-				class:btn-active={isActive('bulletList')}
+				variant="ghost"
+				size="xs"
+				shape="square"
+				class="join-item {isActive('bulletList') ? 'btn-active' : ''}"
 				aria-label="Bullet list"
 				onclick={() => editor!.chain().focus().toggleBulletList().run()}
 			>
 				<IconList size={16} />
-			</button>
-			<button
+			</Button>
+			<Button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square join-item"
-				class:btn-active={isActive('orderedList')}
+				variant="ghost"
+				size="xs"
+				shape="square"
+				class="join-item {isActive('orderedList') ? 'btn-active' : ''}"
 				aria-label="Numbered list"
 				onclick={() => editor!.chain().focus().toggleOrderedList().run()}
 			>
 				<IconListNumbers size={16} />
-			</button>
-			<button
+			</Button>
+			<Button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square join-item"
-				class:btn-active={isActive('blockquote')}
+				variant="ghost"
+				size="xs"
+				shape="square"
+				class="join-item {isActive('blockquote') ? 'btn-active' : ''}"
 				aria-label="Quote"
 				onclick={() => editor!.chain().focus().toggleBlockquote().run()}
 			>
 				<IconBlockquote size={16} />
-			</button>
-			<button
+			</Button>
+			<Button
 				type="button"
-				class="btn btn-ghost btn-xs btn-square join-item rounded-b-none"
-				class:btn-active={isActive('link')}
+				variant="ghost"
+				size="xs"
+				shape="square"
+				class="join-item rounded-b-none {isActive('link') ? 'btn-active' : ''}"
 				aria-label="Link"
 				onclick={toggleLink}
 			>
 				<IconLink size={16} />
-			</button>
+			</Button>
 			<div
 				class="filler join-item rounded-b-none grow btn btn-xs pointer-events-none btn-ghost"
 			></div>

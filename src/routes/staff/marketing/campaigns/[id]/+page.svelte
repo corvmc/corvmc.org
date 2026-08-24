@@ -8,6 +8,8 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import { UnscheduleCampaignAction } from '$lib/components/shared/actions';
 	import Button from '$lib/components/shared/Button.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { getCampaignDetail } from '$lib/remote/marketing.remote';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 
@@ -19,7 +21,7 @@
 	<PageHeader subtitle="Campaign" title={campaign.subject} backHref="/staff/marketing/campaigns">
 		<StatusBadge status={campaign.status} />
 		{#if campaign.status === 'draft'}
-			<Button href="/staff/marketing/campaigns/{id}/edit" class="btn-sm">Edit</Button>
+			<Button href="/staff/marketing/campaigns/{id}/edit" variant="default" size="sm">Edit</Button>
 		{/if}
 		{#if campaign.status === 'scheduled'}
 			<UnscheduleCampaignAction
@@ -31,31 +33,25 @@
 	<PageContent width="3xl">
 		<div class="grid gap-6 lg:grid-cols-2 mb-6">
 			<InfoCard title="Details">
-				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-					<dt class="opacity-60">Status</dt>
-					<dd><StatusBadge status={campaign.status} /></dd>
+				<DefinitionList>
+					<Fact label="Status"><StatusBadge status={campaign.status} /></Fact>
 
-					<dt class="opacity-60">Audiences</dt>
-					<dd>{campaign.audiences.map((a) => a.name).join(', ') || '—'}</dd>
+					<Fact label="Audiences">{campaign.audiences.map((a) => a.name).join(', ') || '—'}</Fact>
 
 					{#if campaign.recipientCount !== null}
-						<dt class="opacity-60">Recipients</dt>
-						<dd>{campaign.recipientCount}</dd>
+						<Fact label="Recipients">{campaign.recipientCount}</Fact>
 					{/if}
 
 					{#if campaign.sentAt}
-						<dt class="opacity-60">Sent at</dt>
-						<dd>{new Date(campaign.sentAt).toLocaleString()}</dd>
+						<Fact label="Sent at">{new Date(campaign.sentAt).toLocaleString()}</Fact>
 					{/if}
 
 					{#if campaign.scheduledFor && !campaign.sentAt}
-						<dt class="opacity-60">Scheduled for</dt>
-						<dd>{new Date(campaign.scheduledFor).toLocaleString()}</dd>
+						<Fact label="Scheduled for">{new Date(campaign.scheduledFor).toLocaleString()}</Fact>
 					{/if}
 
-					<dt class="opacity-60">Created</dt>
-					<dd>{new Date(campaign.createdAt).toLocaleDateString()}</dd>
-				</dl>
+					<Fact label="Created">{new Date(campaign.createdAt).toLocaleDateString()}</Fact>
+				</DefinitionList>
 			</InfoCard>
 
 			<InfoCard title="Markdown Source">

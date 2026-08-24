@@ -1,9 +1,11 @@
 <script lang="ts">
+	import Hero from '$lib/components/shared/marketing/Hero.svelte';
 	import { IconBuildingStore, IconMicrophone, IconDisc, IconUsers } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	let submitted = $state(false);
 	let resetTurnstile = $state<() => void>();
@@ -37,31 +39,18 @@
 </svelte:head>
 
 <!-- Hero -->
-<section class="sunburst section-tint-secondary py-20 px-6 text-center">
-	<div class="max-w-2xl mx-auto flex flex-col items-center gap-4">
-		<h1
-			class="text-5xl font-bold leading-tight tracking-tight text-balance"
-			style="color: var(--cmc-navy)"
-		>
-			Local Resources
-		</h1>
-		<p class="text-lg leading-relaxed" style="color: var(--fg-2)">
-			CMC keeps a list of local music resources — shops, artists, record stores, venues, and more.
-			We're actively building it out, and we want your input.
-		</p>
-	</div>
-</section>
+<Hero title="Local Resources">
+	CMC keeps a list of local music resources — shops, artists, record stores, venues, and more. We're
+	actively building it out, and we want your input.
+</Hero>
 
 <!-- What we're collecting -->
 <section class="py-12 px-6">
 	<div class="max-w-4xl mx-auto">
 		<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
 			{#each categories as cat (cat.label)}
-				<div
-					class="flex flex-col items-center text-center gap-2 rounded-lg p-5"
-					style="background: var(--surface); border: 1px solid var(--surface-border)"
-				>
-					<div style="color: var(--cmc-teal)"><cat.icon size={32} /></div>
+				<div class="flex flex-col items-center text-center gap-2 rounded-lg p-5 surface">
+					<div class="text-cmc-teal"><cat.icon size={32} /></div>
 					<span class="text-sm font-medium">{cat.label}</span>
 				</div>
 			{/each}
@@ -74,15 +63,15 @@
 	<div class="max-w-xl mx-auto">
 		<div class="text-center mb-8">
 			<h2 class="text-3xl font-bold tracking-tight mb-2">Suggest a Resource</h2>
-			<p class="text-base leading-relaxed" style="color: var(--fg-2)">
+			<p class="text-base leading-relaxed text-fg-2">
 				Know a resource the Corvallis music community should have on their radar? Send it our way.
 			</p>
 		</div>
 
 		{#if submitted}
-			<div class="alert alert-success">
+			<Alert type="success">
 				Thanks for the suggestion! We'll take a look and add it to the list.
-			</div>
+			</Alert>
 		{:else}
 			<Form
 				remote={rf}
@@ -113,7 +102,7 @@
 					theme="auto"
 					bind:reset={resetTurnstile}
 				/>
-				<SubmitButton label="Submit Resource" class="btn-primary mt-2" />
+				<SubmitButton label="Submit Resource" variant="primary" class="mt-2" />
 			</Form>
 		{/if}
 	</div>

@@ -114,6 +114,8 @@ export const getStaffLayout = query(async () => {
 		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		inboxUnread,
 		volunteerPending,
+		// Nothing renders this yet — the staff sidebar has no listings row. Either
+		// wire it to a Moderation badge or drop it along with the query above.
 		listingsPending,
 		suggestionsAwaiting
 	};

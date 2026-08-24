@@ -18,6 +18,9 @@ import {
 	SEED_VOL_SHIFT_OPEN_ID,
 	SEED_VOL_SHIFT_OPEN_NOTE,
 	SEED_VOL_SHIFT_FULL_NOTE,
+	SEED_VOL_SHIFT_EVENT_ID,
+	SEED_VOL_EVENT_ID,
+	SEED_VOL_EVENT_TITLE,
 	SEED_VOL_SIGNUP_DONE_ID,
 	SEED_VOL_NEW_MEMBER_EMAIL,
 	SEED_VOL_MINOR_EMAIL,
@@ -27,7 +30,8 @@ import {
 	SEED_VOL_BLOCKED_MINOR_FIRST,
 	SEED_VOL_BLOCKED_MINOR_LAST,
 	readVolunteerState,
-	readSignupStatus
+	readSignupStatus,
+	readShiftEventId
 } from './fixtures/seed-volunteering';
 
 /**
@@ -141,7 +145,7 @@ test.describe('volunteering — staff review queue', () => {
 		// Kept staff-side deliberately: signing a second user in over an existing
 		// session in the same browser context does not swap the session, so the
 		// member view is asserted separately from its own login.
-		await page.getByRole('radio', { name: /Returned/ }).click();
+		await page.getByRole('tab', { name: /Returned/ }).click();
 		const rejected = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
 		await expect(rejected).toBeVisible({ timeout: 15000 });
 		await expect(rejected).toContainText(reason);
@@ -586,6 +590,102 @@ test.describe('volunteering — shifts', () => {
 			{ timeout: 15000 }
 		);
 		expect(await readSignupStatus(SEED_VOL_SHIFT_OPEN_ID)).toBe('confirmed');
+	});
+});
+
+/**
+ * Attaching a shift to a show.
+ *
+ * The column, the service and the remote schema all carried `eventId` from the
+ * day shifts shipped; nothing in the UI ever set it, so the whole link was
+ * unreachable. These cover the three ways in, and the one failure mode that
+ * cannot be seen on screen.
+ */
+test.describe('volunteering — shifts and events', () => {
+	test('the event page lists the shifts staffing that show', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}`);
+
+		const card = page.locator('.card').filter({ hasText: 'Volunteer Shifts' });
+		await expect(card).toBeVisible({ timeout: 15000 });
+		await expect(card).toContainText(SEED_VOL_ROLE_NAME);
+
+		// Straight through to the shift, which is the point of the card.
+		await card.getByRole('link', { name: SEED_VOL_ROLE_NAME }).click();
+		await expect(page).toHaveURL(new RegExp(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_EVENT_ID}$`));
+	});
+
+	test('scheduling from the event page attaches the shift to it', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}`);
+
+		const card = page.locator('.card').filter({ hasText: 'Volunteer Shifts' });
+		await expect(card).toBeVisible({ timeout: 15000 });
+		await card.getByRole('button', { name: 'Schedule a shift' }).click();
+
+		const dialog = page.getByRole('dialog');
+		await expect(dialog).toBeVisible();
+		// The event is already known here, so it is locked rather than offered —
+		// there is no picker to fill in.
+		await expect(dialog.getByPlaceholder('Search events by title...')).toHaveCount(0);
+		await dialog.locator('select[name="volunteerRoleId"]').selectOption({
+			label: SEED_VOL_ROLE_NAME
+		});
+		await modalSubmit(page, 'Create').click();
+
+		// Two rows now: the fixture's and the one just made.
+		await expect(card.getByRole('link', { name: SEED_VOL_ROLE_NAME })).toHaveCount(2, {
+			timeout: 15000
+		});
+	});
+
+	test('a shift can be attached to an event after the fact, and detached again', async ({
+		page
+	}) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_EVENT_ID}`);
+
+		await expect(page.getByRole('link', { name: SEED_VOL_EVENT_TITLE })).toBeVisible({
+			timeout: 15000
+		});
+
+		// Detach: clear the picker and save.
+		await page.getByRole('button', { name: 'Edit' }).click();
+		const dialog = page.getByRole('dialog');
+		await expect(dialog).toBeVisible();
+		await dialog.getByRole('button', { name: `Clear ${SEED_VOL_EVENT_TITLE}` }).click();
+		await modalSubmit(page, 'Save').click();
+
+		await expect(page.getByText('Not tied to an event')).toBeVisible({ timeout: 15000 });
+		/**
+		 * The assertion the page cannot make. A picker that only emits its hidden
+		 * input while something is selected posts *no* `eventId` field at all when
+		 * cleared — and an absent field means "untouched", not "cleared". The save
+		 * reports success either way; only the row tells you which happened.
+		 */
+		expect(await readShiftEventId(SEED_VOL_SHIFT_EVENT_ID)).toBeNull();
+
+		// And back on again, through the search picker this time.
+		await page.getByRole('button', { name: 'Edit' }).click();
+		const reopened = page.getByRole('dialog');
+		// Typed, not filled. `fill()` sets the value and fires one input event;
+		// bits-ui's Combobox opens its listbox off the keystrokes, so a filled
+		// field searches into a popover that never appears.
+		const search = reopened.getByPlaceholder('Search events by title...');
+		await search.click();
+		await search.pressSequentially('E2E Sludge');
+		await reopened.getByRole('option', { name: SEED_VOL_EVENT_TITLE }).click();
+		// SearchSelect swaps the input for a badge the moment the pick commits, so
+		// this is how the test knows the choice reached the form. Saving without it
+		// posts an empty `eventId`, which reads as "cleared" — the assertion below
+		// then fails on a shift that was never re-attached.
+		await expect(search).toHaveCount(0, { timeout: 15000 });
+		await modalSubmit(page, 'Save').click();
+
+		await expect(page.getByRole('link', { name: SEED_VOL_EVENT_TITLE })).toBeVisible({
+			timeout: 15000
+		});
+		expect(await readShiftEventId(SEED_VOL_SHIFT_EVENT_ID)).toBe(SEED_VOL_EVENT_ID);
 	});
 });
 

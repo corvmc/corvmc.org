@@ -62,7 +62,7 @@
 		<legend class="mb-3 font-medium">{legend}</legend>
 	{/if}
 	{#if description}
-		<p class="text-sm opacity-60">{description}</p>
+		<p class="text-muted">{description}</p>
 	{/if}
 
 	{#each options as option (option.value)}

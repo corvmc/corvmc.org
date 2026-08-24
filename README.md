@@ -33,7 +33,7 @@ SvelteKit app running entirely on Cloudflare Workers.
 
 ```bash
 corepack enable                 # Node 22, pnpm 9.15.x (pinned)
-pnpm install                    # also installs git hooks + compiles email layout
+pnpm install                    # also installs git hooks
 cp .env.example .env            # set ORIGIN=http://localhost:5173, leave Turnstile blank
 pnpm db:reset                   # wipe + migrate + seed the local D1
 pnpm dev                        # http://localhost:5173

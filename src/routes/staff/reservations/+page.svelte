@@ -1,4 +1,6 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -15,7 +17,7 @@
 	} from '$lib/components/shared/actions';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateReservation from './CreateModal.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import {
 		IconCheck,
@@ -28,7 +30,7 @@
 		IconCircleX,
 		IconRepeat
 	} from '@tabler/icons-svelte';
-	import { formatDate, formatTimeRange, formatDurationAmount } from '$lib/utils/format';
+	import { formatDate, formatTimeRange, formatPaymentBreakdown } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -51,16 +53,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-		}, 300);
-	}
-
 	let filters = $derived({
 		tab,
 		search: searchDebounced || undefined,
@@ -77,8 +69,12 @@
 
 	let resolveOpen = $state(false);
 
-	function paymentStatus(r: Reservation): { label: string; color: string; icon: typeof IconCheck } {
-		switch (reservationPaymentState(r)) {
+	function paymentStatus(state: ReturnType<typeof reservationPaymentState>): {
+		label: string;
+		color: string;
+		icon: typeof IconCheck;
+	} {
+		switch (state) {
 			case 'no_show':
 				return { label: 'No-show', color: 'text-error', icon: IconUserX };
 			case 'refunded':
@@ -130,17 +126,18 @@
 <PageHeader title="Reservations">
 	<div class="flex gap-2">
 		{#await Promise.all([unresolved, counts])}
-			<button class="btn btn-sm btn-ghost" onclick={() => (resolveOpen = true)}>Resolve</button>
+			<Button variant="ghost" size="sm" onclick={() => (resolveOpen = true)}>Resolve</Button>
 		{:then [unresolvedData]}
-			<button
-				class="btn btn-sm {unresolvedData.length > 0 ? 'btn-warning' : 'btn-ghost'}"
+			<Button
+				variant={unresolvedData.length > 0 ? 'warning' : 'ghost'}
+				size="sm"
 				onclick={() => (resolveOpen = true)}
 			>
 				Resolve
 				{#if unresolvedData.length > 0}
 					<Badge>{unresolvedData.length}</Badge>
 				{/if}
-			</button>
+			</Button>
 		{/await}
 		<CreateReservation />
 	</div>
@@ -174,18 +171,19 @@
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
-				placeholder="Search member or band..."
-				value={searchText}
-				oninput={onSearchInput}
+			<SearchInput
+				bind:value={searchText}
+				placeholder="Search member, band, or event..."
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
 			/>
 		{/snippet}
 		<input
 			type="date"
 			aria-label="From date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
 				page = 1;
@@ -194,14 +192,14 @@
 		<input
 			type="date"
 			aria-label="To date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => {
 				page = 1;
 			}}
 		/>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Booked by"
 			value={bookerType}
 			onchange={(e: Event) => {
@@ -223,6 +221,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Reservation</th>
+					<th>Booker</th>
 					<th class="col-support cell-num">Payment</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -233,8 +232,8 @@
 					{#if label !== prevLabel}
 						<tr>
 							<td
-								colspan="4"
-								class="bg-base-200 px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60"
+								colspan="5"
+								class="bg-base-200 px-4 py-2 text-subtle font-semibold tracking-wide uppercase"
 							>
 								{label}
 							</td>
@@ -248,69 +247,52 @@
 						</td>
 
 						<!--
-							Primary cell: the time is the ordering key, the member is its
-							closest qualifier. These were two columns; merging them is what
-							lets the row fit a phone without hiding the actions.
+							Primary cell: the time is the ordering key, and the booker — a
+							band, an event, a lesson — qualifies it. A member booking for
+							themselves is the ordinary case and leaves this cell one line.
 							The day is not repeated — the group header above carries it.
 						-->
 						<td class="cell-primary">
-							<a
-								{href}
-								class="flex items-center gap-1 font-medium whitespace-nowrap hover:underline"
-							>
-								{formatTimeRange(r.startsAt, r.endsAt)}
+							<div class="flex items-center gap-1">
+								<a {href} class="font-medium whitespace-nowrap hover:underline">
+									{formatTimeRange(r.startsAt, r.endsAt)}
+								</a>
 								{#if r.recurringSeriesId}
 									<span class="tooltip" data-tip="Recurring">
 										<IconRepeat size={14} class="text-base-content" />
 									</span>
 								{/if}
-							</a>
-							<div class="flex min-w-0 items-center gap-1">
-								{#if r.bookerType !== 'user'}
-									<span class="tooltip" data-tip={r.bookerType}>
+								{#if r.bookerType === 'lesson'}
+									<!--
+										The one booker type with no record to point at, so the chip
+										beside it cannot say what this is. Every other type reads
+										off its own glyph in the Booker column.
+									-->
+									<span class="tooltip" data-tip="lesson">
 										<BookerTypeIcon type={r.bookerType} size={14} />
 									</span>
 								{/if}
-								{#if r.bookerType === 'band' && r.bandName}
-									<!--
-										The band owns the slot, so it is the subline; the member who
-										booked it is the qualifier after the middot.
-									-->
-									<a
-										href={resolve(`/staff/bands/${r.bandId}`)}
-										class="truncate font-medium hover:underline"
-									>
-										{r.bandName}
-									</a>
-									<span class="opacity-40">·</span>
-								{/if}
-								<!--
-									No email: the member is already the *subline* of this cell,
-									and a third line puts the row back over two. The email is one
-									click away on the reservation detail page.
-								-->
-								<MemberLink
-									variant="inline"
-									hideAvatar
-									member={{
-										name: r.memberName,
-										pronouns: r.memberPronouns,
-										role: r.memberRole,
-										sustaining: !!r.memberSustaining,
-										userId: r.createdByUserId
-									}}
-								/>
 							</div>
 						</td>
+
+						<!-- Member, band or event — the chip's glyph is what says which. -->
+						<td class="min-w-0"><EntityChip ref={r.booker} /></td>
 
 						<td class="col-support cell-num">
 							{#await hourlyRate then rate}
 								{#if r.bookerType === 'event'}
 									<span class="opacity-40">—</span>
 								{:else}
-									{@const ps = paymentStatus(r)}
+									{@const state = reservationPaymentState(r)}
+									{@const ps = paymentStatus(state)}
 									<span class="inline-flex items-center justify-end gap-1">
-										{formatDurationAmount(r.startsAt, r.endsAt, rate)}
+										<!-- Comped keeps its cash value on screen but strikes it, so the row
+										     still says what the room time was worth while reading as waived.
+										     A comped booking never carries credits: once credits are
+										     committed the row reports as `credits`, not `comped`. -->
+										<span class:line-through={state === 'comped'}>
+											{formatPaymentBreakdown(r.startsAt, r.endsAt, rate, r.creditsUsed)}
+										</span>
 										<span class="tooltip" data-tip={ps.label}>
 											<ps.icon size={16} class={ps.color} />
 										</span>
@@ -326,7 +308,10 @@
 										reservation={r}
 										staff
 										iconOnly
-										class="btn-ghost btn-sm btn-square latched"
+										variant="ghost"
+										size="sm"
+										shape="square"
+										class="latched"
 									>
 										{#snippet icon()}<IconCheck size={16} />{/snippet}
 									</ConfirmReservationAction>
@@ -335,7 +320,9 @@
 									<CompleteReservationAction
 										reservation={r}
 										iconOnly
-										class="btn-ghost btn-sm btn-square"
+										variant="ghost"
+										size="sm"
+										shape="square"
 									>
 										{#snippet icon()}<IconCircleCheck size={16} />{/snippet}
 									</CompleteReservationAction>

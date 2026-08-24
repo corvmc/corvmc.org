@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from './Button.svelte';
 	import { IconBell } from '@tabler/icons-svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
@@ -116,8 +117,10 @@
 <svelte:window onclick={handleClickOutside} />
 
 <div class="notification-bell-wrapper relative">
-	<button
-		class="btn btn-circle btn-ghost btn-sm"
+	<Button
+		variant="ghost"
+		size="sm"
+		shape="circle"
 		onclick={toggleDropdown}
 		aria-label="Notifications"
 	>
@@ -129,7 +132,7 @@
 				{unreadCount > 99 ? '99+' : unreadCount}
 			</span>
 		{/if}
-	</button>
+	</Button>
 
 	{#if open}
 		<div

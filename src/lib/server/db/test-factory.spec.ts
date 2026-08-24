@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mockUser, mockRole, mockStandardRoles, factory } from './test-factory';
-import { UserSchema } from './test-schemas';
-import { z } from 'zod';
+import { mockUser, mockRole, mockStandardRoles } from './test-factory';
 
 describe('mockUser', () => {
 	it('generates a user with all required fields', () => {
@@ -75,26 +73,5 @@ describe('mockStandardRoles', () => {
 		const roles = mockStandardRoles();
 
 		expect(roles.map((r) => r.id)).toEqual([1, 2, 3, 4]);
-	});
-});
-
-describe('factory.generate with arrays', () => {
-	it('generates multiple users', () => {
-		const users = factory.generate(z.array(UserSchema).min(5).max(5));
-
-		expect(users).toHaveLength(5);
-		const emails = users.map((u) => u.email);
-		// All emails should be unique
-		expect(new Set(emails).size).toBe(5);
-	});
-
-	it('produces deterministic output', () => {
-		const a = factory.generate(UserSchema);
-		const b = factory.generate(UserSchema);
-
-		// Same factory, same seed — calling generate on the same schema
-		// returns consistent data (the world is deterministic)
-		expect(a.id).toBeTruthy();
-		expect(b.id).toBeTruthy();
 	});
 });

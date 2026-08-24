@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Section from '$lib/components/shared/marketing/Section.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { page } from '$app/state';
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import MiniCalendar from '$lib/components/public/calendar/MiniCalendar.svelte';
@@ -65,77 +67,75 @@
 	/>
 </svelte:head>
 
-<section class="py-16 px-6">
-	<div class="max-w-5xl mx-auto">
-		<div class="text-center mb-10">
-			<h1 class="text-4xl font-bold tracking-tight mb-2" style="color: var(--cmc-navy)">Events</h1>
-			<p class="text-base" style="color: var(--fg-2)">
-				Shows at the Collective and gigs from our member bands around the region
+<Section>
+	<div class="text-center mb-10">
+		<h1 class="text-4xl font-bold tracking-tight mb-2 text-cmc-navy">Events</h1>
+		<p class="text-base text-fg-2">
+			Shows at the Collective and gigs from our member bands around the region
+		</p>
+	</div>
+
+	{#if showNotice}
+		<div
+			class="flex items-center justify-between gap-4 rounded-lg border px-4 py-3 mb-8"
+			style="border-color: var(--cmc-navy); color: var(--cmc-navy)"
+			role="status"
+		>
+			<p class="text-sm font-medium">
+				No show at the Collective tonight — here's what's coming up.
 			</p>
-		</div>
-
-		{#if showNotice}
-			<div
-				class="flex items-center justify-between gap-4 rounded-lg border px-4 py-3 mb-8"
-				style="border-color: var(--cmc-navy); color: var(--cmc-navy)"
-				role="status"
+			<button
+				type="button"
+				class="text-sm font-semibold underline shrink-0"
+				onclick={() => (dismissed = true)}
 			>
-				<p class="text-sm font-medium">
-					No show at the Collective tonight — here's what's coming up.
-				</p>
-				<button
-					type="button"
-					class="text-sm font-semibold underline shrink-0"
-					onclick={() => (dismissed = true)}
-				>
-					Dismiss
-				</button>
-			</div>
-		{/if}
+				Dismiss
+			</button>
+		</div>
+	{/if}
 
-		{#if upcoming.length > 0}
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-14">
-				{#each upcoming as evt (evt.id)}
-					<PosterCard
-						href="/events/{evt.id}"
-						title={evt.title}
-						posterUrl={evt.posterUrl}
-						startsAt={evt.startsAt}
-						ticketingEnabled={evt.ticketingEnabled}
-						ticketPrice={evt.ticketPrice}
-						externalTicketUrl={evt.externalTicketUrl}
-						tags={evt.tags}
-					/>
-				{/each}
-			</div>
-		{/if}
+	{#if upcoming.length > 0}
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-14">
+			{#each upcoming as evt (evt.id)}
+				<PosterCard
+					href="/events/{evt.id}"
+					title={evt.title}
+					posterUrl={evt.posterUrl}
+					startsAt={evt.startsAt}
+					ticketingEnabled={evt.ticketingEnabled}
+					ticketPrice={evt.ticketPrice}
+					externalTicketUrl={evt.externalTicketUrl}
+					tags={evt.tags}
+				/>
+			{/each}
+		</div>
+	{/if}
 
-		<div class="guide">
-			<aside class="guide__side">
-				<MiniCalendar anchor={from} />
-				{#if from !== today}
-					<a href="/events" class="btn btn-ghost btn-sm mt-3">← Back to today</a>
-				{/if}
-			</aside>
-			<div class="guide__main">
-				{#if allEvents.length === 0}
-					<div class="text-center py-12 opacity-60">
-						<p class="text-base">Nothing on the calendar yet. Check back soon!</p>
+	<div class="guide">
+		<aside class="guide__side">
+			<MiniCalendar anchor={from} />
+			{#if from !== today}
+				<Button href="/events" variant="ghost" size="sm" class="mt-3">← Back to today</Button>
+			{/if}
+		</aside>
+		<div class="guide__main">
+			{#if allEvents.length === 0}
+				<div class="text-center py-12 opacity-60">
+					<p class="text-base">Nothing on the calendar yet. Check back soon!</p>
+				</div>
+			{:else}
+				<GigList events={allEvents} />
+				{#if hasMore}
+					<div class="text-center mt-8">
+						<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
+							{loadingMore ? 'Loading…' : 'Show more'}
+						</Button>
 					</div>
-				{:else}
-					<GigList events={allEvents} />
-					{#if hasMore}
-						<div class="text-center mt-8">
-							<button type="button" class="btn btn-ghost" disabled={loadingMore} onclick={showMore}>
-								{loadingMore ? 'Loading…' : 'Show more'}
-							</button>
-						</div>
-					{/if}
 				{/if}
-			</div>
+			{/if}
 		</div>
 	</div>
-</section>
+</Section>
 
 <style>
 	.guide {

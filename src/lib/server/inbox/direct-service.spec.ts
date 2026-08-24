@@ -150,22 +150,31 @@ const isBlockedEitherWay = vi.fn(async () => false);
 const blockUser = vi.fn(async () => undefined);
 type Standing = {
 	status: 'none' | 'restricted' | 'disabled';
-	source: 'staff' | 'report' | 'member' | null;
 	reason: string | null;
+	triggeringFlagId: string | null;
 	updatedAt: Date | null;
 };
-const getMessagingStanding = vi.fn(
+const getStanding = vi.fn(
 	async (): Promise<Standing> => ({
 		status: 'none',
-		source: null,
 		reason: null,
+		triggeringFlagId: null,
 		updatedAt: null
 	})
 );
+// Reachability has two halves: a restriction (`getStanding`) and the member's
+// own switch (`user.accepts_direct_messages`, which rides along on the
+// recipient row). `messagingIsDisabled` is the one place they recombine.
+const messagingIsDisabled = vi.fn(async () => false);
+const acceptsDirectMessages = vi.fn(async () => true);
+vi.mock('$lib/server/moderation/standing-service', () => ({
+	getStanding: (...a: unknown[]) => getStanding(...(a as []))
+}));
 vi.mock('$lib/server/moderation/moderation-service', () => ({
 	isBlockedEitherWay: (...a: unknown[]) => isBlockedEitherWay(...(a as [])),
 	blockUser: (...a: unknown[]) => blockUser(...(a as [])),
-	getMessagingStanding: (...a: unknown[]) => getMessagingStanding(...(a as []))
+	messagingIsDisabled: (...a: unknown[]) => messagingIsDisabled(...(a as [])),
+	acceptsDirectMessages: (...a: unknown[]) => acceptsDirectMessages(...(a as []))
 }));
 
 const allowRateLimited = vi.fn(async () => true);
@@ -191,11 +200,13 @@ beforeEach(() => {
 	selectedFields = [];
 	isBlockedEitherWay.mockResolvedValue(false);
 	blockUser.mockResolvedValue(undefined);
+	messagingIsDisabled.mockResolvedValue(false);
+	acceptsDirectMessages.mockResolvedValue(true);
 	allowRateLimited.mockResolvedValue(true);
 	addPeerMessage.mockResolvedValue({ id: 'msg-1' });
-	getMessagingStanding.mockResolvedValue({
+	getStanding.mockResolvedValue({
 		status: 'none',
-		source: null,
+		triggeringFlagId: null,
 		reason: null,
 		updatedAt: null
 	});
@@ -206,7 +217,7 @@ const START = { senderId: 'alice', senderName: 'Alice', recipientId: 'bob', body
 /** Queue the reads a clean startDirectThread performs. */
 function happyStart() {
 	results = [
-		[{ id: 'bob' }], // recipient lookup
+		[{ id: 'bob', acceptsDirectMessages: true }], // recipient lookup
 		[{ count: 0 }], // countOutstandingSentRequests
 		[{ id: 'thread-new' }] // thread insert returning
 	];
@@ -221,9 +232,11 @@ describe('startDirectThread — every silent drop looks identical', () => {
 		results = [];
 		inserted = [];
 		isBlockedEitherWay.mockResolvedValue(false);
-		getMessagingStanding.mockResolvedValue({
+		messagingIsDisabled.mockResolvedValue(false);
+		acceptsDirectMessages.mockResolvedValue(true);
+		getStanding.mockResolvedValue({
 			status: 'none',
-			source: null,
+			triggeringFlagId: null,
 			reason: null,
 			updatedAt: null
 		});
@@ -235,35 +248,51 @@ describe('startDirectThread — every silent drop looks identical', () => {
 
 	it('returns the same thing whether blocked, unknown, hidden, or switched off', async () => {
 		const blocked = await outcomeWhen(() => {
-			results = [[{ id: 'bob' }]];
+			results = [[{ id: 'bob', acceptsDirectMessages: true }]];
 			isBlockedEitherWay.mockResolvedValue(true);
 		});
 		const unknownOrHidden = await outcomeWhen(() => {
 			results = [[]]; // recipient lookup finds nobody (deleted or hidden)
 		});
-		const switchedOff = await outcomeWhen(() => {
-			results = [[{ id: 'bob' }]];
-			getMessagingStanding.mockResolvedValue({
+		const switchedOffByStaff = await outcomeWhen(() => {
+			results = [[{ id: 'bob', acceptsDirectMessages: true }]];
+			getStanding.mockResolvedValue({
 				status: 'disabled',
-				source: 'staff',
+				triggeringFlagId: 'flag-1',
 				reason: 'under 18',
 				updatedAt: null
 			});
+		});
+		// The member's own preference is a different table from the standing, and
+		// deliberately indistinguishable from outside: telling a sender which one
+		// stopped them would leak either a moderation decision or a personal choice.
+		const switchedOffThemselves = await outcomeWhen(() => {
+			results = [[{ id: 'bob', acceptsDirectMessages: false }]];
 		});
 		const self = await outcomeWhen(() => {
 			results = [];
 		});
 
 		expect(blocked.result).toEqual(unknownOrHidden.result);
-		expect(blocked.result).toEqual(switchedOff.result);
+		expect(blocked.result).toEqual(switchedOffByStaff.result);
+		expect(blocked.result).toEqual(switchedOffThemselves.result);
 		expect(blocked.result).toEqual({ status: 'sent' });
 
 		// And none of them wrote anything.
-		for (const o of [blocked, unknownOrHidden, switchedOff]) {
+		for (const o of [blocked, unknownOrHidden, switchedOffByStaff, switchedOffThemselves]) {
 			expect(o.wrote).toBe(false);
 			expect(o.messaged).toBe(false);
 		}
 		void self;
+	});
+
+	it('stops a sender who switched their own messaging off, with no reason to give', async () => {
+		// They already know why — they did it. Distinct from a staff restriction,
+		// which quotes the note.
+		results = [[{ id: 'bob', acceptsDirectMessages: true }]];
+		acceptsDirectMessages.mockResolvedValue(false);
+		expect(await startDirectThread(START)).toEqual({ status: 'restricted', reason: null });
+		expect(inserted).toHaveLength(0);
 	});
 
 	it('refuses a self-addressed message without touching the database', async () => {
@@ -281,12 +310,17 @@ describe('startDirectThread — every silent drop looks identical', () => {
 
 describe('startDirectThread — the branches that DO report back', () => {
 	it('tells a restricted sender why, quoting the staff note', async () => {
-		results = [[{ id: 'bob' }]];
-		getMessagingStanding
-			.mockResolvedValueOnce({ status: 'none', source: null, reason: null, updatedAt: null }) // recipient
+		results = [[{ id: 'bob', acceptsDirectMessages: true }]];
+		getStanding
+			.mockResolvedValueOnce({
+				status: 'none',
+				reason: null,
+				triggeringFlagId: null,
+				updatedAt: null
+			}) // recipient
 			.mockResolvedValueOnce({
 				status: 'restricted',
-				source: 'report',
+				triggeringFlagId: 'flag-1',
 				reason: 'harassment',
 				updatedAt: null
 			}); // sender
@@ -297,7 +331,7 @@ describe('startDirectThread — the branches that DO report back', () => {
 	});
 
 	it('reports the pending-request cap', async () => {
-		results = [[{ id: 'bob' }], [{ count: 5 }]];
+		results = [[{ id: 'bob', acceptsDirectMessages: true }], [{ count: 5 }]];
 		expect(await startDirectThread(START)).toEqual({ status: 'too_many_pending' });
 		expect(inserted).toHaveLength(0);
 	});
@@ -305,13 +339,13 @@ describe('startDirectThread — the branches that DO report back', () => {
 	it('checks the exact database count before spending a rate-limit hit', async () => {
 		// DB truth first, KV backstop second — the reverse would burn the sender's
 		// daily allowance on a request that was never going to be created.
-		results = [[{ id: 'bob' }], [{ count: 5 }]];
+		results = [[{ id: 'bob', acceptsDirectMessages: true }], [{ count: 5 }]];
 		await startDirectThread(START);
 		expect(allowRateLimited).not.toHaveBeenCalled();
 	});
 
 	it('reports being rate limited', async () => {
-		results = [[{ id: 'bob' }], [{ count: 0 }]];
+		results = [[{ id: 'bob', acceptsDirectMessages: true }], [{ count: 0 }]];
 		allowRateLimited.mockResolvedValue(false);
 		expect(await startDirectThread(START)).toEqual({ status: 'rate_limited' });
 		expect(inserted).toHaveLength(0);
@@ -398,7 +432,14 @@ describe('replyToDirectThread', () => {
 		expect(built).toContain('isNotNull'); // caller has accepted
 		expect(built).toContain('accepted_at IS NOT NULL'); // counterpart has accepted
 		expect(built).toContain('user_block'); // no block either way
-		expect(built).toContain("ms.status = 'disabled'"); // nobody switched off
+		// Both halves of "switched off", and the table each lives in. Named
+		// explicitly because these are raw `sql` strings: #224 renamed
+		// messaging_standing to member_standing and nothing here or in the type
+		// checker noticed, so every list 500'd until it reached production.
+		expect(built).toContain('member_standing'); // staff switched them off…
+		expect(built).toContain("ms.status = 'disabled'");
+		expect(built).toContain('accepts_direct_messages'); // …or they did themselves
+		expect(built).not.toContain('messaging_standing');
 	});
 
 	it('refuses an empty body without querying', async () => {
@@ -526,13 +567,11 @@ describe('declineDirectThread', () => {
 });
 
 describe('acceptDirectThread', () => {
+	// Both halves of "switched off" go through messagingIsDisabled, so accepting
+	// is refused whether staff switched it off or the member did. Asserting on
+	// the standing directly here would pass vacuously.
 	it('refuses when the accepting member has messaging switched off', async () => {
-		getMessagingStanding.mockResolvedValue({
-			status: 'disabled',
-			source: 'staff',
-			reason: null,
-			updatedAt: null
-		});
+		messagingIsDisabled.mockResolvedValue(true);
 		expect(await acceptDirectThread('t1', 'alice')).toBe(false);
 	});
 

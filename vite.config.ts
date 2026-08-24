@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
+import { devPort, previewPort } from './scripts/lib/checkout-ports';
 const dirname =
 	typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,6 +22,12 @@ export default defineConfig({
 		sveltekit()
 	],
 	server: {
+		// The main checkout keeps 5173; a worktree gets a port of its own, derived
+		// from its path. See scripts/lib/checkout-ports.ts.
+		port: devPort(dirname),
+		// Never silently move up a port: landing on the next one up is how you end
+		// up reading a sibling worktree's app and wondering where your change went.
+		strictPort: true,
 		fs: {
 			// Worktrees under .claude/worktrees/ symlink node_modules to the main
 			// checkout. Vite's allow-list is rooted at the worktree, so requests that
@@ -28,6 +35,11 @@ export default defineConfig({
 			// hydrates. Allowing the realpath covers both layouts.
 			allow: [dirname, fs.realpathSync(path.resolve(dirname, 'node_modules'))]
 		}
+	},
+	preview: {
+		// Same split, and the number playwright.config.ts serves the suite on.
+		port: previewPort(dirname),
+		strictPort: true
 	},
 	test: {
 		expect: {
@@ -62,7 +74,13 @@ export default defineConfig({
 					// file. `drizzle-orm/sqlite-core` alone costs ~400ms to evaluate in a
 					// cold process, which the default `forks` pool re-paid 136 times.
 					pool: 'vmForks',
-					include: ['src/**/*.{test,spec}.{js,ts}', 'scripts/**/*.{test,spec}.{js,ts}'],
+					include: [
+						'src/**/*.{test,spec}.{js,ts}',
+						'scripts/**/*.{test,spec}.{js,ts}',
+						// Helpers the e2e suite runs outside Playwright. `*.e2e.ts` does not
+						// match `*.{test,spec}.ts`, so the Playwright specs stay out.
+						'e2e/**/*.{test,spec}.{js,ts}'
+					],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
 					server: {
 						deps: {

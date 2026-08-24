@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
@@ -12,6 +13,7 @@
 	import { getMemberDashboard } from '$lib/remote/users.remote';
 	import { creditsToHours } from '$lib/config';
 	import { resolve } from '$app/paths';
+	import { imageSrc } from '$lib/utils/images';
 
 	let data = $derived(await getMemberDashboard());
 
@@ -42,23 +44,23 @@
 
 	<!-- Quick links -->
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-		<Button href="/member/reservations" class="card bg-base-100 h-auto">
-			<div class="card-body flex-row items-center gap-3 py-4">
+		<Button href="/member/reservations" variant="default" class="card bg-base-100 h-auto">
+			<CardBody class="flex-row items-center gap-3 py-4">
 				<IconCalendarPlus size={24} class="text-primary" />
 				<span class="font-medium">Book a Session</span>
-			</div>
+			</CardBody>
 		</Button>
-		<Button href="/member/events" class="card bg-base-100 h-auto">
-			<div class="card-body flex-row items-center gap-3 py-4">
+		<Button href="/member/events" variant="default" class="card bg-base-100 h-auto">
+			<CardBody class="flex-row items-center gap-3 py-4">
 				<IconCalendarEvent size={24} class="text-primary" />
 				<span class="font-medium">Browse Events</span>
-			</div>
+			</CardBody>
 		</Button>
-		<Button href="/member/membership" class="card bg-base-100 h-auto">
-			<div class="card-body flex-row items-center gap-3 py-4">
+		<Button href="/member/membership" variant="default" class="card bg-base-100 h-auto">
+			<CardBody class="flex-row items-center gap-3 py-4">
 				<IconStar size={24} class="text-primary" />
 				<span class="font-medium">Manage Membership</span>
-			</div>
+			</CardBody>
 		</Button>
 	</div>
 
@@ -86,7 +88,7 @@
 												<span class="opacity-60">· {res.bandName}</span>
 											{/if}
 										</p>
-										<p class="text-xs opacity-60">
+										<p class="text-subtle">
 											{formatTimeRange(res.startsAt, res.endsAt)} · {formatDuration(
 												res.startsAt,
 												res.endsAt
@@ -114,16 +116,16 @@
 						value={data.usedThisMonth}
 						max={data.allocatedThisMonth || 1}
 					></progress>
-					<p class="text-xs opacity-60">
+					<p class="text-subtle">
 						{usedHours} of {allocatedHours} hours used this month
 					</p>
 				</div>
 			{:else}
 				<div class="space-y-3">
-					<p class="text-sm opacity-70">
+					<p class="text-muted">
 						Become a sustaining member to get free practice hours each month.
 					</p>
-					<Button href="/member/membership" class="btn-sm">Learn More</Button>
+					<Button href="/member/membership" variant="default" size="sm">Learn More</Button>
 				</div>
 			{/if}
 		</InfoCard>
@@ -145,14 +147,21 @@
 						class="card bg-base-200 transition-shadow hover:shadow-md"
 					>
 						{#if evt.posterUrl}
+							{@const poster = imageSrc(evt.posterUrl, 'poster')}
 							<figure>
-								<img src={evt.posterUrl} alt={evt.title} class="h-32 w-full object-cover" />
+								<img
+									src={poster.src}
+									srcset={poster.srcset}
+									sizes={poster.sizes}
+									alt={evt.title}
+									class="h-32 w-full object-cover"
+								/>
 							</figure>
 						{/if}
-						<div class="card-body p-3">
+						<CardBody class="p-3">
 							<p class="text-sm font-medium">{evt.title}</p>
-							<p class="text-xs opacity-60">{formatDate(evt.startsAt)}</p>
-						</div>
+							<p class="text-subtle">{formatDate(evt.startsAt)}</p>
+						</CardBody>
 					</a>
 				{/each}
 			</div>

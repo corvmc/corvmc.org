@@ -1,15 +1,17 @@
 import { db } from '$lib/server/db';
+import { DomainError } from '../domain-error';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import { band, bandMember, bandSlugHistory } from '$lib/server/db/schema/band';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { primaryRoleFor } from '$lib/server/authorization';
+import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject, uploadFile } from '$lib/server/storage';
+import { mediaKey } from '$lib/server/storage-keys';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { captureException } from '$lib/server/sentry';
 import { domainEvents } from '$lib/server/events/event-bus';
@@ -33,6 +35,27 @@ export interface UpdateMemberData {
 	role?: 'admin' | 'member';
 	position?: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Shared fragments
+// ---------------------------------------------------------------------------
+
+/**
+ * Active members of the band in the surrounding query, as a correlated scalar
+ * subquery.
+ *
+ * Three call sites each carried a copy of this written as a SQL string, which
+ * `pnpm check` cannot see inside: the table and column names went unverified,
+ * so a schema rename would compile cleanly and throw at runtime. Expressed
+ * through the query builder they are back under the type checker, and the
+ * duplication is gone with them.
+ *
+ * The subquery's own `FROM band_member` shadows the outer one in `listForUser`,
+ * which selects from the same table — correct, because the only correlation
+ * wanted here is on `band.id`.
+ */
+const activeMemberCount = () =>
+	db.$count(bandMember, and(eq(bandMember.bandId, band.id), eq(bandMember.status, 'active')));
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -66,7 +89,9 @@ export class OwnerCannotLeaveError extends Error {
 	}
 }
 
-export class BandTierManagedByStripeError extends Error {
+export class BandTierManagedByStripeError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('This band has an active Stripe subscription — change the tier in Stripe instead');
 		this.name = 'BandTierManagedByStripeError';
@@ -210,10 +235,7 @@ export async function listForUser(
 		avatarKey: band.avatarKey,
 		role: bandMember.role,
 		status: bandMember.status,
-		memberCount: sql<number>`(
-		select count(*) from band_member bm
-		where bm.band_id = ${band.id} and bm.status = 'active'
-	)`
+		memberCount: activeMemberCount()
 	}
 ) {
 	return db
@@ -225,19 +247,19 @@ export async function listForUser(
 }
 
 export async function getMembers(bandId: string) {
-	return db
+	const rows = await db
 		.select({
 			id: bandMember.id,
 			userId: bandMember.userId,
 			role: bandMember.role,
 			position: bandMember.position,
+			alias: bandMember.alias,
 			status: bandMember.status,
 			invitedById: bandMember.invitedById,
 			createdAt: bandMember.createdAt,
-			userName: user.name,
-			userEmail: user.email,
-			userPronouns: user.pronouns,
-			userRole: primaryRoleFor(user.id)
+			// Carries name, email, pronouns, image, role and sustaining status —
+			// a superset of the flat columns this used to select.
+			member: memberRefColumns()
 		})
 		.from(bandMember)
 		.innerJoin(user, eq(user.id, bandMember.userId))
@@ -246,6 +268,21 @@ export async function getMembers(bandId: string) {
 			sql`case ${bandMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
 			user.name
 		);
+
+	return rows.map((row) => ({
+		...row,
+		member: {
+			...toMemberRef(row.member),
+			// A stage name is this band's word for who this is, so it takes the
+			// title here — the account name stays on the member's own profile.
+			...(row.alias ? { title: row.alias } : {}),
+			// The position is what qualifies this person *in this band*, so it takes
+			// the subline where it exists and the email falls back to the member's own
+			// page. Both call sites used to print the email and the position on two
+			// separate lines, which is a third line on a two-line row.
+			subtitle: row.position ?? row.member.email
+		}
+	}));
 }
 
 export async function searchMembers(query: string, bandId: string) {
@@ -500,6 +537,44 @@ export async function updateMember(memberId: string, data: UpdateMemberData, ban
 	return db.update(bandMember).set(updates).where(scope);
 }
 
+export interface UpdateOwnMembershipData {
+	alias?: string | null;
+	position?: string | null;
+}
+
+/**
+ * A member editing their own row.
+ *
+ * Deliberately not `updateMember`: that one refuses any row whose role is
+ * 'owner', which is what stops an admin demoting the owner — but it would also
+ * lock an owner out of their own stage name. Role is not settable here at all,
+ * so that protection has nothing to protect.
+ *
+ * Scoped by `(bandId, userId)`, which is unique, and to an active membership:
+ * a pending invitee has not joined yet and has nothing to name.
+ */
+export async function updateOwnMembership(
+	bandId: string,
+	userId: string,
+	data: UpdateOwnMembershipData
+) {
+	const updates: Record<string, unknown> = {};
+	if (data.alias !== undefined) updates.alias = data.alias;
+	if (data.position !== undefined) updates.position = data.position;
+	if (Object.keys(updates).length === 0) return;
+
+	return db
+		.update(bandMember)
+		.set(updates)
+		.where(
+			and(
+				eq(bandMember.bandId, bandId),
+				eq(bandMember.userId, userId),
+				eq(bandMember.status, 'active')
+			)
+		);
+}
+
 export async function transferOwnership(bandId: string, newOwnerId: string, actorId: string) {
 	const [target] = await db
 		.select({ status: bandMember.status })
@@ -581,12 +656,11 @@ export async function listAll(
 			name: band.name,
 			slug: band.slug,
 			ownerId: band.ownerId,
-			ownerName: user.name,
+			// Two records per row: the band the row is, and the member who owns it.
+			ref: bandRefColumns(),
+			owner: memberRefColumns(),
 			tier: band.tier,
-			memberCount: sql<number>`(
-				select count(*) from band_member bm
-				where bm.band_id = ${band.id} and bm.status = 'active'
-			)`,
+			memberCount: activeMemberCount(),
 			createdAt: band.createdAt,
 			deletedAt: band.deletedAt
 		})
@@ -602,7 +676,11 @@ export async function listAll(
 		.innerJoin(user, eq(user.id, band.ownerId))
 		.where(where);
 
-	return paginate(dataQ, countQ, pagination);
+	const { rows, pagination: page } = await paginate(dataQ, countQ, pagination);
+	return {
+		rows: rows.map((r) => ({ ...r, ref: toBandRef(r.ref), owner: toMemberRef(r.owner) })),
+		pagination: page
+	};
 }
 
 export async function getByIdWithDetails(bandId: string) {
@@ -613,26 +691,20 @@ export async function getByIdWithDetails(bandId: string) {
 			slug: band.slug,
 			bio: band.bio,
 			ownerId: band.ownerId,
-			ownerName: user.name,
-			ownerEmail: user.email,
-			ownerPronouns: user.pronouns,
-			ownerRole: primaryRoleFor(user.id),
+			owner: memberRefColumns(),
 			avatarKey: band.avatarKey,
 			tier: band.tier,
 			subscription: band.subscription,
 			createdAt: band.createdAt,
 			updatedAt: band.updatedAt,
 			deletedAt: band.deletedAt,
-			memberCount: sql<number>`(
-				select count(*) from band_member bm
-				where bm.band_id = ${band.id} and bm.status = 'active'
-			)`
+			memberCount: activeMemberCount()
 		})
 		.from(band)
 		.innerJoin(user, eq(user.id, band.ownerId))
 		.where(eq(band.id, bandId));
 
-	return row ?? null;
+	return row ? { ...row, owner: toMemberRef(row.owner) } : null;
 }
 
 export async function deactivate(bandId: string) {
@@ -723,12 +795,6 @@ export async function getUserRole(bandId: string, userId: string): Promise<BandR
 // Avatar
 // ---------------------------------------------------------------------------
 
-const AVATAR_EXTENSIONS: Record<string, string> = {
-	'image/jpeg': 'jpg',
-	'image/png': 'png',
-	'image/webp': 'webp'
-};
-
 /** Upload a band avatar to storage and persist its key. */
 export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, contentType: string) {
 	const [row] = await db
@@ -746,8 +812,7 @@ export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, content
 		}
 	}
 
-	const ext = AVATAR_EXTENSIONS[contentType] ?? 'jpg';
-	const key = `bands/avatars/${bandId}.${ext}`;
+	const key = mediaKey('bands/avatars', bandId, contentType);
 	await uploadFile(buffer, key, contentType);
 
 	await db.update(band).set({ avatarKey: key, updatedAt: new Date() }).where(eq(band.id, bandId));

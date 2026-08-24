@@ -120,8 +120,7 @@ describe('VolunteerReportService', () => {
 				[
 					{
 						userId: 'u1',
-						userName: 'Ada',
-						userEmail: 'ada@example.com',
+						member: { id: 'u1', name: 'Ada', email: 'ada@example.com' },
 						minutes: '300',
 						logCount: '3',
 						lastWorkedOn: workedOnSeconds
@@ -131,10 +130,9 @@ describe('VolunteerReportService', () => {
 			];
 
 			const result = await getHoursByMember();
-			expect(result.rows[0]).toEqual({
+			expect(result.rows[0]).toMatchObject({
 				userId: 'u1',
-				userName: 'Ada',
-				userEmail: 'ada@example.com',
+				member: { type: 'member', id: 'u1', title: 'Ada', subtitle: 'ada@example.com' },
 				minutes: 300,
 				logCount: 3,
 				lastWorkedOn: new Date(workedOnSeconds * 1000)
@@ -148,8 +146,7 @@ describe('VolunteerReportService', () => {
 				[
 					{
 						userId: 'u1',
-						userName: 'Ada',
-						userEmail: 'a@e.com',
+						member: { id: 'u1', name: 'Ada', email: 'a@e.com' },
 						minutes: 60,
 						logCount: 9,
 						lastWorkedOn: 1_770_000_000

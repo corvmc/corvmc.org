@@ -5,6 +5,7 @@ import { band } from '$lib/server/db/schema/band';
 import { eq } from 'drizzle-orm';
 import { getUserRole } from '$lib/server/band/band-service';
 import { uploadFile, deleteObject, validateUpload } from '$lib/server/storage';
+import { mediaKey } from '$lib/server/storage-keys';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -15,15 +16,6 @@ async function requireAdminOfBand(bandId: string, userId: string) {
 	if (!role || (role !== 'owner' && role !== 'admin')) {
 		throw error(403, 'Only owners and admins can manage the avatar');
 	}
-}
-
-function extensionFromType(contentType: string): string {
-	const map: Record<string, string> = {
-		'image/jpeg': 'jpg',
-		'image/png': 'png',
-		'image/webp': 'webp'
-	};
-	return map[contentType] ?? 'jpg';
 }
 
 // ---------------------------------------------------------------------------
@@ -60,8 +52,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	}
 
 	const buffer = await file.arrayBuffer();
-	const ext = extensionFromType(file.type);
-	const key = `bands/avatars/${bandId}.${ext}`;
+	const key = mediaKey('bands/avatars', bandId, file.type);
 
 	await uploadFile(buffer, key, file.type);
 

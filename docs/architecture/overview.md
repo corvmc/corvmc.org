@@ -392,7 +392,7 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 otherwise the default. **Feature flags** are just `feature.*` config keys, wrapped by
 `src/lib/server/feature-flags.ts` (`isFeatureEnabled`, `getAllFeatureFlags`,
 `requireFeature` — the latter 404s so a disabled feature is indistinguishable from a
-missing page). Current flags: `staffInbox`, `bandPremium`, `bandReservations`,
+missing page). Current flags: `staffInbox`, `bandPremium`,
 `emailMarketing`, `equipment`, `helpArticles`, `contentFlags`.
 
 A flag gates the **member, band and public** surfaces only. The staff panel ignores flags

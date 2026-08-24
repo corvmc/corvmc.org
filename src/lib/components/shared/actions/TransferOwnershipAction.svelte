@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { transferOwnership } from '$lib/remote/bands.remote';
 
@@ -9,13 +10,17 @@
 		bandId,
 		newOwnerId,
 		name,
-		class: className = 'btn-ghost btn-xs',
+		variant = 'ghost',
+		size = 'xs',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		bandId: string;
 		newOwnerId: string;
 		name: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -27,6 +32,8 @@
 	label="Make owner"
 	modalTitle="Confirm"
 	successToast="Ownership transferred"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

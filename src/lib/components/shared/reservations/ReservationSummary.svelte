@@ -31,15 +31,15 @@
 
 <div class={className}>
 	<p class="font-medium">{format(reservation.startsAt, 'PPP')}</p>
-	<p class="text-sm opacity-70">
+	<p class="text-muted">
 		{format(reservation.startsAt, 'p')} – {format(reservation.endsAt, 'p')} · {formatHours(
 			durationHours
 		)}
 	</p>
 	{#if reservation.price === 0}
-		<p class="text-sm opacity-70">Covered by credits</p>
+		<p class="text-muted">Covered by credits</p>
 	{:else if reservation.price != null}
-		<p class="text-sm opacity-70">
+		<p class="text-muted">
 			{reservation.price.toLocaleString(undefined, { style: 'currency', currency: 'USD' })} ·
 			{#if reservation.refundedAt}
 				Refunded {format(reservation.refundedAt, 'PP')}
@@ -59,6 +59,6 @@
 		<p class="text-sm font-medium text-success">Free hours available — applied at checkout</p>
 	{/if}
 	{#if member?.name}
-		<p class="text-sm opacity-70">{member.name}</p>
+		<p class="text-muted">{member.name}</p>
 	{/if}
 </div>

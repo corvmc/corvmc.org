@@ -38,7 +38,7 @@ describe('ThreadComposer', () => {
 		const textarea = page.getByRole('textbox');
 		await textarea.fill('Following up on the PA question');
 
-		await page.getByRole('radio', { name: 'Internal note' }).click();
+		await page.getByRole('tab', { name: 'Internal note' }).click();
 
 		await expect.element(textarea).toHaveValue('Following up on the PA question');
 		await expect.element(page.getByRole('button', { name: 'Add Note' })).toBeVisible();
@@ -76,7 +76,7 @@ describe('ThreadComposer', () => {
 			replyBlockedReason: 'No contact email on this conversation.'
 		});
 
-		await page.getByRole('radio', { name: 'Reply' }).click();
+		await page.getByRole('tab', { name: 'Reply' }).click();
 
 		await expect.element(page.getByRole('button', { name: 'Add Note' })).toBeVisible();
 	});

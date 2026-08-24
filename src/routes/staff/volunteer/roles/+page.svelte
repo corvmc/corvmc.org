@@ -135,7 +135,7 @@
 								<td class="cell-primary">
 									<a {href} class="truncate font-medium">{role.name}</a>
 									{#if role.description}
-										<div class="truncate text-xs opacity-60" title={role.description}>
+										<div class="truncate text-subtle" title={role.description}>
 											{role.description}
 										</div>
 									{/if}

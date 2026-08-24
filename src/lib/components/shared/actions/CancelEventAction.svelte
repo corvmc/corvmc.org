@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { cancelEvent } from '$lib/remote/events.remote';
 
@@ -7,11 +8,17 @@
 
 	let {
 		eventId,
-		class: className = 'btn-error btn-outline btn-sm',
+		variant = 'error',
+		size = 'sm',
+		outline = true,
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		eventId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
+		outline?: boolean;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -23,6 +30,9 @@
 	label="Cancel Event"
 	modalTitle="Cancel Event"
 	successToast="Cancelled"
+	{variant}
+	{size}
+	{outline}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

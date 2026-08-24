@@ -43,10 +43,12 @@
 		<h3 class="text-lg font-bold">Unsaved changes</h3>
 		<p class="py-4">You have unsaved changes. Are you sure you want to leave?</p>
 		<div class="modal-action">
-			<Button type="button" class="" onclick={() => confirmModal?.close()}>Keep editing</Button>
+			<Button type="button" variant="default" onclick={() => confirmModal?.close()}
+				>Keep editing</Button
+			>
 			<Button
 				type="button"
-				class="btn-error"
+				variant="error"
 				onclick={() => {
 					confirmModal?.close();
 					pendingNavigation?.();

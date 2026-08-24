@@ -5,6 +5,7 @@ import { bandMedia } from '$lib/server/db/schema/band-page';
 import { eq, and, max } from 'drizzle-orm';
 import { getUserRole } from '$lib/server/band/band-service';
 import { uploadFile, deleteObject } from '$lib/server/storage';
+import { extensionForType } from '$lib/server/storage-keys';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -26,17 +27,6 @@ async function requireAdminOfBand(bandId: string, userId: string) {
 	if (!role || (role !== 'owner' && role !== 'admin')) {
 		throw error(403, 'Only owners and admins can manage band media');
 	}
-}
-
-function extensionFromType(contentType: string): string {
-	const map: Record<string, string> = {
-		'image/jpeg': 'jpg',
-		'image/png': 'png',
-		'image/webp': 'webp',
-		'image/gif': 'gif',
-		'application/pdf': 'pdf'
-	};
-	return map[contentType] ?? 'jpg';
 }
 
 // ---------------------------------------------------------------------------
@@ -114,7 +104,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	for (const file of files) {
 		const buffer = await file.arrayBuffer();
-		const ext = extensionFromType(file.type);
+		const ext = extensionForType(file.type);
 		const fileId = crypto.randomUUID();
 		const key = `bands/${bandId}/media/${mediaType}/${fileId}.${ext}`;
 

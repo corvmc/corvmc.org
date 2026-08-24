@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
+	import type { EntityRef } from '$lib/types/entity';
 	import Action from '$lib/components/shared/Action.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
@@ -20,7 +22,7 @@
 	}: {
 		suggestion: {
 			id: string;
-			title: string;
+			ref: EntityRef;
 			body: string;
 			category: string;
 			status: string;
@@ -42,7 +44,7 @@
 </script>
 
 <li class="card bg-base-100 shadow">
-	<div class="card-body flex-row items-start gap-4 p-4">
+	<CardBody padding="sm" class="flex-row items-start gap-4">
 		<!-- The vote control is a Form whose only field is hidden. SubmitButton has
 		     no dirty gate, so a fields-free form still submits. -->
 		<Form remote={vote} class="shrink-0" onsuccess={onchanged}>
@@ -63,12 +65,7 @@
 					{suggestionCategoryLabels[suggestion.category as keyof typeof suggestionCategoryLabels] ??
 						suggestion.category}
 				</Badge>
-				<a
-					href={resolve(`/member/suggestions/${suggestion.id}`)}
-					class="truncate font-medium hover:underline"
-				>
-					{suggestion.title}
-				</a>
+				<EntityIdentity ref={suggestion.ref} class="min-w-0" />
 				{#if suggestion.status !== 'open'}
 					<span class="shrink-0"><StatusBadge status={suggestion.status} label /></span>
 				{/if}
@@ -83,7 +80,7 @@
 				</p>
 			{/if}
 
-			<p class="text-sm opacity-60">
+			<p class="text-muted">
 				{suggestion.authorName ?? 'A former member'} · {relativeDay(suggestion.createdAt)}
 			</p>
 		</div>
@@ -96,13 +93,15 @@
 				modalTitle="Flag for review"
 				submitLabel="Send report"
 				successToast="Reported — staff will take a look"
-				class="btn-ghost btn-xs shrink-0"
+				variant="ghost"
+				size="xs"
+				class="shrink-0"
 				onsuccess={onchanged}
 			>
 				{#snippet icon()}<IconFlag size={16} />{/snippet}
 				{#snippet form()}
 					<input {...flag.fields.suggestionId.as('hidden', suggestion.id)} />
-					<p class="mb-3 text-sm opacity-70">
+					<p class="mb-3 text-muted">
 						This takes the suggestion off the board straight away while staff look at it. If they
 						don't agree with the report, it goes back up.
 					</p>
@@ -111,5 +110,5 @@
 				{/snippet}
 			</Action>
 		{/if}
-	</div>
+	</CardBody>
 </li>

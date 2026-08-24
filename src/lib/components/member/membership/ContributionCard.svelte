@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import { formatDollars } from '$lib/utils/format';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { IconCreditCard } from '@tabler/icons-svelte';
@@ -27,7 +30,7 @@
 
 	const amountPerMonth = $derived(subscription.quantity * DOLLARS_PER_UNIT);
 	const feeAmount = $derived(
-		(calculateTotalWithFeeCoverage(amountPerMonth * 100).feeCents / 100).toFixed(2)
+		formatDollars(calculateTotalWithFeeCoverage(amountPerMonth * 100).feeCents)
 	);
 	const nextBilling = $derived(
 		subscription.currentPeriodEnd.toLocaleDateString('en-US', {
@@ -38,15 +41,15 @@
 	);
 </script>
 
-<div class="card bg-base-100 shadow-sm">
-	<div class="card-body">
+<Card>
+	<CardBody>
 		<div class="flex items-center gap-4">
 			<div class="flex size-12 items-center justify-center rounded-full bg-primary/10">
 				<IconCreditCard size={24} class="text-primary" />
 			</div>
 			<div>
 				<h3 class="text-xl font-semibold">Your Contribution</h3>
-				<p class="text-sm opacity-60">Manage your monthly support</p>
+				<p class="text-muted">Manage your monthly support</p>
 			</div>
 		</div>
 
@@ -58,18 +61,20 @@
 						<Badge variant="secondary">+ ${feeAmount} fees covered</Badge>
 					{/if}
 				</div>
-				<p class="mt-1 text-sm opacity-60">Next bill {nextBilling}</p>
+				<p class="mt-1 text-muted">Next bill {nextBilling}</p>
 			</div>
 		</div>
 
 		<div class="mt-4 flex flex-wrap gap-2">
-			<Button class="btn-sm btn-outline" onclick={() => (modalOpen = true)}>Modify Amount</Button>
+			<Button variant="default" size="sm" outline onclick={() => (modalOpen = true)}
+				>Modify Amount</Button
+			>
 			{#if billingPortalUrl}
-				<Button href={billingPortalUrl} class="btn-sm btn-outline">Manage Billing</Button>
+				<Button href={billingPortalUrl} variant="default" size="sm" outline>Manage Billing</Button>
 			{/if}
 		</div>
-	</div>
-</div>
+	</CardBody>
+</Card>
 
 <Modal bind:open={modalOpen} title="Update Contribution">
 	<SubscriptionForm

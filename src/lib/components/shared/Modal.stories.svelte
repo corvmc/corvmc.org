@@ -1,4 +1,5 @@
 <script module lang="ts">
+	import Button from './Button.svelte';
 	import type { ComponentProps } from 'svelte';
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import Modal from './Modal.svelte';
@@ -15,8 +16,8 @@
 	<Modal {...args}>
 		<p>Are you sure you want to cancel this reservation? This cannot be undone.</p>
 		<div class="modal-action">
-			<button class="btn btn-ghost">Keep it</button>
-			<button class="btn btn-error">Cancel reservation</button>
+			<Button variant="ghost">Keep it</Button>
+			<Button variant="error">Cancel reservation</Button>
 		</div>
 	</Modal>
 {/snippet}

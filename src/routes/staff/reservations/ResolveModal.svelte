@@ -1,11 +1,14 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { IconCheck } from '@tabler/icons-svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { CashReceivedAction, NoShowReservationAction } from '$lib/components/shared/actions';
 	import { invalidateAll } from '$app/navigation';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
+	import type { MemberRef } from '$lib/types/entity';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { formatDate, formatTimeRange } from '$lib/utils/format';
+	import { formatCents, formatDate, formatTimeRange } from '$lib/utils/format';
 
 	let {
 		open = $bindable(false),
@@ -20,10 +23,7 @@
 			endsAt: Date;
 			createdByUserId: string;
 			notes: string | null;
-			memberName: string;
-			memberEmail: string;
-			memberPronouns: string | null;
-			memberRole: string | null;
+			member: MemberRef;
 			cashDueCents: number | null;
 		}>;
 		hourlyRateCents: number;
@@ -33,7 +33,7 @@
 		const hrs = (r.endsAt.getTime() - r.startsAt.getTime()) / (1000 * 60 * 60);
 		const dueCents = r.cashDueCents ?? Math.round(hrs * hourlyRateCents);
 		const hrsLabel = hrs === 1 ? '1 hr' : `${hrs} hrs`;
-		return `${hrsLabel} · $${(dueCents / 100).toFixed(2)} due`;
+		return `${hrsLabel} · ${formatCents(dueCents)} due`;
 	}
 
 	let resolved = $state<Set<string>>(new Set());
@@ -70,35 +70,28 @@
 	{:else}
 		<div class="space-y-3 max-h-96 overflow-y-auto">
 			{#each visible as r (r.id)}
-				<div class="card bg-base-100 border border-base-300">
-					<div class="card-body p-4">
+				<Card bordered>
+					<CardBody padding="sm">
 						<div class="flex justify-between mb-2">
-							<div>
-								<MemberLink
-									member={{
-										name: r.memberName,
-										email: r.memberEmail,
-										pronouns: r.memberPronouns,
-										role: r.memberRole
-									}}
-								/>
-							</div>
+							<EntityIdentity ref={r.member} size="md" />
 							<div class="text-right">
 								<p class="text-sm">{formatDate(r.startsAt)}</p>
-								<p class="text-sm opacity-60">{formatTimeRange(r.startsAt, r.endsAt)}</p>
-								<p class="text-sm opacity-60">{dueLabel(r)}</p>
+								<p class="text-muted">{formatTimeRange(r.startsAt, r.endsAt)}</p>
+								<p class="text-muted">{dueLabel(r)}</p>
 							</div>
 						</div>
 						<div class="flex justify-end gap-2">
 							<CashReceivedAction reservation={r} onsuccess={() => markResolved(r.id)} />
 							<NoShowReservationAction
 								reservation={r}
-								class="btn-error btn-outline btn-sm"
+								variant="error"
+								size="sm"
+								outline
 								onsuccess={() => markResolved(r.id)}
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/each}
 		</div>
 	{/if}

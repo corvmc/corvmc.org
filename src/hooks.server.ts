@@ -49,9 +49,15 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	}
 	const session = await auth.api.getSession({ headers: event.request.headers });
 
-	// Deactivated users (soft-deleted, `deletedAt` set) are treated as anonymous.
-	// The session row is left intact in the DB; it's inert because every request
-	// re-resolves through this gate. Layout auth gates then redirect to login.
+	// Deactivated users (soft-deleted, `deletedAt` set) are treated as anonymous;
+	// layout auth gates then redirect to login.
+	//
+	// This gate is no longer instantaneous. `session.cookieCache` (auth.ts) lets
+	// better-auth answer from the signed cookie without a DB read, so a session
+	// deactivateUser has already purged still resolves here until that cookie ages
+	// out — up to its 60s maxAge, and `deletedAt` is cached along with it. That
+	// window is the deliberate price of dropping a per-request read
+	// (JAVASCRIPT-SVELTEKIT-2B); anything longer is not.
 	if (session && !session.user.deletedAt) {
 		event.locals.session = session.session;
 		event.locals.user = session.user;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
@@ -8,7 +9,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import PaymentMethodIcon from '$lib/components/shared/PaymentMethodIcon.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { getStaffPayments } from '$lib/remote/users.remote';
 	import { formatDateTimeShort, formatCents } from '$lib/utils/format';
@@ -23,16 +24,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-		}, 300);
-	}
-
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		method: method || undefined,
@@ -71,16 +62,17 @@
 	</p>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search name or email..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
 			/>
 		{/snippet}
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Method"
 			value={method}
 			onchange={(e: Event) => {
@@ -93,7 +85,7 @@
 			<option value="Credits">Credits</option>
 		</Select>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Status"
 			value={status}
 			onchange={(e: Event) => {
@@ -108,7 +100,7 @@
 		<input
 			type="date"
 			aria-label="From date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
 				page = 1;
@@ -117,7 +109,7 @@
 		<input
 			type="date"
 			aria-label="To date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => {
 				page = 1;
@@ -141,10 +133,7 @@
 					<tr class="hover">
 						<td class="w-px"><StatusBadge status={p.status} /></td>
 						<td class="cell-primary">
-							<MemberLink
-								variant="inline"
-								member={{ name: p.userName ?? '', email: p.userEmail, userId: p.userId }}
-							/>
+							<EntityIdentity ref={p.member} />
 						</td>
 						<td class="cell-num font-medium">{formatCents(p.amountCents)}</td>
 						<td class="col-support w-px">
@@ -157,7 +146,7 @@
 							<div class="flex items-center gap-2">
 								<CopyableId value={p.id} label="Stripe" />
 								{#if p.reservationId}
-									<Button href="/staff/reservations/{p.reservationId}" class="btn-ghost btn-xs">
+									<Button href="/staff/reservations/{p.reservationId}" variant="ghost" size="xs">
 										View reservation
 									</Button>
 								{/if}

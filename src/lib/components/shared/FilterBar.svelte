@@ -55,7 +55,7 @@
 		<div class="hidden w-full flex-wrap items-end gap-2 peer-checked:flex @lg:contents">
 			{@render children()}
 			{#if activeCount > 0 && onclear}
-				<Button class="btn-ghost btn-sm" onclick={onclear}>Clear</Button>
+				<Button variant="ghost" size="sm" onclick={onclear}>Clear</Button>
 			{/if}
 		</div>
 	{/if}

@@ -28,7 +28,12 @@
 		{#if totalPages > 1}
 			<div class="join">
 				{#if page > 1}
-					<Button onclick={() => onpage(page - 1)} class="join-item" aria-label="Previous page">
+					<Button
+						onclick={() => onpage(page - 1)}
+						variant="default"
+						class="join-item"
+						aria-label="Previous page"
+					>
 						«
 					</Button>
 				{/if}
@@ -39,6 +44,7 @@
 					{:else}
 						<Button
 							onclick={() => onpage(item)}
+							variant="default"
 							class="join-item {item === page ? 'btn-active' : ''}"
 							aria-current={item === page ? 'page' : undefined}
 						>
@@ -48,7 +54,12 @@
 				{/each}
 
 				{#if page < totalPages}
-					<Button onclick={() => onpage(page + 1)} class="join-item" aria-label="Next page">
+					<Button
+						onclick={() => onpage(page + 1)}
+						variant="default"
+						class="join-item"
+						aria-label="Next page"
+					>
 						»
 					</Button>
 				{/if}
@@ -56,7 +67,7 @@
 		{/if}
 
 		{#if range}
-			<p class="text-sm opacity-60 tnums">
+			<p class="text-muted tnums">
 				Showing {range.from}–{range.to} of {total}
 			</p>
 		{/if}

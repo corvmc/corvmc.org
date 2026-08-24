@@ -3,6 +3,8 @@ import { volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, gte, lte, desc, count, sql, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import type { MemberRef } from '$lib/types/entity';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -59,8 +61,7 @@ export async function getVolunteerTotals(range: ReportRange = {}): Promise<Volun
 
 export interface MemberHours {
 	userId: string;
-	userName: string;
-	userEmail: string;
+	member: MemberRef;
 	minutes: number;
 	logCount: number;
 	lastWorkedOn: Date;
@@ -75,8 +76,7 @@ export async function getHoursByMember(
 	const dataQ = db
 		.select({
 			userId: volunteerHourLog.userId,
-			userName: user.name,
-			userEmail: user.email,
+			member: memberRefColumns(),
 			minutes: sumMinutes,
 			logCount: count(),
 			lastWorkedOn: sql<number>`max(${volunteerHourLog.workedOn})`
@@ -101,8 +101,7 @@ export async function getHoursByMember(
 		...result,
 		rows: result.rows.map((row) => ({
 			userId: row.userId,
-			userName: row.userName,
-			userEmail: row.userEmail,
+			member: toMemberRef(row.member),
 			minutes: Number(row.minutes),
 			logCount: Number(row.logCount),
 			// max() over a timestamp column comes back as the raw unix seconds.

@@ -38,19 +38,22 @@
 					value={link.label}
 					oninput={(e) => updateLink(i, 'label', e.currentTarget.value)}
 					placeholder="Label (e.g. My SoundCloud)"
-					class="input-bordered input input-sm w-full"
+					class="input input-sm w-full"
 				/>
 				<input
 					type="url"
 					value={link.url}
 					oninput={(e) => updateLink(i, 'url', e.currentTarget.value)}
 					placeholder="https://..."
-					class="input-bordered input input-sm w-full"
+					class="input input-sm w-full"
 				/>
 			</div>
 			<Button
 				type="button"
-				class="btn-ghost btn-sm btn-square text-error mt-1"
+				variant="ghost"
+				size="sm"
+				shape="square"
+				class="text-error mt-1"
 				aria-label="Remove link"
 				onclick={() => removeLink(i)}
 			>
@@ -58,7 +61,7 @@
 			</Button>
 		</div>
 	{/each}
-	<Button type="button" class="btn-outline btn-sm gap-1" onclick={addLink}>
+	<Button type="button" variant="default" size="sm" outline class="gap-1" onclick={addLink}>
 		<IconPlus size={16} /> Add link
 	</Button>
 </div>

@@ -3,6 +3,8 @@ import { user } from '$lib/server/db/schema/authentication';
 import { creditTransaction } from '$lib/server/db/schema/finance';
 import { eq, and, sql, gt, gte, lte, desc, like, or, count, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import type { MemberRef } from '$lib/types/entity';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { creditTypeConfig, DEFAULT_TIMEZONE } from '$lib/config';
 import {
@@ -310,8 +312,8 @@ const TZ = DEFAULT_TIMEZONE;
 export interface CreditTransactionRow {
 	id: number;
 	userId: string;
-	userName: string | null;
-	userEmail: string;
+	/** Who the credit moved for, ready to render. The join is already here. */
+	member: MemberRef;
 	creditType: string;
 	amount: number;
 	balanceAfter: number;
@@ -367,11 +369,17 @@ function buildTransactionFilters(filters: CreditTransactionFilters): SQL[] {
 	return conditions;
 }
 
-const transactionSelect = {
+/**
+ * A function rather than a const: `memberRefColumns` reaches
+ * `subscription-service`, which reaches back here through `payment-service`.
+ * Evaluated at module scope that cycle bites — the import is still
+ * uninitialised when this file is first evaluated. Called per query, it does
+ * not.
+ */
+const transactionSelect = () => ({
 	id: creditTransaction.id,
 	userId: creditTransaction.userId,
-	userName: user.name,
-	userEmail: user.email,
+	member: memberRefColumns(),
 	creditType: creditTransaction.creditType,
 	amount: creditTransaction.amount,
 	balanceAfter: creditTransaction.balanceAfter,
@@ -379,7 +387,7 @@ const transactionSelect = {
 	sourceId: creditTransaction.sourceId,
 	description: creditTransaction.description,
 	createdAt: creditTransaction.createdAt
-};
+});
 
 export async function listTransactions(
 	filters: CreditTransactionFilters = {},
@@ -389,7 +397,7 @@ export async function listTransactions(
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
 
 	const dataQ = db
-		.select(transactionSelect)
+		.select(transactionSelect())
 		.from(creditTransaction)
 		.innerJoin(user, eq(user.id, creditTransaction.userId))
 		.where(where)
@@ -407,6 +415,7 @@ export async function listTransactions(
 		...result,
 		rows: result.rows.map((row) => ({
 			...row,
+			member: toMemberRef(row.member),
 			createdAt: row.createdAt.toISOString()
 		}))
 	};

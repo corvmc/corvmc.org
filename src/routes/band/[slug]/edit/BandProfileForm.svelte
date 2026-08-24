@@ -7,6 +7,9 @@
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+	import { env } from '$env/dynamic/public';
+	import { resolve } from '$app/paths';
 	import RichTextEditor from '$lib/components/shared/Form/RichTextEditor.svelte';
 	import LinkListEditor from '$lib/components/shared/Form/LinkListEditor.svelte';
 	import VisibilityField from '$lib/components/shared/Form/VisibilityField.svelte';
@@ -25,14 +28,18 @@
 	let {
 		band,
 		profile,
-		genreSuggestions
+		genreSuggestions,
+		isOwner = false
 	}: {
 		band: Awaited<ReturnType<typeof getBandLayout>>['band'];
 		profile: Awaited<ReturnType<typeof getBandProfile>>;
 		genreSuggestions: string[];
+		/** Only the owner can move the address; everyone else just sees it. */
+		isOwner?: boolean;
 	} = $props();
 
 	const profileFields = saveBandProfile.fields;
+	const baseDomain = $derived(baseDomainFromSiteUrl(env.PUBLIC_SITE_URL));
 
 	// Editable copies of the complex fields, seeded once from the loaded profile.
 	const initial = untrack(() => profile);
@@ -84,6 +91,21 @@
 					value={band.name}
 					required
 				/>
+
+				<!-- This is the page people come to when they want to change the
+				     band's identity, and it is the one page that deliberately does
+				     not move the address. Saying so here — with the address in
+				     front of them — beats letting them rename and then wonder why
+				     the URL didn't follow. -->
+				<FormField label="Band address" readonly display={`${band.slug}.${baseDomain}`}>
+					{#snippet description()}
+						Renaming the band doesn't move its address.{#if isOwner}
+							<a href={resolve(`/band/${band.slug}/settings`)} class="link link-primary ml-1">
+								Change it in Settings
+							</a>
+						{/if}
+					{/snippet}
+				</FormField>
 
 				<FormField
 					field={profileFields.tagline}
@@ -152,16 +174,14 @@
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
 		<InfoCard title="Links">
-			<p class="mb-3 text-sm opacity-60">
+			<p class="mb-3 text-muted">
 				SoundCloud, YouTube, and Spotify links show as embedded players on your profile.
 			</p>
 			<LinkListEditor bind:value={links} field={profileFields.links} />
 		</InfoCard>
 
 		<InfoCard title="Directory Contact Info">
-			<p class="mb-3 text-sm opacity-60">
-				Optional contact details shown on your directory listing.
-			</p>
+			<p class="mb-3 text-muted">Optional contact details shown on your directory listing.</p>
 			<div class="space-y-3">
 				<FormField
 					field={profileFields.contactEmail}
@@ -198,7 +218,7 @@
 	</div>
 
 	<div class="flex justify-end">
-		<SubmitButton label="Save" successLabel="Saved" class="btn-primary" shortcut="mod+s">
+		<SubmitButton label="Save" successLabel="Saved" variant="primary" shortcut="mod+s">
 			{#snippet icon()}<IconDeviceFloppy size={18} />{/snippet}
 		</SubmitButton>
 	</div>

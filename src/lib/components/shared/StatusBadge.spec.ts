@@ -28,7 +28,7 @@ import { inviteStatuses } from '$lib/server/db/schema/platform-invite';
 const derivedStatuses = {
 	// campaign-service.ts `deriveCampaignStatus`
 	campaign: ['draft', 'scheduled', 'sending', 'sent'],
-	// MemberLink / band member roles
+	// Member subtypes / band member roles
 	bandRoles: ['owner', 'admin', 'member'],
 	// staff/bands/+page.svelte, and the shared ActivateToggleAction pages
 	activation: ['active', 'deactivated'],
@@ -38,6 +38,9 @@ const derivedStatuses = {
 	clearance: ['cleared', 'uncleared'],
 	// suggestion-service.ts `displayStatus` — derived from mergedIntoId, never stored
 	suggestionDerived: ['merged'],
+	// components/inbox/thread-status.ts `threadDisplayStatus` — an open thread
+	// carrying `awaitingReplySince`, never a stored status value
+	inboxDerived: ['awaiting_reply'],
 
 	// member-certification-service.ts `certificationState` — the state of one
 	// held clearance, shown on the staff user record and the clearances list

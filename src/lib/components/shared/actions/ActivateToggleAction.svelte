@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { RemoteForm } from '@sveltejs/kit';
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 
 	let {
@@ -10,7 +11,9 @@
 		reactivateAction,
 		entityLabel = 'item',
 		deactivateWarning,
-		class: className,
+		variant,
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
@@ -20,6 +23,9 @@
 		reactivateAction: RemoteForm<any, any>;
 		entityLabel?: string;
 		deactivateWarning?: string;
+		/** Defaults to the direction of travel: green to reactivate, red to deactivate. */
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -28,9 +34,7 @@
 	const action = $derived(isDeactivated ? reactivateAction : deactivateAction);
 	const fields = $derived(action.fields);
 	const label = $derived(isDeactivated ? 'Reactivate' : 'Deactivate');
-	const resolvedClass = $derived(
-		className ?? (isDeactivated ? 'btn-success btn-sm' : 'btn-error btn-sm')
-	);
+	const resolvedVariant = $derived(variant ?? (isDeactivated ? 'success' : 'error'));
 	const confirmText = $derived(
 		isDeactivated ? undefined : (deactivateWarning ?? `Deactivate this ${entityLabel}?`)
 	);
@@ -44,7 +48,9 @@
 	{label}
 	modalTitle="Confirm"
 	successToast={toast}
-	class={resolvedClass}
+	variant={resolvedVariant}
+	{size}
+	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}
 >

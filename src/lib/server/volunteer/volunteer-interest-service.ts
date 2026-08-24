@@ -3,7 +3,8 @@ import { volunteerRole, volunteerRoleInterest } from '$lib/server/db/schema/volu
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
-import { primaryRoleFor } from '$lib/server/authorization';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import type { MemberRef } from '$lib/types/entity';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { VOLUNTEER_MAX_INTERESTS } from '$lib/config';
 import type { VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
@@ -168,10 +169,10 @@ export async function countInterestsByRole(): Promise<
 
 export interface InterestedMember {
 	userId: string;
-	name: string;
+	/** Kept beside the ref: the page copies addresses to a clipboard, which is
+	 *  the address as data rather than as the ref's subline. */
 	email: string;
-	pronouns: string | null;
-	role: string | null;
+	member: MemberRef;
 	roleNames: string[];
 	since: Date;
 }
@@ -223,12 +224,9 @@ export async function listInterestedMembers(
 	const dataQuery = db
 		.select({
 			userId: user.id,
-			name: user.name,
-			email: user.email,
-			pronouns: user.pronouns,
-			// Correlated subquery — built per call, not at module scope, so importing
-			// this module does no work (the trap hourLogSelect() documents).
-			role: primaryRoleFor(user.id),
+			// Correlated subqueries — built per call, not at module scope, so
+			// importing this module does no work (the trap hourLogSelect() documents).
+			member: memberRefColumns(),
 			roleNames: sql<string>`group_concat(${volunteerRole.name}, ${ROLE_NAME_SEPARATOR})`,
 			since
 		})
@@ -253,10 +251,8 @@ export async function listInterestedMembers(
 		rows: result.rows.map(
 			(r): InterestedMember => ({
 				userId: r.userId,
-				name: r.name,
-				email: r.email,
-				pronouns: r.pronouns,
-				role: r.role,
+				email: r.member.email,
+				member: toMemberRef(r.member),
 				roleNames: String(r.roleNames).split(ROLE_NAME_SEPARATOR).sort(),
 				since: new Date(Number(r.since) * 1000)
 			})

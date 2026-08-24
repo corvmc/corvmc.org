@@ -80,7 +80,7 @@
 </svelte:head>
 
 <div class="profile-page">
-	<a href="/directory" class="link text-sm opacity-60">&larr; Back to Directory</a>
+	<a href="/directory" class="link text-muted">&larr; Back to Directory</a>
 
 	<ProfileHeader
 		avatarShape="square"

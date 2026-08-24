@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -12,7 +14,6 @@
 		RefundReservationAction
 	} from '$lib/components/shared/actions';
 	import DayTimeline from '$lib/components/shared/reservations/DayTimeline.svelte';
-	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
 	import RecordNav from '$lib/components/shared/RecordNav.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -22,9 +23,8 @@
 		durationHours as calcDurationHours,
 		formatCents
 	} from '$lib/utils/format';
-	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { IconMail, IconPhone } from '@tabler/icons-svelte';
 	import {
 		visibleActions,
 		reservationPaymentState,
@@ -83,8 +83,8 @@
 <PageHeader title="Reservation" backHref="/staff/reservations" />
 <PageContent width="3xl">
 	<!-- Hero card -->
-	<div class="card bg-base-100 shadow">
-		<div class="card-body">
+	<Card>
+		<CardBody>
 			<header class="flex items-start justify-between">
 				<hgroup>
 					<p class="flex items-center gap-2 text-xl font-medium">
@@ -132,7 +132,7 @@
 					{/if}
 				</div>
 			{/if}
-		</div>
+		</CardBody>
 
 		<DayTimeline
 			current={{ id: r.id, startsAt: r.startsAt, endsAt: r.endsAt, bookerType: r.bookerType }}
@@ -145,47 +145,46 @@
 				href: `/staff/reservations/${o.id}`
 			}))}
 		/>
-	</div>
+	</Card>
 
 	<!-- Member + Payment grid -->
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-		<!-- Member card — a band booking leads with the band, then who booked it -->
-		<InfoCard title={r.bookerType === 'band' ? 'Band Booking' : 'Member'}>
+		<!-- Member card — a band or event booking leads with it, then who booked it -->
+		<InfoCard
+			title={r.bookerType === 'band'
+				? 'Band Booking'
+				: r.bookerType === 'event'
+					? 'Event'
+					: 'Member'}
+		>
 			{#snippet header(title)}
 				<header class="flex justify-between">
 					<span class="card-title">{title}</span>
 					{#if r.bookerType === 'band' && r.bandId}
-						<Button href="/staff/bands/{r.bandId}" class="btn-sm">View Band</Button>
+						<Button href="/staff/bands/{r.bandId}" variant="default" size="sm">View Band</Button>
+					{:else if r.bookerType === 'event' && r.eventId}
+						<Button href="/staff/events/{r.eventId}" variant="default" size="sm">View Event</Button>
 					{:else if r.createdByUserId}
-						<Button href="/staff/users/{r.createdByUserId}" class="btn-sm">View Profile</Button>
+						<Button href="/staff/users/{r.createdByUserId}" variant="default" size="sm"
+							>View Profile</Button
+						>
 					{/if}
 				</header>
 			{/snippet}
 			<div class="flex flex-col items-center">
-				{#if r.bookerType === 'band' && r.bandName}
-					<div class="mb-3 flex items-center gap-2">
-						<BookerTypeIcon type="band" size={18} />
-						<span class="text-lg font-medium">{r.bandName}</span>
-					</div>
-					<p class="mb-2 text-xs tracking-wide uppercase opacity-50">Booked by</p>
+				{#if r.booker.type !== 'member'}
+					<!--
+						Whatever the room is held for leads — a band or a show — and its
+						glyph comes with the chip rather than from a booker-type icon beside
+						it. "Booked by" then keeps the account that raised the hold, which
+						is the audit trail for it.
+					-->
+					<div class="mb-3"><EntityChip ref={r.booker} /></div>
+					<p class="mb-2 text-subtle tracking-wide uppercase">Booked by</p>
 				{/if}
-				<Avatar src={r.memberImage ?? undefined} name={r.memberName} class="size-16 mb-4" />
-				<h3 class="text-lg">{r.memberName}</h3>
-				{#if r.memberPronouns}
-					<p class="text-xs text-muted">{r.memberPronouns}</p>
-				{/if}
-				<div class="join join-vertical mt-4">
-					<Button href="mailto:{r.memberEmail}" class="join-item btn-outline">
-						<IconMail class="size-5" />
-						{r.memberEmail}
-					</Button>
-					{#if r.memberPhone}
-						<Button href="tel:{r.memberPhone}" class="join-item btn-outline">
-							<IconPhone class="size-5" />
-							{r.memberPhone}
-						</Button>
-					{/if}
-				</div>
+				<!-- `link`, unlike a detail page's own strip: the record here is the
+				     booking, and the member is a different record with its own page. -->
+				<EntityIdentity ref={r.member} size="lg" link email={r.memberEmail} phone={r.memberPhone} />
 			</div>
 		</InfoCard>
 
@@ -196,7 +195,7 @@
 					<span class="text-2xl font-medium">{amountFormatted}</span>
 					<span class="badge {paymentStatus.class}">{paymentStatus.label}</span>
 				</div>
-				<p class="text-sm opacity-60">{durationLabel} × {rateFormatted}/hr</p>
+				<p class="text-muted">{durationLabel} × {rateFormatted}/hr</p>
 				{#if (r.creditsUsed ?? 0) > 0}
 					<p class="text-sm text-success">
 						Free hours applied: {r.creditsUsed}
@@ -213,15 +212,30 @@
 				{#if actions.has('cashReceived') || actions.has('comp') || actions.has('refund')}
 					<div class="mt-3 flex flex-wrap gap-2 border-t border-base-200 pt-3">
 						{#if actions.has('cashReceived')}
-							<CashReceivedAction reservation={r} class="btn-outline btn-sm btn-success flex-1" />
+							<CashReceivedAction
+								reservation={r}
+								variant="success"
+								size="sm"
+								outline
+								class="flex-1"
+							/>
 						{/if}
 						{#if actions.has('comp')}
-							<CompReservationAction reservation={r} class="btn-outline btn-sm btn-info flex-1" />
+							<CompReservationAction
+								reservation={r}
+								variant="info"
+								size="sm"
+								outline
+								class="flex-1"
+							/>
 						{/if}
 						{#if actions.has('refund')}
 							<RefundReservationAction
 								reservation={r}
-								class="btn-outline btn-sm btn-error flex-1"
+								variant="error"
+								size="sm"
+								outline
+								class="flex-1"
 							/>
 						{/if}
 					</div>
@@ -235,9 +249,9 @@
 		<InfoCard title="Door Access">
 			{#if r.lockCode}
 				<p class="font-mono text-2xl font-bold tracking-[0.2em]">{r.lockCode}</p>
-				<p class="text-sm opacity-60">Keypad code for this reservation.</p>
+				<p class="text-muted">Keypad code for this reservation.</p>
 			{:else}
-				<p class="text-sm opacity-60">
+				<p class="text-muted">
 					Not provisioned yet — codes are issued the morning of the reservation.
 				</p>
 			{/if}
@@ -253,7 +267,7 @@
 
 	<!-- Audit -->
 	{#if data.reservation.createdByStaffName}
-		<p class="text-sm opacity-60">
+		<p class="text-muted">
 			Booked by staff: {data.reservation.createdByStaffName}
 		</p>
 	{/if}

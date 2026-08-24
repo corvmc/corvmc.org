@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { toGenericRef } from '$lib/server/entity/refs';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
@@ -159,7 +161,11 @@ export const confirmUnsubscribeAll = form(
 /** List all audiences (staff). Used on audiences index and as audience options. */
 export const getAudiences = query(z.void(), async () => {
 	await requireStaff();
-	return listAudiences();
+	const rows = await listAudiences();
+	return rows.map((a) => ({
+		...a,
+		ref: toGenericRef('audience', { id: a.id, title: a.name, subtitle: a.description })
+	}));
 });
 
 /** Alias for getAudiences, used in campaign editor audience pickers. */
@@ -189,7 +195,18 @@ export const getCampaigns = query(z.object({ status: z.string().optional() }), a
 	const statusFilter = ['draft', 'scheduled', 'sending', 'sent'].includes(filters.status ?? '')
 		? (filters.status as CampaignStatus)
 		: undefined;
-	return listCampaigns(statusFilter);
+	const rows = await listCampaigns(statusFilter);
+	return rows.map((c) => ({
+		...c,
+		// The campaign's own status has its column, so the ref carries none. The
+		// audiences it sends to are the subline, as they were before they were a
+		// column of their own.
+		ref: toGenericRef('campaign', {
+			id: c.id,
+			title: c.subject,
+			subtitle: c.audienceNames.length > 0 ? c.audienceNames.join(', ') : '—'
+		})
+	}));
 });
 
 /** Single campaign detail (staff). */
@@ -211,9 +228,9 @@ export const getPreview = query(z.string(), async (markdown) => {
 
 export const createAudience = form(
 	z.object({
-		name: z.string().min(1).max(255),
+		name: z.string().min(1).max(SHORT_TEXT_MAX),
 		slug: z.string().max(100).optional(),
-		description: z.string().max(2000).optional(),
+		description: z.string().max(LONG_TEXT_MAX).optional(),
 		allowOptIn: z.boolean().default(false)
 	}),
 	async (data, issue) => {
@@ -242,8 +259,8 @@ export const createAudience = form(
 export const updateAudience = form(
 	z.object({
 		id: z.string(),
-		name: z.string().max(255).optional(),
-		description: z.string().max(2000).optional(),
+		name: z.string().max(SHORT_TEXT_MAX).optional(),
+		description: z.string().max(LONG_TEXT_MAX).optional(),
 		allowOptIn: z.boolean().default(false)
 	}),
 	async (data) => {
@@ -290,7 +307,7 @@ export const addSubscriber = form(
 	z.object({
 		audienceId: z.string(),
 		email: z.string().email(),
-		name: z.string().max(255).optional()
+		name: z.string().max(SHORT_TEXT_MAX).optional()
 	}),
 	async (data, issue) => {
 		await requireStaff();

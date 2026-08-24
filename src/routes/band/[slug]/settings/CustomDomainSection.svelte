@@ -118,7 +118,13 @@
 						onfailure={() => toast.error('Could not check the domain')}
 					>
 						<input {...refreshFields.slug.as('hidden', slug)} />
-						<SubmitButton label="Check status" successLabel="Checked" class="btn-sm btn-outline" />
+						<SubmitButton
+							label="Check status"
+							successLabel="Checked"
+							variant="default"
+							size="sm"
+							outline
+						/>
 					</Form>
 				{/if}
 				<Form
@@ -130,7 +136,13 @@
 					onfailure={() => toast.error('Could not remove the domain')}
 				>
 					<input {...removeFields.slug.as('hidden', slug)} />
-					<SubmitButton label="Remove" successLabel="Removed" class="btn-sm btn-ghost text-error" />
+					<SubmitButton
+						label="Remove"
+						successLabel="Removed"
+						variant="ghost"
+						size="sm"
+						class="text-error"
+					/>
 				</Form>
 			</div>
 		</InfoCard>
@@ -159,7 +171,7 @@
 						required
 					/>
 					<div class="flex justify-end">
-						<SubmitButton label="Add domain" successLabel="Added" class="btn-primary btn-sm" />
+						<SubmitButton label="Add domain" successLabel="Added" variant="primary" size="sm" />
 					</div>
 				</div>
 			</Form>

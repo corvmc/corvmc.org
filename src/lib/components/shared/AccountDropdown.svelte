@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from './Button.svelte';
 	import { IconUser, IconSettings, IconStar, IconLogout } from '@tabler/icons-svelte';
 	import Avatar from './Avatar.svelte';
 	import { getMe } from '$lib/remote/layout.remote';
@@ -22,13 +23,20 @@
 <svelte:window onclick={handleClickOutside} />
 
 <div class="account-dropdown-wrapper relative">
-	<button
-		class="btn btn-ghost btn-circle btn-sm"
+	<Button
+		variant="ghost"
+		size="sm"
+		shape="circle"
 		onclick={() => (open = !open)}
 		aria-label="Account menu"
 	>
-		<Avatar class="size-7 text-xs" name={me?.name ?? ''} src={me?.image ?? undefined} />
-	</button>
+		<Avatar
+			class="size-7 text-xs"
+			size="avatar-sm"
+			name={me?.name ?? ''}
+			src={me?.image ?? undefined}
+		/>
+	</Button>
 
 	{#if open}
 		<div
@@ -36,7 +44,7 @@
 		>
 			<div class="border-b border-base-300 px-4 py-3">
 				<p class="text-sm font-medium truncate">{me?.name}</p>
-				<p class="text-xs opacity-60 truncate">{me?.email}</p>
+				<p class="text-subtle truncate">{me?.email}</p>
 			</div>
 
 			<ul class="menu menu-sm p-2">
@@ -61,13 +69,15 @@
 			</ul>
 
 			<div class="border-t border-base-300 p-2">
-				<button
-					class="btn btn-ghost btn-sm w-full justify-start gap-2 font-normal"
+				<Button
+					variant="ghost"
+					size="sm"
+					class="w-full justify-start gap-2 font-normal"
 					onclick={signOut}
 				>
 					<IconLogout size={16} />
 					Sign Out
-				</button>
+				</Button>
 			</div>
 		</div>
 	{/if}

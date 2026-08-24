@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit';
+import { DomainError } from './domain-error';
 
 // Domain error imports — grouped by service module
 import {
@@ -26,24 +27,15 @@ import {
 	InvalidLoanTransitionError,
 	InsufficientQuantityError
 } from './equipment/loan-service';
-import { InsufficientCreditsError } from './finance/credit-service';
 
 // ---------------------------------------------------------------------------
 // Base class for future domain errors
 // ---------------------------------------------------------------------------
 
-/**
- * Base class that new domain errors should extend. Existing error classes
- * predate this base and will be migrated in a follow-up.
- */
-export abstract class DomainError extends Error {
-	abstract readonly httpStatus: number;
-
-	constructor(message: string) {
-		super(message);
-		this.name = this.constructor.name;
-	}
-}
+// Re-exported so existing importers keep working. The definition lives in a
+// dependency-free leaf module because this file imports every service, and the
+// services now extend the base — see domain-error.ts.
+export { DomainError } from './domain-error';
 
 // ---------------------------------------------------------------------------
 // Mapper
@@ -104,13 +96,19 @@ export function mapDomainError(err: unknown): never {
 	}
 
 	// --- 422 Business rule violations ---
+	//
+	// InsufficientCreditsError is deliberately absent. Every service that spends
+	// credits clamps to the balance first, so the error only ever means "someone
+	// spent between my read and my write" — a race to retry, not a request the
+	// caller can fix, and no 4xx describes that. The one place a human can cause
+	// it is the staff credit adjustment form, which answers with a field issue on
+	// the amount instead. See adjustCredits in users.remote.ts.
 	if (
 		err instanceof CannotRemoveOwnerError ||
 		err instanceof OwnerCannotLeaveError ||
 		err instanceof CategoryHasEquipmentError ||
 		err instanceof InvalidLoanTransitionError ||
 		err instanceof InsufficientQuantityError ||
-		err instanceof InsufficientCreditsError ||
 		err instanceof RecurringSeriesError
 	) {
 		error(422, (err as Error).message);

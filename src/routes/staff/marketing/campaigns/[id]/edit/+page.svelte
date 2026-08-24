@@ -145,7 +145,7 @@
 </script>
 
 <PageHeader title="Edit Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns">
-	<Button class="btn-ghost btn-sm text-error" onclick={handleDelete}>Delete</Button>
+	<Button variant="ghost" size="sm" class="text-error" onclick={handleDelete}>Delete</Button>
 </PageHeader>
 <PageContent>
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -158,7 +158,7 @@
 					type="text"
 					bind:value={subject}
 					placeholder="Email subject line..."
-					class="input-bordered input w-full"
+					class="input w-full"
 				/>
 			</div>
 
@@ -183,12 +183,12 @@
 							{#if a.systemKey}
 								<span class="badge badge-info badge-xs">Built-in</span>
 							{/if}
-							<span class="text-xs opacity-60">({a.subscriberCount})</span>
+							<span class="text-subtle">({a.subscriberCount})</span>
 						</label>
 					{/each}
 				</div>
 				{#if selectedAudienceIds.length > 0}
-					<p class="text-xs opacity-60 mt-1">
+					<p class="text-subtle mt-1">
 						~{totalSubscribers} recipients (before deduplication)
 					</p>
 				{/if}
@@ -200,10 +200,10 @@
 					id="campaign-body"
 					bind:value={markdownBody}
 					placeholder="Write your email in markdown..."
-					class="textarea-bordered textarea w-full font-mono text-sm"
+					class="textarea w-full font-mono text-sm"
 					rows="20"
 				></textarea>
-				<p class="text-xs opacity-60 mt-1">
+				<p class="text-subtle mt-1">
 					Available variables: {'{{subscriber_name}}'}, {'{{unsubscribe_url}}'}
 				</p>
 			</div>
@@ -216,7 +216,7 @@
 					id="campaign-schedule"
 					type="datetime-local"
 					bind:value={scheduledFor}
-					class="input input-bordered w-full"
+					class="input w-full"
 				/>
 				{#if scheduledFor && !isFutureSchedule()}
 					<p class="mt-1 text-xs text-error">Pick a time in the future.</p>
@@ -224,31 +224,35 @@
 			</div>
 
 			<div class="flex flex-wrap gap-2">
-				<button
-					class="btn btn-outline btn-sm"
+				<Button
+					variant="default"
+					size="sm"
+					outline
 					disabled={!isValid() || submitting}
 					onclick={handleSave}
 				>
 					Save Draft
-				</button>
-				<button
-					class="btn btn-secondary btn-sm"
+				</Button>
+				<Button
+					variant="secondary"
+					size="sm"
 					disabled={!isValid() || !isFutureSchedule() || submitting}
 					onclick={handleSchedule}
 				>
 					Schedule
-				</button>
-				<button
-					class="btn btn-primary btn-sm"
+				</Button>
+				<Button
+					variant="primary"
+					size="sm"
 					disabled={!isValid() || submitting}
 					onclick={handleSendNow}
 				>
 					Send Now
-				</button>
+				</Button>
 			</div>
 
 			{#if submitting}
-				<div class="flex items-center gap-2 text-sm opacity-60">
+				<div class="flex items-center gap-2 text-muted">
 					<span class="loading loading-sm loading-spinner"></span>
 					Working...
 				</div>

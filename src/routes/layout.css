@@ -258,6 +258,72 @@ p {
 }
 
 /* ---------------------------------------------------------------------------
+   Muted text tiers
+   ---------------------------------------------------------------------------
+   The two supporting-text sizes, each carrying its own colour. Before these,
+   the same idea was spelled six ways — `text-sm opacity-60`, `text-sm
+   opacity-70`, `text-xs opacity-60`, `mb-3 text-sm opacity-70` … — which is
+   how `opacity-60` and `opacity-70` ended up sitting next to each other in the
+   same table meaning the same thing.
+
+   Colour, not opacity, on purpose. `opacity` dims the whole subtree: a badge,
+   an icon, a `link` inside a muted paragraph all fade with it, so a muted
+   wrapper quietly flattens the hierarchy underneath it (see the EmptyState
+   note in docs/development/component-style-audit.md). `color` inherits into
+   text and `currentColor` icons only, and leaves anything with a colour of its
+   own alone.
+
+   Use `text-muted` for supporting prose, `text-subtle` for captions and
+   metadata. Reach for the bare `text-fg-2` / `text-fg-3` only when the size is
+   already set by something else. */
+
+/* Supporting prose — the `text-sm` tier. */
+@utility text-muted {
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: var(--fg-2);
+}
+
+/* Captions and metadata — the `text-xs` tier. */
+@utility text-subtle {
+	font-size: 0.75rem;
+	line-height: 1rem;
+	color: var(--fg-2);
+}
+
+/* Foreground tiers as colour-only utilities, so nothing needs
+   `style="color: var(--fg-2)"` to reach them. */
+@utility text-fg-2 {
+	color: var(--fg-2);
+}
+
+@utility text-fg-3 {
+	color: var(--fg-3);
+}
+
+/* Brand ink. The palette is not in Tailwind's colour space, so before these the
+   only way to reach it from markup was an inline `style="color: var(--cmc-navy)"`
+   — which is why there were 27 of them. */
+@utility text-cmc-navy {
+	color: var(--cmc-navy);
+}
+
+@utility text-cmc-teal {
+	color: var(--cmc-teal);
+}
+
+@utility text-cmc-orange {
+	color: var(--cmc-orange);
+}
+
+/* The standard raised panel surface — replaces
+   `style="background: var(--surface); border: 1px solid var(--surface-border)"`. */
+@utility surface {
+	background: var(--surface);
+	border: 1px solid var(--surface-border);
+}
+
+/* ---------------------------------------------------------------------------
    Table column visibility tiers
    ---------------------------------------------------------------------------
    Container-query based: every panel page body is an `@container` (PageContent),

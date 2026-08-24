@@ -4,6 +4,7 @@ import { dev } from '$app/environment';
 import { env } from '$env/dynamic/public';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
+import { isStaleRemoteResponse } from '$lib/stale-remote-response';
 
 /**
  * Expected stale-deploy chunk failures: a tab opened before a deploy can't load
@@ -90,6 +91,7 @@ Sentry.init({
 	beforeSend(event, hint) {
 		if (isStaleChunkError(hint?.originalException)) return null;
 		if (isNetworkAbortError(hint?.originalException)) return null;
+		if (isStaleRemoteResponse(hint?.originalException)) return null;
 		if (isWebviewBridgeError(event, hint?.originalException)) return null;
 		if (isFrameworkControlFlow(hint?.originalException)) return null;
 		return event;

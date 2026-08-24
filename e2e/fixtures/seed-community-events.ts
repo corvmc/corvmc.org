@@ -22,9 +22,10 @@
  * Idempotent: deletes and recreates its own rows on every run.
  */
 import { eq, inArray } from 'drizzle-orm';
-import { withPlatformDb } from './platform-db';
+import { readLocalDb, withPlatformDb } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
-import { event, communityEventStanding } from '../../src/lib/server/db/schema/event';
+import { event } from '../../src/lib/server/db/schema/event';
+import { memberStanding } from '../../src/lib/server/db/schema/standing';
 import { ticket } from '../../src/lib/server/db/schema/ticket';
 import { scryptHash } from './seed-pay-reservation';
 
@@ -96,9 +97,7 @@ function daysFromNow(days: number, hour = 20): Date {
 export async function seedCommunityEvents(): Promise<void> {
 	await withPlatformDb(async (db) => {
 		// Standing before user: it points at both.
-		await db
-			.delete(communityEventStanding)
-			.where(inArray(communityEventStanding.userId, MEMBER_IDS));
+		await db.delete(memberStanding).where(inArray(memberStanding.userId, MEMBER_IDS));
 		await db.delete(ticket).where(inArray(ticket.eventId, EVENT_IDS));
 		await db.delete(event).where(inArray(event.id, EVENT_IDS));
 		await db.delete(event).where(inArray(event.createdByUserId, MEMBER_IDS));
@@ -131,9 +130,10 @@ export async function seedCommunityEvents(): Promise<void> {
 			});
 		}
 
-		await db.insert(communityEventStanding).values({
+		await db.insert(memberStanding).values({
 			userId: SEED_CE_REVIEW_ID,
-			requiresReview: true,
+			scope: 'community_event',
+			status: 'restricted',
 			reason: SEED_CE_STANDING_REASON,
 			updatedAt: now
 		});
@@ -246,7 +246,7 @@ export async function seedCommunityEvents(): Promise<void> {
 
 /** Whether a row still exists, for the delete assertions. */
 export async function eventExists(eventId: string): Promise<boolean> {
-	return withPlatformDb(async (db) => {
+	return readLocalDb(async (db) => {
 		const [row] = await db
 			.select({ id: event.id })
 			.from(event)
@@ -261,7 +261,7 @@ export async function readListingState(eventId: string): Promise<{
 	status: string | null;
 	reviewNotes: string | null;
 }> {
-	return withPlatformDb(async (db) => {
+	return readLocalDb(async (db) => {
 		const [row] = await db
 			.select({ status: event.status, reviewNotes: event.reviewNotes })
 			.from(event)

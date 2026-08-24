@@ -1,6 +1,9 @@
 import { db } from '$lib/server/db';
+import { toBandRef, toFlagTargetRef } from '$lib/server/entity/refs';
+import { DomainError } from '../domain-error';
 import { contentFlag } from '$lib/server/db/schema/flag';
 import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
+import type { StandingScope } from '$lib/config';
 import { user } from '$lib/server/db/schema/authentication';
 import { band } from '$lib/server/db/schema/band';
 import { event } from '$lib/server/db/schema/event';
@@ -23,21 +26,27 @@ export const FLAG_DESCRIPTION_MAX = 1000;
 // Errors
 // ---------------------------------------------------------------------------
 
-export class FlagNotFoundError extends Error {
+export class FlagNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+
 	constructor() {
 		super('Flag not found');
 		this.name = 'FlagNotFoundError';
 	}
 }
 
-export class FlagTargetNotFoundError extends Error {
+export class FlagTargetNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+
 	constructor() {
 		super('The content being reported could not be found');
 		this.name = 'FlagTargetNotFoundError';
 	}
 }
 
-export class FlagAlreadyResolvedError extends Error {
+export class FlagAlreadyResolvedError extends DomainError {
+	readonly httpStatus = 409;
+
 	constructor() {
 		super('This flag has already been resolved');
 		this.name = 'FlagAlreadyResolvedError';
@@ -254,42 +263,7 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 		.where(eq(contentFlag.id, flagId))
 		.returning();
 
-	// Upholding a report about a conversation costs the reported party the
-	// ability to start new ones. Not the ability to reply — someone who was rude
-	// in one conversation should not be cut out of a different one they are in
-	// the middle of. Dismissing does nothing, for the same reason a dismissed
-	// event report does nothing.
-	if (params.resolution === 'resolved' && existing.entityType === 'inbox_thread') {
-		const reported = await reportedPartyOf(existing.entityId, row.reportedByUserId);
-		if (reported) {
-			const { restrictMessaging } = await import('$lib/server/moderation/moderation-service');
-			await restrictMessaging({
-				userId: reported,
-				flagId,
-				staffId: params.staffId,
-				reason: params.notes
-			});
-		}
-	}
-
 	if (params.resolution === 'resolved' && existing.entityType === 'event') {
-		const { getById } = await import('$lib/server/event/event-service');
-		const evt = await getById(existing.entityId);
-
-		// An *upheld* report is the only thing that costs a member their standing.
-		// A dismissed one deliberately does nothing: event reports are public and
-		// anonymous, so letting a bare accusation trip probation would hand any
-		// visitor a griefing tool. This is the single place the rule is wired.
-		if (evt?.source === 'community') {
-			const { revokeCommunityTrust } = await import('$lib/server/event/community-event-service');
-			await revokeCommunityTrust({
-				userId: evt.createdByUserId,
-				flagId,
-				staffId: params.staffId,
-				reason: params.notes
-			});
-		}
-
 		if (params.unpublishEvent) {
 			const { unpublishWithNotice } = await import('$lib/server/event/event-service');
 			await unpublishWithNotice(existing.entityId, { notes: params.notes });
@@ -300,22 +274,13 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 		const svc = await import('$lib/server/suggestion/suggestion-service');
 
 		if (params.resolution === 'resolved') {
-			// Upheld: off the board for good, and the author posts under review from
-			// now on. Same rule as community listings — one upheld report costs trust.
+			// Upheld: off the board for good. The author's standing is handled above,
+			// with every other scope — same rule as community listings.
 			await svc.setVisibility(existing.entityId, {
 				visibility: 'hidden',
 				note: params.notes,
 				staffId: params.staffId
 			});
-			const target = await svc.getSuggestionForModeration(existing.entityId);
-			if (target?.authorUserId) {
-				await svc.revokeSuggestionTrust({
-					userId: target.authorUserId,
-					flagId,
-					staffId: params.staffId,
-					reason: params.notes
-				});
-			}
 		} else {
 			// Dismissed: straight back on the board, author untouched.
 			//
@@ -329,6 +294,33 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 				visibility: 'visible',
 				note: null,
 				staffId: params.staffId
+			});
+		}
+	}
+
+	// An *upheld* report is the only thing that costs a member their standing. A
+	// dismissed one deliberately does nothing: event reports are public and
+	// anonymous, so letting a bare accusation trip probation would hand any
+	// visitor a griefing tool. This is the single place the rule is wired.
+	//
+	// Which standing it costs is `scopeForFlag`'s answer, and it is NOT the
+	// identity function — an event report only touches standing when the event is
+	// a member's own community listing. Who pays is a different question per
+	// entity, and stays a per-branch lookup: the listing's submitter, the
+	// suggestion's author, or the participant who is not the reporter.
+	if (params.resolution === 'resolved') {
+		const subject = await standingSubjectOf(existing.entityType, existing.entityId, {
+			reporterUserId: row.reportedByUserId
+		});
+
+		if (subject) {
+			const { restrictStanding } = await import('$lib/server/moderation/standing-service');
+			await restrictStanding({
+				userId: subject.userId,
+				scope: subject.scope,
+				flagId,
+				staffId: params.staffId,
+				reason: params.notes
 			});
 		}
 	}
@@ -426,13 +418,72 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	}
 
 	return {
-		rows: rows.map((r) => ({
-			...r,
-			entityLabel: labelMap.get(`${r.entityType}:${r.entityId}`) ?? '(deleted)',
-			entityHref: entityHref(r.entityType, r.entityId, r.id)
-		})),
+		rows: rows.map((r) => {
+			const label = labelMap.get(`${r.entityType}:${r.entityId}`) ?? null;
+			return {
+				...r,
+				entityLabel: label ?? '(deleted)',
+				entityHref: entityHref(r.entityType, r.entityId, r.id),
+				// The queue row *is* the report, and it opens the report — so the
+				// row's own identity is the flag, titled by what was reported. The
+				// target rides along for the type badge beside it.
+				ref: { type: 'flag' as const, id: r.id, title: label ?? '(deleted)' },
+				target: toFlagTargetRef(r.entityType, r.entityId, label)
+			};
+		}),
 		pagination: pageInfo
 	};
+}
+
+interface StandingSubject {
+	userId: string;
+	scope: StandingScope;
+}
+
+/**
+ * Who an upheld report costs, and in which scope — or null when it costs nobody.
+ *
+ * Two questions live here and they are not the same one. `scopeForFlag` answers
+ * *which standing*, and it is deliberately not the identity function: an `event`
+ * report only touches standing when the event is a member's community listing,
+ * because a CMC or band gig has no member to hold responsible. *Who pays* is
+ * genuinely different per entity, so it stays a branch — the listing's
+ * submitter, the suggestion's author, the participant who is not the reporter.
+ *
+ * Dynamic imports for the same reason `createFlag` uses one: they keep the
+ * domains from importing each other.
+ */
+async function standingSubjectOf(
+	entityType: FlagEntityType,
+	entityId: string,
+	context: { reporterUserId: string | null }
+): Promise<StandingSubject | null> {
+	const { scopeForFlag } = await import('$lib/server/moderation/standing-service');
+
+	switch (entityType) {
+		case 'event': {
+			const { getById } = await import('$lib/server/event/event-service');
+			const evt = await getById(entityId);
+			const scope = scopeForFlag('event', { eventSource: evt?.source });
+			return scope && evt ? { userId: evt.createdByUserId, scope } : null;
+		}
+		case 'suggestion': {
+			const { getSuggestionForModeration } =
+				await import('$lib/server/suggestion/suggestion-service');
+			const target = await getSuggestionForModeration(entityId);
+			const scope = scopeForFlag('suggestion');
+			// Null when the author has deleted their account: there is nobody left
+			// to put on review, and the post is hidden either way.
+			return target?.authorUserId && scope ? { userId: target.authorUserId, scope } : null;
+		}
+		case 'inbox_thread': {
+			const reported = await reportedPartyOf(entityId, context.reporterUserId);
+			const scope = scopeForFlag('inbox_thread');
+			return reported && scope ? { userId: reported, scope } : null;
+		}
+		default:
+			return null;
+	}
 }
 
 /**
@@ -582,7 +633,13 @@ export async function getFlag(flagId: string) {
 		reportedByEmail: row.reportedByEmail,
 		entityLabel: entityLabel ?? '(deleted)',
 		entityHref: entityHref(row.flag.entityType, row.flag.entityId, flagId),
+		/** The reported record itself, so the page stops rebuilding its route. */
+		target: toFlagTargetRef(row.flag.entityType, row.flag.entityId, entityLabel),
 		eventContext,
+		// The credited band as a record. The flagged *target* is still resolved by
+		// the page's own href map — that is the polymorphic case, and it is the
+		// next thing to fold onto a ref.
+		eventBandRef: eventContext?.band ? toBandRef(eventContext.band) : null,
 		threadContext
 	};
 }

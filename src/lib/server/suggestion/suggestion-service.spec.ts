@@ -79,13 +79,22 @@ vi.mock('$lib/server/events/event-bus', () => ({
 }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
+// Posting standing is one shared service now; here it is a mock, so the queue
+// positions below are about suggestions and nothing else.
+// `vi.hoisted` because the import below is hoisted above this line: a plain
+// `const` would still be in its temporal dead zone when the mock factory runs.
+const { getStandingMock } = vi.hoisted(() => ({ getStandingMock: vi.fn() }));
+const GOOD_STANDING = { status: 'none', reason: null, triggeringFlagId: null, updatedAt: null };
+vi.mock('$lib/server/moderation/standing-service', () => ({
+	getStanding: (...a: unknown[]) => getStandingMock(...(a as []))
+}));
+
 import {
 	createSuggestion,
 	toggleVote,
 	mergeSuggestions,
 	respondToSuggestion,
 	withholdForReview,
-	revokeSuggestionTrust,
 	getEditableState,
 	editSuggestion,
 	reviewEdit,
@@ -104,6 +113,7 @@ beforeEach(() => {
 	insertResult = [{ id: 's1' }];
 	calls = [];
 	vi.clearAllMocks();
+	getStandingMock.mockResolvedValue(GOOD_STANDING);
 });
 
 /** Flush the fire-and-forget `Promise.resolve().then()` in notifyAuthor. */
@@ -111,7 +121,6 @@ const flushMicrotasks = () => new Promise((r) => setTimeout(r, 0));
 
 describe('createSuggestion', () => {
 	it('trims and truncates title and body to their limits', async () => {
-		selectResultQueue = [[]]; // no standing row → trusted
 		await createSuggestion({
 			authorUserId: 'u1',
 			title: '  ' + 'T'.repeat(SUGGESTION_TITLE_MAX + 50) + '  ',
@@ -132,9 +141,12 @@ describe('createSuggestion', () => {
 	});
 
 	it('withholds the post when the author is required to post under review', async () => {
-		selectResultQueue = [
-			[{ requiresReview: true, reason: 'spam', triggeringFlagId: 'f1', updatedAt: new Date() }]
-		];
+		getStandingMock.mockResolvedValue({
+			status: 'restricted',
+			reason: 'spam',
+			triggeringFlagId: 'f1',
+			updatedAt: new Date()
+		});
 		await createSuggestion({ authorUserId: 'u1', title: 'T', body: 'B', category: 'policy' });
 
 		expect(insertValues).toHaveBeenCalledWith(
@@ -399,17 +411,6 @@ describe('respondToSuggestion', () => {
 
 		expect(updateSet).toHaveBeenCalledWith(
 			expect.objectContaining({ responseBody: null, responseAt: null, responseByUserId: null })
-		);
-	});
-});
-
-describe('revokeSuggestionTrust', () => {
-	it('upserts so a second upheld report does not conflict', async () => {
-		await revokeSuggestionTrust({ userId: 'u1', flagId: 'f1', staffId: 'staff1', reason: 'spam' });
-
-		expect(onConflictDoUpdate).toHaveBeenCalledOnce();
-		expect(insertValues).toHaveBeenCalledWith(
-			expect.objectContaining({ userId: 'u1', requiresReview: true, triggeringFlagId: 'f1' })
 		);
 	});
 });

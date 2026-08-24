@@ -28,7 +28,17 @@ const config = {
 		// and wrangler.toml's `main` is the hand-written worker.js wrapper that
 		// adds the cron `scheduled` handler. Dev-time platform emulation is
 		// unaffected — getPlatformProxy still discovers wrangler.toml.
-		adapter: adapter({ config: 'wrangler.adapter.toml' }),
+		// MINIFLARE_PERSIST_PATH points `vite dev`/`vite preview` at a state
+		// directory other than wrangler's default `.wrangler/state`. Only the e2e
+		// run sets it (playwright.config.ts), so that its preview server is the one
+		// process holding those SQLite files; unset, the platform emulation is
+		// exactly as wrangler leaves it.
+		adapter: adapter({
+			config: 'wrangler.adapter.toml',
+			platformProxy: process.env.MINIFLARE_PERSIST_PATH
+				? { persist: { path: process.env.MINIFLARE_PERSIST_PATH } }
+				: undefined
+		}),
 
 		// Poll for new deploys so a stale client reloads before it tries to import a
 		// chunk that no longer exists (the "error loading dynamically imported module"

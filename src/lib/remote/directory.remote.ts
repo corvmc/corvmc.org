@@ -1,10 +1,13 @@
 import { z } from 'zod';
+import { LONG_TEXT_MAX } from '$lib/config';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireFeature } from '$lib/server/feature-flags';
 import { requireBandAdmin } from '$lib/server/band/band-context';
 import {
 	listMembers,
+	searchDirectoryMembers,
 	listBands,
 	getPublicDirectory as getPublicDirectoryService,
 	getMemberProfile as getMemberProfileService,
@@ -125,6 +128,23 @@ export const getDirectoryBands = query(filtersSchema, async (filters) => {
 	}));
 });
 
+/**
+ * Recipient candidates for the message composer.
+ *
+ * Scoped to the directory the caller can already browse, and deliberately blind
+ * to whether a candidate accepts messages — see `searchDirectoryMembers`. The
+ * composer is allowed to offer someone unreachable; `startDirectThread` drops
+ * the message silently, which is the point.
+ */
+export const searchMessageRecipients = query(
+	z.object({ search: z.string().trim().min(2).max(100) }),
+	async ({ search }) => {
+		await requireFeature('directMessages');
+		const user = requireUser();
+		return searchDirectoryMembers(search, user.id);
+	}
+);
+
 export const getDirectoryMember = query(z.string(), async (userId) => {
 	requireUser();
 	return getMemberProfileService(userId, 'members');
@@ -237,6 +257,7 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			userId: bandMember.userId,
 			role: bandMember.role,
 			position: bandMember.position,
+			alias: bandMember.alias,
 			userName: user.name,
 			userImage: user.image,
 			userVisibility: user.directoryVisibility
@@ -274,8 +295,10 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 				userId: m.userId,
 				role: m.role,
 				position: m.position,
-				// Withhold identifying details for private members in public.
-				userName: isPrivate ? null : m.userName,
+				// Withhold identifying details for private members in public. The
+				// alias is withheld with them: a stage name is more public than an
+				// account name, not an exemption from the private-row rule.
+				userName: isPrivate ? null : (m.alias ?? m.userName),
 				userImage: isPrivate ? null : resolveImageUrl(m.userImage),
 				private: isPrivate
 			};
@@ -388,7 +411,7 @@ export const getMemberProfile = query(z.void(), async () => {
 
 const memberProfileSchema = z.object({
 	tagline: z.string().max(150).optional().default(''),
-	bio: z.string().max(2000).optional().default(''),
+	bio: z.string().max(LONG_TEXT_MAX).optional().default(''),
 	hometown: z.string().max(150).optional().default(''),
 	instruments: tagsField('Invalid instruments'),
 	genres: tagsField('Invalid genres'),
@@ -449,7 +472,7 @@ export const getBandProfile = query(z.void(), async () => {
 
 const bandProfileSchema = z.object({
 	name: z.string().min(1, 'Name is required').max(200),
-	bio: z.string().max(2000).optional().default(''),
+	bio: z.string().max(LONG_TEXT_MAX).optional().default(''),
 	tagline: z.string().max(150).optional().default(''),
 	hometown: z.string().max(150).optional().default(''),
 	foundedYear: z.string().max(16).optional().default(''),

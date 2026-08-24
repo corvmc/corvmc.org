@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { eq, and, getColumnTable, getTableName, sql, inArray } from 'drizzle-orm';
+import { eq, and, getColumnTable, getTableName, sql, inArray, type AnyColumn } from 'drizzle-orm';
 import { user } from '$lib/server/db/schema/authentication';
 
 /**
@@ -15,7 +15,7 @@ import { user } from '$lib/server/db/schema/authentication';
  * would bind to `roles.id`, so the predicate could never match a user id. Mirrors
  * `isSustainingMemberSql`.
  */
-export function primaryRoleFor(userIdCol: typeof user.id) {
+export function primaryRoleFor(userIdCol: AnyColumn) {
 	const outerRef = sql.raw(`"${getTableName(getColumnTable(userIdCol))}"."${userIdCol.name}"`);
 	return sql<string>`(
 		select r.name from roles r

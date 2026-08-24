@@ -1,10 +1,12 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
@@ -37,16 +39,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-		}, 300);
-	}
-
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		categoryId: categoryId || undefined,
@@ -90,23 +82,24 @@
 
 <PageHeader title="Equipment">
 	<div class="flex gap-2">
-		<Button class="btn-ghost btn-sm" onclick={() => (showCategoryModal = true)}>Categories</Button>
+		<Button variant="ghost" size="sm" onclick={() => (showCategoryModal = true)}>Categories</Button>
 		<AddEquipmentAction {categories} />
 	</div>
 </PageHeader>
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search name, serial, resource ID..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
 			/>
 		{/snippet}
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Category"
 			value={categoryId}
 			onchange={(e: Event) => {
@@ -120,7 +113,7 @@
 			{/each}
 		</Select>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Status"
 			value={statusFilter}
 			onchange={(e: Event) => {
@@ -163,11 +156,8 @@
 						<td class="w-px">
 							<StatusBadge status={e.deletedAt ? 'deactivated' : e.status} />
 						</td>
-						<!-- Category was its own column; as the subline it costs no width. -->
-						<td class="cell-primary">
-							<a {href} class="block truncate font-medium hover:underline">{e.name}</a>
-							<div class="truncate text-sm opacity-60">{e.category.name}</div>
-						</td>
+						<!-- Category was its own column; as the ref's subline it costs no width. -->
+						<td class="cell-primary"><EntityIdentity ref={e.ref} /></td>
 						<td class="col-support">
 							<Badge
 								size="sm"
@@ -214,15 +204,16 @@
 						>
 						<td class="col-support cell-num">{cat.displayOrder}</td>
 						<td class="w-px text-right">
-							<button
-								class="btn btn-ghost btn-xs"
+							<Button
+								variant="ghost"
+								size="xs"
 								onclick={() =>
 									(editingCategory = {
 										id: cat.id,
 										name: cat.name,
 										displayOrder: cat.displayOrder,
 										pricingTier: cat.pricingTier as PricingTier
-									})}>Edit</button
+									})}>Edit</Button
 							>
 							<RemoveCategoryAction categoryId={cat.id} name={cat.name} />
 						</td>
@@ -235,9 +226,11 @@
 	<div class="space-y-3 border-t pt-4">
 		<h4 class="text-sm font-semibold">{editingCategory?.id ? 'Edit' : 'Add'} Category</h4>
 		{#if !editingCategory}
-			<button
+			<Button
 				type="button"
-				class="btn btn-outline btn-sm"
+				variant="default"
+				size="sm"
+				outline
 				onclick={() =>
 					(editingCategory = {
 						id: '',
@@ -247,7 +240,7 @@
 					})}
 			>
 				+ New Category
-			</button>
+			</Button>
 		{:else}
 			<Form
 				remote={editingCategory.id ? (editCategory as any) : addCategory}
@@ -284,12 +277,10 @@
 					}))}
 				/>
 				<div class="flex gap-2">
-					<button
-						type="button"
-						class="btn btn-ghost btn-sm"
-						onclick={() => (editingCategory = null)}>Cancel</button
+					<Button type="button" variant="ghost" size="sm" onclick={() => (editingCategory = null)}
+						>Cancel</Button
 					>
-					<SubmitButton label={editingCategory.id ? 'Save' : 'Add'} class="btn-sm btn-primary" />
+					<SubmitButton label={editingCategory.id ? 'Save' : 'Add'} variant="primary" size="sm" />
 				</div>
 			</Form>
 		{/if}

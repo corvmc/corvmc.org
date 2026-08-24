@@ -6,6 +6,7 @@ import type { Event } from './event';
 import type { EquipmentLoan } from './equipment';
 import type { Ticket } from './ticket';
 import type { Audience } from './marketing';
+import type { MemberRef } from '$lib/types/entity';
 
 // ---------------------------------------------------------------------------
 // Shared primitives
@@ -18,16 +19,13 @@ export interface Pagination {
 	totalPages: number;
 }
 
-export interface MemberSummary {
-	name: string;
-	email?: string;
-	pronouns?: string | null;
-	role?: string | null;
-	/** Sustaining status, derived from the subscription snapshot (source of truth). */
-	sustaining?: boolean | null;
-	userId?: string;
-	avatarUrl?: string;
-}
+/**
+ * @deprecated Use `MemberRef` from `$lib/types/entity`, which the entity tiers
+ * take directly and `toMemberRef` produces. This shape existed for `MemberLink`,
+ * which asked each call site to work out the role/subscription precedence for
+ * itself; the alias remains only so an out-of-tree reference still compiles.
+ */
+export type MemberSummary = MemberRef;
 
 // ---------------------------------------------------------------------------
 // Auth & Layout

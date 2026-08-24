@@ -1,6 +1,7 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import EntityAvatar from '../EntityAvatar.svelte';
-	import { IconShare3, IconCheck } from '@tabler/icons-svelte';
+	import ShareButton from '$lib/components/shared/ShareButton.svelte';
 
 	export type ProfilePill = { label: string; variant?: 'solid' | 'warm' };
 
@@ -19,18 +20,6 @@
 		pills?: ProfilePill[];
 		primaryAction?: { label: string; href: string };
 	} = $props();
-
-	let copied = $state(false);
-
-	async function share() {
-		try {
-			await navigator.clipboard.writeText(window.location.href);
-			copied = true;
-			setTimeout(() => (copied = false), 1500);
-		} catch {
-			// clipboard unavailable — no-op
-		}
-	}
 </script>
 
 <header class="profile-header">
@@ -58,20 +47,9 @@
 
 	<div class="profile-header__actions">
 		{#if primaryAction}
-			<a href={primaryAction.href} class="btn btn-primary btn-sm">{primaryAction.label}</a>
+			<Button href={primaryAction.href} variant="primary" size="sm">{primaryAction.label}</Button>
 		{/if}
-		<button
-			type="button"
-			class="btn btn-ghost btn-sm btn-square"
-			title="Copy link to this profile"
-			onclick={share}
-		>
-			{#if copied}
-				<IconCheck size={18} />
-			{:else}
-				<IconShare3 size={18} />
-			{/if}
-		</button>
+		<ShareButton title="Copy link to this profile" />
 	</div>
 </header>
 

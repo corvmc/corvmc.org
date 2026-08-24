@@ -295,8 +295,10 @@ applied automatically on deploy (A), and data is refreshed manually on demand (B
 
 ### A. Schema migrate on every deploy (Cloudflare Workers Builds)
 
-`scripts/ci-migrate.mjs` runs `drizzle-kit migrate` against remote D1, but only when the
-build branch is `main` (so PR/preview builds never touch prod). Wire it into the deploy:
+`scripts/ci-migrate.mjs` runs `drizzle-kit migrate` against remote D1, but only for a build
+that publishes to production — `main`, or a `gh-readonly-queue/main/*` merge queue branch,
+which Cloudflare builds and publishes in place of the `main` push (so PR/preview builds never
+touch prod). Wire it into the deploy:
 
 1. **Workers Builds → Settings → Build command:** `pnpm ci:migrate && pnpm build`
 2. **Workers Builds → Build environment variables** (so `drizzle-kit migrate` can reach

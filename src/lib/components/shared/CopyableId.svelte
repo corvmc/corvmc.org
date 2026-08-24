@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from './Button.svelte';
 	import { IconCopy } from '@tabler/icons-svelte';
 
 	let {
@@ -19,13 +20,14 @@
 		<p class="text-xs opacity-50">{label}</p>
 	{/if}
 	<div class="mt-1 flex items-center gap-2">
-		<code class="text-xs opacity-70">{display}</code>
-		<button
-			class="btn btn-ghost btn-xs"
+		<code class="text-subtle">{display}</code>
+		<Button
+			variant="ghost"
+			size="xs"
 			onclick={() => navigator.clipboard.writeText(value)}
 			title="Copy"
 		>
 			<IconCopy size={14} />
-		</button>
+		</Button>
 	</div>
 </div>

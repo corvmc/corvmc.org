@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireStaff, isStaff } from '$lib/server/authorization';
+import { requireStaff, requireStaffOrOwner } from '$lib/server/authorization';
 import {
 	get,
 	getHistory,
@@ -67,10 +67,7 @@ export const cancelRecurringSeries = form(z.object({ id: z.string() }), async (d
 	const series = await get(id);
 	if (!series) throw error(404, 'Series not found');
 
-	const staff = await isStaff(locals.user.id);
-	if (!staff && series.prototypeCreatedByUserId !== locals.user.id) {
-		throw error(403, 'Not authorized');
-	}
+	await requireStaffOrOwner(locals.user.id, series.prototypeCreatedByUserId);
 
 	await cancel(id);
 	return { success: true };

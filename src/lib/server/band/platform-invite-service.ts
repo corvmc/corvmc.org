@@ -8,6 +8,7 @@ import { BandMemberExistsError, invite } from './band-service';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { captureException } from '$lib/server/sentry';
+import { DomainError } from '$lib/server/domain-error';
 
 const INVITE_EXPIRY_DAYS = 7;
 
@@ -202,17 +203,49 @@ export async function listForBand(bandId: string) {
 		.limit(SEARCH_LIMIT);
 }
 
-export async function revoke(inviteId: string): Promise<void> {
+/** The invite does not exist, or does not belong to the band doing the asking. */
+export class PlatformInviteNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+	constructor() {
+		super('Invite not found');
+	}
+}
+
+/**
+ * Already accepted, revoked or expired. An ordinary state — usually two admins
+ * clicking Revoke on the same row — not a fault, so it must not reach Sentry as
+ * a 500.
+ */
+export class PlatformInviteNotPendingError extends DomainError {
+	readonly httpStatus = 409;
+	constructor() {
+		super('Can only revoke pending invites');
+	}
+}
+
+/**
+ * Revoke a pending email invite.
+ *
+ * `bandId` scopes the lookup and the write. Without it the invite id alone was
+ * the whole authorization: a band admin holding another band's invite id could
+ * revoke it, since the caller's `requireBandAdmin()` only proves they run *a*
+ * band. Staff pass no `bandId` — they administer every band by definition.
+ */
+export async function revoke(inviteId: string, bandId?: string): Promise<void> {
+	const scope = bandId
+		? and(eq(platformInvite.id, inviteId), eq(platformInvite.bandId, bandId))
+		: eq(platformInvite.id, inviteId);
+
 	const [row] = await db
 		.select({ status: platformInvite.status })
 		.from(platformInvite)
-		.where(eq(platformInvite.id, inviteId))
+		.where(scope)
 		.limit(1);
 
-	if (!row) throw new Error('Invite not found');
-	if (row.status !== 'pending') throw new Error('Can only revoke pending invites');
+	if (!row) throw new PlatformInviteNotFoundError();
+	if (row.status !== 'pending') throw new PlatformInviteNotPendingError();
 
-	await db.update(platformInvite).set({ status: 'revoked' }).where(eq(platformInvite.id, inviteId));
+	await db.update(platformInvite).set({ status: 'revoked' }).where(scope);
 }
 
 export async function getByToken(token: string): Promise<{

@@ -66,11 +66,11 @@
 	{/await}
 	<details class="border-t-[2.5px] border-base-300">
 		<summary
-			class="cursor-pointer px-4 py-2 text-xs font-semibold tracking-wide uppercase opacity-60 hover:opacity-100"
+			class="cursor-pointer px-4 py-2 text-subtle font-semibold tracking-wide uppercase hover:opacity-100"
 		>
 			Booking Policy
 		</summary>
-		<div class="space-y-1 px-4 pb-3 text-sm opacity-70">
+		<div class="space-y-1 px-4 pb-3 text-muted">
 			<p>Payment is due at reservation start time via cash in person or card online.</p>
 			<p>If you have specific needs for equipment or space, note them in the reservation form.</p>
 		</div>

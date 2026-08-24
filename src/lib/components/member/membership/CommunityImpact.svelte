@@ -13,19 +13,19 @@
 		<div class="text-center">
 			<div class="mb-2 text-4xl font-bold text-primary">{stats.sustainingMemberCount}</div>
 			<div class="text-sm font-medium">Sustaining Members</div>
-			<div class="mt-1 text-xs opacity-60">showing up for the Collective every month</div>
+			<div class="mt-1 text-subtle">showing up for the Collective every month</div>
 		</div>
 		<div class="text-center">
 			<div class="mb-2 text-4xl font-bold text-secondary">
 				{stats.totalFreeHoursAllocated.toLocaleString()}
 			</div>
 			<div class="text-sm font-medium">Free Hours</div>
-			<div class="mt-1 text-xs opacity-60">of practice time funded this month</div>
+			<div class="mt-1 text-subtle">of practice time funded this month</div>
 		</div>
 		<div class="text-center">
 			<div class="mb-2 text-4xl font-bold text-accent">{stats.participationPercent}%</div>
 			<div class="text-sm font-medium">of Members</div>
-			<div class="mt-1 text-xs opacity-60">chipping in to keep things running</div>
+			<div class="mt-1 text-subtle">chipping in to keep things running</div>
 		</div>
 	</div>
 </div>

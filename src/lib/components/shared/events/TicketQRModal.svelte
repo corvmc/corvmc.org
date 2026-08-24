@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import { formatDate, formatTime } from '$lib/utils/format';
 	import QRCode from 'qrcode-svg';
@@ -47,7 +48,7 @@
 		{#if ticket.event}
 			<div class="text-center">
 				<p class="text-lg font-bold">{ticket.event.title}</p>
-				<p class="text-sm opacity-70">
+				<p class="text-muted">
 					{formatDate(ticket.event.startsAt)} &middot; {formatTime(ticket.event.startsAt)}
 				</p>
 			</div>
@@ -60,14 +61,17 @@
 
 		<div class="text-center">
 			<p class="font-mono text-lg tracking-widest">{ticket.code}</p>
-			<p class="text-sm opacity-60">{ticket.attendeeName}</p>
+			<p class="text-muted">{ticket.attendeeName}</p>
 		</div>
 
 		{#if hasMultiple}
 			<div class="flex items-center gap-4">
-				<button
+				<Button
 					type="button"
-					class="btn btn-sm btn-circle btn-outline"
+					variant="default"
+					size="sm"
+					shape="circle"
+					outline
 					aria-label="Previous ticket"
 					onclick={() => (offset -= 1)}
 				>
@@ -81,11 +85,14 @@
 						stroke-linejoin="round"
 						style="width:16px;height:16px"><path d="M15 6l-6 6 6 6" /></svg
 					>
-				</button>
-				<span class="text-sm opacity-70">{index + 1} of {total}</span>
-				<button
+				</Button>
+				<span class="text-muted">{index + 1} of {total}</span>
+				<Button
 					type="button"
-					class="btn btn-sm btn-circle btn-outline"
+					variant="default"
+					size="sm"
+					shape="circle"
+					outline
 					aria-label="Next ticket"
 					onclick={() => (offset += 1)}
 				>
@@ -99,7 +106,7 @@
 						stroke-linejoin="round"
 						style="width:16px;height:16px"><path d="M9 6l6 6-6 6" /></svg
 					>
-				</button>
+				</Button>
 			</div>
 		{/if}
 	</div>

@@ -4,6 +4,9 @@ When building or modifying pages in this app, use the shared components and patt
 
 > Testing these components in isolation (stories vs. specs, mocking the server)? See [component-testing.md](./component-testing.md).
 
+> Reducing the raw utility classes still left in page templates? See
+> [template-audit.md](./template-audit.md) for the census, the findings, and the migration phases.
+
 ## Page structure
 
 Every page under a panel layout (staff, member, or band) follows this shape:
@@ -184,6 +187,10 @@ For inputs FormField can't render (date pickers, file uploads, compound inputs),
 </FormField>
 ```
 
+`FormField` with `type="textarea"` spreads only its own input props, so `rows`, `placeholder` and `maxlength` are **silently dropped** on that branch. Use custom input mode for a textarea that needs any of them.
+
+**A remote form encodes its field names**, so a component's own `name="foo"` prop does not reach it. Take the attributes from the form instead — `<input {...myForm.fields.foo.as('hidden', value)} />` — or the field arrives as `undefined` and fails Zod with nothing on screen to show for it. This bites hardest with `SearchSelect`, whose `name` prop emits a plain attribute: bind its value and render the hidden input from the remote form yourself.
+
 ### Key props
 
 - `name` — **required inside a Form**. Must match the field name in the remote form's Zod schema. This is how FormField looks up validation issues from the Form context and how the value is submitted.
@@ -195,6 +202,36 @@ For inputs FormField can't render (date pickers, file uploads, compound inputs),
 - `class` — extra classes on the wrapper fieldset
 - `issues` — only needed when using FormField **outside** a `<Form>`. Inside a Form, issues are pulled from the form context automatically using `name`.
 
+## Button
+
+Variant, size and shape are **props**, never class strings. `class` is reserved for genuine
+one-offs — positioning, a `join-item`, a bespoke skin.
+
+```svelte
+<Button variant="ghost" size="sm">Cancel</Button>
+<Button variant="error" outline size="sm">Delete</Button>
+<Button variant="ghost" size="sm" shape="square" title="Edit"><IconPencil size={16} /></Button>
+<Button href="/staff/users">All users</Button>
+```
+
+Props:
+
+- `variant` — `primary` (default), `secondary`, `accent`, `neutral`, `info`, `success`, `warning`,
+  `error`, `ghost`, `link`, or `default` for the plain uncoloured `btn` surface.
+- `size` — `xs`, `sm`, `md` (default), `lg`
+- `shape` — `square`, `circle`, `wide`, `block`
+- `outline` — boolean; stacks on top of `variant`, so `variant="error" outline` is an outlined
+  destructive button. It is not a variant of its own.
+- `href` — renders an `<a>` instead of a `<button>`
+- `title` — tooltip text, merged onto the button itself rather than a wrapper (nesting a button
+  inside the tooltip trigger drops the control out of the accessibility tree — pinned by
+  `Button.svelte.spec.ts`)
+- `class` — escape hatch. A daisyUI colour passed here still wins over the `primary` default, so an
+  escape hatch can never collide with it, but reach for `variant` instead.
+
+`Action`, `SubmitButton` and every `shared/actions/*Action.svelte` wrapper take the same
+`variant`/`size`/`shape`/`outline` props and forward them here.
+
 ## SubmitButton
 
 Status-aware submit button that reads from `FormContext`. Shows spinner while pending, checkmark on success, X on error.
@@ -204,26 +241,17 @@ Status-aware submit button that reads from `FormContext`. Shows spinner while pe
 	label="Save"
 	successLabel="Saved"
 	errorLabel="Error"
-	class="btn-primary"
+	variant="primary"
 	disabled={!isValid}
 	shortcut="mod+s"
 />
 ```
 
-Place inside a `<Form>`. For standalone async actions (not inside a form), use `AsyncButton` instead.
+Place inside a `<Form>`. `variant` sets the idle colour; the success/error flash overrides it while
+it lasts, so a destructive `variant="error"` submit still reads as success once it lands.
 
-## AsyncButton
-
-Same status feedback as SubmitButton but for standalone async actions that aren't part of a form. For actions that need a confirmation step or a form modal, use `Action` instead.
-
-```svelte
-<AsyncButton
-	action={() => deleteItem(item.id)}
-	label="Delete"
-	successToast="Deleted"
-	class="btn-error btn-sm"
-/>
-```
+For standalone async actions outside a form — and for anything needing a confirmation step or a
+form modal — use `Action`.
 
 ## Action
 
@@ -234,7 +262,7 @@ A single component that handles four patterns depending on its props: direct asy
 Runs an async callback on click. Same behavior as `AsyncButton`.
 
 ```svelte
-<Action action={() => archive(item.id)} label="Archive" successToast="Archived" class="btn-sm" />
+<Action action={() => archive(item.id)} label="Archive" successToast="Archived" size="sm" />
 ```
 
 ### With confirmation
@@ -245,7 +273,8 @@ When `confirm` is set (and no `body`), an alert dialog is shown before firing th
 <Action
 	action={() => deleteItem(item.id)}
 	label="Delete"
-	class="btn-error btn-sm"
+	variant="error"
+	size="sm"
 	confirm="This will permanently delete the item. Are you sure?"
 	successToast="Deleted"
 />
@@ -283,13 +312,7 @@ When `action` is a `RemoteForm` (from a `form()` remote), clicking the button op
 > for the callback-modal mode only.
 
 ```svelte
-<Action
-	action={updateItem}
-	label="Edit"
-	class="btn-primary btn-sm"
-	modalTitle="Edit Item"
-	successToast="Updated"
->
+<Action action={updateItem} label="Edit" size="sm" modalTitle="Edit Item" successToast="Updated">
 	{#snippet form()}
 		<FormField name="name" type="text" value={item.name} />
 		<FormField name="description" type="textarea" value={item.description} />
@@ -330,11 +353,13 @@ For `.for()` instances (per-row actions in a list). The row id has to travel wit
 - `body` — snippet rendered inside the modal, as-is. **Callback-modal mode only** — it takes precedence over the RemoteForm branch, so passing it alongside a RemoteForm action silently breaks the form.
 - `form` — snippet rendered inside the `<Form>` wrapper in form-modal mode. Receives `{ close }`.
 - `submitLabel` — override the submit button label in the modal (defaults to `label`)
+- `submitVariant` — colour of the modal's submit button (defaults to the trigger's `variant`)
 - `canSubmit` — boolean that gates the submit button in callback modal mode (default `true`). Ignored in form-modal mode where Zod handles validation.
 - `maxWidth` — modal width class (default `'max-w-lg'`)
 - `successToast` / `errorToast` — toast messages
 - `onsuccess` / `onfailure` — callbacks
-- `class` — button classes (default `btn-primary`)
+- `variant` / `size` / `shape` / `outline` — forwarded to `Button`; `variant` defaults to `primary`
+- `class` — escape hatch, forwarded to `Button`
 - `disabled` — disables the trigger button
 
 ## StatusBadge
@@ -378,15 +403,163 @@ DaisyUI alert banner for inline messages, errors, and warnings. Not to be confus
 
 Props: `type` (`info`, `warning`, `error`, `success`), `href` (renders as `<a>` instead of `<div>`), `reset` (adds a Retry button), `action` (snippet for custom action content), `class`.
 
-## MemberLink
+## Entity tiers — chip / row / card / detail
 
-Displays a member's name (linked to their staff profile) and email. Optional avatar with initials.
+Four ways to show one record, in `$lib/components/shared/entity/`. Every reference to a record in
+the staff and member panels should be one of them.
 
-```svelte
-<MemberLink name={r.memberName} email={r.memberEmail} userId={r.createdByUserId} avatar />
+| Tier   | Component                                  | Use                                                                      |
+| ------ | ------------------------------------------ | ------------------------------------------------------------------------ |
+| chip   | `EntityChip`                               | mentioning a record mid-sentence, in a `Fact`, or in a column of its own |
+| row    | `EntityIdentity`                           | `size="sm"` is the table primary cell, `md` a list row                   |
+| card   | `EntityCard`                               | a related record on someone else's detail page                           |
+| detail | `EntityIdentity size="lg"` + `RelatedList` | the identity strip and the related sections                              |
+
+All of them take a single `ref: EntityRef` (`$lib/types/entity`) and nothing about presentation.
+
+`EntityIdentity` covers three of the four tiers because a table cell, a list row and the strip at
+the top of a record's own page are one object at three scales:
+
+| Size | Media                      | Title     | Status             | Links |
+| ---- | -------------------------- | --------- | ------------------ | ----- |
+| `sm` | none, or `avatar` for 24px | plain     | only with `avatar` | yes   |
+| `md` | 40px avatar/glyph tile     | plain     | rides the media    | yes   |
+| `lg` | 64px avatar/glyph tile     | `text-lg` | rides the media    | no    |
+
+`sm` is the only structurally different one: it renders the anchor and subline as **two sibling
+roots with no wrapper**, because that is what `cell-primary` needs. The other two are a flex row.
+
+That is also why a bare `sm` cell draws **no status at all**, and passing `status` without `avatar`
+is silently a no-op: a status element would have to be a third sibling, and the wrapper needed to
+place it is the one thing this mode cannot have. A cell that must show status has two options —
+keep the status in its own `w-px` column, which is what ~30 staff tables already do, or pass
+`avatar` and let it ride the 24px avatar or glyph tile like every other size.
+`EntityIdentity.svelte.spec.ts` pins both.
+
+`lg` does not link by default — the record's own page is where you already are — and takes
+`email`/`phone` for its subline, because a detail strip wants to be actionable where a row wants to
+be read. `heading` puts the name in a heading element, for a card whose title is the record; leave
+it off in lists, since fifty headings in a table are not an outline.
+
+It was briefly split into `EntityRow` plus an `EntityHeader`. Two implementations meant two places
+for the avatar convention, the subtype glyph and the status rule to drift apart — and one had
+already drifted before they were merged.
+
+`EntityCard` composes it rather than redrawing it, and owns only what is genuinely card-shaped: the
+full-bleed portrait poster, its ring, and the facts/actions structure. Card actions ride the bottom
+edge (`mt-5 h-0`, outside `CardBody`), matching `member/reservations/ReservationCard.svelte`; pass
+`size="xs"`.
+
+**Scope: the panels only.** The public site and the directory profiles keep their own art-directed
+set (`PosterCard`, `VinylCard`, `IdCard`, `GigList`, `directory/profile/*`). That line cuts across
+`member/` too: `member/events/**` and `member/directory/**` are art-directed routes. Don't
+"consistency-fix" one into the other — they optimise for different things.
+
+### Refs come from the query, not the page
+
+`src/lib/server/entity/refs.ts` projects a record into its ref: `memberRefColumns()` drops into a
+drizzle `.select()` under one key and `toMemberRef()` maps the row back out.
+
+```ts
+.select({ id: reservation.id, member: memberRefColumns() })
+// …
+rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
 ```
 
-Without `userId`, the name renders as plain text. Without `avatar`, only name + email are shown.
+That is where the admin/staff/sustaining precedence lives, and it is why it is now applied once
+rather than at each call site — three staff queries used to read the role and not the subscription,
+so their sustaining members drew as ordinary ones.
+
+Two rules:
+
+- **A ref may only use columns from joins the query already makes.** One that would need a new join
+  gets a `null` image, not a query per row.
+- **Keep it out of module scope.** `memberRefColumns()` reaches `subscription-service`, which cycles
+  back through `payment-service`; a `const baseSelect = {…}` evaluated at import time throws
+  `Cannot access '__vite_ssr_import_2__' before initialization`. Make the select object a function.
+
+The correlated helpers (`primaryRoleFor`, `isSustainingMemberSql`) take any user id column, so
+`memberRefColumns(alias(user, 'approver'))` correlates to the alias — that is what lets one query
+project two different people. `refs.spec.ts` pins the rendered SQL, which is the only thing that
+catches a subquery binding to the wrong table.
+
+### Links are derived, never passed
+
+No component takes an `href`. `entityHref(ref, viewer)` picks the one canonical page for this
+record _and this viewer_: **stay in the panel you are already in, otherwise take the richest page
+they are entitled to** (staff → band → member → public). A staff user who is also in a band, clicking
+that band from inside its own panel, gets `/band/[slug]` rather than the staff record.
+
+`null` — no reachable page — is normal, not a failure: the components render unlinked but still
+visible, so a list keeps its length and a sentence keeps its subject.
+
+The viewer comes from `<EntityViewer panel=… >`, mounted once per panel layout. It is a separate
+synchronous component because the layouts already `await`, and context must be set during init.
+With no provider the viewer is anonymous, so links degrade to public routes — the harmless
+direction.
+
+This is display logic, not authorization. Remote functions remain the security boundary, so a
+mis-derived link is a 403, never a leak.
+
+### Everything visual is exception-only
+
+The same rule three times over, and it is the thing to preserve when extending any of this:
+
+- **Subtypes** — a glyph marks a member as `sustaining`, a listing as `community`, a booking as a
+  band's. The ordinary case (`member`, `cmc`, `user`) is deliberately absent from the registry and
+  gets no marker.
+- **Status** — `ordinaryStatuses` covers the expected resting states (all of `StatusBadge`'s success
+  tone, plus `confirmed` and `valid`). Only the rest are drawn at all.
+- **Identity vs qualifier** — `entityIcon()` is what kind of record this is, used where the glyph
+  stands alone (a chip's leading icon, a card's no-image fallback). `entityGlyph()` is which variant,
+  used only beside a name that already says what the record is.
+
+A marker on every row marks nothing, and the record that actually needs attention stops standing
+out — which is the only reason the marker exists.
+
+### Status rides the media
+
+One treatment, so the same record does not report its state one way in a list and another on a card.
+Where there is media — an avatar, a glyph tile, a poster — a noteworthy status draws a **ring in its
+tone plus the glyph in the corner**. Status becomes its own element only where there is nothing to
+ride: the labelled badge at `lg` with no media, and a tinted trailing region on a chip.
+
+Where there is no media _and_ no room for an element — the bare `sm` cell — there is no status.
+Give it an `avatar` if it needs one; see the size table above.
+
+Ring, fill, border and hover-border all come from one `statusTone` record keyed by `StatusBadge`'s
+own `variants[...].color`, so a chip cannot end up with an error region and a neutral outline. Tone
+classes are literal strings — Tailwind emits only what it can see in source, so a computed
+`text-` → `ring-` swap produces no CSS at all.
+
+### Chip previews
+
+`EntityChip` shows the record's `md` identity on hover, on keyboard focus, or on first tap, built on
+bits-ui's `LinkPreview`. On a coarse pointer the first tap opens the preview instead of following the
+link, so the preview carries an arrow button — without it a phone could reach the preview and never
+the record. Pass `preview={false}` where the surroundings already show the same thing.
+
+Note that bits-ui's trigger sets `role="button"`, which is dropped for the anchor: a link that
+navigates must not be announced as a button.
+
+### Registry
+
+Per-type facts live in `entity/registry.ts` (glyph, avatar shape, subtypes) and `$lib/config`
+(`entityTypes`, `entityLabels`). Components must not branch on `ref.type`; a branch means the
+registry is missing a field. `registry.spec.ts` enforces coverage: every type drawn and named, no
+stale keys, identity glyphs unique across the registry, subtype glyphs unique within a type, every
+flag entity type mapped, and no success-toned status escaping `ordinaryStatuses`.
+
+### Things that will bite
+
+- **`truncate` does nothing on `<h1>`–`<h6>` or `<p>`.** `layout.css` sets `text-wrap: balance` and
+  `pretty` on them _unlayered_, and unlayered CSS beats every `@layer`, so `overflow` and `ellipsis`
+  apply but `white-space: nowrap` does not. Put the `truncate` on an inner `<span>`, or use a `<div>`.
+- **`EntityIdentity` at `sm` renders two sibling roots with no wrapper.** `cell-primary` is
+  `width:100%; max-width:0`, and truncation only resolves when the anchor is a direct block child.
+  Wrapping it silently un-truncates every list in the app; `EntityIdentity.svelte.spec.ts` pins it.
+- **Card actions ride the bottom edge** (`mt-5 h-0`, outside `CardBody`), matching
+  `member/reservations/ReservationCard.svelte`. Pass `size="xs"`.
 
 ## BookerTypeIcon
 
@@ -449,9 +622,99 @@ Prev/next navigation arrows with keyboard shortcuts (← →). Includes `<svelte
 
 When `nextHref` is absent, shows `endLabel` (if provided) or a disabled button.
 
+## Sidebar and panel navigation
+
+`AppShell` → `Sidebar` → `<ul class="menu">` → the `Nav.*` primitives from
+`$lib/components/shared/Nav/`. Three components: `Nav.Item` (a row), `Nav.Collapsible` (a row with
+children, held open by the URL), `Nav.Group` (a titled section).
+
+**Every panel's rows are data — add features there, not in the template.** `staff/nav-items.ts`,
+`member/nav-items.ts`, `band/[slug]/nav-items.ts`. Each layout holds only a `key → Icon` map and, if
+it has badges, a `badgeKey → count` map, which is what makes a renamed field on the layout query a
+type error instead of a badge that quietly stops. Anything conditional — a feature flag, a role —
+belongs in the data module, where a spec can assert it; `band/[slug]/nav-items.ts` records that
+gating expressed as nested `{#if}`s was silently wrong twice.
+
+The panel switcher's tabs come from `$lib/components/shared/panel-tabs.ts`, not hand-built per
+layout.
+
+```svelte
+<Nav.Group title={section.title} collapsible persistKey={section.key} containsActive={…}>
+	<Nav.Item href={item.href} label={item.label} badge={…} active={activeKey === item.key} />
+</Nav.Group>
+```
+
+**Active state.** `Nav.Item` matches the pathname exactly on its own, which lights no row at all on
+a detail page. Pass `active` to override it. The rule lives once, in
+`$lib/components/shared/Nav/active-nav.ts`: `activeNavKey(items, pathname)` picks the item with the
+longest matching href, and each panel wraps it (`activeNavKey`, `activeMemberNavKey`,
+`activeBandNavKey`). Two details it encodes — match on `path === href || path.startsWith(href + '/')`,
+because a bare `startsWith` lets `/staff/users` claim `/staff/usersomething`; and skip any row whose
+href does not start with `/`, because a band's "View Live Site" is filled in by the layout and an
+empty href is a prefix of everything.
+
+A page that resolves to the panel root lights Dashboard, which is the signal that it has no home in
+the nav. `member/nav-items.spec.ts` asserts against that with a commented exemption list — that is
+how you find a surface that shipped without a way in.
+
+**Collapsible groups.** `collapsible` turns the title into a disclosure `<button>`; `persistKey`
+remembers the choice, namespaced by `persistScope` (default `staff`). Groups always render open on
+the server and on the first client paint — the stored state is read in `onMount` — because a
+collapsed group is `display: none`, and e2e selects staff nav links by role. Storage holds the
+_collapsed_ set, so a group added later defaults open with no migration. Navigating into a collapsed
+group opens it and keeps it open.
+
+Group titles are buttons, not headings, deliberately: `getByRole('heading', …)` is how pages assert
+their own titles, and a sidebar full of headings collides with that.
+
+**daisyUI facts this depends on**, each of which will otherwise be rediscovered the hard way:
+
+- `.menu` is `flex-flow: column wrap`. Constrain its height without `flex-nowrap` and the rows wrap
+  into a second column past the sidebar's edge, clipped and unreachable rather than scrolling.
+- A flex child needs `min-h-0` to scroll at all; `overflow-y-auto` alone does nothing, because
+  `min-height: auto` keeps the item at content size.
+- `.menu :where(li ul)` indents and draws a guide rule, so a collapsible group cancels it with
+  `ms-0 ps-0 before:content-none`. `NavGroup`'s plain branch renders a bare `<ul>` sibling with no
+  `<li>` wrapper for exactly this reason — do not "fix" it.
+- `.menu-title` on a `<button>` gets the header look for free, and `.menu-dropdown-toggle` supplies
+  the chevron; neither gets daisyUI's hover treatment, so `NavGroup` adds its own.
+
+## Card
+
+The panel surface. `Card` + `CardBody` + `CardTitle`, from
+`$lib/components/shared/Card/`. Most sections want `InfoCard` (below) instead — reach for these
+directly only when the section has no title, or when the body needs a non-default layout.
+
+```svelte
+<Card>
+	<CardBody>
+		<CardTitle>Schedule</CardTitle>
+		…
+	</CardBody>
+</Card>
+
+<Card bordered>
+	<!-- border instead of shadow, for a nested card -->
+	<CardBody row>…</CardBody>
+	<!-- label left, control right -->
+</Card>
+```
+
+- `Card` — `tone` (`base-100` default, `base-200`, `base-300`), `bordered`. The shadow is not
+  optional and not configurable: `shadow` and `shadow-sm` were both in circulation, and this is
+  where that got settled.
+- `CardBody` — `padding` (`md` default, `sm`), `row` (label/control row instead of a column),
+  `center`.
+- `CardTitle` — `size` (`sm`, `base`, `lg`; omit for daisyUI's own), `level` (`2`/`3`/`4`, default
+  `3`). **`level` is the page outline, `size` is how loud it looks** — pick `level` from where the
+  card sits under `PageHeader`'s `<h1>`, never from how big you want the text.
+
+Not everything with a `card` class should become one: a clickable card is an `<a>`, a list card is
+an `<li>`, and tinted one-offs (`bg-warning/10 border-warning/40`) stay hand-written.
+
 ## InfoCard
 
-Card with a small label header and content body. Use for detail page sections (member info, payment, notes, etc.).
+Titled card — the default section on a detail page. Thin composition over `Card`/`CardBody`/`CardTitle`.
 
 ```svelte
 <InfoCard title="Payment">
@@ -466,6 +729,46 @@ Pass extra classes on the outer card via `class`:
 	<p>Reason: scheduling conflict</p>
 </InfoCard>
 ```
+
+## DefinitionList / Fact
+
+The label/value grid on staff detail pages. Replaces the hand-written
+`<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">`
+that was copy-pasted into nine files.
+
+```svelte
+import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte'; import
+Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+
+<DefinitionList>
+	<Fact label="Status"><StatusBadge status={item.status} /></Fact>
+	<Fact label="ID" mono>{item.id}</Fact>
+	<Fact label="Category" value={item.category.name} />
+	{#if item.notes}
+		<Fact label="Notes" wrap>{item.notes}</Fact>
+	{/if}
+</DefinitionList>
+```
+
+`Fact` props:
+
+- `label` — the `<dt>` text.
+- `value` — plain-text `<dd>`. Ignored when children are supplied.
+- `mono` — `font-mono text-xs`, for IDs and provider record keys.
+- `wrap` — `whitespace-pre-wrap`, for free-text notes.
+- `class` — extra classes on the `<dd>`.
+
+**`Fact` renders a bare `<dt>` + `<dd>` with no wrapper, and it must stay that
+way.** The two columns are a CSS grid declared on the `<dl>`, which only aligns
+when the `<dt>`s and `<dd>`s are direct children of it. Wrapping them in a
+`<div>` collapses every detail page's label gutter, and nothing throws —
+`DefinitionList.svelte.spec.ts` asserts the structure for exactly that reason.
+
+Use a `class` prop rather than a `class:` directive for conditional styling:
+`class:` directives do not forward from a component to its inner element.
+
+Not every `<dl>` belongs here — `member/equipment/loans` puts icons and tooltips
+in its `<dt>`s, which `Fact`'s string `label` deliberately doesn't support.
 
 ## DayTimeline
 
@@ -575,13 +878,29 @@ below the `@lg` container breakpoint.
 
 ```svelte
 <FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
-	{#snippet search()}<input ... />{/snippet}
-	{#snippet children()}<select ...>...</select>{/snippet}
+	{#snippet search()}
+		<SearchInput
+			bind:value={searchText}
+			placeholder="Search members..."
+			onsearch={(q) => {
+				searchQuery = q;
+				page = 1;
+			}}
+		/>
+	{/snippet}
+	<Select size="sm" aria-label="Role" bind:value={roleFilter}>…</Select>
 </FilterBar>
 ```
 
+`SearchInput` (`$lib/components/shared/Form/`) owns the 300ms debounce, so a page keeps only the
+value it queries on. `bind:value` is the immediate text, for Clear; setting it from outside also
+cancels any search still in flight.
+
 Name the page's search state `searchText`, not `search` — the `search` snippet
 shadows a same-named script binding.
+
+**Do not write `input-bordered`, `select-bordered`, `textarea-bordered` or `file-input-bordered`.** They are daisyUI 4
+spellings that emit no CSS in daisyUI 5, where the border is the default.
 
 ### Column slots
 
@@ -597,9 +916,25 @@ Every list row is built from the same four slots, in this order:
    `dropdown dropdown-end`. Never hidden.
 
 **Merge before you hide.** If a column repeats or merely qualifies the primary
-cell, delete it and make it the subline — don't tier it. `MemberLink` already
+cell, delete it and make it the subline — don't tier it. `EntityIdentity` already
 renders the email and the admin/staff/sustaining glyph, so a list showing a
 member never needs separate Email or role columns.
+
+**But another record is not a qualifier.** A fact about the row merges into the
+subline; a _different record_ the row points at — the booker of a reservation,
+the borrower on a loan — gets its own column with an `EntityChip` in it. Chips
+down a column scan as a column; the same chips scattered under each primary cell
+do not, and they cost the primary cell its second line. `staff/reservations`,
+`staff/recurring` and `staff/equipment/loans` all read this way. Reserve the
+subline for what genuinely qualifies the record: a series' time range, an
+equipment loan's category.
+
+**Let the chip carry its glyph when the column's type varies.** A reservation's
+booker is a member, a band or an event, so `toBookerRef()` returns whichever it
+is and the chip's own glyph tells them apart — no column of icons beside it, and
+no branch on the page. Where every row in a column is the same type (a loan's
+borrower is always a member), pass `icon={false}`: a glyph on every row marks
+nothing, which is the same rule the registry states for subtypes.
 
 **Column budget:** 6 at ≥896px, 4 at ≥512px, 3 at 327px. Wanting a 7th means the
 fact belongs on the detail page.
@@ -666,7 +1001,31 @@ Single stat display for dashboards.
 
 ```svelte
 <StatCard title="Total Users" value={stats.userCount} />
+<StatCard title="Members" value={band.memberCount} size="sm" />
+<StatCard title="Your Role" value={role} size="sm" valueClass="capitalize" />
 ```
+
+Props: `title`, `value`, `size` (`'sm'` renders the value at `text-2xl`, `'md'`
+keeps daisyUI's default), `class` (outer card), `valueClass` (value line).
+
+Use `size="sm"` rather than hand-rolling the raw `stat` markup — the default
+value size overflows a narrow panel column once three sit in a row, and that is
+exactly why two pages rebuilt the card by hand before the prop existed.
+
+## ShareButton
+
+Copies the current page URL and flashes a checkmark.
+
+```svelte
+<ShareButton title="Copy link to this event" />
+```
+
+Props: `title` (tooltip — name the thing being shared), `class` (defaults to
+`btn btn-ghost btn-sm btn-square`).
+
+The clipboard write can reject on permissions or a non-secure context; the
+failure is deliberately silent, because a convenience affordance failing loudly
+is worse than the checkmark not appearing.
 
 ## Pagination
 
@@ -705,6 +1064,30 @@ Page title with optional back button, subtitle, and right-side action slot.
 </PageHeader>
 ```
 
+## Public site sections
+
+The marketing pages (`(public)/`) compose from `$lib/components/shared/marketing/`:
+
+```svelte
+<Hero title="Programs">Practice spaces, performances, meetups & clubs for the music community</Hero>
+
+<Section tint="success" class="program-block">…</Section>
+<Section tint="primary">
+	<SectionHeading title="Two Ways to Belong">Everyone starts with a free account.</SectionHeading>
+	…
+</Section>
+```
+
+- `Section` — `tint` (`none`, `primary`, `secondary`, `success`, `warning`, `info`), `pad`
+  (`sm`/`md`/`lg`), `width` (the inner measure: `2xl`, `3xl`, `5xl`, `full`), `center`, `sunburst`.
+  Alternating the brand tints down a page is what gives the marketing site its rhythm.
+- `Hero` — the page masthead. Takes `title`; children are the subtitle line.
+- `SectionHeading` — centred title block, with an optional `eyebrow` snippet (usually a
+  `sticker-badge`) and a lede as children.
+
+Brand ink is `text-cmc-navy` / `text-cmc-teal` / `text-cmc-orange` — never an inline
+`style="color: var(--cmc-navy)"`.
+
 ## Create forms live in modals
 
 "Create" flows (new reservation, new event, etc.) should open in a modal on the list page, not navigate to a separate `/new` route. This keeps the user in context and avoids a full page transition for what's usually a short form. The modal is a sibling component to the list page (e.g. `CreateModal.svelte`) and is toggled by a button in the `PageHeader`.
@@ -713,7 +1096,9 @@ Edit/detail views remain full pages at `[id]/`.
 
 ## CSS conventions
 
-- Use bare daisyUI component classes. Extra Tailwind overrides are fine for spacing on parents but avoid overriding component internals.
+- Buttons are `<Button variant size>` — never a raw `<button class="btn …">` or a `class="btn-ghost btn-sm"` string. The same goes for `Action`, `SubmitButton` and the `*Action` wrappers.
+- Supporting text is `text-muted` (the `text-sm` tier) or `text-subtle` (the `text-xs` tier), not `text-sm opacity-60`. `text-fg-2` / `text-fg-3` / `surface` reach the tokens directly when the size is already set.
+- Otherwise use bare daisyUI component classes. Extra Tailwind overrides are fine for spacing on parents but avoid overriding component internals.
 - Cards: `card bg-base-100 shadow` (use `shadow` not `shadow-sm`).
 - Form inputs: `input input-bordered` (standard size). Use `input-sm` only on dense settings-style forms, and be consistent within a page.
 - Page content width: constrain with `max-w-md` (forms), `max-w-2xl` (settings), or let it fill (tables/dashboards).
@@ -743,3 +1128,17 @@ Components:
 **Avatar shape convention:** a member avatar is always **round**, a band avatar always **square** — use `EntityAvatar shape="round|square"` (or `Avatar` for members) anywhere one represents these entities.
 
 Pure display logic (link partitioning, embeddable-service ordering, the private-row rule) lives in `src/lib/utils/directory-display.ts` and is unit-tested — keep DB/Svelte concerns out of it.
+
+## Inbox
+
+`/member/messages` and `/staff/inbox` are the same two-pane interface: a conversation list beside the open conversation. Both mount `InboxShell` from a `+layout.svelte`, so the list survives navigating between threads and every `/…/[id]` URL keeps working — `/staff/inbox/[id]` is deep-linked from notification emails, the in-app bell and the staff user record.
+
+Components in `src/lib/components/inbox/`:
+
+- `InboxShell` — the two-pane frame. One pane at a time below `lg`, both from `lg`; which one shows on a phone follows whether a thread is open. Each pane scrolls its own overflow, so a conversation and a list of conversations never share a scrollbar. Every link in that flex chain needs `min-h-0`.
+- `ThreadHeader` — title, subtitle, trailing actions, and an optional disclosure below. Its back button is `lg:hidden` and is the only way out of a conversation on a phone.
+- `ThreadTimeline` — messages (and staff-only notes) on one chronological spine. Orients on `viewerUserId`, not direction; see `member-portal-chat-spec.md`.
+- `ThreadComposer` — the reply box. `noteForm` is **optional**: omit it and the Reply/Internal note tabs disappear, which is the member side, since notes are staff-private.
+- `channels.ts` — `channelLabel` / `channelIcon`, the single source of truth for how a channel is named and drawn. Use it rather than a local ternary on `channel`.
+
+**A list pane that mirrors filter state into the URL must write onto the current pathname**, not a hard-coded index path. It lives in the layout, so it keeps running while a thread is open — pinned to the index it navigates straight back out of whatever was just opened.

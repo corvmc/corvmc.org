@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -11,7 +12,7 @@
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Action from '$lib/components/shared/Action.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
@@ -48,19 +49,6 @@
 	let searchText = $state(initial.get('q') ?? '');
 	let searchQuery = $state(initial.get('q') ?? '');
 	let pageNumber = $state(Number(initial.get('page') ?? '1') || 1);
-
-	let searchTimer: ReturnType<typeof setTimeout> | undefined;
-
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchQuery = searchText;
-			pageNumber = 1;
-		}, 300);
-	}
-
-	$effect(() => () => clearTimeout(searchTimer));
 
 	// Writes the URL, never state — the filters above stay the source of truth.
 	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
@@ -114,7 +102,6 @@
 	}
 
 	function clearFilters() {
-		clearTimeout(searchTimer);
 		searchText = '';
 		searchQuery = '';
 		roleFilter = '';
@@ -125,9 +112,9 @@
 </script>
 
 <PageHeader title="Volunteering" subtitle="Staff">
-	<Button href="/staff/volunteer/shifts" class="btn-ghost btn-sm">Shifts</Button>
-	<Button href="/staff/volunteer/roles" class="btn-ghost btn-sm">Roles</Button>
-	<Button href="/staff/volunteer/report" class="btn-ghost btn-sm">Report</Button>
+	<Button href="/staff/volunteer/shifts" variant="ghost" size="sm">Shifts</Button>
+	<Button href="/staff/volunteer/roles" variant="ghost" size="sm">Roles</Button>
+	<Button href="/staff/volunteer/report" variant="ghost" size="sm">Report</Button>
 </PageHeader>
 
 <PageContent>
@@ -141,7 +128,7 @@
 	{#await blocked then rows}
 		{#if rows.length > 0}
 			<InfoCard title="Pending review" class="mb-4 border-l-4 border-warning">
-				<p class="text-sm opacity-70">
+				<p class="text-muted">
 					These members told us they're under 18, so they can't pick up shifts or log hours yet.
 					Approving lets them do both.
 				</p>
@@ -158,16 +145,7 @@
 						<tr>
 							<td class="w-px"><StatusBadge status="blocked" /></td>
 							<td class="cell-primary">
-								<MemberLink
-									variant="inline"
-									member={{
-										name: row.userName,
-										email: row.userEmail,
-										pronouns: row.userPronouns,
-										role: row.userRole,
-										userId: row.userId
-									}}
-								/>
+								<EntityIdentity ref={row.member} />
 							</td>
 							<td class="col-support">{row.firstName} {row.lastName}</td>
 							<td class="col-extra whitespace-nowrap">{relativeDay(row.createdAt)}</td>
@@ -176,7 +154,8 @@
 									<Action
 										action={approveVolunteerSignup.for(row.userId)}
 										label="Approve"
-										class="btn-primary btn-sm"
+										variant="primary"
+										size="sm"
 										modalTitle="Approve {row.firstName} {row.lastName}?"
 										submitLabel="Approve"
 										successToast="Volunteer approved"
@@ -199,40 +178,38 @@
 	{/await}
 
 	{#await counts then c}
-		<!-- Four tabs are wider than a phone; without this the last is clipped off
-		     the edge with no way to reach it. -->
-		<div class="mb-4 overflow-x-auto pb-1">
-			<TabBar
-				class="w-max"
-				tabs={[
-					{ key: 'pending', label: 'Pending', badge: c.pending },
-					{ key: 'approved', label: 'Approved', badge: c.approved },
-					{ key: 'rejected', label: 'Returned', badge: c.rejected },
-					{ key: 'all', label: 'All', badge: c.all }
-				]}
-				active={statusView}
-				onchange={(key) => {
-					statusView = key as StatusView;
-					pageNumber = 1;
-				}}
-			/>
-		</div>
+		<TabBar
+			class="mb-4"
+			collapse
+			tabs={[
+				{ key: 'pending', label: 'Pending', badge: c.pending },
+				{ key: 'approved', label: 'Approved', badge: c.approved },
+				{ key: 'rejected', label: 'Returned', badge: c.rejected },
+				{ key: 'all', label: 'All', badge: c.all }
+			]}
+			active={statusView}
+			onchange={(key) => {
+				statusView = key as StatusView;
+				pageNumber = 1;
+			}}
+		/>
 	{/await}
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search members..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchQuery = q;
+					pageNumber = 1;
+				}}
 			/>
 		{/snippet}
 
 		{#await roles then roleOptions}
 			<Select
-				class="select-bordered select-sm"
+				size="sm"
 				aria-label="Role"
 				value={roleFilter}
 				onchange={(e: Event) => {
@@ -250,7 +227,7 @@
 
 		<input
 			type="date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			aria-label="Worked on or after"
 			value={fromDate}
 			onchange={(e) => {
@@ -260,7 +237,7 @@
 		/>
 		<input
 			type="date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			aria-label="Worked on or before"
 			value={toDate}
 			onchange={(e) => {
@@ -315,26 +292,18 @@
 						</td>
 
 						<!--
-							MemberLink already carries the email and the role glyph, so the
-							description rides here as the subline rather than taking the
-							seventh column the budget doesn't have.
+							The description rides as the subline rather than taking the
+							seventh column the budget doesn't have. The email drops with it:
+							it is one click away on the member's own page.
 						-->
 						<td class="cell-primary">
-							<MemberLink
-								variant="inline"
-								member={{
-									name: log.userName,
-									email: log.userEmail,
-									pronouns: log.userPronouns,
-									role: log.userRole,
-									userId: log.userId
-								}}
-							/>
-							<div class="truncate text-xs opacity-60" title={log.description}>
-								{log.description}
-							</div>
+							<EntityIdentity ref={log.member}>
+								{#snippet subtitle()}
+									<span title={log.description}>{log.description}</span>
+								{/snippet}
+							</EntityIdentity>
 							{#if log.reviewNotes}
-								<div class="truncate text-xs opacity-60">
+								<div class="truncate text-subtle">
 									{log.reviewedByName ?? 'Staff'}: {log.reviewNotes}
 								</div>
 							{/if}
@@ -358,7 +327,9 @@
 										label="Approve"
 										iconOnly
 										icon={checkIcon}
-										class="btn-ghost btn-sm text-success"
+										variant="ghost"
+										size="sm"
+										class="text-success"
 										modalTitle="Approve these hours?"
 										submitLabel="Approve"
 										successToast="Hours approved"
@@ -367,10 +338,10 @@
 										{#snippet form()}
 											<input type="hidden" name="id" value={log.id} />
 											<p class="text-sm">
-												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.userName} on
+												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.member.title} on
 												{formatDateShort(log.workedOn)}.
 											</p>
-											<p class="text-sm opacity-70">{log.description}</p>
+											<p class="text-muted">{log.description}</p>
 											<FormField
 												name="notes"
 												label="Note (optional)"
@@ -385,20 +356,22 @@
 										label="Return"
 										iconOnly
 										icon={returnIcon}
-										class="btn-ghost btn-sm text-error"
+										variant="ghost"
+										size="sm"
+										class="text-error"
 										modalTitle="Return these hours?"
 										submitLabel="Return"
-										submitClass="btn-error"
+										submitVariant="error"
 										successToast="Hours returned"
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
 											<input type="hidden" name="id" value={log.id} />
 											<p class="text-sm">
-												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.userName} on
+												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.member.title} on
 												{formatDateShort(log.workedOn)}.
 											</p>
-											<p class="text-sm opacity-70">{log.description}</p>
+											<p class="text-muted">{log.description}</p>
 											<FormField
 												name="notes"
 												label="Reason"

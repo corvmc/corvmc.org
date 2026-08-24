@@ -252,17 +252,14 @@ describe('updateBandProfile', () => {
 });
 
 describe('setUserAvatar', () => {
-	it('uploads the file and returns the extension-mapped key', async () => {
+	it('uploads the file and returns a cache-busting, extension-mapped key', async () => {
 		selectResults.push([{ image: null }]);
 
 		const key = await setUserAvatar('user-1', new ArrayBuffer(8), 'image/png');
 
-		expect(uploadFile).toHaveBeenCalledWith(
-			expect.any(ArrayBuffer),
-			'users/avatars/user-1.png',
-			'image/png'
-		);
-		expect(key).toBe('users/avatars/user-1.png');
+		// The per-upload token is what stops a replaced avatar reusing its URL.
+		expect(key).toMatch(/^users\/avatars\/user-1-[0-9a-f]{8}\.png$/);
+		expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), key, 'image/png');
 	});
 
 	it('deletes a previously-uploaded avatar key before replacing', async () => {

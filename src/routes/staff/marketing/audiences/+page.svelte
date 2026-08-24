@@ -9,6 +9,7 @@
 	import Table from '$lib/components/shared/Table.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import { formatDateShortYear } from '$lib/utils/format';
 
 	let audiences = $derived(await getAudiences());
@@ -36,12 +37,7 @@
 			{#each audiences as a (a.id)}
 				{@const href = resolve(`/staff/marketing/audiences/${a.id}`)}
 				<tr class="hover cursor-pointer" use:rowLink={href}>
-					<td class="cell-primary">
-						<a {href} class="block truncate font-medium hover:underline">{a.name}</a>
-						{#if a.description}
-							<div class="truncate text-sm opacity-60">{a.description}</div>
-						{/if}
-					</td>
+					<td class="cell-primary"><EntityIdentity ref={a.ref} /></td>
 					<td class="col-support w-px">
 						{#if a.systemKey}
 							<Badge size="sm" variant="info" class="whitespace-nowrap">Built-in</Badge>

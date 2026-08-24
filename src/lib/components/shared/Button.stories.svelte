@@ -12,11 +12,14 @@
 </script>
 
 <Story name="Primary">Primary</Story>
-<Story name="Secondary" args={{ class: 'btn-secondary' }}>Secondary</Story>
-<Story name="Accent" args={{ class: 'btn-accent' }}>Accent</Story>
-<Story name="Ghost" args={{ class: 'btn-ghost' }}>Ghost</Story>
-<Story name="Outline" args={{ class: 'btn-outline' }}>Outline</Story>
-<Story name="Error" args={{ class: 'btn-error' }}>Delete</Story>
-<Story name="Small" args={{ class: 'btn-primary btn-sm' }}>Small</Story>
-<Story name="Large" args={{ class: 'btn-primary btn-lg' }}>Large</Story>
+<Story name="Secondary" args={{ variant: 'secondary' }}>Secondary</Story>
+<Story name="Accent" args={{ variant: 'accent' }}>Accent</Story>
+<Story name="Ghost" args={{ variant: 'ghost' }}>Ghost</Story>
+<Story name="Default" args={{ variant: 'default' }}>Default</Story>
+<Story name="Outline" args={{ outline: true }}>Outline</Story>
+<Story name="Error" args={{ variant: 'error' }}>Delete</Story>
+<Story name="Error outline" args={{ variant: 'error', outline: true }}>Delete</Story>
+<Story name="Small" args={{ size: 'sm' }}>Small</Story>
+<Story name="Large" args={{ size: 'lg' }}>Large</Story>
+<Story name="Square" args={{ variant: 'ghost', size: 'sm', shape: 'square' }}>×</Story>
 <Story name="Disabled" args={{ disabled: true }}>Disabled</Story>

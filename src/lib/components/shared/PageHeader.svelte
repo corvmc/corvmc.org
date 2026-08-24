@@ -8,12 +8,19 @@
 		subtitle,
 		backHref,
 		documentTitle,
+		leading,
 		children
 	}: {
 		title: string;
 		backHref?: string;
 		children?: Snippet;
 		subtitle?: string;
+		/**
+		 * Rendered between the back button and the title. For a record whose
+		 * identity is a picture as much as a name — a member's avatar — so the page
+		 * does not have to restate the name below the header to get one on screen.
+		 */
+		leading?: Snippet;
 		/**
 		 * Overrides the browser tab title when the on-screen heading would make a
 		 * poor one (too long, or missing context outside the page). Defaults to
@@ -39,14 +46,17 @@
 </svelte:head>
 
 <div
-	class="sticky top-0 z-10 -mx-6 flex flex-wrap items-center justify-between gap-2 border-b border-base-300 bg-base-100 px-6 py-4 mb-6"
+	class="sticky top-0 z-10 -mx-6 flex flex-wrap items-center justify-between gap-2 border-b border-base-300 bg-base-100 px-6 py-3 mb-6"
 >
-	<div class="flex items-center gap-4">
+	<div class="flex min-w-0 items-center gap-3">
 		{#if backHref}
-			<Button href={backHref} class="btn-square btn-ghost btn-lg">←</Button>
+			<Button href={backHref} variant="ghost" size="lg" shape="square">←</Button>
 		{/if}
-		<hgroup class="flex flex-col">
-			<h1 class="text-2xl font-bold">{title}</h1>
+		{#if leading}
+			{@render leading()}
+		{/if}
+		<hgroup class="flex min-w-0 flex-col">
+			<h1 class="truncate text-2xl font-bold">{title}</h1>
 			{#if subtitle}
 				<span class="text-sm font-bold text-primary uppercase">{subtitle}</span>
 			{/if}

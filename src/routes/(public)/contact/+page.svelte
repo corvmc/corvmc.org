@@ -10,6 +10,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	// Declared before the awaited query below — a declaration that follows a
 	// top-level await is async-gated.
@@ -57,7 +58,7 @@
 		<!-- Form -->
 		<div class="md:col-span-2">
 			{#if submitted}
-				<div class="alert alert-success">Thanks for reaching out! We'll get back to you soon.</div>
+				<Alert type="success">Thanks for reaching out! We'll get back to you soon.</Alert>
 			{:else}
 				<Form
 					remote={submitContactForm}
@@ -109,7 +110,7 @@
 					<FormField name="message" label="Message">
 						<textarea
 							{...fields.message.as('text')}
-							class="textarea textarea-bordered w-full"
+							class="textarea w-full"
 							rows="5"
 							maxlength="5000"
 							required
@@ -134,18 +135,18 @@
 		<div class="space-y-6">
 			<div>
 				<h3 class="font-semibold flex items-center gap-2 mb-2">
-					<span style="color: var(--cmc-teal)"><IconMapPin size={18} /></span> Visit Us
+					<span class="text-cmc-teal"><IconMapPin size={18} /></span> Visit Us
 				</h3>
-				<p class="text-sm" style="color: var(--fg-2)">
+				<p class="text-muted">
 					{address.street}<br />
 					{cityStateZip}
 				</p>
-				<p class="text-xs mt-1" style="color: var(--fg-3)">Office available by appointment only.</p>
+				<p class="text-xs mt-1 text-fg-3">Office available by appointment only.</p>
 			</div>
 
 			<div>
 				<h3 class="font-semibold flex items-center gap-2 mb-2">
-					<span style="color: var(--cmc-teal)"><IconMail size={18} /></span> Email
+					<span class="text-cmc-teal"><IconMail size={18} /></span> Email
 				</h3>
 				<a href="mailto:info@corvmc.org" class="link text-sm">info@corvmc.org</a>
 			</div>
@@ -157,7 +158,7 @@
 						<summary class="collapse-title font-medium py-2 min-h-0"
 							>How do I become a member?</summary
 						>
-						<div class="collapse-content text-sm" style="color: var(--fg-2)">
+						<div class="collapse-content text-muted">
 							<a href={resolve('/login?register&redirect=/member')} class="link"
 								>Create an account</a
 							> to get started. Free memberships are available.
@@ -167,7 +168,7 @@
 						<summary class="collapse-title font-medium py-2 min-h-0"
 							>Can I use the practice space?</summary
 						>
-						<div class="collapse-content text-sm" style="color: var(--fg-2)">
+						<div class="collapse-content text-muted">
 							The practice space is available to all members. Sign up for a free membership to book
 							your first session.
 						</div>
@@ -176,7 +177,7 @@
 						<summary class="collapse-title font-medium py-2 min-h-0"
 							>How do I submit music for a show?</summary
 						>
-						<div class="collapse-content text-sm" style="color: var(--fg-2)">
+						<div class="collapse-content text-muted">
 							All-ages, all genres — if you make music, we want to hear from you. Use the contact
 							form with "Performance Inquiry" as the subject, or email a link to your music and any
 							dates you have in mind to <a href="mailto:booking@corvmc.org" class="link"

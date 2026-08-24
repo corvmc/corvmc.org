@@ -5,9 +5,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 //
 //   1. Blocks are directional rows read in both directions. Unblocking removes
 //      only your own row — if the other person blocked you too, theirs stands.
-//   2. A member may switch their own messaging off and back on, but may never
-//      write over a restriction staff or a report put there. Without that,
-//      "turn my messages back on" also clears a suspension.
+//   2. Reachability has two independent halves — a restriction staff or a
+//      report imposed (`member_standing`), and the member's own switch
+//      (`user.acceptsDirectMessages`). Either one alone makes a member
+//      unreachable, and the member's switch can never lift a restriction,
+//      because the two write different tables. The standing half is
+//      standing-service.spec.ts's; what this file pins is that both halves are
+//      consulted and that they stay independent.
 
 const TABLES = {
 	userBlock: {
@@ -17,22 +21,13 @@ const TABLES = {
 		blockedUserId: 'block.blockedUserId',
 		source: 'block.source',
 		createdAt: 'block.createdAt'
-	},
-	messagingStanding: {
-		__table: 'messaging_standing',
-		userId: 'standing.userId',
-		status: 'standing.status',
-		source: 'standing.source',
-		reason: 'standing.reason',
-		triggeringFlagId: 'standing.triggeringFlagId',
-		updatedByUserId: 'standing.updatedByUserId',
-		updatedAt: 'standing.updatedAt'
 	}
 };
 
 let results: unknown[] = [];
 let inserted: { table: string; values: unknown; conflict: unknown }[] = [];
 let deleted: { table: string; where: unknown }[] = [];
+let updated: { table: string; set: unknown }[] = [];
 /** Every `where` a select built, in order. */
 let selectWheres: unknown[] = [];
 
@@ -83,7 +78,13 @@ vi.mock('$lib/server/db', () => ({
 				if (k === 'conflict') entry.conflict = v;
 			});
 		},
-		update: () => chain(),
+		update: (table: { __table: string }) => {
+			const entry = { table: table.__table, set: undefined as unknown };
+			updated.push(entry);
+			return chain((k, v) => {
+				if (k === 'set') entry.set = v;
+			});
+		},
 		delete: (table: { __table: string }) => {
 			const entry = { table: table.__table, where: undefined as unknown };
 			deleted.push(entry);
@@ -95,7 +96,32 @@ vi.mock('$lib/server/db', () => ({
 }));
 vi.mock('$lib/server/db/schema/moderation', () => TABLES);
 vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { __table: 'user', id: 'user.id', name: 'user.name' }
+	user: {
+		__table: 'user',
+		id: 'user.id',
+		name: 'user.name',
+		acceptsDirectMessages: 'user.acceptsDirectMessages'
+	}
+}));
+
+// Standing storage is standing-service.spec.ts's subject. Here it is a stub, so
+// these tests assert how the two halves combine and nothing about the table.
+type Standing = {
+	status: string;
+	reason: string | null;
+	triggeringFlagId: string | null;
+	updatedAt: Date | null;
+};
+const getStandingMock = vi.fn(
+	async (): Promise<Standing> => ({
+		status: 'none',
+		reason: null,
+		triggeringFlagId: null,
+		updatedAt: null
+	})
+);
+vi.mock('$lib/server/moderation/standing-service', () => ({
+	getStanding: (...a: unknown[]) => getStandingMock(...(a as []))
 }));
 
 vi.mock('drizzle-orm', () => ({
@@ -115,19 +141,24 @@ const {
 	unblockUser,
 	isBlockedEitherWay,
 	blockExistsBetween,
-	getMessagingStanding,
-	setMessagingStanding,
-	restrictMessaging,
 	canInitiateMessages,
 	messagingIsDisabled,
-	MessagingStandingNotYoursError
+	setAcceptsDirectMessages,
+	getMessagingState
 } = await import('./moderation-service');
 
 beforeEach(() => {
 	results = [];
 	inserted = [];
 	deleted = [];
+	updated = [];
 	selectWheres = [];
+	getStandingMock.mockResolvedValue({
+		status: 'none',
+		reason: null,
+		triggeringFlagId: null,
+		updatedAt: null
+	});
 });
 
 describe('blockUser', () => {
@@ -211,131 +242,116 @@ describe('block checks read both directions', () => {
 	});
 });
 
-describe('getMessagingStanding', () => {
-	it('treats a missing row as no restriction', async () => {
-		// Absence means unrestricted — the common case, and the default the whole
-		// feature is built around.
-		results = [[]];
-		expect(await getMessagingStanding('alice')).toEqual({
+describe('canInitiateMessages', () => {
+	it('is about the restriction only — a member who switched themselves off may still reply', async () => {
+		// Their own switch stops people reaching them; it is not a finding against
+		// them, so it does not close conversations they are already in.
+		getStandingMock.mockResolvedValue({
 			status: 'none',
-			source: null,
 			reason: null,
+			triggeringFlagId: null,
 			updatedAt: null
 		});
+		expect(await canInitiateMessages('alice')).toBe(true);
 	});
 
-	it('returns the stored standing when there is one', async () => {
-		const row = {
+	it('a restricted member may not start conversations', async () => {
+		getStandingMock.mockResolvedValue({
 			status: 'restricted',
-			source: 'report',
-			reason: 'told someone to get lost',
-			updatedAt: new Date(0)
-		};
-		results = [[row]];
-		expect(await getMessagingStanding('alice')).toEqual(row);
+			reason: null,
+			triggeringFlagId: null,
+			updatedAt: null
+		});
+		expect(await canInitiateMessages('alice')).toBe(false);
 	});
 });
 
-describe('canInitiateMessages / messagingIsDisabled', () => {
-	it('a restricted member may not start conversations but is not disabled', async () => {
-		results = [[{ status: 'restricted', source: 'report', reason: null, updatedAt: null }]];
-		expect(await canInitiateMessages('alice')).toBe(false);
-		results = [[{ status: 'restricted', source: 'report', reason: null, updatedAt: null }]];
-		expect(await messagingIsDisabled('alice')).toBe(false);
-	});
-
-	it('a disabled member can neither start nor be reached', async () => {
-		results = [[{ status: 'disabled', source: 'staff', reason: null, updatedAt: null }]];
-		expect(await canInitiateMessages('alice')).toBe(false);
-		results = [[{ status: 'disabled', source: 'staff', reason: null, updatedAt: null }]];
+describe('messagingIsDisabled — the two halves', () => {
+	it('is true when staff switched messaging off', async () => {
+		results = [[{ acceptsDirectMessages: true }]];
+		getStandingMock.mockResolvedValue({
+			status: 'disabled',
+			reason: 'under 18',
+			triggeringFlagId: null,
+			updatedAt: null
+		});
 		expect(await messagingIsDisabled('alice')).toBe(true);
 	});
 
-	it('an unrestricted member may do both', async () => {
-		results = [[]];
-		expect(await canInitiateMessages('alice')).toBe(true);
-		results = [[]];
+	it('is true when the member switched it off themselves', async () => {
+		results = [[{ acceptsDirectMessages: false }]];
+		expect(await messagingIsDisabled('alice')).toBe(true);
+	});
+
+	// The caller gets one boolean and cannot tell which half produced it. That is
+	// deliberate: telling a sender would leak either a moderation decision or a
+	// personal preference.
+	it('is false only when neither half says so', async () => {
+		results = [[{ acceptsDirectMessages: true }]];
+		expect(await messagingIsDisabled('alice')).toBe(false);
+	});
+
+	it('a report-driven restriction does not make someone unreachable', async () => {
+		// `restricted` is reply-only for the restricted member. Other people can
+		// still write to them — that is what separates it from `disabled`.
+		results = [[{ acceptsDirectMessages: true }]];
+		getStandingMock.mockResolvedValue({
+			status: 'restricted',
+			reason: null,
+			triggeringFlagId: null,
+			updatedAt: null
+		});
 		expect(await messagingIsDisabled('alice')).toBe(false);
 	});
 });
 
-describe('setMessagingStanding — who may change what', () => {
-	it('lets a member switch their own messaging off', async () => {
-		results = [[]]; // no existing row
-		await setMessagingStanding({ userId: 'alice', status: 'disabled', source: 'member' });
-		expect(inserted[0].values).toMatchObject({ status: 'disabled', source: 'member' });
-	});
-
-	it('lets a member switch their own back on', async () => {
-		results = [[{ status: 'disabled', source: 'member', reason: null, updatedAt: null }]];
-		await setMessagingStanding({ userId: 'alice', status: 'none', source: 'member' });
-		expect(inserted[0].values).toMatchObject({ status: 'none' });
-	});
-
-	it('refuses to let a member lift a staff-applied restriction', async () => {
-		results = [[{ status: 'disabled', source: 'staff', reason: 'under 18', updatedAt: null }]];
-		await expect(
-			setMessagingStanding({ userId: 'alice', status: 'none', source: 'member' })
-		).rejects.toBeInstanceOf(MessagingStandingNotYoursError);
+describe('setAcceptsDirectMessages', () => {
+	// The rule that replaced `MessagingStandingNotYoursError`: the member's switch
+	// is a different table from their standing, so "turn my messages back on"
+	// structurally cannot clear a suspension. There is no guard to forget.
+	it('writes the member’s own preference and nothing else', async () => {
+		await setAcceptsDirectMessages('alice', false);
+		expect(updated).toHaveLength(1);
+		expect(updated[0].table).toBe('user');
+		expect(updated[0].set).toEqual({ acceptsDirectMessages: false });
 		expect(inserted).toHaveLength(0);
 	});
 
-	it('refuses to let a member lift a restriction from an upheld report', async () => {
-		results = [[{ status: 'restricted', source: 'report', reason: null, updatedAt: null }]];
-		await expect(
-			setMessagingStanding({ userId: 'alice', status: 'none', source: 'member' })
-		).rejects.toBeInstanceOf(MessagingStandingNotYoursError);
-		expect(inserted).toHaveLength(0);
-	});
-
-	it('lets staff write over anything, including a member’s own switch', async () => {
-		results = [[{ status: 'disabled', source: 'member', reason: null, updatedAt: null }]];
-		await setMessagingStanding({
-			userId: 'alice',
-			status: 'none',
-			source: 'staff',
-			actorUserId: 'staff-1'
+	it('lets a restricted member still set their own switch', async () => {
+		getStandingMock.mockResolvedValue({
+			status: 'restricted',
+			reason: 'harassment',
+			triggeringFlagId: 'flag-1',
+			updatedAt: null
 		});
-		expect(inserted[0].values).toMatchObject({ status: 'none', source: 'staff' });
-	});
-
-	it('does not even read the existing row for a staff write', async () => {
-		// The ownership check is member-only. A staff path that consulted it would
-		// be one refactor away from inheriting the member restriction.
-		await setMessagingStanding({ userId: 'alice', status: 'disabled', source: 'staff' });
-		expect(inserted).toHaveLength(1);
-	});
-
-	it('upserts rather than failing on a second write', async () => {
-		results = [[]];
-		await setMessagingStanding({ userId: 'alice', status: 'disabled', source: 'staff' });
-		expect(inserted[0].conflict).toMatchObject({ target: TABLES.messagingStanding.userId });
+		await setAcceptsDirectMessages('alice', true);
+		expect(updated[0].set).toEqual({ acceptsDirectMessages: true });
 	});
 });
 
-describe('restrictMessaging', () => {
-	it('records the report that caused it, so the member can be told why', async () => {
-		await restrictMessaging({
-			userId: 'bob',
-			flagId: 'flag-1',
-			staffId: 'staff-1',
-			reason: 'harassment'
-		});
-		expect(inserted[0].values).toMatchObject({
-			userId: 'bob',
+describe('getMessagingState', () => {
+	it('returns both halves separately, so the account page can show each for what it is', async () => {
+		results = [[{ acceptsDirectMessages: false }]];
+		getStandingMock.mockResolvedValue({
 			status: 'restricted',
-			source: 'report',
 			reason: 'harassment',
 			triggeringFlagId: 'flag-1',
-			updatedByUserId: 'staff-1'
+			updatedAt: null
+		});
+
+		expect(await getMessagingState('alice')).toEqual({
+			acceptsDirectMessages: false,
+			standing: {
+				status: 'restricted',
+				reason: 'harassment',
+				triggeringFlagId: 'flag-1',
+				updatedAt: null
+			}
 		});
 	});
 
-	it('restricts rather than disables — they can still answer existing threads', async () => {
-		// The distinction is the whole point: someone who was rude in one
-		// conversation should not be cut out of a different one mid-negotiation.
-		await restrictMessaging({ userId: 'bob', flagId: 'flag-1', staffId: 'staff-1' });
-		expect((inserted[0].values as Record<string, unknown>).status).toBe('restricted');
-		expect((inserted[0].values as Record<string, unknown>).status).not.toBe('disabled');
+	it('defaults to reachable when the row is missing', async () => {
+		results = [[]];
+		expect((await getMessagingState('ghost')).acceptsDirectMessages).toBe(true);
 	});
 });

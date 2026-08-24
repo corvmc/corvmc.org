@@ -18,9 +18,10 @@ it is switched back off.
       badge + billing details on `/staff/bands/[id]`; `setBandTier` comp/revoke that refuses
       Stripe-backed bands (a comped band is `tier: premium` + `subscription: null`, which
       `clearStaleBands` skips); tier column and filter on `/staff/bands`.
-- [x] **bandReservations** — `band` case in `BookerTypeIcon`; band joined into the staff list and
-      detail queries; search covers band names; booker-type filter; create-on-behalf-of-band in
-      `CreateModal` (picking a band prefills the member with its owner).
+- [x] **bandReservations** (no longer flagged) — `band` case in `BookerTypeIcon`; band joined into
+      the staff list and detail queries; search covers band names; booker-type filter;
+      create-on-behalf-of-band in `CreateModal` (picking a band prefills the member with its
+      owner).
 - [x] **band events** (no longer flagged) — source + band name on the staff list with a source
       filter; band attribution on the detail page; `location` and `externalTicketUrl` editable by
       staff; `unpublishWithBandNotice` extracted to the event service so both the flag queue and

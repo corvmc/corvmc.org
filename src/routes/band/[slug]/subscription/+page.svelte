@@ -1,4 +1,8 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -15,6 +19,7 @@
 	import { env } from '$env/dynamic/public';
 	import { bandSiteUrl, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	let info = $derived(await getBandSubscriptionInfo(page.params.slug!));
@@ -39,10 +44,10 @@
 <PageContent width="2xl">
 	{#if info.tier === 'premium' && info.subscription}
 		<!-- Active premium subscription -->
-		<div class="card bg-base-100 shadow-sm">
-			<div class="card-body">
+		<Card>
+			<CardBody>
 				<div class="flex items-center gap-3">
-					<h2 class="card-title">Premium Band Page</h2>
+					<CardTitle level={2}>Premium Band Page</CardTitle>
 					<Badge variant="success">Active</Badge>
 				</div>
 				<dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
@@ -66,13 +71,11 @@
 				</dl>
 
 				{#if info.subscription.cancelAtPeriodEnd}
-					<div class="alert alert-warning mt-4">
-						<p>
-							Your subscription will end on {formatDate(
-								new Date(info.subscription.currentPeriodEnd)
-							)}.
-						</p>
-					</div>
+					<Alert type="warning" class="mt-4">
+						Your subscription will end on {formatDate(
+							new Date(info.subscription.currentPeriodEnd)
+						)}.
+					</Alert>
 					{#if isOwner}
 						<form
 							{...resumePremium.enhance(async (form) => {
@@ -87,7 +90,7 @@
 							})}
 						>
 							<input {...resumePremium.fields.slug.as('hidden', band.slug)} />
-							<button class="btn btn-primary btn-sm mt-2">Resume Subscription</button>
+							<Button variant="primary" size="sm" class="mt-2">Resume Subscription</Button>
 						</form>
 					{/if}
 				{:else if isOwner}
@@ -104,32 +107,32 @@
 						})}
 					>
 						<input {...cancelPremium.fields.slug.as('hidden', band.slug)} />
-						<button class="btn btn-ghost btn-sm mt-4 text-error">Cancel Subscription</button>
+						<Button variant="ghost" size="sm" class="mt-4 text-error">Cancel Subscription</Button>
 					</form>
 				{/if}
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 	{:else}
 		<!-- Free tier — upgrade CTA -->
 		<div class="space-y-6">
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body text-center">
+			<Card>
+				<CardBody class="text-center">
 					<h2 class="text-2xl font-bold">Upgrade to Premium</h2>
 					<p class="mt-2 opacity-70">
 						Your band already has <strong>{band.slug}.{baseDomain}</strong>, pointing at your
 						directory profile. Premium turns it into a real website — a block editor, custom CSS,
 						genre themes, a full EPK — and lets you serve it from your own domain.
 					</p>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<!-- Monthly -->
 				<div class="card bg-base-100 shadow-sm border">
-					<div class="card-body items-center text-center">
+					<CardBody center>
 						<h3 class="text-lg font-bold">Monthly</h3>
 						<p class="text-3xl font-bold">
-							$15<span class="text-sm font-normal opacity-60">/mo</span>
+							$15<span class="text-muted font-normal">/mo</span>
 						</p>
 						{#if isOwner}
 							<form
@@ -147,19 +150,19 @@
 							>
 								<input {...upgradeMonthly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeMonthly.fields.billingInterval.as('hidden', 'monthly')} />
-								<button class="btn btn-primary mt-4">Subscribe Monthly</button>
+								<Button variant="primary" class="mt-4">Subscribe Monthly</Button>
 							</form>
 						{/if}
-					</div>
+					</CardBody>
 				</div>
 
 				<!-- Yearly -->
 				<div class="card bg-base-100 shadow-sm border border-primary">
-					<div class="card-body items-center text-center">
+					<CardBody center>
 						<Badge variant="primary">2 months free</Badge>
 						<h3 class="text-lg font-bold">Yearly</h3>
 						<p class="text-3xl font-bold">
-							$120<span class="text-sm font-normal opacity-60">/yr</span>
+							$120<span class="text-muted font-normal">/yr</span>
 						</p>
 						{#if isOwner}
 							<form
@@ -177,16 +180,16 @@
 							>
 								<input {...upgradeYearly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeYearly.fields.billingInterval.as('hidden', 'yearly')} />
-								<button class="btn btn-primary mt-4">Subscribe Yearly</button>
+								<Button variant="primary" class="mt-4">Subscribe Yearly</Button>
 							</form>
 						{/if}
-					</div>
+					</CardBody>
 				</div>
 			</div>
 
 			<!-- Feature list -->
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body">
+			<Card>
+				<CardBody>
 					<h3 class="font-bold">What's included</h3>
 					<ul class="mt-2 space-y-2 text-sm">
 						<li class="flex items-start gap-2">
@@ -218,8 +221,8 @@
 							Embedded music players (Spotify, SoundCloud, YouTube)
 						</li>
 					</ul>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 		</div>
 	{/if}
 </PageContent>

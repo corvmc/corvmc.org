@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
+	import { formatDollars } from '$lib/utils/format';
 	import { untrack } from 'svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/config';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -27,17 +29,10 @@
 	let amount = $state(untrack(() => currentAmount ?? MIN_AMOUNT));
 	let coverFees = $state(untrack(() => currentCoverFees));
 
-	// Solve for the total that, after Stripe takes 2.9% + 30¢, nets the base amount.
-	function calcFeeCents(baseCents: number): number {
-		if (baseCents <= 0) return 0;
-		const totalCents = Math.ceil((baseCents + 30) / (1 - 0.029));
-		return totalCents - baseCents;
-	}
-
 	const freeHours = $derived(Math.floor(amount / DOLLARS_PER_UNIT));
-	const feeCents = $derived(coverFees ? calcFeeCents(amount * 100) : 0);
-	const feeDisplay = $derived((feeCents / 100).toFixed(2));
-	const totalDisplay = $derived(((amount * 100 + feeCents) / 100).toFixed(2));
+	const feeCents = $derived(coverFees ? calculateTotalWithFeeCoverage(amount * 100).feeCents : 0);
+	const feeDisplay = $derived(formatDollars(feeCents));
+	const totalDisplay = $derived(formatDollars(amount * 100 + feeCents));
 
 	// Tick labels under the slider: $10, $20 … $60.
 	const ticks = Array.from(
@@ -90,14 +85,14 @@
 			checkboxLabel="Cover processing fees so the Collective receives 100% of your contribution"
 		/>
 		{#if coverFees}
-			<p class="ml-12 text-sm opacity-60">
+			<p class="ml-12 text-muted">
 				Adds ${feeDisplay} to cover processing fees (2.9% + $0.30)
 			</p>
 		{/if}
 	</div>
 
 	<div class="rounded-lg bg-base-200/50 p-4">
-		<p class="text-sm opacity-60">New monthly total</p>
+		<p class="text-muted">New monthly total</p>
 		<p class="mt-1 font-semibold text-primary">
 			${amount}.00 membership{#if coverFees}
 				+ ${feeDisplay} processing fees{/if} = ${totalDisplay} total per month
@@ -105,7 +100,8 @@
 	</div>
 
 	<SubmitButton
-		class="btn-primary w-full"
+		variant="primary"
+		class="w-full"
 		label={mode === 'create' ? 'Become a Sustaining Member' : 'Update Contribution'}
 	/>
 </Form>

@@ -5,22 +5,28 @@
  * the hometown/foundedYear save round-trip, and the directoryVisibility gate on
  * public band detail pages.
  *
- * Run by the Playwright global setup (see playwright.config.ts → globalSetup).
+ * Run by `e2e/prepare.ts`, before Playwright starts the preview server.
  *
  * Idempotent: deletes and recreates the seeded user and bands on every run.
  * Mirrors the D1 access pattern in seed-pay-reservation.ts.
  */
 import 'dotenv/config';
-import { getPlatformProxy } from 'wrangler';
-import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { band, bandMember, bandSlugHistory } from '../../src/lib/server/db/schema/band';
 import { scryptHash } from './seed-pay-reservation';
+import { withPlatformEnv } from './platform-db';
 
 export const SEED_OWNER_EMAIL = 'e2e.band.owner@example.com';
 export const SEED_OWNER_PASSWORD = 'e2e-password-123';
 export const SEED_OWNER_ID = 'e2e-band-owner';
+
+// A second, non-admin member of the members band. Needed to prove the band
+// reservation cancel policy from the outside: a bandmate who didn't book a
+// session must not be offered a Cancel button for it.
+export const SEED_BANDMATE_EMAIL = 'e2e.band.mate@example.com';
+export const SEED_BANDMATE_PASSWORD = 'e2e-password-123';
+export const SEED_BANDMATE_ID = 'e2e-band-mate';
 
 export const SEED_PUBLIC_BAND_ID = 'e2e-band-public';
 export const SEED_PUBLIC_BAND_SLUG = 'e2e-public-band';
@@ -51,19 +57,29 @@ export const SEED_RENAME_BAND_ID = 'e2e-band-rename';
 export const SEED_RENAME_BAND_SLUG = 'e2e-rename-band';
 export const SEED_RENAME_BAND_NAME = 'E2E Rename Band';
 
+/**
+ * Exists to be retitled. Same reasoning as the band above, for the other kind of
+ * rename: the profile-edit test writes a new *name* and leaves it there, so it
+ * must not be a band another spec asserts a name on. It used to borrow the
+ * public band and put the name back afterwards, and any run where that restore
+ * did not land took three `band-subdomain.e2e.ts` assertions with it — a
+ * failure with nothing in that file to explain it.
+ */
+export const SEED_RETITLE_BAND_ID = 'e2e-band-retitle';
+export const SEED_RETITLE_BAND_SLUG = 'e2e-retitle-band';
+export const SEED_RETITLE_BAND_NAME = 'E2E Retitle Band';
+
 const BAND_IDS = [
 	SEED_PUBLIC_BAND_ID,
 	SEED_HIDDEN_BAND_ID,
 	SEED_MEMBERS_BAND_ID,
 	SEED_PREMIUM_BAND_ID,
-	SEED_RENAME_BAND_ID
+	SEED_RENAME_BAND_ID,
+	SEED_RETITLE_BAND_ID
 ];
 
 export async function seedBandOnboarding(): Promise<void> {
-	const { env, dispose } = await getPlatformProxy();
-	const db = drizzle((env as { DB: D1Database }).DB);
-
-	try {
+	await withPlatformEnv(async ({ db, env }) => {
 		// The address change is capped at 3 per 30 days, and the local KV survives
 		// between preview runs — without this, the fourth `pnpm test:e2e` on one
 		// machine would fail the address test for reasons that look nothing like
@@ -76,8 +92,10 @@ export async function seedBandOnboarding(): Promise<void> {
 			await db.delete(bandSlugHistory).where(eq(bandSlugHistory.bandId, bandId));
 			await db.delete(band).where(eq(band.id, bandId));
 		}
-		await db.delete(account).where(eq(account.userId, SEED_OWNER_ID));
-		await db.delete(user).where(eq(user.id, SEED_OWNER_ID));
+		for (const userId of [SEED_OWNER_ID, SEED_BANDMATE_ID]) {
+			await db.delete(account).where(eq(account.userId, userId));
+			await db.delete(user).where(eq(user.id, userId));
+		}
 
 		const now = new Date();
 		const passwordHash = await scryptHash(SEED_OWNER_PASSWORD);
@@ -96,6 +114,25 @@ export async function seedBandOnboarding(): Promise<void> {
 			accountId: SEED_OWNER_ID,
 			providerId: 'credential',
 			userId: SEED_OWNER_ID,
+			password: passwordHash,
+			createdAt: now,
+			updatedAt: now
+		});
+
+		await db.insert(user).values({
+			id: SEED_BANDMATE_ID,
+			name: 'E2E Bandmate',
+			email: SEED_BANDMATE_EMAIL,
+			emailVerified: true,
+			createdAt: now,
+			updatedAt: now
+		});
+
+		await db.insert(account).values({
+			id: 'e2e-band-mate-account',
+			accountId: SEED_BANDMATE_ID,
+			providerId: 'credential',
+			userId: SEED_BANDMATE_ID,
 			password: passwordHash,
 			createdAt: now,
 			updatedAt: now
@@ -157,6 +194,18 @@ export async function seedBandOnboarding(): Promise<void> {
 				directoryVisibility: 'public',
 				createdAt: now,
 				updatedAt: now
+			},
+			{
+				id: SEED_RETITLE_BAND_ID,
+				name: SEED_RETITLE_BAND_NAME,
+				slug: SEED_RETITLE_BAND_SLUG,
+				// Plain-text bio, like the public band: the rename regression rode in
+				// on the edit page, whose RichTextEditor churn needs this shape.
+				bio: 'Disposable: the profile-edit test renames this band.',
+				ownerId: SEED_OWNER_ID,
+				directoryVisibility: 'public',
+				createdAt: now,
+				updatedAt: now
 			}
 		]);
 
@@ -177,7 +226,16 @@ export async function seedBandOnboarding(): Promise<void> {
 				createdAt: now
 			}))
 		);
-	} finally {
-		await dispose();
-	}
+
+		// A plain member — not an admin — of one band, so a test can check what a
+		// bandmate is and isn't offered.
+		await db.insert(bandMember).values({
+			id: `${SEED_MEMBERS_BAND_ID}-mate`,
+			bandId: SEED_MEMBERS_BAND_ID,
+			userId: SEED_BANDMATE_ID,
+			role: 'member' as const,
+			status: 'active' as const,
+			createdAt: now
+		});
+	});
 }

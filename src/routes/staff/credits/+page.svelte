@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
@@ -6,7 +7,7 @@
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import { getStaffCredits } from '$lib/remote/users.remote';
 	import { formatDateTimeShort, titleCase } from '$lib/utils/format';
 	import { creditSourceLabels } from '$lib/config';
@@ -25,16 +26,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-		}, 300);
-	}
-
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		creditType: creditType || undefined,
@@ -69,16 +60,17 @@
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search name or email..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
 			/>
 		{/snippet}
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Credit type"
 			value={creditType}
 			onchange={(e: Event) => {
@@ -91,7 +83,7 @@
 			<option value="equipment_credits">Equipment Credits</option>
 		</Select>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Source"
 			value={source}
 			onchange={(e: Event) => {
@@ -107,7 +99,7 @@
 		<input
 			type="date"
 			aria-label="From date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
 				page = 1;
@@ -116,7 +108,7 @@
 		<input
 			type="date"
 			aria-label="To date"
-			class="input input-bordered input-sm"
+			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => {
 				page = 1;
@@ -144,13 +136,11 @@
 							reaches the page. Source remains a filter.
 						-->
 						<td class="cell-primary">
-							<MemberLink
-								variant="inline"
-								member={{ name: t.userName ?? '', email: undefined, userId: t.userId }}
-							/>
-							<span class="block truncate text-sm opacity-60">
-								{t.description || sourceLabel(t.source)}
-							</span>
+							<EntityIdentity ref={t.member}>
+								{#snippet subtitle()}
+									{t.description || sourceLabel(t.source)}
+								{/snippet}
+							</EntityIdentity>
 						</td>
 						<td class="col-extra whitespace-nowrap">
 							<Badge size="sm" variant="ghost">

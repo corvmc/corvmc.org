@@ -46,8 +46,17 @@ vi.mock('drizzle-orm', () => ({
 	count: vi.fn(() => 'count()')
 }));
 
-vi.mock('$lib/server/authorization', () => ({
-	primaryRoleFor: vi.fn(() => 'member')
+// Stands in for the correlated subqueries the real projection builds; those
+// are pinned by `entity/refs.spec.ts` against rendered SQL instead.
+vi.mock('$lib/server/entity/refs', () => ({
+	memberRefColumns: vi.fn(() => ({ id: 'user.id', name: 'user.name' })),
+	bandRefColumns: vi.fn(() => ({ id: 'band.id', name: 'band.name' })),
+	eventRefColumns: vi.fn(() => ({ id: 'event.id', title: 'event.title' })),
+	toBookerRef: vi.fn((row: { bookerType: string; member?: { id?: string; name?: string } }) => ({
+		type: row.bookerType === 'band' ? 'band' : 'member',
+		id: row.member?.id ?? null,
+		title: row.member?.name ?? 'Unknown member'
+	}))
 }));
 
 vi.mock('./rrule-helpers', () => ({
@@ -294,7 +303,11 @@ describe('recurring-series-service', () => {
 		function setupGetSelect(rows: unknown[]) {
 			const limit = vi.fn().mockResolvedValue(rows);
 			const where = vi.fn().mockReturnValue({ limit });
-			const innerJoin2 = vi.fn().mockReturnValue({ where });
+			// Self-returning `leftJoin`, so the stub survives however many the
+			// booker projection adds without pinning their count here.
+			const joined: Record<string, unknown> = { where };
+			joined.leftJoin = vi.fn().mockReturnValue(joined);
+			const innerJoin2 = vi.fn().mockReturnValue(joined);
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
 			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
@@ -334,7 +347,11 @@ describe('recurring-series-service', () => {
 	describe('listActive()', () => {
 		function setupListSelect(rows: unknown[]) {
 			const where = vi.fn().mockResolvedValue(rows);
-			const innerJoin2 = vi.fn().mockReturnValue({ where });
+			// Self-returning `leftJoin`, so the stub survives however many the
+			// booker projection adds without pinning their count here.
+			const joined: Record<string, unknown> = { where };
+			joined.leftJoin = vi.fn().mockReturnValue(joined);
+			const innerJoin2 = vi.fn().mockReturnValue(joined);
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
 			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
@@ -354,9 +371,7 @@ describe('recurring-series-service', () => {
 				rrule: 'FREQ=WEEKLY;BYDAY=MO',
 				createdAt: new Date('2026-01-01'),
 				cancelledAt: null,
-				userName: 'Alice',
-				userPronouns: null,
-				userRole: 'member',
+				member: { id: 'user-1', name: 'Alice' },
 				bookerType: 'user',
 				bookerId: 'user-1',
 				startsAt: new Date('2026-06-01T10:00:00Z'),
@@ -411,7 +426,11 @@ describe('recurring-series-service', () => {
 			const limit = vi.fn().mockReturnValue({ offset });
 			const $dynamic = vi.fn().mockReturnValue({ limit });
 			const where = vi.fn().mockReturnValue({ $dynamic });
-			const innerJoin2 = vi.fn().mockReturnValue({ where });
+			// Self-returning `leftJoin`, so the stub survives however many the
+			// booker projection adds without pinning their count here.
+			const joined: Record<string, unknown> = { where };
+			joined.leftJoin = vi.fn().mockReturnValue(joined);
+			const innerJoin2 = vi.fn().mockReturnValue(joined);
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
 			// First call: data query, second call: count query
@@ -437,9 +456,7 @@ describe('recurring-series-service', () => {
 				rrule: 'FREQ=WEEKLY;BYDAY=TU',
 				createdAt: new Date('2026-01-01'),
 				cancelledAt: new Date('2026-02-01'),
-				userName: 'Bob',
-				userPronouns: 'he/him',
-				userRole: 'member',
+				member: { id: 'user-2', name: 'Bob' },
 				bookerType: 'user',
 				bookerId: 'user-2',
 				startsAt: new Date('2026-06-01T14:00:00Z'),
@@ -466,7 +483,11 @@ describe('recurring-series-service', () => {
 	describe('listActive({ forUser })', () => {
 		function setupListActiveSelect(rows: unknown[]) {
 			const where = vi.fn().mockResolvedValue(rows);
-			const innerJoin2 = vi.fn().mockReturnValue({ where });
+			// Self-returning `leftJoin`, so the stub survives however many the
+			// booker projection adds without pinning their count here.
+			const joined: Record<string, unknown> = { where };
+			joined.leftJoin = vi.fn().mockReturnValue(joined);
+			const innerJoin2 = vi.fn().mockReturnValue(joined);
 			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
 			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
 			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
@@ -486,9 +507,7 @@ describe('recurring-series-service', () => {
 				rrule: 'FREQ=WEEKLY;BYDAY=WE',
 				createdAt: new Date('2026-03-01'),
 				cancelledAt: null,
-				userName: 'Charlie',
-				userPronouns: 'they/them',
-				userRole: 'member',
+				member: { id: 'user-3', name: 'Charlie' },
 				bookerType: 'user',
 				bookerId: 'user-3',
 				startsAt: new Date('2026-06-05T09:00:00Z'),
@@ -501,7 +520,7 @@ describe('recurring-series-service', () => {
 			expect(result).toHaveLength(1);
 			expect(result[0]).toMatchObject({
 				id: 'series-user',
-				userName: 'Charlie',
+				booker: { title: 'Charlie' },
 				frequencyLabel: 'Weekly'
 			});
 		});

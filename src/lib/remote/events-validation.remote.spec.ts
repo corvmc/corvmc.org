@@ -36,6 +36,10 @@ vi.mock('$lib/server/event/rsvp-service', () => ({
 }));
 
 const checkout = vi.fn(async () => ({ url: 'https://stripe.test/session' }));
+// Must be the same class the handler's `instanceof` compares against, so the
+// module is mocked rather than the real error imported alongside it.
+class InsufficientCreditsError extends Error {}
+vi.mock('$lib/server/finance/credit-service', () => ({ InsufficientCreditsError }));
 vi.mock('$lib/server/finance/payment-service', () => ({
 	checkout: (...a: unknown[]) => checkout(...(a as []))
 }));
@@ -129,6 +133,11 @@ const events = (await import('./events.remote')) as unknown as Record<
 	string,
 	(data: unknown, issue: unknown) => Promise<unknown>
 >;
+
+const conflictService = (await import('$lib/server/reservation/conflict-service')) as unknown as {
+	getConflictDetails: ReturnType<typeof vi.fn>;
+	getValidationWarnings: ReturnType<typeof vi.fn>;
+};
 
 // Mirrors SvelteKit's `issue` helper: `issue.field(msg)` builds an issue object
 // carrying the field path. It does not throw on its own — that is the whole point.
@@ -277,6 +286,45 @@ describe('purchaseTickets validation', () => {
 		);
 		expect(checkout).not.toHaveBeenCalled();
 	});
+
+	/**
+	 * checkout() spends credits before charging, and payment-service reverses
+	 * every completed deduction if a later one fails — so this can only be a lost
+	 * race, with nothing charged. It used to propagate as an unhandled throw: a
+	 * 500 in Sentry for a routine race, and a generic "Something went wrong" for
+	 * the buyer, since Form drops the message off a thrown error.
+	 */
+	it('turns a lost credit race into a quantity issue rather than an unhandled throw', async () => {
+		// The shared getById default omits `source`, which trips the "not ours to
+		// sell" guard long before checkout — override it so this test reaches the
+		// code it is actually about.
+		getById.mockResolvedValueOnce({
+			id: 'evt-1',
+			title: 'Open Mic Night',
+			status: 'published',
+			ticketingEnabled: true,
+			ticketPrice: 1500,
+			source: 'cmc'
+		} as never);
+		checkout.mockRejectedValueOnce(new InsufficientCreditsError('raced'));
+
+		await expectRejects(
+			() =>
+				events.purchaseTickets(
+					{
+						eventId: 'evt-1',
+						quantity: 2,
+						attendeeName: 'Ada',
+						attendeeEmail: 'ada@example.com'
+					},
+					makeIssue()
+				),
+			'quantity'
+		);
+		// Guards the test itself: the assertion above passes for any validation
+		// rejection, including ones that fire long before the code under test.
+		expect(checkout).toHaveBeenCalled();
+	});
 });
 
 // Regression: an externally ticketed event is not one we sell, so it belongs on
@@ -323,5 +371,74 @@ describe('rsvpToEvent with external ticketing', () => {
 			events.rsvpToEvent({ eventId: 'evt-1', ...attendee }, makeIssue())
 		).rejects.toThrow();
 		expect(createRsvp).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Regression: `checkConflicts` filtered the event's own hold with
+// `!('id' in c)`, but getConflictDetails never selected an id, so the predicate
+// was always true and nothing was ever dropped. Re-timing an event reported its
+// own reservation as a conflict, which armed "Override conflicts" on the form —
+// and saving with that set made the server skip the real double-booking check.
+// ---------------------------------------------------------------------------
+
+describe('checkConflicts — excludeReservationId', () => {
+	const window = { date: '2026-08-15', startTime: '19:00', endTime: '22:00' };
+
+	function detail(id: string, label: string) {
+		return {
+			type: 'reservation' as const,
+			id,
+			startsAt: new Date('2026-08-15T02:00:00Z'),
+			endsAt: new Date('2026-08-16T05:00:00Z'),
+			label
+		};
+	}
+
+	beforeEach(() => {
+		conflictService.getValidationWarnings.mockResolvedValue([]);
+	});
+
+	it("drops the event's own hold and keeps everyone else's", async () => {
+		conflictService.getConflictDetails.mockResolvedValue([
+			detail('own-hold', 'Front Desk'),
+			detail('someone-else', 'A Member')
+		]);
+
+		const result = (await events.checkConflicts(
+			{ ...window, excludeReservationId: 'own-hold' },
+			undefined
+		)) as { conflicts: Array<{ id?: string }> };
+
+		expect(result.conflicts.map((c) => c.id)).toEqual(['someone-else']);
+	});
+
+	it('keeps closures, which carry no id to match on', async () => {
+		conflictService.getConflictDetails.mockResolvedValue([
+			detail('own-hold', 'Front Desk'),
+			{
+				type: 'closure' as const,
+				startsAt: new Date('2026-08-15T02:00:00Z'),
+				endsAt: new Date('2026-08-16T05:00:00Z'),
+				label: 'HVAC replacement'
+			}
+		]);
+
+		const result = (await events.checkConflicts(
+			{ ...window, excludeReservationId: 'own-hold' },
+			undefined
+		)) as { conflicts: Array<{ type: string }> };
+
+		expect(result.conflicts.map((c) => c.type)).toEqual(['closure']);
+	});
+
+	it('keeps every conflict when nothing is excluded', async () => {
+		conflictService.getConflictDetails.mockResolvedValue([detail('a', 'One'), detail('b', 'Two')]);
+
+		const result = (await events.checkConflicts(window, undefined)) as {
+			conflicts: Array<{ id?: string }>;
+		};
+
+		expect(result.conflicts.map((c) => c.id)).toEqual(['a', 'b']);
 	});
 });

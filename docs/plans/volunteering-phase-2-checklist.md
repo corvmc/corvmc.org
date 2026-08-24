@@ -1,6 +1,6 @@
 # Volunteering Phase 2 — progress checklist
 
-Design: `docs/specs/volunteering-spec.md` §Phase 2 (line 264) and §Certifications
+Design: `docs/specs/shipped/volunteering-spec.md` §Phase 2 (line 264) and §Certifications
 (line 302). Plan: `~/.claude/plans/deep-drifting-kernighan.md` (approved).
 Phase 1 checklist: `volunteering-checklist.md`.
 
@@ -102,6 +102,36 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
 - [x] `production-workflow-spec.md:1256` — close the staffing hook
 - [x] Help articles, `docs/manual/README.md`, `pnpm docs:routes`,
       `pnpm docs:check`, parity-report row + table count 32 → 38
+
+## Step 7 — The event link (follow-up)
+
+`volunteer_shift.eventId` shipped in Step 1 and stayed unreachable: no form ever
+rendered a field for it, so every shift in production was unattached and the
+`leftJoin` that surfaces `eventTitle` had nothing to surface.
+
+- [x] `searchEvents` — staff event picker query, nearest-in-time first, cancelled
+      and rejected excluded, community drafts excluded (inherited from `listAll`)
+- [x] `listShifts({ eventId })` + `getShiftDetail(id)` — the latter gives the
+      detail page `roleName` / `eventTitle` / `claimed` in one read, without
+      widening `getShiftById`, which the signup service branches on
+- [x] `ShiftFormFields.svelte` — the field set was already duplicated across two
+      modals before this added two more call sites
+- [x] Shift detail page — an **Edit** action, wiring up `updateShift`, which had
+      been written and had no caller. Until now a shift could only be created,
+      copied, or called off.
+- [x] `/staff/events/[id]` — a Volunteer Shifts card, always rendered, with a
+      Schedule action prefilled from doors and the event locked in
+- [x] `toLocalDateTime` in `$lib/utils/format` — the third copy of the same
+      club-time datetime-local helper was about to be written
+- [x] Seeds + e2e fixture link shifts to shows; 3 e2e tests, 4 service specs, 6
+      `searchEvents` specs
+
+**The trap, if this is ever touched again:** the picker's hidden input is
+rendered even with nothing selected. `updateShift` writes `eventId` only when
+the key is _present_, so absent means "untouched" and empty means "cleared".
+`SearchSelect`'s own `name` prop emits the input only while something is picked,
+which makes detaching a silent no-op that still reports success. `readShiftEventId`
+in the e2e fixture exists because the page shows the stale value only on reload.
 
 ## Verification notes
 

@@ -28,12 +28,6 @@ vi.mock('$lib/server/authorization', () => ({
 // Any service call on a rejected request is a failure — the guard has to run
 // first, so these spies must stay clean.
 const svc = {
-	getCommunityStanding: vi.fn(async () => ({
-		requiresReview: false,
-		reason: null,
-		updatedAt: null
-	})),
-	restoreCommunityTrust: vi.fn(async () => undefined),
 	listCommunityEventsForUser: vi.fn(async () => []),
 	listRejectedForUser: vi.fn(async () => []),
 	listPendingSubmissions: vi.fn(async () => ({ rows: [], pagination: {} })),
@@ -49,6 +43,19 @@ const svc = {
 	rejectSubmission: vi.fn(async () => undefined)
 };
 vi.mock('$lib/server/event/community-event-service', () => svc);
+
+// Standing moved out of the domain services into one shared one. It stays a
+// spy here for the same reason the others are: a guard that runs late would
+// show up as a service call on a rejected request.
+const standingSvc = {
+	getStanding: vi.fn(async () => ({
+		status: 'none' as const,
+		reason: null,
+		triggeringFlagId: null,
+		updatedAt: null
+	}))
+};
+vi.mock('$lib/server/moderation/standing-service', () => standingSvc);
 
 const getById = vi.fn(async () => null as unknown);
 const getEventLineup = vi.fn(async () => []);
@@ -139,7 +146,7 @@ const LISTING_INPUT = {
 };
 
 function noServiceCalls() {
-	for (const [name, spy] of Object.entries(svc)) {
+	for (const [name, spy] of Object.entries({ ...svc, ...standingSvc })) {
 		expect(spy, `${name} should not have been called`).not.toHaveBeenCalled();
 	}
 }
@@ -165,10 +172,8 @@ describe('anonymous callers', () => {
 		['deleteListing', () => remote.deleteListing({ eventId: 'evt-1' })],
 		['getPendingSubmissions', () => remote.getPendingSubmissions({})],
 		['getPendingSubmissionCount', () => remote.getPendingSubmissionCount()],
-		['getMemberStanding', () => remote.getMemberStanding('user-9')],
 		['approveListing', () => remote.approveListing({ eventId: 'evt-1' })],
-		['rejectListing', () => remote.rejectListing({ eventId: 'evt-1', notes: 'no' })],
-		['restoreListingTrust', () => remote.restoreListingTrust({ userId: 'user-9' })]
+		['rejectListing', () => remote.rejectListing({ eventId: 'evt-1', notes: 'no' })]
 	];
 
 	it.each(cases)('%s rejects before touching the database', async (_name, call) => {
@@ -187,10 +192,8 @@ describe('signed-in members cannot reach the staff surfaces', () => {
 	const cases: [string, () => Promise<unknown>][] = [
 		['getPendingSubmissions', () => remote.getPendingSubmissions({})],
 		['getPendingSubmissionCount', () => remote.getPendingSubmissionCount()],
-		['getMemberStanding', () => remote.getMemberStanding('user-9')],
 		['approveListing', () => remote.approveListing({ eventId: 'evt-1' })],
-		['rejectListing', () => remote.rejectListing({ eventId: 'evt-1', notes: 'no' })],
-		['restoreListingTrust', () => remote.restoreListingTrust({ userId: 'user-9' })]
+		['rejectListing', () => remote.rejectListing({ eventId: 'evt-1', notes: 'no' })]
 	];
 
 	it.each(cases)('%s rejects a non-staff member', async (_name, call) => {

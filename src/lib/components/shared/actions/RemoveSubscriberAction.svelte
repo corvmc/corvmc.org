@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { removeSubscriber } from '$lib/remote/marketing.remote';
 
@@ -9,13 +10,17 @@
 		audienceId,
 		subscriberId,
 		email,
-		class: className = 'btn-ghost btn-xs text-error',
+		variant = 'ghost',
+		size = 'xs',
+		class: className = 'text-error',
 		onsuccess,
 		...rest
 	}: {
 		audienceId: string;
 		subscriberId: string;
 		email: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -27,6 +32,8 @@
 	label="Remove"
 	modalTitle="Confirm"
 	successToast="Subscriber removed"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

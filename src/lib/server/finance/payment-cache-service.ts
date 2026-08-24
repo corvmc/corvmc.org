@@ -3,6 +3,8 @@ import { paymentCache } from '$lib/server/db/schema/finance';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, desc, and, gte, lte, like, or, count, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
+import { memberRefColumns, toMemberRef, type MemberRefRow } from '$lib/server/entity/refs';
+import type { MemberRef } from '$lib/types/entity';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -15,8 +17,8 @@ const TZ = DEFAULT_TIMEZONE;
 export interface PaymentCacheRow {
 	id: string;
 	userId: string;
-	userName: string | null;
-	userEmail: string;
+	/** Who paid, ready to render — the `user` join is already here. */
+	member: MemberRef;
 	reservationId: string | null;
 	stripeCustomerId: string;
 	amountCents: number;
@@ -40,11 +42,11 @@ export interface PaymentCacheFilters {
 // Queries
 // ---------------------------------------------------------------------------
 
-const baseSelect = {
+/** A function, not a const — see the cycle note on `credit-service`'s. */
+const baseSelect = () => ({
 	id: paymentCache.id,
 	userId: paymentCache.userId,
-	userName: user.name,
-	userEmail: user.email,
+	member: memberRefColumns(),
 	reservationId: paymentCache.reservationId,
 	stripeCustomerId: paymentCache.stripeCustomerId,
 	amountCents: paymentCache.amountCents,
@@ -54,7 +56,7 @@ const baseSelect = {
 	paidAt: paymentCache.paidAt,
 	refundedAt: paymentCache.refundedAt,
 	createdAt: paymentCache.createdAt
-};
+});
 
 /** Escape LIKE/ILIKE wildcards so user input is treated literally. */
 function escapeLike(input: string): string {
@@ -90,6 +92,7 @@ function buildFilters(filters: PaymentCacheFilters): SQL[] {
 
 function serialize(row: {
 	id: string;
+	member: MemberRefRow;
 	paidAt: Date;
 	refundedAt: Date | null;
 	createdAt: Date;
@@ -97,6 +100,7 @@ function serialize(row: {
 }): PaymentCacheRow {
 	return {
 		...row,
+		member: toMemberRef(row.member),
 		paidAt: row.paidAt.toISOString(),
 		refundedAt: row.refundedAt?.toISOString() ?? null,
 		createdAt: row.createdAt.toISOString()
@@ -112,7 +116,7 @@ export async function list(
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
 
 	const dataQ = db
-		.select(baseSelect)
+		.select(baseSelect())
 		.from(paymentCache)
 		.innerJoin(user, eq(user.id, paymentCache.userId))
 		.where(where)
@@ -132,7 +136,7 @@ export async function list(
 /** All payment records for a specific user, ordered by most recent. */
 export async function listByUser(userId: string): Promise<PaymentCacheRow[]> {
 	const rows = await db
-		.select(baseSelect)
+		.select(baseSelect())
 		.from(paymentCache)
 		.innerJoin(user, eq(user.id, paymentCache.userId))
 		.where(eq(paymentCache.userId, userId))

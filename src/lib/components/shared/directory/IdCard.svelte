@@ -1,7 +1,9 @@
 <script lang="ts">
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
 	import { hashPattern } from '$lib/utils/patterns';
+	import { imageSrc } from '$lib/utils/images';
 	import { IconUserSearch, IconBriefcase, IconSchool, IconUsersPlus } from '@tabler/icons-svelte';
+	import { initials } from '$lib/utils/format';
 
 	interface Props {
 		href: string;
@@ -36,6 +38,7 @@
 	}: Props = $props();
 
 	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
+	const photo = $derived(imageSrc(image, 'avatar-lg'));
 
 	const MAX_TAGS = 3;
 	const shownInstruments = $derived(instruments.slice(0, MAX_TAGS));
@@ -50,15 +53,6 @@
 			openToCollaboration && { icon: IconUsersPlus, label: 'Open to collaboration' }
 		].filter(Boolean) as { icon: typeof IconUserSearch; label: string }[]
 	);
-
-	function initials(n: string): string {
-		return n
-			.split(' ')
-			.map((p) => p[0])
-			.slice(0, 2)
-			.join('')
-			.toUpperCase();
-	}
 </script>
 
 <a {href} class="id-card">
@@ -72,7 +66,12 @@
 	<div class="id-card__body">
 		<div class="id-card__photo">
 			{#if image}
-				<img src={image} alt={name} class="h-full w-full rounded object-cover" />
+				<img
+					src={photo.src}
+					srcset={photo.srcset}
+					alt={name}
+					class="h-full w-full rounded object-cover"
+				/>
 			{:else}
 				<div class="poster-gen {patternClass} id-card__pattern">
 					<span class="id-card__initials">{initials(name)}</span>

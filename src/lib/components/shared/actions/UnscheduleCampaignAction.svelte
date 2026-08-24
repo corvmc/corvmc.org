@@ -1,16 +1,21 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { unscheduleCampaign } from '$lib/remote/marketing.remote';
 
 	const { fields } = unscheduleCampaign;
 
 	let {
 		campaignId,
-		class: className = 'btn-warning btn-sm',
+		variant = 'warning',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		campaignId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -22,6 +27,8 @@
 	label="Cancel Schedule"
 	modalTitle="Confirm"
 	successToast="Campaign unscheduled — returned to draft"
+	{variant}
+	{size}
 	class={className}
 	{onsuccess}
 	{...rest}

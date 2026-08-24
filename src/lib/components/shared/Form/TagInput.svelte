@@ -54,7 +54,7 @@
 		{#if selectedOptions.length > 0}
 			<div class="flex flex-wrap gap-1">
 				{#each selectedOptions as opt (opt.id)}
-					<Button class="btn-xs" type="button" onclick={() => remove(opt.id)}>
+					<Button variant="default" size="xs" type="button" onclick={() => remove(opt.id)}>
 						{opt.label}
 						<IconX class="size-3" />
 					</Button>
@@ -65,7 +65,7 @@
 		<div class="relative">
 			<Combobox.Input
 				{placeholder}
-				class="input-bordered input w-full"
+				class="input w-full"
 				oninput={(e: Event) => (query = (e.target as HTMLInputElement).value)}
 			/>
 

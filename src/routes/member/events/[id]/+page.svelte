@@ -1,9 +1,10 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import { IconShare3, IconCheck, IconCalendarPlus } from '@tabler/icons-svelte';
+	import { IconCalendarPlus } from '@tabler/icons-svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -24,6 +25,7 @@
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import ShareButton from '$lib/components/shared/ShareButton.svelte';
 	import {
 		purchaseTickets,
 		claimFreeTicket,
@@ -91,7 +93,6 @@
 	let coverFees = $state(false);
 	let qrOpen = $state(false);
 	let qrIndex = $state(0);
-	let copied = $state(false);
 
 	// What this member is actually charged per ticket — the member rate when it
 	// applies, the list price otherwise.
@@ -108,16 +109,6 @@
 
 	const tagList = $derived(parseTags(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
-
-	async function share() {
-		try {
-			await navigator.clipboard.writeText(window.location.href);
-			copied = true;
-			setTimeout(() => (copied = false), 1500);
-		} catch {
-			// clipboard unavailable — no-op
-		}
-	}
 
 	function refreshDetail() {
 		void getMemberEventDetail(page.params.id!).refresh();
@@ -154,18 +145,7 @@
 				</li>
 			</ul>
 		</details>
-		<button
-			type="button"
-			class="btn btn-ghost btn-sm btn-square"
-			title="Copy link to this event"
-			onclick={share}
-		>
-			{#if copied}
-				<IconCheck size={18} />
-			{:else}
-				<IconShare3 size={18} />
-			{/if}
-		</button>
+		<ShareButton title="Copy link to this event" />
 	</div>
 </PageHeader>
 <PageContent>
@@ -337,7 +317,8 @@
 
 				<div class="edet__ctas">
 					{#if soldOut}
-						<button class="btn btn-lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</button>
+						<Button variant="default" size="lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</Button
+						>
 					{:else if !data.myTicket}
 						{#if isFreeEvent}
 							<Action
@@ -346,7 +327,8 @@
 								modalTitle="Get free ticket"
 								submitLabel="Get {quantity > 1 ? `${quantity} tickets` : 'ticket'}"
 								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
-								class="btn-primary btn-lg"
+								variant="primary"
+								size="lg"
 								onsuccess={handlePurchaseSuccess}
 								onfailure={(err) =>
 									toast.error(err instanceof Error ? err.message : 'Something went wrong')}
@@ -378,7 +360,8 @@
 								modalTitle="Get Tickets"
 								submitLabel="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
 								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
-								class="btn-primary btn-lg"
+								variant="primary"
+								size="lg"
 								onsuccess={handlePurchaseSuccess}
 								onfailure={(err) =>
 									toast.error(err instanceof Error ? err.message : 'Something went wrong')}
@@ -444,7 +427,7 @@
 					{/if}
 
 					{#if data.remaining !== null && !soldOut}
-						<span class="text-sm" style="color: var(--fg-2)"
+						<span class="text-muted"
 							>{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span
 						>
 					{/if}
@@ -454,11 +437,12 @@
 				     the RSVP is the lightweight join row — no QR, no check-in. -->
 				<div class="edet__ctas">
 					{#if mode === 'external'}
-						<a
+						<Button
 							href={evt.externalTicketUrl!}
 							target="_blank"
 							rel="noopener noreferrer"
-							class="btn btn-primary btn-lg">Get Tickets ↗</a
+							variant="primary"
+							size="lg">Get Tickets ↗</Button
 						>
 					{/if}
 					{#if data.myRsvp}
@@ -490,8 +474,9 @@
 							confirm="Cancel your RSVP for this event?"
 							modalTitle="Cancel RSVP"
 							submitLabel="Yes, cancel my RSVP"
-							submitClass="btn-error"
-							class="btn-ghost btn-sm"
+							submitVariant="error"
+							variant="ghost"
+							size="sm"
 							onsuccess={refreshDetail}
 						>
 							{#snippet form()}
@@ -519,7 +504,7 @@
 					{/if}
 
 					{#if data.rsvpCount > 0}
-						<span class="text-sm" style="color: var(--fg-2)">{data.rsvpCount} going</span>
+						<span class="text-muted">{data.rsvpCount} going</span>
 					{/if}
 				</div>
 			{/if}

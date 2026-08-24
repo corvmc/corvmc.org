@@ -14,7 +14,8 @@ See the [architecture overview](overview.md) for how the pieces fit together.
 There is no deploy button in this repo and **no GitHub Action deploys**. Deployment is
 handled by **Cloudflare Workers Builds**, which watches the GitHub repo:
 
-1. You push to `main` (usually by merging a PR).
+1. A PR reaches the front of the merge queue, which puts its commit on a temporary
+   `gh-readonly-queue/main/pr-<n>-<sha>` branch, or you push to `main` directly.
 2. Cloudflare's build system runs the build command configured in the Cloudflare dashboard
    (Workers & Pages → corvmc → Settings → Build):
 
@@ -23,10 +24,19 @@ handled by **Cloudflare Workers Builds**, which watches the GitHub repo:
    ```
 
 3. `pnpm ci:migrate` runs `scripts/ci-migrate.mjs`, which applies any pending D1 migrations
-   **only when the branch is `main`** — it reads `WORKERS_CI_BRANCH` (falling back to
-   `CF_PAGES_BRANCH`) and exits 0 without touching the database on any other branch. If the
-   migration fails, the whole build fails and **nothing is published** — the old Worker
+   **only for a build that publishes to production** — `main` itself, or a
+   `gh-readonly-queue/main/*` merge queue branch. It reads `WORKERS_CI_BRANCH` (falling back
+   to `CF_PAGES_BRANCH`) and exits 0 without touching the database on any other branch. If
+   the migration fails, the whole build fails and **nothing is published** — the old Worker
    keeps serving.
+
+   The queue branch counts as production because Cloudflare builds and publishes it, then
+   does **not** build again when the queue fast-forwards `main` onto that same SHA — the
+   queue build is the only one a queued PR ever gets. #241 landed before this was true and
+   its `band_member.alias` migration was skipped while its code went live, so
+   `/directory/bands/[slug]` 500ed in production until the migration was applied by hand.
+   `scripts/ci-migrate.spec.ts` pins the branch matching.
+
 4. `pnpm build` compiles the MJML email layout (`scripts/compile-email-layouts.ts`) and
    then runs `vite build`; the Worker is published from `.svelte-kit/cloudflare/`.
 
@@ -35,7 +45,14 @@ The load-bearing configuration lives in the Cloudflare dashboard, not the repo:
 - the build command above;
 - three **build environment variables** used by `drizzle.config.ts` for the remote migrate:
   `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_DATABASE_ID`, and `CLOUDFLARE_D1_TOKEN` (an API
-  token scoped Account → D1 → Edit).
+  token scoped Account → D1 → Edit);
+- which branches Cloudflare builds at all. It currently builds non-production branches, which
+  is what puts the merge queue's branch in front of the `main` push. A plain PR branch build
+  only uploads a version — `wrangler deployments list` shows no deployment for it — while the
+  queue branch's build is promoted to 100% of traffic, which is why the two are treated
+  differently. Turning non-production builds off would make Cloudflare build `main` instead;
+  the migrate step works either way, but if you change it, check that a queued PR's build log
+  still says "applying D1 migrations to remote".
 
 GitHub Actions (`.github/workflows/ci.yml`) run **checks only**, on PRs and pushes to
 `main`: prettier+eslint (`lint` on push, `lint:changed` on PRs), `svelte-check`, the full
@@ -195,11 +212,13 @@ Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are 
   to anyone the recipient forwards our reply to.
   - Requires `MX replies.corvmc.org → inbound.postmarkapp.com` (priority 10) and _Inbound
     domain forwarding_ set to `replies.corvmc.org` in the Postmark server settings.
+  - **Enabled** as of 2026-08-19: the MX is live and `INBOX_REPLY_ADDRESS` is set in
+    `wrangler.toml`. Unsetting it is the rollback — replies fall back to
+    `Reply-To: STAFF_CONTACT_EMAIL`, a human rather than a bounce. Enablement steps and the
+    reply-routing troubleshooting table: [inbox-reply-setup.md](inbox-reply-setup.md).
   - **Never point `corvmc.org`'s root MX at Postmark** — `contact@corvmc.org` is a live
     mailbox. Also confirm Cloudflare Email Routing is off for the zone; it claims the zone's
     MX records.
-  - Until that MX is live, leave `INBOX_REPLY_ADDRESS` unset: replies then fall back to
-    `Reply-To: STAFF_CONTACT_EMAIL`, which reaches a human instead of bouncing.
 - The `email` **channel toggle** (Staff → Settings → Inbox Channels) gates only _new-sender_
   mail. A reply to a thread we started always lands, because we invited it.
 
@@ -363,16 +382,11 @@ When you add, move, or remove a route:
    the production database (verify your wrangler remote-binding setup before assuming this
    — the script itself has no `--remote` flag).
 
-### The nightly bot (optional, requires Anthropic API access)
-
-`.github/workflows/nightly-docs-sync.yml` runs at 10:00 UTC daily: it re-runs the same
-deterministic detector plus a git diff against the moving `docs-sync-last` tag, and **only
-if** something changed does it invoke Claude (via `anthropics/claude-code-action`) to draft
-a docs-only PR for human review. It needs the Claude GitHub App installed and an
-`ANTHROPIC_API_KEY` repo secret; without them the workflow simply fails at the model step —
-the app is unaffected. You can disable it entirely (Actions → Nightly Docs Sync → Disable
-workflow) and rely on the manual procedure; nothing else depends on it. Note GitHub
-auto-pauses scheduled workflows after 60 days of repo inactivity.
+There is no automation behind this — the procedure above is the whole mechanism. A
+`nightly-docs-sync.yml` workflow used to run a detector and have Claude draft a docs-only
+PR from it; it was removed in August 2026, having failed on every scheduled run because
+the `ANTHROPIC_API_KEY` secret it needs was never added. `pnpm docs:check` in CI remains
+the only automatic gate, and it checks integrity, not staleness.
 
 Also keep current as you change things:
 

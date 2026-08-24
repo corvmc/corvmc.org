@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mapDomainError } from '$lib/server/errors';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { eq } from 'drizzle-orm';
@@ -9,7 +10,6 @@ import { requireUser } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
 import { getBySlug, getUserRole } from '$lib/server/band/band-service';
 import {
-	CustomDomainError,
 	assertDomainUnclaimed,
 	cnameTarget,
 	createCustomHostname,
@@ -37,11 +37,6 @@ async function requirePremiumOwner() {
 		throw error(403, 'Custom domains are part of the premium plan.');
 	}
 	return ctx;
-}
-
-function asCustomDomainError(err: unknown): never {
-	if (err instanceof CustomDomainError) throw error(400, err.message);
-	throw err;
 }
 
 // ---------------------------------------------------------------------------
@@ -106,7 +101,7 @@ export const setCustomDomain = form(
 			await forgetCustomDomain(state.domain);
 			return { success: true, status: state.status };
 		} catch (err) {
-			asCustomDomainError(err);
+			mapDomainError(err);
 		}
 	}
 );
@@ -135,7 +130,7 @@ export const refreshCustomDomain = form(z.object({ slug: z.string().min(1) }), a
 		await forgetCustomDomain(band.customDomain);
 		return { success: true, status };
 	} catch (err) {
-		asCustomDomainError(err);
+		mapDomainError(err);
 	}
 });
 
@@ -163,6 +158,6 @@ export const removeCustomDomain = form(z.object({ slug: z.string().min(1) }), as
 		await forgetCustomDomain(band.customDomain);
 		return { success: true };
 	} catch (err) {
-		asCustomDomainError(err);
+		mapDomainError(err);
 	}
 });

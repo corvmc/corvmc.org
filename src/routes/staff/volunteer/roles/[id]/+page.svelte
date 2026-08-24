@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -9,22 +10,18 @@
 	import Table from '$lib/components/shared/Table.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field, CheckboxGroup } from '$lib/components/shared/Form';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import ShiftFormFields from '$lib/components/shared/volunteer/ShiftFormFields.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
-	import { formatDateShort } from '$lib/utils/format';
-	import {
-		DEFAULT_TIMEZONE,
-		VOLUNTEER_SHIFT_NOTES_MAX,
-		volunteerRoleGroups,
-		volunteerRoleGroupLabels
-	} from '$lib/config';
+	import { formatDateShort, toLocalDateTime } from '$lib/utils/format';
+	import { DEFAULT_TIMEZONE, volunteerRoleGroups, volunteerRoleGroupLabels } from '$lib/config';
 	import { IconArchive, IconArchiveOff, IconTrash, IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
 		getVolunteerRoleDetail,
@@ -72,23 +69,11 @@
 		return `${fmt.format(start)}–${fmt.format(end)}`;
 	}
 
-	/** `YYYY-MM-DDTHH:mm` in club time, for a datetime-local default. */
-	function localInput(d: Date): string {
-		const date = new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(d);
-		const time = new Intl.DateTimeFormat('en-GB', {
-			timeZone: DEFAULT_TIMEZONE,
-			hour: '2-digit',
-			minute: '2-digit',
-			hour12: false
-		}).format(d);
-		return `${date}T${time}`;
-	}
-
 	// Tomorrow, running for however long this role usually runs.
 	const START_MS = Date.now() + 86_400_000;
-	let shiftStart = $derived(localInput(new Date(START_MS)));
+	let shiftStart = $derived(toLocalDateTime(new Date(START_MS)));
 	let shiftEnd = $derived(
-		localInput(new Date(START_MS + (role.defaultDurationMinutes ?? 4 * 60) * 60_000))
+		toLocalDateTime(new Date(START_MS + (role.defaultDurationMinutes ?? 4 * 60) * 60_000))
 	);
 
 	// Until there's an in-app way to mail volunteers, the useful move is to hand
@@ -122,7 +107,8 @@
 			action={archiveVolunteerRole}
 			label="Archive"
 			icon={archiveIcon}
-			class="btn-ghost btn-sm"
+			variant="ghost"
+			size="sm"
 			modalTitle="Archive {role.name}?"
 			submitLabel="Archive"
 			successToast="Role archived"
@@ -140,7 +126,8 @@
 			action={restoreVolunteerRole}
 			label="Restore"
 			icon={unarchiveIcon}
-			class="btn-ghost btn-sm"
+			variant="ghost"
+			size="sm"
 			modalTitle="Restore {role.name}?"
 			submitLabel="Restore"
 			successToast="Role restored"
@@ -157,10 +144,12 @@
 			action={deleteVolunteerRole}
 			label="Delete"
 			icon={trashIcon}
-			class="btn-ghost btn-sm text-error"
+			variant="ghost"
+			size="sm"
+			class="text-error"
 			modalTitle="Delete {role.name}?"
 			submitLabel="Delete"
-			submitClass="btn-error"
+			submitVariant="error"
 			successToast="Role deleted"
 			onsuccess={() => goto(resolve('/staff/volunteer/roles'))}
 		>
@@ -204,7 +193,7 @@
 
 				<fieldset class="mt-2 rounded-box border border-base-300 p-4">
 					<legend class="px-2 text-sm font-medium">Shift defaults</legend>
-					<p class="mb-2 text-xs opacity-60">
+					<p class="mb-2 text-subtle">
 						What the New Shift form starts with. Not a limit — either can be changed on the shift
 						itself, and leaving them blank just means the form starts on its own defaults.
 					</p>
@@ -253,19 +242,20 @@
 		<InfoCard title="Requirements">
 			{#snippet header(title)}
 				<div class="flex items-center justify-between gap-2">
-					<h3 class="card-title">{title}</h3>
+					<CardTitle>{title}</CardTitle>
 					{#await certifications then certOptions}
 						{#if certOptions.length > 0}
 							<Action
 								action={setRoleCertifications}
 								label="Edit"
-								class="btn-ghost btn-sm"
+								variant="ghost"
+								size="sm"
 								modalTitle="What {role.name} requires"
 								successToast="Requirements saved"
 							>
 								{#snippet form()}
 									<input type="hidden" name="roleId" value={role.id} />
-									<p class="text-sm opacity-70">
+									<p class="text-muted">
 										Someone must hold all of these before they can claim a shift for this role.
 										Logging hours is never blocked — the review queue just flags it.
 									</p>
@@ -289,9 +279,7 @@
 
 			{#await requirements then held}
 				{#if held.length === 0}
-					<p class="text-sm opacity-60">
-						Anyone can claim a shift for this role — no clearance needed.
-					</p>
+					<p class="text-muted">Anyone can claim a shift for this role — no clearance needed.</p>
 				{:else}
 					<ul class="space-y-2 text-sm">
 						{#each held as cert (cert.id)}
@@ -309,35 +297,25 @@
 	<InfoCard title="Upcoming Shifts">
 		{#snippet header(title)}
 			<div class="flex items-center justify-between gap-2">
-				<h3 class="card-title">{title}</h3>
+				<CardTitle>{title}</CardTitle>
 				{#if role.isActive}
 					<Action
 						action={createShift}
 						label="New shift"
-						class="btn-ghost btn-sm"
+						variant="ghost"
+						size="sm"
 						modalTitle="Schedule a {role.name} shift"
 						submitLabel="Create"
 						successToast="Shift scheduled"
 						onsuccess={() => getShifts({ volunteerRoleId: id, from }).refresh()}
 					>
 						{#snippet form()}
-							<input type="hidden" name="volunteerRoleId" value={role.id} />
-							<FormField name="startsAt" label="Starts" type="datetime-local" value={shiftStart} />
-							<FormField name="endsAt" label="Ends" type="datetime-local" value={shiftEnd} />
-							<FormField
-								name="capacity"
-								label="People needed"
-								type="number"
-								min="1"
-								value={String(role.defaultCapacity ?? 1)}
-								description="Claims beyond this are refused."
-							/>
-							<FormField
-								name="notes"
-								label="Anything they should know"
-								type="textarea"
-								maxlength={VOLUNTEER_SHIFT_NOTES_MAX}
-								description="Where to meet, what to bring — shown when they claim it."
+							<ShiftFormFields
+								form={createShift}
+								roleId={role.id}
+								startsAt={shiftStart}
+								endsAt={shiftEnd}
+								capacity={String(role.defaultCapacity ?? 1)}
 							/>
 						{/snippet}
 					</Action>
@@ -362,7 +340,7 @@
 						<tr class="hover cursor-pointer" use:rowLink={href}>
 							<td class="cell-primary whitespace-nowrap">
 								<a {href} class="font-medium">{formatDateShort(shift.startsAt)}</a>
-								<div class="text-xs opacity-60">
+								<div class="text-subtle">
 									{timeRange(shift.startsAt, shift.endsAt)}
 								</div>
 							</td>
@@ -388,20 +366,24 @@
 		{#snippet header(title)}
 			<div class="flex items-center justify-between gap-2">
 				{#await interested then r}
-					<h3 class="card-title">
+					<CardTitle>
 						{title}
 						<!-- The count that matters when the role is gated is how many could
 						     actually take a shift, not how many said yes. -->
 						{#if r.gated && r.rows.length > 0}
-							<span class="text-sm font-normal opacity-60">
+							<span class="text-muted font-normal">
 								· {r.rows.filter((m) => m.missing.length === 0).length} of {r.rows.length} ready
 							</span>
 						{/if}
-					</h3>
+					</CardTitle>
 				{/await}
 				{#await interested then r}
 					{#if r.rows.length > 0}
-						<Button class="btn-ghost btn-sm" onclick={() => copyEmails(r.rows.map((m) => m.email))}>
+						<Button
+							variant="ghost"
+							size="sm"
+							onclick={() => copyEmails(r.rows.map((m) => m.email))}
+						>
 							Copy emails on this page
 						</Button>
 					{/if}
@@ -436,16 +418,7 @@
 									</td>
 								{/if}
 								<td class="cell-primary whitespace-nowrap">
-									<MemberLink
-										variant="inline"
-										member={{
-											name: member.name,
-											email: member.email,
-											pronouns: member.pronouns,
-											role: member.role,
-											userId: member.userId
-										}}
-									/>
+									<EntityIdentity ref={member.member} />
 									{#if gated && member.missing.length > 0}
 										<div class="text-xs text-warning">
 											needs {member.missing.map((c) => c.name).join(', ')}

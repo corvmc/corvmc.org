@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, count, desc, eq, gt, inArray, isNull, isNotNull, ne, or, sql } from 'drizzle-orm';
+import type { AnyColumn, SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import type { PaginationInput } from '$lib/server/db/paginate';
 import { paginate } from '$lib/server/db/paginate';
@@ -11,8 +12,10 @@ import { updateStatus } from './thread-service';
 import {
 	isBlockedEitherWay,
 	blockUser,
-	getMessagingStanding
+	messagingIsDisabled,
+	acceptsDirectMessages
 } from '$lib/server/moderation/moderation-service';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import { allowRateLimited } from '$lib/server/rate-limit';
 import { MAX_PENDING_SENT_REQUESTS, DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
 
@@ -70,12 +73,33 @@ function counterpartAccepted(userId: string) {
 	                     AND other.accepted_at IS NOT NULL)`;
 }
 
+/**
+ * SQL for `messagingIsDisabled`, for the four places that need it inside a
+ * WHERE clause rather than as a separate round-trip.
+ *
+ * Both halves matter and they live in different tables now: staff switching
+ * someone off is `member_standing` scoped to `messaging`, while the member's own
+ * switch is `user.accepts_direct_messages`. They used to be one row with a
+ * `source` column, which is what `messaging_standing` was; #224 split it. These
+ * predicates are raw `sql`, so nothing type-checked them and they kept naming
+ * the dropped table for a day — every conversation list 500'd
+ * (JAVASCRIPT-SVELTEKIT-2F/2G). Keep them here, once, rather than inline.
+ *
+ * A LEFT JOIN because absence of a standing row means good standing.
+ */
+function messagingDisabledFor(userIdExpr: SQL | AnyColumn) {
+	return sql`EXISTS (SELECT 1 FROM "user" u
+	                   LEFT JOIN member_standing ms ON ms.user_id = u.id
+	                                               AND ms.scope = 'messaging'
+	                   WHERE u.id = ${userIdExpr}
+	                     AND (u.accepts_direct_messages = 0 OR ms.status = 'disabled'))`;
+}
+
 /** Nobody on this thread has messaging switched off. */
 function neitherPartyDisabled() {
 	return sql`NOT EXISTS (SELECT 1 FROM inbox_participant p
-	                       JOIN messaging_standing ms ON ms.user_id = p.user_id
 	                       WHERE p.thread_id = ${inboxThread.id}
-	                         AND ms.status = 'disabled')`;
+	                         AND ${messagingDisabledFor(sql`p.user_id`)})`;
 }
 
 /** No block between the two people on this thread, in either direction. */
@@ -130,7 +154,7 @@ export async function startDirectThread(
 	// directory, are not reachable. Hidden is a statement about being found, and
 	// we read it as covering being messaged too.
 	const [recipient] = await db
-		.select({ id: user.id })
+		.select({ id: user.id, acceptsDirectMessages: user.acceptsDirectMessages })
 		.from(user)
 		.where(
 			and(
@@ -144,16 +168,26 @@ export async function startDirectThread(
 
 	if (await isBlockedEitherWay(params.senderId, params.recipientId)) return SILENTLY_DROPPED;
 
-	// A member with messaging switched off cannot be reached. Same silent drop:
-	// whether someone has switched off messaging is their business.
-	const recipientStanding = await getMessagingStanding(params.recipientId);
-	if (recipientStanding.status === 'disabled') return SILENTLY_DROPPED;
+	// A member with messaging switched off cannot be reached — whether they
+	// switched it off or staff did. Same silent drop, and deliberately the same
+	// one for both: which of the two it was is nobody else's business. The
+	// preference rode along on the row above, so only the standing costs a query.
+	if (!recipient.acceptsDirectMessages) return SILENTLY_DROPPED;
+	if ((await getStanding(params.recipientId, 'messaging')).status === 'disabled') {
+		return SILENTLY_DROPPED;
+	}
 
-	// The sender's own standing is not silent — they are entitled to know why
-	// they cannot write, and to be told what staff said about it.
-	const senderStanding = await getMessagingStanding(params.senderId);
+	// The sender's own restriction is not silent — they are entitled to know why
+	// they cannot write, and to be told what staff said about it. Their own switch
+	// being off stops them too, with no reason to give: they already know.
+	const senderStanding = await getStanding(params.senderId, 'messaging');
 	if (senderStanding.status !== 'none') {
 		return { status: 'restricted', reason: senderStanding.reason };
+	}
+	// The preference only — `messagingIsDisabled` would re-read the standing we
+	// are already holding.
+	if (!(await acceptsDirectMessages(params.senderId))) {
+		return { status: 'restricted', reason: null };
 	}
 
 	// Counted in the database, so it is exactly true: you may not have more than
@@ -257,8 +291,7 @@ export async function replyToDirectThread(params: {
 
 /** Accept a pending request. Returns false when there is nothing to accept. */
 export async function acceptDirectThread(threadId: string, userId: string): Promise<boolean> {
-	const standing = await getMessagingStanding(userId);
-	if (standing.status === 'disabled') return false;
+	if (await messagingIsDisabled(userId)) return false;
 
 	const other = await counterpartOf(threadId, userId);
 	if (!other) return false;
@@ -338,8 +371,7 @@ export async function listDirectThreads(userId: string, pagination: PaginationIn
 		// A member who has switched messaging off disappears from the other
 		// person's list. They keep their own history; nobody gets to keep writing
 		// at someone who cannot answer.
-		sql`NOT EXISTS (SELECT 1 FROM messaging_standing ms
-		                WHERE ms.user_id = ${other.userId} AND ms.status = 'disabled')`
+		sql`NOT ${messagingDisabledFor(other.userId)}`
 	);
 
 	const dataQuery = db
@@ -409,8 +441,7 @@ export async function listMemberConversations(userId: string, pagination: Pagina
 		// list. Their own history stays; nobody keeps writing at someone who
 		// cannot answer. Portal threads have no `other`, so this is vacuously true
 		// for them.
-		sql`NOT EXISTS (SELECT 1 FROM messaging_standing ms
-		                WHERE ms.user_id = ${other.userId} AND ms.status = 'disabled')`
+		sql`NOT ${messagingDisabledFor(other.userId)}`
 	);
 
 	const dataQuery = db
@@ -491,8 +522,7 @@ export async function getDirectThread(threadId: string, userId: string) {
 			and(
 				eq(inboxThread.id, threadId),
 				eq(inboxThread.channel, 'direct'),
-				sql`NOT EXISTS (SELECT 1 FROM messaging_standing ms
-				                WHERE ms.user_id = ${other.userId} AND ms.status = 'disabled')`
+				sql`NOT ${messagingDisabledFor(other.userId)}`
 			)
 		)
 		.limit(1);

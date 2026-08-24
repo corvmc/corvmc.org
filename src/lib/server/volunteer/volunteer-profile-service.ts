@@ -3,7 +3,8 @@ import { volunteerProfile } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, eq } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
-import { primaryRoleFor } from '$lib/server/authorization';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import type { MemberRef } from '$lib/types/entity';
 import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '$lib/config';
 import type { VolunteerProfile } from '$lib/server/db/schema/volunteer';
 
@@ -328,17 +329,14 @@ export interface BlockedVolunteer {
 	firstName: string;
 	lastName: string;
 	createdAt: Date;
-	userName: string;
-	userEmail: string;
-	userPronouns: string | null;
-	userRole: string | null;
+	member: MemberRef;
 }
 
 /**
  * The staff review queue: under-18 signups waiting on a person.
  *
- * Joins the same `user` columns and `primaryRoleFor` the hour-log queue selects,
- * so `MemberLink` renders identically on both.
+ * Projects the same member ref the hour-log queue does, so the two queues draw
+ * the person identically.
  */
 export async function listBlockedVolunteers(): Promise<BlockedVolunteer[]> {
 	const rows = await db
@@ -347,17 +345,14 @@ export async function listBlockedVolunteers(): Promise<BlockedVolunteer[]> {
 			firstName: volunteerProfile.firstName,
 			lastName: volunteerProfile.lastName,
 			createdAt: volunteerProfile.createdAt,
-			userName: user.name,
-			userEmail: user.email,
-			userPronouns: user.pronouns,
-			// Correlated subquery built per call, not at module scope, so importing
-			// this module does no work.
-			userRole: primaryRoleFor(user.id)
+			// Correlated subqueries built per call, not at module scope, so
+			// importing this module does no work.
+			member: memberRefColumns()
 		})
 		.from(volunteerProfile)
 		.innerJoin(user, eq(user.id, volunteerProfile.userId))
 		.where(eq(volunteerProfile.status, 'blocked'))
 		.orderBy(asc(volunteerProfile.createdAt));
 
-	return rows;
+	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));
 }

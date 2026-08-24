@@ -6,7 +6,12 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
-	import { getMyMessagingStanding, setMyMessaging } from '$lib/remote/direct-messages.remote';
+	import {
+		getMyMessagingStanding,
+		setMyMessaging,
+		getMyBlocks,
+		unblockMember
+	} from '$lib/remote/direct-messages.remote';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -72,7 +77,7 @@
 				/>
 
 				<div class="flex justify-end pt-2">
-					<SubmitButton label="Save" successLabel="Saved" class="btn-primary" shortcut="mod+s" />
+					<SubmitButton label="Save" successLabel="Saved" variant="primary" shortcut="mod+s" />
 				</div>
 			</div>
 		</Form>
@@ -103,7 +108,7 @@
 							<td>
 								<div>
 									<p class="text-sm font-medium">{pref.label}</p>
-									<p class="text-xs opacity-60">{pref.description}</p>
+									<p class="text-subtle">{pref.description}</p>
 								</div>
 							</td>
 							<td class="w-20 text-center">
@@ -143,45 +148,79 @@
 
 	<!-- Direct messaging -->
 	<svelte:boundary>
-		{@const standing = await getMyMessagingStanding()}
+		{@const messaging = await getMyMessagingStanding()}
 		<InfoCard title="Direct Messages">
-			{#if standing.status !== 'none' && standing.source !== 'member'}
-				<!-- Applied by staff or by an upheld report. The member can see it and
-				     read why, but cannot switch it off — that check lives in
-				     setMessagingStanding, not here. -->
+			<!-- Two separate things, shown together on purpose. The restriction is
+			     staff's and read-only; the switch below it is the member's own and
+			     always theirs to set. Toggling it never lifts the restriction —
+			     they write different tables. -->
+			{#if messaging.standing.status !== 'none'}
 				<Alert type="warning">
-					{standing.status === 'disabled'
-						? 'Direct messaging is switched off for your account.'
+					{messaging.standing.status === 'disabled'
+						? 'Direct messaging is switched off for your account by staff.'
 						: 'You cannot start new conversations at the moment. You can still reply to conversations you are already in.'}
-					{#if standing.reason}
-						<span class="mt-1 block opacity-80">{standing.reason}</span>
+					{#if messaging.standing.reason}
+						<span class="mt-1 block opacity-80">{messaging.standing.reason}</span>
 					{/if}
-					<span class="mt-1 block text-sm opacity-70">
-						Contact staff if you think this is a mistake.
-					</span>
+					<span class="mt-1 block text-muted"> Contact staff if you think this is a mistake. </span>
 				</Alert>
-			{:else}
-				<p class="mb-3 text-sm opacity-70">
-					When this is on, other members can send you a message request from the directory. You
-					decide whether to accept each one, and you can block anyone at any time.
-				</p>
-				<Form
-					remote={setMyMessaging}
-					successToast="Saved"
-					class="flex items-center justify-between gap-4"
-				>
-					<span class="font-medium">Allow direct messages</span>
-					<input
-						{...setMyMessaging.fields.enabled.as(
-							'hidden',
-							standing.status === 'disabled' ? 'on' : 'off'
-						)}
-					/>
-					<SubmitButton
-						label={standing.status === 'disabled' ? 'Turn on' : 'Turn off'}
-						class={standing.status === 'disabled' ? 'btn-primary btn-sm' : 'btn-outline btn-sm'}
-					/>
-				</Form>
+			{/if}
+			<p class="mt-3 mb-3 text-muted">
+				When this is on, other members can send you a message request from the directory. You decide
+				whether to accept each one, and you can block anyone at any time.
+			</p>
+			<Form
+				remote={setMyMessaging}
+				successToast="Saved"
+				class="flex items-center justify-between gap-4"
+			>
+				<span class="font-medium">Allow direct messages</span>
+				<input
+					{...setMyMessaging.fields.enabled.as(
+						'hidden',
+						messaging.acceptsDirectMessages ? 'off' : 'on'
+					)}
+				/>
+				<SubmitButton
+					label={messaging.acceptsDirectMessages ? 'Turn off' : 'Turn on'}
+					variant={messaging.acceptsDirectMessages ? 'default' : 'primary'}
+					outline={messaging.acceptsDirectMessages}
+					size="sm"
+				/>
+			</Form>
+
+			<!--
+				Blocking has been reachable from a conversation since DMs shipped, and
+				unblocking has not been reachable from anywhere. That matters more than
+				it sounds: declining a request blocks the sender too, so this list fills
+				up with people the member never consciously chose to block.
+			-->
+			{@const blocks = await getMyBlocks()}
+			{#if blocks.length > 0}
+				<div class="mt-4 border-t border-base-300 pt-4">
+					<h3 class="mb-2 font-medium">Blocked members</h3>
+					<p class="mb-3 text-muted text-sm">
+						Neither of you can write to the other. Conversations you already had stay readable.
+					</p>
+					<ul class="flex flex-col gap-1">
+						{#each blocks as blocked (blocked.userId)}
+							<li class="flex items-center justify-between gap-3 py-1">
+								<span class="min-w-0">
+									<span class="truncate font-medium">{blocked.name}</span>
+									{#if blocked.source === 'declined_request'}
+										<span class="ml-2 text-subtle text-xs">from a declined request</span>
+									{:else if blocked.source === 'reported'}
+										<span class="ml-2 text-subtle text-xs">from a report</span>
+									{/if}
+								</span>
+								<Form remote={unblockMember} successToast="Unblocked">
+									<input {...unblockMember.fields.userId.as('hidden', blocked.userId)} />
+									<SubmitButton label="Unblock" variant="ghost" size="sm" />
+								</Form>
+							</li>
+						{/each}
+					</ul>
+				</div>
 			{/if}
 		</InfoCard>
 	</svelte:boundary>
@@ -197,17 +236,17 @@
 				</div>
 			{:then [subs, avail]}
 				{#if subs.length === 0 && avail.length === 0}
-					<p class="text-sm opacity-60">No mailing lists available.</p>
+					<p class="text-muted">No mailing lists available.</p>
 				{:else}
 					{#if subs.length > 0}
-						<p class="mb-2 text-xs font-medium opacity-60">Your subscriptions</p>
+						<p class="mb-2 text-subtle font-medium">Your subscriptions</p>
 						<div class="mb-4 space-y-2">
 							{#each subs as sub (sub.audienceId)}
 								<div class="flex items-center justify-between rounded-lg border px-4 py-2">
 									<div>
 										<p class="text-sm font-medium">{sub.audienceName}</p>
 										{#if sub.audienceDescription}
-											<p class="text-xs opacity-60">{sub.audienceDescription}</p>
+											<p class="text-subtle">{sub.audienceDescription}</p>
 										{/if}
 									</div>
 									<UnsubscribeAction audienceId={sub.audienceId} name={sub.audienceName} />
@@ -217,14 +256,14 @@
 					{/if}
 
 					{#if avail.length > 0}
-						<p class="mb-2 text-xs font-medium opacity-60">Available lists</p>
+						<p class="mb-2 text-subtle font-medium">Available lists</p>
 						<div class="space-y-2">
 							{#each avail as a (a.id)}
 								<div class="flex items-center justify-between rounded-lg border px-4 py-2">
 									<div>
 										<p class="text-sm font-medium">{a.name}</p>
 										{#if a.description}
-											<p class="text-xs opacity-60">{a.description}</p>
+											<p class="text-subtle">{a.description}</p>
 										{/if}
 									</div>
 									<SubscribeAction audienceId={a.id} name={a.name} />
@@ -243,14 +282,16 @@
 	<InfoCard title="Security">
 		<div class="space-y-4">
 			<div class="flex items-center justify-between">
-				<p class="text-sm opacity-70">Change your account password.</p>
+				<p class="text-muted">Change your account password.</p>
 				<Action
 					action={changePassword}
 					label="Change Password"
 					modalTitle="Change Password"
 					onsuccess={() => toast.success('Password changed')}
 					onfailure={() => toast.error('Password change failed')}
-					class="btn-outline btn-sm"
+					variant="default"
+					size="sm"
+					outline
 				>
 					{#snippet form()}
 						<FormField
@@ -279,29 +320,28 @@
 
 			<div class="flex items-center justify-between">
 				{#if data.isStaff}
-					<p class="text-sm opacity-70">Contact an admin to delete your account.</p>
+					<p class="text-muted">Contact an admin to delete your account.</p>
 					<span class="btn btn-error btn-sm btn-disabled">Delete Account</span>
 				{:else}
-					<p class="text-sm opacity-70">Permanently delete your account and all associated data.</p>
+					<p class="text-muted">Permanently delete your account and all associated data.</p>
 					<Action
 						action={deleteAccount}
 						label="Delete Account"
 						modalTitle="Delete Account"
 						submitLabel="Delete My Account"
 						onfailure={() => toast.error('Deletion failed')}
-						class="btn-error btn-sm"
+						variant="error"
+						size="sm"
 						onsuccess={() => {
 							toast.success('Account deleted');
 							goto(resolve('/login'));
 						}}
 					>
 						{#snippet form()}
-							<div class="alert alert-error">
-								<p>
-									This action is permanent. Deleting your account will cancel all of your current
-									and future reservations and end your subscription. This cannot be undone.
-								</p>
-							</div>
+							<Alert type="error">
+								This action is permanent. Deleting your account will cancel all of your current and
+								future reservations and end your subscription. This cannot be undone.
+							</Alert>
 
 							<FormField
 								name="password"

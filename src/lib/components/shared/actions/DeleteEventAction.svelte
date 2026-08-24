@@ -1,5 +1,7 @@
 <script lang="ts">
+	import Button from '../Button.svelte';
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import Alert from '../Alert.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -9,11 +11,15 @@
 
 	let {
 		eventId,
-		class: className = 'btn-error btn-sm',
+		variant = 'error',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		eventId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -31,8 +37,10 @@
 		label="Delete"
 		modalTitle="Delete this event?"
 		submitLabel="Delete permanently"
-		submitClass="btn-error"
+		submitVariant="error"
 		successToast="Event deleted"
+		{variant}
+		{size}
 		class={className}
 		onsuccess={onsuccess ?? (() => goto(resolve('/staff/events')))}
 		{...rest}
@@ -68,17 +76,19 @@
 				</Alert>
 			{/if}
 
-			<p class="pt-2 text-sm opacity-70">This cannot be undone.</p>
+			<p class="pt-2 text-muted">This cannot be undone.</p>
 		{/snippet}
 	</Action>
 {:else}
 	<!-- Rendered as a disabled control rather than hidden: "why can't I delete
 	     this?" is a question worth answering in place. -->
-	<button
-		class="btn {className}"
+	<Button
+		{variant}
+		{size}
+		class={className}
 		disabled
 		title="Events with tickets can't be deleted — cancel it instead, which voids the tickets and tells the people holding them."
 	>
 		Delete
-	</button>
+	</Button>
 {/if}

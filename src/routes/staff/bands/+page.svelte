@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
@@ -6,6 +7,7 @@
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { CreateBandAction } from '$lib/components/shared/actions';
@@ -20,16 +22,6 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		searchText = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = searchText;
-			page = 1;
-		}, 300);
-	}
-
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		status: status || undefined,
@@ -56,16 +48,17 @@
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
-			<input
-				type="text"
-				class="input input-bordered input-sm w-full"
+			<SearchInput
+				bind:value={searchText}
 				placeholder="Search by name..."
-				value={searchText}
-				oninput={onSearchInput}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
 			/>
 		{/snippet}
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Status"
 			value={status}
 			onchange={(e: Event) => {
@@ -78,7 +71,7 @@
 			<option value="deactivated">Deactivated</option>
 		</Select>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			aria-label="Tier"
 			value={tier}
 			onchange={(e: Event) => {
@@ -98,6 +91,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Band</th>
+					<th>Owner</th>
 					<th class="col-support">Tier</th>
 					<th class="col-support cell-num">Members</th>
 					<th class="col-extra whitespace-nowrap">Created</th>
@@ -109,14 +103,10 @@
 						<td class="w-px">
 							<StatusBadge status={b.deletedAt ? 'deactivated' : 'active'} />
 						</td>
-						<!--
-							Owner was its own column. As the subline it costs no width, and the
-							row keeps a single link target (the band) for the primary line.
-						-->
-						<td class="cell-primary">
-							<a {href} class="block truncate font-medium hover:underline">{b.name}</a>
-							<div class="truncate text-sm opacity-60">{b.ownerName}</div>
-						</td>
+						<td class="cell-primary"><EntityIdentity ref={b.ref} /></td>
+						<!-- The owner is a member, not a fact about the band, so it takes a
+						     column and reaches their record. -->
+						<td class="min-w-0"><EntityChip ref={b.owner} icon={false} /></td>
 						<td class="col-support"><StatusBadge status={b.tier} label /></td>
 						<td class="col-support cell-num">{b.memberCount}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(b.createdAt)}</td>

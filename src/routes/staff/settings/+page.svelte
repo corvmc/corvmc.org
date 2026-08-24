@@ -1,4 +1,8 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import {
 		getProducts,
 		updateProduct,
@@ -115,10 +119,6 @@
 			label: 'Band Premium',
 			description: 'Premium tier with page editor, EPK, and public band sites'
 		},
-		bandReservations: {
-			label: 'Band Reservations',
-			description: 'Lets bands book the practice room from their band dashboard'
-		},
 		emailMarketing: {
 			label: 'Email Marketing',
 			description: 'Audience management, campaigns, and broadcast emails'
@@ -229,7 +229,7 @@
 
 	<div class="mt-6 space-y-4">
 		{#if activeTab === 'pricing'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Configure the products and pricing used for checkout. Changes to names and descriptions sync
 				to Stripe automatically. Price changes take effect on the next checkout.
 			</p>
@@ -238,15 +238,16 @@
 				{@const isFee = product.key === 'fee_coverage'}
 				{@const instance = updateProduct.for(product.key)}
 				<Form remote={instance} successToast="{product.name} updated">
-					<div class="card bg-base-100 shadow">
-						<div class="card-body">
+					<Card>
+						<CardBody>
 							<div class="flex items-center justify-between">
-								<h3 class="card-title text-base">{product.name}</h3>
+								<CardTitle size="base">{product.name}</CardTitle>
 								<SubmitButton
 									label="Save"
 									successLabel="Saved"
 									errorLabel="Error"
-									class="btn-sm btn-primary"
+									variant="primary"
+									size="sm"
 								/>
 							</div>
 
@@ -271,7 +272,7 @@
 										name="name"
 										type="text"
 										value={product.name}
-										class="input-bordered input input-sm"
+										class="input input-sm"
 									/>
 								</div>
 
@@ -285,7 +286,7 @@
 										{#each instance.fields.unitAmountCents.issues() ?? [] as issue (issue.message)}
 											<p class="text-sm text-error">{issue.message}</p>
 										{/each}
-										<label class="input-bordered input input-sm flex items-center gap-1">
+										<label class="input input-sm flex items-center gap-1">
 											<span class="opacity-60">$</span>
 											<input
 												id="amount-{product.key}"
@@ -325,30 +326,31 @@
 									id="desc-{product.key}"
 									name="description"
 									value={product.description ?? ''}
-									class="textarea-bordered textarea textarea-sm"
+									class="textarea textarea-sm"
 									rows="2"
 								></textarea>
 							</div>
-						</div>
-					</div>
+						</CardBody>
+					</Card>
 				</Form>
 			{/each}
 		{:else if activeTab === 'reservations'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Configure operating hours, booking rules, and scheduling limits for practice room
 				reservations.
 			</p>
 
 			<Form remote={updateReservationSettings} guard successToast="Reservation settings updated">
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h3 class="card-title text-base">Pricing</h3>
+							<CardTitle size="base">Pricing</CardTitle>
 							<SubmitButton
 								label="Save"
 								successLabel="Saved"
 								errorLabel="Error"
-								class="btn-sm btn-primary"
+								variant="primary"
+								size="sm"
 							/>
 						</div>
 
@@ -357,7 +359,7 @@
 								<label class="label" for="hourlyRate">
 									<span class="label-text">Hourly rate</span>
 								</label>
-								<label class="input-bordered input input-sm flex items-center gap-1">
+								<label class="input input-sm flex items-center gap-1">
 									<span class="opacity-60">$</span>
 									<input
 										id="hourlyRate"
@@ -385,13 +387,13 @@
 								/>
 							</div>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h3 class="card-title text-base">Operating Hours</h3>
+							<CardTitle size="base">Operating Hours</CardTitle>
 						</div>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
@@ -408,12 +410,12 @@
 								value={String(reservationSettings.operatingHoursEnd ?? '22:00')}
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
-						<h3 class="card-title text-base">Booking Rules</h3>
+				<Card>
+					<CardBody>
+						<CardTitle size="base">Booking Rules</CardTitle>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
@@ -475,24 +477,25 @@
 								step="0.5"
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			</Form>
 		{:else if activeTab === 'organization'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Organization identity used in emails, branding, and member-facing content.
 			</p>
 
 			<Form remote={updateOrgSettings} guard successToast="Organization settings updated">
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h3 class="card-title text-base">Organization Info</h3>
+							<CardTitle size="base">Organization Info</CardTitle>
 							<SubmitButton
 								label="Save"
 								successLabel="Saved"
 								errorLabel="Error"
-								class="btn-sm btn-primary"
+								variant="primary"
+								size="sm"
 							/>
 						</div>
 
@@ -531,13 +534,13 @@
 								]}
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
-						<h3 class="card-title text-base">Location</h3>
-						<p class="text-xs opacity-60">Shown in the site footer and on the contact page.</p>
+				<Card>
+					<CardBody>
+						<CardTitle size="base">Location</CardTitle>
+						<p class="text-subtle">Shown in the site footer and on the contact page.</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
@@ -569,13 +572,13 @@
 								placeholder="97333"
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
-						<h3 class="card-title text-base">Social Links</h3>
-						<p class="text-xs opacity-60">Shown in the site footer. Leave blank to hide.</p>
+				<Card>
+					<CardBody>
+						<CardTitle size="base">Social Links</CardTitle>
+						<p class="text-subtle">Shown in the site footer. Leave blank to hide.</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
@@ -593,20 +596,20 @@
 								placeholder="https://instagram.com/..."
 							/>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			</Form>
 		{:else if activeTab === 'integrations'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Manage credentials for third-party integrations. Changes take effect immediately.
 			</p>
 
 			<Form remote={updateIntegrationSettings} guard successToast="U-tec credentials updated">
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-2">
-								<h3 class="card-title text-base">U-tec Smart Lock</h3>
+								<CardTitle size="base">U-tec Smart Lock</CardTitle>
 								<span class="badge badge-sm {utecConnected ? 'badge-success' : 'badge-ghost'}">
 									{utecConnected ? 'Connected' : 'Not connected'}
 								</span>
@@ -614,9 +617,10 @@
 							<div class="flex gap-2">
 								{#if utecConnected}
 									<!-- Test Connection only matters once a refresh token exists. -->
-									<button
+									<Button
 										type="button"
-										class="btn btn-sm btn-ghost"
+										variant="ghost"
+										size="sm"
 										onclick={handleTestConnection}
 										disabled={connectionTesting}
 									>
@@ -626,36 +630,39 @@
 											<IconPlugConnected class="size-4" />
 										{/if}
 										Test Connection
-									</button>
-									<a
+									</Button>
+									<Button
 										href={resolve('/api/integrations/utec/authorize')}
-										class="btn btn-sm btn-ghost"
+										variant="ghost"
+										size="sm"
 										data-sveltekit-reload
 									>
 										Reconnect
-									</a>
+									</Button>
 								{:else}
-									<a
+									<Button
 										href={resolve('/api/integrations/utec/authorize')}
-										class="btn btn-sm btn-primary"
-										class:btn-disabled={!utecCanConnect}
+										variant="primary"
+										size="sm"
+										class={utecCanConnect ? '' : 'btn-disabled'}
 										data-sveltekit-reload
 									>
 										<IconPlugConnected class="size-4" />
 										Connect to U-tec
-									</a>
+									</Button>
 								{/if}
 								<SubmitButton
 									label="Save"
 									successLabel="Saved"
 									errorLabel="Error"
-									class="btn-sm btn-primary"
+									variant="primary"
+									size="sm"
 								/>
 							</div>
 						</div>
 
 						{#if !utecConnected && !utecCanConnect}
-							<p class="text-xs opacity-60">
+							<p class="text-subtle">
 								Enter and save your Client ID and Secret, then connect to authorize the lock.
 							</p>
 						{/if}
@@ -679,15 +686,17 @@
 								<div class="flex items-start justify-between gap-2">
 									<div>
 										<p class="text-sm font-medium">Lock self-test</p>
-										<p class="text-xs opacity-60">
+										<p class="text-subtle">
 											Issues a 15-minute test code and exercises the lock commands. Try the code on
 											the door, then revoke it.
 										</p>
 									</div>
 									<div class="flex shrink-0 gap-2">
-										<button
+										<Button
 											type="button"
-											class="btn btn-outline btn-sm"
+											variant="default"
+											size="sm"
+											outline
 											onclick={handleSelfTest}
 											disabled={selfTesting}
 										>
@@ -695,10 +704,11 @@
 												<span class="loading loading-spinner loading-xs"></span>
 											{/if}
 											Run lock self-test
-										</button>
-										<button
+										</Button>
+										<Button
 											type="button"
-											class="btn btn-ghost btn-sm"
+											variant="ghost"
+											size="sm"
 											onclick={handleRevokeTest}
 											disabled={revokingTest}
 										>
@@ -706,7 +716,7 @@
 												<span class="loading loading-spinner loading-xs"></span>
 											{/if}
 											Revoke test codes
-										</button>
+										</Button>
 									</div>
 								</div>
 
@@ -714,7 +724,7 @@
 									<div class="mt-3 rounded-lg border border-base-300 p-3">
 										{#if selfTestResult.code}
 											<div class="mb-2 flex items-baseline gap-2">
-												<span class="text-xs opacity-60">Test code</span>
+												<span class="text-subtle">Test code</span>
 												<span class="font-mono text-2xl font-bold tracking-[0.2em]">
 													{selfTestResult.code}
 												</span>
@@ -765,16 +775,17 @@
 						</div>
 
 						<div class="mt-2">
-							<p class="text-xs opacity-70">
+							<p class="text-subtle">
 								Redirect URI — register this exact value in the U-tec developer console:
 							</p>
 							<div class="mt-1 flex items-center gap-2">
 								<code class="flex-1 truncate rounded bg-base-200 px-2 py-1 font-mono text-xs">
 									{utecRedirectUri}
 								</code>
-								<button
+								<Button
 									type="button"
-									class="btn btn-ghost btn-xs"
+									variant="ghost"
+									size="xs"
 									title="Copy redirect URI"
 									onclick={() => {
 										navigator.clipboard.writeText(utecRedirectUri);
@@ -782,7 +793,7 @@
 									}}
 								>
 									<IconCopy class="size-3.5" />
-								</button>
+								</Button>
 							</div>
 						</div>
 
@@ -791,11 +802,11 @@
 							credentials via environment variables (ULTRALOC_CLIENT_ID, etc.). Values saved here
 							take precedence over environment variables.
 						</p>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			</Form>
 		{:else if activeTab === 'features'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Enable or disable feature modules for members, bands and the public site. Disabled features
 				are hidden from member navigation and return 404 if accessed directly. The staff panel
 				always shows every feature, so you can set one up here before switching it on for everyone.
@@ -804,8 +815,8 @@
 			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
 				{@const enabled = featureFlags[flag as keyof typeof featureFlags]}
 				{@const toggleForm = updateFeatureFlag.for(flag)}
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3">
 								{#if enabled}
@@ -815,7 +826,7 @@
 								{/if}
 								<div>
 									<h3 class="font-semibold">{meta.label}</h3>
-									<p class="text-xs opacity-60">{meta.description}</p>
+									<p class="text-subtle">{meta.description}</p>
 								</div>
 							</div>
 							<form
@@ -827,19 +838,21 @@
 							>
 								<input {...toggleForm.fields.flag.as('hidden', flag)} />
 								<input {...toggleForm.fields.enabled.as('hidden', enabled ? 'false' : 'true')} />
-								<button
+								<Button
 									type="submit"
-									class="btn btn-sm {enabled ? 'btn-error btn-outline' : 'btn-success'}"
+									variant={enabled ? 'error' : 'success'}
+									outline={enabled}
+									size="sm"
 								>
 									{enabled ? 'Disable' : 'Enable'}
-								</button>
+								</Button>
 							</form>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/each}
 		{:else if activeTab === 'inbox'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Enable or disable communication channels for the staff inbox. Disabled channels won't
 				receive or send messages. Environment variables must be configured for each channel to
 				function.
@@ -850,14 +863,14 @@
 				{@const isAlwaysOn = isAlwaysEnabledChannel(cfg.channel)}
 				{@const ChannelIcon = meta.icon}
 				{@const toggleForm = updateInboxChannelConfig.for(cfg.channel)}
-				<div class="card bg-base-100 shadow">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3">
 								<ChannelIcon size={20} class="opacity-60" />
 								<div>
 									<h3 class="font-semibold">{meta.label}</h3>
-									<p class="text-xs opacity-60">{meta.description}</p>
+									<p class="text-subtle">{meta.description}</p>
 								</div>
 							</div>
 							{#if isAlwaysOn}
@@ -874,12 +887,14 @@
 									<input
 										{...toggleForm.fields.enabled.as('hidden', cfg.enabled ? 'false' : 'true')}
 									/>
-									<button
+									<Button
 										type="submit"
-										class="btn btn-sm {cfg.enabled ? 'btn-error btn-outline' : 'btn-success'}"
+										variant={cfg.enabled ? 'error' : 'success'}
+										outline={cfg.enabled}
+										size="sm"
 									>
 										{cfg.enabled ? 'Disable' : 'Enable'}
-									</button>
+									</Button>
 								</form>
 							{/if}
 						</div>
@@ -888,11 +903,11 @@
 								Env: {meta.envHint}
 							</div>
 						{/if}
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/each}
 		{:else if activeTab === 'subscriptions'}
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Reconciles every member and band subscription status from Stripe into the local database.
 				Use this as a one-time backfill after migration, or any time to re-sync if a webhook was
 				missed. For active members it also tops up any missing monthly credits by replaying their
@@ -937,7 +952,7 @@
 
 			<div class="divider"></div>
 
-			<p class="text-sm opacity-70">
+			<p class="text-muted">
 				Community impact stats (sustaining members, free hours funded, participation) are cached for
 				24 hours. Refresh to recompute them now from current subscriptions — useful right after a
 				sync.

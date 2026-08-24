@@ -1,4 +1,7 @@
 <script lang="ts">
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
+	import Button from '$lib/components/shared/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -10,6 +13,7 @@
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
 	import { getMe } from '$lib/remote/layout.remote';
 	import { TURNSTILE_SITE_KEY } from '$lib/turnstile';
+	import Alert from '$lib/components/shared/Alert.svelte';
 
 	// Deliberately NOT `await getMe()`. A top-level await puts the whole template
 	// behind an async boundary, and on a direct load of ?register that stops the
@@ -131,28 +135,25 @@
 <ErrorToastBoundary>
 	<div class="flex items-center justify-center py-16 px-4">
 		<div class="w-full max-w-sm">
-			<div
-				class="card shadow-xl"
-				style="background: var(--surface); border: 1px solid var(--surface-border)"
-			>
-				<div class="card-body gap-4">
+			<div class="card shadow-xl surface">
+				<CardBody class="gap-4">
 					{#if inviteMeta}
-						<div class="alert alert-info text-sm">
+						<Alert type="info" class="text-sm">
 							<span
 								><strong>{inviteMeta.inviterName}</strong> invited you to join
 								<strong>{inviteMeta.bandName}</strong>. Create an account to get started.</span
 							>
-						</div>
+						</Alert>
 					{/if}
 
-					<h2 class="card-title justify-center text-lg">
+					<CardTitle size="lg" level={2} class="justify-center">
 						{mode === 'login' ? 'Sign in to your account' : 'Create your account'}
-					</h2>
+					</CardTitle>
 
 					{#if error}
-						<div class="alert alert-error text-sm">
+						<Alert type="error" class="text-sm">
 							{error}
-						</div>
+						</Alert>
 					{/if}
 
 					<Form action={handleSubmit} class="flex flex-col gap-3">
@@ -172,12 +173,15 @@
 										{id}
 										name="password"
 										type={showPassword ? 'text' : 'password'}
-										class="input-bordered input w-full pr-10"
+										class="input w-full pr-10"
 										minlength={mode === 'register' ? 8 : undefined}
 									/>
-									<button
+									<Button
 										type="button"
-										class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-square"
+										variant="ghost"
+										size="xs"
+										shape="square"
+										class="absolute right-2 top-1/2 -translate-y-1/2"
 										onclick={() => (showPassword = !showPassword)}
 										tabindex={-1}
 									>
@@ -186,7 +190,7 @@
 										{:else}
 											<IconEye size={16} />
 										{/if}
-									</button>
+									</Button>
 								</div>
 							{/snippet}
 						</Field>
@@ -201,18 +205,19 @@
 						{/if}
 						<SubmitButton
 							label={mode === 'login' ? 'Sign in' : 'Create account'}
-							class="btn-primary w-full mt-1"
+							variant="primary"
+							class="w-full mt-1"
 						/>
 					</Form>
 
 					<div class="divider my-0 text-xs">OR</div>
 
-					<button class="btn btn-ghost btn-sm" onclick={toggleMode}>
+					<Button variant="ghost" size="sm" onclick={toggleMode}>
 						{mode === 'login'
 							? "Don't have an account? Sign up"
 							: 'Already have an account? Sign in'}
-					</button>
-				</div>
+					</Button>
+				</CardBody>
 			</div>
 		</div>
 	</div>

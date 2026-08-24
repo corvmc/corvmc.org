@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { removeCategory } from '$lib/remote/equipment.remote';
 
@@ -8,12 +9,16 @@
 	let {
 		categoryId,
 		name,
-		class: className = 'text-error btn-ghost btn-xs',
+		variant = 'ghost',
+		size = 'xs',
+		class: className = 'text-error',
 		onsuccess,
 		...rest
 	}: {
 		categoryId: string;
 		name: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -25,6 +30,8 @@
 	label="Delete"
 	modalTitle="Confirm"
 	successToast="Category deleted"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

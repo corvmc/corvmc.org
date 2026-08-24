@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -53,7 +56,8 @@
 		<EmptyState>
 			<p class="text-lg font-medium">Premium Feature</p>
 			<p class="mt-2 opacity-70">The EPK editor is available with a premium band subscription.</p>
-			<Button href="../../../subscription" class="btn-primary mt-4">Upgrade to Premium</Button>
+			<Button href="../../../subscription" variant="primary" class="mt-4">Upgrade to Premium</Button
+			>
 		</EmptyState>
 	{:else}
 		<form
@@ -73,10 +77,10 @@
 
 			<div class="space-y-6">
 				<!-- Contacts -->
-				<div class="card bg-base-100 shadow-sm">
-					<div class="card-body">
-						<h2 class="card-title text-lg">Contacts</h2>
-						<p class="text-sm opacity-60">Industry contacts shown on your EPK page.</p>
+				<Card>
+					<CardBody>
+						<CardTitle size="lg" level={2}>Contacts</CardTitle>
+						<p class="text-muted">Industry contacts shown on your EPK page.</p>
 
 						<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
 							<!-- Booking -->
@@ -84,7 +88,7 @@
 								<h3 class="font-semibold text-sm">Booking</h3>
 								<input
 									type="text"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Name"
 									value={epk.bookingContact?.name ?? ''}
 									oninput={(e) => {
@@ -96,7 +100,7 @@
 								/>
 								<input
 									type="email"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Email"
 									value={epk.bookingContact?.email ?? ''}
 									oninput={(e) => {
@@ -108,7 +112,7 @@
 								/>
 								<input
 									type="tel"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Phone (optional)"
 									value={epk.bookingContact?.phone ?? ''}
 									oninput={(e) => {
@@ -125,7 +129,7 @@
 								<h3 class="font-semibold text-sm">Management</h3>
 								<input
 									type="text"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Name"
 									value={epk.managementContact?.name ?? ''}
 									oninput={(e) => {
@@ -137,7 +141,7 @@
 								/>
 								<input
 									type="email"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Email"
 									value={epk.managementContact?.email ?? ''}
 									oninput={(e) => {
@@ -154,7 +158,7 @@
 								<h3 class="font-semibold text-sm">Press / PR</h3>
 								<input
 									type="text"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Name"
 									value={epk.prContact?.name ?? ''}
 									oninput={(e) => {
@@ -166,7 +170,7 @@
 								/>
 								<input
 									type="email"
-									class="input input-bordered input-sm w-full"
+									class="input input-sm w-full"
 									placeholder="Email"
 									value={epk.prContact?.email ?? ''}
 									oninput={(e) => {
@@ -178,28 +182,28 @@
 								/>
 							</div>
 						</div>
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
 				<!-- Press Quotes -->
-				<div class="card bg-base-100 shadow-sm">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h2 class="card-title text-lg">Press Quotes</h2>
-							<button type="button" class="btn btn-sm btn-primary" onclick={addPressQuote}
-								>Add Quote</button
+							<CardTitle size="lg" level={2}>Press Quotes</CardTitle>
+							<Button type="button" variant="primary" size="sm" onclick={addPressQuote}
+								>Add Quote</Button
 							>
 						</div>
 
 						{#if !epk.pressQuotes || epk.pressQuotes.length === 0}
-							<p class="text-sm opacity-60 mt-2">No press quotes yet.</p>
+							<p class="text-muted mt-2">No press quotes yet.</p>
 						{:else}
 							<div class="space-y-3 mt-4">
 								{#each epk.pressQuotes as quote, i (i)}
 									<div class="flex gap-2 items-start p-3 bg-base-200 rounded-lg">
 										<div class="flex-1 space-y-2">
 											<textarea
-												class="textarea textarea-bordered textarea-sm w-full"
+												class="textarea textarea-sm w-full"
 												rows="2"
 												placeholder="Quote text..."
 												value={quote.quote}
@@ -210,7 +214,7 @@
 											<div class="grid grid-cols-2 gap-2">
 												<input
 													type="text"
-													class="input input-bordered input-sm"
+													class="input input-sm"
 													placeholder="Publication"
 													value={quote.publication}
 													oninput={(e) => {
@@ -219,7 +223,7 @@
 												/>
 												<input
 													type="text"
-													class="input input-bordered input-sm"
+													class="input input-sm"
 													placeholder="Date (optional)"
 													value={quote.date ?? ''}
 													oninput={(e) => {
@@ -231,71 +235,74 @@
 												/>
 											</div>
 										</div>
-										<button
+										<Button
 											type="button"
-											class="btn btn-ghost btn-sm btn-square"
-											onclick={() => removePressQuote(i)}>✕</button
+											variant="ghost"
+											size="sm"
+											shape="square"
+											onclick={() => removePressQuote(i)}>✕</Button
 										>
 									</div>
 								{/each}
 							</div>
 						{/if}
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
 				<!-- Achievements -->
-				<div class="card bg-base-100 shadow-sm">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h2 class="card-title text-lg">Achievements</h2>
-							<button type="button" class="btn btn-sm btn-primary" onclick={addAchievement}
-								>Add</button
+							<CardTitle size="lg" level={2}>Achievements</CardTitle>
+							<Button type="button" variant="primary" size="sm" onclick={addAchievement}>Add</Button
 							>
 						</div>
-						<p class="text-sm opacity-60">
+						<p class="text-muted">
 							Awards, notable supports, festival appearances, streaming milestones.
 						</p>
 
 						{#if !epk.achievements || epk.achievements.length === 0}
-							<p class="text-sm opacity-60 mt-2">No achievements yet.</p>
+							<p class="text-muted mt-2">No achievements yet.</p>
 						{:else}
 							<div class="space-y-2 mt-4">
 								{#each epk.achievements as achievement, i (i)}
 									<div class="flex gap-2 items-center">
 										<input
 											type="text"
-											class="input input-bordered input-sm flex-1"
+											class="input input-sm flex-1"
 											placeholder="e.g. Opened for The National (2024)"
 											value={achievement}
 											oninput={(e) => {
 												epk.achievements![i] = e.currentTarget.value;
 											}}
 										/>
-										<button
+										<Button
 											type="button"
-											class="btn btn-ghost btn-sm btn-square"
-											onclick={() => removeAchievement(i)}>✕</button
+											variant="ghost"
+											size="sm"
+											shape="square"
+											onclick={() => removeAchievement(i)}>✕</Button
 										>
 									</div>
 								{/each}
 							</div>
 						{/if}
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
 				<!-- Backline Requirements -->
-				<div class="card bg-base-100 shadow-sm">
-					<div class="card-body">
+				<Card>
+					<CardBody>
 						<div class="flex items-center justify-between">
-							<h2 class="card-title text-lg">Backline Requirements</h2>
-							<button type="button" class="btn btn-sm btn-primary" onclick={addBacklineItem}
-								>Add Item</button
+							<CardTitle size="lg" level={2}>Backline Requirements</CardTitle>
+							<Button type="button" variant="primary" size="sm" onclick={addBacklineItem}
+								>Add Item</Button
 							>
 						</div>
-						<p class="text-sm opacity-60">Equipment you need from the venue vs. what you bring.</p>
+						<p class="text-muted">Equipment you need from the venue vs. what you bring.</p>
 
 						{#if !epk.backline || epk.backline.length === 0}
-							<p class="text-sm opacity-60 mt-2">No backline items yet.</p>
+							<p class="text-muted mt-2">No backline items yet.</p>
 						{:else}
 							<div class="overflow-x-auto mt-4">
 								<table class="table table-sm">
@@ -313,7 +320,7 @@
 												<td>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														placeholder="e.g. Drums"
 														value={item.instrument}
 														oninput={(e) => {
@@ -324,7 +331,7 @@
 												<td>
 													<input
 														type="text"
-														class="input input-bordered input-sm w-full"
+														class="input input-sm w-full"
 														placeholder="e.g. 5-piece kit, 22&quot; kick"
 														value={item.details}
 														oninput={(e) => {
@@ -334,7 +341,7 @@
 												</td>
 												<td>
 													<Select
-														class="select-bordered select-sm"
+														size="sm"
 														value={item.provided ? 'band' : 'venue'}
 														onchange={(e: Event) => {
 															epk.backline![i] = {
@@ -348,10 +355,12 @@
 													</Select>
 												</td>
 												<td>
-													<button
+													<Button
 														type="button"
-														class="btn btn-ghost btn-sm btn-square"
-														onclick={() => removeBacklineItem(i)}>✕</button
+														variant="ghost"
+														size="sm"
+														shape="square"
+														onclick={() => removeBacklineItem(i)}>✕</Button
 													>
 												</td>
 											</tr>
@@ -360,15 +369,15 @@
 								</table>
 							</div>
 						{/if}
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 
 				<!-- Save -->
 				<div class="flex justify-end gap-3">
-					<a href={resolve(`/band/${band.slug}/page-editor`)} class="btn btn-ghost"
-						>Back to Page Editor</a
+					<Button href={resolve(`/band/${band.slug}/page-editor`)} variant="ghost"
+						>Back to Page Editor</Button
 					>
-					<button class="btn btn-primary">Save EPK</button>
+					<Button variant="primary">Save EPK</Button>
 				</div>
 			</div>
 		</form>

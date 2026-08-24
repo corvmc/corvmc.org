@@ -41,7 +41,7 @@
 		     people leave one list, keep getting mail from another, and hit "mark as
 		     spam" instead of coming back here. This is the escape hatch. -->
 		<div class="border-t pt-4 space-y-2">
-			<p class="text-sm opacity-70">Still receiving emails you don't want?</p>
+			<p class="text-muted">Still receiving emails you don't want?</p>
 			<!-- SubmitButton wraps its button in a plain flex row, which would sit
 			     left of centre inside this centred column. -->
 			<div class="flex justify-center">
@@ -49,7 +49,9 @@
 					<input {...allFields.token.as('hidden', token)} />
 					<SubmitButton
 						label="Unsubscribe from all CorvMC emails"
-						class="btn-outline btn-primary btn-sm"
+						variant="primary"
+						size="sm"
+						outline
 					/>
 				</Form>
 			</div>
@@ -61,9 +63,9 @@
 		</p>
 		<Form remote={confirmUnsubscribe} onsuccess={() => (done = true)}>
 			<input {...fields.token.as('hidden', token)} />
-			<SubmitButton label="Unsubscribe" class="btn-primary" />
+			<SubmitButton label="Unsubscribe" variant="primary" />
 		</Form>
 	{/if}
 
-	<Button href="/" class="btn-ghost btn-sm">Back to CorvMC</Button>
+	<Button href="/" variant="ghost" size="sm">Back to CorvMC</Button>
 </div>

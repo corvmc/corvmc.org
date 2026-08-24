@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import {
 		getUserVolunteerProfile,
 		getUserShifts,
@@ -9,7 +10,7 @@
 		revokeCertification
 	} from '$lib/remote/volunteer.remote';
 	import { getUserOverview } from '$lib/remote/users.remote';
-	import AsyncCard from './AsyncCard.svelte';
+	import { RelatedList } from '$lib/components/shared/entity';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -18,6 +19,8 @@
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { clubToday, formatVolunteerHours } from '$lib/config';
@@ -34,7 +37,7 @@
 	}
 </script>
 
-<AsyncCard title="Volunteer profile" result={getUserVolunteerProfile(id)}>
+<RelatedList title="Volunteer profile" result={getUserVolunteerProfile(id)}>
 	{#snippet children(data)}
 		{#if !data.profile}
 			<EmptyState
@@ -48,18 +51,14 @@
 					approval.
 				</Alert>
 			{/if}
-			<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-				<dt class="opacity-60">Name on file</dt>
-				<dd>{data.profile.firstName} {data.profile.lastName}</dd>
+			<DefinitionList>
+				<Fact label="Name on file">{data.profile.firstName} {data.profile.lastName}</Fact>
 
-				<dt class="opacity-60">Status</dt>
-				<dd><StatusBadge status={data.profile.status} label /></dd>
+				<Fact label="Status"><StatusBadge status={data.profile.status} label /></Fact>
 
-				<dt class="opacity-60">Age</dt>
-				<dd>{data.profile.isAdult ? 'Adult' : 'Under 18'}</dd>
+				<Fact label="Age">{data.profile.isAdult ? 'Adult' : 'Under 18'}</Fact>
 
-				<dt class="opacity-60">Hours</dt>
-				<dd>
+				<Fact label="Hours">
 					{formatVolunteerHours(data.summary.approvedMinutes)} approved ·
 					{formatVolunteerHours(data.summary.approvedMinutesThisYear)} this year
 					{#if data.summary.pendingMinutes > 0}
@@ -67,10 +66,9 @@
 							>{formatVolunteerHours(data.summary.pendingMinutes)} pending</span
 						>
 					{/if}
-				</dd>
+				</Fact>
 
-				<dt class="opacity-60">Interested in</dt>
-				<dd class="flex flex-wrap gap-1">
+				<Fact label="Interested in" class="flex flex-wrap gap-1">
 					{#each data.interests as i (i.roleId)}
 						<a href={resolve(`/staff/volunteer/roles/${i.roleId}`)}>
 							<Badge size="sm">{i.roleName}</Badge>
@@ -78,11 +76,11 @@
 					{:else}
 						<span class="opacity-60">No roles picked</span>
 					{/each}
-				</dd>
-			</dl>
+				</Fact>
+			</DefinitionList>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
 <!--
 	Clearances. Revoke rather than delete is the normal way to end one: the
@@ -96,12 +94,13 @@
 	<InfoCard title="Certifications">
 		{#snippet header(title: string)}
 			<div class="flex items-center justify-between gap-2">
-				<h3 class="card-title">{title}</h3>
+				<CardTitle>{title}</CardTitle>
 				{#if catalog.length > 0}
 					<Action
 						action={grantCertification}
 						label="Grant"
-						class="btn-sm"
+						variant="default"
+						size="sm"
 						modalTitle="Grant a certification"
 						submitLabel="Grant"
 						successToast="Certification granted"
@@ -147,7 +146,7 @@
 								<span class="font-medium">{record.certificationName}</span>
 								<StatusBadge status={record.state} label />
 							</div>
-							<div class="text-xs opacity-60">
+							<div class="text-subtle">
 								Granted {formatDateShortYear(record.grantedAt)}{record.grantedByName
 									? ` by ${record.grantedByName}`
 									: ''}{record.expiresAt
@@ -155,7 +154,7 @@
 									: ' · no expiry'}
 							</div>
 							{#if record.reference}
-								<div class="text-xs opacity-60">#{record.reference}</div>
+								<div class="text-subtle">#{record.reference}</div>
 							{/if}
 							{#if record.revokedReason}
 								<div class="text-xs text-error">Revoked: {record.revokedReason}</div>
@@ -166,10 +165,12 @@
 							<Action
 								action={revokeCertification.for(record.id)}
 								label="Revoke"
-								class="btn-ghost btn-xs text-error"
+								variant="ghost"
+								size="xs"
+								class="text-error"
 								modalTitle="Revoke {record.certificationName}?"
 								submitLabel="Revoke"
-								submitClass="btn-error"
+								submitVariant="error"
 								successToast="Certification revoked"
 								onsuccess={refreshCertifications}
 							>
@@ -196,7 +197,7 @@
 	</InfoCard>
 {/await}
 
-<AsyncCard title="Shifts" result={getUserShifts(id)}>
+<RelatedList title="Shifts" result={getUserShifts(id)}>
 	{#snippet children(shifts)}
 		{#if shifts.length === 0}
 			<EmptyState
@@ -218,7 +219,7 @@
 								{s.roleName}
 							</a>
 							{#if s.shiftCancelledAt}
-								<div class="text-sm opacity-60">Shift was cancelled</div>
+								<div class="text-muted">Shift was cancelled</div>
 							{/if}
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(s.startsAt)}</td>
@@ -227,15 +228,15 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Hour logs" result={getUserHourLogs(id)}>
+<RelatedList title="Hour logs" result={getUserHourLogs(id)}>
 	{#snippet children(logs)}
 		{#if logs.length === 0}
 			<EmptyState title="No hours logged" description="This member has never submitted hours." />
 		{:else}
 			{#if logs.length > 10}
-				<p class="mb-3 text-sm opacity-60">Showing the 10 most recent of {logs.length}.</p>
+				<p class="mb-3 text-muted">Showing the 10 most recent of {logs.length}.</p>
 			{/if}
 			<Table>
 				{#snippet head()}
@@ -249,7 +250,7 @@
 						<td class="w-px"><StatusBadge status={log.status} /></td>
 						<td class="cell-primary">
 							<div class="font-medium">{log.roleName}</div>
-							<div class="text-sm opacity-60">{log.description}</div>
+							<div class="text-muted">{log.description}</div>
 						</td>
 						<td class="cell-num">{formatVolunteerHours(log.minutes)}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(log.workedOn)}</td>
@@ -258,4 +259,4 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>

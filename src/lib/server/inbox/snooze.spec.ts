@@ -50,7 +50,8 @@ vi.mock('$lib/server/db', () => ({
 }));
 vi.mock('$lib/server/db/paginate', () => ({ paginate: vi.fn() }));
 
-const { wakeSnoozedThreads, countThreadsByStatus } = await import('./thread-service');
+const { wakeSnoozedThreads, countThreadsByStatus, updateStatus, getUnresolvedCount } =
+	await import('./thread-service');
 const { inboxThread } = await import('$lib/server/db/schema/inbox');
 
 /** Render a captured predicate so we can assert on the actual SQL. */
@@ -98,6 +99,30 @@ describe('wakeSnoozedThreads', () => {
 
 		expect(result).toEqual({ woken: 0 });
 		expect(calls.updateSet).toHaveLength(0);
+	});
+});
+
+describe('updateStatus', () => {
+	// Resolving, snoozing and reopening are all staff saying where the thread
+	// stands now, which outranks whatever the last reply left behind.
+	it('clears the awaiting-reply marker', async () => {
+		await updateStatus('thread-1', 'resolved');
+
+		expect(calls.updateSet[0]).toMatchObject({ status: 'resolved', awaitingReplySince: null });
+	});
+});
+
+describe('getUnresolvedCount', () => {
+	// This is the staff nav badge. It counts open threads *waiting on us*, which
+	// is why it can legitimately read lower than the Open tab beside it.
+	it('counts open threads that are not awaiting a reply', async () => {
+		selectRows = [{ count: 3 }];
+
+		expect(await getUnresolvedCount()).toBe(3);
+
+		const sql = renderWhere(calls.selectWhere[0]).toLowerCase();
+		expect(sql).toContain('"status" = ?');
+		expect(sql).toContain('"awaiting_reply_since" is null');
 	});
 });
 

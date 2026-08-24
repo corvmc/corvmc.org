@@ -1,16 +1,21 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { deleteAudience } from '$lib/remote/marketing.remote';
 
 	const { fields } = deleteAudience;
 
 	let {
 		audienceId,
-		class: className = 'btn-error btn-sm',
+		variant = 'error',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		audienceId: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -22,6 +27,8 @@
 	label="Delete"
 	modalTitle="Confirm"
 	successToast="Audience deleted"
+	{variant}
+	{size}
 	class={className}
 	{onsuccess}
 	{...rest}

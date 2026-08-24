@@ -3,6 +3,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
+import { bandRefColumns, toBandRef, toEventRef } from '$lib/server/entity/refs';
 import {
 	create,
 	update,
@@ -19,6 +20,7 @@ import {
 	getEventLineup,
 	listMemberUpcomingShows,
 	listMemberPastShows,
+	type MemberShowRow,
 	countMemberPastShows
 } from '$lib/server/event/event-service';
 import {
@@ -51,21 +53,23 @@ import {
 	countRsvps
 } from '$lib/server/event/rsvp-service';
 import { publicEventStatuses, eventStatuses } from '$lib/server/db/schema/event';
-import { getCommunityStanding } from '$lib/server/event/community-event-service';
+import { getStanding } from '$lib/server/moderation/standing-service';
 import { isSustainingMember as checkSustainingMember } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
+import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
 import { event, createEventSchema, eventSources } from '$lib/server/db/schema/event';
 import { band } from '$lib/server/db/schema/band';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
+import { formatDateShortYear } from '$lib/utils/format';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -422,12 +426,67 @@ export const getStaffEvents = query(
 	}),
 	async (filters) => {
 		await requireStaff();
-		return listAllEvents(
+		const { rows, pagination } = await listAllEvents(
 			{ source: filters.source, status: filters.status },
 			{ page: filters.page ?? 1, pageSize: 50 }
 		);
+		return {
+			rows: rows.map((e) => ({
+				...e,
+				// The listing's own status is the row's and keeps its column, so the
+				// ref carries none — two marks for one fact reads as two facts.
+				ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
+				// `event.bandId` is who manages the listing; the left join is already
+				// here for the byline.
+				band: toBandRef({ id: e.bandId, name: e.bandName, slug: e.bandSlug })
+			})),
+			pagination
+		};
 	}
 );
+
+/**
+ * Staff: event lookup for anything that hangs off a show — today, the volunteer
+ * shift forms.
+ *
+ * Two departures from `listAll`, which is the other staff-facing event read:
+ *
+ *  - **Nearest-in-time first, not newest first.** A venue has five rows called
+ *    "Open Mic Night"; ordering by `startsAt` descending hands back the one
+ *    furthest in the future, which is never the one the staffer meant. Sorting
+ *    by distance from now puts next Thursday's ahead of next April's, and still
+ *    reaches backwards for a show that already happened.
+ *  - **Cancelled and rejected are excluded**, because you do not staff a show
+ *    that is not happening. `listAll` keeps them; it is an admin index, and
+ *    this is a picker.
+ *
+ * The community-draft exclusion is `listAll`'s and carries its reasoning: a
+ * draft listing is a member's private working copy, and a staffer browsing
+ * events has no business reading it.
+ */
+export const searchEvents = query(z.string(), async (q) => {
+	await requireStaff();
+	if (!q || q.length < 2) return [];
+
+	const pattern = `%${q}%`;
+	const rows = await db
+		.select({ id: event.id, title: event.title, startsAt: event.startsAt })
+		.from(event)
+		.where(
+			and(
+				like(event.title, pattern),
+				notInArray(event.status, ['cancelled', 'rejected']),
+				not(and(eq(event.source, 'community'), eq(event.status, 'draft'))!)
+			)
+		)
+		.orderBy(sql`abs(${event.startsAt} - unixepoch())`)
+		.limit(SEARCH_LIMIT);
+
+	// The date arrives as a string because SearchSelect renders its description
+	// field verbatim — and it is formatted here so it lands in club time rather
+	// than whatever timezone the staffer's laptop is set to.
+	return rows.map((e) => ({ id: e.id, title: e.title, when: formatDateShortYear(e.startsAt) }));
+});
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
 	await requireStaff();
@@ -446,11 +505,11 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 	let bookingBand: { id: string; name: string; slug: string } | null = null;
 	if (evt.bandId) {
 		const [row] = await db
-			.select({ id: band.id, name: band.name, slug: band.slug })
+			.select(bandRefColumns())
 			.from(band)
 			.where(eq(band.id, evt.bandId))
 			.limit(1);
-		if (row) bookingBand = row;
+		if (row) bookingBand = { id: row.id, name: row.name, slug: row.slug };
 	}
 
 	let linkedReservation: { id: string; status: string; startsAt: Date; endsAt: Date } | null = null;
@@ -525,13 +584,15 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			externalTicketUrl: evt.externalTicketUrl
 		},
 		band: bookingBand,
+		/** The same band, ready to render. `band` stays for the fields the form reads. */
+		bandRef: bookingBand ? toBandRef(bookingBand) : null,
 		posterUrl,
 		creator,
 		// Standing only matters for a community listing, and only staff see it.
 		// It's what tells a reviewer whether this member is here because of a
 		// past problem or because they're new.
 		submitterStanding:
-			evt.source === 'community' ? await getCommunityStanding(evt.createdByUserId) : null,
+			evt.source === 'community' ? await getStanding(evt.createdByUserId, 'community_event') : null,
 		submitterId: evt.createdByUserId,
 		linkedReservation,
 		ticketStats,
@@ -553,9 +614,14 @@ export const checkConflicts = query(
 		const conflicts = await getConflictDetails(startsAt, endsAt);
 		const validationWarnings = await getValidationWarnings(startsAt, endsAt);
 
-		// Filter out the event's own reservation from conflicts
+		// Drop the event's own hold — re-timing an event must not report it as
+		// conflicting with itself. The old test was `!('id' in c)`, and
+		// getConflictDetails never returned an id, so it was always true and
+		// nothing was ever filtered: every event with a hold showed a phantom
+		// conflict, which armed "Override conflicts" and made the save skip the
+		// real double-booking check.
 		const filtered = excludeReservationId
-			? conflicts.filter((c) => c.type !== 'reservation' || !('id' in c))
+			? conflicts.filter((c) => c.type !== 'reservation' || c.id !== excludeReservationId)
 			: conflicts;
 
 		return { conflicts: filtered, validationWarnings };
@@ -710,7 +776,7 @@ export const updateEvent = form(
 		doorsTime: z.string().optional(),
 		// Band gigs live off these two — without them staff can see a wrong venue
 		// or a dead ticket link on the guide and have no way to fix it.
-		location: z.string().max(255).optional(),
+		location: z.string().max(SHORT_TEXT_MAX).optional(),
 		externalTicketUrl: z.string().max(500).optional(),
 		ticketingEnabled: z.boolean().optional(),
 		ticketPrice: z.string().optional(),
@@ -759,19 +825,27 @@ export const updateEvent = form(
 				data.doorsTime && data.eventDate ? buildDateInTz(data.eventDate, data.doorsTime, tz) : null;
 		}
 
-		// Handle reservation rebooking
-		if (
-			rebookReservation &&
-			data.eventDate &&
-			data.reservationStartTime &&
-			data.reservationEndTime
-		) {
-			const reservationRange = buildTimeRangeInTz(
-				data.eventDate,
-				data.reservationStartTime,
-				data.reservationEndTime,
-				tz
-			);
+		// Hold the space, or move the existing hold. Same rules as createEvent: the
+		// reservation times are an optional override for setup and teardown, not a
+		// precondition, and they are all-or-nothing because buildTimeRangeInTz reads
+		// an end before the start as an overnight range — a supplied 23:00 start
+		// against a defaulted 22:00 end would roll over and hold the room 23 hours.
+		//
+		// Gating on the times is what made this a silent no-op: the box was ticked,
+		// the event saved, and no space was ever held. Same defect the create path
+		// carried until #206.
+		if (rebookReservation) {
+			const customWindow = !!(data.reservationStartTime && data.reservationEndTime);
+			const startTime = customWindow ? data.reservationStartTime! : data.eventStartTime;
+			const endTime = customWindow ? data.reservationEndTime! : data.eventEndTime;
+
+			// The edit form always submits the event's date and times, so this only
+			// trips on a malformed payload. Failing loudly beats booking nothing.
+			if (!data.eventDate || !startTime || !endTime) {
+				error(400, 'A date and time range are required to hold the space');
+			}
+
+			const reservationRange = buildTimeRangeInTz(data.eventDate, startTime, endTime, tz);
 			updateParams.rebook = {
 				userId: staff.id,
 				reservationStartsAt: reservationRange.startsAt,
@@ -791,13 +865,26 @@ export const publishEvent = form(z.object({ id: z.string().min(1) }), async (dat
 	return { success: true };
 });
 
-export const unpublishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
-	// Band-sourced events notify the band's admins — pulling a gig silently is
-	// the one unpublish that needs a word back to whoever posted it.
-	await unpublishWithNotice(data.id);
-	return { success: true };
-});
+export const unpublishEvent = form(
+	z.object({
+		id: z.string().min(1),
+		// Optional, because unpublishing a CMC event notifies nobody and requiring
+		// a reason there is pure friction. It is passed through whenever it is
+		// given: community listings and band gigs both email whoever posted them,
+		// and this endpoint had no way to say why at all — the member got "your
+		// listing was taken down" and a blank space where the reason goes.
+		// 1000 matches `rejectCommunityEvent`, which writes the same
+		// `event.reviewNotes` column.
+		notes: z.string().trim().max(1000).optional()
+	}),
+	async (data) => {
+		await requireStaff();
+		// Band-sourced events notify the band's admins — pulling a gig silently is
+		// the one unpublish that needs a word back to whoever posted it.
+		await unpublishWithNotice(data.id, { notes: data.notes });
+		return { success: true };
+	}
+);
 
 export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
 	const staff = await requireStaff();
@@ -1077,25 +1164,48 @@ export const purchaseTickets = form(
 
 		const lineItem = await buildLineItem('ticket', unitPrice, data.quantity);
 
-		const result = await checkout({
-			stripeCustomerId: locals.user?.stripeId ?? undefined,
-			customerEmail: locals.user?.email ?? attendee.email,
-			userId: locals.user?.id ?? undefined,
-			mode: 'payment',
-			lineItems: [lineItem],
-			coverFees,
-			metadata: {
-				type: 'ticket',
-				purchase_id: purchaseId,
-				event_id: evt.id,
-				ticket_quantity: String(data.quantity),
-				// The webhook needs this to break the charge into tickets vs. covered
-				// fees on the receipt — the session alone can't tell them apart.
-				ticket_unit_price_cents: String(unitPrice)
-			},
-			successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
-			cancelUrl: `${url.origin}/events/${evt.id}/tickets`
-		});
+		// checkout() spends any credits the buyer has before charging the card, and
+		// payment-service reverses every completed deduction if a later one fails.
+		// The only way that surfaces here is a lost race — the balance moved between
+		// this request pricing the cart and the deduction landing. Nothing is
+		// broken and nothing is charged; the buyer just needs to resubmit against
+		// the new balance.
+		//
+		// Reported as a field issue rather than a thrown status because Form routes
+		// a thrown error into onfailure(issues), which carries no message — this
+		// page's onfailure shows a generic "Something went wrong". It also keeps a
+		// routine race out of Sentry, where an unhandled throw lands as a 500.
+		let result;
+		try {
+			result = await checkout({
+				stripeCustomerId: locals.user?.stripeId ?? undefined,
+				customerEmail: locals.user?.email ?? attendee.email,
+				userId: locals.user?.id ?? undefined,
+				mode: 'payment',
+				lineItems: [lineItem],
+				coverFees,
+				metadata: {
+					type: 'ticket',
+					purchase_id: purchaseId,
+					event_id: evt.id,
+					ticket_quantity: String(data.quantity),
+					// The webhook needs this to break the charge into tickets vs. covered
+					// fees on the receipt — the session alone can't tell them apart.
+					ticket_unit_price_cents: String(unitPrice)
+				},
+				successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
+				cancelUrl: `${url.origin}/events/${evt.id}/tickets`
+			});
+		} catch (err) {
+			if (err instanceof InsufficientCreditsError) {
+				invalid(
+					issue.quantity(
+						'Your credit balance changed while this was being processed. Nothing was charged — check the total and try again.'
+					)
+				);
+			}
+			throw err;
+		}
 
 		if (result.paid) {
 			const { fulfillPurchase } = await import('$lib/server/ticket/ticket-service');
@@ -1124,11 +1234,35 @@ export const getUserShows = query(z.string(), async (userId) => {
 		listMemberPastShows(userId, { limit: 5, offset: 0 }),
 		countMemberPastShows(userId)
 	]);
-	return { upcoming, past, pastCount };
+	// Projected here rather than in `listMemberShows`: the directory profile
+	// reads those same functions and is art-directed, so its rows keep their
+	// shape while the staff panel gets refs.
+	return { upcoming: upcoming.map(toShowRow), past: past.map(toShowRow), pastCount };
 });
+
+/** A show as the staff panel draws it: the event, and the band it credits. */
+function toShowRow(show: MemberShowRow) {
+	return {
+		...show,
+		ref: toEventRef({ ...show, image: show.posterKey }),
+		band: toBandRef({ id: show.bandId, name: show.bandName, slug: show.bandSlug })
+	};
+}
 
 export const getUserTicketsAndRsvps = query(z.string(), async (userId) => {
 	await requireStaff();
 	const [tickets, rsvps] = await Promise.all([getUserTickets(userId), listRsvpsForUser(userId)]);
-	return { tickets, rsvps };
+	// The row's own status is the ticket's or the RSVP's, which is not the
+	// event's — so the event ref carries no status here and the page keeps its
+	// status column.
+	return {
+		tickets: tickets.map((t) => ({
+			...t,
+			ref: toEventRef({ id: t.eventId, title: t.eventTitle, startsAt: t.eventStartsAt })
+		})),
+		rsvps: rsvps.map((r) => ({
+			...r,
+			ref: toEventRef({ id: r.eventId, title: r.eventTitle, startsAt: r.startsAt })
+		}))
+	};
 });

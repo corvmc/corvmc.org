@@ -58,9 +58,9 @@ eq(bandMember.id, memberId); // band-service.ts:353
 ```
 
 but the only id the invite list has is the **band** id — `listForUser` selects
-`id: band.id` ([band-service.ts:203](src/lib/server/band/band-service.ts:203)), which flows through
+`id: band.id` ([band-service.ts:203](../../src/lib/server/band/band-service.ts:203)), which flows through
 `getMemberBands` into the hidden input the Accept form submits
-([+page.svelte:85](src/routes/member/bands/+page.svelte:85)). The predicate matched zero rows for every
+([+page.svelte:85](../../src/routes/member/bands/+page.svelte:85)). The predicate matched zero rows for every
 user, every time, and the bare `throw new Error(...)` became a 500 —
 7 events across 5 users in one day.
 
@@ -73,7 +73,7 @@ lies. Accept is idempotent: an already-`active` row is success, not an error.
 Decline returns whether a row was actually removed. Both outcomes are returned
 in-band rather than thrown, so a stale invite no longer reaches Sentry as a 500.
 
-**Why the tests missed it:** [bands.spec.ts](src/routes/member/bands/bands.spec.ts) called the remote
+**Why the tests missed it:** [bands.spec.ts](../../src/routes/member/bands/bands.spec.ts) called the remote
 function with a synthetic `{ memberId: 'member-42' }`, so the UI→service key was
 never exercised. The tests now drive the id the UI really sends.
 
@@ -94,7 +94,7 @@ Event Tip conditional; the spread was already there.
 
 **Fixed:** the field goes through `FormField type="select"`, which builds its
 select props as a plain object literal and deliberately excludes `value`
-([FormField.svelte:74-84](src/lib/components/shared/Form/FormField.svelte:74)). Regression test in
+([FormField.svelte:74-84](../../src/lib/components/shared/Form/FormField.svelte:74)). Regression test in
 [contact.ssr.spec.ts](<src/routes/(public)/contact/contact.ssr.spec.ts>) reproduces the exact
 `TypeError` against the pre-fix page; its field mock replicates Kit's
 non-configurable descriptor, because a plain `{ value }` would not catch it.
@@ -102,7 +102,7 @@ non-configurable descriptor, because a plain `{ value }` would not catch it.
 ### 21 — the cron alert is a monitoring bug, not a failing job
 
 `cancel-stale-tickets` is a single `UPDATE`
-([ticket-service.ts:140](src/lib/server/ticket/ticket-service.ts:140)) — it cannot take 15 minutes.
+([ticket-service.ts:140](../../src/lib/server/ticket/ticket-service.ts:140)) — it cannot take 15 minutes.
 The check-in id was read out of the opening **response**
 (`sentry-check-in.ts:105`), opening check-ins got no retry (`:88`), and every
 attempt carried a 10s abort (`:63,98`). When Sentry recorded the open check-in
@@ -129,7 +129,7 @@ decremented — the guard could not detect a prior refund. `reservation.refunded
 was written in three places and read in none.
 
 Staff **Refund** deliberately does not cancel, and both buttons stayed enabled
-([reservation-actions.ts:108](src/lib/utils/reservation-actions.ts:108)), so Refund-then-Cancel
+([reservation-actions.ts:108](../../src/lib/utils/reservation-actions.ts:108)), so Refund-then-Cancel
 refunded twice. The throw landed _after_ `cancel()` had flipped the row to
 `cancelled` and nulled `cashDueCents`/`creditsUsed`, so credits were never
 reversed, `reservation.cancelled` never emitted (no waitlist promotion, no
@@ -149,7 +149,7 @@ a Stripe error can no longer strand the row.
 > event. It needs manual repair; the code fix does not heal existing rows.
 
 **Deliberately not changed:** `reservationPaymentState`
-([reservation-actions.ts:68](src/lib/utils/reservation-actions.ts:68)) still infers "refunded" from
+([reservation-actions.ts:68](../../src/lib/utils/reservation-actions.ts:68)) still infers "refunded" from
 `status === 'cancelled' && stripePaymentRecordId`, so a cancel whose refund
 failed displays as refunded. Keying it on `refundedAt` is the correct fix, but
 any reservation cancelled before that column was reliably populated would flip
@@ -167,11 +167,11 @@ err.message.includes('unique'); // band-service.ts:346
 
 D1 raises `UNIQUE constraint failed: ...`. The lowercase check never matched, so
 the raw `D1_ERROR` escaped as a 500. The sibling at
-[platform-invite-service.ts](src/lib/server/band/platform-invite-service.ts) had it right with
+[platform-invite-service.ts](../../src/lib/server/band/platform-invite-service.ts) had it right with
 `'UNIQUE'`. The unit test "covering" this fabricated a lowercase message.
 
 **Fixed:** the predicate moved to
-[constraint-errors.ts](src/lib/server/db/constraint-errors.ts) — schema-free, so specs that mock
+[constraint-errors.ts](../../src/lib/server/db/constraint-errors.ts) — schema-free, so specs that mock
 `drizzle-orm` can use the real implementation — matches case-insensitively, and
 walks `cause`, since drizzle wraps the driver message. `createInvite` now
 pre-checks `band_member` and distinguishes "already in this band" from "already
@@ -190,9 +190,9 @@ this band')` and rendered **nothing at all**: the layout's own
 that wraps only `{@render children()}`. 15 users over two months.
 
 **Fixed:** the three `layout.remote.ts` consumers filter to `status === 'active'`
-(matching what [bands.remote.ts:180](src/lib/remote/bands.remote.ts:180) already did for the invite
+(matching what [bands.remote.ts:180](../../src/lib/remote/bands.remote.ts:180) already did for the invite
 list); the 403 itself stays, as the security boundary. A new
-[band/+layout.svelte](src/routes/band/+layout.svelte) puts a boundary one level up so the layout's
+[band/+layout.svelte](../../src/routes/band/+layout.svelte) puts a boundary one level up so the layout's
 own await is covered and a genuine 403 renders an error instead of a blank page.
 It passes `showPending={false}` to keep server rendering identical — a boundary
 with a pending snippet renders that snippet during SSR _instead of_ awaiting its
@@ -205,7 +205,7 @@ contents, which would have replaced the whole band shell with a spinner.
 message, no stack, hence Sentry's "Object captured as promise rejection with
 keys: …".
 
-The redirect at [volunteer.remote.ts:414](src/lib/remote/volunteer.remote.ts:414) is correct and
+The redirect at [volunteer.remote.ts:414](../../src/lib/remote/volunteer.remote.ts:414) is correct and
 works. Kit runs `await goto(location)` and _then_ throws `Redirect(307)` purely
 to settle the dangling query promise, by which point the component and its
 boundary are unmounted — so no boundary can ever catch it. The thrown status is
@@ -214,11 +214,11 @@ matches the transaction name only because `goto` already renamed the
 transaction. Not a redirect loop.
 
 The existing 4xx filter could not help: it lives in `reportError`
-([report-error.ts:13](src/lib/report-error.ts:13)), a manual sink that unhandled rejections never
+([report-error.ts:13](../../src/lib/report-error.ts:13)), a manual sink that unhandled rejections never
 reach, and its `status >= 400` test would miss a 307 anyway. All three
 `beforeSend` filters key on `message`, which these payloads do not have.
 
-**Fixed:** `isFrameworkControlFlow` in [hooks.client.ts](src/hooks.client.ts) drops Redirects
+**Fixed:** `isFrameworkControlFlow` in [hooks.client.ts](../../src/hooks.client.ts) drops Redirects
 and **4xx** HttpErrors in `beforeSend`, bounded so a 5xx still reports.
 
 ## Operator action required
@@ -237,7 +237,7 @@ production `POSTMARK_SERVER_TOKEN` points at:
 
 Every transactional email path was failing, including Stripe receipts and three
 scheduled jobs. The code is correct —
-[postmark-client.ts:31-41](src/lib/server/notification/email/postmark-client.ts:31) reads both
+[postmark-client.ts:31-41](../../src/lib/server/notification/email/postmark-client.ts:31) reads both
 stream ids from the environment with no fallback, by design.
 
 This corroborates the 07-27 report's unproven hypothesis that the production
@@ -262,7 +262,7 @@ replies) may warrant a re-send.
   upstream class — the batch is flushed before the next top-level await gets hold
   of the current batch — and is **not fixed in 5.56.9**, the newest release. The
   page has several concurrent `$derived(await …)` and `{#each await …}`
-  ([+page.svelte:32-114](src/routes/member/reservations/+page.svelte:32)), which is the shape that
+  ([+page.svelte:32-114](../../src/routes/member/reservations/+page.svelte:32)), which is the shape that
   triggers it. 1 event, 1 user. No app-side fix; worth reporting upstream.
 - **24** — `SyntaxError: JSON.parse` on a remote form envelope, `/band/[slug]/edit`.
   **Correction to the note carried from the previous occurrence:** this was _not_

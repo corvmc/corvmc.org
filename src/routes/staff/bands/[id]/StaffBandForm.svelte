@@ -18,8 +18,10 @@
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import Action from '$lib/components/shared/Action.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 
 	// The band arrives as a plain resolved prop, NOT an awaited remote query.
 	// Keeping this component's script fully synchronous matters: a top-level
@@ -74,61 +76,45 @@
 			</InfoCard>
 
 			<InfoCard title="Details" class="bg-base-200 shadow-none">
-				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-					<dt class="opacity-60">Band ID</dt>
-					<dd class="font-mono text-xs">{band.id}</dd>
+				<DefinitionList>
+					<Fact label="Band ID" mono>{band.id}</Fact>
 
-					<dt class="opacity-60">Slug</dt>
-					<dd class="font-mono text-xs">{band.slug}</dd>
+					<Fact label="Slug" mono>{band.slug}</Fact>
 
-					<dt class="opacity-60">Owner</dt>
-					<dd>
-						<MemberLink
-							member={{
-								name: band.ownerName,
-								email: band.ownerEmail,
-								pronouns: band.ownerPronouns,
-								role: band.ownerRole,
-								userId: band.ownerId
-							}}
-						/>
-					</dd>
+					<Fact label="Owner">
+						<EntityChip ref={band.owner} />
+					</Fact>
 
-					<dt class="opacity-60">Members</dt>
-					<dd>{band.memberCount} active</dd>
+					<Fact label="Members">{band.memberCount} active</Fact>
 
-					<dt class="opacity-60">Tier</dt>
-					<dd class="flex items-center gap-2">
+					<Fact label="Tier" class="flex items-center gap-2">
 						<StatusBadge status={band.tier} label />
-						<span class="text-xs opacity-60">
+						<span class="text-subtle">
 							{isStripeBacked ? 'billed through Stripe' : 'set by staff'}
 						</span>
-					</dd>
+					</Fact>
 
 					{#if band.subscription}
-						<dt class="opacity-60">Billing</dt>
-						<dd>
+						<Fact label="Billing">
 							{band.subscription.billingInterval}, renews {new Date(
 								band.subscription.currentPeriodEnd
 							).toLocaleDateString()}
 							{#if band.subscription.cancelAtPeriodEnd}
 								<Badge variant="warning" size="sm">Cancels at period end</Badge>
 							{/if}
-						</dd>
+						</Fact>
 					{/if}
 
-					<dt class="opacity-60">Created</dt>
-					<dd>{new Date(band.createdAt).toLocaleDateString()}</dd>
+					<Fact label="Created">{new Date(band.createdAt).toLocaleDateString()}</Fact>
 
 					{#if band.deletedAt}
-						<dt class="opacity-60">Deactivated</dt>
-						<dd>{new Date(band.deletedAt).toLocaleDateString()}</dd>
+						<Fact label="Deactivated">{new Date(band.deletedAt).toLocaleDateString()}</Fact>
 					{/if}
-				</dl>
+				</DefinitionList>
 
 				<div class="mt-4 flex flex-wrap gap-2">
 					{#if isStripeBacked}
-						<span class="text-xs opacity-60">
+						<span class="text-subtle">
 							Premium is billed through Stripe — cancel there to move this band back to free.
 						</span>
 					{:else if band.tier === 'premium'}
@@ -136,7 +122,8 @@
 							action={setBandTier}
 							label="Revoke premium"
 							successToast="Premium revoked"
-							class="btn-warning btn-sm"
+							variant="warning"
+							size="sm"
 						>
 							{#snippet form()}
 								<input {...tierFields.id.as('hidden', id)} />
@@ -152,7 +139,8 @@
 							action={setBandTier}
 							label="Comp premium"
 							successToast="Premium comped"
-							class="btn-secondary btn-sm"
+							variant="secondary"
+							size="sm"
 						>
 							{#snippet form()}
 								<input {...tierFields.id.as('hidden', id)} />
@@ -169,7 +157,8 @@
 							action={reactivateBand}
 							label="Reactivate"
 							successToast="Band reactivated"
-							class="btn-success btn-sm"
+							variant="success"
+							size="sm"
 							onsuccess={() => {
 								void getBand(id).refresh();
 							}}
@@ -184,7 +173,8 @@
 							action={deactivateBand}
 							label="Deactivate"
 							successToast="Band deactivated"
-							class="btn-error btn-sm"
+							variant="error"
+							size="sm"
 							onsuccess={() => {
 								void getBand(id).refresh();
 							}}

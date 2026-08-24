@@ -1,14 +1,17 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { payForReservation, confirmReservation } from '$lib/remote/reservations.remote';
-	import ConfirmStep from '../../../../routes/member/reservations/ConfirmStep.svelte';
-	import PaymentStep from '../../../../routes/member/reservations/PaymentStep.svelte';
+	import ConfirmStep from '../reservations/booking/ConfirmStep.svelte';
+	import PaymentStep from '../reservations/booking/PaymentStep.svelte';
 
 	let {
 		reservation,
 		staff = false,
-		class: className = 'btn-success btn-sm',
+		variant = 'success',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
@@ -16,6 +19,8 @@
 		// Staff confirming on a member's behalf: submit confirmReservation (commits
 		// the OWNER's credits) and skip the member-only online Pay Ahead step.
 		staff?: boolean;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -31,6 +36,8 @@
 	noFooter
 	maxWidth="max-w-md"
 	successToast="Confirmed"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={async (result) => {
 		const r = result as { paid?: boolean; confirmed?: boolean; redirectUrl?: string };

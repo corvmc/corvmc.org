@@ -18,9 +18,11 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { ActivateToggleAction } from '$lib/components/shared/actions';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Table from '$lib/components/shared/Table.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, formatCents } from '$lib/utils/format';
@@ -76,18 +78,15 @@
 			</InfoCard>
 
 			<InfoCard title="Inventory" class="bg-base-200 shadow-none">
-				<dl class="grid gap-x-4 gap-y-2 text-sm" style="grid-template-columns: auto 1fr;">
-					<dt class="opacity-60">ID</dt>
-					<dd class="font-mono text-xs">{item.id}</dd>
+				<DefinitionList>
+					<Fact label="ID" mono>{item.id}</Fact>
 
-					<dt class="opacity-60">Category</dt>
-					<dd>
+					<Fact label="Category">
 						{item.category.name}
 						<Badge variant="outline" size="xs" class="ml-1">{item.category.pricingTier}</Badge>
-					</dd>
+					</Fact>
 
-					<dt class="opacity-60">Available</dt>
-					<dd class:text-error={item.availableQuantity <= 0}>
+					<Fact label="Available" class={item.availableQuantity <= 0 ? 'text-error' : ''}>
 						{item.availableQuantity} of {item.totalQuantity}
 						{#if item.outOfOrderQuantity > 0}
 							<span class="text-warning text-xs">({item.outOfOrderQuantity} out of order)</span>
@@ -95,8 +94,8 @@
 						{#if item.loanedQuantity > 0}
 							<span class="text-info text-xs">({item.loanedQuantity} on loan)</span>
 						{/if}
-					</dd>
-				</dl>
+					</Fact>
+				</DefinitionList>
 
 				<div class="grid grid-cols-2 gap-3 mt-4">
 					<Field
@@ -168,16 +167,7 @@
 							</div>
 						</td>
 						<td class="cell-primary">
-							<MemberLink
-								variant="inline"
-								member={{
-									name: loan.userName,
-									email: loan.userEmail,
-									pronouns: loan.userPronouns,
-									role: loan.userRole,
-									userId: loan.userId
-								}}
-							/>
+							<EntityIdentity ref={loan.member} />
 						</td>
 						<td class="col-support whitespace-nowrap">
 							{loan.dueDate ? formatDateShort(loan.dueDate) : '—'}

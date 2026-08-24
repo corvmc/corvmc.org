@@ -13,7 +13,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Table from '$lib/components/shared/Table.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
@@ -68,22 +68,10 @@
 				{#each members as m (m.id)}
 					<tr class="hover">
 						<td class="w-px"><StatusBadge status={m.status} /></td>
-						<!-- Position was its own column; it qualifies the member, so it is
-						     the subline. -->
+						<!-- Position was its own column; it qualifies the member, so the
+						     ref carries it as the subline. -->
 						<td class="cell-primary">
-							<MemberLink
-								variant="inline"
-								member={{
-									name: m.userName,
-									email: m.userEmail,
-									pronouns: m.userPronouns,
-									role: m.userRole,
-									userId: m.userId
-								}}
-							/>
-							{#if m.position}
-								<span class="block truncate text-sm opacity-60">{m.position}</span>
-							{/if}
+							<EntityIdentity ref={m.member} />
 						</td>
 						<td class="w-px">
 							{#if m.role !== 'owner' && m.status === 'active'}
@@ -96,9 +84,9 @@
 								>
 									<input {...rf.fields.memberId.as('hidden', m.id)} />
 									<Select
-										class="select-bordered select-xs"
+										class="select-xs"
 										name="role"
-										aria-label="Role for {m.userName}"
+										aria-label="Role for {m.member.title}"
 										value={m.role}
 										onchange={(e: Event) =>
 											(e.currentTarget as HTMLSelectElement).form?.requestSubmit()}
@@ -116,12 +104,16 @@
 							{#if m.role !== 'owner'}
 								<div class="flex justify-end gap-1">
 									{#if m.status === 'pending'}
-										<RevokeInviteAction bandId={id} memberId={m.id} name={m.userName} />
+										<RevokeInviteAction bandId={id} memberId={m.id} name={m.member.title} />
 									{/if}
 									{#if m.status === 'active'}
-										<TransferOwnershipAction bandId={id} newOwnerId={m.userId} name={m.userName} />
+										<TransferOwnershipAction
+											bandId={id}
+											newOwnerId={m.userId}
+											name={m.member.title}
+										/>
 									{/if}
-									<RemoveBandMemberAction bandId={id} memberId={m.id} name={m.userName} />
+									<RemoveBandMemberAction bandId={id} memberId={m.id} name={m.member.title} />
 								</div>
 							{/if}
 						</td>
@@ -146,7 +138,7 @@
 						<td class="cell-primary">
 							<div class="truncate font-medium">{inv.email}</div>
 							{#if inv.position}
-								<div class="truncate text-sm opacity-60">{inv.position}</div>
+								<div class="truncate text-muted">{inv.position}</div>
 							{/if}
 						</td>
 						<td class="w-px"><Badge size="sm" variant="outline">{inv.role}</Badge></td>
@@ -179,7 +171,7 @@
 							<a {href} class="block font-medium whitespace-nowrap hover:underline">
 								{formatDateShort(r.startsAt)}
 							</a>
-							<div class="truncate text-sm opacity-60">
+							<div class="truncate text-muted">
 								{formatTimeRange(r.startsAt, r.endsAt)}
 							</div>
 						</td>

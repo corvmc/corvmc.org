@@ -28,7 +28,7 @@
 
 {#if headings.length > 0}
 	<nav class="text-sm space-y-1">
-		<p class="font-semibold text-xs uppercase tracking-wide opacity-60 mb-2">On this page</p>
+		<p class="font-semibold text-subtle uppercase tracking-wide mb-2">On this page</p>
 		{#each headings as heading (heading.id)}
 			<a
 				href="#{heading.id}"

@@ -60,6 +60,16 @@ export const inboxThread = sqliteTable(
 			onDelete: 'set null'
 		}),
 		snoozedUntil: integer('snoozed_until', { mode: 'timestamp' }),
+		/**
+		 * When staff last sent a reply that nobody has answered yet. Null means the
+		 * ball is in our court.
+		 *
+		 * Deliberately not a fourth `status`: an awaiting thread is still open work
+		 * and stays in the Open queue beside everything else. It only drops out of
+		 * the staff nav badge, which counts what needs a human now. Cleared by any
+		 * inbound message and by any explicit status change.
+		 */
+		awaitingReplySince: integer('awaiting_reply_since', { mode: 'timestamp' }),
 		messageCount: integer('message_count').notNull().default(0),
 		lastMessageAt: integer('last_message_at', { mode: 'timestamp' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })

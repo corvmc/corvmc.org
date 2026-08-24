@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { formatDateTime } from '$lib/utils/format';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -47,7 +49,7 @@
 					<Field name="startsAt" type="datetime-local" label="Start" />
 					<Field name="endsAt" type="datetime-local" label="End" />
 				</div>
-				<SubmitButton label="Add Closure" class="btn-primary" />
+				<SubmitButton label="Add Closure" variant="primary" />
 			</div>
 		</Form>
 	</InfoCard>
@@ -57,29 +59,17 @@
 	{:else}
 		<div class="space-y-3">
 			{#each closures as c (c.id)}
-				<div class="card bg-base-100 shadow-sm">
-					<div class="card-body py-4">
+				<Card>
+					<CardBody class="py-4">
 						{#if editId === c.id}
 							<div class="space-y-3">
-								<input
-									type="text"
-									bind:value={editReason}
-									class="input input-bordered w-full input-sm"
-								/>
+								<input type="text" bind:value={editReason} class="input w-full input-sm" />
 								<div class="grid grid-cols-2 gap-4">
-									<input
-										type="datetime-local"
-										bind:value={editStartsAt}
-										class="input input-bordered input-sm"
-									/>
-									<input
-										type="datetime-local"
-										bind:value={editEndsAt}
-										class="input input-bordered input-sm"
-									/>
+									<input type="datetime-local" bind:value={editStartsAt} class="input input-sm" />
+									<input type="datetime-local" bind:value={editEndsAt} class="input input-sm" />
 								</div>
 								<div class="flex justify-end gap-2">
-									<Button class="btn-ghost btn-sm" onclick={() => (editId = null)}>Cancel</Button>
+									<Button variant="ghost" size="sm" onclick={() => (editId = null)}>Cancel</Button>
 									<UpdateClosureAction
 										closureId={c.id}
 										reason={editReason}
@@ -96,20 +86,20 @@
 							<div class="flex items-center justify-between">
 								<div>
 									<p class="font-medium">{c.reason}</p>
-									<p class="text-sm opacity-60">
+									<p class="text-muted">
 										{formatDateTime(c.startsAt)} — {formatDateTime(c.endsAt)}
 									</p>
 								</div>
 								{#if isFuture(c.startsAt)}
 									<div class="flex gap-1">
-										<Button class="btn-ghost btn-sm" onclick={() => startEdit(c)}>Edit</Button>
+										<Button variant="ghost" size="sm" onclick={() => startEdit(c)}>Edit</Button>
 										<DeleteClosureAction closureId={c.id} />
 									</div>
 								{/if}
 							</div>
 						{/if}
-					</div>
-				</div>
+					</CardBody>
+				</Card>
 			{/each}
 		</div>
 	{/if}

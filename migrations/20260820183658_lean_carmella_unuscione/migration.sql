@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `idx_band_member_single_owner` ON `band_member` (`band_id`) WHERE role = 'owner';

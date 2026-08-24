@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { eq, getColumnTable, getTableName, sql } from 'drizzle-orm';
+import { eq, getColumnTable, getTableName, sql, type AnyColumn } from 'drizzle-orm';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/server/db';
 import { user, type Subscription } from '$lib/server/db/schema/authentication';
@@ -266,7 +266,7 @@ export async function isSustainingMember(userId: string): Promise<boolean> {
  * would bind to the inner `u` alias (`u.id = u.id`, always true), giving every outer
  * row the first table row's flag.
  */
-export function isSustainingMemberSql(userIdCol: typeof user.id) {
+export function isSustainingMemberSql(userIdCol: AnyColumn) {
 	const outerRef = sql.raw(`"${getTableName(getColumnTable(userIdCol))}"."${userIdCol.name}"`);
 	return sql<boolean>`(
 		select case when u.subscription is not null then 1 else 0 end

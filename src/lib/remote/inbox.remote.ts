@@ -11,6 +11,7 @@ import {
 	getThread,
 	assignThread as assignThreadSvc,
 	updateStatus,
+	setAwaitingReply,
 	getUnresolvedCount,
 	countThreadsByStatus,
 	listThreadsByContactEmail
@@ -57,6 +58,8 @@ const threadFiltersSchema = z.object({
 	channel: z.enum(inboxChannels).optional(),
 	/** A staff user id, or the sentinels `mine` / `unassigned`. */
 	assigned: z.string().optional(),
+	/** Who the conversation is waiting on: `yes` them, `no` us. */
+	awaiting: z.enum(['yes', 'no']).optional(),
 	search: z.string().optional(),
 	page: z.coerce.number().int().min(1).optional()
 });
@@ -80,6 +83,7 @@ export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
 			status: filters.status,
 			channel: filters.channel,
 			assignedToUserId,
+			awaitingReply: filters.awaiting === undefined ? undefined : filters.awaiting === 'yes',
 			search: filters.search
 		},
 		{ page: filters.page ?? 1, pageSize: 25 }
@@ -130,6 +134,10 @@ export const replyToThread = form(replySchema, async (data) => {
 	});
 
 	void getInboxThread(data.threadId).refresh();
+	// Replying marks the thread as waiting on the contact, which takes it out of
+	// the nav badge — so the badge has to be recounted here as well.
+	void getInboxUnreadCount().refresh();
+	void getStaffLayout().refresh();
 	return { success: true };
 });
 
@@ -211,6 +219,30 @@ export const updateThreadStatus = form(statusSchema, async (data) => {
 	void getInboxUnreadCount().refresh();
 	// The staff nav badge counts open threads, so resolving from the detail page
 	// has to refresh the layout too or the sidebar keeps the old number.
+	void getStaffLayout().refresh();
+	return { success: true };
+});
+
+// No `.transform()` on `awaiting`: a transform in a form() schema breaks the
+// `fields` inference the button's hidden inputs are built from.
+const awaitingSchema = z.object({
+	threadId: z.string().min(1),
+	awaiting: z.enum(['true', 'false'])
+});
+
+/**
+ * The manual half of the awaiting-reply marker — replying sets it on its own.
+ * Staff reach for this when the answer happened off the platform, or when a
+ * conversation they marked needs their attention again after all.
+ */
+export const setThreadAwaiting = form(awaitingSchema, async (data) => {
+	await requireStaff();
+	await setAwaitingReply(data.threadId, data.awaiting === 'true');
+
+	void getInboxThread(data.threadId).refresh();
+	// The marker is what the nav badge counts, so both it and the layout that
+	// renders it have to be recounted — same reason as updateThreadStatus.
+	void getInboxUnreadCount().refresh();
 	void getStaffLayout().refresh();
 	return { success: true };
 });
@@ -332,6 +364,9 @@ export const markConversationRead = command(z.string(), async (id) => {
 	const user = requireUser();
 	await markPortalThreadRead(id, user.id);
 	void getMemberLayout().refresh();
+	// The unread dot in the list pane is cleared by the caller, not here: the
+	// list is paginated and queries cache per argument, so this handler cannot
+	// name the entry the page is holding.
 });
 
 // ---------------------------------------------------------------------------

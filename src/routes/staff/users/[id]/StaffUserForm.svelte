@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { getUser, updateUser } from '$lib/remote/users.remote';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -40,8 +41,8 @@
 	<InfoCard title="Account Info">
 		{#snippet header(title: string)}
 			<div class="flex items-center justify-between gap-2">
-				<h3 class="card-title">{title}</h3>
-				<SubmitButton shortcut="mod+s" class="btn-primary btn-sm">
+				<CardTitle>{title}</CardTitle>
+				<SubmitButton shortcut="mod+s" variant="primary" size="sm">
 					{#snippet icon()}
 						<IconDeviceFloppy size={16} />
 					{/snippet}

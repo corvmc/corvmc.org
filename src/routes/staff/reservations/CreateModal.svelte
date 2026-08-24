@@ -101,7 +101,8 @@
 	label="New Reservation"
 	modalTitle="New Reservation"
 	submitLabel="Create Reservation"
-	class="btn-primary btn-sm"
+	variant="primary"
+	size="sm"
 	maxWidth="max-w-md"
 	onsuccess={async (result) => {
 		resetForm();
@@ -121,7 +122,7 @@
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Booking for</legend>
-				<Select bind:value={bookerType} class="select-bordered w-full">
+				<Select bind:value={bookerType} class="w-full">
 					<option value="user">A member</option>
 					<option value="band">A band</option>
 				</Select>
@@ -155,11 +156,7 @@
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Start time</legend>
-				<Select
-					bind:value={startTime}
-					class="select-bordered w-full"
-					disabled={!(await startOptions)?.length}
-				>
+				<Select bind:value={startTime} class="w-full" disabled={!(await startOptions)?.length}>
 					<option value="">Select start time</option>
 					{#each await startOptions as opt (opt.value)}
 						<option value={opt.value}>
@@ -171,7 +168,7 @@
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">End time</legend>
-				<Select bind:value={endTime} class="select-bordered w-full" disabled={!startTime}>
+				<Select bind:value={endTime} class="w-full" disabled={!startTime}>
 					<option value="">Select end time</option>
 					{#each await endOptions as opt (opt.value)}
 						<option value={opt.value} class:opacity-40={!opt.available}>

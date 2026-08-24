@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { detectPlatform } from '$lib/utils/link-platform';
 	import {
 		IconBrandYoutube,
@@ -38,15 +39,18 @@
 		{#each links as link (link.url)}
 			{@const platform = detectPlatform(link.url)}
 			{@const IconComponent = platform ? (iconMap[platform.icon] ?? IconLink) : IconLink}
-			<a
+			<Button
 				href={link.url}
 				target="_blank"
 				rel="external noopener noreferrer"
-				class="btn btn-outline btn-sm justify-start gap-2"
+				variant="default"
+				size="sm"
+				outline
+				class="justify-start gap-2"
 			>
 				<IconComponent size={18} />
 				<span class="truncate">{link.label || platform?.name || 'Link'}</span>
-			</a>
+			</Button>
 		{/each}
 	</div>
 {/if}

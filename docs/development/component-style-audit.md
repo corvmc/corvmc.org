@@ -18,7 +18,12 @@ art. 16 components storied, 146 screenshots captured (`/tmp/story-shots/`).
 
 ---
 
-## 🔴 Critical — magenta text on solid surfaces (theme bug)
+## ✅ Resolved — magenta text on solid surfaces (theme bug)
+
+> **Fixed.** The four light-theme and two dark-theme tokens now read `oklch(100% 0 0)`
+> ([layout.css:20](../../src/routes/layout.css#L20) and following). The description below is kept
+> because the failure mode — relative-colour syntax silently clamping to an out-of-gamut hue — is
+> easy to reintroduce.
 
 `src/routes/layout.css` defines several `--color-*-content` tokens as:
 
@@ -34,12 +39,12 @@ is magenta in every component that uses them.
 
 Affected tokens:
 
-| Token                       | Light (`corvmc`)                                | Dark (`corvmc-dark`)                              |
-| --------------------------- | ----------------------------------------------- | ------------------------------------------------- |
-| `--color-primary-content`   | 🔴 broken ([:20](../src/routes/layout.css#L20)) | 🔴 broken ([:89](../src/routes/layout.css#L89))   |
-| `--color-error-content`     | 🔴 broken ([:42](../src/routes/layout.css#L42)) | 🔴 broken ([:109](../src/routes/layout.css#L109)) |
-| `--color-secondary-content` | 🔴 broken ([:24](../src/routes/layout.css#L24)) | ok                                                |
-| `--color-success-content`   | 🔴 broken ([:38](../src/routes/layout.css#L38)) | ok                                                |
+| Token                       | Light (`corvmc`)                                   | Dark (`corvmc-dark`)                                 |
+| --------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| `--color-primary-content`   | 🔴 broken ([:20](../../src/routes/layout.css#L20)) | 🔴 broken ([:89](../../src/routes/layout.css#L89))   |
+| `--color-error-content`     | 🔴 broken ([:42](../../src/routes/layout.css#L42)) | 🔴 broken ([:109](../../src/routes/layout.css#L109)) |
+| `--color-secondary-content` | 🔴 broken ([:24](../../src/routes/layout.css#L24)) | ok                                                   |
+| `--color-success-content`   | 🔴 broken ([:38](../../src/routes/layout.css#L38)) | ok                                                   |
 
 Visually confirmed across components (not just one):
 
@@ -62,17 +67,17 @@ e.g. `white` or `oklch(100% 0 0)`. One-line each; no component changes needed.
 ## 🟡 Minor — contrast / hierarchy
 
 - **EmptyState** wraps the _entire_ block in `opacity-60`
-  ([EmptyState.svelte:25](../src/lib/components/shared/EmptyState.svelte#L25)).
+  ([EmptyState.svelte:25](../../src/lib/components/shared/EmptyState.svelte#L25)).
   Confirmed on the dark screenshot (`shared-emptystate--with-action__corvmc-dark.png`):
   the title and body collapse to the same dim weight, so there's no visual
   hierarchy and the text is a touch low-contrast on near-black. Consider
   `text-base-content/60` on the body only, leaving the title at full strength.
 - **CopyableId** label at `opacity-50` is quite faint; the id at `opacity-70` is
-  fine ([CopyableId.svelte:22](../src/lib/components/shared/CopyableId.svelte#L22)).
+  fine ([CopyableId.svelte:22](../../src/lib/components/shared/CopyableId.svelte#L22)).
   Low priority. Its copy button also has no `aria-label` (only `title`).
 - **StatusBadge** uses two different color systems by mode: label mode →
   `badge-{color}`, icon-only mode → `text-{color}`
-  ([StatusBadge.svelte:39-110](../src/lib/components/shared/StatusBadge.svelte)).
+  ([StatusBadge.svelte:39-110](../../src/lib/components/shared/StatusBadge.svelte)).
   Both render legibly in both themes (verified `scheduled`, dark). Not a bug —
   noted only because it's an easy source of future drift.
 

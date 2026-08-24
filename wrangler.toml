@@ -84,18 +84,18 @@ POSTMARK_TRANSACTIONAL_STREAM = "outbound"
 POSTMARK_BROADCAST_STREAM = "broadcast"
 # Base address for inbox reply routing. Staff replies go out with a plus-addressed
 # Reply-To (reply+<threadId>.<sig>@...) so the response threads back into the same
-# conversation via Postmark's MailboxHash. Requires an MX record on this subdomain
-# pointing at inbound.postmarkapp.com — do NOT use corvmc.org itself, which
-# receives real mail. Until that MX is live, leave this UNSET: replies to a contact
-# fall back to Reply-To: STAFF_CONTACT_EMAIL, which reaches a human instead of
-# bouncing.
+# conversation via Postmark's MailboxHash.
 #
-# This also gates the contact-form alert's relay. Set, a staff member can answer
-# the alert straight from their mail client and the inbox both delivers the reply
-# to the sender and records it on the thread. Unset, the alert's Reply-To is the
-# sender's own address: the reply still arrives, but nothing is logged, and the
-# email says so.
-# INBOX_REPLY_ADDRESS = "reply@replies.corvmc.org"
+# This also gates the contact-form alert's relay: a staff member can answer the
+# alert straight from their mail client and the inbox both delivers the reply to
+# the sender and records it on the thread.
+#
+# Depends on MX replies.corvmc.org -> inbound.postmarkapp.com, which is live. Do
+# NOT move this to corvmc.org itself, which receives real mail on Google Workspace.
+# Unsetting it is the rollback: replies fall back to Reply-To: STAFF_CONTACT_EMAIL,
+# which reaches a human instead of bouncing. Setup and troubleshooting:
+# docs/architecture/inbox-reply-setup.md
+INBOX_REPLY_ADDRESS = "reply@replies.corvmc.org"
 # Public Cloudflare Turnstile site key for the bot-protection widget on the public
 # sign-up, contact, and subscribe forms. Non-secret. The matching secret is the
 # TURNSTILE_SECRET_KEY Worker secret (set via `wrangler secret put`). The value
@@ -104,7 +104,20 @@ PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADkKhGrOdNGAT-pY"
 # Legacy Laravel app (Forge-hosted, currently served at corvmc.org) — used for
 # bcrypt password verification during the migration window; drops out after cutover.
 LARAVEL_URL = "https://corvmcorg-x68glzpd.on-forge.com"
-# Intentionally unset (not provisioned yet): TWILIO_PHONE_NUMBER, R2_TRANSFORM_URL.
+# Cloudflare Image Transformations. The base is the bucket's custom domain plus
+# the fixed /cdn-cgi/image prefix; getPublicUrl appends the option segment and
+# the R2 key. Requires "Resize images from this zone" enabled on the corvmc.org
+# zone — the code path is inert until this var is set, so enable the zone setting
+# first and verify with:
+#   curl -sI 'https://media.corvmc.org/cdn-cgi/image/width=200,format=auto/<key>'
+# Verified live on 2026-08-16: transformations are enabled on the zone and
+# /cdn-cgi/image/ IS intercepted on the R2 custom domain, so the source stays a
+# bare key. A 462KB JPEG poster returns 19.8KB of AVIF at width=200.
+R2_TRANSFORM_URL = "https://media.corvmc.org/cdn-cgi/image"
+# The apex zone (https://corvmc.org/cdn-cgi/image) also works and is the fallback
+# if the R2 custom domain ever stops intercepting; it needs an absolute source,
+# which is what R2_TRANSFORM_SOURCE_ABSOLUTE switches on. No code change either way.
+# Intentionally unset: TWILIO_PHONE_NUMBER, R2_TRANSFORM_SOURCE_ABSOLUTE.
 
 [[d1_databases]]
 binding = "DB"

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Action from '../Action.svelte';
+	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { returnLoan } from '$lib/remote/equipment.remote';
 	import { Field } from '../Form';
@@ -9,12 +10,16 @@
 	let {
 		loanId,
 		chargeMessage,
-		class: className = 'btn-primary btn-sm',
+		variant = 'primary',
+		size = 'sm',
+		class: className = '',
 		onsuccess,
 		...rest
 	}: {
 		loanId: string;
 		chargeMessage?: string;
+		variant?: ButtonVariant;
+		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
@@ -26,6 +31,8 @@
 	label="Mark Returned"
 	modalTitle="Confirm Return"
 	successToast="Marked as returned"
+	{variant}
+	{size}
 	class={className}
 	onsuccess={onsuccess ?? (() => invalidateAll())}
 	{...rest}

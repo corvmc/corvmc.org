@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
 	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -200,10 +201,10 @@
 					type="file"
 					accept="image/jpeg,image/png,image/webp"
 					onchange={handleFileSelect}
-					class="file-input file-input-bordered w-full"
+					class="file-input w-full"
 				/>
 				{#if posterFile}
-					<p class="text-sm opacity-60 mt-1">
+					<p class="text-muted mt-1">
 						{posterFile.name} ({(posterFile.size / 1024).toFixed(0)} KB)
 					</p>
 				{/if}
@@ -227,10 +228,10 @@
 			/>
 
 			{#if ticketingEnabled}
-				<div class="card bg-base-200 p-4 space-y-4">
+				<Card tone="base-200" class="p-4 space-y-4">
 					<Field name="ticketQuantity" type="number" label="Capacity" bind:value={ticketQuantity} />
-					<p class="text-sm opacity-60">Leave capacity blank for unlimited tickets.</p>
-				</div>
+					<p class="text-muted">Leave capacity blank for unlimited tickets.</p>
+				</Card>
 			{/if}
 
 			<Field
@@ -241,8 +242,8 @@
 			/>
 
 			{#if reserveSpace}
-				<div class="card bg-base-200 p-4 space-y-4">
-					<p class="text-sm opacity-60">
+				<Card tone="base-200" class="p-4 space-y-4">
+					<p class="text-muted">
 						Reservation times can differ from event times to allow for setup and teardown.
 					</p>
 
@@ -268,7 +269,7 @@
 						{checkConflicts}
 						bind:hasConflicts
 					/>
-				</div>
+				</Card>
 			{/if}
 
 			<Field
@@ -279,7 +280,7 @@
 			/>
 
 			{#if recurring}
-				<div class="card bg-base-200 p-4 space-y-4">
+				<Card tone="base-200" class="p-4 space-y-4">
 					<Field
 						name="recurringFrequency"
 						type="select"
@@ -312,7 +313,7 @@
 						bind:value={recurringEndsAt}
 					/>
 
-					<p class="text-sm opacity-60">
+					<p class="text-muted">
 						Occurrences are created as drafts ahead of time; publish each one when ready. Each
 						occurrence starts with a copy of this event's poster, editable per occurrence.
 					</p>
@@ -328,10 +329,10 @@
 								</ul>
 							</div>
 						{:else}
-							<p class="text-sm opacity-60">No upcoming occurrences in the next 60 days.</p>
+							<p class="text-muted">No upcoming occurrences in the next 60 days.</p>
 						{/if}
 					{/if}
-				</div>
+				</Card>
 			{/if}
 
 			{#if hasConflicts}
@@ -339,7 +340,7 @@
 			{/if}
 
 			<div class="modal-action">
-				<Button type="button" class="btn-ghost" onclick={() => (open = false)}>Cancel</Button>
+				<Button type="button" variant="ghost" onclick={() => (open = false)}>Cancel</Button>
 				<SubmitButton
 					label={hasConflicts ? 'Create with Override' : 'Create Event'}
 					class={hasConflicts ? 'btn-warning' : 'btn-primary'}

@@ -7,7 +7,20 @@ import {
 } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { eq, ne, and, desc, count, like, or, inArray, isNotNull, lte, sql } from 'drizzle-orm';
+import {
+	eq,
+	ne,
+	and,
+	desc,
+	count,
+	like,
+	or,
+	inArray,
+	isNull,
+	isNotNull,
+	lte,
+	sql
+} from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import type { InboxChannel, InboxThreadStatus } from '$lib/server/db/schema/inbox';
 import type { PaginationInput } from '$lib/server/db/paginate';
@@ -133,7 +146,7 @@ export async function findThreadById(id: string) {
 export async function reopenThread(threadId: string) {
 	await db
 		.update(inboxThread)
-		.set({ status: 'open', snoozedUntil: null, updatedAt: new Date() })
+		.set({ status: 'open', snoozedUntil: null, awaitingReplySince: null, updatedAt: new Date() })
 		.where(eq(inboxThread.id, threadId));
 }
 
@@ -141,6 +154,8 @@ export interface ListThreadsFilters {
 	status?: InboxThreadStatus;
 	channel?: InboxChannel;
 	assignedToUserId?: string | null;
+	/** True: waiting on the contact. False: waiting on us. Undefined: both. */
+	awaitingReply?: boolean;
 	search?: string;
 }
 
@@ -166,6 +181,13 @@ export async function listThreads(filters: ListThreadsFilters, pagination: Pagin
 		} else {
 			conditions.push(eq(inboxThread.assignedToUserId, filters.assignedToUserId));
 		}
+	}
+	if (filters.awaitingReply !== undefined) {
+		conditions.push(
+			filters.awaitingReply
+				? isNotNull(inboxThread.awaitingReplySince)
+				: isNull(inboxThread.awaitingReplySince)
+		);
 	}
 	if (filters.search) {
 		const pattern = `%${filters.search}%`;
@@ -193,6 +215,7 @@ export async function listThreads(filters: ListThreadsFilters, pagination: Pagin
 			contactPhone: inboxThread.contactPhone,
 			assignedToUserId: inboxThread.assignedToUserId,
 			assignedToName: user.name,
+			awaitingReplySince: inboxThread.awaitingReplySince,
 			messageCount: inboxThread.messageCount,
 			lastMessageAt: inboxThread.lastMessageAt,
 			createdAt: inboxThread.createdAt
@@ -253,6 +276,7 @@ export async function getThread(id: string) {
 			contactUserId: contactUser.id,
 			contactUserName: contactUser.name,
 			snoozedUntil: inboxThread.snoozedUntil,
+			awaitingReplySince: inboxThread.awaitingReplySince,
 			messageCount: inboxThread.messageCount,
 			lastMessageAt: inboxThread.lastMessageAt,
 			createdAt: inboxThread.createdAt
@@ -309,16 +333,48 @@ export async function updateStatus(
 		.set({
 			status,
 			snoozedUntil: status === 'snoozed' ? (snoozedUntil ?? null) : null,
+			// An explicit status move supersedes the awaiting marker: resolving ends
+			// the wait, snoozing replaces it with a dated one, and reopening is staff
+			// saying this needs an answer now.
+			awaitingReplySince: null,
 			updatedAt: new Date()
 		})
 		.where(eq(inboxThread.id, threadId));
 }
 
+/**
+ * Mark a thread as waiting on its contact, or hand it back to the queue.
+ *
+ * Replying already does this (see `addOutboundMessage`); this is the manual
+ * path, for a conversation answered somewhere the inbox cannot see — a phone
+ * call, a hallway conversation, a text from someone's own phone.
+ */
+export async function setAwaitingReply(threadId: string, awaiting: boolean) {
+	await db
+		.update(inboxThread)
+		.set({ awaitingReplySince: awaiting ? new Date() : null, updatedAt: new Date() })
+		.where(eq(inboxThread.id, threadId));
+}
+
+/**
+ * The staff nav badge. Open threads *waiting on us* — a thread we have already
+ * answered is somebody else's move, so it drops out of this number even though
+ * it is still open and still listed under the Open tab.
+ *
+ * This is why the badge and the Open tab count differ, and why they should:
+ * the tab labels a list, the badge counts work.
+ */
 export async function getUnresolvedCount(): Promise<number> {
 	const [row] = await db
 		.select({ count: count() })
 		.from(inboxThread)
-		.where(and(eq(inboxThread.status, 'open'), staffVisibleThread));
+		.where(
+			and(
+				eq(inboxThread.status, 'open'),
+				isNull(inboxThread.awaitingReplySince),
+				staffVisibleThread
+			)
+		);
 	return row?.count ?? 0;
 }
 

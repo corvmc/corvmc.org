@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Card from '$lib/components/shared/Card/Card.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import { IconCircleCheck, IconMusic, IconTool, IconUsers } from '@tabler/icons-svelte';
 
 	let { variant = 'full' }: { variant?: 'full' | 'compact' } = $props();
@@ -21,54 +24,54 @@
 		</div>
 
 		<div class="grid gap-6 md:grid-cols-3">
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body">
+			<Card>
+				<CardBody>
 					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10">
 						<IconMusic size={24} class="text-primary" />
 					</div>
-					<h3 class="card-title">Practice Time</h3>
+					<CardTitle>Practice Time</CardTitle>
 					<p class="opacity-70">
 						For every $5 you put in each month, you get an hour of free practice time. Set up
 						recurring reservations so your favorite slot is always waiting, and jump the line when
 						last-minute openings pop up.
 					</p>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body">
+			<Card>
+				<CardBody>
 					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-secondary/10">
 						<IconTool size={24} class="text-secondary" />
 					</div>
-					<h3 class="card-title">Gear Library</h3>
+					<CardTitle>Gear Library</CardTitle>
 					<p class="opacity-70">
 						The Collective has a whole library of gear you can borrow. Sustaining members get free
 						accessory rentals (cables, stands, the stuff you always forget), monthly equipment
 						credits that match your contribution, and better rates on the bigger stuff.
 					</p>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 
-			<div class="card bg-base-100 shadow-sm">
-				<div class="card-body">
+			<Card>
+				<CardBody>
 					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-accent/10">
 						<IconUsers size={24} class="text-accent" />
 					</div>
-					<h3 class="card-title">Shows & Community</h3>
+					<CardTitle>Shows & Community</CardTitle>
 					<p class="opacity-70">
 						Half-price tickets to every Collective event and show, first dibs on workshops, and the
 						satisfaction of knowing you're helping keep independent music going in Corvallis.
 					</p>
-				</div>
-			</div>
+				</CardBody>
+			</Card>
 		</div>
 	</div>
 {:else}
 	<!-- Active member: two columns, compact -->
 	<div class="grid gap-6 md:grid-cols-2">
-		<div class="card bg-base-100 shadow-sm">
-			<div class="card-body">
-				<h3 class="card-title">Gear Library</h3>
+		<Card>
+			<CardBody>
+				<CardTitle>Gear Library</CardTitle>
 				<ul class="mt-2 space-y-2">
 					{@render benefitItem(
 						'<strong>Free accessory rentals</strong> — cables, stands, mic clips, all the essentials'
@@ -78,12 +81,12 @@
 					)}
 					{@render benefitItem('<strong>Better rates</strong> on premium gear')}
 				</ul>
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 
-		<div class="card bg-base-100 shadow-sm">
-			<div class="card-body">
-				<h3 class="card-title">Shows & Community</h3>
+		<Card>
+			<CardBody>
+				<CardTitle>Shows & Community</CardTitle>
 				<ul class="mt-2 space-y-2">
 					{@render benefitItem(
 						'<strong>Half-price tickets</strong> to every Collective event and show'
@@ -93,7 +96,7 @@
 						"You're directly <strong>keeping music happening</strong> in Corvallis"
 					)}
 				</ul>
-			</div>
-		</div>
+			</CardBody>
+		</Card>
 	</div>
 {/if}

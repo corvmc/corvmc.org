@@ -142,7 +142,6 @@ function buildGigRange(date: string, startTime: string, endTime: string | undefi
 
 export const createBandEventForm = form(
 	z.object({
-		slug: z.string().min(1),
 		title: z.string().min(1, 'Title is required').max(200),
 		description: z.string().max(5000).optional(),
 		eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
@@ -212,7 +211,6 @@ export const createBandEventForm = form(
 
 export const updateBandEventForm = form(
 	z.object({
-		slug: z.string().min(1),
 		eventId: z.string().min(1),
 		title: z.string().min(1).max(200).optional(),
 		description: z.string().max(5000).optional(),
@@ -284,44 +282,35 @@ export const updateBandEventForm = form(
 	}
 );
 
-export const publishBandEvent = form(
-	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
-	async (data) => {
-		const { band } = await requireBandAdmin();
+export const publishBandEvent = form(z.object({ eventId: z.string().min(1) }), async (data) => {
+	const { band } = await requireBandAdmin();
 
-		const evt = await getById(data.eventId);
-		if (!evt || evt.bandId !== band.id) throw error(404, 'Event not found');
+	const evt = await getById(data.eventId);
+	if (!evt || evt.bandId !== band.id) throw error(404, 'Event not found');
 
-		await publish(data.eventId);
-		return { success: true };
-	}
-);
+	await publish(data.eventId);
+	return { success: true };
+});
 
-export const unpublishBandEvent = form(
-	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
-	async (data) => {
-		const { band } = await requireBandAdmin();
+export const unpublishBandEvent = form(z.object({ eventId: z.string().min(1) }), async (data) => {
+	const { band } = await requireBandAdmin();
 
-		const evt = await getById(data.eventId);
-		if (!evt || evt.bandId !== band.id) throw error(404, 'Event not found');
+	const evt = await getById(data.eventId);
+	if (!evt || evt.bandId !== band.id) throw error(404, 'Event not found');
 
-		await unpublish(data.eventId);
-		return { success: true };
-	}
-);
+	await unpublish(data.eventId);
+	return { success: true };
+});
 
-export const cancelBandEventForm = form(
-	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
-	async (data) => {
-		const { band } = await requireBandAdmin();
+export const cancelBandEventForm = form(z.object({ eventId: z.string().min(1) }), async (data) => {
+	const { band } = await requireBandAdmin();
 
-		await cancelBandEvent(data.eventId, band.id);
-		return { success: true };
-	}
-);
+	await cancelBandEvent(data.eventId, band.id);
+	return { success: true };
+});
 
 export const removeBandEventPoster = form(
-	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
+	z.object({ eventId: z.string().min(1) }),
 	async (data) => {
 		const { band } = await requireBandAdmin();
 		await clearBandEventPoster(data.eventId, band.id);
@@ -338,7 +327,7 @@ export const removeBandEventPoster = form(
  * cost someone a hundred hand-typed lines.
  */
 export const importGigsForm = form(
-	z.object({ slug: z.string().min(1), text: z.string().min(1).max(80_000) }),
+	z.object({ text: z.string().min(1).max(80_000) }),
 	async (data, issue) => {
 		const { user, band } = await requireBandAdmin();
 
@@ -369,7 +358,7 @@ export const importGigsForm = form(
  * band's public profile — before this, the credit exists on the event only.
  */
 export const confirmLineupSlotForm = form(
-	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
+	z.object({ eventId: z.string().min(1) }),
 	async (data) => {
 		const { band } = await requireBandAdmin();
 		await confirmLineupSlot(data.eventId, band.id);
@@ -383,7 +372,7 @@ export const confirmLineupSlotForm = form(
  * the partial unique index stops them re-inviting.
  */
 export const declineLineupSlotForm = form(
-	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
+	z.object({ eventId: z.string().min(1) }),
 	async (data) => {
 		const { band } = await requireBandAdmin();
 		await declineLineupSlot(data.eventId, band.id);

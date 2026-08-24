@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
@@ -83,13 +84,13 @@
 </script>
 
 <PageHeader title="Events">
-	<a href={resolve('/member/events/submit')} class="btn btn-primary btn-sm">Add a show</a>
+	<Button href={resolve('/member/events/submit')} variant="primary" size="sm">Add a show</Button>
 </PageHeader>
 <PageContent>
 	<section>
 		<SectionLabel label="Your listings" count={mine.listings.length + mine.rejected.length} />
 
-		{#if mine.standing.requiresReview}
+		{#if mine.standing.status !== 'none'}
 			<Alert type="info" class="mb-4">
 				Staff check your listings before they go on the public calendar.
 			</Alert>
@@ -146,26 +147,26 @@
 		{#if allTags.length > 1}
 			<div class="mb-4">
 				<ButtonGroup wrap>
-					<button
-						class="join-item btn btn-sm"
-						class:btn-primary={activeFilter === null}
-						class:latched={activeFilter === null}
+					<Button
+						variant={activeFilter === null ? 'primary' : 'default'}
+						size="sm"
+						class="join-item {activeFilter === null ? 'latched' : ''}"
 						onclick={() => (activeFilter = null)}
 					>
 						All <span class="opacity-60 ml-1">{upcoming.length}</span>
-					</button>
+					</Button>
 					{#each allTags as tag (tag)}
-						<button
-							class="join-item btn btn-sm"
-							class:btn-primary={activeFilter === tag}
-							class:latched={activeFilter === tag}
+						<Button
+							variant={activeFilter === tag ? 'primary' : 'default'}
+							size="sm"
+							class="join-item {activeFilter === tag ? 'latched' : ''}"
 							onclick={() => (activeFilter = activeFilter === tag ? null : tag)}
 						>
 							{tag}
 							<span class="opacity-60 ml-1">
 								{upcoming.filter((e) => e.tags?.split(',').some((t) => t.trim() === tag)).length}
 							</span>
-						</button>
+						</Button>
 					{/each}
 				</ButtonGroup>
 			</div>

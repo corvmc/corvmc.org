@@ -1,4 +1,7 @@
 <script lang="ts">
+	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
+	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -27,15 +30,6 @@
 	let categoryId = $state('');
 
 	let searchDebounced = $state('');
-	let searchTimer: ReturnType<typeof setTimeout>;
-	function onSearchInput(e: Event) {
-		search = (e.target as HTMLInputElement).value;
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			searchDebounced = search;
-		}, 300);
-	}
-
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		categoryId: categoryId || undefined
@@ -100,20 +94,20 @@
 		{#if meta.creditBalance > 0}
 			<Badge variant="info" size="md">{meta.creditBalance} credits</Badge>
 		{/if}
-		<Button href="/member/equipment/loans" class="btn-sm btn-ghost">My Loans</Button>
+		<Button href="/member/equipment/loans" variant="ghost" size="sm">My Loans</Button>
 	</div>
 </PageHeader>
 <PageContent>
 	<div class="flex flex-wrap items-end gap-2 mb-4">
-		<input
-			type="text"
-			class="input input-bordered input-sm"
+		<SearchInput
+			bind:value={search}
 			placeholder="Search equipment..."
-			value={search}
-			oninput={onSearchInput}
+			onsearch={(q) => {
+				searchDebounced = q;
+			}}
 		/>
 		<Select
-			class="select-bordered select-sm"
+			size="sm"
 			value={categoryId}
 			onchange={(e: Event) => {
 				categoryId = (e.currentTarget as HTMLSelectElement).value;
@@ -125,7 +119,7 @@
 			{/each}
 		</Select>
 		{#if hasActiveFilters()}
-			<button class="btn btn-ghost btn-sm" onclick={clearFilters}>Clear</button>
+			<Button variant="ghost" size="sm" onclick={clearFilters}>Clear</Button>
 		{/if}
 	</div>
 
@@ -144,14 +138,14 @@
 			}, {})}
 			{#each Object.entries(groups) as [groupName, items] (groupName)}
 				<div class="mb-6">
-					<h3 class="text-sm font-semibold opacity-60 mb-2">{groupName}</h3>
+					<h3 class="text-muted font-semibold mb-2">{groupName}</h3>
 					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 						{#each items as eq (eq.id)}
 							<div class="card bg-base-100 border shadow-sm">
-								<div class="card-body p-4">
-									<h3 class="card-title text-sm">{eq.name}</h3>
+								<CardBody padding="sm">
+									<CardTitle size="sm">{eq.name}</CardTitle>
 									{#if eq.description}
-										<p class="text-xs opacity-70 line-clamp-2">{eq.description}</p>
+										<p class="text-subtle line-clamp-2">{eq.description}</p>
 									{/if}
 									<div class="flex flex-wrap items-center gap-1 mt-1">
 										<span class="tooltip" data-tip={eq.condition}>
@@ -170,14 +164,15 @@
 									</div>
 									<div class="card-actions mt-2">
 										<Button
-											class="btn-xs"
+											variant="default"
+											size="xs"
 											disabled={eq.availableQuantity <= 0}
 											onclick={() => openRequest(eq.id, eq.name, eq.pricingTier)}
 										>
 											Request
 										</Button>
 									</div>
-								</div>
+								</CardBody>
 							</div>
 						{/each}
 					</div>
@@ -187,8 +182,10 @@
 	{/await}
 
 	<div class="border-t pt-4">
-		<p class="text-sm opacity-70 mb-2">Can't find what you need?</p>
-		<Button class="btn-sm btn-outline" onclick={openFreeFormRequest}>Describe Your Request</Button>
+		<p class="text-muted mb-2">Can't find what you need?</p>
+		<Button variant="default" size="sm" outline onclick={openFreeFormRequest}
+			>Describe Your Request</Button
+		>
 	</div>
 </PageContent>
 
@@ -234,7 +231,7 @@
 				{/if}
 			</div>
 		{:else if isFreeForm && pickupDateValue && returnDateValue}
-			<div class="rounded-lg bg-base-200 px-4 py-3 text-sm opacity-70">
+			<div class="rounded-lg bg-base-200 px-4 py-3 text-muted">
 				Cost will be determined when equipment is assigned
 			</div>
 		{/if}
@@ -245,7 +242,7 @@
 			required={isFreeForm}
 		/>
 		<div class="modal-action">
-			<Button type="button" class="btn-ghost" onclick={() => (showRequestModal = false)}
+			<Button type="button" variant="ghost" onclick={() => (showRequestModal = false)}
 				>Cancel</Button
 			>
 			<SubmitButton label="Submit Request" />

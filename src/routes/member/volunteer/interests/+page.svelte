@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	/**
 	 * Step two: what you'd like to help with.
 	 *
@@ -33,7 +34,7 @@
 	{#await Promise.all([step, roles, interests]) then [me, roleOptions, myInterests]}
 		<InfoCard title="Pick anything that sounds like you">
 			{#if roleOptions.length === 0}
-				<p class="text-sm opacity-60">
+				<p class="text-muted">
 					No volunteer roles are open right now. Get in touch and we'll find you something.
 				</p>
 				<a href={resolve('/member/volunteer')} class="link text-sm">Go to volunteering</a>
@@ -51,8 +52,10 @@
 					/>
 
 					<div class="flex items-center justify-between gap-3">
-						<a href={resolve('/member/volunteer')} class="btn btn-ghost btn-sm">Skip for now</a>
-						<SubmitButton label="Finish" class="btn-primary" />
+						<Button href={resolve('/member/volunteer')} variant="ghost" size="sm"
+							>Skip for now</Button
+						>
+						<SubmitButton label="Finish" variant="primary" />
 					</div>
 				</Form>
 			{/if}

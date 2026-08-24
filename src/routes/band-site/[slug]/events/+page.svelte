@@ -1,9 +1,11 @@
 <script lang="ts">
+	import Button from '$lib/components/shared/Button.svelte';
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
 	import { resolve } from '$app/paths';
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
 	import { bandSiteHref } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
+	import { imageSrc } from '$lib/utils/images';
 
 	let data = $derived(await getBandSiteData(page.params.slug!));
 	const events = $derived(data.events);
@@ -15,10 +17,7 @@
 </svelte:head>
 
 <div class="max-w-3xl mx-auto px-6 py-12">
-	<a
-		href={bandSiteHref(page.params.slug!, '', page.url)}
-		class="link text-sm opacity-60 mb-6 block"
-	>
+	<a href={bandSiteHref(page.params.slug!, '', page.url)} class="link text-muted mb-6 block">
 		&larr; Back to {data.band.name}
 	</a>
 
@@ -37,35 +36,39 @@
 				>
 					<div>
 						{#if evt.posterUrl}
+							{@const poster = imageSrc(evt.posterUrl, 'thumb')}
 							<img
-								src={evt.posterUrl}
+								src={poster.src}
+								srcset={poster.srcset}
 								alt=""
 								class="w-16 h-16 rounded-lg object-cover float-left mr-4"
 							/>
 						{/if}
 						<h2 class="text-lg font-semibold">{evt.title}</h2>
-						<p class="text-sm opacity-70 mt-1">
+						<p class="text-muted mt-1">
 							{formatDate(evt.startsAt)} &middot; {formatTime(evt.startsAt)}
 						</p>
 						{#if evt.location}
-							<p class="text-sm opacity-60">{evt.location}</p>
+							<p class="text-muted">{evt.location}</p>
 						{/if}
 						{#if evt.ticketPrice}
-							<p class="text-sm opacity-60">{formatCents(evt.ticketPrice)}</p>
+							<p class="text-muted">{formatCents(evt.ticketPrice)}</p>
 						{/if}
 						{#if evt.description}
 							<p class="text-sm mt-2 opacity-80">{evt.description}</p>
 						{/if}
 					</div>
 					{#if evt.externalTicketUrl}
-						<a
+						<Button
 							href={evt.externalTicketUrl}
 							target="_blank"
 							rel="noopener external"
-							class="btn btn-primary btn-sm shrink-0 ml-4"
+							variant="primary"
+							size="sm"
+							class="shrink-0 ml-4"
 						>
 							Tickets
-						</a>
+						</Button>
 					{/if}
 				</div>
 			{/each}

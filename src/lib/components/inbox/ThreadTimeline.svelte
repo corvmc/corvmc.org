@@ -106,10 +106,10 @@
 					<IconNote size={13} />
 					{note.authorName ?? 'Staff'} · {formatDateTime(note.createdAt)}
 				</div>
-				<div class="text-sm whitespace-pre-wrap opacity-70">{note.body}</div>
+				<div class="text-muted whitespace-pre-wrap">{note.body}</div>
 			</div>
 		{/if}
 	{:else}
-		<p class="py-8 text-center text-sm opacity-60">No messages in this conversation yet.</p>
+		<p class="py-8 text-center text-muted">No messages in this conversation yet.</p>
 	{/each}
 </div>

@@ -3,12 +3,12 @@ import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
 	SEED_PUBLIC_BAND_SLUG,
-	SEED_PUBLIC_BAND_NAME,
 	SEED_PUBLIC_BAND_HOMETOWN,
 	SEED_PUBLIC_BAND_FOUNDED,
 	SEED_HIDDEN_BAND_SLUG,
 	SEED_MEMBERS_BAND_SLUG,
-	SEED_MEMBERS_BAND_NAME
+	SEED_MEMBERS_BAND_NAME,
+	SEED_RETITLE_BAND_SLUG
 } from './fixtures/seed-band-onboarding';
 
 /**
@@ -119,37 +119,45 @@ test('members-only band is withheld publicly but renders in the member directory
 // stays put, which is the other half of what this test guards: a rename must not
 // move a band's URL out from under anyone.
 //
-// Renames the seeded band and puts the name back, so the tests above (which key
-// off SEED_PUBLIC_BAND_NAME) still pass on a re-run.
+// Renames a band that exists to be renamed (SEED_RETITLE_BAND_*) and leaves it
+// renamed. This used to borrow the public band and put the name back at the end,
+// which coupled it to every later spec that keys off SEED_PUBLIC_BAND_NAME: the
+// restore was confirmed by a `Profile saved` toast that was often still the
+// *first* save's, so the assertion passed instantly and the test could finish
+// with the restore in flight. Playwright then closed the page, the request was
+// cut off, the band stayed renamed, and three `band-subdomain.e2e.ts` tests
+// failed several files later for a reason nothing in them could explain. The
+// fixture recreates its bands every run, so there is nothing to put back.
 test('renaming a band saves cleanly and leaves its address alone', async ({ page }) => {
 	const consoleErrors: string[] = [];
 	page.on('console', (m) => {
 		if (m.type() === 'error') consoleErrors.push(m.text());
 	});
 
+	const NEW_NAME = 'E2E Renamed Band';
+
 	await login(page);
-	await page.goto(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`);
+	await page.goto(`/band/${SEED_RETITLE_BAND_SLUG}/edit`);
 	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
 
-	await page.locator('input[name="name"]').fill('E2E Renamed Band');
+	await page.locator('input[name="name"]').fill(NEW_NAME);
 	await page.getByRole('button', { name: 'Save' }).click();
 
 	await expect(page.getByText('Profile saved')).toBeVisible({ timeout: 15000 });
 	// The save worked, so nothing on the page may claim the band is missing.
 	await expect(page.getByText('Band not found')).toHaveCount(0);
 	// Same URL as before the rename — no slug rotation, nothing to follow.
-	await expect(page).toHaveURL(new RegExp(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`));
+	await expect(page).toHaveURL(new RegExp(`/band/${SEED_RETITLE_BAND_SLUG}/edit`));
 
 	// The reported failure was a caught exception: the form swallowed it into a
 	// toast and only the console (and Sentry) showed the real cause.
 	expect(consoleErrors.join('\n')).not.toContain('JSON.parse');
 
-	// Restore the name, so this test is re-runnable. No reload needed now that
-	// the page never navigates away.
-	await page.locator('input[name="name"]').fill(SEED_PUBLIC_BAND_NAME);
-	await page.getByRole('button', { name: 'Save' }).click();
-	await expect(page.getByText('Profile saved')).toBeVisible({ timeout: 15000 });
-	await expect(page).toHaveURL(new RegExp(`/band/${SEED_PUBLIC_BAND_SLUG}/edit`));
+	// The toast says the response came back; a reload says the row moved. Worth
+	// the extra load: a save that toasts without landing is exactly what made the
+	// old restore step unreliable.
+	await page.reload();
+	await expect(page.locator('input[name="name"]')).toHaveValue(NEW_NAME, { timeout: 15000 });
 });
 
 test('the sidebar Create Band link opens the create-band modal', async ({ page }) => {
