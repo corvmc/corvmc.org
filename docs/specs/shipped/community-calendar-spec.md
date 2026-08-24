@@ -73,7 +73,7 @@ bands, including gigs at other venues.
 
 - ~~Community-submitted events.~~ **Shipped in phase 2** — the extension point
   held: `source='community'` slotted into the same queries with no structural
-  change to them. See `docs/specs/community-events-spec.md`.
+  change to them. See `docs/specs/shipped/community-events-spec.md`.
 - Partner feed imports; subscribable `.ics` / RSS feeds (the RFC-5545 helpers in
   `src/lib/utils/calendar.ts` make this cheap when wanted).
 - Band-admin notice that published events appear on the public gig guide.

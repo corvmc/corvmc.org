@@ -1,6 +1,6 @@
 # Volunteering Phase 2 — progress checklist
 
-Design: `docs/specs/volunteering-spec.md` §Phase 2 (line 264) and §Certifications
+Design: `docs/specs/shipped/volunteering-spec.md` §Phase 2 (line 264) and §Certifications
 (line 302). Plan: `~/.claude/plans/deep-drifting-kernighan.md` (approved).
 Phase 1 checklist: `volunteering-checklist.md`.
 

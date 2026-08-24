@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { E2E_PREVIEW_PORT } from './state-dir';
 import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
@@ -15,7 +16,7 @@ import {
  * assert on would make Playwright's ordering decide whether those pass.
  */
 const NEW_SLUG = 'e2e-renamed-band';
-const PORT = 4173;
+const PORT = E2E_PREVIEW_PORT;
 
 async function login(page: import('@playwright/test').Page) {
 	await page.goto('/login');

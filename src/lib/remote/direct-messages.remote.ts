@@ -312,7 +312,7 @@ export const getMyMessagingStanding = query(async () => {
  * Writes `user.acceptsDirectMessages` and nothing else, which is the whole
  * reason this needs no guard: the preference is theirs outright, and it lives
  * nowhere near `member_standing`. A restricted member may still set it, and
- * setting it cannot lift the restriction — see `docs/specs/member-standing-spec.md`.
+ * setting it cannot lift the restriction — see `docs/specs/shipped/member-standing-spec.md`.
  */
 export const setMyMessaging = form(z.object({ enabled: z.enum(['on', 'off']) }), async (data) => {
 	const user = requireUser();

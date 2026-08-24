@@ -24,8 +24,19 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { previewPort } from '../scripts/lib/checkout-ports';
 
 export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+/**
+ * The port this checkout's preview server binds.
+ *
+ * Re-exported here so the specs that need to build an absolute URL — the
+ * subdomain ones, which cannot use Playwright's relative `baseURL` — take the
+ * port from the same place `playwright.config.ts` and `vite.config.ts` do,
+ * rather than each restating a literal that then has to be kept in step.
+ */
+export const E2E_PREVIEW_PORT = previewPort(REPO_ROOT);
 
 /** Root of the run's state, as `wrangler --persist-to` wants it. */
 export const E2E_STATE_ROOT = join(REPO_ROOT, '.wrangler', 'e2e-state');

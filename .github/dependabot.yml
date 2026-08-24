@@ -1,0 +1,70 @@
+# Dependency updates.
+#
+# The repo had no config at all after the move to corvmc/corvmc.org: the PRs
+# dependabot had already opened survived, but the entry behind them did not, so
+# it would neither rebase them nor open anything new ("The dependabot.yml entry
+# that created this PR has been deleted"). This restores it.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # Every bump has to clear the same gates a hand-written PR does, and the E2E
+    # job is the slow one. Ten at a time is about what the merge queue can chew
+    # through in a week without starving real work of runners.
+    open-pull-requests-limit: 10
+    groups:
+      # One PR per ecosystem-shaped cluster rather than per package. These move
+      # together in lockstep and a lone bump inside a group usually fails to
+      # install, so splitting them costs CI time and merges nothing.
+      svelte:
+        patterns:
+          - '@sveltejs/*'
+          - svelte
+          - svelte-*
+          - vite
+          - '@vitejs/*'
+      storybook:
+        patterns:
+          - storybook
+          - '@storybook/*'
+          - eslint-plugin-storybook
+      cloudflare:
+        patterns:
+          - wrangler
+          - '@cloudflare/*'
+          - miniflare
+      testing:
+        patterns:
+          - vitest
+          - '@vitest/*'
+          - playwright
+          - '@playwright/*'
+          - vitest-browser-svelte
+      linting:
+        patterns:
+          - eslint
+          - '@eslint/*'
+          - typescript-eslint
+          - eslint-config-*
+          - eslint-plugin-*
+          - prettier
+          - prettier-plugin-*
+      # Everything else, split by risk: a patch train is usually safe to skim,
+      # a major rarely is.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns:
+          - '*'

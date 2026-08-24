@@ -941,7 +941,7 @@ export async function listAll(
 //
 // So a band can credit anyone on its own bill (it's their factual statement
 // about their own show) without that credit appearing on the named band's
-// profile until they agree. See `docs/specs/event-lineup-spec.md`.
+// profile until they agree. See `docs/specs/shipped/event-lineup-spec.md`.
 
 export interface LineupRow {
 	id: string;

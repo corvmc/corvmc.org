@@ -7,20 +7,27 @@
 		label,
 		icon,
 		badge,
+		active,
 		...rest
 	}: {
 		href: string;
 		label: string;
 		icon?: Snippet;
 		badge?: number;
+		/**
+		 * Overrides the built-in exact-pathname match. Panels that resolve their
+		 * own active row — the staff sidebar matches on longest href, so detail
+		 * pages still light a row — pass it; everyone else leaves it off.
+		 */
+		active?: boolean;
 		[key: string]: unknown;
 	} = $props();
 
-	let active = $derived(page.url.pathname === href);
+	let isActive = $derived(active ?? page.url.pathname === href);
 </script>
 
 <li>
-	<a {href} class:active {...rest}>
+	<a {href} class:active={isActive} {...rest}>
 		{@render icon?.()}
 		<span class="grow">{label}</span>
 		{#if badge}

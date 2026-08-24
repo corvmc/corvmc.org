@@ -622,6 +622,63 @@ Prev/next navigation arrows with keyboard shortcuts (← →). Includes `<svelte
 
 When `nextHref` is absent, shows `endLabel` (if provided) or a disabled button.
 
+## Sidebar and panel navigation
+
+`AppShell` → `Sidebar` → `<ul class="menu">` → the `Nav.*` primitives from
+`$lib/components/shared/Nav/`. Three components: `Nav.Item` (a row), `Nav.Collapsible` (a row with
+children, held open by the URL), `Nav.Group` (a titled section).
+
+**Every panel's rows are data — add features there, not in the template.** `staff/nav-items.ts`,
+`member/nav-items.ts`, `band/[slug]/nav-items.ts`. Each layout holds only a `key → Icon` map and, if
+it has badges, a `badgeKey → count` map, which is what makes a renamed field on the layout query a
+type error instead of a badge that quietly stops. Anything conditional — a feature flag, a role —
+belongs in the data module, where a spec can assert it; `band/[slug]/nav-items.ts` records that
+gating expressed as nested `{#if}`s was silently wrong twice.
+
+The panel switcher's tabs come from `$lib/components/shared/panel-tabs.ts`, not hand-built per
+layout.
+
+```svelte
+<Nav.Group title={section.title} collapsible persistKey={section.key} containsActive={…}>
+	<Nav.Item href={item.href} label={item.label} badge={…} active={activeKey === item.key} />
+</Nav.Group>
+```
+
+**Active state.** `Nav.Item` matches the pathname exactly on its own, which lights no row at all on
+a detail page. Pass `active` to override it. The rule lives once, in
+`$lib/components/shared/Nav/active-nav.ts`: `activeNavKey(items, pathname)` picks the item with the
+longest matching href, and each panel wraps it (`activeNavKey`, `activeMemberNavKey`,
+`activeBandNavKey`). Two details it encodes — match on `path === href || path.startsWith(href + '/')`,
+because a bare `startsWith` lets `/staff/users` claim `/staff/usersomething`; and skip any row whose
+href does not start with `/`, because a band's "View Live Site" is filled in by the layout and an
+empty href is a prefix of everything.
+
+A page that resolves to the panel root lights Dashboard, which is the signal that it has no home in
+the nav. `member/nav-items.spec.ts` asserts against that with a commented exemption list — that is
+how you find a surface that shipped without a way in.
+
+**Collapsible groups.** `collapsible` turns the title into a disclosure `<button>`; `persistKey`
+remembers the choice, namespaced by `persistScope` (default `staff`). Groups always render open on
+the server and on the first client paint — the stored state is read in `onMount` — because a
+collapsed group is `display: none`, and e2e selects staff nav links by role. Storage holds the
+_collapsed_ set, so a group added later defaults open with no migration. Navigating into a collapsed
+group opens it and keeps it open.
+
+Group titles are buttons, not headings, deliberately: `getByRole('heading', …)` is how pages assert
+their own titles, and a sidebar full of headings collides with that.
+
+**daisyUI facts this depends on**, each of which will otherwise be rediscovered the hard way:
+
+- `.menu` is `flex-flow: column wrap`. Constrain its height without `flex-nowrap` and the rows wrap
+  into a second column past the sidebar's edge, clipped and unreachable rather than scrolling.
+- A flex child needs `min-h-0` to scroll at all; `overflow-y-auto` alone does nothing, because
+  `min-height: auto` keeps the item at content size.
+- `.menu :where(li ul)` indents and draws a guide rule, so a collapsible group cancels it with
+  `ms-0 ps-0 before:content-none`. `NavGroup`'s plain branch renders a bare `<ul>` sibling with no
+  `<li>` wrapper for exactly this reason — do not "fix" it.
+- `.menu-title` on a `<button>` gets the header look for free, and `.menu-dropdown-toggle` supplies
+  the chevron; neither gets daisyUI's hover treatment, so `NavGroup` adds its own.
+
 ## Card
 
 The panel surface. `Card` + `CardBody` + `CardTitle`, from

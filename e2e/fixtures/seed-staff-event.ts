@@ -25,33 +25,79 @@ import { SEED_STAFF_ID } from './seed-staff-user';
 /** Titles the test creates are prefixed with this so they can be found again. */
 export const SEED_EVENT_TITLE_PREFIX = 'E2E Reserved Show';
 
-/** The window the test holds. Far enough out that no other fixture collides. */
-export const SEED_EVENT_DATE = '2030-06-15';
+/**
+ * How many times CI may run one test: the first attempt plus `retries`, from
+ * `playwright.config.ts`. Also the width of the day block each booking test
+ * owns, because each attempt books a day of its own — see `bookingDate`.
+ */
+const ATTEMPTS_PER_TEST = 3;
+
+/** The first day the suite books. Far enough out that no other fixture collides. */
+const FIRST_BOOKING_DAY = '2030-06-15';
+
+function addDays(date: string, days: number): string {
+	const [year, month, day] = date.split('-').map(Number);
+	return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+/** The first day of the `index`th block of ATTEMPTS_PER_TEST consecutive days. */
+function bookingBlock(index: number): string {
+	return addDays(FIRST_BOOKING_DAY, index * ATTEMPTS_PER_TEST);
+}
+
+/**
+ * The day a given attempt books.
+ *
+ * A retry has to book a day the attempt before it did not, because nothing
+ * between attempts clears what that one left behind: this fixture runs once,
+ * before the preview server boots, and a test may not write to the state
+ * directory the server holds (see `platform-db.ts`). Re-running against the same
+ * window therefore meets the confirmed hold the last attempt raised,
+ * `POST /staff/events` rejects it as a genuine double-booking, and every retry
+ * fails the same way — so whatever reddened the *first* attempt was permanent
+ * for the rest of the run, and got reported as a create that never navigated.
+ *
+ * Each booking test owns ATTEMPTS_PER_TEST consecutive days, one per attempt, so
+ * no offset can reach into the next test's block.
+ */
+export function bookingDate(base: string, retry: number): string {
+	if (retry >= ATTEMPTS_PER_TEST) {
+		throw new Error(
+			`Attempt ${retry + 1} has no day of its own: raise ATTEMPTS_PER_TEST in ` +
+				`e2e/fixtures/seed-staff-event.ts to match playwright.config.ts's retries.`
+		);
+	}
+	return addDays(base, retry);
+}
+
+/** The window every booking test holds, on whichever day of its block it draws. */
 export const SEED_EVENT_START = '19:00';
 export const SEED_EVENT_END = '22:00';
 
-/**
- * A separate day, already fully booked, for the conflict-warning test. Kept off
- * SEED_EVENT_DATE so the two tests can never collide with each other.
- */
-export const SEED_CONFLICT_ID = 'e2e-staff-event-conflict';
-export const SEED_CONFLICT_DATE = '2030-06-16';
-export const SEED_CONFLICT_START = '19:00';
-export const SEED_CONFLICT_END = '22:00';
+/** The creation test's block. */
+export const SEED_EVENT_DATE = bookingBlock(0);
 
 /**
- * Two more days for the edit tests. Each books a hold of its own, so they get a
- * day each — sharing one would make the second test collide with the first
+ * A block each for the two edit tests. Each books a hold of its own, so they get
+ * a block each — sharing one would make the second test collide with the first
  * test's booking rather than with the thing it means to assert.
  */
-export const SEED_EDIT_EVENT_DATE = '2030-06-17';
-export const SEED_SELF_CONFLICT_DATE = '2030-06-18';
+export const SEED_EDIT_EVENT_DATE = bookingBlock(1);
+export const SEED_SELF_CONFLICT_DATE = bookingBlock(2);
+
+/** The reservation-list test's block, for the same reason. */
+export const SEED_LIST_LINK_DATE = bookingBlock(3);
 
 /**
- * The day the reservation-list test books. A day of its own for the same reason:
- * sharing SEED_EVENT_DATE would collide with the creation test's own hold.
+ * A day already fully booked, for the conflict-warning test. That test never
+ * submits, so it raises no hold and needs only its first day — but it still gets
+ * a whole block, so that a test which starts submitting cannot silently land on
+ * a neighbour's day.
  */
-export const SEED_LIST_LINK_DATE = '2030-06-19';
+export const SEED_CONFLICT_ID = 'e2e-staff-event-conflict';
+export const SEED_CONFLICT_DATE = bookingBlock(4);
+export const SEED_CONFLICT_START = '19:00';
+export const SEED_CONFLICT_END = '22:00';
 
 /** The club's wall clock — the times above are entered in it, as staff would. */
 const CLUB_TZ = 'America/Los_Angeles';

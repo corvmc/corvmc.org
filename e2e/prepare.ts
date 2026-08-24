@@ -27,6 +27,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { E2E_STATE_ROOT, REPO_ROOT } from './state-dir';
+import { acquireE2eLock } from './lock';
 import { resetE2eDatabase } from './reset-db';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
@@ -75,6 +76,19 @@ function migrateIfStale(): void {
 	mkdirSync(E2E_STATE_ROOT, { recursive: true });
 	writeFileSync(STAMP, wanted);
 }
+
+// Before the build, the seed, and the five minutes they cost: refuse outright if
+// another suite is already running on this machine. Two of them no longer share
+// ports or state, but they do share the CPU, and that is enough to redden a
+// whole spec file at a time in both runs.
+acquireE2eLock('prepare');
+
+// Deliberately *not* released when this process exits. `pnpm test:e2e` is
+// `prepare.ts && run.ts` — two processes — and the lock has to bridge them, or
+// the gap between the seed finishing and Playwright starting is a hole another
+// suite walks straight into. `run.ts` adopts it and owns releasing it. If this
+// process dies instead, the lock is left with a dead pid and `lock.ts` ages it
+// out as stale.
 
 migrateIfStale();
 

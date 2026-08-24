@@ -451,7 +451,10 @@ export const updateBand = form(
 	}
 );
 
-export const deleteBand = form(z.object({}), async () => {
+// A form with no fields of its own. `z.object({})` no longer resolves against
+// kit's schema overload, and there is nothing here to validate anyway — the
+// guard on the first line of the handler is the whole check.
+export const deleteBand = form('unchecked', async () => {
 	const { band } = await requireBandOwner();
 	await deleteBandService(band.id);
 	return { success: true };
@@ -574,7 +577,8 @@ export const transferOwner = form(
 	}
 );
 
-export const leave = form(z.object({}), async () => {
+// No fields to validate — see `deleteBand` above.
+export const leave = form('unchecked', async () => {
 	// `requireBandBySlug()` + `requireUser()` let a non-member's submission reach
 	// the service, which threw a plain Error — a 500 and a generic toast for what
 	// is really a 403. The owner case was worse: `OwnerCannotLeaveError` already
@@ -643,7 +647,8 @@ export const uploadBandAvatar = form(z.object({ file: z.instanceof(File) }), asy
 	return { success: true };
 });
 
-export const removeBandAvatar = form(z.object({}), async () => {
+// No fields to validate — see `deleteBand` above.
+export const removeBandAvatar = form('unchecked', async () => {
 	const { band } = await requireBandAdmin();
 	await clearBandAvatar(band.id);
 	void getBandLayout(band.slug).refresh();

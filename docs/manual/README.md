@@ -32,9 +32,11 @@ auto-creates any missing).
 | `equipment`         | Equipment Lending    | package         | member  | catalog, requesting loans                            |
 | `membership`        | Membership & Billing | heart           | member  | sustaining membership, Stripe portal                 |
 | `volunteering`      | Volunteering         | heart-handshake | member  | roles, interest, shifts, clearances, hours, feedback |
+| `messaging`         | Messages             | message         | member  | staff threads, member DMs, requests, blocks          |
+| `suggestions`       | Suggestions          | bulb            | member  | the idea board, voting, statuses                     |
 | `staff-guide`       | Staff Guide          | settings        | staff   | all staff operations                                 |
 
-**Coverage:** ~8 public + ~30 member + ~19 band + ~19 staff ≈ **76 articles**.
+**Coverage:** ~8 public + ~34 member + ~19 band + ~20 staff ≈ **81 articles**.
 
 ---
 
@@ -59,6 +61,8 @@ auto-creates any missing).
 - [x] `[H]` Manage notification preferences
 - [x] `[H]` Manage email subscriptions
 - [x] `[H]` Delete your account
+- [x] `[H]` Reporting something, and what happens next — filing a report, and what an upheld
+      one costs, scoped per area
 
 ### profile-directory
 
@@ -104,6 +108,15 @@ auto-creates any missing).
 - [x] `[P]` Volunteering overview (`/member/volunteer`) — browsing roles, saying what interests you, claiming shifts, logging hours, the day-after survey
 - [x] `[H]` Reviewing volunteer hours (minRole=staff) — scheduling shifts, the approval queue, the interest list, roles and clearances, the feedback rollup, the report
 
+### messaging
+
+- [x] `[P]` Messages (`/member/messages`) — staff threads and member threads in one list, requests, the phone layout
+- [x] `[H]` Messaging another member — the request/accept consent model, blocking, reporting, turning DMs off
+
+### suggestions
+
+- [x] `[P]` The suggestion board (`/member/suggestions`) — posting, voting, statuses and staff responses, editing, duplicates, reporting
+
 ## C. Band panel → `src/content/help/`
 
 ### bands
@@ -137,7 +150,7 @@ auto-creates any missing).
 - [x] `[P]` Members & users overview (`/staff/users`, tiers, search)
 - [x] `[H]` Edit a user, manage roles & adjust credits (`/staff/users/[id]`)
 - [ ] `[H]` Impersonate a user for support — _blocked: the feature does not exist.
-      Impersonation is explicitly deferred (`docs/specs/staff-bands-spec.md`), and the
+      Impersonation is explicitly deferred (`docs/specs/shipped/staff-bands-spec.md`), and the
       article that described it as working was removed._
 - [x] `[H]` Manage reservations & resolve issues _(expands seed `staff-managing-reservations`)_
 - [x] `[H]` Take payment / comp / refund a reservation (`/staff/reservations/[id]`)
@@ -152,6 +165,8 @@ auto-creates any missing).
 - [x] `[H]` Handle the contact inbox (`/staff/inbox`)
 - [x] `[H]` Reconcile payments & credits (`/staff/payments`, `/staff/credits`)
 - [x] `[H]` Author help articles (`/staff/help`, static-vs-dynamic, sync caveat)
+- [x] `[H]` Work the moderation queues (`/staff/flags`, `/staff/suggestions`) — upholding vs
+      dismissing, scoping a restriction, running the idea board
 - [x] `[P]` System settings reference (`/staff/settings` — products, reservations, org, integrations, inbox channels)
 
 ---

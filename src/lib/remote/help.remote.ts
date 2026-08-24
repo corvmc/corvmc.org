@@ -145,7 +145,11 @@ export const updateArticle = form(updateArticleSchema, async (data) => {
 export const setArticlesPublishedForm = form(
 	z.object({
 		ids: z.array(z.string().min(1)).min(1).max(200),
-		published: z.boolean()
+		// Both call sites post this as a hidden input, so a value always arrives
+		// and the default never fires. It has to be optional regardless: kit
+		// rejects a required boolean in a form schema, because an unchecked
+		// checkbox sends nothing at all.
+		published: z.boolean().optional().default(false)
 	}),
 	async (data) => {
 		await requireStaff();
