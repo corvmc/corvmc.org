@@ -133,6 +133,15 @@ test.describe('staff user management', () => {
 		const draft = `555${Date.now().toString().slice(-7)}`;
 		await page.locator('input[name="phone"]').fill(draft);
 
+		// Pin the draft before leaving the tab. The field is populated from the
+		// server after the panel mounts, so a fill that lands first is silently
+		// overwritten — and because `corrects a phone number` above saves a
+		// `555…` number to this same seeded user, the value it is overwritten
+		// with looks exactly like a draft. Asserting here fails on the fill
+		// rather than three steps later on a value that reads as the right shape
+		// and the wrong digits.
+		await expect(page.locator('input[name="phone"]')).toHaveValue(draft);
+
 		await page.getByRole('tab', { name: 'Money' }).click();
 		await expect(page.getByRole('heading', { name: 'Credit history' })).toBeVisible();
 
