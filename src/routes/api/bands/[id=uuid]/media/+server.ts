@@ -1,6 +1,6 @@
 import { json, error, type RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { bandMedia } from '$lib/server/db/schema/band-page';
 import { eq, and, max } from 'drizzle-orm';
 import { getUserRole } from '$lib/server/band/band-service';
@@ -42,7 +42,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	if (!locals.user) throw error(401, 'Not authenticated');
 
 	const bandId = params.id!;
-	const [row] = await db.select({ id: band.id }).from(band).where(eq(band.id, bandId)).limit(1);
+	const [row] = await db.select({ id: group.id }).from(group).where(eq(group.id, bandId)).limit(1);
 	if (!row) throw error(404, 'Band not found');
 
 	await requireAdminOfBand(bandId, locals.user.id);

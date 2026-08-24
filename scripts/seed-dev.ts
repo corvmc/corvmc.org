@@ -50,7 +50,8 @@ import {
 	paymentCache as paymentRecord
 } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
-import { band, bandMember, bandGenre, bandSlugHistory } from '../src/lib/server/db/schema/band';
+import { bandMember, bandGenre, bandSlugHistory } from '../src/lib/server/db/schema/band';
+import { group } from '../src/lib/server/db/schema/group';
 import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
 import {
 	subscriber,
@@ -506,7 +507,7 @@ async function deleteAll() {
 		'band_genre',
 		'band_member',
 		'band_slug_history',
-		'band',
+		'group',
 		'payment_cache',
 		'credit_transaction',
 		'recurring_series',
@@ -1225,11 +1226,11 @@ async function seedCreditTransactions(users: SeedUser[]) {
  * production drift that `scripts/backfill-band-owners.ts` had to repair.
  */
 async function insertBandWithOwner(
-	values: typeof band.$inferInsert,
+	values: typeof group.$inferInsert,
 	ownerId: string,
 	position?: string
 ) {
-	const [b] = await db.insert(band).values(values).returning();
+	const [b] = await db.insert(group).values(values).returning();
 	await db.insert(bandMember).values({
 		bandId: b.id,
 		userId: ownerId,
@@ -1703,7 +1704,7 @@ async function seedBandReservations(bands: any[]) {
 			const [r] = await db
 				.insert(reservation)
 				.values({
-					bookerType: 'band',
+					bookerType: 'group',
 					bookerId: b.id,
 					// A band booking is still made by a person, and their free hours
 					// settle it — same shape the band-facing booking form produces.

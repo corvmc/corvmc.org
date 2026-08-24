@@ -16,7 +16,7 @@
 
 	const { fields } = createReservation;
 
-	let bookerType = $state<'user' | 'band'>('user');
+	let bookerType = $state<'user' | 'group'>('user');
 	let selectedMember = $state<{ id: string; name: string; email: string } | null>(null);
 	let selectedBand = $state<{
 		id: string;
@@ -115,7 +115,7 @@
 		<svelte:boundary>
 			<input {...fields.memberId.as('hidden', selectedMember?.id ?? '')} />
 			<input
-				{...fields.bandId.as('hidden', bookerType === 'band' ? (selectedBand?.id ?? '') : '')}
+				{...fields.bandId.as('hidden', bookerType === 'group' ? (selectedBand?.id ?? '') : '')}
 			/>
 			<input {...fields.startTime.as('hidden', startTime)} />
 			<input {...fields.endTime.as('hidden', endTime)} />
@@ -124,11 +124,11 @@
 				<legend class="fieldset-legend">Booking for</legend>
 				<Select bind:value={bookerType} class="w-full">
 					<option value="user">A member</option>
-					<option value="band">A band</option>
+					<option value="group">A band</option>
 				</Select>
 			</fieldset>
 
-			{#if bookerType === 'band'}
+			{#if bookerType === 'group'}
 				<fieldset class="fieldset">
 					<legend class="fieldset-legend">Band</legend>
 					<SearchSelect
@@ -143,7 +143,7 @@
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">
-					{bookerType === 'band' ? 'Booked by' : 'Member'}
+					{bookerType === 'group' ? 'Booked by' : 'Member'}
 				</legend>
 				<SearchSelect
 					search={searchMembers}

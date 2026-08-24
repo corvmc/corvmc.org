@@ -62,8 +62,11 @@ vi.mock('$lib/server/db/schema/platform-invite', () => ({
 	}
 }));
 
+vi.mock('$lib/server/db/schema/group', () => ({
+	group: { id: 'id', name: 'name' }
+}));
+
 vi.mock('$lib/server/db/schema/band', () => ({
-	band: { id: 'id', name: 'name' },
 	bandMember: {
 		id: 'id',
 		bandId: 'band_id',

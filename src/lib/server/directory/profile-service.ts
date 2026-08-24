@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { user, userInstrument, userGenre } from '$lib/server/db/schema/authentication';
-import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
+import { bandMember, bandGenre } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { eq, and } from 'drizzle-orm';
 import { deleteObject, uploadFile } from '$lib/server/storage';
 import { mediaKey } from '$lib/server/storage-keys';
@@ -197,9 +198,9 @@ export async function updateBandProfile(bandId: string, userId: string, data: Ba
 	let mergedContact: DirectoryContact | null = null;
 	if (data.directoryContact) {
 		const [existing] = await db
-			.select({ directoryContact: band.directoryContact })
-			.from(band)
-			.where(eq(band.id, bandId))
+			.select({ directoryContact: group.directoryContact })
+			.from(group)
+			.where(eq(group.id, bandId))
 			.limit(1);
 		const prev = (existing?.directoryContact as DirectoryContact) ?? {};
 		mergedContact = validateContact({ ...prev, ...data.directoryContact });
@@ -207,7 +208,7 @@ export async function updateBandProfile(bandId: string, userId: string, data: Ba
 
 	const queries: BatchItem<'sqlite'>[] = [
 		db
-			.update(band)
+			.update(group)
 			.set({
 				tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
 				hometown: data.hometown?.slice(0, MAX_TAGLINE) || null,
@@ -218,7 +219,7 @@ export async function updateBandProfile(bandId: string, userId: string, data: Ba
 				links: data.links ? validateLinks(data.links) : null,
 				updatedAt: new Date()
 			})
-			.where(eq(band.id, bandId))
+			.where(eq(group.id, bandId))
 	];
 
 	if (data.genres !== undefined) {
@@ -283,16 +284,16 @@ export async function clearUserAvatar(userId: string) {
 export async function getBandProfileForEdit(bandId: string) {
 	const [row] = await db
 		.select({
-			tagline: band.tagline,
-			hometown: band.hometown,
-			foundedYear: band.foundedYear,
-			lookingForMembers: band.lookingForMembers,
-			directoryVisibility: band.directoryVisibility,
-			directoryContact: band.directoryContact,
-			links: band.links
+			tagline: group.tagline,
+			hometown: group.hometown,
+			foundedYear: group.foundedYear,
+			lookingForMembers: group.lookingForMembers,
+			directoryVisibility: group.directoryVisibility,
+			directoryContact: group.directoryContact,
+			links: group.links
 		})
-		.from(band)
-		.where(eq(band.id, bandId));
+		.from(group)
+		.where(eq(group.id, bandId));
 
 	if (!row) return null;
 

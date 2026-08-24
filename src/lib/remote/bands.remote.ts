@@ -39,7 +39,7 @@ import {
 	clearBandAvatar,
 	BandMemberExistsError
 } from '$lib/server/band/band-service';
-import { bandTiers } from '$lib/server/db/schema/band';
+import { bandTiers } from '$lib/server/db/schema/group';
 import { getBandLayout } from '$lib/remote/layout.remote';
 import {
 	createInvite as createPlatformInvite,
@@ -105,7 +105,7 @@ export const getBandReservations = query(z.string(), async (bandId) => {
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
-		.where(and(eq(reservation.bookerType, 'band'), eq(reservation.bookerId, bandId)))
+		.where(and(eq(reservation.bookerType, 'group'), eq(reservation.bookerId, bandId)))
 		.orderBy(desc(reservation.startsAt))
 		.limit(10);
 });
@@ -152,7 +152,7 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(
 			and(
-				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerType, 'group'),
 				eq(reservation.bookerId, bandId),
 				gt(reservation.startsAt, now),
 				ne(reservation.status, 'cancelled')

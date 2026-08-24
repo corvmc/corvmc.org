@@ -42,7 +42,7 @@ vi.mock('$lib/server/reservation/conflict-service', () => conflictServiceMock);
 const reservationServiceMock = {
 	create: vi.fn(async () => ({
 		id: 'res-new',
-		bookerType: 'band',
+		bookerType: 'group',
 		bookerId: 'band-1',
 		status: 'scheduled',
 		startsAt: new Date(),
@@ -216,7 +216,7 @@ function reservationRow(createdByUserId: string, status = 'scheduled') {
 
 /** The row `cancelBandReservation` reads before authorizing. */
 function bandReservationRow(createdByUserId = 'user-owner', bookerId = 'band-1') {
-	return [{ bookerType: 'band', bookerId, createdByUserId }];
+	return [{ bookerType: 'group', bookerId, createdByUserId }];
 }
 
 // ---------------------------------------------------------------------------
@@ -234,7 +234,7 @@ describe('bookReservation', () => {
 		expect(reservationServiceMock.create).toHaveBeenCalledWith(
 			expect.objectContaining({
 				userId: 'user-owner',
-				bookerType: 'band',
+				bookerType: 'group',
 				bookerId: 'band-1'
 			})
 		);

@@ -29,7 +29,7 @@ import {
 	count
 } from 'drizzle-orm';
 import { getById as getBandById } from '$lib/server/band/band-service';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { event } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
@@ -208,7 +208,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(
 			and(
-				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerType, 'group'),
 				eq(reservation.bookerId, band.id),
 				gt(reservation.startsAt, now),
 				ne(reservation.status, 'cancelled')
@@ -233,7 +233,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(
 			and(
-				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerType, 'group'),
 				eq(reservation.bookerId, band.id),
 				lte(reservation.startsAt, now)
 			)
@@ -262,15 +262,15 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			reservation: reservation,
 			member: memberRefColumns(),
 			memberPhone: user.phone,
-			bandId: band.id,
-			bandName: band.name,
-			bandSlug: band.slug,
+			bandId: group.id,
+			bandName: group.name,
+			bandSlug: group.slug,
 			eventId: event.id,
 			eventTitle: event.title
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(band, bandBookerJoin)
+		.leftJoin(group, bandBookerJoin)
 		.leftJoin(event, eventBookerJoin)
 		.where(eq(reservation.id, id))
 		.limit(1);
@@ -405,15 +405,15 @@ export const searchBands = query(z.string(), async (q) => {
 	const pattern = `%${q}%`;
 	return db
 		.select({
-			id: band.id,
-			name: band.name,
-			ownerId: band.ownerId,
+			id: group.id,
+			name: group.name,
+			ownerId: group.ownerId,
 			ownerName: user.name,
 			ownerEmail: user.email
 		})
-		.from(band)
-		.innerJoin(user, eq(user.id, band.ownerId))
-		.where(and(isNull(band.deletedAt), like(band.name, pattern)))
+		.from(group)
+		.innerJoin(user, eq(user.id, group.ownerId))
+		.where(and(isNull(group.deletedAt), like(group.name, pattern)))
 		.limit(SEARCH_LIMIT);
 });
 
@@ -802,7 +802,7 @@ const staffReservationFiltersSchema = z.object({
 	dateFrom: z.string().optional(),
 	dateTo: z.string().optional(),
 	statusFilter: z.array(z.string()).optional(),
-	bookerType: z.enum(['user', 'band', 'event']).optional(),
+	bookerType: z.enum(['user', 'group', 'event']).optional(),
 	page: z.number().optional()
 });
 
@@ -811,7 +811,7 @@ const staffReservationFiltersSchema = z.object({
  * to carry that discriminator — otherwise a band whose id happened to match a
  * user's would attach to the wrong row.
  */
-const bandBookerJoin = and(eq(reservation.bookerType, 'band'), eq(band.id, reservation.bookerId));
+const bandBookerJoin = and(eq(reservation.bookerType, 'group'), eq(group.id, reservation.bookerId));
 
 /** The same shape for the other polymorphic booker: an event holding the room. */
 const eventBookerJoin = and(
@@ -863,7 +863,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			or(
 				like(user.name, pattern),
 				like(user.email, pattern),
-				like(band.name, pattern),
+				like(group.name, pattern),
 				like(event.title, pattern)
 			)
 		);
@@ -893,7 +893,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(band, bandBookerJoin)
+		.leftJoin(group, bandBookerJoin)
 		.leftJoin(event, eventBookerJoin)
 		.where(where)
 		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
@@ -903,7 +903,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.select({ count: count() })
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(band, bandBookerJoin)
+		.leftJoin(group, bandBookerJoin)
 		.leftJoin(event, eventBookerJoin)
 		.where(where);
 
@@ -1013,7 +1013,7 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 
 	const res = await staffCreate({
 		userId: data.memberId,
-		bookerType: data.bandId ? 'band' : 'user',
+		bookerType: data.bandId ? 'group' : 'user',
 		bookerId: data.bandId ?? data.memberId,
 		startsAt,
 		endsAt,
@@ -1504,7 +1504,7 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 	try {
 		res = await create({
 			userId: currentUser.id,
-			bookerType: 'band',
+			bookerType: 'group',
 			bookerId: band.id,
 			startsAt,
 			endsAt,
@@ -1514,7 +1514,7 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 		if (isRecurring && err instanceof ReservationConflictError) {
 			res = await createWaitlisted({
 				userId: currentUser.id,
-				bookerType: 'band',
+				bookerType: 'group',
 				bookerId: band.id,
 				startsAt,
 				endsAt,
@@ -1586,7 +1586,7 @@ export const cancelBandReservation = form(
 
 		// 404 rather than 403: whether some other band's reservation exists is not
 		// this band's business.
-		if (!row || row.bookerType !== 'band' || row.bookerId !== band.id) {
+		if (!row || row.bookerType !== 'group' || row.bookerId !== band.id) {
 			error(404, 'Reservation not found');
 		}
 

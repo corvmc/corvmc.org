@@ -13,7 +13,8 @@
 import 'dotenv/config';
 import { eq } from 'drizzle-orm';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
-import { band, bandMember, bandSlugHistory } from '../../src/lib/server/db/schema/band';
+import { bandMember, bandSlugHistory } from '../../src/lib/server/db/schema/band';
+import { group } from '../../src/lib/server/db/schema/group';
 import { scryptHash } from './seed-pay-reservation';
 import { withPlatformEnv } from './platform-db';
 
@@ -90,7 +91,7 @@ export async function seedBandOnboarding(): Promise<void> {
 		for (const bandId of BAND_IDS) {
 			await db.delete(bandMember).where(eq(bandMember.bandId, bandId));
 			await db.delete(bandSlugHistory).where(eq(bandSlugHistory.bandId, bandId));
-			await db.delete(band).where(eq(band.id, bandId));
+			await db.delete(group).where(eq(group.id, bandId));
 		}
 		for (const userId of [SEED_OWNER_ID, SEED_BANDMATE_ID]) {
 			await db.delete(account).where(eq(account.userId, userId));
@@ -138,7 +139,7 @@ export async function seedBandOnboarding(): Promise<void> {
 			updatedAt: now
 		});
 
-		await db.insert(band).values([
+		await db.insert(group).values([
 			{
 				id: SEED_PUBLIC_BAND_ID,
 				name: SEED_PUBLIC_BAND_NAME,

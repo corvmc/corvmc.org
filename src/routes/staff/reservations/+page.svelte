@@ -49,7 +49,7 @@
 	let searchText = $state('');
 	let dateFrom = $state('');
 	let dateTo = $state('');
-	let bookerType = $state<'user' | 'band' | 'event' | ''>('');
+	let bookerType = $state<'user' | 'group' | 'event' | ''>('');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
@@ -209,7 +209,7 @@
 		>
 			<option value="">Anyone</option>
 			<option value="user">Members</option>
-			<option value="band">Bands</option>
+			<option value="group">Bands</option>
 			<option value="event">Events</option>
 		</Select>
 	</FilterBar>

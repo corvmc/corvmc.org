@@ -53,7 +53,7 @@ vi.mock('$lib/server/entity/refs', () => ({
 	bandRefColumns: vi.fn(() => ({ id: 'band.id', name: 'band.name' })),
 	eventRefColumns: vi.fn(() => ({ id: 'event.id', title: 'event.title' })),
 	toBookerRef: vi.fn((row: { bookerType: string; member?: { id?: string; name?: string } }) => ({
-		type: row.bookerType === 'band' ? 'band' : 'member',
+		type: row.bookerType === 'group' ? 'band' : 'member',
 		id: row.member?.id ?? null,
 		title: row.member?.name ?? 'Unknown member'
 	}))

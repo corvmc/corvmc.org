@@ -223,7 +223,7 @@ describe('BandService', () => {
 
 			await create('user-owner', { name: 'The Velvet Underground' });
 
-			const bandRows = writes.filter((w) => w.table === 'band' && w.op === 'insert');
+			const bandRows = writes.filter((w) => w.table === 'group' && w.op === 'insert');
 			const ownerRows = writes.filter(
 				(w) => w.table === 'band_member' && w.op === 'insert' && w.values.role === 'owner'
 			);
@@ -562,7 +562,7 @@ describe('BandService', () => {
 			const memberWrites = writes.filter((w) => w.table === 'band_member' && w.op === 'update');
 			const promotes = memberWrites.filter((w) => w.values.role === 'owner');
 			const demotes = memberWrites.filter((w) => w.values.role === 'admin');
-			const bandWrites = writes.filter((w) => w.table === 'band' && w.op === 'update');
+			const bandWrites = writes.filter((w) => w.table === 'group' && w.op === 'update');
 
 			expect(promotes).toHaveLength(1);
 			expect(demotes).toHaveLength(1);

@@ -41,7 +41,8 @@ import {
 	toPublicMemberProfile
 } from '$lib/utils/directory-display';
 import { db } from '$lib/server/db';
-import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
+import { bandMember, bandGenre } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { profileLinkSchema } from '$lib/server/db/schema/authentication';
@@ -202,24 +203,24 @@ export const getPublicBandProfile = query(z.string(), async (slug) => {
 async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 	const [row] = await db
 		.select({
-			id: band.id,
-			name: band.name,
-			slug: band.slug,
-			bio: band.bio,
-			tagline: band.tagline,
-			hometown: band.hometown,
-			foundedYear: band.foundedYear,
-			avatarKey: band.avatarKey,
-			lookingForMembers: band.lookingForMembers,
-			directoryContact: band.directoryContact,
-			links: band.links,
-			directoryVisibility: band.directoryVisibility,
+			id: group.id,
+			name: group.name,
+			slug: group.slug,
+			bio: group.bio,
+			tagline: group.tagline,
+			hometown: group.hometown,
+			foundedYear: group.foundedYear,
+			avatarKey: group.avatarKey,
+			lookingForMembers: group.lookingForMembers,
+			directoryContact: group.directoryContact,
+			links: group.links,
+			directoryVisibility: group.directoryVisibility,
 			memberCount: sql<number>`cast(count(case when ${bandMember.status} = 'active' then 1 end) as integer)`
 		})
-		.from(band)
-		.leftJoin(bandMember, eq(bandMember.bandId, band.id))
-		.where(and(eq(band.slug, slug), isNull(band.deletedAt)))
-		.groupBy(band.id);
+		.from(group)
+		.leftJoin(bandMember, eq(bandMember.bandId, group.id))
+		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
+		.groupBy(group.id);
 
 	if (!row) {
 		// The band may have changed its address and released this slug. Checking

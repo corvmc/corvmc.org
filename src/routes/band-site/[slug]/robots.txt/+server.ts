@@ -3,7 +3,7 @@ import { env } from '$env/dynamic/public';
 import { bandSiteUrl } from '$lib/utils/band-site-url';
 import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { eq, and, isNull } from 'drizzle-orm';
 
 // Served on band subdomains: {slug}.corvmc.org/robots.txt reroutes here.
@@ -11,9 +11,13 @@ export const GET: RequestHandler = async ({ params }) => {
 	await requireFeature('bandPremium');
 
 	const [row] = await db
-		.select({ tier: band.tier, customDomain: band.customDomain, status: band.customDomainStatus })
-		.from(band)
-		.where(and(eq(band.slug, params.slug!), isNull(band.deletedAt)))
+		.select({
+			tier: group.tier,
+			customDomain: group.customDomain,
+			status: group.customDomainStatus
+		})
+		.from(group)
+		.where(and(eq(group.slug, params.slug!), isNull(group.deletedAt)))
 		.limit(1);
 	if (!row || row.tier !== 'premium') throw error(404, 'Not found');
 

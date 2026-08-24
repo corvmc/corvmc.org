@@ -4,7 +4,7 @@ import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { band as bandTable } from '$lib/server/db/schema/band';
+import { group as bandTable } from '$lib/server/db/schema/group';
 import { requireBandOwner } from '$lib/server/band/band-context';
 import { requireUser } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';

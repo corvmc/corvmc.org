@@ -151,7 +151,7 @@ describe('predicates', () => {
 		const sql = predicateSql('band-leaders');
 		expect(sql).toContain('"band_member"."role" in (\'owner\', \'admin\')');
 		expect(sql).toContain('"band_member"."status" = \'active\'');
-		expect(sql).toContain('"band"."deleted_at" is null');
+		expect(sql).toContain('"group"."deleted_at" is null');
 	});
 
 	// Regression guard: an unqualified outer reference would bind to the

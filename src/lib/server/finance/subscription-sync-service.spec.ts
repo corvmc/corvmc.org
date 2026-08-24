@@ -57,7 +57,7 @@ const dbState: {
 	userByStripeId: Record<string, { id: string; subscription: unknown } | undefined>;
 	staleUsers: { id: string }[];
 	staleBands: { id: string }[];
-	updates: Array<{ table: 'user' | 'band'; set: Record<string, unknown> }>;
+	updates: Array<{ table: 'user' | 'group'; set: Record<string, unknown> }>;
 } = {
 	userByStripeId: {},
 	staleUsers: [],
@@ -66,11 +66,11 @@ const dbState: {
 };
 
 // Track which table a select/update chain targets via the last from()/update() arg.
-let lastTable: 'user' | 'band' | 'unknown' = 'unknown';
+let lastTable: 'user' | 'group' | 'unknown' = 'unknown';
 let pendingCustomerLookup: string | null = null;
 
 vi.mock('$lib/server/db/schema/authentication', () => ({ user: { __table: 'user' } }));
-vi.mock('$lib/server/db/schema/band', () => ({ band: { __table: 'band' } }));
+vi.mock('$lib/server/db/schema/group', () => ({ group: { __table: 'group' } }));
 
 vi.mock('drizzle-orm', () => ({
 	eq: (col: unknown, val: unknown) => ({ op: 'eq', col, val }),
@@ -84,7 +84,7 @@ vi.mock('drizzle-orm', () => ({
 
 vi.mock('$lib/server/db', () => {
 	const select = () => ({
-		from: (table: { __table: 'user' | 'band' }) => {
+		from: (table: { __table: 'user' | 'group' }) => {
 			lastTable = table.__table;
 			return {
 				where: (cond: { op?: string; val?: string }) => {
@@ -106,7 +106,7 @@ vi.mock('$lib/server/db', () => {
 		}
 	});
 
-	const update = (table: { __table: 'user' | 'band' }) => ({
+	const update = (table: { __table: 'user' | 'group' }) => ({
 		set: (values: Record<string, unknown>) => ({
 			where: () => {
 				dbState.updates.push({ table: table.__table, set: values });
@@ -313,7 +313,7 @@ describe('syncAllSubscriptions — bands', () => {
 		expect(mockSyncFromWebhook).not.toHaveBeenCalled();
 		expect(summary.bandsCleared).toBe(1);
 		expect(dbState.updates).toContainEqual({
-			table: 'band',
+			table: 'group',
 			set: expect.objectContaining({ tier: 'free', subscription: null })
 		});
 	});

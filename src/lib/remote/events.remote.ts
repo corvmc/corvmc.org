@@ -64,7 +64,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
 import { event, createEventSchema, eventSources } from '$lib/server/db/schema/event';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
@@ -236,9 +236,9 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	let bandInfo: { name: string; slug: string } | null = null;
 	if (evt.bandId) {
 		const [row] = await db
-			.select({ name: band.name, slug: band.slug })
-			.from(band)
-			.where(eq(band.id, evt.bandId))
+			.select({ name: group.name, slug: group.slug })
+			.from(group)
+			.where(eq(group.id, evt.bandId))
 			.limit(1);
 		bandInfo = row ?? null;
 	}
@@ -507,8 +507,8 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 	if (evt.bandId) {
 		const [row] = await db
 			.select(bandRefColumns())
-			.from(band)
-			.where(eq(band.id, evt.bandId))
+			.from(group)
+			.where(eq(group.id, evt.bandId))
 			.limit(1);
 		if (row) bookingBand = { id: row.id, name: row.name, slug: row.slug };
 	}

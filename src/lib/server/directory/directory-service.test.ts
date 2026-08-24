@@ -14,7 +14,7 @@ vi.mock('$lib/server/db', () => ({
 	db: {
 		query: {
 			user: { findMany: userFindMany, findFirst: userFindFirst },
-			band: { findMany: bandFindMany }
+			group: { findMany: bandFindMany }
 		}
 	}
 }));
