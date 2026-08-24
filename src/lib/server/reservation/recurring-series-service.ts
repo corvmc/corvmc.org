@@ -3,14 +3,14 @@ import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 
 /**
  * `bookerId` points at a band only when `bookerType` says so, so the type check
  * belongs in the join — without it a band whose id happened to match a user's
  * would attach to the wrong row. Mirrors `reservations.remote.ts`.
  */
-const bandBookerJoin = and(eq(reservation.bookerType, 'band'), eq(band.id, reservation.bookerId));
+const bandBookerJoin = and(eq(reservation.bookerType, 'group'), eq(group.id, reservation.bookerId));
 const eventBookerJoin = and(
 	eq(reservation.bookerType, 'event'),
 	eq(event.id, reservation.bookerId)
@@ -386,7 +386,7 @@ export async function listActive(opts?: { forUser?: string }): Promise<SeriesLis
 		.from(recurringSeries)
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(band, bandBookerJoin)
+		.leftJoin(group, bandBookerJoin)
 		.leftJoin(event, eventBookerJoin)
 		.where(and(...conditions));
 
@@ -434,7 +434,7 @@ export async function listAll(opts?: { filter?: string }, pagination: Pagination
 		.from(recurringSeries)
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(band, bandBookerJoin)
+		.leftJoin(group, bandBookerJoin)
 		.leftJoin(event, eventBookerJoin)
 		.where(where)
 		.$dynamic();

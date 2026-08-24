@@ -216,10 +216,10 @@ describe('entity registry', () => {
 	 */
 	describe('identity vs qualifier glyphs', () => {
 		it('never lets a subtype stand in as identity', () => {
-			const reservation = fakeRef('reservation', { subtype: 'band' });
+			const reservation = fakeRef('reservation', { subtype: 'group' });
 			expect(entityIcon(reservation).icon).toBe(entityKinds.reservation.icon);
 			// ...even though the qualifier for the same ref is the band glyph.
-			expect(entityGlyph(reservation).icon).toBe(entityKinds.reservation.subtypes!.band.icon);
+			expect(entityGlyph(reservation).icon).toBe(entityKinds.reservation.subtypes!.group.icon);
 		});
 
 		it('always names the type, whatever the subtype', () => {

@@ -16,7 +16,7 @@ import { recurringSeries } from './recurring';
 // Reservation domain types
 // ---------------------------------------------------------------------------
 
-export const bookerTypes = ['user', 'band', 'event', 'lesson'] as const;
+export const bookerTypes = ['user', 'group', 'event', 'lesson'] as const;
 export type BookerType = (typeof bookerTypes)[number];
 
 export function isBookerType(value: string): value is BookerType {

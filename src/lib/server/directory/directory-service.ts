@@ -266,7 +266,7 @@ export async function getMemberProfile(userId: string, visibility: 'members' | '
 // Band queries
 // ---------------------------------------------------------------------------
 
-type BandWhere = NonNullable<NonNullable<Parameters<typeof db.query.band.findMany>[0]>['where']>;
+type BandWhere = NonNullable<NonNullable<Parameters<typeof db.query.group.findMany>[0]>['where']>;
 
 function bandWhereConditions(visibility: 'members' | 'public', filters?: BandFilters): BandWhere {
 	const conditions: BandWhere[] = [{ deletedAt: { isNull: true } }];
@@ -325,7 +325,7 @@ const bandColumns = {
 
 /** Members-only band directory */
 export async function listBands(filters?: BandFilters) {
-	const rows = await db.query.band.findMany({
+	const rows = await db.query.group.findMany({
 		where: bandWhereConditions('members', filters),
 		with: {
 			genres: true,
@@ -339,7 +339,7 @@ export async function listBands(filters?: BandFilters) {
 
 /** Public band directory */
 export async function listPublicBands(filters?: BandFilters) {
-	const rows = await db.query.band.findMany({
+	const rows = await db.query.group.findMany({
 		where: bandWhereConditions('public', filters),
 		with: {
 			genres: true,

@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
-import { band } from '$lib/server/db/schema/band';
-import { bandSubscriptionSchema, type BandSubscription } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
+import { bandSubscriptionSchema, type BandSubscription } from '$lib/server/db/schema/group';
 import { stripe } from '$lib/server/stripe';
 import { checkout } from '$lib/server/finance/payment-service';
 import {
@@ -109,22 +109,22 @@ export async function syncFromWebhook(
 		};
 
 		await db
-			.update(band)
+			.update(group)
 			.set({
 				tier: 'premium',
 				subscription: subscription as BandSubscription,
 				updatedAt: new Date()
 			})
-			.where(eq(band.id, bandId));
+			.where(eq(group.id, bandId));
 	} else if (status === 'canceled' || status === 'unpaid') {
 		await db
-			.update(band)
+			.update(group)
 			.set({
 				tier: 'free',
 				subscription: null,
 				updatedAt: new Date()
 			})
-			.where(eq(band.id, bandId));
+			.where(eq(group.id, bandId));
 	}
 }
 
@@ -137,9 +137,9 @@ export async function syncFromWebhook(
  */
 export async function cancelBandSubscription(bandId: string): Promise<void> {
 	const [bandRow] = await db
-		.select({ subscription: band.subscription })
-		.from(band)
-		.where(eq(band.id, bandId))
+		.select({ subscription: group.subscription })
+		.from(group)
+		.where(eq(group.id, bandId))
 		.limit(1);
 
 	if (!bandRow?.subscription) throw new Error('No active band subscription');
@@ -154,12 +154,12 @@ export async function cancelBandSubscription(bandId: string): Promise<void> {
 	// Optimistic update — webhook will confirm
 	const updated: BandSubscription = { ...parsed, cancelAtPeriodEnd: true };
 	await db
-		.update(band)
+		.update(group)
 		.set({
 			subscription: updated as BandSubscription,
 			updatedAt: new Date()
 		})
-		.where(eq(band.id, bandId));
+		.where(eq(group.id, bandId));
 }
 
 /**
@@ -167,9 +167,9 @@ export async function cancelBandSubscription(bandId: string): Promise<void> {
  */
 export async function resumeBandSubscription(bandId: string): Promise<void> {
 	const [bandRow] = await db
-		.select({ subscription: band.subscription })
-		.from(band)
-		.where(eq(band.id, bandId))
+		.select({ subscription: group.subscription })
+		.from(group)
+		.where(eq(group.id, bandId))
 		.limit(1);
 
 	if (!bandRow?.subscription) throw new Error('No active band subscription');
@@ -187,12 +187,12 @@ export async function resumeBandSubscription(bandId: string): Promise<void> {
 
 	const updated: BandSubscription = { ...parsed, cancelAtPeriodEnd: false };
 	await db
-		.update(band)
+		.update(group)
 		.set({
 			subscription: updated as BandSubscription,
 			updatedAt: new Date()
 		})
-		.where(eq(band.id, bandId));
+		.where(eq(group.id, bandId));
 }
 
 // ---------------------------------------------------------------------------
@@ -204,9 +204,9 @@ export async function resumeBandSubscription(bandId: string): Promise<void> {
  */
 export async function getBandSubscription(bandId: string): Promise<BandSubscription> {
 	const [bandRow] = await db
-		.select({ subscription: band.subscription })
-		.from(band)
-		.where(eq(band.id, bandId))
+		.select({ subscription: group.subscription })
+		.from(group)
+		.where(eq(group.id, bandId))
 		.limit(1);
 
 	if (!bandRow) throw new Error('Band not found');

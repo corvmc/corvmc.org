@@ -21,7 +21,7 @@ export const relations = defineRelations(schema, (t) => ({
 	account: {
 		user: t.one.user({ from: t.account.userId, to: t.user.id })
 	},
-	band: {
+	group: {
 		genres: t.many.bandGenre(),
 		members: t.many.bandMember(),
 		/** Events this band OWNS. Shows it merely played are `lineups`. */
@@ -29,16 +29,16 @@ export const relations = defineRelations(schema, (t) => ({
 		// eventBand points at band twice (the act, and who added it), so both
 		// sides need a matching alias to say which FK this relation follows.
 		lineups: t.many.eventBand({
-			from: t.band.id,
+			from: t.group.id,
 			to: t.eventBand.bandId,
 			alias: 'eventBand_band'
 		})
 	},
 	bandGenre: {
-		band: t.one.band({ from: t.bandGenre.bandId, to: t.band.id })
+		band: t.one.group({ from: t.bandGenre.bandId, to: t.group.id })
 	},
 	bandMember: {
-		band: t.one.band({ from: t.bandMember.bandId, to: t.band.id }),
+		band: t.one.group({ from: t.bandMember.bandId, to: t.group.id }),
 		user: t.one.user({ from: t.bandMember.userId, to: t.user.id })
 	},
 	reservation: {
@@ -52,15 +52,15 @@ export const relations = defineRelations(schema, (t) => ({
 		reservation: t.one.reservation({ from: t.event.reservationId, to: t.reservation.id }),
 		createdBy: t.one.user({ from: t.event.createdByUserId, to: t.user.id }),
 		/** The owning band, not the bill. Who played is `lineup`. */
-		band: t.one.band({ from: t.event.bandId, to: t.band.id }),
+		band: t.one.group({ from: t.event.bandId, to: t.group.id }),
 		lineup: t.many.eventBand()
 	},
 	eventBand: {
 		event: t.one.event({ from: t.eventBand.eventId, to: t.event.id }),
-		band: t.one.band({ from: t.eventBand.bandId, to: t.band.id, alias: 'eventBand_band' }),
-		addedByBand: t.one.band({
+		band: t.one.group({ from: t.eventBand.bandId, to: t.group.id, alias: 'eventBand_band' }),
+		addedByBand: t.one.group({
 			from: t.eventBand.addedByBandId,
-			to: t.band.id,
+			to: t.group.id,
 			alias: 'eventBand_addedBy'
 		})
 	},
@@ -200,7 +200,7 @@ export const relations = defineRelations(schema, (t) => ({
 		createdBy: t.one.user({ from: t.helpArticle.createdByUserId, to: t.user.id })
 	},
 	platformInvite: {
-		band: t.one.band({ from: t.platformInvite.bandId, to: t.band.id }),
+		band: t.one.group({ from: t.platformInvite.bandId, to: t.group.id }),
 		invitedBy: t.one.user({ from: t.platformInvite.invitedById, to: t.user.id })
 	},
 	inboxThread: {

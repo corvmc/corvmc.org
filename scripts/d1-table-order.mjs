@@ -8,7 +8,7 @@ export const tableOrder = [
 	// roots → leaves
 	'user',
 	'recurring_series',
-	'band',
+	'group',
 	'reservation',
 	'equipment_category',
 	'event',

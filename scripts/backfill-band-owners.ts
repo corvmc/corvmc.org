@@ -82,7 +82,7 @@ SELECT b.id AS band_id, b.slug, b.owner_id,
        m.role AS member_role, m.status AS member_status,
        (SELECT count(*) FROM band_member x
          WHERE x.band_id = b.id AND x.role = 'owner' AND x.user_id != b.owner_id) AS other_owner_rows
-FROM band b
+FROM "group" b
 LEFT JOIN band_member m ON m.band_id = b.id AND m.user_id = b.owner_id
 WHERE b.deleted_at IS NULL
   AND (m.user_id IS NULL OR m.role != 'owner' OR m.status != 'active')

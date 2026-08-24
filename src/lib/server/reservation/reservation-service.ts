@@ -21,7 +21,8 @@ import { refund } from '$lib/server/finance/payment-service';
 import { reverseReservationCredits } from './reservation-credit-service';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { user } from '$lib/server/db/schema/authentication';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { bandMember } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 import type { BookerType, ReservationStatus } from '$lib/server/db/schema/reservation';
@@ -557,9 +558,9 @@ export async function listForMember(
 	const now = new Date();
 
 	const bands = await db
-		.select({ bandId: bandMember.bandId, bandName: band.name })
+		.select({ bandId: bandMember.bandId, bandName: group.name })
 		.from(bandMember)
-		.innerJoin(band, eq(band.id, bandMember.bandId))
+		.innerJoin(group, eq(group.id, bandMember.bandId))
 		.where(and(eq(bandMember.userId, userId), eq(bandMember.status, 'active')));
 
 	const bandNameById = new Map(bands.map((b) => [b.bandId, b.bandName]));
@@ -569,7 +570,7 @@ export async function listForMember(
 	const mine = eq(reservation.createdByUserId, userId);
 	const theirs =
 		bandIds.length > 0
-			? or(mine, and(eq(reservation.bookerType, 'band'), inArray(reservation.bookerId, bandIds)))!
+			? or(mine, and(eq(reservation.bookerType, 'group'), inArray(reservation.bookerId, bandIds)))!
 			: mine;
 	const scope = and(theirs, ne(reservation.bookerType, 'event'))!;
 
@@ -632,7 +633,7 @@ export async function listForMember(
 		status: r.status,
 		bookerType: r.bookerType,
 		bookerId: r.bookerId,
-		bandName: r.bookerType === 'band' ? (bandNameById.get(r.bookerId) ?? null) : null,
+		bandName: r.bookerType === 'group' ? (bandNameById.get(r.bookerId) ?? null) : null,
 		cashDueCents: r.cashDueCents,
 		paidAt: r.paidAt,
 		cancellationReason: r.cancellationReason,

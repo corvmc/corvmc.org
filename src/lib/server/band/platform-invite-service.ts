@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { platformInvite } from '$lib/server/db/schema/platform-invite';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { bandMember } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, gt, desc } from 'drizzle-orm';
 import { SEARCH_LIMIT } from '$lib/config';
@@ -96,9 +97,9 @@ export async function createInvite(
 	Promise.resolve().then(async () => {
 		try {
 			const [bandRow] = await db
-				.select({ name: band.name })
-				.from(band)
-				.where(eq(band.id, bandId))
+				.select({ name: group.name })
+				.from(group)
+				.where(eq(group.id, bandId))
 				.limit(1);
 			const [inviter] = await db
 				.select({ name: user.name })
@@ -262,11 +263,11 @@ export async function getByToken(token: string): Promise<{
 			role: platformInvite.role,
 			status: platformInvite.status,
 			expiresAt: platformInvite.expiresAt,
-			bandName: band.name,
+			bandName: group.name,
 			inviterName: user.name
 		})
 		.from(platformInvite)
-		.innerJoin(band, eq(band.id, platformInvite.bandId))
+		.innerJoin(group, eq(group.id, platformInvite.bandId))
 		.leftJoin(user, eq(user.id, platformInvite.invitedById))
 		.where(eq(platformInvite.token, token))
 		.limit(1);

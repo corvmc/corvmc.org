@@ -9,7 +9,8 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { bandMember } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import {
 	eq,
 	or,
@@ -494,9 +495,9 @@ export const getMemberDashboard = query(async () => {
 	const weekEnd = endOfWeek(nowDate, { weekStartsOn: 1 });
 
 	const userBands = await db
-		.select({ bandId: bandMember.bandId, bandName: band.name })
+		.select({ bandId: bandMember.bandId, bandName: group.name })
 		.from(bandMember)
-		.innerJoin(band, eq(band.id, bandMember.bandId))
+		.innerJoin(group, eq(group.id, bandMember.bandId))
 		.where(and(eq(bandMember.userId, currentUser.id), eq(bandMember.status, 'active')));
 
 	const activeBandIds = userBands.map((b) => b.bandId);
@@ -534,7 +535,7 @@ export const getMemberDashboard = query(async () => {
 					.from(reservation)
 					.where(
 						and(
-							eq(reservation.bookerType, 'band'),
+							eq(reservation.bookerType, 'group'),
 							inArray(reservation.bookerId, activeBandIds),
 							gte(reservation.startsAt, weekStart),
 							lte(reservation.startsAt, weekEnd),
@@ -567,7 +568,7 @@ export const getMemberDashboard = query(async () => {
 			id: r.id,
 			bookerType: r.bookerType,
 			bookerId: r.bookerId,
-			bandName: r.bookerType === 'band' ? (bandNameMap[r.bookerId] ?? null) : null,
+			bandName: r.bookerType === 'group' ? (bandNameMap[r.bookerId] ?? null) : null,
 			status: r.status,
 			startsAt: r.startsAt,
 			endsAt: r.endsAt,

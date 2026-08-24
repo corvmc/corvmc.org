@@ -16,10 +16,10 @@ import { DomainError } from '../domain-error';
 import { env as publicEnv } from '$env/dynamic/public';
 import { eq, and, isNull, ne } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 import { forgetCustomDomain } from './band-host-service';
-import type { CustomDomainStatus, CustomDomainVerification } from '$lib/server/db/schema/band';
+import type { CustomDomainStatus, CustomDomainVerification } from '$lib/server/db/schema/group';
 
 const API_BASE = 'https://api.cloudflare.com/client/v4';
 
@@ -92,9 +92,9 @@ export function normalizeCustomDomain(input: string): string {
 /** Throws if another band already claimed this domain. */
 export async function assertDomainUnclaimed(host: string, bandId: string): Promise<void> {
 	const [existing] = await db
-		.select({ id: band.id })
-		.from(band)
-		.where(and(eq(band.customDomain, host), ne(band.id, bandId), isNull(band.deletedAt)))
+		.select({ id: group.id })
+		.from(group)
+		.where(and(eq(group.customDomain, host), ne(group.id, bandId), isNull(group.deletedAt)))
 		.limit(1);
 
 	if (existing) throw new CustomDomainError('That domain is already connected to another band.');

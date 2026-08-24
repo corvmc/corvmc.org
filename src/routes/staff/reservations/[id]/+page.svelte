@@ -151,7 +151,7 @@
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<!-- Member card — a band or event booking leads with it, then who booked it -->
 		<InfoCard
-			title={r.bookerType === 'band'
+			title={r.bookerType === 'group'
 				? 'Band Booking'
 				: r.bookerType === 'event'
 					? 'Event'
@@ -160,7 +160,7 @@
 			{#snippet header(title)}
 				<header class="flex justify-between">
 					<span class="card-title">{title}</span>
-					{#if r.bookerType === 'band' && r.bandId}
+					{#if r.bookerType === 'group' && r.bandId}
 						<Button href="/staff/bands/{r.bandId}" variant="default" size="sm">View Band</Button>
 					{:else if r.bookerType === 'event' && r.eventId}
 						<Button href="/staff/events/{r.eventId}" variant="default" size="sm">View Event</Button>

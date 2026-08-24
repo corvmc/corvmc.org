@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { bandMember } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { equipmentLoan } from '$lib/server/db/schema/equipment';
 import { volunteerHourLog } from '$lib/server/db/schema/volunteer';
 import { contentFlag } from '$lib/server/db/schema/flag';
@@ -87,10 +88,10 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 	// free — the join to `band` was already there to filter out deleted ones.
 	const [memberships, account] = await Promise.all([
 		db
-			.select({ bandId: bandMember.bandId, name: band.name, status: bandMember.status })
+			.select({ bandId: bandMember.bandId, name: group.name, status: bandMember.status })
 			.from(bandMember)
-			.innerJoin(band, eq(band.id, bandMember.bandId))
-			.where(and(eq(bandMember.userId, userId), isNull(band.deletedAt))),
+			.innerJoin(group, eq(group.id, bandMember.bandId))
+			.where(and(eq(bandMember.userId, userId), isNull(group.deletedAt))),
 		db
 			.select({ directoryVisibility: user.directoryVisibility })
 			.from(user)
@@ -108,7 +109,7 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 		activeBandIds.length > 0
 			? or(
 					mine,
-					and(eq(reservation.bookerType, 'band'), inArray(reservation.bookerId, activeBandIds))
+					and(eq(reservation.bookerType, 'group'), inArray(reservation.bookerId, activeBandIds))
 				)!
 			: mine,
 		ne(reservation.bookerType, 'event')

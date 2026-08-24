@@ -3,7 +3,7 @@ import { env } from '$env/dynamic/public';
 import { bandSiteUrl } from '$lib/utils/band-site-url';
 import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { bandPageConfig } from '$lib/server/db/schema/band-page';
 import { eq, and, isNull } from 'drizzle-orm';
 
@@ -13,14 +13,14 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	const [row] = await db
 		.select({
-			id: band.id,
-			tier: band.tier,
-			updatedAt: band.updatedAt,
-			customDomain: band.customDomain,
-			status: band.customDomainStatus
+			id: group.id,
+			tier: group.tier,
+			updatedAt: group.updatedAt,
+			customDomain: group.customDomain,
+			status: group.customDomainStatus
 		})
-		.from(band)
-		.where(and(eq(band.slug, params.slug!), isNull(band.deletedAt)))
+		.from(group)
+		.where(and(eq(group.slug, params.slug!), isNull(group.deletedAt)))
 		.limit(1);
 	if (!row || row.tier !== 'premium') throw error(404, 'Not found');
 

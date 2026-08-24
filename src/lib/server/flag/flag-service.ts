@@ -5,7 +5,7 @@ import { contentFlag } from '$lib/server/db/schema/flag';
 import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
 import type { StandingScope } from '$lib/config';
 import { user } from '$lib/server/db/schema/authentication';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { event } from '$lib/server/db/schema/event';
 import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
 import type { InboxMessageDirection } from '$lib/server/db/schema/inbox';
@@ -89,9 +89,9 @@ async function resolveEntityLabel(
 ): Promise<string | null> {
 	if (entityType === 'band_profile') {
 		const [row] = await db
-			.select({ name: band.name })
-			.from(band)
-			.where(eq(band.id, entityId))
+			.select({ name: group.name })
+			.from(group)
+			.where(eq(group.id, entityId))
 			.limit(1);
 		return row?.name ?? null;
 	}
@@ -389,7 +389,10 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 				.where(inArray(user.id, memberIds))
 		: [];
 	const bandNames = bandIds.length
-		? await db.select({ id: band.id, name: band.name }).from(band).where(inArray(band.id, bandIds))
+		? await db
+				.select({ id: group.id, name: group.name })
+				.from(group)
+				.where(inArray(group.id, bandIds))
 		: [];
 	const eventTitles = eventIds.length
 		? await db
@@ -653,12 +656,12 @@ async function resolveEventContext(eventId: string): Promise<FlaggedEventContext
 			location: event.location,
 			status: event.status,
 			source: event.source,
-			bandId: band.id,
-			bandName: band.name,
-			bandSlug: band.slug
+			bandId: group.id,
+			bandName: group.name,
+			bandSlug: group.slug
 		})
 		.from(event)
-		.leftJoin(band, eq(band.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.bandId))
 		.where(eq(event.id, eventId))
 		.limit(1);
 

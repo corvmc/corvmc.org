@@ -1,5 +1,6 @@
 import { sql, type SQL } from 'drizzle-orm';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { bandMember } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 
 // ---------------------------------------------------------------------------
@@ -60,11 +61,11 @@ const SUSTAINING = sql`"user"."subscription" is not null`;
  */
 const LEADS_A_BAND = sql`exists (
 	select 1 from ${bandMember}
-	inner join ${band} on ${band.id} = ${bandMember.bandId}
+	inner join ${group} on ${group.id} = ${bandMember.bandId}
 	where ${bandMember.userId} = ${user.id}
 		and ${bandMember.role} in ('owner', 'admin')
 		and ${bandMember.status} = 'active'
-		and ${band.deletedAt} is null
+		and ${group.deletedAt} is null
 )`;
 
 /** Active (not soft-deleted) member accounts. */

@@ -9,7 +9,7 @@ import { dispatchEmailOnly } from '$lib/server/notification/dispatcher';
 import type { NotificationEmailModel } from '$lib/types/notification-email';
 import type { BandEpk } from '$lib/types/band-page';
 import { db } from '$lib/server/db';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { bandMember } from '$lib/server/db/schema/band';
 import { bandGenre } from '$lib/server/db/schema/band';
 import { bandPageConfig, bandMedia } from '$lib/server/db/schema/band-page';
@@ -50,8 +50,8 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 
 	const [bandRow] = await db
 		.select()
-		.from(band)
-		.where(and(eq(band.slug, slug), isNull(band.deletedAt)))
+		.from(group)
+		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
 		.limit(1);
 
 	if (!bandRow) {
@@ -172,9 +172,9 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 	}
 
 	const [bandRow] = await db
-		.select({ id: band.id, name: band.name, tier: band.tier, ownerId: band.ownerId })
-		.from(band)
-		.where(and(eq(band.slug, data.slug), isNull(band.deletedAt)))
+		.select({ id: group.id, name: group.name, tier: group.tier, ownerId: group.ownerId })
+		.from(group)
+		.where(and(eq(group.slug, data.slug), isNull(group.deletedAt)))
 		.limit(1);
 
 	if (!bandRow || bandRow.tier !== 'premium') throw error(404, 'Band not found');

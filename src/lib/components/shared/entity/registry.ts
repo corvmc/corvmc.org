@@ -111,7 +111,7 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 		// `lesson` is present because `BookerTypeIcon` silently rendered *nothing*
 		// for it — the one booker type with no glyph at all.
 		subtypes: {
-			band: { icon: IconMusic, label: 'Booked by a band' },
+			group: { icon: IconMusic, label: 'Booked by a band' },
 			event: { icon: IconCalendarEvent, label: 'Held for an event' },
 			lesson: { icon: IconSchool, label: 'Lesson' }
 		}

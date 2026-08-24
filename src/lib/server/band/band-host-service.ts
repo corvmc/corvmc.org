@@ -11,7 +11,7 @@
  */
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { getJson, putJson } from '$lib/server/kv';
 
 /** Custom-domain lookups are cached this long. Short: a band that just verified shouldn't wait. */
@@ -32,9 +32,9 @@ export type BandHost = {
  */
 export async function resolveBandSubdomain(slug: string): Promise<BandHost | null> {
 	const [row] = await db
-		.select({ slug: band.slug, tier: band.tier })
-		.from(band)
-		.where(and(eq(band.slug, slug), isNull(band.deletedAt)))
+		.select({ slug: group.slug, tier: group.tier })
+		.from(group)
+		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
 		.limit(1);
 
 	if (!row) return null;
@@ -57,9 +57,9 @@ export async function resolveCustomDomain(hostname: string): Promise<BandHost | 
 	if (cached) return 'miss' in cached ? null : cached;
 
 	const [row] = await db
-		.select({ slug: band.slug, tier: band.tier, status: band.customDomainStatus })
-		.from(band)
-		.where(and(eq(band.customDomain, host), isNull(band.deletedAt)))
+		.select({ slug: group.slug, tier: group.tier, status: group.customDomainStatus })
+		.from(group)
+		.where(and(eq(group.customDomain, host), isNull(group.deletedAt)))
 		.limit(1);
 
 	const resolved: BandHost | null =

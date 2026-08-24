@@ -32,7 +32,8 @@ import {
 	userInstrument,
 	userGenre
 } from '../src/lib/server/db/schema/authentication';
-import { band, bandGenre, bandMember } from '../src/lib/server/db/schema/band';
+import { bandGenre, bandMember } from '../src/lib/server/db/schema/band';
+import { group } from '../src/lib/server/db/schema/group';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
 import { event } from '../src/lib/server/db/schema/event';
@@ -566,7 +567,7 @@ async function migrateBands() {
 		}
 
 		await db
-			.insert(band)
+			.insert(group)
 			.values({
 				id,
 				name: b.name,
@@ -1416,7 +1417,7 @@ async function migrateMedia() {
 			const bandId = lookupId('band_profiles', resolvedId);
 			if (bandId) {
 				await db
-					.update(band)
+					.update(group)
 					.set({ avatarKey: r2Key })
 					.where(sql`id = ${bandId}`);
 				updated++;
