@@ -113,7 +113,7 @@ export async function listBlockedBy(blockerUserId: string): Promise<BlockedMembe
 //   - `user.acceptsDirectMessages`, which is the member's own preference.
 //
 // Only the second is theirs to change. Keeping them apart is why neither needs
-// to record who set it — see `docs/specs/member-standing-spec.md`.
+// to record who set it — see `docs/specs/shipped/member-standing-spec.md`.
 
 /** May this member start new conversations? Restriction only; a preference doesn't stop them replying. */
 export async function canInitiateMessages(userId: string): Promise<boolean> {

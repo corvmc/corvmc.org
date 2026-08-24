@@ -22,7 +22,7 @@ system.
 
 This is the **Moderation Appeals** entry in `IDEAS.md`, the deliberate follow-up
 to the suggestion board (`d4df38c`), and it now sits on top of the merged
-`member_standing` table (`docs/specs/member-standing-spec.md`).
+`member_standing` table (`docs/specs/shipped/member-standing-spec.md`).
 
 ## The rule this rests on
 
@@ -138,7 +138,7 @@ something new turns up, but Sam cannot keep filing.
 - **A second-level appeal.** A denied appeal has been read by two people. A third
   is a committee, and the collective does not have one.
 - **Changing what a report _does_.** The griefing tradeoff in
-  `docs/specs/member-suggestions-spec.md` — one report hides a suggestion — is
+  `docs/specs/shipped/member-suggestions-spec.md` — one report hides a suggestion — is
   untouched. This feature is downstream of it.
 
 ## Decisions
@@ -352,7 +352,7 @@ member, an upheld flag, and ownership.
 `MAX_OPEN_PORTAL_THREADS`. That cap protects a genuinely scarce resource — an
 open portal thread is an unbounded conversation demanding ongoing attention. An
 appeal is one paragraph and one decision. Same reasoning
-`docs/specs/community-events-spec.md` used to reject a total listing cap, landing
+`docs/specs/shipped/community-events-spec.md` used to reject a total listing cap, landing
 the same way: the only person a cap reliably stops is the member with several
 legitimate grievances.
 
@@ -362,7 +362,7 @@ An earlier draft of this spec argued at length for keeping the standing tables
 separate behind a facade, on the grounds that appeals adds no standing of its own
 so the rule-of-three trigger had not fired. That is obsolete. It fired
 independently when direct messages added a third table, and the merge landed in
-`0e8a718` (`docs/specs/member-standing-spec.md`).
+`0e8a718` (`docs/specs/shipped/member-standing-spec.md`).
 
 What this feature consumes, unchanged:
 

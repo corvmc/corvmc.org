@@ -8,7 +8,7 @@ This spec splits today's `band` table by purpose. `group` is the managed organiz
 
 > This spec is the source of truth for the band/group boundary, including where it meets
 > [production-workflow-spec.md](production-workflow-spec.md) and
-> [event-lineup-spec.md](event-lineup-spec.md). `production_slot` appears below as a design contrast
+> [event-lineup-spec.md](shipped/event-lineup-spec.md). `production_slot` appears below as a design contrast
 > rather than an existing table.
 
 ---

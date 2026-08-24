@@ -212,7 +212,7 @@
 										</button>
 									</li>
 									<!-- No Impersonate item: `/staff/users/[id]/impersonate` does not exist
-									     (404). Impersonation is deferred — see docs/specs/staff-bands-spec.md.
+									     (404). Impersonation is deferred — see docs/specs/shipped/staff-bands-spec.md.
 									     Re-add this only alongside the route. -->
 								</ul>
 							</div>
