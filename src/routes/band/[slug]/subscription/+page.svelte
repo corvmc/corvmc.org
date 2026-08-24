@@ -7,7 +7,6 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { formatDate } from '$lib/utils/format';
 	import {
 		getBandSubscriptionInfo,
@@ -20,6 +19,7 @@
 	import { bandSiteUrl, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
 	import Alert from '$lib/components/shared/Alert.svelte';
+	import Form from '$lib/components/shared/Form/Form.svelte';
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	let info = $derived(await getBandSubscriptionInfo(page.params.slug!));
@@ -34,10 +34,16 @@
 	);
 	const baseDomain = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
 
-	// One form object per <form> element — a single object attached to both the
+	// One form object per <Form> element — a single object attached to both the
 	// monthly and yearly forms throws and takes the whole page down.
 	const upgradeMonthly = upgradeToPremium.for('monthly');
 	const upgradeYearly = upgradeToPremium.for('yearly');
+
+	// Stripe Checkout lives on another origin, so this is a full-page navigation
+	// rather than client-side routing.
+	function goToCheckout(result?: { redirectUrl: string }) {
+		if (result?.redirectUrl) window.location.href = result.redirectUrl;
+	}
 </script>
 
 <PageHeader title="Subscription" subtitle={band.name} />
@@ -62,8 +68,9 @@
 					<div class="sm:col-span-2">
 						<dt class="font-medium opacity-60">Your site</dt>
 						<dd>
-							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- absolute URL on the band's own subdomain, not a route in this app -->
-							<a href={siteUrl} target="_blank" rel="noopener" class="link">
+							<!-- The band's own subdomain, so this leaves the app: rel="external" is both the
+							     correct annotation and what keeps it out of the router. -->
+							<a href={siteUrl} target="_blank" rel="external noopener" class="link">
 								{siteUrl.replace(/^https?:\/\//, '')}
 							</a>
 						</dd>
@@ -77,38 +84,24 @@
 						)}.
 					</Alert>
 					{#if isOwner}
-						<form
-							{...resumePremium.enhance(async (form) => {
-								try {
-									if (await form.submit()) {
-										toast.success('Subscription resumed');
-										invalidateAll();
-									}
-								} catch {
-									toast.error('Something went wrong');
-								}
-							})}
+						<Form
+							remote={resumePremium}
+							successToast="Subscription resumed"
+							onsuccess={() => invalidateAll()}
 						>
 							<input {...resumePremium.fields.slug.as('hidden', band.slug)} />
 							<Button variant="primary" size="sm" class="mt-2">Resume Subscription</Button>
-						</form>
+						</Form>
 					{/if}
 				{:else if isOwner}
-					<form
-						{...cancelPremium.enhance(async (form) => {
-							try {
-								if (await form.submit()) {
-									toast.success('Subscription will cancel at end of billing period');
-									invalidateAll();
-								}
-							} catch {
-								toast.error('Something went wrong');
-							}
-						})}
+					<Form
+						remote={cancelPremium}
+						successToast="Subscription will cancel at end of billing period"
+						onsuccess={() => invalidateAll()}
 					>
 						<input {...cancelPremium.fields.slug.as('hidden', band.slug)} />
 						<Button variant="ghost" size="sm" class="mt-4 text-error">Cancel Subscription</Button>
-					</form>
+					</Form>
 				{/if}
 			</CardBody>
 		</Card>
@@ -135,23 +128,11 @@
 							$15<span class="text-muted font-normal">/mo</span>
 						</p>
 						{#if isOwner}
-							<form
-								{...upgradeMonthly.enhance(async (form) => {
-									try {
-										const result = await form.submit();
-										if (result && upgradeMonthly.result?.redirectUrl) {
-											// External Stripe Checkout URL — full-page navigation, not client-side routing.
-											window.location.href = upgradeMonthly.result.redirectUrl;
-										}
-									} catch {
-										toast.error('Something went wrong');
-									}
-								})}
-							>
+							<Form remote={upgradeMonthly} onsuccess={goToCheckout}>
 								<input {...upgradeMonthly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeMonthly.fields.billingInterval.as('hidden', 'monthly')} />
 								<Button variant="primary" class="mt-4">Subscribe Monthly</Button>
-							</form>
+							</Form>
 						{/if}
 					</CardBody>
 				</div>
@@ -165,23 +146,11 @@
 							$120<span class="text-muted font-normal">/yr</span>
 						</p>
 						{#if isOwner}
-							<form
-								{...upgradeYearly.enhance(async (form) => {
-									try {
-										const result = await form.submit();
-										if (result && upgradeYearly.result?.redirectUrl) {
-											// External Stripe Checkout URL — full-page navigation, not client-side routing.
-											window.location.href = upgradeYearly.result.redirectUrl;
-										}
-									} catch {
-										toast.error('Something went wrong');
-									}
-								})}
-							>
+							<Form remote={upgradeYearly} onsuccess={goToCheckout}>
 								<input {...upgradeYearly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeYearly.fields.billingInterval.as('hidden', 'yearly')} />
 								<Button variant="primary" class="mt-4">Subscribe Yearly</Button>
-							</form>
+							</Form>
 						{/if}
 					</CardBody>
 				</div>

@@ -205,6 +205,25 @@ Phase 1, the clickable and tinted cards deliberately left in Phase 3, and the pa
 in a phase — `(public)/+page.svelte` (13) and `band-site/[slug]/epk` (13), the latter being a
 separate theme context.
 
+Re-measured at `5b45863` (post-Phase 7) it is **142**, broken down by what the rule actually fired
+on. Useful before picking up Phase 8, since the five messages are five different pieces of work:
+
+| Message                                            | Count  |
+| -------------------------------------------------- | ------ |
+| `tooMany` — 6–7 tokens on one element              | 59     |
+| `tooMany` — 8–10 tokens                            | 12     |
+| `inlineVar` — `style="…var(--…)"`                  | 22     |
+| `muted` — `text-sm\|xs` + `opacity-*`              | 18     |
+| `componentised` — raw `badge`                      | 13     |
+| `componentised` — raw `card`                       | 12     |
+| `componentised` — `table` / `card-title` / `alert` | 2 each |
+| `dead` — `*-bordered`                              | **0**  |
+
+The zero confirms Phase 4's claim that all 185 dead classes are gone and none have come back. The
+18 `muted` are still the `opacity-50` tier Phase 1 deferred — one decision, not eighteen edits.
+`(public)/programs` (14), `(public)/+page` (13) and `band-site/[slug]/epk` (13) hold 40 of the 142,
+and the last remains out of scope as a separate theme context.
+
 ### Two regressions the suites caught
 
 Both were the same shape: a prop that quietly changes what an attribute means.

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
 		getPublicBandProfile,
@@ -80,7 +81,7 @@
 </svelte:head>
 
 <div class="profile-page">
-	<a href="/directory" class="link text-muted">&larr; Back to Directory</a>
+	<a href={resolve('/directory')} class="link text-muted">&larr; Back to Directory</a>
 
 	<ProfileHeader
 		avatarShape="square"
@@ -117,7 +118,7 @@
 	</ProfileGrid>
 
 	<footer class="profile-page__footer">
-		<a href="/">Corvallis Music Collective</a>
+		<a href={resolve('/')}>Corvallis Music Collective</a>
 	</footer>
 </div>
 

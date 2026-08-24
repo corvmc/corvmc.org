@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
 		getPublicMemberProfile,
@@ -74,7 +75,9 @@
 <div class="profile-page">
 	<!-- Carries the tab: bands are the directory's default, so a bare /directory
 	     would drop you somewhere other than where you came from. -->
-	<a href="/directory?tab=musicians" class="link text-muted">&larr; Back to Directory</a>
+	<a href="{resolve('/directory')}?tab=musicians" class="link text-muted"
+		>&larr; Back to Directory</a
+	>
 
 	<ProfileHeader avatarShape="round" name={member.name} {subtitle} image={member.image} {pills} />
 
@@ -102,7 +105,7 @@
 	</ProfileGrid>
 
 	<footer class="profile-page__footer">
-		<a href="/">Corvallis Music Collective</a>
+		<a href={resolve('/')}>Corvallis Music Collective</a>
 	</footer>
 </div>
 

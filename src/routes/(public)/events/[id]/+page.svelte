@@ -106,12 +106,15 @@
 					</summary>
 					<ul class="menu dropdown-content z-10 w-48 rounded-box bg-base-100 p-2 shadow">
 						<li>
-							<a href={googleCalendarUrl(calendarEvt)} target="_blank" rel="noopener noreferrer"
-								>Google Calendar</a
+							<a
+								href={googleCalendarUrl(calendarEvt)}
+								target="_blank"
+								rel="external noopener noreferrer">Google Calendar</a
 							>
 						</li>
 						<li>
-							<a href={icsDataUrl(calendarEvt)} download="{evt.title}.ics">Apple / Outlook (.ics)</a
+							<a href={icsDataUrl(calendarEvt)} rel="external" download="{evt.title}.ics"
+								>Apple / Outlook (.ics)</a
 							>
 						</li>
 					</ul>
