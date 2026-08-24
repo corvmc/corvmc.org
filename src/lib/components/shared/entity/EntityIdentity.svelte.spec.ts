@@ -13,7 +13,7 @@ describe('EntityIdentity', () => {
 	 * `DefinitionList` asserts its dt/dd are direct children.
 	 */
 	it('renders the anchor and subline as direct children of the cell', async () => {
-		render(Harness, { ref: fakeRef('member', { id: 'm1' }) });
+		await render(Harness, { ref: fakeRef('member', { id: 'm1' }) });
 
 		const cell = document.querySelector('td.cell-primary')!;
 		const childTags = Array.from(cell.children).map((el) => el.tagName.toLowerCase());
@@ -21,13 +21,13 @@ describe('EntityIdentity', () => {
 	});
 
 	it('keeps the truncate class on the anchor itself', async () => {
-		render(Harness, { ref: fakeRef('member', { id: 'm1' }) });
+		await render(Harness, { ref: fakeRef('member', { id: 'm1' }) });
 		const anchor = document.querySelector('td.cell-primary > a')!;
 		expect(anchor.className).toContain('truncate');
 	});
 
 	it('omits the subline entirely when there is no qualifier', async () => {
-		render(Harness, { ref: fakeRef('member', { id: 'm1', subtitle: null }) });
+		await render(Harness, { ref: fakeRef('member', { id: 'm1', subtitle: null }) });
 		const cell = document.querySelector('td.cell-primary')!;
 		expect(Array.from(cell.children).map((el) => el.tagName.toLowerCase())).toEqual(['a']);
 	});
@@ -38,7 +38,7 @@ describe('EntityIdentity', () => {
 	 * `href="#"` did.
 	 */
 	it('renders a span, not an empty anchor, when the record is gone', async () => {
-		render(Harness, { ref: fakeRef('member', { id: null }) });
+		await render(Harness, { ref: fakeRef('member', { id: null }) });
 		const cell = document.querySelector('td.cell-primary')!;
 		expect(cell.querySelector('a')).toBeNull();
 		expect(cell.querySelector('span')).not.toBeNull();
@@ -46,19 +46,19 @@ describe('EntityIdentity', () => {
 
 	it('renders a span when the viewer has no page for the record', async () => {
 		// A report is staff-only; a member has nowhere to go.
-		render(Harness, { ref: fakeRef('flag', { id: 'f1' }), isStaff: false, panel: 'member' });
+		await render(Harness, { ref: fakeRef('flag', { id: 'f1' }), isStaff: false, panel: 'member' });
 		expect(document.querySelector('td.cell-primary a')).toBeNull();
 	});
 
 	it('derives the link from the viewer rather than a prop', async () => {
-		render(Harness, { ref: fakeRef('member', { id: 'm1' }), panel: 'staff', isStaff: true });
+		await render(Harness, { ref: fakeRef('member', { id: 'm1' }), panel: 'staff', isStaff: true });
 		expect(document.querySelector('td.cell-primary a')?.getAttribute('href')).toBe(
 			'/staff/users/m1'
 		);
 	});
 
 	it('marks a subtype with its glyph and label', async () => {
-		render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: 'sustaining' }) });
+		await render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: 'sustaining' }) });
 		expect(document.querySelector('[data-tip]')?.getAttribute('data-tip')).toBe(
 			'Sustaining member'
 		);
@@ -70,12 +70,12 @@ describe('EntityIdentity', () => {
 	 * which is the whole reason `user` and `cmc` are absent from the registry.
 	 */
 	it('leaves the ordinary case unmarked', async () => {
-		render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: null }) });
+		await render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: null }) });
 		expect(document.querySelector('[data-tip]')).toBeNull();
 	});
 
 	it('leaves an unrecognised subtype unmarked rather than blank', async () => {
-		render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: 'nonsense' }) });
+		await render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: 'nonsense' }) });
 		expect(document.querySelector('[data-tip]')).toBeNull();
 		expect(document.querySelector('td.cell-primary > a')?.textContent).toContain('Jane Doe');
 	});
@@ -91,7 +91,7 @@ describe('EntityIdentity', () => {
 	 * `avatar` and lets the status ride it like every other size does.
 	 */
 	it('draws no status in a bare cell, even when asked for one', async () => {
-		render(Harness, {
+		await render(Harness, {
 			ref: fakeRef('reservation', { id: 'r1', status: 'cancelled' }),
 			status: true
 		});
@@ -101,7 +101,7 @@ describe('EntityIdentity', () => {
 	});
 
 	it('rides the media once the cell has an avatar', async () => {
-		render(Harness, {
+		await render(Harness, {
 			ref: fakeRef('reservation', { id: 'r1', status: 'cancelled' }),
 			status: true,
 			avatar: true
@@ -113,7 +113,7 @@ describe('EntityIdentity', () => {
 
 	/** The md shape is a flex row, so a wrapper here is correct, not a bug. */
 	it('wraps in a flex row at size md, where the avatar needs one', async () => {
-		render(Harness, { ref: fakeRef('band', { id: 'b1', slug: 'vu' }), size: 'md' });
+		await render(Harness, { ref: fakeRef('band', { id: 'b1', slug: 'vu' }), size: 'md' });
 		const cell = document.querySelector('td.cell-primary')!;
 		expect(cell.firstElementChild?.className).toContain('flex');
 	});
@@ -136,7 +136,7 @@ describe('EntityIdentity', () => {
  */
 describe('EntityIdentity truncation elements', () => {
 	it('never puts truncate directly on a heading or a paragraph', async () => {
-		render(Harness, {
+		await render(Harness, {
 			ref: fakeRef('member', { id: 'm1', title: 'A'.repeat(120), subtitle: 'B'.repeat(120) }),
 			size: 'md'
 		});

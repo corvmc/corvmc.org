@@ -12,7 +12,7 @@ describe('DefinitionList + Fact', () => {
 	 * failure throws, so assert the structure.
 	 */
 	it('renders dt/dd as direct children of the dl, with no wrapper', async () => {
-		render(Harness);
+		await render(Harness);
 
 		const dl = document.querySelector('dl');
 		expect(dl).not.toBeNull();
@@ -22,23 +22,23 @@ describe('DefinitionList + Fact', () => {
 	});
 
 	it('keeps the grid template that makes the label column shrink-to-fit', async () => {
-		render(Harness);
+		await render(Harness);
 		const dl = document.querySelector('dl')!;
 		expect(dl.getAttribute('style')).toContain('grid-template-columns: auto 1fr');
 	});
 
 	it('renders a plain value via the value prop', async () => {
-		render(Harness);
+		await render(Harness);
 		await expect.element(page_dd(0)).toHaveTextContent('Bass Cabinet');
 	});
 
 	it('applies mono styling for ids', async () => {
-		render(Harness);
+		await render(Harness);
 		expect(page_dd(1).className).toContain('font-mono');
 	});
 
 	it('renders arbitrary markup passed as children', async () => {
-		render(Harness);
+		await render(Harness);
 		expect(page_dd(2).querySelector('a')?.getAttribute('href')).toBe('#open');
 	});
 });

@@ -27,7 +27,7 @@ const AccountDropdown = (await import('./AccountDropdown.svelte')).default;
 
 describe('AccountDropdown', () => {
 	it('renders the signed-in user and opens the menu', async () => {
-		render(AccountDropdown);
+		await render(AccountDropdown);
 
 		const trigger = page.getByRole('button', { name: 'Account menu' });
 		await expect.element(trigger).toBeVisible();

@@ -6,7 +6,7 @@ import { fakeRef } from '$lib/test/fixtures';
 
 describe('EntityChip', () => {
 	it('derives its link from the viewer rather than a prop', async () => {
-		render(Harness, { ref: fakeRef('member', { id: 'm1' }), panel: 'staff', isStaff: true });
+		await render(Harness, { ref: fakeRef('member', { id: 'm1' }), panel: 'staff', isStaff: true });
 		expect(document.querySelector('a')?.getAttribute('href')).toBe('/staff/users/m1');
 	});
 
@@ -16,7 +16,7 @@ describe('EntityChip', () => {
 	 * No `href="#"`, which would leave a dead anchor in the accessibility tree.
 	 */
 	it('renders a span, not a dead anchor, when there is no page to open', async () => {
-		render(Harness, { ref: fakeRef('flag', { id: 'f1' }), isStaff: false, panel: 'member' });
+		await render(Harness, { ref: fakeRef('flag', { id: 'f1' }), isStaff: false, panel: 'member' });
 		expect(document.querySelector('a')).toBeNull();
 		expect(document.body.textContent).toContain('The Velvet Underground');
 	});
@@ -26,24 +26,24 @@ describe('EntityChip', () => {
 	 * reservation drawn with a music note reads as *a band*.
 	 */
 	it('shows the type glyph even for a marked subtype', async () => {
-		render(Harness, { ref: fakeRef('reservation', { id: 'r1', subtype: 'band' }) });
+		await render(Harness, { ref: fakeRef('reservation', { id: 'r1', subtype: 'band' }) });
 		const svgs = document.querySelectorAll('a svg');
 		expect(svgs.length).toBe(1);
 	});
 
 	describe('status', () => {
 		it('trails a glyph when the record needs attention', async () => {
-			render(Harness, { ref: fakeRef('event', { id: 'e1', status: 'cancelled' }) });
+			await render(Harness, { ref: fakeRef('event', { id: 'e1', status: 'cancelled' }) });
 			expect(document.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('Cancelled');
 		});
 
 		it('says nothing for a record in its expected state', async () => {
-			render(Harness, { ref: fakeRef('event', { id: 'e1', status: 'published' }) });
+			await render(Harness, { ref: fakeRef('event', { id: 'e1', status: 'published' }) });
 			expect(document.querySelector('[role="img"]')).toBeNull();
 		});
 
 		it('can be turned off entirely', async () => {
-			render(Harness, {
+			await render(Harness, {
 				ref: fakeRef('event', { id: 'e1', status: 'cancelled' }),
 				status: false
 			});
@@ -58,7 +58,7 @@ describe('EntityChip', () => {
 	 */
 	describe('preview', () => {
 		it('opens on hover and shows the record identity', async () => {
-			render(Harness, {
+			await render(Harness, {
 				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' })
 			});
 			await page.getByRole('link', { name: /Velvet Underground/ }).hover();
@@ -66,7 +66,7 @@ describe('EntityChip', () => {
 		});
 
 		it('opens on keyboard focus, so it is not mouse-only', async () => {
-			render(Harness, {
+			await render(Harness, {
 				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' })
 			});
 			const link = page.getByRole('link', { name: /Velvet Underground/ });
@@ -80,7 +80,7 @@ describe('EntityChip', () => {
 		 * the record.
 		 */
 		it('offers a way through to the record', async () => {
-			render(Harness, { ref: fakeRef('band', { id: 'band-1', slug: 'vu' }) });
+			await render(Harness, { ref: fakeRef('band', { id: 'band-1', slug: 'vu' }) });
 			await page
 				.getByRole('link', { name: /Velvet Underground/ })
 				.first()
@@ -91,7 +91,7 @@ describe('EntityChip', () => {
 		});
 
 		it('can be turned off', async () => {
-			render(Harness, {
+			await render(Harness, {
 				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' }),
 				preview: false
 			});

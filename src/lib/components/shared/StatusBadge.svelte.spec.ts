@@ -11,26 +11,26 @@ import StatusBadge from './StatusBadge.svelte';
  */
 describe('StatusBadge accessibility', () => {
 	it('names the icon-only form', async () => {
-		render(StatusBadge, { status: 'no_show' });
+		await render(StatusBadge, { status: 'no_show' });
 		const el = document.querySelector('[role="img"]');
 		expect(el?.getAttribute('aria-label')).toBe('No show');
 	});
 
 	it('uses the humanised label, not the raw enum value', async () => {
-		render(StatusBadge, { status: 'pending_review' });
+		await render(StatusBadge, { status: 'pending_review' });
 		// `labels` overrides this one: "Pending review" reads as a state,
 		// "Pending_review" reads as a database column.
 		expect(document.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('In review');
 	});
 
 	it('does not double up the name when the label is already visible', async () => {
-		render(StatusBadge, { status: 'no_show', label: true });
+		await render(StatusBadge, { status: 'no_show', label: true });
 		expect(document.querySelector('[role="img"]')).toBeNull();
 		expect(document.body.textContent).toContain('No show');
 	});
 
 	it('still names a status it has no mapping for', async () => {
-		render(StatusBadge, { status: 'brand_new_thing' });
+		await render(StatusBadge, { status: 'brand_new_thing' });
 		expect(document.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe(
 			'Brand new thing'
 		);

@@ -33,20 +33,20 @@ const trigger = () => page.getByRole('button', { expanded: false }).first();
 
 describe('TabBar collapse', () => {
 	it('renders a menu trigger naming the active tab', async () => {
-		render(TabBarHarness, { tabs: TABS, active: 'moderation', collapse: true });
+		await render(TabBarHarness, { tabs: TABS, active: 'moderation', collapse: true });
 
 		await expect.element(trigger()).toHaveTextContent('Moderation');
 		await expect.element(trigger()).toHaveAttribute('aria-haspopup', 'menu');
 	});
 
 	it('carries the active tab badge on the trigger', async () => {
-		render(TabBarHarness, { tabs: TABS, active: 'overview', collapse: true });
+		await render(TabBarHarness, { tabs: TABS, active: 'overview', collapse: true });
 
 		await expect.element(trigger()).toHaveTextContent('2');
 	});
 
 	it('offers every tab in the menu, not just the ones that fit', async () => {
-		render(TabBarHarness, { tabs: TABS, active: 'overview', collapse: true });
+		await render(TabBarHarness, { tabs: TABS, active: 'overview', collapse: true });
 
 		await trigger().click();
 
@@ -59,7 +59,7 @@ describe('TabBar collapse', () => {
 
 	it('reports the chosen tab through onchange', async () => {
 		const onchange = vi.fn();
-		render(TabBarHarness, { tabs: TABS, active: 'overview', collapse: true, onchange });
+		await render(TabBarHarness, { tabs: TABS, active: 'overview', collapse: true, onchange });
 
 		await trigger().click();
 		await page.getByRole('menuitem', { name: /Money/ }).click();
@@ -69,7 +69,7 @@ describe('TabBar collapse', () => {
 
 	/** Link tabs must stay real anchors in the menu: middle-click and copy-link. */
 	it('renders link tabs as anchors inside the menu', async () => {
-		render(TabBarHarness, {
+		await render(TabBarHarness, {
 			tabs: [
 				{ key: 'a', label: 'Pending', href: '/staff/inbox?view=pending' },
 				{ key: 'b', label: 'Closed', href: '/staff/inbox?view=closed' }
@@ -87,7 +87,7 @@ describe('TabBar collapse', () => {
 
 	/** Without `collapse` the short bars keep buttons at every width. */
 	it('renders no menu trigger when collapse is off', async () => {
-		render(TabBarHarness, { tabs: TABS, active: 'overview' });
+		await render(TabBarHarness, { tabs: TABS, active: 'overview' });
 
 		await expect.element(page.getByRole('tab', { name: /Overview/ })).toBeInTheDocument();
 		expect(document.querySelector('[aria-haspopup="menu"]')).toBeNull();
@@ -101,7 +101,7 @@ describe('TabBar semantics', () => {
 	 * navigation and "tab 3 of 8" entirely.
 	 */
 	it('announces itself as a tablist of tabs', async () => {
-		render(TabBarHarness, { tabs: TABS, active: 'space', collapse: true });
+		await render(TabBarHarness, { tabs: TABS, active: 'space', collapse: true });
 
 		await expect.element(page.getByRole('tablist')).toBeInTheDocument();
 		await expect

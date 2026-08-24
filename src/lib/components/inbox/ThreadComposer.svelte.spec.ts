@@ -29,7 +29,7 @@ describe('ThreadComposer', () => {
 	// The whole point of merging the two boxes: deciding "actually, this is a
 	// note" mid-sentence must not cost you the sentence.
 	it('keeps the draft when switching from reply to internal note', async () => {
-		render(ThreadComposer, {
+		await render(ThreadComposer, {
 			threadId: 'thread-1',
 			replyForm: fakeRemoteForm(),
 			noteForm: fakeRemoteForm()
@@ -45,7 +45,7 @@ describe('ThreadComposer', () => {
 	});
 
 	it('sends replies by default', async () => {
-		render(ThreadComposer, {
+		await render(ThreadComposer, {
 			threadId: 'thread-1',
 			replyForm: fakeRemoteForm(),
 			noteForm: fakeRemoteForm()
@@ -57,7 +57,7 @@ describe('ThreadComposer', () => {
 	// A thread with no contact email has nowhere to send a reply, so the composer
 	// must not offer one — the old page hid the form and left no way to type.
 	it('falls back to note mode when replying is blocked', async () => {
-		render(ThreadComposer, {
+		await render(ThreadComposer, {
 			threadId: 'thread-1',
 			replyForm: fakeRemoteForm(),
 			noteForm: fakeRemoteForm(),
@@ -69,7 +69,7 @@ describe('ThreadComposer', () => {
 	});
 
 	it('ignores a click on the reply tab while replying is blocked', async () => {
-		render(ThreadComposer, {
+		await render(ThreadComposer, {
 			threadId: 'thread-1',
 			replyForm: fakeRemoteForm(),
 			noteForm: fakeRemoteForm(),

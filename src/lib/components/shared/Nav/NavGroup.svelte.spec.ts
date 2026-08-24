@@ -24,21 +24,21 @@ beforeEach(() => localStorage.clear());
 
 describe('NavGroup', () => {
 	it('leaves the plain group untouched — no button, no disclosure', async () => {
-		render(NavGroupHarness, { title: 'My Bands' });
+		await render(NavGroupHarness, { title: 'My Bands' });
 
 		await expect.element(page.getByText('My Bands')).toBeInTheDocument();
 		expect(await page.getByRole('button').elements()).toHaveLength(0);
 	});
 
 	it('renders expanded by default', async () => {
-		render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
+		await render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
 
 		await expect.element(header('People')).toHaveAttribute('aria-expanded', 'true');
 		await expect.element(page.getByRole('link', { name: 'Users' })).toBeVisible();
 	});
 
 	it('hides its rows when collapsed, and brings them back', async () => {
-		render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
+		await render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
 
 		await header('People').click();
 		await expect.element(header('People')).toHaveAttribute('aria-expanded', 'false');
@@ -51,14 +51,14 @@ describe('NavGroup', () => {
 	});
 
 	it('points aria-controls at the list it toggles', async () => {
-		render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
+		await render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
 
 		const id = await header('People').element().getAttribute('aria-controls');
 		expect(document.getElementById(id!)).not.toBeNull();
 	});
 
 	it('remembers a collapsed group', async () => {
-		render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
+		await render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
 
 		await header('People').click();
 
@@ -67,7 +67,7 @@ describe('NavGroup', () => {
 
 	it('restores a remembered collapse after the first paint, not during it', async () => {
 		writeCollapsed('staff', 'people', true);
-		render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
+		await render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
 
 		await expect.element(header('People')).toHaveAttribute('aria-expanded', 'false');
 		// Hidden, but still in the DOM — the collapse is a class, not an `{#if}`,
@@ -77,7 +77,7 @@ describe('NavGroup', () => {
 
 	it('opens a collapsed group that holds the current page, and keeps it open', async () => {
 		writeCollapsed('staff', 'people', true);
-		const { rerender } = render(NavGroupHarness, {
+		const { rerender } = await render(NavGroupHarness, {
 			collapsible: true,
 			persistKey: 'people',
 			containsActive: false
@@ -91,7 +91,11 @@ describe('NavGroup', () => {
 	});
 
 	it('keeps each panel\u2019s record to itself', async () => {
-		render(NavGroupHarness, { collapsible: true, persistKey: 'people', persistScope: 'member' });
+		await render(NavGroupHarness, {
+			collapsible: true,
+			persistKey: 'people',
+			persistScope: 'member'
+		});
 
 		await header('People').click();
 
