@@ -107,7 +107,7 @@ available 60" — plus a 400 for a non-numeric amount.
 ### 7. Impersonate was a dead link
 
 The row menu linked to `/staff/users/[id]/impersonate`, which does not exist (verified 404).
-Impersonation is explicitly deferred in `docs/specs/staff-bands-spec.md:206`.
+Impersonation is explicitly deferred in `docs/specs/shipped/staff-bands-spec.md:206`.
 
 **Fix:** menu item removed. ~~**Still outstanding:** `src/content/help/staff-guide/` documents
 impersonation as a working feature (`staff-impersonate.md`, referenced from
@@ -210,7 +210,7 @@ Each of these now has a design doc in `docs/specs/`; none of them are implemente
 3. **Reactivation doesn't restore what deactivation destroyed.** →
    `docs/specs/reactivation-restore-spec.md`
 4. **User detail lacks the manager's context.** →
-   `docs/specs/staff-user-detail-context-spec.md`
+   `docs/specs/shipped/staff-user-detail-context-spec.md`
 5. **`admin` and `staff` are interchangeable everywhere.** →
    `docs/specs/admin-vs-staff-spec.md`
 

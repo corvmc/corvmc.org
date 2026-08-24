@@ -628,11 +628,15 @@ When `nextHref` is absent, shows `endLabel` (if provided) or a disabled button.
 `$lib/components/shared/Nav/`. Three components: `Nav.Item` (a row), `Nav.Collapsible` (a row with
 children, held open by the URL), `Nav.Group` (a titled section).
 
-**The staff panel's rows are data, in `src/routes/staff/nav-items.ts` — add features there, not in
-the template.** The template holds only a `key → Icon` map and a `badgeKey → count` map, which is
-what makes a renamed field on `getStaffLayout` a type error instead of a badge that quietly stops.
-`src/routes/band/[slug]/nav-items.ts` is the same pattern with role gating; member is still inline
-markup.
+**Every panel's rows are data — add features there, not in the template.** `staff/nav-items.ts`,
+`member/nav-items.ts`, `band/[slug]/nav-items.ts`. Each layout holds only a `key → Icon` map and, if
+it has badges, a `badgeKey → count` map, which is what makes a renamed field on the layout query a
+type error instead of a badge that quietly stops. Anything conditional — a feature flag, a role —
+belongs in the data module, where a spec can assert it; `band/[slug]/nav-items.ts` records that
+gating expressed as nested `{#if}`s was silently wrong twice.
+
+The panel switcher's tabs come from `$lib/components/shared/panel-tabs.ts`, not hand-built per
+layout.
 
 ```svelte
 <Nav.Group title={section.title} collapsible persistKey={section.key} containsActive={…}>
@@ -641,9 +645,17 @@ markup.
 ```
 
 **Active state.** `Nav.Item` matches the pathname exactly on its own, which lights no row at all on
-a detail page. Pass `active` to override it; staff derives it with `activeNavKey()`, which picks the
-item with the longest matching href. Match on `path === href || path.startsWith(href + '/')` — bare
-`startsWith` lets `/staff/users` claim `/staff/usersomething`.
+a detail page. Pass `active` to override it. The rule lives once, in
+`$lib/components/shared/Nav/active-nav.ts`: `activeNavKey(items, pathname)` picks the item with the
+longest matching href, and each panel wraps it (`activeNavKey`, `activeMemberNavKey`,
+`activeBandNavKey`). Two details it encodes — match on `path === href || path.startsWith(href + '/')`,
+because a bare `startsWith` lets `/staff/users` claim `/staff/usersomething`; and skip any row whose
+href does not start with `/`, because a band's "View Live Site" is filled in by the layout and an
+empty href is a prefix of everything.
+
+A page that resolves to the panel root lights Dashboard, which is the signal that it has no home in
+the nav. `member/nav-items.spec.ts` asserts against that with a commented exemption list — that is
+how you find a surface that shipped without a way in.
 
 **Collapsible groups.** `collapsible` turns the title into a disclosure `<button>`; `persistKey`
 remembers the choice, namespaced by `persistScope` (default `staff`). Groups always render open on

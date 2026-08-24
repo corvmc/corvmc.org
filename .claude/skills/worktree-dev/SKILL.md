@@ -26,17 +26,24 @@ boot.
    Editing through a symlink writes into the main checkout and leaks into every other worktree.
    Restore the original if you replaced one.
 
-3. **Port.** `:5173` may already belong to a different worktree's server. Check first:
+3. **Port.** Handled for you: `scripts/lib/checkout-ports.ts` gives every worktree its own dev and
+   preview port, derived from its path, so `:5173` and `:4173` stay the main checkout's. Vite binds
+   with `strictPort`, so if the port really is taken you get a clear bind failure instead of a
+   silent bump onto a neighbour's next port.
+
+   Print this worktree's ports — the dev server also announces them on boot:
 
    ```bash
-   ps aux | grep '[v]ite'
+   pnpm worktree:ports
    ```
 
-   Give yours its own port and a matching `ORIGIN` — a mismatched `ORIGIN` fails auth and Sentry
-   gating rather than erroring cleanly.
+   `ORIGIN` must match the port you actually serve on; a mismatch fails auth and Sentry gating
+   rather than erroring cleanly. Override both with `PORT` / `PREVIEW_PORT` if you need to.
 
-4. **Launch.** Use `preview_start` with a name from `.claude/launch.json` (`dev`, `preview`, or
-   `storybook`). Never run a dev server through Bash.
+4. **Launch.** `.claude/launch.json` is tracked and its `port` is a single static number, so its
+   entries name the _main_ checkout's ports. From a worktree, start the browser pane with the URL
+   instead of the name — `preview_start` with `{url: "http://localhost:<dev port>"}`, taking the
+   port from step 3. Never run a dev server through Bash.
 
 ## Live Stripe key
 

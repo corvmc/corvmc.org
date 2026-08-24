@@ -14,13 +14,13 @@ A public-facing directory of local music-related businesses and spaces — recor
 
 Manage volunteer sign-ups, shift scheduling, and hour tracking for events and venue operations. Members could browse open volunteer slots, sign up, and log hours. Staff get a dashboard to define needs per event, confirm sign-ups, and track contributions.
 
-**Progress:** Split into two phases in `docs/specs/volunteering-spec.md`. Phase 1 — staff-defined volunteer roles with job descriptions, member hour logging, a staff approval queue, and a date-ranged report by member/role/month — is built behind the `volunteering` flag. Phase 2 — opportunities and shifts, member sign-up, per-event and per-production staffing, and the daily shift-reminder cron — is designed there but deferred, as are certifications (who is cleared for which role, and when that lapses). Approved hours are tracking only; they grant no practice-room credits.
+**Progress:** Built, both phases, specced in `docs/specs/shipped/volunteering-spec.md` and gated by the `volunteering` flag. Phase 1: staff-defined roles with job descriptions, member hour logging, a staff approval queue, and a date-ranged report by member/role/month. Phase 2 (#235): volunteer shifts with member sign-up, a shift attachable to the show it staffs, certifications and clearances (who is cleared for which role, and when that lapses), post-shift feedback, and three crons. Approved hours are tracking only; they grant no practice-room credits. Still open: per-**production** staffing, which waits on productions existing at all; CSV export; bulk approve.
 
 ### Member Voting / Proposals
 
 Formal voting system for a member-driven non-profit. Staff or board create proposals (board elections, budget priorities, policy changes, event programming) with a defined voting window. Members cast ballots, results publish automatically. Could also power a lightweight feature-request board where members upvote ideas to help prioritize development.
 
-**Progress:** The lightweight half is built. `/member/suggestions` is a categorized board where members post ideas about anything — gear, programming, the space, policy, the website — upvote what they agree with, and read a public staff response with a status. Staff get the board sorted by votes, plus duplicate merging (votes transfer, deduped) and moderation: a member's report pulls a suggestion off the board pending review, and an upheld report puts the author's future suggestions through review first, reusing the standing rule community listings established. Not flag-gated, deliberately — a board with no audience collects single-vote posts. Specced in `docs/specs/member-suggestions-spec.md`. Formal balloting is still unbuilt and is a different feature: ballot secrecy, eligibility rules, and a close date have no counterpart in an upvote counter.
+**Progress:** The lightweight half is built. `/member/suggestions` is a categorized board where members post ideas about anything — gear, programming, the space, policy, the website — upvote what they agree with, and read a public staff response with a status. Staff get the board sorted by votes, plus duplicate merging (votes transfer, deduped) and moderation: a member's report pulls a suggestion off the board pending review, and an upheld report puts the author's future suggestions through review first, reusing the standing rule community listings established. Not flag-gated, deliberately — a board with no audience collects single-vote posts. Specced in `docs/specs/shipped/member-suggestions-spec.md`. Formal balloting is still unbuilt and is a different feature: ballot secrecy, eligibility rules, and a close date have no counterpart in an upvote counter.
 
 ### Moderation Appeals
 
@@ -36,32 +36,11 @@ see the decision and the objection together, and a second staffer can be the one
 Would also want an outcome that restores standing automatically when an appeal succeeds, since
 the manual "Restore posting trust" button is easy to forget after the conversation has moved on.
 
-**Progress:** Designed in `docs/specs/moderation-appeals-spec.md`, unbuilt. It rests on one rule
-that is a change to the system rather than an addition: **every moderation action is an upheld
-report.** Reports come from members or from staff — a staffer who notices something files a report
-and upholds it in the same action, which is not a fiction but the written record of why they acted.
-Dismissing never costs anyone anything; upholding is the only thing that moderates. Two things fall
-out: every moderation action is appealable through one mechanism, and every moderation action has a
-stated reason.
-
-That closes a real hole. `setStanding` takes `flagId` as optional today and `setMemberStanding` is a
-staff form that restricts a member with no report behind it — the category least reviewed, since no
-reporter and no triage was involved and one staffer decided alone. The spec makes `flagId` required
-and routes the staff form through a filed-and-upheld report, with a `content_flag.origin` of
-`report` or `staff_action` so the queue does not treat a staff action as pending work.
-
-A `moderation_appeal` row hangs off the upheld flag — the inbox was weighed and rejected because a
-thread has no outcome state, so the restore would still be a button somebody has to remember. Two
-independent outcomes (the content and the standing), so "it broke the rules but a first offense
-isn't probation" is expressible, and granting the standing half _is_ the restore. One appeal per
-decision, reopenable by staff. Nothing pauses while pending. The second-staffer rule is by identity,
-not role, with an asymmetry that keeps a one-staffer collective from deadlocking: you may overturn
-yourself, you may not ratify yourself — which matters most in the staff-filed case, where one person
-would otherwise file, uphold, and rule on the objection.
-
-Standing is no longer part of this: the three tables merged into a scoped `member_standing` in its
-own change (`docs/specs/member-standing-spec.md`), so appeals just calls
-`restoreStanding({ userId, scope, staffId })`.
+**Progress:** Designed in `docs/specs/moderation-appeals-spec.md`, unbuilt — no `moderation_appeal`
+table exists and `setStanding` still takes `flagId` as optional. The spec rests on one rule that is a
+change to the system rather than an addition — **every moderation action is an upheld report**, filed
+by a member or by the staffer who acted — from which appealability and a stated reason both fall out.
+Read it there rather than here.
 
 Still open, and not an appeals problem: **suggestions have no return state.** Community listings do
 — `rejected` and `draft` are both editable and republishable, so a turned-down listing is a
@@ -147,7 +126,7 @@ Track grant applications, deadlines, award status, and reporting obligations. Co
 
 A regional music calendar with three event layers: venue events auto-populated from internal systems, community-submitted events moderated by staff, and partner feeds batch-imported from sponsors and affiliated venues. On the export side, syndicate events out to other local aggregators via standardized feeds, API, or formatted blasts — positioning the venue as a two-way hub for the local music scene.
 
-**Progress:** Phases 1 and 2 shipped. Phase 1 made `/events` a unified gig guide: next-3 CMC hero posters plus a poster-forward list of CMC and member-band events, a compact mini-calendar date-jumper, and band events rendering on `/events/[id]` with band attribution (`docs/specs/community-calendar-spec.md`). Phase 2 added the third layer the extension point was left for — members author `source='community'` listings for off-site shows, publishing directly until staff uphold a report against them, after which their listings queue for review; anyone with no account can send an "Event Tip" through the contact form into the staff inbox. Cancelled events now stay on the guide marked cancelled instead of vanishing (`docs/specs/community-events-spec.md`). Still to come: partner feed imports and `.ics`/RSS syndication (no calendar UI package was needed — built on the already-installed `@internationalized/date`).
+**Progress:** Phases 1 and 2 shipped. Phase 1 made `/events` a unified gig guide: next-3 CMC hero posters plus a poster-forward list of CMC and member-band events, a compact mini-calendar date-jumper, and band events rendering on `/events/[id]` with band attribution (`docs/specs/shipped/community-calendar-spec.md`). Phase 2 added the third layer the extension point was left for — members author `source='community'` listings for off-site shows, publishing directly until staff uphold a report against them, after which their listings queue for review; anyone with no account can send an "Event Tip" through the contact form into the staff inbox. Cancelled events now stay on the guide marked cancelled instead of vanishing (`docs/specs/shipped/community-events-spec.md`). Still to come: partner feed imports and `.ics`/RSS syndication (no calendar UI package was needed — built on the already-installed `@internationalized/date`).
 
 ### Club Management
 
@@ -267,7 +246,7 @@ Areas where the npm ecosystem is thin — worth revisiting periodically.
 
 ## Feature-Flagged (Built, Not Yet Enabled)
 
-Features behind feature flags in `src/lib/server/feature-flags.ts`. Toggled via Staff Settings.
+Features behind feature flags in `src/lib/server/feature-flags.ts` — all eight of `ALL_FLAGS`, in declaration order. Toggled via Staff Settings.
 
 ## Staff Inbox
 
@@ -312,3 +291,29 @@ Knowledge base with staff-managed articles for members. Staff can create and edi
 **Routes (staff):** `/staff/help`, `/staff/help/create`, `/staff/help/[id]`
 **Routes (member):** `/member/help`, `/member/help/[slug]`
 **API:** `/api/help`, `/api/help/search`, `/api/help/[slug]`
+
+## Content Flags
+
+**Flag:** `contentFlags`
+
+Member reporting and the staff triage queue. Members report a profile, band, event or suggestion; staff uphold or dismiss, and an upheld report writes `member_standing`. The flag gates the member-facing report button only — the staff queue is always on.
+
+**Routes (staff):** `/staff/flags`, `/staff/flags/[id]`
+
+## Direct Messages
+
+**Flag:** `directMessages`
+
+Member↔member messaging with request/accept consent, blocks, silent drops and reporting. Shares the inbox transport with member↔staff portal chat, which is not flagged.
+
+**Routes:** `/member/messages`, `/member/messages/[id]`
+
+## Volunteering
+
+**Flag:** `volunteering`
+
+Volunteer roles, hour logging and approval, shifts and sign-up, certifications and clearances, post-shift feedback. Gates the member surface only; the staff panel always shows it.
+
+**Routes (staff):** `/staff/volunteer`, `/staff/volunteer/{roles,roles/[id],shifts,shifts/[id],certifications,clearances,report}`
+**Routes (member):** `/member/volunteer`, `/member/volunteer/{start,interests,blocked,feedback/[signupId]}`
+**API:** `/api/cron/{shift-reminders,complete-shifts,shift-feedback}`

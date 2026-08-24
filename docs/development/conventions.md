@@ -10,7 +10,9 @@ When building a new feature, work through these phases in order:
 
 1. **Design** — understand the domain and map the workflows before proposing models. For
    anything that touches multiple files or introduces schema, write a spec in
-   `docs/specs/` first (the existing specs are good templates).
+   `docs/specs/` first. `docs/specs/shipped/` holds specs for features that already
+   exist — good templates, and the place to check whether the thing you are designing has
+   been argued about before.
 2. **Schema** — add columns/tables in `src/lib/server/db/schema/`, then generate the
    migration yourself with `pnpm db:generate` and **review the SQL** before committing.
    Add shared types to `src/lib/types/` if the feature introduces new structures (JSONB
@@ -31,9 +33,34 @@ When building a new feature, work through these phases in order:
    (pre-existing errors in unrelated files can be ignored).
 8. **Document** — add the feature row to `docs/reports/parity-report.md`; update/add help
    articles and run the docs checks (see
-   [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below).
+   [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). If the
+   feature had a spec, **retire it now** — see below.
 9. **Commit** — descriptive message summarizing what the feature adds. **No co-author
    lines.**
+
+### Retiring a spec
+
+A spec describes what you intend to build. The moment it is built, it describes live
+behavior instead — and a document that describes live behavior with a spec's authority is
+how a doc folder starts lying, because nothing makes anyone update it. `docs/specs/` held
+23 such files before [reports/spec-audit.md](../reports/spec-audit.md) sorted them out, and
+three of them asserted a feature was unbuilt that had shipped months earlier.
+
+So when a feature lands, do three things in the same PR:
+
+1. **Write the behavior where behavior lives** — a section in
+   [business-workflows.md](business-workflows.md) for anything with a code path worth
+   tracing, and help articles for anything a member or staffer touches. The workflow
+   sections all follow one shape: the story, the code path, data touched, where it breaks.
+2. **Move the spec to `docs/specs/shipped/`** and fix the links that pointed at it. What
+   survives there is the design rationale — the options weighed and rejected — which is the
+   half no manual article ever carries.
+3. **If only part of it shipped, split it.** `specs/reservation-confirmation-window.md` is
+   the worked example: the shipped phases became prose in business-workflows §1 and the file
+   was rewritten down to the one phase that was never built.
+
+Nothing enforces this. It is the last thing anyone feels like doing and the first thing that
+rots, which is exactly why it is written down.
 
 ## Table rebuilds on D1
 
@@ -148,9 +175,9 @@ Every script in `package.json`:
 
 | Script                          | What it does                                                                                                                                                          |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dev`                           | Vite dev server on :5173                                                                                                                                              |
+| `dev`                           | Vite dev server on :5173 (a worktree gets its own port — `scripts/lib/checkout-ports.ts`)                                                                             |
 | `build`                         | `vite build` (output: `.svelte-kit/cloudflare/`)                                                                                                                      |
-| `preview`                       | Serve the production build on :4173                                                                                                                                   |
+| `preview`                       | Serve the production build on :4173 (a worktree gets its own port)                                                                                                    |
 | `prepare`                       | (auto on install) svelte-kit sync + lefthook install                                                                                                                  |
 | `check` / `check:watch`         | svelte-check type checking                                                                                                                                            |
 | `test:unit`                     | Vitest (watch mode; `--run` for one-shot)                                                                                                                             |

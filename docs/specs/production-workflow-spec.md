@@ -65,7 +65,7 @@ always a function of its inputs. Day-of adjustments happen on a clipboard, not i
 database.
 
 **Stripe is the ledger and settlement only reads it.** Per
-[finance-spec.md](finance-spec.md), settlement creates no Order or Transaction tables and
+[finance-spec.md](shipped/finance-spec.md), settlement creates no Order or Transaction tables and
 writes nothing back to Stripe. Ticket revenue is read live from Stripe at settle time and
 snapshotted onto the production. Door cash, expenses, and band payouts are _recorded_
 amounts — the app is a settlement worksheet and a record of what was handed over, not a
@@ -753,7 +753,7 @@ to complicate the arithmetic: `purchaseTickets` passes no `eligibleCredits` to
 
 **Do not add a local `ticket.pricePaidCents`.** Storing the amount on the ticket row is
 the obvious shortcut and it reintroduces precisely the local ledger that
-[finance-spec.md](finance-spec.md) removed. Stripe is the ledger; a second copy is a
+[finance-spec.md](shipped/finance-spec.md) removed. Stripe is the ledger; a second copy is a
 second thing to reconcile.
 
 **`ticket.stripePaymentRecordId` already exists**, added by the prerequisite fix above

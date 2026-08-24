@@ -172,7 +172,7 @@ export async function listMembers(filters?: MemberFilters) {
  * `startDirectThread`'s silent drops exist to withhold — a sender who can spot a
  * closed door can tell a decline from an unopened request. Sending stays
  * silently dropped instead. Same reasoning keeps the directory Message button
- * visible for everyone; see `docs/specs/direct-messages-spec.md`.
+ * visible for everyone; see `docs/specs/shipped/direct-messages-spec.md`.
  */
 export async function searchDirectoryMembers(search: string, viewerId: string, limit = 10) {
 	// `tagline` rides along because two members called Chris are otherwise

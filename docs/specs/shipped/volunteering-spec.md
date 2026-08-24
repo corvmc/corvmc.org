@@ -13,10 +13,13 @@ logs, approving or rejecting each one, and a report rolls the approved hours up
 by member, by role, and by month over any date range.
 
 Phase 1 is roles and hour logging: retrospective, member-initiated,
-staff-approved. Two further pieces are designed here but **not built** — Phase 2
-(volunteer opportunities and shifts, member sign-up, per-event staffing) and
-certifications (who is cleared for what, and when that lapses). The Phase 1
-schema anticipates them and nothing more.
+staff-approved. Phase 2 (volunteer opportunities and shifts, member sign-up,
+per-event staffing) and certifications (who is cleared for what, and when that
+lapses) were designed here as future work and **both shipped in #235** — six
+further tables, `/staff/volunteer/{shifts,certifications,clearances}` and
+`/member/volunteer/{start,feedback}`. Everything below is live; the phase
+headings are kept because they still describe how the schema was built up, not
+what is missing.
 
 Approved volunteer hours are a record, not a currency. They do not grant
 practice-room credits and they never touch the finance ledger.
@@ -164,7 +167,7 @@ volunteer_hour_log
   id                uuid pk
   userId            uuid fk → user            cascade
   volunteerRoleId   uuid fk → volunteer_role  restrict
-  shiftId           text?                     — Phase 2 hook; always null today
+  shiftId           uuid? fk → volunteer_shift set null   — added in Phase 2
   workedOn          timestamp                 — calendar date, anchored at noon club time
   minutes           integer                   — 1..720, check-constrained 1..1440
   description       text                      — what the member actually did
@@ -190,12 +193,14 @@ UTC-ahead zone, where midnight local is the _previous_ UTC day and every
 1st-of-the-month log buckets into the prior month. Noon costs nothing and removes
 the class of bug. `hour-log-service.spec.ts` pins it.
 
-**`shiftId` is a bare text column, not a foreign key.** The Phase 2 table does
-not exist, and Phase 1 must not create an empty one just to satisfy a
-constraint. Adding the real FK in Phase 2 forces a SQLite table rebuild, but
-`volunteer_hour_log` has no FK children, so the D1 cascade hazard documented in
-`docs/development/conventions.md` does not apply and `pnpm db:generate`'s
-rebuild script handles it unattended.
+**`shiftId` shipped as a bare text column and became a real foreign key in
+Phase 2.** Phase 1 must not create an empty `volunteer_shift` table just to
+satisfy a constraint, so it did not; Phase 2 added the FK
+(`onDelete: 'set null'`), which forced the SQLite table rebuild this paragraph
+anticipated. `volunteer_hour_log` has no FK children, so the D1 cascade hazard
+documented in `docs/development/conventions.md` did not apply and
+`pnpm db:generate`'s rebuild script handled it unattended — the prediction is
+recorded here because it held.
 
 ---
 
@@ -647,8 +652,9 @@ auth role is now unconditional.
 
 ## Schema
 
-Two new tables, taking the app from 29 to 31. The certification tables below are
-designed, not created — see [Certifications, unbuilt](#certifications).
+Phase 1 added two tables, taking the app from 29 to 31. Phase 2 added six more
+(shifts, sign-up, feedback, and the three certification tables) — see
+[Certifications](#certifications).
 
 ### volunteer_role
 
@@ -1039,21 +1045,24 @@ terms, but it is no longer a question of _whether_.
 | Finance and Stripe                      | No interaction                                        |
 | Auth roles and permissions              | No new roles; the dead `volunteer` role is left alone |
 | Postmark templates                      | Generic `notification` alias covers all three emails  |
-| Cron and `wrangler.toml`                | Nothing scheduled — the shift reminder is Phase 2     |
+| Cron and `wrangler.toml`                | Phase 1 scheduled nothing; Phase 2 added three jobs   |
 | Reservations, bands, equipment, tickets | No interaction                                        |
 
 ---
 
 ## Deferred
 
-- **Opportunities, shifts, and sign-up** — the whole of Phase 2, above. This is
-  the bulk of the original IDEAS.md entry.
-- **Certifications** — designed above. The smaller of the two unbuilt pieces,
-  and it makes Phase 2 smaller, so it is the better one to build next.
-- **The daily 09:00 shift-reminder cron** — nothing to remind about until shifts
-  exist.
-- **Per-event and per-production staffing** — `production-workflow-spec.md`'s
-  deferred hook lands in Phase 2.
+This list was written at the end of Phase 1. The first four entries have since
+shipped in #235 and are struck through; the rest are still open.
+
+- ~~**Opportunities, shifts, and sign-up**~~ — shipped. `volunteer_shift`,
+  `volunteer_signup`, `/staff/volunteer/shifts`, `/member/volunteer/start`.
+- ~~**Certifications**~~ — shipped. Three tables, `/staff/volunteer/certifications`
+  and `/staff/volunteer/clearances`.
+- ~~**The daily 09:00 shift-reminder cron**~~ — shipped, alongside
+  `complete-shifts` and `shift-feedback`.
+- ~~**Per-event and per-production staffing**~~ — the per-event half shipped; a
+  shift can name the show it staffs. Productions still do not exist.
 - **CSV export** — the report is what a board packet needs, and CSV is the
   obvious next ask. Deferred because there is no CSV endpoint anywhere in this
   app yet, and the first one should set the pattern deliberately rather than as

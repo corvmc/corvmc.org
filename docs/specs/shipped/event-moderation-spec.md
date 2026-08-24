@@ -13,7 +13,7 @@ system (member/band profile reports, `/staff/flags` triage queue) to events.
   already gated to band admins; a flag is the kill switch. (Pre-approval was
   considered and deliberately deferred in the community-calendar spec.)
 
-  > **Amended by `docs/specs/community-events-spec.md`.** This decision
+  > **Amended by `docs/specs/shipped/community-events-spec.md`.** This decision
   > originally read "No `pending_review` status and no staff pre-approval
   > queue." The status now exists — community listings need somewhere to sit
   > while staff look at them. What still holds, and what this decision was

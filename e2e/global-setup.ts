@@ -13,6 +13,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import type { FullConfig } from '@playwright/test';
+import { E2E_PREVIEW_PORT } from './state-dir';
 
 /**
  * Guard against a zombie `vite preview` serving a stale build.
@@ -31,7 +32,7 @@ import type { FullConfig } from '@playwright/test';
  * local preview and differ for an adopted foreign one.
  */
 async function assertPreviewMatchesBuild(config: FullConfig) {
-	const port = config.webServer?.port ?? 4173;
+	const port = config.webServer?.port ?? E2E_PREVIEW_PORT;
 
 	let served: string | undefined;
 	try {

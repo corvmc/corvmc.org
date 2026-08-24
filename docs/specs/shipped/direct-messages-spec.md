@@ -73,7 +73,7 @@ from "this never came up" — the same idiom as `communityEventStanding`.
 **Superseded.** This table was the third domain to need standing, which fired the
 rule-of-three note in `member-suggestions-spec.md`; all three are now one
 `member_standing` keyed `(userId, scope)`. Two things above changed with it, and
-`docs/specs/member-standing-spec.md` has the reasoning:
+`docs/specs/shipped/member-standing-spec.md` has the reasoning:
 
 - **`source` is gone.** It existed only because this one table held both a
   moderation decision and a member preference. Those split: the two staff/report
