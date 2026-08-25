@@ -51,7 +51,7 @@
 			<input {...vote.fields.suggestionId.as('hidden', suggestion.id)} />
 			<SubmitButton
 				label={String(suggestion.voteCount)}
-				class="btn-sm flex-col gap-0 h-auto py-1 {suggestion.hasVoted
+				class="h-auto flex-col gap-0 py-1 btn-sm {suggestion.hasVoted
 					? 'btn-primary'
 					: 'btn-outline'}"
 			>

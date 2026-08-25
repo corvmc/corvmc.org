@@ -78,7 +78,7 @@
 				in, and an aria-label would replace that text as the accessible name —
 				leaving a screen reader with "Choose a section" and no answer.
 			-->
-			<DropdownMenu.Trigger class="btn btn-sm depth-2 flex w-full items-center justify-between">
+			<DropdownMenu.Trigger class="depth-2 btn flex w-full items-center justify-between btn-sm">
 				<span class="flex items-center">{@render contents(activeTab)}</span>
 				<IconChevronDown size={14} />
 			</DropdownMenu.Trigger>

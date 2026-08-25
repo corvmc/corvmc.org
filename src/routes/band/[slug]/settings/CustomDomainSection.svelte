@@ -77,7 +77,7 @@
 			{/if}
 
 			{#if domain.verification && domain.status !== 'active'}
-				<div class="overflow-x-auto mt-3">
+				<div class="mt-3 overflow-x-auto">
 					<table class="table table-sm">
 						<thead>
 							<tr><th>Type</th><th>Name</th><th>Value</th></tr>
@@ -107,7 +107,7 @@
 				</div>
 			{/if}
 
-			<div class="flex flex-wrap justify-end gap-2 mt-4">
+			<div class="mt-4 flex flex-wrap justify-end gap-2">
 				{#if domain.status !== 'active'}
 					<Form
 						remote={refreshCustomDomain}

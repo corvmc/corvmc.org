@@ -55,9 +55,7 @@ See `src/lib/components/shared/EmptyState.stories.svelte`.
 		title: 'Shared/MyComponent',
 		component: MyComponent,
 		tags: ['autodocs'],
-		args: {
-			/* defaults shared by all stories */
-		}
+		args: {/* defaults shared by all stories */}
 	});
 </script>
 

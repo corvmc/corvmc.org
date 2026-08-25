@@ -132,7 +132,7 @@
 	"sign up" reads as "pay us" to anyone skimming.
 -->
 <Section>
-	<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4 mb-12">
+	<div class="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-4 text-center">
 		<h2 class="text-4xl font-bold tracking-tight">Volunteer with Us</h2>
 		<p class="text-base leading-relaxed text-fg-2">
 			Volunteers are the beating heart of our organization! Every show, every piece of gear, and
@@ -141,7 +141,7 @@
 		</p>
 	</div>
 
-	<div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
+	<div class="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
 		{#each volunteerGroups as group (group.title)}
 			<div class="flex flex-col gap-3 rounded-lg p-6 surface">
 				<div class="flex items-center gap-2 text-cmc-navy">
@@ -163,7 +163,7 @@
 		{/each}
 	</div>
 
-	<div class="text-center max-w-2xl mx-auto flex flex-col items-center gap-4">
+	<div class="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
 		<Button href={VOLUNTEER_SIGNUP_URL} variant="default" size="lg"
 			>Create a Free Account to Volunteer</Button
 		>
@@ -171,8 +171,8 @@
 </Section>
 
 <!-- Become a Sustaining Member (pointer to /membership) -->
-<section class="section-tint-secondary py-16 px-6">
-	<div class="max-w-2xl mx-auto text-center flex flex-col items-center gap-4">
+<section class="section-tint-secondary px-6 py-16">
+	<div class="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
 		<h2 class="text-4xl font-bold tracking-tight">Become a Sustaining Member</h2>
 		<p class="text-base leading-relaxed text-fg-2">
 			The most direct way to support the space is a monthly contribution on a sliding scale —
@@ -187,10 +187,10 @@
 <!-- Other Ways to Contribute -->
 <Section tint="warning">
 	<SectionHeading title="Other Ways to Contribute" />
-	<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+	<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
 		{#each otherWays as item (item.title)}
 			<div
-				class="flex flex-col items-center text-center gap-3 rounded-lg p-6"
+				class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
 				style="background: var(--surface); border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))"
 			>
 				<div class="text-cmc-navy">

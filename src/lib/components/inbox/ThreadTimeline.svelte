@@ -63,8 +63,7 @@
 	const otherName = $derived(contactName ?? (viewerUserId ? 'CorvMC' : 'Contact'));
 
 	type Entry =
-		| { kind: 'message'; at: number; message: Message }
-		| { kind: 'note'; at: number; note: Note };
+		{ kind: 'message'; at: number; message: Message } | { kind: 'note'; at: number; note: Note };
 
 	const entries = $derived.by(() => {
 		const combined: Entry[] = [
@@ -101,7 +100,7 @@
 			</div>
 		{:else}
 			{@const note = entry.note}
-			<div class="border-base-content/20 mx-6 border-l-2 border-dashed py-1 pl-3">
+			<div class="mx-6 border-l-2 border-dashed border-base-content/20 py-1 pl-3">
 				<div class="flex items-center gap-1.5 text-xs opacity-50">
 					<IconNote size={13} />
 					{note.authorName ?? 'Staff'} · {formatDateTime(note.createdAt)}

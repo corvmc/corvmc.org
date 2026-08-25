@@ -120,7 +120,7 @@
 		<!-- SubmitButton renders its `label` prop, not children. -->
 		<SubmitButton
 			variant="primary"
-			class="w-full mt-4"
+			class="mt-4 w-full"
 			label={remainingCents <= 0 ? 'Confirm (Free Hours)' : `Pay $${formatDollars(chargeTotal)}`}
 		/>
 	</Form>

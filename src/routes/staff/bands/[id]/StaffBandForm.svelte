@@ -64,7 +64,7 @@
 		</SubmitButton>
 	</PageHeader>
 	<PageContent width="3xl">
-		<div class="grid gap-6 lg:grid-cols-2 mb-6">
+		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Band Info">
 				<div class="grid grid-cols-1 gap-x-2">
 					<Field name="name" type="text" value={band.name} />

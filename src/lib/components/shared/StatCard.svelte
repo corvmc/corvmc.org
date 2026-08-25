@@ -24,7 +24,7 @@
 	} = $props();
 </script>
 
-<div class="stat bg-base-100 rounded-box shadow {extraClass}">
+<div class="stat rounded-box bg-base-100 shadow {extraClass}">
 	<div class="stat-title">{title}</div>
 	<div class="stat-value {size === 'sm' ? 'text-2xl' : ''} {valueClass}">{value}</div>
 </div>

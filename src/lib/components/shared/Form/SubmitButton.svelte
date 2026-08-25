@@ -83,7 +83,7 @@
 		{...rest}
 	>
 		{#if ctx.status === 'pending'}
-			<span class="loading loading-spinner loading-sm"></span>
+			<span class="loading loading-sm loading-spinner"></span>
 			{activeLabel}
 		{:else if ctx.status === 'success'}
 			<IconCheck size={20} />

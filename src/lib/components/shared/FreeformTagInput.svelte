@@ -79,7 +79,7 @@
 
 		{#if showSuggestions && filteredSuggestions.length > 0}
 			<ul
-				class="menu z-10 absolute w-full max-h-40 overflow-y-auto rounded-box bg-base-100 p-1 shadow-lg"
+				class="menu absolute z-10 max-h-40 w-full overflow-y-auto rounded-box bg-base-100 p-1 shadow-lg"
 			>
 				{#each filteredSuggestions as suggestion (suggestion)}
 					<li>

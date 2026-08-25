@@ -26,8 +26,8 @@
 	}
 </script>
 
-<div class="border border-base-300 rounded-box overflow-hidden">
-	<div class="flex items-center gap-1 border-b border-base-300 px-2 py-1 bg-base-200/50">
+<div class="overflow-hidden rounded-box border border-base-300">
+	<div class="flex items-center gap-1 border-b border-base-300 bg-base-200/50 px-2 py-1">
 		<Button
 			type="button"
 			variant="ghost"
@@ -72,15 +72,14 @@
 		<textarea
 			bind:this={textarea}
 			bind:value
-			class="w-full min-h-64 p-3 font-mono text-sm bg-base-100 resize-y focus:outline-none"
-			placeholder="Write your article in Markdown..."
-		></textarea>
+			class="min-h-64 w-full resize-y bg-base-100 p-3 font-mono text-sm focus:outline-none"
+			placeholder="Write your article in Markdown..."></textarea>
 	{:else}
 		<div class="min-h-64 p-3">
 			{#if value.trim()}
 				<MarkdownPreview content={value} />
 			{:else}
-				<p class="text-sm opacity-50 italic">Nothing to preview</p>
+				<p class="text-sm italic opacity-50">Nothing to preview</p>
 			{/if}
 		</div>
 	{/if}

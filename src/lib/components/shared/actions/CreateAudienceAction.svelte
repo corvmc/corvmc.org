@@ -70,7 +70,7 @@
 				class="input w-full font-mono text-sm"
 				oninput={() => (slugManuallyEdited = true)}
 			/>
-			<p class="text-subtle mt-1">Used in the signup URL: /subscribe/{slug || '...'}</p>
+			<p class="mt-1 text-subtle">Used in the signup URL: /subscribe/{slug || '...'}</p>
 		</fieldset>
 		<Field name="description" type="textarea" label="Description" bind:value={description} />
 		<Field

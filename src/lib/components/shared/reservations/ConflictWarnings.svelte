@@ -71,7 +71,7 @@
 	{#if warnings.length > 0}
 		<div class="space-y-2">
 			{#each warnings as warning, i (i)}
-				<div class="alert alert-warning text-sm py-2">
+				<div class="alert py-2 text-sm alert-warning">
 					{warning}
 				</div>
 			{/each}
@@ -80,7 +80,7 @@
 
 	{#snippet pending()}
 		<div class="flex items-center gap-2 py-1">
-			<span class="loading loading-spinner loading-xs"></span>
+			<span class="loading loading-xs loading-spinner"></span>
 			<span class="text-subtle">Checking conflicts...</span>
 		</div>
 	{/snippet}

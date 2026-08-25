@@ -178,7 +178,7 @@
 		{#if members.length === 0}
 			{@render empty('members')}
 		{:else}
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+			<div class="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-3">
 				{#each members.slice(0, limit) as member (member.id)}
 					<IdCard
 						href="/member/directory/members/{member.id}"
@@ -201,7 +201,7 @@
 	{:else if bands.length === 0}
 		{@render empty('bands')}
 	{:else}
-		<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
+		<div class="grid grid-cols-2 justify-items-center gap-6 sm:grid-cols-3 lg:grid-cols-4">
 			{#each bands.slice(0, limit) as b (b.id)}
 				<VinylCard
 					href="/member/directory/bands/{b.slug}"

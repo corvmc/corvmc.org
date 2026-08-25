@@ -47,7 +47,7 @@
 <PageContent width="3xl">
 	<InfoCard title="Members">
 		{#snippet header(title)}
-			<header class="flex justify-between items-center">
+			<header class="flex items-center justify-between">
 				<span class="card-title">{title}</span>
 				<div class="flex gap-2">
 					<InviteByEmailAction bandId={id} />

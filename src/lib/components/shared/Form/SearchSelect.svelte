@@ -130,7 +130,7 @@
 
 		{#snippet pending()}
 			<div class="flex items-center gap-2 p-2">
-				<span class="loading loading-spinner loading-sm"></span>
+				<span class="loading loading-sm loading-spinner"></span>
 				<span class="text-muted">Searching...</span>
 			</div>
 		{/snippet}

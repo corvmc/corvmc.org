@@ -98,7 +98,7 @@
 	</div>
 </PageHeader>
 <PageContent>
-	<div class="flex flex-wrap items-end gap-2 mb-4">
+	<div class="mb-4 flex flex-wrap items-end gap-2">
 		<SearchInput
 			bind:value={search}
 			placeholder="Search equipment..."
@@ -125,7 +125,7 @@
 
 	{#await equipmentResult}
 		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
+			<span class="loading loading-lg loading-spinner"></span>
 		</div>
 	{:then equipment}
 		{#if equipment.length === 0}
@@ -138,16 +138,16 @@
 			}, {})}
 			{#each Object.entries(groups) as [groupName, items] (groupName)}
 				<div class="mb-6">
-					<h3 class="text-muted font-semibold mb-2">{groupName}</h3>
+					<h3 class="mb-2 text-muted font-semibold">{groupName}</h3>
 					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 						{#each items as eq (eq.id)}
-							<div class="card bg-base-100 border shadow-sm">
+							<div class="card border bg-base-100 shadow-sm">
 								<CardBody padding="sm">
 									<CardTitle size="sm">{eq.name}</CardTitle>
 									{#if eq.description}
-										<p class="text-subtle line-clamp-2">{eq.description}</p>
+										<p class="line-clamp-2 text-subtle">{eq.description}</p>
 									{/if}
-									<div class="flex flex-wrap items-center gap-1 mt-1">
+									<div class="mt-1 flex flex-wrap items-center gap-1">
 										<span class="tooltip" data-tip={eq.condition}>
 											{#if eq.condition === 'good'}
 												<IconCircleCheck size={14} class="text-success" />
@@ -162,7 +162,7 @@
 											{eq.availableQuantity} available
 										</span>
 									</div>
-									<div class="card-actions mt-2">
+									<div class="mt-2 card-actions">
 										<Button
 											variant="default"
 											size="xs"
@@ -182,7 +182,7 @@
 	{/await}
 
 	<div class="border-t pt-4">
-		<p class="text-muted mb-2">Can't find what you need?</p>
+		<p class="mb-2 text-muted">Can't find what you need?</p>
 		<Button variant="default" size="sm" outline onclick={openFreeFormRequest}
 			>Describe Your Request</Button
 		>

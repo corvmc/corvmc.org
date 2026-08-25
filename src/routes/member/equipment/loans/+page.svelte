@@ -73,23 +73,23 @@
 
 					<dl class="mt-2 grid gap-x-4 gap-y-1 text-sm" style="grid-template-columns: auto 1fr;">
 						{#if loan.quantity > 1}
-							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Quantity">
+							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Quantity">
 								<IconHash size={14} /><span class="hidden sm:inline">Qty</span>
 							</dt>
 							<dd>{loan.quantity}</dd>
 						{/if}
-						<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Requested pickup">
+						<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Requested pickup">
 							<IconCalendar size={14} /><span class="hidden sm:inline">Pickup</span>
 						</dt>
 						<dd>{formatDate(loan.requestedPickupDate)}</dd>
 						{#if loan.estimatedReturnDate}
-							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Estimated return">
+							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Estimated return">
 								<IconCalendar size={14} /><span class="hidden sm:inline">Est. Return</span>
 							</dt>
 							<dd>{formatDate(loan.estimatedReturnDate)}</dd>
 						{/if}
 						{#if loan.estimatedCostCents != null}
-							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Estimated cost">
+							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Estimated cost">
 								<IconCoin size={14} /><span class="hidden sm:inline">Est. Cost</span>
 							</dt>
 							<dd>
@@ -97,19 +97,19 @@
 							</dd>
 						{/if}
 						{#if loan.scheduledPickupDate}
-							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Confirmed pickup">
+							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Confirmed pickup">
 								<IconCalendarCheck size={14} /><span class="hidden sm:inline">Confirmed</span>
 							</dt>
 							<dd>{formatDate(loan.scheduledPickupDate)}</dd>
 						{/if}
 						{#if loan.dueDate}
-							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Due date">
+							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Due date">
 								<IconClock size={14} /><span class="hidden sm:inline">Due</span>
 							</dt>
 							<dd class:text-error={loan.isOverdue}>{formatDate(loan.dueDate)}</dd>
 						{/if}
 						{#if loan.dailyRateCents != null}
-							<dt class="opacity-60 tooltip flex items-center gap-1" data-tip="Daily rate">
+							<dt class="tooltip flex items-center gap-1 opacity-60" data-tip="Daily rate">
 								<IconCoin size={14} /><span class="hidden sm:inline">Rate</span>
 							</dt>
 							<dd>{formatCents(loan.dailyRateCents)}/day</dd>
@@ -122,7 +122,7 @@
 				</CardBody>
 			</div>
 		{:else}
-			<p class="text-center opacity-60 py-8">No active loans.</p>
+			<p class="py-8 text-center opacity-60">No active loans.</p>
 		{/each}
 	{:else}
 		{#each data.past as loan (loan.id)}
@@ -151,7 +151,7 @@
 				</CardBody>
 			</div>
 		{:else}
-			<p class="text-center opacity-60 py-8">No past loans.</p>
+			<p class="py-8 text-center opacity-60">No past loans.</p>
 		{/each}
 	{/if}
 </PageContent>

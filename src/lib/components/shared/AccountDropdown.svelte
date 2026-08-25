@@ -40,11 +40,11 @@
 
 	{#if open}
 		<div
-			class="absolute right-0 top-full z-[1000] mt-2 w-56 rounded-lg border border-base-300 bg-base-100 shadow-lg"
+			class="absolute top-full right-0 z-[1000] mt-2 w-56 rounded-lg border border-base-300 bg-base-100 shadow-lg"
 		>
 			<div class="border-b border-base-300 px-4 py-3">
-				<p class="text-sm font-medium truncate">{me?.name}</p>
-				<p class="text-subtle truncate">{me?.email}</p>
+				<p class="truncate text-sm font-medium">{me?.name}</p>
+				<p class="truncate text-subtle">{me?.email}</p>
 			</div>
 
 			<ul class="menu menu-sm p-2">

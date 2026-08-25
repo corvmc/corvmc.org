@@ -31,7 +31,7 @@
 		{@render icon?.()}
 		<span class="grow">{label}</span>
 		{#if badge}
-			<span class="badge badge-primary badge-sm">{badge > 99 ? '99+' : badge}</span>
+			<span class="badge badge-sm badge-primary">{badge > 99 ? '99+' : badge}</span>
 		{/if}
 	</a>
 	{#if isOpen}

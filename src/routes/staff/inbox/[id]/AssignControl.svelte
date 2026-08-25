@@ -32,7 +32,7 @@
 
 {#await getAssignableStaff()}
 	<div class="flex items-end gap-2 py-2">
-		<span class="loading loading-spinner loading-xs"></span>
+		<span class="loading loading-xs loading-spinner"></span>
 		<span class="text-subtle text-sm">Loading assignees…</span>
 	</div>
 {:then staffUsers}

@@ -142,7 +142,7 @@
 	form, with no content a crawler or link preview would want.
 -->
 <ErrorToastBoundary>
-	<div class="flex items-center justify-center py-16 px-4">
+	<div class="flex items-center justify-center px-4 py-16">
 		<div class="w-full max-w-sm">
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
@@ -190,7 +190,7 @@
 										variant="ghost"
 										size="xs"
 										shape="square"
-										class="absolute right-2 top-1/2 -translate-y-1/2"
+										class="absolute top-1/2 right-2 -translate-y-1/2"
 										onclick={() => (showPassword = !showPassword)}
 										tabindex={-1}
 									>
@@ -215,7 +215,7 @@
 						<SubmitButton
 							label={mode === 'login' ? 'Sign in' : 'Create account'}
 							variant="primary"
-							class="w-full mt-1"
+							class="mt-1 w-full"
 						/>
 					</Form>
 

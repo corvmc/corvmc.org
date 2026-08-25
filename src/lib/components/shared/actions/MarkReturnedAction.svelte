@@ -40,7 +40,7 @@
 	{#snippet form()}
 		<input {...fields.id.as('hidden', loanId)} />
 		{#if chargeMessage}
-			<div class="bg-base-200 rounded p-3 mb-3 text-sm">
+			<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 				<p>{chargeMessage}</p>
 			</div>
 		{/if}

@@ -442,8 +442,7 @@
 									name="description"
 									bind:value={editDescription}
 									class="textarea w-full"
-									rows="4"
-								></textarea>
+									rows="4"></textarea>
 							</FormField>
 
 							<FormField label="Date" id="editDate" issues={[]}>
@@ -544,7 +543,7 @@
 									class="input w-full"
 									required={editTicketingEnabled}
 								/>
-								<span class="label-text-alt opacity-60 mt-1"> Leave blank for a free event. </span>
+								<span class="label-text-alt mt-1 opacity-60"> Leave blank for a free event. </span>
 							</FormField>
 
 							<!-- Selling through our checkout is the one thing a band gig cannot
@@ -579,7 +578,7 @@
 											class="input w-full"
 										/>
 									</FormField>
-									<p class="text-muted mt-2">Leave capacity blank for unlimited tickets.</p>
+									<p class="mt-2 text-muted">Leave capacity blank for unlimited tickets.</p>
 								</Card>
 							{/if}
 
@@ -603,7 +602,7 @@
 										</label>
 
 										{#if rebookConfirmed}
-											<div class="grid grid-cols-2 gap-4 mt-2">
+											<div class="mt-2 grid grid-cols-2 gap-4">
 												<FormField label="Reservation start" id="editResStart" issues={[]}>
 													<input
 														id="editResStart"
@@ -664,7 +663,7 @@
 									</label>
 
 									{#if reserveSpace}
-										<Card tone="base-200" class="p-4 space-y-4 mt-2">
+										<Card tone="base-200" class="mt-2 space-y-4 p-4">
 											<p class="text-muted">
 												Reservation times can differ from event times to allow for setup and
 												teardown.
@@ -727,7 +726,7 @@
 			{#snippet pending()}
 				<Card>
 					<CardBody class="flex items-center justify-center p-8">
-						<span class="loading loading-spinner loading-md"></span>
+						<span class="loading loading-md loading-spinner"></span>
 					</CardBody>
 				</Card>
 			{/snippet}
@@ -793,13 +792,13 @@
 		{/if}
 
 		{#if evt.description}
-			<div class="mt-4 pt-4 border-t border-base-200">
+			<div class="mt-4 border-t border-base-200 pt-4">
 				<p class="whitespace-pre-wrap">{evt.description}</p>
 			</div>
 		{/if}
 
 		{#if parseTags(evt.tags).length > 0}
-			<div class="mt-4 pt-4 border-t border-base-200 flex gap-1 flex-wrap">
+			<div class="mt-4 flex flex-wrap gap-1 border-t border-base-200 pt-4">
 				{#each parseTags(evt.tags) as tag (tag)}
 					<Badge variant="outline">{tag}</Badge>
 				{/each}
@@ -843,7 +842,7 @@
 				<div class="mt-3">
 					<a
 						href={resolve(`/events/${evt.id}/tickets`)}
-						class="link link-primary text-sm"
+						class="link text-sm link-primary"
 						target="_blank"
 					>
 						View purchase page →
@@ -852,7 +851,7 @@
 			{/if}
 
 			{#if evt.status !== 'cancelled'}
-				<div class="mt-4 pt-4 border-t border-base-200">
+				<div class="mt-4 border-t border-base-200 pt-4">
 					<CompTicketsAction eventId={evt.id} />
 				</div>
 			{/if}
@@ -891,7 +890,7 @@
 				srcset={poster.srcset}
 				sizes={poster.sizes}
 				alt="Event poster"
-				class="rounded max-h-64 object-contain"
+				class="max-h-64 rounded object-contain"
 			/>
 		{:else}
 			<p class="text-sm opacity-50">No poster uploaded</p>
@@ -927,7 +926,7 @@
 			<div class="mt-2">
 				<a
 					href={resolve(`/staff/reservations/${data.linkedReservation.id}`)}
-					class="link link-primary text-sm"
+					class="link text-sm link-primary"
 				>
 					View reservation →
 				</a>

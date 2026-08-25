@@ -25,7 +25,7 @@
 		class="flex flex-col gap-4"
 	>
 		<input {...fields.slug.as('hidden', slug)} />
-		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 			<FormField field={fields.name} type="text" label="Name" required />
 			<FormField field={fields.email} type="email" label="Email" required />
 		</div>

@@ -57,7 +57,7 @@
 			max={MAX_AMOUNT}
 			step={STEP}
 			bind:value={amount}
-			class="range range-primary mt-3 w-full"
+			class="range mt-3 w-full range-primary"
 			aria-label="Monthly contribution amount"
 		/>
 		<div class="mt-1 flex w-full justify-between px-1 text-xs opacity-50">

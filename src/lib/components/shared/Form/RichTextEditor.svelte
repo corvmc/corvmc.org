@@ -110,7 +110,7 @@
 
 <div class="rounded-box border border-base-300">
 	{#if editor}
-		<div class="join flex flex-wrap border-b border-base-300 rounded-b-none">
+		<div class="join flex flex-wrap rounded-b-none border-b border-base-300">
 			<Button
 				type="button"
 				variant="ghost"
@@ -200,7 +200,7 @@
 				<IconLink size={16} />
 			</Button>
 			<div
-				class="filler join-item rounded-b-none grow btn btn-xs pointer-events-none btn-ghost"
+				class="filler btn pointer-events-none join-item grow rounded-b-none btn-ghost btn-xs"
 			></div>
 		</div>
 	{/if}

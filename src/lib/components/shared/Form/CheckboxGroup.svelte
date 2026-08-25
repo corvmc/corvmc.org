@@ -70,7 +70,7 @@
 			<input
 				{...field.as('checkbox', option.value)}
 				checked={selected.includes(option.value)}
-				class="checkbox checkbox-sm mt-0.5 shrink-0"
+				class="checkbox mt-0.5 shrink-0 checkbox-sm"
 			/>
 			<span class="min-w-0">
 				<span class="font-medium">{option.label}</span>

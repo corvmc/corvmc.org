@@ -63,16 +63,16 @@
 	{/snippet}
 
 	{#if visible.length === 0}
-		<div class="text-center py-8">
-			<IconCheck size={48} class="mx-auto text-success mb-2" />
+		<div class="py-8 text-center">
+			<IconCheck size={48} class="mx-auto mb-2 text-success" />
 			<p class="text-lg font-medium">All caught up!</p>
 		</div>
 	{:else}
-		<div class="space-y-3 max-h-96 overflow-y-auto">
+		<div class="max-h-96 space-y-3 overflow-y-auto">
 			{#each visible as r (r.id)}
 				<Card bordered>
 					<CardBody padding="sm">
-						<div class="flex justify-between mb-2">
+						<div class="mb-2 flex justify-between">
 							<EntityIdentity ref={r.member} size="md" />
 							<div class="text-right">
 								<p class="text-sm">{formatDate(r.startsAt)}</p>

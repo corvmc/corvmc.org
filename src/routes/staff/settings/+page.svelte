@@ -286,7 +286,7 @@
 										{#each instance.fields.unitAmountCents.issues() ?? [] as issue (issue.message)}
 											<p class="text-sm text-error">{issue.message}</p>
 										{/each}
-										<label class="input input-sm flex items-center gap-1">
+										<label class="input flex items-center gap-1 input-sm">
 											<span class="opacity-60">$</span>
 											<input
 												id="amount-{product.key}"
@@ -327,8 +327,7 @@
 									name="description"
 									value={product.description ?? ''}
 									class="textarea textarea-sm"
-									rows="2"
-								></textarea>
+									rows="2"></textarea>
 							</div>
 						</CardBody>
 					</Card>
@@ -359,7 +358,7 @@
 								<label class="label" for="hourlyRate">
 									<span class="label-text">Hourly rate</span>
 								</label>
-								<label class="input input-sm flex items-center gap-1">
+								<label class="input flex items-center gap-1 input-sm">
 									<span class="opacity-60">$</span>
 									<input
 										id="hourlyRate"
@@ -625,7 +624,7 @@
 										disabled={connectionTesting}
 									>
 										{#if connectionTesting}
-											<span class="loading loading-spinner loading-xs"></span>
+											<span class="loading loading-xs loading-spinner"></span>
 										{:else}
 											<IconPlugConnected class="size-4" />
 										{/if}
@@ -701,7 +700,7 @@
 											disabled={selfTesting}
 										>
 											{#if selfTesting}
-												<span class="loading loading-spinner loading-xs"></span>
+												<span class="loading loading-xs loading-spinner"></span>
 											{/if}
 											Run lock self-test
 										</Button>
@@ -713,7 +712,7 @@
 											disabled={revokingTest}
 										>
 											{#if revokingTest}
-												<span class="loading loading-spinner loading-xs"></span>
+												<span class="loading loading-xs loading-spinner"></span>
 											{/if}
 											Revoke test codes
 										</Button>
@@ -871,7 +870,7 @@
 								</div>
 							</div>
 							{#if isAlwaysOn}
-								<span class="badge badge-success badge-sm">Always On</span>
+								<span class="badge badge-sm badge-success">Always On</span>
 							{:else}
 								<Form
 									remote={toggleForm}

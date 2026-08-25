@@ -253,7 +253,7 @@
 						<CardBody row class="py-3">
 							<div class="min-w-0">
 								<p class="truncate font-medium">{invite.email}</p>
-								<p class="text-subtle truncate">
+								<p class="truncate text-subtle">
 									Invited as {invite.role}{invite.position ? ` · ${invite.position}` : ''} · by {invite.invitedByName}
 								</p>
 							</div>

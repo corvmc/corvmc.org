@@ -15,9 +15,9 @@
 {#if embeddableLinks.length > 0}
 	<div class="flex flex-col gap-4">
 		{#each embeddableLinks as link (link.url)}
-			<div class="rounded-lg overflow-hidden">
+			<div class="overflow-hidden rounded-lg">
 				{#if link.label}
-					<p class="text-sm font-medium mb-1">{link.label}</p>
+					<p class="mb-1 text-sm font-medium">{link.label}</p>
 				{/if}
 				<iframe
 					src={link.embedUrl}

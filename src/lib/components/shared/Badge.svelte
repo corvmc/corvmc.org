@@ -9,14 +9,7 @@
 		children
 	}: {
 		variant?:
-			| 'outline'
-			| 'ghost'
-			| 'primary'
-			| 'success'
-			| 'error'
-			| 'warning'
-			| 'info'
-			| 'secondary';
+			'outline' | 'ghost' | 'primary' | 'success' | 'error' | 'warning' | 'info' | 'secondary';
 		size?: 'xs' | 'sm' | 'md' | 'lg';
 		class?: string;
 		children: Snippet;

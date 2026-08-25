@@ -64,7 +64,7 @@
 
 {#snippet defaultPending()}
 	<div class="flex items-center justify-center p-12">
-		<span class="loading loading-spinner loading-lg"></span>
+		<span class="loading loading-lg loading-spinner"></span>
 	</div>
 {/snippet}
 
