@@ -100,7 +100,7 @@
 				<FormField label="Band address" readonly display={`${band.slug}.${baseDomain}`}>
 					{#snippet description()}
 						Renaming the band doesn't move its address.{#if isOwner}
-							<a href={resolve(`/band/${band.slug}/settings`)} class="link link-primary ml-1">
+							<a href={resolve(`/band/${band.slug}/settings`)} class="ml-1 link link-primary">
 								Change it in Settings
 							</a>
 						{/if}

@@ -13,7 +13,7 @@
 </svelte:head>
 
 <article
-	class="prose prose-lg mx-auto max-w-3xl px-4 py-12"
+	class="mx-auto prose prose-lg max-w-3xl px-4 py-12"
 	style="--tw-prose-links: var(--cmc-teal); --tw-prose-bullets: var(--cmc-orange); --tw-prose-counters: var(--cmc-orange); --tw-prose-hr: var(--surface-border);"
 >
 	<slot />

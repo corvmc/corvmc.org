@@ -22,7 +22,7 @@
 	let allDone = $state(false);
 </script>
 
-<div class="max-w-md mx-auto p-6 text-center space-y-4">
+<div class="mx-auto max-w-md space-y-4 p-6 text-center">
 	{#if !data.valid}
 		<h1 class="text-2xl font-bold">Invalid Link</h1>
 		<p class="opacity-70">This unsubscribe link is invalid or has already been used.</p>
@@ -40,7 +40,7 @@
 		<!-- The single-list unsubscribe is the main driver of spam complaints:
 		     people leave one list, keep getting mail from another, and hit "mark as
 		     spam" instead of coming back here. This is the escape hatch. -->
-		<div class="border-t pt-4 space-y-2">
+		<div class="space-y-2 border-t pt-4">
 			<p class="text-muted">Still receiving emails you don't want?</p>
 			<!-- SubmitButton wraps its button in a plain flex row, which would sit
 			     left of centre inside this centred column. -->

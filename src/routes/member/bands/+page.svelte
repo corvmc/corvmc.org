@@ -57,7 +57,7 @@
 	<!-- Pending invitations -->
 	{#if pending.length > 0}
 		<section>
-			<h2 class="text-lg font-semibold mb-3">Pending Invitations</h2>
+			<h2 class="mb-3 text-lg font-semibold">Pending Invitations</h2>
 			<div class="space-y-3">
 				{#each pending as invite (invite.id)}
 					{@const accept = acceptInvite.for(invite.id)}
@@ -132,7 +132,7 @@
 				{#each active as b (b.id)}
 					<a
 						href={resolve(`/band/${b.slug}`)}
-						class="card bg-base-100 shadow hover:shadow-md transition-shadow"
+						class="card bg-base-100 shadow transition-shadow hover:shadow-md"
 					>
 						<CardBody row class="py-4">
 							<div>

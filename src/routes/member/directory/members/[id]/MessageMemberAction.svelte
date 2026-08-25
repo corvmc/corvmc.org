@@ -39,8 +39,7 @@
 					rows="5"
 					maxlength={DIRECT_MESSAGE_BODY_MAX}
 					bind:value={body}
-					placeholder="Say who you are and what you're after"
-				></textarea>
+					placeholder="Say who you are and what you're after"></textarea>
 			</label>
 		</div>
 	{/snippet}

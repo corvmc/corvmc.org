@@ -114,7 +114,7 @@
 							<td class="w-20 text-center">
 								<input
 									type="checkbox"
-									class="toggle toggle-sm toggle-primary"
+									class="toggle toggle-primary toggle-sm"
 									checked={pref.email}
 									aria-label={`Email notifications for ${pref.label}`}
 									onchange={() =>
@@ -128,7 +128,7 @@
 							<td class="w-20 text-center">
 								<input
 									type="checkbox"
-									class="toggle toggle-sm toggle-primary"
+									class="toggle toggle-primary toggle-sm"
 									checked={pref.inApp}
 									aria-label={`In-app notifications for ${pref.label}`}
 									onchange={() =>
@@ -232,7 +232,7 @@
 		<InfoCard title="Email Subscriptions">
 			{#await Promise.all([subscriptions, available])}
 				<div class="flex justify-center p-4">
-					<span class="loading loading-spinner loading-sm"></span>
+					<span class="loading loading-sm loading-spinner"></span>
 				</div>
 			{:then [subs, avail]}
 				{#if subs.length === 0 && avail.length === 0}
@@ -321,7 +321,7 @@
 			<div class="flex items-center justify-between">
 				{#if data.isStaff}
 					<p class="text-muted">Contact an admin to delete your account.</p>
-					<span class="btn btn-error btn-sm btn-disabled">Delete Account</span>
+					<span class="btn btn-disabled btn-error btn-sm">Delete Account</span>
 				{:else}
 					<p class="text-muted">Permanently delete your account and all associated data.</p>
 					<Action

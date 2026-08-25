@@ -38,7 +38,7 @@
 	     `flex-flow: column wrap` — once the height is constrained the rows wrap
 	     into a second column beyond the 16rem edge and are clipped away entirely
 	     rather than scrolling. -->
-	<ul class="menu w-full min-h-0 flex-1 flex-nowrap gap-1 overflow-y-auto overscroll-contain">
+	<ul class="menu min-h-0 w-full flex-1 flex-nowrap gap-1 overflow-y-auto overscroll-contain">
 		{@render navigation?.()}
 	</ul>
 </aside>

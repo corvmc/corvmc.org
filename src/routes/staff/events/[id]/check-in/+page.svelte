@@ -54,7 +54,7 @@
 					<div>
 						<p class="font-medium">{ticket.attendeeName}</p>
 						<p class="text-muted">{ticket.attendeeEmail}</p>
-						<p class="font-mono text-xs opacity-50 mt-1">{ticket.code}</p>
+						<p class="mt-1 font-mono text-xs opacity-50">{ticket.code}</p>
 					</div>
 
 					<div class="flex items-center gap-3">
@@ -84,7 +84,7 @@
 		{/each}
 
 		{#if filteredTickets.length === 0}
-			<p class="text-center opacity-50 py-8">
+			<p class="py-8 text-center opacity-50">
 				{search ? 'No tickets match your search' : 'No tickets to check in'}
 			</p>
 		{/if}

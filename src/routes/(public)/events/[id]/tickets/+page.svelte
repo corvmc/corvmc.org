@@ -52,7 +52,7 @@
 	}
 </script>
 
-<div class="max-w-lg mx-auto space-y-6">
+<div class="mx-auto max-w-lg space-y-6">
 	<PageHeader title={isFreeEvent ? 'Get free ticket' : 'Get Tickets'} backHref="/events" />
 
 	<Card>
@@ -82,9 +82,9 @@
 				</div>
 			{/if}
 			{#if data.remaining !== null}
-				<p class="text-sm mt-1">
+				<p class="mt-1 text-sm">
 					{#if soldOut}
-						<span class="text-error font-medium">{isFreeEvent ? 'Full' : 'Sold out'}</span>
+						<span class="font-medium text-error">{isFreeEvent ? 'Full' : 'Sold out'}</span>
 					{:else}
 						{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining
 					{/if}
@@ -209,7 +209,7 @@
 							<span>{formatCents(total)}</span>
 						</div>
 						{#if data.isSustainingMember}
-							<p class="text-sm text-success mt-1">Sustaining member discount applied</p>
+							<p class="mt-1 text-sm text-success">Sustaining member discount applied</p>
 						{/if}
 					</div>
 

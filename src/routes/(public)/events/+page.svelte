@@ -68,8 +68,8 @@
 </svelte:head>
 
 <Section>
-	<div class="text-center mb-10">
-		<h1 class="text-4xl font-bold tracking-tight mb-2 text-cmc-navy">Events</h1>
+	<div class="mb-10 text-center">
+		<h1 class="mb-2 text-4xl font-bold tracking-tight text-cmc-navy">Events</h1>
 		<p class="text-base text-fg-2">
 			Shows at the Collective and gigs from our member bands around the region
 		</p>
@@ -77,7 +77,7 @@
 
 	{#if showNotice}
 		<div
-			class="flex items-center justify-between gap-4 rounded-lg border px-4 py-3 mb-8"
+			class="mb-8 flex items-center justify-between gap-4 rounded-lg border px-4 py-3"
 			style="border-color: var(--cmc-navy); color: var(--cmc-navy)"
 			role="status"
 		>
@@ -86,7 +86,7 @@
 			</p>
 			<button
 				type="button"
-				class="text-sm font-semibold underline shrink-0"
+				class="shrink-0 text-sm font-semibold underline"
 				onclick={() => (dismissed = true)}
 			>
 				Dismiss
@@ -95,7 +95,7 @@
 	{/if}
 
 	{#if upcoming.length > 0}
-		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-14">
+		<div class="mb-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
 			{#each upcoming as evt (evt.id)}
 				<PosterCard
 					href="/events/{evt.id}"
@@ -120,13 +120,13 @@
 		</aside>
 		<div class="guide__main">
 			{#if allEvents.length === 0}
-				<div class="text-center py-12 opacity-60">
+				<div class="py-12 text-center opacity-60">
 					<p class="text-base">Nothing on the calendar yet. Check back soon!</p>
 				</div>
 			{:else}
 				<GigList events={allEvents} />
 				{#if hasMore}
-					<div class="text-center mt-8">
+					<div class="mt-8 text-center">
 						<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
 							{loadingMore ? 'Loading…' : 'Show more'}
 						</Button>

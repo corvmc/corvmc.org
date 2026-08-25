@@ -84,7 +84,7 @@
 	{#each blocks as block (block.id)}
 		<section class="band-site-block {block.cssClass ?? ''}">
 			{#if block.type === 'hero'}
-				<div class="band-site-hero relative h-64 md:h-96 overflow-hidden">
+				<div class="band-site-hero relative h-64 overflow-hidden md:h-96">
 					{#if block.imageKey}
 						{@const heroImg = imageSrc(block.imageKey, 'hero')}
 						<img
@@ -92,22 +92,22 @@
 							srcset={heroImg.srcset}
 							sizes={heroImg.sizes}
 							alt=""
-							class="absolute inset-0 w-full h-full object-cover"
+							class="absolute inset-0 h-full w-full object-cover"
 						/>
 					{/if}
 					<div
-						class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white text-center px-4"
+						class="absolute inset-0 flex flex-col items-center justify-center bg-black/40 px-4 text-center text-white"
 					>
 						{#if block.headline}
-							<h1 class="text-4xl md:text-6xl font-bold">{block.headline}</h1>
+							<h1 class="text-4xl font-bold md:text-6xl">{block.headline}</h1>
 						{/if}
 						{#if block.subtitle}
-							<p class="text-xl mt-2 opacity-80">{block.subtitle}</p>
+							<p class="mt-2 text-xl opacity-80">{block.subtitle}</p>
 						{/if}
 					</div>
 				</div>
 			{:else if block.type === 'bio'}
-				<div class="max-w-3xl mx-auto px-6 py-8">
+				<div class="mx-auto max-w-3xl px-6 py-8">
 					<div class="prose prose-lg">
 						<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized server-side (prepareBlocksForRender) -->
 						{@html block.content}
@@ -115,7 +115,7 @@
 				</div>
 			{:else if block.type === 'links'}
 				{#if band.links && band.links.length > 0}
-					<div class="max-w-md mx-auto px-6 py-8">
+					<div class="mx-auto max-w-md px-6 py-8">
 						<div class="flex flex-col gap-3">
 							{#each band.links as link (link.url)}
 								{@const platform = detectPlatform(link.url)}
@@ -137,13 +137,13 @@
 					</div>
 				{/if}
 			{:else if block.type === 'members'}
-				<div class="max-w-3xl mx-auto px-6 py-8">
-					<h2 class="text-2xl font-bold mb-4">Members</h2>
-					<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+				<div class="mx-auto max-w-3xl px-6 py-8">
+					<h2 class="mb-4 text-2xl font-bold">Members</h2>
+					<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
 						{#each members as member (member.id)}
 							<div class="text-center">
-								<div class="avatar placeholder mb-2">
-									<div class="bg-neutral text-neutral-content w-16 rounded-full">
+								<div class="placeholder avatar mb-2">
+									<div class="w-16 rounded-full bg-neutral text-neutral-content">
 										{#if member.image}
 											{@const memberImg = imageSrc(member.image, 'avatar-sm')}
 											<img
@@ -167,11 +167,11 @@
 				</div>
 			{:else if block.type === 'events'}
 				{#if events.length > 0}
-					<div class="max-w-3xl mx-auto px-6 py-8">
-						<h2 class="text-2xl font-bold mb-4">Upcoming Shows</h2>
+					<div class="mx-auto max-w-3xl px-6 py-8">
+						<h2 class="mb-4 text-2xl font-bold">Upcoming Shows</h2>
 						<div class="space-y-3">
 							{#each events.slice(0, block.limit ?? 10) as evt (evt.id)}
-								<div class="flex items-start justify-between p-4 rounded-lg bg-base-200">
+								<div class="flex items-start justify-between rounded-lg bg-base-200 p-4">
 									<div>
 										<p class="font-medium">{evt.title}</p>
 										<p class="text-muted">
@@ -202,15 +202,15 @@
 				{/if}
 
 				{#if block.showPast && pastEvents.length > 0}
-					<div class="max-w-3xl mx-auto px-6 py-8">
-						<h2 class="text-2xl font-bold mb-4">Past Shows</h2>
+					<div class="mx-auto max-w-3xl px-6 py-8">
+						<h2 class="mb-4 text-2xl font-bold">Past Shows</h2>
 						<div class="space-y-2">
 							{#each pastEvents.slice(0, block.limit ?? 10) as evt (evt.id)}
 								<div class="flex items-baseline gap-3 text-sm">
-									<span class="opacity-60 tabular-nums shrink-0">{formatDate(evt.startsAt)}</span>
+									<span class="shrink-0 tabular-nums opacity-60">{formatDate(evt.startsAt)}</span>
 									<span class="font-medium">{evt.title}</span>
 									{#if evt.location}
-										<span class="opacity-60 truncate">{evt.location}</span>
+										<span class="truncate opacity-60">{evt.location}</span>
 									{/if}
 								</div>
 							{/each}
@@ -224,8 +224,8 @@
 						: media
 								.filter((m) => m.type === 'image')
 								.map((m) => ({ url: m.url, caption: m.caption }))}
-				<div class="max-w-4xl mx-auto px-6 py-8">
-					<div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+				<div class="mx-auto max-w-4xl px-6 py-8">
+					<div class="grid grid-cols-2 gap-2 md:grid-cols-3">
 						{#each galleryImages as img, i (img.url ?? i)}
 							{#if img.url}
 								{@const galleryImg = imageSrc(img.url, 'gallery')}
@@ -235,7 +235,7 @@
 										srcset={galleryImg.srcset}
 										sizes={galleryImg.sizes}
 										alt={img.caption ?? ''}
-										class="w-full h-full object-cover"
+										class="h-full w-full object-cover"
 									/>
 								</div>
 							{/if}
@@ -245,7 +245,7 @@
 			{:else if block.type === 'embed'}
 				{@const embedUrl = getEmbedUrl(block.url)}
 				{#if embedUrl}
-					<div class="max-w-3xl mx-auto px-6 py-4">
+					<div class="mx-auto max-w-3xl px-6 py-4">
 						<iframe
 							src={embedUrl}
 							title={block.platform}
@@ -261,8 +261,8 @@
 				{/if}
 			{:else if block.type === 'press'}
 				{#if epk?.pressQuotes && epk.pressQuotes.length > 0}
-					<div class="max-w-3xl mx-auto px-6 py-8">
-						<h2 class="text-2xl font-bold mb-4">Press</h2>
+					<div class="mx-auto max-w-3xl px-6 py-8">
+						<h2 class="mb-4 text-2xl font-bold">Press</h2>
 						<div class="space-y-4">
 							{#each epk.pressQuotes as quote (quote.quote)}
 								<blockquote class="border-l-4 border-primary pl-4">
@@ -280,8 +280,8 @@
 				{/if}
 			{:else if block.type === 'achievements'}
 				{#if epk?.achievements && epk.achievements.length > 0}
-					<div class="max-w-3xl mx-auto px-6 py-8">
-						<h2 class="text-2xl font-bold mb-4">Highlights</h2>
+					<div class="mx-auto max-w-3xl px-6 py-8">
+						<h2 class="mb-4 text-2xl font-bold">Highlights</h2>
 						<ul class="space-y-2">
 							{#each epk.achievements as achievement (achievement)}
 								<li class="flex items-start gap-2">
@@ -295,13 +295,13 @@
 			{:else if block.type === 'contact'}
 				{@const showForm = block.showForm ?? true}
 				{#if showForm || epk?.bookingContact || epk?.managementContact || epk?.prContact}
-					<div class="max-w-3xl mx-auto px-6 py-8">
-						<h2 class="text-2xl font-bold mb-4">Contact</h2>
+					<div class="mx-auto max-w-3xl px-6 py-8">
+						<h2 class="mb-4 text-2xl font-bold">Contact</h2>
 						{#if epk?.bookingContact || epk?.managementContact || epk?.prContact}
-							<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+							<div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
 								{#if epk.bookingContact}
 									<div>
-										<h3 class="font-semibold text-muted uppercase">Booking</h3>
+										<h3 class="text-muted font-semibold uppercase">Booking</h3>
 										<p class="font-medium">{epk.bookingContact.name}</p>
 										<a href="mailto:{epk.bookingContact.email}" class="link text-sm"
 											>{epk.bookingContact.email}</a
@@ -313,7 +313,7 @@
 								{/if}
 								{#if epk.managementContact}
 									<div>
-										<h3 class="font-semibold text-muted uppercase">Management</h3>
+										<h3 class="text-muted font-semibold uppercase">Management</h3>
 										<p class="font-medium">{epk.managementContact.name}</p>
 										<a href="mailto:{epk.managementContact.email}" class="link text-sm"
 											>{epk.managementContact.email}</a
@@ -322,7 +322,7 @@
 								{/if}
 								{#if epk.prContact}
 									<div>
-										<h3 class="font-semibold text-muted uppercase">Press</h3>
+										<h3 class="text-muted font-semibold uppercase">Press</h3>
 										<p class="font-medium">{epk.prContact.name}</p>
 										<a href="mailto:{epk.prContact.email}" class="link text-sm"
 											>{epk.prContact.email}</a
@@ -337,16 +337,16 @@
 					</div>
 				{/if}
 			{:else if block.type === 'tech_rider'}
-				<div class="max-w-3xl mx-auto px-6 py-8">
-					<h2 class="text-2xl font-bold mb-4">Technical Requirements</h2>
+				<div class="mx-auto max-w-3xl px-6 py-8">
+					<h2 class="mb-4 text-2xl font-bold">Technical Requirements</h2>
 					{#if epk?.stagePlotKey}
 						{@const stageMedia = media.find((m) => m.type === 'stage_plot')}
 						{#if stageMedia?.url}
-							<img src={stageMedia.url} alt="Stage Plot" class="rounded-lg mb-4 max-w-full" />
+							<img src={stageMedia.url} alt="Stage Plot" class="mb-4 max-w-full rounded-lg" />
 						{/if}
 					{/if}
 					{#if epk?.backline && epk.backline.length > 0}
-						<h3 class="font-semibold mb-2">Backline Requirements</h3>
+						<h3 class="mb-2 font-semibold">Backline Requirements</h3>
 						<div class="overflow-x-auto">
 							<table class="table table-sm">
 								<thead>
@@ -386,29 +386,29 @@
 					{/if}
 				</div>
 			{:else if block.type === 'custom_html'}
-				<div class="max-w-4xl mx-auto px-6 py-8">
+				<div class="mx-auto max-w-4xl px-6 py-8">
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized server-side (prepareBlocksForRender) -->
 					{@html block.content}
 				</div>
 			{:else if block.type === 'merch'}
-				<div class="max-w-3xl mx-auto px-6 py-8">
-					<h2 class="text-2xl font-bold mb-4">Merch</h2>
-					<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+				<div class="mx-auto max-w-3xl px-6 py-8">
+					<h2 class="mb-4 text-2xl font-bold">Merch</h2>
+					<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
 						{#each block.items as item (item.url)}
-							<a href={item.url} target="_blank" rel="external noopener" class="block group">
+							<a href={item.url} target="_blank" rel="external noopener" class="group block">
 								{#if item.imageKey}
 									{@const merchImg = imageSrc(item.imageKey, 'gallery')}
-									<div class="aspect-square overflow-hidden rounded-lg mb-2">
+									<div class="mb-2 aspect-square overflow-hidden rounded-lg">
 										<img
 											src={merchImg.src}
 											srcset={merchImg.srcset}
 											sizes={merchImg.sizes}
 											alt={item.title}
-											class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+											class="h-full w-full object-cover transition-transform group-hover:scale-105"
 										/>
 									</div>
 								{/if}
-								<p class="font-medium group-hover:text-primary transition-colors">{item.title}</p>
+								<p class="font-medium transition-colors group-hover:text-primary">{item.title}</p>
 								{#if item.price}
 									<p class="text-muted">{item.price}</p>
 								{/if}
@@ -423,20 +423,20 @@
 	{/each}
 {:else}
 	<!-- Default layout when no blocks are configured -->
-	<div class="max-w-3xl mx-auto px-6 py-12">
-		<div class="text-center mb-8">
+	<div class="mx-auto max-w-3xl px-6 py-12">
+		<div class="mb-8 text-center">
 			{#if band.avatarUrl}
 				{@const bandImg = imageSrc(band.avatarUrl, 'avatar-lg')}
 				<img
 					src={bandImg.src}
 					srcset={bandImg.srcset}
 					alt={band.name}
-					class="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
+					class="mx-auto mb-4 h-24 w-24 rounded-full object-cover"
 				/>
 			{/if}
 			<h1 class="text-4xl font-bold">{band.name}</h1>
 			{#if band.tagline}
-				<p class="text-xl mt-2 opacity-70">{band.tagline}</p>
+				<p class="mt-2 text-xl opacity-70">{band.tagline}</p>
 			{/if}
 			{#if band.genres.length > 0}
 				<p class="mt-2 opacity-60">{band.genres.join(' / ')}</p>
@@ -444,14 +444,14 @@
 		</div>
 
 		{#if band.bio}
-			<div class="prose prose-sm max-w-none text-center text-base-content/80 mb-8">
+			<div class="prose prose-sm mb-8 max-w-none text-center text-base-content/80">
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown bio) -->
 				{@html sanitizeBio(band.bio)}
 			</div>
 		{/if}
 
 		{#if band.links && band.links.length > 0}
-			<div class="max-w-sm mx-auto space-y-3 mb-8">
+			<div class="mx-auto mb-8 max-w-sm space-y-3">
 				{#each band.links as link (link.url)}
 					{@const embedUrl = link.embed !== false ? getEmbedUrl(link.url) : null}
 					{#if embedUrl}
@@ -486,17 +486,17 @@
 {/if}
 
 <!-- Navigation footer -->
-<nav class="max-w-3xl mx-auto px-6 py-6 flex justify-center gap-4 text-muted">
+<nav class="mx-auto flex max-w-3xl justify-center gap-4 px-6 py-6 text-muted">
 	{#if events.length > 0}
 		<a
 			href={bandSiteHref(page.params.slug!, '/events', page.url)}
-			class="hover:opacity-100 transition-opacity">All Events</a
+			class="transition-opacity hover:opacity-100">All Events</a
 		>
 	{/if}
 	{#if epk}
 		<a
 			href={bandSiteHref(page.params.slug!, '/epk', page.url)}
-			class="hover:opacity-100 transition-opacity">Press Kit</a
+			class="transition-opacity hover:opacity-100">Press Kit</a
 		>
 	{/if}
 </nav>

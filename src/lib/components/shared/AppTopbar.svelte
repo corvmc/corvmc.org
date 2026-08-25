@@ -62,7 +62,7 @@
 			{/each}
 
 			{#if bandPanels.length > 0}
-				<div class="bands-dropdown-wrapper join-item relative">
+				<div class="bands-dropdown-wrapper relative join-item">
 					<Button
 						variant={activeBand ? 'primary' : 'ghost'}
 						size="sm"

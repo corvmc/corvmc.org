@@ -44,19 +44,19 @@
 
 	<!-- Quick links -->
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-		<Button href="/member/reservations" variant="default" class="card bg-base-100 h-auto">
+		<Button href="/member/reservations" variant="default" class="card h-auto bg-base-100">
 			<CardBody class="flex-row items-center gap-3 py-4">
 				<IconCalendarPlus size={24} class="text-primary" />
 				<span class="font-medium">Book a Session</span>
 			</CardBody>
 		</Button>
-		<Button href="/member/events" variant="default" class="card bg-base-100 h-auto">
+		<Button href="/member/events" variant="default" class="card h-auto bg-base-100">
 			<CardBody class="flex-row items-center gap-3 py-4">
 				<IconCalendarEvent size={24} class="text-primary" />
 				<span class="font-medium">Browse Events</span>
 			</CardBody>
 		</Button>
-		<Button href="/member/membership" variant="default" class="card bg-base-100 h-auto">
+		<Button href="/member/membership" variant="default" class="card h-auto bg-base-100">
 			<CardBody class="flex-row items-center gap-3 py-4">
 				<IconStar size={24} class="text-primary" />
 				<span class="font-medium">Manage Membership</span>

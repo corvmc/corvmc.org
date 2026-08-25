@@ -276,7 +276,7 @@
 </script>
 
 {#if showLabel}
-	<span class="badge badge-sm gap-1 {badgeClass[status] ?? 'badge-ghost'} {className}">
+	<span class="badge gap-1 badge-sm {badgeClass[status] ?? 'badge-ghost'} {className}">
 		<variant.icon size={14} />
 		{label}
 	</span>

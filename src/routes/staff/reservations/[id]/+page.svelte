@@ -103,7 +103,7 @@
 			</header>
 
 			{#if conflicts.length > 0}
-				<div role="alert" class="alert alert-warning py-2 text-sm">
+				<div role="alert" class="alert py-2 text-sm alert-warning">
 					<span>
 						Overlaps {conflicts.length} other {conflicts.length === 1 ? 'booking' : 'bookings'}:
 						{conflicts

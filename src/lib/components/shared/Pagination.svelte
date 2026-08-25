@@ -40,7 +40,7 @@
 
 				{#each items as item, i (item === PAGE_GAP ? `gap-${i}` : item)}
 					{#if item === PAGE_GAP}
-						<span class="join-item btn btn-disabled pointer-events-none">…</span>
+						<span class="btn btn-disabled pointer-events-none join-item">…</span>
 					{:else}
 						<Button
 							onclick={() => onpage(item)}
@@ -67,7 +67,7 @@
 		{/if}
 
 		{#if range}
-			<p class="text-muted tnums">
+			<p class="tnums text-muted">
 				Showing {range.from}–{range.to} of {total}
 			</p>
 		{/if}

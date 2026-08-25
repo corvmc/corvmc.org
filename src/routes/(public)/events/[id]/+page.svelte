@@ -95,12 +95,12 @@
 	{/if}
 </svelte:head>
 
-<section class="py-10 px-6">
-	<div class="max-w-4xl mx-auto">
+<section class="px-6 py-10">
+	<div class="mx-auto max-w-4xl">
 		<PageHeader title={evt.title} backHref="/events">
 			<div class="flex items-center gap-1">
 				<details class="dropdown dropdown-end">
-					<summary class="btn btn-ghost btn-sm gap-1">
+					<summary class="btn gap-1 btn-ghost btn-sm">
 						<IconCalendarPlus size={18} />
 						Add to calendar
 					</summary>
@@ -295,7 +295,7 @@
 							{/if}
 						</div>
 						<progress
-							class="progress progress-primary w-full"
+							class="progress w-full progress-primary"
 							value={data.sold}
 							max={evt.ticketQuantity}
 						></progress>

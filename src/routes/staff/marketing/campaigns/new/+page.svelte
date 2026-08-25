@@ -105,7 +105,7 @@
 
 <PageHeader title="New Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns" />
 <PageContent>
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+	<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 		<!-- Editor pane -->
 		<div class="space-y-4">
 			<div>
@@ -124,7 +124,7 @@
 				<div class="flex flex-wrap gap-2">
 					{#each audiences as a (a.id)}
 						<label
-							class="label cursor-pointer gap-2 border rounded-lg px-3 py-1.5 {selectedAudienceIds.includes(
+							class="label cursor-pointer gap-2 rounded-lg border px-3 py-1.5 {selectedAudienceIds.includes(
 								a.id
 							)
 								? 'border-primary bg-primary/10'
@@ -138,14 +138,14 @@
 							/>
 							<span class="text-sm">{a.name}</span>
 							{#if a.systemKey}
-								<span class="badge badge-info badge-xs">Built-in</span>
+								<span class="badge badge-xs badge-info">Built-in</span>
 							{/if}
 							<span class="text-subtle">({a.subscriberCount})</span>
 						</label>
 					{/each}
 				</div>
 				{#if selectedAudienceIds.length > 0}
-					<p class="text-subtle mt-1">
+					<p class="mt-1 text-subtle">
 						~{totalSubscribers} recipients (before deduplication)
 					</p>
 				{/if}
@@ -158,9 +158,8 @@
 					bind:value={markdownBody}
 					placeholder="Write your email in markdown..."
 					class="textarea w-full font-mono text-sm"
-					rows="20"
-				></textarea>
-				<p class="text-subtle mt-1">
+					rows="20"></textarea>
+				<p class="mt-1 text-subtle">
 					Available variables: {'{{subscriber_name}}'}, {'{{unsubscribe_url}}'}
 				</p>
 			</div>
@@ -220,12 +219,12 @@
 		<!-- Preview pane -->
 		<div>
 			<p class="label text-sm font-medium">Preview</p>
-			<div class="border rounded-lg bg-white overflow-hidden" style="min-height: 400px;">
+			<div class="overflow-hidden rounded-lg border bg-white" style="min-height: 400px;">
 				{#if previewHtml}
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML preview) -->
 					{@html previewHtml}
 				{:else}
-					<div class="flex items-center justify-center h-full p-12 text-sm opacity-40">
+					<div class="flex h-full items-center justify-center p-12 text-sm opacity-40">
 						Start typing to see a preview...
 					</div>
 				{/if}

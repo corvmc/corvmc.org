@@ -62,7 +62,7 @@
 	<li>
 		<button
 			type="button"
-			class="menu-title menu-dropdown-toggle flex w-full flex-row items-center justify-between"
+			class="menu-dropdown-toggle flex w-full flex-row items-center justify-between menu-title"
 			class:menu-dropdown-show={!collapsed}
 			aria-expanded={!collapsed}
 			aria-controls="nav-group-{uid}"
@@ -78,14 +78,14 @@
 		     in `:where()`, so plain utilities outrank it without `!`. -->
 		<ul
 			id="nav-group-{uid}"
-			class="menu-dropdown ms-0 ps-0 before:content-none"
+			class="ms-0 menu-dropdown ps-0 before:content-none"
 			class:menu-dropdown-show={!collapsed}
 		>
 			{@render children()}
 		</ul>
 	</li>
 {:else}
-	<li class="menu-title flex flex-row items-center justify-between">
+	<li class="flex flex-row items-center justify-between menu-title">
 		<span>{title}</span>
 		{#if action}
 			{@render action()}

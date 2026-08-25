@@ -132,8 +132,7 @@
 							<textarea
 								class="textarea w-full"
 								rows="3"
-								{...reviewSuggestion.fields.note.as('text')}
-							></textarea>
+								{...reviewSuggestion.fields.note.as('text')}></textarea>
 						</label>
 					</div>
 				{/snippet}
@@ -207,8 +206,7 @@
 								<textarea
 									class="textarea w-full"
 									rows="3"
-									{...reviewSuggestionEdit.fields.notes.as('text')}
-								></textarea>
+									{...reviewSuggestionEdit.fields.notes.as('text')}></textarea>
 							</label>
 						</div>
 					{/snippet}
@@ -303,8 +301,7 @@
 							<textarea
 								class="textarea w-full"
 								rows="3"
-								{...setSuggestionVisibility.fields.note.as('text')}
-							></textarea>
+								{...setSuggestionVisibility.fields.note.as('text')}></textarea>
 						</label>
 					{/snippet}
 				</Action>

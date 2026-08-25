@@ -50,7 +50,7 @@
 			<input
 				{...fields.reason.as('text')}
 				placeholder="Reason (optional)"
-				class="input input-sm w-full"
+				class="input w-full input-sm"
 			/>
 		{/if}
 	{/snippet}

@@ -40,7 +40,7 @@
 	{/if}
 </PageHeader>
 <PageContent width="3xl">
-	<div class="flex items-center gap-2 mb-4">
+	<div class="mb-4 flex items-center gap-2">
 		{#if series.cancelledAt}
 			<StatusBadge status="cancelled" />
 		{:else}
@@ -78,7 +78,7 @@
 				{#each history as h, i (h.id)}
 					<div class="flex items-center gap-3 text-sm" class:opacity-50={i > 0}>
 						<span class="font-mono text-xs">{h.id.slice(0, 8)}</span>
-						<span class="font-mono text-xs flex-1">{h.rrule}</span>
+						<span class="flex-1 font-mono text-xs">{h.rrule}</span>
 						<span>{formatDate(h.createdAt)}</span>
 						{#if h.cancelledAt}
 							<StatusBadge status="cancelled" />

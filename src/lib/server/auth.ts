@@ -270,10 +270,7 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 // anomalies (not ordinary wrong passwords) so they're distinguishable in Sentry.
 
 export type SignInAnomaly =
-	| 'user_not_found'
-	| 'no_credential_account'
-	| 'no_password'
-	| 'unknown_hash_format';
+	'user_not_found' | 'no_credential_account' | 'no_password' | 'unknown_hash_format';
 
 /** Pure reason-derivation for a sign-in attempt; returns null when nothing is structurally wrong. */
 export function deriveSignInAnomaly(input: {

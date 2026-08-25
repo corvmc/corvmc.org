@@ -58,13 +58,13 @@
 	{#if isOwner}
 		<section class="space-y-4">
 			<h2 class="text-lg font-semibold text-error">Danger Zone</h2>
-			<div class="card bg-base-100 border border-error/30">
+			<div class="card border border-error/30 bg-base-100">
 				<CardBody>
 					<p class="text-sm">
 						Deleting this band will cancel all future reservations and remove all members. This
 						action cannot be undone.
 					</p>
-					<div class="card-actions justify-end mt-2">
+					<div class="mt-2 card-actions justify-end">
 						<Button variant="error" size="sm" outline onclick={() => (showDeleteModal = true)}>
 							Delete Band
 						</Button>

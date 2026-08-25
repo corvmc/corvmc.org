@@ -42,7 +42,7 @@
 -->
 {#await result}
 	<div class="flex justify-center py-12">
-		<span class="loading loading-spinner loading-lg"></span>
+		<span class="loading loading-lg loading-spinner"></span>
 	</div>
 {:then { rows, pagination }}
 	{#if rows.length === 0}

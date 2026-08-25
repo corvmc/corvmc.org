@@ -36,7 +36,7 @@
 <InfoCard {title} class={className} {header}>
 	{#await result}
 		<div class="flex justify-center py-8">
-			<span class="loading loading-spinner loading-sm"></span>
+			<span class="loading loading-sm loading-spinner"></span>
 		</div>
 	{:then value}
 		{@render children(value)}

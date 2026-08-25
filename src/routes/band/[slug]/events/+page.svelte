@@ -56,7 +56,7 @@
 				     its own instance with its own pending state. -->
 				{@const confirm = confirmLineupSlotForm.for(invite.eventId)}
 				{@const decline = declineLineupSlotForm.for(invite.eventId)}
-				<div class="card bg-warning/10 border border-warning/40">
+				<div class="card border border-warning/40 bg-warning/10">
 					<CardBody row class="gap-4 py-4">
 						<div>
 							<p class="font-medium">{invite.eventTitle}</p>
@@ -109,7 +109,7 @@
 			{#each events as evt (evt.id)}
 				<a
 					href={resolve(`/band/${band.slug}/events/${evt.id}`)}
-					class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow block"
+					class="card block bg-base-100 shadow-sm transition-shadow hover:shadow-md"
 				>
 					<CardBody row class="py-4">
 						<div>

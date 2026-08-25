@@ -153,7 +153,7 @@
 						class="join-item {activeFilter === null ? 'latched' : ''}"
 						onclick={() => (activeFilter = null)}
 					>
-						All <span class="opacity-60 ml-1">{upcoming.length}</span>
+						All <span class="ml-1 opacity-60">{upcoming.length}</span>
 					</Button>
 					{#each allTags as tag (tag)}
 						<Button
@@ -163,7 +163,7 @@
 							onclick={() => (activeFilter = activeFilter === tag ? null : tag)}
 						>
 							{tag}
-							<span class="opacity-60 ml-1">
+							<span class="ml-1 opacity-60">
 								{upcoming.filter((e) => e.tags?.split(',').some((t) => t.trim() === tag)).length}
 							</span>
 						</Button>
@@ -173,7 +173,7 @@
 		{/if}
 
 		{#if filteredEvents.length === 0}
-			<div class="text-center py-8 opacity-60">
+			<div class="py-8 text-center opacity-60">
 				<p class="text-base">No upcoming events right now. Check back soon!</p>
 			</div>
 		{:else}

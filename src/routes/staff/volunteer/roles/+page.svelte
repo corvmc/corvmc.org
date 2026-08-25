@@ -154,7 +154,7 @@
 								-->
 								<td class="cell-num whitespace-nowrap">
 									{#if role.unfilled > 0}
-										<span class="badge badge-warning badge-sm">{role.unfilled}</span>
+										<span class="badge badge-sm badge-warning">{role.unfilled}</span>
 									{:else}
 										<span class="opacity-40">—</span>
 									{/if}

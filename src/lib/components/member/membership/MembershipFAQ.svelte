@@ -40,7 +40,7 @@
 
 	<div class="mx-auto max-w-3xl space-y-2">
 		{#each faqs as faq (faq.question)}
-			<div class="collapse collapse-arrow bg-base-100">
+			<div class="collapse-arrow collapse bg-base-100">
 				<input type="checkbox" />
 				<div class="collapse-title font-semibold">{faq.question}</div>
 				<div class="collapse-content">

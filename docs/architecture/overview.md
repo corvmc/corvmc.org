@@ -109,7 +109,7 @@ enforced by a custom ESLint rule):
 <!-- src/routes/member/reservations/[id]/pay/+page.svelte -->
 <Form remote={payReservation}>
 	<Field name="coverFees" type="checkbox" ... />
-	<SubmitButton class="btn-primary w-full mt-4">Pay</SubmitButton>
+	<SubmitButton class="mt-4 w-full btn-primary">Pay</SubmitButton>
 </Form>
 ```
 

@@ -19,6 +19,6 @@
 	};
 </script>
 
-<div class="@container space-y-6 flex-auto {widthClass[width]} {className}">
+<div class="@container flex-auto space-y-6 {widthClass[width]} {className}">
 	{@render children()}
 </div>

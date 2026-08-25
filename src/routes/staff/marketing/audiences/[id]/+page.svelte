@@ -50,7 +50,7 @@
 		{/if}
 	</PageHeader>
 	<PageContent width="3xl">
-		<div class="grid gap-6 lg:grid-cols-2 mb-6">
+		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Details">
 				<DefinitionList>
 					<Fact label="Slug" mono>{audienceData.slug}</Fact>
@@ -72,11 +72,11 @@
 				</DefinitionList>
 
 				{#if audienceData.description}
-					<p class="text-muted mt-3">{audienceData.description}</p>
+					<p class="mt-3 text-muted">{audienceData.description}</p>
 				{/if}
 
 				{#if isBuiltIn}
-					<p class="text-muted mt-3">
+					<p class="mt-3 text-muted">
 						Membership is worked out from member attributes each time you send, so this list is
 						always current — there is nothing to refresh. Subscribers without a member account, such
 						as public newsletter signups, are never included.
@@ -84,7 +84,7 @@
 				{/if}
 
 				{#if audienceData.allowOptIn}
-					<div class="mt-3 p-2 bg-base-200 rounded text-xs">
+					<div class="mt-3 rounded bg-base-200 p-2 text-xs">
 						<span class="opacity-60">Signup URL:</span>
 						<code class="ml-1">/subscribe/{audienceData.slug}</code>
 					</div>

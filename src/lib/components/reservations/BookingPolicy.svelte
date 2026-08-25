@@ -36,7 +36,7 @@
 					<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
 						>{label}</span
 					>
-					<div class="skeleton mx-auto mt-1 h-6 w-16"></div>
+					<div class="mx-auto mt-1 h-6 w-16 skeleton"></div>
 				</div>
 			{/each}
 		</div>

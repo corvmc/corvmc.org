@@ -34,7 +34,7 @@
 			</div>
 
 			<div class="rounded-lg bg-primary/5 p-6">
-				<div class="mb-2 text-center text-sm font-semibold uppercase tracking-wide text-primary">
+				<div class="mb-2 text-center text-sm font-semibold tracking-wide text-primary uppercase">
 					Why sliding scale?
 				</div>
 				<p class="text-center opacity-70">

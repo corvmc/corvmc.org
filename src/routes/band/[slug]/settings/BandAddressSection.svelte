@@ -50,9 +50,9 @@
 			<!-- Admins can see the address; only the owner can move it, because
 			     `changeBandAddress` is owner-guarded. A button that 403s would be
 			     worse than none. -->
-			<p class="text-subtle mt-2">Only the band's owner can change this address.</p>
+			<p class="mt-2 text-subtle">Only the band's owner can change this address.</p>
 		{:else}
-			<div class="card-actions mt-2 justify-end">
+			<div class="mt-2 card-actions justify-end">
 				<Button variant="default" size="sm" outline onclick={() => (showChange = true)}
 					>Change address</Button
 				>
@@ -101,7 +101,7 @@
 			{/if}
 
 			{#if reserved}
-				<p class="text-error text-sm">That address is reserved — pick another.</p>
+				<p class="text-sm text-error">That address is reserved — pick another.</p>
 			{/if}
 
 			<Alert type="warning" class="text-sm">

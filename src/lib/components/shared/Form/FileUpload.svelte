@@ -140,12 +140,12 @@
 
 	<div class="flex flex-col gap-1">
 		{#if uploadStatus === 'uploading'}
-			<span class="btn btn-sm btn-outline btn-disabled">
-				<span class="loading loading-spinner loading-sm"></span>
+			<span class="btn btn-disabled btn-outline btn-sm">
+				<span class="loading loading-sm loading-spinner"></span>
 				Uploading…
 			</span>
 		{:else}
-			<label class="btn btn-sm btn-outline" class:btn-disabled={disabled}>
+			<label class="btn btn-outline btn-sm" class:btn-disabled={disabled}>
 				{hasPreview ? replaceLabel : emptyLabel}
 				<input
 					bind:this={fileInput}

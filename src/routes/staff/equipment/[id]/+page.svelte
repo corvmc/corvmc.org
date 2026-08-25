@@ -51,7 +51,7 @@
 		</SubmitButton>
 	</PageHeader>
 	<PageContent width="3xl">
-		<div class="grid gap-6 lg:grid-cols-2 mb-6">
+		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Equipment Info">
 				<div class="grid grid-cols-1 gap-x-2">
 					<Field field={fields.name} type="text" value={item.name} />
@@ -89,15 +89,15 @@
 					<Fact label="Available" class={item.availableQuantity <= 0 ? 'text-error' : ''}>
 						{item.availableQuantity} of {item.totalQuantity}
 						{#if item.outOfOrderQuantity > 0}
-							<span class="text-warning text-xs">({item.outOfOrderQuantity} out of order)</span>
+							<span class="text-xs text-warning">({item.outOfOrderQuantity} out of order)</span>
 						{/if}
 						{#if item.loanedQuantity > 0}
-							<span class="text-info text-xs">({item.loanedQuantity} on loan)</span>
+							<span class="text-xs text-info">({item.loanedQuantity} on loan)</span>
 						{/if}
 					</Fact>
 				</DefinitionList>
 
-				<div class="grid grid-cols-2 gap-3 mt-4">
+				<div class="mt-4 grid grid-cols-2 gap-3">
 					<Field
 						field={fields.totalQuantity}
 						type="number"

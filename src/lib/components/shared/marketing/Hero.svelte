@@ -21,7 +21,7 @@
 
 <Section tint="secondary" pad="lg" width="2xl" center sunburst>
 	<div class="flex flex-col items-center gap-4">
-		<h1 class="text-5xl font-bold leading-tight tracking-tight text-balance text-cmc-navy">
+		<h1 class="text-5xl leading-tight font-bold tracking-tight text-balance text-cmc-navy">
 			{title}
 		</h1>
 		{#if children}

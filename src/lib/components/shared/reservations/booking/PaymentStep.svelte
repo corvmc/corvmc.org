@@ -95,13 +95,13 @@
 		{#if !pricing}
 			<div class="space-y-2 py-2">
 				<div class="flex justify-between">
-					<div class="skeleton h-5 w-48"></div>
-					<div class="skeleton h-5 w-16"></div>
+					<div class="h-5 w-48 skeleton"></div>
+					<div class="h-5 w-16 skeleton"></div>
 				</div>
 				<div class="divider my-1"></div>
 				<div class="flex justify-between">
-					<div class="skeleton h-6 w-16"></div>
-					<div class="skeleton h-6 w-20"></div>
+					<div class="h-6 w-16 skeleton"></div>
+					<div class="h-6 w-20 skeleton"></div>
 				</div>
 			</div>
 		{:else}

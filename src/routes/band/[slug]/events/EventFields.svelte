@@ -84,8 +84,7 @@
 		class="textarea w-full"
 		rows="4"
 		maxlength="5000"
-		placeholder="Tell people what to expect..."
-	></textarea>
+		placeholder="Tell people what to expect..."></textarea>
 </FormField>
 
 {#if readonly}
@@ -220,7 +219,7 @@
 						href={evt.externalTicketUrl}
 						target="_blank"
 						rel="noopener external"
-						class="link link-primary break-all"
+						class="link break-all link-primary"
 					>
 						{evt.externalTicketUrl}
 					</a>

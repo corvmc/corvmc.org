@@ -46,7 +46,7 @@
 </svelte:head>
 
 <div
-	class="sticky top-0 z-10 -mx-6 flex flex-wrap items-center justify-between gap-2 border-b border-base-300 bg-base-100 px-6 py-3 mb-6"
+	class="sticky top-0 z-10 -mx-6 mb-6 flex flex-wrap items-center justify-between gap-2 border-b border-base-300 bg-base-100 px-6 py-3"
 >
 	<div class="flex min-w-0 items-center gap-3">
 		{#if backHref}
