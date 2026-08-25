@@ -6,7 +6,7 @@
 	"packageManager": "pnpm@9.15.9",
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build",
+		"build": "node scripts/ci-migrate.mjs && vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo '' && lefthook install",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",

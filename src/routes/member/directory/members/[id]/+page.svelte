@@ -1,12 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import {
-		getDirectoryMember,
-		getMemberShows,
-		getMemberPastShows
-	} from '$lib/remote/directory.remote';
-	import { getMemberLayout } from '$lib/remote/layout.remote';
+	import { getDirectoryMember, getMemberPastShows } from '$lib/remote/directory.remote';
 	import { ReportContentAction } from '$lib/components/shared/actions';
 	import MessageMemberAction from './MessageMemberAction.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -32,16 +27,14 @@
 	const BANDS_BASE = '/member/directory/bands';
 
 	let id = $derived(page.params.id!);
-	let member = $derived(await getDirectoryMember(id));
-	let shows = $derived(await getMemberShows(id));
-	let viewer = $derived(await getMemberLayout());
+	// One query — see the note on `getDirectoryMember`. The two permission flags are decided
+	// server-side now; the "message yourself" reasoning moved there with them.
+	let data = $derived(await getDirectoryMember(id));
 
-	let canReport = $derived(viewer.features.contentFlags && viewer.user.id !== id);
-	// No "message yourself" button. Whether they will actually receive it depends
-	// on blocks and their own messaging switch — which is checked server-side and
-	// deliberately not reflected here: showing or hiding this button based on
-	// those would tell the sender things the silent-drop design keeps from them.
-	let canMessage = $derived(viewer.features.directMessages && viewer.user.id !== id);
+	const member = $derived(data.profile);
+	const shows = $derived(data.shows);
+	const canReport = $derived(data.viewer.canReport);
+	const canMessage = $derived(data.viewer.canMessage);
 
 	let links = $derived((member?.links as ProfileLink[] | null) ?? []);
 	let contact = $derived((member?.directoryContact ?? {}) as NonNullable<DirectoryContact>);

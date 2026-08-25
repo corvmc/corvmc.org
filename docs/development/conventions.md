@@ -200,7 +200,7 @@ Every script in `package.json`:
 | `db:reset`                      | Wipe local D1 + migrate + seed                                                                                                                                        |
 | `db:studio`                     | drizzle-kit studio GUI (**remote** D1 — needs `CLOUDFLARE_*` vars)                                                                                                    |
 | `db:sync`                       | Pre-cutover: reload remote D1 data from Postgres (destructive — see [operations manual](../architecture/operations-manual.md#6-the-postgres-bridge-pre-cutover-only)) |
-| `ci:migrate`                    | Remote migrate, but only on `main` (used by Cloudflare Workers Builds)                                                                                                |
+| `ci:migrate`                    | Remote migrate, but only on `main` — the first half of `build`, so deploys cannot skip it                                                                             |
 | `storybook` / `build-storybook` | Storybook on :6006 / static build                                                                                                                                     |
 | `stripe:sync-webhooks`          | Sync the Stripe webhook endpoint's event list to the code registry                                                                                                    |
 | `help:sync`                     | Upsert `src/content/help/**` articles into the D1 help tables                                                                                                         |

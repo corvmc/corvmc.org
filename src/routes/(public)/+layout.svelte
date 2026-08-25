@@ -30,5 +30,13 @@
 			{@render children()}
 		</ErrorToastBoundary>
 	</main>
-	<SiteFooter />
+	<!--
+		The footer needs its own boundary. It is a sibling of <main>, not a child, so anything
+		it throws sails past the boundary above it and out to +error.svelte, replacing the whole
+		route with an error page over a footer that failed to load its address
+		(JAVASCRIPT-SVELTEKIT-2H). `showPending={false}` for the same SSR reason as above.
+	-->
+	<ErrorToastBoundary showPending={false}>
+		<SiteFooter />
+	</ErrorToastBoundary>
 </div>

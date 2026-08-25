@@ -3,7 +3,7 @@ import { LONG_TEXT_MAX } from '$lib/config';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
-import { requireFeature } from '$lib/server/feature-flags';
+import { requireFeature, getAllFeatureFlags } from '$lib/server/feature-flags';
 import { requireBandAdmin } from '$lib/server/band/band-context';
 import {
 	listMembers,
@@ -146,14 +146,61 @@ export const searchMessageRecipients = query(
 	}
 );
 
+/**
+ * The member directory profile page's one load-bearing query.
+ *
+ * It used to be three — the profile, `getMemberShows`, and `getMemberLayout` for two booleans
+ * — awaited side by side in the component. Past kit 2.64 that shape does not render at all: a
+ * component holding several remote queries in flight blows up inside Svelte's reactivity, which
+ * is what `TypeError: null is not an object` on the band twin (JAVASCRIPT-SVELTEKIT-1V) was.
+ * See `custom/no-concurrent-remote-queries`.
+ *
+ * The layout query is not composed in — the page wanted two flags off it, not a nav, and
+ * `getMemberLayout` is refreshed from seven places that have nothing to do with this page.
+ * The permission decisions are resolved here instead, which is where they belonged.
+ */
 export const getDirectoryMember = query(z.string(), async (userId) => {
-	requireUser();
-	return getMemberProfileService(userId, 'members');
+	const viewer = requireUser();
+
+	const [profile, shows, features] = await Promise.all([
+		getMemberProfileService(userId, 'members'),
+		getMemberShows(userId),
+		getAllFeatureFlags()
+	]);
+
+	return {
+		profile,
+		shows,
+		viewer: {
+			canReport: features.contentFlags && viewer.id !== userId,
+			// No "message yourself" button. Whether they will actually receive it depends on
+			// blocks and their own messaging switch — checked server-side and deliberately not
+			// reflected here: showing or hiding this would tell the sender things the
+			// silent-drop design keeps from them.
+			canMessage: features.directMessages && viewer.id !== userId
+		}
+	};
 });
 
+/** The band directory profile page's one load-bearing query. See `getDirectoryMember`. */
 export const getDirectoryBand = query(z.string(), async (slug) => {
-	requireUser();
-	return loadBandProfile(slug, 'members');
+	const viewer = requireUser();
+
+	// Serial, because the shows are keyed by the band id the profile resolves — but both hops
+	// are local to the server, where the fan-out was three network round trips.
+	const profile = await loadBandProfile(slug, 'members');
+	const [shows, features] = await Promise.all([
+		getBandShows(profile.band.id),
+		getAllFeatureFlags()
+	]);
+
+	return {
+		...profile,
+		shows,
+		viewer: {
+			canReport: features.contentFlags && !profile.members.some((m) => m.userId === viewer.id)
+		}
+	};
 });
 
 // ---------------------------------------------------------------------------

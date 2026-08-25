@@ -1,7 +1,17 @@
 // Apply pending D1 migrations to remote, but ONLY for a build that publishes to production.
-// Runs inside the Cloudflare Workers Builds build command (`pnpm ci:migrate && pnpm build`)
-// so the schema is applied before the new Worker is published — and so preview/PR builds
-// never touch the production database.
+// Runs as the first half of `pnpm build`, so the schema is applied before the new Worker is
+// published — and so preview/PR builds never touch the production database.
+//
+// It is wired into `build` rather than left to the Cloudflare Workers Builds build command
+// because that command is a dashboard field, invisible to code review and reset when the
+// GitHub connection is recreated. It was silently reset once — the repo moved to
+// `corvmc/corvmc.org`, the `pnpm ci:migrate &&` half went with it, and #267's `band` -> `group`
+// rename shipped its code without its migration. Every route touching a band 500ed with
+// `no such table: group` for two hours. A guard written inside this script would not have
+// caught that: the script never ran. Being part of `build` is what makes it unskippable.
+//
+// The `ci:migrate` package script stays for the dashboard command that still calls it
+// explicitly; `drizzle-kit migrate` is idempotent, so the second run is a no-op.
 //
 // Requires CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_DATABASE_ID / CLOUDFLARE_D1_TOKEN in the
 // build environment (used by drizzle.config.ts's d1-http driver).

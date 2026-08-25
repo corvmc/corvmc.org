@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { IconBrandFacebook, IconBrandInstagram } from '@tabler/icons-svelte';
-	import { getSocialLinks, getOrgAddress } from '$lib/remote/settings.remote';
+	import { getFooterInfo } from '$lib/remote/settings.remote';
 
-	let socialLinks = $derived(await getSocialLinks());
-	let address = $derived(await getOrgAddress());
+	// One query, not two. Two remote queries in flight in one component crashes past kit 2.64
+	// (JAVASCRIPT-SVELTEKIT-2H), and this footer renders on every public route.
+	let { social, address } = $derived(await getFooterInfo());
 
 	const addressLine = $derived(
 		[address.street, [address.city, address.state].filter(Boolean).join(', ')]
@@ -25,8 +26,8 @@
 
 	const socials = $derived(
 		[
-			{ href: socialLinks.facebook, label: 'Facebook', icon: IconBrandFacebook },
-			{ href: socialLinks.instagram, label: 'Instagram', icon: IconBrandInstagram }
+			{ href: social.facebook, label: 'Facebook', icon: IconBrandFacebook },
+			{ href: social.instagram, label: 'Instagram', icon: IconBrandInstagram }
 		].filter((s) => s.href)
 	);
 </script>

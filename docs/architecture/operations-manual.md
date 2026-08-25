@@ -17,13 +17,18 @@ handled by **Cloudflare Workers Builds**, which watches the GitHub repo:
 1. A PR reaches the front of the merge queue, which puts its commit on a temporary
    `gh-readonly-queue/main/pr-<n>-<sha>` branch, or you push to `main` directly.
 2. Cloudflare's build system runs the build command configured in the Cloudflare dashboard
-   (Workers & Pages → corvmc → Settings → Build):
+   (Workers & Pages → corvmc → Settings → Build). Any command that ends in `pnpm build`
+   works, because `build` is `node scripts/ci-migrate.mjs && vite build` — the migrate is part
+   of the build, not something the dashboard has to remember to prepend.
 
-   ```
-   pnpm ci:migrate && pnpm build
-   ```
+   That is deliberate. The build command used to be `pnpm ci:migrate && pnpm build`, and when
+   the repo moved to `corvmc/corvmc.org` the build configuration was recreated without the
+   first half. Builds kept publishing while migrations silently stopped applying, so #267's
+   `band` → `group` rename shipped its code against a database that still had `band`, and every
+   route touching a band 500ed with `no such table: group`. `scripts/ci-migrate.spec.ts` pins
+   the wiring.
 
-3. `pnpm ci:migrate` runs `scripts/ci-migrate.mjs`, which applies any pending D1 migrations
+3. `scripts/ci-migrate.mjs` applies any pending D1 migrations
    **only for a build that publishes to production** — `main` itself, or a
    `gh-readonly-queue/main/*` merge queue branch. It reads `WORKERS_CI_BRANCH` (falling back
    to `CF_PAGES_BRANCH`) and exits 0 without touching the database on any other branch. If
@@ -42,10 +47,14 @@ handled by **Cloudflare Workers Builds**, which watches the GitHub repo:
 
 The load-bearing configuration lives in the Cloudflare dashboard, not the repo:
 
-- the build command above;
-- three **build environment variables** used by `drizzle.config.ts` for the remote migrate:
-  `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_DATABASE_ID`, and `CLOUDFLARE_D1_TOKEN` (an API
-  token scoped Account → D1 → Edit);
+- two **build environment variables** used by `drizzle.config.ts` for the remote migrate:
+  `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_D1_TOKEN` (an API token scoped Account → D1 → Edit).
+  `CLOUDFLARE_DATABASE_ID` is no longer among them — `drizzle.config.ts` reads the id from
+  `wrangler.toml`, so the migrate targets whatever database the Worker binds `DB` to and one
+  less non-secret value depends on a dashboard field surviving. The token has no such escape:
+  it is a secret and has to live here. When the build config was recreated for the repo move
+  both variables went missing, and the build failed with "Please provide required params for
+  D1 HTTP driver";
 - which branches Cloudflare builds at all. It currently builds non-production branches, which
   is what puts the merge queue's branch in front of the `main` push. A plain PR branch build
   only uploads a version — `wrangler deployments list` shows no deployment for it — while the
