@@ -16,11 +16,25 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Every job sets `timeout-minutes`. Without it a job inherits GitHub's default of
+# 360, so anything that wedges — a preview server that never binds, a browser
+# that never exits — holds a runner for six hours and keeps auto-merge armed on
+# a PR that is going nowhere.
+#
+# The numbers are roughly 2x the slowest run observed over the preceding weeks,
+# not the median: E2E retries twice on CI (playwright.config.ts), so a run with
+# a few flaky failures legitimately takes 3x a clean one. Observed maxima at the
+# time of writing were E2E 14.8m and Unit tests 15.1m, against medians of 4.8m
+# and 2.4m. These bound a hang; they are not a performance budget, and a job
+# that starts timing out is reporting a real regression rather than a limit set
+# too tight.
+
 jobs:
   lint:
     name: Lint (full)
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -51,6 +65,7 @@ jobs:
     # queue ref, so the changed-file set is still right there.
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -67,6 +82,7 @@ jobs:
   check:
     name: Svelte Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -83,6 +99,7 @@ jobs:
   unit:
     name: Unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -107,6 +124,7 @@ jobs:
   e2e:
     name: E2E
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -147,6 +165,7 @@ jobs:
   schema-drift:
     name: Schema drift
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -177,6 +196,7 @@ jobs:
   docs:
     name: Docs integrity
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       # No deps needed — the checker is plain Node. Fails only on integrity errors
