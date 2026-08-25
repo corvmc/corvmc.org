@@ -22,7 +22,7 @@ function type(input: HTMLInputElement, text: string) {
 describe('SearchInput', () => {
 	it('fires once with the final text, not once per keystroke', async () => {
 		const onsearch = vi.fn();
-		render(SearchInput, { placeholder: 'Search members...', delay: DELAY, onsearch });
+		await render(SearchInput, { placeholder: 'Search members...', delay: DELAY, onsearch });
 		const input = page.getByPlaceholder('Search members...').element() as HTMLInputElement;
 
 		type(input, 'a');
@@ -40,7 +40,7 @@ describe('SearchInput', () => {
 	 */
 	it('cancels a pending search when the value is reset from outside', async () => {
 		const onsearch = vi.fn();
-		const screen = render(SearchInput, {
+		const screen = await render(SearchInput, {
 			placeholder: 'Search',
 			delay: DELAY,
 			onsearch,

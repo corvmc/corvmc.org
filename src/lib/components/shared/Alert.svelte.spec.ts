@@ -11,7 +11,7 @@ import AlertHarness from './Alert.test.svelte';
  */
 describe('Alert with block-level children', () => {
 	it('does not nest block content inside a paragraph', async () => {
-		render(AlertHarness);
+		await render(AlertHarness);
 
 		await expect.element(page.getByRole('alert')).toBeInTheDocument();
 		expect(document.querySelectorAll('p p, p ul, p div')).toHaveLength(0);

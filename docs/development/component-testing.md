@@ -95,18 +95,25 @@ describe('MyComponent', () => {
 	it('renders with no DB/auth/server', async () => {
 		// Import the component AFTER vi.mock is registered.
 		const MyComponent = (await import('./MyComponent.svelte')).default;
-		render(MyComponent);
+		await render(MyComponent);
 		await expect.element(page.getByText('Jane Doe')).toBeVisible();
 	});
 });
 ```
+
+`render()` returns a promise and must be awaited. Dropping the `await` does not
+fail loudly — you get a `Promise` where the `RenderResult` should be, so
+`container`, `rerender` and `unmount` come back `undefined` and the test dies on
+a property access several lines later. `pnpm check` catches it; a bare
+`await render(X)` with no destructuring typechecks either way, so keep the
+`await` even where nothing reads the result.
 
 For an `actions/*` component, prefer passing `fakeForm([...])` as the prop over
 mocking the whole remote module:
 
 ```ts
 import { fakeForm } from '$lib/test/mocks';
-render(CancelReservationAction, { reservation: { id: 'r1' }, action: fakeForm(['id']) });
+await render(CancelReservationAction, { reservation: { id: 'r1' }, action: fakeForm(['id']) });
 ```
 
 ## Coverage

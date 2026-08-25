@@ -44,7 +44,7 @@ function bubbleFor(body: string) {
 
 describe('ThreadTimeline — member view (viewerUserId given)', () => {
 	it('puts the member’s own message on the right and the staff reply on the left', async () => {
-		render(ThreadTimeline, { messages, viewerUserId: MEMBER });
+		await render(ThreadTimeline, { messages, viewerUserId: MEMBER });
 
 		expect(bubbleFor('Is a locker free?')?.className).toContain('chat-end');
 		expect(bubbleFor('Yes, through Friday.')?.className).toContain('chat-start');
@@ -53,7 +53,7 @@ describe('ThreadTimeline — member view (viewerUserId given)', () => {
 	it('does not fall back to direction for a message with no author id', async () => {
 		// The regression this guards: treating a null author as "outbound, so
 		// mine" would land every staff reply on the member's own side.
-		render(ThreadTimeline, { messages, viewerUserId: MEMBER });
+		await render(ThreadTimeline, { messages, viewerUserId: MEMBER });
 
 		expect(bubbleFor('Yes, through Friday.')?.className).not.toContain('chat-end');
 	});
@@ -61,14 +61,14 @@ describe('ThreadTimeline — member view (viewerUserId given)', () => {
 
 describe('ThreadTimeline — staff view (no viewerUserId)', () => {
 	it('keeps orienting by direction, so a colleague’s reply still reads as ours', async () => {
-		render(ThreadTimeline, { messages, contactName: 'Robin' });
+		await render(ThreadTimeline, { messages, contactName: 'Robin' });
 
 		expect(bubbleFor('Is a locker free?')?.className).toContain('chat-start');
 		expect(bubbleFor('Yes, through Friday.')?.className).toContain('chat-end');
 	});
 
 	it('still renders internal notes', async () => {
-		render(ThreadTimeline, {
+		await render(ThreadTimeline, {
 			messages,
 			contactName: 'Robin',
 			notes: [
@@ -87,7 +87,7 @@ describe('ThreadTimeline — staff view (no viewerUserId)', () => {
 
 describe('ThreadTimeline — notes', () => {
 	it('renders none when the prop is omitted, as on member-facing pages', async () => {
-		render(ThreadTimeline, { messages, viewerUserId: MEMBER });
+		await render(ThreadTimeline, { messages, viewerUserId: MEMBER });
 
 		expect(document.querySelectorAll('.border-dashed').length).toBe(0);
 	});

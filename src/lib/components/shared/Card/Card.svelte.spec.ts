@@ -13,7 +13,7 @@ const body = () => document.querySelector('.card-body') as HTMLElement;
 
 describe('Card', () => {
 	it('is a base-100 surface with a shadow by default', async () => {
-		render(CardHarness);
+		await render(CardHarness);
 
 		await expect.element(page.getByText('$24.00')).toBeVisible();
 		expect([...card().classList]).toEqual(
@@ -23,7 +23,7 @@ describe('Card', () => {
 	});
 
 	it('swaps the shadow for a border when bordered', async () => {
-		render(CardHarness, { bordered: true });
+		await render(CardHarness, { bordered: true });
 
 		await expect.element(page.getByText('$24.00')).toBeVisible();
 		expect([...card().classList]).toEqual(expect.arrayContaining(['border', 'border-base-300']));
@@ -31,14 +31,14 @@ describe('Card', () => {
 	});
 
 	it('takes a tone', async () => {
-		render(CardHarness, { tone: 'base-200' });
+		await render(CardHarness, { tone: 'base-200' });
 
 		await expect.element(page.getByText('$24.00')).toBeVisible();
 		expect(card().classList).toContain('bg-base-200');
 	});
 
 	it('lays the body out as a row on request', async () => {
-		render(CardHarness, { row: true });
+		await render(CardHarness, { row: true });
 
 		await expect.element(page.getByText('$24.00')).toBeVisible();
 		expect([...body().classList]).toEqual(
@@ -47,7 +47,7 @@ describe('Card', () => {
 	});
 
 	it('tightens padding without touching the rest of the body', async () => {
-		render(CardHarness, { padding: 'sm' });
+		await render(CardHarness, { padding: 'sm' });
 
 		await expect.element(page.getByText('$24.00')).toBeVisible();
 		expect([...body().classList]).toEqual(expect.arrayContaining(['card-body', 'p-4']));
@@ -56,14 +56,14 @@ describe('Card', () => {
 
 describe('CardTitle', () => {
 	it('is an h3 by default', async () => {
-		render(CardHarness);
+		await render(CardHarness);
 
 		await expect.element(page.getByRole('heading', { name: 'Payment', level: 3 })).toBeVisible();
 	});
 
 	/** `level` is the page outline, `size` is how loud it looks — never conflate them. */
 	it('changes heading level without changing size', async () => {
-		render(CardHarness, { level: 2, size: 'lg' });
+		await render(CardHarness, { level: 2, size: 'lg' });
 
 		const heading = page.getByRole('heading', { name: 'Payment', level: 2 });
 		await expect.element(heading).toBeVisible();

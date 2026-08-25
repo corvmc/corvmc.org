@@ -22,7 +22,7 @@ const img = () => document.querySelector('img[alt="Cascade Fest"]');
 describe('PosterCard poster sizing', () => {
 	it('offers a width ladder when the URL is a transform URL', async () => {
 		const posterUrl = `https://media.corvmc.org${CDN_MARKER}${transformOptions(1200)}/events/posters/e1.jpg`;
-		render(PosterCard, { ...base, posterUrl });
+		await render(PosterCard, { ...base, posterUrl });
 
 		const srcset = img()?.getAttribute('srcset') ?? '';
 		expect(srcset.split(', ')).toHaveLength(3);
@@ -32,7 +32,7 @@ describe('PosterCard poster sizing', () => {
 
 	it('omits srcset entirely for a plain R2 URL', async () => {
 		const posterUrl = 'https://media.corvmc.org/events/posters/e1.jpg';
-		render(PosterCard, { ...base, posterUrl });
+		await render(PosterCard, { ...base, posterUrl });
 
 		expect(img()?.getAttribute('src')).toBe(posterUrl);
 		expect(img()?.hasAttribute('srcset')).toBe(false);

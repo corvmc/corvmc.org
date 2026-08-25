@@ -32,7 +32,7 @@ describe('FormField', () => {
 	it('pre-fills a field-based text input from the value prop', async () => {
 		// Regression: when both `field` and `value` were provided, the value prop was
 		// dropped and the input rendered empty (band name not auto-filled).
-		render(FormField, {
+		await render(FormField, {
 			field: fakeField('name'),
 			type: 'text',
 			label: 'Band Name',
@@ -43,7 +43,7 @@ describe('FormField', () => {
 	});
 
 	it('renders an empty field-based input when no value is supplied', async () => {
-		render(FormField, {
+		await render(FormField, {
 			field: fakeField('tagline'),
 			type: 'text',
 			label: 'Tagline'
@@ -56,7 +56,7 @@ describe('FormField', () => {
 	// does when the input name carries the `b:` prefix. A string-typed schema otherwise
 	// rejects the coerced boolean with "Invalid option: expected one of \"\"|\"on\"".
 	it('b:-prefixes a name-only checkbox so the value is a boolean', async () => {
-		const { container } = render(FormField, {
+		const { container } = await render(FormField, {
 			name: 'coverFees',
 			type: 'checkbox',
 			label: '',
@@ -67,7 +67,7 @@ describe('FormField', () => {
 	});
 
 	it('b:-prefixes a name-only toggle so the value is a boolean', async () => {
-		const { container } = render(FormField, {
+		const { container } = await render(FormField, {
 			name: 'published',
 			type: 'toggle',
 			label: '',
@@ -78,7 +78,7 @@ describe('FormField', () => {
 	});
 
 	it('b:-prefixes a field-based checkbox so the value is a boolean', async () => {
-		const { container } = render(FormField, {
+		const { container } = await render(FormField, {
 			field: fakeField('coverFees'),
 			type: 'checkbox',
 			label: '',
@@ -89,7 +89,7 @@ describe('FormField', () => {
 	});
 
 	it('b:-prefixes a field-based toggle so the value is a boolean', async () => {
-		const { container } = render(FormField, {
+		const { container } = await render(FormField, {
 			field: fakeField('lookingForBand'),
 			type: 'toggle',
 			label: '',
@@ -115,7 +115,7 @@ describe('FormField', () => {
 			['totalQuantity']
 		);
 
-		const { container } = render(FormField, {
+		const { container } = await render(FormField, {
 			field,
 			type: 'number',
 			label: 'Total Quantity',
@@ -132,7 +132,7 @@ describe('FormField', () => {
 	// profile save posted an empty role list — silently deleting the member's
 	// roles (staff/admin included) as a side effect of editing a phone number.
 	it('pre-fills a tags input from the value prop', async () => {
-		const { container } = render(FormField, {
+		const { container } = await render(FormField, {
 			name: 'roles',
 			type: 'tags',
 			label: 'Roles',
@@ -150,7 +150,7 @@ describe('FormField', () => {
 	});
 
 	it('serialises an empty tags input as an empty array', async () => {
-		const { container } = render(FormField, {
+		const { container } = await render(FormField, {
 			name: 'roles',
 			type: 'tags',
 			label: 'Roles',
@@ -182,7 +182,7 @@ describe('FormField', () => {
 				() => ({}),
 				['posterFile']
 			);
-			const { container } = render(FormField, { field, type: 'file', label: 'Poster' });
+			const { container } = await render(FormField, { field, type: 'file', label: 'Poster' });
 
 			const input = container.querySelector('input[type="file"]') as HTMLInputElement;
 			expect(input).not.toBeNull();
@@ -199,7 +199,7 @@ describe('FormField', () => {
 				() => ({}),
 				['posterFile']
 			);
-			const { container } = render(FormField, { field, type: 'file', label: 'Poster' });
+			const { container } = await render(FormField, { field, type: 'file', label: 'Poster' });
 
 			expect(container.querySelectorAll('[name="posterFile"]')).toHaveLength(1);
 		});
@@ -212,7 +212,7 @@ describe('FormField', () => {
 				() => ({}),
 				['posterFile']
 			);
-			render(FormField, { field, type: 'file', label: 'Poster', emptyLabel: 'Add a poster' });
+			await render(FormField, { field, type: 'file', label: 'Poster', emptyLabel: 'Add a poster' });
 
 			await expect.element(page.getByText('Add a poster')).toBeInTheDocument();
 		});
@@ -234,7 +234,7 @@ describe('FormField', () => {
 				render: () => `<textarea name="bio">editable</textarea>`
 			}));
 
-			const { container } = render(FormField, {
+			const { container } = await render(FormField, {
 				name: 'bio',
 				label: 'Bio',
 				readonly: true,
@@ -248,7 +248,7 @@ describe('FormField', () => {
 		});
 
 		it('renders no submittable input, so a read-only field cannot post', async () => {
-			const { container } = render(FormField, {
+			const { container } = await render(FormField, {
 				name: 'title',
 				type: 'text',
 				label: 'Title',
@@ -263,7 +263,7 @@ describe('FormField', () => {
 		// what a person should be shown. `display` is how the caller supplies the
 		// formatted form without giving up the field's identity.
 		it('shows `display` instead of the raw value', async () => {
-			render(FormField, {
+			await render(FormField, {
 				name: 'eventDate',
 				type: 'date',
 				label: 'Date',
@@ -276,7 +276,7 @@ describe('FormField', () => {
 		});
 
 		it('keeps long text on its own lines rather than in a single-line input', async () => {
-			const { container } = render(FormField, {
+			const { container } = await render(FormField, {
 				name: 'description',
 				type: 'textarea',
 				label: 'Description',

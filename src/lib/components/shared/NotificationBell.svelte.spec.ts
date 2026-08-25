@@ -37,7 +37,7 @@ describe('NotificationBell', () => {
 	});
 
 	it('opens on click and closes when clicking outside', async () => {
-		render(NotificationBell);
+		await render(NotificationBell);
 
 		const trigger = page.getByRole('button', { name: 'Notifications' });
 		await expect.element(trigger).toBeVisible();
@@ -56,7 +56,7 @@ describe('NotificationBell', () => {
 	// `open` then throws. Simulate by unmounting in a capture-phase listener so
 	// the same click reaches the window handler after teardown.
 	it('survives a click that unmounts the component mid-dispatch (JAVASCRIPT-SVELTEKIT-Q/1A)', async () => {
-		const screen = render(NotificationBell);
+		const screen = await render(NotificationBell);
 
 		const trigger = page.getByRole('button', { name: 'Notifications' });
 		await trigger.click();
