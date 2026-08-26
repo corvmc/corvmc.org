@@ -1,26 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
 // @ts-expect-error -- plain .mjs script, no types
 import { isProductionBranch } from './ci-migrate.mjs';
 
-// The migrate step has to be part of `build`, not just part of the build command configured
-// in the Cloudflare dashboard. That field is invisible to code review and is reset when the
-// GitHub connection is recreated — which is exactly what happened when the repo moved to
-// `corvmc/corvmc.org`. The `pnpm ci:migrate &&` half vanished, #267's `band` -> `group` rename
-// published its code without its migration, and every route touching a band 500ed with
-// `no such table: group`. Nothing in the repo could have caught it, because this script never
-// ran. Wiring it into `build` is the fix; this test is what keeps it wired.
-describe('the build script', () => {
-	it('runs the migrate step before vite build', () => {
-		const { scripts } = JSON.parse(
-			readFileSync(new URL('../package.json', import.meta.url), 'utf8')
-		);
-		expect(scripts.build).toContain('ci-migrate.mjs');
-		expect(scripts.build.indexOf('ci-migrate.mjs')).toBeLessThan(
-			scripts.build.indexOf('vite build')
-		);
-	});
-});
+// `build` no longer runs this script — it is `vite build`, and the migrate is invoked
+// through `pnpm ci:migrate` from the build command configured in the Cloudflare dashboard.
+// The assertion that pinned `ci-migrate.mjs` into `build` lived here and is gone with it.
+// Worth knowing what that guard was for: the dashboard field is invisible to code review and
+// is reset when the GitHub connection is recreated, which is what happened when the repo moved
+// to `corvmc/corvmc.org` — the `pnpm ci:migrate &&` half vanished, #267's `band` -> `group`
+// rename published without its migration, and every route touching a band 500ed with
+// `no such table: group`. Whatever runs the migrate now, nothing in this repo checks that it does.
 
 // Cloudflare Workers Builds is the only thing that deploys this app, and with the
 // merge queue enabled it builds — and publishes to production — the queue's

@@ -17,16 +17,16 @@ handled by **Cloudflare Workers Builds**, which watches the GitHub repo:
 1. A PR reaches the front of the merge queue, which puts its commit on a temporary
    `gh-readonly-queue/main/pr-<n>-<sha>` branch, or you push to `main` directly.
 2. Cloudflare's build system runs the build command configured in the Cloudflare dashboard
-   (Workers & Pages → corvmc → Settings → Build). Any command that ends in `pnpm build`
-   works, because `build` is `node scripts/ci-migrate.mjs && vite build` — the migrate is part
-   of the build, not something the dashboard has to remember to prepend.
+   (Workers & Pages → corvmc → Settings → Build). That command has to be `pnpm ci:migrate &&
+pnpm build`: `build` is `vite build` and does **not** migrate, so the dashboard field is the
+   only thing that applies a migration on deploy.
 
-   That is deliberate. The build command used to be `pnpm ci:migrate && pnpm build`, and when
-   the repo moved to `corvmc/corvmc.org` the build configuration was recreated without the
-   first half. Builds kept publishing while migrations silently stopped applying, so #267's
-   `band` → `group` rename shipped its code against a database that still had `band`, and every
-   route touching a band 500ed with `no such table: group`. `scripts/ci-migrate.spec.ts` pins
-   the wiring.
+   Treat that field as load-bearing. It was recreated without its `pnpm ci:migrate &&` half when
+   the repo moved to `corvmc/corvmc.org`; builds kept publishing while migrations silently
+   stopped applying, so #267's `band` → `group` rename shipped its code against a database that
+   still had `band`, and every route touching a band 500ed with `no such table: group`. For a
+   time `build` ran the migrate itself so the field could not skip it (#274). It no longer does
+   (#277), and no test in this repo can see whether the field is right.
 
 3. `scripts/ci-migrate.mjs` applies any pending D1 migrations
    **only for a build that publishes to production** — `main` itself, or a
