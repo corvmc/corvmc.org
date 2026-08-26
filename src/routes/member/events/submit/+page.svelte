@@ -53,8 +53,7 @@
 				class="textarea w-full"
 				rows="4"
 				maxlength="5000"
-				placeholder="Who's playing, what it sounds like, anything worth knowing..."
-			></textarea>
+				placeholder="Who's playing, what it sounds like, anything worth knowing..."></textarea>
 		</FormField>
 
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">

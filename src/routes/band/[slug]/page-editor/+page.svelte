@@ -337,8 +337,7 @@
 														value={block.content}
 														oninput={(e) => {
 															block.content = e.currentTarget.value;
-														}}
-													></textarea>
+														}}></textarea>
 												</label>
 											{:else if block.type === 'links'}
 												<label class="form-control">
@@ -349,9 +348,7 @@
 														value={block.style}
 														onchange={(e: Event) => {
 															block.style = (e.currentTarget as HTMLSelectElement).value as
-																| 'buttons'
-																| 'icons'
-																| 'list';
+																'buttons' | 'icons' | 'list';
 														}}
 													>
 														<option value="buttons">Buttons</option>
@@ -435,9 +432,7 @@
 														value={block.height}
 														onchange={(e: Event) => {
 															block.height = (e.currentTarget as HTMLSelectElement).value as
-																| 'sm'
-																| 'md'
-																| 'lg';
+																'sm' | 'md' | 'lg';
 														}}
 													>
 														<option value="sm">Small</option>
@@ -454,8 +449,7 @@
 														value={block.content}
 														oninput={(e) => {
 															block.content = e.currentTarget.value;
-														}}
-													></textarea>
+														}}></textarea>
 												</label>
 											{:else if block.type === 'contact'}
 												<label class="flex items-center gap-2">
@@ -575,8 +569,7 @@
 						value={customCss}
 						oninput={(e) => {
 							customCss = e.currentTarget.value;
-						}}
-					></textarea>
+						}}></textarea>
 					<p class="mt-1 text-xs opacity-40">
 						Max 50KB. External imports and scripts are stripped.
 					</p>

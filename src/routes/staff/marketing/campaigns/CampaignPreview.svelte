@@ -13,12 +13,12 @@
 	const html = $derived(await getPreview(markdown));
 </script>
 
-<div class="border rounded-lg bg-white overflow-hidden" style="min-height: 400px;">
+<div class="overflow-hidden rounded-lg border bg-white" style="min-height: 400px;">
 	{#if html}
 		<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML preview) -->
 		{@html html}
 	{:else}
-		<div class="flex items-center justify-center h-full p-12 text-sm opacity-40">
+		<div class="flex h-full items-center justify-center p-12 text-sm opacity-40">
 			Start typing to see a preview...
 		</div>
 	{/if}

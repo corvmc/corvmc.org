@@ -74,8 +74,7 @@
 					rows="3"
 					maxlength="1000"
 					bind:value={description}
-					placeholder="Anything else that would help us review this"
-				></textarea>
+					placeholder="Anything else that would help us review this"></textarea>
 			</label>
 			<Turnstile
 				siteKey={TURNSTILE_SITE_KEY}

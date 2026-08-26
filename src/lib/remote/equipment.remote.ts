@@ -80,8 +80,7 @@ export const getStaffEquipmentList = query(staffEquipmentFilters, async (filters
 			search: filters.search || undefined,
 			categoryId: filters.categoryId || undefined,
 			status: (filters.status || undefined) as
-				| import('$lib/server/db/schema/equipment').EquipmentStatus
-				| undefined,
+				import('$lib/server/db/schema/equipment').EquipmentStatus | undefined,
 			includeDeleted: filters.includeDeleted
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
@@ -114,8 +113,7 @@ export const getStaffLoans = query(staffLoansFilters, async (filters) => {
 		{
 			search: filters.search || undefined,
 			status: (filters.status || undefined) as
-				| import('$lib/server/db/schema/equipment').LoanStatus
-				| undefined
+				import('$lib/server/db/schema/equipment').LoanStatus | undefined
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);

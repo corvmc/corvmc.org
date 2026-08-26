@@ -134,7 +134,7 @@
 	<Button variant="ghost" size="sm" class="text-error" onclick={handleDelete}>Delete</Button>
 </PageHeader>
 <PageContent>
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+	<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 		<!-- Editor pane -->
 		<div class="space-y-4">
 			<div>
@@ -160,9 +160,8 @@
 					bind:value={markdownBody}
 					placeholder="Write your email in markdown..."
 					class="textarea w-full font-mono text-sm"
-					rows="20"
-				></textarea>
-				<p class="text-subtle mt-1">
+					rows="20"></textarea>
+				<p class="mt-1 text-subtle">
 					Available variables: {'{{subscriber_name}}'}, {'{{unsubscribe_url}}'}
 				</p>
 			</div>

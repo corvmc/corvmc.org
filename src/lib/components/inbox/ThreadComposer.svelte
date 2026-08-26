@@ -106,8 +106,7 @@
 						class="textarea w-full"
 						rows={isNote ? 2 : 4}
 						placeholder={isNote ? 'Add an internal note…' : 'Type your reply…'}
-						bind:value={draft}
-					></textarea>
+						bind:value={draft}></textarea>
 				{/snippet}
 			</FormField>
 			<div class="flex justify-end">

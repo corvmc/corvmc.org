@@ -63,8 +63,7 @@
 	const otherName = $derived(contactName ?? (viewerUserId ? 'CorvMC' : 'Contact'));
 
 	type Entry =
-		| { kind: 'message'; at: number; message: Message }
-		| { kind: 'note'; at: number; note: Note };
+		{ kind: 'message'; at: number; message: Message } | { kind: 'note'; at: number; note: Note };
 
 	const entries = $derived.by(() => {
 		const combined: Entry[] = [

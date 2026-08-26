@@ -34,7 +34,7 @@
 <div class="flex flex-wrap gap-2">
 	{#each audiences as a (a.id)}
 		<label
-			class="label cursor-pointer gap-2 border rounded-lg px-3 py-1.5 {selected.includes(a.id)
+			class="label cursor-pointer gap-2 rounded-lg border px-3 py-1.5 {selected.includes(a.id)
 				? 'border-primary bg-primary/10'
 				: 'border-base-300'}"
 		>
@@ -46,12 +46,12 @@
 			/>
 			<span class="text-sm">{a.name}</span>
 			{#if a.systemKey}
-				<span class="badge badge-info badge-xs">Built-in</span>
+				<span class="badge badge-xs badge-info">Built-in</span>
 			{/if}
 			<span class="text-subtle">({a.subscriberCount})</span>
 		</label>
 	{/each}
 </div>
 {#if selected.length > 0}
-	<p class="text-subtle mt-1">~{total} recipients (before deduplication)</p>
+	<p class="mt-1 text-subtle">~{total} recipients (before deduplication)</p>
 {/if}

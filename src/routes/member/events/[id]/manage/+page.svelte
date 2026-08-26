@@ -230,8 +230,7 @@
 					{...fields.description.as('text', listing.description ?? '')}
 					class="textarea w-full"
 					rows="4"
-					maxlength="5000"
-				></textarea>
+					maxlength="5000"></textarea>
 			</FormField>
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">

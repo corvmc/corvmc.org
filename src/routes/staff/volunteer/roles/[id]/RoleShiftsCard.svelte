@@ -112,7 +112,7 @@
 						<td class="cell-num whitespace-nowrap">
 							{shift.claimed}/{shift.capacity}
 							{#if short}
-								<span class="badge badge-warning badge-sm ml-2">short</span>
+								<span class="ml-2 badge badge-sm badge-warning">short</span>
 							{/if}
 						</td>
 					</tr>

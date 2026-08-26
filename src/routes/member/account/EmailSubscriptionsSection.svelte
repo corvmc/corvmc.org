@@ -13,7 +13,7 @@
 	<InfoCard title="Email Subscriptions">
 		{#await lists}
 			<div class="flex justify-center p-4">
-				<span class="loading loading-spinner loading-sm"></span>
+				<span class="loading loading-sm loading-spinner"></span>
 			</div>
 		{:then { subscriptions: subs, available: avail }}
 			{#if subs.length === 0 && avail.length === 0}

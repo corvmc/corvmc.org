@@ -201,8 +201,7 @@
 												value={quote.quote}
 												oninput={(e) => {
 													epk.pressQuotes![i] = { ...quote, quote: e.currentTarget.value };
-												}}
-											></textarea>
+												}}></textarea>
 											<div class="grid grid-cols-2 gap-2">
 												<input
 													type="text"

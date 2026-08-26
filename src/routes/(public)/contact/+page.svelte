@@ -116,8 +116,7 @@
 							required
 							placeholder={isEventTip
 								? 'Anything else worth knowing — who else is on the bill, cover charge, all-ages...'
-								: ''}
-						></textarea>
+								: ''}></textarea>
 					</FormField>
 
 					<Turnstile

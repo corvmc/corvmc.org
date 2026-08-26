@@ -167,8 +167,7 @@
 										class="textarea w-full"
 										rows="3"
 										{...fields.notes.as('text')}
-										bind:value={notes}
-									></textarea>
+										bind:value={notes}></textarea>
 								</label>
 								{#if flag.entityType === 'event' && flag.eventContext?.source === 'community' && resolution === 'resolved'}
 									<!-- Say this out loud. Resolving a community-listing flag is

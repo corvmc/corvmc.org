@@ -112,14 +112,12 @@ type Standing = {
 	triggeringFlagId: string | null;
 	updatedAt: Date | null;
 };
-const getStandingMock = vi.fn(
-	async (): Promise<Standing> => ({
-		status: 'none',
-		reason: null,
-		triggeringFlagId: null,
-		updatedAt: null
-	})
-);
+const getStandingMock = vi.fn(async (): Promise<Standing> => ({
+	status: 'none',
+	reason: null,
+	triggeringFlagId: null,
+	updatedAt: null
+}));
 vi.mock('$lib/server/moderation/standing-service', () => ({
 	getStanding: (...a: unknown[]) => getStandingMock(...(a as []))
 }));

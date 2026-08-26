@@ -154,14 +154,12 @@ type Standing = {
 	triggeringFlagId: string | null;
 	updatedAt: Date | null;
 };
-const getStanding = vi.fn(
-	async (): Promise<Standing> => ({
-		status: 'none',
-		reason: null,
-		triggeringFlagId: null,
-		updatedAt: null
-	})
-);
+const getStanding = vi.fn(async (): Promise<Standing> => ({
+	status: 'none',
+	reason: null,
+	triggeringFlagId: null,
+	updatedAt: null
+}));
 // Reachability has two halves: a restriction (`getStanding`) and the member's
 // own switch (`user.accepts_direct_messages`, which rides along on the
 // recipient row). `messagingIsDisabled` is the one place they recombine.

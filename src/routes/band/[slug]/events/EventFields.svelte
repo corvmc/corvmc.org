@@ -84,8 +84,7 @@
 		class="textarea w-full"
 		rows="4"
 		maxlength="5000"
-		placeholder="Tell people what to expect..."
-	></textarea>
+		placeholder="Tell people what to expect..."></textarea>
 </FormField>
 
 {#if readonly}

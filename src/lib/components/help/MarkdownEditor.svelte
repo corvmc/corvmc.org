@@ -73,8 +73,7 @@
 			bind:this={textarea}
 			bind:value
 			class="min-h-64 w-full resize-y bg-base-100 p-3 font-mono text-sm focus:outline-none"
-			placeholder="Write your article in Markdown..."
-		></textarea>
+			placeholder="Write your article in Markdown..."></textarea>
 	{:else}
 		<div class="min-h-64 p-3">
 			{#if value.trim()}
