@@ -32,7 +32,7 @@ is the enforcement.
 | 2   | **Directory — member and public** — 3 files, 9 queries     | ✅     | (next) |
 | 3   | **Help** — 3 files, 6 queries                              | ✅     | (next) |
 | 4   | **Equipment** — 4 files, 9 queries                         | ✅     | (next) |
-| 5   | **Events and recurring** — 6 files, 13 queries             | ⬜     |        |
+| 5   | **Events and recurring** — 6 files, 13 queries             | ✅     | (next) |
 | 6   | **Suggestions** — 4 files, 13 queries                      | ⬜     |        |
 | 7   | **Marketing** — 3 files, 7 queries                         | ⬜     |        |
 | 8   | **Reservations** — 3 files, 10 queries                     | ⬜     |        |
@@ -155,7 +155,35 @@ synchronous init — same rule as `setContext` in tranche 1.
 - `src/routes/staff/equipment/+page.svelte` — 2
 - `src/routes/staff/equipment/loans/[id]/+page.svelte` — 2
 
-### 5. Events and recurring
+### 5. Events and recurring ✅
+
+**Done**, and it added a third constraint to the compose-or-push-down test: **an import cycle is a
+reason to push down.**
+
+`getMyListings` lives in `community-events.remote.ts` with the six mutations that refresh it, and
+the member events page also wants `getMemberEvents`/`getMemberTickets` from `events.remote.ts`.
+Composing all three meant one file importing the other. Putting the wrapper in community-events
+made _that_ file import `events.remote`, which imports `volunteer.remote` — and that dragged the
+whole volunteer graph into `community-events.remote.spec.ts`, whose partial `$lib/server/errors`
+mock then failed to resolve `DomainError`. The spec was right and the import was wrong: the
+listings section became `MyListingsSection.svelte`, owning its own query, and every refresh in
+community-events stayed untouched.
+
+`staff/events` pushed down for a different reason. `getPendingSubmissionCount` does not depend on
+the filters, so composing it would have re-fired it on every keystroke — and awaiting the pair in
+the script would suspend the page inside the staff layout's boundary, blanking it each time, which
+is the exact thing `DataList` exists to avoid. It moved into `PendingReviewBadge.svelte`, which
+needed `TabBar`'s `badge` to accept a `Snippet` as well as a value.
+
+**A `.remote.ts` file may export only remote functions.** Sharing a Zod schema between a query and
+its wrapper by exporting it makes Kit reject the whole module at load time, and the failure
+surfaces as every spec that imports the file failing to _collect_ — 6 failed files, 0 failed tests,
+51 tests silently not run. Keep shared schemas unexported, or move them to a non-remote module.
+
+Two smaller notes: a `{#snippet}` declared directly inside a component's children becomes that
+component's prop, so a badge snippet has to sit at the top level of the markup. And when markup
+moves into a new component, its scoped `<style>` rules have to move with it — Svelte scopes per
+component, and the CSS silently stops applying otherwise.
 
 `(public)/events` also mounts `MiniCalendar`, which starts `getPublicCalendar` of its own —
 three in flight across the tree even though no single component fans out that far.

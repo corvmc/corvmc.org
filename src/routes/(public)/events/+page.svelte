@@ -5,7 +5,8 @@
 	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
 	import MiniCalendar from '$lib/components/public/calendar/MiniCalendar.svelte';
 	import GigList from '$lib/components/shared/events/GigList.svelte';
-	import { getPublicEvents } from '$lib/remote/events.remote';
+	import { getPublicEventsPage } from '$lib/remote/events.remote';
+	// Still needed on its own for the lazy "show more" pager below, which is not a fan-out.
 	import { getPublicGigGuide } from '$lib/remote/calendar.remote';
 	import { toLocalDate } from '$lib/utils/format';
 	import type { CalendarEntry } from '$lib/types/calendar';
@@ -19,8 +20,9 @@
 		return param && FROM_RE.test(param) ? param : today;
 	});
 
-	let { upcoming } = $derived(await getPublicEvents());
-	let guide = $derived(await getPublicGigGuide({ from, offset: 0 }));
+	const pageData = $derived(await getPublicEventsPage(from));
+	const { upcoming } = $derived(pageData.events);
+	const guide = $derived(pageData.guide);
 
 	// "Show more" appends pages client-side; reset when the anchor changes.
 	let extra: CalendarEntry[] = $state([]);

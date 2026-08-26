@@ -10,12 +10,13 @@
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
-	import { getSeries, getSeriesHistory, cancelDetailSeries } from '$lib/remote/recurring.remote';
+	import { getStaffSeriesDetail, cancelDetailSeries } from '$lib/remote/recurring.remote';
 	const { fields: cancelFields } = cancelDetailSeries;
 
 	let id = $derived(page.params.id!);
-	let series = $derived(await getSeries(id));
-	let history = $derived(await getSeriesHistory(id));
+	const data = $derived(await getStaffSeriesDetail(id));
+	const series = $derived(data.series);
+	const history = $derived(data.history);
 
 	let isActive = $derived(!series.cancelledAt);
 </script>

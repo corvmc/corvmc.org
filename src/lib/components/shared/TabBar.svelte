@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { Tabs, DropdownMenu } from 'bits-ui';
 	import { IconChevronDown } from '@tabler/icons-svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
@@ -7,7 +8,12 @@
 	type Tab = {
 		key: string;
 		label: string;
-		badge?: string | number;
+		/**
+		 * A snippet as well as a value, so a badge whose number needs its own remote query can be
+		 * a component instead of a prop the page has to resolve first. Resolving it on the page
+		 * would put a second query in flight there — see `custom/no-concurrent-remote-queries`.
+		 */
+		badge?: string | number | Snippet;
 		href?: string;
 	};
 
@@ -65,7 +71,9 @@
 
 {#snippet contents(tab: Tab)}
 	{tab.label}
-	{#if tab.badge != null}
+	{#if typeof tab.badge === 'function'}
+		{@render tab.badge()}
+	{:else if tab.badge != null}
 		<Badge class="ml-1">{tab.badge}</Badge>
 	{/if}
 {/snippet}
