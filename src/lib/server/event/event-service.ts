@@ -39,7 +39,7 @@ import { captureException } from '$lib/server/sentry';
 import { uploadFile, deleteObject, copyObject } from '$lib/server/storage';
 import { mediaKey } from '$lib/server/storage-keys';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import {
 	formatDateFull,
 	formatDateInTz,

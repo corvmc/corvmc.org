@@ -1,15 +1,15 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
-	import Badge from '$lib/components/shared/Badge.svelte';
+	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { relativeDay } from '$lib/utils/format';

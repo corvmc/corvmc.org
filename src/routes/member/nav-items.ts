@@ -13,7 +13,7 @@
  * pushes to the foot of the sidebar. Twelve rows do not need regrouping.
  */
 
-import { activeNavKey, type NavNode } from '$lib/components/shared/Nav/active-nav';
+import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
 
 export type MemberNavKey =
 	| 'dashboard'

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import ShiftFormFields from '$lib/components/shared/volunteer/ShiftFormFields.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, toLocalDateTime } from '$lib/utils/format';

@@ -14,16 +14,16 @@
 		IconHeartHandshake,
 		IconBulb
 	} from '@tabler/icons-svelte';
-	import AppShell from '$lib/components/shared/AppShell.svelte';
-	import Nav from '$lib/components/shared/Nav';
-	import { childHrefsFor } from '$lib/components/shared/Nav/active-nav';
-	import Avatar from '$lib/components/shared/Avatar.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
-	import { EntityViewer } from '$lib/components/shared/entity';
+	import AppShell from '$lib/components/layout/AppShell.svelte';
+	import Nav from '$lib/components/layout/Nav';
+	import { childHrefsFor } from '$lib/components/layout/Nav/active-nav';
+	import Avatar from '$lib/components/ui/Avatar.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '$lib/components/ui/entity';
 	import { getMemberLayout } from '$lib/remote/layout.remote';
 	import { setMemberLayoutContext } from './layout-context';
-	import { panelTabs } from '$lib/components/shared/panel-tabs';
+	import { panelTabs } from '$lib/components/layout/panel-tabs';
 	import {
 		activeMemberNavKey,
 		memberNavFooter,

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import CheckboxGroup from '$lib/components/shared/Form/CheckboxGroup.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
 	import { setRoleCertifications, getActiveCertifications } from '$lib/remote/volunteer.remote';
 
 	/**

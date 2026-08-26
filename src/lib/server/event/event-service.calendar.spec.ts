@@ -51,7 +51,7 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 	ReservationConflictError: class extends Error {}
 }));
 vi.mock('$lib/server/reservation/conflict-service', () => ({ hasConflict: vi.fn() }));
-vi.mock('$lib/server/events/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
+vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
 vi.mock('$lib/server/storage', () => ({ uploadFile: vi.fn(), deleteObject: vi.fn() }));
 
 import { listPublicCalendarEvents, listPublicUpcomingEvents } from './event-service';

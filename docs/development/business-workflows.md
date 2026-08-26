@@ -126,7 +126,7 @@ Three things differ from the member path:
   the queue is short enough to be worth working.
 
 Cash settlement (`cashReceived`), comping, refunds and no-shows all live here, each as a
-shared action component under `$lib/components/shared/actions/`, so the member and staff
+shared action component under `$lib/components/actions/`, so the member and staff
 surfaces cannot drift in what they do — only in who may do it.
 
 ---
@@ -158,7 +158,7 @@ one is offered the slot with a 24-hour window to confirm.
   events so the member hears about it. The generation window is ~2.5 weeks
   (`reservation.maxAdvanceDaysRecurring` config, default 17.5).
 - **Waitlist promotion:** `cancel()` emits `reservation.cancelled`; the listener in
-  `src/lib/server/events/register-listeners.ts` calls `promoteNextWaitlisted()` in
+  `src/lib/server/event-bus/register-listeners.ts` calls `promoteNextWaitlisted()` in
   `waitlist-service.ts` — oldest overlapping waitlisted reservation wins, gets
   `waitlistNotifiedAt`/`waitlistExpiresAt` set, and a `waitlist_slot_available`
   notification with a confirm link.

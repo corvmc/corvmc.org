@@ -2,14 +2,14 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { getAudiences } from '$lib/remote/marketing.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import { CreateAudienceAction } from '$lib/components/shared/actions';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import { CreateAudienceAction } from '$lib/components/actions';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
-	import { EntityIdentity } from '$lib/components/shared/entity';
+	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { formatDateShortYear } from '$lib/utils/format';
 
 	let audiences = $derived(await getAudiences());

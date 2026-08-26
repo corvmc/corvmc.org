@@ -2,7 +2,7 @@ import { db, getRowCount } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, lt, gt, isNull, notInArray, asc } from 'drizzle-orm';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { env } from '$env/dynamic/private';
 import { DEFAULT_TIMEZONE } from '$lib/config';

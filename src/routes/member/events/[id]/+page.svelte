@@ -1,19 +1,19 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import { Field } from '$lib/components/shared/Form';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
-	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
-	import TicketStub from '$lib/components/shared/events/TicketStub.svelte';
-	import TicketQRModal from '$lib/components/shared/events/TicketQRModal.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import { Field } from '$lib/components/ui/Form';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import PosterCard from '$lib/components/events/PosterCard.svelte';
+	import TicketStub from '$lib/components/events/TicketStub.svelte';
+	import TicketQRModal from '$lib/components/events/TicketQRModal.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
 	import {
 		ticketingMode,
@@ -25,7 +25,7 @@
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import ShareButton from '$lib/components/shared/ShareButton.svelte';
+	import ShareButton from '$lib/components/ui/ShareButton.svelte';
 	import {
 		purchaseTickets,
 		claimFreeTicket,

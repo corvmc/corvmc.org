@@ -6,7 +6,7 @@ import { paginate, type PaginationInput, type PaginatedResult } from '$lib/serve
 import { memberRefColumns, toMemberRef, type MemberRefRow } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
 import { buildDateInTz, formatDateInTz } from '$lib/server/reservation/timezone';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
 import { DomainError } from '$lib/server/errors';
 import {

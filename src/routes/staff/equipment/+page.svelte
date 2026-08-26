@@ -1,23 +1,23 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Badge from '$lib/components/shared/Badge.svelte';
+	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
-	import { Select } from '$lib/components/shared/Form';
+	import { Select } from '$lib/components/ui/Form';
 	import { getStaffEquipmentList } from '$lib/remote/equipment.remote';
-	import CategoryOptions from '$lib/components/shared/equipment/CategoryOptions.svelte';
-	import CategoryManagerModal from '$lib/components/shared/equipment/CategoryManagerModal.svelte';
+	import CategoryOptions from '$lib/components/equipment/CategoryOptions.svelte';
+	import CategoryManagerModal from '$lib/components/equipment/CategoryManagerModal.svelte';
 	import { equipmentStatuses, equipmentConditionBadge } from '$lib/config';
 	import type { EquipmentCondition } from '$lib/server/db/schema/equipment';
-	import { AddEquipmentAction } from '$lib/components/shared/actions';
-	import Button from '$lib/components/shared/Button.svelte';
+	import { AddEquipmentAction } from '$lib/components/actions';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { titleCase } from '$lib/utils/format';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet

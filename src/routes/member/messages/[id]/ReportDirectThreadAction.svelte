@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Action from '$lib/components/shared/Action.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
 	import { reportDirectThread } from '$lib/remote/direct-messages.remote';
 

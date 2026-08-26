@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		getUnsubscribeInfo,
 		confirmUnsubscribe,

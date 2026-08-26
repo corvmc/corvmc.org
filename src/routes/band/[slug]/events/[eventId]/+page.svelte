@@ -1,16 +1,16 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		BandPublishEventAction,
 		BandUnpublishEventAction,
 		BandCancelEventAction,
 		RemoveEventPosterAction
-	} from '$lib/components/shared/actions';
+	} from '$lib/components/actions';
 	import EventFields from '../EventFields.svelte';
 	import { type LineupChip } from '../LineupEditor.svelte';
 	import { invalidateAll } from '$app/navigation';

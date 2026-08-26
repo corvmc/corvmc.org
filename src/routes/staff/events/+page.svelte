@@ -1,23 +1,23 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate } from '$lib/utils/format';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { getStaffEvents } from '$lib/remote/events.remote';
 	import PendingReviewBadge from './PendingReviewBadge.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 
 	// Read once, at mount: the notification a staffer follows links straight to

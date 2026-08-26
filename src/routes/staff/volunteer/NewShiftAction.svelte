@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Action from '$lib/components/shared/Action.svelte';
-	import ShiftFormFields from '$lib/components/shared/volunteer/ShiftFormFields.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
 	import { toLocalDateTime } from '$lib/utils/format';
 	import { createShift, getVolunteerRoles } from '$lib/remote/volunteer.remote';
 

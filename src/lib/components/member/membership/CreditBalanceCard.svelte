@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { IconMusic, IconCircleCheck } from '@tabler/icons-svelte';
 	import type { SubscriptionInfo, Credits } from '$lib/server/db/schema/finance';
 	import { creditsToHours } from '$lib/config';

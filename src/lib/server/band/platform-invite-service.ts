@@ -7,7 +7,7 @@ import { eq, and, gt, desc } from 'drizzle-orm';
 import { SEARCH_LIMIT } from '$lib/config';
 import { BandMemberExistsError, invite } from './band-service';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
 import { DomainError } from '$lib/server/domain-error';
 

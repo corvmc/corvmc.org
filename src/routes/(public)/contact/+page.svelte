@@ -7,10 +7,10 @@
 	import { getOrgAddress } from '$lib/remote/settings.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
 
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 
 	// Declared before the awaited query below — a declaration that follows a
 	// top-level await is async-gated.

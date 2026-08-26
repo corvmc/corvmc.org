@@ -1,14 +1,14 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Field from '$lib/components/shared/Form/FormField.svelte';
+	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Field from '$lib/components/ui/Form/FormField.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';

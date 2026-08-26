@@ -571,7 +571,7 @@ export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
  * `config.ts` rather than beside the tables because `$lib/server` cannot be
  * imported from the browser, and every one of these values is read by a
  * `.svelte` file. The rendering half (icon, avatar shape) lives in
- * `$lib/components/shared/entity/registry.ts`, which carries Svelte icon
+ * `$lib/components/ui/entity/registry.ts`, which carries Svelte icon
  * components and so cannot be imported by server code.
  *
  * Adding a value here without adding it to `entityKinds` fails

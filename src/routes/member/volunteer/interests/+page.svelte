@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	/**
 	 * Step two: what you'd like to help with.
 	 *
@@ -11,11 +11,11 @@
 	 */
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Form, { SubmitButton } from '$lib/components/shared/Form';
-	import InterestFields from '$lib/components/shared/volunteer/InterestFields.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Form, { SubmitButton } from '$lib/components/ui/Form';
+	import InterestFields from '$lib/components/volunteer/InterestFields.svelte';
 	import { getVolunteerInterestsPage, saveVolunteerInterests } from '$lib/remote/volunteer.remote';
 
 	// One query rather than three; the `{#await}` below now waits on a single promise.

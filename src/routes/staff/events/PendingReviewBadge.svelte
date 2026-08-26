@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Badge from '$lib/components/shared/Badge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { getPendingSubmissionCount } from '$lib/remote/community-events.remote';
 
 	/**

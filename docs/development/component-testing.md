@@ -43,7 +43,7 @@ Decide by whether the component reads its data from props or from the server.
 
 ## Template — pure component story
 
-See `src/lib/components/shared/EmptyState.stories.svelte`.
+See `src/lib/components/ui/EmptyState.stories.svelte`.
 
 ```svelte
 <script module>
@@ -74,7 +74,7 @@ See `src/lib/components/shared/EmptyState.stories.svelte`.
 
 ## Template — coupled component spec
 
-See `src/lib/components/shared/AccountDropdown.svelte.spec.ts`.
+See `src/lib/components/layout/AccountDropdown.svelte.spec.ts`.
 
 ```ts
 import { page } from 'vitest/browser';

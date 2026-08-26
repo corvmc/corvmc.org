@@ -11,9 +11,9 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconPlus, IconUsers } from '@tabler/icons-svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/shared/Form/SearchSelect.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
 	import { startConversation } from '$lib/remote/inbox.remote';
 	import { startDirectConversation } from '$lib/remote/direct-messages.remote';
 	import { searchMessageRecipients } from '$lib/remote/directory.remote';

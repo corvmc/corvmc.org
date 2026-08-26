@@ -2,26 +2,26 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { getDirectoryMember, getMemberPastShows } from '$lib/remote/directory.remote';
-	import { ReportContentAction } from '$lib/components/shared/actions';
+	import { ReportContentAction } from '$lib/components/actions';
 	import MessageMemberAction from './MessageMemberAction.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { pageTitle } from '$lib/config';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import ProfileHeader, {
 		type ProfilePill
-	} from '$lib/components/shared/directory/profile/ProfileHeader.svelte';
-	import QuickFacts from '$lib/components/shared/directory/profile/QuickFacts.svelte';
-	import ProseBlock from '$lib/components/shared/directory/profile/ProseBlock.svelte';
-	import ListenStrip from '$lib/components/shared/directory/profile/ListenStrip.svelte';
-	import ShowsBox from '$lib/components/shared/directory/profile/ShowsBox.svelte';
+	} from '$lib/components/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
+	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
-	} from '$lib/components/shared/directory/profile/CrossRefList.svelte';
-	import TagCloud from '$lib/components/shared/directory/profile/TagCloud.svelte';
-	import LinksBox from '$lib/components/shared/directory/profile/LinksBox.svelte';
-	import ContactBox from '$lib/components/shared/directory/profile/ContactBox.svelte';
-	import ProfileGrid from '$lib/components/shared/directory/profile/ProfileGrid.svelte';
+	} from '$lib/components/directory/profile/CrossRefList.svelte';
+	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
+	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
+	import ContactBox from '$lib/components/directory/profile/ContactBox.svelte';
+	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
 	import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
 
 	const BANDS_BASE = '/member/directory/bands';

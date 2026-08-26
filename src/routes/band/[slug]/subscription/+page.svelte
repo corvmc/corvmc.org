@@ -1,11 +1,11 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { formatDate } from '$lib/utils/format';
 	import {
@@ -18,8 +18,8 @@
 	import { env } from '$env/dynamic/public';
 	import { bandSiteUrl, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.

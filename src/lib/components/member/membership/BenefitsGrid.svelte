@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import { IconCircleCheck, IconMusic, IconTool, IconUsers } from '@tabler/icons-svelte';
 
 	let { variant = 'full' }: { variant?: 'full' | 'compact' } = $props();

@@ -2,23 +2,23 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { formatDateShort } from '$lib/utils/format';
 	import {
 		DeleteAudienceAction,
 		BulkAddMembersAction,
 		AddSubscriberAction,
 		RemoveSubscriberAction
-	} from '$lib/components/shared/actions';
+	} from '$lib/components/actions';
 	import { getStaffAudienceDetail, updateAudience } from '$lib/remote/marketing.remote';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 
 	const { fields } = updateAudience;
 

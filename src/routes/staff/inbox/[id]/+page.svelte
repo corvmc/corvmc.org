@@ -9,8 +9,8 @@
 	 */
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
 	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
 	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';

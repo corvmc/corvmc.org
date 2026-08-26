@@ -9,14 +9,14 @@
 
 /** daisyUI classes that a shared component owns. */
 const COMPONENTISED = {
-	btn: '<Button variant size> from $lib/components/shared/Button.svelte',
-	card: '<Card> from $lib/components/shared/Card/',
-	'card-body': '<CardBody> from $lib/components/shared/Card/',
-	'card-title': '<CardTitle> from $lib/components/shared/Card/',
-	badge: '<Badge variant size> from $lib/components/shared/Badge.svelte',
-	alert: '<Alert type> from $lib/components/shared/Alert.svelte',
-	stat: '<StatCard> from $lib/components/shared/StatCard.svelte',
-	table: '<Table> from $lib/components/shared/Table.svelte'
+	btn: '<Button variant size> from $lib/components/ui/Button.svelte',
+	card: '<Card> from $lib/components/ui/Card/',
+	'card-body': '<CardBody> from $lib/components/ui/Card/',
+	'card-title': '<CardTitle> from $lib/components/ui/Card/',
+	badge: '<Badge variant size> from $lib/components/ui/Badge.svelte',
+	alert: '<Alert type> from $lib/components/ui/Alert.svelte',
+	stat: '<StatCard> from $lib/components/ui/StatCard.svelte',
+	table: '<Table> from $lib/components/ui/Table.svelte'
 };
 
 /**

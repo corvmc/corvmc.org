@@ -1,14 +1,14 @@
 <script lang="ts">
-	import Hero from '$lib/components/shared/marketing/Hero.svelte';
-	import Section from '$lib/components/shared/marketing/Section.svelte';
-	import SectionHeading from '$lib/components/shared/marketing/SectionHeading.svelte';
+	import Hero from '$lib/components/public/Hero.svelte';
+	import Section from '$lib/components/public/Section.svelte';
+	import SectionHeading from '$lib/components/public/SectionHeading.svelte';
 	import {
 		IconClock,
 		IconCalendarRepeat,
 		IconTicket,
 		IconDeviceSpeaker
 	} from '@tabler/icons-svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 
 	// Sustaining membership is a sliding scale: every $5/month earns one free hour

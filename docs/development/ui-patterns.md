@@ -27,7 +27,7 @@ Always use `<PageHeader>` for the page title. Never write a bare `<h1>`.
 Wraps the page body with consistent vertical spacing (`space-y-6`) and optional width constraint. PageHeader always sits **outside** PageContent so it keeps full-bleed behavior.
 
 ```svelte
-import PageContent from '$lib/components/shared/PageContent.svelte';
+import PageContent from '$lib/components/ui/PageContent.svelte';
 ```
 
 Props:
@@ -405,7 +405,7 @@ Props: `type` (`info`, `warning`, `error`, `success`), `href` (renders as `<a>` 
 
 ## Entity tiers — chip / row / card / detail
 
-Four ways to show one record, in `$lib/components/shared/entity/`. Every reference to a record in
+Four ways to show one record, in `$lib/components/ui/entity/`. Every reference to a record in
 the staff and member panels should be one of them.
 
 | Tier   | Component                                  | Use                                                                      |
@@ -625,7 +625,7 @@ When `nextHref` is absent, shows `endLabel` (if provided) or a disabled button.
 ## Sidebar and panel navigation
 
 `AppShell` → `Sidebar` → `<ul class="menu">` → the `Nav.*` primitives from
-`$lib/components/shared/Nav/`. Three components: `Nav.Item` (a row), `Nav.Collapsible` (a row with
+`$lib/components/layout/Nav/`. Three components: `Nav.Item` (a row), `Nav.Collapsible` (a row with
 children, held open by the URL), `Nav.Group` (a titled section).
 
 **Every panel's rows are data — add features there, not in the template.** `staff/nav-items.ts`,
@@ -635,7 +635,7 @@ type error instead of a badge that quietly stops. Anything conditional — a fea
 belongs in the data module, where a spec can assert it; `band/[slug]/nav-items.ts` records that
 gating expressed as nested `{#if}`s was silently wrong twice.
 
-The panel switcher's tabs come from `$lib/components/shared/panel-tabs.ts`, not hand-built per
+The panel switcher's tabs come from `$lib/components/layout/panel-tabs.ts`, not hand-built per
 layout.
 
 ```svelte
@@ -646,7 +646,7 @@ layout.
 
 **Active state.** `Nav.Item` matches the pathname exactly on its own, which lights no row at all on
 a detail page. Pass `active` to override it. The rule lives once, in
-`$lib/components/shared/Nav/active-nav.ts`: `activeNavKey(items, pathname)` picks the item with the
+`$lib/components/layout/Nav/active-nav.ts`: `activeNavKey(items, pathname)` picks the item with the
 longest matching href, and each panel wraps it (`activeNavKey`, `activeMemberNavKey`,
 `activeBandNavKey`). Two details it encodes — match on `path === href || path.startsWith(href + '/')`,
 because a bare `startsWith` lets `/staff/users` claim `/staff/usersomething`; and skip any row whose
@@ -682,7 +682,7 @@ their own titles, and a sidebar full of headings collides with that.
 ## Card
 
 The panel surface. `Card` + `CardBody` + `CardTitle`, from
-`$lib/components/shared/Card/`. Most sections want `InfoCard` (below) instead — reach for these
+`$lib/components/ui/Card/`. Most sections want `InfoCard` (below) instead — reach for these
 directly only when the section has no title, or when the body needs a non-default layout.
 
 ```svelte
@@ -737,8 +737,8 @@ The label/value grid on staff detail pages. Replaces the hand-written
 that was copy-pasted into nine files.
 
 ```svelte
-import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte'; import
-Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte'; import Fact
+from '$lib/components/ui/DefinitionList/Fact.svelte';
 
 <DefinitionList>
 	<Fact label="Status"><StatusBadge status={item.status} /></Fact>
@@ -892,7 +892,7 @@ below the `@lg` container breakpoint.
 </FilterBar>
 ```
 
-`SearchInput` (`$lib/components/shared/Form/`) owns the 300ms debounce, so a page keeps only the
+`SearchInput` (`$lib/components/ui/Form/`) owns the 300ms debounce, so a page keeps only the
 value it queries on. `bind:value` is the immediate text, for Clear; setting it from outside also
 cancels any search still in flight.
 
@@ -1066,7 +1066,7 @@ Page title with optional back button, subtitle, and right-side action slot.
 
 ## Public site sections
 
-The marketing pages (`(public)/`) compose from `$lib/components/shared/marketing/`:
+The marketing pages (`(public)/`) compose from `$lib/components/public/`:
 
 ```svelte
 <Hero title="Programs">Practice spaces, performances, meetups & clubs for the music community</Hero>
@@ -1110,7 +1110,7 @@ All shared components live in `src/lib/components/`. Panel-specific layout compo
 
 ## Directory profiles
 
-Member and band profiles — public (`/directory/...`) and authenticated (`/member/directory/...`) — are all built from **one parameterised component set** in `src/lib/components/shared/directory/profile/`. Member vs. band and public vs. authenticated are prop differences, never separate designs. The four `+page.svelte` files are thin assemblers: `await` the profile query (+ a shows query), map data to props, compose.
+Member and band profiles — public (`/directory/...`) and authenticated (`/member/directory/...`) — are all built from **one parameterised component set** in `src/lib/components/directory/profile/`. Member vs. band and public vs. authenticated are prop differences, never separate designs. The four `+page.svelte` files are thin assemblers: `await` the profile query (+ a shows query), map data to props, compose.
 
 Components:
 

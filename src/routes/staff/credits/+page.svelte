@@ -1,13 +1,13 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
+	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { getStaffCredits } from '$lib/remote/users.remote';
 	import { formatDateTimeShort, titleCase } from '$lib/utils/format';
 	import { creditSourceLabels } from '$lib/config';

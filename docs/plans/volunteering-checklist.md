@@ -51,7 +51,7 @@ Branch: `claude/volunteer-system-plans-5b2b17` (off `main`).
       (`VolunteerRoleInUseError`, mirroring `deleteCategory`)
 - [x] `hour-log-service.ts` — submit/edit/withdraw/approve/reject + queries
 - [x] `volunteer-report-service.ts` — totals, by member, by role, by month
-- [x] `src/lib/server/events/event-bus.ts` — 2 payload types, 3 event keys
+- [x] `src/lib/server/event-bus/event-bus.ts` — 2 payload types, 3 event keys
 - Errors extend `DomainError` — no edit to `errors.ts` needed.
 - No `db.transaction()` (lint rule); every mutation is a single statement.
 - `getHoursByMember` count query must be `count(distinct user_id)`, not `count()`

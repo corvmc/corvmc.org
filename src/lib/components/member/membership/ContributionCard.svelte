@@ -1,18 +1,18 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { formatDollars } from '$lib/utils/format';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { IconCreditCard } from '@tabler/icons-svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Modal from '$lib/components/shared/Modal.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/config';
 	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
 	import SubscriptionForm from './SubscriptionForm.svelte';
-	import type { RemoteForm } from '$lib/components/shared/Form/Form.svelte';
+	import type { RemoteForm } from '$lib/components/ui/Form/Form.svelte';
 
 	let {
 		subscription,

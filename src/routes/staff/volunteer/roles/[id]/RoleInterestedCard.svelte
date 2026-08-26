@@ -1,11 +1,11 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Button from '$lib/components/shared/Button.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { toast } from 'svelte-sonner';
 	import { formatDateShort } from '$lib/utils/format';
 	import { getInterestedVolunteers } from '$lib/remote/volunteer.remote';

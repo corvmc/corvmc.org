@@ -142,7 +142,7 @@ Create `src/routes/api/cron/generate-recurring-reservations/+server.ts` followin
 
 ### 3.3 Add domain event for skipped occurrences
 
-Add `RecurringSkippedEvent` interface and `'reservation.recurring_skipped'` to the event map in `src/lib/server/events/event-bus.ts`:
+Add `RecurringSkippedEvent` interface and `'reservation.recurring_skipped'` to the event map in `src/lib/server/event-bus/event-bus.ts`:
 
 ```typescript
 export interface RecurringSkippedEvent {

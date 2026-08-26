@@ -4,11 +4,11 @@
 	import { resolve } from '$app/paths';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { getUserPage } from '$lib/remote/users.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import { TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import UserScoreboard from './panels/UserScoreboard.svelte';
 	import OverviewPanel from './panels/OverviewPanel.svelte';

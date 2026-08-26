@@ -1,16 +1,16 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatCard from '$lib/components/shared/StatCard.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import OpenShifts from '$lib/components/shared/volunteer/OpenShifts.svelte';
-	import InterestFields from '$lib/components/shared/volunteer/InterestFields.svelte';
-	import ProfileFields from '$lib/components/shared/volunteer/ProfileFields.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatCard from '$lib/components/ui/StatCard.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import OpenShifts from '$lib/components/volunteer/OpenShifts.svelte';
+	import InterestFields from '$lib/components/volunteer/InterestFields.svelte';
+	import ProfileFields from '$lib/components/volunteer/ProfileFields.svelte';
 	import { IconHeartHandshake, IconUserCog } from '@tabler/icons-svelte';
 	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
 	import {

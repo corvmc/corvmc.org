@@ -9,7 +9,7 @@
  * invisible; as a list it can be asserted against, which `nav-items.spec.ts`
  * does for every role and flag combination.
  */
-import { activeNavKey, type NavNode } from '$lib/components/shared/Nav/active-nav';
+import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
 
 export type BandNavKey =
 	| 'dashboard'

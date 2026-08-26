@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import MarkdownPreview from './MarkdownPreview.svelte';
 	import { IconPhoto } from '@tabler/icons-svelte';
 

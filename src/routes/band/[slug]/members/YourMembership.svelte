@@ -1,14 +1,14 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
 	import type { MemberRef } from '$lib/types/entity';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { leave, updateMyBandMembership } from '$lib/remote/bands.remote';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';

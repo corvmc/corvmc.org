@@ -2,15 +2,15 @@
 	import { page } from '$app/state';
 
 	import { getStaffBandPage, updateMemberRole } from '$lib/remote/bands.remote';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Table from '$lib/components/shared/Table.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Table from '$lib/components/ui/Table.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, formatTimeRange } from '$lib/utils/format';
@@ -22,7 +22,7 @@
 		TransferOwnershipAction,
 		RemoveBandMemberAction,
 		RevokePlatformInviteAction
-	} from '$lib/components/shared/actions';
+	} from '$lib/components/actions';
 	import StaffBandForm from './StaffBandForm.svelte';
 
 	let id = $derived(page.params.id!);

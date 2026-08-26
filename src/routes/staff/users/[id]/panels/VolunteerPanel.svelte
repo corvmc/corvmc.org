@@ -1,5 +1,5 @@
 <script lang="ts">
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import GrantCertificationAction from './GrantCertificationAction.svelte';
 	import {
 		getUserVolunteerProfile,
@@ -9,17 +9,17 @@
 		revokeCertification
 	} from '$lib/remote/volunteer.remote';
 	import { getUserPage } from '$lib/remote/users.remote';
-	import { RelatedList } from '$lib/components/shared/entity';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	import { RelatedList } from '$lib/components/ui/entity';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatVolunteerHours } from '$lib/config';

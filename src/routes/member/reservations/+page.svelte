@@ -9,13 +9,13 @@
 	import { confirmWaitlisted, getMemberReservationsPage } from '$lib/remote/reservations.remote';
 
 	const { fields } = confirmWaitlisted;
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Modal from '$lib/components/shared/Modal.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	import CreateModal from './CreateModal.svelte';
 	import ReservationCard from './ReservationCard.svelte';
 	import { Tabs } from 'bits-ui';

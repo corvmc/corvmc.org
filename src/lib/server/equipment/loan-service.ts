@@ -4,7 +4,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, sql, like, or, desc, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { memberRefColumns, toGenericRef, toMemberRef } from '$lib/server/entity/refs';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { getBalance, deductCredits } from '$lib/server/finance/credit-service';
 import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';

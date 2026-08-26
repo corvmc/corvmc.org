@@ -143,8 +143,8 @@ const compileSource = (source: string, filename: string) =>
 	compile(source, {
 		generate: 'client',
 		// Matches svelte.config.js, as `async-effect-shape.spec.ts` does: runes
-		// everywhere except the mdsvex layouts, which still use `export let`.
-		runes: !filename.includes('/layouts/'),
+		// everywhere except the mdsvex prose layout, which still uses `export let`.
+		runes: !filename.includes('/markdown/prose.svelte'),
 		experimental: { async: true },
 		filename
 	}).js.code;

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Action from '$lib/components/shared/Action.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import EventFields from './EventFields.svelte';
 	import { type LineupChip } from './LineupEditor.svelte';
 	import { goto } from '$app/navigation';

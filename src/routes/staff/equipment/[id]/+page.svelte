@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import CategoryOptions from '$lib/components/shared/equipment/CategoryOptions.svelte';
+	import CategoryOptions from '$lib/components/equipment/CategoryOptions.svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
 		getStaffEquipmentDetail,
@@ -8,20 +8,20 @@
 		deactivateEquipment,
 		reactivateEquipment
 	} from '$lib/remote/equipment.remote';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/shared/Form';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import { ActivateToggleAction } from '$lib/components/shared/actions';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Table from '$lib/components/shared/Table.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '$lib/components/ui/Form';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import { ActivateToggleAction } from '$lib/components/actions';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Table from '$lib/components/ui/Table.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, formatCents } from '$lib/utils/format';

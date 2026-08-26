@@ -6,6 +6,7 @@ import noDuplicateFieldNames from './eslint-rules/no-duplicate-field-names.js';
 import noDbTransaction from './eslint-rules/no-db-transaction.js';
 import noConcurrentRemoteQueries from './eslint-rules/no-concurrent-remote-queries.js';
 import refreshTheComposedQuery from './eslint-rules/refresh-the-composed-query.js';
+import noDomainImportsInUi from './eslint-rules/no-domain-imports-in-ui.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -30,7 +31,8 @@ const customPlugin = {
 		'no-duplicate-field-names': noDuplicateFieldNames,
 		'no-db-transaction': noDbTransaction,
 		'no-concurrent-remote-queries': noConcurrentRemoteQueries,
-		'refresh-the-composed-query': refreshTheComposedQuery
+		'refresh-the-composed-query': refreshTheComposedQuery,
+		'no-domain-imports-in-ui': noDomainImportsInUi
 	}
 };
 
@@ -124,5 +126,12 @@ export default defineConfig(
 		files: ['src/lib/server/**/*.ts'],
 		ignores: ['**/*.spec.ts'],
 		rules: { 'custom/no-db-transaction': 'error' }
+	},
+	{
+		// components/ui/ is the design system — primitives only, no domain knowledge.
+		// Stories and specs are allowed to reach for fixtures the primitive itself cannot.
+		files: ['src/lib/components/ui/**/*.{ts,svelte}'],
+		ignores: ['**/*.spec.ts', '**/*.stories.svelte'],
+		rules: { 'custom/no-domain-imports-in-ui': 'error' }
 	}
 );

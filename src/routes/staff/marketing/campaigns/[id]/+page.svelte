@@ -2,14 +2,14 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import { UnscheduleCampaignAction } from '$lib/components/shared/actions';
-	import Button from '$lib/components/shared/Button.svelte';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import { UnscheduleCampaignAction } from '$lib/components/actions';
+	import Button from '$lib/components/ui/Button.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { getCampaignDetail } from '$lib/remote/marketing.remote';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 

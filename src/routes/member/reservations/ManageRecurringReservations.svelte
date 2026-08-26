@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
-	import { CancelSeriesAction } from '$lib/components/shared/actions';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { CancelSeriesAction } from '$lib/components/actions';
 	import { getLocalUser } from '$lib/remote/users.remote';
 	import { getRecurringReservations } from '$lib/remote/reservations.remote';
 	import { formatScheduleLabel } from '$lib/utils/format';

@@ -3,8 +3,8 @@
 	import { resolve } from '$app/paths';
 	import { getMemberArticlePage } from '$lib/remote/help.remote';
 	import { extractHeadings } from '$lib/utils/markdown';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import MarkdownPreview from '$lib/components/help/MarkdownPreview.svelte';
 	import TableOfContents from '$lib/components/help/TableOfContents.svelte';
 

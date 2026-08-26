@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Action from '$lib/components/shared/Action.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { IconMessage } from '@tabler/icons-svelte';
 	import { startDirectConversation } from '$lib/remote/direct-messages.remote';
 	import { DIRECT_MESSAGE_BODY_MAX } from '$lib/config';

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
 	import { resolve } from '$app/paths';
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';

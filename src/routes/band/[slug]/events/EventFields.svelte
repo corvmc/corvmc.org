@@ -1,5 +1,5 @@
 <script lang="ts">
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import LineupEditor, { type LineupChip } from './LineupEditor.svelte';
 	import {
 		formatDate,

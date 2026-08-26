@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Action from '$lib/components/shared/Action.svelte';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import ShiftRoleFields from '$lib/components/shared/volunteer/ShiftRoleFields.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Action from '$lib/components/ui/Action.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import ShiftRoleFields from '$lib/components/volunteer/ShiftRoleFields.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { formatDateShort, formatDateShortYear, toLocalDateTime } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { resolve } from '$app/paths';

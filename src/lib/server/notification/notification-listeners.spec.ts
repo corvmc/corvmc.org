@@ -36,7 +36,7 @@ vi.mock('$env/dynamic/private', () => ({
 
 // Capture event handlers
 const handlers: Record<string, (...args: any[]) => any> = {};
-vi.mock('$lib/server/events/event-bus', () => ({
+vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: {
 		on: (event: string, handler: (...args: any[]) => any) => {
 			handlers[event] = handler;

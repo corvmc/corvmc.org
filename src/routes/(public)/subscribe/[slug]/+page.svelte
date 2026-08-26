@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
 	import { getPublicAudienceBySlug, subscribeToAudience } from '$lib/remote/marketing.remote';
 	import { page } from '$app/state';
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	/**
 	 * One box for both outbound replies and internal notes.
 	 *
@@ -22,10 +22,10 @@
 	 */
 	import type { RemoteForm } from '@sveltejs/kit';
 	import { IconNote, IconSend } from '@tabler/icons-svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 
 	let {
 		threadId,

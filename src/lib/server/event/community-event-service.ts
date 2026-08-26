@@ -5,7 +5,7 @@ import { and, asc, count, eq, getTableColumns, gte, inArray, like, ne } from 'dr
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { uploadFile, deleteObject } from '$lib/server/storage';
 import { mediaKey } from '$lib/server/storage-keys';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
 import { allowRateLimited } from '$lib/server/rate-limit';
 import { getStanding } from '$lib/server/moderation/standing-service';

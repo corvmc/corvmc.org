@@ -497,7 +497,7 @@ Recorded so a future pass doesn't churn them:
 
 Both nav fragilities recorded here are resolved: `Nav.Collapsible`'s hand-maintained `childHrefs`
 now derive from the panel's nav data, and the triplicated `panels` array is
-`$lib/components/shared/panel-tabs.ts`.
+`$lib/components/layout/panel-tabs.ts`.
 
 ---
 

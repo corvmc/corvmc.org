@@ -13,12 +13,7 @@ import type { MemberRef } from '$lib/types/entity';
 // Shared primitives
 // ---------------------------------------------------------------------------
 
-export interface Pagination {
-	page: number;
-	pageSize: number;
-	total: number;
-	totalPages: number;
-}
+export type { Pagination } from '$lib/types/pagination';
 
 /**
  * @deprecated Use `MemberRef` from `$lib/types/entity`, which the entity tiers

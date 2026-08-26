@@ -1,13 +1,13 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
-	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
-	import ReportEventAction from '$lib/components/shared/actions/ReportEventAction.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import PosterCard from '$lib/components/events/PosterCard.svelte';
+	import ReportEventAction from '$lib/components/actions/ReportEventAction.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
 	import {
 		ticketingMode,
@@ -20,7 +20,7 @@
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
 	import { getPublicEventDetail } from '$lib/remote/events.remote';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import ShareButton from '$lib/components/shared/ShareButton.svelte';
+	import ShareButton from '$lib/components/ui/ShareButton.svelte';
 
 	let data = $derived(await getPublicEventDetail(page.params.id!));
 

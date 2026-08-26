@@ -1,17 +1,17 @@
 <script lang="ts">
 	import NewShiftAction from '../NewShiftAction.svelte';
-	import RoleOptions from '$lib/components/shared/volunteer/RoleOptions.svelte';
+	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { formatDateShort, toLocalDateTime } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { IconCopy } from '@tabler/icons-svelte';

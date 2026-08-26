@@ -2,8 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconPlus } from '@tabler/icons-svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { suggestionCategories, suggestionCategoryLabels } from '$lib/config';
 	import { createSuggestion, getMySuggestionStanding } from '$lib/remote/suggestions.remote';
 

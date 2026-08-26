@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import type { Block, BandEpk } from '$lib/server/db/schema/band-page';
 	import { getEmbedUrl, detectPlatform } from '$lib/utils/link-platform';
 	import { formatDate, formatTime, formatCents } from '$lib/utils/format';

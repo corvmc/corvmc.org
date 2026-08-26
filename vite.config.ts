@@ -60,7 +60,7 @@ export default defineConfig({
 							}
 						]
 					},
-					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+					include: ['src/**/*.svelte.spec.{js,ts}'],
 					exclude: ['src/lib/server/**']
 				}
 			},
@@ -75,13 +75,13 @@ export default defineConfig({
 					// cold process, which the default `forks` pool re-paid 136 times.
 					pool: 'vmForks',
 					include: [
-						'src/**/*.{test,spec}.{js,ts}',
-						'scripts/**/*.{test,spec}.{js,ts}',
+						'src/**/*.spec.{js,ts}',
+						'scripts/**/*.spec.{js,ts}',
 						// Helpers the e2e suite runs outside Playwright. `*.e2e.ts` does not
 						// match `*.{test,spec}.ts`, so the Playwright specs stay out.
-						'e2e/**/*.{test,spec}.{js,ts}'
+						'e2e/**/*.spec.{js,ts}'
 					],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+					exclude: ['src/**/*.svelte.spec.{js,ts}'],
 					server: {
 						deps: {
 							inline: ['bits-ui']

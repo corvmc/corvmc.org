@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import { getMySuggestionStanding } from '$lib/remote/suggestions.remote';
 
 	/**

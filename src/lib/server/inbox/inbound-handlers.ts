@@ -4,7 +4,7 @@ import { parseReplyMailboxHash } from './reply-address';
 import { isChannelEnabled } from './channel-config-service';
 import { findStaffUserByEmail } from '$lib/server/authorization';
 import { captureException } from '$lib/server/sentry';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 
 export interface ContactFormParams {
 	name: string;

@@ -18,7 +18,7 @@ import {
 	childHrefsFor as resolveChildHrefs,
 	flattenNav,
 	type NavNode
-} from '$lib/components/shared/Nav/active-nav';
+} from '$lib/components/layout/Nav/active-nav';
 
 export type StaffNavKey =
 	| 'dashboard'

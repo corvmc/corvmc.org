@@ -2,7 +2,7 @@
 	import { formatDate } from '$lib/utils/format';
 	import { creditsToHours } from '$lib/config';
 	import { getMembershipStatus } from '$lib/remote/reservations.remote';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { IconClock } from '@tabler/icons-svelte';
 </script>
 

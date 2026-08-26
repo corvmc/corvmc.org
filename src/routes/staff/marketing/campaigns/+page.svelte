@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { getCampaigns } from '$lib/remote/marketing.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
-	import { EntityIdentity } from '$lib/components/shared/entity';
+	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
 

@@ -1,12 +1,12 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { formatDollars } from '$lib/utils/format';
 	import {
 		CancelReservationAction,
 		ConfirmReservationAction,
 		ConfirmWaitlistedAction
-	} from '$lib/components/shared/actions';
-	import ReservationSummary from '$lib/components/shared/reservations/ReservationSummary.svelte';
+	} from '$lib/components/actions';
+	import ReservationSummary from '$lib/components/reservations/ReservationSummary.svelte';
 	import type { Reservation } from '$lib/server/db/schema';
 	import { resolve } from '$app/paths';
 	import { withinConfirmationWindow, confirmWindowOpensAt } from '$lib/config';
