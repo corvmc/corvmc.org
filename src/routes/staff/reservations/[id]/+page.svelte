@@ -16,6 +16,8 @@
 	import DayTimeline from '$lib/components/shared/reservations/DayTimeline.svelte';
 	import RecordNav from '$lib/components/shared/RecordNav.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
+	import Badge from '$lib/components/shared/Badge.svelte';
+	import { IconUserPlus } from '@tabler/icons-svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import {
 		fullDate,
@@ -90,6 +92,14 @@
 					<p class="flex items-center gap-2 text-xl font-medium">
 						{fullDate(r.startsAt)}
 						<StatusBadge status={r.status} />
+						{#if data.isFirstReservation}
+							<!-- Spelled out rather than icon-only: the list has a flag cluster
+							     to read this out of, and this page has the room. -->
+							<Badge variant="success">
+								<IconUserPlus size={14} />
+								First reservation
+							</Badge>
+						{/if}
 					</p>
 					<p class="opacity-70">
 						{formatTime(r.startsAt)} – {formatTime(r.endsAt)} · {durationLabel}
