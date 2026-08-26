@@ -38,7 +38,7 @@ cp .env.example .env
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `ORIGIN`                                             | `http://localhost:5173` — **required**, better-auth throws without it                                                          |
 | `BETTER_AUTH_SECRET`                                 | Any string locally (32+ chars high-entropy in real environments)                                                               |
-| `DATABASE_URL`                                       | Leave as-is/blank — only the retired Postgres scripts read it, never the app                                                   |
+| `DATABASE_URL`                                       | Leave as-is/blank — the app never reads it; only some unreferenced Postgres one-offs in `scripts/` do                          |
 | `PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | **Leave blank** — blank means Cloudflare's always-pass test keys (per the comment in `.env.example`), so sign-up works offline |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`        | Blank unless you're testing payment flows (see §6)                                                                             |
 | `R2_*`                                               | Blank — media storage is emulated locally by the platform proxy                                                                |

@@ -9,8 +9,9 @@ SvelteKit app running entirely on Cloudflare Workers.
 > migration is done — D1 is the production data store and the legacy app is no longer active.
 > One thread remains: passwords still on bcrypt cannot be verified on Workers, so sign-in for
 > accounts that have not signed in since the move proxies to the legacy server, which is why
-> it stays up. `pnpm db:sync` and the Postgres ETL scripts are **retired and destructive** —
-> see [the operations manual §6](docs/architecture/operations-manual.md).
+> it stays up. The Postgres sync and ETL scripts have been deleted — D1 is canonical, so
+> there is no longer any supported path from Postgres into it. See
+> [the operations manual §6](docs/architecture/operations-manual.md).
 
 ## Stack at a glance
 

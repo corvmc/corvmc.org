@@ -443,6 +443,6 @@ canonical** and the legacy app is no longer active. One thread is still open:
   so the population only shrinks.
 - `LARAVEL_URL` (wrangler var) and `MIGRATION_SECRET` (secret) serve that proxy and retire
   with it. `DATABASE_URL` is not read by the Worker at all.
-- `pnpm db:sync` and the Postgres ETL scripts under `scripts/` are **retired** — running
-  them would overwrite production D1 with a stale snapshot. See
+- `pnpm db:sync` and the Postgres ETL scripts under `scripts/` have been **deleted** — they
+  reloaded D1 from Postgres, which is backwards now. See
   [operations manual §6](operations-manual.md).

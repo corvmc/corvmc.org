@@ -133,23 +133,23 @@ Bulk secret upload: copy `secrets.template.json` → `.secrets.json` (gitignored
 
 ### Secret inventory
 
-| Secret                                                                    | Used by                                                                                                                                           |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET`                                                      | Session/signing key for better-auth (`src/lib/server/auth.ts`)                                                                                    |
-| `CRON_SECRET`                                                             | Bearer token every `/api/cron/*` endpoint requires; sent by the Worker's own `scheduled` handler (`worker.js`) and by manual curl invocations     |
-| `MIGRATION_SECRET`                                                        | Shared secret for the legacy-Laravel `verify-password` proxy (see §6; retire with the bridge)                                                     |
-| `DATABASE_URL`                                                            | **Not read by the Worker** (no references in `src/`). Only the retired Postgres scripts read it, from `.env`. Safe to remove from Worker secrets. |
-| `MARKETING_UNSUBSCRIBE_SECRET`                                            | Signs unsubscribe links (`src/lib/server/marketing/unsubscribe.ts`)                                                                               |
-| `STRIPE_SECRET_KEY`                                                       | All Stripe API calls (`src/lib/server/stripe.ts`)                                                                                                 |
-| `STRIPE_WEBHOOK_SECRET`                                                   | Webhook signature verification (`src/routes/api/stripe/webhook/+server.ts`)                                                                       |
-| `STRIPE_WEBHOOK_ID`                                                       | Which endpoint `pnpm stripe:sync-webhooks` manages                                                                                                |
-| `POSTMARK_SERVER_TOKEN`                                                   | Outbound email (`src/lib/server/notification/email/postmark-client.ts`) + the `email:push/pull` CLI                                               |
-| `POSTMARK_INBOUND_TOKEN`                                                  | Authenticates Postmark's inbound webhook (`src/routes/api/inbox/postmark/+server.ts`) — sent as the HTTP Basic _password_ in the hook URL         |
-| `INBOX_REPLY_SECRET`                                                      | Signs the thread id in inbox reply addresses (`src/lib/server/inbox/reply-address.ts`). Optional — falls back to `POSTMARK_SERVER_TOKEN`          |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN`                                | SMS send/receive (`src/lib/server/inbox/twilio-client.ts`)                                                                                        |
-| `META_APP_SECRET` / `META_PAGE_ACCESS_TOKEN` / `META_VERIFY_TOKEN`        | Messenger inbox channel (`src/routes/api/inbox/meta/+server.ts`) — provisioned but dormant                                                        |
-| `ULTRALOC_CLIENT_ID` / `_CLIENT_SECRET` / `_REFRESH_TOKEN` / `_DEVICE_ID` | U-Tec smart-lock API (`src/lib/server/lock/ultraloc-client.ts`)                                                                                   |
-| `TURNSTILE_SECRET_KEY`                                                    | Server-side Turnstile verification (`src/lib/server/turnstile.ts`)                                                                                |
+| Secret                                                                    | Used by                                                                                                                                                                    |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`                                                      | Session/signing key for better-auth (`src/lib/server/auth.ts`)                                                                                                             |
+| `CRON_SECRET`                                                             | Bearer token every `/api/cron/*` endpoint requires; sent by the Worker's own `scheduled` handler (`worker.js`) and by manual curl invocations                              |
+| `MIGRATION_SECRET`                                                        | Shared secret for the legacy-Laravel `verify-password` proxy (see §6; retire with the bridge)                                                                              |
+| `DATABASE_URL`                                                            | **Not read by the Worker** (no references in `src/`). Three unreferenced Postgres one-offs in `scripts/` read it from `.env` — see §6. Safe to remove from Worker secrets. |
+| `MARKETING_UNSUBSCRIBE_SECRET`                                            | Signs unsubscribe links (`src/lib/server/marketing/unsubscribe.ts`)                                                                                                        |
+| `STRIPE_SECRET_KEY`                                                       | All Stripe API calls (`src/lib/server/stripe.ts`)                                                                                                                          |
+| `STRIPE_WEBHOOK_SECRET`                                                   | Webhook signature verification (`src/routes/api/stripe/webhook/+server.ts`)                                                                                                |
+| `STRIPE_WEBHOOK_ID`                                                       | Which endpoint `pnpm stripe:sync-webhooks` manages                                                                                                                         |
+| `POSTMARK_SERVER_TOKEN`                                                   | Outbound email (`src/lib/server/notification/email/postmark-client.ts`) + the `email:push/pull` CLI                                                                        |
+| `POSTMARK_INBOUND_TOKEN`                                                  | Authenticates Postmark's inbound webhook (`src/routes/api/inbox/postmark/+server.ts`) — sent as the HTTP Basic _password_ in the hook URL                                  |
+| `INBOX_REPLY_SECRET`                                                      | Signs the thread id in inbox reply addresses (`src/lib/server/inbox/reply-address.ts`). Optional — falls back to `POSTMARK_SERVER_TOKEN`                                   |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN`                                | SMS send/receive (`src/lib/server/inbox/twilio-client.ts`)                                                                                                                 |
+| `META_APP_SECRET` / `META_PAGE_ACCESS_TOKEN` / `META_VERIFY_TOKEN`        | Messenger inbox channel (`src/routes/api/inbox/meta/+server.ts`) — provisioned but dormant                                                                                 |
+| `ULTRALOC_CLIENT_ID` / `_CLIENT_SECRET` / `_REFRESH_TOKEN` / `_DEVICE_ID` | U-Tec smart-lock API (`src/lib/server/lock/ultraloc-client.ts`)                                                                                                            |
+| `TURNSTILE_SECRET_KEY`                                                    | Server-side Turnstile verification (`src/lib/server/turnstile.ts`)                                                                                                         |
 
 Local equivalents: Worker secrets go in **`.dev.vars`** (read by `vite dev` / wrangler),
 Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are gitignored;
@@ -336,13 +336,17 @@ npx wrangler dev --test-scheduled --var CRON_SECRET:local-test --var SENTRY_ENVI
 store. The legacy Laravel/Postgres app is no longer active; the server stays up for exactly
 one reason, described below.
 
-> **Do not run `pnpm db:sync`.** It deletes every row in remote D1 and reloads it from a
-> DigitalOcean Postgres that has not been canonical for a long time — it would replace
-> production data with a stale snapshot. It is interactive and prompts before the
-> destructive step, so it cannot fire by accident, but nothing else stops it. It and the
-> ETL scripts beneath it (`scripts/migrate-from-postgres.ts`, `scripts/reorder-seed.mjs`,
-> `scripts/gen-d1-delete.mjs`, `scripts/d1-table-order.mjs`) are retired and should be
-> deleted; they are listed here so nobody rediscovers them and assumes they are current.
+`pnpm db:sync` and the Postgres ETL beneath it are **gone** — deleted along with
+`scripts/sync-d1.sh`, `scripts/migrate-from-postgres.ts`, `scripts/reorder-seed.mjs` and
+`scripts/gen-d1-delete.mjs`. They reloaded D1 from a DigitalOcean Postgres that stopped
+being canonical long ago, so keeping them meant keeping a documented way to overwrite
+production with a stale snapshot. If you need to move data into D1, write it against the
+current schema; there is no supported path from Postgres any more.
+
+`scripts/d1-table-order.mjs` **stayed** — despite being on the old teardown list, it is live
+infrastructure: `e2e/reset-db.ts` derives the between-test wipe from it and
+`scripts/d1-table-order.spec.ts` pins it to the drizzle snapshot. Add new FK-bearing tables
+to it as before.
 
 ### What the Laravel server is still for
 
@@ -364,11 +368,13 @@ password reset instead of proxying. At that point:
 
 - remove the bcrypt branch and `verifyBcryptViaLaravel` from `src/lib/server/auth.ts`;
 - remove `LARAVEL_URL` from `wrangler.toml` and the `MIGRATION_SECRET` Worker secret;
-- delete the retired sync/ETL scripts listed above;
 - the Laravel server and its Postgres can then be shut down.
 
-`DATABASE_URL` is **not read by the Worker** (no references in `src/`) and can be removed
-from the Worker secrets whenever — only the retired local scripts ever read it.
+`DATABASE_URL` is **not read by the Worker** and can be removed from the Worker secrets. Keep
+it in `.env` only if you still need the three unreferenced Postgres one-offs left in
+`scripts/` — `seed-admin.ts`, `migrate-bcrypt-to-scrypt.ts` and
+`backfill-charge-payment-intents.ts`. None is wired into `package.json`, all three read the
+legacy database, and they are very likely retired too — nobody has reviewed them.
 
 To see whether anyone is still using the bcrypt path, search Sentry for
 `auth.bcrypt_migration` events (§8).
