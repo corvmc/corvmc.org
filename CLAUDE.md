@@ -49,7 +49,7 @@ Anything that adds schema or spans several files follows the nine phases in
 and gated.
 
 The finishing steps that are easiest to skip: extend `scripts/seed-dev.ts` so the feature has
-realistic local data, add its row to `docs/reports/parity-report.md`, and run
+realistic local data, add its row to the feature catalog (`docs/reports/feature-catalog.md`), and run
 `pnpm docs:routes && pnpm docs:check` if any route moved.
 
 **A finished PR is queued, not merged.** `gh pr merge --auto --squash`, and the session ends there.

@@ -101,7 +101,7 @@ Building certifications **and** shifts in one pass, plus the post-shift survey.
 - [x] Spec — rewrite §Phase 2 and §Certifications from "designed" to shipped
 - [x] `production-workflow-spec.md:1256` — close the staffing hook
 - [x] Help articles, `docs/manual/README.md`, `pnpm docs:routes`,
-      `pnpm docs:check`, parity-report row + table count 32 → 38
+      `pnpm docs:check`, feature-catalog row + table count 32 → 38
 
 ## Step 7 — The event link (follow-up)
 

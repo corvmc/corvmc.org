@@ -9,11 +9,13 @@ import { user } from './authentication';
 // Only `roles` and `model_has_roles` are live: authorization in this app is
 // role-name based (see src/lib/server/authorization.ts). `permissions`,
 // `model_has_permissions` and `role_has_permissions` are **not read or written
-// by any application code** — they exist solely so scripts/migrate-from-postgres.ts
-// can carry the legacy Laravel grants across the cutover. Dropping them would
-// discard rows that exist in Postgres today and cannot be recovered afterwards,
-// so they stay until the cutover is done. Do not build features on them without
-// first wiring up a real permission check.
+// by any application code**. They hold the legacy Laravel grants, carried over
+// by the Postgres ETL that has since been deleted — so whatever is in them now
+// is all there will ever be, and there is no longer a Postgres to re-derive
+// them from. Whether to keep or drop them is an open question nobody has taken:
+// see docs/specs/admin-vs-staff-spec.md, which is where a real permission model
+// would be decided. Do not build features on them without wiring up a real
+// permission check first.
 
 export const permission = sqliteTable(
 	'permissions',

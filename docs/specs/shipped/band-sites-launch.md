@@ -80,4 +80,4 @@ media upload — all behind the `bandPremium` feature flag (off by default).
 - Multi-band event lineups (event↔band junction with billing order).
 - Gallery `downloadable` option (cross-origin `download` attribute doesn't
   work; needs a proxied download endpoint).
-- Robust media management (see parity-report enhancements).
+- Robust media management (see the media entry in `CHORES.md`).
