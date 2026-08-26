@@ -14,11 +14,7 @@
 		AddSubscriberAction,
 		RemoveSubscriberAction
 	} from '$lib/components/shared/actions';
-	import {
-		getAudienceDetail,
-		getAudienceSubscribers,
-		updateAudience
-	} from '$lib/remote/marketing.remote';
+	import { getStaffAudienceDetail, updateAudience } from '$lib/remote/marketing.remote';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
@@ -27,8 +23,9 @@
 	const { fields } = updateAudience;
 
 	let id = $derived(page.params.id!);
-	let audienceData = $derived(await getAudienceDetail(id));
-	let subscribers = $derived(await getAudienceSubscribers(id));
+	const data = $derived(await getStaffAudienceDetail(id));
+	const audienceData = $derived(data.audience);
+	const subscribers = $derived(data.subscribers);
 
 	// A built-in audience's membership is a SQL predicate over member
 	// attributes, so every list-editing control below is meaningless for it.

@@ -19,7 +19,7 @@
 		suggestionCategoryLabels,
 		suggestionStatusLabels
 	} from '$lib/config';
-	import { getSuggestionsQueue, getPendingSuggestionEdits } from '$lib/remote/suggestions.remote';
+	import { getStaffSuggestionsQueues } from '$lib/remote/suggestions.remote';
 
 	// One tab per reason a suggestion is or isn't on the board. "Needs review" is
 	// the time-sensitive one: everything in it is invisible to members until
@@ -44,22 +44,20 @@
 		page
 	});
 
-	let boardFilters = $derived({ ...baseFilters, visibility: 'visible' as const });
-	let pendingFilters = $derived({ ...baseFilters, visibility: 'pending_review' as const });
-	let underReviewFilters = $derived({ ...baseFilters, visibility: 'under_review' as const });
-	let hiddenFilters = $derived({ ...baseFilters, visibility: 'hidden' as const });
-
-	let result = $derived(
-		tab === 'board'
-			? getSuggestionsQueue(boardFilters)
-			: tab === 'hidden'
-				? getSuggestionsQueue(hiddenFilters)
-				: getSuggestionsQueue(pendingFilters)
+	// One query for all three lists, and three `.then()` views off the single promise rather than
+	// an await — awaiting here would suspend the page into the layout boundary's pending snippet
+	// and blank it on every filter keystroke, which is what DataList exists to avoid.
+	const queues = $derived(
+		getStaffSuggestionsQueues({
+			...baseFilters,
+			visibility: tab === 'board' ? 'visible' : tab === 'hidden' ? 'hidden' : 'pending_review'
+		})
 	);
-	// The second half of the review tab. Kept separate so its pagination and the
-	// pending one don't fight over a single `page`.
-	let underReview = $derived(getSuggestionsQueue(underReviewFilters));
-	let pendingEdits = $derived(await getPendingSuggestionEdits());
+
+	const result = $derived(queues.then((q) => q.primary));
+	// The second half of the review tab: `under_review` alongside `pending_review`.
+	const underReview = $derived(queues.then((q) => q.underReview));
+	const pendingEditsPromise = $derived(queues.then((q) => q.pendingEdits));
 
 	const activeFilterCount = $derived(
 		(searchDebounced ? 1 : 0) + (categoryFilter ? 1 : 0) + (statusFilter ? 1 : 0)
@@ -177,32 +175,36 @@
 		{/snippet}
 	</DataList>
 
-	{#if tab === 'review' && pendingEdits.length > 0}
-		<h2 class="text-muted font-medium">Edits waiting on approval</h2>
-		<!-- These sit apart from the two lists above: the suggestion itself is
+	{#if tab === 'review'}
+		{#await pendingEditsPromise then pendingEdits}
+			{#if pendingEdits.length > 0}
+				<h2 class="text-muted font-medium">Edits waiting on approval</h2>
+				<!-- These sit apart from the two lists above: the suggestion itself is
 		     still on the board and untouched, it's only the proposed change that
 		     is waiting. -->
-		<Table>
-			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th>Proposed change</th>
-				<th>Requested by</th>
-				<th class="col-extra whitespace-nowrap">Requested</th>
-			{/snippet}
-			{#each pendingEdits as e (e.id)}
-				{@const href = resolve(`/staff/suggestions/${e.suggestionId}`)}
-				<tr class="hover cursor-pointer" use:rowLink={href}>
-					<td class="w-px"><StatusBadge status="pending_review" /></td>
-					<td class="cell-primary">
-						<EntityIdentity ref={e.ref}>
-							{#snippet subtitle()}was "{e.originalTitle}"{/snippet}
-						</EntityIdentity>
-					</td>
-					<td class="min-w-0"><EntityChip ref={e.requestedBy} icon={false} /></td>
-					<td class="col-extra whitespace-nowrap">{relativeDay(e.createdAt)}</td>
-				</tr>
-			{/each}
-		</Table>
+				<Table>
+					{#snippet head()}
+						<th class="w-px"><span class="sr-only">Status</span></th>
+						<th>Proposed change</th>
+						<th>Requested by</th>
+						<th class="col-extra whitespace-nowrap">Requested</th>
+					{/snippet}
+					{#each pendingEdits as e (e.id)}
+						{@const href = resolve(`/staff/suggestions/${e.suggestionId}`)}
+						<tr class="hover cursor-pointer" use:rowLink={href}>
+							<td class="w-px"><StatusBadge status="pending_review" /></td>
+							<td class="cell-primary">
+								<EntityIdentity ref={e.ref}>
+									{#snippet subtitle()}was "{e.originalTitle}"{/snippet}
+								</EntityIdentity>
+							</td>
+							<td class="min-w-0"><EntityChip ref={e.requestedBy} icon={false} /></td>
+							<td class="col-extra whitespace-nowrap">{relativeDay(e.createdAt)}</td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		{/await}
 	{/if}
 
 	{#if tab === 'review'}

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import AudiencePicker from '../../AudiencePicker.svelte';
+	import CampaignPreview from '../../CampaignPreview.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -8,8 +10,6 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import {
 		getCampaignDetail,
-		getAudienceOptions,
-		getPreview,
 		saveDraft,
 		sendCampaignNow,
 		scheduleCampaign,
@@ -18,7 +18,6 @@
 
 	let id = $derived(page.params.id!);
 	let campaignData = $derived(await getCampaignDetail(id));
-	let audiences = $derived(await getAudienceOptions());
 
 	// Initialize editable state from loaded campaign
 	let subject = $state('');
@@ -44,21 +43,8 @@
 		}
 	});
 
-	let previewHtml = $derived(await getPreview(markdownBody));
-
-	function toggleAudience(audienceId: string) {
-		if (selectedAudienceIds.includes(audienceId)) {
-			selectedAudienceIds = selectedAudienceIds.filter((a) => a !== audienceId);
-		} else {
-			selectedAudienceIds = [...selectedAudienceIds, audienceId];
-		}
-	}
-
-	let totalSubscribers = $derived(
-		audiences
-			.filter((a) => selectedAudienceIds.includes(a.id))
-			.reduce((sum, a) => sum + a.subscriberCount, 0)
-	);
+	// Written back by AudiencePicker, which owns the audience query.
+	let totalSubscribers = $state(0);
 
 	function isValid() {
 		return subject.trim() && markdownBody.trim() && selectedAudienceIds.length > 0;
@@ -164,34 +150,7 @@
 
 			<div>
 				<p class="label text-sm font-medium">Audiences</p>
-				<div class="flex flex-wrap gap-2">
-					{#each audiences as a (a.id)}
-						<label
-							class="label cursor-pointer gap-2 border rounded-lg px-3 py-1.5 {selectedAudienceIds.includes(
-								a.id
-							)
-								? 'border-primary bg-primary/10'
-								: 'border-base-300'}"
-						>
-							<input
-								type="checkbox"
-								class="checkbox checkbox-sm checkbox-primary"
-								checked={selectedAudienceIds.includes(a.id)}
-								onchange={() => toggleAudience(a.id)}
-							/>
-							<span class="text-sm">{a.name}</span>
-							{#if a.systemKey}
-								<span class="badge badge-info badge-xs">Built-in</span>
-							{/if}
-							<span class="text-subtle">({a.subscriberCount})</span>
-						</label>
-					{/each}
-				</div>
-				{#if selectedAudienceIds.length > 0}
-					<p class="text-subtle mt-1">
-						~{totalSubscribers} recipients (before deduplication)
-					</p>
-				{/if}
+				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} />
 			</div>
 
 			<div>
@@ -262,16 +221,7 @@
 		<!-- Preview pane -->
 		<div>
 			<p class="label text-sm font-medium">Preview</p>
-			<div class="border rounded-lg bg-white overflow-hidden" style="min-height: 400px;">
-				{#if previewHtml}
-					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML preview) -->
-					{@html previewHtml}
-				{:else}
-					<div class="flex items-center justify-center h-full p-12 text-sm opacity-40">
-						Start typing to see a preview...
-					</div>
-				{/if}
-			</div>
+			<CampaignPreview markdown={markdownBody} />
 		</div>
 	</div>
 </PageContent>

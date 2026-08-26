@@ -33,8 +33,8 @@ is the enforcement.
 | 3   | **Help** — 3 files, 6 queries                              | ✅     | (next) |
 | 4   | **Equipment** — 4 files, 9 queries                         | ✅     | (next) |
 | 5   | **Events and recurring** — 6 files, 13 queries             | ✅     | (next) |
-| 6   | **Suggestions** — 4 files, 13 queries                      | ⬜     |        |
-| 7   | **Marketing** — 3 files, 7 queries                         | ⬜     |        |
+| 6   | **Suggestions** — 4 files, 13 queries                      | ✅     | (next) |
+| 7   | **Marketing** — 3 files, 7 queries                         | ✅     | (next) |
 | 8   | **Reservations** — 3 files, 10 queries                     | ⬜     |        |
 | 9   | **Inbox and messages** — 2 files, 6 queries                | ⬜     |        |
 | 10  | **Volunteer — staff** — 6 files, 21 queries                | ⬜     |        |
@@ -195,14 +195,46 @@ three in flight across the tree even though no single component fans out that fa
 - `src/routes/staff/events/+page.svelte` — 2
 - `src/routes/staff/recurring/[id]/+page.svelte` — 2
 
-### 6. Suggestions
+### 6. Suggestions ✅
+
+**Done.** Two detail pages composed; two list pages pushed down, and the difference between them
+is worth reading before doing tranches 8 and 10.
+
+`staff/suggestions` created **two** `getSuggestionsQueue` promises before any await — a real
+fan-out. One `getStaffSuggestionsQueues` now serves all three lists, and the page derives three
+`.then()` views off the single promise instead of awaiting it. That shape is the answer whenever a
+`DataList` is involved: it keeps one query in flight without suspending the page into the layout
+boundary's `pending` snippet, which blanks it on every keystroke.
+
+`member/suggestions` was already _serial_ — it awaits the standing first, so the board promise is
+not created until that resolves. Not a crash, but still a waterfall, and composing was the wrong
+fix: the standing does not depend on the filters, so it would have re-fetched on every keystroke.
+It moved into `StandingNotice` and `CreateSuggestionAction` instead, and the one field the card
+loop wanted from it — "is this mine" — moved onto the board rows server-side, where
+`getSuggestionBoard` already knows who is asking.
+
+`staff/suggestions/[id]` also retired a workaround rather than preserving it. Its merge candidates
+had to be declared _above_ the awaits or `{#each await candidates}` compiled to the
+`$.async(node, [blocker], [expression])` shape that crashes as `c.async_deriveds` is null
+(JAVASCRIPT-SVELTEKIT-25). In `MergeCandidateOptions` there is no await to be blocked by, so the
+hazard is gone rather than managed.
 
 - `src/routes/staff/suggestions/+page.svelte` — 5
 - `src/routes/member/suggestions/[id]/+page.svelte` — 3
 - `src/routes/staff/suggestions/[id]/+page.svelte` — 3
 - `src/routes/member/suggestions/+page.svelte` — 2
 
-### 7. Marketing
+### 7. Marketing ✅
+
+**Done.** `getStaffAudienceDetail` composes the audience page. Both campaign editors pushed down
+instead, for two separate reasons that both apply: `getAudienceOptions` is an alias for
+`getAudiences`, which the audience mutations refresh by name and a campaign-keyed wrapper could not
+be refreshed from; and `getPreview` re-fires as the body is typed, so sharing a query with the
+campaign would re-fetch the campaign on every keystroke.
+
+`AudiencePicker` and `CampaignPreview` serve both editors. The picker's `total` is `$bindable`
+because the page still needs the number outside the markup — the send handler puts it in a confirm
+dialog.
 
 `campaigns/[id]/edit` and `campaigns/new` both hold `getPreview(markdownBody)`, which
 re-fires on every keystroke-derived body change. That one is a debounce question as much as

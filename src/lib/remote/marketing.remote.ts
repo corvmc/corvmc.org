@@ -273,7 +273,7 @@ export const updateAudience = form(
 			allowOptIn: data.allowOptIn
 		});
 
-		void getAudienceDetail(id).refresh();
+		void getStaffAudienceDetail(id).refresh();
 		return { success: true };
 	}
 );
@@ -297,8 +297,7 @@ export const bulkAddMembers = form(
 	async (data) => {
 		await requireStaff();
 		const count = await bulkAddMembersService(data.audienceId as string);
-		void getAudienceSubscribers(data.audienceId as string).refresh();
-		void getAudienceDetail(data.audienceId as string).refresh();
+		void getStaffAudienceDetail(data.audienceId as string).refresh();
 		return { added: count };
 	}
 );
@@ -320,8 +319,7 @@ export const addSubscriber = form(
 		const sub = await findOrCreateByEmail(email, (data.name as string)?.trim() || undefined);
 		await addSubscriberService(data.audienceId as string, sub.id);
 
-		void getAudienceSubscribers(data.audienceId as string).refresh();
-		void getAudienceDetail(data.audienceId as string).refresh();
+		void getStaffAudienceDetail(data.audienceId as string).refresh();
 		return { success: true };
 	}
 );
@@ -334,8 +332,7 @@ export const removeSubscriber = form(
 	async (data) => {
 		await requireStaff();
 		await removeSubscriberService(data.audienceId as string, data.subscriberId as string);
-		void getAudienceSubscribers(data.audienceId as string).refresh();
-		void getAudienceDetail(data.audienceId as string).refresh();
+		void getStaffAudienceDetail(data.audienceId as string).refresh();
 		return { success: true };
 	}
 );
@@ -473,4 +470,18 @@ export const getUserMarketing = query(z.string(), async (userId) => {
 			: null,
 		audiences
 	};
+});
+
+/**
+ * The staff audience detail page's one load-bearing query.
+ *
+ * Both halves are keyed by the same id and every mutation that refreshed either one has that id
+ * in scope, so this composes cleanly.
+ */
+export const getStaffAudienceDetail = query(z.string(), async (id) => {
+	const [audience, subscribers] = await Promise.all([
+		getAudienceDetail(id),
+		getAudienceSubscribers(id)
+	]);
+	return { audience, subscribers };
 });
