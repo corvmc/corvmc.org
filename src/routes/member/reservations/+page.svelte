@@ -6,12 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import {
-		confirmWaitlisted,
-		getReservations,
-		getMembershipStatus,
-		getBookingContact
-	} from '$lib/remote/reservations.remote';
+	import { confirmWaitlisted, getMemberReservationsPage } from '$lib/remote/reservations.remote';
 
 	const { fields } = confirmWaitlisted;
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -40,24 +35,22 @@
 	// (JAVASCRIPT-SVELTEKIT-25). Unfixed in every published Svelte. Declared
 	// first, the blocker list is empty and `flatten` takes its synchronous path.
 	// `async-effect-shape.spec.ts` fails the build if this order is undone.
-	let activeReservations = $state(getReservations({ after: new Date().toISOString() }));
-	let allReservations = $state(getReservations({ includeTerminal: true }));
+	const pageData = $derived(getMemberReservationsPage());
 
-	let creditData = $derived(await getMembershipStatus());
+	const activeReservations = $derived(pageData.then((d) => d.active));
+	const allReservations = $derived(pageData.then((d) => d.all));
+	const creditData = $derived(await pageData.then((d) => d.membership));
 	const isSustaining = $derived(creditData.isSustainingMember);
 
 	// Staff can't follow up on a booking they can't call about, so the wizard
 	// collects a number inline when the member has none on file.
-	let contact = $derived(await getBookingContact());
+	const contact = $derived(await pageData.then((d) => d.contact));
 
 	// Remote queries aren't refreshed by invalidateAll() — only by their own
 	// refresh() method. Mutations (book/cancel/confirm) must call this so the
 	// lists (and free-hours balance) update without a manual page reload.
 	function refreshReservations() {
-		activeReservations.refresh();
-		allReservations.refresh();
-		getMembershipStatus().refresh();
-		getBookingContact().refresh();
+		void getMemberReservationsPage().refresh();
 	}
 
 	// Waitlist confirmation via ?confirm={id}

@@ -510,7 +510,7 @@ export const updateVolunteerProfile = form(profileFieldsSchema, async (data) => 
 		mapDomainError(err);
 	}
 
-	await Promise.all([getMyVolunteerOnboarding().refresh(), getMyVolunteerAccess().refresh()]);
+	await Promise.all([getMyVolunteerOnboarding().refresh(), getMemberVolunteerPage().refresh()]);
 	return { success: true };
 });
 
@@ -584,7 +584,9 @@ export const saveVolunteerInterests = form(
 			mapDomainError(err);
 		}
 
-		await Promise.all([getMyVolunteerInterests().refresh(), getMyVolunteerAccess().refresh()]);
+		// Both pages that read the interests: the dashboard and the onboarding step. This form is
+		// shared by them, so refreshing one wrapper would leave the other stale.
+		await Promise.all([getMemberVolunteerPage().refresh(), getVolunteerInterestsPage().refresh()]);
 		// No redirect: this form is shared by the onboarding step and the modal on
 		// /member/volunteer, and only the step wants to navigate. It does that itself.
 		return { success: true };
@@ -737,7 +739,8 @@ export const createVolunteerRole = form(roleFormSchema, async (data) => {
 	}
 
 	void getVolunteerRoles().refresh();
-	void getActiveVolunteerRoles().refresh();
+	void getMemberVolunteerPage().refresh();
+	void getVolunteerInterestsPage().refresh();
 	return { success: true };
 });
 
@@ -811,12 +814,9 @@ export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), asy
 // ---------------------------------------------------------------------------
 
 async function refreshMemberViews() {
-	await Promise.all([
-		getMyVolunteerHours().refresh(),
-		getMyVolunteerSummary().refresh(),
-		// Logging against a shift clears it from the "log your hours" prompt.
-		getUnloggedShifts().refresh()
-	]);
+	// All three live in the dashboard's one query now — including the unlogged-shift prompt that
+	// logging against a shift clears.
+	await getMemberVolunteerPage().refresh();
 }
 
 /**
@@ -842,7 +842,8 @@ async function refreshStaffQueue() {
 async function refreshRoleViews(roleId?: string) {
 	await Promise.all([
 		getVolunteerRoles().refresh(),
-		getActiveVolunteerRoles().refresh(),
+		getMemberVolunteerPage().refresh(),
+		getVolunteerInterestsPage().refresh(),
 		...(roleId ? [getVolunteerRoleDetail(roleId).refresh()] : [])
 	]);
 }
@@ -1254,7 +1255,7 @@ export const claimShift = form(z.object({ shiftId: z.string().min(1) }), async (
 		mapDomainError(err);
 	}
 
-	void getOpenShifts().refresh();
+	void getMemberVolunteerPage().refresh();
 	return { success: true };
 });
 
@@ -1268,7 +1269,7 @@ export const cancelMySignup = form(z.object({ signupId: z.string().min(1) }), as
 		mapDomainError(err);
 	}
 
-	void getOpenShifts().refresh();
+	void getMemberVolunteerPage().refresh();
 	return { success: true };
 });
 
@@ -1389,4 +1390,48 @@ export const getUserShifts = query(z.string(), async (userId) => {
 export const getUserHourLogs = query(z.string(), async (userId) => {
 	await requireStaff();
 	return listUserHourLogs(userId);
+});
+
+/**
+ * The member volunteering dashboard's one load-bearing query.
+ *
+ * Seven query promises used to leave this page at once — the access gate, the role catalogue, the
+ * member's interests, open and unlogged shifts, their hour logs and their summary. Every one is
+ * unparameterized, which is what makes this composable: each of the mutations that used to refresh
+ * them individually can name this wrapper with no argument.
+ *
+ * `getMyVolunteerAccess` stays the gate. It redirects an un-onboarded member to
+ * /member/volunteer/start and a blocked one to /blocked, server-side, and awaiting it here keeps
+ * that redirect ahead of everything else rather than racing the other six.
+ */
+export const getMemberVolunteerPage = query(z.void(), async () => {
+	const access = await getMyVolunteerAccess();
+
+	const [roles, interests, openShifts, unloggedShifts, logs, summary] = await Promise.all([
+		getActiveVolunteerRoles(),
+		getMyVolunteerInterests(),
+		getOpenShifts(),
+		getUnloggedShifts(),
+		getMyVolunteerHours(),
+		getMyVolunteerSummary()
+	]);
+
+	return { access, roles, interests, openShifts, unloggedShifts, logs, summary };
+});
+
+/**
+ * The volunteering onboarding step's one load-bearing query.
+ *
+ * Shares two constituents with `getMemberVolunteerPage`, which is why `saveVolunteerInterests`
+ * refreshes both wrappers rather than the constituents: the interests form is rendered by the step
+ * and by a modal on the dashboard, and refreshing one would leave the other stale.
+ */
+export const getVolunteerInterestsPage = query(z.void(), async () => {
+	const [step, roles, interests] = await Promise.all([
+		getVolunteerInterestsStep(),
+		getActiveVolunteerRoles(),
+		getMyVolunteerInterests()
+	]);
+
+	return { step, roles, interests };
 });

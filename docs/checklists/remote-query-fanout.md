@@ -35,10 +35,10 @@ is the enforcement.
 | 5   | **Events and recurring** — 6 files, 13 queries             | ✅     | (next) |
 | 6   | **Suggestions** — 4 files, 13 queries                      | ✅     | (next) |
 | 7   | **Marketing** — 3 files, 7 queries                         | ✅     | (next) |
-| 8   | **Reservations** — 3 files, 10 queries                     | ⬜     |        |
-| 9   | **Inbox and messages** — 2 files, 6 queries                | ⬜     |        |
+| 8   | **Reservations** — 3 files, 10 queries                     | ✅     | (next) |
+| 9   | **Inbox and messages** — 2 files, 6 queries                | ✅     | (next) |
 | 10  | **Volunteer — staff** — 6 files, 21 queries                | ⬜     |        |
-| 11  | **Volunteer — member** — 2 files, 10 queries               | ⬜     |        |
+| 11  | **Volunteer — member** — 2 files, 10 queries               | ✅     | (next) |
 | 12  | **Settings and account** — 2 files, 12 queries             | ⬜     |        |
 | 13  | **Staff band detail** — 1 file, 4 queries                  | ⬜     |        |
 | 14  | **Serial waterfalls** — 2 files, 6 queries — read the note | ✅     | (next) |
@@ -244,7 +244,24 @@ a composition question.
 - `src/routes/staff/marketing/audiences/[id]/+page.svelte` — 2
 - `src/routes/staff/marketing/campaigns/new/+page.svelte` — 2
 
-### 8. Reservations
+### 8. Reservations ✅
+
+**Done.** `getStaffReservationsPage` and `getMemberReservationsPage`, both consumed as `.then()`
+views off a single promise rather than awaited — the tranche-6 shape.
+
+`staff/reservations` is where JAVASCRIPT-SVELTEKIT-3's 33 unhandled rejections came from: four
+query promises recreated on every filter keystroke, and a superseded one that rejects has no
+consumer left to catch it. One promise now, so there is nothing to supersede.
+
+`member/reservations` is the second page whose JAVASCRIPT-SVELTEKIT-25 workaround this sweep
+retired. Its two list queries had to be declared _above_ the awaits so their blocker list stayed
+empty; with one query there is nothing to be blocked by. `async-effect-shape.spec.ts` compiles
+every `.svelte` file and fails on the `$.async(node, [blockers], [exprs])` shape, so it verifies
+the outcome tree-wide rather than a declaration order — it passes.
+
+`CreateModal`'s two async deriveds both called `getStaffSlots(date)` with the same argument, so
+Kit deduped them to one request — but they were still two queries in flight. One `slots` promise,
+two derivations off it.
 
 `staff/reservations` recreates four query promises on every filter keystroke. The superseded
 ones reject with no consumer left, which is where `-3`'s 33 events came from — the client
@@ -254,7 +271,19 @@ filter now drops them, but this is the source.
 - `src/routes/staff/reservations/+page.svelte` — 4
 - `src/routes/staff/reservations/CreateModal.svelte` — 2
 
-### 9. Inbox and messages
+### 9. Inbox and messages ✅
+
+**Done**, both by push-down — every extra query here is unparameterized and refreshed by name, so
+none of them could live in a filter-keyed page query.
+
+`InboxList`'s three filter controls each own their query now: `InboxStatusTabs` (counts),
+`InboxChannelOptions` and `InboxStaffOptions`. The tabs component is the first consumer of the
+`Snippet` badge added to `TabBar` in tranche 5.
+
+`ConversationList` got **`member/layout-context.ts`**, the member-panel twin of the band one from
+tranche 1 — `getMemberLayout` is refreshed from seven places across the inbox and direct-message
+mutations, so composing was never an option. Any other member-panel component that re-awaits the
+layout can now read it from here instead.
 
 `InboxList` absorbs `inbox.remote.ts` L139, 218, 219, 245, 276, 277.
 `ConversationList` duplicates `getMemberLayout`.
@@ -271,7 +300,21 @@ filter now drops them, but this is the source.
 - `src/routes/staff/volunteer/shifts/[id]/+page.svelte` — 3
 - `src/routes/staff/volunteer/shifts/+page.svelte` — 2
 
-### 11. Volunteer — member
+### 11. Volunteer — member ✅
+
+**Done**, and the refresh cluster that made this look like the worst tranche turned out to be what
+made it easy: **all seven queries are unparameterized**, so an unparameterized wrapper can be named
+by every mutation that used to refresh them one at a time. Twelve refresh sites collapsed to two
+wrapper refreshes with no orphans.
+
+`getMyVolunteerAccess` is still the gate. Inside `getMemberVolunteerPage` it is awaited _first_, so
+its server-side redirect — un-onboarded to `/member/volunteer/start`, blocked to `/blocked` — still
+runs ahead of the other six rather than racing them.
+
+The two constituents shared with the onboarding step (`getActiveVolunteerRoles`,
+`getMyVolunteerInterests`) are why `saveVolunteerInterests` refreshes **both** wrappers: the
+interests form is rendered by the step and by a modal on the dashboard, and refreshing one would
+leave the other stale.
 
 The worst of the set, and the largest refresh cluster in the repo: `volunteer.remote.ts`
 L497, 513, 587, 739-740, 815-818, 831, 844-846, 1257, 1271 — three of them already

@@ -15,14 +15,17 @@
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import ComposeAction from './ComposeAction.svelte';
 	import { getMyMessages } from '$lib/remote/direct-messages.remote';
-	import { getMemberLayout } from '$lib/remote/layout.remote';
+	import { getMemberLayoutContext } from '../layout-context';
 	import { conversationList } from './list-state.svelte';
 
 	// The page number is shared module state, not local: the thread pane is a
 	// sibling, and it has to be able to refresh this list at the page it is
 	// actually showing. See list-state.svelte.ts.
 	const result = $derived(getMyMessages({ page: conversationList.page }));
-	const layout = $derived(await getMemberLayout());
+	// The member layout above already holds this; re-awaiting it here was a second remote query in
+	// flight in this component. See `member/layout-context.ts`.
+	const memberLayout = getMemberLayoutContext();
+	const layout = $derived(memberLayout.current);
 	const openId = $derived(page.params.id);
 </script>
 

@@ -1,4 +1,7 @@
 <script lang="ts">
+	import InboxStatusTabs from './InboxStatusTabs.svelte';
+	import InboxChannelOptions from './InboxChannelOptions.svelte';
+	import InboxStaffOptions from './InboxStaffOptions.svelte';
 	/**
 	 * The staff queue: status tabs, filters, and the list of conversations.
 	 *
@@ -11,18 +14,12 @@
 	import { goto } from '$app/navigation';
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { resolve } from '$app/paths';
 	import { relativeDay } from '$lib/utils/format';
 	import { inboxChannels } from '$lib/config';
-	import {
-		getInboxThreads,
-		getInboxThreadCounts,
-		getInboxEnabledChannels,
-		getAssignableStaff
-	} from '$lib/remote/inbox.remote';
+	import { getInboxThreads } from '$lib/remote/inbox.remote';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
 	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
 
@@ -92,10 +89,9 @@
 		page: pageNumber
 	});
 
-	let result = $derived(getInboxThreads(filters));
-	let counts = $derived(getInboxThreadCounts());
-	let enabledChannels = $derived(getInboxEnabledChannels());
-	let staffUsers = $derived(getAssignableStaff());
+	// The component's one query. The three filter controls each own theirs — none of them is
+	// keyed by these filters, and all three have mutations that refresh them by name.
+	const result = $derived(getInboxThreads(filters));
 
 	const openId = $derived(page.params.id);
 
@@ -121,25 +117,12 @@
 <div class="flex min-h-0 flex-col gap-3">
 	<h1 class="text-xl font-bold">Inbox</h1>
 
-	{#await counts then c}
-		<!-- `collapse`: below md this becomes a dropdown naming the active tab.
-		     Four tabs never fit the list pane, which is narrower than the full-width
-		     page this came from. -->
-		<TabBar
-			collapse
-			tabs={[
-				{ key: 'open', label: 'Open', badge: c.open },
-				{ key: 'snoozed', label: 'Snoozed', badge: c.snoozed },
-				{ key: 'resolved', label: 'Resolved', badge: c.resolved },
-				{ key: 'all', label: 'All', badge: c.all }
-			]}
-			active={statusView}
-			onchange={(key) => {
-				statusView = key as StatusView;
-				pageNumber = 1;
-			}}
-		/>
-	{/await}
+	<InboxStatusTabs
+		bind:view={statusView}
+		onchange={() => {
+			pageNumber = 1;
+		}}
+	/>
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
@@ -152,42 +135,28 @@
 				}}
 			/>
 		{/snippet}
-		{#await enabledChannels then channels}
-			<Select
-				size="sm"
-				aria-label="Channel"
-				value={channelFilter}
-				onchange={(e: Event) => {
-					channelFilter = (e.currentTarget as HTMLSelectElement).value;
-					pageNumber = 1;
-				}}
-			>
-				<option value="">All channels</option>
-				<!-- Enabled channels plus whatever the current filter names, so a thread
-				     from a since-disabled channel stays reachable. -->
-				{#each [...new Set([...channels, ...(channelFilter ? [channelFilter] : [])])] as ch (ch)}
-					<option value={ch}>{channelLabel(ch)}</option>
-				{/each}
-			</Select>
-		{/await}
-		{#await staffUsers then staff}
-			<Select
-				size="sm"
-				aria-label="Assigned to"
-				value={assignedFilter}
-				onchange={(e: Event) => {
-					assignedFilter = (e.currentTarget as HTMLSelectElement).value;
-					pageNumber = 1;
-				}}
-			>
-				<option value="">Anyone</option>
-				<option value="mine">Assigned to me</option>
-				<option value="unassigned">Unassigned</option>
-				{#each staff as s (s.id)}
-					<option value={s.id}>{s.name}</option>
-				{/each}
-			</Select>
-		{/await}
+		<Select
+			size="sm"
+			aria-label="Channel"
+			value={channelFilter}
+			onchange={(e: Event) => {
+				channelFilter = (e.currentTarget as HTMLSelectElement).value;
+				pageNumber = 1;
+			}}
+		>
+			<InboxChannelOptions current={channelFilter} />
+		</Select>
+		<Select
+			size="sm"
+			aria-label="Assigned to"
+			value={assignedFilter}
+			onchange={(e: Event) => {
+				assignedFilter = (e.currentTarget as HTMLSelectElement).value;
+				pageNumber = 1;
+			}}
+		>
+			<InboxStaffOptions />
+		</Select>
 		<!-- Which side the ball is on. Awaiting threads stay in the Open tab, so
 		     this is how staff narrow it down to what they still owe an answer. -->
 		<Select
