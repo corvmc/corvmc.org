@@ -31,7 +31,8 @@ When building a new feature, work through these phases in order:
    test that reflects unfinished business logic is acceptable.
 7. **Verify** — `pnpm check` and confirm no new type errors in files you touched
    (pre-existing errors in unrelated files can be ignored).
-8. **Document** — add the feature row to `docs/reports/parity-report.md`; update/add help
+8. **Document** — add the feature row to the feature catalog
+   (`docs/reports/parity-report.md`); update/add help
    articles and run the docs checks (see
    [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). If the
    feature had a spec, **retire it now** — see below.
@@ -218,7 +219,8 @@ Before opening a PR that adds/removes/moves a route or touches help articles:
    `docs/manual/README.md`.
 2. `pnpm docs:routes` — regenerate and commit `docs/manual/route-inventory.json`.
 3. `pnpm docs:check` — must pass; CI fails the PR on integrity errors.
-4. New feature shipped? Add its row to `docs/reports/parity-report.md` (checklist phase 8)
+4. New feature shipped? Add its row to the feature catalog `docs/reports/parity-report.md`
+   (checklist phase 8)
    and index any new doc in `docs/README.md`.
 
 Keeping the docs honest is a manual step in every PR that changes behaviour — nothing

@@ -164,6 +164,46 @@ Track stock levels for space consumables — drumsticks, strings, cables, cleani
 
 Auto-generate event posters by compositing uploaded artwork with a branded footer containing event details (date, time, venue, ticket info) and sponsor logos. Reduces manual design work for recurring events and ensures consistent branding.
 
+## Laravel-era, not yet reviewed
+
+Features the legacy Laravel app had that this one never rebuilt. They were tracked in the parity
+report until it stopped being a parity report (2026-08-26); they are parked here so the call can be
+made deliberately rather than lost. Nobody has decided these are wanted — several may simply be
+artifacts of how the old app was organised.
+
+### Site Pages / CMS
+
+A staff-editable page builder for the public site — the Laravel app had one with a block builder.
+Nothing equivalent exists here; public pages are Svelte routes, edited in the repo.
+
+### Kiosk Devices
+
+A registered-device concept for a terminal in the space — check-in, door access, or a
+walk-up booking screen. The Laravel app had a `KioskDevices` resource; what it was actually for is
+not recorded anywhere.
+
+### Bylaws
+
+A place to publish and version the collective's bylaws. Currently they live outside the app.
+
+### Revisions
+
+Generic revision history for edited records. Partly overtaken by
+[`docs/specs/audit-log-spec.md`](docs/specs/audit-log-spec.md), which covers staff actions on member
+accounts; a general content-revision layer is a bigger and much less obviously needed thing.
+
+### Member Order History
+
+A "my payments" view for members. Would pull from Stripe and the `payment_cache` table rather than
+a local order ledger, since Stripe is the source of truth. Staff already have this at
+`/staff/payments`; members do not.
+
+### Public About Page
+
+The public site has no About page. The most clearly wanted item in this group.
+
+---
+
 ---
 
 ## Library Reference
