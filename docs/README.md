@@ -171,7 +171,7 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 
 | Doc                                                                      | Status | Notes                                                                                    |
 | ------------------------------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------- |
-| [parity-report.md](reports/parity-report.md)                             | ✅     | **Feature catalog** — every shipped feature, what it does, where it lives                |
+| [feature-catalog.md](reports/feature-catalog.md)                         | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship         |
 | [spec-audit.md](reports/spec-audit.md)                                   | ✅     | All 31 specs classified against the tree; which are shipped and where their content goes |
 | [standardization-audit.md](reports/standardization-audit.md)             | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                 |
 | [staff-user-management-audit.md](reports/staff-user-management-audit.md) | 📦     | The audit behind #164; five follow-up specs, one of them built                           |

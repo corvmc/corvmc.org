@@ -264,7 +264,7 @@ This requires finding the member's subscriber record by userId (creating one if 
 
 ---
 
-## Epic 7: Seed data + parity report + verification
+## Epic 7: Seed data + feature catalog + verification
 
 ### 7.1 Update `scripts/seed-dev.ts`
 
@@ -276,7 +276,7 @@ Add marketing seed data:
 - Create 3–5 campaigns in various states: 2 sent (with sentAt and recipientCount set), 1 scheduled (scheduledFor in the future), 1–2 drafts
 - Wire campaigns to audiences via campaign_audience
 
-### 7.2 Update `docs/reports/parity-report.md`
+### 7.2 Update `docs/reports/feature-catalog.md`
 
 Add the Email Marketing row.
 

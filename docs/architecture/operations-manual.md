@@ -400,7 +400,7 @@ the only automatic gate, and it checks integrity, not staleness.
 Also keep current as you change things:
 
 - `docs/README.md` — the index; every doc gets a row and a status emoji.
-- `docs/reports/parity-report.md` — the feature catalog; add a row per shipped feature
+- `docs/reports/feature-catalog.md` — every shipped feature; add a row per shipped feature
   (see [conventions](../development/conventions.md)).
 
 ## 8. Monitoring and incident triage

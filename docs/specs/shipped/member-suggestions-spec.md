@@ -20,7 +20,7 @@ This is the "lightweight feature-request board where members upvote ideas to hel
 
 ## Decisions
 
-**No feature flag.** Every recent feature shipped behind one; this one doesn't. A suggestion board only works if there is an audience to upvote, so a dark-launched board collects single-vote posts and reads as dead on the day it's switched on. Member Messages made the same call for the same reason and `docs/reports/parity-report.md` records it as "Not flag-gated". The consequence is that `requireUser()` and `requireStaff()` in `src/lib/remote/suggestions.remote.ts` are the entire access-control story, which is why the remote spec asserts every one of them.
+**No feature flag.** Every recent feature shipped behind one; this one doesn't. A suggestion board only works if there is an audience to upvote, so a dark-launched board collects single-vote posts and reads as dead on the day it's switched on. Member Messages made the same call for the same reason and `docs/reports/feature-catalog.md` records it as "Not flag-gated". The consequence is that `requireUser()` and `requireStaff()` in `src/lib/remote/suggestions.remote.ts` are the entire access-control story, which is why the remote spec asserts every one of them.
 
 **Publish immediately.** Trust by default, matching community listings. Staff moderate after the fact rather than gating a queue that nobody has time to clear.
 

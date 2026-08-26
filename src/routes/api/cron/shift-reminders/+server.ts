@@ -8,7 +8,7 @@ import { listSignupsStartingBetween } from '$lib/server/volunteer/volunteer-sign
  * Remind confirmed volunteers about tomorrow's shifts.
  *
  * Runs in the daily batch (08:00 PST / 09:00 PDT) — the 09:00 shift reminder the
- * parity report has wanted since the Laravel app, finally buildable now there
+ * feature catalog has wanted since the Laravel app, finally buildable now there
  * are shifts to remind anyone about.
  *
  * A 24-hour window from the run, so a shift is reminded exactly once: the batch

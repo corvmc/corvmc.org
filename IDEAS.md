@@ -167,7 +167,7 @@ Auto-generate event posters by compositing uploaded artwork with a branded foote
 ## Laravel-era, not yet reviewed
 
 Features the legacy Laravel app had that this one never rebuilt. They were tracked in the parity
-report until it stopped being a parity report (2026-08-26); they are parked here so the call can be
+report until it became the feature catalog (2026-08-26); they are parked here so the call can be
 made deliberately rather than lost. Nobody has decided these are wanted — several may simply be
 artifacts of how the old app was organised.
 

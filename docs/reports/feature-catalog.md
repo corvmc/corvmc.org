@@ -7,12 +7,10 @@ something — that is phase 8 of
 [the feature checklist](../development/conventions.md#the-feature-checklist), and it is how anyone
 else finds out the feature exists.
 
-> **On the filename.** This was the Laravel → Svelte parity report until 2026-08-26. The legacy
-> Laravel app is no longer active — the server survives only to verify bcrypt for un-migrated
-> logins — so there is nothing left to reach parity with, and the comparison columns were dropped.
-> The file keeps its old name because a dozen shipped specs and historical plans cite it by path as
-> a record of work done at the time; renaming it would either break those links or falsify the
-> record.
+> **History.** This was `parity-report.md`, a Laravel → Svelte feature matrix, until 2026-08-26.
+> The legacy Laravel app is no longer active — the server survives only to verify bcrypt for
+> un-migrated logins — so there was nothing left to reach parity with. The comparison columns were
+> dropped and the file renamed to what it had actually become.
 
 **Status legend:** ✅ Built · 📋 Designed, not built (see the linked spec)
 
