@@ -9,7 +9,7 @@ paths:
 Compose the existing shared primitives rather than inventing new ones.
 
 - **Forms**: pages use `Form` / `FormField` / `SubmitButton` from
-  `$lib/components/shared/Form/`. The only raw `<select>` elements in the codebase live inside
+  `$lib/components/ui/Form/`. The only raw `<select>` elements in the codebase live inside
   those shared components; a page that needs one is a page that should be using `FormField`.
 - **`FormField` with `type="textarea"` drops the rest props** — `rows`, `placeholder`, and
   `maxlength` are ignored. Use the custom-input mode instead.

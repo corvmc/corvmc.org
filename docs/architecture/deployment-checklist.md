@@ -83,64 +83,27 @@ each one in a `__drizzle_migrations` tracking table so it is only ever applied o
 > **First time only — bootstrap the tracking table.** `drizzle-kit migrate` expects an
 > empty database it builds up from migration 0001. On a D1 that already has tables (e.g.
 > applied by hand), it will try to replay them and fail. The clean way to establish the
-> tracking table is the full rebuild in §3: drop the D1, `pnpm db:migrate` into the empty
-> database, then load data. From then on every deploy runs `pnpm db:migrate` incrementally.
+> tracking table is to drop the D1 and `pnpm db:migrate` into the empty database. From then
+> on every deploy runs `pnpm db:migrate` incrementally.
 
 ---
 
-## 3. Data Migration from Postgres
+## 3. Data Migration from Postgres (historical)
 
-### Restore the dump to a local Postgres
+This section documented the one-time ETL that moved the legacy Laravel/Postgres data into
+D1. **That migration is done and the scripts are deleted** — `migrate-from-postgres.ts`,
+`reorder-seed.mjs`, `gen-d1-delete.mjs` and `sync-d1.sh` are gone, and D1 is now canonical.
+There is no supported path from Postgres any more.
 
-```bash
-createdb corvmc-migration
-pg_restore -d corvmc-migration path/to/dump.Fc
-```
+The two constraints it taught, which still apply to any bulk load into D1:
 
-### Run the migration script
-
-```bash
-# Dry run — shows what would be migrated without writing
-DATABASE_URL="postgres://localhost/corvmc-migration" pnpm tsx scripts/migrate-from-postgres.ts
-
-# Commit to local D1
-DATABASE_URL="postgres://localhost/corvmc-migration" pnpm tsx scripts/migrate-from-postgres.ts --commit
-```
-
-The script only writes to **local** D1 (it uses `getPlatformProxy()`; the `--remote` flag
-is intentionally unimplemented). To get the data into production: load locally, ensure
-remote has a fresh schema (drop + `pnpm db:migrate`, see §2), then push the local data:
-
-```bash
-# 1. Export local data only (schema already exists on remote from `pnpm db:migrate`)
-wrangler d1 export corvmc-db --local --no-schema --output ./d1-seed.sql
-
-# 2. Reorder INSERTs parent-first — D1 enforces FKs on import and ignores the
-#    PRAGMA defer_foreign_keys hint, so an unordered dump fails with a FK violation.
-node scripts/reorder-seed.mjs        # writes d1-seed-ordered.sql
-
-# 3. Import into remote
-wrangler d1 execute corvmc-db --remote --file ./d1-seed-ordered.sql
-```
-
-> `scripts/reorder-seed.mjs` holds the table dependency order. If the schema gains a new
-> table with foreign keys, add it to the `order` array in that file.
-
-The script:
-
-- Maps Laravel integer IDs to UUIDs (maintains a stable mapping file at `scripts/.id-map.json`)
-- Transforms snake_case columns to the D1 schema
-- Splits array columns into junction tables (instruments, genres)
-- Merges `member_profiles` data into the `user` table
-- Creates `account` records for better-auth credential storage
-- Processes tables in foreign-key order
-
-### Verify migration
-
-```bash
-# Check row counts
-wrangler d1 execute corvmc-db --remote --command "SELECT 'user' as t, count(*) as n FROM user UNION ALL SELECT 'band', count(*) FROM band UNION ALL SELECT 'reservation', count(*) FROM reservation UNION ALL SELECT 'event', count(*) FROM event"
-```
+- **D1 enforces foreign keys on import and ignores `PRAGMA defer_foreign_keys`**, so INSERTs
+  have to be ordered parent-first. `scripts/d1-table-order.mjs` still holds that order and is
+  still maintained — `e2e/reset-db.ts` uses it for the between-test wipe. Add any new
+  FK-bearing table there.
+- **`drizzle-kit migrate` expects to build a database up from migration 0001.** Pointed at a
+  D1 that already has tables, it replays them and fails. Establishing the tracking table on a
+  non-empty database means dropping it first and migrating into the empty one.
 
 ---
 
@@ -287,11 +250,11 @@ see §9a.
 
 ---
 
-## 9a. Migrations & data sync (pre-cutover)
+## 9a. Migrations on deploy
 
-While Postgres (DigitalOcean) is still canonical and D1 is staging: schema migrations are
-applied automatically on deploy (A), and data is refreshed manually on demand (B).
-**Both are temporary — remove at cutover (see §10a).**
+Schema migrations are applied automatically on every production deploy (A). Part B was a
+manual data refresh from Postgres; **it is gone** — D1 is canonical now, so that refresh ran
+the wrong way. See [operations manual §6](operations-manual.md) and §10a.
 
 ### A. Schema migrate on every deploy (Cloudflare Workers Builds)
 
@@ -311,37 +274,11 @@ touch prod). Wire it into the deploy:
 
 If migrate fails, the build fails and nothing is published — schema can never lag code.
 
-### B. Data refresh from Postgres (manual, from a trusted host)
+### B. Data refresh from Postgres — removed
 
-Run on demand from a machine that is already a DO Postgres **Trusted Source** — your
-laptop, or any box allowed to reach the cluster:
-
-```bash
-pnpm db:sync             # prompts before the destructive remote reload
-pnpm db:sync -- --yes    # skip the prompt
-```
-
-`DATABASE_URL` is read from `.env` (or the shell env); append `?sslmode=require` for DO.
-It reloads all data: ETL Postgres → local D1 → export → FK-order → clear remote (DELETE) →
-import. No `pg_dump`; the ETL reads Postgres live over SSL. Requires wrangler auth
-(`wrangler login`, or `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`). Your **local dev
-D1 is preserved** (stashed and restored around the run). If you've added migrations since
-the last deploy, run `pnpm db:migrate` first so the remote schema matches. The table
-dependency order lives in `scripts/d1-table-order.mjs`; add any new FK-bearing table there.
-
-> **Why not GitHub Actions / a cron?** The DO cluster also hosts other production
-> databases, so it stays locked to Trusted Sources. GitHub-hosted runners have no static
-> IP (their published ranges are large, volatile, and shared by all GitHub users), so they
-> can't be safely allowlisted. Running from an already-trusted host avoids opening the
-> cluster at all. If you later want this automated, the clean path is a self-hosted runner
-> on a small Droplet in the DB's VPC, allowlisted as a Trusted Source and connecting over
-> the private network.
-
-### C. DigitalOcean Postgres connectivity
-
-The cluster stays **locked** (it hosts other prod DBs). The sync host (your laptop) is
-already a Trusted Source, so no firewall change is needed. Ensure `DATABASE_URL` ends with
-`?sslmode=require` (DO requires SSL).
+`pnpm db:sync` reloaded remote D1 from the DigitalOcean Postgres. It is deleted: D1 is
+canonical, so the refresh ran the wrong way and would have overwritten production with a
+stale snapshot. Nothing replaces it — there is no supported Postgres → D1 path.
 
 ---
 
@@ -366,17 +303,21 @@ wrangler d1 execute corvmc-db --remote --command "UPDATE user SET ..."
 
 ---
 
-## 10a. Cutover teardown
+## 10a. Teardown — what is left
 
-When D1 becomes canonical (Postgres retired), the §9a data sync is no longer wanted:
+D1 is canonical and the legacy app is no longer active, so the §9a data sync is not wanted.
+Still outstanding:
 
-- Delete the `sync-d1.sh` / `migrate-from-postgres.ts` / `reorder-seed.mjs` /
-  `gen-d1-delete.mjs` / `d1-table-order.mjs` data-sync scripts.
+- ~~Delete the data-sync scripts~~ — done. `sync-d1.sh`, `migrate-from-postgres.ts`,
+  `reorder-seed.mjs` and `gen-d1-delete.mjs` are gone. `d1-table-order.mjs` was on this list
+  by mistake and **stays**: `e2e/reset-db.ts` and its own spec depend on it.
 - Decommission the DO Postgres database.
-- Retire the bcrypt→scrypt Laravel proxy per §7a.
+- Retire the bcrypt→scrypt Laravel proxy per §7a — this is the one thing keeping the legacy
+  server up, and it can go once few enough accounts are still on a bcrypt hash to migrate
+  them with a forced password reset instead.
 
 Keep §9a part A (the migrate step inside `pnpm build`) — applying migrations before publish
-is still correct post-cutover.
+is correct permanently, not a migration-window measure.
 
 ---
 

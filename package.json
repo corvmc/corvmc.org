@@ -42,8 +42,7 @@
 		"email:preview": "tsx scripts/email-preview.ts",
 		"email:validate": "tsx scripts/email-validate.ts",
 		"db:reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local && pnpm db:seed",
-		"db:migrate:local": "for f in migrations/*/migration.sql; do wrangler d1 execute corvmc-db --local --persist-to \"${WRANGLER_PERSIST_TO:-.wrangler/state}\" --file=\"$f\"; done",
-		"db:sync": "bash scripts/sync-d1.sh"
+		"db:migrate:local": "for f in migrations/*/migration.sql; do wrangler d1 execute corvmc-db --local --persist-to \"${WRANGLER_PERSIST_TO:-.wrangler/state}\" --file=\"$f\"; done"
 	},
 	"imports": {
 		"#/*": "./src/*"

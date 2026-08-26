@@ -144,7 +144,7 @@ afterwards:
 
 - **5 code comments** naming a spec path — [directory-service.ts:175](../../src/lib/server/directory/directory-service.ts:175), [event-service.ts:944](../../src/lib/server/event/event-service.ts:944), [standing-service.ts:172](../../src/lib/server/moderation/standing-service.ts:172), [moderation-service.ts:116](../../src/lib/server/moderation/moderation-service.ts:116), [direct-messages.remote.ts:315](../../src/lib/remote/direct-messages.remote.ts:315). [reserved-slugs.ts:58](../../src/lib/reserved-slugs.ts:58) points at `groups-spec.md`, which did not move.
 - **1 user-visible string** — [staff/users/+page.svelte:215](../../src/routes/staff/users/+page.svelte:215) named `staff-bands-spec.md` in rendered copy.
-- **Docs** — business-workflows.md, both volunteering checklists, `docs/reports/{parity-report,revenue-audit,staff-user-management-audit}.md`, `docs/manual/README.md`, `docs/README.md`, `IDEAS.md`.
+- **Docs** — business-workflows.md, both volunteering checklists, `docs/reports/{feature-catalog,revenue-audit,staff-user-management-audit}.md`, `docs/manual/README.md`, `docs/README.md`, `IDEAS.md`.
 - **Specs citing each other across the split** — a shipped spec pointing at an unbuilt one now
   climbs out (`../groups-spec.md`); an unbuilt one pointing at a shipped one goes down
   (`shipped/bands-spec.md`). Same-side links were left alone, since they moved together.
@@ -163,7 +163,7 @@ Four documents asserted things the code contradicts. All four are fixed as part 
 | --------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `docs/specs/shipped/volunteering-spec.md` §intro    | Phase 2 and certifications are "**not built**"                               | Both shipped in #235. `volunteer_shift`, `volunteer_signup`, `volunteer_shift_feedback`, `volunteer_certification`, `member_certification`, `volunteer_role_certification` all exist; `docs/plans/volunteering-phase-2-checklist.md` is 41 of 42 checked |
 | `docs/specs/shipped/volunteering-spec.md` §hour log | `shiftId` is "a bare text column, not a foreign key" and "always null today" | It is a real FK with `onDelete: 'set null'` ([volunteer.ts:342](../../src/lib/server/db/schema/volunteer.ts:342))                                                                                                                                        |
-| `docs/reports/parity-report.md` item 8              | Volunteering Phase 2 "designed … but not built"                              | Same error. Its `Last updated` predated #235, #245 and #247                                                                                                                                                                                              |
+| `docs/reports/feature-catalog.md` item 8            | Volunteering Phase 2 "designed … but not built"                              | Same error. Its `Last updated` predated #235, #245 and #247                                                                                                                                                                                              |
 | `docs/README.md` volunteering row                   | "shifts + certifications designed, unbuilt"                                  | Same error, third copy                                                                                                                                                                                                                                   |
 
 All three volunteering errors are one PR's un-swept wake: #235 shipped the feature and updated
@@ -234,7 +234,7 @@ Tech Rider Management, Event Settlement.
 
 ## 6. Execution order — as it ran
 
-1. ~~**Correct the stale claims**~~ — ✅ spec, parity report, IDEAS, docs README.
+1. ~~**Correct the stale claims**~~ — ✅ spec, feature catalog, IDEAS, docs README.
 2. ~~**Sweep the finished chores**~~ — ✅ two moved to Done.
 3. ~~**Write the missing manual coverage**~~ — ✅ 5 articles, 2 new categories, and the icon-map fix
    that makes categories render as themselves.

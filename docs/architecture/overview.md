@@ -26,7 +26,7 @@ server build. There is no separate API server, no queue worker, no VM.
                     │   R2_BUCKET → R2 (media/file storage)        │──▶ U-Tec API (door locks)
   Cron triggers ───▶│   KV        → KV (site config cache)         │──▶ Sentry (errors/traces)
   (wrangler.toml)   │   ASSETS    → static files                   │──▶ Legacy Laravel app
-  (POST /api/cron/*)└──────────────────────────────────────────────┘    (bcrypt verify, pre-cutover)
+  (POST /api/cron/*)└──────────────────────────────────────────────┘    (bcrypt verify only)
 ```
 
 The bindings (`DB`, `R2_BUCKET`, `KV`, `ASSETS`) are declared in `wrangler.toml` and arrive
@@ -174,11 +174,11 @@ Auth is [better-auth](https://better-auth.com) configured in `src/lib/server/aut
 The `account.password` column holds hashes in three formats, distinguished by prefix, all
 handled by the custom `verify` callback in `src/lib/server/auth.ts`:
 
-| Prefix    | What it is                          | Path                                                                                                                                                         |
-| --------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `scrypt:` | Current format (node:crypto scrypt) | Verified locally. All new hashes are written in this format.                                                                                                 |
-| `$2...`   | Legacy bcrypt from the Laravel app  | Proxied to the legacy Laravel server (`LARAVEL_URL` + `MIGRATION_SECRET`) for verification; on success the hash is **rewritten to scrypt**. Dies at cutover. |
-| `pbkdf2:` | Brief interim format                | Verified locally via Web Crypto; still accepted.                                                                                                             |
+| Prefix    | What it is                          | Path                                                                                                                                                                 |
+| --------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scrypt:` | Current format (node:crypto scrypt) | Verified locally. All new hashes are written in this format.                                                                                                         |
+| `$2...`   | Legacy bcrypt from the Laravel app  | Proxied to the legacy Laravel server (`LARAVEL_URL` + `MIGRATION_SECRET`) for verification; on success the hash is **rewritten to scrypt**. Retires with the bridge. |
+| `pbkdf2:` | Brief interim format                | Verified locally via Web Crypto; still accepted.                                                                                                                     |
 
 Why scrypt via `node:crypto` and not a JS library: the pure-JS scrypt implementations
 better-auth falls back to are silently broken on Cloudflare Workers. The `nodejs_compat`
@@ -433,13 +433,16 @@ are traced step-by-step in [business-workflows.md](../development/business-workf
   `[observability.logs]` in `wrangler.toml`. The destination names (`sentry-traces`,
   `sentry-logs`) must exist in the Cloudflare dashboard — see the operations manual.
 
-## Migration status (pre-cutover)
+## Migration status
 
-This app is a rewrite of a legacy Laravel/Postgres system. Until cutover:
+This app is a rewrite of a legacy Laravel/Postgres system, and the migration is done: **D1 is
+canonical** and the legacy app is no longer active. One thread is still open:
 
-- The legacy app is still canonical for production data; this app's D1 database is
-  refreshed from Postgres with `pnpm db:sync` (see the operations manual).
-- Sign-in for un-migrated users proxies bcrypt verification to the Laravel server.
-- `LARAVEL_URL` (wrangler var), `MIGRATION_SECRET` and `DATABASE_URL` (secrets), and the
-  bridge scripts under `scripts/` all exist only for this window and are slated for
-  deletion — the teardown list is in the deployment checklist §10a.
+- Sign-in for accounts still on a bcrypt hash proxies verification to the legacy Laravel
+  server, which is the only reason it stays up. The hash is rewritten to scrypt on success,
+  so the population only shrinks.
+- `LARAVEL_URL` (wrangler var) and `MIGRATION_SECRET` (secret) serve that proxy and retire
+  with it. `DATABASE_URL` is not read by the Worker at all.
+- `pnpm db:sync` and the Postgres ETL scripts under `scripts/` have been **deleted** — they
+  reloaded D1 from Postgres, which is backwards now. See
+  [operations manual §6](operations-manual.md).

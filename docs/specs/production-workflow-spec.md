@@ -167,7 +167,7 @@ actually goes on at 8:20.
 ### Venue
 
 New table, closing the "Venues — not started" gap in
-[parity-report.md](../reports/parity-report.md).
+[feature-catalog.md](../reports/feature-catalog.md).
 
 ```
 venue
