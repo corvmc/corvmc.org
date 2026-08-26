@@ -10,10 +10,18 @@
 		markAllNotificationsRead
 	} from '$lib/remote/notifications.remote';
 
-	let data = $derived(await getNotifications());
-	let notifications = $derived(data.notifications);
-	let unreadCount = $derived(data.unreadCount);
-
+	// Everything that does not derive from `data` is declared *above* the awaited
+	// derived on purpose, and the order is load-bearing. Anything after a
+	// top-level await is async-gated: the compiler assigns it inside a
+	// continuation that runs only once the promise settles. But
+	// `<svelte:window onclick>` is attached synchronously during setup, so gating
+	// this block left the click-outside handler live for the length of one
+	// `getNotifications()` round trip with `open` and `destroyed` both still
+	// `undefined` — `destroyed` read falsy and waved the click through, and
+	// reading the absent `open` signal threw
+	// `undefined is not an object (evaluating 'e.f')` (JAVASCRIPT-SVELTEKIT-2S).
+	// Hoisting also gets `onMount`/`onDestroy` registered at setup, where they
+	// belong, instead of one round trip late.
 	let open = $state(false);
 	let eventSource: EventSource | null = null;
 	let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -73,6 +81,10 @@
 		if (browser) window.removeEventListener('beforeunload', handleBeforeUnload);
 	});
 
+	let data = $derived(await getNotifications());
+	let notifications = $derived(data.notifications);
+	let unreadCount = $derived(data.unreadCount);
+
 	function toggleDropdown() {
 		open = !open;
 	}
@@ -102,7 +114,8 @@
 		// This handler can be invoked by the very click that unmounts the component
 		// (navigation), after its reactive state is torn down — even reading `open`
 		// then throws (JAVASCRIPT-SVELTEKIT-Q, JAVASCRIPT-SVELTEKIT-1A). `destroyed`
-		// is a plain boolean, safe to read at any point in the lifecycle.
+		// is only a plain boolean it is safe to read here because it is declared
+		// above the awaited derived; gated, it read `undefined` and guarded nothing.
 		if (destroyed) return;
 		// Only react when the dropdown is open — avoids a reactive write on every
 		// document click and skips the case where the target is detached/null.

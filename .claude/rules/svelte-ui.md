@@ -26,6 +26,13 @@ Compose the existing shared primitives rather than inventing new ones.
   finishes. `/login` stays client-mounted for exactly this reason.
 - Declarations after a top-level `await` are async-gated. On Svelte < 5.56.4 their async blocks
   could stay uncommitted after an SPA navigation, producing dead modals.
+- **`<svelte:window>` listeners are not gated.** They are attached synchronously during setup, so a
+  component that awaits at the top and binds a window handler leaves that handler live — for one
+  round trip — while the state it reads is still `undefined`. Reading an absent signal throws
+  `undefined is not an object (evaluating 'e.f')`. A `destroyed`-style guard flag does not help:
+  it is gated too, reads falsy, and waves the event through. Declare anything a listener touches
+  _above_ the awaited derived, leaving only genuinely derived values below.
+  `src/async-gated-listener.spec.ts` fails the build on this shape.
 
 ## Filter state in the URL
 
