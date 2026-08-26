@@ -23,8 +23,9 @@ import { globSync } from 'node:fs';
  * constraint names — `idx_band_member_user`, `band_member_band_user_unique` —
  * which keep their old names deliberately: SQLite carries indexes through
  * `ALTER TABLE … RENAME` untouched, so renaming them would turn a free rename
- * into a table rebuild. It also does not match `band_members`, the Postgres
- * *source* table in `migrate-from-postgres.ts`.
+ * into a table rebuild. The bound also spares a plural like `band_members`,
+ * which is how a legacy source table would be spelled — the pg migrator that
+ * held the last one was deleted in #278.
  *
  * The symbol patterns are lowercase-initial, so they match the drizzle table
  * symbols and the relation key but not `requireBandMember`, `addBandMember`,

@@ -38,7 +38,7 @@ it is switched back off.
 - [x] **staffInbox / contentFlags** — seed inserts `inbox_channel_config` rows so the SMS thread is
       repliable locally; removed the `getFlagsQueue({})` refresh that matched no live cache key.
 - [x] **Config + docs** — `POSTMARK_WEBHOOK_TOKEN`, `MARKETING_UNSUBSCRIBE_SECRET`, `CRON_SECRET`,
-      `TWILIO_*`, `META_*` documented in `.env.example`; parity report and architecture overview
+      `TWILIO_*`, `META_*` documented in `.env.example`; feature catalog and architecture overview
       updated for staff-always-on.
 
 ## Deferred (deliberately out of scope)

@@ -105,7 +105,7 @@ Branch: `claude/volunteer-system-plans-5b2b17` (off `main`).
 
 ## Step 8 — Document
 
-- [x] `docs/reports/parity-report.md` — **5** touch points: lines 33, 61, 142, 158,
+- [x] `docs/reports/feature-catalog.md` — **5** touch points: lines 33, 61, 142, 158,
       and 213 + 269 (table count 29 → 31)
 - [x] Help articles under `src/content/help/volunteering/`, indexed in
       `docs/manual/README.md`

@@ -59,13 +59,13 @@ this split was made.
 
 ### Bands & groups
 
-| Doc                                                        | Status | Lifecycle | Notes                                                                                                                                 |
-| ---------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| [bands-spec.md](specs/shipped/bands-spec.md)               | ✅     | archived  | Band entity, membership, ownership, invitations — superseded in part by `groups-spec.md`                                              |
-| [staff-bands-spec.md](specs/shipped/staff-bands-spec.md)   | ✅     | archived  | Staff band management & moderation; impersonation deliberately deferred                                                               |
-| [band-domains-spec.md](specs/shipped/band-domains-spec.md) | ✅     | archived  | `{slug}.corvmc.org` for every band; custom domains as the premium tier                                                                |
-| [band-sites-launch.md](specs/shipped/band-sites-launch.md) | 📦     | archived  | Shipped, then superseded outright by `band-domains-spec.md`                                                                           |
-| [groups-spec.md](specs/groups-spec.md)                     | 📋     | spec      | Bands/clubs/committees: `group` + `directory_entry` + `band_site`, roster, announcements, documents. Only the slug reservation exists |
+| Doc                                                        | Status | Lifecycle | Notes                                                                                                                                                                    |
+| ---------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [bands-spec.md](specs/shipped/bands-spec.md)               | ✅     | archived  | Band entity, membership, ownership, invitations — superseded in part by `groups-spec.md`                                                                                 |
+| [staff-bands-spec.md](specs/shipped/staff-bands-spec.md)   | ✅     | archived  | Staff band management & moderation; impersonation deliberately deferred                                                                                                  |
+| [band-domains-spec.md](specs/shipped/band-domains-spec.md) | ✅     | archived  | `{slug}.corvmc.org` for every band; custom domains as the premium tier                                                                                                   |
+| [band-sites-launch.md](specs/shipped/band-sites-launch.md) | 📦     | archived  | Shipped, then superseded outright by `band-domains-spec.md`                                                                                                              |
+| [groups-spec.md](specs/groups-spec.md)                     | 🔧     | spec      | Bands/clubs/committees: `group` + `directory_entry` + `band_site`, roster, announcements, documents. #267 renamed `band` → `group` in place; the split itself is unbuilt |
 
 ### Events
 
@@ -171,7 +171,7 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 
 | Doc                                                                      | Status | Notes                                                                                    |
 | ------------------------------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------- |
-| [parity-report.md](reports/parity-report.md)                             | ✅     | Authoritative feature parity vs. the legacy Laravel app                                  |
+| [feature-catalog.md](reports/feature-catalog.md)                         | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship         |
 | [spec-audit.md](reports/spec-audit.md)                                   | ✅     | All 31 specs classified against the tree; which are shipped and where their content goes |
 | [standardization-audit.md](reports/standardization-audit.md)             | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                 |
 | [staff-user-management-audit.md](reports/staff-user-management-audit.md) | 📦     | The audit behind #164; five follow-up specs, one of them built                           |

@@ -120,7 +120,7 @@ Premium no longer sells a subdomain. Update:
 - [x] Seed data (`scripts/seed-dev.ts`): active + pending custom domains
 - [x] e2e: free-band subdomain redirects; premium subdomain serves the site
 - [x] `.env.example` + `secrets.template.json`
-- [x] parity-report row
+- [x] feature-catalog row
 
 **Before this can deploy or run in CI:** generate the migration for the five new
 `band` columns with `drizzle-kit`. `pnpm db:migrate:local` (the CI e2e path) has

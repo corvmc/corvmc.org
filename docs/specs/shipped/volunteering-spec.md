@@ -610,8 +610,7 @@ auth role is now unconditional.
   dates are in the table — and it should be folded into the Phase 2 shift-reminder
   cron rather than shipping a second daily job.
 - **Evidence upload.** Photographing a Food Handler card. Needs the media work
-  in the parity report's enhancements section; `reference` carries the number in
-  the meantime.
+  tracked in `CHORES.md`; `reference` carries the number in the meantime.
 - **Self-service claims.** A member asserting they hold a card, pending staff
   verification. Phase 1 of this is staff-entered only, which is the honest
   default for something that gates work.
