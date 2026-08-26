@@ -58,6 +58,7 @@ import {
 	markComplete,
 	markNoShow,
 	recordCashAndComplete,
+	isFirstReservationSql,
 	ReservationConflictError,
 	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
@@ -357,11 +358,22 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		.orderBy(asc(reservation.startsAt))
 		.limit(1);
 
-	const [completedCount] = await db
+	// The rule the list renders, restated here so the two pages cannot disagree
+	// about what a first visit is — see `isFirstReservationSql`. Counting only
+	// `completed` rows, which is what this did before, called a member's third
+	// booking their first whenever the earlier two were still `confirmed`.
+	const [priorCount] = await db
 		.select({ count: count() })
 		.from(reservation)
 		.where(
-			and(eq(reservation.createdByUserId, row.createdByUserId), eq(reservation.status, 'completed'))
+			and(
+				eq(reservation.createdByUserId, row.createdByUserId),
+				ne(reservation.status, 'cancelled'),
+				or(
+					lt(reservation.startsAt, row.startsAt),
+					and(eq(reservation.startsAt, row.startsAt), lt(reservation.id, id))
+				)
+			)
 		);
 
 	return {
@@ -377,7 +389,8 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		isLastOfDay,
 		prevId: prevRow?.id ?? null,
 		nextId: nextRow?.id ?? null,
-		isFirstReservation: completedCount.count === 0,
+		isFirstReservation:
+			row.bookerType === 'user' && row.status !== 'cancelled' && priorCount.count === 0,
 		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
 	};
 });
@@ -885,6 +898,9 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			creditsUsed: reservation.creditsUsed,
 			createdByUserId: reservation.createdByUserId,
 			recurringSeriesId: reservation.recurringSeriesId,
+			// The desk staffs a volunteer for a member's first visit, so the list
+			// has to say which booking that is without opening any of them.
+			isFirstReservation: isFirstReservationSql(),
 			// Three joins for one column: the booker is a member, a band or an
 			// event, and which one it is comes from `bookerType`.
 			member: memberRefColumns(),
@@ -914,6 +930,9 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 	return {
 		rows: rows.map(({ member, band: bandRow, event: eventRow, ...r }) => ({
 			...r,
+			// SQLite has no booleans, so the correlated subquery lands as 0 or 1 —
+			// the same coercion `toMemberRef` does for `sustaining`.
+			isFirstReservation: !!r.isFirstReservation,
 			booker: toBookerRef({ bookerType: r.bookerType, member, band: bandRow, event: eventRow })
 		})),
 		pagination

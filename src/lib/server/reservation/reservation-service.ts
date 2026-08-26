@@ -14,7 +14,9 @@ import {
 	isNull,
 	isNotNull,
 	inArray,
-	notInArray
+	notInArray,
+	sql,
+	type AnyColumn
 } from 'drizzle-orm';
 import { validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
@@ -650,4 +652,55 @@ export async function listForMember(
 			cancelledUpcoming: cancelledUpcomingCount[0]?.count ?? 0
 		}
 	};
+}
+
+// ---------------------------------------------------------------------------
+// isFirstReservationSql — the booking that wants a volunteer on the desk
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether this row is the member's first time renting the space, as a
+ * correlated subquery: `select({ isFirstReservation: isFirstReservationSql() })`.
+ * Mirrors `isSustainingMemberSql`.
+ *
+ * Three rules, each of them a decision rather than an implementation detail:
+ *
+ * - **Member bookings only.** A band's rehearsal hold or a staff-created event
+ *   hold is not somebody's first visit, so the flag is gated on `booker_type`.
+ * - **Prior history is every non-cancelled booking that member *created***,
+ *   whatever its booker type — someone who has been in before as their band's
+ *   booker is not a first-timer. A cancelled booking is not a visit, so it
+ *   never counts as history, and a cancelled row never carries the flag itself.
+ * - **`starts_at` ties break by `id`**, so exactly one row of a same-instant
+ *   pair is the first.
+ *
+ * The outer references are qualified by hand for the reason spelled out on
+ * `isSustainingMemberSql`: drizzle renders an interpolated Column unqualified
+ * in a single-table select list, and inside this subquery the bare name would
+ * bind to `r0` instead — `r0.created_by_user_id = r0.created_by_user_id` is
+ * always true, which would mark every row on the page a first visit.
+ * `correlated-sql.spec.ts` pins it.
+ */
+export function isFirstReservationSql() {
+	const outer = (column: AnyColumn) => sql.raw(`"reservation"."${column.name}"`);
+	return sql<boolean>`(
+		case
+			when ${outer(reservation.bookerType)} = 'user'
+				and ${outer(reservation.status)} <> 'cancelled'
+				and not exists (
+					select 1 from ${reservation} r0
+					where r0.created_by_user_id = ${outer(reservation.createdByUserId)}
+						and r0.status <> 'cancelled'
+						and (
+							r0.starts_at < ${outer(reservation.startsAt)}
+							or (
+								r0.starts_at = ${outer(reservation.startsAt)}
+								and r0.id < ${outer(reservation.id)}
+							)
+						)
+				)
+			then 1
+			else 0
+		end
+	)`;
 }

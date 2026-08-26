@@ -28,7 +28,9 @@
 		IconArrowBackUp,
 		IconUserX,
 		IconCircleX,
-		IconRepeat
+		IconRepeat,
+		IconUserPlus,
+		IconNote
 	} from '@tabler/icons-svelte';
 	import { formatDate, formatTimeRange, formatPaymentBreakdown } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -221,8 +223,8 @@
 			<Table zebra={false}>
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Reservation</th>
 					<th>Booker</th>
+					<th>Time</th>
 					<th class="col-support cell-num">Payment</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -247,11 +249,15 @@
 							<StatusBadge status={r.status} class="size-6" />
 						</td>
 
+						<!-- Member, band or event — the chip's glyph is what says which. -->
+						<td class="min-w-0"><EntityChip ref={r.booker} /></td>
+
 						<!--
-							Primary cell: the time is the ordering key, and the booker — a
-							band, an event, a lesson — qualifies it. A member booking for
-							themselves is the ordinary case and leaves this cell one line.
-							The day is not repeated — the group header above carries it.
+							The time, and the flags that decide how the desk staffs the hour.
+							`cell-primary` stays here rather than on the booker: it is what
+							absorbs the table's slack, and moving it would let a long band
+							name push the actions column off the edge. The day is not
+							repeated — the group header above carries it.
 						-->
 						<td class="cell-primary">
 							<div class="flex items-center gap-1">
@@ -273,11 +279,36 @@
 										<BookerTypeIcon type={r.bookerType} size={14} />
 									</span>
 								{/if}
+								{#if r.isFirstReservation}
+									<!--
+										The collective likes a volunteer on the desk for a member's
+										first visit, which is a fact about the booking nothing else
+										in the row carries.
+									-->
+									<span
+										class="tooltip"
+										data-tip="First reservation"
+										role="img"
+										aria-label="First reservation"
+									>
+										<IconUserPlus size={14} class="text-success" />
+									</span>
+								{/if}
+								{#if r.notes}
+									<!-- `data-tip` draws through ::before and is invisible to a
+									     screen reader, so the name goes on the span — the same
+									     thing StatusBadge does. -->
+									<span
+										class="tooltip"
+										data-tip="Member left a note"
+										role="img"
+										aria-label="Member left a note"
+									>
+										<IconNote size={14} class="text-info" />
+									</span>
+								{/if}
 							</div>
 						</td>
-
-						<!-- Member, band or event — the chip's glyph is what says which. -->
-						<td class="min-w-0"><EntityChip ref={r.booker} /></td>
 
 						<td class="col-support cell-num">
 							{#await hourlyRate then rate}

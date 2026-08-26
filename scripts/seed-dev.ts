@@ -845,6 +845,43 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 		}
 	}
 
+	// A guaranteed first-timer, for the flag the staff list shows so the desk can
+	// put a volunteer on the hour. Both loops above pick their member at random,
+	// so whether anybody was booking for the first time came down to the dice —
+	// and picking one of `users` would not have settled it either, since bands
+	// and recurring series seed reservations for those same members afterwards.
+	// This member exists only here and books once, with a note, so both of the
+	// list's flags are on screen after every seed.
+	const newcomerId = randomUUID();
+	const [newcomer] = await db
+		.insert(user)
+		.values({
+			id: newcomerId,
+			name: 'Wren Okafor',
+			email: 'wren.okafor@example.com',
+			emailVerified: true,
+			pronouns: 'they/them',
+			phone: '541-555-0142',
+			memberNumber: 999,
+			createdAt: new Date(Date.now() - 2 * 86400000),
+			updatedAt: new Date()
+		})
+		.returning();
+
+	const [firstEver] = await db
+		.insert(reservation)
+		.values({
+			bookerType: 'user',
+			bookerId: newcomer.id,
+			createdByUserId: newcomer.id,
+			status: 'scheduled',
+			startsAt: ptDate(2, 18),
+			endsAt: ptDate(2, 20),
+			notes: 'First time here — is there somewhere to park a van?'
+		})
+		.returning();
+	rows.push(firstEver);
+
 	return rows;
 }
 
