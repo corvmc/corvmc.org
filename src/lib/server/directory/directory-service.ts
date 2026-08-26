@@ -91,7 +91,7 @@ function mapMemberRow<
 		instruments: { instrument: string }[];
 		genres: { genre: string }[];
 		image?: string | null;
-		bandMembers?: {
+		groupMembers?: {
 			status: string;
 			role?: string | null;
 			position?: string | null;
@@ -99,13 +99,13 @@ function mapMemberRow<
 		}[];
 	}
 >(row: T) {
-	const { instruments, genres, bandMembers, image, ...rest } = row;
+	const { instruments, genres, groupMembers, image, ...rest } = row;
 	return {
 		...rest,
 		image: resolveImageUrl(image),
 		instruments: instruments.map((r) => r.instrument),
 		genres: genres.map((r) => r.genre),
-		bands: (bandMembers ?? [])
+		bands: (groupMembers ?? [])
 			.filter((m) => m.status === 'active' && m.band)
 			.map((m) => ({
 				name: m.band!.name,
@@ -147,7 +147,7 @@ export async function listMembers(filters?: MemberFilters) {
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: memberBandsWith
+			groupMembers: memberBandsWith
 		},
 		orderBy: { name: 'asc' },
 		columns: memberColumns
@@ -196,7 +196,7 @@ export async function listPublicMembers(filters?: MemberFilters) {
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: memberBandsWith
+			groupMembers: memberBandsWith
 		},
 		orderBy: { name: 'asc' },
 		columns: memberColumns
@@ -252,7 +252,7 @@ export async function getMemberProfile(userId: string, visibility: 'members' | '
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: memberBandsWith
+			groupMembers: memberBandsWith
 		},
 		columns: memberColumns
 	});

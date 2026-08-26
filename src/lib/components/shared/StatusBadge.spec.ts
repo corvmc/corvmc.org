@@ -13,8 +13,7 @@ import { ticketStatuses } from '$lib/server/db/schema/ticket';
 import { reservationStatuses } from '$lib/server/db/schema/reservation';
 import { eventStatuses } from '$lib/server/db/schema/event';
 import { flagStatuses } from '$lib/server/db/schema/flag';
-import { bandMemberStatuses } from '$lib/server/db/schema/band';
-import { bandTiers } from '$lib/server/db/schema/group';
+import { bandTiers, groupMemberStatuses } from '$lib/server/db/schema/group';
 import { inviteStatuses } from '$lib/server/db/schema/platform-invite';
 
 /**
@@ -29,8 +28,8 @@ import { inviteStatuses } from '$lib/server/db/schema/platform-invite';
 const derivedStatuses = {
 	// campaign-service.ts `deriveCampaignStatus`
 	campaign: ['draft', 'scheduled', 'sending', 'sent'],
-	// Member subtypes / band member roles
-	bandRoles: ['owner', 'admin', 'member'],
+	// Member subtypes / group member roles
+	groupRoles: ['owner', 'admin', 'member'],
 	// staff/bands/+page.svelte, and the shared ActivateToggleAction pages
 	activation: ['active', 'deactivated'],
 	// payment-service.ts writes `completed`; refunds write `refunded`
@@ -54,7 +53,7 @@ const vocabularies: Record<string, readonly string[]> = {
 	reservation: reservationStatuses,
 	event: eventStatuses,
 	flag: flagStatuses,
-	bandMember: bandMemberStatuses,
+	groupMember: groupMemberStatuses,
 	bandTier: bandTiers,
 	platformInvite: inviteStatuses,
 	ticket: ticketStatuses,

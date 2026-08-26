@@ -32,7 +32,8 @@ import {
 	userInstrument,
 	userGenre
 } from '../src/lib/server/db/schema/authentication';
-import { bandGenre, bandMember } from '../src/lib/server/db/schema/band';
+import { bandGenre } from '../src/lib/server/db/schema/band';
+import { groupMember } from '../src/lib/server/db/schema/group';
 import { group } from '../src/lib/server/db/schema/group';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
@@ -617,10 +618,10 @@ async function migrateBands() {
 		if (!bandId || !userId) continue;
 
 		await db
-			.insert(bandMember)
+			.insert(groupMember)
 			.values({
 				id: mapId('band_members', m.id),
-				bandId,
+				groupId: bandId,
 				userId,
 				role: m.role || 'member',
 				position: m.position,
@@ -631,7 +632,7 @@ async function migrateBands() {
 			.onConflictDoNothing();
 	}
 
-	// Reconcile ownership. `band.owner_id` and the `band_member` row whose role is
+	// Reconcile ownership. `group.owner_id` and the `group_member` row whose role is
 	// 'owner' are two records of the same fact, and they arrive here from two
 	// different legacy tables: `band_profiles.owner_id` above, and
 	// `band_profile_members.role` in the loop just before this. Nothing upstream
@@ -652,13 +653,13 @@ async function migrateBands() {
 		// Another user already holding 'owner' is left alone: two records
 		// disagreeing about who owns the band is not something to guess at.
 		const [conflict] = await db
-			.select({ id: bandMember.id })
-			.from(bandMember)
+			.select({ id: groupMember.id })
+			.from(groupMember)
 			.where(
 				and(
-					eq(bandMember.bandId, bandId),
-					eq(bandMember.role, 'owner'),
-					ne(bandMember.userId, ownerId)
+					eq(groupMember.groupId, bandId),
+					eq(groupMember.role, 'owner'),
+					ne(groupMember.userId, ownerId)
 				)
 			)
 			.limit(1);
@@ -668,22 +669,22 @@ async function migrateBands() {
 		}
 
 		const [existing] = await db
-			.select({ id: bandMember.id, role: bandMember.role, status: bandMember.status })
-			.from(bandMember)
-			.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, ownerId)))
+			.select({ id: groupMember.id, role: groupMember.role, status: groupMember.status })
+			.from(groupMember)
+			.where(and(eq(groupMember.groupId, bandId), eq(groupMember.userId, ownerId)))
 			.limit(1);
 
 		if (!existing) {
 			await db
-				.insert(bandMember)
-				.values({ bandId, userId: ownerId, role: 'owner', status: 'active' })
+				.insert(groupMember)
+				.values({ groupId: bandId, userId: ownerId, role: 'owner', status: 'active' })
 				.onConflictDoNothing();
 			ownersFixed++;
 		} else if (existing.role !== 'owner' || existing.status !== 'active') {
 			await db
-				.update(bandMember)
+				.update(groupMember)
 				.set({ role: 'owner', status: 'active' })
-				.where(eq(bandMember.id, existing.id));
+				.where(eq(groupMember.id, existing.id));
 			ownersFixed++;
 		}
 	}

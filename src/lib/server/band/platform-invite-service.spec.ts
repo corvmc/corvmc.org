@@ -63,13 +63,10 @@ vi.mock('$lib/server/db/schema/platform-invite', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/group', () => ({
-	group: { id: 'id', name: 'name' }
-}));
-
-vi.mock('$lib/server/db/schema/band', () => ({
-	bandMember: {
+	group: { id: 'id', name: 'name' },
+	groupMember: {
 		id: 'id',
-		bandId: 'band_id',
+		groupId: 'group_id',
 		userId: 'user_id',
 		role: 'role',
 		position: 'position',
@@ -242,18 +239,18 @@ describe('resolvePendingInvites', () => {
 		const result = await resolvePendingInvites('user-1', 'ALICE@Test.com');
 
 		expect(result).toBe(2);
-		// 2 inserts (bandMember rows) + we can't easily assert update calls
+		// 2 inserts (groupMember rows) + we can't easily assert update calls
 		// but the function should have created 2 members
 		expect(insertResult).toHaveLength(2);
 		expect(insertResult[0]).toMatchObject({
-			bandId: 'band-1',
+			groupId: 'band-1',
 			userId: 'user-1',
 			role: 'member',
 			position: 'Guitar',
 			status: 'active'
 		});
 		expect(insertResult[1]).toMatchObject({
-			bandId: 'band-2',
+			groupId: 'band-2',
 			userId: 'user-1',
 			role: 'admin',
 			status: 'active'

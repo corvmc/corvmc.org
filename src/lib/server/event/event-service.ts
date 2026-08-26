@@ -7,7 +7,7 @@ import {
 	type EventBandStatus,
 	type LineupEntry
 } from '$lib/server/db/schema/event';
-import { bandMember } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
@@ -616,13 +616,13 @@ export async function unpublishWithNotice(
 
 	const admins = await db
 		.select({ id: user.id, name: user.name, email: user.email })
-		.from(bandMember)
-		.innerJoin(user, eq(user.id, bandMember.userId))
+		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
 		.where(
 			and(
-				inArray(bandMember.bandId, notifyBandIds),
-				inArray(bandMember.role, ['owner', 'admin']),
-				eq(bandMember.status, 'active')
+				inArray(groupMember.groupId, notifyBandIds),
+				inArray(groupMember.role, ['owner', 'admin']),
+				eq(groupMember.status, 'active')
 			)
 		);
 
@@ -1131,14 +1131,14 @@ async function notifyLineupInvites(
 			userName: user.name,
 			userEmail: user.email
 		})
-		.from(bandMember)
-		.innerJoin(group, eq(group.id, bandMember.bandId))
-		.innerJoin(user, eq(user.id, bandMember.userId))
+		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
+		.innerJoin(user, eq(user.id, groupMember.userId))
 		.where(
 			and(
-				inArray(bandMember.bandId, invitedBandIds),
-				inArray(bandMember.role, ['owner', 'admin']),
-				eq(bandMember.status, 'active')
+				inArray(groupMember.groupId, invitedBandIds),
+				inArray(groupMember.role, ['owner', 'admin']),
+				eq(groupMember.status, 'active')
 			)
 		);
 
@@ -1616,11 +1616,11 @@ function confirmedForMember(userId: string) {
 			.select({ id: eventBand.eventId })
 			.from(eventBand)
 			.innerJoin(
-				bandMember,
+				groupMember,
 				and(
-					eq(bandMember.bandId, eventBand.bandId),
-					eq(bandMember.userId, userId),
-					eq(bandMember.status, 'active')
+					eq(groupMember.groupId, eventBand.bandId),
+					eq(groupMember.userId, userId),
+					eq(groupMember.status, 'active')
 				)
 			)
 			.where(eq(eventBand.status, 'confirmed'))
@@ -1645,11 +1645,11 @@ async function withMemberBylines(rows: EventRow[], userId: string): Promise<Memb
 		.from(eventBand)
 		.innerJoin(group, eq(group.id, eventBand.bandId))
 		.innerJoin(
-			bandMember,
+			groupMember,
 			and(
-				eq(bandMember.bandId, eventBand.bandId),
-				eq(bandMember.userId, userId),
-				eq(bandMember.status, 'active')
+				eq(groupMember.groupId, eventBand.bandId),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'active')
 			)
 		)
 		.where(

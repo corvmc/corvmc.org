@@ -7,13 +7,13 @@
  * moves when an owner deliberately changes it here — renaming a band must never
  * silently relocate its public address.
  *
- * A released slug is recorded in `band_slug_history` and redirects to the band's
+ * A released slug is recorded in `group_slug_history` and redirects to the band's
  * current address, but only for as long as nobody else claims it: a live
  * `band.slug` always shadows history, and claiming a slug deletes its history row.
  */
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { bandSlugHistory } from '$lib/server/db/schema/band';
+import { groupSlugHistory } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { generateSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
@@ -83,9 +83,9 @@ export async function resolveBandSlug(slug: string): Promise<SlugResolution> {
 	// into a deactivated band.
 	const [moved] = await db
 		.select({ slug: group.slug })
-		.from(bandSlugHistory)
-		.innerJoin(group, eq(group.id, bandSlugHistory.bandId))
-		.where(and(eq(bandSlugHistory.slug, slug), isNull(group.deletedAt)))
+		.from(groupSlugHistory)
+		.innerJoin(group, eq(group.id, groupSlugHistory.groupId))
+		.where(and(eq(groupSlugHistory.slug, slug), isNull(group.deletedAt)))
 		.limit(1);
 
 	if (moved) return { kind: 'moved', slug: moved.slug };
@@ -136,13 +136,13 @@ export async function changeBandSlug(
 		// Order matters: claiming `next` has to clear any stale history row for it
 		// before the old address is recorded, or the two would contradict.
 		await db.batch([
-			db.delete(bandSlugHistory).where(eq(bandSlugHistory.slug, next)),
+			db.delete(groupSlugHistory).where(eq(groupSlugHistory.slug, next)),
 			db
-				.insert(bandSlugHistory)
-				.values({ slug: row.slug, bandId })
+				.insert(groupSlugHistory)
+				.values({ slug: row.slug, groupId: bandId })
 				.onConflictDoUpdate({
-					target: bandSlugHistory.slug,
-					set: { bandId, createdAt: new Date() }
+					target: groupSlugHistory.slug,
+					set: { groupId: bandId, createdAt: new Date() }
 				}),
 			db.update(group).set({ slug: next, updatedAt: new Date() }).where(eq(group.id, bandId))
 		]);
