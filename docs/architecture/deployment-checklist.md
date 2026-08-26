@@ -300,10 +300,10 @@ that publishes to production — `main`, or a `gh-readonly-queue/main/*` merge q
 which Cloudflare builds and publishes in place of the `main` push (so PR/preview builds never
 touch prod). Wire it into the deploy:
 
-1. **Workers Builds → Settings → Build command:** `pnpm build`. The migrate runs because
-   `build` is `node scripts/ci-migrate.mjs && vite build`, not because the command says so —
-   a dashboard field that once lost its `pnpm ci:migrate &&` half and published #267's schema
-   change without its migration.
+1. **Workers Builds → Settings → Build command:** `pnpm ci:migrate && pnpm build`. `build` is
+   `vite build` and does not migrate, so this field is the only thing that applies a migration
+   on deploy — and it once lost its `pnpm ci:migrate &&` half and published #267's schema change
+   without its migration. Check it after any change to the GitHub connection.
 2. **Workers Builds → Build environment variables** (so `drizzle-kit migrate` can reach
    D1 over `d1-http`): `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_D1_TOKEN` (a token scoped to
    **Account → D1 → Edit**). `CLOUDFLARE_DATABASE_ID` is not needed — `drizzle.config.ts`
