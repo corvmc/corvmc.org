@@ -5,8 +5,16 @@
 	import { getMe } from '$lib/remote/layout.remote';
 	import { resolve } from '$app/paths';
 
-	let me = $derived(await getMe());
+	// Declared *above* the awaited derived on purpose. Anything after a top-level
+	// await is async-gated — the compiler assigns it inside a continuation that
+	// only runs once the promise settles — while `<svelte:window onclick>` is
+	// attached synchronously during setup. Gating `open` therefore left the
+	// click-outside handler live for the length of one `getMe()` round trip with
+	// `open` still `undefined`, and touching a signal that isn't there throws
+	// `undefined is not an object (evaluating 'e.f')` (JAVASCRIPT-SVELTEKIT-2S).
 	let open = $state(false);
+
+	let me = $derived(await getMe());
 
 	function handleClickOutside(e: MouseEvent) {
 		const target = e.target as HTMLElement;

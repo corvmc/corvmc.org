@@ -7,23 +7,26 @@ pass (see git history of this file). Environment: production only. Short IDs lin
 to Sentry; timestamps UTC.
 
 Eleven unresolved issues, **three** causes. One of them was breaking production
-while this pass was being written.
+while this pass was being written. §5 is a later addendum: two issues that first
+arrived on 08-26, after this pass was written, sharing one session replay.
 
 ## Summary
 
-| Sentry issue                                                                      | Title                                      | Events/Users | Cause                                               | Action                     |
-| --------------------------------------------------------------------------------- | ------------------------------------------ | ------------ | --------------------------------------------------- | -------------------------- |
-| [2P](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2P) | `no such table: group` — `/directory`      | 1/1          | **Migration never applied to production**           | Deploy fix + apply migrate |
-| [2R](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2R) | `no such table: group` — band subdomain    | 5/2          | same                                                | same                       |
-| [2M](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2M) | `no such table: group` — `/member`         | 4/2          | same                                                | same                       |
-| [2N](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2N) | `no such table: group` — `/member/account` | 1/1          | same                                                | same                       |
-| [2Q](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2Q) | `no such table: group` — `/events`         | 1/1          | same                                                | same                       |
-| [3](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-3)   | UnhandledRejection `{body, status}` 500    | 33/19        | Duplicate of a 500 the server already captured      | Filtered client-side       |
-| [2F](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2F) | `no such table: messaging_standing`        | 8/5          | Stale Worker, 08-18→08-19; table dropped by #224    | **No code change**         |
-| [2G](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2G) | `no such table: messaging_standing`        | 6/4          | same                                                | **No code change**         |
-| [1V](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1V) | `null is not an object (evaluating 'W.f')` | 2/2          | Three remote queries in flight in one component     | One load-bearing query     |
-| [2H](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2H) | `url with embedded credentials`            | 1/1          | Two queries in `SiteFooter`, outside every boundary | One query + its boundary   |
-| [2K](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2K) | `JSON Parse error: Unexpected identifier`  | 1/1          | Deploy skew; Safari wording the filter missed       | Filter widened             |
+| Sentry issue                                                                      | Title                                      | Events/Users | Cause                                                | Action                        |
+| --------------------------------------------------------------------------------- | ------------------------------------------ | ------------ | ---------------------------------------------------- | ----------------------------- |
+| [2P](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2P) | `no such table: group` — `/directory`      | 1/1          | **Migration never applied to production**            | Deploy fix + apply migrate    |
+| [2R](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2R) | `no such table: group` — band subdomain    | 5/2          | same                                                 | same                          |
+| [2M](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2M) | `no such table: group` — `/member`         | 4/2          | same                                                 | same                          |
+| [2N](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2N) | `no such table: group` — `/member/account` | 1/1          | same                                                 | same                          |
+| [2Q](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2Q) | `no such table: group` — `/events`         | 1/1          | same                                                 | same                          |
+| [3](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-3)   | UnhandledRejection `{body, status}` 500    | 33/19        | Duplicate of a 500 the server already captured       | Filtered client-side          |
+| [2F](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2F) | `no such table: messaging_standing`        | 8/5          | Stale Worker, 08-18→08-19; table dropped by #224     | **No code change**            |
+| [2G](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2G) | `no such table: messaging_standing`        | 6/4          | same                                                 | **No code change**            |
+| [1V](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-1V) | `null is not an object (evaluating 'W.f')` | 2/2          | Three remote queries in flight in one component      | One load-bearing query        |
+| [2H](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2H) | `url with embedded credentials`            | 1/1          | Two queries in `SiteFooter`, outside every boundary  | One query + its boundary      |
+| [2K](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2K) | `JSON Parse error: Unexpected identifier`  | 1/1          | Deploy skew; Safari wording the filter missed        | Filter widened                |
+| [2T](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2T) | `D1_TYPE_ERROR` — `getBandUpcoming`        | 3/1          | Remote query raced a navigation off `band/[slug]`    | Guard answers a null slug     |
+| [2S](https://corvallis-music-collective.sentry.io/issues/JAVASCRIPT-SVELTEKIT-2S) | `undefined is not an object ('e.f')`       | 1/1          | Window listener live before async-gated state exists | Declare state above the await |
 
 ## 1. The schema and the code deployed separately
 
@@ -137,6 +140,83 @@ now — only comments and a spec assertion that it stays gone.
 
 **No code change.** Resolve both by hand; there is no commit to attach them to.
 The deploy fix in §1 is what addresses them, from the other direction.
+
+## 5. Addendum, 2026-08-26 — 2T and 2S
+
+Both first seen 00:22 UTC on release `7bc49e1`, one user, one minute, one
+session replay (`3cfe11d4…`), iPhone / Chrome Mobile iOS. They are two halves of
+the same gesture: a tap on a link, on a phone, while the page was still loading.
+
+### 2T — a remote query outlived the page it was mounted on
+
+`getBandUpcoming` has exactly one caller, `routes/band/[slug]/+page.svelte`, yet
+the crash arrived on a `GET /member/reservations` transaction. That is the whole
+diagnosis. Remote functions are their own endpoint under `/_app/remote/…`; they
+do not run inside a route load, and the pathname their params resolve against
+comes from a client-supplied header. A query issued on the band page that lands
+after the browser has navigated away is resolved against the _new_ pathname, so
+`params.slug` is simply absent.
+
+`requireBandBySlug` asserted it non-null — `getBySlug(params.slug!)` — and handed
+`undefined` to drizzle, which D1 rejected with `D1_TYPE_ERROR: Type 'undefined'
+not supported`. The reported SQL has an empty `params:` array, which is the tell.
+A raced navigation became a 500.
+
+**Fixed:** the guard answers a missing slug itself, with a 400, before any query
+is built. Every band-context guard funnels through it, so
+`requireBandMember`, `requireBandMemberOrStaff` and `requireBandRole` are all
+covered. `band-context.spec.ts` pins it, with the `getBySlug` mock rejecting the
+way D1 does rather than returning a tidy `null` — otherwise the bug reads as a
+404 and the test proves nothing.
+
+The same `params.x!` shape survives in `bands.remote.ts`, `marketing.remote.ts`
+and `reservations.remote.ts`. Those are all `requireStaff`-guarded staff detail
+pages, so they are far less exposed than a member-facing dashboard, but they are
+the same latent 500 and none of them is asserted safely.
+
+### 2S — a window listener attached before the state it reads exists
+
+`TypeError: undefined is not an object (evaluating 'e.f')`, from a document-level
+`addEventListener`, the click target an `a.btn` — the user tapped a link.
+
+The hypothesis on the ticket was a read _after_ teardown. It is the opposite: a
+read _before_ initialisation. Under `experimental.async`, every declaration after
+a top-level await is async-gated. `NotificationBell` compiles to
+
+```js
+var open, destroyed, …;
+var $$promises = $.run([
+  async () => data = await $.async_derived(getNotifications),
+  () => { open = $.state(false); … destroyed = false; }
+]);
+…
+$.event('click', $.window, handleClickOutside);   // ← not gated
+```
+
+The listener is attached synchronously during setup; `open` and `destroyed` are
+assigned only once `getNotifications()` settles. For the length of one round trip
+the handler is live and its state does not exist. `destroyed` reads `undefined`,
+which is falsy, so the guard that was added for JAVASCRIPT-SVELTEKIT-Q/1A waved
+the click straight through; `open` reads `undefined`, and `$.get(undefined)`
+dereferences `.f`.
+
+That window is invisible to the existing spec because its mock resolves before
+anyone can click. It is wide open on a phone on a slow connection.
+
+`AccountDropdown` had the identical shape and had simply not been caught yet —
+the two components `AppTopbar` mounts on every authenticated page, which is the
+same tree-level concurrency `docs/checklists/remote-query-fanout.md` records as
+out of scope for the per-component lint rule.
+
+**Fixed:** state the listener reads is declared _above_ the awaited derived in
+both components, leaving only genuinely `data`-derived values gated. Hoisting
+also registers `onMount`/`onDestroy` at setup rather than one round trip late.
+Two tests: `NotificationBell.pending.svelte.spec.ts` holds the query pending and
+clicks into the gap (it reproduces the exact `TypeError`), and
+`src/async-gated-listener.spec.ts` compiles the tree and fails on any component
+where a synchronously-attached `$.event` handler can reach an async-gated
+binding. The static guard carries its own canaries, since a detector that
+silently stops detecting is worse than none.
 
 ## Sentry housekeeping
 

@@ -5,11 +5,22 @@ import { getBySlug, getUserRole } from '$lib/server/band/band-service';
 
 /**
  * Resolve a band from the current request's `params.slug`.
- * Throws 404 if not found.
+ * Throws 400 if the request carries no slug, 404 if no such band exists.
+ *
+ * The slug cannot be asserted non-null. Remote functions are their own endpoint
+ * under `/_app/remote/...`; they do not run inside a route load, and the
+ * pathname their params are resolved against comes from a client-supplied
+ * header. A query issued from `/band/[slug]` that lands after the browser has
+ * navigated away arrives with the *new* pathname, so `params.slug` is simply
+ * absent — see JAVASCRIPT-SVELTEKIT-2T, where `getBandUpcoming` reached D1 with
+ * an undefined bind parameter and turned a raced navigation into a 500
+ * (`D1_TYPE_ERROR: Type 'undefined' not supported`).
  */
 export async function requireBandBySlug() {
 	const { params } = getRequestEvent();
-	const band = await getBySlug(params.slug!);
+	const slug = params.slug;
+	if (!slug) throw error(400, 'No band in request context');
+	const band = await getBySlug(slug);
 	if (!band) throw error(404, 'Band not found');
 	return band;
 }
