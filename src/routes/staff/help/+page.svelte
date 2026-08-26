@@ -1,7 +1,6 @@
 <script lang="ts">
 	import {
-		getStaffArticles,
-		getStaffCategories,
+		getStaffHelpPage,
 		createCategory,
 		updateCategory,
 		deleteCategory,
@@ -27,8 +26,9 @@
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
 
-	let articles = $derived(await getStaffArticles());
-	let categories = $derived(await getStaffCategories());
+	const data = $derived(await getStaffHelpPage());
+	const articles = $derived(data.articles);
+	const categories = $derived(data.categories);
 
 	let categoryMap = $derived(Object.fromEntries(categories.map((c) => [c.id, c.name])));
 
@@ -68,8 +68,8 @@
 	}
 
 	function refreshData() {
-		void getStaffArticles().refresh();
-		void getStaffCategories().refresh();
+		// The wrapper this page reads, not the constituents it is assembled from.
+		void getStaffHelpPage().refresh();
 	}
 
 	// Two instances of the same form so the publish and unpublish modals keep

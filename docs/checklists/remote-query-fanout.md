@@ -29,8 +29,8 @@ is the enforcement.
 | #   | Tranche                                                    | Status | Commit |
 | --- | ---------------------------------------------------------- | ------ | ------ |
 | 1   | **Band panel — layout context** — 9 files, 22 queries      | ✅     | (next) |
-| 2   | **Directory — member and public** — 3 files, 9 queries     | ⬜     |        |
-| 3   | **Help** — 3 files, 6 queries                              | ⬜     |        |
+| 2   | **Directory — member and public** — 3 files, 9 queries     | ✅     | (next) |
+| 3   | **Help** — 3 files, 6 queries                              | ✅     | (next) |
 | 4   | **Equipment** — 4 files, 9 queries                         | ⬜     |        |
 | 5   | **Events and recurring** — 6 files, 13 queries             | ⬜     |        |
 | 6   | **Suggestions** — 4 files, 13 queries                      | ⬜     |        |
@@ -96,7 +96,13 @@ so the pages inherit that refresh instead of needing their own.
 - `src/routes/band/[slug]/settings/+page.svelte` — 2
 - `src/routes/band/[slug]/subscription/+page.svelte` — 2
 
-### 2. Directory — member and public
+### 2. Directory — member and public ✅
+
+**Done.** `getMemberDirectory`, `getPublicDirectoryPage` and `getPublicMemberProfilePage`. Two notes
+worth carrying forward: `filtersSchema` has `.transform()` steps, so a query's parsed output is
+not its own input type and one query cannot be handed straight to another — `getMemberDirectory`
+calls the services instead. And `getPublicMemberProfile` was left exactly as it is, with a wrapper
+around it, because it is the public privacy boundary and has a test suite pinned to it directly.
 
 `member/directory/+page.svelte` also duplicates `getMe` from `(public)/+layout.svelte:10`.
 The two profile pages in this area were already converted (`-1V`).
@@ -105,7 +111,16 @@ The two profile pages in this area were already converted (`-1V`).
 - `src/routes/(public)/directory/+page.svelte` — 3
 - `src/routes/(public)/directory/members/[id]/+page.svelte` — 2
 
-### 3. Help
+### 3. Help ✅
+
+**Done.** `getMemberArticlePage`, `getStaffHelpPage`, `getStaffArticlePage`. `getMemberCategories`
+and `getStaffCategories` stay exported — `/member/help` and `/staff/help/create` each read one of
+them alone, which is not the shape that breaks.
+
+`custom/refresh-the-composed-query` reports **unconditionally**: refreshing the wrapper _as well
+as_ the constituent still errors. That is deliberate on its part — it wants a human to decide —
+and the answer here was to refresh only the wrapper, because nothing reads the constituent any
+more.
 
 - `src/routes/member/help/[slug]/+page.svelte` — 2
 - `src/routes/staff/help/+page.svelte` — 2

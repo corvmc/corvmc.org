@@ -35,6 +35,7 @@ import { update as updateBandBasics } from '$lib/server/band/band-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
+import { getMe } from './layout.remote';
 import {
 	isMemberRowPrivate,
 	isBandProfileHidden,
@@ -101,6 +102,48 @@ const filtersSchema = z.object({
 		.string()
 		.optional()
 		.transform((v) => (v === 'true' ? true : undefined))
+});
+
+/**
+ * The member directory's one load-bearing query.
+ *
+ * Four queries used to leave this component at once — both lists plus the two suggestion sets
+ * that fill the filter chips — and all four re-fired on every keystroke that moved `filters`.
+ * Past kit 2.64 a component holding several in flight renders its error boundary instead of the
+ * page. One request now, whatever the filters do.
+ *
+ * The suggestions do not depend on `filters` and are recomputed with them, which is the one cost
+ * of folding them in. It buys nothing to split them back out: the request happens anyway.
+ */
+export const getMemberDirectory = query(filtersSchema, async (filters) => {
+	requireUser();
+
+	// The services rather than `getDirectoryMembers`/`getDirectoryBands`: `filtersSchema` has
+	// `.transform()` steps, so a query's parsed output is not its own input type and handing one
+	// straight to the other does not compile. The two stay exported for nothing in particular —
+	// this page is their only caller — but re-deriving the list logic here would be worse.
+	const [members, rawBands, instrumentSuggestions, genreSuggestions] = await Promise.all([
+		listMembers({
+			search: filters.search,
+			instruments: filters.instruments,
+			genres: filters.genres,
+			lookingForBand: filters.lookingForBand,
+			availableForHire: filters.availableForHire,
+			teachesLessons: filters.teachesLessons,
+			openToCollaboration: filters.openToCollaboration
+		}),
+		listBands({
+			search: filters.search,
+			genres: filters.genres,
+			lookingForMembers: filters.lookingForMembers
+		}),
+		getInstrumentSuggestions(),
+		getGenreSuggestions()
+	]);
+
+	const bands = rawBands.map((b) => ({ ...b, avatarUrl: resolveImageUrl(b.avatarKey) }));
+
+	return { members, bands, instrumentSuggestions, genreSuggestions };
 });
 
 export const getDirectoryMembers = query(filtersSchema, async (filters) => {
@@ -606,4 +649,35 @@ export const getUserDirectoryProfile = query(z.string(), async (userId) => {
 		isProfileComplete(userId)
 	]);
 	return { profile, complete };
+});
+
+/**
+ * The public directory's one load-bearing query.
+ *
+ * `getMe` is the notable one: `(public)/+layout.svelte` already holds it, and the page awaited it
+ * again purely to decide whether to show the "your profile is hidden" prompt. Two remote queries
+ * in one component is the shape that stops the page rendering past kit 2.64. Reading it here
+ * costs nothing — Kit dedupes a remote query per request, so the layout's call and this one are
+ * one read — and it keeps the layout free to pass `user` to the header as a plain prop.
+ */
+export const getPublicDirectoryPage = query(z.void(), async () => {
+	const [directory, viewer, visibility] = await Promise.all([
+		getPublicDirectory({}),
+		getMe(),
+		getMyDirectoryVisibility()
+	]);
+
+	return { directory, viewer, visibility };
+});
+
+/**
+ * The public member profile's one load-bearing query.
+ *
+ * A wrapper rather than folding the shows into `getPublicMemberProfile`, because that query is
+ * the public-facing privacy boundary and has a test suite pinned to it directly
+ * (`directory.remote.test.ts`) — worth leaving exactly as it is.
+ */
+export const getPublicMemberProfilePage = query(z.string(), async (id) => {
+	const [profile, shows] = await Promise.all([getPublicMemberProfile(id), getMemberShows(id)]);
+	return { ...profile, shows };
 });

@@ -1,11 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import {
-		getPublicMemberProfile,
-		getMemberShows,
-		getMemberPastShows
-	} from '$lib/remote/directory.remote';
+	import { getPublicMemberProfilePage, getMemberPastShows } from '$lib/remote/directory.remote';
 	import ProfileHeader, {
 		type ProfilePill
 	} from '$lib/components/shared/directory/profile/ProfileHeader.svelte';
@@ -24,8 +20,8 @@
 	const BANDS_BASE = '/directory/bands';
 
 	let id = $derived(page.params.id!);
-	let data = $derived(await getPublicMemberProfile(id));
-	let shows = $derived(await getMemberShows(id));
+	const data = $derived(await getPublicMemberProfilePage(id));
+	const shows = $derived(data.shows);
 	const member = $derived(data.member);
 
 	let subtitle = $derived(member.tagline || member.instruments?.join(' · ') || null);
