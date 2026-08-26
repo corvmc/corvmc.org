@@ -183,10 +183,11 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 Cross-cutting rollouts tracked to completion — broader than one feature, so they live outside
 `plans/`.
 
-| Doc                                                                   | Status | Notes                                                          |
-| --------------------------------------------------------------------- | ------ | -------------------------------------------------------------- |
-| [staff-feature-enablement.md](checklists/staff-feature-enablement.md) | 📦     | Making the staff panel work independently of the feature flags |
-| [standardization-rollout.md](checklists/standardization-rollout.md)   | 🔧     | Working through `reports/standardization-audit.md`             |
+| Doc                                                                   | Status | Notes                                                                 |
+| --------------------------------------------------------------------- | ------ | --------------------------------------------------------------------- |
+| [staff-feature-enablement.md](checklists/staff-feature-enablement.md) | 📦     | Making the staff panel work independently of the feature flags        |
+| [standardization-rollout.md](checklists/standardization-rollout.md)   | 🔧     | Working through `reports/standardization-audit.md`                    |
+| [remote-query-fanout.md](checklists/remote-query-fanout.md)           | 🔧     | One load-bearing query per page across the 50 components that fan out |
 
 ## manual
 

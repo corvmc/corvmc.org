@@ -15,7 +15,7 @@
 	import { type LineupChip } from '../LineupEditor.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { getBandEventDetail, updateBandEventForm } from '$lib/remote/band-events.remote';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayoutContext } from '../../layout-context';
 	import { page } from '$app/state';
 
 	// Declared before the awaited queries below: a declaration that follows a
@@ -24,7 +24,10 @@
 	// JAVASCRIPT-SVELTEKIT-W). It reaches that component as a resolved prop.
 	const updateFields = updateBandEventForm.fields;
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
 	let evt = $derived(
 		await getBandEventDetail({ slug: page.params.slug!, eventId: page.params.eventId! })
 	);

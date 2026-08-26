@@ -2,8 +2,7 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import {
-		getLoan,
-		getAvailableEquipment,
+		getStaffLoanDetail,
 		scheduleLoanForm as schedule,
 		checkoutLoanForm as checkout
 	} from '$lib/remote/equipment.remote';
@@ -23,8 +22,9 @@
 	const { fields: checkoutFields } = checkout;
 
 	let id = $derived(page.params.id!);
-	let loan = $derived(await getLoan(id));
-	let availableEquipment = $derived(await getAvailableEquipment());
+	const data = $derived(await getStaffLoanDetail(id));
+	const loan = $derived(data.loan);
+	const availableEquipment = $derived(data.availableEquipment);
 
 	let chargePreview = $derived.by(() => {
 		if (loan.status !== 'checked_out' || !loan.dailyRateCents || !loan.checkedOutAt) return null;

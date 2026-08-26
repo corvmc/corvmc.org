@@ -1,12 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import {
-		getDirectoryMembers,
-		getDirectoryBands,
-		getInstrumentSuggestions,
-		getGenreSuggestions
-	} from '$lib/remote/directory.remote';
+	import { getMemberDirectory } from '$lib/remote/directory.remote';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
@@ -69,10 +64,14 @@
 		lookingForMembers = false;
 	}
 
-	let members = $derived(await getDirectoryMembers(filters));
-	let bands = $derived(await getDirectoryBands(filters));
-	let instrumentSuggestions = $derived(await getInstrumentSuggestions());
-	let genreSuggestions = $derived(await getGenreSuggestions());
+	// One query for all four. They all re-fire when `filters` moves anyway, so this is one
+	// request per keystroke rather than four — and one is what this component can hold without
+	// kit 2.64 rendering the error boundary instead of the page.
+	const directory = $derived(await getMemberDirectory(filters));
+	const members = $derived(directory.members);
+	const bands = $derived(directory.bands);
+	const instrumentSuggestions = $derived(directory.instrumentSuggestions);
+	const genreSuggestions = $derived(directory.genreSuggestions);
 
 	// The "Show more" window collapses whenever the listed set changes. Derived
 	// off a key rather than reset from an effect, so it can't lag the filters by

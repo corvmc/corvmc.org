@@ -54,7 +54,7 @@ export const cancelDetailSeries = form(z.object({ seriesId: z.string() }), async
 	await requireStaff();
 	const seriesId = data.seriesId as string;
 	await cancel(seriesId);
-	void getSeries(seriesId).refresh();
+	void getStaffSeriesDetail(seriesId).refresh();
 	return { success: true };
 });
 
@@ -71,4 +71,10 @@ export const cancelRecurringSeries = form(z.object({ id: z.string() }), async (d
 
 	await cancel(id);
 	return { success: true };
+});
+
+/** The recurring series detail page's one load-bearing query. */
+export const getStaffSeriesDetail = query(z.string(), async (id) => {
+	const [series, history] = await Promise.all([getSeries(id), getSeriesHistory(id)]);
+	return { series, history };
 });

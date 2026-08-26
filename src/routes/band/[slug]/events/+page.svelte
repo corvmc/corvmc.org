@@ -12,19 +12,20 @@
 	import { formatDate } from '$lib/utils/format';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import {
-		getBandEvents,
-		getBandLineupInvites,
+		getBandEventsPage,
 		confirmLineupSlotForm,
 		declineLineupSlotForm
 	} from '$lib/remote/band-events.remote';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayoutContext } from '../layout-context';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
-	let events = $derived(await getBandEvents(page.params.slug!));
-	let invites = $derived(await getBandLineupInvites(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
+	const { events, invites } = $derived(await getBandEventsPage(page.params.slug!));
 	const band = $derived(layout.band);
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 

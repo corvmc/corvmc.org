@@ -14,11 +14,7 @@
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { formatVolunteerHours } from '$lib/config';
-	import {
-		getVolunteerReport,
-		getVolunteerReportByMember,
-		getFeedbackByRole
-	} from '$lib/remote/volunteer.remote';
+	import { getVolunteerReportPage } from '$lib/remote/volunteer.remote';
 
 	// Calendar year to date is what a board packet asks for, so it's the default
 	// rather than "all time" — which would keep drifting as the org ages.
@@ -44,9 +40,10 @@
 	});
 
 	let range = $derived({ from: fromDate || undefined, to: toDate || undefined });
-	let report = $derived(getVolunteerReport(range));
-	let feedbackByRole = $derived(getFeedbackByRole());
-	let byMember = $derived(getVolunteerReportByMember({ ...range, page: pageNumber }));
+	const pageData = $derived(getVolunteerReportPage({ ...range, page: pageNumber }));
+	const report = $derived(pageData.then((d) => d.report));
+	const feedbackByRole = $derived(pageData.then((d) => d.feedbackByRole));
+	const byMember = $derived(pageData.then((d) => d.byMember));
 
 	// Refresh once on mount. An approval on /staff/volunteer changes these totals,
 	// but it can't refresh them from there — `refresh()` is keyed by argument and
@@ -57,8 +54,7 @@
 	// onMount rather than $effect: an effect tracking `range` would fire a second
 	// fetch on top of the one the $derived above already issues for a new range.
 	onMount(() => {
-		void getVolunteerReport(range).refresh();
-		void getVolunteerReportByMember({ ...range, page: pageNumber }).refresh();
+		void getVolunteerReportPage({ ...range, page: pageNumber }).refresh();
 	});
 
 	const activeFilterCount = $derived((fromDate !== yearStart ? 1 : 0) + (toDate ? 1 : 0));

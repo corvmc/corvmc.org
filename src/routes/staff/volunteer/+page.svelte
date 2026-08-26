@@ -1,4 +1,7 @@
 <script lang="ts">
+	import PendingReviewCard from './PendingReviewCard.svelte';
+	import VolunteerStatusTabs from './VolunteerStatusTabs.svelte';
+	import RoleOptions from '$lib/components/shared/volunteer/RoleOptions.svelte';
 	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -8,9 +11,7 @@
 	import Button from '$lib/components/shared/Button.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -22,9 +23,6 @@
 	import {
 		getStaffVolunteerLogs,
 		getVolunteerStatusCounts,
-		getVolunteerRoles,
-		getBlockedVolunteers,
-		approveVolunteerSignup,
 		approveVolunteerHours,
 		rejectVolunteerHours
 	} from '$lib/remote/volunteer.remote';
@@ -81,10 +79,9 @@
 		page: pageNumber
 	});
 
-	let result = $derived(getStaffVolunteerLogs(filters));
-	let counts = $derived(getVolunteerStatusCounts());
-	let blocked = $derived(getBlockedVolunteers());
-	let roles = $derived(getVolunteerRoles());
+	// The page's one query. The counts, the pending-review queue and the role filter each own
+	// theirs — all three are unparameterized and refreshed by name, so none could join this one.
+	const result = $derived(getStaffVolunteerLogs(filters));
 
 	// The status view is a view, not a filter — it always has a value, so counting
 	// it would leave "Clear" permanently offered.
@@ -98,6 +95,8 @@
 	// updated the tab counts but left the approved row sitting in the queue.
 	function refreshQueue() {
 		void getStaffVolunteerLogs(filters).refresh();
+		// VolunteerStatusTabs reads this query directly rather than through a wrapper, so
+		// refreshing it here still repaints the badges.
 		void getVolunteerStatusCounts().refresh();
 	}
 
@@ -125,75 +124,14 @@
 		people, and putting it in that machinery would break the URL filter mirroring
 		and the row shape. Hidden entirely when empty, which is most days.
 	-->
-	{#await blocked then rows}
-		{#if rows.length > 0}
-			<InfoCard title="Pending review" class="mb-4 border-l-4 border-warning">
-				<p class="text-muted">
-					These members told us they're under 18, so they can't pick up shifts or log hours yet.
-					Approving lets them do both.
-				</p>
-				<Table>
-					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Member</th>
-						<th class="col-support">Name given</th>
-						<th class="col-extra whitespace-nowrap">Signed up</th>
-						<th class="w-px"><span class="sr-only">Actions</span></th>
-					{/snippet}
+	<PendingReviewCard />
 
-					{#each rows as row (row.userId)}
-						<tr>
-							<td class="w-px"><StatusBadge status="blocked" /></td>
-							<td class="cell-primary">
-								<EntityIdentity ref={row.member} />
-							</td>
-							<td class="col-support">{row.firstName} {row.lastName}</td>
-							<td class="col-extra whitespace-nowrap">{relativeDay(row.createdAt)}</td>
-							<td class="w-px">
-								<div class="flex justify-end">
-									<Action
-										action={approveVolunteerSignup.for(row.userId)}
-										label="Approve"
-										variant="primary"
-										size="sm"
-										modalTitle="Approve {row.firstName} {row.lastName}?"
-										submitLabel="Approve"
-										successToast="Volunteer approved"
-									>
-										{#snippet form()}
-											<input type="hidden" name="userId" value={row.userId} />
-											<p class="text-sm">
-												Make sure a guardian's sign-off is on file first — approving lets them claim
-												shifts and log hours on their own.
-											</p>
-										{/snippet}
-									</Action>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</Table>
-			</InfoCard>
-		{/if}
-	{/await}
-
-	{#await counts then c}
-		<TabBar
-			class="mb-4"
-			collapse
-			tabs={[
-				{ key: 'pending', label: 'Pending', badge: c.pending },
-				{ key: 'approved', label: 'Approved', badge: c.approved },
-				{ key: 'rejected', label: 'Returned', badge: c.rejected },
-				{ key: 'all', label: 'All', badge: c.all }
-			]}
-			active={statusView}
-			onchange={(key) => {
-				statusView = key as StatusView;
-				pageNumber = 1;
-			}}
-		/>
-	{/await}
+	<VolunteerStatusTabs
+		bind:view={statusView}
+		onchange={() => {
+			pageNumber = 1;
+		}}
+	/>
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
@@ -207,23 +145,18 @@
 			/>
 		{/snippet}
 
-		{#await roles then roleOptions}
-			<Select
-				size="sm"
-				aria-label="Role"
-				value={roleFilter}
-				onchange={(e: Event) => {
-					roleFilter = (e.currentTarget as HTMLSelectElement).value;
-					pageNumber = 1;
-				}}
-			>
-				<option value="">All roles</option>
-				<!-- Archived roles stay listed: their logs are still in the table. -->
-				{#each roleOptions as role (role.id)}
-					<option value={role.id}>{role.name}{role.isActive ? '' : ' (archived)'}</option>
-				{/each}
-			</Select>
-		{/await}
+		<Select
+			size="sm"
+			aria-label="Role"
+			value={roleFilter}
+			onchange={(e: Event) => {
+				roleFilter = (e.currentTarget as HTMLSelectElement).value;
+				pageNumber = 1;
+			}}
+		>
+			<option value="">All roles</option>
+			<RoleOptions />
+		</Select>
 
 		<input
 			type="date"

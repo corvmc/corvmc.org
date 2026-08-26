@@ -2,12 +2,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import {
-		getStaffArticle,
-		getStaffCategories,
-		updateArticle,
-		deleteArticle
-	} from '$lib/remote/help.remote';
+	import { getStaffArticlePage, updateArticle, deleteArticle } from '$lib/remote/help.remote';
 	const { fields: deleteFields } = deleteArticle;
 	const { fields: updateFields } = updateArticle;
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
@@ -22,8 +17,9 @@
 	import Alert from '$lib/components/shared/Alert.svelte';
 
 	let id = $derived(page.params.id!);
-	let article = $derived(await getStaffArticle(id));
-	let categories = $derived(await getStaffCategories());
+	const data = $derived(await getStaffArticlePage(id));
+	const article = $derived(data.article);
+	const categories = $derived(data.categories);
 
 	let contentValue = $state('');
 

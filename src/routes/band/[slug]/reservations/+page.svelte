@@ -10,23 +10,23 @@
 	import Form from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
-	import {
-		cancelBandReservation,
-		getBandReservations,
-		getBandMembershipStatus,
-		getBookingContact
-	} from '$lib/remote/reservations.remote';
+	import { cancelBandReservation, getBandReservationsPage } from '$lib/remote/reservations.remote';
 	import CreateModal from './CreateModal.svelte';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayoutContext } from '../layout-context';
 	import { page } from '$app/state';
 
 	const { fields: cancelFields } = cancelBandReservation;
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
-	let data = $derived(await getBandReservations(page.params.slug!));
-	// Resolved here and handed down, so the step components stay synchronous.
-	let membership = $derived(await getBandMembershipStatus());
-	let contact = $derived(await getBookingContact());
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
+	// One query. Membership and contact are still resolved before render and handed down, so
+	// the step components stay synchronous — they just arrive on the same request now.
+	const page_ = $derived(await getBandReservationsPage(page.params.slug!));
+	const data = $derived(page_.reservations);
+	const membership = $derived(page_.membership);
+	const contact = $derived(page_.contact);
 	const upcoming = $derived(data.upcoming);
 	const past = $derived(data.past);
 	const band = $derived(layout.band);

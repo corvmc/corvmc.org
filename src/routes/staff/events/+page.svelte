@@ -16,7 +16,7 @@
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { getStaffEvents } from '$lib/remote/events.remote';
-	import { getPendingSubmissionCount } from '$lib/remote/community-events.remote';
+	import PendingReviewBadge from './PendingReviewBadge.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 
@@ -53,15 +53,16 @@
 
 	// The review queue is exactly `pending_review`, never `draft` — a member's
 	// unfinished listing is not staff's to read, and listAll holds those back.
-	let result = $derived(
+	// The page's one query, and still a promise rather than an await: `DataList` consumes it with
+	// `{#await}` so a filter keystroke does not suspend the page into the layout boundary's
+	// pending snippet. The review count moved into `PendingReviewBadge`.
+	const result = $derived(
 		getStaffEvents({
 			source: source || undefined,
 			status: view === 'review' ? 'pending_review' : undefined,
 			page
 		})
 	);
-
-	let pendingCount = $derived(await getPendingSubmissionCount());
 
 	type Event = Awaited<typeof result>['rows'][number];
 
@@ -83,6 +84,10 @@
 	}
 </script>
 
+{#snippet reviewBadge()}
+	<PendingReviewBadge />
+{/snippet}
+
 <PageHeader title="Events">
 	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>New Event</Button>
 </PageHeader>
@@ -92,7 +97,7 @@
 	<TabBar
 		tabs={[
 			{ key: 'all', label: 'All events' },
-			{ key: 'review', label: 'Needs review', badge: pendingCount || undefined }
+			{ key: 'review', label: 'Needs review', badge: reviewBadge }
 		]}
 		active={view}
 		onchange={(k) => {

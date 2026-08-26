@@ -15,27 +15,25 @@
 	import { formatDateTime } from '$lib/utils/format';
 	import { suggestionCategories, suggestionCategoryLabels } from '$lib/config';
 	import {
-		getSuggestionDetail,
-		getMySuggestionStanding,
+		getMemberSuggestionDetailPage,
 		toggleSuggestionVote,
 		flagSuggestion,
-		getSuggestionEditState,
 		editSuggestion,
 		cancelSuggestionEdit
 	} from '$lib/remote/suggestions.remote';
 
 	let id = $derived(page.params.id!);
-	let s = $derived(await getSuggestionDetail(id));
-	let standing = $derived(await getMySuggestionStanding());
+	const data = $derived(await getMemberSuggestionDetailPage(id));
+	const s = $derived(data.suggestion);
+	const standing = $derived(data.standing);
+	const editState = $derived(data.editState);
 
-	let isMine = $derived(s.authorUserId === standing.viewerUserId);
-	let editState = $derived(await getSuggestionEditState(id));
+	const isMine = $derived(s.authorUserId === standing.viewerUserId);
 	let vote = $derived(toggleSuggestionVote.for(s.id));
 	let flag = $derived(flagSuggestion.for(s.id));
 
 	function refresh() {
-		void getSuggestionDetail(id).refresh();
-		void getSuggestionEditState(id).refresh();
+		void getMemberSuggestionDetailPage(id).refresh();
 	}
 
 	// Only the author ever sees these — everyone else 404s before reaching here.

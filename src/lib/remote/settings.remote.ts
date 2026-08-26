@@ -15,6 +15,7 @@ import { testConnection } from '$lib/server/lock/ultraloc-client';
 import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
 import { requireStaff } from '$lib/server/authorization';
 import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '$lib/server/feature-flags';
+import { getInboxChannelConfigs } from './inbox.remote';
 import { syncAllSubscriptions } from '$lib/server/finance/subscription-sync-service';
 import { refreshCommunityStats as refreshStats } from '$lib/server/finance/community-stats';
 
@@ -22,22 +23,43 @@ import { refreshCommunityStats as refreshStats } from '$lib/server/finance/commu
 // Public queries (no auth)
 // ---------------------------------------------------------------------------
 
-export const getSocialLinks = query(async () => {
-	const settings = await getConfigsByPrefix('org');
+type OrgConfigs = Awaited<ReturnType<typeof getConfigsByPrefix>>;
+
+function socialFrom(settings: OrgConfigs) {
 	return {
 		facebook: String(settings.socialFacebook ?? ''),
 		instagram: String(settings.socialInstagram ?? '')
 	};
-});
+}
 
-export const getOrgAddress = query(async () => {
-	const settings = await getConfigsByPrefix('org');
+function addressFrom(settings: OrgConfigs) {
 	return {
 		street: String(settings.addressStreet ?? ''),
 		city: String(settings.addressCity ?? ''),
 		state: String(settings.addressState ?? ''),
 		zip: String(settings.addressZip ?? '')
 	};
+}
+
+export const getSocialLinks = query(async () => socialFrom(await getConfigsByPrefix('org')));
+
+export const getOrgAddress = query(async () => addressFrom(await getConfigsByPrefix('org')));
+
+/**
+ * The site footer's one load-bearing query.
+ *
+ * It used to await `getSocialLinks()` and `getOrgAddress()` side by side, which is two
+ * requests for one `org` config read and — past kit 2.64 — a crash: a component holding two
+ * remote queries in flight blows up in Svelte's reactivity rather than rendering
+ * (JAVASCRIPT-SVELTEKIT-2H, on a page whose footer sits in every public route). One query,
+ * one config read.
+ *
+ * `getOrgAddress` stays exported because `/contact` reads it on its own, and a page with a
+ * single query is not the shape that breaks.
+ */
+export const getFooterInfo = query(async () => {
+	const settings = await getConfigsByPrefix('org');
+	return { social: socialFrom(settings), address: addressFrom(settings) };
 });
 
 // ---------------------------------------------------------------------------
@@ -109,7 +131,7 @@ export const updateProduct = form(updateProductSchema, async (raw) => {
 		unitAmountCents: parseInt(data.unitAmountCents, 10)
 	});
 
-	void getProducts().refresh();
+	void getStaffSettingsPage().refresh();
 
 	return { success: true };
 });
@@ -154,7 +176,7 @@ export const updateReservationSettings = form(reservationSettingsSchema, async (
 		{ key: 'reservation.hourlyRateCents', value: data.hourlyRateCents }
 	]);
 
-	void getReservationSettings().refresh();
+	void getStaffSettingsPage().refresh();
 
 	return { success: true };
 });
@@ -193,8 +215,11 @@ export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
 		{ key: 'org.socialInstagram', value: data.socialInstagram ?? '' }
 	]);
 
-	void getOrgSettings().refresh();
+	void getStaffSettingsPage().refresh();
+	// Both, not either: `/contact` reads `getOrgAddress` directly, the footer reads it only
+	// through `getFooterInfo`, and refreshing one repaints nothing for the other.
 	void getOrgAddress().refresh();
+	void getFooterInfo().refresh();
 
 	return { success: true };
 });
@@ -234,7 +259,7 @@ export const updateFeatureFlag = form(
 			throw error(400, 'Invalid feature flag');
 		}
 		await updateSiteConfig(`feature.${data.flag}`, data.enabled);
-		void getFeatureFlags().refresh();
+		void getStaffSettingsPage().refresh();
 		return { success: true };
 	}
 );
@@ -264,7 +289,31 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
 		{ key: 'integration.utec.refreshToken', value: data.refreshToken }
 	]);
 
-	void getIntegrationSettings().refresh();
+	void getStaffSettingsPage().refresh();
 
 	return { success: true };
+});
+
+/**
+ * The staff settings page's one load-bearing query.
+ *
+ * Six tabs' worth of configuration, and every constituent is unparameterized — which is what makes
+ * this composable at all: each of the mutations that used to refresh them one at a time can name
+ * this wrapper with no argument.
+ */
+export const getStaffSettingsPage = query(z.void(), async () => {
+	await requireStaff();
+
+	const [products, reservation, org, integration, channelConfigs, featureFlags] = await Promise.all(
+		[
+			getProducts(),
+			getReservationSettings(),
+			getOrgSettings(),
+			getIntegrationSettings(),
+			getInboxChannelConfigs(),
+			getFeatureFlags()
+		]
+	);
+
+	return { products, reservation, org, integration, channelConfigs, featureFlags };
 });

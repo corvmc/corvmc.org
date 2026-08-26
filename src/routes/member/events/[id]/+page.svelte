@@ -31,8 +31,7 @@
 		claimFreeTicket,
 		rsvpToEvent,
 		cancelRsvp,
-		getMemberEventDetail,
-		getMemberTickets
+		getMemberEventDetailPage
 	} from '$lib/remote/events.remote';
 
 	const { fields } = purchaseTickets;
@@ -40,8 +39,9 @@
 	const rsvpToEventFields = rsvpToEvent.fields;
 	const cancelRsvpFields = cancelRsvp.fields;
 
-	let eventData = $derived(await getMemberEventDetail(page.params.id!));
-	let allTickets = $derived(await getMemberTickets());
+	const detail = $derived(await getMemberEventDetailPage(page.params.id!));
+	const eventData = $derived(detail.event);
+	const allTickets = $derived(detail.tickets);
 	let myTickets = $derived(
 		allTickets.filter((t) => t.eventId === page.params.id && t.status !== 'cancelled')
 	);
@@ -111,8 +111,8 @@
 	const primaryTag = $derived(tagList[0] ?? null);
 
 	function refreshDetail() {
-		void getMemberEventDetail(page.params.id!).refresh();
-		void getMemberTickets().refresh();
+		// The wrapper this page reads, not the two it is assembled from.
+		void getMemberEventDetailPage(page.params.id!).refresh();
 	}
 
 	async function handlePurchaseSuccess(result?: unknown) {

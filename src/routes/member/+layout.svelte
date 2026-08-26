@@ -22,6 +22,7 @@
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
 	import { EntityViewer } from '$lib/components/shared/entity';
 	import { getMemberLayout } from '$lib/remote/layout.remote';
+	import { setMemberLayoutContext } from './layout-context';
 	import { panelTabs } from '$lib/components/shared/panel-tabs';
 	import {
 		activeMemberNavKey,
@@ -33,6 +34,14 @@
 	} from './nav-items';
 
 	let { children } = $props();
+
+	// Before the await, not after: the `await` below suspends the script body, and `setContext`
+	// has to run during synchronous init. See `layout-context.ts`.
+	setMemberLayoutContext({
+		get current() {
+			return layout;
+		}
+	});
 
 	let layout = $derived(await getMemberLayout());
 

@@ -167,8 +167,7 @@ export const subscribe = form(
 		await clearSelfServiceSuppression(sub.id);
 		await addSubscriber(audienceId, sub.id);
 
-		void getMySubscriptions().refresh();
-		void getAvailableLists().refresh();
+		void getMyEmailSubscriptions().refresh();
 		return { success: true };
 	}
 );
@@ -185,8 +184,18 @@ export const unsubscribe = form(
 		const sub = await findOrCreateForUser(currentUser.id, currentUser.email, currentUser.name);
 		await unsubscribeFromAudience(sub.id, audienceId);
 
-		void getMySubscriptions().refresh();
-		void getAvailableLists().refresh();
+		void getMyEmailSubscriptions().refresh();
 		return { success: true };
 	}
 );
+
+/**
+ * The account page's Email Subscriptions section, as one query.
+ *
+ * Both halves are unparameterized and both are refreshed together by the two mutations below, so
+ * the wrapper replaces them one for one.
+ */
+export const getMyEmailSubscriptions = query(z.void(), async () => {
+	const [subscriptions, available] = await Promise.all([getMySubscriptions(), getAvailableLists()]);
+	return { subscriptions, available };
+});

@@ -14,8 +14,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
-		getMyListing,
-		findDuplicateListing,
+		getMyListingPage,
 		searchBandsForListing,
 		updateListing,
 		publishListing,
@@ -34,12 +33,11 @@
 	const deleteFields = deleteListing.fields;
 
 	const eventId = $derived(page.params.id!);
-	let listing = $derived(await getMyListing(eventId));
-
-	// Advisory only — shown next to Publish, never blocking it.
-	let duplicate = $derived(
-		listing?.status === 'draft' ? await findDuplicateListing(eventId) : null
-	);
+	// One query. The duplicate check is advisory copy next to Publish and only means anything for
+	// a draft, so that condition moved server-side with it.
+	const pageData = $derived(await getMyListingPage(eventId));
+	const listing = $derived(pageData.listing);
+	const duplicate = $derived(pageData.duplicate);
 
 	const requiresReview = $derived(listing?.standing.status !== 'none');
 

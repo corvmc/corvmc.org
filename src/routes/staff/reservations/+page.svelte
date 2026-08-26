@@ -34,14 +34,9 @@
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import {
-		getStaffReservations,
-		getReservationCounts,
-		getUnresolvedReservations,
-		getHourlyRate
-	} from '$lib/remote/reservations.remote';
+	import { getStaffReservationsPage } from '$lib/remote/reservations.remote';
 
-	type Reservation = Awaited<ReturnType<typeof getStaffReservations>>['rows'][number];
+	type Reservation = Awaited<ReturnType<typeof getStaffReservationsPage>>['list']['rows'][number];
 
 	let tab = $state<'upcoming' | 'all'>('upcoming');
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
@@ -62,10 +57,16 @@
 		page
 	});
 
-	let result = $derived(getStaffReservations(filters));
-	let counts = $derived(getReservationCounts());
-	let unresolved = $derived(getUnresolvedReservations());
-	let hourlyRate = $derived(getHourlyRate());
+	// One query, four `.then()` views off it. Four separate promises here were recreated on every
+	// filter keystroke, and a superseded one that rejects has no consumer left — that is where
+	// JAVASCRIPT-SVELTEKIT-3's unhandled rejections came from. Not awaited, because awaiting would
+	// suspend the page into the layout boundary's pending snippet on every keystroke.
+	const pageData = $derived(getStaffReservationsPage(filters));
+
+	const result = $derived(pageData.then((d) => d.list));
+	const counts = $derived(pageData.then((d) => d.counts));
+	const unresolved = $derived(pageData.then((d) => d.unresolved));
+	const hourlyRate = $derived(pageData.then((d) => d.hourlyRate));
 
 	let resolveOpen = $state(false);
 

@@ -1,17 +1,13 @@
 <script lang="ts">
+	import AudiencePicker from '../AudiencePicker.svelte';
+	import CampaignPreview from '../CampaignPreview.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import {
-		getAudienceOptions,
-		getPreview,
-		createDraft,
-		createAndSend,
-		createAndSchedule
-	} from '$lib/remote/marketing.remote';
+	import { createDraft, createAndSend, createAndSchedule } from '$lib/remote/marketing.remote';
 
 	let subject = $state('');
 	let markdownBody = $state('');
@@ -19,22 +15,8 @@
 	let scheduledFor = $state('');
 	let submitting = $state(false);
 
-	let audiences = $derived(await getAudienceOptions());
-	let previewHtml = $derived(await getPreview(markdownBody));
-
-	function toggleAudience(id: string) {
-		if (selectedAudienceIds.includes(id)) {
-			selectedAudienceIds = selectedAudienceIds.filter((a) => a !== id);
-		} else {
-			selectedAudienceIds = [...selectedAudienceIds, id];
-		}
-	}
-
-	let totalSubscribers = $derived(
-		audiences
-			.filter((a) => selectedAudienceIds.includes(a.id))
-			.reduce((sum, a) => sum + a.subscriberCount, 0)
-	);
+	// Written back by AudiencePicker, which owns the audience query.
+	let totalSubscribers = $state(0);
 
 	async function handleSaveDraft() {
 		if (!isValid()) return;
@@ -121,34 +103,7 @@
 
 			<div>
 				<p class="label text-sm font-medium">Audiences</p>
-				<div class="flex flex-wrap gap-2">
-					{#each audiences as a (a.id)}
-						<label
-							class="label cursor-pointer gap-2 rounded-lg border px-3 py-1.5 {selectedAudienceIds.includes(
-								a.id
-							)
-								? 'border-primary bg-primary/10'
-								: 'border-base-300'}"
-						>
-							<input
-								type="checkbox"
-								class="checkbox checkbox-sm checkbox-primary"
-								checked={selectedAudienceIds.includes(a.id)}
-								onchange={() => toggleAudience(a.id)}
-							/>
-							<span class="text-sm">{a.name}</span>
-							{#if a.systemKey}
-								<span class="badge badge-xs badge-info">Built-in</span>
-							{/if}
-							<span class="text-subtle">({a.subscriberCount})</span>
-						</label>
-					{/each}
-				</div>
-				{#if selectedAudienceIds.length > 0}
-					<p class="mt-1 text-subtle">
-						~{totalSubscribers} recipients (before deduplication)
-					</p>
-				{/if}
+				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} />
 			</div>
 
 			<div>
@@ -219,16 +174,7 @@
 		<!-- Preview pane -->
 		<div>
 			<p class="label text-sm font-medium">Preview</p>
-			<div class="overflow-hidden rounded-lg border bg-white" style="min-height: 400px;">
-				{#if previewHtml}
-					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML preview) -->
-					{@html previewHtml}
-				{:else}
-					<div class="flex h-full items-center justify-center p-12 text-sm opacity-40">
-						Start typing to see a preview...
-					</div>
-				{/if}
-			</div>
+			<CampaignPreview markdown={markdownBody} />
 		</div>
 	</div>
 </PageContent>

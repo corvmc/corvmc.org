@@ -71,6 +71,7 @@ import { hasEventEnded } from '$lib/utils/event-time';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
 import { formatDateShortYear } from '$lib/utils/format';
 import { getShifts, getVolunteerRoles } from './volunteer.remote';
+import { getPublicGigGuide } from './calendar.remote';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -419,32 +420,33 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 	};
 });
 
-export const getStaffEvents = query(
-	z.object({
-		source: z.enum(eventSources).optional(),
-		status: z.enum(eventStatuses).optional(),
-		page: z.number().optional()
-	}),
-	async (filters) => {
-		await requireStaff();
-		const { rows, pagination } = await listAllEvents(
-			{ source: filters.source, status: filters.status },
-			{ page: filters.page ?? 1, pageSize: 50 }
-		);
-		return {
-			rows: rows.map((e) => ({
-				...e,
-				// The listing's own status is the row's and keeps its column, so the
-				// ref carries none — two marks for one fact reads as two facts.
-				ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
-				// `event.bandId` is who manages the listing; the left join is already
-				// here for the byline.
-				band: toBandRef({ id: e.bandId, name: e.bandName, slug: e.bandSlug })
-			})),
-			pagination
-		};
-	}
-);
+// Not exported: a `.remote.ts` file may only export remote functions — Kit rejects the module at
+// load time otherwise, and the failure surfaces as every spec that imports it failing to collect.
+const staffEventsFilters = z.object({
+	source: z.enum(eventSources).optional(),
+	status: z.enum(eventStatuses).optional(),
+	page: z.number().optional()
+});
+
+export const getStaffEvents = query(staffEventsFilters, async (filters) => {
+	await requireStaff();
+	const { rows, pagination } = await listAllEvents(
+		{ source: filters.source, status: filters.status },
+		{ page: filters.page ?? 1, pageSize: 50 }
+	);
+	return {
+		rows: rows.map((e) => ({
+			...e,
+			// The listing's own status is the row's and keeps its column, so the
+			// ref carries none — two marks for one fact reads as two facts.
+			ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
+			// `event.bandId` is who manages the listing; the left join is already
+			// here for the byline.
+			band: toBandRef({ id: e.bandId, name: e.bandName, slug: e.bandSlug })
+		})),
+		pagination
+	};
+});
 
 /**
  * Staff: event lookup for anything that hangs off a show — today, the volunteer
@@ -1295,4 +1297,38 @@ export const getUserTicketsAndRsvps = query(z.string(), async (userId) => {
 			ref: toEventRef({ id: r.eventId, title: r.eventTitle, startsAt: r.startsAt })
 		}))
 	};
+});
+
+/**
+ * The member event detail page's one load-bearing query.
+ *
+ * The ticket list is what decides whether the page shows "RSVP" or "you're going", so it is first
+ * paint alongside the event itself. Both refresh sites on the page repoint here.
+ */
+export const getMemberEventDetailPage = query(z.string(), async (id) => {
+	const [event, tickets] = await Promise.all([getMemberEventDetail(id), getMemberTickets()]);
+	return { event, tickets };
+});
+
+/** The public events page's one load-bearing query. Neither half has a refresh site. */
+export const getPublicEventsPage = query(z.string().optional(), async (from) => {
+	const [events, guide] = await Promise.all([
+		getPublicEvents(),
+		getPublicGigGuide({ from, offset: 0 })
+	]);
+	return { events, guide };
+});
+
+/**
+ * The member events page's one load-bearing query.
+ *
+ * Only the two queries that live in this file. `getMyListings` is deliberately left out: it lives
+ * in `community-events.remote.ts` along with the six mutations that refresh it, and composing it
+ * here would mean that file importing this one — a cycle, and one that dragged the whole
+ * `volunteer.remote` graph into `community-events.remote.spec.ts` and broke its mocks. The
+ * listings section owns that query itself instead.
+ */
+export const getMemberEventsPage = query(z.void(), async () => {
+	const [events, tickets] = await Promise.all([getMemberEvents(), getMemberTickets()]);
+	return { events, tickets };
 });

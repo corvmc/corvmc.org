@@ -179,6 +179,26 @@ export const getBandMembersList = query(z.string(), async (bandId) => {
 	};
 });
 
+/**
+ * The band members page's one load-bearing query.
+ *
+ * `getBandPlatformInvites` is admin-guarded and 403s a plain member into the error boundary, so
+ * the page gated it on the viewer's role and held the two queries in flight together — a
+ * permission decision made client-side, and the fan-out that past kit 2.64 stops the page
+ * rendering at all. Both now resolve here, where the role is already known.
+ */
+export const getBandMembersPage = query(z.string(), async (bandId) => {
+	const { role } = await requireBandMember();
+	const canManage = role === 'owner' || role === 'admin';
+
+	const [members, platformInvites] = await Promise.all([
+		getBandMembersList(bandId),
+		canManage ? getBandPlatformInvites() : []
+	]);
+
+	return { members, platformInvites, canManage };
+});
+
 export const getMemberBands = query(async () => {
 	const currentUser = requireUser();
 	const bands = await listForUser(currentUser.id);
@@ -213,7 +233,7 @@ export const updateStaffBand = form(
 		const { params } = getRequestEvent();
 		const id = params.id!;
 		await update(id, { name: data.name, bio: data.bio || undefined });
-		void getStaffBand(id).refresh();
+		void getStaffBandPage(id).refresh();
 		return { success: true };
 	}
 );
@@ -231,7 +251,7 @@ export const updateMemberRole = form(
 			position: data.position ?? undefined
 		});
 		const { params } = getRequestEvent();
-		void getStaffBandMembers(params.id!).refresh();
+		void getStaffBandPage(params.id!).refresh();
 		return { success: true };
 	}
 );
@@ -288,7 +308,7 @@ export const setBandTier = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getStaffBand(data.id).refresh();
+		void getStaffBandPage(data.id).refresh();
 		return { success: true };
 	}
 );
@@ -676,4 +696,21 @@ export const getUserBands = query(z.string(), async (userId) => {
 			subtitle: `${b.memberCount} active members`
 		}
 	}));
+});
+
+/**
+ * The staff band detail page's one load-bearing query.
+ *
+ * Every half is keyed by the same band id, and every mutation that refreshed one of them has that
+ * id in scope, so this composes with nothing left orphaned.
+ */
+export const getStaffBandPage = query(z.string(), async (id) => {
+	const [band, members, reservations, platformInvites] = await Promise.all([
+		getStaffBand(id),
+		getStaffBandMembers(id),
+		getBandReservations(id),
+		getStaffPlatformInvites(id)
+	]);
+
+	return { band, members, reservations, platformInvites };
 });

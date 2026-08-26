@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { getMemberArticle, getMemberCategories } from '$lib/remote/help.remote';
+	import { getMemberArticlePage } from '$lib/remote/help.remote';
 	import { extractHeadings } from '$lib/utils/markdown';
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
@@ -9,8 +9,9 @@
 	import TableOfContents from '$lib/components/help/TableOfContents.svelte';
 
 	let slug = $derived(page.params.slug!);
-	let article = $derived(await getMemberArticle(slug));
-	let categories = $derived(await getMemberCategories());
+	const data = $derived(await getMemberArticlePage(slug));
+	const article = $derived(data.article);
+	const categories = $derived(data.categories);
 
 	let headings = $derived(extractHeadings(article.content));
 	let category = $derived(categories.find((c) => c.id === article.categoryId));

@@ -30,8 +30,13 @@
 	let endTime = $state('');
 	let notes = $state('');
 
+	// One query for the day, two derivations off it. Two async deriveds each calling
+	// `getStaffSlots(date)` deduped to a single request, but they were still two remote queries in
+	// flight in one component — the shape that stops a component rendering past kit 2.64.
+	const slots = $derived(getStaffSlots(date));
+
 	const startOptions = $derived.by(async () => {
-		const data = await getStaffSlots(date);
+		const data = await slots;
 		return data.slots.map((s) => ({
 			value: s.startTime,
 			label: formatSlotTime(s.startTime),
@@ -41,7 +46,7 @@
 
 	const endOptions = $derived.by(async () => {
 		if (!startTime) return [];
-		const data = await getStaffSlots(date);
+		const data = await slots;
 
 		const opts: Array<{ value: string; label: string; available: boolean }> = [];
 		const startIdx = data.slots.findIndex((s) => s.startTime === startTime);

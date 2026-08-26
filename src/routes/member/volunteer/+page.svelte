@@ -21,13 +21,7 @@
 	} from '$lib/config';
 	import { IconPencil, IconTrash } from '@tabler/icons-svelte';
 	import {
-		getActiveVolunteerRoles,
-		getMyVolunteerAccess,
-		getMyVolunteerHours,
-		getMyVolunteerInterests,
-		getMyVolunteerSummary,
-		getOpenShifts,
-		getUnloggedShifts,
+		getMemberVolunteerPage,
 		saveVolunteerInterests,
 		updateVolunteerProfile,
 		submitVolunteerHours,
@@ -35,17 +29,19 @@
 		withdrawVolunteerHours
 	} from '$lib/remote/volunteer.remote';
 
-	// The gate. This query redirects an un-onboarded member to /member/volunteer/start
-	// and a blocked one to /blocked, server-side — so the page never renders for
-	// either and needs no client-side check of its own. It also carries the data
-	// behind the two header modals.
-	let access = $derived(getMyVolunteerAccess());
-	let roles = $derived(getActiveVolunteerRoles());
-	let interests = $derived(getMyVolunteerInterests());
-	let openShifts = $derived(getOpenShifts());
-	let unloggedShifts = $derived(getUnloggedShifts());
-	let logs = $derived(getMyVolunteerHours());
-	let summary = $derived(getMyVolunteerSummary());
+	// One query, seven `.then()` views off it. The gate is still the gate: inside the wrapper
+	// `getMyVolunteerAccess` is awaited first, so its server-side redirect — an un-onboarded member
+	// to /member/volunteer/start, a blocked one to /blocked — still happens ahead of the rest
+	// rather than racing it. The page needs no client-side check of its own.
+	const pageData = $derived(getMemberVolunteerPage());
+
+	const access = $derived(pageData.then((d) => d.access));
+	const roles = $derived(pageData.then((d) => d.roles));
+	const interests = $derived(pageData.then((d) => d.interests));
+	const openShifts = $derived(pageData.then((d) => d.openShifts));
+	const unloggedShifts = $derived(pageData.then((d) => d.unloggedShifts));
+	const logs = $derived(pageData.then((d) => d.logs));
+	const summary = $derived(pageData.then((d) => d.summary));
 
 	// Club time, not UTC: after 5pm PT the UTC date is already tomorrow, and the
 	// service rejects a future date — so a UTC-defaulted input offered a value

@@ -7,7 +7,10 @@ describe('isStaleRemoteResponse', () => {
 	it.each([
 		['Firefox', 'JSON.parse: unexpected character at line 1 column 1 of the JSON data'],
 		['Chrome', `Unexpected token '<', "<!DOCTYPE "... is not valid JSON`],
-		['Safari', `The string did not match the expected pattern. is not valid JSON`]
+		['Safari', `The string did not match the expected pattern. is not valid JSON`],
+		// Safari again, but for a bare `undefined` body rather than an HTML page — a
+		// different wording entirely, and the one that produced -2K.
+		['Safari (undefined body)', `JSON Parse error: Unexpected identifier "undefined"`]
 	])('matches the %s parse failure', (_engine, message) => {
 		expect(isStaleRemoteResponse(new SyntaxError(message))).toBe(true);
 	});

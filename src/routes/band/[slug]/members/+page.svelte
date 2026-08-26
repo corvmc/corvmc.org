@@ -21,17 +21,15 @@
 	import { toast } from 'svelte-sonner';
 	import {
 		searchBandUsers as searchUsers,
-		getBandMembersList,
+		getBandMembersPage,
 		inviteMember,
 		removeMember,
 		revokeInvitation,
 		transferOwner,
-		getBandPlatformInvites as getPlatformInvites,
 		inviteByEmail,
 		revokePlatformInviteRemote
 	} from '$lib/remote/bands.remote';
-	import { getBandLayout } from '$lib/remote/layout.remote';
-	import { page } from '$app/state';
+	import { getBandLayoutContext } from '../layout-context';
 
 	// Above the awaited queries: a declaration after a top-level await is
 	// async-gated, which would compile every `fields.X.as()` into an async
@@ -42,21 +40,24 @@
 	const { fields: inviteFields } = inviteMember;
 	const { fields: transferFields } = transferOwner;
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
 
 	const isAdmin = $derived(layout.userRole === 'admin');
 	const isOwner = $derived(layout.userRole === 'owner');
 	const canManage = $derived(isOwner || isAdmin);
 	const isStaffOnly = $derived(layout.userRole === 'staff');
 
-	let members = $derived(await getBandMembersList(layout.band.id));
-
-	// Was loaded through an `$effect` into `$state`, which meant it sat outside
-	// the layout's boundary and needed a hand-rolled re-fetch. An ordinary query
-	// participates in both. Kept behind the role check because
-	// `getBandPlatformInvites` is admin-guarded and would 403 a plain member into
-	// the error boundary.
-	let platformInvites = $derived(canManage ? await getPlatformInvites() : []);
+	// One query. The invites were loaded through an `$effect` into `$state` once, which sat
+	// outside the layout's boundary and needed a hand-rolled re-fetch; then as a second query
+	// gated on `canManage`, because `getBandPlatformInvites` is admin-guarded and 403s a plain
+	// member into the error boundary. Both are resolved server-side now, where the role is
+	// already known — and one query is what this page can hold without kit 2.64 breaking it.
+	const data = $derived(await getBandMembersPage(layout.band.id));
+	const members = $derived(data.members);
+	const platformInvites = $derived(data.platformInvites);
 
 	const active = $derived(members.active);
 	const pending = $derived(members.pending);
@@ -66,11 +67,13 @@
 	const others = $derived(active.filter((m) => m.userId !== layout.user.id));
 	const pendingPlatform = $derived(platformInvites.filter((i) => i.status === 'pending'));
 
+	// Both repoint at the wrapper: nothing reads the constituents directly any more, so
+	// refreshing them would repaint nothing. See `custom/refresh-the-composed-query`.
 	function refreshMembers() {
-		void getBandMembersList(layout.band.id).refresh();
+		void getBandMembersPage(layout.band.id).refresh();
 	}
 	function refreshInvites() {
-		void getPlatformInvites().refresh();
+		void getBandMembersPage(layout.band.id).refresh();
 	}
 
 	// Invite form state

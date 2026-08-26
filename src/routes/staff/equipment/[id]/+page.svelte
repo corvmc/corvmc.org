@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import CategoryOptions from '$lib/components/shared/equipment/CategoryOptions.svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
-		getEquipment,
-		getEquipmentCategories as getCategories,
-		getEquipmentLoanHistory,
+		getStaffEquipmentDetail,
 		editEquipment,
 		deactivateEquipment,
 		reactivateEquipment
@@ -31,9 +30,10 @@
 	const { fields } = editEquipment;
 
 	let id = $derived(page.params.id!);
-	let item = $derived(await getEquipment(id));
-	let categories = $derived(await getCategories());
-	let loanHistory = $derived(await getEquipmentLoanHistory(id));
+	// One query. The category list is not in it — see CategoryOptions for why it cannot be.
+	const data = $derived(await getStaffEquipmentDetail(id));
+	const item = $derived(data.item);
+	const loanHistory = $derived(data.loanHistory);
 
 	let isDeactivated = $derived(!!item.deletedAt);
 </script>
@@ -57,9 +57,7 @@
 					<Field field={fields.name} type="text" value={item.name} />
 					<Field field={fields.description} type="textarea" value={item.description ?? ''} />
 					<Field field={fields.categoryId} type="select" value={item.categoryId} label="Category">
-						{#each categories as cat (cat.id)}
-							<option value={cat.id}>{cat.name}</option>
-						{/each}
+						<CategoryOptions selected={item.categoryId} />
 					</Field>
 					<div class="grid grid-cols-2 gap-3">
 						<Field field={fields.condition} type="select" value={item.condition}>

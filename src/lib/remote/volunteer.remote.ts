@@ -510,7 +510,7 @@ export const updateVolunteerProfile = form(profileFieldsSchema, async (data) => 
 		mapDomainError(err);
 	}
 
-	await Promise.all([getMyVolunteerOnboarding().refresh(), getMyVolunteerAccess().refresh()]);
+	await Promise.all([getMyVolunteerOnboarding().refresh(), getMemberVolunteerPage().refresh()]);
 	return { success: true };
 });
 
@@ -584,7 +584,9 @@ export const saveVolunteerInterests = form(
 			mapDomainError(err);
 		}
 
-		await Promise.all([getMyVolunteerInterests().refresh(), getMyVolunteerAccess().refresh()]);
+		// Both pages that read the interests: the dashboard and the onboarding step. This form is
+		// shared by them, so refreshing one wrapper would leave the other stale.
+		await Promise.all([getMemberVolunteerPage().refresh(), getVolunteerInterestsPage().refresh()]);
 		// No redirect: this form is shared by the onboarding step and the modal on
 		// /member/volunteer, and only the step wants to navigate. It does that itself.
 		return { success: true };
@@ -737,7 +739,8 @@ export const createVolunteerRole = form(roleFormSchema, async (data) => {
 	}
 
 	void getVolunteerRoles().refresh();
-	void getActiveVolunteerRoles().refresh();
+	void getMemberVolunteerPage().refresh();
+	void getVolunteerInterestsPage().refresh();
 	return { success: true };
 });
 
@@ -811,12 +814,9 @@ export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), asy
 // ---------------------------------------------------------------------------
 
 async function refreshMemberViews() {
-	await Promise.all([
-		getMyVolunteerHours().refresh(),
-		getMyVolunteerSummary().refresh(),
-		// Logging against a shift clears it from the "log your hours" prompt.
-		getUnloggedShifts().refresh()
-	]);
+	// All three live in the dashboard's one query now — including the unlogged-shift prompt that
+	// logging against a shift clears.
+	await getMemberVolunteerPage().refresh();
 }
 
 /**
@@ -842,8 +842,9 @@ async function refreshStaffQueue() {
 async function refreshRoleViews(roleId?: string) {
 	await Promise.all([
 		getVolunteerRoles().refresh(),
-		getActiveVolunteerRoles().refresh(),
-		...(roleId ? [getVolunteerRoleDetail(roleId).refresh()] : [])
+		getMemberVolunteerPage().refresh(),
+		getVolunteerInterestsPage().refresh(),
+		...(roleId ? [getStaffVolunteerRolePage(roleId).refresh()] : [])
 	]);
 }
 
@@ -1012,7 +1013,7 @@ export const setRoleCertifications = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getRoleRequirements(data.roleId).refresh();
+		void getStaffVolunteerRolePage(data.roleId).refresh();
 		// The roles table renders each role's requirements too.
 		void getVolunteerRoles().refresh();
 		return { success: true };
@@ -1207,7 +1208,7 @@ export const updateShift = form(
 			mapDomainError(err);
 		}
 
-		void getShift(data.id).refresh();
+		void getStaffShiftPage(data.id).refresh();
 		return { success: true };
 	}
 );
@@ -1236,7 +1237,7 @@ export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data
 		mapDomainError(err);
 	}
 
-	void getShift(data.id).refresh();
+	void getStaffShiftPage(data.id).refresh();
 	return { success: true };
 });
 
@@ -1254,7 +1255,7 @@ export const claimShift = form(z.object({ shiftId: z.string().min(1) }), async (
 		mapDomainError(err);
 	}
 
-	void getOpenShifts().refresh();
+	void getMemberVolunteerPage().refresh();
 	return { success: true };
 });
 
@@ -1268,7 +1269,7 @@ export const cancelMySignup = form(z.object({ signupId: z.string().min(1) }), as
 		mapDomainError(err);
 	}
 
-	void getOpenShifts().refresh();
+	void getMemberVolunteerPage().refresh();
 	return { success: true };
 });
 
@@ -1283,7 +1284,7 @@ export const confirmSignup = form(
 			mapDomainError(err);
 		}
 
-		void getShift(data.shiftId).refresh();
+		void getStaffShiftPage(data.shiftId).refresh();
 		return { success: true };
 	}
 );
@@ -1299,7 +1300,7 @@ export const markSignupNoShow = form(
 			mapDomainError(err);
 		}
 
-		void getShift(data.shiftId).refresh();
+		void getStaffShiftPage(data.shiftId).refresh();
 		return { success: true };
 	}
 );
@@ -1390,3 +1391,106 @@ export const getUserHourLogs = query(z.string(), async (userId) => {
 	await requireStaff();
 	return listUserHourLogs(userId);
 });
+
+/**
+ * The member volunteering dashboard's one load-bearing query.
+ *
+ * Seven query promises used to leave this page at once — the access gate, the role catalogue, the
+ * member's interests, open and unlogged shifts, their hour logs and their summary. Every one is
+ * unparameterized, which is what makes this composable: each of the mutations that used to refresh
+ * them individually can name this wrapper with no argument.
+ *
+ * `getMyVolunteerAccess` stays the gate. It redirects an un-onboarded member to
+ * /member/volunteer/start and a blocked one to /blocked, server-side, and awaiting it here keeps
+ * that redirect ahead of everything else rather than racing the other six.
+ */
+export const getMemberVolunteerPage = query(z.void(), async () => {
+	const access = await getMyVolunteerAccess();
+
+	const [roles, interests, openShifts, unloggedShifts, logs, summary] = await Promise.all([
+		getActiveVolunteerRoles(),
+		getMyVolunteerInterests(),
+		getOpenShifts(),
+		getUnloggedShifts(),
+		getMyVolunteerHours(),
+		getMyVolunteerSummary()
+	]);
+
+	return { access, roles, interests, openShifts, unloggedShifts, logs, summary };
+});
+
+/**
+ * The volunteering onboarding step's one load-bearing query.
+ *
+ * Shares two constituents with `getMemberVolunteerPage`, which is why `saveVolunteerInterests`
+ * refreshes both wrappers rather than the constituents: the interests form is rendered by the step
+ * and by a modal on the dashboard, and refreshing one would leave the other stale.
+ */
+export const getVolunteerInterestsPage = query(z.void(), async () => {
+	const [step, roles, interests] = await Promise.all([
+		getVolunteerInterestsStep(),
+		getActiveVolunteerRoles(),
+		getMyVolunteerInterests()
+	]);
+
+	return { step, roles, interests };
+});
+
+/**
+ * The staff volunteer role detail page's one load-bearing query.
+ *
+ * Keyed by the role id alone, deliberately: `setRoleCertifications` refreshes the requirements
+ * with `data.roleId` and `refreshRoleViews` refreshes the detail with a bare `roleId`, so a
+ * wrapper keyed by anything more — the interested-volunteer page number, the shift window — could
+ * not be named from either. Those two lists own their queries in their own components instead.
+ */
+export const getStaffVolunteerRolePage = query(z.string(), async (id) => {
+	const [role, requirements, feedback] = await Promise.all([
+		getVolunteerRoleDetail(id),
+		getRoleRequirements(id),
+		getFeedbackByRole()
+	]);
+
+	return { role, requirements, feedback };
+});
+
+/** The shift detail page's one load-bearing query. Both halves are keyed by the shift id. */
+export const getStaffShiftPage = query(z.string(), async (id) => {
+	const [shift, feedback] = await Promise.all([getShift(id), getShiftFeedback(id)]);
+	return { shift, feedback };
+});
+
+/**
+ * The clearances page's one load-bearing query.
+ *
+ * Two `getClearances` calls with different arguments — the filtered view and the unfiltered set the
+ * counts are drawn from — which is two query promises in flight for one screen.
+ */
+export const getClearancesPage = query(
+	z.object({
+		certificationId: z.string().optional(),
+		state: z.enum(['current', 'expiring', 'expired', 'revoked']).optional()
+	}),
+	async ({ certificationId, state }) => {
+		const [rows, allRows] = await Promise.all([
+			getClearances({ certificationId, state }),
+			getClearances({ certificationId })
+		]);
+
+		return { rows, allRows };
+	}
+);
+
+/** The volunteer report page's one load-bearing query. None of the three has a refresh site. */
+export const getVolunteerReportPage = query(
+	z.object({ from: z.string().optional(), to: z.string().optional(), page: z.number().optional() }),
+	async ({ from, to, page }) => {
+		const [report, feedbackByRole, byMember] = await Promise.all([
+			getVolunteerReport({ from, to }),
+			getFeedbackByRole(),
+			getVolunteerReportByMember({ from, to, page })
+		]);
+
+		return { report, feedbackByRole, byMember };
+	}
+);

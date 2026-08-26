@@ -2107,3 +2107,64 @@ export const getUserRecurringSeries = query(z.string(), async (userId) => {
 	await requireStaff();
 	return listActiveSeries({ forUser: userId });
 });
+
+/**
+ * The band reservations page's one load-bearing query.
+ *
+ * The schedule, whether the band has a sustaining member (which sets the rate the booking form
+ * quotes) and the booking contact are all first paint, and the page awaited the three side by
+ * side. Past kit 2.64 that renders the error boundary instead of the page; assembled here it is
+ * one request. Each callee re-guards — `getBandReservations` in particular does its own slug
+ * cross-check, which is the boundary that stops one band reading another's schedule.
+ */
+export const getBandReservationsPage = query(z.string(), async (slug) => {
+	const [reservations, membership, contact] = await Promise.all([
+		getBandReservations(slug),
+		getBandMembershipStatus(),
+		getBookingContact()
+	]);
+
+	return { reservations, membership, contact };
+});
+
+/**
+ * The staff reservations page's one load-bearing query.
+ *
+ * Four query promises used to leave this component at once — the list, the tab counts, the
+ * unresolved queue and the hourly rate — and `filters` moves on every keystroke, so each one was
+ * recreated as fast as it could be typed. A superseded promise that rejects has no consumer left
+ * to catch it, which is where JAVASCRIPT-SVELTEKIT-3's 33 unhandled rejections came from.
+ *
+ * The page derives `.then()` views off the single promise rather than awaiting it: awaiting in the
+ * script would suspend the page into the staff layout boundary's `pending` snippet and blank it on
+ * every keystroke, which is what `DataList` exists to avoid.
+ */
+export const getStaffReservationsPage = query(staffReservationFiltersSchema, async (filters) => {
+	await requireStaff();
+
+	const [list, counts, unresolved, hourlyRate] = await Promise.all([
+		getStaffReservations(filters),
+		getReservationCounts(),
+		getUnresolvedReservations(),
+		getHourlyRate()
+	]);
+
+	return { list, counts, unresolved, hourlyRate };
+});
+
+/**
+ * The member reservations page's one load-bearing query.
+ *
+ * Unparameterized, so `refreshReservations()` can name it with no argument — it replaces four
+ * separate `.refresh()` calls.
+ */
+export const getMemberReservationsPage = query(z.void(), async () => {
+	const [active, all, membership, contact] = await Promise.all([
+		getReservations({ after: new Date().toISOString() }),
+		getReservations({ includeTerminal: true }),
+		getMembershipStatus(),
+		getBookingContact()
+	]);
+
+	return { active, all, membership, contact };
+});

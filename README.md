@@ -83,7 +83,8 @@ The complete annotated list is in
 
 ## Deploying
 
-Push to `main`. Cloudflare Workers Builds runs `pnpm ci:migrate && pnpm build` and
-publishes the Worker; migrations apply first and a failed migration aborts the deploy.
+Push to `main`. Cloudflare Workers Builds runs `pnpm build` and publishes the Worker;
+`build` applies pending migrations before `vite build`, and a failed migration aborts the
+deploy.
 GitHub Actions run checks only. Rollback, manual deploys, and everything else operational:
 [operations manual](docs/architecture/operations-manual.md).

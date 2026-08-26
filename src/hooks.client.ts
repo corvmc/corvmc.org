@@ -64,12 +64,17 @@ export function isWebviewBridgeError(event: Sentry.ErrorEvent, error: unknown): 
  * They escape because a remote function's rejection outlives its consumer: for
  * a redirect, Kit awaits `goto()` and *then* throws to settle the dangling
  * query promise, by which point the component and its boundary are unmounted,
- * so no boundary can ever catch it. The existing 4xx filter can't help either
- * — it lives in `reportError`, a manual sink that unhandled rejections never
- * reach.
+ * so no boundary can ever catch it. `reportError` can't help either — it is a
+ * manual sink that unhandled rejections never reach.
  *
- * Redirects are always control flow. HttpErrors are dropped only below 500, so
- * a genuine server fault still reports.
+ * Redirects are always control flow. HttpErrors are dropped at every status,
+ * which matches what `report-error.ts` already does and is not a decision to
+ * stop caring about 5xx: `hooks.server.ts`'s `handleError` captures the same
+ * fault with a stack, the request, and the user, while this side has only
+ * `{status, body}`. -3 and -2F are the two halves of one 500 — same trace id,
+ * `f621892409b6416aad1b93e24b21d810` — and the client half was 33 events and
+ * 19 users of untitled duplicate. If a 5xx is missing from Sentry, the bug is
+ * in the server capture, not here.
  */
 export function isFrameworkControlFlow(error: unknown): boolean {
 	if (!error || typeof error !== 'object') return false;
@@ -83,8 +88,9 @@ export function isFrameworkControlFlow(error: unknown): boolean {
 	// Redirect: 3xx with a destination.
 	if (typeof location === 'string') return status >= 300 && status < 400;
 
-	// HttpError: expected 4xx carrying a body.
-	return body !== undefined && status >= 400 && status < 500;
+	// HttpError: anything from 400 up carrying a body. The 5xx counterpart is
+	// captured server-side by `hooks.server.ts`'s handleError.
+	return body !== undefined && status >= 400;
 }
 
 Sentry.init({

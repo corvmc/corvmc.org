@@ -14,14 +14,17 @@
 		cancelPremium,
 		resumePremium
 	} from '$lib/remote/band-subscription.remote';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayoutContext } from '../layout-context';
 	import { env } from '$env/dynamic/public';
 	import { bandSiteUrl, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
 	import Alert from '$lib/components/shared/Alert.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
 	let info = $derived(await getBandSubscriptionInfo(page.params.slug!));
 	const band = $derived(layout.band);
 	const isOwner = $derived(layout.userRole === 'owner');

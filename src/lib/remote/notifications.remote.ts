@@ -9,6 +9,7 @@ import {
 	markAllRead
 } from '$lib/server/notification/in-app-service';
 import { getAllPreferences, setPreference } from '$lib/server/notification/preference-service';
+import { getMemberAccount } from './account.remote';
 import { NOTIFICATION_TYPES, getNotificationType } from '$lib/server/db/schema/notification';
 
 function requireUser() {
@@ -68,7 +69,7 @@ export const setNotificationPreference = command(
 			throw error(400, 'Cannot change preferences for mandatory notifications');
 
 		await setPreference(user.id, notificationType, { email, inApp, sms });
-		void getNotificationPreferences().refresh();
+		void getMemberAccountPage().refresh();
 	}
 );
 
@@ -87,4 +88,19 @@ export const getUserNotifications = query(z.string(), async (userId) => {
 		getAllPreferences(userId)
 	]);
 	return { items, unread, preferences };
+});
+
+/**
+ * The account page's one load-bearing query.
+ *
+ * Here rather than in `account.remote.ts` so that file does not have to import this one — the
+ * notification preferences are refreshed from this file, and keeping the wrapper beside that
+ * mutation lets `custom/refresh-the-composed-query` check the two against each other.
+ */
+export const getMemberAccountPage = query(z.void(), async () => {
+	const [account, notificationPreferences] = await Promise.all([
+		getMemberAccount(),
+		getNotificationPreferences()
+	]);
+	return { account, notificationPreferences };
 });

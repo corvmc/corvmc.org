@@ -158,10 +158,16 @@ describe('framework control-flow rejections', () => {
 		).toBe(true);
 	});
 
-	it('keeps a 5xx HttpError — a genuine server fault is still worth seeing', () => {
-		expect(isFrameworkControlFlow({ status: 500, body: { message: 'Internal Error' } })).toBe(
-			false
-		);
+	// This used to assert `false`, on the reasoning that a genuine server fault is worth
+	// seeing. It is — but not from here. The client only ever has `{status, body}`, while
+	// `hooks.server.ts`'s handleError already captured the same fault with a stack, the
+	// request and the user. -3 and -2F proved it: one 500, one trace id
+	// (f621892409b6416aad1b93e24b21d810), reported twice, and the client copy was 33 events
+	// and 19 users of "Object captured as promise rejection with keys: body, status".
+	// `report-error.ts` had already drawn this line for the sink it controls; this is the
+	// other sink agreeing with it.
+	it('drops a 5xx HttpError — the server side captured it with a stack', () => {
+		expect(isFrameworkControlFlow({ status: 500, body: { message: 'Internal Error' } })).toBe(true);
 	});
 
 	it('ignores ordinary errors and non-objects', () => {
