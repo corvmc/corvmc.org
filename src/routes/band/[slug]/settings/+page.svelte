@@ -10,14 +10,16 @@
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { deleteBand as deleteBandForm } from '$lib/remote/bands.remote';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayoutContext } from '../layout-context';
 	import { getCustomDomain } from '$lib/remote/band-custom-domain.remote';
 	import BandAddressSection from './BandAddressSection.svelte';
 	import CustomDomainSection from './CustomDomainSection.svelte';
-	import { page } from '$app/state';
 	import Alert from '$lib/components/shared/Alert.svelte';
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
 	const band = $derived(layout.band);
 
 	// Owner-only and premium-only: the query enforces both, so asking for it as

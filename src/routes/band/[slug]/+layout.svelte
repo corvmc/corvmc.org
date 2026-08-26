@@ -19,9 +19,19 @@
 	import { panelTabs } from '$lib/components/shared/panel-tabs';
 	import { page } from '$app/state';
 	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { setBandLayoutContext } from './layout-context';
 	import { activeBandNavKey, bandNavItems, type BandNavKey } from './nav-items';
 
 	let { children } = $props();
+
+	// Before the await, not after: the `await` below suspends the script body, and `setContext`
+	// has to run during synchronous init. The getter defers reading `layout` until a child
+	// renders, which is after this script has finished.
+	setBandLayoutContext({
+		get current() {
+			return layout;
+		}
+	});
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 

@@ -10,12 +10,15 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayoutContext } from '../../layout-context';
 	import { getBandPageEditor, saveBandEpk } from '$lib/remote/band-page-editor.remote';
 	import { page } from '$app/state';
 	import type { BandEpk } from '$lib/types/band-page';
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
 	let pageData = $derived(await getBandPageEditor(page.params.slug!));
 	const band = $derived(layout.band);
 	const isPremium = $derived(band.tier === 'premium');

@@ -63,6 +63,19 @@ export const getBandLineupInvites = query(z.string(), async () => {
 	return listBandLineupInvites(band.id);
 });
 
+/**
+ * The band events page's one load-bearing query.
+ *
+ * Both halves are first paint — the gig list and the unanswered invites banner above it — and
+ * awaiting them side by side in the component is two round trips and, past kit 2.64, a page
+ * that renders its error boundary instead of itself. Each callee re-guards; assembled here
+ * they are one request and two local reads. See `custom/no-concurrent-remote-queries`.
+ */
+export const getBandEventsPage = query(z.string(), async (slug) => {
+	const [events, invites] = await Promise.all([getBandEvents(slug), getBandLineupInvites(slug)]);
+	return { events, invites };
+});
+
 /** One gig, for the detail page. */
 export const getBandEventDetail = query(
 	z.object({ slug: z.string(), eventId: z.string() }),

@@ -179,6 +179,26 @@ export const getBandMembersList = query(z.string(), async (bandId) => {
 	};
 });
 
+/**
+ * The band members page's one load-bearing query.
+ *
+ * `getBandPlatformInvites` is admin-guarded and 403s a plain member into the error boundary, so
+ * the page gated it on the viewer's role and held the two queries in flight together — a
+ * permission decision made client-side, and the fan-out that past kit 2.64 stops the page
+ * rendering at all. Both now resolve here, where the role is already known.
+ */
+export const getBandMembersPage = query(z.string(), async (bandId) => {
+	const { role } = await requireBandMember();
+	const canManage = role === 'owner' || role === 'admin';
+
+	const [members, platformInvites] = await Promise.all([
+		getBandMembersList(bandId),
+		canManage ? getBandPlatformInvites() : []
+	]);
+
+	return { members, platformInvites, canManage };
+});
+
 export const getMemberBands = query(async () => {
 	const currentUser = requireUser();
 	const bands = await listForUser(currentUser.id);

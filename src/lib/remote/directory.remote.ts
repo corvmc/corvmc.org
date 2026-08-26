@@ -505,8 +505,30 @@ export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 		links: data.links
 	});
 
-	void getMemberProfile().refresh();
+	void getMemberProfileEditor().refresh();
 	return { success: true };
+});
+
+/**
+ * The member profile editor's one load-bearing query.
+ *
+ * The page resolves everything before rendering and hands `ProfileForm` plain props, because the
+ * form must not live in a component whose script awaits: a top-level await marks every later
+ * declaration blocked, turning each `bind:value` in the template into an async derived — the
+ * churn behind `JAVASCRIPT-SVELTEKIT-W`. That is still true. What changed is the count: three
+ * sequential awaits were three round trips before first paint, and one await is one.
+ *
+ * `getInstrumentSuggestions` and `getGenreSuggestions` stay exported — `/member/directory` reads
+ * them for its filter chips, which is a different page with a different refresh story.
+ */
+export const getMemberProfileEditor = query(z.void(), async () => {
+	const [profile, instrumentSuggestions, genreSuggestions] = await Promise.all([
+		getMemberProfile(),
+		getInstrumentSuggestions(),
+		getGenreSuggestions()
+	]);
+
+	return { profile, instrumentSuggestions, genreSuggestions };
 });
 
 // ---------------------------------------------------------------------------
@@ -559,9 +581,15 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 	// `params.slug`, which for a remote request is the slug the client sent, and
 	// renaming no longer rotates it (see band-service `update`). Only the explicit
 	// address change moves a slug, and that one deliberately refreshes nothing.
-	void getBandProfile().refresh();
+	void getBandProfileEditor().refresh();
 
 	return { success: true };
+});
+
+/** The band profile editor's one load-bearing query. See `getMemberProfileEditor`. */
+export const getBandProfileEditor = query(z.void(), async () => {
+	const [profile, genreSuggestions] = await Promise.all([getBandProfile(), getGenreSuggestions()]);
+	return { profile, genreSuggestions };
 });
 
 // ---------------------------------------------------------------------------

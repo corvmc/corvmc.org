@@ -14,12 +14,15 @@
 	import { resolve } from '$app/paths';
 	import { env } from '$env/dynamic/public';
 	import { bandSiteUrl } from '$lib/utils/band-site-url';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayoutContext } from '../layout-context';
 	import { getBandPageEditor, saveBandPageConfig } from '$lib/remote/band-page-editor.remote';
 	import { BAND_THEMES, type Block } from '$lib/types/band-page';
 	import { page } from '$app/state';
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
 	let pageData = $derived(await getBandPageEditor(page.params.slug!));
 	const band = $derived(layout.band);
 

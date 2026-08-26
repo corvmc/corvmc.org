@@ -28,7 +28,7 @@ is the enforcement.
 
 | #   | Tranche                                                    | Status | Commit |
 | --- | ---------------------------------------------------------- | ------ | ------ |
-| 1   | **Band panel — layout context** — 9 files, 22 queries      | ⬜     |        |
+| 1   | **Band panel — layout context** — 9 files, 22 queries      | ✅     | (next) |
 | 2   | **Directory — member and public** — 3 files, 9 queries     | ⬜     |        |
 | 3   | **Help** — 3 files, 6 queries                              | ⬜     |        |
 | 4   | **Equipment** — 4 files, 9 queries                         | ⬜     |        |
@@ -41,7 +41,7 @@ is the enforcement.
 | 11  | **Volunteer — member** — 2 files, 10 queries               | ⬜     |        |
 | 12  | **Settings and account** — 2 files, 12 queries             | ⬜     |        |
 | 13  | **Staff band detail** — 1 file, 4 queries                  | ⬜     |        |
-| 14  | **Serial waterfalls** — 2 files, 6 queries — read the note | ⬜     |        |
+| 14  | **Serial waterfalls** — 2 files, 6 queries — read the note | ✅     | (next) |
 | 15  | Register the widened rule at `error`                       | ⬜     |        |
 
 Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ parked · ❌ withdrawn (finding didn't hold)
@@ -67,7 +67,18 @@ Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ parked · ❌ 
 Counts are from the widened rule. A lazy call — an event handler, a `loadMore` prop, a
 `.then` continuation — is not a fan-out and is not counted.
 
-### 1. Band panel — layout context
+### 1. Band panel — layout context ✅
+
+**Done.** `layout-context.ts` hands the layout's value down through `createContext`, and three
+composed queries cover what was left: `getBandEventsPage`, `getBandMembersPage` (which also moves
+the admin-only invites gate server-side) and `getBandReservationsPage`. Nine pages are clean;
+`edit/` finished alongside tranche 14, below. Verified by 26 e2e tests against build + preview.
+
+One detail the rest of this checklist depends on: `setContext` runs **before** the layout's
+awaited `$derived`, not after. A top-level `await` suspends the script body — Svelte will not even
+create the next `$derived` until the first resolves — so anything after it is outside synchronous
+init, and `setContext` there is too late. The context holds a getter, so the value is read when a
+child renders.
 
 Every one of these re-awaits `getBandLayout(slug)`, which
 [`band/[slug]/+layout.svelte:26`](../../src/routes/band/[slug]/+layout.svelte) is already
@@ -186,17 +197,24 @@ as `{@const}` inside the template.
 
 - `src/routes/staff/bands/[id]/+page.svelte` — 4
 
-### 14. Serial waterfalls — read before converting
+### 14. Serial waterfalls ✅
 
-These two are **not** the crash shape. They use plain sequential `const x = await q()`, and
+**Done**, and converted the careful way. These two were **not** the crash shape. They use plain sequential `const x = await q()`, and
 both carry a comment saying they were deliberately written that way to escape an earlier
 `effect_update_depth_exceeded` (`JAVASCRIPT-SVELTEKIT-W`). The rule flags them because a
 page still gets one query and three serial round trips before first paint is a waterfall —
 but this is a performance change to code that is the way it is on purpose. Convert with the
 existing comments intact, or park the tranche; do not quietly undo the earlier fix.
 
-- `src/routes/band/[slug]/edit/+page.svelte` — 3
-- `src/routes/member/profile/+page.svelte` — 3
+That is what happened: `getMemberProfileEditor` and `getBandProfileEditor` collapse three awaits
+into one and two into one, which _reduces_ the number of suspension points rather than adding an
+async derived. The reason those pages resolve everything before rendering — so `ProfileForm` and
+`BandProfileForm` receive plain props and no `bind:value` becomes an async derived — is unchanged,
+and the comments saying so are still there. `getInstrumentSuggestions` and `getGenreSuggestions`
+stay exported for `/member/directory`, so their refresh story is untouched.
+
+- `src/routes/band/[slug]/edit/+page.svelte` — was 3 ✅
+- `src/routes/member/profile/+page.svelte` — was 3 ✅
 
 ## Out of scope, recorded here so it is not lost
 
