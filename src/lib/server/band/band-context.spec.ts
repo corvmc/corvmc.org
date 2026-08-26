@@ -23,10 +23,12 @@ vi.mock('$lib/server/authorization', () => ({
 	hasAnyRole: (...a: unknown[]) => hasAnyRole(...(a as []))
 }));
 
-const getBySlug = vi.fn(async () => null as unknown);
+// Typed with its parameter so the D1-rejecting override below is assignable;
+// a zero-arg `vi.fn` narrows the mock to `() => …` and rejects it.
+const getBySlug = vi.fn(async (_slug: unknown) => null as unknown);
 const getUserRole = vi.fn(async () => null as unknown);
 vi.mock('$lib/server/band/band-service', () => ({
-	getBySlug: (...a: unknown[]) => getBySlug(...(a as [])),
+	getBySlug: (slug: unknown) => getBySlug(slug),
 	getUserRole: (...a: unknown[]) => getUserRole(...(a as []))
 }));
 
