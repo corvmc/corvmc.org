@@ -1,6 +1,6 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import { SubscribeAction, UnsubscribeAction } from '$lib/components/shared/actions';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import { SubscribeAction, UnsubscribeAction } from '$lib/components/actions';
 	import { getMyEmailSubscriptions } from '$lib/remote/account.remote';
 
 	/**

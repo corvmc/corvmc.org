@@ -5,9 +5,9 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import {
 		getCampaignDetail,
 		saveDraft,

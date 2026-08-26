@@ -12,7 +12,7 @@ import type { InboxMessageDirection } from '$lib/server/db/schema/inbox';
 import { suggestion } from '$lib/server/db/schema/suggestion';
 import { eq, ne, and, desc, count, like, inArray, getTableColumns } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
 
 // ---------------------------------------------------------------------------

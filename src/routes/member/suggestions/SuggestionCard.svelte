@@ -1,13 +1,13 @@
 <script lang="ts">
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
 	import type { EntityRef } from '$lib/types/entity';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { IconFlag, IconCaretUpFilled } from '@tabler/icons-svelte';
 	import { relativeDay } from '$lib/utils/format';
 	import { suggestionCategoryLabels } from '$lib/config';

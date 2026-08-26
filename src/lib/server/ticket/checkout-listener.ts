@@ -1,6 +1,6 @@
 import type Stripe from 'stripe';
 import { fulfillPurchase } from './ticket-service';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { db } from '$lib/server/db';
 import { event } from '$lib/server/db/schema/event';
 import { eq } from 'drizzle-orm';

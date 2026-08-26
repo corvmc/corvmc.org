@@ -9,7 +9,7 @@
 	 */
 	import type { Snippet } from 'svelte';
 	import { IconArrowLeft } from '@tabler/icons-svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 
 	let {
 		title,

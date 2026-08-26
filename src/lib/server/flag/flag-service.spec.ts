@@ -36,7 +36,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emitMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/events/event-bus', () => ({
+vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: { emit: (...args: unknown[]) => emitMock(...args) }
 }));
 

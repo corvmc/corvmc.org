@@ -5,16 +5,16 @@
 	import { getStaffArticlePage, updateArticle, deleteArticle } from '$lib/remote/help.remote';
 	const { fields: deleteFields } = deleteArticle;
 	const { fields: updateFields } = updateArticle;
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import MarkdownEditor from '$lib/components/help/MarkdownEditor.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { IconTrash } from '@tabler/icons-svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 
 	let id = $derived(page.params.id!);
 	const data = $derived(await getStaffArticlePage(id));

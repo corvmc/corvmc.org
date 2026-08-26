@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { fullDate } from '$lib/utils/format';
 	import { IconCircleCheck } from '@tabler/icons-svelte';
 	import { getTicketPurchaseSuccess } from '$lib/remote/events.remote';

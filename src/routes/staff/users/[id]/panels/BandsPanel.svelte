@@ -2,12 +2,12 @@
 	import { getUserBands } from '$lib/remote/bands.remote';
 	import { getUserShows, getUserTicketsAndRsvps } from '$lib/remote/events.remote';
 	import { getUserListings } from '$lib/remote/community-events.remote';
-	import { RelatedList } from '$lib/components/shared/entity';
-	import Table from '$lib/components/shared/Table.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
+	import { RelatedList } from '$lib/components/ui/entity';
+	import Table from '$lib/components/ui/Table.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShortYear } from '$lib/utils/format';

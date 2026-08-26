@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { getMemberStandings } from '$lib/remote/standing.remote';
 	import { getFlagsAgainstUser, getFlagsByUser } from '$lib/remote/flags.remote';
-	import { RelatedList } from '$lib/components/shared/entity';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import { RelatedList } from '$lib/components/ui/entity';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShortYear } from '$lib/utils/format';

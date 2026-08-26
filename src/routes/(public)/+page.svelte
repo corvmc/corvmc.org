@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Section from '$lib/components/shared/marketing/Section.svelte';
+	import Section from '$lib/components/public/Section.svelte';
 	import { IconMusic, IconMicrophone, IconHeartHandshake, IconSchool } from '@tabler/icons-svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import PosterCard from '$lib/components/events/PosterCard.svelte';
 	import { getPublicEvents } from '$lib/remote/events.remote';
 
 	let { upcoming } = $derived(await getPublicEvents());

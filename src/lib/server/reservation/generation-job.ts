@@ -10,7 +10,7 @@ import { formatDateInTz, formatTimeInTz } from './timezone';
 import { staffCreate } from './reservation-service';
 import { hasConflict } from './conflict-service';
 import { copyObject } from '$lib/server/storage';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 

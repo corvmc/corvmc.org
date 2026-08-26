@@ -1,19 +1,19 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
-	import Badge from '$lib/components/shared/Badge.svelte';
+	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, formatCents, titleCase } from '$lib/utils/format';
 	import { loanStatuses } from '$lib/config';
-	import { CreateLoanAction } from '$lib/components/shared/actions';
+	import { CreateLoanAction } from '$lib/components/actions';
 	import { getStaffLoans } from '$lib/remote/equipment.remote';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet

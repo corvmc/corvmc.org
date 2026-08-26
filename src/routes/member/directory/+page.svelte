@@ -2,14 +2,14 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { getMemberDirectory } from '$lib/remote/directory.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
-	import IdCard from '$lib/components/shared/directory/IdCard.svelte';
-	import VinylCard from '$lib/components/shared/directory/VinylCard.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
+	import IdCard from '$lib/components/directory/IdCard.svelte';
+	import VinylCard from '$lib/components/directory/VinylCard.svelte';
 	import { hashIndex } from '$lib/utils/patterns';
 	import { BAND_COLORS } from '$lib/utils/directory-browse';
 

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
-	import { EntityViewer } from '$lib/components/shared/entity';
-	import AppShell from '$lib/components/shared/AppShell.svelte';
-	import Nav from '$lib/components/shared/Nav';
+	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '$lib/components/ui/entity';
+	import AppShell from '$lib/components/layout/AppShell.svelte';
+	import Nav from '$lib/components/layout/Nav';
 	import {
 		IconBulb,
 		IconUsers,
@@ -30,7 +30,7 @@
 		IconCalendarTime
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
-	import { panelTabs } from '$lib/components/shared/panel-tabs';
+	import { panelTabs } from '$lib/components/layout/panel-tabs';
 	import {
 		activeNavKey,
 		childHrefsFor,

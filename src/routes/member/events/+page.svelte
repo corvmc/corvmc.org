@@ -1,13 +1,13 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
-	import TicketStub from '$lib/components/shared/events/TicketStub.svelte';
-	import TicketQRModal from '$lib/components/shared/events/TicketQRModal.svelte';
-	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
-	import Carousel from '$lib/components/shared/Carousel.svelte';
-	import ButtonGroup from '$lib/components/shared/ButtonGroup.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import PosterCard from '$lib/components/events/PosterCard.svelte';
+	import TicketStub from '$lib/components/events/TicketStub.svelte';
+	import TicketQRModal from '$lib/components/events/TicketQRModal.svelte';
+	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import Carousel from '$lib/components/ui/Carousel.svelte';
+	import ButtonGroup from '$lib/components/ui/ButtonGroup.svelte';
 	import { tagToTapeVariant } from '$lib/utils/tag-colors';
 	import { getMemberEventsPage } from '$lib/remote/events.remote';
 	import MyListingsSection from './MyListingsSection.svelte';

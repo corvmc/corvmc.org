@@ -6,14 +6,14 @@
 	 * shows Accept / Decline / Report *instead of* a message box, which is what
 	 * makes a request exactly one message until it is accepted.
 	 */
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { page } from '$app/state';
 	import { IconCheck, IconX, IconBan } from '@tabler/icons-svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
 	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
 	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';

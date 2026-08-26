@@ -3,16 +3,16 @@
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { env } from '$env/dynamic/public';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Modal from '$lib/components/shared/Modal.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	import { changeBandAddress } from '$lib/remote/band-address.remote';
 	import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 	import { isReservedSlug } from '$lib/reserved-slugs';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 
 	// A resolved prop, not an awaited query: a top-level await here would compile
 	// the fields.X.as() expressions below into async deriveds (see BandProfileForm).

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import {
 		getStaffSettingsPage,
 		updateProduct,
@@ -18,15 +18,15 @@
 	} from '$lib/remote/settings.remote';
 	import { updateInboxChannelConfig } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import StatCard from '$lib/components/shared/StatCard.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import StatCard from '$lib/components/ui/StatCard.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import type { SubscriptionSyncSummary } from '$lib/types/subscription-sync';
 	import type { CommunityStats } from '$lib/server/db/schema/finance';
 	import { formatDollars } from '$lib/utils/format';

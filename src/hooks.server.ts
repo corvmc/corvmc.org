@@ -4,7 +4,7 @@ import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { building, dev } from '$app/environment';
 import { auth } from '$lib/server/auth';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
-import { registerListeners } from '$lib/server/events/register-listeners';
+import { registerListeners } from '$lib/server/event-bus/register-listeners';
 import { initDb } from '$lib/server/db';
 import { initStorage } from '$lib/server/storage';
 import { initKv } from '$lib/server/kv';

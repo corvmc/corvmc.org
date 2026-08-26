@@ -249,10 +249,10 @@ callable regardless of which page uses it.
 
 Side effects are decoupled from mutations through a single typed
 [emittery](https://github.com/sindresorhus/emittery) instance in
-`src/lib/server/events/event-bus.ts`. Services `emit`; listeners subscribe.
+`src/lib/server/event-bus/event-bus.ts`. Services `emit`; listeners subscribe.
 
 ```ts
-// src/lib/server/events/event-bus.ts
+// src/lib/server/event-bus/event-bus.ts
 export type DomainEvents = {
 	'checkout.completed': CheckoutCompletedEvent;
 	'reservation.confirmed': ReservationConfirmedEvent;
@@ -264,7 +264,7 @@ export const domainEvents = new Emittery<DomainEvents>();
 ```
 
 Listeners are registered once per Worker isolate by `registerListeners()` in
-`src/lib/server/events/register-listeners.ts`, which is called from `hooks.server.ts`
+`src/lib/server/event-bus/register-listeners.ts`, which is called from `hooks.server.ts`
 inside the request handler (it must run there, not at module load, because
 `$env/dynamic/private` isn't available earlier on Cloudflare). The registrations:
 

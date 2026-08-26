@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import DateTimeStep from '$lib/components/shared/reservations/booking/DateTimeStep.svelte';
-	import ConfirmStep from '$lib/components/shared/reservations/booking/ConfirmStep.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import DateTimeStep from '$lib/components/reservations/booking/DateTimeStep.svelte';
+	import ConfirmStep from '$lib/components/reservations/booking/ConfirmStep.svelte';
 	import { bookBandReservation } from '$lib/remote/reservations.remote';
 
 	/**

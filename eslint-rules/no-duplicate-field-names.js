@@ -2,7 +2,7 @@
  * Resolve the submitted property name from an element's attributes, or null when it
  * can't be determined statically.
  *
- * Two static-analyzable forms (see src/lib/components/shared/Form/FormField.svelte):
+ * Two static-analyzable forms (see src/lib/components/ui/Form/FormField.svelte):
  *   name="bio"          -> "bio"
  *   field={fields.bio}  -> "bio"  (FormField derives its name from the field)
  *

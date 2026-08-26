@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Hero from '$lib/components/shared/marketing/Hero.svelte';
-	import Section from '$lib/components/shared/marketing/Section.svelte';
-	import SectionHeading from '$lib/components/shared/marketing/SectionHeading.svelte';
+	import Hero from '$lib/components/public/Hero.svelte';
+	import Section from '$lib/components/public/Section.svelte';
+	import SectionHeading from '$lib/components/public/SectionHeading.svelte';
 	import {
 		IconBuildingCommunity,
 		IconCoin,
@@ -11,7 +11,7 @@
 		IconTicket
 	} from '@tabler/icons-svelte';
 	import type { Icon } from '@tabler/icons-svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 
 	type VolunteerGroup = {
 		icon: Icon;

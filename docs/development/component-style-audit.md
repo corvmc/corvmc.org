@@ -1,6 +1,6 @@
 # Component visual style audit
 
-Scope: shared UI primitives in `src/lib/components/shared/`, rendered in isolation
+Scope: shared UI primitives in `src/lib/components/ui/`, rendered in isolation
 via Storybook and screenshotted in both themes (`corvmc` light, `corvmc-dark`).
 Decorative cards (`VinylCard`, `IdCard` + CTA) were treated as intentional brand
 art. 16 components storied, 146 screenshots captured (`/tmp/story-shots/`).
@@ -67,17 +67,17 @@ e.g. `white` or `oklch(100% 0 0)`. One-line each; no component changes needed.
 ## 🟡 Minor — contrast / hierarchy
 
 - **EmptyState** wraps the _entire_ block in `opacity-60`
-  ([EmptyState.svelte:25](../../src/lib/components/shared/EmptyState.svelte#L25)).
+  ([EmptyState.svelte:25](../../src/lib/components/ui/EmptyState.svelte#L25)).
   Confirmed on the dark screenshot (`shared-emptystate--with-action__corvmc-dark.png`):
   the title and body collapse to the same dim weight, so there's no visual
   hierarchy and the text is a touch low-contrast on near-black. Consider
   `text-base-content/60` on the body only, leaving the title at full strength.
 - **CopyableId** label at `opacity-50` is quite faint; the id at `opacity-70` is
-  fine ([CopyableId.svelte:22](../../src/lib/components/shared/CopyableId.svelte#L22)).
+  fine ([CopyableId.svelte:22](../../src/lib/components/ui/CopyableId.svelte#L22)).
   Low priority. Its copy button also has no `aria-label` (only `title`).
 - **StatusBadge** uses two different color systems by mode: label mode →
   `badge-{color}`, icon-only mode → `text-{color}`
-  ([StatusBadge.svelte:39-110](../../src/lib/components/shared/StatusBadge.svelte)).
+  ([StatusBadge.svelte:39-110](../../src/lib/components/ui/StatusBadge.svelte)).
   Both render legibly in both themes (verified `scheduled`, dark). Not a bug —
   noted only because it's an easy source of future drift.
 

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Turnstile } from 'svelte-turnstile';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { submitBandContactForm } from '$lib/remote/band-site.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
 

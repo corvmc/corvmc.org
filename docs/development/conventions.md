@@ -125,30 +125,86 @@ What this means in practice:
 - Prefer DTO-shaped return values over passing raw rows to the UI; never return
   string-indexed grab-bag objects from services.
 - Side effects (emails, notifications, cascades) go through the event bus
-  (`src/lib/server/events/`) and must be idempotent.
+  (`src/lib/server/event-bus/`) and must be idempotent.
+
+## Where a file goes
+
+Layering says which _tier_ a file belongs to. This says which _folder_.
+
+### Components
+
+**Route-local by default.** A component used by one page lives next to that page's
+`+page.svelte` — `src/routes/staff/events/CreateEventModal.svelte`, not a lib folder. Move it
+into `src/lib/components/` only when a second route actually imports it. Fifty-odd components
+live this way and it is the SvelteKit convention, not a shortcut.
+
+For everything that is genuinely shared, `src/lib/components/` has exactly four kinds of
+folder:
+
+| Folder      | What belongs there                                                  |
+| ----------- | ------------------------------------------------------------------- |
+| `ui/`       | Design-system primitives. Domain-free, prop-driven, used anywhere.  |
+| `layout/`   | The app frame a `+layout.svelte` mounts around pages.               |
+| `actions/`  | The `*Action.svelte` family — one flat registry of the one pattern. |
+| `<domain>/` | Everything else, filed under the domain it serves.                  |
+
+The decision, in order:
+
+1. Does it import `$lib/remote`, `$lib/server`, or a domain type? **No → `ui/`.** This is
+   enforced: `custom/no-domain-imports-in-ui` errors on a `$lib/remote` or `$lib/server`
+   import under `ui/`, including a type-only one.
+2. Is it the persistent frame — mounted once by a `+layout.svelte`, and aware of the current
+   route, the nav tree, or the signed-in user? **→ `layout/`.** Both halves must hold.
+   `ErrorToastBoundary` is mounted by every layout but is prop-driven and route-blind, so it
+   stays a `ui/` primitive; `RecordNav` is page-level despite the name.
+3. Is it an `*Action.svelte`? **→ `actions/`.** They span every domain but are one repeated
+   pattern, and the flat list is what makes "does an action for this already exist?"
+   answerable at a glance.
+4. Otherwise **→ `<domain>/`**, the same domain word the service uses.
+
+There is no `shared/`. That folder was both the design system and a second feature bucket,
+which meant two plausible homes for every domain component and no rule to pick between them.
+If a new component does not obviously fit one of the four, that is a signal about the
+component, not a reason for a fifth folder.
+
+### Tests
+
+Specs are colocated with what they test and named `.spec.ts` — never `.test.ts`. The vitest
+`include` globs only match `*.spec.*`, so a misnamed file does not fail, it silently never
+runs.
+
+Remote-function specs are `<module>.remote.spec.ts`, and a spec covering one slice of a large
+module appends the scenario: `events.remote.validation.spec.ts`, not
+`events-validation.remote.spec.ts`. The point is that every spec sorts directly beneath the
+module it covers in a directory listing.
+
+Do not merge two spec files just because they cover the same module. Sibling specs carry
+different `vi.mock` preambles, and unioning those quietly guts whatever the stricter one was
+testing.
 
 ## Forms: no raw elements
 
 Every form in a route file uses the shared components from
-`$lib/components/shared/Form/` — `Form`, `FormField`, `SubmitButton` — never raw `<form>`,
+`$lib/components/ui/Form/` — `Form`, `FormField`, `SubmitButton` — never raw `<form>`,
 `<input>`, or `<select>` elements, even for small inline forms. Mutations use `form()` from
 `$app/server` in a `.remote.ts` file so `<Form>` wires up validation and dirty tracking
 automatically. Full patterns and component API: [ui-patterns.md](ui-patterns.md).
 
 ## Custom ESLint rules
 
-Three project-specific rules live in `eslint-rules/` and are registered once as the
+Seven project-specific rules live in `eslint-rules/` and are registered once as the
 `custom` plugin in `eslint.config.js` (note the comment there: registering the plugin in
 more than one config object crashes eslint with "Cannot redefine plugin custom").
 
-| Rule                                  | Severity / scope                                        | What it flags → what to do instead                                                                                                                                                                                                                                                                                                                                                                                          |
-| ------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `custom/no-db-transaction`            | **error** on `src/lib/server/**/*.ts` (excluding specs) | Any `.transaction()` call — broken on D1. Use `db.batch([...queries])` for atomic writes.                                                                                                                                                                                                                                                                                                                                   |
-| `custom/no-raw-form-elements`         | **warn** on `+page.svelte` files                        | Raw `<form>` elements in pages. Use the `<Form>` component.                                                                                                                                                                                                                                                                                                                                                                 |
-| `custom/no-utility-soup`              | **warn** on `+page.svelte` files                        | Hand-written utility-class soup where a component or semantic utility exists: >5 classes on one element, a raw `btn`/`card`/`badge`/`alert`/`stat`/`table`, the dead `*-bordered` classes, `text-sm opacity-60` instead of `text-muted`, or an inline `style` reaching a `var(--…)`. See `template-audit.md`.                                                                                                               |
-| `custom/no-duplicate-field-names`     | **error** on all `*.svelte`                             | Two fields submitting the same `name` within one `<Form>` (statically resolvable names only) — the later value silently wins on submit. Rename one.                                                                                                                                                                                                                                                                         |
-| `custom/no-concurrent-remote-queries` | **error** on all `*.svelte`                             | Two or more remote queries fanned out at once — `Promise.all`/`allSettled`/`race`/`any` over calls imported from a `*.remote` module, in script or template. A page gets one load-bearing query: assemble them in a single remote query on the server, or move what the first paint does not need behind its own boundary to load lazily. Past kit 2.64 this shape also renders the page as `effect_update_depth_exceeded`. |
-| `custom/refresh-the-composed-query`   | **error** on `src/lib/remote/**/*.remote.ts`            | `.refresh()` on a query that is composed into another query in the same file — nothing reading the wrapper repaints from it, so a save appears to do nothing. Refresh the wrapper too, or instead if nothing reads the constituent directly any more.                                                                                                                                                                       |
+| Rule                                  | Severity / scope                                                      | What it flags → what to do instead                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `custom/no-db-transaction`            | **error** on `src/lib/server/**/*.ts` (excluding specs)               | Any `.transaction()` call — broken on D1. Use `db.batch([...queries])` for atomic writes.                                                                                                                                                                                                                                                                                                                                   |
+| `custom/no-raw-form-elements`         | **warn** on `+page.svelte` files                                      | Raw `<form>` elements in pages. Use the `<Form>` component.                                                                                                                                                                                                                                                                                                                                                                 |
+| `custom/no-utility-soup`              | **warn** on `+page.svelte` files                                      | Hand-written utility-class soup where a component or semantic utility exists: >5 classes on one element, a raw `btn`/`card`/`badge`/`alert`/`stat`/`table`, the dead `*-bordered` classes, `text-sm opacity-60` instead of `text-muted`, or an inline `style` reaching a `var(--…)`. See `template-audit.md`.                                                                                                               |
+| `custom/no-duplicate-field-names`     | **error** on all `*.svelte`                                           | Two fields submitting the same `name` within one `<Form>` (statically resolvable names only) — the later value silently wins on submit. Rename one.                                                                                                                                                                                                                                                                         |
+| `custom/no-concurrent-remote-queries` | **error** on all `*.svelte`                                           | Two or more remote queries fanned out at once — `Promise.all`/`allSettled`/`race`/`any` over calls imported from a `*.remote` module, in script or template. A page gets one load-bearing query: assemble them in a single remote query on the server, or move what the first paint does not need behind its own boundary to load lazily. Past kit 2.64 this shape also renders the page as `effect_update_depth_exceeded`. |
+| `custom/refresh-the-composed-query`   | **error** on `src/lib/remote/**/*.remote.ts`                          | `.refresh()` on a query that is composed into another query in the same file — nothing reading the wrapper repaints from it, so a save appears to do nothing. Refresh the wrapper too, or instead if nothing reads the constituent directly any more.                                                                                                                                                                       |
+| `custom/no-domain-imports-in-ui`      | **error** on `src/lib/components/ui/**` (excluding specs and stories) | A `$lib/remote` or `$lib/server` import — including a type-only one — inside the design system. The component belongs in `components/<domain>/`, or `components/layout/` if a `+layout.svelte` mounts it to frame pages. See [Where a file goes](#where-a-file-goes).                                                                                                                                                       |
 
 Other lint posture (see `eslint.config.js`): `no-explicit-any` and
 `svelte/no-navigation-without-resolve` are downgraded to warnings; unused vars error unless

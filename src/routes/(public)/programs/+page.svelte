@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Hero from '$lib/components/shared/marketing/Hero.svelte';
-	import Section from '$lib/components/shared/marketing/Section.svelte';
+	import Hero from '$lib/components/public/Hero.svelte';
+	import Section from '$lib/components/public/Section.svelte';
 	import {
 		IconMusic,
 		IconMicrophone,
@@ -12,7 +12,7 @@
 	import Keyfob from '$lib/components/illustrations/Keyfob.svelte';
 	import Ticket from '$lib/components/illustrations/Ticket.svelte';
 	import Setlist from '$lib/components/illustrations/Setlist.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 </script>
 

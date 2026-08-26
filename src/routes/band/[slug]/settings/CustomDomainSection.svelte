@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import {
 		setCustomDomain,
 		refreshCustomDomain,

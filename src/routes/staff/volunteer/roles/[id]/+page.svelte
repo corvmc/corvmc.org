@@ -5,15 +5,15 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/shared/Form';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '$lib/components/ui/Form';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { volunteerRoleGroups, volunteerRoleGroupLabels } from '$lib/config';
 	import { IconArchive, IconArchiveOff, IconTrash, IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {

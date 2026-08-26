@@ -1,15 +1,15 @@
 <script lang="ts">
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import BookerTypeIcon from '$lib/components/reservations/BookerTypeIcon.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
 	import { IconCalendarPlus, IconCalendarEvent, IconStar } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { getMemberDashboard } from '$lib/remote/users.remote';
 	import { creditsToHours } from '$lib/config';
 	import { resolve } from '$app/paths';

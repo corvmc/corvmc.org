@@ -1,12 +1,12 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import { EntityChip } from '$lib/components/shared/entity';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import { EntityChip } from '$lib/components/ui/entity';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { IconRepeat, IconX } from '@tabler/icons-svelte';

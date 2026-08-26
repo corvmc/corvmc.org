@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import { formatDateShort } from '$lib/utils/format';
 	import { getMyListings } from '$lib/remote/community-events.remote';
 

@@ -10,9 +10,9 @@
 		CreditBalanceCard,
 		CancelledBanner
 	} from '$lib/components/member/membership';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { pageTitle } from '$lib/config';
-	import Modal from '$lib/components/shared/Modal.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	import {
 		createSubscription,
 		updateAmount,

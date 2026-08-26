@@ -2,12 +2,12 @@
 	import { getUserReservations } from '$lib/remote/users.remote';
 	import { getUserRecurringSeries } from '$lib/remote/reservations.remote';
 	import { getUserLoans } from '$lib/remote/equipment.remote';
-	import { RelatedList } from '$lib/components/shared/entity';
-	import Table from '$lib/components/shared/Table.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
+	import { RelatedList } from '$lib/components/ui/entity';
+	import Table from '$lib/components/ui/Table.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import BookerTypeIcon from '$lib/components/reservations/BookerTypeIcon.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear, formatTimeRange } from '$lib/utils/format';

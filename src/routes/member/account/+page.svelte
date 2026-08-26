@@ -1,18 +1,18 @@
 <script lang="ts">
 	import DirectMessagesSection from './DirectMessagesSection.svelte';
 	import EmailSubscriptionsSection from './EmailSubscriptionsSection.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import Action from '$lib/components/shared/Action.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { IconMail, IconBell } from '@tabler/icons-svelte';
 	import { updateProfile, changePassword, deleteAccount } from '$lib/remote/account.remote';
 	import {

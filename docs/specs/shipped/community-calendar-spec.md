@@ -16,7 +16,7 @@ bands, including gigs at other venues.
 - `/events` composition, top to bottom: hero of the next 3 CMC shows as full
   `PosterCard`s → gig guide: compact `MiniCalendar` date-jumper beside a scannable
   `GigList` with a "Show more" pager.
-- **GigList rows** (`src/lib/components/shared/events/GigList.svelte`, also used by the
+- **GigList rows** (`src/lib/components/events/GigList.svelte`, also used by the
   directory profiles' `ShowsBox`): fixed date
   block (month / day-number / weekday) · small framed poster thumb (uploaded art or
   the generated `poster-gen` pattern) · title link · "by {band}" link or CMC badge ·

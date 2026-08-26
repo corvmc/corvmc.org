@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { IconFlag, IconCaretUpFilled, IconPencil } from '@tabler/icons-svelte';
 	import { formatDateTime } from '$lib/utils/format';
 	import { suggestionCategories, suggestionCategoryLabels } from '$lib/config';

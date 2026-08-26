@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import EntityViewer from '../src/lib/components/shared/entity/EntityViewer.svelte';
+	import EntityViewer from '../src/lib/components/ui/entity/EntityViewer.svelte';
 	import type { Panel } from '../src/lib/types/entity';
 
 	/**

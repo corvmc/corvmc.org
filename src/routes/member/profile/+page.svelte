@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getMemberProfileEditor } from '$lib/remote/directory.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import ProfileForm from './ProfileForm.svelte';
 
 	// Resolve everything here and hand ProfileForm plain props. The form must

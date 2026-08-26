@@ -2,12 +2,12 @@
 	import { getUserThreads } from '$lib/remote/inbox.remote';
 	import { getUserNotifications } from '$lib/remote/notifications.remote';
 	import { getUserMarketing } from '$lib/remote/marketing.remote';
-	import { RelatedList } from '$lib/components/shared/entity';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import { RelatedList } from '$lib/components/ui/entity';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShortYear, relativeDay } from '$lib/utils/format';

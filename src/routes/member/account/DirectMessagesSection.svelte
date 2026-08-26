@@ -1,8 +1,8 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		getMyMessagingSettings,
 		setMyMessaging,

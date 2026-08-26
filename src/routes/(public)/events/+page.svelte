@@ -1,10 +1,10 @@
 <script lang="ts">
-	import Section from '$lib/components/shared/marketing/Section.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Section from '$lib/components/public/Section.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
-	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
+	import PosterCard from '$lib/components/events/PosterCard.svelte';
 	import MiniCalendar from '$lib/components/public/calendar/MiniCalendar.svelte';
-	import GigList from '$lib/components/shared/events/GigList.svelte';
+	import GigList from '$lib/components/events/GigList.svelte';
 	import { getPublicEventsPage } from '$lib/remote/events.remote';
 	// Still needed on its own for the lazy "show more" pager below, which is not a fan-out.
 	import { getPublicGigGuide } from '$lib/remote/calendar.remote';

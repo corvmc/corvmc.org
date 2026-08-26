@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Action from '$lib/components/shared/Action.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { updateMemberRemote } from '$lib/remote/bands.remote';
 
 	/**

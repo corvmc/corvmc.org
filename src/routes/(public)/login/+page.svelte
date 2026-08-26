@@ -1,7 +1,7 @@
 <script lang="ts">
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -9,11 +9,11 @@
 	import { pageTitle } from '$lib/config';
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
-	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
+	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
+	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
 	import { getMe } from '$lib/remote/layout.remote';
 	import { TURNSTILE_SITE_KEY } from '$lib/turnstile';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 
 	// Deliberately NOT `await getMe()`. A top-level await puts the whole template
 	// behind an async boundary, and on a direct load of ?register that stops the

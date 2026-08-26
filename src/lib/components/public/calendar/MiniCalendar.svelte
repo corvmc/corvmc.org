@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { CalendarDate, today as todayIn, getLocalTimeZone } from '@internationalized/date';
 	import { IconChevronLeft, IconChevronRight } from '@tabler/icons-svelte';
 	import { getPublicCalendar } from '$lib/remote/calendar.remote';

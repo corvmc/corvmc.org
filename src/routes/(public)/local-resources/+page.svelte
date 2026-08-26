@@ -1,11 +1,11 @@
 <script lang="ts">
-	import Hero from '$lib/components/shared/marketing/Hero.svelte';
+	import Hero from '$lib/components/public/Hero.svelte';
 	import { IconBuildingStore, IconMicrophone, IconDisc, IconUsers } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
+	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 
 	let submitted = $state(false);
 	let resetTurnstile = $state<() => void>();

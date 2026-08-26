@@ -1,15 +1,15 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
 	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import Modal from '$lib/components/shared/Modal.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/shared/Form';
-	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '$lib/components/ui/Form';
+	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { checkConflicts, createEvent, previewRecurringEvents } from '$lib/remote/events.remote';
 	import { responseErrorMessage } from '$lib/api';
 

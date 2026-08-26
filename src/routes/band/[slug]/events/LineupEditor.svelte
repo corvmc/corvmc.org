@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { searchBandsForLineup } from '$lib/remote/band-events.remote';
 
 	export type LineupChip = {

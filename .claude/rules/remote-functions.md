@@ -19,7 +19,7 @@ nothing here.
   `src/lib/server/errors.ts`.
 - Return DTO-shaped values. Never hand a raw row or a string-indexed grab-bag to the UI.
 - Side effects (email, notifications, cascades) go through the event bus in
-  `src/lib/server/events/` and must be idempotent.
+  `src/lib/server/event-bus/` and must be idempotent.
 
 ## `form()` gotchas
 

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Toaster } from 'svelte-sonner';
-	import SiteHeader from '$lib/components/public/SiteHeader.svelte';
-	import SiteFooter from '$lib/components/public/SiteFooter.svelte';
-	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
+	import SiteHeader from '$lib/components/public/layout/SiteHeader.svelte';
+	import SiteFooter from '$lib/components/public/layout/SiteFooter.svelte';
+	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
 	import { getMe } from '$lib/remote/layout.remote';
 
 	let { children } = $props();

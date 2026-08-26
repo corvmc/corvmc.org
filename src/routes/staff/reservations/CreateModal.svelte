@@ -8,10 +8,10 @@
 		checkConflicts,
 		createReservation
 	} from '$lib/remote/reservations.remote';
-	import Action from '$lib/components/shared/Action.svelte';
-	import { Field, Select } from '$lib/components/shared/Form';
-	import SearchSelect from '$lib/components/shared/Form/SearchSelect.svelte';
-	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import { Field, Select } from '$lib/components/ui/Form';
+	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
+	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 
 	const { fields } = createReservation;

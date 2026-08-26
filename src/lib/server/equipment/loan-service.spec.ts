@@ -42,7 +42,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/events/event-bus', () => ({
+vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: {
 		emit: vi.fn().mockResolvedValue(undefined)
 	}

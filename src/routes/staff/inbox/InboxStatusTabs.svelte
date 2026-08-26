@@ -1,5 +1,5 @@
 <script lang="ts">
-	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import { getInboxThreadCounts } from '$lib/remote/inbox.remote';
 
 	/**

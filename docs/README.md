@@ -14,6 +14,15 @@ system is designed and built; the user manual (`manual/`) describes how to use i
 | [`checklists/`](#checklists)     | Cross-cutting rollouts tracked to completion                                  | Developers          |
 | [`manual/`](#manual)             | End-user manual manifest & public-site articles                               | End users           |
 
+Two working files live at the repo root rather than in here, because they are edited constantly
+and are as much backlog as documentation. Specs and conventions link to both, so they are listed
+for findability, not because they belong to a folder above:
+
+| File                        | What's in it                                                                      |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| [`CHORES.md`](../CHORES.md) | Running list of known gaps and cleanup owed — the source for "recorded in CHORES" |
+| [`IDEAS.md`](../IDEAS.md)   | Unbuilt feature ideas and the library table; where a spec starts life             |
+
 **Status legend:** ✅ Current · 🔧 In progress · 📋 Designed, not built · 📦 Historical (shipped) · ⚠️ Action needed
 
 **Spec lifecycle:** a spec whose feature has shipped no longer describes intent — it describes live
@@ -143,15 +152,17 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 
 ## architecture
 
-| Doc                                                                               | Status | Notes                                                                                                |
-| --------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
-| [overview.md](architecture/overview.md)                                           | ✅     | **Start here** — how the system is wired (remote functions, auth, event bus, D1, cron, config)       |
-| [operations-manual.md](architecture/operations-manual.md)                         | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring |
-| [deployment-checklist.md](architecture/deployment-checklist.md)                   | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                              |
-| [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                         | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting  |
-| [d1-migration-proposal.md](architecture/d1-migration-proposal.md)                 | ✅     | Postgres → Cloudflare D1 proposal                                                                    |
-| [universal-data-layer-proposal.md](architecture/universal-data-layer-proposal.md) | ✅     | API layer for SSR/SPA + kiosk parity (proposal)                                                      |
-| [product-config-kv-migration.md](architecture/product-config-kv-migration.md)     | ⚠️     | product_config → KV — migration pending user action                                                  |
+| Doc                                                                                   | Status | Notes                                                                                                |
+| ------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| [overview.md](architecture/overview.md)                                               | ✅     | **Start here** — how the system is wired (remote functions, auth, event bus, D1, cron, config)       |
+| [operations-manual.md](architecture/operations-manual.md)                             | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring |
+| [deployment-checklist.md](architecture/deployment-checklist.md)                       | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                              |
+| [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                             | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting  |
+| [d1-migration-proposal.md](architecture/d1-migration-proposal.md)                     | ✅     | Postgres → Cloudflare D1 proposal                                                                    |
+| [universal-data-layer-proposal.md](architecture/universal-data-layer-proposal.md)     | ✅     | API layer for SSR/SPA + kiosk parity (proposal)                                                      |
+| [product-config-kv-migration.md](architecture/product-config-kv-migration.md)         | ⚠️     | product_config → KV — migration pending user action                                                  |
+| [postmark-template-migration.md](architecture/postmark-template-migration.md)         | ✅     | Transactional email moved to Postmark-hosted templates; repo source and `pnpm email:push`            |
+| [U-Tec Api.postman_collection.json](architecture/U-Tec%20Api.postman_collection.json) | 📦     | Vendor API collection for the door-lock integration — reference only, not maintained here            |
 
 ## development
 

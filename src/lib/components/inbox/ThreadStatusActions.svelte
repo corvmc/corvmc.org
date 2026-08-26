@@ -16,10 +16,10 @@
 		IconInbox,
 		IconSend
 	} from '@tabler/icons-svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { formatDate } from '$lib/utils/format';
 
 	type StatusInput = {

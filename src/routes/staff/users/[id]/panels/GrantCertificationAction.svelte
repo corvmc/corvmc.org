@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getActiveCertifications, grantCertification } from '$lib/remote/volunteer.remote';
-	import Action from '$lib/components/shared/Action.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { clubToday } from '$lib/config';
 
 	/**

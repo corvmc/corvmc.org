@@ -47,7 +47,7 @@ vi.mock('$lib/server/db', () => {
 	};
 });
 vi.mock('$lib/server/db/paginate', () => ({ paginate: vi.fn() }));
-vi.mock('$lib/server/events/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
+vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
 vi.mock('./channel-dispatcher', () => ({
 	dispatchReply: vi.fn().mockResolvedValue('sent-message-id')
 }));

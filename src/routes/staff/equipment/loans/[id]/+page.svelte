@@ -6,16 +6,16 @@
 		scheduleLoanForm as schedule,
 		checkoutLoanForm as checkout
 	} from '$lib/remote/equipment.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import { CancelLoanAction, MarkReturnedAction } from '$lib/components/shared/actions';
-	import Form, { Field, SubmitButton, Select } from '$lib/components/shared/Form';
-	import { EntityChip } from '$lib/components/shared/entity';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import { CancelLoanAction, MarkReturnedAction } from '$lib/components/actions';
+	import Form, { Field, SubmitButton, Select } from '$lib/components/ui/Form';
+	import { EntityChip } from '$lib/components/ui/entity';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
 
 	const { fields: scheduleFields } = schedule;

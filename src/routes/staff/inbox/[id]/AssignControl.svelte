@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { RemoteForm } from '@sveltejs/kit';
 	import { getAssignableStaff } from '$lib/remote/inbox.remote';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 
 	/**
 	 * The "Assigned to" control, with its own data.

@@ -9,7 +9,7 @@ import { buildMemberSubscriptionState } from './subscription-service';
 import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { getStripeProductId } from './product-config-service';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import type { Subscription } from '$lib/server/db/schema/authentication';
 
 // Re-export so downstream consumers can import from one place

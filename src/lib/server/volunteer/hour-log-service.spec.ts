@@ -53,7 +53,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emit = vi.fn(() => Promise.resolve());
-vi.mock('$lib/server/events/event-bus', () => ({
+vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: {
 		emit: (...args: unknown[]) => emit(...(args as [])),
 		on: vi.fn()

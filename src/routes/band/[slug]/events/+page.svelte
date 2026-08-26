@@ -1,12 +1,12 @@
 <script lang="ts">
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import ImportGigsModal from './ImportGigsModal.svelte';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate } from '$lib/utils/format';

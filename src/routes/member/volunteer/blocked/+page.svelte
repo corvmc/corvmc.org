@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	/**
 	 * Where an under-18 sign-up lands.
 	 *
@@ -12,9 +12,9 @@
 	 * wait; nothing here should read as a rejection.
 	 */
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import { getVolunteerBlockedNotice } from '$lib/remote/volunteer.remote';
 
 	let notice = $derived(getVolunteerBlockedNotice());

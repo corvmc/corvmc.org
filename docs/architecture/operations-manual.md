@@ -199,7 +199,7 @@ Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are 
 - **Transactional templates** live in the repo under `postmark/templates/` and are synced
   with Postmark's CLI: `pnpm email:push` (repo → Postmark) / `pnpm email:pull`
   (Postmark → repo), both using `$POSTMARK_SERVER_TOKEN` from your shell. The repo is the
-  source of truth — see `docs/postmark-template-migration.md`.
+  source of truth — see `docs/architecture/postmark-template-migration.md`.
 - The **campaign layout** is different: it's MJML, compiled to a TS constant at build time
   by `scripts/compile-email-layouts.ts` (runs in both `pnpm prepare` and `pnpm build`) into
   `src/lib/server/generated/`.
@@ -244,7 +244,7 @@ Smart-lock access for the practice space. Client code in `src/lib/server/lock/`
 (`ultraloc-client.ts`, `utec-oauth.ts`); OAuth handshake routes under
 `src/routes/api/integrations/utec/`; four `ULTRALOC_*` secrets; daily provisioning via the
 `lock-access` cron. A Postman collection for the vendor API is checked in at
-`docs/U-Tec Api.postman_collection.json`.
+`docs/architecture/U-Tec Api.postman_collection.json`.
 
 ### Turnstile (bot protection)
 

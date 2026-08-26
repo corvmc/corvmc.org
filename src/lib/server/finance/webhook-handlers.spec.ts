@@ -34,7 +34,7 @@ const mockCreditService = {
 vi.mock('./credit-service', () => mockCreditService);
 
 const mockEmit = vi.fn();
-vi.mock('$lib/server/events/event-bus', () => ({
+vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: { emit: mockEmit }
 }));
 

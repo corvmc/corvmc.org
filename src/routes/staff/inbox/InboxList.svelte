@@ -9,13 +9,13 @@
 	 * thread. Every `/staff/inbox/[id]` URL still resolves — those are deep-linked
 	 * from notification emails, the in-app bell and the staff user record.
 	 */
-	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
+	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { resolve } from '$app/paths';
 	import { relativeDay } from '$lib/utils/format';
 	import { inboxChannels } from '$lib/config';

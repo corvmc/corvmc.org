@@ -1,14 +1,14 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { responseErrorMessage } from '$lib/api';
 	import {
@@ -17,7 +17,7 @@
 		CancelEventAction,
 		DeleteEventAction,
 		CompTicketsAction
-	} from '$lib/components/shared/actions';
+	} from '$lib/components/actions';
 	import {
 		getStaffEventPage,
 		updateEvent,
@@ -26,9 +26,9 @@
 		cancelEventSeries
 	} from '$lib/remote/events.remote';
 	const { fields } = updateEvent;
-	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
+	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import {
 		formatDateShort,
 		formatDollars,
@@ -40,18 +40,18 @@
 		toLocalTime
 	} from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import { EntityChip } from '$lib/components/shared/entity';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { EntityChip } from '$lib/components/ui/entity';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { rejectListing } from '$lib/remote/community-events.remote';
 	import { imageSrc } from '$lib/utils/images';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import ShiftFormFields from '$lib/components/shared/volunteer/ShiftFormFields.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
 	import { createShift } from '$lib/remote/volunteer.remote';
 
 	const rejectFields = rejectListing.fields;

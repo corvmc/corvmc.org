@@ -4,7 +4,7 @@
 	 * the list — `InboxShell` hides this pane below `lg` — so it is never the whole
 	 * screen, and does not need to be.
 	 */
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 </script>
 
 <div class="flex h-full items-center justify-center">

@@ -1,24 +1,21 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
+	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import BookerTypeIcon from '$lib/components/reservations/BookerTypeIcon.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
-	import {
-		ConfirmReservationAction,
-		CompleteReservationAction
-	} from '$lib/components/shared/actions';
+	import { ConfirmReservationAction, CompleteReservationAction } from '$lib/components/actions';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateReservation from './CreateModal.svelte';
-	import { EntityChip } from '$lib/components/shared/entity';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import { EntityChip } from '$lib/components/ui/entity';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import {
 		IconCheck,
 		IconCircleCheck,
@@ -35,7 +32,7 @@
 	import { formatDate, formatTimeRange, formatPaymentBreakdown } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
-	import Badge from '$lib/components/shared/Badge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { getStaffReservationsPage } from '$lib/remote/reservations.remote';
 
 	type Reservation = Awaited<ReturnType<typeof getStaffReservationsPage>>['list']['rows'][number];

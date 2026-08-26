@@ -2,18 +2,18 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Select from '$lib/components/shared/Form/Select.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { CERT_EXPIRY_WARNING_DAYS } from '$lib/config';
 	import { getClearancesPage } from '$lib/remote/volunteer.remote';
-	import CertificationOptions from '$lib/components/shared/volunteer/CertificationOptions.svelte';
+	import CertificationOptions from '$lib/components/volunteer/CertificationOptions.svelte';
 
 	type StateView = 'current' | 'expiring' | 'expired' | 'revoked' | 'all';
 	const stateViews: StateView[] = ['current', 'expiring', 'expired', 'revoked', 'all'];

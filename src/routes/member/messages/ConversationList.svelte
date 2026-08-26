@@ -12,7 +12,7 @@
 	import { resolve } from '$app/paths';
 	import { relativeDay } from '$lib/utils/format';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
-	import DataList from '$lib/components/shared/DataList.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
 	import ComposeAction from './ComposeAction.svelte';
 	import { getMyMessages } from '$lib/remote/direct-messages.remote';
 	import { getMemberLayoutContext } from '../layout-context';
