@@ -20,10 +20,10 @@
 	} = $props();
 </script>
 
-<div class="text-center mb-12">
+<div class="mb-12 text-center">
 	{@render eyebrow?.()}
-	<h2 class="text-4xl font-bold tracking-tight mb-3">{title}</h2>
+	<h2 class="mb-3 text-4xl font-bold tracking-tight">{title}</h2>
 	{#if children}
-		<p class="text-base max-w-2xl mx-auto leading-relaxed text-fg-2">{@render children()}</p>
+		<p class="mx-auto max-w-2xl text-base leading-relaxed text-fg-2">{@render children()}</p>
 	{/if}
 </div>

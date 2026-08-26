@@ -31,7 +31,7 @@
 		{/if}
 	</PageHeader>
 	<PageContent width="3xl">
-		<div class="grid gap-6 lg:grid-cols-2 mb-6">
+		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Details">
 				<DefinitionList>
 					<Fact label="Status"><StatusBadge status={campaign.status} /></Fact>
@@ -56,12 +56,12 @@
 
 			<InfoCard title="Markdown Source">
 				<pre
-					class="text-xs font-mono bg-base-200 p-3 rounded overflow-auto max-h-64 whitespace-pre-wrap">{campaign.markdownBody}</pre>
+					class="max-h-64 overflow-auto rounded bg-base-200 p-3 font-mono text-xs whitespace-pre-wrap">{campaign.markdownBody}</pre>
 			</InfoCard>
 		</div>
 
 		<InfoCard title="Rendered Preview">
-			<div class="border rounded-lg bg-white overflow-hidden">
+			<div class="overflow-hidden rounded-lg border bg-white">
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML) -->
 				{@html sanitizeHtml(campaign.htmlBody)}
 			</div>

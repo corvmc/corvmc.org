@@ -150,14 +150,14 @@
 				<p class="font-medium">{dateLabel}</p>
 				<p class="text-muted">{timeLabel}</p>
 			{:else}
-				<div class="skeleton h-5 w-48"></div>
+				<div class="h-5 w-48 skeleton"></div>
 			{/if}
 		</div>
 
 		{#if !pricing}
 			<div class="flex justify-between py-2">
-				<div class="skeleton h-5 w-32"></div>
-				<div class="skeleton h-5 w-16"></div>
+				<div class="h-5 w-32 skeleton"></div>
+				<div class="h-5 w-16 skeleton"></div>
 			</div>
 		{:else}
 			<div class="py-2 text-sm">
@@ -185,7 +185,7 @@
 		{/if}
 
 		{#if isRecurring}
-			<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3 mt-2">
+			<div class="mt-2 rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 				{#if scheduleLabel}
 					<p class="text-sm font-medium">{scheduleLabel}</p>
 				{/if}
@@ -194,7 +194,7 @@
 					{#if !recurringPreview}
 						<div class="space-y-1">
 							{#each Array(3), i (i)}
-								<div class="skeleton h-4 w-36 rounded"></div>
+								<div class="h-4 w-36 skeleton rounded"></div>
 							{/each}
 						</div>
 					{:else if recurringPreview.dates.length === 0}

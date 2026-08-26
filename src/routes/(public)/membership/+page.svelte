@@ -75,16 +75,16 @@
 
 <!-- Free vs Sustaining -->
 <Section>
-	<div class="text-center mb-10">
-		<h2 class="text-4xl font-bold tracking-tight mb-3">Two Ways to Belong</h2>
-		<p class="text-base max-w-2xl mx-auto leading-relaxed text-fg-2">
+	<div class="mb-10 text-center">
+		<h2 class="mb-3 text-4xl font-bold tracking-tight">Two Ways to Belong</h2>
+		<p class="mx-auto max-w-2xl text-base leading-relaxed text-fg-2">
 			Everyone starts with a free account. Sustaining members chip in monthly to keep the collective
 			running — and get more out of the space in return.
 		</p>
 	</div>
-	<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+	<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 		<!-- Free -->
-		<div class="rounded-lg p-8 flex flex-col gap-4 surface">
+		<div class="flex flex-col gap-4 rounded-lg p-8 surface">
 			<div>
 				<div class="text-3xl font-bold">Free Account</div>
 				<div class="text-sm text-fg-3">Always free</div>
@@ -93,7 +93,7 @@
 				Create an account to use the basics — book practice space at the standard hourly rate,
 				browse the member directory, and RSVP to events.
 			</p>
-			<ul class="text-muted space-y-2">
+			<ul class="space-y-2 text-muted">
 				<li>• Reserve practice space hourly</li>
 				<li>• Member directory access</li>
 				<li>• RSVP to events</li>
@@ -105,7 +105,7 @@
 
 		<!-- Sustaining -->
 		<div
-			class="rounded-lg p-8 flex flex-col gap-4"
+			class="flex flex-col gap-4 rounded-lg p-8"
 			style="background: var(--cmc-navy); color: #fff"
 		>
 			<div>
@@ -116,7 +116,7 @@
 				A recurring contribution that supports the space and unlocks the full set of member
 				benefits. Change or cancel anytime.
 			</p>
-			<ul class="text-sm space-y-2" style="opacity: 0.9">
+			<ul class="space-y-2 text-sm" style="opacity: 0.9">
 				<li>• Everything in the free account</li>
 				<li>• Free practice hours every month</li>
 				<li>• Recurring reservations</li>
@@ -138,10 +138,10 @@
 <!-- Benefits -->
 <Section tint="secondary">
 	<SectionHeading title="What Sustaining Members Get" />
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
 		{#each benefits as item (item.title)}
 			<div
-				class="flex flex-col items-center text-center gap-3 rounded-lg p-6"
+				class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
 				style="background: var(--surface); border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))"
 			>
 				<div class="text-cmc-navy">
@@ -156,34 +156,34 @@
 
 <!-- Sliding scale tiers -->
 <Section>
-	<div class="text-center mb-10">
-		<h2 class="text-4xl font-bold tracking-tight mb-3">Pick Your Contribution</h2>
-		<p class="text-base max-w-2xl mx-auto leading-relaxed text-fg-2">
+	<div class="mb-10 text-center">
+		<h2 class="mb-3 text-4xl font-bold tracking-tight">Pick Your Contribution</h2>
+		<p class="mx-auto max-w-2xl text-base leading-relaxed text-fg-2">
 			It's a sliding scale: every <strong>$5/month</strong> earns you another free hour of practice time
 			— up to 12. Every tier gets the same member benefits, you just walk away with more practice hours.
 			Change or cancel anytime.
 		</p>
 	</div>
-	<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+	<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
 		{#each tiers as tier (tier.amount)}
 			<div
-				class="rounded-lg p-8 text-center flex flex-col items-center"
+				class="flex flex-col items-center rounded-lg p-8 text-center"
 				style={tier.featured
 					? 'background: var(--cmc-orange); color: #fff'
 					: 'background: var(--surface); border: 1px solid var(--surface-border)'}
 			>
-				<div class="text-5xl font-bold leading-none mb-1">{tier.amount}</div>
-				<div class="text-xs mb-3" style={tier.featured ? 'opacity: 0.85' : 'color: var(--fg-3)'}>
+				<div class="mb-1 text-5xl leading-none font-bold">{tier.amount}</div>
+				<div class="mb-3 text-xs" style={tier.featured ? 'opacity: 0.85' : 'color: var(--fg-3)'}>
 					per month
 				</div>
 				<div
-					class="text-sm font-bold uppercase tracking-widest mb-3"
+					class="mb-3 text-sm font-bold tracking-widest uppercase"
 					style={tier.featured ? 'opacity: 0.95' : 'color: var(--cmc-teal)'}
 				>
 					{tier.hours}
 				</div>
 				<p
-					class="text-sm leading-relaxed mb-6"
+					class="mb-6 text-sm leading-relaxed"
 					style={tier.featured ? 'opacity: 0.9' : 'color: var(--fg-2)'}
 				>
 					{tier.body}
@@ -203,10 +203,10 @@
 			</div>
 		{/each}
 	</div>
-	<p class="text-center text-sm mt-8 text-fg-3">
+	<p class="mt-8 text-center text-sm text-fg-3">
 		Not looking to join monthly? There are <a
 			href={resolve('/contribute')}
-			class="underline text-cmc-teal">other ways to support the collective</a
+			class="text-cmc-teal underline">other ways to support the collective</a
 		>.
 	</p>
 </Section>

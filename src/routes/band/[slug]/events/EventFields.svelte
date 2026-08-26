@@ -220,7 +220,7 @@
 						href={evt.externalTicketUrl}
 						target="_blank"
 						rel="noopener external"
-						class="link link-primary break-all"
+						class="link break-all link-primary"
 					>
 						{evt.externalTicketUrl}
 					</a>

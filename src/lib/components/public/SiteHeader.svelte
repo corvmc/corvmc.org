@@ -27,7 +27,7 @@
 		style="background: var(--bg-page); border-bottom: 1px solid var(--surface-border)"
 	>
 		<div
-			class="max-w-6xl mx-auto grid items-end gap-x-4 gap-y-1"
+			class="mx-auto grid max-w-6xl items-end gap-x-4 gap-y-1"
 			style="grid-template-columns: auto 1fr auto; grid-template-rows: auto auto"
 		>
 			<!-- Logo -->
@@ -72,11 +72,11 @@
 			</div>
 
 			<!-- Nav -->
-			<nav class="hidden lg:flex items-center gap-1 -ml-3" style="grid-row: 2; grid-column: 2">
+			<nav class="-ml-3 hidden items-center gap-1 lg:flex" style="grid-row: 2; grid-column: 2">
 				{#each links as link (link.href)}
 					<a
 						href={link.href}
-						class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
+						class="rounded-md px-3 py-2 text-sm font-medium transition-colors"
 						class:is-active={isActive(link.href)}
 						style={isActive(link.href)
 							? 'background: color-mix(in oklch, var(--cmc-orange) 14%, transparent); color: var(--cmc-orange)'

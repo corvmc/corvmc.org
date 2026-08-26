@@ -59,7 +59,7 @@
 					<CardTitle level={2}>Premium Band Page</CardTitle>
 					<Badge variant="success">Active</Badge>
 				</div>
-				<dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+				<dl class="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
 					<div>
 						<dt class="font-medium opacity-60">Billing</dt>
 						<dd class="capitalize">{info.subscription.billingInterval}</dd>
@@ -124,7 +124,7 @@
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<!-- Monthly -->
-				<div class="card bg-base-100 shadow-sm border">
+				<div class="card border bg-base-100 shadow-sm">
 					<CardBody center>
 						<h3 class="text-lg font-bold">Monthly</h3>
 						<p class="text-3xl font-bold">
@@ -141,7 +141,7 @@
 				</div>
 
 				<!-- Yearly -->
-				<div class="card bg-base-100 shadow-sm border border-primary">
+				<div class="card border border-primary bg-base-100 shadow-sm">
 					<CardBody center>
 						<Badge variant="primary">2 months free</Badge>
 						<h3 class="text-lg font-bold">Yearly</h3>

@@ -186,7 +186,7 @@
 			<Card>
 				<CardBody>
 					<CardTitle size="lg" level={2}>Theme</CardTitle>
-					<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+					<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
 						{#each BAND_THEMES as theme (theme)}
 							<Button
 								type="button"
@@ -224,17 +224,17 @@
 
 					<!-- Block type picker -->
 					{#if showBlockPicker}
-						<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 p-4 bg-base-200 rounded-lg">
+						<div class="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-base-200 p-4 sm:grid-cols-3">
 							{#each BLOCK_TYPES as bt (bt.type)}
 								<Button
 									type="button"
 									variant="ghost"
 									size="sm"
-									class="justify-start text-left h-auto py-2"
+									class="h-auto justify-start py-2 text-left"
 									onclick={() => addBlock(bt.type)}
 								>
 									<div>
-										<p class="font-medium text-sm">{bt.label}</p>
+										<p class="text-sm font-medium">{bt.label}</p>
 										<p class="text-subtle">{bt.description}</p>
 									</div>
 								</Button>
@@ -243,19 +243,19 @@
 					{/if}
 
 					{#if blocks.length === 0}
-						<p class="text-muted mt-4">
+						<p class="mt-4 text-muted">
 							No blocks configured yet. Add blocks to build your custom page. Your page will show a
 							default layout until you add blocks.
 						</p>
 					{:else}
 						<div class="mt-4 space-y-2">
 							{#each blocks as block, i (block.id)}
-								<div class="bg-base-200 rounded-lg overflow-hidden">
+								<div class="overflow-hidden rounded-lg bg-base-200">
 									<!-- Block header row -->
 									<div class="flex items-center gap-2 p-3">
-										<span class="text-sm font-mono opacity-40">{i + 1}</span>
+										<span class="font-mono text-sm opacity-40">{i + 1}</span>
 										<span class="badge badge-sm capitalize">{block.type}</span>
-										<span class="flex-1 text-muted truncate">{blockLabel(block)}</span>
+										<span class="flex-1 truncate text-muted">{blockLabel(block)}</span>
 										<div class="flex items-center gap-1">
 											<Button
 												type="button"
@@ -293,13 +293,13 @@
 
 									<!-- Block configuration panel -->
 									{#if editingBlockId === block.id}
-										<div class="px-3 pb-3 border-t border-base-300 pt-3 space-y-3">
+										<div class="space-y-3 border-t border-base-300 px-3 pt-3 pb-3">
 											{#if block.type === 'hero'}
 												<label class="form-control">
 													<span class="label-text text-xs">Image Key (R2 path or URL)</span>
 													<input
 														type="text"
-														class="input input-sm w-full"
+														class="input w-full input-sm"
 														value={block.imageKey}
 														oninput={(e) => {
 															block.imageKey = e.currentTarget.value;
@@ -310,7 +310,7 @@
 													<span class="label-text text-xs">Headline</span>
 													<input
 														type="text"
-														class="input input-sm w-full"
+														class="input w-full input-sm"
 														value={block.headline ?? ''}
 														oninput={(e) => {
 															block.headline = e.currentTarget.value || undefined;
@@ -321,7 +321,7 @@
 													<span class="label-text text-xs">Subtitle</span>
 													<input
 														type="text"
-														class="input input-sm w-full"
+														class="input w-full input-sm"
 														value={block.subtitle ?? ''}
 														oninput={(e) => {
 															block.subtitle = e.currentTarget.value || undefined;
@@ -376,7 +376,7 @@
 													<span class="label-text text-xs">Max events to show</span>
 													<input
 														type="number"
-														class="input input-sm w-24"
+														class="input w-24 input-sm"
 														min="1"
 														max="20"
 														value={block.limit ?? 5}
@@ -406,7 +406,7 @@
 													<span class="label-text text-xs">Platform</span>
 													<input
 														type="text"
-														class="input input-sm w-full"
+														class="input w-full input-sm"
 														placeholder="spotify, youtube, soundcloud"
 														value={block.platform}
 														oninput={(e) => {
@@ -418,7 +418,7 @@
 													<span class="label-text text-xs">URL</span>
 													<input
 														type="url"
-														class="input input-sm w-full"
+														class="input w-full input-sm"
 														placeholder="https://open.spotify.com/track/..."
 														value={block.url}
 														oninput={(e) => {
@@ -485,14 +485,14 @@
 													>
 												</p>
 											{:else if block.type === 'merch'}
-												<p class="text-subtle mb-2">
+												<p class="mb-2 text-subtle">
 													Add merchandise items with links to your store.
 												</p>
 												{#each block.items as item, mi (mi)}
-													<div class="flex gap-2 items-start">
+													<div class="flex items-start gap-2">
 														<input
 															type="text"
-															class="input input-sm flex-1"
+															class="input flex-1 input-sm"
 															placeholder="Title"
 															value={item.title}
 															oninput={(e) => {
@@ -501,7 +501,7 @@
 														/>
 														<input
 															type="url"
-															class="input input-sm flex-1"
+															class="input flex-1 input-sm"
 															placeholder="URL"
 															value={item.url}
 															oninput={(e) => {
@@ -510,7 +510,7 @@
 														/>
 														<input
 															type="text"
-															class="input input-sm w-20"
+															class="input w-20 input-sm"
 															placeholder="$25"
 															value={item.price ?? ''}
 															oninput={(e) => {
@@ -544,7 +544,7 @@
 												<span class="label-text text-xs">CSS Class (optional)</span>
 												<input
 													type="text"
-													class="input input-sm w-full"
+													class="input w-full input-sm"
 													placeholder="custom-class"
 													value={block.cssClass ?? ''}
 													oninput={(e) => {
@@ -569,7 +569,7 @@
 						Add custom styles to your page. CSS is scoped to your band site container.
 					</p>
 					<textarea
-						class="textarea w-full font-mono text-sm mt-2"
+						class="textarea mt-2 w-full font-mono text-sm"
 						rows="8"
 						placeholder={`.band-site-container {\n  /* your styles here */\n}`}
 						value={customCss}
@@ -577,14 +577,14 @@
 							customCss = e.currentTarget.value;
 						}}
 					></textarea>
-					<p class="text-xs opacity-40 mt-1">
+					<p class="mt-1 text-xs opacity-40">
 						Max 50KB. External imports and scripts are stripped.
 					</p>
 				</CardBody>
 			</Card>
 
 			<!-- Save -->
-			<div class="flex justify-between items-center">
+			<div class="flex items-center justify-between">
 				<!-- The band's own subdomain, so this leaves the app: rel="external" is both the
 				     correct annotation and what keeps it out of the router. -->
 				<a href={siteUrl} target="_blank" rel="external noopener" class="link text-sm">
@@ -608,7 +608,7 @@
 							<span class="label-text text-xs font-medium">Gallery Images</span>
 							<input
 								type="file"
-								class="file-input file-input-sm w-full mt-1"
+								class="file-input mt-1 w-full file-input-sm"
 								accept="image/*"
 								multiple
 								onchange={async (e) => {
@@ -638,7 +638,7 @@
 							<span class="label-text text-xs font-medium">Hero Image</span>
 							<input
 								type="file"
-								class="file-input file-input-sm w-full mt-1"
+								class="file-input mt-1 w-full file-input-sm"
 								accept="image/*"
 								onchange={async (e) => {
 									const file = e.currentTarget.files?.[0];
@@ -667,7 +667,7 @@
 							<span class="label-text text-xs font-medium">Stage Plot</span>
 							<input
 								type="file"
-								class="file-input file-input-sm w-full mt-1"
+								class="file-input mt-1 w-full file-input-sm"
 								accept="image/*"
 								onchange={async (e) => {
 									const file = e.currentTarget.files?.[0];
@@ -696,7 +696,7 @@
 							<span class="label-text text-xs font-medium">Tech Rider (PDF/Image)</span>
 							<input
 								type="file"
-								class="file-input file-input-sm w-full mt-1"
+								class="file-input mt-1 w-full file-input-sm"
 								accept="image/*,.pdf"
 								onchange={async (e) => {
 									const file = e.currentTarget.files?.[0];

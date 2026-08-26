@@ -43,14 +43,14 @@
 	     selects has never fit a 20–24rem list pane. Without a container ancestor
 	     those queries silently never match, which is the same result by accident. -->
 	<div
-		class="@container w-full min-h-0 flex-col lg:w-80 lg:shrink-0 xl:w-96 {threadOpen
+		class="@container min-h-0 w-full flex-col lg:w-80 lg:shrink-0 xl:w-96 {threadOpen
 			? 'hidden lg:flex'
 			: 'flex'}"
 	>
 		{@render list()}
 	</div>
 
-	<div class="min-w-0 flex-1 flex-col min-h-0 {threadOpen ? 'flex' : 'hidden lg:flex'}">
+	<div class="min-h-0 min-w-0 flex-1 flex-col {threadOpen ? 'flex' : 'hidden lg:flex'}">
 		{@render children()}
 	</div>
 </div>

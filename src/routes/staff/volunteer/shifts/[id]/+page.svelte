@@ -231,7 +231,7 @@
 									{#if !response.wasSetUp}
 										<!-- The actionable signal: enjoyment and preparedness pull
 										     apart exactly where the briefing needs work. -->
-										<span class="badge badge-warning badge-sm">wasn't set up</span>
+										<span class="badge badge-sm badge-warning">wasn't set up</span>
 									{/if}
 								</div>
 								{#if response.comment}

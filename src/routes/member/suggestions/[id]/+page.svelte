@@ -105,7 +105,7 @@
 				<SubmitButton
 					label={String(s.voteCount)}
 					disabled={s.visibility !== 'visible' || !!s.mergedIntoId}
-					class="btn-sm h-auto flex-col gap-0 py-1 {s.hasVoted ? 'btn-primary' : 'btn-outline'}"
+					class="h-auto flex-col gap-0 py-1 btn-sm {s.hasVoted ? 'btn-primary' : 'btn-outline'}"
 				>
 					{#snippet icon()}<IconCaretUpFilled size={16} />{/snippet}
 				</SubmitButton>

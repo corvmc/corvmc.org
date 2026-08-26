@@ -74,7 +74,7 @@
 					     a silent no-op: the field has no FormField to hang its issue on,
 					     so nothing on screen changes. -->
 					{#each directForm.fields.recipientId.issues() ?? [] as issue (issue.message)}
-						<p class="text-error text-sm">Choose who this is going to.</p>
+						<p class="text-sm text-error">Choose who this is going to.</p>
 					{/each}
 				</label>
 

@@ -41,7 +41,7 @@
 
 <div class="relative w-full max-w-md">
 	<div class="relative">
-		<IconSearch size={16} class="absolute left-3 top-1/2 -translate-y-1/2 opacity-50" />
+		<IconSearch size={16} class="absolute top-1/2 left-3 -translate-y-1/2 opacity-50" />
 		<input
 			type="text"
 			placeholder="Search help articles..."
@@ -61,17 +61,17 @@
 
 	{#if open}
 		<div
-			class="absolute z-50 mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg max-h-64 overflow-y-auto"
+			class="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-box border border-base-300 bg-base-100 shadow-lg"
 		>
 			{#each results as result (result.slug)}
 				<button
 					type="button"
-					class="w-full text-left px-4 py-2 hover:bg-base-200 transition-colors"
+					class="w-full px-4 py-2 text-left transition-colors hover:bg-base-200"
 					onmousedown={() => select(result.slug)}
 				>
-					<p class="font-medium text-sm">{result.title}</p>
+					<p class="text-sm font-medium">{result.title}</p>
 					{#if result.summary}
-						<p class="text-subtle truncate">{result.summary}</p>
+						<p class="truncate text-subtle">{result.summary}</p>
 					{/if}
 				</button>
 			{/each}

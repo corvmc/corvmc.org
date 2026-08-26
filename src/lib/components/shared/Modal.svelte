@@ -29,13 +29,13 @@
 		<Dialog.Overlay class="modal modal-open bg-black/40" />
 		<Dialog.Content class="modal modal-open">
 			<div class="modal-box {maxWidth}">
-				<div class="flex items-center justify-between mb-4">
+				<div class="mb-4 flex items-center justify-between">
 					{#if titleSnippet}
 						{@render titleSnippet()}
 					{:else if title}
 						<Dialog.Title class="text-lg font-bold">{title}</Dialog.Title>
 					{/if}
-					<Dialog.Close class="btn btn-sm btn-outline btn-circle">✕</Dialog.Close>
+					<Dialog.Close class="btn btn-circle btn-outline btn-sm">✕</Dialog.Close>
 				</div>
 
 				{@render children()}

@@ -82,7 +82,7 @@
 		{/if}
 
 		{#if replyBlockedReason}
-			<p class="text-warning text-xs">{replyBlockedReason}</p>
+			<p class="text-xs text-warning">{replyBlockedReason}</p>
 		{/if}
 
 		<Form

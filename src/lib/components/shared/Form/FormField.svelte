@@ -207,7 +207,7 @@
 	{:else if type === 'calendar'}
 		<CalendarSelect {...rest} name={resolvedName} bind:value disabled={pending || readonly} />
 	{:else if type === 'checkbox'}
-		<label class="label cursor-pointer gap-2 items-center">
+		<label class="label cursor-pointer items-center gap-2">
 			<input
 				type="checkbox"
 				class="checkbox shrink-0"

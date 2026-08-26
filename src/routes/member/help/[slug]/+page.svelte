@@ -19,7 +19,7 @@
 
 <PageHeader title={article.title} subtitle="Help Center" backHref="/member/help" />
 <PageContent width="3xl">
-	<div class="text-sm breadcrumbs mb-4">
+	<div class="breadcrumbs mb-4 text-sm">
 		<ul>
 			<li><a href={resolve('/member/help')}>Help</a></li>
 			{#if category}
@@ -30,15 +30,15 @@
 	</div>
 
 	<div class="flex gap-8">
-		<article class="flex-1 min-w-0">
+		<article class="min-w-0 flex-1">
 			{#if article.summary}
-				<p class="text-base-content/70 text-sm mb-6">{article.summary}</p>
+				<p class="mb-6 text-sm text-base-content/70">{article.summary}</p>
 			{/if}
 			<MarkdownPreview content={article.content} />
 		</article>
 
 		{#if headings.length > 2}
-			<aside class="hidden lg:block w-48 shrink-0 sticky top-20 self-start">
+			<aside class="sticky top-20 hidden w-48 shrink-0 self-start lg:block">
 				<TableOfContents {headings} />
 			</aside>
 		{/if}

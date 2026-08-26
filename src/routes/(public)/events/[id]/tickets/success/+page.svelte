@@ -17,18 +17,18 @@
 	const isFreeClaim = $derived(purchaseId.startsWith('rsvp-'));
 </script>
 
-<div class="max-w-lg mx-auto space-y-6">
+<div class="mx-auto max-w-lg space-y-6">
 	<PageHeader title="Tickets Confirmed" backHref="/events" />
 
 	<Card>
-		<CardBody class="text-center space-y-4">
+		<CardBody class="space-y-4 text-center">
 			<div class="flex justify-center">
 				<IconCircleCheck size={64} class="text-success" />
 			</div>
 
 			<div>
 				<h2 class="text-xl font-bold">{evt.title}</h2>
-				<p class="opacity-70 mt-1">
+				<p class="mt-1 opacity-70">
 					{fullDate(evt.startsAt)} · {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 				</p>
 			</div>
@@ -50,10 +50,10 @@
 	<!-- Ticket codes -->
 	<Card>
 		<CardBody>
-			<h3 class="font-medium mb-3">Your Tickets</h3>
+			<h3 class="mb-3 font-medium">Your Tickets</h3>
 			<div class="space-y-3">
 				{#each data.tickets as ticket (ticket.id)}
-					<div class="flex items-center justify-between p-3 bg-base-200 rounded">
+					<div class="flex items-center justify-between rounded bg-base-200 p-3">
 						<div>
 							<p class="font-medium">{ticket.attendeeName}</p>
 							<p class="text-muted">{ticket.attendeeEmail}</p>

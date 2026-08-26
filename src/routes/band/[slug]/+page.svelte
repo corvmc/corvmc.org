@@ -27,11 +27,11 @@
 <PageContent>
 	{#await upcoming}
 		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
+			<span class="loading loading-lg loading-spinner"></span>
 		</div>
 	{:then sessions}
 		<!-- Band overview -->
-		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 			<StatCard title="Members" value={band.memberCount} size="sm" />
 			<StatCard title="Upcoming Sessions" value={sessions.length} size="sm" />
 			<StatCard title="Your Role" value={layout.userRole} size="sm" valueClass="capitalize" />
@@ -39,9 +39,9 @@
 
 		<!-- Upcoming reservations -->
 		<section>
-			<div class="flex items-center justify-between mb-3">
+			<div class="mb-3 flex items-center justify-between">
 				<h2 class="text-lg font-semibold">Upcoming Sessions</h2>
-				<a href={resolve(`/band/${band.slug}/reservations`)} class="link link-primary text-sm">
+				<a href={resolve(`/band/${band.slug}/reservations`)} class="link text-sm link-primary">
 					View all
 				</a>
 			</div>

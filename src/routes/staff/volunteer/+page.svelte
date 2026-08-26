@@ -218,7 +218,7 @@
 							{#if log.shiftId}
 								<!-- Filed against a shift staff scheduled — the person was
 								     rostered, so this can be approved with less scrutiny. -->
-								<span class="badge badge-ghost badge-xs mt-1" title="Logged from a scheduled shift"
+								<span class="mt-1 badge badge-ghost badge-xs" title="Logged from a scheduled shift"
 									>scheduled</span
 								>
 							{/if}

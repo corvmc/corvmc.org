@@ -70,10 +70,10 @@
 							<div class="rounded-lg bg-primary/10 p-2">
 								<Icon size={20} class="text-primary" />
 							</div>
-							<div class="flex-1 min-w-0">
-								<h3 class="font-semibold text-sm">{category.name}</h3>
+							<div class="min-w-0 flex-1">
+								<h3 class="text-sm font-semibold">{category.name}</h3>
 								{#if category.description}
-									<p class="text-subtle mt-0.5">{category.description}</p>
+									<p class="mt-0.5 text-subtle">{category.description}</p>
 								{/if}
 							</div>
 						</div>
@@ -83,7 +83,7 @@
 									<li>
 										<a
 											href={resolve(`/member/help/${article.slug}`)}
-											class="text-sm hover:text-primary transition-colors"
+											class="text-sm transition-colors hover:text-primary"
 										>
 											{article.title}
 										</a>
@@ -91,7 +91,7 @@
 								{/each}
 							</ul>
 						{:else}
-							<p class="text-xs opacity-50 mt-3 italic">No articles yet</p>
+							<p class="mt-3 text-xs italic opacity-50">No articles yet</p>
 						{/if}
 					</CardBody>
 				</Card>

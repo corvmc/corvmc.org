@@ -83,10 +83,10 @@
 												: (c.subject ?? 'Conversation')}
 										</span>
 										{#if c.pending}
-											<span class="badge badge-sm badge-warning shrink-0">Request</span>
+											<span class="badge shrink-0 badge-sm badge-warning">Request</span>
 										{/if}
 										{#if c.unread}
-											<span class="bg-primary size-2 shrink-0 rounded-full" title="Unread"></span>
+											<span class="size-2 shrink-0 rounded-full bg-primary" title="Unread"></span>
 										{/if}
 									</span>
 

@@ -63,7 +63,7 @@
 		<input {...fields.userId.as('hidden', userId)} />
 		<div class="space-y-3">
 			{#if userId}
-				<div class="flex items-center justify-between bg-base-200 rounded p-2">
+				<div class="flex items-center justify-between rounded bg-base-200 p-2">
 					<span class="font-medium">{userName}</span>
 					<Button
 						type="button"
@@ -87,15 +87,15 @@
 					/>
 				</label>
 				{#if searchResults.length > 0}
-					<div class="bg-base-200 rounded max-h-40 overflow-y-auto">
+					<div class="max-h-40 overflow-y-auto rounded bg-base-200">
 						{#each searchResults as u (u.id)}
 							<button
 								type="button"
-								class="w-full text-left px-3 py-2 hover:bg-base-300 text-sm"
+								class="w-full px-3 py-2 text-left text-sm hover:bg-base-300"
 								onclick={() => selectUser(u)}
 							>
 								<span class="font-medium">{u.name}</span>
-								<span class="opacity-60 ml-1">{u.email}</span>
+								<span class="ml-1 opacity-60">{u.email}</span>
 							</button>
 						{/each}
 					</div>

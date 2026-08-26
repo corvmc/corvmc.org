@@ -28,7 +28,7 @@
 
 <PageHeader title="Recurring Reservations" />
 <PageContent>
-	<div class="flex items-center gap-2 mb-4">
+	<div class="mb-4 flex items-center gap-2">
 		<Button
 			variant={filter === 'active' ? 'primary' : 'ghost'}
 			size="sm"

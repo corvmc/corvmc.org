@@ -201,7 +201,7 @@
 								<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 								<ul
 									tabindex="0"
-									class="dropdown-content menu bg-base-200 rounded-box z-10 w-44 p-2 shadow"
+									class="menu dropdown-content z-10 w-44 rounded-box bg-base-200 p-2 shadow"
 								>
 									<li>
 										<a href={resolve(`/staff/users/${row.id}`)}><IconEye size={16} />View</a>

@@ -130,7 +130,7 @@
 <PageHeader title={evt.title} backHref={resolve('/member/events')}>
 	<div class="flex items-center gap-1">
 		<details class="dropdown dropdown-end">
-			<summary class="btn btn-ghost btn-sm gap-1">
+			<summary class="btn gap-1 btn-ghost btn-sm">
 				<IconCalendarPlus size={18} />
 				Add to calendar
 			</summary>
@@ -312,7 +312,7 @@
 							{/if}
 						</div>
 						<progress
-							class="progress progress-primary w-full"
+							class="progress w-full progress-primary"
 							value={data.sold}
 							max={evt.ticketQuantity}
 						></progress>
@@ -414,7 +414,7 @@
 											<span>{formatCents(subtotal)}</span>
 										</div>
 										{#if data.isSustainingMember}
-											<p class="text-sm text-success mt-1">Sustaining member discount applied</p>
+											<p class="mt-1 text-sm text-success">Sustaining member discount applied</p>
 										{/if}
 									</div>
 								{/snippet}

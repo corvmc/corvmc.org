@@ -106,7 +106,7 @@
 			{#snippet children(rows)}
 				<ul class="flex flex-col gap-2">
 					{#each rows as ref (ref.id)}
-						<li class="rounded-box flex items-center gap-2 px-2 py-2 hover:bg-base-200">
+						<li class="flex items-center gap-2 rounded-box px-2 py-2 hover:bg-base-200">
 							<EntityIdentity {ref} size="md" class="flex-1" />
 							<StatusBadge status="active" label />
 						</li>

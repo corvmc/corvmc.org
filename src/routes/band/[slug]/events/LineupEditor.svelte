@@ -104,7 +104,7 @@
 <div class="space-y-2">
 	{#each value as chip, i (chip.name + i)}
 		<div class="flex items-center gap-2 rounded border border-base-300 bg-base-100 px-3 py-2">
-			<span class="text-xs opacity-50 tabular-nums w-6">{i === 0 ? '★' : i + 1}</span>
+			<span class="w-6 text-xs tabular-nums opacity-50">{i === 0 ? '★' : i + 1}</span>
 			<span class="flex-1 truncate text-sm font-medium">{chip.name}</span>
 			<span class="badge badge-sm {chipClass(chip)}">{chipLabel(chip)}</span>
 			{#if !readonly}
@@ -154,7 +154,7 @@
 			/>
 
 			{#if suggestions.length > 0}
-				<ul class="menu menu-sm mt-1 rounded border border-base-300 bg-base-100 p-1">
+				<ul class="menu mt-1 menu-sm rounded border border-base-300 bg-base-100 p-1">
 					{#each suggestions as b (b.id)}
 						<li>
 							<button type="button" onclick={() => add({ name: b.name, bandId: b.id })}>

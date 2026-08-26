@@ -46,7 +46,7 @@
 	<StatusBadge status={flag.status} label />
 </PageHeader>
 <PageContent width="3xl">
-	<div class="grid gap-6 lg:grid-cols-2 mb-6">
+	<div class="mb-6 grid gap-6 lg:grid-cols-2">
 		<InfoCard title="Report">
 			<DefinitionList>
 				<Fact label="Type">{entityLabels[flag.target.type].one}</Fact>
@@ -131,7 +131,7 @@
 
 		<InfoCard title="Resolution" class="bg-base-200 shadow-none">
 			{#if flag.status === 'pending'}
-				<p class="text-muted mb-3">
+				<p class="mb-3 text-muted">
 					Review the reported content, then mark this flag resolved (action taken) or dismissed (no
 					action needed).
 				</p>
