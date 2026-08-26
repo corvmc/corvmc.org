@@ -12,7 +12,8 @@
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { CERT_EXPIRY_WARNING_DAYS } from '$lib/config';
-	import { getClearances, getActiveCertifications } from '$lib/remote/volunteer.remote';
+	import { getClearancesPage } from '$lib/remote/volunteer.remote';
+	import CertificationOptions from '$lib/components/shared/volunteer/CertificationOptions.svelte';
 
 	type StateView = 'current' | 'expiring' | 'expired' | 'revoked' | 'all';
 	const stateViews: StateView[] = ['current', 'expiring', 'expired', 'revoked', 'all'];
@@ -36,17 +37,19 @@
 		}
 	});
 
-	let rows = $derived(
-		getClearances({
+	// One query for both views. The certification filter's options load in CertificationOptions:
+	// that query is unparameterized and refreshed by name, so it cannot join this one.
+	const pageData = $derived(
+		getClearancesPage({
 			certificationId: certFilter || undefined,
 			state: stateView === 'all' ? undefined : stateView
 		})
 	);
-	let certifications = $derived(getActiveCertifications());
 
+	const rows = $derived(pageData.then((d) => d.rows));
 	// Every row is the newest grant for that member+certification, so the counts
 	// answer "how many people are cleared", not "how many pieces of paper exist".
-	let allRows = $derived(getClearances({ certificationId: certFilter || undefined }));
+	const allRows = $derived(pageData.then((d) => d.allRows));
 
 	const stateLabels: Record<Exclude<StateView, 'all'>, string> = {
 		current: 'Current',
@@ -99,21 +102,17 @@
 	{/await}
 
 	<FilterBar activeCount={certFilter ? 1 : 0} onclear={() => (certFilter = '')}>
-		{#await certifications then certs}
-			<Select
-				size="sm"
-				aria-label="Certification"
-				value={certFilter}
-				onchange={(e: Event) => {
-					certFilter = (e.currentTarget as HTMLSelectElement).value;
-				}}
-			>
-				<option value="">All certifications</option>
-				{#each certs as cert (cert.id)}
-					<option value={cert.id}>{cert.name}</option>
-				{/each}
-			</Select>
-		{/await}
+		<Select
+			size="sm"
+			aria-label="Certification"
+			value={certFilter}
+			onchange={(e: Event) => {
+				certFilter = (e.currentTarget as HTMLSelectElement).value;
+			}}
+		>
+			<option value="">All certifications</option>
+			<CertificationOptions />
+		</Select>
 	</FilterBar>
 
 	{#await rows then clearances}

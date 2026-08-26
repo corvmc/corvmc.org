@@ -844,7 +844,7 @@ async function refreshRoleViews(roleId?: string) {
 		getVolunteerRoles().refresh(),
 		getMemberVolunteerPage().refresh(),
 		getVolunteerInterestsPage().refresh(),
-		...(roleId ? [getVolunteerRoleDetail(roleId).refresh()] : [])
+		...(roleId ? [getStaffVolunteerRolePage(roleId).refresh()] : [])
 	]);
 }
 
@@ -1013,7 +1013,7 @@ export const setRoleCertifications = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getRoleRequirements(data.roleId).refresh();
+		void getStaffVolunteerRolePage(data.roleId).refresh();
 		// The roles table renders each role's requirements too.
 		void getVolunteerRoles().refresh();
 		return { success: true };
@@ -1208,7 +1208,7 @@ export const updateShift = form(
 			mapDomainError(err);
 		}
 
-		void getShift(data.id).refresh();
+		void getStaffShiftPage(data.id).refresh();
 		return { success: true };
 	}
 );
@@ -1237,7 +1237,7 @@ export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data
 		mapDomainError(err);
 	}
 
-	void getShift(data.id).refresh();
+	void getStaffShiftPage(data.id).refresh();
 	return { success: true };
 });
 
@@ -1284,7 +1284,7 @@ export const confirmSignup = form(
 			mapDomainError(err);
 		}
 
-		void getShift(data.shiftId).refresh();
+		void getStaffShiftPage(data.shiftId).refresh();
 		return { success: true };
 	}
 );
@@ -1300,7 +1300,7 @@ export const markSignupNoShow = form(
 			mapDomainError(err);
 		}
 
-		void getShift(data.shiftId).refresh();
+		void getStaffShiftPage(data.shiftId).refresh();
 		return { success: true };
 	}
 );
@@ -1435,3 +1435,62 @@ export const getVolunteerInterestsPage = query(z.void(), async () => {
 
 	return { step, roles, interests };
 });
+
+/**
+ * The staff volunteer role detail page's one load-bearing query.
+ *
+ * Keyed by the role id alone, deliberately: `setRoleCertifications` refreshes the requirements
+ * with `data.roleId` and `refreshRoleViews` refreshes the detail with a bare `roleId`, so a
+ * wrapper keyed by anything more — the interested-volunteer page number, the shift window — could
+ * not be named from either. Those two lists own their queries in their own components instead.
+ */
+export const getStaffVolunteerRolePage = query(z.string(), async (id) => {
+	const [role, requirements, feedback] = await Promise.all([
+		getVolunteerRoleDetail(id),
+		getRoleRequirements(id),
+		getFeedbackByRole()
+	]);
+
+	return { role, requirements, feedback };
+});
+
+/** The shift detail page's one load-bearing query. Both halves are keyed by the shift id. */
+export const getStaffShiftPage = query(z.string(), async (id) => {
+	const [shift, feedback] = await Promise.all([getShift(id), getShiftFeedback(id)]);
+	return { shift, feedback };
+});
+
+/**
+ * The clearances page's one load-bearing query.
+ *
+ * Two `getClearances` calls with different arguments — the filtered view and the unfiltered set the
+ * counts are drawn from — which is two query promises in flight for one screen.
+ */
+export const getClearancesPage = query(
+	z.object({
+		certificationId: z.string().optional(),
+		state: z.enum(['current', 'expiring', 'expired', 'revoked']).optional()
+	}),
+	async ({ certificationId, state }) => {
+		const [rows, allRows] = await Promise.all([
+			getClearances({ certificationId, state }),
+			getClearances({ certificationId })
+		]);
+
+		return { rows, allRows };
+	}
+);
+
+/** The volunteer report page's one load-bearing query. None of the three has a refresh site. */
+export const getVolunteerReportPage = query(
+	z.object({ from: z.string().optional(), to: z.string().optional(), page: z.number().optional() }),
+	async ({ from, to, page }) => {
+		const [report, feedbackByRole, byMember] = await Promise.all([
+			getVolunteerReport({ from, to }),
+			getFeedbackByRole(),
+			getVolunteerReportByMember({ from, to, page })
+		]);
+
+		return { report, feedbackByRole, byMember };
+	}
+);

@@ -22,9 +22,12 @@ two), both fixed in the pass that produced this checklist.
 
 ## Status
 
-**The widened rule is not registered yet.** It lands with tranche 15, once nothing violates
-it — so `pnpm lint` stays green at every commit in between. Until then the inventory below
-is the enforcement.
+**Done — all 50 files, zero fan-outs left in the tree.**
+
+A correction to how this was framed at the start: the rule was already registered at `error` in
+`eslint.config.js` from #270. What was missing was the widened _implementation_, so CI had been
+enforcing only the narrow `Promise.all([call(), call()])` shape. Landing the rewritten rule is what
+makes the rest of it enforceable.
 
 | #   | Tranche                                                    | Status | Commit |
 | --- | ---------------------------------------------------------- | ------ | ------ |
@@ -37,12 +40,12 @@ is the enforcement.
 | 7   | **Marketing** — 3 files, 7 queries                         | ✅     | (next) |
 | 8   | **Reservations** — 3 files, 10 queries                     | ✅     | (next) |
 | 9   | **Inbox and messages** — 2 files, 6 queries                | ✅     | (next) |
-| 10  | **Volunteer — staff** — 6 files, 21 queries                | ⬜     |        |
+| 10  | **Volunteer — staff** — 6 files, 21 queries                | ✅     | (next) |
 | 11  | **Volunteer — member** — 2 files, 10 queries               | ✅     | (next) |
 | 12  | **Settings and account** — 2 files, 12 queries             | ✅     | (next) |
 | 13  | **Staff band detail** — 1 file, 4 queries                  | ✅     | (next) |
 | 14  | **Serial waterfalls** — 2 files, 6 queries — read the note | ✅     | (next) |
-| 15  | Register the widened rule at `error`                       | ⬜     |        |
+| 15  | Register the widened rule at `error`                       | ✅     | (next) |
 
 Legend: ⬜ not started · 🔵 in progress · ✅ done · ⏸️ parked · ❌ withdrawn (finding didn't hold)
 
@@ -291,7 +294,25 @@ layout can now read it from here instead.
 - `src/routes/staff/inbox/InboxList.svelte` — 4
 - `src/routes/member/messages/ConversationList.svelte` — 2
 
-### 10. Volunteer — staff
+### 10. Volunteer — staff ✅
+
+**Done**, and the largest restructuring of the sweep. It split cleanly along the tranche-4 test.
+
+Pushed down, all four unparameterized _and_ refreshed by name: `getVolunteerRoles` (`RoleOptions`,
+`ShiftRoleFields`, `NewShiftAction`), `getActiveCertifications` (`CertificationOptions`,
+`RoleRequirementsCard`), `getVolunteerStatusCounts` (`VolunteerStatusTabs`) and
+`getBlockedVolunteers` (`PendingReviewCard`). Composed: `getStaffVolunteerRolePage`,
+`getStaffShiftPage`, `getClearancesPage`, `getVolunteerReportPage`.
+
+The role detail page added a **third** reason to push down, distinct from the other two: a query
+keyed by _page state the wrapper cannot carry_. Its wrapper is keyed by the role id alone so that
+`setRoleCertifications` (which has `data.roleId`) and `refreshRoleViews` (a bare `roleId`) can both
+name it — which left the paginated interested-members list and the `from`-keyed shift list with
+nowhere to go but their own components, `RoleInterestedCard` and `RoleShiftsCard`.
+
+`from` is still pinned once on the page and passed in. Its comment is the reason: `refresh()` is
+keyed by argument, so a `from` that ticked with the clock would mint a new key on every
+re-evaluation and the refresh after creating a shift would miss its query.
 
 - `src/routes/staff/volunteer/roles/[id]/+page.svelte` — 6
 - `src/routes/staff/volunteer/+page.svelte` — 4
