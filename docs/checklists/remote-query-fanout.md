@@ -31,7 +31,7 @@ is the enforcement.
 | 1   | **Band panel — layout context** — 9 files, 22 queries      | ✅     | (next) |
 | 2   | **Directory — member and public** — 3 files, 9 queries     | ✅     | (next) |
 | 3   | **Help** — 3 files, 6 queries                              | ✅     | (next) |
-| 4   | **Equipment** — 4 files, 9 queries                         | ⬜     |        |
+| 4   | **Equipment** — 4 files, 9 queries                         | ✅     | (next) |
 | 5   | **Events and recurring** — 6 files, 13 queries             | ⬜     |        |
 | 6   | **Suggestions** — 4 files, 13 queries                      | ⬜     |        |
 | 7   | **Marketing** — 3 files, 7 queries                         | ⬜     |        |
@@ -126,7 +126,29 @@ more.
 - `src/routes/staff/help/+page.svelte` — 2
 - `src/routes/staff/help/[id]/+page.svelte` — 2
 
-### 4. Equipment
+### 4. Equipment ✅
+
+**Done**, and this is the tranche that established the second pattern. `getEquipmentCategories` is
+unparameterized and its own mutations refresh it by name, so it **cannot** be folded into a page
+query keyed by an id or a filter set — the mutation would have nothing to refresh the wrapper with,
+and the list would sit stale until navigation. #270 hit the identical wall with the inbox channel
+config.
+
+So it moved _down_ instead: `CategoryOptions.svelte` for the two `<option>` lists,
+`CategoryManagerModal.svelte` for the management table and its add/edit form, and
+`AddEquipmentAction` loads it itself the way `GrantCertificationAction` does. Kit dedupes a remote
+query per request, so four components asking for it is still one read, and every existing refresh
+keeps working untouched.
+
+**Use this test to choose:** if the constituent has a `.refresh()` that cannot name the wrapper's
+argument, push the query down into the components. Otherwise compose.
+
+`getStaffEquipmentDetail`, `getStaffLoanDetail` and `getMemberEquipmentPage` compose cleanly —
+their refresh sites all have the id in scope, and `getAvailableEquipment` has no refreshes at all.
+
+One trap worth repeating: when a component gains `const x = $derived(await …)`, `$props()` must
+stay **above** it. A top-level await suspends the script body, and `$props()` after one is past
+synchronous init — same rule as `setContext` in tranche 1.
 
 - `src/routes/staff/equipment/[id]/+page.svelte` — 3
 - `src/routes/member/equipment/+page.svelte` — 2

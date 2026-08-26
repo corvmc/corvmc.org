@@ -10,8 +10,7 @@
 	import Modal from '$lib/components/shared/Modal.svelte';
 	import {
 		submitLoanRequest as submitRequest,
-		getMemberEquipment,
-		getMemberEquipmentMeta
+		getMemberEquipmentPage
 	} from '$lib/remote/equipment.remote';
 
 	const { fields } = submitRequest;
@@ -35,8 +34,11 @@
 		categoryId: categoryId || undefined
 	});
 
-	let equipmentResult = $derived(getMemberEquipment(filters));
-	let meta = $derived(await getMemberEquipmentMeta());
+	// One query for the list and the page's own facts (credit balance, sustaining status, the
+	// category filter). `equipmentResult` stays a promise for the {#await} below.
+	const pageData = $derived(await getMemberEquipmentPage(filters));
+	const equipmentResult = $derived(pageData.equipment);
+	const meta = $derived(pageData.meta);
 
 	let showRequestModal = $state(false);
 	let selectedEquipmentId = $state<string | undefined>(undefined);

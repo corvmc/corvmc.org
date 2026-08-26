@@ -2,27 +2,36 @@
 	import Action from '../Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { createEquipment } from '$lib/remote/equipment.remote';
+	import { createEquipment, getEquipmentCategories } from '$lib/remote/equipment.remote';
 	import { Field } from '../Form';
 	import { equipmentConditions } from '$lib/config';
 
 	const { fields } = createEquipment;
 
 	let {
-		categories,
 		variant = 'primary',
 		size = 'sm',
 		class: className = '',
 		onsuccess,
 		...rest
 	}: {
-		categories: { id: string; name: string }[];
 		variant?: ButtonVariant;
 		size?: ButtonSize;
 		class?: string;
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
+
+	/**
+	 * The category list loads here rather than arriving as a prop, so the page that renders this
+	 * button is not holding a second remote query for it. Same move #270 made for
+	 * GrantCertificationAction, and the same reason `getEquipmentCategories` cannot be folded
+	 * into a page query — see CategoryOptions.
+	 *
+	 * Below `$props()`, and that matters: a top-level await suspends the script body, so a
+	 * `$props()` call after one is past synchronous init.
+	 */
+	const categories = $derived(await getEquipmentCategories());
 </script>
 
 <Action

@@ -210,7 +210,7 @@ export const editEquipment = form(editEquipmentSchema.extend({ id: z.string() })
 	const data = raw as z.infer<typeof editEquipmentSchema> & { id: string };
 	const id = data.id;
 	await updateEquipment(id, data);
-	void getEquipment(id).refresh();
+	void getStaffEquipmentDetail(id).refresh();
 	return { success: true };
 });
 
@@ -257,14 +257,14 @@ export const createEquipment = form(
 export const deactivateEquipment = form(z.object({ id: z.string() }), async (data) => {
 	await requireStaff();
 	await softDeleteEquipment(data.id as string);
-	void getEquipment(data.id as string).refresh();
+	void getStaffEquipmentDetail(data.id as string).refresh();
 	return { success: true };
 });
 
 export const reactivateEquipment = form(z.object({ id: z.string() }), async (data) => {
 	await requireStaff();
 	await restoreEquipment(data.id as string);
-	void getEquipment(data.id as string).refresh();
+	void getStaffEquipmentDetail(data.id as string).refresh();
 	return { success: true };
 });
 
@@ -345,7 +345,7 @@ export const scheduleLoanForm = form('unchecked', async (data, issue) => {
 		equipmentId: result.data!.equipmentId,
 		scheduledPickupDate: result.data!.scheduledPickupDate
 	});
-	void getLoan(loanId).refresh();
+	void getStaffLoanDetail(loanId).refresh();
 	return { success: true };
 });
 
@@ -363,7 +363,7 @@ export const checkoutLoanForm = form('unchecked', async (data, issue) => {
 	}
 	const loanId = (data as { loanId: string }).loanId;
 	await checkoutLoan(loanId, { dueDate: result.data!.dueDate });
-	void getLoan(loanId).refresh();
+	void getStaffLoanDetail(loanId).refresh();
 	return { success: true };
 });
 
@@ -447,7 +447,7 @@ export const cancelLoan = form(z.object({ id: z.string() }), async (data) => {
 	}
 
 	await cancelLoanService(loanId);
-	void getLoan(loanId).refresh();
+	void getStaffLoanDetail(loanId).refresh();
 	return { success: true };
 });
 
@@ -459,7 +459,7 @@ export const returnLoan = form(
 	async (data) => {
 		await requireStaff();
 		await returnLoanService(data.id as string, (data.staffNotes as string) || undefined);
-		void getLoan(data.id as string).refresh();
+		void getStaffLoanDetail(data.id as string).refresh();
 		return { success: true };
 	}
 );
@@ -474,4 +474,41 @@ export const returnLoan = form(
 export const getUserLoans = query(z.string(), async (userId) => {
 	await requireStaff();
 	return listUserLoans(userId);
+});
+
+/**
+ * The staff equipment detail page's one load-bearing query.
+ *
+ * The item and its loan history are both keyed by the same id and both are first paint, so they
+ * assemble here rather than racing each other out of the component — the shape that stops a page
+ * rendering past kit 2.64. Every mutation that touched `getEquipment` now refreshes this instead;
+ * nothing reads the constituent directly any more.
+ *
+ * The category list is deliberately *not* here. It is unparameterized and its own mutations
+ * refresh it by name, with no equipment id to key a wrapper with, so it lives in
+ * `CategoryOptions` instead.
+ */
+export const getStaffEquipmentDetail = query(z.string(), async (id) => {
+	const [item, loanHistory] = await Promise.all([getEquipment(id), getEquipmentLoanHistory(id)]);
+	return { item, loanHistory };
+});
+
+/**
+ * The staff loan detail page's one load-bearing query.
+ *
+ * `getAvailableEquipment` has no mutations refreshing it, so unlike the category list it composes
+ * cleanly. It stays exported for `CreateLoanAction`, which loads it in its own markup.
+ */
+export const getStaffLoanDetail = query(z.string(), async (id) => {
+	const [loan, availableEquipment] = await Promise.all([getLoan(id), getAvailableEquipment()]);
+	return { loan, availableEquipment };
+});
+
+/** The member equipment page's one load-bearing query. */
+export const getMemberEquipmentPage = query(memberEquipmentFilters, async (filters) => {
+	const [equipment, meta] = await Promise.all([
+		getMemberEquipment(filters),
+		getMemberEquipmentMeta()
+	]);
+	return { equipment, meta };
 });
