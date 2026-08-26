@@ -1,8 +1,15 @@
 /**
  * migrate-from-postgres.ts
  *
- * ETL script to migrate data from the corvmc-redux Laravel/Postgres database
- * into the corvmc-svelte D1 (SQLite) schema.
+ * RETIRED. DO NOT RUN WITH `--commit --remote`.
+ *
+ * ETL script that migrated data from the corvmc-redux Laravel/Postgres database
+ * into the corvmc-svelte D1 (SQLite) schema. That migration is done and D1 is now
+ * the canonical production data store, so writing to remote D1 from a Postgres
+ * dump would overwrite live data with a stale snapshot.
+ *
+ * Kept only until the retired ETL scripts are deleted together — see
+ * docs/architecture/operations-manual.md section 6.
  *
  * Usage:
  *   DATABASE_URL="postgres://localhost/corvmc-migration" pnpm tsx scripts/migrate-from-postgres.ts [--commit] [--remote]

@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 #
-# sync-d1.sh — reload the remote (staging) D1 database's DATA from the canonical
-# DigitalOcean Postgres. Schema and migration history (__drizzle_migrations) are left
-# intact; only table contents are replaced.
+# sync-d1.sh — RETIRED. DO NOT RUN.
 #
-# PRE-CUTOVER ONLY: Postgres is canonical, D1 is staging. Run from a host that is a DO
-# Postgres Trusted Source (e.g. your laptop). Your local dev D1 is preserved — it is
-# stashed before the run and restored afterward (even if the run fails).
+# This reloads the remote D1 database's DATA from a DigitalOcean Postgres, deleting every
+# existing row first. It was written when Postgres was canonical and D1 was a staging copy.
+# That is no longer true: D1 is the canonical production data store, so running this would
+# destroy production data and replace it with a stale snapshot.
+#
+# Kept only until the retired ETL scripts are deleted together — see
+# docs/architecture/operations-manual.md section 6 and deployment-checklist section 10a.
+#
+# (Historical behaviour, for reference: schema and migration history are left intact and
+# only table contents replaced; must run from a DO Postgres Trusted Source; the local dev
+# D1 is stashed before the run and restored afterward, even on failure.)
 #
 # Requirements:
 #   - DATABASE_URL — Postgres source; read from the shell env or .env. Append

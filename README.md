@@ -5,29 +5,28 @@ reservations, sustaining memberships, bands, ticketed events, equipment loans, a
 directory, email marketing, a staff support inbox, and smart-lock door access — one
 SvelteKit app running entirely on Cloudflare Workers.
 
-> **Migration status (as of 2026-07-10):** this app is a rewrite of a legacy
-> Laravel/Postgres system and is **pre-cutover** — the legacy app's Postgres is still the
-> canonical production data store, and this app's D1 database is a staging copy refreshed
-> from it. Sign-in for un-migrated users proxies to the legacy server. The bridge machinery
-> (`pnpm db:sync`, `scripts/migrate-from-postgres.ts`, `LARAVEL_URL`, `MIGRATION_SECRET`)
-> is temporary; the teardown list is in
-> [docs/architecture/deployment-checklist.md](docs/architecture/deployment-checklist.md) §10a.
+> **This app is canonical.** It is a rewrite of a legacy Laravel/Postgres system, and that
+> migration is done — D1 is the production data store and the legacy app is no longer active.
+> One thread remains: passwords still on bcrypt cannot be verified on Workers, so sign-in for
+> accounts that have not signed in since the move proxies to the legacy server, which is why
+> it stays up. `pnpm db:sync` and the Postgres ETL scripts are **retired and destructive** —
+> see [the operations manual §6](docs/architecture/operations-manual.md).
 
 ## Stack at a glance
 
-| Piece            | Choice                                               | Why it matters to a maintainer                                                                           |
-| ---------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Framework        | SvelteKit 2 / Svelte 5 (runes)                       | Data flows through **remote functions** (`query()`/`form()`), not load functions — see the overview      |
-| Runtime          | Cloudflare Workers (`@sveltejs/adapter-cloudflare`)  | One Worker, no servers; deploys happen via Cloudflare Workers Builds watching this repo                  |
-| Database         | Cloudflare D1 (SQLite) + Drizzle ORM                 | **No transactions** — `db.batch()` only (lint-enforced); migrations are generated, forward-only          |
-| Storage / config | R2 (media), KV (runtime site config + feature flags) | Feature flags are KV keys; staff toggle them without a deploy                                            |
-| Auth             | better-auth (email+password, scrypt)                 | Custom hashing for Workers; legacy bcrypt verifies via the old Laravel app until cutover                 |
-| Payments         | Stripe (Checkout, subscriptions, one webhook)        | Fulfillment is webhook-driven → event bus → per-domain listeners                                         |
-| Email            | Postmark (transactional + broadcast streams)         | Templates live in `postmark/`, synced with `pnpm email:push/pull`                                        |
-| SMS              | Twilio (support inbox)                               | Phone number not yet provisioned; outbound dormant                                                       |
-| Door locks       | U-Tec/Ultraloc API                                   | Daily provisioning via a cron endpoint                                                                   |
-| Errors/traces    | Sentry (+ Cloudflare native OTLP export)             | Initialized per-request in `hooks.server.ts`                                                             |
-| Scheduled jobs   | Plain HTTP endpoints under `/api/cron/*`             | Triggered by native Cloudflare cron triggers (`worker.js` scheduled handler) — see the operations manual |
+| Piece            | Choice                                               | Why it matters to a maintainer                                                                            |
+| ---------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Framework        | SvelteKit 2 / Svelte 5 (runes)                       | Data flows through **remote functions** (`query()`/`form()`), not load functions — see the overview       |
+| Runtime          | Cloudflare Workers (`@sveltejs/adapter-cloudflare`)  | One Worker, no servers; deploys happen via Cloudflare Workers Builds watching this repo                   |
+| Database         | Cloudflare D1 (SQLite) + Drizzle ORM                 | **No transactions** — `db.batch()` only (lint-enforced); migrations are generated, forward-only           |
+| Storage / config | R2 (media), KV (runtime site config + feature flags) | Feature flags are KV keys; staff toggle them without a deploy                                             |
+| Auth             | better-auth (email+password, scrypt)                 | Custom hashing for Workers; leftover bcrypt hashes verify via the old Laravel app, then rewrite to scrypt |
+| Payments         | Stripe (Checkout, subscriptions, one webhook)        | Fulfillment is webhook-driven → event bus → per-domain listeners                                          |
+| Email            | Postmark (transactional + broadcast streams)         | Templates live in `postmark/`, synced with `pnpm email:push/pull`                                         |
+| SMS              | Twilio (support inbox)                               | Phone number not yet provisioned; outbound dormant                                                        |
+| Door locks       | U-Tec/Ultraloc API                                   | Daily provisioning via a cron endpoint                                                                    |
+| Errors/traces    | Sentry (+ Cloudflare native OTLP export)             | Initialized per-request in `hooks.server.ts`                                                              |
+| Scheduled jobs   | Plain HTTP endpoints under `/api/cron/*`             | Triggered by native Cloudflare cron triggers (`worker.js` scheduled handler) — see the operations manual  |
 
 ## Quickstart
 

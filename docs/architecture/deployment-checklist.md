@@ -287,11 +287,13 @@ see §9a.
 
 ---
 
-## 9a. Migrations & data sync (pre-cutover)
+## 9a. Migrations on deploy
 
-While Postgres (DigitalOcean) is still canonical and D1 is staging: schema migrations are
-applied automatically on deploy (A), and data is refreshed manually on demand (B).
-**Both are temporary — remove at cutover (see §10a).**
+Schema migrations are applied automatically on every production deploy (A). Part B below
+described a manual data refresh from Postgres; **that is retired** — D1 is canonical now, so
+reloading it from Postgres would overwrite production with a stale snapshot. It is kept here
+only so nobody rediscovers the scripts and assumes they are current. See
+[operations manual §6](operations-manual.md) and §10a.
 
 ### A. Schema migrate on every deploy (Cloudflare Workers Builds)
 
@@ -366,17 +368,20 @@ wrangler d1 execute corvmc-db --remote --command "UPDATE user SET ..."
 
 ---
 
-## 10a. Cutover teardown
+## 10a. Teardown — what is left
 
-When D1 becomes canonical (Postgres retired), the §9a data sync is no longer wanted:
+D1 is canonical and the legacy app is no longer active, so the §9a data sync is not wanted.
+Still outstanding:
 
 - Delete the `sync-d1.sh` / `migrate-from-postgres.ts` / `reorder-seed.mjs` /
   `gen-d1-delete.mjs` / `d1-table-order.mjs` data-sync scripts.
 - Decommission the DO Postgres database.
-- Retire the bcrypt→scrypt Laravel proxy per §7a.
+- Retire the bcrypt→scrypt Laravel proxy per §7a — this is the one thing keeping the legacy
+  server up, and it can go once few enough accounts are still on a bcrypt hash to migrate
+  them with a forced password reset instead.
 
 Keep §9a part A (the migrate step inside `pnpm build`) — applying migrations before publish
-is still correct post-cutover.
+is correct permanently, not a migration-window measure.
 
 ---
 
