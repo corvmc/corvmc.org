@@ -42,7 +42,8 @@ import {
 	toPublicMemberProfile
 } from '$lib/utils/directory-display';
 import { db } from '$lib/server/db';
-import { bandMember, bandGenre } from '$lib/server/db/schema/band';
+import { bandGenre } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, sql, isNull } from 'drizzle-orm';
@@ -305,10 +306,10 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			directoryContact: group.directoryContact,
 			links: group.links,
 			directoryVisibility: group.directoryVisibility,
-			memberCount: sql<number>`cast(count(case when ${bandMember.status} = 'active' then 1 end) as integer)`
+			memberCount: sql<number>`cast(count(case when ${groupMember.status} = 'active' then 1 end) as integer)`
 		})
 		.from(group)
-		.leftJoin(bandMember, eq(bandMember.bandId, group.id))
+		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
 		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
 		.groupBy(group.id);
 
@@ -344,20 +345,20 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 
 	const members = await db
 		.select({
-			id: bandMember.id,
-			userId: bandMember.userId,
-			role: bandMember.role,
-			position: bandMember.position,
-			alias: bandMember.alias,
+			id: groupMember.id,
+			userId: groupMember.userId,
+			role: groupMember.role,
+			position: groupMember.position,
+			alias: groupMember.alias,
 			userName: user.name,
 			userImage: user.image,
 			userVisibility: user.directoryVisibility
 		})
-		.from(bandMember)
-		.innerJoin(user, eq(user.id, bandMember.userId))
-		.where(and(eq(bandMember.bandId, row.id), eq(bandMember.status, 'active')))
+		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.where(and(eq(groupMember.groupId, row.id), eq(groupMember.status, 'active')))
 		.orderBy(
-			sql`case ${bandMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
+			sql`case ${groupMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
 			user.name
 		);
 

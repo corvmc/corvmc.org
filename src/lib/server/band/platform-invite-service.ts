@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { platformInvite } from '$lib/server/db/schema/platform-invite';
-import { bandMember } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, gt, desc } from 'drizzle-orm';
@@ -40,9 +40,9 @@ export async function createInvite(
 		// insert, so the admin gets a precise message instead of a generic
 		// constraint failure (JAVASCRIPT-SVELTEKIT-2D).
 		const [membership] = await db
-			.select({ status: bandMember.status })
-			.from(bandMember)
-			.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, existingUser.id)))
+			.select({ status: groupMember.status })
+			.from(groupMember)
+			.where(and(eq(groupMember.groupId, bandId), eq(groupMember.userId, existingUser.id)))
 			.limit(1);
 
 		if (membership) {
@@ -152,8 +152,8 @@ export async function resolvePendingInvites(userId: string, email: string): Prom
 	for (const inv of pending) {
 		try {
 			// Create band member row (auto-accepted)
-			await db.insert(bandMember).values({
-				bandId: inv.bandId,
+			await db.insert(groupMember).values({
+				groupId: inv.bandId,
 				userId,
 				role: inv.role,
 				position: inv.position,

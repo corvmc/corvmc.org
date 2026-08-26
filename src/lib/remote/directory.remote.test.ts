@@ -57,7 +57,7 @@ const baseRow = {
 	createdAt: new Date(0),
 	instruments: [],
 	genres: [],
-	bandMembers: []
+	groupMembers: []
 };
 
 describe('getPublicMemberProfile contact privacy', () => {

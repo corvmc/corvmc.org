@@ -111,7 +111,7 @@ describe('createBand', () => {
 
 describe('acceptInvite', () => {
 	// JAVASCRIPT-SVELTEKIT-2A: the form carries the BAND id, which is the only
-	// id the invite list has. Passing a band_member id here is what broke accept
+	// id the invite list has. Passing a group_member id here is what broke accept
 	// for every user.
 	it('passes the band id through to acceptInvitation', async () => {
 		const result = await acceptInvite({ bandId: 'band-42' });

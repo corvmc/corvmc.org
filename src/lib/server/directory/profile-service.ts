@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { user, userInstrument, userGenre } from '$lib/server/db/schema/authentication';
-import { bandMember, bandGenre } from '$lib/server/db/schema/band';
+import { bandGenre } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { eq, and } from 'drizzle-orm';
 import { deleteObject, uploadFile } from '$lib/server/storage';
@@ -177,13 +178,13 @@ export type BandProfileData = {
 
 async function requireBandAdmin(bandId: string, userId: string) {
 	const [membership] = await db
-		.select({ role: bandMember.role })
-		.from(bandMember)
+		.select({ role: groupMember.role })
+		.from(groupMember)
 		.where(
 			and(
-				eq(bandMember.bandId, bandId),
-				eq(bandMember.userId, userId),
-				eq(bandMember.status, 'active')
+				eq(groupMember.groupId, bandId),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'active')
 			)
 		);
 

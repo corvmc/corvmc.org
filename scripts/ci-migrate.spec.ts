@@ -16,7 +16,7 @@ import { isProductionBranch } from './ci-migrate.mjs';
 // `gh-readonly-queue/main/*` branch, not `main`. It never rebuilds the identical SHA
 // once the queue merges it, so a branch check that only accepts `main` skips the
 // migrate for every queued PR while shipping its code. That is how #241's
-// `band_member.alias` column reached production as a 500 rather than a column.
+// the roster table's `alias` column reached production as a 500 rather than a column.
 describe('isProductionBranch', () => {
 	it('accepts the merge queue branch that actually deployed #241', () => {
 		expect(
