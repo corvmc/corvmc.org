@@ -400,9 +400,7 @@ export async function invite(
  * asked for — that is a success, not an error.
  */
 export type AcceptInvitationResult =
-	| { status: 'accepted'; bandId: string }
-	| { status: 'already_active' }
-	| { status: 'not_found' };
+	{ status: 'accepted'; bandId: string } | { status: 'already_active' } | { status: 'not_found' };
 
 export async function acceptInvitation(
 	bandId: string,
