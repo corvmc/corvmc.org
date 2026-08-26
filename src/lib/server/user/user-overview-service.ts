@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { bandMember } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { equipmentLoan } from '$lib/server/db/schema/equipment';
 import { volunteerHourLog } from '$lib/server/db/schema/volunteer';
@@ -88,10 +88,10 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 	// free — the join to `band` was already there to filter out deleted ones.
 	const [memberships, account] = await Promise.all([
 		db
-			.select({ bandId: bandMember.bandId, name: group.name, status: bandMember.status })
-			.from(bandMember)
-			.innerJoin(group, eq(group.id, bandMember.bandId))
-			.where(and(eq(bandMember.userId, userId), isNull(group.deletedAt))),
+			.select({ bandId: groupMember.groupId, name: group.name, status: groupMember.status })
+			.from(groupMember)
+			.innerJoin(group, eq(group.id, groupMember.groupId))
+			.where(and(eq(groupMember.userId, userId), isNull(group.deletedAt))),
 		db
 			.select({ directoryVisibility: user.directoryVisibility })
 			.from(user)

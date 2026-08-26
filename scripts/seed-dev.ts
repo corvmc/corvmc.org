@@ -50,7 +50,8 @@ import {
 	paymentCache as paymentRecord
 } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
-import { bandMember, bandGenre, bandSlugHistory } from '../src/lib/server/db/schema/band';
+import { bandGenre } from '../src/lib/server/db/schema/band';
+import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { group } from '../src/lib/server/db/schema/group';
 import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
 import {
@@ -505,8 +506,8 @@ async function deleteAll() {
 		'band_media',
 		'band_page_config',
 		'band_genre',
-		'band_member',
-		'band_slug_history',
+		'group_member',
+		'group_slug_history',
 		'group',
 		'payment_cache',
 		'credit_transaction',
@@ -1252,7 +1253,7 @@ async function seedCreditTransactions(users: SeedUser[]) {
 }
 
 /**
- * Insert a band together with the `band_member` row that records its owner.
+ * Insert a band together with the `group_member` row that records its owner.
  *
  * These two are one fact stored twice, and the app's guards read only the
  * member row (`requireBandOwner` resolves through `requireBandMember()`), so a
@@ -1268,8 +1269,8 @@ async function insertBandWithOwner(
 	position?: string
 ) {
 	const [b] = await db.insert(group).values(values).returning();
-	await db.insert(bandMember).values({
-		bandId: b.id,
+	await db.insert(groupMember).values({
+		groupId: b.id,
 		userId: ownerId,
 		role: 'owner',
 		position: position ?? null,
@@ -1365,8 +1366,8 @@ async function seedBands(users: SeedUser[]) {
 		const candidates = users.filter((u) => u.id !== owner.id);
 		const members = pickN(candidates, memberCount);
 		for (const m of members) {
-			await db.insert(bandMember).values({
-				bandId: b.id,
+			await db.insert(groupMember).values({
+				groupId: b.id,
 				userId: m.id,
 				role: 'member',
 				position: pick(BAND_POSITIONS),
@@ -1380,7 +1381,7 @@ async function seedBands(users: SeedUser[]) {
 		// old-address redirect paths (microsite and directory profile) have local
 		// data to exercise.
 		if (i === 0 || i === PREMIUM_BAND_COUNT) {
-			await db.insert(bandSlugHistory).values({ slug: `${slug}-old`, bandId: b.id });
+			await db.insert(groupSlugHistory).values({ slug: `${slug}-old`, groupId: b.id });
 		}
 	}
 

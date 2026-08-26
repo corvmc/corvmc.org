@@ -23,7 +23,7 @@ import { refund } from '$lib/server/finance/payment-service';
 import { reverseReservationCredits } from './reservation-credit-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { user } from '$lib/server/db/schema/authentication';
-import { bandMember } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -544,7 +544,7 @@ export interface MemberReservations {
  * - **Band bookings count.** A member whose band books the room has no
  *   `createdByUserId` row of their own, and "can you add me to my band's
  *   booking?" is one of the questions this page exists to answer. Resolved
- *   through active `bandMember` rows, the same way `getMemberDashboard` does.
+ *   through active `groupMember` rows, the same way `getMemberDashboard` does.
  * - **Cancellations are kept.** Filtering them out would defeat the card —
  *   "why was my booking cancelled?" is unanswerable from a list that hides it.
  *
@@ -560,10 +560,10 @@ export async function listForMember(
 	const now = new Date();
 
 	const bands = await db
-		.select({ bandId: bandMember.bandId, bandName: group.name })
-		.from(bandMember)
-		.innerJoin(group, eq(group.id, bandMember.bandId))
-		.where(and(eq(bandMember.userId, userId), eq(bandMember.status, 'active')));
+		.select({ bandId: groupMember.groupId, bandName: group.name })
+		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
+		.where(and(eq(groupMember.userId, userId), eq(groupMember.status, 'active')));
 
 	const bandNameById = new Map(bands.map((b) => [b.bandId, b.bandName]));
 	const bandIds = bands.map((b) => b.bandId);

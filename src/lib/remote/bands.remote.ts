@@ -418,7 +418,7 @@ export const createBand = form(
 	}
 );
 
-// `bandId`, not a band_member row id: the invite list only ever knows the band.
+// `bandId`, not a group_member row id: the invite list only ever knows the band.
 // Both outcomes are returned in-band rather than thrown — a stale or
 // already-taken invite is an ordinary user state, and a thrown error would
 // reach Sentry as a 500 while showing the member only a generic toast.

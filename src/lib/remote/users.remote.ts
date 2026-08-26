@@ -9,7 +9,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { bandMember } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import {
 	eq,
@@ -495,18 +495,18 @@ export const getMemberDashboard = query(async () => {
 	const weekEnd = endOfWeek(nowDate, { weekStartsOn: 1 });
 
 	const userBands = await db
-		.select({ bandId: bandMember.bandId, bandName: group.name })
-		.from(bandMember)
-		.innerJoin(group, eq(group.id, bandMember.bandId))
-		.where(and(eq(bandMember.userId, currentUser.id), eq(bandMember.status, 'active')));
+		.select({ bandId: groupMember.groupId, bandName: group.name })
+		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
+		.where(and(eq(groupMember.userId, currentUser.id), eq(groupMember.status, 'active')));
 
 	const activeBandIds = userBands.map((b) => b.bandId);
 	const bandNameMap = Object.fromEntries(userBands.map((b) => [b.bandId, b.bandName]));
 
 	const [{ count: pendingInviteCount }] = await db
 		.select({ count: sql<number>`cast(count(*) as integer)` })
-		.from(bandMember)
-		.where(and(eq(bandMember.userId, currentUser.id), eq(bandMember.status, 'pending')));
+		.from(groupMember)
+		.where(and(eq(groupMember.userId, currentUser.id), eq(groupMember.status, 'pending')));
 
 	const [
 		weekReservations,

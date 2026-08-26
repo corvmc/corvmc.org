@@ -1,5 +1,5 @@
 import { sql, type SQL } from 'drizzle-orm';
-import { bandMember } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 
@@ -55,16 +55,16 @@ const SUSTAINING = sql`"user"."subscription" is not null`;
  * each table appears once here, so the fully qualified names are unambiguous on
  * their own, and drizzle renders the correlated outer reference as
  * `"user"."id"` — prefix intact — which is the part that has to stay qualified.
- * Both `band` and `band_member` have their own `id`, so an unqualified outer
+ * Both `group` and `group_member` have their own `id`, so an unqualified outer
  * reference would silently bind to the wrong table instead of failing loudly;
  * `system-audiences.spec.ts` asserts the rendered SQL to keep it that way.
  */
 const LEADS_A_BAND = sql`exists (
-	select 1 from ${bandMember}
-	inner join ${group} on ${group.id} = ${bandMember.bandId}
-	where ${bandMember.userId} = ${user.id}
-		and ${bandMember.role} in ('owner', 'admin')
-		and ${bandMember.status} = 'active'
+	select 1 from ${groupMember}
+	inner join ${group} on ${group.id} = ${groupMember.groupId}
+	where ${groupMember.userId} = ${user.id}
+		and ${groupMember.role} in ('owner', 'admin')
+		and ${groupMember.status} = 'active'
 		and ${group.deletedAt} is null
 )`;
 

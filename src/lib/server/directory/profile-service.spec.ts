@@ -77,11 +77,11 @@ vi.mock('$lib/server/db/schema/group', () => ({
 		directoryContact: 'directory_contact',
 		links: 'links',
 		updatedAt: 'updated_at'
-	}
+	},
+	groupMember: { groupId: 'group_id', userId: 'user_id', role: 'role', status: 'status' }
 }));
 
 vi.mock('$lib/server/db/schema/band', () => ({
-	bandMember: { bandId: 'band_id', userId: 'user_id', role: 'role', status: 'status' },
 	bandGenre: { bandId: 'band_id', genre: 'genre' }
 }));
 

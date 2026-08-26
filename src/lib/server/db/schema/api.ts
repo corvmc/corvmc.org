@@ -1,7 +1,6 @@
 import type { Credits, SubscriptionInfo, CommunityStats } from './finance';
 import type { User } from './authentication';
-import type { Group } from './group';
-import type { BandMember } from './band';
+import type { Group, GroupMember } from './group';
 import type { Reservation } from './reservation';
 import type { Event } from './event';
 import type { EquipmentLoan } from './equipment';
@@ -80,9 +79,9 @@ export interface AccountResponse {
 
 export interface MemberBandsResponse {
 	pending: (Pick<Group, 'id' | 'name' | 'slug' | 'avatarKey'> &
-		Pick<BandMember, 'role' | 'status'> & { memberCount: number })[];
+		Pick<GroupMember, 'role' | 'status'> & { memberCount: number })[];
 	active: (Pick<Group, 'id' | 'name' | 'slug' | 'avatarKey'> &
-		Pick<BandMember, 'role' | 'status'> & { memberCount: number })[];
+		Pick<GroupMember, 'role' | 'status'> & { memberCount: number })[];
 }
 
 export type MemberReservation = Pick<
@@ -243,7 +242,7 @@ export interface DirectoryBandResponse {
 		memberCount: number;
 		genres: string[];
 	};
-	members: (Pick<BandMember, 'id' | 'role' | 'position'> & {
+	members: (Pick<GroupMember, 'id' | 'role' | 'position'> & {
 		userName: string;
 		userImage: string | null;
 	})[];

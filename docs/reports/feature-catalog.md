@@ -219,8 +219,8 @@ are easier to trace.
 - **reservations** — `reservation`, `closure`, `recurring_series`
 - **events** — `event`, `event_band`, `event_rsvp`
 - **finance** — `credit_transaction`, `payment_cache`
-- **groups/bands** — `group`, `band_member`, `band_genre`, `band_media`, `band_page_config`,
-  `band_slug_history`
+- **groups/bands** — `group`, `group_member`, `group_slug_history`, `band_genre`, `band_media`,
+  `band_page_config`
 - **directory** — `user_genre`, `user_instrument`
 - **tickets** — `ticket`
 - **notifications** — `notification`, `notification_preference`

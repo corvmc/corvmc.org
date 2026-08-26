@@ -9,8 +9,7 @@ import { dispatchEmailOnly } from '$lib/server/notification/dispatcher';
 import type { NotificationEmailModel } from '$lib/types/notification-email';
 import type { BandEpk } from '$lib/types/band-page';
 import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
-import { bandMember } from '$lib/server/db/schema/band';
+import { group, groupMember } from '$lib/server/db/schema/group';
 import { bandGenre } from '$lib/server/db/schema/band';
 import { bandPageConfig, bandMedia } from '$lib/server/db/schema/band-page';
 import { user } from '$lib/server/db/schema/authentication';
@@ -78,16 +77,16 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 	// Fetch members
 	const members = await db
 		.select({
-			id: bandMember.id,
+			id: groupMember.id,
 			userName: user.name,
-			alias: bandMember.alias,
+			alias: groupMember.alias,
 			userImage: user.image,
-			position: bandMember.position,
-			role: bandMember.role
+			position: groupMember.position,
+			role: groupMember.role
 		})
-		.from(bandMember)
-		.innerJoin(user, eq(user.id, bandMember.userId))
-		.where(and(eq(bandMember.bandId, bandRow.id), eq(bandMember.status, 'active')));
+		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.where(and(eq(groupMember.groupId, bandRow.id), eq(groupMember.status, 'active')));
 
 	// Fetch genres
 	const genres = await db
