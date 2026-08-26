@@ -364,7 +364,15 @@ grows.
 ### Retiring it
 
 The bridge ends when the remaining bcrypt accounts are few enough to migrate by forcing a
-password reset instead of proxying. At that point:
+password reset instead of proxying — **but there is no password reset flow yet**, so that exit
+is blocked until one is built (see the Auth emails row in
+[the feature catalog](../reports/feature-catalog.md)). The alternative exit, which costs users
+nothing, is getting bcrypt to run on Workers: `bcrypt-ts` fails there the same way
+`@noble/hashes` scrypt did, so the candidate is a WASM build. Test any such spike **on a
+deployed Worker** against a known hash/password pair — local Node passes even when workerd
+does not, which is exactly how both previous libraries went unnoticed.
+
+Once one of those lands:
 
 - remove the bcrypt branch and `verifyBcryptViaLaravel` from `src/lib/server/auth.ts`;
 - remove `LARAVEL_URL` from `wrangler.toml` and the `MIGRATION_SECRET` Worker secret;
