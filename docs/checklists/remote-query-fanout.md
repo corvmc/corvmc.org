@@ -39,8 +39,8 @@ is the enforcement.
 | 9   | **Inbox and messages** — 2 files, 6 queries                | ✅     | (next) |
 | 10  | **Volunteer — staff** — 6 files, 21 queries                | ⬜     |        |
 | 11  | **Volunteer — member** — 2 files, 10 queries               | ✅     | (next) |
-| 12  | **Settings and account** — 2 files, 12 queries             | ⬜     |        |
-| 13  | **Staff band detail** — 1 file, 4 queries                  | ⬜     |        |
+| 12  | **Settings and account** — 2 files, 12 queries             | ✅     | (next) |
+| 13  | **Staff band detail** — 1 file, 4 queries                  | ✅     | (next) |
 | 14  | **Serial waterfalls** — 2 files, 6 queries — read the note | ✅     | (next) |
 | 15  | Register the widened rule at `error`                       | ⬜     |        |
 
@@ -323,7 +323,18 @@ L497, 513, 587, 739-740, 815-818, 831, 844-846, 1257, 1271 — three of them alr
 - `src/routes/member/volunteer/+page.svelte` — 7
 - `src/routes/member/volunteer/interests/+page.svelte` — 3
 
-### 12. Settings and account
+### 12. Settings and account ✅
+
+**Done.** `staff/settings` is the tranche-11 case again — all six constituents unparameterized, so
+`getStaffSettingsPage` can be named by every mutation that used to refresh them one at a time.
+
+`member/account` needed both moves. The header pair composed into `getMemberAccountPage`, which
+lives in `notifications.remote.ts` so `account.remote.ts` does not have to import it — the
+preferences are refreshed from there, and keeping the wrapper beside the mutation lets
+`refresh-the-composed-query` check them against each other. The two card sections already had their
+own `<svelte:boundary>`, so they became `DirectMessagesSection` and `EmailSubscriptionsSection`,
+each owning one composed query (`getMyMessagingSettings`, `getMyEmailSubscriptions`) rather than
+the two `{@const await}`s they held before.
 
 `staff/settings` absorbs `settings.remote.ts` L112, 157, 196, 197, 237, 267 — note 196/197
 now also carry `getFooterInfo`. `member/account` absorbs `account.remote.ts` L170, 171, 188,
@@ -333,7 +344,10 @@ as `{@const}` inside the template.
 - `src/routes/member/account/+page.svelte` — 6
 - `src/routes/staff/settings/+page.svelte` — 6
 
-### 13. Staff band detail
+### 13. Staff band detail ✅
+
+**Done.** `getStaffBandPage` — four halves keyed by the same band id, and every mutation that
+refreshed one has that id in scope.
 
 - `src/routes/staff/bands/[id]/+page.svelte` — 4
 

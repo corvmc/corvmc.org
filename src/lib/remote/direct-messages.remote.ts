@@ -219,7 +219,7 @@ export const getMyBlocks = query(async () => {
 export const unblockMember = form(z.object({ userId: z.string().min(1) }), async (data) => {
 	const user = requireUser();
 	await unblockUser(user.id, data.userId);
-	void getMyBlocks().refresh();
+	void getMyMessagingSettings().refresh();
 	return { success: true };
 });
 
@@ -317,6 +317,18 @@ export const getMyMessagingStanding = query(async () => {
 export const setMyMessaging = form(z.object({ enabled: z.enum(['on', 'off']) }), async (data) => {
 	const user = requireUser();
 	await setAcceptsDirectMessages(user.id, data.enabled === 'on');
-	void getMyMessagingStanding().refresh();
+	void getMyMessagingSettings().refresh();
 	return { success: true };
+});
+
+/**
+ * The account page's Direct Messages section, as one query.
+ *
+ * The standing is staff's read-only restriction; the block list is the member's own. Both are
+ * unparameterized and both are refreshed by name from this file, so the wrapper can be named the
+ * same way — and the section stops holding two remote queries in flight.
+ */
+export const getMyMessagingSettings = query(z.void(), async () => {
+	const [standing, blocks] = await Promise.all([getMyMessagingStanding(), getMyBlocks()]);
+	return { standing, blocks };
 });

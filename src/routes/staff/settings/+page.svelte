@@ -4,23 +4,19 @@
 	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import {
-		getProducts,
+		getStaffSettingsPage,
 		updateProduct,
-		getReservationSettings,
 		updateReservationSettings,
-		getOrgSettings,
 		updateOrgSettings,
-		getIntegrationSettings,
 		updateIntegrationSettings,
 		testUtecConnection,
 		runLockSelfTest,
 		revokeLockTest,
-		getFeatureFlags,
 		updateFeatureFlag,
 		syncSubscriptions,
 		refreshCommunityStats
 	} from '$lib/remote/settings.remote';
-	import { getInboxChannelConfigs, updateInboxChannelConfig } from '$lib/remote/inbox.remote';
+	import { updateInboxChannelConfig } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
@@ -54,12 +50,15 @@
 	} from '@tabler/icons-svelte';
 
 	let activeTab = $state('pricing');
-	let products = $derived(await getProducts());
-	let reservationSettings = $derived(await getReservationSettings());
-	let orgSettings = $derived(await getOrgSettings());
-	let integrationSettings = $derived(await getIntegrationSettings());
-	let channelConfigs = $derived(await getInboxChannelConfigs());
-	let featureFlags = $derived(await getFeatureFlags());
+	// One query. All six are unparameterized, which is what lets every mutation that used to
+	// refresh them individually name this wrapper instead.
+	const settings = $derived(await getStaffSettingsPage());
+	const products = $derived(settings.products);
+	const reservationSettings = $derived(settings.reservation);
+	const orgSettings = $derived(settings.org);
+	const integrationSettings = $derived(settings.integration);
+	const channelConfigs = $derived(settings.channelConfigs);
+	const featureFlags = $derived(settings.featureFlags);
 
 	const { fields: reservationFields } = updateReservationSettings;
 

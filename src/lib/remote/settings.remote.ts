@@ -15,6 +15,7 @@ import { testConnection } from '$lib/server/lock/ultraloc-client';
 import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
 import { requireStaff } from '$lib/server/authorization';
 import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '$lib/server/feature-flags';
+import { getInboxChannelConfigs } from './inbox.remote';
 import { syncAllSubscriptions } from '$lib/server/finance/subscription-sync-service';
 import { refreshCommunityStats as refreshStats } from '$lib/server/finance/community-stats';
 
@@ -130,7 +131,7 @@ export const updateProduct = form(updateProductSchema, async (raw) => {
 		unitAmountCents: parseInt(data.unitAmountCents, 10)
 	});
 
-	void getProducts().refresh();
+	void getStaffSettingsPage().refresh();
 
 	return { success: true };
 });
@@ -175,7 +176,7 @@ export const updateReservationSettings = form(reservationSettingsSchema, async (
 		{ key: 'reservation.hourlyRateCents', value: data.hourlyRateCents }
 	]);
 
-	void getReservationSettings().refresh();
+	void getStaffSettingsPage().refresh();
 
 	return { success: true };
 });
@@ -214,7 +215,7 @@ export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
 		{ key: 'org.socialInstagram', value: data.socialInstagram ?? '' }
 	]);
 
-	void getOrgSettings().refresh();
+	void getStaffSettingsPage().refresh();
 	// Both, not either: `/contact` reads `getOrgAddress` directly, the footer reads it only
 	// through `getFooterInfo`, and refreshing one repaints nothing for the other.
 	void getOrgAddress().refresh();
@@ -258,7 +259,7 @@ export const updateFeatureFlag = form(
 			throw error(400, 'Invalid feature flag');
 		}
 		await updateSiteConfig(`feature.${data.flag}`, data.enabled);
-		void getFeatureFlags().refresh();
+		void getStaffSettingsPage().refresh();
 		return { success: true };
 	}
 );
@@ -288,7 +289,31 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
 		{ key: 'integration.utec.refreshToken', value: data.refreshToken }
 	]);
 
-	void getIntegrationSettings().refresh();
+	void getStaffSettingsPage().refresh();
 
 	return { success: true };
+});
+
+/**
+ * The staff settings page's one load-bearing query.
+ *
+ * Six tabs' worth of configuration, and every constituent is unparameterized — which is what makes
+ * this composable at all: each of the mutations that used to refresh them one at a time can name
+ * this wrapper with no argument.
+ */
+export const getStaffSettingsPage = query(z.void(), async () => {
+	await requireStaff();
+
+	const [products, reservation, org, integration, channelConfigs, featureFlags] = await Promise.all(
+		[
+			getProducts(),
+			getReservationSettings(),
+			getOrgSettings(),
+			getIntegrationSettings(),
+			getInboxChannelConfigs(),
+			getFeatureFlags()
+		]
+	);
+
+	return { products, reservation, org, integration, channelConfigs, featureFlags };
 });

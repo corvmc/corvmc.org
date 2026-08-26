@@ -1,13 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
-	import {
-		getStaffBand as getBand,
-		getStaffBandMembers as getBandMembers,
-		getBandReservations,
-		updateMemberRole,
-		getStaffPlatformInvites as getPlatformInvites
-	} from '$lib/remote/bands.remote';
+	import { getStaffBandPage, updateMemberRole } from '$lib/remote/bands.remote';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -32,10 +26,11 @@
 	import StaffBandForm from './StaffBandForm.svelte';
 
 	let id = $derived(page.params.id!);
-	let band = $derived(await getBand(id));
-	let members = $derived(await getBandMembers(id));
-	let reservations = $derived(await getBandReservations(id));
-	let platformInvites = $derived(await getPlatformInvites(id));
+	const data = $derived(await getStaffBandPage(id));
+	const band = $derived(data.band);
+	const members = $derived(data.members);
+	const reservations = $derived(data.reservations);
+	const platformInvites = $derived(data.platformInvites);
 </script>
 
 <!-- The band info form lives in a fully synchronous component: a top-level
