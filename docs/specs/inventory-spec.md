@@ -487,21 +487,20 @@ on Workers; label printing is SVG and the browser's own print.
 
 ## Permissions
 
-| Action                               | Who                                  |
-| ------------------------------------ | ------------------------------------ |
-| Browse the catalog, request a loan   | member (behind the `equipment` flag) |
-| See own loans, report damage         | member                               |
-| View an asset page via `/a/[tag]`    | member                               |
-| Create/edit items, assets, locations | staff                                |
-| Bind a tag, record a movement        | staff                                |
-| Receive stock, record an acquisition | staff                                |
-| Adjust stock, retire an asset        | staff                                |
-| In-kind and spend reports            | staff                                |
+| Action                               | Who    |
+| ------------------------------------ | ------ |
+| Browse the catalog, request a loan   | member |
+| See own loans, report damage         | member |
+| View an asset page via `/a/[tag]`    | member |
+| Create/edit items, assets, locations | staff  |
+| Bind a tag, record a movement        | staff  |
+| Receive stock, record an acquisition | staff  |
+| Adjust stock, retire an asset        | staff  |
+| In-kind and spend reports            | staff  |
 
-The `equipment` feature flag is kept as-is rather than renamed, and keeps gating
-the member surface only — the staff panel is always on, per
-`checklists/staff-feature-enablement.md`. Guards live in the remote layer, which
-is the only security boundary.
+There is **no feature flag.** Guards live in the remote layer, which is the only
+security boundary — `requireStaff` on everything operational, `requireUser` on
+the member surface.
 
 ## Surfaces
 
@@ -511,8 +510,16 @@ is the only security boundary.
 `/staff/inventory/loans` and `/staff/inventory/loans/[id]` (the existing loan
 queue), plus receiving and stocktake actions.
 
-**Member** — `/member/equipment` keeps its URL. The asset page reached by
-scanning is new.
+**Member** — `/member/equipment` keeps its URL, and the unit page reached by
+scanning a tag is new. **Neither is in the member nav**, deliberately: gear
+lending is still arranged in person, so a browsable catalogue would invite
+requests the front desk is not yet running through this system. The pages are
+reachable by scanning a tag, by a notification link, or by URL.
+
+Cutting the `equipment` flag did not change that — the member nav never gated on
+the flag, it simply omits the section. Adding the row is the follow-up for when
+lending stops being manual, and `src/routes/member/nav-items.spec.ts` records
+both routes in its stranded-on-dashboard list until then.
 
 **Resolver** — `/a/[tag]`.
 
@@ -588,9 +595,15 @@ pattern — a cached column reconciled by cron, with the ledger still canonical.
 backfillable. A `receive` with no cost or source is a permanently impoverished
 row, and by the time the reporting is built the receipts are gone.
 
-**Why the `equipment` feature flag keeps its name.** Renaming it means touching
-`ALL_FLAGS`, the settings UI, the seed and every guard, to no functional end. The
-flag names a member-facing surface, and members will still call it equipment.
+**Why the `equipment` feature flag was cut rather than renamed.** The first draft
+of this spec kept it, reasoning that renaming it meant touching `ALL_FLAGS`, the
+site-config defaults, the settings UI and every guard to no functional end. That
+was the wrong question. The flag existed to hide a module that had never been
+used, and the member nav did not gate on it anyway — so it was defending a
+surface nothing linked to, while leaving the flag's name (`equipment`) in
+permanent disagreement with the section's (Inventory). Cutting it removed four
+hand-maintained lists, four `requireFeature` calls and the contradiction, and it
+is why `getMemberEquipment` and friends now guard with `requireUser` alone.
 
 **Why `assetTag` is nullable.** Tags get bound when a physical sticker exists, and
 gear will be entered before the roll arrives. A `NOT NULL` here would force a

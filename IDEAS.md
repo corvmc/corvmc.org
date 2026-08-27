@@ -314,7 +314,9 @@ Areas where the npm ecosystem is thin — worth revisiting periodically.
 
 ## Feature-Flagged (Built, Not Yet Enabled)
 
-Features behind feature flags in `src/lib/server/feature-flags.ts` — all eight of `ALL_FLAGS`, in declaration order. Toggled via Staff Settings.
+Features behind feature flags in `src/lib/server/feature-flags.ts` — all seven of `ALL_FLAGS`, in declaration order. Toggled via Staff Settings.
+
+Inventory used to be here as `equipment`; its flag was cut in #281 and the module is now always on.
 
 ## Staff Inbox
 
@@ -341,14 +343,6 @@ Audience management, campaigns, and broadcast emails. Adds a Marketing section t
 
 **Routes:** `/staff/marketing/campaigns`, `/staff/marketing/campaigns/new`, `/staff/marketing/campaigns/[id]`, `/staff/marketing/campaigns/[id]/edit`, `/staff/marketing/audiences`, `/staff/marketing/audiences/[id]`
 **API:** `/api/cron/send-campaigns`
-
-## Equipment
-
-**Flag:** `equipment`
-
-Equipment catalog, loan management, and equipment credits. Adds an Equipment section to the staff sidebar with loan tracking and inventory management.
-
-**Routes:** `/staff/inventory`, `/staff/inventory/loans`, `/staff/inventory/[id]`, `/staff/inventory/assets/[id]`
 
 ## Help Articles
 

@@ -122,10 +122,6 @@
 			label: 'Email Marketing',
 			description: 'Audience management, campaigns, and broadcast emails'
 		},
-		equipment: {
-			label: 'Equipment',
-			description: 'Equipment catalog, loan management, and equipment credits'
-		},
 		helpArticles: {
 			label: 'Help Articles',
 			description: 'Knowledge base with staff-managed articles for members'
@@ -326,7 +322,8 @@
 									name="description"
 									value={product.description ?? ''}
 									class="textarea textarea-sm"
-									rows="2"></textarea>
+									rows="2"
+								></textarea>
 							</div>
 						</CardBody>
 					</Card>

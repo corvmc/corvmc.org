@@ -3,7 +3,6 @@ import { toGenericRef } from '$lib/server/entity/refs';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
-import { requireFeature } from '$lib/server/feature-flags';
 import {
 	createCategory,
 	createItem as createItemService,
@@ -189,7 +188,6 @@ const memberEquipmentFilters = z.object({
 });
 
 export const getMemberEquipment = query(memberEquipmentFilters, async (filters) => {
-	await requireFeature('equipment');
 	requireUser();
 	const { rows } = await listItems({
 		search: filters.search || undefined,
@@ -210,7 +208,6 @@ export const getMemberEquipment = query(memberEquipmentFilters, async (filters) 
 });
 
 export const getMemberEquipmentMeta = query(z.void(), async () => {
-	await requireFeature('equipment');
 	const currentUser = requireUser();
 	const { getBalance } = await import('$lib/server/finance/credit-service');
 	const { getSubscription } = await import('$lib/server/finance/subscription-service');
@@ -234,7 +231,6 @@ export const getMemberEquipmentMeta = query(z.void(), async () => {
 });
 
 export const getMemberEquipmentLoans = query(async () => {
-	await requireFeature('equipment');
 	const currentUser = requireUser();
 	const loans = await listUserLoans(currentUser.id);
 
@@ -252,7 +248,6 @@ export const getMemberEquipmentLoans = query(async () => {
  * gave it. Phase 4 adds the manual and the report-damage button here.
  */
 export const getMemberAsset = query(z.string(), async (id) => {
-	await requireFeature('equipment');
 	requireUser();
 	const asset = await getAssetById(id);
 	if (!asset) error(404, 'Not found');
