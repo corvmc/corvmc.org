@@ -130,54 +130,50 @@ A regional music calendar with three event layers: venue events auto-populated f
 
 **Progress:** Phases 1 and 2 shipped. Phase 1 made `/events` a unified gig guide: next-3 CMC hero posters plus a poster-forward list of CMC and member-band events, a compact mini-calendar date-jumper, and band events rendering on `/events/[id]` with band attribution (`docs/specs/shipped/community-calendar-spec.md`). Phase 2 added the third layer the extension point was left for — members author `source='community'` listings for off-site shows, publishing directly until staff uphold a report against them, after which their listings queue for review; anyone with no account can send an "Event Tip" through the contact form into the staff inbox. Cancelled events now stay on the guide marked cancelled instead of vanishing (`docs/specs/shipped/community-events-spec.md`). Still to come: partner feed imports and `.ics`/RSS syndication (no calendar UI package was needed — built on the already-installed `@internationalized/date`).
 
-### Staff Events: Productions vs Listings
+### Staff Events: Productions and Calendar
 
-`/staff/events` is two jobs on one page. **Moderating listings** is reactive: a member or band posts
-a show, almost all go straight to the public guide untouched, but a member whose standing is flagged
-has theirs held at `pending_review` and staff get pinged. The questions are fixed — what is this,
-who's behind it, is anything wrong — and the work is done when the queue is empty. **Running a
-production** is the opposite shape: nobody pings you, one show is touched repeatedly over weeks, and
-the characteristic failure is something quietly missing — no room held, no poster, no volunteers —
-until it's too late to fix.
+`/staff/events` is two jobs on one page. **Moderating** is reactive: a member or band posts a show,
+almost all go straight to the public guide untouched, but a member whose standing is flagged has
+theirs held at `pending_review` and staff get pinged. The questions are fixed — what is this, who's
+behind it, is anything wrong, is it already on the calendar — and the work is done when the queue is
+empty. **Running a production** is the opposite shape: nobody pings you, one show is touched
+repeatedly over weeks, and the characteristic failure is something quietly missing — no room held,
+no poster, no volunteers — until it's too late to fix.
 
 One page can't be shaped for both. Today it toggles between them with a `TabBar` and a source
 `Select`, and the detail page carries every card for every source: a community listing at another
 venue still renders "Space Reservation: no space held" and a "Volunteer Shifts: + schedule one" form
-for a show CMC neither produces nor staffs. Meanwhile the review queue never shows who posted the
-thing, which is the first fact a moderator needs.
+for a show CMC neither produces nor staffs.
 
-The split is by **source**, not status. `/staff/events` becomes **Productions** (`source='cmc'`) — no
-queue, New Event as the primary action, a status filter, and the Space column promoted so an unheld
-room is visible while scanning. A new `/staff/listings` becomes **Listings** (`band` + `community`) —
-opens on Needs review, badged in the sidebar from the `listingsPending` count `getStaffLayout`
-already computes and nothing reads, with a **Posted by** column carrying the accountable party: the
-band's chip for a band gig, the member for a community listing.
+The axis is **work versus publicity**. `/staff/events` becomes **Productions** — `source='cmc'` at
+every status, the surface where a show is built: drafts, the room, the ticket ledger, the check-in
+door. A new `/staff/calendar` is the staff's view of the public gig guide — **every** source,
+public statuses plus `pending_review`, forward-chronological, with the moderation actions on each
+row and a **Posted by** column naming whoever is accountable. A CMC show appears on both, in two
+roles; neither page is a superset of the other, since Productions holds drafts the Calendar must
+never show.
+
+Splitting the moderation half by _source_ was the first design and it was wrong, because it answers
+a question moderators don't ask. The clincher is duplicates: `checkForDuplicate`'s own comment calls
+two people posting the same gig "the characteristic failure of a community calendar" and names
+moderation as the only backstop — yet `findDuplicateListing` returns null unless the caller is the
+listing's own author, so **staff have no duplicate detection at all**. The duplicate is frequently
+one of our own shows, re-posted by a member who didn't know we had it listed. A source-scoped page
+structurally cannot show that; a calendar shows it by construction.
 
 The detail page stays at **one route**. `entity-href.ts` sends every event ref to
 `/staff/events/{id}` and `EventRef` carries no `source`, so two detail routes would mean adding
 `source` to every event-ref producer. Gating the production cards on `source === 'cmc'` removes the
-dead UI for a fraction of that cost. Both indexes should scope by an explicit allow-list rather than
-by exclusion, so a future source lands on neither page until someone chooses — a group event going
-missing is a visible bug, whereas one quietly appearing in the moderation queue is a wrong answer
-nobody notices.
+dead UI for a fraction of that cost.
 
-Losing the combined index costs less than it appears. The cross-source view staff actually want is
-day-level — _is anything else on that night?_ — and that already exists as the public gig guide,
-which is all-source by design and whose mini-calendar dots exist to answer exactly that. What the
-staff index adds is the non-public rows, and those divide cleanly: a CMC draft is Productions, a
-listing awaiting or refused review is Listings. The one real gap is scheduling against an
-_unannounced_ show, which belongs in `checkConflicts` — today it guards the room, not the night.
-
-**Progress:** Specced in `docs/specs/staff-events-split-spec.md`. No schema change — it is a routing
-and presentation split over data that already exists. It was originally deferred behind Groups, on
-the belief that module would move the join this depends on; in fact Groups phase 1 already repointed
-`event.bandId` at `group.id`, so that churn is behind us. What remains is phase 9 — group events,
-`event_group`, and a **fourth** `eventSources` value, `'group'`, for club and committee sessions.
-That is seven phases out and changes nothing structural here: it adds a source rather than renaming
-one, so `'band'` stays and the Listings page is unaffected. A club
-session is a third category — collective programming, but not a CMC production and not a listing
-anyone moderates — and where staff administer it is left open for the Groups panel design to settle.
-Both indexes scope by explicit allow-list so it lands on neither page by default.
+**Progress:** Specced in `docs/specs/staff-events-split-spec.md`. No schema change, and no change to
+`listAll` or `getStaffEvents` either — Productions calls the existing query with `source: 'cmc'`,
+and the Calendar gets its own read modelled on the gig guide's. It was originally deferred behind
+Groups on the belief that module would move a join this depends on; in fact phase 1 already
+repointed `event.bandId` at `group.id`, so that churn is behind us. Phase 9 adds a **fourth**
+`eventSources` value, `'group'`, for club and committee sessions rather than renaming an existing
+one — a club session reaches the Calendar for free, like anything else that publishes, while its
+work-side home is left open for the Groups panel design to settle.
 
 ### Club Management
 
