@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "dad42d3e-ad08-469a-8add-588ad5d747ce",
+  "id": "911d1478-824d-41c6-8854-b9ec90229442",
   "prevIds": [
-    "fcc9c3fb-4778-44cb-9d39-5a699b64aef1"
+    "c5ec70ee-ef44-4849-89d8-16a007683353"
   ],
   "ddl": [
     {
@@ -132,6 +132,14 @@
     },
     {
       "name": "group_slug_history",
+      "entityType": "tables"
+    },
+    {
+      "name": "directory_entry",
+      "entityType": "tables"
+    },
+    {
+      "name": "directory_tag",
       "entityType": "tables"
     },
     {
@@ -3047,6 +3055,226 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "group_slug_history"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "bio",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tagline",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "hometown",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "founded_year",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "avatar_key",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "links",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'public'",
+      "generated": null,
+      "name": "visibility",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contact",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "looking_for",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "available_for_hire",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "teaches_lessons",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "open_to_collaboration",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "entry_id",
+      "entityType": "columns",
+      "table": "directory_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "directory_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "value",
+      "entityType": "columns",
+      "table": "directory_tag"
     },
     {
       "type": "text",
@@ -6105,6 +6333,51 @@
     },
     {
       "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_directory_entry_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "directory_entry"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_directory_entry_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "directory_entry"
+    },
+    {
+      "columns": [
+        "entry_id"
+      ],
+      "tableTo": "directory_entry",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_directory_tag_entry_id_directory_entry_id_fk",
+      "entityType": "fks",
+      "table": "directory_tag"
+    },
+    {
+      "columns": [
         "band_id"
       ],
       "tableTo": "group",
@@ -7128,6 +7401,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "directory_entry_pk",
+      "table": "directory_entry",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "band_media_pk",
       "table": "band_media",
       "entityType": "pks"
@@ -8082,6 +8364,80 @@
     {
       "columns": [
         {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_entry_user",
+      "entityType": "indexes",
+      "table": "directory_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_entry_group",
+      "entityType": "indexes",
+      "table": "directory_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "visibility",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_entry_visibility",
+      "entityType": "indexes",
+      "table": "directory_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "entry_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_tag_entry",
+      "entityType": "indexes",
+      "table": "directory_tag"
+    },
+    {
+      "columns": [
+        {
+          "value": "kind",
+          "isExpression": false
+        },
+        {
+          "value": "value",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_tag_kind_value",
+      "entityType": "indexes",
+      "table": "directory_tag"
+    },
+    {
+      "columns": [
+        {
           "value": "band_id",
           "isExpression": false
         },
@@ -8910,6 +9266,17 @@
       "name": "band_member_band_user_unique",
       "entityType": "uniques",
       "table": "group_member"
+    },
+    {
+      "columns": [
+        "entry_id",
+        "kind",
+        "value"
+      ],
+      "nameExplicit": true,
+      "name": "directory_tag_entry_kind_value_unique",
+      "entityType": "uniques",
+      "table": "directory_tag"
     },
     {
       "columns": [

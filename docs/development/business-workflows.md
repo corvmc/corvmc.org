@@ -365,7 +365,7 @@ Members browse the catalog, request an item for a weekend, and staff schedule a
 pickup, hand it over and take it back. Charges are computed at return from days
 borrowed × a per-tier daily rate, discounted for sustaining members, payable from
 equipment credits first and cash for the rest. Both surfaces are always on — the
-`equipment` flag was cut in #281, since a flag whose only job was hiding a module
+`equipment` flag was cut in #286, since a flag whose only job was hiding a module
 nobody had entered data into stopped being useful the moment the data model was
 worth using.
 

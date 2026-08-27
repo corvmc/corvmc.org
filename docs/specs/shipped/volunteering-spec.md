@@ -875,7 +875,7 @@ tracked in `CHORES.md`.
 ### `/staff/volunteer/report`
 
 A separate route rather than a tab, mirroring `/staff/equipment` ↔
-`/staff/equipment/loans` (renamed to `/staff/inventory/**` in #281).
+`/staff/equipment/loans` (renamed to `/staff/inventory/**` in #286).
 
 - Two date inputs, defaulting to the current calendar year.
 - `StatCard` row: total hours, volunteers, logs, average per volunteer.

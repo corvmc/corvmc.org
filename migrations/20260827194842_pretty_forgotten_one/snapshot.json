@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "68f66848-4ff0-4607-924b-16cb3ed211e6",
+  "id": "c5ec70ee-ef44-4849-89d8-16a007683353",
   "prevIds": [
-    "dad42d3e-ad08-469a-8add-588ad5d747ce"
+    "fcc9c3fb-4778-44cb-9d39-5a699b64aef1"
   ],
   "ddl": [
     {
@@ -115,11 +115,7 @@
       "entityType": "tables"
     },
     {
-      "name": "acquisition",
-      "entityType": "tables"
-    },
-    {
-      "name": "acquisition_line",
+      "name": "equipment",
       "entityType": "tables"
     },
     {
@@ -127,23 +123,7 @@
       "entityType": "tables"
     },
     {
-      "name": "inventory_asset",
-      "entityType": "tables"
-    },
-    {
-      "name": "inventory_item",
-      "entityType": "tables"
-    },
-    {
-      "name": "inventory_loan",
-      "entityType": "tables"
-    },
-    {
-      "name": "inventory_location",
-      "entityType": "tables"
-    },
-    {
-      "name": "stock_movement",
+      "name": "equipment_loan",
       "entityType": "tables"
     },
     {
@@ -160,6 +140,14 @@
     },
     {
       "name": "group_slug_history",
+      "entityType": "tables"
+    },
+    {
+      "name": "directory_entry",
+      "entityType": "tables"
+    },
+    {
+      "name": "directory_tag",
       "entityType": "tables"
     },
     {
@@ -2594,7 +2582,7 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "acquisition"
+      "table": "equipment"
     },
     {
       "type": "text",
@@ -2602,109 +2590,49 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "kind",
+      "name": "name",
       "entityType": "columns",
-      "table": "acquisition"
+      "table": "equipment"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "description",
+      "entityType": "columns",
+      "table": "equipment"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "category_id",
+      "entityType": "columns",
+      "table": "equipment"
     },
     {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
-      "default": null,
+      "default": "1",
       "generated": null,
-      "name": "occurred_at",
+      "name": "total_quantity",
       "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "source_name",
-      "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "donor_user_id",
-      "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "reference",
-      "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "total_cents",
-      "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "fair_value_cents",
-      "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "fair_value_basis",
-      "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "intended_use",
-      "entityType": "columns",
-      "table": "acquisition"
+      "table": "equipment"
     },
     {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
-      "default": "false",
+      "default": "0",
       "generated": null,
-      "name": "monetized",
+      "name": "out_of_order_quantity",
       "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "acknowledged_at",
-      "entityType": "columns",
-      "table": "acquisition"
+      "table": "equipment"
     },
     {
       "type": "text",
@@ -2712,9 +2640,9 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "appraisal_ref",
+      "name": "serial_number",
       "entityType": "columns",
-      "table": "acquisition"
+      "table": "equipment"
     },
     {
       "type": "text",
@@ -2722,9 +2650,29 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "recorded_by_user_id",
+      "name": "resource_id",
       "entityType": "columns",
-      "table": "acquisition"
+      "table": "equipment"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "condition",
+      "entityType": "columns",
+      "table": "equipment"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'available'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "equipment"
     },
     {
       "type": "text",
@@ -2734,7 +2682,17 @@
       "generated": null,
       "name": "notes",
       "entityType": "columns",
-      "table": "acquisition"
+      "table": "equipment"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "image_url",
+      "entityType": "columns",
+      "table": "equipment"
     },
     {
       "type": "integer",
@@ -2744,7 +2702,7 @@
       "generated": null,
       "name": "created_at",
       "entityType": "columns",
-      "table": "acquisition"
+      "table": "equipment"
     },
     {
       "type": "integer",
@@ -2754,47 +2712,7 @@
       "generated": null,
       "name": "updated_at",
       "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "acquisition_line"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "acquisition_id",
-      "entityType": "columns",
-      "table": "acquisition_line"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "item_id",
-      "entityType": "columns",
-      "table": "acquisition_line"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "quantity",
-      "entityType": "columns",
-      "table": "acquisition_line"
+      "table": "equipment"
     },
     {
       "type": "integer",
@@ -2802,19 +2720,9 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "unit_value_cents",
+      "name": "deleted_at",
       "entityType": "columns",
-      "table": "acquisition_line"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "acquisition_line"
+      "table": "equipment"
     },
     {
       "type": "text",
@@ -2884,17 +2792,7 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "item_id",
-      "entityType": "columns",
-      "table": "inventory_asset"
+      "table": "equipment_loan"
     },
     {
       "type": "text",
@@ -2902,299 +2800,9 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "asset_tag",
+      "name": "equipment_id",
       "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "serial_number",
-      "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "condition",
-      "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'in_service'",
-      "generated": null,
-      "name": "status",
-      "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "location_id",
-      "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "acquisition_id",
-      "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "retired_at",
-      "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "retired_reason",
-      "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notes",
-      "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "inventory_asset"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "name",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "description",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "category_id",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "kind",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'each'",
-      "generated": null,
-      "name": "unit_of_measure",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "gtin",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "true",
-      "generated": null,
-      "name": "is_loanable",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "reorder_point",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "reorder_quantity",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "resource_id",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "image_url",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notes",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "deleted_at",
-      "entityType": "columns",
-      "table": "inventory_item"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "inventory_loan"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "item_id",
-      "entityType": "columns",
-      "table": "inventory_loan"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "asset_id",
-      "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "text",
@@ -3204,7 +2812,7 @@
       "generated": null,
       "name": "user_id",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3214,7 +2822,7 @@
       "generated": null,
       "name": "quantity",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3224,7 +2832,7 @@
       "generated": null,
       "name": "requested_pickup_date",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3234,7 +2842,7 @@
       "generated": null,
       "name": "estimated_return_date",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3244,7 +2852,7 @@
       "generated": null,
       "name": "scheduled_pickup_date",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3254,7 +2862,7 @@
       "generated": null,
       "name": "due_date",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3264,7 +2872,7 @@
       "generated": null,
       "name": "checked_out_at",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3274,7 +2882,7 @@
       "generated": null,
       "name": "returned_at",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "text",
@@ -3284,7 +2892,7 @@
       "generated": null,
       "name": "status",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3294,7 +2902,7 @@
       "generated": null,
       "name": "daily_rate_cents",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3304,7 +2912,7 @@
       "generated": null,
       "name": "estimated_cost_cents",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3314,7 +2922,7 @@
       "generated": null,
       "name": "total_charge_cents",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3324,7 +2932,7 @@
       "generated": null,
       "name": "credits_cents",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3334,7 +2942,7 @@
       "generated": null,
       "name": "cash_cents",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "text",
@@ -3344,7 +2952,7 @@
       "generated": null,
       "name": "member_notes",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "text",
@@ -3354,7 +2962,7 @@
       "generated": null,
       "name": "staff_notes",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3364,7 +2972,7 @@
       "generated": null,
       "name": "created_at",
       "entityType": "columns",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "type": "integer",
@@ -3374,207 +2982,7 @@
       "generated": null,
       "name": "updated_at",
       "entityType": "columns",
-      "table": "inventory_loan"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "inventory_location"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "name",
-      "entityType": "columns",
-      "table": "inventory_location"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "parent_id",
-      "entityType": "columns",
-      "table": "inventory_location"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "display_order",
-      "entityType": "columns",
-      "table": "inventory_location"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notes",
-      "entityType": "columns",
-      "table": "inventory_location"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "inventory_location"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "inventory_location"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "item_id",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "asset_id",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "quantity",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "reason",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "location_id",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "to_location_id",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "actor_id",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "occurred_at",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "loan_id",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "acquisition_id",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notes",
-      "entityType": "columns",
-      "table": "stock_movement"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "stock_movement"
+      "table": "equipment_loan"
     },
     {
       "type": "text",
@@ -4005,6 +3413,226 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "group_slug_history"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "bio",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tagline",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "hometown",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "founded_year",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "avatar_key",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "links",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'public'",
+      "generated": null,
+      "name": "visibility",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contact",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "looking_for",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "available_for_hire",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "teaches_lessons",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "open_to_collaboration",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "directory_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "entry_id",
+      "entityType": "columns",
+      "table": "directory_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "directory_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "value",
+      "entityType": "columns",
+      "table": "directory_tag"
     },
     {
       "type": "text",
@@ -6973,96 +6601,6 @@
     },
     {
       "columns": [
-        "donor_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_acquisition_donor_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "acquisition"
-    },
-    {
-      "columns": [
-        "recorded_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_acquisition_recorded_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "acquisition"
-    },
-    {
-      "columns": [
-        "acquisition_id"
-      ],
-      "tableTo": "acquisition",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_acquisition_line_acquisition_id_acquisition_id_fk",
-      "entityType": "fks",
-      "table": "acquisition_line"
-    },
-    {
-      "columns": [
-        "item_id"
-      ],
-      "tableTo": "inventory_item",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "RESTRICT",
-      "nameExplicit": false,
-      "name": "fk_acquisition_line_item_id_inventory_item_id_fk",
-      "entityType": "fks",
-      "table": "acquisition_line"
-    },
-    {
-      "columns": [
-        "item_id"
-      ],
-      "tableTo": "inventory_item",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "RESTRICT",
-      "nameExplicit": false,
-      "name": "fk_inventory_asset_item_id_inventory_item_id_fk",
-      "entityType": "fks",
-      "table": "inventory_asset"
-    },
-    {
-      "columns": [
-        "location_id"
-      ],
-      "tableTo": "inventory_location",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_inventory_asset_location_id_inventory_location_id_fk",
-      "entityType": "fks",
-      "table": "inventory_asset"
-    },
-    {
-      "columns": [
         "category_id"
       ],
       "tableTo": "equipment_category",
@@ -7072,39 +6610,24 @@
       "onUpdate": "NO ACTION",
       "onDelete": "RESTRICT",
       "nameExplicit": false,
-      "name": "fk_inventory_item_category_id_equipment_category_id_fk",
+      "name": "fk_equipment_category_id_equipment_category_id_fk",
       "entityType": "fks",
-      "table": "inventory_item"
+      "table": "equipment"
     },
     {
       "columns": [
-        "item_id"
+        "equipment_id"
       ],
-      "tableTo": "inventory_item",
+      "tableTo": "equipment",
       "columnsTo": [
         "id"
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
-      "name": "fk_inventory_loan_item_id_inventory_item_id_fk",
+      "name": "fk_equipment_loan_equipment_id_equipment_id_fk",
       "entityType": "fks",
-      "table": "inventory_loan"
-    },
-    {
-      "columns": [
-        "asset_id"
-      ],
-      "tableTo": "inventory_asset",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_inventory_loan_asset_id_inventory_asset_id_fk",
-      "entityType": "fks",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "columns": [
@@ -7117,84 +6640,9 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
-      "name": "fk_inventory_loan_user_id_user_id_fk",
+      "name": "fk_equipment_loan_user_id_user_id_fk",
       "entityType": "fks",
-      "table": "inventory_loan"
-    },
-    {
-      "columns": [
-        "item_id"
-      ],
-      "tableTo": "inventory_item",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "RESTRICT",
-      "nameExplicit": false,
-      "name": "fk_stock_movement_item_id_inventory_item_id_fk",
-      "entityType": "fks",
-      "table": "stock_movement"
-    },
-    {
-      "columns": [
-        "asset_id"
-      ],
-      "tableTo": "inventory_asset",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_stock_movement_asset_id_inventory_asset_id_fk",
-      "entityType": "fks",
-      "table": "stock_movement"
-    },
-    {
-      "columns": [
-        "location_id"
-      ],
-      "tableTo": "inventory_location",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_stock_movement_location_id_inventory_location_id_fk",
-      "entityType": "fks",
-      "table": "stock_movement"
-    },
-    {
-      "columns": [
-        "to_location_id"
-      ],
-      "tableTo": "inventory_location",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_stock_movement_to_location_id_inventory_location_id_fk",
-      "entityType": "fks",
-      "table": "stock_movement"
-    },
-    {
-      "columns": [
-        "actor_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_stock_movement_actor_id_user_id_fk",
-      "entityType": "fks",
-      "table": "stock_movement"
+      "table": "equipment_loan"
     },
     {
       "columns": [
@@ -7285,6 +6733,51 @@
       "name": "fk_band_slug_history_band_id_band_id_fk",
       "entityType": "fks",
       "table": "group_slug_history"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_directory_entry_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "directory_entry"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_directory_entry_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "directory_entry"
+    },
+    {
+      "columns": [
+        "entry_id"
+      ],
+      "tableTo": "directory_entry",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_directory_tag_entry_id_directory_entry_id_fk",
+      "entityType": "fks",
+      "table": "directory_tag"
     },
     {
       "columns": [
@@ -8275,17 +7768,8 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "acquisition_pk",
-      "table": "acquisition",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "acquisition_line_pk",
-      "table": "acquisition_line",
+      "name": "equipment_pk",
+      "table": "equipment",
       "entityType": "pks"
     },
     {
@@ -8302,44 +7786,8 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "inventory_asset_pk",
-      "table": "inventory_asset",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "inventory_item_pk",
-      "table": "inventory_item",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "inventory_loan_pk",
-      "table": "inventory_loan",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "inventory_location_pk",
-      "table": "inventory_location",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "stock_movement_pk",
-      "table": "stock_movement",
+      "name": "equipment_loan_pk",
+      "table": "equipment_loan",
       "entityType": "pks"
     },
     {
@@ -8367,6 +7815,15 @@
       "nameExplicit": false,
       "name": "band_slug_history_pk",
       "table": "group_slug_history",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "directory_entry_pk",
+      "table": "directory_entry",
       "entityType": "pks"
     },
     {
@@ -9216,86 +8673,16 @@
     {
       "columns": [
         {
-          "value": "kind",
+          "value": "category_id",
           "isExpression": false
         }
       ],
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "idx_acquisition_kind",
+      "name": "idx_equipment_category",
       "entityType": "indexes",
-      "table": "acquisition"
-    },
-    {
-      "columns": [
-        {
-          "value": "occurred_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_acquisition_occurred",
-      "entityType": "indexes",
-      "table": "acquisition"
-    },
-    {
-      "columns": [
-        {
-          "value": "donor_user_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_acquisition_donor",
-      "entityType": "indexes",
-      "table": "acquisition"
-    },
-    {
-      "columns": [
-        {
-          "value": "acquisition_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_acq_line_acquisition",
-      "entityType": "indexes",
-      "table": "acquisition_line"
-    },
-    {
-      "columns": [
-        {
-          "value": "item_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_acq_line_item",
-      "entityType": "indexes",
-      "table": "acquisition_line"
-    },
-    {
-      "columns": [
-        {
-          "value": "item_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_asset_item",
-      "entityType": "indexes",
-      "table": "inventory_asset"
+      "table": "equipment"
     },
     {
       "columns": [
@@ -9307,79 +8694,9 @@
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "idx_asset_status",
+      "name": "idx_equipment_status",
       "entityType": "indexes",
-      "table": "inventory_asset"
-    },
-    {
-      "columns": [
-        {
-          "value": "location_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_asset_location",
-      "entityType": "indexes",
-      "table": "inventory_asset"
-    },
-    {
-      "columns": [
-        {
-          "value": "acquisition_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_asset_acquisition",
-      "entityType": "indexes",
-      "table": "inventory_asset"
-    },
-    {
-      "columns": [
-        {
-          "value": "category_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_item_category",
-      "entityType": "indexes",
-      "table": "inventory_item"
-    },
-    {
-      "columns": [
-        {
-          "value": "kind",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_item_kind",
-      "entityType": "indexes",
-      "table": "inventory_item"
-    },
-    {
-      "columns": [
-        {
-          "value": "gtin",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": "gtin IS NOT NULL",
-      "origin": "manual",
-      "name": "idx_item_gtin",
-      "entityType": "indexes",
-      "table": "inventory_item"
+      "table": "equipment"
     },
     {
       "columns": [
@@ -9391,37 +8708,23 @@
       "isUnique": false,
       "where": "resource_id IS NOT NULL",
       "origin": "manual",
-      "name": "idx_item_resource_id",
+      "name": "idx_equipment_resource_id",
       "entityType": "indexes",
-      "table": "inventory_item"
+      "table": "equipment"
     },
     {
       "columns": [
         {
-          "value": "item_id",
+          "value": "equipment_id",
           "isExpression": false
         }
       ],
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "idx_loan_item",
+      "name": "idx_loan_equipment",
       "entityType": "indexes",
-      "table": "inventory_loan"
-    },
-    {
-      "columns": [
-        {
-          "value": "asset_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_loan_asset",
-      "entityType": "indexes",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "columns": [
@@ -9435,7 +8738,7 @@
       "origin": "manual",
       "name": "idx_loan_user",
       "entityType": "indexes",
-      "table": "inventory_loan"
+      "table": "equipment_loan"
     },
     {
       "columns": [
@@ -9449,105 +8752,7 @@
       "origin": "manual",
       "name": "idx_loan_status",
       "entityType": "indexes",
-      "table": "inventory_loan"
-    },
-    {
-      "columns": [
-        {
-          "value": "parent_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_location_parent",
-      "entityType": "indexes",
-      "table": "inventory_location"
-    },
-    {
-      "columns": [
-        {
-          "value": "item_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_movement_item",
-      "entityType": "indexes",
-      "table": "stock_movement"
-    },
-    {
-      "columns": [
-        {
-          "value": "asset_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_movement_asset",
-      "entityType": "indexes",
-      "table": "stock_movement"
-    },
-    {
-      "columns": [
-        {
-          "value": "occurred_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_movement_occurred",
-      "entityType": "indexes",
-      "table": "stock_movement"
-    },
-    {
-      "columns": [
-        {
-          "value": "reason",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_movement_reason",
-      "entityType": "indexes",
-      "table": "stock_movement"
-    },
-    {
-      "columns": [
-        {
-          "value": "loan_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_movement_loan",
-      "entityType": "indexes",
-      "table": "stock_movement"
-    },
-    {
-      "columns": [
-        {
-          "value": "acquisition_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_movement_acquisition",
-      "entityType": "indexes",
-      "table": "stock_movement"
+      "table": "equipment_loan"
     },
     {
       "columns": [
@@ -9660,6 +8865,80 @@
       "name": "idx_band_slug_history_band",
       "entityType": "indexes",
       "table": "group_slug_history"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_entry_user",
+      "entityType": "indexes",
+      "table": "directory_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_entry_group",
+      "entityType": "indexes",
+      "table": "directory_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "visibility",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_entry_visibility",
+      "entityType": "indexes",
+      "table": "directory_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "entry_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_tag_entry",
+      "entityType": "indexes",
+      "table": "directory_tag"
+    },
+    {
+      "columns": [
+        {
+          "value": "kind",
+          "isExpression": false
+        },
+        {
+          "value": "value",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_tag_kind_value",
+      "entityType": "indexes",
+      "table": "directory_tag"
     },
     {
       "columns": [
@@ -10485,15 +9764,6 @@
     },
     {
       "columns": [
-        "asset_tag"
-      ],
-      "nameExplicit": true,
-      "name": "uniq_asset_tag",
-      "entityType": "uniques",
-      "table": "inventory_asset"
-    },
-    {
-      "columns": [
         "group_id",
         "user_id"
       ],
@@ -10501,6 +9771,17 @@
       "name": "band_member_band_user_unique",
       "entityType": "uniques",
       "table": "group_member"
+    },
+    {
+      "columns": [
+        "entry_id",
+        "kind",
+        "value"
+      ],
+      "nameExplicit": true,
+      "name": "directory_tag_entry_kind_value_unique",
+      "entityType": "uniques",
+      "table": "directory_tag"
     },
     {
       "columns": [
@@ -10682,28 +9963,22 @@
       "table": "event"
     },
     {
-      "value": "quantity > 0",
-      "name": "acq_line_qty_positive",
+      "value": "total_quantity > 0",
+      "name": "equipment_qty_positive",
       "entityType": "checks",
-      "table": "acquisition_line"
+      "table": "equipment"
     },
     {
-      "value": "reorder_point IS NULL OR kind = 'bulk'",
-      "name": "item_reorder_bulk_only",
+      "value": "out_of_order_quantity >= 0 AND out_of_order_quantity <= total_quantity",
+      "name": "equipment_ooo_valid",
       "entityType": "checks",
-      "table": "inventory_item"
+      "table": "equipment"
     },
     {
       "value": "quantity > 0",
       "name": "loan_qty_positive",
       "entityType": "checks",
-      "table": "inventory_loan"
-    },
-    {
-      "value": "quantity != 0",
-      "name": "movement_qty_nonzero",
-      "entityType": "checks",
-      "table": "stock_movement"
+      "table": "equipment_loan"
     },
     {
       "value": "(revoked_at IS NULL) = (revoked_reason IS NULL)",

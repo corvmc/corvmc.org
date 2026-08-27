@@ -122,13 +122,14 @@ this split was made.
 
 | Doc                                          | Status | Lifecycle | Notes                                                                                                                                                                                                 |
 | -------------------------------------------- | ------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [inventory-spec.md](specs/inventory-spec.md) | 🔧     | split     | Phase 1 shipped (#281) — gear and consumables on one append-only ledger, serialized units, acquisitions, `/a/[tag]` scans. Phases 2–4 (spend reports, in-kind disclosure, attached resources) unbuilt |
+| [inventory-spec.md](specs/inventory-spec.md) | 🔧     | split     | Phase 1 shipped (#286) — gear and consumables on one append-only ledger, serialized units, acquisitions, `/a/[tag]` scans. Phases 2–4 (spend reports, in-kind disclosure, attached resources) unbuilt |
 
 ### Staff platform
 
 | Doc                                                                                  | Status | Lifecycle | Notes                                                                                        |
 | ------------------------------------------------------------------------------------ | ------ | --------- | -------------------------------------------------------------------------------------------- |
 | [staff-user-detail-context-spec.md](specs/shipped/staff-user-detail-context-spec.md) | ✅     | archived  | `/staff/users/[id]` as an operational record: 8 tabs, 9 panels                               |
+| [reporting-spec.md](specs/reporting-spec.md)                                         | 📋     | spec      | Module-owned reports over a shared kit; which vendor answers which question                  |
 | [audit-log-spec.md](specs/audit-log-spec.md)                                         | 📋     | spec      | Who did what to a member's account. No audit table exists                                    |
 | [staff-email-change-spec.md](specs/staff-email-change-spec.md)                       | 📋     | spec      | The most common front-desk correction, and the one the panel cannot do                       |
 | [reactivation-restore-spec.md](specs/reactivation-restore-spec.md)                   | 📋     | spec      | Deactivation cancels reservations and the Stripe subscription; reactivation restores neither |

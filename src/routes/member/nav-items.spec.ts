@@ -141,7 +141,7 @@ describe('route coverage', () => {
 	 *  - `/member/equipment` and its loans page have no row on purpose: gear
 	 *    lending is still arranged in person, so a browsable catalogue would
 	 *    invite requests the front desk is not running through this system yet.
-	 *    Cutting the `equipment` flag (#281) did not change that — the nav never
+	 *    Cutting the `equipment` flag (#286) did not change that — the nav never
 	 *    gated on the flag, it just omits the section. The row is the follow-up
 	 *    for when lending stops being manual.
 	 *  - `/member/equipment/assets/[id]` is reached by pointing a phone at the

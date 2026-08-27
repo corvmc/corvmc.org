@@ -88,6 +88,8 @@ Bands submit stage plots and backline requirements ahead of events. Staff match 
 
 Pull stats across the platform — events held, members active, volunteer hours, revenue, grants received — into a formatted report for the board and funders. Non-profits need this every year.
 
+**Progress:** Not built. `docs/specs/reporting-spec.md` sequences it as the last phase and settles the shape: the rollup calls each module's existing report service rather than writing its own queries, so `getVolunteerTotals()` and `getCommunityStats()` are already the queries it will use. The open piece is revenue — nothing in the app sums `payment_cache`, so that line is a design decision (Stripe as the authoritative total, local rows for the per-member breakdown) rather than a query to write.
+
 ### Community Forum / Q&A
 
 Member forum for gear advice, technique questions, and general music knowledge sharing. Threaded discussions, searchable archive, and topic categories. Complements the classifieds for gear talk and help articles for staff-curated knowledge with peer-to-peer support.
@@ -276,11 +278,25 @@ Existing npm packages that could accelerate building these features. Grouped by 
 
 ### PDF & Reporting
 
-| Package     | Downloads/wk | Use                                                                               |
-| ----------- | ------------ | --------------------------------------------------------------------------------- |
-| `pdfkit`    | 3.6M         | Server-side PDF generation for annual reports — **does not run on Workers**       |
-| `puppeteer` | 10M          | Render styled HTML to PDF — **does not run on Workers**; needs a separate service |
-| `chart.js`  | 11.6M        | Chart generation for report data visualization                                    |
+| Package         | Downloads/wk | Use                                                               |
+| --------------- | ------------ | ----------------------------------------------------------------- |
+| `csv-stringify` | 9.7M         | CSV export. No runtime deps; use `csv-stringify/browser/esm/sync` |
+| `chart.js`      | 12.8M        | Charts — but see the note on SSR below before picking a library   |
+
+**`puppeteer` and `pdfkit` were listed here and are wrong for this stack.** Puppeteer cannot run
+inside a Cloudflare Worker at all; the platform answer for HTML → PDF is **Cloudflare Browser
+Rendering** (a `/pdf` REST endpoint or the binding), which needs no npm dependency. A print
+stylesheet over the report page comes first either way — see `docs/specs/reporting-spec.md`.
+
+Two things to know before adding either of the above:
+
+- **`csv-stringify` must be configured with `escape_formulas`.** It does not escape a leading `=`,
+  `+`, `-` or `@` by default, and neither does PapaParse — CSV formula injection is the reason to
+  take the dependency rather than hand-rolling the quoting. The `src/lib/server/report/csv.ts`
+  wrapper forces the flag on so no call site can forget it.
+- **A charting library is not yet chosen, and the constraint is SSR.** The board packet is a print
+  artifact, so a library that emits SVG without a browser DOM wins. `chart.js` and Observable Plot
+  both assume a DOM; LayerChart is Svelte-native and worth testing first.
 
 ### Stage Plot & Drawing
 
@@ -316,7 +332,7 @@ Areas where the npm ecosystem is thin — worth revisiting periodically.
 
 Features behind feature flags in `src/lib/server/feature-flags.ts` — all seven of `ALL_FLAGS`, in declaration order. Toggled via Staff Settings.
 
-Inventory used to be here as `equipment`; its flag was cut in #281 and the module is now always on.
+Inventory used to be here as `equipment`; its flag was cut in #286 and the module is now always on.
 
 ## Staff Inbox
 

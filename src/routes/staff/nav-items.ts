@@ -125,7 +125,7 @@ export const staffNavSections: StaffNavSection[] = [
 				// Loans and the child was labelled Inventory, which the loans page
 				// itself contradicts — it declares `backHref="/staff/inventory"`.
 				//
-				// "Inventory" rather than "Equipment" since #281: the section now
+				// "Inventory" rather than "Equipment" since #286: the section now
 				// covers consumables too, and calling it Equipment would send anyone
 				// looking for the drumstick count somewhere else.
 				key: 'equipment',

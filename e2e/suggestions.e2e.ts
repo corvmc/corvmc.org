@@ -138,8 +138,15 @@ test.describe('suggestion board', () => {
 			.poll(async () => (await readSuggestionState(SEED_SG_MERGE_TARGET_ID)).voteCount, DB_POLL)
 			.toBe(SEED_SG_MERGE_UNION_VOTES);
 
-		const source = await readSuggestionState(SEED_SG_MERGE_SOURCE_ID);
-		expect(source.mergedIntoId).toBe(SEED_SG_MERGE_TARGET_ID);
+		// Polled, not read once: `mergeSuggestions` transfers the votes and points
+		// the source at the target in two separate writes (see the "Step 2" comment
+		// in suggestion-service.ts — the split is what makes a half-finished merge
+		// repairable). So the poll above proves step 1 landed and says nothing about
+		// step 2, and a bare read here loses the race under CI load. It did, on the
+		// merge-queue run for #282, taking a required check down with it.
+		await expect
+			.poll(async () => (await readSuggestionState(SEED_SG_MERGE_SOURCE_ID)).mergedIntoId, DB_POLL)
+			.toBe(SEED_SG_MERGE_TARGET_ID);
 
 		// Off the board, but reachable by URL with an explanation — no redirect.
 		await switchUser(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);

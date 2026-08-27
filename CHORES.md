@@ -13,7 +13,7 @@ Low-priority cleanup and tech-debt items. Not blocking, but worth doing.
   renders a toggle for a flag that no longer exists, and a missing key means a live flag has no
   toggle at all and cannot be switched on from the UI. This is the mirror of the `VALID_FLAGS` bug
   the spec's header describes (it omitted `contentFlags`, so that toggle threw 400 on click).
-  Noticed while cutting the `equipment` flag in #281, where the entry had to be deleted by hand with
+  Noticed while cutting the `equipment` flag in #286, where the entry had to be deleted by hand with
   nothing to catch it if it had been missed. The fix is to lift `featureMeta` into a `<script
 module>` or a plain `.ts` beside the page so a spec can import it, then assert it covers
   `ALL_FLAGS` exactly — the same two assertions the other lists already get.

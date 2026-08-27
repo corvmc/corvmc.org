@@ -33,7 +33,7 @@ it is switched back off.
 - [x] **equipment** — `CreateLoanAction` awaits `getAvailableEquipment` instead of fetching the
       non-existent `/api/equipment`; deactivated gear reachable via `includeDeleted` plus a
       "Show deactivated" toggle, which makes the Reactivate button reachable again.
-      (#281 rebuilt this module as `inventory` and **cut the flag entirely**, so the entry above is
+      (#286 rebuilt this module as `inventory` and **cut the flag entirely**, so the entry above is
       history: `getAvailableEquipment` is now `getAvailableItems`, and there is no `equipment` flag
       left for the staff panel to ignore.)
 - [x] **helpArticles** — bulk publish/unpublish with row checkboxes and "Select all drafts";

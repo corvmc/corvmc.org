@@ -241,7 +241,9 @@ Every script in `package.json`:
 | `check` / `check:watch`         | svelte-check type checking                                                                     |
 | `test:unit`                     | Vitest (watch mode; `--run` for one-shot)                                                      |
 | `test:components`               | One-shot client (browser) + storybook vitest projects                                          |
-| `test:e2e`                      | Install Chromium + run Playwright `e2e/**/*.e2e.ts`                                            |
+| `test:e2e`                      | Migrate + seed a local D1, then run Playwright `e2e/**/*.e2e.ts`                               |
+| `test:e2e:prepare`              | Just the migrate + seed half (CI runs it as its own step)                                      |
+| `test:e2e:run`                  | Just the Playwright half — takes its flags, e.g. `-- --workers=1`                              |
 | `test`                          | Full suite: unit one-shot + e2e (what CI runs)                                                 |
 | `test:report`                   | Vitest with JSON output → `test-results.json`                                                  |
 | `lint`                          | prettier `--check` + eslint over everything                                                    |
@@ -251,7 +253,7 @@ Every script in `package.json`:
 | `db:fix-migrations`             | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                             |
 | `db:check-migrations`           | Fail if any migration has an unsafe table rebuild (runs in CI)                                 |
 | `db:migrate`                    | drizzle-kit: apply pending migrations to **remote** D1                                         |
-| `db:migrate:local`              | Replay all migration files into the local D1                                                   |
+| `db:migrate:local`              | Apply pending migrations to the local D1 (tracked; a no-op when current)                       |
 | `db:seed`                       | Run `scripts/seed-dev.ts` against local D1                                                     |
 | `volunteer:seed-roles`          | Seed the volunteer role catalogue (`scripts/seed-volunteer-roles.ts`)                          |
 | `db:reset`                      | Wipe local D1 + migrate + seed                                                                 |
@@ -295,6 +297,37 @@ Prefer existing libraries and managed services over new bespoke code — the goa
 minimize _maintained_ code, not just initial build effort. Lean on Stripe, Postmark, and
 Cloudflare primitives rather than re-creating vendor features in app code. When adding a
 dependency, note it in `IDEAS.md`'s library table if it's broadly useful.
+
+### Analytics and reporting tools
+
+Which vendor owns which question, so this is not re-litigated per feature. The governing rule
+lives in `docs/specs/reporting-spec.md`: **a report belongs in the app only when it joins data no
+single vendor holds.**
+
+| Question                                                              | Where it is answered                                                                    | Notes                                                             |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Anything over our own records — members, hours, reservations, tickets | **D1, in app**                                                                          | Module-owned `*-report-service.ts` over drizzle aggregates        |
+| Revenue totals, payouts, reconciliation                               | **Stripe** — dashboard reports, or the Reporting API for the same CSVs programmatically | Sigma is a paid add-on and is not warranted at this volume        |
+| Email delivery, opens, clicks, bounces                                | **Postmark Stats API** — filterable by stream, tag and date                             | Not yet read by any code; `campaign` stores only `recipientCount` |
+| Site traffic, referrers, Core Web Vitals                              | **Cloudflare Web Analytics** — free, cookieless, on all plans                           | Not enabled yet. Prefer it over adding PostHog, GA or Plausible   |
+| Errors, traces, cron check-ins                                        | **Sentry**                                                                              | Already wired, including Cloudflare native OTLP traces and logs   |
+| A one-off question nobody has asked twice                             | **`wrangler d1 export --remote`** → SQLite → DuckDB, Metabase, a spreadsheet            | Reach for this before building a page                             |
+
+Three Cloudflare products look like they fit application reporting and do not:
+
+- **Workers Analytics Engine** stores custom events, but retains them for 90 days and downsamples
+  at volume — aggregates use `SUM(_sample_interval)`, not `COUNT()`. An annual report needs more
+  than a year of history and a number a funder can rely on, so neither property is survivable.
+  It remains the right tool if a concrete "how often is feature X used?" question ever arrives;
+  there is deliberately no `analytics_engine_datasets` binding in `wrangler.toml` until one does.
+- **The GraphQL Analytics API** reports Cloudflare product metrics, not application data. Its own
+  docs warn it is not accurate enough for Cloudflare's billing.
+- **Workers Logs** is developer observability with days of retention, and is already forwarded to
+  Sentry via `[observability.logs]`.
+
+Full-fat BI — Cube, Evidence, Metabase, Superset — is rejected for in-app reporting: none runs in
+a Worker or reads D1, each is a second deployment to operate, and the ad-hoc case they would serve
+is covered by the D1 export above.
 
 ## Where a status enum lives
 

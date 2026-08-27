@@ -74,7 +74,7 @@ describe('entityHref', () => {
 		});
 
 		/**
-		 * Gear stopped being staff-only in #281. A printed tag on an amp is
+		 * Gear stopped being staff-only in #286. A printed tag on an amp is
 		 * scanned by whoever is standing next to it, so a member needs somewhere
 		 * to land — but a signed-out scan still has nowhere to go, which is what
 		 * lets `/a/[tag]` answer with a login redirect instead of a 404.

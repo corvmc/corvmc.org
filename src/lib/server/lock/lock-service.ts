@@ -5,10 +5,10 @@ import { and, eq, isNull, isNotNull, gte, lt } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	createTemporaryUser,
+	createControlUser,
 	removeTemporaryUser,
 	listLockUsers,
-	generateLockCode,
-	LOCK_GRACE_MINUTES
+	generateLockCode
 } from './ultraloc-client';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -168,7 +168,6 @@ async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 // ---------------------------------------------------------------------------
 
 const SELF_TEST_NAME = 'CMC Self-Test';
-const SELF_TEST_WINDOW_MINUTES = 15;
 
 export interface LockSelfTestStep {
 	name: 'create' | 'list';
@@ -195,21 +194,22 @@ export interface LockSelfTestResult {
 export async function issueLockSelfTest(): Promise<LockSelfTestResult> {
 	const steps: LockSelfTestStep[] = [];
 	const code = generateLockCode();
-	const now = new Date();
-	const endTime = new Date(now.getTime() + SELF_TEST_WINDOW_MINUTES * 60_000);
-	// createTemporaryUser extends the window by the grace period.
-	const expiresAt = new Date(endTime.getTime() + LOCK_GRACE_MINUTES * 60_000);
 
+	// Use the proven-working normal-user (type 0) `add` to validate the command
+	// path end to end. A normal user has no lock-side expiry, so the code stays
+	// active until "Revoke test codes" is clicked (or the daily cleanup removes
+	// it). This isolates the integration plumbing from the temporary-user schedule
+	// fields that U-tec has been rejecting with BAD-REQUEST.
 	try {
-		await createTemporaryUser({ name: SELF_TEST_NAME, startTime: now, endTime, code });
+		await createControlUser(SELF_TEST_NAME, code);
 		steps.push({
 			name: 'create',
 			ok: true,
-			detail: `Issued test code on the lock (valid until ${expiresAt.toLocaleTimeString('en-US', { timeZone: DEFAULT_TIMEZONE, hour: 'numeric', minute: '2-digit' })}).`
+			detail: 'Issued test code on the lock. It stays active until you click "Revoke test codes".'
 		});
 	} catch (err) {
 		steps.push({ name: 'create', ok: false, detail: (err as Error).message });
-		return { ok: false, steps };
+		return { ok: false, code, steps };
 	}
 
 	try {
@@ -217,10 +217,10 @@ export async function issueLockSelfTest(): Promise<LockSelfTestResult> {
 		steps.push({ name: 'list', ok: true, detail: `Lock returned ${users.length} user(s).` });
 	} catch (err) {
 		steps.push({ name: 'list', ok: false, detail: (err as Error).message });
-		return { ok: false, code, expiresAt, steps };
+		return { ok: false, code, steps };
 	}
 
-	return { ok: true, code, expiresAt, steps };
+	return { ok: true, code, steps };
 }
 
 /** Remove any lingering self-test users from the lock. */
@@ -230,7 +230,8 @@ export async function revokeLockSelfTest(): Promise<{ removed: number; errors: s
 
 	const users = await listLockUsers();
 	for (const u of users) {
-		if (u.type !== 2 || u.name !== SELF_TEST_NAME) continue;
+		// Match by name only — the self-test now issues a normal (type 0) user.
+		if (u.name !== SELF_TEST_NAME) continue;
 		try {
 			await removeTemporaryUser(u.id);
 			removed++;

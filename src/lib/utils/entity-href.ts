@@ -115,7 +115,7 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 			break;
 		}
 
-		// Gear. Members reach the catalog and their own loans, and — since #281 —
+		// Gear. Members reach the catalog and their own loans, and — since #286 —
 		// the unit itself, because a printed tag on an amp is scanned by whoever
 		// is standing next to it.
 		case 'equipment': {

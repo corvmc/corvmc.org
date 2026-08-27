@@ -1,6 +1,6 @@
 # Inventory & Assets — gear and consumables on one ledger
 
-> **Status: Phase 1 shipped (#281). Phases 2–4 unbuilt.**
+> **Status: Phase 1 shipped (#286). Phases 2–4 unbuilt.**
 >
 > How the shipped half _behaves_ is documented in
 > [business-workflows §6](../development/business-workflows.md#6-inventory-gear-and-consumables),
@@ -525,7 +525,7 @@ both routes in its stranded-on-dashboard list until then.
 
 ## Phases
 
-**Phase 1 — the unified ledger. ✅ Shipped (#281).** Locations, items, assets,
+**Phase 1 — the unified ledger. ✅ Shipped (#286).** Locations, items, assets,
 movements, loans, and the acquisition pair; the staff panel at `/staff/inventory`,
 the member catalog, tag binding and `/a/[tag]` scan resolution. Replaced the
 equipment module outright. Behaviour is documented in

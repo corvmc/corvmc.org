@@ -5,6 +5,7 @@ export const relations = defineRelations(schema, (t) => ({
 	user: {
 		instruments: t.many.userInstrument(),
 		genres: t.many.userGenre(),
+		directoryEntry: t.one.directoryEntry({ from: t.user.id, to: t.directoryEntry.userId }),
 		sessions: t.many.session(),
 		accounts: t.many.account(),
 		groupMembers: t.many.groupMember()
@@ -23,6 +24,7 @@ export const relations = defineRelations(schema, (t) => ({
 	},
 	group: {
 		genres: t.many.bandGenre(),
+		directoryEntry: t.one.directoryEntry({ from: t.group.id, to: t.directoryEntry.groupId }),
 		members: t.many.groupMember(),
 		/** Events this band OWNS. Shows it merely played are `lineups`. */
 		events: t.many.event(),
@@ -36,6 +38,14 @@ export const relations = defineRelations(schema, (t) => ({
 	},
 	bandGenre: {
 		band: t.one.group({ from: t.bandGenre.bandId, to: t.group.id })
+	},
+	directoryEntry: {
+		user: t.one.user({ from: t.directoryEntry.userId, to: t.user.id }),
+		group: t.one.group({ from: t.directoryEntry.groupId, to: t.group.id }),
+		tags: t.many.directoryTag()
+	},
+	directoryTag: {
+		entry: t.one.directoryEntry({ from: t.directoryTag.entryId, to: t.directoryEntry.id })
 	},
 	groupMember: {
 		band: t.one.group({ from: t.groupMember.groupId, to: t.group.id }),

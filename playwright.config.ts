@@ -26,7 +26,10 @@ export default defineConfig({
 	// watch the flaky count, and fix the spec when one stops being occasional.
 	retries: process.env.CI ? 2 : 0,
 	webServer: {
-		command: 'npm run build && npm run preview',
+		// `pnpm`, not `npm`: this repo is pnpm-only and a global prettier 2.8.8
+		// shadows its prettier 3, which is why `npm`/`npx` are blocked everywhere
+		// else.
+		command: 'pnpm build && pnpm preview',
 		port: PORT,
 		// The command builds before it serves, and a cold production build here
 		// takes several minutes — well past the 60s default, which reported the

@@ -12,7 +12,7 @@ import {
 } from './fixtures/seed-inventory';
 
 /**
- * End-to-end coverage for the inventory rebuild (#281).
+ * End-to-end coverage for the inventory rebuild (#286).
  *
  * The thing worth pinning here is the **invariant**, not the screens: on-hand is
  * the sum of `stock_movement` and is never stored anywhere, so a run that
