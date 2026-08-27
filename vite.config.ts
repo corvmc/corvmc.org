@@ -14,10 +14,27 @@ const dirname =
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
 	plugins: [
-		sentrySvelteKit({
-			org: 'corvallis-music-collective',
-			project: 'javascript-sveltekit'
-		}),
+		// Not in the e2e build. `playwright.config.ts` puts SENTRY_ENVIRONMENT=ci in
+		// the webServer env, which the build inherits, and `hooks.server.ts` already
+		// runs the SDK `enabled: false` under it — so none of this is under test.
+		// It is not free, though the cost is not where the hook counts suggest.
+		// sentry-auto-instrumentation runs a `load` hook ~8k times and
+		// sentry-sveltekit-browser-tracing-variant runs `resolveId` ~68k times, and
+		// together those are worth about a second. The plugin also turns
+		// `build.sourcemap` on (nothing else sets it here), and *that* is worth
+		// 715 `.map` files: measured warm-to-warm, 18.8s/28MB with the plugin
+		// against 17.5s/11MB without. CI uploads this build once and fans it out to
+		// the e2e shards, so the 17MB matters more than the second does — and
+		// sentry-vite-plugin was only ever going to warn twice that it has no auth
+		// token to upload any of it with.
+		...(process.env.SENTRY_ENVIRONMENT === 'ci'
+			? []
+			: [
+					sentrySvelteKit({
+						org: 'corvallis-music-collective',
+						project: 'javascript-sveltekit'
+					})
+				]),
 		tailwindcss(),
 		sveltekit()
 	],

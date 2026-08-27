@@ -11,6 +11,7 @@ export * from './marketing';
 export * from './inventory';
 export * from './band';
 export * from './group';
+export * from './directory';
 export * from './band-page';
 export * from './platform-invite';
 export * from './help';

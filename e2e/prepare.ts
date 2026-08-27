@@ -6,8 +6,8 @@
  * orders its startup tasks as [remove output dirs, plugin setup, global setup],
  * and `webServer` is a plugin, so `globalSetup` only runs once the preview server
  * is already up and serving. Migrating and seeding from there meant a second
- * miniflare (every `wrangler d1 execute` in the migrate loop, then each fixture's
- * `getPlatformProxy()`) opening the state directory while the server held it.
+ * miniflare (the migrate's own, then each fixture's `getPlatformProxy()`)
+ * opening the state directory while the server held it.
  *
  * SQLite tolerates that right up until the file needs recovery, at which point
  * the exclusive lock can't be taken and workerd dies outright:
@@ -22,13 +22,17 @@
  * The database itself lives in the run's own state directory (`e2e/state-dir.ts`),
  * not the `.wrangler/state` that `pnpm dev` and every other wrangler command use,
  * so nothing outside this suite is ever holding it.
+ *
+ * The migrate is incremental — `scripts/db/migrate-local.ts` goes through
+ * drizzle's migrator, which records what it applied in `__drizzle_migrations` —
+ * so this runs it unconditionally and it costs one `SELECT` when the database is
+ * already current. To start from nothing (a corrupt state directory, or KV
+ * counters a fixture does not own), delete the directory: `rm -rf .wrangler/e2e-state`.
  */
-import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { E2E_STATE_ROOT, REPO_ROOT } from './state-dir';
+import { E2E_STATE_ROOT } from './state-dir';
+import { migrateLocal } from '../scripts/db/migrate-local';
 import { acquireE2eLock } from './lock';
-import { resetE2eDatabase } from './reset-db';
+import { checkpointE2eDatabase, resetE2eDatabase } from './reset-db';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 import { seedStaffUser } from './fixtures/seed-staff-user';
@@ -41,42 +45,6 @@ import { seedCommunityEvents } from './fixtures/seed-community-events';
 import { seedSuggestions } from './fixtures/seed-suggestions';
 import { seedMessaging } from './fixtures/seed-messaging';
 import { seedInboxAwaiting } from './fixtures/seed-inbox-awaiting';
-
-const MIGRATIONS_DIR = join(REPO_ROOT, 'migrations');
-const STAMP = join(E2E_STATE_ROOT, 'applied-migrations');
-
-/** The migrations `pnpm db:migrate:local` would apply, in the order it applies them. */
-function migrationNames(): string {
-	return readdirSync(MIGRATIONS_DIR)
-		.filter((name) => existsSync(join(MIGRATIONS_DIR, name, 'migration.sql')))
-		.sort()
-		.join('\n');
-}
-
-/**
- * Build the run's database from the migrations whenever it doesn't match them.
- *
- * The migration SQL is plain `CREATE TABLE`, so it can only be applied to an
- * empty database — a new migration means starting over rather than topping up.
- * Cheap: CI always starts from nothing, and locally this only runs the first
- * time and after `pnpm db:generate`. Rebuilding drops KV and R2 along with D1,
- * which is what we want — the seeds are idempotent, but KV counters (the
- * report rate limit) are not.
- */
-function migrateIfStale(): void {
-	const wanted = migrationNames();
-	const applied = existsSync(STAMP) ? readFileSync(STAMP, 'utf8') : null;
-	if (applied === wanted) return;
-
-	rmSync(E2E_STATE_ROOT, { recursive: true, force: true });
-	execSync('pnpm db:migrate:local', {
-		stdio: 'inherit',
-		cwd: REPO_ROOT,
-		env: { ...process.env, WRANGLER_PERSIST_TO: E2E_STATE_ROOT }
-	});
-	mkdirSync(E2E_STATE_ROOT, { recursive: true });
-	writeFileSync(STAMP, wanted);
-}
 
 // Before the build, the seed, and the five minutes they cost: refuse outright if
 // another suite is already running on this machine. Two of them no longer share
@@ -91,7 +59,7 @@ acquireE2eLock('prepare');
 // process dies instead, the lock is left with a dead pid and `lock.ts` ages it
 // out as stale.
 
-migrateIfStale();
+await migrateLocal(E2E_STATE_ROOT);
 
 // Start from an empty database, not a nearly-empty one. Each fixture clears
 // its own rows, but nothing owns the `session` rows every login writes, the
@@ -113,3 +81,9 @@ await seedSuggestions();
 await seedMessaging();
 await seedInboxAwaiting();
 await seedFeatureFlags();
+
+// Last, once every seed's miniflare has exited: leave the file with no WAL for
+// the preview server to recover. workerd opens D1 on the first *request*, by
+// which time Playwright's workers are already reading it, and a recovery that
+// collides with those readers kills the server outright. See `reset-db.ts`.
+checkpointE2eDatabase();
