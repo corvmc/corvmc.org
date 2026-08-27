@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
-import { user, userInstrument, userGenre } from '$lib/server/db/schema/authentication';
+import { user } from '$lib/server/db/schema/authentication';
 import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
-import { getOrCreateGroupEntryId, replaceTags } from './entry-service';
+import { getOrCreateGroupEntryId, getOrCreateUserEntryId, replaceTags } from './entry-service';
 import { groupMember } from '$lib/server/db/schema/group';
 import { eq, and } from 'drizzle-orm';
 import { deleteObject, uploadFile } from '$lib/server/storage';
@@ -71,52 +71,50 @@ export type MemberProfileData = {
 };
 
 export async function updateMemberProfile(userId: string, data: MemberProfileData) {
+	const entryId = await getOrCreateUserEntryId(userId);
+
 	let mergedContact: DirectoryContact | null = null;
 	if (data.directoryContact) {
+		// Read-modify-write, and it has to read the ENTRY. Reading the old
+		// `user.directory_contact` here would merge onto a column nothing writes
+		// any more, so every field the member did not resubmit would be dropped.
 		const [existing] = await db
-			.select({ directoryContact: user.directoryContact })
-			.from(user)
-			.where(eq(user.id, userId))
+			.select({ contact: directoryEntry.contact })
+			.from(directoryEntry)
+			.where(eq(directoryEntry.id, entryId))
 			.limit(1);
-		const prev = (existing?.directoryContact as DirectoryContact) ?? {};
+		const prev = (existing?.contact as DirectoryContact) ?? {};
 		mergedContact = validateContact({ ...prev, ...data.directoryContact });
 	}
 
 	const queries: BatchItem<'sqlite'>[] = [
 		db
-			.update(user)
+			.update(directoryEntry)
 			.set({
 				bio: data.bio ? sanitizeBio(data.bio).slice(0, MAX_BIO) || null : null,
 				tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
 				hometown: data.hometown?.slice(0, MAX_TAGLINE) || null,
-				lookingForBand: data.lookingForBand ?? false,
+				lookingFor: data.lookingForBand ? 'band' : null,
 				availableForHire: data.availableForHire ?? false,
 				teachesLessons: data.teachesLessons ?? false,
 				openToCollaboration: data.openToCollaboration ?? false,
-				directoryVisibility: data.directoryVisibility ?? 'members',
-				directoryContact: mergedContact,
+				visibility: (data.directoryVisibility ?? 'members') as DirectoryVisibility,
+				contact: mergedContact,
 				links: data.links ? validateLinks(data.links) : null,
 				updatedAt: new Date()
 			})
-			.where(eq(user.id, userId))
+			.where(eq(directoryEntry.id, entryId))
 	];
 
+	// Scoped to one `kind` each. Genres and instruments share a table now, so an
+	// unscoped delete would clear a member's instruments every time they saved
+	// their genres — and every assertion that "saving genres works" would pass.
 	if (data.instruments !== undefined) {
-		queries.push(db.delete(userInstrument).where(eq(userInstrument.userId, userId)));
-		const tags = validateTags(data.instruments);
-		if (tags.length > 0) {
-			queries.push(
-				db.insert(userInstrument).values(tags.map((instrument) => ({ userId, instrument })))
-			);
-		}
+		queries.push(...replaceTags(entryId, 'instrument', validateTags(data.instruments)));
 	}
 
 	if (data.genres !== undefined) {
-		queries.push(db.delete(userGenre).where(eq(userGenre.userId, userId)));
-		const tags = validateTags(data.genres);
-		if (tags.length > 0) {
-			queries.push(db.insert(userGenre).values(tags.map((genre) => ({ userId, genre }))));
-		}
+		queries.push(...replaceTags(entryId, 'genre', validateTags(data.genres)));
 	}
 
 	await db.batch(queries as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
@@ -126,38 +124,42 @@ export async function updateMemberProfile(userId: string, data: MemberProfileDat
 export async function getMemberProfileForEdit(userId: string) {
 	const [row] = await db
 		.select({
-			name: user.name,
-			bio: user.bio,
-			tagline: user.tagline,
-			hometown: user.hometown,
+			id: directoryEntry.id,
+			name: directoryEntry.name,
+			bio: directoryEntry.bio,
+			tagline: directoryEntry.tagline,
+			hometown: directoryEntry.hometown,
+			// The member's avatar stays `user.image` — better-auth's column, and it
+			// may hold a full OAuth URL rather than an R2 key.
 			image: user.image,
-			lookingForBand: user.lookingForBand,
-			availableForHire: user.availableForHire,
-			teachesLessons: user.teachesLessons,
-			openToCollaboration: user.openToCollaboration,
-			directoryVisibility: user.directoryVisibility,
-			directoryContact: user.directoryContact,
-			links: user.links
+			lookingFor: directoryEntry.lookingFor,
+			availableForHire: directoryEntry.availableForHire,
+			teachesLessons: directoryEntry.teachesLessons,
+			openToCollaboration: directoryEntry.openToCollaboration,
+			visibility: directoryEntry.visibility,
+			contact: directoryEntry.contact,
+			links: directoryEntry.links
 		})
-		.from(user)
-		.where(eq(user.id, userId));
+		.from(directoryEntry)
+		.innerJoin(user, eq(user.id, directoryEntry.userId))
+		.where(eq(directoryEntry.userId, userId));
 
 	if (!row) return null;
 
-	const instruments = await db
-		.select({ instrument: userInstrument.instrument })
-		.from(userInstrument)
-		.where(eq(userInstrument.userId, userId));
+	const tags = await db
+		.select({ kind: directoryTag.kind, value: directoryTag.value })
+		.from(directoryTag)
+		.where(eq(directoryTag.entryId, row.id));
 
-	const genres = await db
-		.select({ genre: userGenre.genre })
-		.from(userGenre)
-		.where(eq(userGenre.userId, userId));
-
+	// Renamed back to the shape the form and its zod schema already use.
+	const { id: _entryId, lookingFor, visibility, contact, ...rest } = row;
 	return {
-		...row,
-		instruments: instruments.map((r) => r.instrument),
-		genres: genres.map((r) => r.genre)
+		...rest,
+		lookingForBand: lookingFor === 'band',
+		directoryVisibility: visibility,
+		directoryContact: contact,
+		instruments: tags.filter((t) => t.kind === 'instrument').map((t) => t.value),
+		genres: tags.filter((t) => t.kind === 'genre').map((t) => t.value)
 	};
 }
 

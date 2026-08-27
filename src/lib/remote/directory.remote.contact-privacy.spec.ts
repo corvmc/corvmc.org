@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // tagged with a `__` marker so the kit plugin's remote-function init
 // validation accepts the export. The DB is mocked at the same boundary the
 // service test uses.
-const { userFindFirst } = vi.hoisted(() => ({ userFindFirst: vi.fn() }));
+const { entryFindFirst } = vi.hoisted(() => ({ entryFindFirst: vi.fn() }));
 
 vi.mock('$app/server', () => ({
 	query: (...args: unknown[]) => {
@@ -23,11 +23,13 @@ vi.mock('$app/server', () => ({
 	},
 	getRequestEvent: () => ({ locals: {} })
 }));
+// The member listing moved to `directory_entry` in phase 3a; the contact
+// details this spec guards moved with it, from `user.directoryContact` to
+// `directory_entry.contact`.
 vi.mock('$lib/server/db', () => ({
 	db: {
 		query: {
-			user: { findFirst: userFindFirst, findMany: vi.fn() },
-			band: { findMany: vi.fn() }
+			directoryEntry: { findFirst: entryFindFirst, findMany: vi.fn() }
 		}
 	}
 }));
@@ -38,35 +40,40 @@ vi.mock('$lib/server/band/band-context', () => ({ requireBandAdmin: vi.fn() }));
 
 import { getPublicMemberProfile } from './directory.remote';
 
-/** A member who IS in the public directory (passed the visibility WHERE). */
+/**
+ * A member who IS in the public directory (passed the visibility WHERE), shaped
+ * as the entry row the query now returns: identity and avatar come from the
+ * joined `user`, the listing fields from the entry itself.
+ */
 const baseRow = {
-	id: 'm1',
+	userId: 'm1',
 	name: 'Jeff',
-	memberNumber: 1,
-	pronouns: null,
-	image: null,
 	bio: null,
 	tagline: null,
 	hometown: null,
-	lookingForBand: false,
+	lookingFor: null,
 	availableForHire: false,
 	teachesLessons: false,
 	openToCollaboration: false,
-	directoryContact: null as Record<string, unknown> | null,
+	contact: null as Record<string, unknown> | null,
 	links: null,
-	createdAt: new Date(0),
-	instruments: [],
-	genres: [],
-	groupMembers: []
+	tags: [],
+	user: {
+		memberNumber: 1,
+		pronouns: null,
+		image: null,
+		createdAt: new Date(0),
+		groupMembers: []
+	}
 };
 
 describe('getPublicMemberProfile contact privacy', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('withholds members-only contact details from the public profile', async () => {
-		userFindFirst.mockResolvedValue({
+		entryFindFirst.mockResolvedValue({
 			...baseRow,
-			directoryContact: { email: 'secret@jeff.com', phone: '555-9999', visibility: 'members' }
+			contact: { email: 'secret@jeff.com', phone: '555-9999', visibility: 'members' }
 		});
 
 		const { member } = await getPublicMemberProfile('m1');
@@ -80,9 +87,9 @@ describe('getPublicMemberProfile contact privacy', () => {
 	});
 
 	it('treats contact with no visibility set as members-only (default)', async () => {
-		userFindFirst.mockResolvedValue({
+		entryFindFirst.mockResolvedValue({
 			...baseRow,
-			directoryContact: { email: 'secret@jeff.com' }
+			contact: { email: 'secret@jeff.com' }
 		});
 
 		const { member } = await getPublicMemberProfile('m1');
@@ -92,9 +99,9 @@ describe('getPublicMemberProfile contact privacy', () => {
 	});
 
 	it('exposes contact only when the member explicitly opted it public', async () => {
-		userFindFirst.mockResolvedValue({
+		entryFindFirst.mockResolvedValue({
 			...baseRow,
-			directoryContact: { email: 'book@jeff.com', visibility: 'public' }
+			contact: { email: 'book@jeff.com', visibility: 'public' }
 		});
 
 		const { member } = await getPublicMemberProfile('m1');

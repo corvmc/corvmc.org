@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
+import { directoryEntry } from '$lib/server/db/schema/directory';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
@@ -93,9 +93,9 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 			.innerJoin(group, eq(group.id, groupMember.groupId))
 			.where(and(eq(groupMember.userId, userId), isNull(group.deletedAt))),
 		db
-			.select({ directoryVisibility: user.directoryVisibility })
-			.from(user)
-			.where(eq(user.id, userId))
+			.select({ directoryVisibility: directoryEntry.visibility })
+			.from(directoryEntry)
+			.where(eq(directoryEntry.userId, userId))
 			.limit(1)
 	]);
 

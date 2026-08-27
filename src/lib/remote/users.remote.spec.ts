@@ -71,6 +71,9 @@ const dbSelect = vi.fn((shape?: Record<string, unknown>) => {
 	const rows = isCount ? [{ value: otherAdminCount }] : ROLE_ROWS;
 	const result = {
 		from: () => result,
+		// `getUser` left-joins `directory_entry` for the member's directory
+		// visibility, which moved off `user` in phase 3a.
+		leftJoin: () => result,
 		where: () => result,
 		limit: () => result,
 		then: (resolve: (v: unknown) => unknown) => resolve(rows)

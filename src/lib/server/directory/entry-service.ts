@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
 import { group } from '$lib/server/db/schema/group';
+import { user } from '$lib/server/db/schema/authentication';
 import { and, eq } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 
@@ -61,6 +62,51 @@ export async function getOrCreateGroupEntryId(groupId: string): Promise<string> 
 		.values({ groupId, name: row.name, bio: row.bio, avatarKey: row.avatarKey })
 		.returning({ id: directoryEntry.id });
 	return created.id;
+}
+
+/**
+ * Give a user a listing if they have none, and return its id.
+ *
+ * Called from better-auth's `user.create.after` hook so a new account is in the
+ * directory from its first request, and again from the profile save path, which
+ * is what repairs an account whose hook failed. The member directory anchors on
+ * `directory_entry`, so a user without one is simply not in it.
+ *
+ * `name` is a copy of `user.name` — better-auth owns that column — kept current
+ * by `updateProfile` and the staff `updateUser` form.
+ */
+export async function ensureUserEntry(userId: string, name: string): Promise<string> {
+	const [existing] = await db
+		.select({ id: directoryEntry.id })
+		.from(directoryEntry)
+		.where(eq(directoryEntry.userId, userId))
+		.limit(1);
+	if (existing) return existing.id;
+
+	const [created] = await db
+		.insert(directoryEntry)
+		// 'members' rather than the column default of 'public': a new account has
+		// not chosen anything yet, and the old `user.directoryVisibility` default
+		// this replaces was 'members'. Defaulting a brand-new member to the public
+		// web would be a change of policy smuggled in as a migration.
+		.values({ userId, name, visibility: 'members' })
+		.returning({ id: directoryEntry.id });
+	return created.id;
+}
+
+/** The entry id for a user, creating one from `user.name` if they somehow have none. */
+export async function getOrCreateUserEntryId(userId: string): Promise<string> {
+	const [existing] = await db
+		.select({ id: directoryEntry.id })
+		.from(directoryEntry)
+		.where(eq(directoryEntry.userId, userId))
+		.limit(1);
+	if (existing) return existing.id;
+
+	const [row] = await db.select({ name: user.name }).from(user).where(eq(user.id, userId)).limit(1);
+	if (!row) throw new Error(`No user ${userId} to create a directory entry for`);
+
+	return ensureUserEntry(userId, row.name);
 }
 
 /**
