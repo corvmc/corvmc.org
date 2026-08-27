@@ -37,7 +37,10 @@ import {
 	user,
 	account,
 	userInstrument,
-	userGenre
+	userGenre,
+	type DirectoryContact,
+	type DirectoryVisibility,
+	type ProfileLink
 } from '../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../src/lib/server/db/schema/authorization';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
@@ -51,6 +54,7 @@ import {
 } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
 import { bandGenre } from '../src/lib/server/db/schema/band';
+import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/directory';
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { group } from '../src/lib/server/db/schema/group';
 import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
@@ -506,6 +510,9 @@ async function deleteAll() {
 		'band_media',
 		'band_page_config',
 		'band_genre',
+		// Child before parent, and both before `group` and `user`.
+		'directory_tag',
+		'directory_entry',
 		'group_member',
 		'group_slug_history',
 		'group',
@@ -3847,6 +3854,138 @@ async function seedSuggestions(users: any[], adminUser: any) {
 	return { total: rows.length, votes: uniqueVotes.length, pendingEdits: 1 };
 }
 
+// ---------------------------------------------------------------------------
+// Directory entries
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive `directory_entry` and `directory_tag` from everything already seeded,
+ * mirroring `scripts/db/backfill/directory-entry.sql` statement for statement.
+ *
+ * It runs last and reads the tables back rather than being threaded through the
+ * dozen places that insert a user or a group, because `pnpm db:reset` replays
+ * migrations and then seeds — the backfill script never runs locally or in e2e.
+ * Without this, every directory page goes blank the moment phase 3a's readers
+ * land, and it reads as a query bug rather than a fixture gap.
+ */
+async function seedDirectoryEntries() {
+	console.log('Seeding directory entries...');
+
+	const users = await db
+		.select({
+			id: user.id,
+			name: user.name,
+			bio: user.bio,
+			tagline: user.tagline,
+			hometown: user.hometown,
+			links: user.links,
+			directoryVisibility: user.directoryVisibility,
+			directoryContact: user.directoryContact,
+			lookingForBand: user.lookingForBand,
+			availableForHire: user.availableForHire,
+			teachesLessons: user.teachesLessons,
+			openToCollaboration: user.openToCollaboration,
+			createdAt: user.createdAt,
+			updatedAt: user.updatedAt,
+			deletedAt: user.deletedAt
+		})
+		.from(user);
+
+	const groups = await db
+		.select({
+			id: group.id,
+			name: group.name,
+			bio: group.bio,
+			tagline: group.tagline,
+			hometown: group.hometown,
+			foundedYear: group.foundedYear,
+			avatarKey: group.avatarKey,
+			links: group.links,
+			directoryVisibility: group.directoryVisibility,
+			directoryContact: group.directoryContact,
+			lookingForMembers: group.lookingForMembers,
+			createdAt: group.createdAt,
+			updatedAt: group.updatedAt,
+			deletedAt: group.deletedAt
+		})
+		.from(group);
+
+	// `deletedAt` is carried, not reset: an entry that did not follow its
+	// deactivated band would put that band back in the public directory.
+	const entries = [
+		...groups.map((g) => ({
+			id: randomUUID(),
+			groupId: g.id,
+			name: g.name,
+			bio: g.bio,
+			tagline: g.tagline,
+			hometown: g.hometown,
+			foundedYear: g.foundedYear,
+			avatarKey: g.avatarKey,
+			links: g.links as ProfileLink[] | null,
+			visibility: g.directoryVisibility as DirectoryVisibility,
+			contact: g.directoryContact as DirectoryContact,
+			lookingFor: g.lookingForMembers ? ('members' as const) : null,
+			createdAt: g.createdAt,
+			updatedAt: g.updatedAt,
+			deletedAt: g.deletedAt
+		})),
+		// `avatarKey` is deliberately null for a member: their avatar stays
+		// `user.image`, which may hold a full OAuth URL rather than an R2 key.
+		...users.map((u) => ({
+			id: randomUUID(),
+			userId: u.id,
+			name: u.name,
+			bio: u.bio,
+			tagline: u.tagline,
+			hometown: u.hometown,
+			links: u.links as ProfileLink[] | null,
+			visibility: u.directoryVisibility as DirectoryVisibility,
+			contact: u.directoryContact as DirectoryContact,
+			lookingFor: u.lookingForBand ? ('band' as const) : null,
+			availableForHire: u.availableForHire,
+			teachesLessons: u.teachesLessons,
+			openToCollaboration: u.openToCollaboration,
+			createdAt: u.createdAt,
+			updatedAt: u.updatedAt,
+			deletedAt: u.deletedAt
+		}))
+	];
+
+	// 19 columns × the default batch of 10 is 190 bound parameters, over D1's
+	// 100-variable ceiling. 5 × 19 = 95.
+	await batchInsert(directoryEntry, entries, 5);
+
+	const byGroup = new Map(entries.filter((e) => 'groupId' in e).map((e: any) => [e.groupId, e.id]));
+	const byUser = new Map(entries.filter((e) => 'userId' in e).map((e: any) => [e.userId, e.id]));
+
+	const bandGenres = await db.select().from(bandGenre);
+	const userGenres = await db.select().from(userGenre);
+	const userInstruments = await db.select().from(userInstrument);
+
+	// The three source tables have no unique constraint, so fold through a Set
+	// exactly as the backfill's ON CONFLICT DO NOTHING does. Values are copied
+	// verbatim — normalising case would change what the directory renders.
+	const seen = new Set<string>();
+	const tags: { entryId: string; kind: 'genre' | 'instrument'; value: string }[] = [];
+	const addTag = (entryId: string | undefined, kind: 'genre' | 'instrument', value: string) => {
+		if (!entryId) return;
+		const key = `${entryId}:${kind}:${value}`;
+		if (seen.has(key)) return;
+		seen.add(key);
+		tags.push({ entryId, kind, value });
+	};
+
+	for (const row of bandGenres) addTag(byGroup.get(row.bandId), 'genre', row.genre);
+	for (const row of userGenres) addTag(byUser.get(row.userId), 'genre', row.genre);
+	for (const row of userInstruments) addTag(byUser.get(row.userId), 'instrument', row.instrument);
+
+	// 3 columns × 30 = 90.
+	await batchInsert(directoryTag, tags, 30);
+
+	return { entries: entries.length, tags: tags.length };
+}
+
 async function main() {
 	console.log('\nStarting dev seed...\n');
 
@@ -3891,6 +4030,8 @@ async function main() {
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
 	const volunteerShifts = await seedVolunteerShifts(activeVolunteers, volunteerRoles, events);
 	const suggestions = await seedSuggestions(allUsers, adminUser);
+	// Last: it reads back every user and group the seed created.
+	const directory = await seedDirectoryEntries();
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -3917,6 +4058,7 @@ async function main() {
 		`  ${eq.categories} equipment categories, ${eq.items} equipment items, ${eq.loans} loans`
 	);
 	console.log(`  ${help.categories} help categories, ${help.articles} help articles`);
+	console.log(`  ${directory.entries} directory entries, ${directory.tags} directory tags`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(
 		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings, 1 member-set messaging preference`

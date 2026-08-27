@@ -9,6 +9,8 @@ export const tableOrder = [
 	'user',
 	'recurring_series',
 	'group',
+	// References user and group; parent of directory_tag.
+	'directory_entry',
 	'reservation',
 	'equipment_category',
 	'event',
@@ -38,6 +40,7 @@ export const tableOrder = [
 	'model_has_roles',
 	'role_has_permissions',
 	'band_genre',
+	'directory_tag',
 	'group_slug_history',
 	'campaign_audience',
 	'session',
