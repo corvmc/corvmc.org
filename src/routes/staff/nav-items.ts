@@ -46,13 +46,7 @@ export type StaffNavKey =
 	| 'settings';
 
 export type StaffNavSectionKey =
-	| 'people'
-	| 'space'
-	| 'programs'
-	| 'moderation'
-	| 'outreach'
-	| 'money'
-	| 'system';
+	'people' | 'space' | 'programs' | 'moderation' | 'outreach' | 'money' | 'system';
 
 /**
  * Field names on `getStaffLayout()`'s return. Items name a count rather than

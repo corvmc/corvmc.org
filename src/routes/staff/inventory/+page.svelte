@@ -124,7 +124,7 @@
 					<th>Item</th>
 					<th class="col-support">Tracking</th>
 					<th class="cell-num">Available</th>
-					<th class="cell-num col-support">On hand</th>
+					<th class="col-support cell-num">On hand</th>
 					<th class="col-extra">Barcode</th>
 				{/snippet}
 
@@ -145,7 +145,7 @@
 						<td class="cell-num">
 							<span class:text-error={e.availableQuantity <= 0}>{e.availableQuantity}</span>
 						</td>
-						<td class="cell-num col-support">
+						<td class="col-support cell-num">
 							<!-- Low stock is the reorder point doing its job: nobody has to
 							     notice, so the row says so itself. -->
 							<span class:text-warning={e.isLowStock}>{e.onHand}</span>

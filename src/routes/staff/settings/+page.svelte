@@ -322,8 +322,7 @@
 									name="description"
 									value={product.description ?? ''}
 									class="textarea textarea-sm"
-									rows="2"
-								></textarea>
+									rows="2"></textarea>
 							</div>
 						</CardBody>
 					</Card>
