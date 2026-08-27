@@ -3,6 +3,8 @@ import { DomainError } from '../domain-error';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import { group, groupMember, groupSlugHistory, type GroupRole } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
+import { directoryEntry } from '$lib/server/db/schema/directory';
+import { groupEntryInsert } from '$lib/server/directory/entry-service';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
@@ -126,6 +128,15 @@ export async function create(ownerId: string, data: CreateBandData) {
 			userId: ownerId,
 			role: 'owner',
 			status: 'active'
+		}),
+		// The public listing, in the same batch as the band it belongs to. A band
+		// with no entry is not in the directory at all — see `directory-service.ts`
+		// — so creating them apart would leave a window where a new band is
+		// invisible, and a failed second write would make that permanent.
+		groupEntryInsert({
+			groupId: bandId,
+			name: data.name,
+			bio: data.bio ? sanitizeBio(data.bio) : null
 		})
 	]);
 
@@ -152,7 +163,19 @@ export async function update(bandId: string, data: UpdateBandData) {
 		updates.bio = data.bio ? sanitizeBio(data.bio).slice(0, 2000) || null : null;
 	}
 
-	const [updated] = await db.update(group).set(updates).where(eq(group.id, bandId)).returning();
+	// `name` and `bio` live in two places on purpose: canonical on `group`, and
+	// copied onto the listing. The copy is what an unowned external act (phase
+	// 10) has instead, and what the directory orders and searches on — so a
+	// rename that wrote only one of them would leave the directory showing the
+	// old name indefinitely.
+	const entryUpdates: Record<string, unknown> = { updatedAt: new Date() };
+	if (data.name !== undefined) entryUpdates.name = updates.name;
+	if (data.bio !== undefined) entryUpdates.bio = updates.bio;
+
+	const [[updated]] = await db.batch([
+		db.update(group).set(updates).where(eq(group.id, bandId)).returning(),
+		db.update(directoryEntry).set(entryUpdates).where(eq(directoryEntry.groupId, bandId))
+	]);
 
 	if (!updated) throw new BandNotFoundError();
 	return updated;
@@ -707,11 +730,21 @@ export async function getByIdWithDetails(bandId: string) {
 }
 
 export async function deactivate(bandId: string) {
-	const [row] = await db
-		.update(group)
-		.set({ deletedAt: new Date(), updatedAt: new Date() })
-		.where(and(eq(group.id, bandId), isNull(group.deletedAt)))
-		.returning();
+	const now = new Date();
+	// Both flags, in one batch. The directory filters on the entry's, so a band
+	// deactivated here without it would leave the panel read-only while its
+	// listing stayed up.
+	const [[row]] = await db.batch([
+		db
+			.update(group)
+			.set({ deletedAt: now, updatedAt: now })
+			.where(and(eq(group.id, bandId), isNull(group.deletedAt)))
+			.returning(),
+		db
+			.update(directoryEntry)
+			.set({ deletedAt: now, updatedAt: now })
+			.where(eq(directoryEntry.groupId, bandId))
+	]);
 
 	if (!row) throw new BandNotFoundError();
 
@@ -736,11 +769,18 @@ export async function deactivate(bandId: string) {
 }
 
 export async function reactivate(bandId: string) {
-	const [row] = await db
-		.update(group)
-		.set({ deletedAt: null, updatedAt: new Date() })
-		.where(and(eq(group.id, bandId), isNotNull(group.deletedAt)))
-		.returning();
+	const now = new Date();
+	const [[row]] = await db.batch([
+		db
+			.update(group)
+			.set({ deletedAt: null, updatedAt: now })
+			.where(and(eq(group.id, bandId), isNotNull(group.deletedAt)))
+			.returning(),
+		db
+			.update(directoryEntry)
+			.set({ deletedAt: null, updatedAt: now })
+			.where(eq(directoryEntry.groupId, bandId))
+	]);
 
 	if (!row) throw new BandNotFoundError();
 	return row;

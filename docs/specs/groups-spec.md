@@ -130,7 +130,7 @@ directory_entry
   deletedAt    timestamp, nullable
 ```
 
-**`name` and `avatarKey` are copies, not moves.** `user.name` belongs to better-auth, `group.name`
+**`name`, `bio` and `avatarKey` are copies, not moves.** `user.name` belongs to better-auth, `group.name`
 has readers in every module through `refs.ts`, and — decisively — an entry is _optional_: a club or
 committee has a group and no listing, so a name held only on the entry would leave `/staff/groups`
 with nothing to render. Both columns stay canonical where they are and are maintained here on write,
@@ -138,7 +138,18 @@ the `event_band.name` pattern. The duplication earns itself immediately, because
 `ORDER BY name` and its search `LIKE` then run against this row rather than a joined table. For a
 user-attached entry `avatarKey` stays **null** and the member's avatar remains `user.image`, which an
 OAuth provider may have filled with a full URL rather than an R2 key. **Phase 3c therefore drops
-neither `name` nor the avatar columns.**
+neither `name`, `bio` nor the avatar columns.**
+
+`bio` joins them for the same reason and one more: `group` carries a `description` in its own right
+— a club's "what this program is" is not a directory listing — so a group with no entry still needs
+prose. `create()` and `update()` in `band-service.ts` are its only two writers and both write the
+pair.
+
+The avatar is the one where the copy is **not** the read path. `group.avatarKey` has three writers
+(`setBandAvatar`, `clearBandAvatar`, and `/api/bands/[id]/avatar`, which duplicates them inline), and
+the band directory joins `group` anyway for the slug, so it reads the canonical column and keeps
+`directory_entry.avatarKey` for the entry that has no subject to read from: an unowned act in phase
+10, and a band after a hard delete, whose entry survives with `groupId` set back to null.
 
 **The three availability booleans come along.** `availableForHire`, `teachesLessons` and
 `openToCollaboration` travel with `lookingForBand` through every filter, form, DTO and card;

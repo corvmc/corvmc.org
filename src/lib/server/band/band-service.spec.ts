@@ -94,7 +94,10 @@ vi.mock('$lib/server/db', () => ({
 				then: (resolve: (v: unknown) => void) => resolve(deleteResult)
 			}))
 		})),
-		batch: vi.fn(() => Promise.resolve([]))
+		// One result array per statement, which is the shape drizzle actually
+		// returns. A flat `[]` let a `const [[row]] = await db.batch(...)` destructure
+		// undefined and fail as a TypeError rather than as the domain error.
+		batch: vi.fn((queries: unknown[]) => Promise.resolve(queries.map(() => [])))
 	}
 }));
 
@@ -247,6 +250,7 @@ describe('BandService', () => {
 		// all of it silently. Only `changeBandSlug` moves an address now.
 		it('never touches the slug when the name changes', async () => {
 			const { db } = await import('$lib/server/db');
+			vi.mocked(db.batch).mockResolvedValueOnce([[{ id: 'band-1', name: 'New Name' }], []] as any);
 
 			await update('band-1', { name: 'New Name' });
 
@@ -257,15 +261,35 @@ describe('BandService', () => {
 			expect(setArg).toMatchObject({ name: 'New Name' });
 		});
 
+		// `name` and `bio` are canonical on `group` and copied onto the listing,
+		// so a rename has to write both. Writing only the group would leave the
+		// directory — which orders and searches on the entry's copy — showing the
+		// old name until something else happened to touch the row.
+		it('writes the new name to the listing as well as the band', async () => {
+			const { db } = await import('$lib/server/db');
+			vi.mocked(db.batch).mockResolvedValueOnce([[{ id: 'band-1', name: 'New Name' }], []] as any);
+
+			await update('band-1', { name: 'New Name', bio: 'Fresh bio' });
+
+			const setArgs = vi.mocked(db.update).mock.results.map((r) => r.value.set.mock.calls[0][0]);
+			expect(setArgs).toHaveLength(2);
+			expect(setArgs[0]).toMatchObject({ name: 'New Name' });
+			expect(setArgs[1]).toMatchObject({ name: 'New Name', bio: 'Fresh bio' });
+		});
+
+		it('leaves the listing alone for a field the band did not send', async () => {
+			const { db } = await import('$lib/server/db');
+			vi.mocked(db.batch).mockResolvedValueOnce([[{ id: 'band-1' }], []] as any);
+
+			await update('band-1', { name: 'Only A Rename' });
+
+			const entrySet = vi.mocked(db.update).mock.results[1]?.value.set.mock.calls[0][0];
+			expect(entrySet).not.toHaveProperty('bio');
+		});
+
 		it('throws when band not found', async () => {
 			const { db } = await import('$lib/server/db');
-			vi.mocked(db.update).mockReturnValueOnce({
-				set: vi.fn(() => ({
-					where: vi.fn(() => ({
-						returning: vi.fn(() => Promise.resolve([]))
-					}))
-				}))
-			} as any);
+			vi.mocked(db.batch).mockResolvedValueOnce([[], []] as any);
 
 			await expect(update('band-999', { bio: 'test' })).rejects.toThrow(BandNotFoundError);
 		});

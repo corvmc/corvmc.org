@@ -42,7 +42,7 @@ import {
 	toPublicMemberProfile
 } from '$lib/utils/directory-display';
 import { db } from '$lib/server/db';
-import { bandGenre } from '$lib/server/db/schema/band';
+import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
@@ -295,22 +295,31 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 	const [row] = await db
 		.select({
 			id: group.id,
+			// The entry id, needed for the genre lookup below. Distinct from
+			// `id` on purpose: nothing outside this function means the entry.
+			entryId: directoryEntry.id,
 			name: group.name,
 			slug: group.slug,
-			bio: group.bio,
-			tagline: group.tagline,
-			hometown: group.hometown,
-			foundedYear: group.foundedYear,
+			bio: directoryEntry.bio,
+			tagline: directoryEntry.tagline,
+			hometown: directoryEntry.hometown,
+			foundedYear: directoryEntry.foundedYear,
 			avatarKey: group.avatarKey,
-			lookingForMembers: group.lookingForMembers,
-			directoryContact: group.directoryContact,
-			links: group.links,
-			directoryVisibility: group.directoryVisibility,
+			lookingFor: directoryEntry.lookingFor,
+			directoryContact: directoryEntry.contact,
+			links: directoryEntry.links,
+			// Both soft-delete flags: `deactivate()` sets the pair, but a group
+			// deleted by any other path would otherwise keep a live listing.
+			entryDeletedAt: directoryEntry.deletedAt,
+			directoryVisibility: directoryEntry.visibility,
 			memberCount: sql<number>`cast(count(case when ${groupMember.status} = 'active' then 1 end) as integer)`
 		})
 		.from(group)
+		// INNER, not left: the listing is the profile. A group with no entry has
+		// no public page, which is what a club or committee (phase 5) is.
+		.innerJoin(directoryEntry, eq(directoryEntry.groupId, group.id))
 		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
-		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
+		.where(and(eq(group.slug, slug), isNull(group.deletedAt), isNull(directoryEntry.deletedAt)))
 		.groupBy(group.id);
 
 	if (!row) {
@@ -339,9 +348,9 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 	}
 
 	const genres = await db
-		.select({ genre: bandGenre.genre })
-		.from(bandGenre)
-		.where(eq(bandGenre.bandId, row.id));
+		.select({ value: directoryTag.value })
+		.from(directoryTag)
+		.where(and(eq(directoryTag.entryId, row.entryId), eq(directoryTag.kind, 'genre')));
 
 	const members = await db
 		.select({
@@ -373,8 +382,8 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			foundedYear: row.foundedYear,
 			avatarUrl: resolveImageUrl(row.avatarKey),
 			memberCount: row.memberCount,
-			genres: genres.map((r) => r.genre),
-			lookingForMembers: row.lookingForMembers,
+			genres: genres.map((r) => r.value),
+			lookingForMembers: row.lookingFor === 'members',
 			directoryContact: row.directoryContact as DirectoryContact | null,
 			links: (row.links as ProfileLink[] | null) ?? []
 		},
