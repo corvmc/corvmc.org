@@ -86,6 +86,7 @@ this split was made.
 | [community-events-spec.md](specs/shipped/community-events-spec.md)     | ✅     | archived  | Phase 2 — member-authored `source='community'` listings, event tips, cancelled-not-hidden                                   |
 | [event-moderation-spec.md](specs/shipped/event-moderation-spec.md)     | ✅     | archived  | `contentFlag` coverage for the gig guide; reactive, no pre-approval queue                                                   |
 | [production-workflow-spec.md](specs/production-workflow-spec.md)       | 📋     | spec      | CMC-produced shows: booking → run of show → settlement → close-out; venues, external acts. Reconciled with `groups-spec.md` |
+| [staff-events-split-spec.md](specs/staff-events-split-spec.md)         | 📋     | spec      | Splits `/staff/events` into Productions (`source='cmc'`) and Listings (band + community); no schema change                  |
 
 ### Members & directory
 

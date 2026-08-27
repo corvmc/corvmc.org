@@ -168,26 +168,30 @@ staff index adds is the non-public rows, and those divide cleanly: a CMC draft i
 listing awaiting or refused review is Listings. The one real gap is scheduling against an
 _unannounced_ show, which belongs in `checkConflicts` — today it guards the room, not the night.
 
-**Progress:** Designed, unbuilt, and deliberately sequenced after Groups (see
-[Club Management](#club-management)). That module renames `band` to `band_profile` and
-`event.bandId` to `event.groupId`, which is precisely the join the Posted by column reads, and
-extends `eventSources` with `'group'` — a club's jazz night is production-shaped, since it's a
-staff-sanctioned program that holds the room free. Building this first means rebuilding it after.
-Groups also independently prescribes the same `sources: EventSource[]` allow-list refactor for its
-own source filters, so the two converge.
+**Progress:** Specced in `docs/specs/staff-events-split-spec.md`. No schema change — it is a routing
+and presentation split over data that already exists. It was originally deferred behind Groups, on
+the belief that module would move the join this depends on; in fact Groups phase 1 already repointed
+`event.bandId` at `group.id`, so that churn is behind us. What remains is phase 9 (group events,
+`event_group`, and renaming the `eventSources` value `'band'` to `'group'`), which is seven phases
+out and, for this split, a two-line rename. A club's jazz night is production-shaped — a
+staff-sanctioned program that holds the room free — so phase 9 adds `'group'` to Productions, and
+building the split first gives group events a home rather than leaving phase 9 to invent one.
 
 ### Club Management
 
 Tools for member-run clubs (jazz night, open mic, songwriter circle, etc.). Each club gets a dedicated space for managing a recurring event series, a member roster, and a simplified email/announcement system for communicating with club members. Club organizers can also share resources (files, links, lesson materials) with their members, similar to the teacher panel. Builds on top of the existing event and email marketing infrastructure without requiring club organizers to use the full staff tools.
 
-**Progress:** Designed as the **Groups** module in `docs/specs/groups-spec.md`, unbuilt — the Real
-Book Club jazz jam is that spec's driving case. It generalizes today's `band` table into `group`
-(kind, roster, announcements, documents, events) plus `band_profile` (the musical identity a club
-has no use for), so clubs and committees reuse the roster machinery without inheriting band-shaped
+**Progress:** Being built as the **Groups** module (`docs/specs/groups-spec.md`) — the Real Book
+Club jazz jam is that spec's driving case. It splits today's `band` table by **purpose** into four:
+`group` (kind, roster, announcements, documents, events), `directory_entry` (the public listing,
+shared with members), `band_site` (the premium microsite), and `contact` (private details of people
+who are not members). Clubs and committees reuse the roster machinery without inheriting band-shaped
 columns. Three kinds: `band | club | committee`. Bands stay member self-service; clubs and
 committees are staff-created, which is what makes free room time safe to grant by kind — a program
-gets the room through its event rather than a credit balance, and the abuse case is closed
-structurally instead of by a check someone has to remember.
+gets the room through its event rather than a credit balance, so the abuse case is closed
+structurally instead of by a check someone has to remember. Phases 0–2 and 3a have landed (the
+`group` table, `band_member` → `group_member`, `directory_entry`); club-facing behaviour arrives at
+phase 5 (the `/group/{slug}` panel) and phase 9 (group events).
 
 ### Poster Art Repository
 
