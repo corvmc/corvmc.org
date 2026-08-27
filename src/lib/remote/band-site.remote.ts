@@ -10,7 +10,7 @@ import type { NotificationEmailModel } from '$lib/types/notification-email';
 import type { BandEpk } from '$lib/types/band-page';
 import { db } from '$lib/server/db';
 import { group, groupMember } from '$lib/server/db/schema/group';
-import { bandGenre } from '$lib/server/db/schema/band';
+import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
 import { bandPageConfig, bandMedia } from '$lib/server/db/schema/band-page';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, isNull, asc } from 'drizzle-orm';
@@ -47,11 +47,18 @@ function toSiteEvent(e: EventRow) {
 export const getBandSiteData = query(z.string(), async (slug) => {
 	await requireFeature('bandPremium');
 
-	const [bandRow] = await db
-		.select()
+	// LEFT join, unlike the directory's. There, no entry means no listing and a
+	// 404 is the right answer; here the page is granted by `tier`, and a premium
+	// band whose entry went missing should lose its bio, not its site.
+	const [joined] = await db
+		.select({ band: group, entry: directoryEntry })
 		.from(group)
+		.leftJoin(directoryEntry, eq(directoryEntry.groupId, group.id))
 		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
 		.limit(1);
+
+	const bandRow = joined?.band;
+	const entry = joined?.entry;
 
 	if (!bandRow) {
 		// Not just for stale bookmarks: `/api/host-route` answers with
@@ -90,9 +97,10 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 
 	// Fetch genres
 	const genres = await db
-		.select({ genre: bandGenre.genre })
-		.from(bandGenre)
-		.where(eq(bandGenre.bandId, bandRow.id));
+		.select({ value: directoryTag.value })
+		.from(directoryTag)
+		.innerJoin(directoryEntry, eq(directoryEntry.id, directoryTag.entryId))
+		.where(and(eq(directoryEntry.groupId, bandRow.id), eq(directoryTag.kind, 'genre')));
 
 	// Upcoming, plus enough history for a "past shows" section
 	const [events, pastEvents] = await Promise.all([
@@ -112,11 +120,11 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 			id: bandRow.id,
 			name: bandRow.name,
 			slug: bandRow.slug,
-			bio: bandRow.bio,
-			tagline: bandRow.tagline,
+			bio: entry?.bio ?? null,
+			tagline: entry?.tagline ?? null,
 			avatarUrl: resolveImageUrl(bandRow.avatarKey),
-			links: bandRow.links as Array<{ label: string; url: string; embed?: boolean }> | null,
-			genres: genres.map((g) => g.genre),
+			links: entry?.links as Array<{ label: string; url: string; embed?: boolean }> | null,
+			genres: genres.map((g) => g.value),
 			// Only a live custom domain counts — canonical URLs must not point at a
 			// hostname that isn't serving yet.
 			customDomain: bandRow.customDomainStatus === 'active' ? bandRow.customDomain : null

@@ -10,17 +10,22 @@ const { userFindMany, userFindFirst, bandFindMany, captureException } = vi.hoist
 	captureException: vi.fn()
 }));
 
+// Bands read `directory_entry` since phase 3a, so the band mock moved with them.
+// The name is unchanged on purpose: what it stands for — "the query behind the
+// band directory" — did not.
 vi.mock('$lib/server/db', () => ({
 	db: {
 		query: {
 			user: { findMany: userFindMany, findFirst: userFindFirst },
-			group: { findMany: bandFindMany }
+			directoryEntry: { findMany: bandFindMany }
 		}
 	}
 }));
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (k: string | null) => k }));
 vi.mock('$lib/server/sentry', () => ({ captureException }));
 
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import { sql, type SQL } from 'drizzle-orm';
 import { getPublicDirectory, listMembers, listBands, isProfileComplete } from './directory-service';
 
 /** Pull the `AND` condition array out of the `where` passed to a findMany mock. */
@@ -72,8 +77,40 @@ describe('band filters', () => {
 	it('passes lookingForMembers through and applies a name search', async () => {
 		await listBands({ lookingForMembers: true, search: 'trio' });
 		const conds = whereConditions(bandFindMany);
-		expect(conds).toContainEqual({ lookingForMembers: true });
+		expect(conds).toContainEqual({ lookingFor: 'members' });
 		expect(conds).toContainEqual({ name: { like: '%trio%' } });
+	});
+
+	it('lists only entries attached to a band, and only live ones', async () => {
+		// Three conditions doing three different jobs, and every one of them is a
+		// way to leak. Without `groupId`, a member's entry — or in phase 10 an
+		// unowned external act, which must never be listed anywhere — shows up on
+		// the band page. Without `kind`, so does a club or committee. Without the
+		// group's own `deletedAt`, a band deleted by any path other than
+		// `deactivate()` keeps its listing.
+		await listBands();
+		const conds = whereConditions(bandFindMany);
+		expect(conds).toContainEqual({ groupId: { isNotNull: true } });
+		expect(conds).toContainEqual({ deletedAt: { isNull: true } });
+		expect(conds).toContainEqual({ group: { kind: 'band', deletedAt: { isNull: true } } });
+	});
+
+	it('scopes a genre filter to genre tags', async () => {
+		// Genres and instruments share one table now. A filter that forgot `kind`
+		// would still return rows — a member who plays bass would answer a search
+		// for the "bass" genre — so every it-works assertion would still pass.
+		// This renders the fragment and looks for the predicate itself.
+		await listBands({ genres: ['jazz'] });
+		const raw = whereConditions(bandFindMany).find((c) => 'RAW' in c) as
+			{ RAW: (t: unknown, o: unknown) => SQL } | undefined;
+		expect(raw).toBeDefined();
+
+		const rendered = new SQLiteSyncDialect().sqlToQuery(
+			raw!.RAW({ id: sql`"directory_entry"."id"` }, {})
+		);
+		expect(rendered.sql).toContain('"directory_tag"."kind"');
+		expect(rendered.params).toContain('genre');
+		expect(rendered.params).toContain('jazz');
 	});
 });
 

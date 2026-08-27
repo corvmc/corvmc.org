@@ -94,10 +94,16 @@ export const directoryEntry = sqliteTable(
 		foundedYear: text('founded_year'),
 
 		/**
-		 * R2 storage key, for group-attached entries only. A user-attached entry
-		 * leaves this null and the member's avatar stays `user.image`: that column
-		 * is better-auth's, an OAuth provider writes a full URL into it, and
-		 * `setUserAvatar` carries the escape hatch that knows the difference.
+		 * R2 storage key — **not** the read path for a band or a member.
+		 *
+		 * Both have a canonical avatar elsewhere (`group.avatarKey`, and
+		 * `user.image`, which is better-auth's and may hold a full OAuth URL), and
+		 * the directory reads those. Keeping this as the source would mean syncing
+		 * three group write paths and better-auth's own for no gain.
+		 *
+		 * It is here for the entry that has no subject to read from: an unowned
+		 * external act in phase 10, and a band after a hard delete, whose entry
+		 * survives with `groupId` set back to null.
 		 */
 		avatarKey: text('avatar_key'),
 		links: text('links', { mode: 'json' }).$type<ProfileLink[] | null>(),

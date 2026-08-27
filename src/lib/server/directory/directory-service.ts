@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { userInstrument, userGenre } from '$lib/server/db/schema/authentication';
-import { bandGenre } from '$lib/server/db/schema/band';
-import { asc, like, sql } from 'drizzle-orm';
+import { directoryTag } from '$lib/server/db/schema/directory';
+import { and, asc, eq, like, sql } from 'drizzle-orm';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
 
@@ -24,6 +24,32 @@ export type BandFilters = {
 	genres?: string[];
 	lookingForMembers?: boolean;
 };
+
+// ---------------------------------------------------------------------------
+// Tag filtering
+// ---------------------------------------------------------------------------
+
+/**
+ * "This entry carries one of these tags."
+ *
+ * `kind` is not optional and not a default. Genres and instruments share one
+ * table now, so a filter that omits it still returns rows — a member's
+ * instruments would answer a genre filter — and every test that only checks
+ * "filtering works" would still pass. `directory-service.spec.ts` renders this
+ * fragment to SQL and asserts the predicate is in it.
+ *
+ * Typed on the caller's `where` shape because it is written against whatever
+ * table the query is anchored on, and both halves anchor on `directory_entry`.
+ */
+function tagCondition<W>(kind: 'genre' | 'instrument', values: string[]): W {
+	return {
+		RAW: (table: { id: unknown }, _ops: unknown) =>
+			sql`EXISTS (SELECT 1 FROM ${directoryTag} WHERE ${directoryTag.entryId} = ${table.id} AND ${directoryTag.kind} = ${kind} AND ${directoryTag.value} IN (${sql.join(
+				values.map((v) => sql`${v}`),
+				sql`, `
+			)}))`
+	} as W;
+}
 
 // ---------------------------------------------------------------------------
 // Member queries
@@ -266,15 +292,36 @@ export async function getMemberProfile(userId: string, visibility: 'members' | '
 // Band queries
 // ---------------------------------------------------------------------------
 
-type BandWhere = NonNullable<NonNullable<Parameters<typeof db.query.group.findMany>[0]>['where']>;
+type BandWhere = NonNullable<
+	NonNullable<Parameters<typeof db.query.directoryEntry.findMany>[0]>['where']
+>;
 
+/**
+ * Bands are read through `directory_entry`, not `group`.
+ *
+ * The entry is where the listing lives, so anchoring here keeps `ORDER BY name`,
+ * the search `LIKE`, the visibility filter and the tag filter all native to the
+ * queried table rather than reaching across a join. `groupId: isNotNull` is what
+ * says "a listing attached to something CMC manages" — the same predicate reads
+ * `userId` for members, which is what lets the two halves merge into one query
+ * in phase 3a's last step.
+ *
+ * Two soft-delete flags have to be checked, not one. `deactivate()` sets both,
+ * but a group deleted by any other path would otherwise keep its listing.
+ */
 function bandWhereConditions(visibility: 'members' | 'public', filters?: BandFilters): BandWhere {
-	const conditions: BandWhere[] = [{ deletedAt: { isNull: true } }];
+	const conditions: BandWhere[] = [
+		{ groupId: { isNotNull: true } },
+		{ deletedAt: { isNull: true } },
+		// Only bands. A club or committee (phase 5) is a group with an entry and
+		// no place on this page.
+		{ group: { kind: 'band', deletedAt: { isNull: true } } }
+	];
 
 	if (visibility === 'public') {
-		conditions.push({ directoryVisibility: 'public' });
+		conditions.push({ visibility: 'public' });
 	} else {
-		conditions.push({ directoryVisibility: { in: ['members', 'public'] } });
+		conditions.push({ visibility: { in: ['members', 'public'] } });
 	}
 
 	if (filters?.search) {
@@ -282,55 +329,75 @@ function bandWhereConditions(visibility: 'members' | 'public', filters?: BandFil
 	}
 
 	if (filters?.genres?.length) {
-		conditions.push({
-			RAW: (table, _ops) =>
-				sql`EXISTS (SELECT 1 FROM ${bandGenre} WHERE ${bandGenre.bandId} = ${table.id} AND ${bandGenre.genre} IN (${sql.join(
-					filters.genres!.map((g) => sql`${g}`),
-					sql`, `
-				)}))`
-		});
+		conditions.push(tagCondition<BandWhere>('genre', filters.genres));
 	}
 
 	if (filters?.lookingForMembers) {
-		conditions.push({ lookingForMembers: true });
+		conditions.push({ lookingFor: 'members' });
 	}
 
 	return { AND: conditions };
 }
 
-function mapBandRow<T extends { genres: { genre: string }[]; members: { status: string }[] }>(
-	row: T
-) {
-	const { genres, members, ...rest } = row;
+/**
+ * Flattens an entry back into the band shape every caller already draws.
+ *
+ * The renames are the whole point of doing this here rather than at each call
+ * site: `id` is the BAND's id (nothing downstream means the entry — not the
+ * card colour hash, not a link, not a later lookup), `contact` goes back to
+ * `directoryContact`, and `lookingFor` back to the boolean. Phase 3a is a
+ * server-side port with an unchanged wire shape, so no `.svelte` file and no
+ * client DTO has to know the listing moved tables.
+ */
+function mapBandRow<
+	T extends {
+		groupId: string | null;
+		tags: { kind: string; value: string }[];
+		lookingFor: string | null;
+		contact: unknown;
+		group: { slug: string; avatarKey: string | null; members: { status: string }[] } | null;
+	}
+>(row: T) {
+	const { groupId, tags, group, lookingFor, contact, ...rest } = row;
 	return {
 		...rest,
-		genres: genres.map((r) => r.genre),
-		memberCount: members.filter((m) => m.status === 'active').length
+		id: groupId!,
+		slug: group?.slug ?? '',
+		// From the GROUP, not the entry. `group.avatarKey` is canonical and has
+		// three writers (`setBandAvatar`, `clearBandAvatar`, and the avatar route,
+		// which duplicates them inline); reading the entry's copy instead would
+		// mean keeping all three in sync for no gain, since the group is joined
+		// here anyway. The entry's copy exists for an act that has no group.
+		avatarKey: group?.avatarKey ?? null,
+		genres: tags.filter((t) => t.kind === 'genre').map((t) => t.value),
+		memberCount: (group?.members ?? []).filter((m) => m.status === 'active').length,
+		lookingForMembers: lookingFor === 'members',
+		directoryContact: contact
 	};
 }
 
 const bandColumns = {
-	id: true,
+	groupId: true,
 	name: true,
-	slug: true,
 	bio: true,
 	tagline: true,
 	hometown: true,
 	foundedYear: true,
-	avatarKey: true,
-	lookingForMembers: true,
-	directoryContact: true,
+	lookingFor: true,
+	contact: true,
 	links: true
+} as const;
+
+const bandGroupWith = {
+	columns: { slug: true, avatarKey: true },
+	with: { members: { columns: { status: true } } }
 } as const;
 
 /** Members-only band directory */
 export async function listBands(filters?: BandFilters) {
-	const rows = await db.query.group.findMany({
+	const rows = await db.query.directoryEntry.findMany({
 		where: bandWhereConditions('members', filters),
-		with: {
-			genres: true,
-			members: { columns: { status: true } }
-		},
+		with: { tags: true, group: bandGroupWith },
 		orderBy: { name: 'asc' },
 		columns: bandColumns
 	});
@@ -339,12 +406,9 @@ export async function listBands(filters?: BandFilters) {
 
 /** Public band directory */
 export async function listPublicBands(filters?: BandFilters) {
-	const rows = await db.query.group.findMany({
+	const rows = await db.query.directoryEntry.findMany({
 		where: bandWhereConditions('public', filters),
-		with: {
-			genres: true,
-			members: { columns: { status: true } }
-		},
+		with: { tags: true, group: bandGroupWith },
 		orderBy: { name: 'asc' },
 		columns: bandColumns
 	});
@@ -422,30 +486,34 @@ export async function getPublicDirectory(filters: PublicDirectoryFilters = {}) {
 // Tag suggestions
 // ---------------------------------------------------------------------------
 
-export async function suggestInstruments(prefix: string) {
+/**
+ * One table, one query, for what used to be three scans unioned in JS —
+ * `user_instrument` for instruments, `user_genre` and `band_genre` for genres,
+ * with the genre halves deduped and re-sorted in memory afterwards.
+ *
+ * These two move in the band PR even though instruments are a member concept,
+ * and that is deliberate: they read `directory_tag`, which the backfill already
+ * filled for members and bands alike, so they are correct the moment this lands
+ * regardless of whether the member half has been ported. Leaving
+ * `suggestGenres` reading `band_genre` until then would have meant a band's
+ * genres briefly disappearing from the suggestion list the moment band writes
+ * moved to `directory_tag`.
+ */
+async function suggestTags(kind: 'genre' | 'instrument', prefix: string) {
 	const rows = await db
-		.selectDistinct({ tag: userInstrument.instrument })
-		.from(userInstrument)
-		.where(like(userInstrument.instrument, `${prefix}%`))
-		.orderBy(asc(userInstrument.instrument))
+		.selectDistinct({ tag: directoryTag.value })
+		.from(directoryTag)
+		.where(and(eq(directoryTag.kind, kind), like(directoryTag.value, `${prefix}%`)))
+		.orderBy(asc(directoryTag.value))
 		.limit(10);
 
 	return rows.map((r) => r.tag);
 }
 
-export async function suggestGenres(prefix: string) {
-	const [userRows, bandRows] = await Promise.all([
-		db
-			.selectDistinct({ tag: userGenre.genre })
-			.from(userGenre)
-			.where(like(userGenre.genre, `${prefix}%`))
-			.limit(10),
-		db
-			.selectDistinct({ tag: bandGenre.genre })
-			.from(bandGenre)
-			.where(like(bandGenre.genre, `${prefix}%`))
-			.limit(10)
-	]);
+export async function suggestInstruments(prefix: string) {
+	return suggestTags('instrument', prefix);
+}
 
-	return [...new Set([...userRows, ...bandRows].map((r) => r.tag))].sort().slice(0, 10);
+export async function suggestGenres(prefix: string) {
+	return suggestTags('genre', prefix);
 }

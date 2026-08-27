@@ -1,8 +1,8 @@
 import { db } from '$lib/server/db';
 import { user, userInstrument, userGenre } from '$lib/server/db/schema/authentication';
-import { bandGenre } from '$lib/server/db/schema/band';
+import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
+import { getOrCreateGroupEntryId, replaceTags } from './entry-service';
 import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
 import { eq, and } from 'drizzle-orm';
 import { deleteObject, uploadFile } from '$lib/server/storage';
 import { mediaKey } from '$lib/server/storage-keys';
@@ -196,39 +196,40 @@ async function requireBandAdmin(bandId: string, userId: string) {
 export async function updateBandProfile(bandId: string, userId: string, data: BandProfileData) {
 	await requireBandAdmin(bandId, userId);
 
+	const entryId = await getOrCreateGroupEntryId(bandId);
+
 	let mergedContact: DirectoryContact | null = null;
 	if (data.directoryContact) {
+		// Read-modify-write, and it has to read the ENTRY. Reading the old
+		// `group.directory_contact` here would merge onto a column nothing writes
+		// any more, so every field the band did not resubmit would be dropped.
 		const [existing] = await db
-			.select({ directoryContact: group.directoryContact })
-			.from(group)
-			.where(eq(group.id, bandId))
+			.select({ contact: directoryEntry.contact })
+			.from(directoryEntry)
+			.where(eq(directoryEntry.id, entryId))
 			.limit(1);
-		const prev = (existing?.directoryContact as DirectoryContact) ?? {};
+		const prev = (existing?.contact as DirectoryContact) ?? {};
 		mergedContact = validateContact({ ...prev, ...data.directoryContact });
 	}
 
 	const queries: BatchItem<'sqlite'>[] = [
 		db
-			.update(group)
+			.update(directoryEntry)
 			.set({
 				tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
 				hometown: data.hometown?.slice(0, MAX_TAGLINE) || null,
 				foundedYear: data.foundedYear?.slice(0, 16) || null,
-				lookingForMembers: data.lookingForMembers ?? false,
-				directoryVisibility: data.directoryVisibility ?? 'public',
-				directoryContact: mergedContact,
+				lookingFor: data.lookingForMembers ? 'members' : null,
+				visibility: (data.directoryVisibility ?? 'public') as DirectoryVisibility,
+				contact: mergedContact,
 				links: data.links ? validateLinks(data.links) : null,
 				updatedAt: new Date()
 			})
-			.where(eq(group.id, bandId))
+			.where(eq(directoryEntry.id, entryId))
 	];
 
 	if (data.genres !== undefined) {
-		queries.push(db.delete(bandGenre).where(eq(bandGenre.bandId, bandId)));
-		const tags = validateTags(data.genres);
-		if (tags.length > 0) {
-			queries.push(db.insert(bandGenre).values(tags.map((genre) => ({ bandId, genre }))));
-		}
+		queries.push(...replaceTags(entryId, 'genre', validateTags(data.genres)));
 	}
 
 	await db.batch(queries as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
@@ -285,26 +286,33 @@ export async function clearUserAvatar(userId: string) {
 export async function getBandProfileForEdit(bandId: string) {
 	const [row] = await db
 		.select({
-			tagline: group.tagline,
-			hometown: group.hometown,
-			foundedYear: group.foundedYear,
-			lookingForMembers: group.lookingForMembers,
-			directoryVisibility: group.directoryVisibility,
-			directoryContact: group.directoryContact,
-			links: group.links
+			id: directoryEntry.id,
+			tagline: directoryEntry.tagline,
+			hometown: directoryEntry.hometown,
+			foundedYear: directoryEntry.foundedYear,
+			lookingFor: directoryEntry.lookingFor,
+			visibility: directoryEntry.visibility,
+			contact: directoryEntry.contact,
+			links: directoryEntry.links
 		})
-		.from(group)
-		.where(eq(group.id, bandId));
+		.from(directoryEntry)
+		.where(eq(directoryEntry.groupId, bandId));
 
 	if (!row) return null;
 
 	const genres = await db
-		.select({ genre: bandGenre.genre })
-		.from(bandGenre)
-		.where(eq(bandGenre.bandId, bandId));
+		.select({ value: directoryTag.value })
+		.from(directoryTag)
+		.where(and(eq(directoryTag.entryId, row.id), eq(directoryTag.kind, 'genre')));
 
+	// Renamed back to the shape the form and its zod schema already use. Phase 3a
+	// is a server-side port; no `.svelte` file learns that the listing moved.
+	const { id: _entryId, lookingFor, visibility, contact, ...rest } = row;
 	return {
-		...row,
-		genres: genres.map((r) => r.genre)
+		...rest,
+		lookingForMembers: lookingFor === 'members',
+		directoryVisibility: visibility,
+		directoryContact: contact,
+		genres: genres.map((r) => r.value)
 	};
 }

@@ -81,13 +81,31 @@ vi.mock('$lib/server/db/schema/group', () => ({
 	groupMember: { groupId: 'group_id', userId: 'user_id', role: 'role', status: 'status' }
 }));
 
-vi.mock('$lib/server/db/schema/band', () => ({
-	bandGenre: { bandId: 'band_id', genre: 'genre' }
+// One table for what used to be three (`band_genre`, `user_genre`,
+// `user_instrument`), which is why the mock has a `kind` column and the
+// assertions below check it.
+vi.mock('$lib/server/db/schema/directory', () => ({
+	directoryEntry: {
+		id: 'id',
+		userId: 'user_id',
+		groupId: 'group_id',
+		name: 'name',
+		tagline: 'tagline',
+		hometown: 'hometown',
+		foundedYear: 'founded_year',
+		lookingFor: 'looking_for',
+		visibility: 'visibility',
+		contact: 'contact',
+		links: 'links',
+		updatedAt: 'updated_at'
+	},
+	directoryTag: { entryId: 'entry_id', kind: 'kind', value: 'value' }
 }));
 
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn(),
-	and: vi.fn()
+	and: vi.fn(),
+	sql: vi.fn()
 }));
 
 vi.mock('$lib/server/storage', () => ({
@@ -215,8 +233,9 @@ describe('updateBandProfile', () => {
 		);
 	});
 
-	it('updates band profile when user is admin', async () => {
+	it('updates the band listing when user is admin', async () => {
 		selectResults.push([{ role: 'admin' }]);
+		selectResults.push([{ id: 'entry-1' }]); // getOrCreateGroupEntryId
 
 		await updateBandProfile('band-1', 'user-1', {
 			tagline: 'Best band ever',
@@ -226,13 +245,38 @@ describe('updateBandProfile', () => {
 
 		expect(updatedData[0]).toMatchObject({
 			tagline: 'Best band ever',
-			lookingForMembers: true
+			// The boolean became one end of a two-way column.
+			lookingFor: 'members'
 		});
 		expect(insertedRows).toHaveLength(1); // genres
 	});
 
+	it('writes genres as genre-kinded tags on the entry', async () => {
+		selectResults.push([{ role: 'admin' }]);
+		selectResults.push([{ id: 'entry-1' }]);
+
+		await updateBandProfile('band-1', 'user-1', { genres: ['punk', 'ska'] });
+
+		// Without `kind` these rows are indistinguishable from a member's
+		// instruments, and the directory would answer a genre filter with them.
+		expect(insertedRows[0]).toEqual([
+			{ entryId: 'entry-1', kind: 'genre', value: 'punk' },
+			{ entryId: 'entry-1', kind: 'genre', value: 'ska' }
+		]);
+	});
+
+	it('clears lookingFor rather than writing false', async () => {
+		selectResults.push([{ role: 'owner' }]);
+		selectResults.push([{ id: 'entry-1' }]);
+
+		await updateBandProfile('band-1', 'user-1', { lookingForMembers: false });
+
+		expect(updatedData[0]).toMatchObject({ lookingFor: null });
+	});
+
 	it('round-trips hometown and foundedYear', async () => {
 		selectResults.push([{ role: 'owner' }]);
+		selectResults.push([{ id: 'entry-1' }]);
 
 		await updateBandProfile('band-1', 'user-1', {
 			hometown: 'Corvallis, OR',
@@ -247,6 +291,7 @@ describe('updateBandProfile', () => {
 
 	it('nulls hometown and foundedYear when omitted (why the edit form must submit them)', async () => {
 		selectResults.push([{ role: 'owner' }]);
+		selectResults.push([{ id: 'entry-1' }]);
 
 		await updateBandProfile('band-1', 'user-1', { tagline: 'Only tagline' });
 
@@ -307,23 +352,31 @@ describe('getBandProfileForEdit', () => {
 		expect(result).toBeNull();
 	});
 
-	it('returns band profile with genres', async () => {
+	it('returns band profile with genres, in the shape the form already speaks', async () => {
 		selectResults.push([
 			{
+				id: 'entry-1',
 				tagline: 'NYC punk',
-				lookingForMembers: true,
-				directoryVisibility: 'public',
-				directoryContact: null,
+				lookingFor: 'members',
+				visibility: 'public',
+				contact: null,
 				links: null
 			}
 		]);
-		selectResults.push([{ genre: 'punk' }, { genre: 'rock' }]);
+		selectResults.push([{ value: 'punk' }, { value: 'rock' }]);
 
 		const result = await getBandProfileForEdit('band-1');
 
+		// The entry's column names are translated back here rather than in the
+		// form: phase 3a is a server-side port, and no `.svelte` file learns that
+		// the listing changed tables.
 		expect(result).toMatchObject({
 			tagline: 'NYC punk',
+			lookingForMembers: true,
+			directoryVisibility: 'public',
+			directoryContact: null,
 			genres: ['punk', 'rock']
 		});
+		expect(result).not.toHaveProperty('id');
 	});
 });
