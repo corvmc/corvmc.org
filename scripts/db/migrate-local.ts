@@ -75,6 +75,22 @@ export function applyMigrations(file: string): void {
 	const client = new DatabaseSync(file, { timeout: 5_000 });
 	try {
 		migrate(drizzle({ client }), { migrationsFolder: MIGRATIONS_FOLDER });
+		// Fold the WAL back into the database before letting go of it.
+		//
+		// The whole migration set lands in one transaction (drizzle's migrator
+		// wraps it in a single BEGIN/COMMIT), so this leaves a large WAL behind.
+		// Whoever opens the file next has to recover it, and the next opener here
+		// is workerd: `@sveltejs/adapter-cloudflare`'s `emulate()` hook calls
+		// `getPlatformProxy` from *both* the build and the preview server and
+		// never disposes either, so recovery can collide with a reader and take
+		// the whole suite down rather than one test:
+		//
+		//   *** Fatal uncaught kj::Exception: SENTRY_DO SQLite failed;
+		//       database is locked: SQLITE_BUSY (extended: SQLITE_BUSY_RECOVERY)
+		//
+		// TRUNCATE rather than PASSIVE: it waits for readers and resets the WAL
+		// to zero length, so there is nothing left to recover.
+		client.exec('PRAGMA wal_checkpoint(TRUNCATE)');
 	} finally {
 		client.close();
 	}
