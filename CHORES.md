@@ -4,6 +4,20 @@ Low-priority cleanup and tech-debt items. Not blocking, but worth doing.
 
 ## Open
 
+- **The staff settings page keeps a fifth, unguarded copy of the flag list.** A feature flag is
+  spelled out in four hand-maintained places that `src/lib/server/feature-flags.spec.ts` does guard —
+  the `FeatureFlag` union, `ALL_FLAGS`, the `feature.*` default in `site-config-service.ts`, and
+  (as an alias) `VALID_FLAGS` in `settings.remote.ts`. There is a fifth it does not: `featureMeta`
+  in `src/routes/staff/settings/+page.svelte`, which is `Record<string, …>` and is what the page
+  actually iterates to render toggles. So the drift is silent in **both** directions: a stale key
+  renders a toggle for a flag that no longer exists, and a missing key means a live flag has no
+  toggle at all and cannot be switched on from the UI. This is the mirror of the `VALID_FLAGS` bug
+  the spec's header describes (it omitted `contentFlags`, so that toggle threw 400 on click).
+  Noticed while cutting the `equipment` flag in #286, where the entry had to be deleted by hand with
+  nothing to catch it if it had been missed. The fix is to lift `featureMeta` into a `<script
+module>` or a plain `.ts` beside the page so a spec can import it, then assert it covers
+  `ALL_FLAGS` exactly — the same two assertions the other lists already get.
+
 - **The e2e suite now loses one random test per run to a workerd SQLite lock.** Distinct from the boot-time variant `e2e/prepare.ts` already fixes — that one is `SQLITE_BUSY_RECOVERY` while the server starts, and it kills the whole suite. This one is `SQLITE_BUSY` / `SQLITE_BUSY_SNAPSHOT` _during_ the run: workerd's internal `SENTRY_DO` can't take its lock on `.wrangler/state`, D1 then starts answering `D1_ERROR: Failed to parse body as JSON, got: Error: internal error`, unrelated requests 500 for a few seconds, and whichever test is mid-flight times out. The reported failure is always a timeout in a test that has nothing to do with the cause — two consecutive runs on the same commit blamed `staff-users.e2e.ts` and then `suggestions.e2e.ts`, both at 86 passed / 1 failed. Not app config: Sentry's SDK is already `enabled: false` under `SENTRY_ENVIRONMENT=ci` (`src/hooks.server.ts`) and there are no Durable Objects in `wrangler.toml`, so `SENTRY_DO` is workerd's own. It became frequent when the suite grew from 72 tests to 87 (#211 + #212) — main went red on it at `d4df38c` and green at `b787237`, so it is roughly a coin flip per run now and will keep blocking unrelated PRs. **Ruled out: Playwright worker parallelism.** The obvious theory is that Playwright's default two workers write to the one D1 concurrently, so `workers: 1` should fix it. Measured on CI it does the opposite — a 1-worker run logged _nine_ `SQLITE_BUSY` against _four_ in a passing 2-worker run, and it additionally broke four tests that pass in parallel (the three `band-subdomain` specs and the suggestions voting test), which look like inter-test ordering dependencies parallel scheduling had been hiding. So the contention is not between Playwright workers — a single request's own concurrent queries are enough — and serialising only makes the run longer. Note too that lock errors appear in runs that _pass_, so their presence alone does not explain a failure. Also ruled out: our Sentry config, and any fixture touching D1 mid-run (all `getPlatformProxy` use is in `e2e/prepare.ts`, before the server boots).
 
 Still worth trying: an isolated or non-persisted miniflare state directory for the e2e server, so its lock has no other contender. Until then, a failed E2E needs a re-run and a look at _which_ test failed before it means anything.

@@ -122,10 +122,40 @@ directory_entry
   visibility   text, not null, default 'public'   ('public' | 'members' | 'hidden')
   contact      json, nullable   (published contact preferences — see below)
   lookingFor   text, nullable   ('members' | 'band' | null)
+  availableForHire     boolean, not null, default false
+  teachesLessons       boolean, not null, default false
+  openToCollaboration  boolean, not null, default false
   createdAt    timestamp, not null
   updatedAt    timestamp, not null
   deletedAt    timestamp, nullable
 ```
+
+**`name`, `bio` and `avatarKey` are copies, not moves.** `user.name` belongs to better-auth, `group.name`
+has readers in every module through `refs.ts`, and — decisively — an entry is _optional_: a club or
+committee has a group and no listing, so a name held only on the entry would leave `/staff/groups`
+with nothing to render. Both columns stay canonical where they are and are maintained here on write,
+the `event_band.name` pattern. The duplication earns itself immediately, because the directory's
+`ORDER BY name` and its search `LIKE` then run against this row rather than a joined table. For a
+user-attached entry `avatarKey` stays **null** and the member's avatar remains `user.image`, which an
+OAuth provider may have filled with a full URL rather than an R2 key. **Phase 3c therefore drops
+neither `name`, `bio` nor the avatar columns.**
+
+`bio` joins them for the same reason and one more: `group` carries a `description` in its own right
+— a club's "what this program is" is not a directory listing — so a group with no entry still needs
+prose. `create()` and `update()` in `band-service.ts` are its only two writers and both write the
+pair.
+
+The avatar is the one where the copy is **not** the read path. `group.avatarKey` has three writers
+(`setBandAvatar`, `clearBandAvatar`, and `/api/bands/[id]/avatar`, which duplicates them inline), and
+the band directory joins `group` anyway for the slug, so it reads the canonical column and keeps
+`directory_entry.avatarKey` for the entry that has no subject to read from: an unowned act in phase
+10, and a band after a hard delete, whose entry survives with `groupId` set back to null.
+
+**The three availability booleans come along.** `availableForHire`, `teachesLessons` and
+`openToCollaboration` travel with `lookingForBand` through every filter, form, DTO and card;
+`lookingFor` unifies only the fourth. They are list-query predicates, and a column compare beats an
+`EXISTS` subquery, so they keep the shape and default they had on `user` — and they generalize:
+"available for hire" is as natural a listing fact for a band, or for an external act, as for a member.
 
 **What it is attached to is the whole of its meaning:**
 
@@ -478,8 +508,8 @@ because nothing about a left-to-inner join looks wrong in a diff. `transferOwner
 
 Phase 1 inherits a cleaner starting point than this spec originally assumed. Ownership was recorded
 twice and had drifted — five of sixteen production bands had no usable owner row — but
-`scripts/backfill-band-owners.ts` repaired it, the pg migrator now reconciles the two after its
-member loop, and `insertBandWithOwner` replaced the hand-rolled band+owner pairs in the seed. So
+`scripts/backfill-band-owners.ts` repaired it and `insertBandWithOwner` replaced the hand-rolled
+band+owner pairs in the seed. (The pg migrator that also reconciled them was deleted in #278.) So
 "create a group per existing band" starts from a reconciled model rather than one that has to be
 repaired mid-migration.
 
@@ -1047,21 +1077,21 @@ A flag must be registered in **three** places: the `FeatureFlag` union and `ALL_
 
 Phase order. Each phase ships green, with bands working at every step.
 
-| #   | Phase                                                                                                                                                                                                                                                                                                  |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0   | Reserved slugs. First, and near-irreversible once groups exist                                                                                                                                                                                                                                         |
-| 1   | `band` → `group`: the row keeps its identity and the table is renamed (see below), gaining `kind`, `joinPolicy` and `joinInstructions`. `band_member` is untouched — its foreign key simply points at the renamed table. Rename the `'band'` booker type to `'group'`; no `bookerId` repoint is needed |
-| 2   | `band_member` → `group_member`, with every read and write ported and the CI grep gate — **its own PR**                                                                                                                                                                                                 |
-| 3a  | `directory_entry` + `directory_tag`: create, backfill one entry per band **and** per member, fold in `band_genre`/`user_genre`/`user_instrument`, migrate readers. Columns stay on `user`/`band` until 3c                                                                                              |
-| 3b  | `band_site`: move tier, subscription and the five `customDomain*` columns; re-key `band_page_config` and `band_media`. Carries the `band-host-service.ts` join                                                                                                                                         |
-| 3c  | Drop the moved columns from `band` and `user`, plus slug/name/`ownerId`. Carries the owner left-join conversion                                                                                                                                                                                        |
-| 4   | `requireGroupRole` + explicit refs; deprecated wrappers retained                                                                                                                                                                                                                                       |
-| 5   | `/staff/groups` + `/group/{slug}` panel + public group page; `joinPolicy` and self-join                                                                                                                                                                                                                |
-| 6   | `group_invite` replaces `platform_invite`                                                                                                                                                                                                                                                              |
-| 7   | Announcements — bands and groups simultaneously, since it is the same code                                                                                                                                                                                                                             |
-| 8   | Documents — bucket and binding deployed and verified **first**, then the table and route                                                                                                                                                                                                               |
-| 9   | Group events + `event_group` + `createGroupEvent()`; fix the recurring generator                                                                                                                                                                                                                       |
-| 10  | External acts: unowned entries, `contact`, `directory_entry_link` + `/act/{token}`, and `event_band` re-keyed to `directoryEntryId`                                                                                                                                                                    |
+| #   | Phase                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | Reserved slugs. First, and near-irreversible once groups exist                                                                                                                                                                                                                                                                                                                                                                                 |
+| 1   | `band` → `group`: the row keeps its identity and the table is renamed (see below), gaining `kind`, `joinPolicy` and `joinInstructions`. `band_member` is untouched — its foreign key simply points at the renamed table. Rename the `'band'` booker type to `'group'`; no `bookerId` repoint is needed                                                                                                                                         |
+| 2   | `band_member` → `group_member`, with every read and write ported and the CI grep gate — **its own PR**                                                                                                                                                                                                                                                                                                                                         |
+| 3a  | `directory_entry` + `directory_tag`: create, backfill one entry per band **and** per member, fold in `band_genre`/`user_genre`/`user_instrument`, migrate readers. Columns stay on `user`/`group` until 3c. **Four PRs**: schema + backfill, then the band half, then the member half, then the merges and the gate — split by surface, because reads and writes for one surface cannot move apart without a window where an edit is invisible |
+| 3b  | `band_site`: move tier, subscription and the five `customDomain*` columns; re-key `band_page_config` and `band_media`. Carries the `band-host-service.ts` join                                                                                                                                                                                                                                                                                 |
+| 3c  | Drop the moved listing columns from `group` and `user`, plus `ownerId`. Carries the owner left-join conversion. **Not** `slug`, `name` or the avatar columns — see [Directory entry](#directory-entry)                                                                                                                                                                                                                                         |
+| 4   | `requireGroupRole` + explicit refs; deprecated wrappers retained                                                                                                                                                                                                                                                                                                                                                                               |
+| 5   | `/staff/groups` + `/group/{slug}` panel + public group page; `joinPolicy` and self-join                                                                                                                                                                                                                                                                                                                                                        |
+| 6   | `group_invite` replaces `platform_invite`                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 7   | Announcements — bands and groups simultaneously, since it is the same code                                                                                                                                                                                                                                                                                                                                                                     |
+| 8   | Documents — bucket and binding deployed and verified **first**, then the table and route                                                                                                                                                                                                                                                                                                                                                       |
+| 9   | Group events + `event_group` + `createGroupEvent()`; fix the recurring generator                                                                                                                                                                                                                                                                                                                                                               |
+| 10  | External acts: unowned entries, `contact`, `directory_entry_link` + `/act/{token}`, and `event_band` re-keyed to `directoryEntryId`                                                                                                                                                                                                                                                                                                            |
 
 Do not interleave phases 1–3. A half-ported roster plus a new `group` table means group bugs and band regressions land in one diff and cannot be told apart.
 
@@ -1099,9 +1129,10 @@ plan where a bad migration is unrecoverable rather than merely wrong.
 one, so code passing a group id where an entry id belongs would work in production against old data
 and fail only on records created later. That is the worst failure shape available here.
 
-It costs nothing in practice, because the mapping never leaves the migration that creates it. Phase
-3a inserts the entries and re-keys `band_genre` and `event_band` in the same step, resolving through
-`group_id` rather than through anything the application has to remember:
+It costs nothing in practice, because the mapping never has to be carried anywhere. Phase 3a inserts
+the entries and folds `band_genre` in the same step, and phase 10 re-keys `event_band` seven phases
+later off the same resolution — `group_id` does not expire, which is the real content of the
+no-id-map argument:
 
 ```sql
 UPDATE event_band
@@ -1112,7 +1143,7 @@ UPDATE event_band
 
 The same holds for `band_page_config` and `band_media` re-keying to `band_site` in 3b.
 
-Phase 2 carries a specific hazard: raw SQL that `pnpm check` cannot see inside compiles fine through the port and throws at runtime the moment the table is renamed. `band-service.ts` holds three such `band_member` subqueries — inside `listForUser`, `listAll`, and `getByIdWithDetails` — and there is at least a fourth elsewhere in `src/`: `LEADS_A_BAND` in `marketing/system-audience-defs.ts`. Scripts carry more (`backfill-band-owners.ts`, `seed-dev.ts`, `d1-table-order.mjs`, `migrate-from-postgres.ts`). Write the CI grep gate against the literal string across the whole tree rather than against `band-service.ts`, because the count is what keeps being wrong.
+Phase 2 carries a specific hazard: raw SQL that `pnpm check` cannot see inside compiles fine through the port and throws at runtime the moment the table is renamed. `band-service.ts` holds three such `band_member` subqueries — inside `listForUser`, `listAll`, and `getByIdWithDetails` — and there is at least a fourth elsewhere in `src/`: `LEADS_A_BAND` in `marketing/system-audience-defs.ts`. Scripts carry more (`backfill-band-owners.ts`, `seed-dev.ts`, `d1-table-order.mjs`). Write the CI grep gate against the literal string across the whole tree rather than against `band-service.ts`, because the count is what keeps being wrong.
 
 The split between phases 1 and 2 is drawn at the table, not at the layer, and that is deliberate: renaming a table in the database forces every code reference to it into the same commit, so `band` and `band_member` cannot be renamed together and reviewed apart. `band` reaches 39 files; `band_member` reaches roughly 180 references across 18. Separately each is a mechanical diff a reviewer can scan; together they are one diff in which a band regression and a roster regression are indistinguishable.
 

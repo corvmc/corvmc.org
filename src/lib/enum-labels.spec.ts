@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { creditSourceLabels, equipmentConditionBadge, equipmentConditions } from './config';
+import {
+	acquisitionKindLabels,
+	acquisitionKinds,
+	assetStatusLabels,
+	assetStatuses,
+	creditSourceLabels,
+	equipmentConditionBadge,
+	equipmentConditions,
+	stockReasonLabels,
+	stockReasons
+} from './config';
 import { transactionSources } from './server/db/schema/finance';
 import { titleCase } from './utils/format';
 
@@ -39,6 +49,33 @@ describe('equipmentConditionBadge', () => {
 	it('gives each condition a distinct colour — it is an ordinal scale', () => {
 		const colours = equipmentConditions.map((c) => equipmentConditionBadge[c]);
 		expect(new Set(colours).size).toBe(equipmentConditions.length);
+	});
+});
+
+/**
+ * The inventory vocabularies are read straight onto staff screens — a movement
+ * history is a list of reasons and nothing else — so an unlabelled value shows
+ * up as `loan_out` in front of a person. Same drift, same guard.
+ */
+describe.each([
+	['stockReasonLabels', stockReasons, stockReasonLabels],
+	['assetStatusLabels', assetStatuses, assetStatusLabels],
+	['acquisitionKindLabels', acquisitionKinds, acquisitionKindLabels]
+] as const)('%s', (name, values, labels: Record<string, string>) => {
+	it('labels every value', () => {
+		const missing = values.filter((v) => !(v in labels));
+		expect(missing, `add these to \`${name}\` in src/lib/config.ts`).toEqual([]);
+	});
+
+	it('has no labels for values that no longer exist', () => {
+		const stale = Object.keys(labels).filter((k) => !(values as readonly string[]).includes(k));
+		expect(stale, `these are not in the enum behind \`${name}\``).toEqual([]);
+	});
+
+	it('never renders a raw snake_case token', () => {
+		for (const value of values) {
+			expect(labels[value]).not.toContain('_');
+		}
 	});
 });
 

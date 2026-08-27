@@ -5,7 +5,6 @@ export type FeatureFlag =
 	| 'staffInbox'
 	| 'bandPremium'
 	| 'emailMarketing'
-	| 'equipment'
 	| 'helpArticles'
 	| 'contentFlags'
 	| 'directMessages'
@@ -15,7 +14,6 @@ export const ALL_FLAGS: FeatureFlag[] = [
 	'staffInbox',
 	'bandPremium',
 	'emailMarketing',
-	'equipment',
 	'helpArticles',
 	'contentFlags',
 	'directMessages',

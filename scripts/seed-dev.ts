@@ -14,7 +14,7 @@ import 'dotenv/config';
 import { randomUUID, randomBytes, scrypt } from 'crypto';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
-import { sql, eq } from 'drizzle-orm';
+import { sql, eq, inArray } from 'drizzle-orm';
 
 // Mirror the app's password hashing (src/lib/server/auth.ts `scryptHash`). We can't
 // import that module here — it pulls SvelteKit-only `$env`/`$app` aliases that don't
@@ -37,7 +37,10 @@ import {
 	user,
 	account,
 	userInstrument,
-	userGenre
+	userGenre,
+	type DirectoryContact,
+	type DirectoryVisibility,
+	type ProfileLink
 } from '../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../src/lib/server/db/schema/authorization';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
@@ -51,6 +54,7 @@ import {
 } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
 import { bandGenre } from '../src/lib/server/db/schema/band';
+import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/directory';
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { group } from '../src/lib/server/db/schema/group';
 import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
@@ -63,7 +67,16 @@ import {
 } from '../src/lib/server/db/schema/marketing';
 // Registry only — deliberately free of $lib imports so it resolves under tsx.
 import { SYSTEM_AUDIENCES } from '../src/lib/server/marketing/system-audience-defs';
-import { equipmentCategory, equipment, equipmentLoan } from '../src/lib/server/db/schema/equipment';
+import {
+	acquisition,
+	acquisitionLine,
+	equipmentCategory,
+	inventoryAsset,
+	inventoryItem,
+	inventoryLoan,
+	inventoryLocation,
+	stockMovement
+} from '../src/lib/server/db/schema/inventory';
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
 import {
 	inboxThread,
@@ -492,8 +505,13 @@ async function deleteAll() {
 		'inbox_channel_config',
 		'help_articles',
 		'help_categories',
-		'equipment_loan',
-		'equipment',
+		'stock_movement',
+		'inventory_loan',
+		'acquisition_line',
+		'acquisition',
+		'inventory_asset',
+		'inventory_item',
+		'inventory_location',
 		'equipment_category',
 		'campaign_audience',
 		'campaign',
@@ -506,6 +524,9 @@ async function deleteAll() {
 		'band_media',
 		'band_page_config',
 		'band_genre',
+		// Child before parent, and both before `group` and `user`.
+		'directory_tag',
+		'directory_entry',
 		'group_member',
 		'group_slug_history',
 		'group',
@@ -2464,7 +2485,7 @@ async function seedMarketing(users: SeedUser[]) {
 }
 
 async function seedEquipment(users: SeedUser[]) {
-	console.log('Seeding equipment...');
+	console.log('Seeding inventory...');
 
 	const categories = await db
 		.insert(equipmentCategory)
@@ -2473,278 +2494,507 @@ async function seedEquipment(users: SeedUser[]) {
 			{ id: randomUUID(), name: 'Amplifiers', displayOrder: 1, pricingTier: 'major' },
 			{ id: randomUUID(), name: 'Microphones', displayOrder: 2, pricingTier: 'major' },
 			{ id: randomUUID(), name: 'Drum Hardware', displayOrder: 3, pricingTier: 'major' },
-			{ id: randomUUID(), name: 'Cables & Accessories', displayOrder: 4, pricingTier: 'accessory' }
+			{ id: randomUUID(), name: 'Cables & Accessories', displayOrder: 4, pricingTier: 'accessory' },
+			{ id: randomUUID(), name: 'Consumables', displayOrder: 5, pricingTier: 'accessory' }
 		])
 		.returning();
 
 	const catByName = Object.fromEntries(categories.map((c) => [c.name, c.id]));
 
+	// "Main room → stage left rack" is how people say it out loud, so the tree is
+	// two deep rather than one flat list of compound names.
+	const mainRoom = { id: randomUUID(), name: 'Main room', parentId: null, displayOrder: 0 };
+	const storage = { id: randomUUID(), name: 'Storage closet', parentId: null, displayOrder: 1 };
+	const locations = await batchInsert(
+		inventoryLocation,
+		[
+			mainRoom,
+			storage,
+			{ id: randomUUID(), name: 'Stage left rack', parentId: mainRoom.id, displayOrder: 0 },
+			{ id: randomUUID(), name: 'Supply shelf', parentId: storage.id, displayOrder: 0 }
+		],
+		4
+	);
+	const locByName = Object.fromEntries(locations.map((l) => [l.name, l.id]));
+
+	/**
+	 * Both kinds, and both loanable and not — the seed has to exercise the
+	 * cable-drawer case (`bulk` *and* returnable) or the two-axis model is never
+	 * actually tried locally.
+	 */
 	const items = await batchInsert(
-		equipment,
+		inventoryItem,
 		[
 			{
 				id: randomUUID(),
 				name: 'Fender Stratocaster',
 				description: 'Sunburst finish, maple neck.',
 				categoryId: catByName['Guitars'],
-				totalQuantity: 1,
-				serialNumber: 'FEN-STR-2019-0041',
-				resourceId: 'EQ-001',
-				condition: 'good',
-				status: 'available'
+				kind: 'serialized' as const,
+				isLoanable: true,
+				resourceId: 'EQ-001'
 			},
 			{
 				id: randomUUID(),
 				name: 'Gibson Les Paul Standard',
-				description: 'Cherry burst.',
+				description: 'Cherry burst. Donated.',
 				categoryId: catByName['Guitars'],
-				totalQuantity: 1,
-				serialNumber: 'GIB-LP-2021-1187',
-				resourceId: 'EQ-002',
-				condition: 'excellent',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Ibanez SR500 Bass',
-				description: '4-string active bass.',
-				categoryId: catByName['Guitars'],
-				totalQuantity: 1,
-				serialNumber: 'IBZ-SR5-2020-0223',
-				resourceId: 'EQ-003',
-				condition: 'fair',
-				status: 'available'
+				kind: 'serialized' as const,
+				isLoanable: true
 			},
 			{
 				id: randomUUID(),
 				name: 'Fender Blues Deluxe',
 				description: '40W tube combo.',
 				categoryId: catByName['Amplifiers'],
-				totalQuantity: 1,
-				serialNumber: 'FEN-BD-2018-0912',
-				resourceId: 'EQ-004',
-				condition: 'good',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Orange CR120 Head + 4x12 Cab',
-				description: 'Solid state 120W.',
-				categoryId: catByName['Amplifiers'],
-				totalQuantity: 1,
-				serialNumber: 'ORG-CR120-2022-0055',
-				resourceId: 'EQ-005',
-				condition: 'excellent',
-				status: 'available'
+				kind: 'serialized' as const,
+				isLoanable: true
 			},
 			{
 				id: randomUUID(),
 				name: 'QSC K12.2 Powered Speaker',
 				description: '2000W powered PA speaker.',
 				categoryId: catByName['Amplifiers'],
-				totalQuantity: 2,
-				resourceId: 'EQ-006',
-				condition: 'good',
-				status: 'available'
+				kind: 'serialized' as const,
+				isLoanable: true
 			},
 			{
 				id: randomUUID(),
 				name: 'Shure SM58',
-				description: 'Dynamic vocal mic.',
+				description: 'Cardioid dynamic vocal mic.',
 				categoryId: catByName['Microphones'],
-				totalQuantity: 6,
-				outOfOrderQuantity: 1,
-				condition: 'good',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Shure SM57',
-				description: 'Instrument mic.',
-				categoryId: catByName['Microphones'],
-				totalQuantity: 4,
-				condition: 'good',
-				status: 'available'
+				kind: 'serialized' as const,
+				isLoanable: true
 			},
 			{
 				id: randomUUID(),
 				name: 'AKG P420 Condenser',
-				description: 'Large-diaphragm condenser.',
+				description: 'Multi-pattern large-diaphragm condenser.',
 				categoryId: catByName['Microphones'],
-				totalQuantity: 2,
-				resourceId: 'EQ-009',
-				condition: 'excellent',
-				status: 'available'
+				kind: 'serialized' as const,
+				isLoanable: true
 			},
-			{
-				id: randomUUID(),
-				name: 'DW 5000 Kick Pedal',
-				description: 'Single chain drive.',
-				categoryId: catByName['Drum Hardware'],
-				totalQuantity: 2,
-				condition: 'fair',
-				status: 'available'
-			},
-			{
-				id: randomUUID(),
-				name: 'Snare Stand',
-				description: 'Heavy-duty double-braced.',
-				categoryId: catByName['Drum Hardware'],
-				totalQuantity: 3,
-				condition: 'good',
-				status: 'available'
-			},
+			// Counted, but it comes back — the case a single asset/consumable enum
+			// could not express.
 			{
 				id: randomUUID(),
 				name: 'XLR Cable (25ft)',
-				description: 'Standard balanced XLR.',
+				description: 'Neutrik ends.',
 				categoryId: catByName['Cables & Accessories'],
-				totalQuantity: 12,
-				outOfOrderQuantity: 2,
-				condition: 'good',
-				status: 'available'
+				kind: 'bulk' as const,
+				unitOfMeasure: 'each' as const,
+				isLoanable: true,
+				reorderPoint: 6,
+				reorderQuantity: 12
 			},
 			{
 				id: randomUUID(),
-				name: 'Instrument Cable (15ft)',
-				description: '1/4" TS cable.',
-				categoryId: catByName['Cables & Accessories'],
-				totalQuantity: 8,
-				condition: 'good',
-				status: 'available'
+				name: 'Boom Mic Stand',
+				categoryId: catByName['Drum Hardware'],
+				kind: 'bulk' as const,
+				isLoanable: true,
+				reorderPoint: 2,
+				reorderQuantity: 4
+			},
+			// Counted and consumed — a consumable is derived from exactly this
+			// pair, never stored as its own flag.
+			{
+				id: randomUUID(),
+				name: "D'Addario EXL110 Strings",
+				description: 'Regular light, 10–46.',
+				categoryId: catByName['Consumables'],
+				kind: 'bulk' as const,
+				unitOfMeasure: 'pack' as const,
+				gtin: '019954141042',
+				isLoanable: false,
+				reorderPoint: 4,
+				reorderQuantity: 12
 			},
 			{
 				id: randomUUID(),
-				name: 'Mic Stand (Boom)',
-				description: 'Tripod base with boom arm.',
-				categoryId: catByName['Cables & Accessories'],
-				totalQuantity: 6,
-				outOfOrderQuantity: 1,
-				condition: 'good',
-				status: 'available'
+				name: 'Vic Firth 5A Drumsticks',
+				categoryId: catByName['Consumables'],
+				kind: 'bulk' as const,
+				unitOfMeasure: 'pair' as const,
+				gtin: '750795000159',
+				isLoanable: false,
+				reorderPoint: 3,
+				reorderQuantity: 10
 			},
 			{
 				id: randomUUID(),
-				name: 'Yamaha MG10XU Mixer',
-				description: '10-channel mixer. Being repaired.',
-				categoryId: catByName['Amplifiers'],
-				totalQuantity: 1,
-				serialNumber: 'YAM-MG10-2020-0331',
-				resourceId: 'EQ-015',
-				condition: 'poor',
-				status: 'maintenance'
+				name: '9V Batteries',
+				categoryId: catByName['Consumables'],
+				kind: 'bulk' as const,
+				unitOfMeasure: 'box' as const,
+				isLoanable: false,
+				// Deliberately seeded below its reorder point so the low-stock
+				// surface has something to show without anyone arranging it.
+				reorderPoint: 5,
+				reorderQuantity: 20
 			}
 		],
-		5
+		4
 	);
 
 	const itemByName = Object.fromEntries(items.map((i) => [i.name, i]));
 	const now = new Date();
 	const day = 86400000;
+	const staffId = users[0].id;
 
-	const loans = await batchInsert(
-		equipmentLoan,
-		[
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['Fender Stratocaster'].id,
-				userId: users[0].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() - 10 * day),
-				scheduledPickupDate: new Date(now.getTime() - 9 * day),
-				dueDate: new Date(now.getTime() + 3 * day),
-				checkedOutAt: new Date(now.getTime() - 9 * day),
-				status: 'checked_out',
-				dailyRateCents: 500,
-				memberNotes: 'Need it for a gig this weekend'
-			},
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['Shure SM58'].id,
-				userId: users[1].id,
-				quantity: 2,
-				requestedPickupDate: new Date(now.getTime() - 14 * day),
-				scheduledPickupDate: new Date(now.getTime() - 13 * day),
-				dueDate: new Date(now.getTime() - 2 * day),
-				checkedOutAt: new Date(now.getTime() - 13 * day),
-				status: 'checked_out',
-				dailyRateCents: 500
-			},
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['Gibson Les Paul Standard'].id,
-				userId: users[2].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() + 2 * day),
-				status: 'requested',
-				memberNotes: 'Would love to try this for a recording session'
-			},
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['QSC K12.2 Powered Speaker'].id,
-				userId: users[3].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() + 1 * day),
-				scheduledPickupDate: new Date(now.getTime() + 1 * day),
-				status: 'scheduled',
-				memberNotes: 'Need for band practice'
-			},
-			{
-				id: randomUUID(),
-				equipmentId: null,
-				userId: users[4].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() + 3 * day),
-				status: 'requested',
-				memberNotes: 'Looking for a bass amp 300W+'
-			},
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['Fender Blues Deluxe'].id,
-				userId: users[0].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() - 30 * day),
-				scheduledPickupDate: new Date(now.getTime() - 29 * day),
-				dueDate: new Date(now.getTime() - 22 * day),
-				checkedOutAt: new Date(now.getTime() - 29 * day),
-				returnedAt: new Date(now.getTime() - 23 * day),
-				status: 'returned',
-				dailyRateCents: 500,
-				totalChargeCents: 3000,
-				creditsCents: 2000,
-				cashCents: 1000,
-				staffNotes: 'Returned in good condition'
-			},
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['XLR Cable (25ft)'].id,
-				userId: users[1].id,
-				quantity: 3,
-				requestedPickupDate: new Date(now.getTime() - 20 * day),
-				scheduledPickupDate: new Date(now.getTime() - 19 * day),
-				dueDate: new Date(now.getTime() - 15 * day),
-				checkedOutAt: new Date(now.getTime() - 19 * day),
-				returnedAt: new Date(now.getTime() - 16 * day),
-				status: 'returned',
-				dailyRateCents: 0,
-				totalChargeCents: 0,
-				creditsCents: 0,
-				cashCents: 0,
-				staffNotes: 'Sustaining member — accessories free'
-			},
-			{
-				id: randomUUID(),
-				equipmentId: itemByName['AKG P420 Condenser'].id,
-				userId: users[5].id,
-				quantity: 1,
-				requestedPickupDate: new Date(now.getTime() - 7 * day),
-				status: 'cancelled'
+	// -----------------------------------------------------------------------
+	// Acquisitions. Every arrival goes through one, so the spend report has
+	// something to add up and the gifts-in-kind disclosure has something to
+	// disaggregate.
+	// -----------------------------------------------------------------------
+	const purchase = {
+		id: randomUUID(),
+		kind: 'purchase' as const,
+		occurredAt: new Date(now.getTime() - 200 * day),
+		sourceName: 'Guitar Center',
+		reference: 'INV-88213',
+		totalCents: 184_000,
+		recordedByUserId: staffId
+	};
+	const donation = {
+		id: randomUUID(),
+		kind: 'donation' as const,
+		occurredAt: new Date(now.getTime() - 120 * day),
+		sourceName: 'Estate of R. Whitfield',
+		donorUserId: users[2].id,
+		fairValueCents: 250_000,
+		fairValueBasis: 'Reverb comparable sales, three listings averaged',
+		intendedUse: 'Practice-room backline, available to all members',
+		monetized: false,
+		acknowledgedAt: new Date(now.getTime() - 118 * day),
+		recordedByUserId: staffId
+	};
+	const restock = {
+		id: randomUUID(),
+		kind: 'purchase' as const,
+		occurredAt: new Date(now.getTime() - 20 * day),
+		sourceName: 'Sweetwater',
+		reference: 'SW-4471902',
+		totalCents: 21_400,
+		recordedByUserId: staffId
+	};
+	const grant = {
+		id: randomUUID(),
+		kind: 'grant' as const,
+		occurredAt: new Date(now.getTime() - 300 * day),
+		sourceName: 'Benton County Cultural Coalition',
+		reference: 'BCCC-2025-14',
+		totalCents: 96_000,
+		intendedUse: 'PA capacity for all-ages programming',
+		recordedByUserId: staffId
+	};
+
+	await batchInsert(acquisition, [purchase, donation, restock, grant], 4);
+
+	// A helper so a seeded arrival cannot drift from the ledger it implies: one
+	// call writes the line *and* the movement, the way the service does.
+	const lines: (typeof acquisitionLine.$inferInsert)[] = [];
+	const movements: (typeof stockMovement.$inferInsert)[] = [];
+	const assets: (typeof inventoryAsset.$inferInsert)[] = [];
+
+	function received(
+		acq: { id: string; occurredAt: Date },
+		itemName: string,
+		quantity: number,
+		unitValueCents: number | null,
+		opts: {
+			units?: { tag?: string; serial?: string; condition?: string }[];
+			locationId?: string;
+		} = {}
+	) {
+		const item = itemByName[itemName];
+		lines.push({
+			id: randomUUID(),
+			acquisitionId: acq.id,
+			itemId: item.id,
+			quantity,
+			unitValueCents
+		});
+
+		if (item.kind === 'serialized') {
+			const units = opts.units ?? Array.from({ length: quantity }, () => ({}));
+			for (const unit of units) {
+				const assetId = randomUUID();
+				assets.push({
+					id: assetId,
+					itemId: item.id,
+					assetTag: unit.tag ?? null,
+					serialNumber: unit.serial ?? null,
+					condition: (unit.condition ?? 'good') as 'excellent' | 'good' | 'fair' | 'poor',
+					status: 'in_service',
+					locationId: opts.locationId ?? null,
+					acquisitionId: acq.id
+				});
+				movements.push({
+					id: randomUUID(),
+					itemId: item.id,
+					assetId,
+					quantity: 1,
+					reason: 'receive',
+					locationId: opts.locationId ?? null,
+					acquisitionId: acq.id,
+					actorId: staffId,
+					occurredAt: acq.occurredAt
+				});
 			}
-		],
-		3
+		} else {
+			movements.push({
+				id: randomUUID(),
+				itemId: item.id,
+				quantity,
+				reason: 'receive',
+				locationId: opts.locationId ?? null,
+				acquisitionId: acq.id,
+				actorId: staffId,
+				occurredAt: acq.occurredAt
+			});
+		}
+	}
+
+	received(purchase, 'Fender Stratocaster', 1, 89_900, {
+		units: [{ tag: 'CMC-000101', serial: 'FEN-STR-2019-0041' }],
+		locationId: locByName['Main room']
+	});
+	received(purchase, 'Fender Blues Deluxe', 1, 94_100, {
+		units: [{ tag: 'CMC-000102', serial: 'FBD-114522', condition: 'fair' }],
+		locationId: locByName['Main room']
+	});
+	received(donation, 'Gibson Les Paul Standard', 1, 250_000, {
+		units: [{ tag: 'CMC-000103', serial: 'GIB-LP-91188', condition: 'excellent' }],
+		locationId: locByName['Main room']
+	});
+	received(grant, 'QSC K12.2 Powered Speaker', 2, 48_000, {
+		units: [{ tag: 'CMC-000104' }, { tag: 'CMC-000105' }],
+		locationId: locByName['Stage left rack']
+	});
+	// One unit deliberately left untagged: gear gets entered before the roll of
+	// stickers arrives, and the UI has to show that state honestly.
+	received(purchase, 'Shure SM58', 3, 11_900, {
+		units: [{ tag: 'CMC-000106' }, { tag: 'CMC-000107' }, {}],
+		locationId: locByName['Stage left rack']
+	});
+	received(purchase, 'AKG P420 Condenser', 1, 29_900, {
+		units: [{ tag: 'CMC-000108' }],
+		locationId: locByName['Stage left rack']
+	});
+	received(purchase, 'XLR Cable (25ft)', 12, 1_800, { locationId: locByName['Stage left rack'] });
+	received(purchase, 'Boom Mic Stand', 4, 3_500, { locationId: locByName['Storage closet'] });
+	received(restock, "D'Addario EXL110 Strings", 12, 700, { locationId: locByName['Supply shelf'] });
+	received(restock, 'Vic Firth 5A Drumsticks', 10, 1_100, {
+		locationId: locByName['Supply shelf']
+	});
+	received(restock, '9V Batteries', 6, 1_400, { locationId: locByName['Supply shelf'] });
+
+	await batchInsert(acquisitionLine, lines, 4);
+	await batchInsert(inventoryAsset, assets, 4);
+
+	const assetByTag = Object.fromEntries(
+		assets.filter((a) => a.assetTag).map((a) => [a.assetTag, a])
 	);
 
-	return { categories: categories.length, items: items.length, loans: loans.length };
+	// -----------------------------------------------------------------------
+	// Consumption and corrections, so the ledger reads like a real quarter and
+	// the batteries land under their reorder point on their own.
+	// -----------------------------------------------------------------------
+	function used(itemName: string, quantity: number, daysAgo: number, notes: string) {
+		movements.push({
+			id: randomUUID(),
+			itemId: itemByName[itemName].id,
+			quantity: -quantity,
+			reason: 'consume',
+			locationId: locByName['Supply shelf'],
+			actorId: staffId,
+			occurredAt: new Date(now.getTime() - daysAgo * day),
+			notes
+		});
+	}
+
+	used("D'Addario EXL110 Strings", 3, 15, 'Restrung the house Strat');
+	used("D'Addario EXL110 Strings", 2, 8, 'Open mic night');
+	used('Vic Firth 5A Drumsticks', 4, 12, 'House kit');
+	used('Vic Firth 5A Drumsticks', 3, 4, 'Broken during all-ages show');
+	used('9V Batteries', 2, 18, 'Active DI boxes');
+	// Leaves 9V at 6 − 2 − 2 = 2 against a reorder point of 5.
+	used('9V Batteries', 2, 6, 'Wireless packs');
+
+	// A stocktake correction: the honest way to change a count, and the reason
+	// `adjust` is the one caller-signed reason in the vocabulary.
+	movements.push({
+		id: randomUUID(),
+		itemId: itemByName['XLR Cable (25ft)'].id,
+		quantity: -1,
+		reason: 'adjust',
+		locationId: locByName['Stage left rack'],
+		actorId: staffId,
+		occurredAt: new Date(now.getTime() - 5 * day),
+		notes: 'Quarterly count — one unaccounted for'
+	});
+
+	// One amp out for repair, so a unit exists that is owned, on hand, and not
+	// available. Only the per-unit status can say that.
+	const blues = assetByTag['CMC-000102'];
+	movements.push({
+		id: randomUUID(),
+		itemId: blues.itemId,
+		assetId: blues.id,
+		quantity: -1,
+		reason: 'repair_out',
+		actorId: staffId,
+		occurredAt: new Date(now.getTime() - 3 * day),
+		notes: 'Crackling on the clean channel'
+	});
+
+	// -----------------------------------------------------------------------
+	// Loans across every state, with the movements they imply.
+	// -----------------------------------------------------------------------
+	const strat = assetByTag['CMC-000101'];
+	const sm58 = assetByTag['CMC-000106'];
+	const lespaul = assetByTag['CMC-000103'];
+	const speaker = assetByTag['CMC-000104'];
+
+	const loanRows: (typeof inventoryLoan.$inferInsert)[] = [
+		{
+			id: randomUUID(),
+			itemId: strat.itemId,
+			assetId: strat.id,
+			userId: users[0].id,
+			quantity: 1,
+			requestedPickupDate: new Date(now.getTime() - 10 * day),
+			scheduledPickupDate: new Date(now.getTime() - 9 * day),
+			dueDate: new Date(now.getTime() + 3 * day),
+			checkedOutAt: new Date(now.getTime() - 9 * day),
+			status: 'checked_out',
+			dailyRateCents: 500,
+			memberNotes: 'Need it for a gig this weekend'
+		},
+		{
+			id: randomUUID(),
+			itemId: sm58.itemId,
+			assetId: sm58.id,
+			userId: users[1].id,
+			quantity: 1,
+			requestedPickupDate: new Date(now.getTime() - 14 * day),
+			scheduledPickupDate: new Date(now.getTime() - 13 * day),
+			dueDate: new Date(now.getTime() - 2 * day),
+			checkedOutAt: new Date(now.getTime() - 13 * day),
+			status: 'checked_out',
+			dailyRateCents: 500
+		},
+		{
+			id: randomUUID(),
+			itemId: lespaul.itemId,
+			userId: users[2].id,
+			quantity: 1,
+			requestedPickupDate: new Date(now.getTime() + 2 * day),
+			status: 'requested',
+			memberNotes: 'Would love to try this for a recording session'
+		},
+		{
+			id: randomUUID(),
+			itemId: speaker.itemId,
+			userId: users[3].id,
+			quantity: 1,
+			requestedPickupDate: new Date(now.getTime() + 1 * day),
+			scheduledPickupDate: new Date(now.getTime() + 1 * day),
+			status: 'scheduled',
+			memberNotes: 'Need for band practice'
+		},
+		{
+			id: randomUUID(),
+			itemId: null,
+			userId: users[4].id,
+			quantity: 1,
+			requestedPickupDate: new Date(now.getTime() + 3 * day),
+			status: 'requested',
+			memberNotes: 'Looking for a bass amp 300W+'
+		},
+		{
+			id: randomUUID(),
+			itemId: itemByName['XLR Cable (25ft)'].id,
+			userId: users[1].id,
+			quantity: 3,
+			requestedPickupDate: new Date(now.getTime() - 20 * day),
+			scheduledPickupDate: new Date(now.getTime() - 19 * day),
+			dueDate: new Date(now.getTime() - 15 * day),
+			checkedOutAt: new Date(now.getTime() - 19 * day),
+			returnedAt: new Date(now.getTime() - 16 * day),
+			status: 'returned',
+			dailyRateCents: 0,
+			totalChargeCents: 0,
+			creditsCents: 0,
+			cashCents: 0,
+			staffNotes: 'Sustaining member — accessories free'
+		},
+		{
+			id: randomUUID(),
+			itemId: itemByName['AKG P420 Condenser'].id,
+			userId: users[5].id,
+			quantity: 1,
+			requestedPickupDate: new Date(now.getTime() - 7 * day),
+			status: 'cancelled'
+		}
+	];
+
+	const loans = await batchInsert(inventoryLoan, loanRows, 3);
+
+	// The two open checkouts have left the building; the returned cable loan went
+	// out and came back. Written here so on-hand reflects what is physically in
+	// the room, which is the invariant the whole rebuild rests on.
+	for (const loan of loanRows) {
+		if (!loan.itemId) continue;
+		if (loan.checkedOutAt) {
+			movements.push({
+				id: randomUUID(),
+				itemId: loan.itemId,
+				assetId: loan.assetId ?? null,
+				quantity: -(loan.quantity ?? 1),
+				reason: 'loan_out',
+				loanId: loan.id,
+				actorId: staffId,
+				occurredAt: loan.checkedOutAt
+			});
+		}
+		if (loan.returnedAt) {
+			movements.push({
+				id: randomUUID(),
+				itemId: loan.itemId,
+				assetId: loan.assetId ?? null,
+				quantity: loan.quantity ?? 1,
+				reason: 'loan_return',
+				loanId: loan.id,
+				actorId: staffId,
+				occurredAt: loan.returnedAt
+			});
+		}
+	}
+
+	// Units currently out or in the shop say so, so availability and the ledger
+	// agree without anyone reconciling them by hand.
+	await db
+		.update(inventoryAsset)
+		.set({ status: 'on_loan' })
+		.where(inArray(inventoryAsset.id, [strat.id!, sm58.id!]));
+	await db
+		.update(inventoryAsset)
+		.set({ status: 'maintenance', condition: 'poor' })
+		.where(eq(inventoryAsset.id, blues.id!));
+
+	await batchInsert(stockMovement, movements, 4);
+
+	return {
+		categories: categories.length,
+		locations: locations.length,
+		items: items.length,
+		assets: assets.length,
+		acquisitions: 4,
+		movements: movements.length,
+		loans: loans.length
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -3847,6 +4097,138 @@ async function seedSuggestions(users: any[], adminUser: any) {
 	return { total: rows.length, votes: uniqueVotes.length, pendingEdits: 1 };
 }
 
+// ---------------------------------------------------------------------------
+// Directory entries
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive `directory_entry` and `directory_tag` from everything already seeded,
+ * mirroring `scripts/db/backfill/directory-entry.sql` statement for statement.
+ *
+ * It runs last and reads the tables back rather than being threaded through the
+ * dozen places that insert a user or a group, because `pnpm db:reset` replays
+ * migrations and then seeds — the backfill script never runs locally or in e2e.
+ * Without this, every directory page goes blank the moment phase 3a's readers
+ * land, and it reads as a query bug rather than a fixture gap.
+ */
+async function seedDirectoryEntries() {
+	console.log('Seeding directory entries...');
+
+	const users = await db
+		.select({
+			id: user.id,
+			name: user.name,
+			bio: user.bio,
+			tagline: user.tagline,
+			hometown: user.hometown,
+			links: user.links,
+			directoryVisibility: user.directoryVisibility,
+			directoryContact: user.directoryContact,
+			lookingForBand: user.lookingForBand,
+			availableForHire: user.availableForHire,
+			teachesLessons: user.teachesLessons,
+			openToCollaboration: user.openToCollaboration,
+			createdAt: user.createdAt,
+			updatedAt: user.updatedAt,
+			deletedAt: user.deletedAt
+		})
+		.from(user);
+
+	const groups = await db
+		.select({
+			id: group.id,
+			name: group.name,
+			bio: group.bio,
+			tagline: group.tagline,
+			hometown: group.hometown,
+			foundedYear: group.foundedYear,
+			avatarKey: group.avatarKey,
+			links: group.links,
+			directoryVisibility: group.directoryVisibility,
+			directoryContact: group.directoryContact,
+			lookingForMembers: group.lookingForMembers,
+			createdAt: group.createdAt,
+			updatedAt: group.updatedAt,
+			deletedAt: group.deletedAt
+		})
+		.from(group);
+
+	// `deletedAt` is carried, not reset: an entry that did not follow its
+	// deactivated band would put that band back in the public directory.
+	const entries = [
+		...groups.map((g) => ({
+			id: randomUUID(),
+			groupId: g.id,
+			name: g.name,
+			bio: g.bio,
+			tagline: g.tagline,
+			hometown: g.hometown,
+			foundedYear: g.foundedYear,
+			avatarKey: g.avatarKey,
+			links: g.links as ProfileLink[] | null,
+			visibility: g.directoryVisibility as DirectoryVisibility,
+			contact: g.directoryContact as DirectoryContact,
+			lookingFor: g.lookingForMembers ? ('members' as const) : null,
+			createdAt: g.createdAt,
+			updatedAt: g.updatedAt,
+			deletedAt: g.deletedAt
+		})),
+		// `avatarKey` is deliberately null for a member: their avatar stays
+		// `user.image`, which may hold a full OAuth URL rather than an R2 key.
+		...users.map((u) => ({
+			id: randomUUID(),
+			userId: u.id,
+			name: u.name,
+			bio: u.bio,
+			tagline: u.tagline,
+			hometown: u.hometown,
+			links: u.links as ProfileLink[] | null,
+			visibility: u.directoryVisibility as DirectoryVisibility,
+			contact: u.directoryContact as DirectoryContact,
+			lookingFor: u.lookingForBand ? ('band' as const) : null,
+			availableForHire: u.availableForHire,
+			teachesLessons: u.teachesLessons,
+			openToCollaboration: u.openToCollaboration,
+			createdAt: u.createdAt,
+			updatedAt: u.updatedAt,
+			deletedAt: u.deletedAt
+		}))
+	];
+
+	// 19 columns × the default batch of 10 is 190 bound parameters, over D1's
+	// 100-variable ceiling. 5 × 19 = 95.
+	await batchInsert(directoryEntry, entries, 5);
+
+	const byGroup = new Map(entries.filter((e) => 'groupId' in e).map((e: any) => [e.groupId, e.id]));
+	const byUser = new Map(entries.filter((e) => 'userId' in e).map((e: any) => [e.userId, e.id]));
+
+	const bandGenres = await db.select().from(bandGenre);
+	const userGenres = await db.select().from(userGenre);
+	const userInstruments = await db.select().from(userInstrument);
+
+	// The three source tables have no unique constraint, so fold through a Set
+	// exactly as the backfill's ON CONFLICT DO NOTHING does. Values are copied
+	// verbatim — normalising case would change what the directory renders.
+	const seen = new Set<string>();
+	const tags: { entryId: string; kind: 'genre' | 'instrument'; value: string }[] = [];
+	const addTag = (entryId: string | undefined, kind: 'genre' | 'instrument', value: string) => {
+		if (!entryId) return;
+		const key = `${entryId}:${kind}:${value}`;
+		if (seen.has(key)) return;
+		seen.add(key);
+		tags.push({ entryId, kind, value });
+	};
+
+	for (const row of bandGenres) addTag(byGroup.get(row.bandId), 'genre', row.genre);
+	for (const row of userGenres) addTag(byUser.get(row.userId), 'genre', row.genre);
+	for (const row of userInstruments) addTag(byUser.get(row.userId), 'instrument', row.instrument);
+
+	// 3 columns × 30 = 90.
+	await batchInsert(directoryTag, tags, 30);
+
+	return { entries: entries.length, tags: tags.length };
+}
+
 async function main() {
 	console.log('\nStarting dev seed...\n');
 
@@ -3891,6 +4273,8 @@ async function main() {
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
 	const volunteerShifts = await seedVolunteerShifts(activeVolunteers, volunteerRoles, events);
 	const suggestions = await seedSuggestions(allUsers, adminUser);
+	// Last: it reads back every user and group the seed created.
+	const directory = await seedDirectoryEntries();
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -3914,9 +4298,11 @@ async function main() {
 		`  ${marketing.audiences} audiences, ${marketing.subscribers} subscribers, ${marketing.campaigns} campaigns`
 	);
 	console.log(
-		`  ${eq.categories} equipment categories, ${eq.items} equipment items, ${eq.loans} loans`
+		`  ${eq.categories} categories, ${eq.locations} locations, ${eq.items} items, ${eq.assets} units,\n` +
+			`  ${eq.acquisitions} acquisitions, ${eq.movements} stock movements, ${eq.loans} loans`
 	);
 	console.log(`  ${help.categories} help categories, ${help.articles} help articles`);
+	console.log(`  ${directory.entries} directory entries, ${directory.tags} directory tags`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(
 		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings, 1 member-set messaging preference`

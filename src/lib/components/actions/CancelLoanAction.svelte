@@ -2,7 +2,7 @@
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { cancelLoan } from '$lib/remote/equipment.remote';
+	import { cancelLoan } from '$lib/remote/inventory.remote';
 
 	const { fields } = cancelLoan;
 

@@ -3,6 +3,7 @@ import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
 	SEED_PUBLIC_BAND_SLUG,
+	SEED_PUBLIC_BAND_NAME,
 	SEED_PUBLIC_BAND_HOMETOWN,
 	SEED_PUBLIC_BAND_FOUNDED,
 	SEED_HIDDEN_BAND_SLUG,
@@ -84,6 +85,27 @@ test('saving the profile preserves hometown and founded year', async ({ page }) 
 // boundary has no pending snippet), so the visibility gate is a real HTTP 404
 // carrying SvelteKit's +error.svelte — not a 200 shell that resolves the gate
 // client-side. Either way no profile content is rendered.
+/**
+ * The band directory LIST, as opposed to a band detail page.
+ *
+ * Nothing covered this before phase 3a, and the gap was load-bearing: the list
+ * moved from `group` to `directory_entry`, and a band with no entry silently
+ * drops out of it. Every existing directory e2e keys off tab controls and URLs
+ * rather than cards — deliberately, since the card count depends on other
+ * suites' fixtures — so an empty list passed all of them. This asserts one named
+ * band is present, which does not depend on how many others are.
+ */
+test('a public band appears in the public directory list', async ({ page }) => {
+	await page.goto('/directory');
+
+	await expect(page.getByRole('link', { name: new RegExp(SEED_PUBLIC_BAND_NAME) })).toBeVisible({
+		timeout: 15000
+	});
+	// The visibility gate still applies to the list, not just the detail page.
+	await expect(page.getByRole('link', { name: /E2E Hidden Band/ })).toHaveCount(0);
+	await expect(page.getByRole('link', { name: new RegExp(SEED_MEMBERS_BAND_NAME) })).toHaveCount(0);
+});
+
 test('hidden band detail page is not publicly readable', async ({ page }) => {
 	await page.goto(`/directory/bands/${SEED_HIDDEN_BAND_SLUG}`);
 	// .first(): the message is also embedded in the serialized __sveltekit payload.

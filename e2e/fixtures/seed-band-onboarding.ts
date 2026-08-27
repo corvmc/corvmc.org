@@ -15,6 +15,7 @@ import { eq } from 'drizzle-orm';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { groupMember, groupSlugHistory } from '../../src/lib/server/db/schema/group';
 import { group } from '../../src/lib/server/db/schema/group';
+import { directoryEntry, directoryTag } from '../../src/lib/server/db/schema/directory';
 import { scryptHash } from './seed-pay-reservation';
 import { withPlatformEnv } from './platform-db';
 
@@ -70,6 +71,13 @@ export const SEED_RETITLE_BAND_ID = 'e2e-band-retitle';
 export const SEED_RETITLE_BAND_SLUG = 'e2e-retitle-band';
 export const SEED_RETITLE_BAND_NAME = 'E2E Retitle Band';
 
+/**
+ * Fixture entry ids are derived rather than random so the cleanup above can
+ * delete a previous run's tags without reading the entry back first. Production
+ * ids are uuids from the service; nothing depends on this shape but the fixture.
+ */
+const entryIdFor = (bandId: string) => `${bandId}-entry`;
+
 const BAND_IDS = [
 	SEED_PUBLIC_BAND_ID,
 	SEED_HIDDEN_BAND_ID,
@@ -91,6 +99,10 @@ export async function seedBandOnboarding(): Promise<void> {
 		for (const bandId of BAND_IDS) {
 			await db.delete(groupMember).where(eq(groupMember.groupId, bandId));
 			await db.delete(groupSlugHistory).where(eq(groupSlugHistory.groupId, bandId));
+			// Explicitly, and tags before entries: local D1 may have foreign keys
+			// off, so neither cascade can be relied on here.
+			await db.delete(directoryTag).where(eq(directoryTag.entryId, entryIdFor(bandId)));
+			await db.delete(directoryEntry).where(eq(directoryEntry.groupId, bandId));
 			await db.delete(group).where(eq(group.id, bandId));
 		}
 		for (const userId of [SEED_OWNER_ID, SEED_BANDMATE_ID]) {
@@ -139,7 +151,10 @@ export async function seedBandOnboarding(): Promise<void> {
 			updatedAt: now
 		});
 
-		await db.insert(group).values([
+		// One definition per band, shared by the `group` insert and the
+		// `directory_entry` insert below, so the two halves of a band cannot
+		// drift apart in the fixture the way they would if each listed its own.
+		const BANDS = [
 			{
 				id: SEED_PUBLIC_BAND_ID,
 				name: SEED_PUBLIC_BAND_NAME,
@@ -208,7 +223,34 @@ export async function seedBandOnboarding(): Promise<void> {
 				createdAt: now,
 				updatedAt: now
 			}
-		]);
+		];
+
+		await db.insert(group).values(BANDS);
+
+		// The listing half. Every band needs one: the band directory reads
+		// `directory_entry`, so a band without an entry is simply not in it — and
+		// no existing directory e2e asserts a card count, which is what let this
+		// go unnoticed until `a public band appears in the public directory list`
+		// was added.
+		await db.insert(directoryEntry).values(
+			BANDS.map((b) => ({
+				id: entryIdFor(b.id),
+				groupId: b.id,
+				name: b.name,
+				bio: b.bio,
+				hometown: b.hometown ?? null,
+				foundedYear: b.foundedYear ?? null,
+				visibility: b.directoryVisibility,
+				createdAt: now,
+				updatedAt: now
+			}))
+		);
+
+		await db.insert(directoryTag).values({
+			entryId: entryIdFor(SEED_PUBLIC_BAND_ID),
+			kind: 'genre',
+			value: 'jazz'
+		});
 
 		await db.insert(groupSlugHistory).values({
 			id: 'e2e-band-public-old-slug',

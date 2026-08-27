@@ -71,9 +71,10 @@ through the UI (Turnstile passes with the blank/test keys) or use the admin's st
 console.
 
 Re-run `pnpm db:reset` any time the data gets weird; it's the supported path back to a
-known state. To apply _new_ migrations without wiping data there is no tracked local
-migrate — `db:migrate:local` replays _all_ migration files, which errors on already-applied
-ones, so in practice: reset.
+known state. To apply _new_ migrations without wiping data, `pnpm db:migrate:local` is
+tracked and incremental — it goes through drizzle's migrator, which records what it
+applied in `__drizzle_migrations`, the same table the remote `db:migrate` uses — so it
+applies only what is pending and is a no-op when the database is current.
 
 ## 4. Run
 
@@ -152,7 +153,7 @@ step, and confirm-without-payment flows are fully testable.
 | `ORIGIN environment variable is required` on first request | Set `ORIGIN=http://localhost:5173` in `.env`, restart                                                                                             |
 | `Database not initialized — call initDb(d1)...`            | You're running server code outside a request (e.g. a bare `tsx` script). Scripts must create their own DB handle like `scripts/seed-dev.ts` does. |
 | `no such table: ...`                                       | Migrations not applied to the local DB — `pnpm db:reset`                                                                                          |
-| `db:migrate:local` errors on `CREATE TABLE`                | It replays _all_ migrations against an existing DB; use `pnpm db:reset` instead                                                                   |
+| `db:migrate:local` errors on `CREATE TABLE`                | A database built before migrations were tracked has no `__drizzle_migrations`, so all of them look pending; use `pnpm db:reset`                   |
 | Sign-up rejected with "Verification failed"                | Turnstile keys are set but wrong; blank both keys locally to use the always-pass test mode                                                        |
 | Commit mangled / files reformatted on commit               | That's lefthook's prettier/eslint `--fix` pre-commit hook doing its job                                                                           |
 | Email layout changes not showing                           | The MJML layout compiles at `prepare`/`build` — run `pnpm tsx scripts/compile-email-layouts.ts` or restart after `pnpm install`                   |

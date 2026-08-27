@@ -72,12 +72,14 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 }));
 
 const mockCreateTemporaryUser = vi.fn().mockResolvedValue(undefined);
+const mockCreateControlUser = vi.fn().mockResolvedValue(undefined);
 const mockRemoveTemporaryUser = vi.fn().mockResolvedValue(undefined);
 const mockListLockUsers = vi.fn().mockResolvedValue([]);
 const mockGenerateLockCode = vi.fn().mockReturnValue(4242);
 
 vi.mock('./ultraloc-client', () => ({
 	createTemporaryUser: (...args: unknown[]) => mockCreateTemporaryUser(...args),
+	createControlUser: (...args: unknown[]) => mockCreateControlUser(...args),
 	removeTemporaryUser: (...args: unknown[]) => mockRemoveTemporaryUser(...args),
 	listLockUsers: (...args: unknown[]) => mockListLockUsers(...args),
 	generateLockCode: (...args: unknown[]) => mockGenerateLockCode(...args),
@@ -115,6 +117,7 @@ beforeEach(() => {
 	selectCallIndex = 0;
 	updateCalls.length = 0;
 	mockCreateTemporaryUser.mockResolvedValue(undefined);
+	mockCreateControlUser.mockResolvedValue(undefined);
 	mockRemoveTemporaryUser.mockResolvedValue(undefined);
 	mockListLockUsers.mockResolvedValue([]);
 	mockGenerateLockCode.mockReturnValue(4242);
@@ -232,23 +235,22 @@ describe('runDailyLockJob', () => {
 });
 
 describe('issueLockSelfTest', () => {
-	it('issues a named test code and reports both steps ok', async () => {
+	it('issues a named control (type 0) test code and reports both steps ok', async () => {
 		mockListLockUsers.mockResolvedValue([{ id: 1, name: 'Someone', type: 2 }]);
 
 		const result = await issueLockSelfTest();
 
 		expect(result.ok).toBe(true);
 		expect(result.code).toBe(4242);
-		expect(result.expiresAt).toBeInstanceOf(Date);
-		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
-			expect.objectContaining({ name: 'CMC Self-Test', code: 4242 })
-		);
+		// Uses the proven normal-user add, not the temporary-user path.
+		expect(mockCreateControlUser).toHaveBeenCalledWith('CMC Self-Test', 4242);
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
 		expect(result.steps.map((s) => s.name)).toEqual(['create', 'list']);
 		expect(result.steps.every((s) => s.ok)).toBe(true);
 	});
 
 	it('reports a failed create step without throwing', async () => {
-		mockCreateTemporaryUser.mockRejectedValueOnce(new Error('device offline'));
+		mockCreateControlUser.mockRejectedValueOnce(new Error('device offline'));
 
 		const result = await issueLockSelfTest();
 
@@ -261,20 +263,22 @@ describe('issueLockSelfTest', () => {
 });
 
 describe('revokeLockSelfTest', () => {
-	it('removes only type-2 users named CMC Self-Test', async () => {
+	it('removes every user named CMC Self-Test regardless of type', async () => {
 		mockListLockUsers.mockResolvedValue([
 			{ id: 1, name: 'CMC Self-Test', type: 2 },
-			{ id: 2, name: 'CMC Self-Test', type: 0 }, // not temporary
+			{ id: 2, name: 'CMC Self-Test', type: 0 }, // control user
 			{ id: 3, name: 'A Member', type: 2 }, // not a self-test
-			{ id: 4, name: 'CMC Self-Test', type: 2 }
+			{ id: 4, name: 'CMC Self-Test', type: 0 }
 		]);
 
 		const result = await revokeLockSelfTest();
 
-		expect(result.removed).toBe(2);
+		expect(result.removed).toBe(3);
 		expect(result.errors).toHaveLength(0);
-		expect(mockRemoveTemporaryUser).toHaveBeenCalledTimes(2);
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledTimes(3);
 		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(1);
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(2);
 		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(4);
+		expect(mockRemoveTemporaryUser).not.toHaveBeenCalledWith(3);
 	});
 });

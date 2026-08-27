@@ -7,6 +7,7 @@ import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
+import { directoryEntry } from '$lib/server/db/schema/directory';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { groupMember } from '$lib/server/db/schema/group';
@@ -221,13 +222,17 @@ export const getUser = query(z.string(), async (id) => {
 			phone: user.phone,
 			image: user.image,
 			memberNumber: user.memberNumber,
-			directoryVisibility: user.directoryVisibility,
+			directoryVisibility: directoryEntry.visibility,
 			stripeId: user.stripeId,
 			subscription: user.subscription,
 			createdAt: user.createdAt,
 			deletedAt: user.deletedAt
 		})
 		.from(user)
+		// LEFT: staff must be able to open any account, including one whose
+		// listing is missing. `?? 'members'` below matches the default a new entry
+		// is created with.
+		.leftJoin(directoryEntry, eq(directoryEntry.userId, user.id))
 		.where(eq(user.id, id))
 		.limit(1);
 
@@ -239,10 +244,13 @@ export const getUser = query(z.string(), async (id) => {
 	// its presence. It is reduced to a boolean here rather than shipped: the
 	// blob carries a Stripe subscription id, and the identity header only ever
 	// asks "are they sustaining?".
-	const { subscription, image, ...rest } = found;
+	const { subscription, image, directoryVisibility, ...rest } = found;
 
 	return {
 		...rest,
+		// Matches the default `ensureUserEntry` creates an entry with, so a staff
+		// page never renders a blank where a visibility should be.
+		directoryVisibility: directoryVisibility ?? 'members',
 		avatarUrl: resolveImageUrl(image),
 		sustaining: subscription != null,
 		roles

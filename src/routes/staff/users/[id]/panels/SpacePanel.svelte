@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getUserReservations } from '$lib/remote/users.remote';
 	import { getUserRecurringSeries } from '$lib/remote/reservations.remote';
-	import { getUserLoans } from '$lib/remote/equipment.remote';
+	import { getUserLoans } from '$lib/remote/inventory.remote';
 	import { RelatedList } from '$lib/components/ui/entity';
 	import Table from '$lib/components/ui/Table.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -125,10 +125,10 @@
 					<th class="col-extra">Returned</th>
 				{/snippet}
 				{#each loans as loan (loan.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/equipment/loans/${loan.id}`)}>
+					<tr class="hover" use:rowLink={resolve(`/staff/inventory/loans/${loan.id}`)}>
 						<td class="w-px"><StatusBadge status={loan.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/equipment/loans/${loan.id}`)}>
+							<a class="font-medium" href={resolve(`/staff/inventory/loans/${loan.id}`)}>
 								{loan.equipmentName ?? 'Removed item'}
 							</a>
 							{#if loan.quantity > 1}

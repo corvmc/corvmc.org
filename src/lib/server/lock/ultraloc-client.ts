@@ -207,6 +207,16 @@ export async function createTemporaryUser(params: TempUserParams): Promise<void>
 	});
 }
 
+/**
+ * Create a plain normal (type 0) lock user — the minimal `add` payload proven to
+ * work (name + type + password, no schedule). Used by the self-test to isolate
+ * whether the temporary-user schedule fields are what U-tec is rejecting. A
+ * normal user has no lock-side expiry, so it stays until explicitly deleted.
+ */
+export async function createControlUser(name: string, code: number): Promise<void> {
+	await lockUserCommand('add', { name, type: 0, password: code });
+}
+
 /** Remove a lock user by its lock-assigned id. */
 export async function removeTemporaryUser(userId: number): Promise<void> {
 	await lockUserCommand('delete', { id: userId });

@@ -158,9 +158,12 @@ jobs:
       #
       # which pays it when the Playwright version bumps, not on every push.
       - run: pnpm exec playwright install chromium
-      # Builds the app and seeds a local D1 via playwright.config.ts webServer +
-      # e2e/global-setup.ts.
-      - run: pnpm run test:e2e
+      # Two steps rather than `pnpm test:e2e`, so the setup and the tests show up
+      # separately in the step timings. As one opaque block, a migrate that had
+      # grown to 64s went unnoticed for months.
+      - run: pnpm test:e2e:prepare
+      # Builds the app and serves it via playwright.config.ts's webServer.
+      - run: pnpm test:e2e:run
 
   schema-drift:
     name: Schema drift

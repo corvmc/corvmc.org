@@ -15,6 +15,9 @@ import { withPlatformEnv } from './platform-db';
  * /band-site/**. `directMessages` gates every member↔member endpoint and the
  * recipient picker — without it `requireFeature` rejects before any of the
  * messaging lifecycle can be exercised.
+ *
+ * Inventory is deliberately absent: its flag was cut in #286, so the member
+ * surface and the scan-resolution pages need no enabling here.
  */
 export const ENABLED_FLAGS = ['bandPremium', 'directMessages'] as const;
 

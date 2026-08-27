@@ -2,7 +2,7 @@
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { createLoan, getAvailableEquipment } from '$lib/remote/equipment.remote';
+	import { createLoan, getAvailableItems } from '$lib/remote/inventory.remote';
 	import { Field } from '../ui/Form';
 	import Button from '$lib/components/ui/Button.svelte';
 
@@ -103,9 +103,9 @@
 				does not exist, so the select silently stayed empty and every
 				staff-created loan quietly became a free-form request.
 			-->
-				<Field field={fields.equipmentId} type="select" label="Equipment">
+				<Field field={fields.itemId} type="select" label="Equipment">
 					<option value="">-- Select equipment --</option>
-					{#each await getAvailableEquipment() as eq (eq.id)}
+					{#each await getAvailableItems() as eq (eq.id)}
 						<option value={eq.id}>{eq.name}</option>
 					{/each}
 				</Field>

@@ -119,6 +119,12 @@ this split was made.
 | ---------------------------------------------------------- | ------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [volunteering-spec.md](specs/shipped/volunteering-spec.md) | ✅     | archived  | **Both phases shipped.** Roles, hour logging, approval queue and reporting; plus shifts, sign-up, certifications, clearances and post-shift feedback (#235) |
 
+### Inventory & assets
+
+| Doc                                          | Status | Lifecycle | Notes                                                                                                                                                                                                 |
+| -------------------------------------------- | ------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [inventory-spec.md](specs/inventory-spec.md) | 🔧     | split     | Phase 1 shipped (#286) — gear and consumables on one append-only ledger, serialized units, acquisitions, `/a/[tag]` scans. Phases 2–4 (spend reports, in-kind disclosure, attached resources) unbuilt |
+
 ### Staff platform
 
 | Doc                                                                                  | Status | Lifecycle | Notes                                                                                        |

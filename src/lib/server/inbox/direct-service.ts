@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
+import { directoryEntry } from '$lib/server/db/schema/directory';
 import { and, count, desc, eq, gt, inArray, isNull, isNotNull, ne, or, sql } from 'drizzle-orm';
 import type { AnyColumn, SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
@@ -156,11 +157,19 @@ export async function startDirectThread(
 	const [recipient] = await db
 		.select({ id: user.id, acceptsDirectMessages: user.acceptsDirectMessages })
 		.from(user)
+		// The visibility gate reads `directory_entry` since phase 3a.
+		//
+		// LEFT, and missing counts as not-hidden. An inner join would make a
+		// member whose entry never got created silently unreachable — the same
+		// silent drop this function uses for a deliberate opt-out, which is
+		// exactly the failure you would never find. Being absent from the
+		// directory is a recoverable degradation; being unreachable is not.
+		.leftJoin(directoryEntry, eq(directoryEntry.userId, user.id))
 		.where(
 			and(
 				eq(user.id, params.recipientId),
 				isNull(user.deletedAt),
-				ne(user.directoryVisibility, 'hidden')
+				or(isNull(directoryEntry.id), ne(directoryEntry.visibility, 'hidden'))
 			)
 		)
 		.limit(1);

@@ -1,9 +1,9 @@
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
+import { directoryEntry } from '$lib/server/db/schema/directory';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
-import { equipmentLoan } from '$lib/server/db/schema/equipment';
+import { inventoryLoan } from '$lib/server/db/schema/inventory';
 import { volunteerHourLog } from '$lib/server/db/schema/volunteer';
 import { contentFlag } from '$lib/server/db/schema/flag';
 import { paymentCache } from '$lib/server/db/schema/finance';
@@ -93,9 +93,9 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 			.innerJoin(group, eq(group.id, groupMember.groupId))
 			.where(and(eq(groupMember.userId, userId), isNull(group.deletedAt))),
 		db
-			.select({ directoryVisibility: user.directoryVisibility })
-			.from(user)
-			.where(eq(user.id, userId))
+			.select({ directoryVisibility: directoryEntry.visibility })
+			.from(directoryEntry)
+			.where(eq(directoryEntry.userId, userId))
 			.limit(1)
 	]);
 
@@ -157,12 +157,12 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 		scalar(
 			db
 				.select({ count: count() })
-				.from(equipmentLoan)
+				.from(inventoryLoan)
 				.where(
 					and(
-						eq(equipmentLoan.userId, userId),
-						eq(equipmentLoan.status, 'checked_out'),
-						lt(equipmentLoan.dueDate, now)
+						eq(inventoryLoan.userId, userId),
+						eq(inventoryLoan.status, 'checked_out'),
+						lt(inventoryLoan.dueDate, now)
 					)
 				)
 		),
