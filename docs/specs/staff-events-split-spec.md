@@ -47,7 +47,9 @@ notification `href`.
 **Out:**
 
 - **Schema.** Nothing is added, dropped, or renamed.
-- **Group events.** Groups phase 9 adds `source: 'group'`; see [What phase 9 changes](#what-groups-phase-9-changes).
+- **Group events.** Groups adds a fourth source, `'group'`, for club and committee sessions. It is
+  a third category belonging to neither page here, and where it renders is left open — see
+  [The third category](#the-third-category).
 - **Band standing.** The moderation card shows a standing warning for community submitters only.
   Whether a _band_ can be flagged the same way is a different axis.
 - **Calendar-density conflict checking.** `checkConflicts` guards the room, not the night. See
@@ -116,10 +118,12 @@ at the Whiteside is `source='cmc'`, so the toggle is offered, staff leave it off
 
 Productions is `sources: ['cmc']`, not "everything that is not a listing."
 
-`eventSources` is going to grow. With allow-lists, a new source lands on **neither** page until
-someone chooses — a group event going missing is a visible bug, whereas one quietly appearing in the
-moderation queue is a wrong answer nobody notices. Adding a source to a page is then one array
-element.
+`eventSources` is going to grow, and this is the decision that absorbs it. Groups adds a fourth
+value, `'group'`, for club and committee sessions — a category that belongs to neither of these
+pages (see [The third category](#the-third-category)). With allow-lists it lands on **neither** page
+until someone chooses, and a club session going missing is a visible bug; with an exclusion filter
+it would appear in whichever page said "not the others," silently and wrongly. Adding a source to a
+page is then one array element.
 
 ### 4. "Posted by" replaces both "Submitted by" and the Source column
 
@@ -234,20 +238,50 @@ Four rules this work must not break, each with a failure mode that is quiet rath
 
 ---
 
-## What Groups phase 9 changes
+## The third category
 
-Phase 1 already repointed `event.bandId` at `group.id`, and `listAll` already joins `group`. The
-events-facing churn is behind us; phase 9 adds `event_group`, `createGroupEvent()`, the
-recurring-generator fix, and renames the `eventSources` value `'band'` to `'group'`.
+Groups adds **a fourth event source, not a rename**: `eventSources` becomes
+`['cmc', 'band', 'community', 'group']`. `'band'` stays exactly as it is, and community listings are
+untouched — they arrived after that spec was drafted and keep their own draft/review path. (The
+`'band'` → `'group'` rename in the Groups spec is `reservation.bookerType`, a different enum on a
+different table. An earlier draft of this spec conflated the two.)
 
-For this split that is mechanical: `sources: ['band', 'community']` becomes
-`['group', 'community']`, the source `Select` option is relabelled, and `event.bandId` is renamed in
-one join. Phase 9 is seven phases out and none of the phases before it touch the staff events panel,
-so this does not wait on it.
+So Listings is unaffected by phase 9. `sources: ['band', 'community']` stays correct through it.
 
-A club's jazz night is **production-shaped** — a staff-sanctioned program that holds the room free —
-so phase 9 adds `'group'` to Productions, not Listings. Building the split first gives group events
-a defined home rather than leaving phase 9 to invent one.
+**A club session is a third thing, and does not belong on either of these pages.** Sorting the four
+sources by what staff actually do with them:
+
+| Source      | Staff's job                                      | Surface       |
+| ----------- | ------------------------------------------------ | ------------- |
+| `cmc`       | Produce it — room, tickets, poster, shifts, door | Productions   |
+| `group`     | Oversee it — the club runs its own sessions      | **Undecided** |
+| `band`      | Moderate it — off-site, someone else's show      | Listings      |
+| `community` | Moderate it — off-site, someone else's show      | Listings      |
+
+Folding `'group'` into Productions was this spec's original answer and was wrong. A club's jazz
+night is collective programming, but it is not a CMC production: no tickets sold through our
+checkout, no bill, no settlement, no poster campaign, and the person running it is the club's leader
+rather than staff. It holds the room free precisely because it is _not_ a commercial show. Putting
+it in a table whose columns are ticketing and staffing describes it by everything it lacks. The
+Groups spec draws the same line from the other direction — a club night is "programming at the
+Collective" for the purposes of the gig guide, yet still gets its own source value rather than
+reusing `'cmc'`.
+
+**Where it lands is deliberately left open.** Two readings are live and phase 9 is seven phases out:
+club sessions could be administered on the club's own record once `/staff/groups` exists in phase 5
+— the unit staff care about being the club and its series, not any one Tuesday — or they could earn
+a third index alongside these two. The Groups panel design may settle it without this spec having to
+guess. What matters here is that decision 3 keeps `'group'` out of both pages until someone decides,
+rather than letting it default into one.
+
+## What phase 9 changes here
+
+Nothing structural. Phase 1 already repointed `event.bandId` at `group.id` and `listAll` already
+joins `group`, so the events-facing churn is behind us. Phase 9 adds `event_group`,
+`createGroupEvent()`, the recurring-generator fix, and the fourth source value — none of which
+touches either page built here, beyond whatever choice is made about where `'group'` renders. None
+of the phases before it touch the staff events panel either, so this work does not wait on any of
+them.
 
 ---
 

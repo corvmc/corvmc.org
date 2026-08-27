@@ -171,11 +171,13 @@ _unannounced_ show, which belongs in `checkConflicts` — today it guards the ro
 **Progress:** Specced in `docs/specs/staff-events-split-spec.md`. No schema change — it is a routing
 and presentation split over data that already exists. It was originally deferred behind Groups, on
 the belief that module would move the join this depends on; in fact Groups phase 1 already repointed
-`event.bandId` at `group.id`, so that churn is behind us. What remains is phase 9 (group events,
-`event_group`, and renaming the `eventSources` value `'band'` to `'group'`), which is seven phases
-out and, for this split, a two-line rename. A club's jazz night is production-shaped — a
-staff-sanctioned program that holds the room free — so phase 9 adds `'group'` to Productions, and
-building the split first gives group events a home rather than leaving phase 9 to invent one.
+`event.bandId` at `group.id`, so that churn is behind us. What remains is phase 9 — group events,
+`event_group`, and a **fourth** `eventSources` value, `'group'`, for club and committee sessions.
+That is seven phases out and changes nothing structural here: it adds a source rather than renaming
+one, so `'band'` stays and the Listings page is unaffected. A club
+session is a third category — collective programming, but not a CMC production and not a listing
+anyone moderates — and where staff administer it is left open for the Groups panel design to settle.
+Both indexes scope by explicit allow-list so it lands on neither page by default.
 
 ### Club Management
 
