@@ -185,7 +185,9 @@ Every script in `package.json`:
 | `check` / `check:watch`         | svelte-check type checking                                                                     |
 | `test:unit`                     | Vitest (watch mode; `--run` for one-shot)                                                      |
 | `test:components`               | One-shot client (browser) + storybook vitest projects                                          |
-| `test:e2e`                      | Install Chromium + run Playwright `e2e/**/*.e2e.ts`                                            |
+| `test:e2e`                      | Migrate + seed a local D1, then run Playwright `e2e/**/*.e2e.ts`                               |
+| `test:e2e:prepare`              | Just the migrate + seed half (CI runs it as its own step)                                      |
+| `test:e2e:run`                  | Just the Playwright half — takes its flags, e.g. `-- --shard=1/2`                              |
 | `test`                          | Full suite: unit one-shot + e2e (what CI runs)                                                 |
 | `test:report`                   | Vitest with JSON output → `test-results.json`                                                  |
 | `lint`                          | prettier `--check` + eslint over everything                                                    |
@@ -195,7 +197,7 @@ Every script in `package.json`:
 | `db:fix-migrations`             | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                             |
 | `db:check-migrations`           | Fail if any migration has an unsafe table rebuild (runs in CI)                                 |
 | `db:migrate`                    | drizzle-kit: apply pending migrations to **remote** D1                                         |
-| `db:migrate:local`              | Replay all migration files into the local D1                                                   |
+| `db:migrate:local`              | Apply pending migrations to the local D1 (tracked; a no-op when current)                       |
 | `db:seed`                       | Run `scripts/seed-dev.ts` against local D1                                                     |
 | `volunteer:seed-roles`          | Seed the volunteer role catalogue (`scripts/seed-volunteer-roles.ts`)                          |
 | `db:reset`                      | Wipe local D1 + migrate + seed                                                                 |

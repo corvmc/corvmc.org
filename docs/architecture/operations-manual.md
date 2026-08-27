@@ -99,21 +99,27 @@ wrangler deploy
 
 Schema source of truth: `src/lib/server/db/schema/`. Migrations: `migrations/<timestamp>_<name>/migration.sql`.
 
-| Task                                     | Command                                                                                                |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Generate a migration from schema changes | `pnpm db:generate` (review the SQL it writes before committing)                                        |
-| Apply migrations to **remote** D1        | `pnpm db:migrate` (needs the three `CLOUDFLARE_*` vars in `.env`)                                      |
-| Apply migrations to **local** D1         | `pnpm db:migrate:local` (replays every `migrations/*/migration.sql` via `wrangler d1 execute --local`) |
-| Wipe + rebuild + seed local DB           | `pnpm db:reset`                                                                                        |
-| Browse remote data in a GUI              | `pnpm db:studio` (drizzle-kit studio, same `CLOUDFLARE_*` vars)                                        |
-| Ad-hoc remote SQL                        | `wrangler d1 execute corvmc-db --remote --command "SELECT count(*) FROM user"`                         |
+| Task                                     | Command                                                                                                    |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Generate a migration from schema changes | `pnpm db:generate` (review the SQL it writes before committing)                                            |
+| Apply migrations to **remote** D1        | `pnpm db:migrate` (needs the three `CLOUDFLARE_*` vars in `.env`)                                          |
+| Apply migrations to **local** D1         | `pnpm db:migrate:local` (drizzle's migrator over the miniflare SQLite file; tracked, applies only pending) |
+| Wipe + rebuild + seed local DB           | `pnpm db:reset`                                                                                            |
+| Browse remote data in a GUI              | `pnpm db:studio` (drizzle-kit studio, same `CLOUDFLARE_*` vars)                                            |
+| Ad-hoc remote SQL                        | `wrangler d1 execute corvmc-db --remote --command "SELECT count(*) FROM user"`                             |
 
 Notes:
 
-- Remote migration state is tracked by drizzle-kit (idempotent — re-running `db:migrate`
-  applies only pending migrations). The local loop in `db:migrate:local` is **not**
-  tracked; it's only safe because it always starts from a wiped `.wrangler/state/v3/d1`
-  (that's what `db:reset` does).
+- Both migrates are tracked by drizzle and idempotent: re-running either applies only
+  pending migrations. Remote goes through `drizzle-kit migrate`; local
+  (`scripts/db/migrate-local.ts`) runs drizzle's own migrator against the miniflare
+  SQLite file, writing the same `__drizzle_migrations` table. It cannot use
+  `wrangler d1 migrations apply` — wrangler discovers migrations with a flat
+  `endsWith('.sql')` scan and does not recurse, while drizzle-kit 1.0 emits
+  `<timestamp>_<name>/migration.sql` and has no option to emit anything else.
+- The local migrator applies everything in one transaction, which makes
+  `PRAGMA foreign_keys` inert — the same condition D1 imposes remotely, and the one
+  `scripts/db/d1-safe-rebuild.mjs` rewrites table rebuilds to satisfy.
 - `db.transaction()` doesn't exist on D1; multi-statement writes use `db.batch()`. See the
   [overview](overview.md#database).
 

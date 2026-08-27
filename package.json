@@ -16,7 +16,9 @@
 		"test:server": "vitest --run --project=server",
 		"test:changed": "vitest --run --changed",
 		"test": "pnpm run test:unit -- --run && playwright install chromium && pnpm run test:e2e",
-		"test:e2e": "tsx e2e/prepare.ts && tsx e2e/run.ts",
+		"test:e2e": "pnpm test:e2e:prepare && pnpm test:e2e:run",
+		"test:e2e:prepare": "tsx e2e/prepare.ts",
+		"test:e2e:run": "tsx e2e/run.ts",
 		"worktree:ports": "tsx scripts/print-ports.ts",
 		"test:report": "vitest run --reporter=verbose --reporter=json --outputFile=test-results.json",
 		"lint": "prettier --cache --check . && eslint .",
@@ -42,7 +44,7 @@
 		"email:preview": "tsx scripts/email-preview.ts",
 		"email:validate": "tsx scripts/email-validate.ts",
 		"db:reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local && pnpm db:seed",
-		"db:migrate:local": "for f in migrations/*/migration.sql; do wrangler d1 execute corvmc-db --local --persist-to \"${WRANGLER_PERSIST_TO:-.wrangler/state}\" --file=\"$f\"; done"
+		"db:migrate:local": "tsx scripts/db/migrate-local.ts"
 	},
 	"imports": {
 		"#/*": "./src/*"

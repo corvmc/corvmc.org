@@ -121,10 +121,57 @@ jobs:
       - run: pnpm exec playwright install chromium
       - run: pnpm run test:unit -- --run
 
-  e2e:
-    name: E2E
+  e2e-build:
+    name: E2E build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The shards below all serve this one build. Nothing in `src/` reads
+      # `$env/static/*` — it is `$env/dynamic` throughout — so no environment
+      # variable is baked in here, and each shard still supplies ORIGIN,
+      # PUBLIC_SITE_URL and the rest at preview time via playwright.config.ts.
+      # SENTRY_ENVIRONMENT is the exception, and is build-time on purpose: it
+      # drops the Sentry vite plugin (see vite.config.ts), which takes the output
+      # from 28MB to 11MB by not emitting source maps nothing will ever read.
+      - run: pnpm build
+        env:
+          SENTRY_ENVIRONMENT: ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-build
+          # `.svelte-kit/cloudflare` is the adapter's deploy output; `vite preview`
+          # serves from `.svelte-kit/output` and never reads it.
+          path: |
+            .svelte-kit
+            !.svelte-kit/cloudflare
+          retention-days: 1
+          include-hidden-files: true
+
+  e2e:
+    # Not named "E2E": branch protection requires that context by exact name, and
+    # a matrix job reports as "E2E shard 1"/"E2E shard 2". The `e2e-gate` job below
+    # carries the required name. Renaming this without that job in place leaves the
+    # required check permanently pending and every PR stuck in the merge queue.
+    name: E2E shard ${{ matrix.shard }}
+    needs: [e2e-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      # A red shard must not cancel its sibling: half a result does not tell you
+      # which tests actually failed.
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    env:
+      # Serve the downloaded build instead of making each shard produce its own.
+      E2E_SKIP_BUILD: '1'
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -158,9 +205,41 @@ jobs:
       #
       # which pays it when the Playwright version bumps, not on every push.
       - run: pnpm exec playwright install chromium
-      # Builds the app and seeds a local D1 via playwright.config.ts webServer +
-      # e2e/global-setup.ts.
-      - run: pnpm run test:e2e
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-build
+          path: .svelte-kit
+      # Migrates and seeds this runner's own local D1. Split from the run below so
+      # the two costs are separately visible in the step timings — they were one
+      # opaque five-minute block, which is how a 64s migrate went unnoticed.
+      - run: pnpm test:e2e:prepare
+      # `test:e2e:run` rather than `test:e2e` so the flag reaches `playwright test`
+      # and the prepare above stays its own step. pnpm forwards the `--` itself
+      # rather than eating it; `e2e/run.ts` drops it, because `playwright test`
+      # reads a bare `--` as a filename filter and exits with "No tests found".
+      - run: pnpm test:e2e:run -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+  # Carries the "E2E" context that branch protection requires, since the sharded
+  # job above cannot. `needs.<matrix job>.result` is `success` only when every leg
+  # succeeded; `e2e-build` is checked separately so a failed build reads as itself
+  # rather than as the `skipped` the shards would report.
+  e2e-gate:
+    name: E2E
+    needs: [e2e-build, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require the build and every shard
+        run: |
+          if [ "${{ needs.e2e-build.result }}" != "success" ]; then
+            echo "::error::The E2E build failed; no shard ran."
+            exit 1
+          fi
+          if [ "${{ needs.e2e.result }}" != "success" ]; then
+            echo "::error::One or more E2E shards failed."
+            exit 1
+          fi
 
   schema-drift:
     name: Schema drift

@@ -21,10 +21,10 @@
  * directly. Passing the wrong one to either is silent: nothing errors, the seed
  * simply lands in a database the server never opens.
  */
-import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { previewPort } from '../scripts/lib/checkout-ports';
+import { d1File } from '../scripts/lib/d1-file';
 
 export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -45,22 +45,12 @@ export const E2E_STATE_ROOT = join(REPO_ROOT, '.wrangler', 'e2e-state');
 export const E2E_PERSIST_PATH = join(E2E_STATE_ROOT, 'v3');
 
 /**
- * The SQLite file behind the local D1 `DB` binding.
+ * The SQLite file behind the local D1 `DB` binding, for this run's state.
  *
- * miniflare names it after the database id and keeps its own `metadata.sqlite`
- * next to it, so the binding's file is the one that is left.
+ * The discovery itself lives in `scripts/lib/d1-file.ts`, because
+ * `db:migrate:local` needs the same derivation against whichever state
+ * directory it was pointed at.
  */
 export function e2eD1File(): string {
-	const dir = join(E2E_PERSIST_PATH, 'd1', 'miniflare-D1DatabaseObject');
-	const files = existsSync(dir)
-		? readdirSync(dir).filter((f) => f.endsWith('.sqlite') && f !== 'metadata.sqlite')
-		: [];
-
-	if (files.length !== 1) {
-		throw new Error(
-			`Expected exactly one D1 database file in ${dir}, found ${files.length}` +
-				` (${files.join(', ') || 'none'}). Run \`pnpm test:e2e\`, which seeds it first.`
-		);
-	}
-	return join(dir, files[0]);
+	return d1File(E2E_PERSIST_PATH);
 }
