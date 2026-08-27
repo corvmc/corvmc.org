@@ -152,13 +152,41 @@ Tools for members who teach music lessons at the venue. A teacher panel for shar
 
 Track gear donations with donor attribution, condition notes, and provenance. Members can submit acquisition requests for gear the venue doesn't have yet — like a library purchase request. Staff review, prioritize (possibly informed by member voting), and fulfill. Ties into the donation wishlist for sourcing and the equipment system for cataloging once acquired.
 
+**Progress:** The tracking half is built and specced in `docs/specs/inventory-spec.md`. Every
+physical unit of a serialized item is now its own `inventory_asset` row with its own condition,
+serial, repair history and the `acquisition` it arrived on — so donor attribution and provenance
+have somewhere to live, which they did not under the old single-table schema. Donations,
+purchases and grants are one `acquisition` table, carrying the fair-value basis and intended use
+that FASB ASU 2020-07 requires a nonprofit to disclose.
+
+The request half turned out to be **already shipped under a different name**: `gear_equipment` is
+a live category on `/member/suggestions`, with upvotes, a staff response and the
+`open → planned → in_progress → done / declined` lifecycle. A gear suggestion marked `planned`
+_is_ the purchase request this entry describes. Phase 2 links the two rather than building a
+second queue.
+
 ### Donation Wishlist
 
 Public-facing list of items the venue needs — gear, furniture, supplies, services. Members and community can claim items they want to donate. Staff manage the list, mark items as fulfilled, and optionally acknowledge donors. Could tie into consumables inventory for recurring supply needs.
 
+**Progress:** Not built, and deliberately **not a new list**. `docs/specs/inventory-spec.md`
+settles that demand for the unknown already lives on the suggestions board (`gear_equipment`,
+upvoted) and replenishment of the known lives on reorder points, so the wishlist is the public
+projection of rows that already exist rather than a fourth thing to maintain. Donor
+acknowledgment is a field on `acquisition` (`acknowledgedAt`, `appraisalRef`) for the IRS Form
+8283 threshold, and is Phase 3 of that spec.
+
 ### Consumables Inventory
 
 Track stock levels for space consumables — drumsticks, strings, cables, cleaning supplies, etc. Staff log restocks and usage, set low-stock alerts, and see spending over time. Complements the existing equipment system which covers loanable gear.
+
+**Progress:** Built, and **not** a complement to the equipment system — the same one. Specced in
+`docs/specs/inventory-spec.md`: gear and consumables are one catalog on one append-only ledger,
+differing by `kind` (serialized vs bulk) and `isLoanable` (comes back vs does not). A consumable
+is derived from that pair, never stored. Restocks are `acquisition` rows, usage is a `consume`
+movement, low stock is a reorder point the staff dashboard surfaces on its own, and spend over
+time is a query rather than a report anyone has to build. What is still open is the spend report
+UI itself and the `supplier` table that normalises the free-text source (Phase 2).
 
 ### Automatic Poster Compositing
 
@@ -248,11 +276,11 @@ Existing npm packages that could accelerate building these features. Grouped by 
 
 ### PDF & Reporting
 
-| Package     | Downloads/wk | Use                                                           |
-| ----------- | ------------ | ------------------------------------------------------------- |
-| `pdfkit`    | 3.6M         | Server-side PDF generation for annual reports                 |
-| `puppeteer` | 10M          | Render styled HTML to PDF — most flexible for complex reports |
-| `chart.js`  | 11.6M        | Chart generation for report data visualization                |
+| Package     | Downloads/wk | Use                                                                               |
+| ----------- | ------------ | --------------------------------------------------------------------------------- |
+| `pdfkit`    | 3.6M         | Server-side PDF generation for annual reports — **does not run on Workers**       |
+| `puppeteer` | 10M          | Render styled HTML to PDF — **does not run on Workers**; needs a separate service |
+| `chart.js`  | 11.6M        | Chart generation for report data visualization                                    |
 
 ### Stage Plot & Drawing
 
@@ -263,10 +291,10 @@ Existing npm packages that could accelerate building these features. Grouped by 
 
 ### Inventory & Scanning
 
-| Package        | Downloads/wk | Use                                                       |
-| -------------- | ------------ | --------------------------------------------------------- |
-| `html5-qrcode` | 1.1M         | Camera-based barcode/QR scanning for inventory management |
-| `bwip-js`      | 572K         | Generate barcode/QR labels for printing                   |
+| Package            | Downloads/wk | Use                                                                        |
+| ------------------ | ------------ | -------------------------------------------------------------------------- |
+| `barcode-detector` | 1.5M         | Camera-based barcode/QR scanning — ZXing-C++ via wasm, actively maintained |
+| `bwip-js`          | 572K         | Generate barcode/QR labels for printing                                    |
 
 ### Drag & Drop / Pipeline UI
 
@@ -320,7 +348,7 @@ Audience management, campaigns, and broadcast emails. Adds a Marketing section t
 
 Equipment catalog, loan management, and equipment credits. Adds an Equipment section to the staff sidebar with loan tracking and inventory management.
 
-**Routes:** `/staff/equipment`, `/staff/equipment/loans`, `/staff/equipment/[id]`
+**Routes:** `/staff/inventory`, `/staff/inventory/loans`, `/staff/inventory/[id]`, `/staff/inventory/assets/[id]`
 
 ## Help Articles
 

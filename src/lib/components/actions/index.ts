@@ -21,8 +21,13 @@ export { default as TransferOwnershipAction } from './TransferOwnershipAction.sv
 export { default as RemoveBandMemberAction } from './RemoveBandMemberAction.svelte';
 export { default as RevokePlatformInviteAction } from './RevokePlatformInviteAction.svelte';
 
-// Equipment
-export { default as AddEquipmentAction } from './AddEquipmentAction.svelte';
+// Inventory
+export { default as AddItemAction } from './AddItemAction.svelte';
+export { default as AddAssetAction } from './AddAssetAction.svelte';
+export { default as BindTagAction } from './BindTagAction.svelte';
+export { default as ReceiveStockAction } from './ReceiveStockAction.svelte';
+export { default as UseStockAction } from './UseStockAction.svelte';
+export { default as AdjustStockAction } from './AdjustStockAction.svelte';
 export { default as RemoveCategoryAction } from './RemoveCategoryAction.svelte';
 export { default as CreateLoanAction } from './CreateLoanAction.svelte';
 export { default as CancelLoanAction } from './CancelLoanAction.svelte';

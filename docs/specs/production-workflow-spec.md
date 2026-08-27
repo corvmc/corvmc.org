@@ -1110,7 +1110,7 @@ modal on the list page rather than a `/new` route.
     against the sum of payouts, and the settle action.
   - **Close-out** — the `closeout` checklist and the close action.
 - **`/staff/venues`** and **`/staff/venues/[id]`** — venue CRUD, same shape as
-  `/staff/equipment`.
+  `/staff/inventory`.
 
 Remote functions go in `src/lib/remote/productions.remote.ts` and
 `src/lib/remote/venues.remote.ts` — `query()` for reads, `form()`/`command()` for writes,

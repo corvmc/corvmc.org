@@ -8,7 +8,7 @@ export * from './event-rsvp';
 export * from './notification';
 export * from './recurring';
 export * from './marketing';
-export * from './equipment';
+export * from './inventory';
 export * from './band';
 export * from './group';
 export * from './band-page';

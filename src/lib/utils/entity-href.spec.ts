@@ -68,9 +68,32 @@ describe('entityHref', () => {
 		});
 
 		it('returns null for a staff-only record when the viewer is not staff', () => {
-			for (const type of ['flag', 'campaign', 'audience', 'equipment', 'loan'] as const) {
+			for (const type of ['flag', 'campaign', 'audience'] as const) {
 				expect(entityHref(fakeRef(type), viewer())).toBeNull();
 			}
+		});
+
+		/**
+		 * Gear stopped being staff-only in #281. A printed tag on an amp is
+		 * scanned by whoever is standing next to it, so a member needs somewhere
+		 * to land — but a signed-out scan still has nowhere to go, which is what
+		 * lets `/a/[tag]` answer with a login redirect instead of a 404.
+		 */
+		it('gives a signed-in member somewhere to land for gear', () => {
+			expect(entityHref(fakeRef('equipment'), viewer())).toBe('/member/equipment/equipment-1');
+			expect(entityHref(fakeRef('asset'), viewer())).toBe('/member/equipment/assets/asset-1');
+			expect(entityHref(fakeRef('loan'), viewer())).toBe('/member/equipment/loans');
+		});
+
+		it('has nowhere to send a signed-out scan, because the catalog is not public', () => {
+			expect(entityHref(fakeRef('asset'), ANONYMOUS)).toBeNull();
+			expect(entityHref(fakeRef('equipment'), ANONYMOUS)).toBeNull();
+		});
+
+		it('sends staff to the operational record instead', () => {
+			const staff = viewer({ isStaff: true, panel: 'staff' });
+			expect(entityHref(fakeRef('asset'), staff)).toBe('/staff/inventory/assets/asset-1');
+			expect(entityHref(fakeRef('equipment'), staff)).toBe('/staff/inventory/equipment-1');
 		});
 
 		it('returns null when the record is gone', () => {

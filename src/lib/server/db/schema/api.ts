@@ -3,7 +3,7 @@ import type { User } from './authentication';
 import type { Group, GroupMember } from './group';
 import type { Reservation } from './reservation';
 import type { Event } from './event';
-import type { EquipmentLoan } from './equipment';
+import type { InventoryLoan } from './inventory';
 import type { Ticket } from './ticket';
 import type { Audience } from './marketing';
 import type { MemberRef } from '$lib/types/entity';
@@ -135,8 +135,8 @@ export interface MemberTicketsResponse {
 }
 
 export interface MemberEquipmentLoansResponse {
-	active: (EquipmentLoan & { equipmentName: string | null; isOverdue: boolean })[];
-	past: (EquipmentLoan & { equipmentName: string | null; isOverdue: boolean })[];
+	active: (InventoryLoan & { equipmentName: string | null; isOverdue: boolean })[];
+	past: (InventoryLoan & { equipmentName: string | null; isOverdue: boolean })[];
 }
 
 export interface MembershipResponse {

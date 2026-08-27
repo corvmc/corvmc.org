@@ -14,7 +14,7 @@
 		IconClock,
 		IconCoin
 	} from '@tabler/icons-svelte';
-	import { getMemberEquipmentLoans } from '$lib/remote/equipment.remote';
+	import { getMemberEquipmentLoans } from '$lib/remote/inventory.remote';
 
 	let data = $derived(await getMemberEquipmentLoans());
 

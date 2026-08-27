@@ -14,9 +14,11 @@ import { withPlatformEnv } from './platform-db';
  * `bandPremium` gates /band/[slug]/subscription, the page editor and
  * /band-site/**. `directMessages` gates every member↔member endpoint and the
  * recipient picker — without it `requireFeature` rejects before any of the
- * messaging lifecycle can be exercised.
+ * messaging lifecycle can be exercised. `equipment` gates the member-facing
+ * inventory surface, including the unit page a scanned tag resolves to; the
+ * staff panel is always on and does not need it.
  */
-export const ENABLED_FLAGS = ['bandPremium', 'directMessages'] as const;
+export const ENABLED_FLAGS = ['bandPremium', 'directMessages', 'equipment'] as const;
 
 export async function seedFeatureFlags(): Promise<void> {
 	await withPlatformEnv(async ({ env }) => {

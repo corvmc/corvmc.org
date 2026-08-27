@@ -2,7 +2,7 @@
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { removeCategory } from '$lib/remote/equipment.remote';
+	import { removeCategory } from '$lib/remote/inventory.remote';
 
 	const { fields } = removeCategory;
 

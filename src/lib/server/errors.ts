@@ -18,15 +18,23 @@ import {
 import { SubscriptionStateError } from './finance/subscription-service';
 import { RecurringSeriesError } from './reservation/recurring-series-service';
 import {
-	EquipmentNotFoundError,
+	ItemNotFoundError,
 	CategoryNotFoundError,
-	CategoryHasEquipmentError
-} from './equipment/equipment-service';
+	CategoryHasItemsError
+} from './inventory/item-service';
 import {
+	AssetNotFoundError,
+	AssetTagTakenError,
+	InvalidAssetTransitionError,
+	NotSerializedError
+} from './inventory/asset-service';
+import { InvalidMovementError } from './inventory/stock-service';
+import {
+	AssetRequiredError,
 	LoanNotFoundError,
 	InvalidLoanTransitionError,
 	InsufficientQuantityError
-} from './equipment/loan-service';
+} from './inventory/loan-service';
 
 // ---------------------------------------------------------------------------
 // Base class for future domain errors
@@ -67,7 +75,8 @@ export function mapDomainError(err: unknown): never {
 	// --- 404 Not Found ---
 	if (
 		err instanceof BandNotFoundError ||
-		err instanceof EquipmentNotFoundError ||
+		err instanceof ItemNotFoundError ||
+		err instanceof AssetNotFoundError ||
 		err instanceof CategoryNotFoundError ||
 		err instanceof LoanNotFoundError ||
 		err instanceof ReservationNotFoundError
@@ -106,7 +115,12 @@ export function mapDomainError(err: unknown): never {
 	if (
 		err instanceof CannotRemoveOwnerError ||
 		err instanceof OwnerCannotLeaveError ||
-		err instanceof CategoryHasEquipmentError ||
+		err instanceof CategoryHasItemsError ||
+		err instanceof AssetTagTakenError ||
+		err instanceof AssetRequiredError ||
+		err instanceof InvalidAssetTransitionError ||
+		err instanceof InvalidMovementError ||
+		err instanceof NotSerializedError ||
 		err instanceof InvalidLoanTransitionError ||
 		err instanceof InsufficientQuantityError ||
 		err instanceof RecurringSeriesError

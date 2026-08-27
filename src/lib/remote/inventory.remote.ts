@@ -1,0 +1,865 @@
+import { z } from 'zod';
+import { toGenericRef } from '$lib/server/entity/refs';
+import { error } from '@sveltejs/kit';
+import { query, form, getRequestEvent } from '$app/server';
+import { requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
+import { requireFeature } from '$lib/server/feature-flags';
+import {
+	createCategory,
+	createItem as createItemService,
+	createLocation,
+	deleteCategory,
+	getItemById,
+	listCategories,
+	listItems,
+	listLocations,
+	restoreItem,
+	softDeleteItem,
+	updateCategory,
+	updateItem
+} from '$lib/server/inventory/item-service';
+import {
+	bindAssetTag,
+	createAsset as createAssetService,
+	getAssetById,
+	listAssets,
+	listAvailableAssets,
+	setAssetStatus,
+	updateAsset
+} from '$lib/server/inventory/asset-service';
+import { listLowStock, listMovements } from '$lib/server/inventory/stock-service';
+import {
+	adjustStock,
+	consumeStock,
+	recordAcquisition
+} from '$lib/server/inventory/acquisition-service';
+import {
+	getLoanById,
+	getLoanHistory,
+	scheduleLoan,
+	checkoutLoan,
+	requestLoan,
+	cancelLoan as cancelLoanService,
+	returnLoan as returnLoanService,
+	listLoans,
+	listUserLoans
+} from '$lib/server/inventory/loan-service';
+import { scheduleLoanSchema, checkoutLoanSchema } from '$lib/server/db/schema/inventory';
+import {
+	LONG_TEXT_MAX,
+	SHORT_TEXT_MAX,
+	acquisitionKinds,
+	assetStatuses,
+	equipmentConditions,
+	itemKinds,
+	unitsOfMeasure,
+	type AssetStatus,
+	type ItemKind,
+	type LoanStatus
+} from '$lib/config';
+
+// ---------------------------------------------------------------------------
+// Queries — Staff
+// ---------------------------------------------------------------------------
+
+export const getItem = query(z.string(), async (id) => {
+	await requireStaff();
+	// Staff see deactivated items too — that page is where Reactivate lives.
+	const item = await getItemById(id, { includeDeleted: true });
+	if (!item) error(404, 'Item not found');
+	return item;
+});
+
+export const getEquipmentCategories = query(z.void(), async () => {
+	await requireStaff();
+	return listCategories();
+});
+
+export const getLocations = query(z.void(), async () => {
+	await requireStaff();
+	return listLocations();
+});
+
+export const getItemLoanHistory = query(z.string(), async (itemId) => {
+	await requireStaff();
+	return getLoanHistory(itemId);
+});
+
+export const getItemMovements = query(z.string(), async (itemId) => {
+	await requireStaff();
+	return listMovements({ itemId });
+});
+
+export const getItemAssets = query(z.string(), async (itemId) => {
+	await requireStaff();
+	return listAssets({ itemId });
+});
+
+export const getLoan = query(z.string(), async (id) => {
+	await requireStaff();
+	const loan = await getLoanById(id);
+	if (!loan) error(404, 'Loan not found');
+	return loan;
+});
+
+export const getAvailableItems = query(z.void(), async () => {
+	await requireStaff();
+	const { rows } = await listItems({ loanableOnly: true });
+	return rows;
+});
+
+export const getAvailableAssets = query(z.string(), async (itemId) => {
+	await requireStaff();
+	return listAvailableAssets(itemId);
+});
+
+export const getLowStock = query(z.void(), async () => {
+	await requireStaff();
+	return listLowStock();
+});
+
+const staffItemFilters = z.object({
+	search: z.string().optional(),
+	categoryId: z.string().optional(),
+	kind: z.string().optional(),
+	includeDeleted: z.boolean().optional(),
+	page: z.number().optional()
+});
+
+export const getStaffItemList = query(staffItemFilters, async (filters) => {
+	await requireStaff();
+	const { rows, pagination } = await listItems(
+		{
+			search: filters.search || undefined,
+			categoryId: filters.categoryId || undefined,
+			kind: (filters.kind || undefined) as ItemKind | undefined,
+			includeDeleted: filters.includeDeleted
+		},
+		{ page: filters.page ?? 1, pageSize: 50 }
+	);
+	return {
+		rows: rows.map((e) => ({
+			...e,
+			ref: toGenericRef('equipment', {
+				id: e.id,
+				title: e.name,
+				subtitle: e.category.name
+			})
+		})),
+		pagination
+	};
+});
+
+const staffLoansFilters = z.object({
+	search: z.string().optional(),
+	status: z.string().optional(),
+	page: z.number().optional()
+});
+
+export const getStaffLoans = query(staffLoansFilters, async (filters) => {
+	await requireStaff();
+	return listLoans(
+		{
+			search: filters.search || undefined,
+			status: (filters.status || undefined) as LoanStatus | undefined
+		},
+		{ page: filters.page ?? 1, pageSize: 50 }
+	);
+});
+
+export const getAsset = query(z.string(), async (id) => {
+	await requireStaff();
+	const asset = await getAssetById(id);
+	if (!asset) error(404, 'Asset not found');
+	return asset;
+});
+
+export const getAssetMovements = query(z.string(), async (assetId) => {
+	await requireStaff();
+	return listMovements({ assetId });
+});
+
+// ---------------------------------------------------------------------------
+// Queries — Member
+// ---------------------------------------------------------------------------
+
+const memberEquipmentFilters = z.object({
+	search: z.string().optional(),
+	categoryId: z.string().optional()
+});
+
+export const getMemberEquipment = query(memberEquipmentFilters, async (filters) => {
+	await requireFeature('equipment');
+	requireUser();
+	const { rows } = await listItems({
+		search: filters.search || undefined,
+		categoryId: filters.categoryId || undefined,
+		loanableOnly: true
+	});
+	return rows.map((e) => ({
+		id: e.id,
+		name: e.name,
+		description: e.description,
+		categoryId: e.categoryId,
+		categoryName: e.category.name,
+		pricingTier: e.category.pricingTier,
+		kind: e.kind,
+		onHand: e.onHand,
+		availableQuantity: e.availableQuantity
+	}));
+});
+
+export const getMemberEquipmentMeta = query(z.void(), async () => {
+	await requireFeature('equipment');
+	const currentUser = requireUser();
+	const { getBalance } = await import('$lib/server/finance/credit-service');
+	const { getSubscription } = await import('$lib/server/finance/subscription-service');
+
+	const [categories, creditBalance] = await Promise.all([
+		listCategories(),
+		getBalance(currentUser.id, 'equipment_credits')
+	]);
+
+	let isSustainingMember = false;
+	if (currentUser.stripeId) {
+		const sub = await getSubscription(currentUser.stripeId);
+		isSustainingMember = sub !== null;
+	}
+
+	return {
+		categories: categories.map((c) => ({ id: c.id, name: c.name, pricingTier: c.pricingTier })),
+		creditBalance,
+		isSustainingMember
+	};
+});
+
+export const getMemberEquipmentLoans = query(async () => {
+	await requireFeature('equipment');
+	const currentUser = requireUser();
+	const loans = await listUserLoans(currentUser.id);
+
+	return {
+		active: loans.filter((l) => ['requested', 'scheduled', 'checked_out'].includes(l.status)),
+		past: loans.filter((l) => ['returned', 'cancelled'].includes(l.status))
+	};
+});
+
+/**
+ * What a member sees after scanning the sticker on a piece of gear.
+ *
+ * Deliberately narrower than the staff record: what this is, what shape it is
+ * in, and whether it can be borrowed. Not who has it, not what it cost, not who
+ * gave it. Phase 4 adds the manual and the report-damage button here.
+ */
+export const getMemberAsset = query(z.string(), async (id) => {
+	await requireFeature('equipment');
+	requireUser();
+	const asset = await getAssetById(id);
+	if (!asset) error(404, 'Not found');
+
+	return {
+		id: asset.id,
+		assetTag: asset.assetTag,
+		name: asset.item.name,
+		description: asset.item.description,
+		categoryName: asset.category.name,
+		pricingTier: asset.category.pricingTier,
+		condition: asset.condition,
+		status: asset.status,
+		locationName: asset.location?.name ?? null,
+		itemId: asset.itemId,
+		isAvailable: asset.status === 'in_service'
+	};
+});
+
+// ---------------------------------------------------------------------------
+// Forms — Items
+// ---------------------------------------------------------------------------
+
+const editItemSchema = z.object({
+	name: z.string().min(1).max(SHORT_TEXT_MAX).optional(),
+	description: z.string().max(LONG_TEXT_MAX).optional(),
+	categoryId: z.string().uuid().optional(),
+	unitOfMeasure: z.enum(unitsOfMeasure).optional(),
+	gtin: z.string().max(14).optional(),
+	isLoanable: z.boolean().optional().default(false),
+	// `<Field type="number">` submits through `field.as('number')`, so SvelteKit
+	// hands the handler a number (or `undefined` for an empty input) — never a string.
+	reorderPoint: z.number().int().min(0).optional(),
+	reorderQuantity: z.number().int().min(1).optional(),
+	resourceId: z.string().max(100).optional(),
+	notes: z.string().max(2000).optional()
+});
+
+export const editItem = form(editItemSchema.extend({ id: z.string() }), async (raw) => {
+	await requireStaff();
+	const data = raw as z.infer<typeof editItemSchema> & { id: string };
+	const id = data.id;
+	await updateItem(id, data);
+	void getStaffItemDetail(id).refresh();
+	return { success: true };
+});
+
+export const createItem = form(
+	z.object({
+		name: z.string().min(1).max(SHORT_TEXT_MAX),
+		description: z.string().max(LONG_TEXT_MAX).optional(),
+		categoryId: z.string(),
+		kind: z.enum(itemKinds),
+		unitOfMeasure: z.enum(unitsOfMeasure).optional(),
+		gtin: z.string().max(14).optional(),
+		isLoanable: z.boolean().optional().default(false),
+		reorderPoint: z.number().int().min(0).optional(),
+		reorderQuantity: z.number().int().min(1).optional(),
+		resourceId: z.string().max(100).optional(),
+		notes: z.string().max(2000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as {
+			name: string;
+			description?: string;
+			categoryId: string;
+			kind: ItemKind;
+			unitOfMeasure?: (typeof unitsOfMeasure)[number];
+			gtin?: string;
+			isLoanable?: boolean;
+			reorderPoint?: number;
+			reorderQuantity?: number;
+			resourceId?: string;
+			notes?: string;
+		};
+		const item = await createItemService({
+			name: data.name,
+			description: data.description,
+			categoryId: data.categoryId,
+			kind: data.kind,
+			unitOfMeasure: data.unitOfMeasure,
+			gtin: data.gtin,
+			isLoanable: data.isLoanable ?? false,
+			reorderPoint: data.reorderPoint,
+			reorderQuantity: data.reorderQuantity,
+			resourceId: data.resourceId,
+			notes: data.notes
+		});
+		return { itemId: item.id };
+	}
+);
+
+export const deactivateItem = form(z.object({ id: z.string() }), async (data) => {
+	await requireStaff();
+	await softDeleteItem(data.id as string);
+	void getStaffItemDetail(data.id as string).refresh();
+	return { success: true };
+});
+
+export const reactivateItem = form(z.object({ id: z.string() }), async (data) => {
+	await requireStaff();
+	await restoreItem(data.id as string);
+	void getStaffItemDetail(data.id as string).refresh();
+	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Forms — Assets
+// ---------------------------------------------------------------------------
+
+export const createAsset = form(
+	z.object({
+		itemId: z.string(),
+		assetTag: z.string().max(64).optional(),
+		serialNumber: z.string().max(100).optional(),
+		condition: z.enum(equipmentConditions),
+		locationId: z.string().optional(),
+		notes: z.string().max(2000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as {
+			itemId: string;
+			assetTag?: string;
+			serialNumber?: string;
+			condition: (typeof equipmentConditions)[number];
+			locationId?: string;
+			notes?: string;
+		};
+		const currentUser = requireUser();
+		const asset = await createAssetService({
+			itemId: data.itemId,
+			assetTag: data.assetTag || undefined,
+			serialNumber: data.serialNumber || undefined,
+			condition: data.condition,
+			locationId: data.locationId || undefined,
+			notes: data.notes,
+			actorId: currentUser.id
+		});
+		void getStaffItemDetail(data.itemId).refresh();
+		return { assetId: asset.id };
+	}
+);
+
+/**
+ * Bind a printed tag to a unit — the everyday counterpart to buying a roll of
+ * pre-numbered stickers. Rebinding is normal, not an error state.
+ */
+export const bindTag = form(
+	z.object({ assetId: z.string(), assetTag: z.string().min(1).max(64) }),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as { assetId: string; assetTag: string };
+		await bindAssetTag(data.assetId, data.assetTag);
+		void getStaffAssetDetail(data.assetId).refresh();
+		return { success: true };
+	}
+);
+
+export const editAsset = form(
+	z.object({
+		id: z.string(),
+		serialNumber: z.string().max(100).optional(),
+		condition: z.enum(equipmentConditions).optional(),
+		locationId: z.string().optional(),
+		notes: z.string().max(2000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as {
+			id: string;
+			serialNumber?: string;
+			condition?: (typeof equipmentConditions)[number];
+			locationId?: string;
+			notes?: string;
+		};
+		await updateAsset(data.id, {
+			serialNumber: data.serialNumber,
+			condition: data.condition,
+			locationId: data.locationId || null,
+			notes: data.notes
+		});
+		void getStaffAssetDetail(data.id).refresh();
+		return { success: true };
+	}
+);
+
+export const changeAssetStatus = form(
+	z.object({
+		id: z.string(),
+		status: z.enum(assetStatuses),
+		condition: z.enum(equipmentConditions).optional(),
+		notes: z.string().max(2000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as {
+			id: string;
+			status: AssetStatus;
+			condition?: (typeof equipmentConditions)[number];
+			notes?: string;
+		};
+		const currentUser = requireUser();
+		await setAssetStatus(data.id, data.status, {
+			condition: data.condition,
+			notes: data.notes,
+			actorId: currentUser.id
+		});
+		void getStaffAssetDetail(data.id).refresh();
+		return { success: true };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Forms — Stock
+// ---------------------------------------------------------------------------
+
+/**
+ * Receiving. Every arrival goes through an acquisition, including a $4 pack of
+ * strings — a receipt with no cost or source attached is a row nothing can
+ * improve later, because by then the receipt itself is gone.
+ */
+export const receiveStock = form(
+	z.object({
+		itemId: z.string(),
+		quantity: z.number().int().min(1),
+		kind: z.enum(acquisitionKinds),
+		sourceName: z.string().max(255).optional(),
+		donorUserId: z.string().optional(),
+		reference: z.string().max(100).optional(),
+		unitValueCents: z.number().int().min(0).optional(),
+		fairValueBasis: z.string().max(1000).optional(),
+		intendedUse: z.string().max(1000).optional(),
+		locationId: z.string().optional(),
+		notes: z.string().max(2000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const currentUser = requireUser();
+		const data = raw as {
+			itemId: string;
+			quantity: number;
+			kind: (typeof acquisitionKinds)[number];
+			sourceName?: string;
+			donorUserId?: string;
+			reference?: string;
+			unitValueCents?: number;
+			fairValueBasis?: string;
+			intendedUse?: string;
+			locationId?: string;
+			notes?: string;
+		};
+
+		await recordAcquisition({
+			kind: data.kind,
+			occurredAt: new Date(),
+			sourceName: data.sourceName || undefined,
+			donorUserId: data.donorUserId || undefined,
+			reference: data.reference || undefined,
+			fairValueBasis: data.fairValueBasis || undefined,
+			intendedUse: data.intendedUse || undefined,
+			locationId: data.locationId || undefined,
+			notes: data.notes,
+			recordedByUserId: currentUser.id,
+			lines: [
+				{
+					itemId: data.itemId,
+					quantity: data.quantity,
+					unitValueCents: data.unitValueCents
+				}
+			]
+		});
+
+		void getStaffItemDetail(data.itemId).refresh();
+		return { success: true };
+	}
+);
+
+export const useStock = form(
+	z.object({
+		itemId: z.string(),
+		quantity: z.number().int().min(1),
+		notes: z.string().max(1000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const currentUser = requireUser();
+		const data = raw as { itemId: string; quantity: number; notes?: string };
+		await consumeStock({
+			itemId: data.itemId,
+			quantity: data.quantity,
+			actorId: currentUser.id,
+			notes: data.notes
+		});
+		void getStaffItemDetail(data.itemId).refresh();
+		return { success: true };
+	}
+);
+
+/** A stocktake correction — the honest way to change a count. */
+export const correctStock = form(
+	z.object({
+		itemId: z.string(),
+		delta: z.number().int(),
+		notes: z.string().max(1000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const currentUser = requireUser();
+		const data = raw as { itemId: string; delta: number; notes?: string };
+		if (data.delta === 0) error(400, 'An adjustment of zero changes nothing');
+		await adjustStock({
+			itemId: data.itemId,
+			delta: data.delta,
+			actorId: currentUser.id,
+			notes: data.notes
+		});
+		void getStaffItemDetail(data.itemId).refresh();
+		return { success: true };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Forms — Categories & locations
+// ---------------------------------------------------------------------------
+
+export const addCategory = form(
+	z.object({
+		name: z.string().min(1).max(100),
+		displayOrder: z.string().optional(),
+		pricingTier: z.string()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as { name: string; displayOrder?: string; pricingTier: string };
+		const cat = await createCategory({
+			name: data.name,
+			displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : 0,
+			pricingTier: data.pricingTier as 'major' | 'accessory'
+		});
+		void getEquipmentCategories().refresh();
+		return { categoryId: cat.id };
+	}
+);
+
+export const editCategory = form(
+	z.object({
+		id: z.string(),
+		name: z.string().min(1).max(100).optional(),
+		displayOrder: z.string().optional(),
+		pricingTier: z.string().optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as {
+			id: string;
+			name?: string;
+			displayOrder?: string;
+			pricingTier?: string;
+		};
+		const { id, ...rest } = data;
+		await updateCategory(id, {
+			name: rest.name,
+			displayOrder: rest.displayOrder ? parseInt(rest.displayOrder, 10) : undefined,
+			pricingTier: rest.pricingTier as 'major' | 'accessory' | undefined
+		});
+		void getEquipmentCategories().refresh();
+		return { success: true };
+	}
+);
+
+export const removeCategory = form(z.object({ id: z.string() }), async (data) => {
+	await requireStaff();
+	await deleteCategory(data.id as string);
+	void getEquipmentCategories().refresh();
+	return { success: true };
+});
+
+export const addLocation = form(
+	z.object({
+		name: z.string().min(1).max(100),
+		parentId: z.string().optional(),
+		notes: z.string().max(2000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as { name: string; parentId?: string; notes?: string };
+		const loc = await createLocation({
+			name: data.name,
+			parentId: data.parentId || undefined,
+			notes: data.notes
+		});
+		void getLocations().refresh();
+		return { locationId: loc.id };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Forms — Loans
+// ---------------------------------------------------------------------------
+
+export const scheduleLoanForm = form('unchecked', async (data, issue) => {
+	await requireStaff();
+	const result = scheduleLoanSchema.safeParse(data);
+	if (!result.success) {
+		const issues = result.error.issues
+			.map((err: any) => {
+				const key = String(err.path[0] ?? '');
+				return (issue as any)[key]?.(err.message);
+			})
+			.filter(Boolean);
+		(await import('@sveltejs/kit')).invalid(...issues);
+	}
+	const loanId = (data as { loanId: string }).loanId;
+	await scheduleLoan(loanId, {
+		itemId: result.data!.itemId,
+		scheduledPickupDate: result.data!.scheduledPickupDate
+	});
+	void getStaffLoanDetail(loanId).refresh();
+	return { success: true };
+});
+
+export const checkoutLoanForm = form('unchecked', async (data, issue) => {
+	await requireStaff();
+	const currentUser = requireUser();
+	const result = checkoutLoanSchema.safeParse(data);
+	if (!result.success) {
+		const issues = result.error.issues
+			.map((err: any) => {
+				const key = String(err.path[0] ?? '');
+				return (issue as any)[key]?.(err.message);
+			})
+			.filter(Boolean);
+		(await import('@sveltejs/kit')).invalid(...issues);
+	}
+	const loanId = (data as { loanId: string }).loanId;
+	await checkoutLoan(loanId, {
+		dueDate: result.data!.dueDate,
+		assetId: result.data!.assetId,
+		actorId: currentUser.id
+	});
+	void getStaffLoanDetail(loanId).refresh();
+	return { success: true };
+});
+
+export const createLoan = form(
+	z.object({
+		userId: z.string(),
+		itemId: z.string().optional(),
+		// Staff's Create Loan modal binds this with `field=`, so it arrives as a
+		// number. The member-facing `submitLoanRequest` below uses a bare `name=`
+		// and still gets a string.
+		quantity: z.number().int().min(1).optional(),
+		requestedPickupDate: z.string().min(1),
+		estimatedReturnDate: z.string().min(1),
+		memberNotes: z.string().max(1000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as {
+			userId: string;
+			itemId?: string;
+			quantity?: number;
+			requestedPickupDate: string;
+			estimatedReturnDate: string;
+			memberNotes?: string;
+		};
+		await requestLoan(data.userId, {
+			itemId: data.itemId || undefined,
+			quantity: data.quantity ?? 1,
+			requestedPickupDate: new Date(data.requestedPickupDate),
+			estimatedReturnDate: new Date(data.estimatedReturnDate),
+			memberNotes: data.memberNotes
+		});
+		return { success: true };
+	}
+);
+
+export const submitLoanRequest = form(
+	z.object({
+		itemId: z.string().optional(),
+		quantity: z.string().optional(),
+		requestedPickupDate: z.string().min(1),
+		estimatedReturnDate: z.string().min(1),
+		memberNotes: z.string().max(1000).optional()
+	}),
+	async (raw) => {
+		const data = raw as {
+			itemId?: string;
+			quantity?: string;
+			requestedPickupDate: string;
+			estimatedReturnDate: string;
+			memberNotes?: string;
+		};
+		const currentUser = requireUser();
+
+		const loan = await requestLoan(currentUser.id, {
+			itemId: data.itemId || undefined,
+			quantity: data.quantity ? parseInt(data.quantity, 10) : 1,
+			requestedPickupDate: new Date(data.requestedPickupDate),
+			estimatedReturnDate: new Date(data.estimatedReturnDate),
+			memberNotes: data.memberNotes
+		});
+
+		return { success: true, loanId: loan.id };
+	}
+);
+
+export const cancelLoan = form(z.object({ id: z.string() }), async (data) => {
+	const { locals } = getRequestEvent();
+	if (!locals.user) throw error(401, 'Not authenticated');
+
+	const loanId = data.id as string;
+	const loan = await getLoanById(loanId);
+	if (!loan) throw error(404, 'Loan not found');
+
+	// Staff may cancel at any point; the borrower only before pickup.
+	const role = await requireStaffOrOwner(locals.user.id, loan.userId);
+	if (role === 'owner') {
+		if (loan.status !== 'requested' && loan.status !== 'scheduled') {
+			throw error(400, 'Cannot cancel a loan that has been checked out');
+		}
+	}
+
+	await cancelLoanService(loanId);
+	void getStaffLoanDetail(loanId).refresh();
+	return { success: true };
+});
+
+export const returnLoan = form(
+	z.object({
+		id: z.string(),
+		staffNotes: z.string().max(2000).optional()
+	}),
+	async (data) => {
+		await requireStaff();
+		const currentUser = requireUser();
+		await returnLoanService(data.id as string, (data.staffNotes as string) || undefined, {
+			actorId: currentUser.id
+		});
+		void getStaffLoanDetail(data.id as string).refresh();
+		return { success: true };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Staff user record (/staff/users/[id])
+// ---------------------------------------------------------------------------
+// Read-only, staff-guarded, and scoped by an explicit userId argument rather
+// than `params.id`, which on a remote call comes from a caller-supplied header.
+// ---------------------------------------------------------------------------
+
+export const getUserLoans = query(z.string(), async (userId) => {
+	await requireStaff();
+	return listUserLoans(userId);
+});
+
+// ---------------------------------------------------------------------------
+// Composed page queries — one load-bearing query per page
+// ---------------------------------------------------------------------------
+
+/**
+ * The staff item detail page's one load-bearing query.
+ *
+ * The item, its units, its ledger and its loan history are all keyed by the same
+ * id and all first paint, so they assemble here rather than racing each other
+ * out of the component — the shape that stops a page rendering past kit 2.64.
+ *
+ * The category list is deliberately *not* here. It is unparameterized and its
+ * own mutations refresh it by name, with no item id to key a wrapper with, so it
+ * lives in `CategoryOptions` instead.
+ */
+export const getStaffItemDetail = query(z.string(), async (id) => {
+	const [item, assets, movements, loanHistory] = await Promise.all([
+		getItem(id),
+		getItemAssets(id),
+		getItemMovements(id),
+		getItemLoanHistory(id)
+	]);
+	return { item, assets, movements, loanHistory };
+});
+
+/** The staff asset detail page's one load-bearing query. */
+export const getStaffAssetDetail = query(z.string(), async (id) => {
+	const [asset, movements] = await Promise.all([getAsset(id), getAssetMovements(id)]);
+	return { asset, movements };
+});
+
+/**
+ * The staff loan detail page's one load-bearing query.
+ *
+ * `getAvailableItems` has no mutations refreshing it, so unlike the category
+ * list it composes cleanly. It stays exported for `CreateLoanAction`, which
+ * loads it in its own markup.
+ */
+export const getStaffLoanDetail = query(z.string(), async (id) => {
+	const [loan, availableItems] = await Promise.all([getLoan(id), getAvailableItems()]);
+	const availableAssets = loan.itemId ? await getAvailableAssets(loan.itemId) : [];
+	return { loan, availableItems, availableAssets };
+});
+
+/** The member equipment page's one load-bearing query. */
+export const getMemberEquipmentPage = query(memberEquipmentFilters, async (filters) => {
+	const [equipment, meta] = await Promise.all([
+		getMemberEquipment(filters),
+		getMemberEquipmentMeta()
+	]);
+	return { equipment, meta };
+});

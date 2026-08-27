@@ -351,47 +351,107 @@ linked `reservation` rows for space-holding events.
 
 ---
 
-## 6. Equipment loans
+## 6. Inventory, gear and consumables
+
+Spec: [specs/inventory-spec.md](../specs/inventory-spec.md)
 
 ### The story
 
-Members request to borrow gear (amps, PAs, etc.). Staff schedule a pickup date, hand the
-item over (checkout), and take it back (return). Charges are computed at return time from
-days borrowed × a per-tier daily rate, discounted for sustaining members, payable from
-equipment credits first and cash for the rest. The whole feature sits behind the
-`equipment` feature flag.
+The collective tracks two kinds of physical thing on one ledger. **Gear** — amps,
+guitars, PAs, mics — is lent to members and comes back. **Consumables** — strings,
+sticks, batteries — leave and do not.
+
+Members browse the catalog, request an item for a weekend, and staff schedule a
+pickup, hand it over and take it back. Charges are computed at return from days
+borrowed × a per-tier daily rate, discounted for sustaining members, payable from
+equipment credits first and cash for the rest. The member surface sits behind the
+`equipment` feature flag; the staff panel is always on.
+
+### The rule everything rests on
+
+**Stock is a ledger, not a number.** Every change to what the collective holds is
+an append-only `stock_movement` row — a signed quantity, a reason, a time, an
+actor. On-hand is the sum of those rows and is never stored. A stocktake
+correction is itself a movement, with reason `adjust`.
+
+The predecessor kept `equipment.totalQuantity` as an integer somebody typed,
+which is why consumables could not be tracked at all: the only way to record a
+pack of strings being opened was to overwrite the count.
+
+Two axes, deliberately separate:
+
+- `inventory_item.kind` — `serialized` (one `inventory_asset` row per physical
+  unit) or `bulk` (a count).
+- `inventory_item.isLoanable` — whether it comes back.
+
+A **consumable is a bulk item that is not loanable**, derived and never stored.
+Twelve XLR cables are bulk _and_ returnable, which is why one enum could not
+carry both.
 
 ### Code path
 
-The lifecycle lives in `src/lib/server/equipment/loan-service.ts`, driven by
-`equipment.remote.ts`:
+Services live in `src/lib/server/inventory/`, driven by `inventory.remote.ts`:
+
+- `stock-service.ts` — the ledger. Nothing else writes `stock_movement`.
+  `signedQuantity` applies the direction from `STOCK_REASON_SIGN`, so a caller
+  can never pass a negative `receive`. A transfer is written as a **matched
+  pair** (`-n` at the origin, `+n` at the destination) so it nets to zero in
+  every sum without any query filtering it out.
+- `item-service.ts` — catalog and categories. `kind` is not updatable.
+- `asset-service.ts` — one physical unit. Tags are **bound, not generated**; an
+  asset's identity is the row, never the sticker, so a lost tag is a rebind.
+  Retirement writes a movement rather than deleting.
+- `acquisition-service.ts` — receiving. All arrivals go through an acquisition.
+- `loan-service.ts` — the five-state machine, unchanged from the shipped module:
 
 ```
 requestLoan()  member asks; emits equipment.loan_requested (staff notified)
    ↓ scheduleLoan()   staff sets pickup date; emits equipment.loan_scheduled
-   ↓ checkoutLoan()   staff hands over; emits equipment.checked_out
-   ↓ returnLoan()     staff takes back; computes charge, settles credits/cash,
-                      emits equipment.returned
+   ↓ checkoutLoan()   staff hands over a *specific unit*; writes loan_out;
+                      emits equipment.checked_out
+   ↓ returnLoan()     staff take it back; writes loan_return; computes charge,
+                      settles credits/cash; emits equipment.returned
    (cancelLoan() from the pre-checkout states)
 ```
 
-Pricing helpers `calculateDailyRate()` / `calculateLoanCharge()` are pure functions at the
-top of the service; rates come from `$lib/config.ts` (`DAILY_RATE_MAJOR`,
-`DAILY_RATE_ACCESSORY`). Invalid transitions throw `InvalidLoanTransitionError`. Equipment
-credits are the same ledger as free hours (`credit-service.ts`, type
-`equipment_credits`), allocated monthly from the subscription invoice (workflow 3).
+Pricing helpers `calculateDailyRate()` / `calculateLoanCharge()` are pure
+functions; rates come from `$lib/config.ts` (`DAILY_RATE_MAJOR`,
+`DAILY_RATE_ACCESSORY`). Invalid transitions throw `InvalidLoanTransitionError`;
+checking out a serialized item without naming a unit throws
+`AssetRequiredError`. Equipment credits are the same ledger as free hours
+(`credit-service.ts`, type `equipment_credits`).
+
+### Scanning a tag
+
+`/a/[tag]` renders nothing. Its `+page.server.ts` resolves the tag and hands the
+routing decision to `entityHref` — the same policy the identity chips use — so
+staff get `/staff/inventory/assets/[id]` and a member gets
+`/member/equipment/assets/[id]`. A signed-out scan has no public arm to land on,
+so it redirects to `/login?redirectTo=…` rather than 404ing. A `load` rather than
+a remote function because it is navigation, not data: a phone camera should get a
+302 off the server, not a blank page that redirects after hydration.
 
 ### Data touched
 
-`equipment`, `equipmentCategory`, `equipmentLoan` (status machine above),
-`creditTransaction` (equipment credit spends).
+`inventory_item`, `inventory_asset`, `stock_movement`, `inventory_loan`,
+`acquisition`, `acquisition_line`, `inventory_location`, `equipment_category`
+(unchanged), `creditTransaction` (equipment credit spends).
 
 ### Where it breaks
 
-- **"Insufficient quantity"** → another live loan holds the last unit; check
-  `equipmentLoan` rows in non-terminal states for that equipment id.
-- **Charge looks wrong** → recompute with `calculateLoanCharge()`'s inputs: days borrowed,
-  tier, sustaining status at return time.
+- **"Only N available"** → for a serialized item, availability is the count of
+  units with `status='in_service'`, not the ledger sum: an amp in `maintenance`
+  is on hand and unavailable. For bulk it is on-hand minus quantities held by
+  `scheduled` loans.
+- **On-hand looks wrong** → read `stock_movement` for the item. It is the whole
+  answer; there is no cached figure that could be stale.
+- **A serialized item's on-hand disagrees with its unit count** → that invariant
+  should hold. A mismatch means something wrote a movement without an asset, or
+  an asset without its `receive`.
+- **"Tag is already bound"** → `AssetTagTakenError`; another unit wears it.
+  Rebinding _that_ unit is the fix, not renumbering this one.
+- **Charge looks wrong** → recompute with `calculateLoanCharge()`'s inputs: days
+  borrowed, tier, sustaining status at return time.
 
 ---
 

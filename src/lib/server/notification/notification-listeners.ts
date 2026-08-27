@@ -466,7 +466,7 @@ export function registerAllNotificationListeners(): void {
 					{ label: 'Requested pickup', value: formatPickupDate(event.requestedPickupDate) },
 					...(event.memberNotes ? [{ label: 'Notes', value: event.memberNotes }] : [])
 				],
-				cta: { url: `${siteUrl}/staff/equipment/loans/${event.loanId}`, label: 'Review request' }
+				cta: { url: `${siteUrl}/staff/inventory/loans/${event.loanId}`, label: 'Review request' }
 			} satisfies NotificationEmailModel
 		});
 	});

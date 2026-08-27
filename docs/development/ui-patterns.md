@@ -52,7 +52,7 @@ Props:
 #### Constrained detail page
 
 ```svelte
-<PageHeader title={item.name} subtitle="Equipment" backHref="/staff/equipment" />
+<PageHeader title={item.name} subtitle="Inventory" backHref="/staff/inventory" />
 <PageContent width="3xl">
 	<InfoCard title="Details">...</InfoCard>
 </PageContent>

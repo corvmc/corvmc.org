@@ -115,6 +115,32 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 			break;
 		}
 
+		// Gear. Members reach the catalog and their own loans, and — since #281 —
+		// the unit itself, because a printed tag on an amp is scanned by whoever
+		// is standing next to it.
+		case 'equipment': {
+			if (staff) out.push({ panel: 'staff', href: resolve(`/staff/inventory/${id}`) });
+			if (signedIn) out.push({ panel: 'member', href: resolve(`/member/equipment/${id}`) });
+			break;
+		}
+
+		case 'asset': {
+			if (staff) out.push({ panel: 'staff', href: resolve(`/staff/inventory/assets/${id}`) });
+			if (signedIn) out.push({ panel: 'member', href: resolve(`/member/equipment/assets/${id}`) });
+			// Deliberately no public arm: the gear catalog is not public, so a
+			// signed-out scan gets `null` here and `/a/[tag]` turns that into a
+			// login redirect rather than a 404.
+			break;
+		}
+
+		case 'loan': {
+			if (staff) out.push({ panel: 'staff', href: resolve(`/staff/inventory/loans/${id}`) });
+			// The member panel has no per-loan page, only the list — the same
+			// shape reservations already use for the band panel.
+			if (signedIn) out.push({ panel: 'member', href: resolve('/member/equipment/loans') });
+			break;
+		}
+
 		// Staff-only records. A member has no page for these at all, which is why
 		// `null` has to be a first-class answer rather than a fallback to "/".
 		case 'flag':
@@ -125,12 +151,6 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 			break;
 		case 'audience':
 			if (staff) out.push({ panel: 'staff', href: resolve(`/staff/marketing/audiences/${id}`) });
-			break;
-		case 'equipment':
-			if (staff) out.push({ panel: 'staff', href: resolve(`/staff/equipment/${id}`) });
-			break;
-		case 'loan':
-			if (staff) out.push({ panel: 'staff', href: resolve(`/staff/equipment/loans/${id}`) });
 			break;
 		case 'shift':
 			if (staff) out.push({ panel: 'staff', href: resolve(`/staff/volunteer/shifts/${id}`) });

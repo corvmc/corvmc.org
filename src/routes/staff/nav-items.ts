@@ -46,7 +46,13 @@ export type StaffNavKey =
 	| 'settings';
 
 export type StaffNavSectionKey =
-	'people' | 'space' | 'programs' | 'moderation' | 'outreach' | 'money' | 'system';
+	| 'people'
+	| 'space'
+	| 'programs'
+	| 'moderation'
+	| 'outreach'
+	| 'money'
+	| 'system';
 
 /**
  * Field names on `getStaffLayout()`'s return. Items name a count rather than
@@ -117,11 +123,15 @@ export const staffNavSections: StaffNavSection[] = [
 			{
 				// Equipment used to hang the other way up: the parent row landed on
 				// Loans and the child was labelled Inventory, which the loans page
-				// itself contradicts — it declares `backHref="/staff/equipment"`.
+				// itself contradicts — it declares `backHref="/staff/inventory"`.
+				//
+				// "Inventory" rather than "Equipment" since #281: the section now
+				// covers consumables too, and calling it Equipment would send anyone
+				// looking for the drumstick count somewhere else.
 				key: 'equipment',
-				label: 'Equipment',
-				href: '/staff/equipment',
-				children: [{ key: 'equipment-loans', label: 'Loans', href: '/staff/equipment/loans' }]
+				label: 'Inventory',
+				href: '/staff/inventory',
+				children: [{ key: 'equipment-loans', label: 'Loans', href: '/staff/inventory/loans' }]
 			}
 		]
 	},

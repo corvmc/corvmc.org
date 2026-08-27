@@ -187,8 +187,8 @@ This exact string is copy-pasted verbatim:
 followed each time by hand-written `<dt class="opacity-60">` / `<dd>` pairs.
 
 - `src/routes/staff/flags/[id]/+page.svelte:48`, `:81`, `:182` — three in one file
-- `src/routes/staff/equipment/loans/[id]/+page.svelte:50`
-- `src/routes/staff/equipment/[id]/+page.svelte:79`
+- `src/routes/staff/inventory/loans/[id]/+page.svelte:50`
+- `src/routes/staff/inventory/[id]/+page.svelte:79`
 - `src/routes/staff/users/[id]/+page.svelte:282`
 - `src/routes/staff/recurring/[id]/+page.svelte:49`
 - `src/routes/staff/volunteer/shifts/[id]/+page.svelte:72`
