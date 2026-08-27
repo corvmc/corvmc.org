@@ -12,6 +12,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and } from 'drizzle-orm';
 import { userAdditionalFields } from './auth-fields';
 import { captureException } from '$lib/server/sentry';
+import { ensureUserEntry } from '$lib/server/directory/entry-service';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
 // ---------------------------------------------------------------------------
@@ -422,6 +423,29 @@ function createAuth() {
 		},
 		user: {
 			additionalFields: userAdditionalFields
+		},
+		databaseHooks: {
+			user: {
+				create: {
+					// A new account needs its `directory_entry` immediately: the member
+					// directory reads that table, so an account without one is not in
+					// the directory at all. This is the only path in the groups
+					// migration that can produce a NEW member with no listing —
+					// everything that existed when phase 3a shipped was backfilled.
+					//
+					// Deliberately non-fatal. A failure here costs the member their
+					// directory presence until they next save their profile, which
+					// repairs it through `getOrCreateUserEntryId`; throwing would cost
+					// them the account.
+					after: async (created) => {
+						try {
+							await ensureUserEntry(created.id, created.name);
+						} catch (err) {
+							captureException(err);
+						}
+					}
+				}
+			}
 		},
 		advanced: {
 			ipAddress: { ipAddressHeaders: AUTH_IP_ADDRESS_HEADERS }

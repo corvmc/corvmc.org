@@ -136,7 +136,9 @@ beforeEach(() => {
 });
 
 describe('updateMemberProfile', () => {
-	it('updates user fields and replaces instruments/genres', async () => {
+	it('updates the listing and replaces instruments/genres', async () => {
+		selectResults.push([{ id: 'entry-1' }]); // getOrCreateUserEntryId
+
 		await updateMemberProfile('user-1', {
 			bio: 'Hello world',
 			tagline: 'Musician',
@@ -148,13 +150,27 @@ describe('updateMemberProfile', () => {
 		expect(updatedData[0]).toMatchObject({
 			bio: 'Hello world',
 			tagline: 'Musician',
-			lookingForBand: false
+			// The boolean became one end of a two-way column.
+			lookingFor: null
 		});
 		// Instruments and genres inserted
 		expect(insertedRows).toHaveLength(2);
 	});
 
+	it('kinds each tag, so genres and instruments cannot be confused', async () => {
+		selectResults.push([{ id: 'entry-1' }]);
+
+		await updateMemberProfile('user-1', { instruments: ['bass'], genres: ['jazz'] });
+
+		// They share one table now. Without `kind`, a genre filter answers with
+		// instruments and a genre save wipes them — and both still look like they
+		// work.
+		expect(insertedRows[0]).toEqual([{ entryId: 'entry-1', kind: 'instrument', value: 'bass' }]);
+		expect(insertedRows[1]).toEqual([{ entryId: 'entry-1', kind: 'genre', value: 'jazz' }]);
+	});
+
 	it('truncates bio to 2000 chars', async () => {
+		selectResults.push([{ id: 'entry-1' }]);
 		const longBio = 'x'.repeat(3000);
 		await updateMemberProfile('user-1', { bio: longBio });
 
@@ -162,6 +178,7 @@ describe('updateMemberProfile', () => {
 	});
 
 	it('truncates tagline to 150 chars', async () => {
+		selectResults.push([{ id: 'entry-1' }]);
 		const longTagline = 'x'.repeat(200);
 		await updateMemberProfile('user-1', { tagline: longTagline });
 
@@ -169,6 +186,7 @@ describe('updateMemberProfile', () => {
 	});
 
 	it('limits instruments to 20', async () => {
+		selectResults.push([{ id: 'entry-1' }]);
 		const manyInstruments = Array.from({ length: 30 }, (_, i) => `inst-${i}`);
 		await updateMemberProfile('user-1', { instruments: manyInstruments });
 
@@ -177,6 +195,8 @@ describe('updateMemberProfile', () => {
 	});
 
 	it('validates links structure', async () => {
+		selectResults.push([{ id: 'entry-1' }]);
+
 		await updateMemberProfile('user-1', {
 			links: [
 				{ label: 'Website', url: 'https://example.com' },
@@ -198,28 +218,37 @@ describe('getMemberProfileForEdit', () => {
 		expect(result).toBeNull();
 	});
 
-	it('returns profile with instruments and genres', async () => {
+	it('returns profile with instruments and genres, in the shape the form speaks', async () => {
 		selectResults.push([
 			{
+				id: 'entry-1',
 				bio: 'Hi',
 				tagline: 'Dev',
-				lookingForBand: true,
-				directoryVisibility: 'public',
-				directoryContact: null,
+				lookingFor: 'band',
+				visibility: 'public',
+				contact: null,
 				links: null
 			}
 		]);
-		selectResults.push([{ instrument: 'guitar' }, { instrument: 'drums' }]);
-		selectResults.push([{ genre: 'rock' }]);
+		// One tag query now, split by `kind`, rather than one per table.
+		selectResults.push([
+			{ kind: 'instrument', value: 'guitar' },
+			{ kind: 'instrument', value: 'drums' },
+			{ kind: 'genre', value: 'rock' }
+		]);
 
 		const result = await getMemberProfileForEdit('user-1');
 
 		expect(result).toMatchObject({
 			bio: 'Hi',
 			tagline: 'Dev',
+			lookingForBand: true,
+			directoryVisibility: 'public',
+			directoryContact: null,
 			instruments: ['guitar', 'drums'],
 			genres: ['rock']
 		});
+		expect(result).not.toHaveProperty('id');
 	});
 });
 

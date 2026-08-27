@@ -1,5 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
-import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD, SEED_TARGET_ID } from './fixtures/seed-staff-user';
+import {
+	SEED_STAFF_EMAIL,
+	SEED_STAFF_PASSWORD,
+	SEED_TARGET_ID,
+	SEED_TARGET_NAME
+} from './fixtures/seed-staff-user';
 import { SEED_PUBLIC_BAND_SLUG, SEED_PUBLIC_BAND_NAME } from './fixtures/seed-band-onboarding';
 
 /**
@@ -57,4 +62,38 @@ test('the public footer renders alongside the page it sits under', async ({ page
 	await expect(footer).toContainText('Corvallis Music Collective');
 	await expect(footer.getByRole('link', { name: 'Contact' })).toBeVisible();
 	await expect(page.locator('body')).not.toContainText('Cannot read properties');
+});
+
+/**
+ * The member directory LIST, the twin of `a public band appears in the public
+ * directory list` in band-onboarding.e2e.ts.
+ *
+ * Members moved from `user` to `directory_entry` in phase 3a, and a member
+ * without an entry silently drops out of the list. Nothing covered that: the
+ * directory specs key off tab controls and URLs rather than cards, deliberately,
+ * because the card count depends on other suites' fixtures. Asserting one named
+ * member is present does not.
+ */
+test('a member appears in the member directory, and not in the public one', async ({ page }) => {
+	await login(page);
+	await page.goto('/member/directory');
+
+	// Filtered rather than scanned: the fixtures seed 42 members and the page
+	// renders a first slice of them, so asserting on a name straight away would
+	// depend on where that slice happens to end. Typing also exercises the name
+	// search, which runs against the entry's copy of the name since phase 3a.
+	await page.getByPlaceholder('Search by name').fill(SEED_TARGET_NAME);
+	await expect(page.getByRole('link', { name: new RegExp(SEED_TARGET_NAME) })).toBeVisible({
+		timeout: 15000
+	});
+
+	// The seeded member is `members`-visible, so the visibility gate has to keep
+	// them off the logged-out page — on the list, not only on their profile.
+	await page.context().clearCookies();
+	await page.goto('/directory?tab=musicians');
+	// The public page names its search input `q` and mirrors it to the URL; the
+	// member page keeps the term in local state. Different controls, so the two
+	// halves of this test drive them differently.
+	await page.locator('input[name="q"]').fill(SEED_TARGET_NAME);
+	await expect(page.getByRole('link', { name: new RegExp(SEED_TARGET_NAME) })).toHaveCount(0);
 });

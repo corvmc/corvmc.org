@@ -101,8 +101,16 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 		__table: 'user',
 		id: 'user.id',
 		name: 'user.name',
-		deletedAt: 'user.deletedAt',
-		directoryVisibility: 'user.directoryVisibility'
+		deletedAt: 'user.deletedAt'
+	}
+}));
+// The directory visibility gate reads the listing table since phase 3a.
+vi.mock('$lib/server/db/schema/directory', () => ({
+	directoryEntry: {
+		__table: 'directory_entry',
+		id: 'directoryEntry.id',
+		userId: 'directoryEntry.userId',
+		visibility: 'directoryEntry.visibility'
 	}
 }));
 vi.mock('drizzle-orm/sqlite-core', () => ({
