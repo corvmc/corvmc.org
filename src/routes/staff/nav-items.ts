@@ -35,7 +35,7 @@ export type StaffNavKey =
 	| 'closures'
 	| 'equipment'
 	| 'equipment-loans'
-	| 'events'
+	| 'productions'
 	| 'calendar'
 	| 'flags'
 	| 'suggestions'
@@ -47,13 +47,7 @@ export type StaffNavKey =
 	| 'settings';
 
 export type StaffNavSectionKey =
-	| 'people'
-	| 'space'
-	| 'programs'
-	| 'moderation'
-	| 'outreach'
-	| 'money'
-	| 'system';
+	'people' | 'space' | 'events' | 'moderation' | 'outreach' | 'money' | 'system';
 
 /**
  * Field names on `getStaffLayout()`'s return. Items name a count rather than
@@ -62,10 +56,7 @@ export type StaffNavSectionKey =
  * would churn every `{#each}` for nothing.
  */
 export type StaffNavBadgeKey =
-	| 'inboxUnread'
-	| 'suggestionsAwaiting'
-	| 'volunteerPending'
-	| 'listingsPending';
+	'inboxUnread' | 'suggestionsAwaiting' | 'volunteerPending' | 'listingsPending';
 
 export interface StaffNavItem extends NavNode<StaffNavKey> {
 	label: string;
@@ -137,15 +128,19 @@ export const staffNavSections: StaffNavSection[] = [
 		]
 	},
 	{
-		key: 'programs',
-		title: 'Programs',
+		// Keyed `events`, not `programs`: "programs" is spoken-for — it is a
+		// reserved slug for the Groups module, where a program is a club or
+		// committee that runs its own sessions. Those will want a home of their
+		// own, and it should not have to fight this section for the name.
+		key: 'events',
+		title: 'Events',
 		items: [
 			// Two surfaces over one table, split by what staff do with a row.
 			// Productions is where a show is built — CMC's own, every status,
 			// drafts included. Calendar is what the public can see, across every
 			// source, plus what is asking to join it. A published CMC show is on
 			// both, in two roles.
-			{ key: 'events', label: 'Productions', href: '/staff/events' },
+			{ key: 'productions', label: 'Productions', href: '/staff/events' },
 			{
 				key: 'calendar',
 				label: 'Calendar',

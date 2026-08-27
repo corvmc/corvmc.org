@@ -71,7 +71,7 @@
 		closures: IconBan,
 		equipment: IconTool,
 		'equipment-loans': IconPackage,
-		events: IconCalendarEvent,
+		productions: IconCalendarEvent,
 		calendar: IconCalendarMonth,
 		flags: IconFlag,
 		suggestions: IconBulb,
