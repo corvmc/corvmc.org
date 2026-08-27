@@ -11,7 +11,7 @@
 	import {
 		submitLoanRequest as submitRequest,
 		getMemberEquipmentPage
-	} from '$lib/remote/equipment.remote';
+	} from '$lib/remote/inventory.remote';
 
 	const { fields } = submitRequest;
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -20,9 +20,8 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
-	import { IconCircleCheck, IconAlertCircle, IconAlertTriangle } from '@tabler/icons-svelte';
 	import { estimateLoanCost } from '$lib/config';
-	import type { PricingTier } from '$lib/server/db/schema/equipment';
+	import type { PricingTier } from '$lib/server/db/schema/inventory';
 	import { formatCents } from '$lib/utils/format';
 
 	let search = $state('');
@@ -57,8 +56,8 @@
 		return estimateLoanCost(pickup, returnDate, selectedPricingTier, meta.isSustainingMember);
 	});
 
-	function openRequest(equipmentId: string, name: string, pricingTier: string) {
-		selectedEquipmentId = equipmentId;
+	function openRequest(itemId: string, name: string, pricingTier: string) {
+		selectedEquipmentId = itemId;
 		selectedEquipmentName = name;
 		selectedPricingTier = (pricingTier as PricingTier) ?? 'major';
 		isFreeForm = false;
@@ -150,19 +149,13 @@
 										<p class="line-clamp-2 text-subtle">{eq.description}</p>
 									{/if}
 									<div class="mt-1 flex flex-wrap items-center gap-1">
-										<span class="tooltip" data-tip={eq.condition}>
-											{#if eq.condition === 'good'}
-												<IconCircleCheck size={14} class="text-success" />
-											{:else if eq.condition === 'fair'}
-												<IconAlertCircle size={14} class="text-warning" />
-											{:else}
-												<IconAlertTriangle size={14} class="text-error" />
-											{/if}
-										</span>
+										<!-- Condition moved to the individual unit: four Twin Reverbs are
+										     one catalog row and four records, and one of them is the beat-up
+										     one. Which unit you get is decided at checkout. -->
 										<Badge variant="ghost" size="xs">{priceLabel(eq.pricingTier)}</Badge>
-										<span class="badge badge-xs" class:badge-error={eq.availableQuantity <= 0}>
+										<Badge variant={eq.availableQuantity <= 0 ? 'error' : 'ghost'} size="xs">
 											{eq.availableQuantity} available
-										</span>
+										</Badge>
 									</div>
 									<div class="mt-2 card-actions">
 										<Button
@@ -205,7 +198,7 @@
 		}}
 	>
 		{#if !isFreeForm}
-			<input {...fields.equipmentId.as('hidden', selectedEquipmentId!)} />
+			<input {...fields.itemId.as('hidden', selectedEquipmentId!)} />
 		{/if}
 		<div
 			oninput={(e: Event) => {

@@ -136,7 +136,7 @@ const [
 	import('./events.remote'),
 	import('./community-events.remote'),
 	import('./volunteer.remote'),
-	import('./equipment.remote'),
+	import('./inventory.remote'),
 	import('./flags.remote'),
 	import('./inbox.remote'),
 	import('./notifications.remote'),

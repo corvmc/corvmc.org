@@ -3,7 +3,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
-import { equipmentLoan } from '$lib/server/db/schema/equipment';
+import { inventoryLoan } from '$lib/server/db/schema/inventory';
 import { volunteerHourLog } from '$lib/server/db/schema/volunteer';
 import { contentFlag } from '$lib/server/db/schema/flag';
 import { paymentCache } from '$lib/server/db/schema/finance';
@@ -157,12 +157,12 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 		scalar(
 			db
 				.select({ count: count() })
-				.from(equipmentLoan)
+				.from(inventoryLoan)
 				.where(
 					and(
-						eq(equipmentLoan.userId, userId),
-						eq(equipmentLoan.status, 'checked_out'),
-						lt(equipmentLoan.dueDate, now)
+						eq(inventoryLoan.userId, userId),
+						eq(inventoryLoan.status, 'checked_out'),
+						lt(inventoryLoan.dueDate, now)
 					)
 				)
 		),

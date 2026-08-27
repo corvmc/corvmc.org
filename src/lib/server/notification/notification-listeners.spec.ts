@@ -322,7 +322,7 @@ describe('collapsed listeners use the generic template', () => {
 		const params = mockDispatchEmailOnly.mock.calls[0][0];
 		expect(params.templateAlias).toBe(GENERIC);
 		expect(detailLabels(params.model)).not.toContain('Notes');
-		expect(params.model.cta.url).toBe('https://test.corvmc.com/staff/equipment/loans/loan-1');
+		expect(params.model.cta.url).toBe('https://test.corvmc.com/staff/inventory/loans/loan-1');
 	});
 });
 

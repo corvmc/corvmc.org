@@ -138,12 +138,23 @@ describe('route coverage', () => {
 	 *  - `/member/bands` is reachable, just not as a row: the "All" button in the
 	 *    My Bands group header goes there. Highlighting a group's action is not
 	 *    something `NavGroup` models.
+	 *  - `/member/equipment` and its loans page have no row on purpose: gear
+	 *    lending is still arranged in person, so a browsable catalogue would
+	 *    invite requests the front desk is not running through this system yet.
+	 *    Cutting the `equipment` flag (#286) did not change that — the nav never
+	 *    gated on the flag, it just omits the section. The row is the follow-up
+	 *    for when lending stops being manual.
+	 *  - `/member/equipment/assets/[id]` is reached by pointing a phone at the
+	 *    sticker on a piece of gear and nothing else. It is not stranded pending
+	 *    a nav row — a row would be meaningless, since there is no "the unit" to
+	 *    navigate to. This line is expected to stay.
 	 *
 	 * Delete a line when its page gets a row of its own.
 	 */
 	const strandedOnDashboard = new Set([
 		'/member/equipment',
 		'/member/equipment/loans',
+		'/member/equipment/assets/[id]',
 		'/member/bands'
 	]);
 

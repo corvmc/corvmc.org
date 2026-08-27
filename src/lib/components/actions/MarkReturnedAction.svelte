@@ -2,7 +2,7 @@
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { returnLoan } from '$lib/remote/equipment.remote';
+	import { returnLoan } from '$lib/remote/inventory.remote';
 	import { Field } from '../ui/Form';
 
 	const { fields } = returnLoan;

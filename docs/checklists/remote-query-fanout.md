@@ -153,10 +153,10 @@ One trap worth repeating: when a component gains `const x = $derived(await …)`
 stay **above** it. A top-level await suspends the script body, and `$props()` after one is past
 synchronous init — same rule as `setContext` in tranche 1.
 
-- `src/routes/staff/equipment/[id]/+page.svelte` — 3
+- `src/routes/staff/inventory/[id]/+page.svelte` — 3
 - `src/routes/member/equipment/+page.svelte` — 2
-- `src/routes/staff/equipment/+page.svelte` — 2
-- `src/routes/staff/equipment/loans/[id]/+page.svelte` — 2
+- `src/routes/staff/inventory/+page.svelte` — 2
+- `src/routes/staff/inventory/loans/[id]/+page.svelte` — 2
 
 ### 5. Events and recurring ✅
 

@@ -1,5 +1,4 @@
 import type { CreditType } from '$lib/server/db/schema/finance';
-import type { PricingTier } from '$lib/server/db/schema/equipment';
 
 // ---------------------------------------------------------------------------
 // Site
@@ -171,10 +170,123 @@ export const groupJoinPolicies = ['invite_only', 'open'] as const;
 export type GroupJoinPolicy = (typeof groupJoinPolicies)[number];
 
 // ---------------------------------------------------------------------------
-// Equipment enum values (used in UI dropdowns)
+// Inventory enum values (used in UI dropdowns)
 // ---------------------------------------------------------------------------
 
+/**
+ * How a catalog entry is *tracked* — and only that.
+ *
+ * `serialized` items get one `inventory_asset` row per physical unit, each with
+ * its own serial, condition, donor and repair history. `bulk` items are a count
+ * in the ledger and nothing else.
+ *
+ * **This is deliberately not the same axis as "is it a consumable".** Twelve XLR
+ * cables are lent out and come back, but nobody tracks which cable; a pack of
+ * strings is also counted, but leaves and never returns. Both are `bulk`, and
+ * what separates them is `isLoanable`. Folding the two axes into one enum was
+ * the first draft, and it had no way to say "counted, but returnable" — which is
+ * most of the cable drawer.
+ *
+ * So: **a consumable is a `bulk` item that is not loanable.** It is derived, not
+ * stored, because a stored flag could contradict the loan rules.
+ *
+ * InvenTree reaches the same split with its `trackable` flag.
+ */
+export const itemKinds = ['serialized', 'bulk'] as const;
+export type ItemKind = (typeof itemKinds)[number];
+
+/**
+ * Why a `stock_movement` row exists — the "why" of the EPCIS event shape the
+ * ledger borrows (what / when / where / why / who).
+ *
+ * Seeded from the GS1 EPCIS `bizStep` vocabulary and trimmed to what this domain
+ * actually does: `receiving`, `storing`, `inspecting`, `repairing` and
+ * `decommissioning` survive under local names, the rest of the supply-chain
+ * vocabulary does not apply to a music collective.
+ *
+ * **A quantity is always signed by the reason**, never by the caller: `receive`,
+ * `loan_return` and `repair_in` add, everything else subtracts. `adjust` is the
+ * one that goes both ways, and is how a stocktake correction gets recorded
+ * without anybody overwriting a total.
+ *
+ * `retail_selling` is deliberately absent — consignment is a different domain.
+ */
+export const stockReasons = [
+	'receive',
+	'loan_out',
+	'loan_return',
+	'consume',
+	'adjust',
+	'transfer',
+	'repair_out',
+	'repair_in',
+	'loss',
+	'retire'
+] as const;
+export type StockReason = (typeof stockReasons)[number];
+
+export const stockReasonLabels: Record<StockReason, string> = {
+	receive: 'Received',
+	loan_out: 'Loaned out',
+	loan_return: 'Returned from loan',
+	consume: 'Used',
+	adjust: 'Adjusted',
+	transfer: 'Transferred',
+	repair_out: 'Out for repair',
+	repair_in: 'Back from repair',
+	loss: 'Lost',
+	retire: 'Retired'
+};
+
+/**
+ * Where one physical unit is in its life.
+ *
+ * `retired` and `lost` are terminal, and both are reached by writing a movement
+ * rather than deleting the row — an asset's history has to outlive the asset,
+ * which is the whole reason the ledger exists.
+ */
+export const assetStatuses = ['in_service', 'on_loan', 'maintenance', 'retired', 'lost'] as const;
+export type AssetStatus = (typeof assetStatuses)[number];
+
+export const assetStatusLabels: Record<AssetStatus, string> = {
+	in_service: 'In service',
+	on_loan: 'On loan',
+	maintenance: 'Maintenance',
+	retired: 'Retired',
+	lost: 'Lost'
+};
+
+/** How stock arrived. One table covers all three; only the fields differ. */
+export const acquisitionKinds = ['purchase', 'donation', 'grant'] as const;
+export type AcquisitionKind = (typeof acquisitionKinds)[number];
+
+export const acquisitionKindLabels: Record<AcquisitionKind, string> = {
+	purchase: 'Purchase',
+	donation: 'Donation',
+	grant: 'Grant'
+};
+
+/**
+ * Above this, an arrival is capitalized as a tracked asset; below it, the thing
+ * is stock that gets used up.
+ *
+ * A policy number rather than a constant of nature — it is the organisation's
+ * capitalization policy, which is exactly what FASB ASU 2020-07 leans on when it
+ * asks whether a contributed nonfinancial asset was capitalized or expensed. It
+ * lives here so changing it is a one-line decision with a paper trail, not a
+ * migration.
+ */
+export const CAPITALIZATION_THRESHOLD_CENTS = 100_000;
+
+/**
+ * How a counted item is counted. Display only — the ledger is always integers,
+ * so a "pack" is one unit and never 6 strings.
+ */
+export const unitsOfMeasure = ['each', 'pack', 'box', 'set', 'pair', 'roll'] as const;
+export type UnitOfMeasure = (typeof unitsOfMeasure)[number];
+
 export const equipmentConditions = ['excellent', 'good', 'fair', 'poor'] as const;
+export type EquipmentCondition = (typeof equipmentConditions)[number];
 
 /**
  * Condition is an ordinal scale, so it gets colour rather than four identical
@@ -189,6 +301,7 @@ export const equipmentConditionBadge: Record<(typeof equipmentConditions)[number
 
 export const equipmentStatuses = ['available', 'maintenance', 'retired'] as const;
 export const pricingTiers = ['major', 'accessory'] as const;
+export type PricingTier = (typeof pricingTiers)[number];
 export const loanStatuses = [
 	'requested',
 	'scheduled',
@@ -196,6 +309,7 @@ export const loanStatuses = [
 	'returned',
 	'cancelled'
 ] as const;
+export type LoanStatus = (typeof loanStatuses)[number];
 
 // ---------------------------------------------------------------------------
 // Credit transaction sources
@@ -588,6 +702,7 @@ export const entityTypes = [
 	'campaign',
 	'audience',
 	'equipment',
+	'asset',
 	'loan',
 	'shift',
 	'role',
@@ -612,7 +727,8 @@ export const entityLabels: Record<EntityType, { one: string; many: string }> = {
 	flag: { one: 'Report', many: 'Reports' },
 	campaign: { one: 'Campaign', many: 'Campaigns' },
 	audience: { one: 'Audience', many: 'Audiences' },
-	equipment: { one: 'Equipment', many: 'Equipment' },
+	equipment: { one: 'Item', many: 'Items' },
+	asset: { one: 'Unit', many: 'Units' },
 	loan: { one: 'Loan', many: 'Loans' },
 	shift: { one: 'Shift', many: 'Shifts' },
 	role: { one: 'Volunteer role', many: 'Volunteer roles' },

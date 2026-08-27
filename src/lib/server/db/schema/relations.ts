@@ -108,15 +108,58 @@ export const relations = defineRelations(schema, (t) => ({
 		})
 	},
 	equipmentCategory: {
-		equipment: t.many.equipment()
+		items: t.many.inventoryItem()
 	},
-	equipment: {
-		category: t.one.equipmentCategory({ from: t.equipment.categoryId, to: t.equipmentCategory.id }),
-		loans: t.many.equipmentLoan()
+	inventoryLocation: {
+		assets: t.many.inventoryAsset()
 	},
-	equipmentLoan: {
-		equipment: t.one.equipment({ from: t.equipmentLoan.equipmentId, to: t.equipment.id }),
-		user: t.one.user({ from: t.equipmentLoan.userId, to: t.user.id })
+	inventoryItem: {
+		category: t.one.equipmentCategory({
+			from: t.inventoryItem.categoryId,
+			to: t.equipmentCategory.id
+		}),
+		assets: t.many.inventoryAsset(),
+		movements: t.many.stockMovement(),
+		loans: t.many.inventoryLoan()
+	},
+	inventoryAsset: {
+		item: t.one.inventoryItem({ from: t.inventoryAsset.itemId, to: t.inventoryItem.id }),
+		location: t.one.inventoryLocation({
+			from: t.inventoryAsset.locationId,
+			to: t.inventoryLocation.id
+		}),
+		movements: t.many.stockMovement(),
+		loans: t.many.inventoryLoan()
+	},
+	stockMovement: {
+		item: t.one.inventoryItem({ from: t.stockMovement.itemId, to: t.inventoryItem.id }),
+		asset: t.one.inventoryAsset({ from: t.stockMovement.assetId, to: t.inventoryAsset.id }),
+		actor: t.one.user({ from: t.stockMovement.actorId, to: t.user.id })
+	},
+	acquisition: {
+		lines: t.many.acquisitionLine(),
+		donor: t.one.user({
+			from: t.acquisition.donorUserId,
+			to: t.user.id,
+			alias: 'acquisition_donor'
+		}),
+		recordedBy: t.one.user({
+			from: t.acquisition.recordedByUserId,
+			to: t.user.id,
+			alias: 'acquisition_recordedBy'
+		})
+	},
+	acquisitionLine: {
+		acquisition: t.one.acquisition({
+			from: t.acquisitionLine.acquisitionId,
+			to: t.acquisition.id
+		}),
+		item: t.one.inventoryItem({ from: t.acquisitionLine.itemId, to: t.inventoryItem.id })
+	},
+	inventoryLoan: {
+		item: t.one.inventoryItem({ from: t.inventoryLoan.itemId, to: t.inventoryItem.id }),
+		asset: t.one.inventoryAsset({ from: t.inventoryLoan.assetId, to: t.inventoryAsset.id }),
+		user: t.one.user({ from: t.inventoryLoan.userId, to: t.user.id })
 	},
 	ticket: {
 		event: t.one.event({ from: t.ticket.eventId, to: t.event.id }),

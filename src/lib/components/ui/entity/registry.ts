@@ -26,6 +26,7 @@ import {
 	IconMail,
 	IconAddressBook,
 	IconTool,
+	IconBarcode,
 	IconPackageExport,
 	IconClock,
 	IconHeartHandshake,
@@ -122,6 +123,9 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 	campaign: { icon: IconMail, shape: 'none' },
 	audience: { icon: IconAddressBook, shape: 'none' },
 	equipment: { icon: IconTool, shape: 'square' },
+	// A unit is the thing that wears a scannable tag, which is what tells it
+	// apart from the catalog row above it at a glance.
+	asset: { icon: IconBarcode, shape: 'square' },
 	loan: { icon: IconPackageExport, shape: 'none' },
 	shift: { icon: IconClock, shape: 'none' },
 	role: { icon: IconHeartHandshake, shape: 'none' },
