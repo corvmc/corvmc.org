@@ -26,12 +26,11 @@ export default defineConfig({
 	// watch the flaky count, and fix the spec when one stops being occasional.
 	retries: process.env.CI ? 2 : 0,
 	webServer: {
-		// CI builds once in its own job and hands each shard the result, so only a
-		// local run still builds for itself. A shard that somehow arrives without a
-		// build fails loudly rather than quietly serving a stale one: `vite preview`
-		// cannot start without `.svelte-kit/output`, and `e2e/global-setup.ts`
-		// version-checks what it is served against what is on disk.
-		command: process.env.E2E_SKIP_BUILD ? 'pnpm preview' : 'pnpm build && pnpm preview',
+		// `pnpm`, not `npm`: this repo is pnpm-only and a global prettier 2.8.8
+		// shadows its prettier 3, which is why `npm`/`npx` are blocked everywhere
+		// else. Every CI shard builds here — hoisting it into one job and shipping
+		// `.svelte-kit` to the shards measured worse, see .github/workflows/ci.yml.
+		command: 'pnpm build && pnpm preview',
 		port: PORT,
 		// The command builds before it serves, and a cold production build here
 		// takes several minutes — well past the 60s default, which reported the
