@@ -187,7 +187,7 @@ Every script in `package.json`:
 | `test:components`               | One-shot client (browser) + storybook vitest projects                                          |
 | `test:e2e`                      | Migrate + seed a local D1, then run Playwright `e2e/**/*.e2e.ts`                               |
 | `test:e2e:prepare`              | Just the migrate + seed half (CI runs it as its own step)                                      |
-| `test:e2e:run`                  | Just the Playwright half — takes its flags, e.g. `-- --shard=1/2`                              |
+| `test:e2e:run`                  | Just the Playwright half — takes its flags, e.g. `-- --workers=1`                              |
 | `test`                          | Full suite: unit one-shot + e2e (what CI runs)                                                 |
 | `test:report`                   | Vitest with JSON output → `test-results.json`                                                  |
 | `lint`                          | prettier `--check` + eslint over everything                                                    |

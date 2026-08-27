@@ -110,6 +110,41 @@ export function resetE2eDatabase(): boolean {
 	return true;
 }
 
+/**
+ * Fold the write-ahead log back into the database file.
+ *
+ * The preview server opens D1 through workerd, and workerd opens it *lazily, on
+ * the first request* — by which time Playwright has already started its workers,
+ * and each of those opens its own `readLocalDb` reader. If the file still has a
+ * WAL to replay at that moment, workerd needs an exclusive lock to recover it,
+ * the readers' shared locks deny it, and it does not retry — it dies, taking the
+ * whole suite with it rather than one test:
+ *
+ *   *** Fatal uncaught kj::Exception: SENTRY_DO SQLite failed;
+ *       database is locked: SQLITE_BUSY (extended: SQLITE_BUSY_RECOVERY)
+ *
+ * Observed on run 33113081800: 61 of 61 tests failed this way, on a shard that
+ * did not even build (so this is not the build's second workerd — it is purely
+ * recovery racing the readers).
+ *
+ * So `e2e/prepare.ts` calls this last, after every seed has written and its
+ * miniflare has gone. TRUNCATE rather than PASSIVE: it resets the WAL to zero
+ * length, so there is nothing left for workerd to recover.
+ *
+ * @returns false when there is no database yet.
+ */
+export function checkpointE2eDatabase(): boolean {
+	if (!existsSync(join(E2E_PERSIST_PATH, 'd1'))) return false;
+
+	const db = new DatabaseSync(e2eD1File(), { timeout: 5_000 });
+	try {
+		db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+	} finally {
+		db.close();
+	}
+	return true;
+}
+
 // `tsx e2e/reset-db.ts` — clear the database by hand, e.g. after a failing run
 // that was left intact for inspection.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

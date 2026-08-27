@@ -32,7 +32,7 @@
 import { E2E_STATE_ROOT } from './state-dir';
 import { migrateLocal } from '../scripts/db/migrate-local';
 import { acquireE2eLock } from './lock';
-import { resetE2eDatabase } from './reset-db';
+import { checkpointE2eDatabase, resetE2eDatabase } from './reset-db';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 import { seedStaffUser } from './fixtures/seed-staff-user';
@@ -79,3 +79,9 @@ await seedSuggestions();
 await seedMessaging();
 await seedInboxAwaiting();
 await seedFeatureFlags();
+
+// Last, once every seed's miniflare has exited: leave the file with no WAL for
+// the preview server to recover. workerd opens D1 on the first *request*, by
+// which time Playwright's workers are already reading it, and a recovery that
+// collides with those readers kills the server outright. See `reset-db.ts`.
+checkpointE2eDatabase();
