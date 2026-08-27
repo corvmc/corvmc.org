@@ -1,30 +1,27 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import {
-		getPublicMemberProfile,
-		getMemberShows,
-		getMemberPastShows
-	} from '$lib/remote/directory.remote';
+	import { getPublicMemberProfilePage, getMemberPastShows } from '$lib/remote/directory.remote';
 	import ProfileHeader, {
 		type ProfilePill
-	} from '$lib/components/shared/directory/profile/ProfileHeader.svelte';
-	import QuickFacts from '$lib/components/shared/directory/profile/QuickFacts.svelte';
-	import ProseBlock from '$lib/components/shared/directory/profile/ProseBlock.svelte';
-	import ListenStrip from '$lib/components/shared/directory/profile/ListenStrip.svelte';
-	import ShowsBox from '$lib/components/shared/directory/profile/ShowsBox.svelte';
+	} from '$lib/components/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
+	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
-	} from '$lib/components/shared/directory/profile/CrossRefList.svelte';
-	import TagCloud from '$lib/components/shared/directory/profile/TagCloud.svelte';
-	import LinksBox from '$lib/components/shared/directory/profile/LinksBox.svelte';
-	import ContactBox from '$lib/components/shared/directory/profile/ContactBox.svelte';
-	import ProfileGrid from '$lib/components/shared/directory/profile/ProfileGrid.svelte';
+	} from '$lib/components/directory/profile/CrossRefList.svelte';
+	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
+	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
+	import ContactBox from '$lib/components/directory/profile/ContactBox.svelte';
+	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
 
 	const BANDS_BASE = '/directory/bands';
 
 	let id = $derived(page.params.id!);
-	let data = $derived(await getPublicMemberProfile(id));
-	let shows = $derived(await getMemberShows(id));
+	const data = $derived(await getPublicMemberProfilePage(id));
+	const shows = $derived(data.shows);
 	const member = $derived(data.member);
 
 	let subtitle = $derived(member.tagline || member.instruments?.join(' · ') || null);
@@ -74,7 +71,9 @@
 <div class="profile-page">
 	<!-- Carries the tab: bands are the directory's default, so a bare /directory
 	     would drop you somewhere other than where you came from. -->
-	<a href="/directory?tab=musicians" class="link text-muted">&larr; Back to Directory</a>
+	<a href="{resolve('/directory')}?tab=musicians" class="link text-muted"
+		>&larr; Back to Directory</a
+	>
 
 	<ProfileHeader avatarShape="round" name={member.name} {subtitle} image={member.image} {pills} />
 
@@ -102,7 +101,7 @@
 	</ProfileGrid>
 
 	<footer class="profile-page__footer">
-		<a href="/">Corvallis Music Collective</a>
+		<a href={resolve('/')}>Corvallis Music Collective</a>
 	</footer>
 </div>
 

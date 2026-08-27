@@ -1,12 +1,13 @@
 import { db } from '$lib/server/db';
 import { platformInvite } from '$lib/server/db/schema/platform-invite';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
+import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, gt, desc } from 'drizzle-orm';
 import { SEARCH_LIMIT } from '$lib/config';
 import { BandMemberExistsError, invite } from './band-service';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
 import { DomainError } from '$lib/server/domain-error';
 
@@ -39,9 +40,9 @@ export async function createInvite(
 		// insert, so the admin gets a precise message instead of a generic
 		// constraint failure (JAVASCRIPT-SVELTEKIT-2D).
 		const [membership] = await db
-			.select({ status: bandMember.status })
-			.from(bandMember)
-			.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, existingUser.id)))
+			.select({ status: groupMember.status })
+			.from(groupMember)
+			.where(and(eq(groupMember.groupId, bandId), eq(groupMember.userId, existingUser.id)))
 			.limit(1);
 
 		if (membership) {
@@ -96,9 +97,9 @@ export async function createInvite(
 	Promise.resolve().then(async () => {
 		try {
 			const [bandRow] = await db
-				.select({ name: band.name })
-				.from(band)
-				.where(eq(band.id, bandId))
+				.select({ name: group.name })
+				.from(group)
+				.where(eq(group.id, bandId))
 				.limit(1);
 			const [inviter] = await db
 				.select({ name: user.name })
@@ -151,8 +152,8 @@ export async function resolvePendingInvites(userId: string, email: string): Prom
 	for (const inv of pending) {
 		try {
 			// Create band member row (auto-accepted)
-			await db.insert(bandMember).values({
-				bandId: inv.bandId,
+			await db.insert(groupMember).values({
+				groupId: inv.bandId,
 				userId,
 				role: inv.role,
 				position: inv.position,
@@ -262,11 +263,11 @@ export async function getByToken(token: string): Promise<{
 			role: platformInvite.role,
 			status: platformInvite.status,
 			expiresAt: platformInvite.expiresAt,
-			bandName: band.name,
+			bandName: group.name,
 			inviterName: user.name
 		})
 		.from(platformInvite)
-		.innerJoin(band, eq(band.id, platformInvite.bandId))
+		.innerJoin(group, eq(group.id, platformInvite.bandId))
 		.leftJoin(user, eq(user.id, platformInvite.invitedById))
 		.where(eq(platformInvite.token, token))
 		.limit(1);

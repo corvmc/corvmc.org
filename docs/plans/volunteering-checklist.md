@@ -1,6 +1,6 @@
 # Volunteering module Phase 1 — progress checklist
 
-Design: `docs/specs/volunteering-spec.md`. Plan: `~/.claude/plans/investigate-current-plans-for-cheeky-wave.md` (approved).
+Design: `docs/specs/shipped/volunteering-spec.md`. Plan: `~/.claude/plans/investigate-current-plans-for-cheeky-wave.md` (approved).
 Branch: `claude/volunteer-system-plans-5b2b17` (off `main`).
 
 ## Model recap
@@ -26,7 +26,7 @@ Branch: `claude/volunteer-system-plans-5b2b17` (off `main`).
 
 ## Step 1 — Design spec
 
-- [x] `docs/specs/volunteering-spec.md`
+- [x] `docs/specs/shipped/volunteering-spec.md`
 - [x] `IDEAS.md` — `**Progress:**` line under Volunteer Coordination
 - [x] `docs/README.md` — spec table row
 - [x] this checklist
@@ -51,7 +51,7 @@ Branch: `claude/volunteer-system-plans-5b2b17` (off `main`).
       (`VolunteerRoleInUseError`, mirroring `deleteCategory`)
 - [x] `hour-log-service.ts` — submit/edit/withdraw/approve/reject + queries
 - [x] `volunteer-report-service.ts` — totals, by member, by role, by month
-- [x] `src/lib/server/events/event-bus.ts` — 2 payload types, 3 event keys
+- [x] `src/lib/server/event-bus/event-bus.ts` — 2 payload types, 3 event keys
 - Errors extend `DomainError` — no edit to `errors.ts` needed.
 - No `db.transaction()` (lint rule); every mutation is a single statement.
 - `getHoursByMember` count query must be `count(distinct user_id)`, not `count()`
@@ -105,7 +105,7 @@ Branch: `claude/volunteer-system-plans-5b2b17` (off `main`).
 
 ## Step 8 — Document
 
-- [x] `docs/reports/parity-report.md` — **5** touch points: lines 33, 61, 142, 158,
+- [x] `docs/reports/feature-catalog.md` — **5** touch points: lines 33, 61, 142, 158,
       and 213 + 269 (table count 29 → 31)
 - [x] Help articles under `src/content/help/volunteering/`, indexed in
       `docs/manual/README.md`

@@ -1,41 +1,39 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { IconFlag, IconCaretUpFilled, IconPencil } from '@tabler/icons-svelte';
 	import { formatDateTime } from '$lib/utils/format';
 	import { suggestionCategories, suggestionCategoryLabels } from '$lib/config';
 	import {
-		getSuggestionDetail,
-		getMySuggestionStanding,
+		getMemberSuggestionDetailPage,
 		toggleSuggestionVote,
 		flagSuggestion,
-		getSuggestionEditState,
 		editSuggestion,
 		cancelSuggestionEdit
 	} from '$lib/remote/suggestions.remote';
 
 	let id = $derived(page.params.id!);
-	let s = $derived(await getSuggestionDetail(id));
-	let standing = $derived(await getMySuggestionStanding());
+	const data = $derived(await getMemberSuggestionDetailPage(id));
+	const s = $derived(data.suggestion);
+	const standing = $derived(data.standing);
+	const editState = $derived(data.editState);
 
-	let isMine = $derived(s.authorUserId === standing.viewerUserId);
-	let editState = $derived(await getSuggestionEditState(id));
+	const isMine = $derived(s.authorUserId === standing.viewerUserId);
 	let vote = $derived(toggleSuggestionVote.for(s.id));
 	let flag = $derived(flagSuggestion.for(s.id));
 
 	function refresh() {
-		void getSuggestionDetail(id).refresh();
-		void getSuggestionEditState(id).refresh();
+		void getMemberSuggestionDetailPage(id).refresh();
 	}
 
 	// Only the author ever sees these — everyone else 404s before reaching here.
@@ -107,7 +105,7 @@
 				<SubmitButton
 					label={String(s.voteCount)}
 					disabled={s.visibility !== 'visible' || !!s.mergedIntoId}
-					class="btn-sm h-auto flex-col gap-0 py-1 {s.hasVoted ? 'btn-primary' : 'btn-outline'}"
+					class="h-auto flex-col gap-0 py-1 btn-sm {s.hasVoted ? 'btn-primary' : 'btn-outline'}"
 				>
 					{#snippet icon()}<IconCaretUpFilled size={16} />{/snippet}
 				</SubmitButton>

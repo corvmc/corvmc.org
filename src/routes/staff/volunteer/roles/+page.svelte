@@ -2,15 +2,15 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import {
 		VOLUNTEER_ROLE_DESCRIPTION_MAX,
@@ -154,7 +154,7 @@
 								-->
 								<td class="cell-num whitespace-nowrap">
 									{#if role.unfilled > 0}
-										<span class="badge badge-warning badge-sm">{role.unfilled}</span>
+										<span class="badge badge-sm badge-warning">{role.unfilled}</span>
 									{:else}
 										<span class="opacity-40">—</span>
 									{/if}

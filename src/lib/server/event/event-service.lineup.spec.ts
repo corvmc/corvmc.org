@@ -56,7 +56,7 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 }));
 vi.mock('$lib/server/reservation/conflict-service', () => ({ hasConflict: vi.fn() }));
 const mockEmit = vi.fn();
-vi.mock('$lib/server/events/event-bus', () => ({
+vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: { emit: (...a: unknown[]) => mockEmit(...a) }
 }));
 vi.mock('$lib/server/storage', () => ({ uploadFile: vi.fn(), deleteObject: vi.fn() }));

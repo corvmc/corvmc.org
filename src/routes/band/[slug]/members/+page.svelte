@@ -1,37 +1,35 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import Form, { Field } from '$lib/components/shared/Form';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Modal from '$lib/components/shared/Modal.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import Form, { Field } from '$lib/components/ui/Form';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import YourMembership from './YourMembership.svelte';
 	import EditMemberAction from './EditMemberAction.svelte';
 	import { onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import {
 		searchBandUsers as searchUsers,
-		getBandMembersList,
+		getBandMembersPage,
 		inviteMember,
 		removeMember,
 		revokeInvitation,
 		transferOwner,
-		getBandPlatformInvites as getPlatformInvites,
 		inviteByEmail,
 		revokePlatformInviteRemote
 	} from '$lib/remote/bands.remote';
-	import { getBandLayout } from '$lib/remote/layout.remote';
-	import { page } from '$app/state';
+	import { getBandLayoutContext } from '../layout-context';
 
 	// Above the awaited queries: a declaration after a top-level await is
 	// async-gated, which would compile every `fields.X.as()` into an async
@@ -42,21 +40,24 @@
 	const { fields: inviteFields } = inviteMember;
 	const { fields: transferFields } = transferOwner;
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
 
 	const isAdmin = $derived(layout.userRole === 'admin');
 	const isOwner = $derived(layout.userRole === 'owner');
 	const canManage = $derived(isOwner || isAdmin);
 	const isStaffOnly = $derived(layout.userRole === 'staff');
 
-	let members = $derived(await getBandMembersList(layout.band.id));
-
-	// Was loaded through an `$effect` into `$state`, which meant it sat outside
-	// the layout's boundary and needed a hand-rolled re-fetch. An ordinary query
-	// participates in both. Kept behind the role check because
-	// `getBandPlatformInvites` is admin-guarded and would 403 a plain member into
-	// the error boundary.
-	let platformInvites = $derived(canManage ? await getPlatformInvites() : []);
+	// One query. The invites were loaded through an `$effect` into `$state` once, which sat
+	// outside the layout's boundary and needed a hand-rolled re-fetch; then as a second query
+	// gated on `canManage`, because `getBandPlatformInvites` is admin-guarded and 403s a plain
+	// member into the error boundary. Both are resolved server-side now, where the role is
+	// already known — and one query is what this page can hold without kit 2.64 breaking it.
+	const data = $derived(await getBandMembersPage(layout.band.id));
+	const members = $derived(data.members);
+	const platformInvites = $derived(data.platformInvites);
 
 	const active = $derived(members.active);
 	const pending = $derived(members.pending);
@@ -66,11 +67,13 @@
 	const others = $derived(active.filter((m) => m.userId !== layout.user.id));
 	const pendingPlatform = $derived(platformInvites.filter((i) => i.status === 'pending'));
 
+	// Both repoint at the wrapper: nothing reads the constituents directly any more, so
+	// refreshing them would repaint nothing. See `custom/refresh-the-composed-query`.
 	function refreshMembers() {
-		void getBandMembersList(layout.band.id).refresh();
+		void getBandMembersPage(layout.band.id).refresh();
 	}
 	function refreshInvites() {
-		void getPlatformInvites().refresh();
+		void getBandMembersPage(layout.band.id).refresh();
 	}
 
 	// Invite form state
@@ -253,7 +256,7 @@
 						<CardBody row class="py-3">
 							<div class="min-w-0">
 								<p class="truncate font-medium">{invite.email}</p>
-								<p class="text-subtle truncate">
+								<p class="truncate text-subtle">
 									Invited as {invite.role}{invite.position ? ` · ${invite.position}` : ''} · by {invite.invitedByName}
 								</p>
 							</div>

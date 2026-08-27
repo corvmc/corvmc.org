@@ -1,21 +1,8 @@
 export type ReservationActionKey =
-	| 'confirm'
-	| 'cashReceived'
-	| 'comp'
-	| 'complete'
-	| 'noShow'
-	| 'cancel'
-	| 'refund';
+	'confirm' | 'cashReceived' | 'comp' | 'complete' | 'noShow' | 'cancel' | 'refund';
 
 export type ReservationPaymentState =
-	| 'paid'
-	| 'cash_due'
-	| 'unpaid'
-	| 'credits'
-	| 'comped'
-	| 'cancelled'
-	| 'refunded'
-	| 'no_show';
+	'paid' | 'cash_due' | 'unpaid' | 'credits' | 'comped' | 'cancelled' | 'refunded' | 'no_show';
 
 /** Statuses that end a reservation's lifecycle (no further member actions). */
 export function isTerminalStatus(status: string): boolean {

@@ -7,10 +7,10 @@
 	import { getOrgAddress } from '$lib/remote/settings.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
 
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 
 	// Declared before the awaited query below — a declaration that follows a
 	// top-level await is async-gated.
@@ -50,11 +50,11 @@
 	<meta name="description" content="Get in touch with the Corvallis Music Collective." />
 </svelte:head>
 
-<div class="max-w-4xl mx-auto px-4 py-12">
+<div class="mx-auto max-w-4xl px-4 py-12">
 	<p class="eyebrow mb-2">Get in Touch</p>
-	<h1 class="text-3xl font-bold mb-8">Contact Us</h1>
+	<h1 class="mb-8 text-3xl font-bold">Contact Us</h1>
 
-	<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+	<div class="grid grid-cols-1 gap-8 md:grid-cols-3">
 		<!-- Form -->
 		<div class="md:col-span-2">
 			{#if submitted}
@@ -66,7 +66,7 @@
 					onfailure={() => resetTurnstile?.()}
 					class="flex flex-col gap-4"
 				>
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<FormField field={fields.name} type="text" label="Name" required />
 						<FormField field={fields.email} type="email" label="Email" required />
 					</div>
@@ -116,8 +116,7 @@
 							required
 							placeholder={isEventTip
 								? 'Anything else worth knowing — who else is on the bill, cover charge, all-ages...'
-								: ''}
-						></textarea>
+								: ''}></textarea>
 					</FormField>
 
 					<Turnstile
@@ -134,28 +133,28 @@
 		<!-- Sidebar -->
 		<div class="space-y-6">
 			<div>
-				<h3 class="font-semibold flex items-center gap-2 mb-2">
+				<h3 class="mb-2 flex items-center gap-2 font-semibold">
 					<span class="text-cmc-teal"><IconMapPin size={18} /></span> Visit Us
 				</h3>
 				<p class="text-muted">
 					{address.street}<br />
 					{cityStateZip}
 				</p>
-				<p class="text-xs mt-1 text-fg-3">Office available by appointment only.</p>
+				<p class="mt-1 text-xs text-fg-3">Office available by appointment only.</p>
 			</div>
 
 			<div>
-				<h3 class="font-semibold flex items-center gap-2 mb-2">
+				<h3 class="mb-2 flex items-center gap-2 font-semibold">
 					<span class="text-cmc-teal"><IconMail size={18} /></span> Email
 				</h3>
 				<a href="mailto:info@corvmc.org" class="link text-sm">info@corvmc.org</a>
 			</div>
 
 			<div>
-				<h3 class="font-semibold mb-2">Quick Answers</h3>
+				<h3 class="mb-2 font-semibold">Quick Answers</h3>
 				<div class="space-y-2 text-sm">
-					<details class="collapse collapse-arrow bg-base-200">
-						<summary class="collapse-title font-medium py-2 min-h-0"
+					<details class="collapse-arrow collapse bg-base-200">
+						<summary class="collapse-title min-h-0 py-2 font-medium"
 							>How do I become a member?</summary
 						>
 						<div class="collapse-content text-muted">
@@ -164,8 +163,8 @@
 							> to get started. Free memberships are available.
 						</div>
 					</details>
-					<details class="collapse collapse-arrow bg-base-200">
-						<summary class="collapse-title font-medium py-2 min-h-0"
+					<details class="collapse-arrow collapse bg-base-200">
+						<summary class="collapse-title min-h-0 py-2 font-medium"
 							>Can I use the practice space?</summary
 						>
 						<div class="collapse-content text-muted">
@@ -173,8 +172,8 @@
 							your first session.
 						</div>
 					</details>
-					<details class="collapse collapse-arrow bg-base-200">
-						<summary class="collapse-title font-medium py-2 min-h-0"
+					<details class="collapse-arrow collapse bg-base-200">
+						<summary class="collapse-title min-h-0 py-2 font-medium"
 							>How do I submit music for a show?</summary
 						>
 						<div class="collapse-content text-muted">

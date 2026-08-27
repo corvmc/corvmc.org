@@ -21,7 +21,7 @@
  */
 import type { BuildAliasTable } from 'drizzle-orm/sqlite-core';
 import { user } from '$lib/server/db/schema/authentication';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { event } from '$lib/server/db/schema/event';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { primaryRoleFor } from '$lib/server/authorization';
@@ -110,7 +110,7 @@ export function toMemberRef(row: MemberRefRow | null | undefined): MemberRef {
 // Band
 // ---------------------------------------------------------------------------
 
-type BandTable = typeof band | BuildAliasTable<typeof band, string>;
+type BandTable = typeof group | BuildAliasTable<typeof group, string>;
 
 /**
  * `slug` is not optional dressing: every band route outside the staff panel is
@@ -119,7 +119,7 @@ type BandTable = typeof band | BuildAliasTable<typeof band, string>;
  * No status. A band's `tier` is the only state it has, and `premium` on every
  * premium band marks nothing — the rule the registry states for subtypes.
  */
-export function bandRefColumns(b: BandTable = band) {
+export function bandRefColumns(b: BandTable = group) {
 	return { id: b.id, name: b.name, slug: b.slug, image: b.avatarKey };
 }
 
@@ -197,7 +197,7 @@ export function toBookerRef(row: {
 	// A left join that missed — a deleted band, a purged event — still gets its
 	// own ref rather than silently reporting as a member booking. `id: null`
 	// renders unlinked, so the row stays honest about what it is.
-	if (row.bookerType === 'band') return toBandRef(row.band);
+	if (row.bookerType === 'group') return toBandRef(row.band);
 	if (row.bookerType === 'event') return toEventRef(row.event);
 	return toMemberRef(row.member);
 }

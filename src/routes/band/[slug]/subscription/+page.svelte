@@ -1,13 +1,12 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { toast } from 'svelte-sonner';
 	import { formatDate } from '$lib/utils/format';
 	import {
 		getBandSubscriptionInfo,
@@ -15,13 +14,17 @@
 		cancelPremium,
 		resumePremium
 	} from '$lib/remote/band-subscription.remote';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayoutContext } from '../layout-context';
 	import { env } from '$env/dynamic/public';
 	import { bandSiteUrl, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 	import { page } from '$app/state';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
 	let info = $derived(await getBandSubscriptionInfo(page.params.slug!));
 	const band = $derived(layout.band);
 	const isOwner = $derived(layout.userRole === 'owner');
@@ -34,10 +37,16 @@
 	);
 	const baseDomain = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
 
-	// One form object per <form> element — a single object attached to both the
+	// One form object per <Form> element — a single object attached to both the
 	// monthly and yearly forms throws and takes the whole page down.
 	const upgradeMonthly = upgradeToPremium.for('monthly');
 	const upgradeYearly = upgradeToPremium.for('yearly');
+
+	// Stripe Checkout lives on another origin, so this is a full-page navigation
+	// rather than client-side routing.
+	function goToCheckout(result?: { redirectUrl: string }) {
+		if (result?.redirectUrl) window.location.href = result.redirectUrl;
+	}
 </script>
 
 <PageHeader title="Subscription" subtitle={band.name} />
@@ -50,7 +59,7 @@
 					<CardTitle level={2}>Premium Band Page</CardTitle>
 					<Badge variant="success">Active</Badge>
 				</div>
-				<dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+				<dl class="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
 					<div>
 						<dt class="font-medium opacity-60">Billing</dt>
 						<dd class="capitalize">{info.subscription.billingInterval}</dd>
@@ -62,8 +71,9 @@
 					<div class="sm:col-span-2">
 						<dt class="font-medium opacity-60">Your site</dt>
 						<dd>
-							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- absolute URL on the band's own subdomain, not a route in this app -->
-							<a href={siteUrl} target="_blank" rel="noopener" class="link">
+							<!-- The band's own subdomain, so this leaves the app: rel="external" is both the
+							     correct annotation and what keeps it out of the router. -->
+							<a href={siteUrl} target="_blank" rel="external noopener" class="link">
 								{siteUrl.replace(/^https?:\/\//, '')}
 							</a>
 						</dd>
@@ -77,38 +87,24 @@
 						)}.
 					</Alert>
 					{#if isOwner}
-						<form
-							{...resumePremium.enhance(async (form) => {
-								try {
-									if (await form.submit()) {
-										toast.success('Subscription resumed');
-										invalidateAll();
-									}
-								} catch {
-									toast.error('Something went wrong');
-								}
-							})}
+						<Form
+							remote={resumePremium}
+							successToast="Subscription resumed"
+							onsuccess={() => invalidateAll()}
 						>
 							<input {...resumePremium.fields.slug.as('hidden', band.slug)} />
 							<Button variant="primary" size="sm" class="mt-2">Resume Subscription</Button>
-						</form>
+						</Form>
 					{/if}
 				{:else if isOwner}
-					<form
-						{...cancelPremium.enhance(async (form) => {
-							try {
-								if (await form.submit()) {
-									toast.success('Subscription will cancel at end of billing period');
-									invalidateAll();
-								}
-							} catch {
-								toast.error('Something went wrong');
-							}
-						})}
+					<Form
+						remote={cancelPremium}
+						successToast="Subscription will cancel at end of billing period"
+						onsuccess={() => invalidateAll()}
 					>
 						<input {...cancelPremium.fields.slug.as('hidden', band.slug)} />
 						<Button variant="ghost" size="sm" class="mt-4 text-error">Cancel Subscription</Button>
-					</form>
+					</Form>
 				{/if}
 			</CardBody>
 		</Card>
@@ -128,36 +124,24 @@
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<!-- Monthly -->
-				<div class="card bg-base-100 shadow-sm border">
+				<div class="card border bg-base-100 shadow-sm">
 					<CardBody center>
 						<h3 class="text-lg font-bold">Monthly</h3>
 						<p class="text-3xl font-bold">
 							$15<span class="text-muted font-normal">/mo</span>
 						</p>
 						{#if isOwner}
-							<form
-								{...upgradeMonthly.enhance(async (form) => {
-									try {
-										const result = await form.submit();
-										if (result && upgradeMonthly.result?.redirectUrl) {
-											// External Stripe Checkout URL — full-page navigation, not client-side routing.
-											window.location.href = upgradeMonthly.result.redirectUrl;
-										}
-									} catch {
-										toast.error('Something went wrong');
-									}
-								})}
-							>
+							<Form remote={upgradeMonthly} onsuccess={goToCheckout}>
 								<input {...upgradeMonthly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeMonthly.fields.billingInterval.as('hidden', 'monthly')} />
 								<Button variant="primary" class="mt-4">Subscribe Monthly</Button>
-							</form>
+							</Form>
 						{/if}
 					</CardBody>
 				</div>
 
 				<!-- Yearly -->
-				<div class="card bg-base-100 shadow-sm border border-primary">
+				<div class="card border border-primary bg-base-100 shadow-sm">
 					<CardBody center>
 						<Badge variant="primary">2 months free</Badge>
 						<h3 class="text-lg font-bold">Yearly</h3>
@@ -165,23 +149,11 @@
 							$120<span class="text-muted font-normal">/yr</span>
 						</p>
 						{#if isOwner}
-							<form
-								{...upgradeYearly.enhance(async (form) => {
-									try {
-										const result = await form.submit();
-										if (result && upgradeYearly.result?.redirectUrl) {
-											// External Stripe Checkout URL — full-page navigation, not client-side routing.
-											window.location.href = upgradeYearly.result.redirectUrl;
-										}
-									} catch {
-										toast.error('Something went wrong');
-									}
-								})}
-							>
+							<Form remote={upgradeYearly} onsuccess={goToCheckout}>
 								<input {...upgradeYearly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeYearly.fields.billingInterval.as('hidden', 'yearly')} />
 								<Button variant="primary" class="mt-4">Subscribe Yearly</Button>
-							</form>
+							</Form>
 						{/if}
 					</CardBody>
 				</div>

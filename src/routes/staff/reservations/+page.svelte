@@ -1,24 +1,21 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
+	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import BookerTypeIcon from '$lib/components/reservations/BookerTypeIcon.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
-	import {
-		ConfirmReservationAction,
-		CompleteReservationAction
-	} from '$lib/components/shared/actions';
+	import { ConfirmReservationAction, CompleteReservationAction } from '$lib/components/actions';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateReservation from './CreateModal.svelte';
-	import { EntityChip } from '$lib/components/shared/entity';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import { EntityChip } from '$lib/components/ui/entity';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import {
 		IconCheck,
 		IconCircleCheck,
@@ -28,20 +25,17 @@
 		IconArrowBackUp,
 		IconUserX,
 		IconCircleX,
-		IconRepeat
+		IconRepeat,
+		IconUserPlus,
+		IconNote
 	} from '@tabler/icons-svelte';
 	import { formatDate, formatTimeRange, formatPaymentBreakdown } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import {
-		getStaffReservations,
-		getReservationCounts,
-		getUnresolvedReservations,
-		getHourlyRate
-	} from '$lib/remote/reservations.remote';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import { getStaffReservationsPage } from '$lib/remote/reservations.remote';
 
-	type Reservation = Awaited<ReturnType<typeof getStaffReservations>>['rows'][number];
+	type Reservation = Awaited<ReturnType<typeof getStaffReservationsPage>>['list']['rows'][number];
 
 	let tab = $state<'upcoming' | 'all'>('upcoming');
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
@@ -49,7 +43,7 @@
 	let searchText = $state('');
 	let dateFrom = $state('');
 	let dateTo = $state('');
-	let bookerType = $state<'user' | 'band' | 'event' | ''>('');
+	let bookerType = $state<'user' | 'group' | 'event' | ''>('');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
@@ -62,10 +56,16 @@
 		page
 	});
 
-	let result = $derived(getStaffReservations(filters));
-	let counts = $derived(getReservationCounts());
-	let unresolved = $derived(getUnresolvedReservations());
-	let hourlyRate = $derived(getHourlyRate());
+	// One query, four `.then()` views off it. Four separate promises here were recreated on every
+	// filter keystroke, and a superseded one that rejects has no consumer left — that is where
+	// JAVASCRIPT-SVELTEKIT-3's unhandled rejections came from. Not awaited, because awaiting would
+	// suspend the page into the layout boundary's pending snippet on every keystroke.
+	const pageData = $derived(getStaffReservationsPage(filters));
+
+	const result = $derived(pageData.then((d) => d.list));
+	const counts = $derived(pageData.then((d) => d.counts));
+	const unresolved = $derived(pageData.then((d) => d.unresolved));
+	const hourlyRate = $derived(pageData.then((d) => d.hourlyRate));
 
 	let resolveOpen = $state(false);
 
@@ -209,7 +209,7 @@
 		>
 			<option value="">Anyone</option>
 			<option value="user">Members</option>
-			<option value="band">Bands</option>
+			<option value="group">Bands</option>
 			<option value="event">Events</option>
 		</Select>
 	</FilterBar>
@@ -220,8 +220,8 @@
 			<Table zebra={false}>
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Reservation</th>
 					<th>Booker</th>
+					<th>Time</th>
 					<th class="col-support cell-num">Payment</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -246,11 +246,15 @@
 							<StatusBadge status={r.status} class="size-6" />
 						</td>
 
+						<!-- Member, band or event — the chip's glyph is what says which. -->
+						<td class="min-w-0"><EntityChip ref={r.booker} /></td>
+
 						<!--
-							Primary cell: the time is the ordering key, and the booker — a
-							band, an event, a lesson — qualifies it. A member booking for
-							themselves is the ordinary case and leaves this cell one line.
-							The day is not repeated — the group header above carries it.
+							The time, and the flags that decide how the desk staffs the hour.
+							`cell-primary` stays here rather than on the booker: it is what
+							absorbs the table's slack, and moving it would let a long band
+							name push the actions column off the edge. The day is not
+							repeated — the group header above carries it.
 						-->
 						<td class="cell-primary">
 							<div class="flex items-center gap-1">
@@ -272,11 +276,36 @@
 										<BookerTypeIcon type={r.bookerType} size={14} />
 									</span>
 								{/if}
+								{#if r.isFirstReservation}
+									<!--
+										The collective likes a volunteer on the desk for a member's
+										first visit, which is a fact about the booking nothing else
+										in the row carries.
+									-->
+									<span
+										class="tooltip"
+										data-tip="First reservation"
+										role="img"
+										aria-label="First reservation"
+									>
+										<IconUserPlus size={14} class="text-success" />
+									</span>
+								{/if}
+								{#if r.notes}
+									<!-- `data-tip` draws through ::before and is invisible to a
+									     screen reader, so the name goes on the span — the same
+									     thing StatusBadge does. -->
+									<span
+										class="tooltip"
+										data-tip="Member left a note"
+										role="img"
+										aria-label="Member left a note"
+									>
+										<IconNote size={14} class="text-info" />
+									</span>
+								{/if}
 							</div>
 						</td>
-
-						<!-- Member, band or event — the chip's glyph is what says which. -->
-						<td class="min-w-0"><EntityChip ref={r.booker} /></td>
 
 						<td class="col-support cell-num">
 							{#await hourlyRate then rate}

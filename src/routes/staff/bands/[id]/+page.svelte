@@ -1,21 +1,16 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
-	import {
-		getStaffBand as getBand,
-		getStaffBandMembers as getBandMembers,
-		getBandReservations,
-		updateMemberRole,
-		getStaffPlatformInvites as getPlatformInvites
-	} from '$lib/remote/bands.remote';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Table from '$lib/components/shared/Table.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import { getStaffBandPage, updateMemberRole } from '$lib/remote/bands.remote';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Table from '$lib/components/ui/Table.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, formatTimeRange } from '$lib/utils/format';
@@ -27,14 +22,15 @@
 		TransferOwnershipAction,
 		RemoveBandMemberAction,
 		RevokePlatformInviteAction
-	} from '$lib/components/shared/actions';
+	} from '$lib/components/actions';
 	import StaffBandForm from './StaffBandForm.svelte';
 
 	let id = $derived(page.params.id!);
-	let band = $derived(await getBand(id));
-	let members = $derived(await getBandMembers(id));
-	let reservations = $derived(await getBandReservations(id));
-	let platformInvites = $derived(await getPlatformInvites(id));
+	const data = $derived(await getStaffBandPage(id));
+	const band = $derived(data.band);
+	const members = $derived(data.members);
+	const reservations = $derived(data.reservations);
+	const platformInvites = $derived(data.platformInvites);
 </script>
 
 <!-- The band info form lives in a fully synchronous component: a top-level
@@ -46,7 +42,7 @@
 <PageContent width="3xl">
 	<InfoCard title="Members">
 		{#snippet header(title)}
-			<header class="flex justify-between items-center">
+			<header class="flex items-center justify-between">
 				<span class="card-title">{title}</span>
 				<div class="flex gap-2">
 					<InviteByEmailAction bandId={id} />
@@ -76,11 +72,10 @@
 						<td class="w-px">
 							{#if m.role !== 'owner' && m.status === 'active'}
 								{@const rf = updateMemberRole.for(m.id)}
-								<form
-									{...rf.enhance(async ({ submit }) => {
-										if (await submit()) toast.success('Role updated');
-										else toast.error('Failed to update role');
-									})}
+								<Form
+									remote={rf}
+									successToast="Role updated"
+									onfailure={() => toast.error('Failed to update role')}
 								>
 									<input {...rf.fields.memberId.as('hidden', m.id)} />
 									<Select
@@ -94,7 +89,7 @@
 										<option value="member">Member</option>
 										<option value="admin">Admin</option>
 									</Select>
-								</form>
+								</Form>
 							{:else}
 								<Badge size="sm" variant="outline">{m.role}</Badge>
 							{/if}

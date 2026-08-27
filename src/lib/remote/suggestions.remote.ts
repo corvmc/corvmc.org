@@ -75,7 +75,11 @@ export const getSuggestionBoard = query(boardFiltersSchema, async (filters) => {
 	return {
 		rows: rows.map((s) => ({
 			...s,
-			ref: toGenericRef('suggestion', { id: s.id, title: s.title })
+			ref: toGenericRef('suggestion', { id: s.id, title: s.title }),
+			// Decided here rather than on the page. The page used to get the viewer's id off
+			// `getMySuggestionStanding`, which meant holding a second query in flight for one
+			// field; this function already knows who is asking.
+			isMine: s.authorUserId === me.id
 		})),
 		pagination
 	};
@@ -235,8 +239,7 @@ export const editSuggestion = form(
 				category: data.category,
 				userId: me.id
 			});
-			void getSuggestionDetail(data.suggestionId).refresh();
-			void getSuggestionEditState(data.suggestionId).refresh();
+			void getMemberSuggestionDetailPage(data.suggestionId).refresh();
 			return result;
 		} catch (err) {
 			mapDomainError(err);
@@ -253,7 +256,7 @@ export const cancelSuggestionEdit = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getSuggestionEditState(data.suggestionId).refresh();
+		void getMemberSuggestionDetailPage(data.suggestionId).refresh();
 		return { success: true };
 	}
 );
@@ -317,7 +320,7 @@ export const respondToSuggestion = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getStaffSuggestionDetail(data.suggestionId).refresh();
+		void getStaffSuggestionDetailPage(data.suggestionId).refresh();
 		return { success: true };
 	}
 );
@@ -339,7 +342,7 @@ export const reviewSuggestion = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getStaffSuggestionDetail(data.suggestionId).refresh();
+		void getStaffSuggestionDetailPage(data.suggestionId).refresh();
 		return { success: true };
 	}
 );
@@ -361,7 +364,7 @@ export const setSuggestionVisibility = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getStaffSuggestionDetail(data.suggestionId).refresh();
+		void getStaffSuggestionDetailPage(data.suggestionId).refresh();
 		return { success: true };
 	}
 );
@@ -375,8 +378,8 @@ export const mergeSuggestion = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getStaffSuggestionDetail(data.sourceId).refresh();
-		void getStaffSuggestionDetail(data.targetId).refresh();
+		void getStaffSuggestionDetailPage(data.sourceId).refresh();
+		void getStaffSuggestionDetailPage(data.targetId).refresh();
 		return { targetId: data.targetId };
 	}
 );
@@ -399,9 +402,69 @@ export const reviewSuggestionEdit = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getStaffSuggestionDetail(data.suggestionId).refresh();
-		void getSuggestionPendingEdit(data.suggestionId).refresh();
-		void getPendingSuggestionEdits().refresh();
+		void getStaffSuggestionDetailPage(data.suggestionId).refresh();
+		void getStaffSuggestionsQueues({}).refresh();
 		return { success: true };
 	}
 );
+
+/**
+ * The member suggestion detail page's one load-bearing query.
+ *
+ * The suggestion, the viewer's standing (which decides whether an edit goes straight through or to
+ * staff) and the edit state are all first paint. `getMySuggestionStanding` has no refresh site of
+ * its own, so folding it in costs nothing.
+ */
+export const getMemberSuggestionDetailPage = query(z.string(), async (id) => {
+	const [suggestion, standing, editState] = await Promise.all([
+		getSuggestionDetail(id),
+		getMySuggestionStanding(),
+		getSuggestionEditState(id)
+	]);
+	return { suggestion, standing, editState };
+});
+
+/**
+ * The staff suggestion detail page's one load-bearing query.
+ *
+ * The merge candidates are deliberately *not* here — they back a `<select>` in a modal and load in
+ * `MergeCandidateOptions`, which is also what retires this page's JAVASCRIPT-SVELTEKIT-25
+ * workaround.
+ */
+export const getStaffSuggestionDetailPage = query(z.string(), async (id) => {
+	const [suggestion, pendingEdit] = await Promise.all([
+		getStaffSuggestionDetail(id),
+		getSuggestionPendingEdit(id)
+	]);
+	return { suggestion, pendingEdit };
+});
+
+/**
+ * The staff suggestions queue page's one load-bearing query.
+ *
+ * The page ran two `getSuggestionsQueue` calls side by side — the review tab shows
+ * `pending_review` and `under_review` together, because they are two reasons for the same
+ * member-visible fact — plus the pending-edit list. Two query promises created in one component
+ * before any await is the fan-out that stops a page rendering past kit 2.64.
+ *
+ * One request now, and the page derives three `.then()` views off the single promise rather than
+ * awaiting it. That is deliberate: awaiting in the script would suspend the page into the staff
+ * layout's boundary, whose `pending` snippet blanks it on every filter keystroke. `DataList`
+ * exists to avoid exactly that.
+ */
+export const getStaffSuggestionsQueues = query(staffFiltersSchema, async (filters) => {
+	await requireStaff();
+
+	const primaryVisibility =
+		filters.visibility === 'visible' || filters.visibility === 'hidden'
+			? filters.visibility
+			: ('pending_review' as const);
+
+	const [primary, underReview, pendingEdits] = await Promise.all([
+		getSuggestionsQueue({ ...filters, visibility: primaryVisibility }),
+		getSuggestionsQueue({ ...filters, visibility: 'under_review' }),
+		getPendingSuggestionEdits()
+	]);
+
+	return { primary, underReview, pendingEdits };
+});

@@ -41,7 +41,6 @@ function req(headers: Record<string, string>) {
 			headers: { 'content-type': 'application/json', ...headers },
 			body: JSON.stringify(BODY)
 		})
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} as any;
 }
 

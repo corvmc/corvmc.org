@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import {
 		setCustomDomain,
 		refreshCustomDomain,
 		removeCustomDomain
 	} from '$lib/remote/band-custom-domain.remote';
 	import type { getCustomDomain } from '$lib/remote/band-custom-domain.remote';
-	import type { CustomDomainStatus } from '$lib/server/db/schema/band';
+	import type { CustomDomainStatus } from '$lib/server/db/schema/group';
 	import { bandSiteUrl } from '$lib/utils/band-site-url';
 	import { env } from '$env/dynamic/public';
 
@@ -77,7 +77,7 @@
 			{/if}
 
 			{#if domain.verification && domain.status !== 'active'}
-				<div class="overflow-x-auto mt-3">
+				<div class="mt-3 overflow-x-auto">
 					<table class="table table-sm">
 						<thead>
 							<tr><th>Type</th><th>Name</th><th>Value</th></tr>
@@ -107,7 +107,7 @@
 				</div>
 			{/if}
 
-			<div class="flex flex-wrap justify-end gap-2 mt-4">
+			<div class="mt-4 flex flex-wrap justify-end gap-2">
 				{#if domain.status !== 'active'}
 					<Form
 						remote={refreshCustomDomain}

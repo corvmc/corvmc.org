@@ -1,25 +1,24 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
+	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Modal from '$lib/components/shared/Modal.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	import {
 		submitLoanRequest as submitRequest,
-		getMemberEquipment,
-		getMemberEquipmentMeta
+		getMemberEquipmentPage
 	} from '$lib/remote/equipment.remote';
 
 	const { fields } = submitRequest;
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import { Field, Select } from '$lib/components/shared/Form';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import { Field, Select } from '$lib/components/ui/Form';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { IconCircleCheck, IconAlertCircle, IconAlertTriangle } from '@tabler/icons-svelte';
 	import { estimateLoanCost } from '$lib/config';
@@ -35,8 +34,11 @@
 		categoryId: categoryId || undefined
 	});
 
-	let equipmentResult = $derived(getMemberEquipment(filters));
-	let meta = $derived(await getMemberEquipmentMeta());
+	// One query for the list and the page's own facts (credit balance, sustaining status, the
+	// category filter). `equipmentResult` stays a promise for the {#await} below.
+	const pageData = $derived(await getMemberEquipmentPage(filters));
+	const equipmentResult = $derived(pageData.equipment);
+	const meta = $derived(pageData.meta);
 
 	let showRequestModal = $state(false);
 	let selectedEquipmentId = $state<string | undefined>(undefined);
@@ -98,7 +100,7 @@
 	</div>
 </PageHeader>
 <PageContent>
-	<div class="flex flex-wrap items-end gap-2 mb-4">
+	<div class="mb-4 flex flex-wrap items-end gap-2">
 		<SearchInput
 			bind:value={search}
 			placeholder="Search equipment..."
@@ -125,7 +127,7 @@
 
 	{#await equipmentResult}
 		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
+			<span class="loading loading-lg loading-spinner"></span>
 		</div>
 	{:then equipment}
 		{#if equipment.length === 0}
@@ -138,16 +140,16 @@
 			}, {})}
 			{#each Object.entries(groups) as [groupName, items] (groupName)}
 				<div class="mb-6">
-					<h3 class="text-muted font-semibold mb-2">{groupName}</h3>
+					<h3 class="mb-2 text-muted font-semibold">{groupName}</h3>
 					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 						{#each items as eq (eq.id)}
-							<div class="card bg-base-100 border shadow-sm">
+							<div class="card border bg-base-100 shadow-sm">
 								<CardBody padding="sm">
 									<CardTitle size="sm">{eq.name}</CardTitle>
 									{#if eq.description}
-										<p class="text-subtle line-clamp-2">{eq.description}</p>
+										<p class="line-clamp-2 text-subtle">{eq.description}</p>
 									{/if}
-									<div class="flex flex-wrap items-center gap-1 mt-1">
+									<div class="mt-1 flex flex-wrap items-center gap-1">
 										<span class="tooltip" data-tip={eq.condition}>
 											{#if eq.condition === 'good'}
 												<IconCircleCheck size={14} class="text-success" />
@@ -162,7 +164,7 @@
 											{eq.availableQuantity} available
 										</span>
 									</div>
-									<div class="card-actions mt-2">
+									<div class="mt-2 card-actions">
 										<Button
 											variant="default"
 											size="xs"
@@ -182,7 +184,7 @@
 	{/await}
 
 	<div class="border-t pt-4">
-		<p class="text-muted mb-2">Can't find what you need?</p>
+		<p class="mb-2 text-muted">Can't find what you need?</p>
 		<Button variant="default" size="sm" outline onclick={openFreeFormRequest}
 			>Describe Your Request</Button
 		>

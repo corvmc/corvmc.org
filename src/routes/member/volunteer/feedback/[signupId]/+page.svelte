@@ -12,12 +12,12 @@
 	import { resolve } from '$app/paths';
 	import { RatingGroup } from 'bits-ui';
 	import { IconStar, IconStarFilled } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { formatDateShort } from '$lib/utils/format';
 	import { getShiftFeedbackContext, submitShiftFeedback } from '$lib/remote/volunteer.remote';
 

@@ -1,17 +1,13 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import AudiencePicker from '../AudiencePicker.svelte';
+	import CampaignPreview from '../CampaignPreview.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import {
-		getAudienceOptions,
-		getPreview,
-		createDraft,
-		createAndSend,
-		createAndSchedule
-	} from '$lib/remote/marketing.remote';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import { createDraft, createAndSend, createAndSchedule } from '$lib/remote/marketing.remote';
 
 	let subject = $state('');
 	let markdownBody = $state('');
@@ -19,22 +15,8 @@
 	let scheduledFor = $state('');
 	let submitting = $state(false);
 
-	let audiences = $derived(await getAudienceOptions());
-	let previewHtml = $derived(await getPreview(markdownBody));
-
-	function toggleAudience(id: string) {
-		if (selectedAudienceIds.includes(id)) {
-			selectedAudienceIds = selectedAudienceIds.filter((a) => a !== id);
-		} else {
-			selectedAudienceIds = [...selectedAudienceIds, id];
-		}
-	}
-
-	let totalSubscribers = $derived(
-		audiences
-			.filter((a) => selectedAudienceIds.includes(a.id))
-			.reduce((sum, a) => sum + a.subscriberCount, 0)
-	);
+	// Written back by AudiencePicker, which owns the audience query.
+	let totalSubscribers = $state(0);
 
 	async function handleSaveDraft() {
 		if (!isValid()) return;
@@ -105,7 +87,7 @@
 
 <PageHeader title="New Campaign" subtitle="Marketing" backHref="/staff/marketing/campaigns" />
 <PageContent>
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+	<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 		<!-- Editor pane -->
 		<div class="space-y-4">
 			<div>
@@ -121,34 +103,7 @@
 
 			<div>
 				<p class="label text-sm font-medium">Audiences</p>
-				<div class="flex flex-wrap gap-2">
-					{#each audiences as a (a.id)}
-						<label
-							class="label cursor-pointer gap-2 border rounded-lg px-3 py-1.5 {selectedAudienceIds.includes(
-								a.id
-							)
-								? 'border-primary bg-primary/10'
-								: 'border-base-300'}"
-						>
-							<input
-								type="checkbox"
-								class="checkbox checkbox-sm checkbox-primary"
-								checked={selectedAudienceIds.includes(a.id)}
-								onchange={() => toggleAudience(a.id)}
-							/>
-							<span class="text-sm">{a.name}</span>
-							{#if a.systemKey}
-								<span class="badge badge-info badge-xs">Built-in</span>
-							{/if}
-							<span class="text-subtle">({a.subscriberCount})</span>
-						</label>
-					{/each}
-				</div>
-				{#if selectedAudienceIds.length > 0}
-					<p class="text-subtle mt-1">
-						~{totalSubscribers} recipients (before deduplication)
-					</p>
-				{/if}
+				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} />
 			</div>
 
 			<div>
@@ -158,9 +113,8 @@
 					bind:value={markdownBody}
 					placeholder="Write your email in markdown..."
 					class="textarea w-full font-mono text-sm"
-					rows="20"
-				></textarea>
-				<p class="text-subtle mt-1">
+					rows="20"></textarea>
+				<p class="mt-1 text-subtle">
 					Available variables: {'{{subscriber_name}}'}, {'{{unsubscribe_url}}'}
 				</p>
 			</div>
@@ -220,16 +174,7 @@
 		<!-- Preview pane -->
 		<div>
 			<p class="label text-sm font-medium">Preview</p>
-			<div class="border rounded-lg bg-white overflow-hidden" style="min-height: 400px;">
-				{#if previewHtml}
-					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML preview) -->
-					{@html previewHtml}
-				{:else}
-					<div class="flex items-center justify-center h-full p-12 text-sm opacity-40">
-						Start typing to see a preview...
-					</div>
-				{/if}
-			</div>
+			<CampaignPreview markdown={markdownBody} />
 		</div>
 	</div>
 </PageContent>

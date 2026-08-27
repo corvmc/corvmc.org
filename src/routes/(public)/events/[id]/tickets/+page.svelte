@@ -1,23 +1,23 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { Field, Select } from '$lib/components/shared/Form';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { Field, Select } from '$lib/components/ui/Form';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
 	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { IconHeartHandshake } from '@tabler/icons-svelte';
 	import { purchaseTickets, claimFreeTicket, getPublicTicketPage } from '$lib/remote/events.remote';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 
 	const purchaseFields = purchaseTickets.fields;
 	const freeTicketFields = claimFreeTicket.fields;
@@ -52,7 +52,7 @@
 	}
 </script>
 
-<div class="max-w-lg mx-auto space-y-6">
+<div class="mx-auto max-w-lg space-y-6">
 	<PageHeader title={isFreeEvent ? 'Get free ticket' : 'Get Tickets'} backHref="/events" />
 
 	<Card>
@@ -82,9 +82,9 @@
 				</div>
 			{/if}
 			{#if data.remaining !== null}
-				<p class="text-sm mt-1">
+				<p class="mt-1 text-sm">
 					{#if soldOut}
-						<span class="text-error font-medium">{isFreeEvent ? 'Full' : 'Sold out'}</span>
+						<span class="font-medium text-error">{isFreeEvent ? 'Full' : 'Sold out'}</span>
 					{:else}
 						{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining
 					{/if}
@@ -209,7 +209,7 @@
 							<span>{formatCents(total)}</span>
 						</div>
 						{#if data.isSustainingMember}
-							<p class="text-sm text-success mt-1">Sustaining member discount applied</p>
+							<p class="mt-1 text-sm text-success">Sustaining member discount applied</p>
 						{/if}
 					</div>
 

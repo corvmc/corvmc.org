@@ -35,7 +35,7 @@ one is still invisible. See `docs/reports/staff-user-management-audit.md`.
   the log is for accountability and reconstruction, not for regulatory
   non-repudiation.
 - **Rides the existing event bus where an event already exists**, and is called
-  directly where one does not. `src/lib/server/events/event-bus.ts` already
+  directly where one does not. `src/lib/server/event-bus/event-bus.ts` already
   carries `ReservationCancelledEvent` and friends with a `cancelledBy` field; a
   listener in `register-listeners.ts` can turn those into audit rows for free.
   Role and credit changes have no events today and get direct calls in the

@@ -37,7 +37,7 @@ vi.mock('@sveltejs/kit/hooks', () => ({
 }));
 
 const mockRegisterListeners = vi.fn();
-vi.mock('$lib/server/events/register-listeners', () => ({
+vi.mock('$lib/server/event-bus/register-listeners', () => ({
 	registerListeners: (...args: unknown[]) => mockRegisterListeners(...args)
 }));
 

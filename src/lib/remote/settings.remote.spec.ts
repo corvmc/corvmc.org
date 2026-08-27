@@ -172,10 +172,18 @@ describe('settings.remote staff guards', () => {
 		});
 	});
 
-	it('getSocialLinks and getOrgAddress remain public (used by the site footer)', async () => {
+	it('the footer and contact queries remain public (rendered for logged-out visitors)', async () => {
 		await settings.getSocialLinks();
 		await settings.getOrgAddress();
+		await settings.getFooterInfo();
 		expect(requireStaff).not.toHaveBeenCalled();
+	});
+
+	it('getFooterInfo reads the org config once and shapes both halves', async () => {
+		expect(await settings.getFooterInfo()).toEqual({
+			social: await settings.getSocialLinks(),
+			address: await settings.getOrgAddress()
+		});
 	});
 
 	it('no arbitrary-key config reader is exported (it could read integration secrets)', () => {

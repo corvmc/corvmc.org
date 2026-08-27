@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Toaster } from 'svelte-sonner';
-	import SiteHeader from '$lib/components/public/SiteHeader.svelte';
-	import SiteFooter from '$lib/components/public/SiteFooter.svelte';
-	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
+	import SiteHeader from '$lib/components/public/layout/SiteHeader.svelte';
+	import SiteFooter from '$lib/components/public/layout/SiteFooter.svelte';
+	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
 	import { getMe } from '$lib/remote/layout.remote';
 
 	let { children } = $props();
@@ -30,5 +30,13 @@
 			{@render children()}
 		</ErrorToastBoundary>
 	</main>
-	<SiteFooter />
+	<!--
+		The footer needs its own boundary. It is a sibling of <main>, not a child, so anything
+		it throws sails past the boundary above it and out to +error.svelte, replacing the whole
+		route with an error page over a footer that failed to load its address
+		(JAVASCRIPT-SVELTEKIT-2H). `showPending={false}` for the same SSR reason as above.
+	-->
+	<ErrorToastBoundary showPending={false}>
+		<SiteFooter />
+	</ErrorToastBoundary>
 </div>

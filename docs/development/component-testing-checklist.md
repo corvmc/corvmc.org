@@ -43,6 +43,8 @@ See `docs/development/component-style-audit.md` for the visual audit run over th
 
 - [x] AccountDropdown
 - [x] EntityViewer (covered through the identity/chip specs, which mount it as their harness)
+- [x] Nav/NavGroup (collapse, persistence, and the open-on-navigate rule)
+- [x] Nav/NavItem (the `active` override vs. the built-in exact match)
 - [ ] NotificationBell
 - [ ] TabBar
 - [ ] actions/CancelReservationAction (use `fakeForm`)

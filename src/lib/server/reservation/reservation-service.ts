@@ -14,14 +14,17 @@ import {
 	isNull,
 	isNotNull,
 	inArray,
-	notInArray
+	notInArray,
+	sql,
+	type AnyColumn
 } from 'drizzle-orm';
 import { validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import { reverseReservationCredits } from './reservation-credit-service';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { user } from '$lib/server/db/schema/authentication';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
+import { group } from '$lib/server/db/schema/group';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 import type { BookerType, ReservationStatus } from '$lib/server/db/schema/reservation';
@@ -541,7 +544,7 @@ export interface MemberReservations {
  * - **Band bookings count.** A member whose band books the room has no
  *   `createdByUserId` row of their own, and "can you add me to my band's
  *   booking?" is one of the questions this page exists to answer. Resolved
- *   through active `bandMember` rows, the same way `getMemberDashboard` does.
+ *   through active `groupMember` rows, the same way `getMemberDashboard` does.
  * - **Cancellations are kept.** Filtering them out would defeat the card —
  *   "why was my booking cancelled?" is unanswerable from a list that hides it.
  *
@@ -557,10 +560,10 @@ export async function listForMember(
 	const now = new Date();
 
 	const bands = await db
-		.select({ bandId: bandMember.bandId, bandName: band.name })
-		.from(bandMember)
-		.innerJoin(band, eq(band.id, bandMember.bandId))
-		.where(and(eq(bandMember.userId, userId), eq(bandMember.status, 'active')));
+		.select({ bandId: groupMember.groupId, bandName: group.name })
+		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
+		.where(and(eq(groupMember.userId, userId), eq(groupMember.status, 'active')));
 
 	const bandNameById = new Map(bands.map((b) => [b.bandId, b.bandName]));
 	const bandIds = bands.map((b) => b.bandId);
@@ -569,7 +572,7 @@ export async function listForMember(
 	const mine = eq(reservation.createdByUserId, userId);
 	const theirs =
 		bandIds.length > 0
-			? or(mine, and(eq(reservation.bookerType, 'band'), inArray(reservation.bookerId, bandIds)))!
+			? or(mine, and(eq(reservation.bookerType, 'group'), inArray(reservation.bookerId, bandIds)))!
 			: mine;
 	const scope = and(theirs, ne(reservation.bookerType, 'event'))!;
 
@@ -632,7 +635,7 @@ export async function listForMember(
 		status: r.status,
 		bookerType: r.bookerType,
 		bookerId: r.bookerId,
-		bandName: r.bookerType === 'band' ? (bandNameById.get(r.bookerId) ?? null) : null,
+		bandName: r.bookerType === 'group' ? (bandNameById.get(r.bookerId) ?? null) : null,
 		cashDueCents: r.cashDueCents,
 		paidAt: r.paidAt,
 		cancellationReason: r.cancellationReason,
@@ -649,4 +652,55 @@ export async function listForMember(
 			cancelledUpcoming: cancelledUpcomingCount[0]?.count ?? 0
 		}
 	};
+}
+
+// ---------------------------------------------------------------------------
+// isFirstReservationSql — the booking that wants a volunteer on the desk
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether this row is the member's first time renting the space, as a
+ * correlated subquery: `select({ isFirstReservation: isFirstReservationSql() })`.
+ * Mirrors `isSustainingMemberSql`.
+ *
+ * Three rules, each of them a decision rather than an implementation detail:
+ *
+ * - **Member bookings only.** A band's rehearsal hold or a staff-created event
+ *   hold is not somebody's first visit, so the flag is gated on `booker_type`.
+ * - **Prior history is every non-cancelled booking that member *created***,
+ *   whatever its booker type — someone who has been in before as their band's
+ *   booker is not a first-timer. A cancelled booking is not a visit, so it
+ *   never counts as history, and a cancelled row never carries the flag itself.
+ * - **`starts_at` ties break by `id`**, so exactly one row of a same-instant
+ *   pair is the first.
+ *
+ * The outer references are qualified by hand for the reason spelled out on
+ * `isSustainingMemberSql`: drizzle renders an interpolated Column unqualified
+ * in a single-table select list, and inside this subquery the bare name would
+ * bind to `r0` instead — `r0.created_by_user_id = r0.created_by_user_id` is
+ * always true, which would mark every row on the page a first visit.
+ * `correlated-sql.spec.ts` pins it.
+ */
+export function isFirstReservationSql() {
+	const outer = (column: AnyColumn) => sql.raw(`"reservation"."${column.name}"`);
+	return sql<boolean>`(
+		case
+			when ${outer(reservation.bookerType)} = 'user'
+				and ${outer(reservation.status)} <> 'cancelled'
+				and not exists (
+					select 1 from ${reservation} r0
+					where r0.created_by_user_id = ${outer(reservation.createdByUserId)}
+						and r0.status <> 'cancelled'
+						and (
+							r0.starts_at < ${outer(reservation.startsAt)}
+							or (
+								r0.starts_at = ${outer(reservation.startsAt)}
+								and r0.id < ${outer(reservation.id)}
+							)
+						)
+				)
+			then 1
+			else 0
+		end
+	)`;
 }

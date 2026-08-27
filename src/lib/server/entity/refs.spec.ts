@@ -111,7 +111,7 @@ describe('toBookerRef', () => {
 			type: 'member',
 			title: 'Ada'
 		});
-		expect(toBookerRef({ ...args, bookerType: 'band' })).toMatchObject({
+		expect(toBookerRef({ ...args, bookerType: 'group' })).toMatchObject({
 			type: 'band',
 			title: 'The Velvet Underground',
 			slug: 'the-velvet-underground'
@@ -139,7 +139,7 @@ describe('toBookerRef', () => {
 	 * then claim something about the data that is not true.
 	 */
 	it('keeps the type when the join missed, rather than reporting a member', () => {
-		expect(toBookerRef({ bookerType: 'band', member, band: null })).toMatchObject({
+		expect(toBookerRef({ bookerType: 'group', member, band: null })).toMatchObject({
 			type: 'band',
 			id: null,
 			title: 'Unknown band'

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import Hero from '$lib/components/shared/marketing/Hero.svelte';
+	import Hero from '$lib/components/public/Hero.svelte';
 	import { IconBuildingStore, IconMicrophone, IconDisc, IconUsers } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
+	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
 	import { submitContactForm } from '$lib/remote/inbox.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 
 	let submitted = $state(false);
 	let resetTurnstile = $state<() => void>();
@@ -45,11 +45,11 @@
 </Hero>
 
 <!-- What we're collecting -->
-<section class="py-12 px-6">
-	<div class="max-w-4xl mx-auto">
-		<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+<section class="px-6 py-12">
+	<div class="mx-auto max-w-4xl">
+		<div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
 			{#each categories as cat (cat.label)}
-				<div class="flex flex-col items-center text-center gap-2 rounded-lg p-5 surface">
+				<div class="flex flex-col items-center gap-2 rounded-lg p-5 text-center surface">
 					<div class="text-cmc-teal"><cat.icon size={32} /></div>
 					<span class="text-sm font-medium">{cat.label}</span>
 				</div>
@@ -59,10 +59,10 @@
 </section>
 
 <!-- Submission form -->
-<section class="section-tint-secondary py-16 px-6">
-	<div class="max-w-xl mx-auto">
-		<div class="text-center mb-8">
-			<h2 class="text-3xl font-bold tracking-tight mb-2">Suggest a Resource</h2>
+<section class="section-tint-secondary px-6 py-16">
+	<div class="mx-auto max-w-xl">
+		<div class="mb-8 text-center">
+			<h2 class="mb-2 text-3xl font-bold tracking-tight">Suggest a Resource</h2>
 			<p class="text-base leading-relaxed text-fg-2">
 				Know a resource the Corvallis music community should have on their radar? Send it our way.
 			</p>
@@ -86,7 +86,7 @@
 					options={resourceTypes}
 					bind:value={resourceType}
 				/>
-				<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 					<Field name="name" type="text" label="Your name" />
 					<Field name="email" type="email" label="Email" />
 				</div>

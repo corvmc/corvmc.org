@@ -5,7 +5,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, ne, and, gte, lt } from 'drizzle-orm';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 

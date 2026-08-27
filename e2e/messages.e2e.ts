@@ -117,7 +117,15 @@ test.describe('member messaging', () => {
 		// --- the recipient sees a request, not a conversation ---
 		await switchUser(page, SEED_MSG_RECIPIENT_EMAIL, SEED_MSG_PASSWORD);
 		await page.goto('/member/messages');
-		await expect(page.getByText('Request')).toBeVisible(WAIT);
+		// Scoped to this sender's row, not `getByText('Request')`. That is a
+		// case-insensitive substring, so it matches the "N message request(s) are
+		// waiting for you" summary above the list as well as the badge — two hits,
+		// and strict mode rejects it. `.first()` because a retried attempt leaves
+		// its predecessor's request behind: the fixture sweep runs once per run,
+		// so a second attempt sends a second request that nothing has cleared.
+		await expect(
+			page.getByRole('link', { name: new RegExp(`${SEED_MSG_SENDER_NAME}.*Request`) }).first()
+		).toBeVisible(WAIT);
 
 		await openConversation(page, SEED_MSG_SENDER_NAME);
 		await expect(bubble(page, body)).toBeVisible(WAIT);

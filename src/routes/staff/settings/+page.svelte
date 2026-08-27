@@ -1,36 +1,32 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import {
-		getProducts,
+		getStaffSettingsPage,
 		updateProduct,
-		getReservationSettings,
 		updateReservationSettings,
-		getOrgSettings,
 		updateOrgSettings,
-		getIntegrationSettings,
 		updateIntegrationSettings,
 		testUtecConnection,
 		runLockSelfTest,
 		revokeLockTest,
-		getFeatureFlags,
 		updateFeatureFlag,
 		syncSubscriptions,
 		refreshCommunityStats
 	} from '$lib/remote/settings.remote';
-	import { getInboxChannelConfigs, updateInboxChannelConfig } from '$lib/remote/inbox.remote';
+	import { updateInboxChannelConfig } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import StatCard from '$lib/components/shared/StatCard.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import StatCard from '$lib/components/ui/StatCard.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import type { SubscriptionSyncSummary } from '$lib/types/subscription-sync';
 	import type { CommunityStats } from '$lib/server/db/schema/finance';
 	import { formatDollars } from '$lib/utils/format';
@@ -54,12 +50,15 @@
 	} from '@tabler/icons-svelte';
 
 	let activeTab = $state('pricing');
-	let products = $derived(await getProducts());
-	let reservationSettings = $derived(await getReservationSettings());
-	let orgSettings = $derived(await getOrgSettings());
-	let integrationSettings = $derived(await getIntegrationSettings());
-	let channelConfigs = $derived(await getInboxChannelConfigs());
-	let featureFlags = $derived(await getFeatureFlags());
+	// One query. All six are unparameterized, which is what lets every mutation that used to
+	// refresh them individually name this wrapper instead.
+	const settings = $derived(await getStaffSettingsPage());
+	const products = $derived(settings.products);
+	const reservationSettings = $derived(settings.reservation);
+	const orgSettings = $derived(settings.org);
+	const integrationSettings = $derived(settings.integration);
+	const channelConfigs = $derived(settings.channelConfigs);
+	const featureFlags = $derived(settings.featureFlags);
 
 	const { fields: reservationFields } = updateReservationSettings;
 
@@ -286,7 +285,7 @@
 										{#each instance.fields.unitAmountCents.issues() ?? [] as issue (issue.message)}
 											<p class="text-sm text-error">{issue.message}</p>
 										{/each}
-										<label class="input input-sm flex items-center gap-1">
+										<label class="input flex items-center gap-1 input-sm">
 											<span class="opacity-60">$</span>
 											<input
 												id="amount-{product.key}"
@@ -327,8 +326,7 @@
 									name="description"
 									value={product.description ?? ''}
 									class="textarea textarea-sm"
-									rows="2"
-								></textarea>
+									rows="2"></textarea>
 							</div>
 						</CardBody>
 					</Card>
@@ -359,7 +357,7 @@
 								<label class="label" for="hourlyRate">
 									<span class="label-text">Hourly rate</span>
 								</label>
-								<label class="input input-sm flex items-center gap-1">
+								<label class="input flex items-center gap-1 input-sm">
 									<span class="opacity-60">$</span>
 									<input
 										id="hourlyRate"
@@ -625,7 +623,7 @@
 										disabled={connectionTesting}
 									>
 										{#if connectionTesting}
-											<span class="loading loading-spinner loading-xs"></span>
+											<span class="loading loading-xs loading-spinner"></span>
 										{:else}
 											<IconPlugConnected class="size-4" />
 										{/if}
@@ -701,7 +699,7 @@
 											disabled={selfTesting}
 										>
 											{#if selfTesting}
-												<span class="loading loading-spinner loading-xs"></span>
+												<span class="loading loading-xs loading-spinner"></span>
 											{/if}
 											Run lock self-test
 										</Button>
@@ -713,7 +711,7 @@
 											disabled={revokingTest}
 										>
 											{#if revokingTest}
-												<span class="loading loading-spinner loading-xs"></span>
+												<span class="loading loading-xs loading-spinner"></span>
 											{/if}
 											Revoke test codes
 										</Button>
@@ -829,12 +827,9 @@
 									<p class="text-subtle">{meta.description}</p>
 								</div>
 							</div>
-							<form
-								{...toggleForm.enhance(async ({ submit }) => {
-									if (await submit()) {
-										toast.success(`${meta.label} ${enabled ? 'disabled' : 'enabled'}`);
-									}
-								})}
+							<Form
+								remote={toggleForm}
+								onsuccess={() => toast.success(`${meta.label} ${enabled ? 'disabled' : 'enabled'}`)}
 							>
 								<input {...toggleForm.fields.flag.as('hidden', flag)} />
 								<input {...toggleForm.fields.enabled.as('hidden', enabled ? 'false' : 'true')} />
@@ -846,7 +841,7 @@
 								>
 									{enabled ? 'Disable' : 'Enable'}
 								</Button>
-							</form>
+							</Form>
 						</div>
 					</CardBody>
 				</Card>
@@ -874,14 +869,12 @@
 								</div>
 							</div>
 							{#if isAlwaysOn}
-								<span class="badge badge-success badge-sm">Always On</span>
+								<span class="badge badge-sm badge-success">Always On</span>
 							{:else}
-								<form
-									{...toggleForm.enhance(async ({ submit }) => {
-										if (await submit()) {
-											toast.success(`${meta.label} ${cfg.enabled ? 'disabled' : 'enabled'}`);
-										}
-									})}
+								<Form
+									remote={toggleForm}
+									onsuccess={() =>
+										toast.success(`${meta.label} ${cfg.enabled ? 'disabled' : 'enabled'}`)}
 								>
 									<input {...toggleForm.fields.channel.as('hidden', cfg.channel)} />
 									<input
@@ -895,7 +888,7 @@
 									>
 										{cfg.enabled ? 'Disable' : 'Enable'}
 									</Button>
-								</form>
+								</Form>
 							{/if}
 						</div>
 						{#if !isAlwaysOn}

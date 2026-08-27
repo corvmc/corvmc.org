@@ -1,19 +1,19 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import { Field } from '$lib/components/shared/Form';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
-	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
-	import TicketStub from '$lib/components/shared/events/TicketStub.svelte';
-	import TicketQRModal from '$lib/components/shared/events/TicketQRModal.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import { Field } from '$lib/components/ui/Form';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import PosterCard from '$lib/components/events/PosterCard.svelte';
+	import TicketStub from '$lib/components/events/TicketStub.svelte';
+	import TicketQRModal from '$lib/components/events/TicketQRModal.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
 	import {
 		ticketingMode,
@@ -25,14 +25,13 @@
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import ShareButton from '$lib/components/shared/ShareButton.svelte';
+	import ShareButton from '$lib/components/ui/ShareButton.svelte';
 	import {
 		purchaseTickets,
 		claimFreeTicket,
 		rsvpToEvent,
 		cancelRsvp,
-		getMemberEventDetail,
-		getMemberTickets
+		getMemberEventDetailPage
 	} from '$lib/remote/events.remote';
 
 	const { fields } = purchaseTickets;
@@ -40,8 +39,9 @@
 	const rsvpToEventFields = rsvpToEvent.fields;
 	const cancelRsvpFields = cancelRsvp.fields;
 
-	let eventData = $derived(await getMemberEventDetail(page.params.id!));
-	let allTickets = $derived(await getMemberTickets());
+	const detail = $derived(await getMemberEventDetailPage(page.params.id!));
+	const eventData = $derived(detail.event);
+	const allTickets = $derived(detail.tickets);
 	let myTickets = $derived(
 		allTickets.filter((t) => t.eventId === page.params.id && t.status !== 'cancelled')
 	);
@@ -111,8 +111,8 @@
 	const primaryTag = $derived(tagList[0] ?? null);
 
 	function refreshDetail() {
-		void getMemberEventDetail(page.params.id!).refresh();
-		void getMemberTickets().refresh();
+		// The wrapper this page reads, not the two it is assembled from.
+		void getMemberEventDetailPage(page.params.id!).refresh();
 	}
 
 	async function handlePurchaseSuccess(result?: unknown) {
@@ -130,18 +130,22 @@
 <PageHeader title={evt.title} backHref={resolve('/member/events')}>
 	<div class="flex items-center gap-1">
 		<details class="dropdown dropdown-end">
-			<summary class="btn btn-ghost btn-sm gap-1">
+			<summary class="btn gap-1 btn-ghost btn-sm">
 				<IconCalendarPlus size={18} />
 				Add to calendar
 			</summary>
 			<ul class="menu dropdown-content z-10 w-48 rounded-box bg-base-100 p-2 shadow">
 				<li>
-					<a href={googleCalendarUrl(calendarEvt)} target="_blank" rel="noopener noreferrer"
-						>Google Calendar</a
+					<a
+						href={googleCalendarUrl(calendarEvt)}
+						target="_blank"
+						rel="external noopener noreferrer">Google Calendar</a
 					>
 				</li>
 				<li>
-					<a href={icsDataUrl(calendarEvt)} download="{evt.title}.ics">Apple / Outlook (.ics)</a>
+					<a href={icsDataUrl(calendarEvt)} rel="external" download="{evt.title}.ics"
+						>Apple / Outlook (.ics)</a
+					>
 				</li>
 			</ul>
 		</details>
@@ -308,7 +312,7 @@
 							{/if}
 						</div>
 						<progress
-							class="progress progress-primary w-full"
+							class="progress w-full progress-primary"
 							value={data.sold}
 							max={evt.ticketQuantity}
 						></progress>
@@ -410,7 +414,7 @@
 											<span>{formatCents(subtotal)}</span>
 										</div>
 										{#if data.isSustainingMember}
-											<p class="text-sm text-success mt-1">Sustaining member discount applied</p>
+											<p class="mt-1 text-sm text-success">Sustaining member discount applied</p>
 										{/if}
 									</div>
 								{/snippet}

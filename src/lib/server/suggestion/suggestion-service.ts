@@ -14,7 +14,7 @@ import { eq, and, or, desc, count, like, inArray, isNull, sql } from 'drizzle-or
 import { alias } from 'drizzle-orm/sqlite-core';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/errors';
-import { domainEvents, type DomainEvents } from '$lib/server/events/event-bus';
+import { domainEvents, type DomainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
 import { getStanding } from '$lib/server/moderation/standing-service';
 import {

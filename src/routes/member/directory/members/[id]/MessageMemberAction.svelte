@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Action from '$lib/components/shared/Action.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { IconMessage } from '@tabler/icons-svelte';
 	import { startDirectConversation } from '$lib/remote/direct-messages.remote';
 	import { DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
@@ -39,8 +39,7 @@
 					rows="5"
 					maxlength={DIRECT_MESSAGE_BODY_MAX}
 					bind:value={body}
-					placeholder="Say who you are and what you're after"
-				></textarea>
+					placeholder="Say who you are and what you're after"></textarea>
 			</label>
 		</div>
 	{/snippet}

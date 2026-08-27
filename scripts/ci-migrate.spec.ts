@@ -2,12 +2,21 @@ import { describe, it, expect } from 'vitest';
 // @ts-expect-error -- plain .mjs script, no types
 import { isProductionBranch } from './ci-migrate.mjs';
 
+// `build` no longer runs this script — it is `vite build`, and the migrate is invoked
+// through `pnpm ci:migrate` from the build command configured in the Cloudflare dashboard.
+// The assertion that pinned `ci-migrate.mjs` into `build` lived here and is gone with it.
+// Worth knowing what that guard was for: the dashboard field is invisible to code review and
+// is reset when the GitHub connection is recreated, which is what happened when the repo moved
+// to `corvmc/corvmc.org` — the `pnpm ci:migrate &&` half vanished, #267's `band` -> `group`
+// rename published without its migration, and every route touching a band 500ed with
+// `no such table: group`. Whatever runs the migrate now, nothing in this repo checks that it does.
+
 // Cloudflare Workers Builds is the only thing that deploys this app, and with the
 // merge queue enabled it builds — and publishes to production — the queue's
 // `gh-readonly-queue/main/*` branch, not `main`. It never rebuilds the identical SHA
 // once the queue merges it, so a branch check that only accepts `main` skips the
 // migrate for every queued PR while shipping its code. That is how #241's
-// `band_member.alias` column reached production as a 500 rather than a column.
+// the roster table's `alias` column reached production as a 500 rather than a column.
 describe('isProductionBranch', () => {
 	it('accepts the merge queue branch that actually deployed #241', () => {
 		expect(

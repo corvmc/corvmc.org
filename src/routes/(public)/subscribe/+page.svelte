@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
 	import { getPublicAudiences, subscribeToAudience } from '$lib/remote/marketing.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
 
@@ -16,10 +16,10 @@
 	const selectedSlug = $derived(audiences.find((a) => a.id === selectedAudienceId)?.slug ?? '');
 </script>
 
-<div class="max-w-lg mx-auto p-6 space-y-6">
+<div class="mx-auto max-w-lg space-y-6 p-6">
 	<div class="text-center">
 		<h1 class="text-2xl font-bold">Subscribe</h1>
-		<p class="opacity-60 mt-1">Join our mailing lists to stay in the loop.</p>
+		<p class="mt-1 opacity-60">Join our mailing lists to stay in the loop.</p>
 	</div>
 
 	{#if success}
@@ -49,7 +49,7 @@
 				<div class="space-y-2">
 					{#each audiences as a (a.id)}
 						<label
-							class="label cursor-pointer gap-3 border rounded-lg px-4 py-3 {selectedAudienceId ===
+							class="label cursor-pointer gap-3 rounded-lg border px-4 py-3 {selectedAudienceId ===
 							a.id
 								? 'border-primary bg-primary/10'
 								: 'border-base-300'}"
@@ -57,12 +57,12 @@
 							<input
 								type="radio"
 								name="audience"
-								class="radio radio-primary radio-sm"
+								class="radio radio-sm radio-primary"
 								value={a.id}
 								bind:group={selectedAudienceId}
 							/>
 							<div class="flex-1">
-								<p class="font-medium text-sm">{a.name}</p>
+								<p class="text-sm font-medium">{a.name}</p>
 								{#if a.description}
 									<p class="text-subtle">{a.description}</p>
 								{/if}

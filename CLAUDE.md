@@ -37,7 +37,14 @@ These mirror the CI jobs in `.github/workflows/ci.yml`, so a green local gate is
 - **No `db.transaction()`** — it is broken on D1. Use `db.batch([...])`. ESLint errors on it.
 - **Migrations come only from `pnpm db:generate`.** Never hand-write one; never edit one that is
   already committed.
-- **Forms use `$lib/components/shared/Form/`** (`Form`, `FormField`, `SubmitButton`) — never a raw
+- **Components go in one of four folders.** `ui/` (domain-free primitives — a lint rule errors
+  on any `$lib/remote` or `$lib/server` import there), `layout/` (the frame a `+layout.svelte`
+  mounts), `actions/` (the `*Action.svelte` registry), or `<domain>/`. A component used by one
+  page stays next to that page instead. There is no `shared/`. See
+  `docs/development/conventions.md#where-a-file-goes`.
+- **Tests are `.spec.ts`**, colocated, never `.test.ts` — the vitest globs only match `.spec`,
+  so a misnamed file silently never runs.
+- **Forms use `$lib/components/ui/Form/`** (`Form`, `FormField`, `SubmitButton`) — never a raw
   `<form>`, `<input>`, or `<select>`, not even inline.
 - **No gradients** in any interface.
 - **No co-author lines** in commit messages.
@@ -49,7 +56,7 @@ Anything that adds schema or spans several files follows the nine phases in
 and gated.
 
 The finishing steps that are easiest to skip: extend `scripts/seed-dev.ts` so the feature has
-realistic local data, add its row to `docs/reports/parity-report.md`, and run
+realistic local data, add its row to the feature catalog (`docs/reports/feature-catalog.md`), and run
 `pnpm docs:routes && pnpm docs:check` if any route moved.
 
 **A finished PR is queued, not merged.** `gh pr merge --auto --squash`, and the session ends there.

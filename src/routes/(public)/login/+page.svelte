@@ -1,7 +1,7 @@
 <script lang="ts">
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -9,11 +9,11 @@
 	import { pageTitle } from '$lib/config';
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
-	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
+	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
+	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
 	import { getMe } from '$lib/remote/layout.remote';
 	import { TURNSTILE_SITE_KEY } from '$lib/turnstile';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 
 	// Deliberately NOT `await getMe()`. A top-level await puts the whole template
 	// behind an async boundary, and on a direct load of ?register that stops the
@@ -21,8 +21,16 @@
 	// failed" because no token is produced. Reading `.current` keeps the redirect
 	// check without gating the markup.
 	const me = getMe();
+
+	// `handleSubmit` owns the navigation for a sign-in performed *here*. Without
+	// this flag its `invalidateAll` refreshes `getMe()`, `me.current` flips, and
+	// this effect fires a SECOND `goto` a few hundred ms behind the first one.
+	// SvelteKit treats the later navigation as superseding, so it aborts whatever
+	// navigation is in flight at that moment — including the first link the member
+	// clicks after landing, which then silently does nothing.
+	let navigatingAfterSignIn = false;
 	$effect(() => {
-		if (me.current) goto(resolve('/member'));
+		if (me.current && !navigatingAfterSignIn) goto(resolve('/member'));
 	});
 
 	let inviteToken = $derived(page.url.searchParams.get('invite'));
@@ -108,6 +116,7 @@
 		}
 
 		const redirectTo = new URLSearchParams(window.location.search).get('redirect') ?? '/member';
+		navigatingAfterSignIn = true;
 		await goto(redirectTo, { invalidateAll: true });
 	}
 </script>
@@ -133,7 +142,7 @@
 	form, with no content a crawler or link preview would want.
 -->
 <ErrorToastBoundary>
-	<div class="flex items-center justify-center py-16 px-4">
+	<div class="flex items-center justify-center px-4 py-16">
 		<div class="w-full max-w-sm">
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
@@ -181,7 +190,7 @@
 										variant="ghost"
 										size="xs"
 										shape="square"
-										class="absolute right-2 top-1/2 -translate-y-1/2"
+										class="absolute top-1/2 right-2 -translate-y-1/2"
 										onclick={() => (showPassword = !showPassword)}
 										tabindex={-1}
 									>
@@ -206,7 +215,7 @@
 						<SubmitButton
 							label={mode === 'login' ? 'Sign in' : 'Create account'}
 							variant="primary"
-							class="w-full mt-1"
+							class="mt-1 w-full"
 						/>
 					</Form>
 

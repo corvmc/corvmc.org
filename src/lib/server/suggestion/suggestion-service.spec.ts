@@ -74,7 +74,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emit = vi.fn(() => Promise.resolve());
-vi.mock('$lib/server/events/event-bus', () => ({
+vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: { emit: (...a: unknown[]) => emit(...(a as [])), on: vi.fn() }
 }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));

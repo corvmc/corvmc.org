@@ -3,22 +3,18 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatCard from '$lib/components/shared/StatCard.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatCard from '$lib/components/ui/StatCard.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { formatVolunteerHours } from '$lib/config';
-	import {
-		getVolunteerReport,
-		getVolunteerReportByMember,
-		getFeedbackByRole
-	} from '$lib/remote/volunteer.remote';
+	import { getVolunteerReportPage } from '$lib/remote/volunteer.remote';
 
 	// Calendar year to date is what a board packet asks for, so it's the default
 	// rather than "all time" — which would keep drifting as the org ages.
@@ -44,9 +40,10 @@
 	});
 
 	let range = $derived({ from: fromDate || undefined, to: toDate || undefined });
-	let report = $derived(getVolunteerReport(range));
-	let feedbackByRole = $derived(getFeedbackByRole());
-	let byMember = $derived(getVolunteerReportByMember({ ...range, page: pageNumber }));
+	const pageData = $derived(getVolunteerReportPage({ ...range, page: pageNumber }));
+	const report = $derived(pageData.then((d) => d.report));
+	const feedbackByRole = $derived(pageData.then((d) => d.feedbackByRole));
+	const byMember = $derived(pageData.then((d) => d.byMember));
 
 	// Refresh once on mount. An approval on /staff/volunteer changes these totals,
 	// but it can't refresh them from there — `refresh()` is keyed by argument and
@@ -57,8 +54,7 @@
 	// onMount rather than $effect: an effect tracking `range` would fire a second
 	// fetch on top of the one the $derived above already issues for a new range.
 	onMount(() => {
-		void getVolunteerReport(range).refresh();
-		void getVolunteerReportByMember({ ...range, page: pageNumber }).refresh();
+		void getVolunteerReportPage({ ...range, page: pageNumber }).refresh();
 	});
 
 	const activeFilterCount = $derived((fromDate !== yearStart ? 1 : 0) + (toDate ? 1 : 0));

@@ -113,7 +113,7 @@ explicitly accepted leftovers noted at the end.
   (`CRON_SCHEDULE` in `src/lib/server/cron/schedule.ts`).
 - `commitReservationCredits` records `creditsUsed` (hours) for partially covered
   reservations too, so staff views report credit usage accurately.
-- `docs/specs/finance-spec.md` updated to match the implementation (D1 integer wallets with
+- `docs/specs/shipped/finance-spec.md` updated to match the implementation (D1 integer wallets with
   CAS/atomic-decrement writes, KV-backed inline pricing, caller-declared credit eligibility,
   domain event bus, `subscription` snapshot).
 - Orphaned coupons from failed session creation are deleted best-effort; the vestigial

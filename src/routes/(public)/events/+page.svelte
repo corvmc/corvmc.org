@@ -1,11 +1,12 @@
 <script lang="ts">
-	import Section from '$lib/components/shared/marketing/Section.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Section from '$lib/components/public/Section.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
-	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
+	import PosterCard from '$lib/components/events/PosterCard.svelte';
 	import MiniCalendar from '$lib/components/public/calendar/MiniCalendar.svelte';
-	import GigList from '$lib/components/shared/events/GigList.svelte';
-	import { getPublicEvents } from '$lib/remote/events.remote';
+	import GigList from '$lib/components/events/GigList.svelte';
+	import { getPublicEventsPage } from '$lib/remote/events.remote';
+	// Still needed on its own for the lazy "show more" pager below, which is not a fan-out.
 	import { getPublicGigGuide } from '$lib/remote/calendar.remote';
 	import { toLocalDate } from '$lib/utils/format';
 	import type { CalendarEntry } from '$lib/types/calendar';
@@ -19,8 +20,9 @@
 		return param && FROM_RE.test(param) ? param : today;
 	});
 
-	let { upcoming } = $derived(await getPublicEvents());
-	let guide = $derived(await getPublicGigGuide({ from, offset: 0 }));
+	const pageData = $derived(await getPublicEventsPage(from));
+	const { upcoming } = $derived(pageData.events);
+	const guide = $derived(pageData.guide);
 
 	// "Show more" appends pages client-side; reset when the anchor changes.
 	let extra: CalendarEntry[] = $state([]);
@@ -68,8 +70,8 @@
 </svelte:head>
 
 <Section>
-	<div class="text-center mb-10">
-		<h1 class="text-4xl font-bold tracking-tight mb-2 text-cmc-navy">Events</h1>
+	<div class="mb-10 text-center">
+		<h1 class="mb-2 text-4xl font-bold tracking-tight text-cmc-navy">Events</h1>
 		<p class="text-base text-fg-2">
 			Shows at the Collective and gigs from our member bands around the region
 		</p>
@@ -77,7 +79,7 @@
 
 	{#if showNotice}
 		<div
-			class="flex items-center justify-between gap-4 rounded-lg border px-4 py-3 mb-8"
+			class="mb-8 flex items-center justify-between gap-4 rounded-lg border px-4 py-3"
 			style="border-color: var(--cmc-navy); color: var(--cmc-navy)"
 			role="status"
 		>
@@ -86,7 +88,7 @@
 			</p>
 			<button
 				type="button"
-				class="text-sm font-semibold underline shrink-0"
+				class="shrink-0 text-sm font-semibold underline"
 				onclick={() => (dismissed = true)}
 			>
 				Dismiss
@@ -95,7 +97,7 @@
 	{/if}
 
 	{#if upcoming.length > 0}
-		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-14">
+		<div class="mb-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
 			{#each upcoming as evt (evt.id)}
 				<PosterCard
 					href="/events/{evt.id}"
@@ -120,13 +122,13 @@
 		</aside>
 		<div class="guide__main">
 			{#if allEvents.length === 0}
-				<div class="text-center py-12 opacity-60">
+				<div class="py-12 text-center opacity-60">
 					<p class="text-base">Nothing on the calendar yet. Check back soon!</p>
 				</div>
 			{:else}
 				<GigList events={allEvents} />
 				{#if hasMore}
-					<div class="text-center mt-8">
+					<div class="mt-8 text-center">
 						<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
 							{loadingMore ? 'Loading…' : 'Show more'}
 						</Button>

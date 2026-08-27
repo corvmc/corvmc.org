@@ -11,9 +11,9 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconPlus, IconUsers } from '@tabler/icons-svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/shared/Form/SearchSelect.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
 	import { startConversation } from '$lib/remote/inbox.remote';
 	import { startDirectConversation } from '$lib/remote/direct-messages.remote';
 	import { searchMessageRecipients } from '$lib/remote/directory.remote';
@@ -74,7 +74,7 @@
 					     a silent no-op: the field has no FormField to hang its issue on,
 					     so nothing on screen changes. -->
 					{#each directForm.fields.recipientId.issues() ?? [] as issue (issue.message)}
-						<p class="text-error text-sm">Choose who this is going to.</p>
+						<p class="text-sm text-error">Choose who this is going to.</p>
 					{/each}
 				</label>
 
@@ -91,8 +91,7 @@
 						rows="5"
 						maxlength={DIRECT_MESSAGE_BODY_MAX}
 						bind:value={body}
-						placeholder="Say who you are and what you're after"
-					></textarea>
+						placeholder="Say who you are and what you're after"></textarea>
 				</label>
 			</div>
 		{/snippet}

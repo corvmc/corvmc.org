@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { bookAndPayReservation } from '$lib/remote/reservations.remote';
-	import Action from '$lib/components/shared/Action.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import DateTimeStep from '$lib/components/shared/reservations/booking/DateTimeStep.svelte';
-	import ConfirmStep from '$lib/components/shared/reservations/booking/ConfirmStep.svelte';
-	import PaymentStep from '$lib/components/shared/reservations/booking/PaymentStep.svelte';
-	import BookingConflict from '$lib/components/shared/reservations/booking/BookingConflict.svelte';
+	import DateTimeStep from '$lib/components/reservations/booking/DateTimeStep.svelte';
+	import ConfirmStep from '$lib/components/reservations/booking/ConfirmStep.svelte';
+	import PaymentStep from '$lib/components/reservations/booking/PaymentStep.svelte';
+	import BookingConflict from '$lib/components/reservations/booking/BookingConflict.svelte';
 
 	const { fields } = bookAndPayReservation;
 

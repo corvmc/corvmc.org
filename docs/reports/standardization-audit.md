@@ -495,13 +495,9 @@ Recorded so a future pass doesn't churn them:
 - **`StatusBadge` adoption** — 41 route files, no meaningful hand-rolls beyond the 5 maps noted.
 - **`Nav.*` components** — no duplication.
 
-Two fragilities worth a line, neither a component gap:
-
-- `Nav.Collapsible` requires a hand-maintained `childHrefs` array
-  (`staff/+layout.svelte:70,88,97`) that drifts silently as routes are added.
-- The panel `panels` array is duplicated near-verbatim across all three shells
-  (`member/+layout.svelte:26`, `staff/+layout.svelte:36`, `band/[slug]/+layout.svelte:33`) — only
-  difference is that staff includes its own panel unconditionally.
+Both nav fragilities recorded here are resolved: `Nav.Collapsible`'s hand-maintained `childHrefs`
+now derive from the panel's nav data, and the triplicated `panels` array is
+`$lib/components/layout/panel-tabs.ts`.
 
 ---
 

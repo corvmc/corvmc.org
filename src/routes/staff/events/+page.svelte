@@ -1,23 +1,23 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate } from '$lib/utils/format';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { getStaffEvents } from '$lib/remote/events.remote';
-	import { getPendingSubmissionCount } from '$lib/remote/community-events.remote';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
+	import PendingReviewBadge from './PendingReviewBadge.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 
 	// Read once, at mount: the notification a staffer follows links straight to
@@ -53,15 +53,16 @@
 
 	// The review queue is exactly `pending_review`, never `draft` — a member's
 	// unfinished listing is not staff's to read, and listAll holds those back.
-	let result = $derived(
+	// The page's one query, and still a promise rather than an await: `DataList` consumes it with
+	// `{#await}` so a filter keystroke does not suspend the page into the layout boundary's
+	// pending snippet. The review count moved into `PendingReviewBadge`.
+	const result = $derived(
 		getStaffEvents({
 			source: source || undefined,
 			status: view === 'review' ? 'pending_review' : undefined,
 			page
 		})
 	);
-
-	let pendingCount = $derived(await getPendingSubmissionCount());
 
 	type Event = Awaited<typeof result>['rows'][number];
 
@@ -83,6 +84,10 @@
 	}
 </script>
 
+{#snippet reviewBadge()}
+	<PendingReviewBadge />
+{/snippet}
+
 <PageHeader title="Events">
 	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>New Event</Button>
 </PageHeader>
@@ -92,7 +97,7 @@
 	<TabBar
 		tabs={[
 			{ key: 'all', label: 'All events' },
-			{ key: 'review', label: 'Needs review', badge: pendingCount || undefined }
+			{ key: 'review', label: 'Needs review', badge: reviewBadge }
 		]}
 		active={view}
 		onchange={(k) => {

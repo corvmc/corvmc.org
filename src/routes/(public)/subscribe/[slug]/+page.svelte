@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Form, { Field, SubmitButton } from '$lib/components/shared/Form';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
 	import { getPublicAudienceBySlug, subscribeToAudience } from '$lib/remote/marketing.remote';
 	import { page } from '$app/state';
 
@@ -9,11 +9,11 @@
 	let success = $state(false);
 </script>
 
-<div class="max-w-md mx-auto p-6 space-y-6">
+<div class="mx-auto max-w-md space-y-6 p-6">
 	<div class="text-center">
 		<h1 class="text-2xl font-bold">{data.audience.name}</h1>
 		{#if data.audience.description}
-			<p class="opacity-60 mt-1">{data.audience.description}</p>
+			<p class="mt-1 opacity-60">{data.audience.description}</p>
 		{/if}
 	</div>
 

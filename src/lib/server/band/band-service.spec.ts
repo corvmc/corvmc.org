@@ -17,7 +17,7 @@ const mockBand = {
 
 const mockMember = {
 	id: 'member-1',
-	bandId: 'band-1',
+	groupId: 'band-1',
 	userId: 'user-2',
 	role: 'member',
 	position: 'Guitar',
@@ -210,7 +210,7 @@ describe('BandService', () => {
 			await expect(create('user-owner', { name: 'Ghost Band' })).rejects.toThrow(BandNotFoundError);
 		});
 
-		// Ownership is recorded twice — `band.ownerId` and a `band_member` row with
+		// Ownership is recorded twice — `band.ownerId` and a `group_member` row with
 		// role 'owner' — and only the member row is read by the guards
 		// (`requireBandOwner` resolves through `requireBandMember()`). A band
 		// created with just the column has no owner in practice: no address
@@ -223,9 +223,9 @@ describe('BandService', () => {
 
 			await create('user-owner', { name: 'The Velvet Underground' });
 
-			const bandRows = writes.filter((w) => w.table === 'band' && w.op === 'insert');
+			const bandRows = writes.filter((w) => w.table === 'group' && w.op === 'insert');
 			const ownerRows = writes.filter(
-				(w) => w.table === 'band_member' && w.op === 'insert' && w.values.role === 'owner'
+				(w) => w.table === 'group_member' && w.op === 'insert' && w.values.role === 'owner'
 			);
 
 			expect(bandRows).toHaveLength(1);
@@ -233,7 +233,7 @@ describe('BandService', () => {
 			expect(ownerRows[0].values.userId).toBe(bandRows[0].values.ownerId);
 			expect(ownerRows[0].values.userId).toBe('user-owner');
 			expect(ownerRows[0].values.status).toBe('active');
-			expect(ownerRows[0].values.bandId).toBe(bandRows[0].values.id);
+			expect(ownerRows[0].values.groupId).toBe(bandRows[0].values.id);
 		});
 	});
 
@@ -322,7 +322,7 @@ describe('BandService', () => {
 		// letting the raw D1_ERROR escape in production (JAVASCRIPT-SVELTEKIT-2D).
 		it('throws BandMemberExistsError on the real D1 unique-violation message', async () => {
 			insertError = new Error(
-				'D1_ERROR: UNIQUE constraint failed: band_member.band_id, band_member.user_id: SQLITE_CONSTRAINT'
+				'D1_ERROR: UNIQUE constraint failed: group_member.group_id, group_member.user_id: SQLITE_CONSTRAINT'
 			);
 
 			await expect(invite('band-1', 'user-2', 'member', null, 'user-owner')).rejects.toThrow(
@@ -331,9 +331,9 @@ describe('BandService', () => {
 		});
 
 		it('unwraps a DrizzleQueryError that carries the driver message in cause', async () => {
-			const wrapped = new Error('Failed query: insert into "band_member" ...');
+			const wrapped = new Error('Failed query: insert into "group_member" ...');
 			(wrapped as { cause?: unknown }).cause = new Error(
-				'UNIQUE constraint failed: band_member.band_id, band_member.user_id'
+				'UNIQUE constraint failed: group_member.group_id, group_member.user_id'
 			);
 			insertError = wrapped;
 
@@ -349,7 +349,7 @@ describe('BandService', () => {
 
 	describe('acceptInvitation', () => {
 		/**
-		 * JAVASCRIPT-SVELTEKIT-2A. The old signature took a `band_member.id`, but
+		 * JAVASCRIPT-SVELTEKIT-2A. The old signature took a `group_member.id`, but
 		 * the invite list only ever knows the band id, so the predicate matched
 		 * nothing and every accept threw. These tests drive the id the UI really
 		 * sends — a band id.
@@ -365,7 +365,7 @@ describe('BandService', () => {
 		it('activates the pending row for a band id', async () => {
 			const { db } = await import('$lib/server/db');
 			vi.mocked(db.update).mockReturnValueOnce(
-				mockUpdateReturning([{ ...mockMember, status: 'active', bandId: 'band-1' }])
+				mockUpdateReturning([{ ...mockMember, status: 'active', groupId: 'band-1' }])
 			);
 
 			const result = await acceptInvitation('band-1', 'user-2');
@@ -427,7 +427,7 @@ describe('BandService', () => {
 			const { db } = await import('$lib/server/db');
 			await revokeInvitation('member-1', 'band-1');
 			const condition = (db.delete as any).mock.results[0].value.where.mock.calls[0][0];
-			expect(collectColumnNames(condition)).toContain('band_id');
+			expect(collectColumnNames(condition)).toContain('group_id');
 		});
 	});
 
@@ -475,7 +475,7 @@ describe('BandService', () => {
 
 			await removeMember('member-1', 'band-1');
 			const condition = (db.delete as any).mock.results[0].value.where.mock.calls[0][0];
-			expect(collectColumnNames(condition)).toContain('band_id');
+			expect(collectColumnNames(condition)).toContain('group_id');
 		});
 	});
 
@@ -518,7 +518,7 @@ describe('BandService', () => {
 			await updateMember('member-1', { role: 'admin' }, 'band-1');
 			const setResult = (db.update as any).mock.results[0].value.set.mock.results[0].value;
 			const condition = setResult.where.mock.calls[0][0];
-			expect(collectColumnNames(condition)).toContain('band_id');
+			expect(collectColumnNames(condition)).toContain('group_id');
 		});
 	});
 
@@ -559,10 +559,10 @@ describe('BandService', () => {
 
 			await transferOwnership('band-1', 'user-2', 'user-owner');
 
-			const memberWrites = writes.filter((w) => w.table === 'band_member' && w.op === 'update');
+			const memberWrites = writes.filter((w) => w.table === 'group_member' && w.op === 'update');
 			const promotes = memberWrites.filter((w) => w.values.role === 'owner');
 			const demotes = memberWrites.filter((w) => w.values.role === 'admin');
-			const bandWrites = writes.filter((w) => w.table === 'band' && w.op === 'update');
+			const bandWrites = writes.filter((w) => w.table === 'group' && w.op === 'update');
 
 			expect(promotes).toHaveLength(1);
 			expect(demotes).toHaveLength(1);

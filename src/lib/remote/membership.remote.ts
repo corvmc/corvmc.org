@@ -127,7 +127,10 @@ export const updateAmount = form(amountSchema, async (data) => {
 	return { success: true };
 });
 
-export const resumeSubscription = form(z.object({}), async () => {
+// A form with no fields of its own. `z.object({})` no longer resolves against
+// kit's schema overload, and there is nothing here to validate anyway — the
+// guard on the first line of the handler is the whole check.
+export const resumeSubscription = form('unchecked', async () => {
 	const user = await requireMember();
 	const stripeId = requireStripeId(user);
 

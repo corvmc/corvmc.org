@@ -1,14 +1,14 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Field from '$lib/components/shared/Form/FormField.svelte';
+	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Field from '$lib/components/ui/Form/FormField.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
@@ -201,7 +201,7 @@
 								<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 								<ul
 									tabindex="0"
-									class="dropdown-content menu bg-base-200 rounded-box z-10 w-44 p-2 shadow"
+									class="menu dropdown-content z-10 w-44 rounded-box bg-base-200 p-2 shadow"
 								>
 									<li>
 										<a href={resolve(`/staff/users/${row.id}`)}><IconEye size={16} />View</a>
@@ -212,7 +212,7 @@
 										</button>
 									</li>
 									<!-- No Impersonate item: `/staff/users/[id]/impersonate` does not exist
-									     (404). Impersonation is deferred — see docs/specs/staff-bands-spec.md.
+									     (404). Impersonation is deferred — see docs/specs/shipped/staff-bands-spec.md.
 									     Re-add this only alongside the route. -->
 								</ul>
 							</div>

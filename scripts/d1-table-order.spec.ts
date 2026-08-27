@@ -4,10 +4,10 @@ import { readdirSync, readFileSync } from 'fs';
 import { tableOrder } from './d1-table-order.mjs';
 
 // `tableOrder` is hand-maintained but has to stay in step with the drizzle schema:
-// `gen-d1-delete.mjs` derives the entire wipe from it with no schema cross-check, so a
-// table missing from the list gets no DELETE at all and its rows silently survive a
-// full wipe. These tests check the list against drizzle's own snapshot — the same
-// source of truth `d1-ddl.mjs` reads.
+// `e2e/reset-db.ts` derives the whole between-test wipe from it with no schema
+// cross-check, so a table missing from the list gets no DELETE at all and its rows
+// silently survive a reset, leaking state into the next test. These tests check the
+// list against drizzle's own snapshot — the same source of truth `d1-ddl.mjs` reads.
 
 /** Newest `migrations/<timestamp>_<name>/snapshot.json` — dir names sort chronologically. */
 function latestSnapshot() {

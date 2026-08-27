@@ -1,35 +1,52 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { getMemberCategories } from '$lib/remote/help.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import HelpSearch from '$lib/components/help/HelpSearch.svelte';
 	import {
 		IconBook,
 		IconSettings,
 		IconCalendar,
 		IconUsers,
+		IconUser,
 		IconMusic,
 		IconHelp,
 		IconTicket,
-		IconTool
+		IconTool,
+		IconLayout,
+		IconPackage,
+		IconHeart,
+		IconHeartHandshake,
+		IconMessage,
+		IconBulb
 	} from '@tabler/icons-svelte';
 
 	let categories = $derived(await getMemberCategories());
 
+	// Keys are the `icon` values seeded in scripts/seed-dev.ts. A category whose
+	// icon is not here silently renders as IconBook, so half the help centre once
+	// wore the same icon — keep the two lists in step.
 	const iconMap: Record<string, typeof IconBook> = {
 		book: IconBook,
 		settings: IconSettings,
 		calendar: IconCalendar,
 		users: IconUsers,
+		user: IconUser,
 		music: IconMusic,
 		help: IconHelp,
 		ticket: IconTicket,
-		tool: IconTool
+		tool: IconTool,
+		layout: IconLayout,
+		package: IconPackage,
+		heart: IconHeart,
+		'heart-handshake': IconHeartHandshake,
+		message: IconMessage,
+		bulb: IconBulb
 	};
 
 	function handleSelect(slug: string) {
@@ -53,10 +70,10 @@
 							<div class="rounded-lg bg-primary/10 p-2">
 								<Icon size={20} class="text-primary" />
 							</div>
-							<div class="flex-1 min-w-0">
-								<h3 class="font-semibold text-sm">{category.name}</h3>
+							<div class="min-w-0 flex-1">
+								<h3 class="text-sm font-semibold">{category.name}</h3>
 								{#if category.description}
-									<p class="text-subtle mt-0.5">{category.description}</p>
+									<p class="mt-0.5 text-subtle">{category.description}</p>
 								{/if}
 							</div>
 						</div>
@@ -66,7 +83,7 @@
 									<li>
 										<a
 											href={resolve(`/member/help/${article.slug}`)}
-											class="text-sm hover:text-primary transition-colors"
+											class="text-sm transition-colors hover:text-primary"
 										>
 											{article.title}
 										</a>
@@ -74,7 +91,7 @@
 								{/each}
 							</ul>
 						{:else}
-							<p class="text-xs opacity-50 mt-3 italic">No articles yet</p>
+							<p class="mt-3 text-xs italic opacity-50">No articles yet</p>
 						{/if}
 					</CardBody>
 				</Card>

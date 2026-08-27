@@ -9,7 +9,8 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { role, modelHasRole } from '$lib/server/db/schema/authorization';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
+import { group } from '$lib/server/db/schema/group';
 import {
 	eq,
 	or,
@@ -346,7 +347,7 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 
 	await db.batch(ops as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
 
-	void getUser(id).refresh();
+	void getUserPage(id).refresh();
 
 	return { success: true };
 });
@@ -424,7 +425,7 @@ export const deactivateUser = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getUser(data.id).refresh();
+		void getUserPage(data.id).refresh();
 		return { success: true };
 	}
 );
@@ -453,7 +454,7 @@ export const reactivateUser = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getUser(data.id).refresh();
+		void getUserPage(data.id).refresh();
 		return { success: true };
 	}
 );
@@ -494,18 +495,18 @@ export const getMemberDashboard = query(async () => {
 	const weekEnd = endOfWeek(nowDate, { weekStartsOn: 1 });
 
 	const userBands = await db
-		.select({ bandId: bandMember.bandId, bandName: band.name })
-		.from(bandMember)
-		.innerJoin(band, eq(band.id, bandMember.bandId))
-		.where(and(eq(bandMember.userId, currentUser.id), eq(bandMember.status, 'active')));
+		.select({ bandId: groupMember.groupId, bandName: group.name })
+		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
+		.where(and(eq(groupMember.userId, currentUser.id), eq(groupMember.status, 'active')));
 
 	const activeBandIds = userBands.map((b) => b.bandId);
 	const bandNameMap = Object.fromEntries(userBands.map((b) => [b.bandId, b.bandName]));
 
 	const [{ count: pendingInviteCount }] = await db
 		.select({ count: sql<number>`cast(count(*) as integer)` })
-		.from(bandMember)
-		.where(and(eq(bandMember.userId, currentUser.id), eq(bandMember.status, 'pending')));
+		.from(groupMember)
+		.where(and(eq(groupMember.userId, currentUser.id), eq(groupMember.status, 'pending')));
 
 	const [
 		weekReservations,
@@ -534,7 +535,7 @@ export const getMemberDashboard = query(async () => {
 					.from(reservation)
 					.where(
 						and(
-							eq(reservation.bookerType, 'band'),
+							eq(reservation.bookerType, 'group'),
 							inArray(reservation.bookerId, activeBandIds),
 							gte(reservation.startsAt, weekStart),
 							lte(reservation.startsAt, weekEnd),
@@ -567,7 +568,7 @@ export const getMemberDashboard = query(async () => {
 			id: r.id,
 			bookerType: r.bookerType,
 			bookerId: r.bookerId,
-			bandName: r.bookerType === 'band' ? (bandNameMap[r.bookerId] ?? null) : null,
+			bandName: r.bookerType === 'group' ? (bandNameMap[r.bookerId] ?? null) : null,
 			status: r.status,
 			startsAt: r.startsAt,
 			endsAt: r.endsAt,
@@ -607,6 +608,23 @@ export const getMemberDashboard = query(async () => {
 export const getUserOverview = query(z.string(), async (userId) => {
 	await requireStaff();
 	return getUserOverviewService(userId);
+});
+
+/**
+ * The staff member page's one load-bearing query.
+ *
+ * Both halves are first paint: `getUser` backs the identity header, and the
+ * overview backs the scoreboard, every tab badge and the whole Overview tab.
+ * Reading them as two queries from the component made the page wait on the
+ * slower of two round trips; assembled here they are one request and two
+ * local reads. See `custom/no-concurrent-remote-queries`.
+ */
+export const getUserPage = query(z.string(), async (id) => {
+	await requireStaff();
+
+	const [member, overview] = await Promise.all([getUser(id), getUserOverview(id)]);
+
+	return { member, overview };
 });
 
 export const getUserReservations = query(z.string(), async (userId) => {

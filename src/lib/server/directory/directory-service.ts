@@ -91,7 +91,7 @@ function mapMemberRow<
 		instruments: { instrument: string }[];
 		genres: { genre: string }[];
 		image?: string | null;
-		bandMembers?: {
+		groupMembers?: {
 			status: string;
 			role?: string | null;
 			position?: string | null;
@@ -99,13 +99,13 @@ function mapMemberRow<
 		}[];
 	}
 >(row: T) {
-	const { instruments, genres, bandMembers, image, ...rest } = row;
+	const { instruments, genres, groupMembers, image, ...rest } = row;
 	return {
 		...rest,
 		image: resolveImageUrl(image),
 		instruments: instruments.map((r) => r.instrument),
 		genres: genres.map((r) => r.genre),
-		bands: (bandMembers ?? [])
+		bands: (groupMembers ?? [])
 			.filter((m) => m.status === 'active' && m.band)
 			.map((m) => ({
 				name: m.band!.name,
@@ -147,7 +147,7 @@ export async function listMembers(filters?: MemberFilters) {
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: memberBandsWith
+			groupMembers: memberBandsWith
 		},
 		orderBy: { name: 'asc' },
 		columns: memberColumns
@@ -172,7 +172,7 @@ export async function listMembers(filters?: MemberFilters) {
  * `startDirectThread`'s silent drops exist to withhold — a sender who can spot a
  * closed door can tell a decline from an unopened request. Sending stays
  * silently dropped instead. Same reasoning keeps the directory Message button
- * visible for everyone; see `docs/specs/direct-messages-spec.md`.
+ * visible for everyone; see `docs/specs/shipped/direct-messages-spec.md`.
  */
 export async function searchDirectoryMembers(search: string, viewerId: string, limit = 10) {
 	// `tagline` rides along because two members called Chris are otherwise
@@ -196,7 +196,7 @@ export async function listPublicMembers(filters?: MemberFilters) {
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: memberBandsWith
+			groupMembers: memberBandsWith
 		},
 		orderBy: { name: 'asc' },
 		columns: memberColumns
@@ -252,7 +252,7 @@ export async function getMemberProfile(userId: string, visibility: 'members' | '
 		with: {
 			instruments: true,
 			genres: true,
-			bandMembers: memberBandsWith
+			groupMembers: memberBandsWith
 		},
 		columns: memberColumns
 	});
@@ -266,7 +266,7 @@ export async function getMemberProfile(userId: string, visibility: 'members' | '
 // Band queries
 // ---------------------------------------------------------------------------
 
-type BandWhere = NonNullable<NonNullable<Parameters<typeof db.query.band.findMany>[0]>['where']>;
+type BandWhere = NonNullable<NonNullable<Parameters<typeof db.query.group.findMany>[0]>['where']>;
 
 function bandWhereConditions(visibility: 'members' | 'public', filters?: BandFilters): BandWhere {
 	const conditions: BandWhere[] = [{ deletedAt: { isNull: true } }];
@@ -325,7 +325,7 @@ const bandColumns = {
 
 /** Members-only band directory */
 export async function listBands(filters?: BandFilters) {
-	const rows = await db.query.band.findMany({
+	const rows = await db.query.group.findMany({
 		where: bandWhereConditions('members', filters),
 		with: {
 			genres: true,
@@ -339,7 +339,7 @@ export async function listBands(filters?: BandFilters) {
 
 /** Public band directory */
 export async function listPublicBands(filters?: BandFilters) {
-	const rows = await db.query.band.findMany({
+	const rows = await db.query.group.findMany({
 		where: bandWhereConditions('public', filters),
 		with: {
 			genres: true,

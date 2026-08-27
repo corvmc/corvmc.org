@@ -1,37 +1,35 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { getDirectoryBand, getBandShows, getBandPastShows } from '$lib/remote/directory.remote';
-	import { getMemberLayout } from '$lib/remote/layout.remote';
-	import { ReportContentAction } from '$lib/components/shared/actions';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import { getDirectoryBand, getBandPastShows } from '$lib/remote/directory.remote';
+	import { ReportContentAction } from '$lib/components/actions';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { pageTitle } from '$lib/config';
 	import ProfileHeader, {
 		type ProfilePill
-	} from '$lib/components/shared/directory/profile/ProfileHeader.svelte';
-	import QuickFacts from '$lib/components/shared/directory/profile/QuickFacts.svelte';
-	import ProseBlock from '$lib/components/shared/directory/profile/ProseBlock.svelte';
-	import ListenStrip from '$lib/components/shared/directory/profile/ListenStrip.svelte';
-	import ShowsBox from '$lib/components/shared/directory/profile/ShowsBox.svelte';
+	} from '$lib/components/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
+	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
-	} from '$lib/components/shared/directory/profile/CrossRefList.svelte';
-	import TagCloud from '$lib/components/shared/directory/profile/TagCloud.svelte';
-	import LinksBox from '$lib/components/shared/directory/profile/LinksBox.svelte';
-	import ContactBox from '$lib/components/shared/directory/profile/ContactBox.svelte';
-	import ProfileGrid from '$lib/components/shared/directory/profile/ProfileGrid.svelte';
+	} from '$lib/components/directory/profile/CrossRefList.svelte';
+	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
+	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
+	import ContactBox from '$lib/components/directory/profile/ContactBox.svelte';
+	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
 
 	const MEMBERS_BASE = '/member/directory/members';
 
+	// One query. Three concurrent ones is what -1V was: past kit 2.64 the component blows up in
+	// Svelte's reactivity instead of rendering. `getBandPastShows` below is still its own call,
+	// but it fires from the pager's callback, long after first paint.
 	let data = $derived(await getDirectoryBand(page.params.slug!));
-	let shows = $derived(await getBandShows(data.band.id));
-	let viewer = $derived(await getMemberLayout());
 
 	const band = $derived(data.band);
-
-	let canReport = $derived(
-		viewer.features.contentFlags && !data.members.some((m) => m.userId === viewer.user.id)
-	);
+	const shows = $derived(data.shows);
+	const canReport = $derived(data.viewer.canReport);
 	const contact = $derived(band.directoryContact ?? {});
 
 	let subtitle = $derived(band.tagline || band.genres.join(' · ') || null);

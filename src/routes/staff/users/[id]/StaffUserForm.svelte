@@ -1,11 +1,11 @@
 <script lang="ts">
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { getUser, updateUser } from '$lib/remote/users.remote';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/shared/Form';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '$lib/components/ui/Form';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 
 	// Everything arrives as a resolved prop. Keeping this component's script
 	// fully synchronous is the point of extracting it: a top-level `await` marks

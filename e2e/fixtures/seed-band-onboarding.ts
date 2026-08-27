@@ -13,7 +13,8 @@
 import 'dotenv/config';
 import { eq } from 'drizzle-orm';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
-import { band, bandMember, bandSlugHistory } from '../../src/lib/server/db/schema/band';
+import { groupMember, groupSlugHistory } from '../../src/lib/server/db/schema/group';
+import { group } from '../../src/lib/server/db/schema/group';
 import { scryptHash } from './seed-pay-reservation';
 import { withPlatformEnv } from './platform-db';
 
@@ -88,9 +89,9 @@ export async function seedBandOnboarding(): Promise<void> {
 
 		// Clean slate. Delete explicitly (FKs may be disabled on local D1).
 		for (const bandId of BAND_IDS) {
-			await db.delete(bandMember).where(eq(bandMember.bandId, bandId));
-			await db.delete(bandSlugHistory).where(eq(bandSlugHistory.bandId, bandId));
-			await db.delete(band).where(eq(band.id, bandId));
+			await db.delete(groupMember).where(eq(groupMember.groupId, bandId));
+			await db.delete(groupSlugHistory).where(eq(groupSlugHistory.groupId, bandId));
+			await db.delete(group).where(eq(group.id, bandId));
 		}
 		for (const userId of [SEED_OWNER_ID, SEED_BANDMATE_ID]) {
 			await db.delete(account).where(eq(account.userId, userId));
@@ -138,7 +139,7 @@ export async function seedBandOnboarding(): Promise<void> {
 			updatedAt: now
 		});
 
-		await db.insert(band).values([
+		await db.insert(group).values([
 			{
 				id: SEED_PUBLIC_BAND_ID,
 				name: SEED_PUBLIC_BAND_NAME,
@@ -209,17 +210,17 @@ export async function seedBandOnboarding(): Promise<void> {
 			}
 		]);
 
-		await db.insert(bandSlugHistory).values({
+		await db.insert(groupSlugHistory).values({
 			id: 'e2e-band-public-old-slug',
 			slug: SEED_PUBLIC_BAND_OLD_SLUG,
-			bandId: SEED_PUBLIC_BAND_ID,
+			groupId: SEED_PUBLIC_BAND_ID,
 			createdAt: now
 		});
 
-		await db.insert(bandMember).values(
+		await db.insert(groupMember).values(
 			BAND_IDS.map((bandId) => ({
 				id: `${bandId}-owner`,
-				bandId,
+				groupId: bandId,
 				userId: SEED_OWNER_ID,
 				role: 'owner' as const,
 				status: 'active' as const,
@@ -229,9 +230,9 @@ export async function seedBandOnboarding(): Promise<void> {
 
 		// A plain member — not an admin — of one band, so a test can check what a
 		// bandmate is and isn't offered.
-		await db.insert(bandMember).values({
+		await db.insert(groupMember).values({
 			id: `${SEED_MEMBERS_BAND_ID}-mate`,
-			bandId: SEED_MEMBERS_BAND_ID,
+			groupId: SEED_MEMBERS_BAND_ID,
 			userId: SEED_BANDMATE_ID,
 			role: 'member' as const,
 			status: 'active' as const,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	/**
 	 * Step two: what you'd like to help with.
 	 *
@@ -11,27 +11,21 @@
 	 */
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Form, { SubmitButton } from '$lib/components/shared/Form';
-	import InterestFields from '$lib/components/shared/volunteer/InterestFields.svelte';
-	import {
-		getActiveVolunteerRoles,
-		getMyVolunteerInterests,
-		getVolunteerInterestsStep,
-		saveVolunteerInterests
-	} from '$lib/remote/volunteer.remote';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Form, { SubmitButton } from '$lib/components/ui/Form';
+	import InterestFields from '$lib/components/volunteer/InterestFields.svelte';
+	import { getVolunteerInterestsPage, saveVolunteerInterests } from '$lib/remote/volunteer.remote';
 
-	let step = $derived(getVolunteerInterestsStep());
-	let roles = $derived(getActiveVolunteerRoles());
-	let interests = $derived(getMyVolunteerInterests());
+	// One query rather than three; the `{#await}` below now waits on a single promise.
+	const pageData = $derived(getVolunteerInterestsPage());
 </script>
 
 <PageHeader title="What would you like to help with?" subtitle="Volunteering" />
 
 <PageContent width="md">
-	{#await Promise.all([step, roles, interests]) then [me, roleOptions, myInterests]}
+	{#await pageData then { step: me, roles: roleOptions, interests: myInterests }}
 		<InfoCard title="Pick anything that sounds like you">
 			{#if roleOptions.length === 0}
 				<p class="text-muted">

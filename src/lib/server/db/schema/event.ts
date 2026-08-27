@@ -2,7 +2,7 @@ import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-o
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
-import { band } from './band';
+import { group } from './group';
 import { reservation } from './reservation';
 import { recurringSeries, RECURRING_FREQUENCIES } from './recurring';
 
@@ -62,7 +62,7 @@ export const event = sqliteTable(
 		// that may edit, publish or cancel it. Null for CMC-produced events. This is
 		// not the bill: who actually played is `event_band`, and every write that sets
 		// bandId must also write the matching confirmed event_band row.
-		bandId: text('band_id').references(() => band.id, { onDelete: 'set null' }),
+		bandId: text('band_id').references(() => group.id, { onDelete: 'set null' }),
 		source: text('source', { enum: eventSources }).notNull().default('cmc'),
 		location: text('location'),
 		externalTicketUrl: text('external_ticket_url'),
@@ -146,13 +146,13 @@ export const eventBand = sqliteTable(
 		/** Display credit. Always set, even when bandId is. */
 		name: text('name').notNull(),
 		/** Set only when this credit points at a real band. */
-		bandId: text('band_id').references(() => band.id, { onDelete: 'cascade' }),
+		bandId: text('band_id').references(() => group.id, { onDelete: 'cascade' }),
 		/** 0 = headliner, ascending down the bill. */
 		billingOrder: integer('billing_order').notNull().default(0),
 		status: text('status', { enum: eventBandStatuses }).notNull().default('unlinked'),
 		/** Optional slot label, e.g. "Direct support". */
 		note: text('note'),
-		addedByBandId: text('added_by_band_id').references(() => band.id, { onDelete: 'set null' }),
+		addedByBandId: text('added_by_band_id').references(() => group.id, { onDelete: 'set null' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`)

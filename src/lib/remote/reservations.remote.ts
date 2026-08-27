@@ -29,7 +29,7 @@ import {
 	count
 } from 'drizzle-orm';
 import { getById as getBandById } from '$lib/server/band/band-service';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { event } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
@@ -58,6 +58,7 @@ import {
 	markComplete,
 	markNoShow,
 	recordCashAndComplete,
+	isFirstReservationSql,
 	ReservationConflictError,
 	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
@@ -208,7 +209,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(
 			and(
-				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerType, 'group'),
 				eq(reservation.bookerId, band.id),
 				gt(reservation.startsAt, now),
 				ne(reservation.status, 'cancelled')
@@ -233,7 +234,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(
 			and(
-				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerType, 'group'),
 				eq(reservation.bookerId, band.id),
 				lte(reservation.startsAt, now)
 			)
@@ -262,15 +263,15 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			reservation: reservation,
 			member: memberRefColumns(),
 			memberPhone: user.phone,
-			bandId: band.id,
-			bandName: band.name,
-			bandSlug: band.slug,
+			bandId: group.id,
+			bandName: group.name,
+			bandSlug: group.slug,
 			eventId: event.id,
 			eventTitle: event.title
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(band, bandBookerJoin)
+		.leftJoin(group, bandBookerJoin)
 		.leftJoin(event, eventBookerJoin)
 		.where(eq(reservation.id, id))
 		.limit(1);
@@ -357,11 +358,22 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		.orderBy(asc(reservation.startsAt))
 		.limit(1);
 
-	const [completedCount] = await db
+	// The rule the list renders, restated here so the two pages cannot disagree
+	// about what a first visit is — see `isFirstReservationSql`. Counting only
+	// `completed` rows, which is what this did before, called a member's third
+	// booking their first whenever the earlier two were still `confirmed`.
+	const [priorCount] = await db
 		.select({ count: count() })
 		.from(reservation)
 		.where(
-			and(eq(reservation.createdByUserId, row.createdByUserId), eq(reservation.status, 'completed'))
+			and(
+				eq(reservation.createdByUserId, row.createdByUserId),
+				ne(reservation.status, 'cancelled'),
+				or(
+					lt(reservation.startsAt, row.startsAt),
+					and(eq(reservation.startsAt, row.startsAt), lt(reservation.id, id))
+				)
+			)
 		);
 
 	return {
@@ -377,7 +389,8 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		isLastOfDay,
 		prevId: prevRow?.id ?? null,
 		nextId: nextRow?.id ?? null,
-		isFirstReservation: completedCount.count === 0,
+		isFirstReservation:
+			row.bookerType === 'user' && row.status !== 'cancelled' && priorCount.count === 0,
 		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
 	};
 });
@@ -405,15 +418,15 @@ export const searchBands = query(z.string(), async (q) => {
 	const pattern = `%${q}%`;
 	return db
 		.select({
-			id: band.id,
-			name: band.name,
-			ownerId: band.ownerId,
+			id: group.id,
+			name: group.name,
+			ownerId: group.ownerId,
 			ownerName: user.name,
 			ownerEmail: user.email
 		})
-		.from(band)
-		.innerJoin(user, eq(user.id, band.ownerId))
-		.where(and(isNull(band.deletedAt), like(band.name, pattern)))
+		.from(group)
+		.innerJoin(user, eq(user.id, group.ownerId))
+		.where(and(isNull(group.deletedAt), like(group.name, pattern)))
 		.limit(SEARCH_LIMIT);
 });
 
@@ -802,7 +815,7 @@ const staffReservationFiltersSchema = z.object({
 	dateFrom: z.string().optional(),
 	dateTo: z.string().optional(),
 	statusFilter: z.array(z.string()).optional(),
-	bookerType: z.enum(['user', 'band', 'event']).optional(),
+	bookerType: z.enum(['user', 'group', 'event']).optional(),
 	page: z.number().optional()
 });
 
@@ -811,7 +824,7 @@ const staffReservationFiltersSchema = z.object({
  * to carry that discriminator — otherwise a band whose id happened to match a
  * user's would attach to the wrong row.
  */
-const bandBookerJoin = and(eq(reservation.bookerType, 'band'), eq(band.id, reservation.bookerId));
+const bandBookerJoin = and(eq(reservation.bookerType, 'group'), eq(group.id, reservation.bookerId));
 
 /** The same shape for the other polymorphic booker: an event holding the room. */
 const eventBookerJoin = and(
@@ -863,7 +876,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			or(
 				like(user.name, pattern),
 				like(user.email, pattern),
-				like(band.name, pattern),
+				like(group.name, pattern),
 				like(event.title, pattern)
 			)
 		);
@@ -885,6 +898,9 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			creditsUsed: reservation.creditsUsed,
 			createdByUserId: reservation.createdByUserId,
 			recurringSeriesId: reservation.recurringSeriesId,
+			// The desk staffs a volunteer for a member's first visit, so the list
+			// has to say which booking that is without opening any of them.
+			isFirstReservation: isFirstReservationSql(),
 			// Three joins for one column: the booker is a member, a band or an
 			// event, and which one it is comes from `bookerType`.
 			member: memberRefColumns(),
@@ -893,7 +909,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(band, bandBookerJoin)
+		.leftJoin(group, bandBookerJoin)
 		.leftJoin(event, eventBookerJoin)
 		.where(where)
 		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
@@ -903,7 +919,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.select({ count: count() })
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(band, bandBookerJoin)
+		.leftJoin(group, bandBookerJoin)
 		.leftJoin(event, eventBookerJoin)
 		.where(where);
 
@@ -914,6 +930,9 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 	return {
 		rows: rows.map(({ member, band: bandRow, event: eventRow, ...r }) => ({
 			...r,
+			// SQLite has no booleans, so the correlated subquery lands as 0 or 1 —
+			// the same coercion `toMemberRef` does for `sustaining`.
+			isFirstReservation: !!r.isFirstReservation,
 			booker: toBookerRef({ bookerType: r.bookerType, member, band: bandRow, event: eventRow })
 		})),
 		pagination
@@ -1013,7 +1032,7 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 
 	const res = await staffCreate({
 		userId: data.memberId,
-		bookerType: data.bandId ? 'band' : 'user',
+		bookerType: data.bandId ? 'group' : 'user',
 		bookerId: data.bandId ?? data.memberId,
 		startsAt,
 		endsAt,
@@ -1504,7 +1523,7 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 	try {
 		res = await create({
 			userId: currentUser.id,
-			bookerType: 'band',
+			bookerType: 'group',
 			bookerId: band.id,
 			startsAt,
 			endsAt,
@@ -1514,7 +1533,7 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 		if (isRecurring && err instanceof ReservationConflictError) {
 			res = await createWaitlisted({
 				userId: currentUser.id,
-				bookerType: 'band',
+				bookerType: 'group',
 				bookerId: band.id,
 				startsAt,
 				endsAt,
@@ -1586,7 +1605,7 @@ export const cancelBandReservation = form(
 
 		// 404 rather than 403: whether some other band's reservation exists is not
 		// this band's business.
-		if (!row || row.bookerType !== 'band' || row.bookerId !== band.id) {
+		if (!row || row.bookerType !== 'group' || row.bookerId !== band.id) {
 			error(404, 'Reservation not found');
 		}
 
@@ -2106,4 +2125,65 @@ export const getRecurringReservations = query(
 export const getUserRecurringSeries = query(z.string(), async (userId) => {
 	await requireStaff();
 	return listActiveSeries({ forUser: userId });
+});
+
+/**
+ * The band reservations page's one load-bearing query.
+ *
+ * The schedule, whether the band has a sustaining member (which sets the rate the booking form
+ * quotes) and the booking contact are all first paint, and the page awaited the three side by
+ * side. Past kit 2.64 that renders the error boundary instead of the page; assembled here it is
+ * one request. Each callee re-guards — `getBandReservations` in particular does its own slug
+ * cross-check, which is the boundary that stops one band reading another's schedule.
+ */
+export const getBandReservationsPage = query(z.string(), async (slug) => {
+	const [reservations, membership, contact] = await Promise.all([
+		getBandReservations(slug),
+		getBandMembershipStatus(),
+		getBookingContact()
+	]);
+
+	return { reservations, membership, contact };
+});
+
+/**
+ * The staff reservations page's one load-bearing query.
+ *
+ * Four query promises used to leave this component at once — the list, the tab counts, the
+ * unresolved queue and the hourly rate — and `filters` moves on every keystroke, so each one was
+ * recreated as fast as it could be typed. A superseded promise that rejects has no consumer left
+ * to catch it, which is where JAVASCRIPT-SVELTEKIT-3's 33 unhandled rejections came from.
+ *
+ * The page derives `.then()` views off the single promise rather than awaiting it: awaiting in the
+ * script would suspend the page into the staff layout boundary's `pending` snippet and blank it on
+ * every keystroke, which is what `DataList` exists to avoid.
+ */
+export const getStaffReservationsPage = query(staffReservationFiltersSchema, async (filters) => {
+	await requireStaff();
+
+	const [list, counts, unresolved, hourlyRate] = await Promise.all([
+		getStaffReservations(filters),
+		getReservationCounts(),
+		getUnresolvedReservations(),
+		getHourlyRate()
+	]);
+
+	return { list, counts, unresolved, hourlyRate };
+});
+
+/**
+ * The member reservations page's one load-bearing query.
+ *
+ * Unparameterized, so `refreshReservations()` can name it with no argument — it replaces four
+ * separate `.refresh()` calls.
+ */
+export const getMemberReservationsPage = query(z.void(), async () => {
+	const [active, all, membership, contact] = await Promise.all([
+		getReservations({ after: new Date().toISOString() }),
+		getReservations({ includeTerminal: true }),
+		getMembershipStatus(),
+		getBookingContact()
+	]);
+
+	return { active, all, membership, contact };
 });

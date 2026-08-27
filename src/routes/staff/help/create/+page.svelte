@@ -3,12 +3,12 @@
 	import { resolve } from '$app/paths';
 	import { getStaffCategories, createArticle } from '$lib/remote/help.remote';
 	const { fields } = createArticle;
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import MarkdownEditor from '$lib/components/help/MarkdownEditor.svelte';
 
 	let categories = $derived(await getStaffCategories());

@@ -3,16 +3,16 @@
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { env } from '$env/dynamic/public';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Modal from '$lib/components/shared/Modal.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	import { changeBandAddress } from '$lib/remote/band-address.remote';
 	import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 	import { isReservedSlug } from '$lib/reserved-slugs';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 
 	// A resolved prop, not an awaited query: a top-level await here would compile
 	// the fields.X.as() expressions below into async deriveds (see BandProfileForm).
@@ -50,9 +50,9 @@
 			<!-- Admins can see the address; only the owner can move it, because
 			     `changeBandAddress` is owner-guarded. A button that 403s would be
 			     worse than none. -->
-			<p class="text-subtle mt-2">Only the band's owner can change this address.</p>
+			<p class="mt-2 text-subtle">Only the band's owner can change this address.</p>
 		{:else}
-			<div class="card-actions mt-2 justify-end">
+			<div class="mt-2 card-actions justify-end">
 				<Button variant="default" size="sm" outline onclick={() => (showChange = true)}
 					>Change address</Button
 				>
@@ -101,7 +101,7 @@
 			{/if}
 
 			{#if reserved}
-				<p class="text-error text-sm">That address is reserved — pick another.</p>
+				<p class="text-sm text-error">That address is reserved — pick another.</p>
 			{/if}
 
 			<Alert type="warning" class="text-sm">

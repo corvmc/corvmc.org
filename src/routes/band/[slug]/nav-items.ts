@@ -9,6 +9,8 @@
  * invisible; as a list it can be asserted against, which `nav-items.spec.ts`
  * does for every role and flag combination.
  */
+import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
+
 export type BandNavKey =
 	| 'dashboard'
 	| 'members'
@@ -30,10 +32,13 @@ export interface BandNavInput {
 	features: { bandPremium?: boolean };
 }
 
-export interface BandNavItem {
-	key: BandNavKey;
+export interface BandNavItem extends NavNode<BandNavKey> {
 	label: string;
-	/** Relative to the panel base, or absolute when it leaves the panel. */
+	/**
+	 * Absolute, inside the panel. An `external` row's href leaves the origin and
+	 * is filled in by the layout, which is the only place that knows the band's
+	 * custom domain — it stays empty here, and `activeBandNavKey` skips it.
+	 */
 	href: string;
 	external?: boolean;
 }
@@ -79,4 +84,13 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	}
 
 	return items;
+}
+
+/**
+ * Which row to light up. Band detail pages — `/band/x/events/<id>` and the EPK
+ * editor under `/band/x/page-editor` — lit nothing before this, because
+ * `NavItem` matches the pathname exactly on its own.
+ */
+export function activeBandNavKey(input: BandNavInput, pathname: string): BandNavKey | null {
+	return activeNavKey(bandNavItems(input), pathname);
 }

@@ -13,6 +13,7 @@ import { eq, and } from 'drizzle-orm';
 import { userAdditionalFields } from './auth-fields';
 import { captureException } from '$lib/server/sentry';
 import { verifyTurnstile } from '$lib/server/turnstile';
+import { isLocalOrigin } from '$lib/sentry-local-origin';
 // ---------------------------------------------------------------------------
 // PBKDF2 password hashing via Web Crypto API
 // ---------------------------------------------------------------------------
@@ -269,10 +270,7 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 // anomalies (not ordinary wrong passwords) so they're distinguishable in Sentry.
 
 export type SignInAnomaly =
-	| 'user_not_found'
-	| 'no_credential_account'
-	| 'no_password'
-	| 'unknown_hash_format';
+	'user_not_found' | 'no_credential_account' | 'no_password' | 'unknown_hash_format';
 
 /** Pure reason-derivation for a sign-in attempt; returns null when nothing is structurally wrong. */
 export function deriveSignInAnomaly(input: {
@@ -347,6 +345,39 @@ async function reportSignInAnomaly(rawEmail: unknown): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Client IP and rate limiting
+// ---------------------------------------------------------------------------
+// better-auth rate-limits by client IP, with a built-in rule of 3 requests per
+// 10 seconds on /sign-in*. Which header it reads that IP from decides whether
+// the limit protects anyone.
+//
+// The default is `x-forwarded-for`, which a caller can append to: Cloudflare
+// adds the real address to whatever the client already sent, so a visitor who
+// sends their own produces a two-entry header. better-auth refuses to guess
+// which entry is real without a `trustedProxies` list and resolves no IP at
+// all. It used to skip the check in that case; since 1.6.17 it drops the
+// request into a single shared bucket instead, which would let one visitor hold
+// site-wide sign-in to 3 requests per 10 seconds.
+//
+// CF-Connecting-IP is set by the edge, always a single address, and is not
+// forgeable from outside. Name it and every request is bucketed by its own IP.
+// ---------------------------------------------------------------------------
+
+export const AUTH_IP_ADDRESS_HEADERS = ['cf-connecting-ip'];
+
+/**
+ * Rate limiting is on everywhere but a local server.
+ *
+ * Nothing sets CF-Connecting-IP off Cloudflare, so under `vite preview` no IP
+ * resolves and the whole e2e suite shares the one /sign-in bucket — 104 tests
+ * that each sign in against a budget of 3 per 10 seconds. Fails closed: an
+ * origin that does not parse is treated as remote and keeps its limits.
+ */
+export function authRateLimitEnabled(origin: string | undefined): boolean {
+	return !isLocalOrigin(origin);
+}
+
+// ---------------------------------------------------------------------------
 // Auth instance (lazy-initialized)
 // ---------------------------------------------------------------------------
 
@@ -391,6 +422,12 @@ function createAuth() {
 		},
 		user: {
 			additionalFields: userAdditionalFields
+		},
+		advanced: {
+			ipAddress: { ipAddressHeaders: AUTH_IP_ADDRESS_HEADERS }
+		},
+		rateLimit: {
+			enabled: authRateLimitEnabled(baseURL)
 		},
 		session: {
 			// Every request resolved the session with a DB read, which Sentry's

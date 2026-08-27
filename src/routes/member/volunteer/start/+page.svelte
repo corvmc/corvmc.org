@@ -9,12 +9,12 @@
 	 * Reaching this page with a profile already saved redirects back out; the
 	 * check lives in getVolunteerStartStep, not here.
 	 */
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Form, { SubmitButton } from '$lib/components/shared/Form';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import ProfileFields from '$lib/components/shared/volunteer/ProfileFields.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Form, { SubmitButton } from '$lib/components/ui/Form';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import ProfileFields from '$lib/components/volunteer/ProfileFields.svelte';
 	import { getVolunteerStartStep, startVolunteerOnboarding } from '$lib/remote/volunteer.remote';
 
 	let step = $derived(getVolunteerStartStep());

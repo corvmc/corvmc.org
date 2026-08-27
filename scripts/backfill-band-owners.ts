@@ -2,15 +2,15 @@
  * backfill-band-owners.ts
  *
  * One-off repair. Band ownership is stored twice — `band.owner_id` and the
- * `band_member` row whose `role` is `'owner'` — and only `create()` writes both
+ * `group_member` row whose `role` is `'owner'` — and only `create()` writes both
  * in one batch. The Postgres migrator took the two from different legacy tables
  * without reconciling them, so a migrated band can have an owner who is recorded
  * as `admin`, or who has no membership row at all. Since `requireBandOwner`
- * reads only `band_member.role`, such a band has no owner in practice: no
+ * reads only `group_member.role`, such a band has no owner in practice: no
  * address change, no delete, no transfer, no subscription, no custom domain, and
  * no Settings nav item.
  *
- * This brings `band_member` into agreement with `band.owner_id`.
+ * This brings `group_member` into agreement with `band.owner_id`.
  *
  * Usage:
  *   pnpm tsx scripts/backfill-band-owners.ts [--remote] [--commit]
@@ -43,7 +43,7 @@ const DB_NAME = 'corvmc-db';
 const UUID_RE = /^[0-9a-fA-F-]{36}$/;
 
 type DriftRow = {
-	band_id: string;
+	group_id: string;
 	slug: string;
 	owner_id: string;
 	member_role: string | null;
@@ -78,12 +78,12 @@ function d1File(sql: string): void {
 }
 
 const DRIFT_QUERY = `
-SELECT b.id AS band_id, b.slug, b.owner_id,
+SELECT b.id AS group_id, b.slug, b.owner_id,
        m.role AS member_role, m.status AS member_status,
-       (SELECT count(*) FROM band_member x
-         WHERE x.band_id = b.id AND x.role = 'owner' AND x.user_id != b.owner_id) AS other_owner_rows
-FROM band b
-LEFT JOIN band_member m ON m.band_id = b.id AND m.user_id = b.owner_id
+       (SELECT count(*) FROM group_member x
+         WHERE x.group_id = b.id AND x.role = 'owner' AND x.user_id != b.owner_id) AS other_owner_rows
+FROM "group" b
+LEFT JOIN group_member m ON m.group_id = b.id AND m.user_id = b.owner_id
 WHERE b.deleted_at IS NULL
   AND (m.user_id IS NULL OR m.role != 'owner' OR m.status != 'active')
 ORDER BY b.slug
@@ -107,7 +107,7 @@ async function main() {
 	const skip: DriftRow[] = [];
 
 	for (const r of rows) {
-		if (!UUID_RE.test(r.band_id) || !UUID_RE.test(r.owner_id)) {
+		if (!UUID_RE.test(r.group_id) || !UUID_RE.test(r.owner_id)) {
 			console.error(`  ! Unexpected id shape on ${r.slug}; refusing to build SQL for it.`);
 			skip.push(r);
 		} else if (r.other_owner_rows > 0) {
@@ -138,13 +138,13 @@ async function main() {
 	const statements = [
 		...promote.map(
 			(r) =>
-				`UPDATE band_member SET role = 'owner', status = 'active' ` +
-				`WHERE band_id = '${r.band_id}' AND user_id = '${r.owner_id}';`
+				`UPDATE group_member SET role = 'owner', status = 'active' ` +
+				`WHERE group_id = '${r.group_id}' AND user_id = '${r.owner_id}';`
 		),
 		...insert.map(
 			(r) =>
-				`INSERT INTO band_member (id, band_id, user_id, role, status) ` +
-				`VALUES ('${randomUUID()}', '${r.band_id}', '${r.owner_id}', 'owner', 'active');`
+				`INSERT INTO group_member (id, group_id, user_id, role, status) ` +
+				`VALUES ('${randomUUID()}', '${r.group_id}', '${r.owner_id}', 'owner', 'active');`
 		)
 	];
 
@@ -170,7 +170,7 @@ async function main() {
 
 	const remaining = d1(DRIFT_QUERY) as DriftRow[];
 	const dupes = d1(
-		`SELECT band_id, count(*) AS n FROM band_member WHERE role = 'owner' GROUP BY band_id HAVING count(*) != 1`
+		`SELECT group_id, count(*) AS n FROM group_member WHERE role = 'owner' GROUP BY group_id HAVING count(*) != 1`
 	);
 	console.log(
 		`Verify: ${remaining.length} band(s) still without an owner row, ${dupes.length} band(s) with a duplicate owner row.`

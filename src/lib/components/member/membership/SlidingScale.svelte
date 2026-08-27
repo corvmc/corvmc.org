@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	const tiers = [
 		{ amount: '$10/month', hours: '2 free hours' },
 		{ amount: '$25/month', hours: '5 free hours' },
@@ -34,7 +34,7 @@
 			</div>
 
 			<div class="rounded-lg bg-primary/5 p-6">
-				<div class="mb-2 text-center text-sm font-semibold uppercase tracking-wide text-primary">
+				<div class="mb-2 text-center text-sm font-semibold tracking-wide text-primary uppercase">
 					Why sliding scale?
 				</div>
 				<p class="text-center opacity-70">

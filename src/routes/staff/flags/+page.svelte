@@ -1,15 +1,15 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/shared/Form/SearchInput.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
+	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { entityLabels } from '$lib/config';
-	import Badge from '$lib/components/shared/Badge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { relativeDay } from '$lib/utils/format';
 	import { getFlagsQueue } from '$lib/remote/flags.remote';
 

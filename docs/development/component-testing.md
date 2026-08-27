@@ -43,7 +43,7 @@ Decide by whether the component reads its data from props or from the server.
 
 ## Template — pure component story
 
-See `src/lib/components/shared/EmptyState.stories.svelte`.
+See `src/lib/components/ui/EmptyState.stories.svelte`.
 
 ```svelte
 <script module>
@@ -55,9 +55,7 @@ See `src/lib/components/shared/EmptyState.stories.svelte`.
 		title: 'Shared/MyComponent',
 		component: MyComponent,
 		tags: ['autodocs'],
-		args: {
-			/* defaults shared by all stories */
-		}
+		args: {/* defaults shared by all stories */}
 	});
 </script>
 
@@ -76,7 +74,7 @@ See `src/lib/components/shared/EmptyState.stories.svelte`.
 
 ## Template — coupled component spec
 
-See `src/lib/components/shared/AccountDropdown.svelte.spec.ts`.
+See `src/lib/components/layout/AccountDropdown.svelte.spec.ts`.
 
 ```ts
 import { page } from 'vitest/browser';
@@ -95,18 +93,25 @@ describe('MyComponent', () => {
 	it('renders with no DB/auth/server', async () => {
 		// Import the component AFTER vi.mock is registered.
 		const MyComponent = (await import('./MyComponent.svelte')).default;
-		render(MyComponent);
+		await render(MyComponent);
 		await expect.element(page.getByText('Jane Doe')).toBeVisible();
 	});
 });
 ```
+
+`render()` returns a promise and must be awaited. Dropping the `await` does not
+fail loudly — you get a `Promise` where the `RenderResult` should be, so
+`container`, `rerender` and `unmount` come back `undefined` and the test dies on
+a property access several lines later. `pnpm check` catches it; a bare
+`await render(X)` with no destructuring typechecks either way, so keep the
+`await` even where nothing reads the result.
 
 For an `actions/*` component, prefer passing `fakeForm([...])` as the prop over
 mocking the whole remote module:
 
 ```ts
 import { fakeForm } from '$lib/test/mocks';
-render(CancelReservationAction, { reservation: { id: 'r1' }, action: fakeForm(['id']) });
+await render(CancelReservationAction, { reservation: { id: 'r1' }, action: fakeForm(['id']) });
 ```
 
 ## Coverage

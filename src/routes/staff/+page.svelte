@@ -1,11 +1,11 @@
 <script lang="ts">
-	import StatCard from '$lib/components/shared/StatCard.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
+	import StatCard from '$lib/components/ui/StatCard.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { getStaffDashboard } from '$lib/remote/users.remote';
 	import { resolve } from '$app/paths';

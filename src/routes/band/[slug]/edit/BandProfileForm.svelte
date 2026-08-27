@@ -3,17 +3,17 @@
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 	import { env } from '$env/dynamic/public';
 	import { resolve } from '$app/paths';
-	import RichTextEditor from '$lib/components/shared/Form/RichTextEditor.svelte';
-	import LinkListEditor from '$lib/components/shared/Form/LinkListEditor.svelte';
-	import VisibilityField from '$lib/components/shared/Form/VisibilityField.svelte';
-	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
+	import RichTextEditor from '$lib/components/ui/Form/RichTextEditor.svelte';
+	import LinkListEditor from '$lib/components/directory/LinkListEditor.svelte';
+	import VisibilityField from '$lib/components/ui/Form/VisibilityField.svelte';
+	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
 	import { saveBandProfile } from '$lib/remote/directory.remote';
 	import type { getBandProfile } from '$lib/remote/directory.remote';
 	import type { getBandLayout } from '$lib/remote/layout.remote';
@@ -100,7 +100,7 @@
 				<FormField label="Band address" readonly display={`${band.slug}.${baseDomain}`}>
 					{#snippet description()}
 						Renaming the band doesn't move its address.{#if isOwner}
-							<a href={resolve(`/band/${band.slug}/settings`)} class="link link-primary ml-1">
+							<a href={resolve(`/band/${band.slug}/settings`)} class="ml-1 link link-primary">
 								Change it in Settings
 							</a>
 						{/if}

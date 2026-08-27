@@ -16,15 +16,29 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Every job sets `timeout-minutes`. Without it a job inherits GitHub's default of
+# 360, so anything that wedges — a preview server that never binds, a browser
+# that never exits — holds a runner for six hours and keeps auto-merge armed on
+# a PR that is going nowhere.
+#
+# The numbers are roughly 2x the slowest run observed over the preceding weeks,
+# not the median: E2E retries twice on CI (playwright.config.ts), so a run with
+# a few flaky failures legitimately takes 3x a clean one. Observed maxima at the
+# time of writing were E2E 14.8m and Unit tests 15.1m, against medians of 4.8m
+# and 2.4m. These bound a hang; they are not a performance budget, and a job
+# that starts timing out is reporting a real regression rather than a limit set
+# too tight.
+
 jobs:
   lint:
     name: Lint (full)
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -34,7 +48,7 @@ jobs:
       # function (it exempts node_modules, .md/.svx and src/lib/layouts/prose.svelte
       # from runes mode), which ESLint refuses to serialize. ESLint is ~200s of this
       # job's ~250s, so this only caches the small half.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: node_modules/.cache/prettier
           key: prettier-cache-${{ runner.os }}-${{ github.sha }}
@@ -51,13 +65,14 @@ jobs:
     # queue ref, so the changed-file set is still right there.
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - run: git fetch origin main
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -67,10 +82,11 @@ jobs:
   check:
     name: Svelte Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -83,10 +99,11 @@ jobs:
   unit:
     name: Unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -95,7 +112,7 @@ jobs:
       - name: Resolve Playwright version
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
@@ -107,10 +124,11 @@ jobs:
   e2e:
     name: E2E
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -118,7 +136,7 @@ jobs:
       - name: Resolve Playwright version
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
@@ -147,10 +165,11 @@ jobs:
   schema-drift:
     name: Schema drift
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -177,8 +196,9 @@ jobs:
   docs:
     name: Docs integrity
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # No deps needed — the checker is plain Node. Fails only on integrity errors
       # (broken help links, duplicate slugs, bad frontmatter, orphaned static slugs);
       # route drift is informational here and handled by the nightly sync.

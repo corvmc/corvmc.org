@@ -1,20 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import {
-		getDirectoryMembers,
-		getDirectoryBands,
-		getInstrumentSuggestions,
-		getGenreSuggestions
-	} from '$lib/remote/directory.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import FreeformTagInput from '$lib/components/shared/FreeformTagInput.svelte';
-	import IdCard from '$lib/components/shared/directory/IdCard.svelte';
-	import VinylCard from '$lib/components/shared/directory/VinylCard.svelte';
+	import { getMemberDirectory } from '$lib/remote/directory.remote';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
+	import IdCard from '$lib/components/directory/IdCard.svelte';
+	import VinylCard from '$lib/components/directory/VinylCard.svelte';
 	import { hashIndex } from '$lib/utils/patterns';
 	import { BAND_COLORS } from '$lib/utils/directory-browse';
 
@@ -69,10 +64,14 @@
 		lookingForMembers = false;
 	}
 
-	let members = $derived(await getDirectoryMembers(filters));
-	let bands = $derived(await getDirectoryBands(filters));
-	let instrumentSuggestions = $derived(await getInstrumentSuggestions());
-	let genreSuggestions = $derived(await getGenreSuggestions());
+	// One query for all four. They all re-fire when `filters` moves anyway, so this is one
+	// request per keystroke rather than four — and one is what this component can hold without
+	// kit 2.64 rendering the error boundary instead of the page.
+	const directory = $derived(await getMemberDirectory(filters));
+	const members = $derived(directory.members);
+	const bands = $derived(directory.bands);
+	const instrumentSuggestions = $derived(directory.instrumentSuggestions);
+	const genreSuggestions = $derived(directory.genreSuggestions);
 
 	// The "Show more" window collapses whenever the listed set changes. Derived
 	// off a key rather than reset from an effect, so it can't lag the filters by
@@ -178,7 +177,7 @@
 		{#if members.length === 0}
 			{@render empty('members')}
 		{:else}
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+			<div class="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-3">
 				{#each members.slice(0, limit) as member (member.id)}
 					<IdCard
 						href="/member/directory/members/{member.id}"
@@ -201,7 +200,7 @@
 	{:else if bands.length === 0}
 		{@render empty('bands')}
 	{:else}
-		<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
+		<div class="grid grid-cols-2 justify-items-center gap-6 sm:grid-cols-3 lg:grid-cols-4">
 			{#each bands.slice(0, limit) as b (b.id)}
 				<VinylCard
 					href="/member/directory/bands/{b.slug}"

@@ -105,10 +105,10 @@ describe('async template effects', () => {
 			.filter((file) => {
 				const { js } = compile(readFileSync(file, 'utf8'), {
 					generate: 'client',
-					// Matches svelte.config.js: runes everywhere except the mdsvex layouts.
+					// Matches svelte.config.js: runes everywhere except the mdsvex prose layout.
 					// Leave TypeScript in place — Svelte 5 parses `lang="ts"` natively,
 					// including TS in template expressions.
-					runes: !file.includes('/layouts/'),
+					runes: !file.includes('/markdown/prose.svelte'),
 					experimental: { async: true },
 					filename: file
 				});

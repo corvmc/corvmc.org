@@ -1,7 +1,7 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { band } from './band';
+import { group } from './group';
 
 export {
 	BAND_THEMES,
@@ -28,7 +28,7 @@ export const bandPageConfig = sqliteTable(
 		bandId: text('band_id')
 			.notNull()
 			.unique()
-			.references(() => band.id, { onDelete: 'cascade' }),
+			.references(() => group.id, { onDelete: 'cascade' }),
 		theme: text('theme').notNull().default('default'),
 		customCss: text('custom_css'),
 		blocks: text('blocks', { mode: 'json' }).$type<Block[]>().notNull().default([]),
@@ -52,7 +52,7 @@ export const bandMedia = sqliteTable(
 			.$defaultFn(() => crypto.randomUUID()),
 		bandId: text('band_id')
 			.notNull()
-			.references(() => band.id, { onDelete: 'cascade' }),
+			.references(() => group.id, { onDelete: 'cascade' }),
 		key: text('key').notNull(),
 		type: text('type').notNull(), // 'image' | 'hero' | 'rider' | 'stage_plot'
 		caption: text('caption'),

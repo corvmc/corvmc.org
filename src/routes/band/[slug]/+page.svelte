@@ -1,19 +1,21 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Button from '$lib/components/shared/Button.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Button from '$lib/components/ui/Button.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { getBandUpcoming } from '$lib/remote/bands.remote';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayoutContext } from './layout-context';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
-	import StatCard from '$lib/components/shared/StatCard.svelte';
+	import StatCard from '$lib/components/ui/StatCard.svelte';
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
 
 	const band = $derived(layout.band);
 	const isOwnerOrAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
@@ -25,11 +27,11 @@
 <PageContent>
 	{#await upcoming}
 		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
+			<span class="loading loading-lg loading-spinner"></span>
 		</div>
 	{:then sessions}
 		<!-- Band overview -->
-		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 			<StatCard title="Members" value={band.memberCount} size="sm" />
 			<StatCard title="Upcoming Sessions" value={sessions.length} size="sm" />
 			<StatCard title="Your Role" value={layout.userRole} size="sm" valueClass="capitalize" />
@@ -37,9 +39,9 @@
 
 		<!-- Upcoming reservations -->
 		<section>
-			<div class="flex items-center justify-between mb-3">
+			<div class="mb-3 flex items-center justify-between">
 				<h2 class="text-lg font-semibold">Upcoming Sessions</h2>
-				<a href={resolve(`/band/${band.slug}/reservations`)} class="link link-primary text-sm">
+				<a href={resolve(`/band/${band.slug}/reservations`)} class="link text-sm link-primary">
 					View all
 				</a>
 			</div>

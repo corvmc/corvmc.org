@@ -1,16 +1,16 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { CancelTicketAction } from '$lib/components/shared/actions';
+	import { CancelTicketAction } from '$lib/components/actions';
 	import { checkInTicket, getStaffCheckIn } from '$lib/remote/events.remote';
 	import { page } from '$app/state';
-	import StatCard from '$lib/components/shared/StatCard.svelte';
+	import StatCard from '$lib/components/ui/StatCard.svelte';
 	const { fields } = checkInTicket;
 
 	let data = $derived(await getStaffCheckIn(page.params.id!));
@@ -54,7 +54,7 @@
 					<div>
 						<p class="font-medium">{ticket.attendeeName}</p>
 						<p class="text-muted">{ticket.attendeeEmail}</p>
-						<p class="font-mono text-xs opacity-50 mt-1">{ticket.code}</p>
+						<p class="mt-1 font-mono text-xs opacity-50">{ticket.code}</p>
 					</div>
 
 					<div class="flex items-center gap-3">
@@ -84,7 +84,7 @@
 		{/each}
 
 		{#if filteredTickets.length === 0}
-			<p class="text-center opacity-50 py-8">
+			<p class="py-8 text-center opacity-50">
 				{search ? 'No tickets match your search' : 'No tickets to check in'}
 			</p>
 		{/if}

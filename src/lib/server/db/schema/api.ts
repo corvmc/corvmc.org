@@ -1,6 +1,6 @@
 import type { Credits, SubscriptionInfo, CommunityStats } from './finance';
 import type { User } from './authentication';
-import type { Band, BandMember } from './band';
+import type { Group, GroupMember } from './group';
 import type { Reservation } from './reservation';
 import type { Event } from './event';
 import type { EquipmentLoan } from './equipment';
@@ -12,12 +12,7 @@ import type { MemberRef } from '$lib/types/entity';
 // Shared primitives
 // ---------------------------------------------------------------------------
 
-export interface Pagination {
-	page: number;
-	pageSize: number;
-	total: number;
-	totalPages: number;
-}
+export type { Pagination } from '$lib/types/pagination';
 
 /**
  * @deprecated Use `MemberRef` from `$lib/types/entity`, which the entity tiers
@@ -37,22 +32,22 @@ export interface AuthMeResponse {
 
 export interface MemberLayoutResponse {
 	user: Pick<User, 'id' | 'name' | 'email'>;
-	userBands: (Pick<Band, 'id' | 'name' | 'slug' | 'avatarKey'> & { role: string })[];
+	userBands: (Pick<Group, 'id' | 'name' | 'slug' | 'avatarKey'> & { role: string })[];
 	isStaff: boolean;
 }
 
 export interface StaffLayoutResponse {
 	user: Pick<User, 'id' | 'name' | 'email'>;
-	userBands: Pick<Band, 'id' | 'name' | 'slug'>[];
+	userBands: Pick<Group, 'id' | 'name' | 'slug'>[];
 }
 
 export interface BandLayoutResponse {
-	band: Pick<Band, 'id' | 'name' | 'slug' | 'bio' | 'ownerId' | 'avatarKey' | 'createdAt'> & {
+	band: Pick<Group, 'id' | 'name' | 'slug' | 'bio' | 'ownerId' | 'avatarKey' | 'createdAt'> & {
 		memberCount: number;
 	};
 	userRole: string;
 	isStaff: boolean;
-	userBands: Pick<Band, 'id' | 'name' | 'slug'>[];
+	userBands: Pick<Group, 'id' | 'name' | 'slug'>[];
 	user: Pick<User, 'id' | 'name' | 'email'> | null;
 }
 
@@ -83,10 +78,10 @@ export interface AccountResponse {
 }
 
 export interface MemberBandsResponse {
-	pending: (Pick<Band, 'id' | 'name' | 'slug' | 'avatarKey'> &
-		Pick<BandMember, 'role' | 'status'> & { memberCount: number })[];
-	active: (Pick<Band, 'id' | 'name' | 'slug' | 'avatarKey'> &
-		Pick<BandMember, 'role' | 'status'> & { memberCount: number })[];
+	pending: (Pick<Group, 'id' | 'name' | 'slug' | 'avatarKey'> &
+		Pick<GroupMember, 'role' | 'status'> & { memberCount: number })[];
+	active: (Pick<Group, 'id' | 'name' | 'slug' | 'avatarKey'> &
+		Pick<GroupMember, 'role' | 'status'> & { memberCount: number })[];
 }
 
 export type MemberReservation = Pick<
@@ -221,9 +216,9 @@ export interface DirectoryResponse {
 		instruments: string[];
 		genres: string[];
 		memberSince: string;
-		bands: Pick<Band, 'name' | 'slug'>[];
+		bands: Pick<Group, 'name' | 'slug'>[];
 	})[];
-	bands: (Pick<Band, 'id' | 'name' | 'slug' | 'bio' | 'tagline' | 'lookingForMembers'> & {
+	bands: (Pick<Group, 'id' | 'name' | 'slug' | 'bio' | 'tagline' | 'lookingForMembers'> & {
 		avatarUrl: string | null;
 		memberCount: number;
 		genres: string[];
@@ -232,7 +227,7 @@ export interface DirectoryResponse {
 
 export interface DirectoryBandResponse {
 	band: Pick<
-		Band,
+		Group,
 		| 'id'
 		| 'name'
 		| 'slug'
@@ -247,7 +242,7 @@ export interface DirectoryBandResponse {
 		memberCount: number;
 		genres: string[];
 	};
-	members: (Pick<BandMember, 'id' | 'role' | 'position'> & {
+	members: (Pick<GroupMember, 'id' | 'role' | 'position'> & {
 		userName: string;
 		userImage: string | null;
 	})[];

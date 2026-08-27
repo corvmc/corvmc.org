@@ -17,7 +17,13 @@
  * in `beforeNavigate`, and a form submit is not a navigation.
  *
  * Browsers word the message differently — Firefox "unexpected character",
- * Chrome "Unexpected token", Safari "is not valid JSON" — so match all three.
+ * Chrome "Unexpected token", Safari "is not valid JSON" — so match all of them.
+ * Safari has a second wording: when the body is a bare `undefined` rather than
+ * an HTML page it says `JSON Parse error: Unexpected identifier "undefined"`
+ * (JAVASCRIPT-SVELTEKIT-2K, reported by a tab still running release 82a4999
+ * minutes after a deploy). `JSON Parse error` is its prefix for every parse
+ * failure, so matching it covers that family.
+ *
  * The type check does the real narrowing; a non-SyntaxError never qualifies.
  */
 export function isStaleRemoteResponse(error: unknown): boolean {
@@ -26,6 +32,7 @@ export function isStaleRemoteResponse(error: unknown): boolean {
 	return (
 		message.includes('unexpected character') ||
 		message.includes('Unexpected token') ||
-		message.includes('is not valid JSON')
+		message.includes('is not valid JSON') ||
+		message.includes('JSON Parse error')
 	);
 }

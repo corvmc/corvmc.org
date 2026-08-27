@@ -142,7 +142,7 @@ Create `src/routes/api/cron/generate-recurring-reservations/+server.ts` followin
 
 ### 3.3 Add domain event for skipped occurrences
 
-Add `RecurringSkippedEvent` interface and `'reservation.recurring_skipped'` to the event map in `src/lib/server/events/event-bus.ts`:
+Add `RecurringSkippedEvent` interface and `'reservation.recurring_skipped'` to the event map in `src/lib/server/event-bus/event-bus.ts`:
 
 ```typescript
 export interface RecurringSkippedEvent {
@@ -299,9 +299,9 @@ Build the edit flow (could be a modal or separate page):
 
 ## Epic 8: Parity report and final verification
 
-### 8.1 Update parity report
+### 8.1 Update the feature catalog
 
-In `docs/reports/parity-report.md`:
+In `docs/reports/feature-catalog.md`:
 
 - Update the "Recurring reservations" row in the staff panel table to `✅` with notes.
 - Update the "Recurring reservation generation" row in the scheduled jobs table to `✅ /api/cron/generate-recurring-reservations`.
@@ -335,7 +335,7 @@ Epic 1 (schema + config)
         ├─▶ Epic 6 (staff UI)
         └─▶ Epic 7 (member UI)
 
-Epic 8 (parity report + smoke test) ── after all others
+Epic 8 (feature catalog + smoke test) ── after all others
 ```
 
 Epics 3–7 can be worked in any order after Epic 2 is complete. Epics 4, 5, 6, and 7 are independent of each other.

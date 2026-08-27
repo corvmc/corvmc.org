@@ -1,30 +1,31 @@
 <script lang="ts">
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import ImportGigsModal from './ImportGigsModal.svelte';
 	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate } from '$lib/utils/format';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import {
-		getBandEvents,
-		getBandLineupInvites,
+		getBandEventsPage,
 		confirmLineupSlotForm,
 		declineLineupSlotForm
 	} from '$lib/remote/band-events.remote';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayoutContext } from '../layout-context';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
-	let events = $derived(await getBandEvents(page.params.slug!));
-	let invites = $derived(await getBandLineupInvites(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
+	const { events, invites } = $derived(await getBandEventsPage(page.params.slug!));
 	const band = $derived(layout.band);
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
@@ -56,7 +57,7 @@
 				     its own instance with its own pending state. -->
 				{@const confirm = confirmLineupSlotForm.for(invite.eventId)}
 				{@const decline = declineLineupSlotForm.for(invite.eventId)}
-				<div class="card bg-warning/10 border border-warning/40">
+				<div class="card border border-warning/40 bg-warning/10">
 					<CardBody row class="gap-4 py-4">
 						<div>
 							<p class="font-medium">{invite.eventTitle}</p>
@@ -109,7 +110,7 @@
 			{#each events as evt (evt.id)}
 				<a
 					href={resolve(`/band/${band.slug}/events/${evt.id}`)}
-					class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow block"
+					class="card block bg-base-100 shadow-sm transition-shadow hover:shadow-md"
 				>
 					<CardBody row class="py-4">
 						<div>

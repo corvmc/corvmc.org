@@ -1,4 +1,4 @@
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { formatCents } from '$lib/utils/format';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { captureException } from '$lib/server/sentry';

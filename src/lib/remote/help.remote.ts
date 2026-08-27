@@ -67,6 +67,19 @@ export const getMemberArticle = query(z.string(), async (slug) => {
 	return article;
 });
 
+/**
+ * The member article page's one load-bearing query.
+ *
+ * The article and the category list either side of it are both first paint — the list backs the
+ * sidebar — and awaiting them side by side is the shape that stops a page rendering past kit
+ * 2.64. `getMemberCategories` stays exported: `/member/help` reads it on its own, and a page with
+ * one query is not the problem.
+ */
+export const getMemberArticlePage = query(z.string(), async (slug) => {
+	const [article, categories] = await Promise.all([getMemberArticle(slug), getMemberCategories()]);
+	return { article, categories };
+});
+
 export const searchHelp = query(z.string(), async (q) => {
 	const { role } = await requireUserWithRole();
 	if (q.trim().length < 2) return [];
@@ -145,12 +158,19 @@ export const updateArticle = form(updateArticleSchema, async (data) => {
 export const setArticlesPublishedForm = form(
 	z.object({
 		ids: z.array(z.string().min(1)).min(1).max(200),
-		published: z.boolean()
+		// Both call sites post this as a hidden input, so a value always arrives
+		// and the default never fires. It has to be optional regardless: kit
+		// rejects a required boolean in a form schema, because an unchecked
+		// checkbox sends nothing at all.
+		published: z.boolean().optional().default(false)
 	}),
 	async (data) => {
 		await requireStaff();
 		const count = await setArticlesPublished(data.ids, data.published);
-		void getStaffArticles().refresh();
+		// The wrapper, not `getStaffArticles`: `/staff/help` is the only thing that read the list
+		// and it reads it through `getStaffHelpPage` now, so refreshing the constituent would
+		// repaint nothing. See `custom/refresh-the-composed-query`.
+		void getStaffHelpPage().refresh();
 		return { count };
 	}
 );
@@ -211,4 +231,16 @@ export const deleteCategory = form(z.object({ id: z.string().min(1) }), async (d
 	await requireStaff();
 	await deleteCategorySvc(data.id);
 	return { success: true };
+});
+
+/** The staff help list's one load-bearing query. See `getMemberArticlePage`. */
+export const getStaffHelpPage = query(z.void(), async () => {
+	const [articles, categories] = await Promise.all([getStaffArticles(), getStaffCategories()]);
+	return { articles, categories };
+});
+
+/** The staff article editor's one load-bearing query. See `getMemberArticlePage`. */
+export const getStaffArticlePage = query(z.string(), async (id) => {
+	const [article, categories] = await Promise.all([getStaffArticle(id), getStaffCategories()]);
+	return { article, categories };
 });

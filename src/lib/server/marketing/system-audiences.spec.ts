@@ -149,16 +149,18 @@ describe('predicates', () => {
 
 	it('band-leaders matches only owners and admins of live bands', () => {
 		const sql = predicateSql('band-leaders');
-		expect(sql).toContain("bm.\"role\" in ('owner', 'admin')");
-		expect(sql).toContain('bm."status" = \'active\'');
-		expect(sql).toContain('b."deleted_at" is null');
+		expect(sql).toContain('"group_member"."role" in (\'owner\', \'admin\')');
+		expect(sql).toContain('"group_member"."status" = \'active\'');
+		expect(sql).toContain('"group"."deleted_at" is null');
 	});
 
 	// Regression guard: an unqualified outer reference would bind to the
-	// subquery's own tables — both `band` and `band_member` have an `id` — and
-	// silently match every user instead of failing.
+	// subquery's own tables — both `group` and `group_member` have an `id` — and
+	// silently match every user instead of failing. The predicate interpolates
+	// `user.id` rather than spelling it, so this also pins the fact that drizzle
+	// renders it with its table prefix intact in this position.
 	it('band-leaders qualifies its correlated outer reference', () => {
-		expect(predicateSql('band-leaders')).toContain('bm."user_id" = "user"."id"');
+		expect(predicateSql('band-leaders')).toContain('"group_member"."user_id" = "user"."id"');
 	});
 });
 

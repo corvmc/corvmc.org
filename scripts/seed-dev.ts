@@ -50,7 +50,9 @@ import {
 	paymentCache as paymentRecord
 } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
-import { band, bandMember, bandGenre, bandSlugHistory } from '../src/lib/server/db/schema/band';
+import { bandGenre } from '../src/lib/server/db/schema/band';
+import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
+import { group } from '../src/lib/server/db/schema/group';
 import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
 import {
 	subscriber,
@@ -504,9 +506,9 @@ async function deleteAll() {
 		'band_media',
 		'band_page_config',
 		'band_genre',
-		'band_member',
-		'band_slug_history',
-		'band',
+		'group_member',
+		'group_slug_history',
+		'group',
 		'payment_cache',
 		'credit_transaction',
 		'recurring_series',
@@ -843,6 +845,43 @@ async function seedReservations(users: SeedUser[]): SeedReservation[] {
 			rows.push(r);
 		}
 	}
+
+	// A guaranteed first-timer, for the flag the staff list shows so the desk can
+	// put a volunteer on the hour. Both loops above pick their member at random,
+	// so whether anybody was booking for the first time came down to the dice —
+	// and picking one of `users` would not have settled it either, since bands
+	// and recurring series seed reservations for those same members afterwards.
+	// This member exists only here and books once, with a note, so both of the
+	// list's flags are on screen after every seed.
+	const newcomerId = randomUUID();
+	const [newcomer] = await db
+		.insert(user)
+		.values({
+			id: newcomerId,
+			name: 'Wren Okafor',
+			email: 'wren.okafor@example.com',
+			emailVerified: true,
+			pronouns: 'they/them',
+			phone: '541-555-0142',
+			memberNumber: 999,
+			createdAt: new Date(Date.now() - 2 * 86400000),
+			updatedAt: new Date()
+		})
+		.returning();
+
+	const [firstEver] = await db
+		.insert(reservation)
+		.values({
+			bookerType: 'user',
+			bookerId: newcomer.id,
+			createdByUserId: newcomer.id,
+			status: 'scheduled',
+			startsAt: ptDate(2, 18),
+			endsAt: ptDate(2, 20),
+			notes: 'First time here — is there somewhere to park a van?'
+		})
+		.returning();
+	rows.push(firstEver);
 
 	return rows;
 }
@@ -1214,7 +1253,7 @@ async function seedCreditTransactions(users: SeedUser[]) {
 }
 
 /**
- * Insert a band together with the `band_member` row that records its owner.
+ * Insert a band together with the `group_member` row that records its owner.
  *
  * These two are one fact stored twice, and the app's guards read only the
  * member row (`requireBandOwner` resolves through `requireBandMember()`), so a
@@ -1225,13 +1264,13 @@ async function seedCreditTransactions(users: SeedUser[]) {
  * production drift that `scripts/backfill-band-owners.ts` had to repair.
  */
 async function insertBandWithOwner(
-	values: typeof band.$inferInsert,
+	values: typeof group.$inferInsert,
 	ownerId: string,
 	position?: string
 ) {
-	const [b] = await db.insert(band).values(values).returning();
-	await db.insert(bandMember).values({
-		bandId: b.id,
+	const [b] = await db.insert(group).values(values).returning();
+	await db.insert(groupMember).values({
+		groupId: b.id,
 		userId: ownerId,
 		role: 'owner',
 		position: position ?? null,
@@ -1327,8 +1366,8 @@ async function seedBands(users: SeedUser[]) {
 		const candidates = users.filter((u) => u.id !== owner.id);
 		const members = pickN(candidates, memberCount);
 		for (const m of members) {
-			await db.insert(bandMember).values({
-				bandId: b.id,
+			await db.insert(groupMember).values({
+				groupId: b.id,
 				userId: m.id,
 				role: 'member',
 				position: pick(BAND_POSITIONS),
@@ -1342,7 +1381,7 @@ async function seedBands(users: SeedUser[]) {
 		// old-address redirect paths (microsite and directory profile) have local
 		// data to exercise.
 		if (i === 0 || i === PREMIUM_BAND_COUNT) {
-			await db.insert(bandSlugHistory).values({ slug: `${slug}-old`, bandId: b.id });
+			await db.insert(groupSlugHistory).values({ slug: `${slug}-old`, groupId: b.id });
 		}
 	}
 
@@ -1703,7 +1742,7 @@ async function seedBandReservations(bands: any[]) {
 			const [r] = await db
 				.insert(reservation)
 				.values({
-					bookerType: 'band',
+					bookerType: 'group',
 					bookerId: b.id,
 					// A band booking is still made by a person, and their free hours
 					// settle it — same shape the band-facing booking form produces.
@@ -2794,6 +2833,22 @@ async function seedHelp() {
 				description: 'Volunteer roles, logging hours, and how review works',
 				icon: 'heart-handshake',
 				sortOrder: 9,
+				minRole: 'member'
+			},
+			{
+				name: 'Messages',
+				slug: 'messaging',
+				description: 'Talking to staff, and to other members',
+				icon: 'message',
+				sortOrder: 10,
+				minRole: 'member'
+			},
+			{
+				name: 'Suggestions',
+				slug: 'suggestions',
+				description: 'The member idea board and how staff answer it',
+				icon: 'bulb',
+				sortOrder: 11,
 				minRole: 'member'
 			}
 		],

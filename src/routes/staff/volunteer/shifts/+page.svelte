@@ -1,25 +1,21 @@
 <script lang="ts">
+	import NewShiftAction from '../NewShiftAction.svelte';
+	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import ShiftFormFields from '$lib/components/shared/volunteer/ShiftFormFields.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import FilterBar from '$lib/components/ui/FilterBar.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { formatDateShort, toLocalDateTime } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { IconCopy } from '@tabler/icons-svelte';
-	import {
-		getShifts,
-		getVolunteerRoles,
-		createShift,
-		duplicateShift
-	} from '$lib/remote/volunteer.remote';
+	import { getShifts, duplicateShift } from '$lib/remote/volunteer.remote';
 
 	const initial = page.url.searchParams;
 
@@ -46,7 +42,6 @@
 			from: showPast ? undefined : new Date().toISOString()
 		})
 	);
-	let roles = $derived(getVolunteerRoles());
 
 	function timeRange(start: Date, end: Date): string {
 		const fmt = new Intl.DateTimeFormat('en-US', {
@@ -64,64 +59,10 @@
 	// The role carries the shape of its own shift, so the end time and headcount
 	// follow whichever role is picked in the modal. Roles that never had defaults
 	// set fall back to the four hours and one person this form always assumed.
-	const FALLBACK_DURATION_MINUTES = 4 * 60;
-	const FALLBACK_CAPACITY = 1;
-
-	let pickedRoleId = $state('');
-
-	// Seeded from the first live role rather than left empty. The select has no
-	// placeholder option, so a bound value matching nothing leaves it with nothing
-	// selected — which posts an empty role instead of the one on screen. Guarded on
-	// `pickedRoleId` so it seeds once and never clobbers an actual choice.
-	$effect(() => {
-		void roles.then((all) => {
-			if (pickedRoleId) return;
-			const first = all.find((r) => r.isActive);
-			if (first) pickedRoleId = first.id;
-		});
-	});
-
-	type RoleDefaults = {
-		id: string;
-		defaultDurationMinutes: number | null;
-		defaultCapacity: number | null;
-	};
-
-	function defaultsFor(all: RoleDefaults[]) {
-		const picked = all.find((r) => r.id === pickedRoleId) ?? all[0];
-		const minutes = picked?.defaultDurationMinutes ?? FALLBACK_DURATION_MINUTES;
-		return {
-			end: toLocalDateTime(new Date(START_MS + minutes * 60_000)),
-			capacity: String(picked?.defaultCapacity ?? FALLBACK_CAPACITY)
-		};
-	}
 </script>
 
 <PageHeader title="Shifts" subtitle="Staff" backHref="/staff/volunteer">
-	{#await roles then roleOptions}
-		{@const live = roleOptions.filter((r) => r.isActive)}
-		{#if live.length > 0}
-			<Action
-				action={createShift}
-				label="New Shift"
-				modalTitle="Schedule a shift"
-				submitLabel="Create"
-				successToast="Shift scheduled"
-			>
-				{#snippet form()}
-					{@const defaults = defaultsFor(live)}
-					<ShiftFormFields
-						form={createShift}
-						roles={live}
-						bind:roleId={pickedRoleId}
-						startsAt={defaultStart}
-						endsAt={defaults.end}
-						capacity={defaults.capacity}
-					/>
-				{/snippet}
-			</Action>
-		{/if}
-	{/await}
+	<NewShiftAction {defaultStart} />
 </PageHeader>
 
 <PageContent>
@@ -132,21 +73,17 @@
 			showPast = false;
 		}}
 	>
-		{#await roles then roleOptions}
-			<Select
-				size="sm"
-				aria-label="Role"
-				value={roleFilter}
-				onchange={(e: Event) => {
-					roleFilter = (e.currentTarget as HTMLSelectElement).value;
-				}}
-			>
-				<option value="">All roles</option>
-				{#each roleOptions as role (role.id)}
-					<option value={role.id}>{role.name}</option>
-				{/each}
-			</Select>
-		{/await}
+		<Select
+			size="sm"
+			aria-label="Role"
+			value={roleFilter}
+			onchange={(e: Event) => {
+				roleFilter = (e.currentTarget as HTMLSelectElement).value;
+			}}
+		>
+			<option value="">All roles</option>
+			<RoleOptions />
+		</Select>
 
 		<label class="label cursor-pointer gap-2 text-sm">
 			<input

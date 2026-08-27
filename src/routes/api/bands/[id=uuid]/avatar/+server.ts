@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { eq } from 'drizzle-orm';
 import { getUserRole } from '$lib/server/band/band-service';
 import { uploadFile, deleteObject, validateUpload } from '$lib/server/storage';
@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	if (!locals.user) throw error(401, 'Not authenticated');
 
 	const bandId = params.id;
-	const [row] = await db.select().from(band).where(eq(band.id, bandId)).limit(1);
+	const [row] = await db.select().from(group).where(eq(group.id, bandId)).limit(1);
 	if (!row) throw error(404, 'Band not found');
 
 	await requireAdminOfBand(bandId, locals.user.id);
@@ -56,7 +56,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	await uploadFile(buffer, key, file.type);
 
-	await db.update(band).set({ avatarKey: key, updatedAt: new Date() }).where(eq(band.id, bandId));
+	await db.update(group).set({ avatarKey: key, updatedAt: new Date() }).where(eq(group.id, bandId));
 
 	return json({ success: true, avatarKey: key });
 };
@@ -69,7 +69,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) throw error(401, 'Not authenticated');
 
 	const bandId = params.id;
-	const [row] = await db.select().from(band).where(eq(band.id, bandId)).limit(1);
+	const [row] = await db.select().from(group).where(eq(group.id, bandId)).limit(1);
 	if (!row) throw error(404, 'Band not found');
 
 	await requireAdminOfBand(bandId, locals.user.id);
@@ -82,7 +82,10 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		}
 	}
 
-	await db.update(band).set({ avatarKey: null, updatedAt: new Date() }).where(eq(band.id, bandId));
+	await db
+		.update(group)
+		.set({ avatarKey: null, updatedAt: new Date() })
+		.where(eq(group.id, bandId));
 
 	return json({ success: true });
 };

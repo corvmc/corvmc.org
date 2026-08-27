@@ -1,47 +1,40 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import {
-		getDirectoryMember,
-		getMemberShows,
-		getMemberPastShows
-	} from '$lib/remote/directory.remote';
-	import { getMemberLayout } from '$lib/remote/layout.remote';
-	import { ReportContentAction } from '$lib/components/shared/actions';
+	import { getDirectoryMember, getMemberPastShows } from '$lib/remote/directory.remote';
+	import { ReportContentAction } from '$lib/components/actions';
 	import MessageMemberAction from './MessageMemberAction.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { pageTitle } from '$lib/config';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import ProfileHeader, {
 		type ProfilePill
-	} from '$lib/components/shared/directory/profile/ProfileHeader.svelte';
-	import QuickFacts from '$lib/components/shared/directory/profile/QuickFacts.svelte';
-	import ProseBlock from '$lib/components/shared/directory/profile/ProseBlock.svelte';
-	import ListenStrip from '$lib/components/shared/directory/profile/ListenStrip.svelte';
-	import ShowsBox from '$lib/components/shared/directory/profile/ShowsBox.svelte';
+	} from '$lib/components/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
+	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
-	} from '$lib/components/shared/directory/profile/CrossRefList.svelte';
-	import TagCloud from '$lib/components/shared/directory/profile/TagCloud.svelte';
-	import LinksBox from '$lib/components/shared/directory/profile/LinksBox.svelte';
-	import ContactBox from '$lib/components/shared/directory/profile/ContactBox.svelte';
-	import ProfileGrid from '$lib/components/shared/directory/profile/ProfileGrid.svelte';
+	} from '$lib/components/directory/profile/CrossRefList.svelte';
+	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
+	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
+	import ContactBox from '$lib/components/directory/profile/ContactBox.svelte';
+	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
 	import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
 
 	const BANDS_BASE = '/member/directory/bands';
 
 	let id = $derived(page.params.id!);
-	let member = $derived(await getDirectoryMember(id));
-	let shows = $derived(await getMemberShows(id));
-	let viewer = $derived(await getMemberLayout());
+	// One query — see the note on `getDirectoryMember`. The two permission flags are decided
+	// server-side now; the "message yourself" reasoning moved there with them.
+	let data = $derived(await getDirectoryMember(id));
 
-	let canReport = $derived(viewer.features.contentFlags && viewer.user.id !== id);
-	// No "message yourself" button. Whether they will actually receive it depends
-	// on blocks and their own messaging switch — which is checked server-side and
-	// deliberately not reflected here: showing or hiding this button based on
-	// those would tell the sender things the silent-drop design keeps from them.
-	let canMessage = $derived(viewer.features.directMessages && viewer.user.id !== id);
+	const member = $derived(data.profile);
+	const shows = $derived(data.shows);
+	const canReport = $derived(data.viewer.canReport);
+	const canMessage = $derived(data.viewer.canMessage);
 
 	let links = $derived((member?.links as ProfileLink[] | null) ?? []);
 	let contact = $derived((member?.directoryContact ?? {}) as NonNullable<DirectoryContact>);

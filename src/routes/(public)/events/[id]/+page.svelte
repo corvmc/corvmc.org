@@ -1,13 +1,13 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import SectionLabel from '$lib/components/shared/SectionLabel.svelte';
-	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
-	import ReportEventAction from '$lib/components/shared/actions/ReportEventAction.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import PosterCard from '$lib/components/events/PosterCard.svelte';
+	import ReportEventAction from '$lib/components/actions/ReportEventAction.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
 	import {
 		ticketingMode,
@@ -20,7 +20,7 @@
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
 	import { getPublicEventDetail } from '$lib/remote/events.remote';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import ShareButton from '$lib/components/shared/ShareButton.svelte';
+	import ShareButton from '$lib/components/ui/ShareButton.svelte';
 
 	let data = $derived(await getPublicEventDetail(page.params.id!));
 
@@ -95,23 +95,26 @@
 	{/if}
 </svelte:head>
 
-<section class="py-10 px-6">
-	<div class="max-w-4xl mx-auto">
+<section class="px-6 py-10">
+	<div class="mx-auto max-w-4xl">
 		<PageHeader title={evt.title} backHref="/events">
 			<div class="flex items-center gap-1">
 				<details class="dropdown dropdown-end">
-					<summary class="btn btn-ghost btn-sm gap-1">
+					<summary class="btn gap-1 btn-ghost btn-sm">
 						<IconCalendarPlus size={18} />
 						Add to calendar
 					</summary>
 					<ul class="menu dropdown-content z-10 w-48 rounded-box bg-base-100 p-2 shadow">
 						<li>
-							<a href={googleCalendarUrl(calendarEvt)} target="_blank" rel="noopener noreferrer"
-								>Google Calendar</a
+							<a
+								href={googleCalendarUrl(calendarEvt)}
+								target="_blank"
+								rel="external noopener noreferrer">Google Calendar</a
 							>
 						</li>
 						<li>
-							<a href={icsDataUrl(calendarEvt)} download="{evt.title}.ics">Apple / Outlook (.ics)</a
+							<a href={icsDataUrl(calendarEvt)} rel="external" download="{evt.title}.ics"
+								>Apple / Outlook (.ics)</a
 							>
 						</li>
 					</ul>
@@ -292,7 +295,7 @@
 							{/if}
 						</div>
 						<progress
-							class="progress progress-primary w-full"
+							class="progress w-full progress-primary"
 							value={data.sold}
 							max={evt.ticketQuantity}
 						></progress>

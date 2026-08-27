@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import {
 		IconLayoutDashboard,
 		IconStar,
@@ -13,69 +14,109 @@
 		IconHeartHandshake,
 		IconBulb
 	} from '@tabler/icons-svelte';
-	import AppShell from '$lib/components/shared/AppShell.svelte';
-	import Nav from '$lib/components/shared/Nav';
-	import Avatar from '$lib/components/shared/Avatar.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
-	import { EntityViewer } from '$lib/components/shared/entity';
+	import AppShell from '$lib/components/layout/AppShell.svelte';
+	import Nav from '$lib/components/layout/Nav';
+	import { childHrefsFor } from '$lib/components/layout/Nav/active-nav';
+	import Avatar from '$lib/components/ui/Avatar.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '$lib/components/ui/entity';
 	import { getMemberLayout } from '$lib/remote/layout.remote';
+	import { setMemberLayoutContext } from './layout-context';
+	import { panelTabs } from '$lib/components/layout/panel-tabs';
+	import {
+		activeMemberNavKey,
+		memberNavFooter,
+		memberNavMain,
+		type MemberNavBadgeKey,
+		type MemberNavItem,
+		type MemberNavKey
+	} from './nav-items';
 
 	let { children } = $props();
 
+	// Before the await, not after: the `await` below suspends the script body, and `setContext`
+	// has to run during synchronous init. See `layout-context.ts`.
+	setMemberLayoutContext({
+		get current() {
+			return layout;
+		}
+	});
+
 	let layout = $derived(await getMemberLayout());
 
-	const panels = $derived([
-		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },
-		...(layout.isStaff
-			? [{ key: 'staff', label: 'Staff', href: '/staff', type: 'staff' as const }]
-			: []),
-		...layout.userBands.map((b) => ({
-			key: b.slug,
-			label: b.name,
-			href: `/band/${b.slug}`,
-			type: 'band' as const
-		}))
-	]);
+	const panels = $derived(panelTabs(layout));
+
+	const icons: Record<MemberNavKey, typeof IconLayoutDashboard> = {
+		dashboard: IconLayoutDashboard,
+		messages: IconMessages,
+		reservations: IconMetronome,
+		events: IconCalendarEvent,
+		'events-submit': IconPlus,
+		directory: IconAddressBook,
+		volunteer: IconHeartHandshake,
+		suggestions: IconBulb,
+		profile: IconUser,
+		account: IconSettings,
+		help: IconHelp,
+		membership: IconStar
+	};
+
+	let navInput = $derived({ features: layout.features });
+	let mainItems = $derived(memberNavMain(navInput));
+	let footerItems = $derived(memberNavFooter(navInput));
+
+	let badges = $derived({
+		messagesUnread: layout.messagesUnread
+	} satisfies Record<MemberNavBadgeKey, number>);
+
+	let activeKey = $derived(activeMemberNavKey(navInput, page.url.pathname));
+
+	function badgeFor(item: MemberNavItem): number | undefined {
+		return item.badgeKey ? badges[item.badgeKey] : undefined;
+	}
 </script>
 
-<AppShell drawerId="member-drawer" user={layout.user} {panels} activePanel="member">
-	{#snippet brand()}
-		<div class="flex items-center gap-2 px-6 py-5">
-			<span class="truncate text-xl font-bold">CorvMC</span>
-		</div>
-	{/snippet}
-	{#snippet navigation()}
-		<Nav.Item href="/member" label="Dashboard">
-			{#snippet icon()}<IconLayoutDashboard />{/snippet}
-		</Nav.Item>
-		<Nav.Item href="/member/messages" label="Messages" badge={layout.messagesUnread}>
-			{#snippet icon()}<IconMessages />{/snippet}
-		</Nav.Item>
-		<Nav.Item href="/member/reservations" label="Reservations">
-			{#snippet icon()}<IconMetronome />{/snippet}
-		</Nav.Item>
-		<Nav.Collapsible href="/member/events" label="Events" childHrefs={['/member/events']}>
-			{#snippet icon()}<IconCalendarEvent />{/snippet}
-			<Nav.Item href="/member/events/submit" label="Add a Show">
-				{#snippet icon()}<IconPlus />{/snippet}
-			</Nav.Item>
+{#snippet row(item: MemberNavItem)}
+	{@const Icon = icons[item.key]}
+	{#if item.children}
+		<Nav.Collapsible
+			href={item.href}
+			label={item.label}
+			childHrefs={childHrefsFor(item)}
+			badge={badgeFor(item)}
+			active={activeKey === item.key}
+		>
+			{#snippet icon()}<Icon />{/snippet}
+			{#each item.children as child (child.key)}
+				{@render row(child)}
+			{/each}
 		</Nav.Collapsible>
-		<Nav.Item href="/member/directory" label="Directory">
-			{#snippet icon()}<IconAddressBook />{/snippet}
+	{:else}
+		<Nav.Item
+			href={item.href}
+			label={item.label}
+			badge={badgeFor(item)}
+			active={activeKey === item.key}
+		>
+			{#snippet icon()}<Icon />{/snippet}
 		</Nav.Item>
-		{#if layout.features.volunteering}
-			<Nav.Item href="/member/volunteer" label="Volunteering">
-				{#snippet icon()}<IconHeartHandshake />{/snippet}
-			</Nav.Item>
-		{/if}
-		<!-- Not flag-gated: a suggestion board with no audience collects
-		     single-vote posts, so there is nothing useful to dark-launch. -->
-		<Nav.Item href="/member/suggestions" label="Suggestions">
-			{#snippet icon()}<IconBulb />{/snippet}
-		</Nav.Item>
+	{/if}
+{/snippet}
 
-		<Nav.Group title="My Bands">
+<AppShell drawerId="member-drawer" {panels} activePanel="member">
+	{#snippet navigation()}
+		{#each mainItems as item (item.key)}
+			{@render row(item)}
+		{/each}
+
+		<Nav.Group
+			title="My Bands"
+			collapsible
+			persistKey="my-bands"
+			persistScope="member"
+			containsActive={page.url.pathname.startsWith('/band/')}
+		>
 			{#snippet action()}
 				<Button href="/member/bands" variant="ghost" size="xs">All</Button>
 			{/snippet}
@@ -98,20 +139,9 @@
 
 		<div class="flex grow"></div>
 
-		<Nav.Item href="/member/profile" label="Profile">
-			{#snippet icon()}<IconUser />{/snippet}
-		</Nav.Item>
-		<Nav.Item href="/member/account" label="Account">
-			{#snippet icon()}<IconSettings />{/snippet}
-		</Nav.Item>
-		{#if layout.features.helpArticles}
-			<Nav.Item href="/member/help" label="Help">
-				{#snippet icon()}<IconHelp />{/snippet}
-			</Nav.Item>
-		{/if}
-		<Nav.Item href="/member/membership" label="Membership">
-			{#snippet icon()}<IconStar />{/snippet}
-		</Nav.Item>
+		{#each footerItems as item (item.key)}
+			{@render row(item)}
+		{/each}
 	{/snippet}
 	<ErrorToastBoundary>
 		<EntityViewer

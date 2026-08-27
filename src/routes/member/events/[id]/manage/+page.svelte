@@ -1,12 +1,12 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import LineupEditor, {
 		type LineupChip
 	} from '../../../../band/[slug]/events/LineupEditor.svelte';
@@ -14,8 +14,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
-		getMyListing,
-		findDuplicateListing,
+		getMyListingPage,
 		searchBandsForListing,
 		updateListing,
 		publishListing,
@@ -34,12 +33,11 @@
 	const deleteFields = deleteListing.fields;
 
 	const eventId = $derived(page.params.id!);
-	let listing = $derived(await getMyListing(eventId));
-
-	// Advisory only — shown next to Publish, never blocking it.
-	let duplicate = $derived(
-		listing?.status === 'draft' ? await findDuplicateListing(eventId) : null
-	);
+	// One query. The duplicate check is advisory copy next to Publish and only means anything for
+	// a draft, so that condition moved server-side with it.
+	const pageData = $derived(await getMyListingPage(eventId));
+	const listing = $derived(pageData.listing);
+	const duplicate = $derived(pageData.duplicate);
 
 	const requiresReview = $derived(listing?.standing.status !== 'none');
 
@@ -232,8 +230,7 @@
 					{...fields.description.as('text', listing.description ?? '')}
 					class="textarea w-full"
 					rows="4"
-					maxlength="5000"
-				></textarea>
+					maxlength="5000"></textarea>
 			</FormField>
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">

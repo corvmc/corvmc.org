@@ -1,9 +1,9 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import {
 		ConfirmReservationAction,
 		CompleteReservationAction,
@@ -12,19 +12,21 @@
 		CashReceivedAction,
 		CompReservationAction,
 		RefundReservationAction
-	} from '$lib/components/shared/actions';
-	import DayTimeline from '$lib/components/shared/reservations/DayTimeline.svelte';
-	import RecordNav from '$lib/components/shared/RecordNav.svelte';
-	import CopyableId from '$lib/components/shared/CopyableId.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	} from '$lib/components/actions';
+	import DayTimeline from '$lib/components/reservations/DayTimeline.svelte';
+	import RecordNav from '$lib/components/ui/RecordNav.svelte';
+	import CopyableId from '$lib/components/ui/CopyableId.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import { IconUserPlus } from '@tabler/icons-svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import {
 		fullDate,
 		formatTime,
 		durationHours as calcDurationHours,
 		formatCents
 	} from '$lib/utils/format';
-	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
-	import Button from '$lib/components/shared/Button.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
+	import Button from '$lib/components/ui/Button.svelte';
 	import {
 		visibleActions,
 		reservationPaymentState,
@@ -90,6 +92,14 @@
 					<p class="flex items-center gap-2 text-xl font-medium">
 						{fullDate(r.startsAt)}
 						<StatusBadge status={r.status} />
+						{#if data.isFirstReservation}
+							<!-- Spelled out rather than icon-only: the list has a flag cluster
+							     to read this out of, and this page has the room. -->
+							<Badge variant="success">
+								<IconUserPlus size={14} />
+								First reservation
+							</Badge>
+						{/if}
 					</p>
 					<p class="opacity-70">
 						{formatTime(r.startsAt)} – {formatTime(r.endsAt)} · {durationLabel}
@@ -103,7 +113,7 @@
 			</header>
 
 			{#if conflicts.length > 0}
-				<div role="alert" class="alert alert-warning py-2 text-sm">
+				<div role="alert" class="alert py-2 text-sm alert-warning">
 					<span>
 						Overlaps {conflicts.length} other {conflicts.length === 1 ? 'booking' : 'bookings'}:
 						{conflicts
@@ -151,7 +161,7 @@
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<!-- Member card — a band or event booking leads with it, then who booked it -->
 		<InfoCard
-			title={r.bookerType === 'band'
+			title={r.bookerType === 'group'
 				? 'Band Booking'
 				: r.bookerType === 'event'
 					? 'Event'
@@ -160,7 +170,7 @@
 			{#snippet header(title)}
 				<header class="flex justify-between">
 					<span class="card-title">{title}</span>
-					{#if r.bookerType === 'band' && r.bandId}
+					{#if r.bookerType === 'group' && r.bandId}
 						<Button href="/staff/bands/{r.bandId}" variant="default" size="sm">View Band</Button>
 					{:else if r.bookerType === 'event' && r.eventId}
 						<Button href="/staff/events/{r.eventId}" variant="default" size="sm">View Event</Button>

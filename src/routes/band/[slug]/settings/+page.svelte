@@ -1,23 +1,25 @@
 <script lang="ts">
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Modal from '$lib/components/shared/Modal.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { deleteBand as deleteBandForm } from '$lib/remote/bands.remote';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayoutContext } from '../layout-context';
 	import { getCustomDomain } from '$lib/remote/band-custom-domain.remote';
 	import BandAddressSection from './BandAddressSection.svelte';
 	import CustomDomainSection from './CustomDomainSection.svelte';
-	import { page } from '$app/state';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	// The layout above already holds this; re-awaiting it here was a second remote query
+	// in flight in this component. See `layout-context.ts`.
+	const bandLayout = getBandLayoutContext();
+	const layout = $derived(bandLayout.current);
 	const band = $derived(layout.band);
 
 	// Owner-only and premium-only: the query enforces both, so asking for it as
@@ -58,13 +60,13 @@
 	{#if isOwner}
 		<section class="space-y-4">
 			<h2 class="text-lg font-semibold text-error">Danger Zone</h2>
-			<div class="card bg-base-100 border border-error/30">
+			<div class="card border border-error/30 bg-base-100">
 				<CardBody>
 					<p class="text-sm">
 						Deleting this band will cancel all future reservations and remove all members. This
 						action cannot be undone.
 					</p>
-					<div class="card-actions justify-end mt-2">
+					<div class="mt-2 card-actions justify-end">
 						<Button variant="error" size="sm" outline onclick={() => (showDeleteModal = true)}>
 							Delete Band
 						</Button>

@@ -38,7 +38,7 @@ cp .env.example .env
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `ORIGIN`                                             | `http://localhost:5173` — **required**, better-auth throws without it                                                          |
 | `BETTER_AUTH_SECRET`                                 | Any string locally (32+ chars high-entropy in real environments)                                                               |
-| `DATABASE_URL`                                       | Leave as-is/blank — Postgres is only for the pre-cutover bridge scripts, not the app                                           |
+| `DATABASE_URL`                                       | Leave as-is/blank — the app never reads it; only some unreferenced Postgres one-offs in `scripts/` do                          |
 | `PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | **Leave blank** — blank means Cloudflare's always-pass test keys (per the comment in `.env.example`), so sign-up works offline |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`        | Blank unless you're testing payment flows (see §6)                                                                             |
 | `R2_*`                                               | Blank — media storage is emulated locally by the platform proxy                                                                |
@@ -102,12 +102,12 @@ pnpm db:studio    # drizzle-kit studio (needs CLOUDFLARE_* vars → points at RE
 
 ## 5. Tests
 
-| Command                | What runs                                                                                                                                                                                |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test:unit`       | Vitest, watch mode — `server` project (node, `src/**/*.{test,spec}.ts` + `scripts/**` + `e2e/**` helpers) and `client` project (real Chromium browser, `src/**/*.svelte.{test,spec}.ts`) |
-| `pnpm test:components` | One-shot client + storybook story tests                                                                                                                                                  |
-| `pnpm test:e2e`        | Playwright — builds, runs `vite preview` on :4173, migrates + seeds its own D1 via `e2e/prepare.ts`, runs `e2e/**/*.e2e.ts`, then clears the database again                              |
-| `pnpm test`            | Everything (unit one-shot + e2e) — what CI runs                                                                                                                                          |
+| Command                | What runs                                                                                                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm test:unit`       | Vitest, watch mode — `server` project (node, `src/**/*.{test,spec}.ts` + `scripts/**` + `e2e/**` helpers) and `client` project (real Chromium browser, `src/**/*.svelte.{test,spec}.ts`)   |
+| `pnpm test:components` | One-shot client + storybook story tests                                                                                                                                                    |
+| `pnpm test:e2e`        | Playwright — builds, runs `vite preview` on :4173 (a worktree gets its own port), migrates + seeds its own D1 via `e2e/prepare.ts`, runs `e2e/**/*.e2e.ts`, then clears the database again |
+| `pnpm test`            | Everything (unit one-shot + e2e) — what CI runs                                                                                                                                            |
 
 Notes: every test must make at least one assertion (`expect.requireAssertions` is on
 globally in `vite.config.ts`). The e2e web server injects dummy Stripe/auth env so it runs
@@ -156,7 +156,7 @@ step, and confirm-without-payment flows are fully testable.
 | Sign-up rejected with "Verification failed"                | Turnstile keys are set but wrong; blank both keys locally to use the always-pass test mode                                                        |
 | Commit mangled / files reformatted on commit               | That's lefthook's prettier/eslint `--fix` pre-commit hook doing its job                                                                           |
 | Email layout changes not showing                           | The MJML layout compiles at `prepare`/`build` — run `pnpm tsx scripts/compile-email-layouts.ts` or restart after `pnpm install`                   |
-| Port 5173 busy                                             | Another dev server is running; find it or `pnpm dev -- --port 5174` (update `ORIGIN` to match)                                                    |
+| Port 5173 busy                                             | Another dev server is in the _same_ checkout (worktrees get their own port). Stop it, or `PORT=5174 pnpm dev` (update `ORIGIN` to match)          |
 | Storybook stories fail in vitest                           | The `storybook` vitest project needs the Chromium install: `pnpm exec playwright install chromium`                                                |
 
 ## Where to next

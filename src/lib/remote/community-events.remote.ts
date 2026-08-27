@@ -265,7 +265,7 @@ export const updateListing = form(
 			mapDomainError(err);
 		}
 
-		void getMyListing(data.eventId).refresh();
+		void getMyListingPage(data.eventId).refresh();
 		void getMyListings().refresh();
 		void getStaffLayout().refresh();
 		return { success: true };
@@ -276,7 +276,7 @@ export const publishListing = form(z.object({ eventId: z.string().min(1) }), asy
 	const user = requireUser();
 	try {
 		const result = await publishCommunityEvent(data.eventId, user.id);
-		void getMyListing(data.eventId).refresh();
+		void getMyListingPage(data.eventId).refresh();
 		void getMyListings().refresh();
 		// The review queue badge moves whenever a listing enters it, or the
 		// sidebar keeps the old number.
@@ -294,7 +294,7 @@ export const unpublishListing = form(z.object({ eventId: z.string().min(1) }), a
 	} catch (err) {
 		mapDomainError(err);
 	}
-	void getMyListing(data.eventId).refresh();
+	void getMyListingPage(data.eventId).refresh();
 	void getMyListings().refresh();
 	return { success: true };
 });
@@ -306,7 +306,7 @@ export const withdrawListing = form(z.object({ eventId: z.string().min(1) }), as
 	} catch (err) {
 		mapDomainError(err);
 	}
-	void getMyListing(data.eventId).refresh();
+	void getMyListingPage(data.eventId).refresh();
 	void getMyListings().refresh();
 	return { success: true };
 });
@@ -396,4 +396,16 @@ export const getUserListings = query(z.string(), async (userId) => {
 		ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt })
 	});
 	return { listings: listings.map(withRef), rejected: rejected.map(withRef), publishedCount };
+});
+
+/**
+ * The member listing manage page's one load-bearing query.
+ *
+ * The duplicate check only runs for a draft — it is advisory copy next to Publish and means
+ * nothing for a listing already submitted — so that condition moves server-side with it.
+ */
+export const getMyListingPage = query(z.string(), async (eventId) => {
+	const listing = await getMyListing(eventId);
+	const duplicate = listing?.status === 'draft' ? await findDuplicateListing(eventId) : null;
+	return { listing, duplicate };
 });

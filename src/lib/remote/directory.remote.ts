@@ -3,7 +3,7 @@ import { LONG_TEXT_MAX } from '$lib/config';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
-import { requireFeature } from '$lib/server/feature-flags';
+import { requireFeature, getAllFeatureFlags } from '$lib/server/feature-flags';
 import { requireBandAdmin } from '$lib/server/band/band-context';
 import {
 	listMembers,
@@ -35,13 +35,16 @@ import { update as updateBandBasics } from '$lib/server/band/band-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
+import { getMe } from './layout.remote';
 import {
 	isMemberRowPrivate,
 	isBandProfileHidden,
 	toPublicMemberProfile
 } from '$lib/utils/directory-display';
 import { db } from '$lib/server/db';
-import { band, bandMember, bandGenre } from '$lib/server/db/schema/band';
+import { bandGenre } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
+import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { profileLinkSchema } from '$lib/server/db/schema/authentication';
@@ -102,6 +105,48 @@ const filtersSchema = z.object({
 		.transform((v) => (v === 'true' ? true : undefined))
 });
 
+/**
+ * The member directory's one load-bearing query.
+ *
+ * Four queries used to leave this component at once — both lists plus the two suggestion sets
+ * that fill the filter chips — and all four re-fired on every keystroke that moved `filters`.
+ * Past kit 2.64 a component holding several in flight renders its error boundary instead of the
+ * page. One request now, whatever the filters do.
+ *
+ * The suggestions do not depend on `filters` and are recomputed with them, which is the one cost
+ * of folding them in. It buys nothing to split them back out: the request happens anyway.
+ */
+export const getMemberDirectory = query(filtersSchema, async (filters) => {
+	requireUser();
+
+	// The services rather than `getDirectoryMembers`/`getDirectoryBands`: `filtersSchema` has
+	// `.transform()` steps, so a query's parsed output is not its own input type and handing one
+	// straight to the other does not compile. The two stay exported for nothing in particular —
+	// this page is their only caller — but re-deriving the list logic here would be worse.
+	const [members, rawBands, instrumentSuggestions, genreSuggestions] = await Promise.all([
+		listMembers({
+			search: filters.search,
+			instruments: filters.instruments,
+			genres: filters.genres,
+			lookingForBand: filters.lookingForBand,
+			availableForHire: filters.availableForHire,
+			teachesLessons: filters.teachesLessons,
+			openToCollaboration: filters.openToCollaboration
+		}),
+		listBands({
+			search: filters.search,
+			genres: filters.genres,
+			lookingForMembers: filters.lookingForMembers
+		}),
+		getInstrumentSuggestions(),
+		getGenreSuggestions()
+	]);
+
+	const bands = rawBands.map((b) => ({ ...b, avatarUrl: resolveImageUrl(b.avatarKey) }));
+
+	return { members, bands, instrumentSuggestions, genreSuggestions };
+});
+
 export const getDirectoryMembers = query(filtersSchema, async (filters) => {
 	requireUser();
 	return listMembers({
@@ -145,14 +190,61 @@ export const searchMessageRecipients = query(
 	}
 );
 
+/**
+ * The member directory profile page's one load-bearing query.
+ *
+ * It used to be three — the profile, `getMemberShows`, and `getMemberLayout` for two booleans
+ * — awaited side by side in the component. Past kit 2.64 that shape does not render at all: a
+ * component holding several remote queries in flight blows up inside Svelte's reactivity, which
+ * is what `TypeError: null is not an object` on the band twin (JAVASCRIPT-SVELTEKIT-1V) was.
+ * See `custom/no-concurrent-remote-queries`.
+ *
+ * The layout query is not composed in — the page wanted two flags off it, not a nav, and
+ * `getMemberLayout` is refreshed from seven places that have nothing to do with this page.
+ * The permission decisions are resolved here instead, which is where they belonged.
+ */
 export const getDirectoryMember = query(z.string(), async (userId) => {
-	requireUser();
-	return getMemberProfileService(userId, 'members');
+	const viewer = requireUser();
+
+	const [profile, shows, features] = await Promise.all([
+		getMemberProfileService(userId, 'members'),
+		getMemberShows(userId),
+		getAllFeatureFlags()
+	]);
+
+	return {
+		profile,
+		shows,
+		viewer: {
+			canReport: features.contentFlags && viewer.id !== userId,
+			// No "message yourself" button. Whether they will actually receive it depends on
+			// blocks and their own messaging switch — checked server-side and deliberately not
+			// reflected here: showing or hiding this would tell the sender things the
+			// silent-drop design keeps from them.
+			canMessage: features.directMessages && viewer.id !== userId
+		}
+	};
 });
 
+/** The band directory profile page's one load-bearing query. See `getDirectoryMember`. */
 export const getDirectoryBand = query(z.string(), async (slug) => {
-	requireUser();
-	return loadBandProfile(slug, 'members');
+	const viewer = requireUser();
+
+	// Serial, because the shows are keyed by the band id the profile resolves — but both hops
+	// are local to the server, where the fan-out was three network round trips.
+	const profile = await loadBandProfile(slug, 'members');
+	const [shows, features] = await Promise.all([
+		getBandShows(profile.band.id),
+		getAllFeatureFlags()
+	]);
+
+	return {
+		...profile,
+		shows,
+		viewer: {
+			canReport: features.contentFlags && !profile.members.some((m) => m.userId === viewer.id)
+		}
+	};
 });
 
 // ---------------------------------------------------------------------------
@@ -202,24 +294,24 @@ export const getPublicBandProfile = query(z.string(), async (slug) => {
 async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 	const [row] = await db
 		.select({
-			id: band.id,
-			name: band.name,
-			slug: band.slug,
-			bio: band.bio,
-			tagline: band.tagline,
-			hometown: band.hometown,
-			foundedYear: band.foundedYear,
-			avatarKey: band.avatarKey,
-			lookingForMembers: band.lookingForMembers,
-			directoryContact: band.directoryContact,
-			links: band.links,
-			directoryVisibility: band.directoryVisibility,
-			memberCount: sql<number>`cast(count(case when ${bandMember.status} = 'active' then 1 end) as integer)`
+			id: group.id,
+			name: group.name,
+			slug: group.slug,
+			bio: group.bio,
+			tagline: group.tagline,
+			hometown: group.hometown,
+			foundedYear: group.foundedYear,
+			avatarKey: group.avatarKey,
+			lookingForMembers: group.lookingForMembers,
+			directoryContact: group.directoryContact,
+			links: group.links,
+			directoryVisibility: group.directoryVisibility,
+			memberCount: sql<number>`cast(count(case when ${groupMember.status} = 'active' then 1 end) as integer)`
 		})
-		.from(band)
-		.leftJoin(bandMember, eq(bandMember.bandId, band.id))
-		.where(and(eq(band.slug, slug), isNull(band.deletedAt)))
-		.groupBy(band.id);
+		.from(group)
+		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
+		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
+		.groupBy(group.id);
 
 	if (!row) {
 		// The band may have changed its address and released this slug. Checking
@@ -253,20 +345,20 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 
 	const members = await db
 		.select({
-			id: bandMember.id,
-			userId: bandMember.userId,
-			role: bandMember.role,
-			position: bandMember.position,
-			alias: bandMember.alias,
+			id: groupMember.id,
+			userId: groupMember.userId,
+			role: groupMember.role,
+			position: groupMember.position,
+			alias: groupMember.alias,
 			userName: user.name,
 			userImage: user.image,
 			userVisibility: user.directoryVisibility
 		})
-		.from(bandMember)
-		.innerJoin(user, eq(user.id, bandMember.userId))
-		.where(and(eq(bandMember.bandId, row.id), eq(bandMember.status, 'active')))
+		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.where(and(eq(groupMember.groupId, row.id), eq(groupMember.status, 'active')))
 		.orderBy(
-			sql`case ${bandMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
+			sql`case ${groupMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
 			user.name
 		);
 
@@ -457,8 +549,30 @@ export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 		links: data.links
 	});
 
-	void getMemberProfile().refresh();
+	void getMemberProfileEditor().refresh();
 	return { success: true };
+});
+
+/**
+ * The member profile editor's one load-bearing query.
+ *
+ * The page resolves everything before rendering and hands `ProfileForm` plain props, because the
+ * form must not live in a component whose script awaits: a top-level await marks every later
+ * declaration blocked, turning each `bind:value` in the template into an async derived — the
+ * churn behind `JAVASCRIPT-SVELTEKIT-W`. That is still true. What changed is the count: three
+ * sequential awaits were three round trips before first paint, and one await is one.
+ *
+ * `getInstrumentSuggestions` and `getGenreSuggestions` stay exported — `/member/directory` reads
+ * them for its filter chips, which is a different page with a different refresh story.
+ */
+export const getMemberProfileEditor = query(z.void(), async () => {
+	const [profile, instrumentSuggestions, genreSuggestions] = await Promise.all([
+		getMemberProfile(),
+		getInstrumentSuggestions(),
+		getGenreSuggestions()
+	]);
+
+	return { profile, instrumentSuggestions, genreSuggestions };
 });
 
 // ---------------------------------------------------------------------------
@@ -511,9 +625,15 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 	// `params.slug`, which for a remote request is the slug the client sent, and
 	// renaming no longer rotates it (see band-service `update`). Only the explicit
 	// address change moves a slug, and that one deliberately refreshes nothing.
-	void getBandProfile().refresh();
+	void getBandProfileEditor().refresh();
 
 	return { success: true };
+});
+
+/** The band profile editor's one load-bearing query. See `getMemberProfileEditor`. */
+export const getBandProfileEditor = query(z.void(), async () => {
+	const [profile, genreSuggestions] = await Promise.all([getBandProfile(), getGenreSuggestions()]);
+	return { profile, genreSuggestions };
 });
 
 // ---------------------------------------------------------------------------
@@ -530,4 +650,35 @@ export const getUserDirectoryProfile = query(z.string(), async (userId) => {
 		isProfileComplete(userId)
 	]);
 	return { profile, complete };
+});
+
+/**
+ * The public directory's one load-bearing query.
+ *
+ * `getMe` is the notable one: `(public)/+layout.svelte` already holds it, and the page awaited it
+ * again purely to decide whether to show the "your profile is hidden" prompt. Two remote queries
+ * in one component is the shape that stops the page rendering past kit 2.64. Reading it here
+ * costs nothing — Kit dedupes a remote query per request, so the layout's call and this one are
+ * one read — and it keeps the layout free to pass `user` to the header as a plain prop.
+ */
+export const getPublicDirectoryPage = query(z.void(), async () => {
+	const [directory, viewer, visibility] = await Promise.all([
+		getPublicDirectory({}),
+		getMe(),
+		getMyDirectoryVisibility()
+	]);
+
+	return { directory, viewer, visibility };
+});
+
+/**
+ * The public member profile's one load-bearing query.
+ *
+ * A wrapper rather than folding the shows into `getPublicMemberProfile`, because that query is
+ * the public-facing privacy boundary and has a test suite pinned to it directly
+ * (`directory.remote.test.ts`) — worth leaving exactly as it is.
+ */
+export const getPublicMemberProfilePage = query(z.string(), async (id) => {
+	const [profile, shows] = await Promise.all([getPublicMemberProfile(id), getMemberShows(id)]);
+	return { ...profile, shows };
 });

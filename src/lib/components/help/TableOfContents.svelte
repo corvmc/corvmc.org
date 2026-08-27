@@ -27,13 +27,13 @@
 </script>
 
 {#if headings.length > 0}
-	<nav class="text-sm space-y-1">
-		<p class="font-semibold text-subtle uppercase tracking-wide mb-2">On this page</p>
+	<nav class="space-y-1 text-sm">
+		<p class="mb-2 text-subtle font-semibold tracking-wide uppercase">On this page</p>
 		{#each headings as heading (heading.id)}
 			<a
 				href="#{heading.id}"
 				class="block py-0.5 transition-colors hover:text-primary {activeId === heading.id
-					? 'text-primary font-medium'
+					? 'font-medium text-primary'
 					: 'opacity-70'}"
 				style="padding-left: {(heading.level - 2) * 12}px"
 			>

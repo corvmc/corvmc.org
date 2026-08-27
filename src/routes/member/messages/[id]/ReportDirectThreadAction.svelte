@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Action from '$lib/components/shared/Action.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
 	import { reportDirectThread } from '$lib/remote/direct-messages.remote';
 
@@ -57,8 +57,7 @@
 					rows="3"
 					maxlength="1000"
 					bind:value={description}
-					placeholder="Anything else that would help us review this"
-				></textarea>
+					placeholder="Anything else that would help us review this"></textarea>
 			</label>
 		</div>
 	{/snippet}

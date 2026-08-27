@@ -2,33 +2,30 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { formatDateShort } from '$lib/utils/format';
 	import {
 		DeleteAudienceAction,
 		BulkAddMembersAction,
 		AddSubscriberAction,
 		RemoveSubscriberAction
-	} from '$lib/components/shared/actions';
-	import {
-		getAudienceDetail,
-		getAudienceSubscribers,
-		updateAudience
-	} from '$lib/remote/marketing.remote';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	} from '$lib/components/actions';
+	import { getStaffAudienceDetail, updateAudience } from '$lib/remote/marketing.remote';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 
 	const { fields } = updateAudience;
 
 	let id = $derived(page.params.id!);
-	let audienceData = $derived(await getAudienceDetail(id));
-	let subscribers = $derived(await getAudienceSubscribers(id));
+	const data = $derived(await getStaffAudienceDetail(id));
+	const audienceData = $derived(data.audience);
+	const subscribers = $derived(data.subscribers);
 
 	// A built-in audience's membership is a SQL predicate over member
 	// attributes, so every list-editing control below is meaningless for it.
@@ -50,7 +47,7 @@
 		{/if}
 	</PageHeader>
 	<PageContent width="3xl">
-		<div class="grid gap-6 lg:grid-cols-2 mb-6">
+		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Details">
 				<DefinitionList>
 					<Fact label="Slug" mono>{audienceData.slug}</Fact>
@@ -72,11 +69,11 @@
 				</DefinitionList>
 
 				{#if audienceData.description}
-					<p class="text-muted mt-3">{audienceData.description}</p>
+					<p class="mt-3 text-muted">{audienceData.description}</p>
 				{/if}
 
 				{#if isBuiltIn}
-					<p class="text-muted mt-3">
+					<p class="mt-3 text-muted">
 						Membership is worked out from member attributes each time you send, so this list is
 						always current — there is nothing to refresh. Subscribers without a member account, such
 						as public newsletter signups, are never included.
@@ -84,7 +81,7 @@
 				{/if}
 
 				{#if audienceData.allowOptIn}
-					<div class="mt-3 p-2 bg-base-200 rounded text-xs">
+					<div class="mt-3 rounded bg-base-200 p-2 text-xs">
 						<span class="opacity-60">Signup URL:</span>
 						<code class="ml-1">/subscribe/{audienceData.slug}</code>
 					</div>

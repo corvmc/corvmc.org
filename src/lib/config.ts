@@ -140,6 +140,37 @@ export function estimateLoanCost(
 }
 
 // ---------------------------------------------------------------------------
+// Groups
+// ---------------------------------------------------------------------------
+
+/**
+ * What a group is. Roles, roster, announcements and documents behave identically
+ * across all three — kind carries governance and nothing else: who may create
+ * one, who may delete it, and whose events may hold the room for free.
+ *
+ * A band is a member's own project, created self-service. A club or committee is
+ * a CMC program, and only staff can bring one into existence — which is what
+ * makes free room time safe to grant by kind rather than by per-event approval.
+ */
+export const groupKinds = ['band', 'club', 'committee'] as const;
+export type GroupKind = (typeof groupKinds)[number];
+
+/**
+ * How someone gets onto the roster.
+ *
+ * `invite_only` — you are added by someone with authority. Today's behaviour.
+ * `open`        — any signed-in member may join themselves, landing directly on
+ *                 an active membership with no approval step. The point of a
+ *                 drop-in program.
+ *
+ * Two values, not three: approval-gated joining would need a status meaning "you
+ * asked us, awaiting our answer", which is the exact mirror of today's `pending`
+ * and cannot share it without making every roster query ambiguous.
+ */
+export const groupJoinPolicies = ['invite_only', 'open'] as const;
+export type GroupJoinPolicy = (typeof groupJoinPolicies)[number];
+
+// ---------------------------------------------------------------------------
 // Equipment enum values (used in UI dropdowns)
 // ---------------------------------------------------------------------------
 
@@ -540,7 +571,7 @@ export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
  * `config.ts` rather than beside the tables because `$lib/server` cannot be
  * imported from the browser, and every one of these values is read by a
  * `.svelte` file. The rendering half (icon, avatar shape) lives in
- * `$lib/components/shared/entity/registry.ts`, which carries Svelte icon
+ * `$lib/components/ui/entity/registry.ts`, which carries Svelte icon
  * components and so cannot be imported by server code.
  *
  * Adding a value here without adding it to `entityKinds` fails

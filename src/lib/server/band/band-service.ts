@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { DomainError } from '../domain-error';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
-import { band, bandMember, bandSlugHistory } from '$lib/server/db/schema/band';
+import { group, groupMember, groupSlugHistory, type GroupRole } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } from 'drizzle-orm';
@@ -14,8 +14,9 @@ import { deleteObject, uploadFile } from '$lib/server/storage';
 import { mediaKey } from '$lib/server/storage-keys';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { captureException } from '$lib/server/sentry';
-import { domainEvents } from '$lib/server/events/event-bus';
-import type { BandRole, BandTier } from '$lib/server/db/schema/band';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
+
+import type { BandTier } from '$lib/server/db/schema/group';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,6 +36,27 @@ export interface UpdateMemberData {
 	role?: 'admin' | 'member';
 	position?: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Shared fragments
+// ---------------------------------------------------------------------------
+
+/**
+ * Active members of the band in the surrounding query, as a correlated scalar
+ * subquery.
+ *
+ * Three call sites each carried a copy of this written as a SQL string, which
+ * `pnpm check` cannot see inside: the table and column names went unverified,
+ * so a schema rename would compile cleanly and throw at runtime. Expressed
+ * through the query builder they are back under the type checker, and the
+ * duplication is gone with them.
+ *
+ * The subquery's own `FROM group_member` shadows the outer one in `listForUser`,
+ * which selects from the same table — correct, because the only correlation
+ * wanted here is on `band.id`.
+ */
+const activeMemberCount = () =>
+	db.$count(groupMember, and(eq(groupMember.groupId, group.id), eq(groupMember.status, 'active')));
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -83,7 +105,7 @@ export class BandTierManagedByStripeError extends DomainError {
 
 export async function create(ownerId: string, data: CreateBandData) {
 	const baseSlug = generateSlug(data.name);
-	const slug = await ensureUniqueSlug(baseSlug, band, band.slug, undefined, isReservedSlug);
+	const slug = await ensureUniqueSlug(baseSlug, group, group.slug, undefined, isReservedSlug);
 
 	const bandId = crypto.randomUUID();
 
@@ -91,23 +113,23 @@ export async function create(ownerId: string, data: CreateBandData) {
 		// A previous owner may have released this slug. Claiming it retires their
 		// redirect, the same rule `changeBandSlug` enforces — a live band.slug
 		// always shadows history, so a stale row here could only resurface later.
-		db.delete(bandSlugHistory).where(eq(bandSlugHistory.slug, slug)),
-		db.insert(band).values({
+		db.delete(groupSlugHistory).where(eq(groupSlugHistory.slug, slug)),
+		db.insert(group).values({
 			id: bandId,
 			name: data.name,
 			slug,
 			bio: data.bio ? sanitizeBio(data.bio) : null,
 			ownerId
 		}),
-		db.insert(bandMember).values({
-			bandId,
+		db.insert(groupMember).values({
+			groupId: bandId,
 			userId: ownerId,
 			role: 'owner',
 			status: 'active'
 		})
 	]);
 
-	const [newBand] = await db.select().from(band).where(eq(band.id, bandId));
+	const [newBand] = await db.select().from(group).where(eq(group.id, bandId));
 	// Callers read `.slug` off this; an unchecked destructure turned an empty
 	// re-select into "Cannot read properties of undefined" at the call site.
 	if (!newBand) throw new BandNotFoundError();
@@ -130,14 +152,14 @@ export async function update(bandId: string, data: UpdateBandData) {
 		updates.bio = data.bio ? sanitizeBio(data.bio).slice(0, 2000) || null : null;
 	}
 
-	const [updated] = await db.update(band).set(updates).where(eq(band.id, bandId)).returning();
+	const [updated] = await db.update(group).set(updates).where(eq(group.id, bandId)).returning();
 
 	if (!updated) throw new BandNotFoundError();
 	return updated;
 }
 
 export async function deleteBand(bandId: string) {
-	const [row] = await db.select().from(band).where(eq(band.id, bandId)).limit(1);
+	const [row] = await db.select().from(group).where(eq(group.id, bandId)).limit(1);
 	if (!row) throw new BandNotFoundError();
 
 	// Cancel all future band reservations
@@ -146,7 +168,7 @@ export async function deleteBand(bandId: string) {
 		.from(reservation)
 		.where(
 			and(
-				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerType, 'group'),
 				eq(reservation.bookerId, bandId),
 				gt(reservation.startsAt, new Date()),
 				ne(reservation.status, 'cancelled')
@@ -166,8 +188,8 @@ export async function deleteBand(bandId: string) {
 		}
 	}
 
-	// Delete band (band_member rows cascade)
-	await db.delete(band).where(eq(band.id, bandId));
+	// Delete band (group_member rows cascade)
+	await db.delete(group).where(eq(group.id, bandId));
 }
 
 // ---------------------------------------------------------------------------
@@ -177,77 +199,74 @@ export async function deleteBand(bandId: string) {
 export async function getBySlug(slug: string) {
 	const [row] = await db
 		.select({
-			id: band.id,
-			name: band.name,
-			slug: band.slug,
-			bio: band.bio,
-			ownerId: band.ownerId,
-			avatarKey: band.avatarKey,
-			tier: band.tier,
-			customDomain: band.customDomain,
-			customDomainStatus: band.customDomainStatus,
-			customDomainHostnameId: band.customDomainHostnameId,
-			customDomainVerification: band.customDomainVerification,
-			createdAt: band.createdAt,
-			updatedAt: band.updatedAt,
-			memberCount: sql<number>`count(case when ${bandMember.status} = 'active' then 1 end)`
+			id: group.id,
+			name: group.name,
+			slug: group.slug,
+			bio: group.bio,
+			ownerId: group.ownerId,
+			avatarKey: group.avatarKey,
+			tier: group.tier,
+			customDomain: group.customDomain,
+			customDomainStatus: group.customDomainStatus,
+			customDomainHostnameId: group.customDomainHostnameId,
+			customDomainVerification: group.customDomainVerification,
+			createdAt: group.createdAt,
+			updatedAt: group.updatedAt,
+			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
 		})
-		.from(band)
-		.leftJoin(bandMember, eq(bandMember.bandId, band.id))
-		.where(and(eq(band.slug, slug), isNull(band.deletedAt)))
-		.groupBy(band.id);
+		.from(group)
+		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
+		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
+		.groupBy(group.id);
 
 	return row ?? null;
 }
 
 export async function getById(bandId: string) {
-	const [row] = await db.select().from(band).where(eq(band.id, bandId)).limit(1);
+	const [row] = await db.select().from(group).where(eq(group.id, bandId)).limit(1);
 	return row ?? null;
 }
 
 export async function listForUser(
 	userId: string,
 	props = {
-		id: band.id,
-		name: band.name,
-		slug: band.slug,
-		avatarKey: band.avatarKey,
-		role: bandMember.role,
-		status: bandMember.status,
-		memberCount: sql<number>`(
-		select count(*) from band_member bm
-		where bm.band_id = ${band.id} and bm.status = 'active'
-	)`
+		id: group.id,
+		name: group.name,
+		slug: group.slug,
+		avatarKey: group.avatarKey,
+		role: groupMember.role,
+		status: groupMember.status,
+		memberCount: activeMemberCount()
 	}
 ) {
 	return db
 		.select(props)
-		.from(bandMember)
-		.innerJoin(band, eq(band.id, bandMember.bandId))
-		.where(and(eq(bandMember.userId, userId), isNull(band.deletedAt)))
-		.orderBy(band.name);
+		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
+		.where(and(eq(groupMember.userId, userId), isNull(group.deletedAt)))
+		.orderBy(group.name);
 }
 
 export async function getMembers(bandId: string) {
 	const rows = await db
 		.select({
-			id: bandMember.id,
-			userId: bandMember.userId,
-			role: bandMember.role,
-			position: bandMember.position,
-			alias: bandMember.alias,
-			status: bandMember.status,
-			invitedById: bandMember.invitedById,
-			createdAt: bandMember.createdAt,
+			id: groupMember.id,
+			userId: groupMember.userId,
+			role: groupMember.role,
+			position: groupMember.position,
+			alias: groupMember.alias,
+			status: groupMember.status,
+			invitedById: groupMember.invitedById,
+			createdAt: groupMember.createdAt,
 			// Carries name, email, pronouns, image, role and sustaining status —
 			// a superset of the flat columns this used to select.
 			member: memberRefColumns()
 		})
-		.from(bandMember)
-		.innerJoin(user, eq(user.id, bandMember.userId))
-		.where(eq(bandMember.bandId, bandId))
+		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.where(eq(groupMember.groupId, bandId))
 		.orderBy(
-			sql`case ${bandMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
+			sql`case ${groupMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
 			user.name
 		);
 
@@ -277,9 +296,9 @@ export async function searchMembers(query: string, bandId: string) {
 				or(like(user.name, pattern), like(user.email, pattern)),
 				isNull(user.deletedAt),
 				sql`NOT EXISTS (
-					SELECT 1 FROM ${bandMember}
-					WHERE ${bandMember.bandId} = ${bandId}
-					AND ${bandMember.userId} = ${user.id}
+					SELECT 1 FROM ${groupMember}
+					WHERE ${groupMember.groupId} = ${bandId}
+					AND ${groupMember.userId} = ${user.id}
 				)`
 			)
 		)
@@ -295,10 +314,10 @@ export async function searchMembers(query: string, bandId: string) {
  */
 export async function searchBandsByName(query: string) {
 	return db
-		.select({ id: band.id, name: band.name, slug: band.slug, avatarKey: band.avatarKey })
-		.from(band)
-		.where(and(like(band.name, `%${query}%`), isNull(band.deletedAt)))
-		.orderBy(band.name)
+		.select({ id: group.id, name: group.name, slug: group.slug, avatarKey: group.avatarKey })
+		.from(group)
+		.where(and(like(group.name, `%${query}%`), isNull(group.deletedAt)))
+		.orderBy(group.name)
 		.limit(10);
 }
 
@@ -315,9 +334,9 @@ export async function invite(
 ) {
 	try {
 		const [row] = await db
-			.insert(bandMember)
+			.insert(groupMember)
 			.values({
-				bandId,
+				groupId: bandId,
 				userId,
 				role,
 				position,
@@ -330,9 +349,9 @@ export async function invite(
 		Promise.resolve().then(async () => {
 			try {
 				const [bandRow] = await db
-					.select({ name: band.name })
-					.from(band)
-					.where(eq(band.id, bandId))
+					.select({ name: group.name })
+					.from(group)
+					.where(eq(group.id, bandId))
 					.limit(1);
 				const [invitedUser] = await db
 					.select({ name: user.name, email: user.email })
@@ -372,7 +391,7 @@ export async function invite(
 
 /**
  * Invitations are keyed by `(bandId, userId)` — the pair the unique constraint
- * already enforces — not by `band_member.id`. The UI only ever knows the band
+ * already enforces — not by `group_member.id`. The UI only ever knows the band
  * (`listForUser` selects `id: band.id`), so keying on the row id meant the
  * predicate matched nothing and every accept threw: JAVASCRIPT-SVELTEKIT-2A.
  *
@@ -381,31 +400,29 @@ export async function invite(
  * asked for — that is a success, not an error.
  */
 export type AcceptInvitationResult =
-	| { status: 'accepted'; bandId: string }
-	| { status: 'already_active' }
-	| { status: 'not_found' };
+	{ status: 'accepted'; bandId: string } | { status: 'already_active' } | { status: 'not_found' };
 
 export async function acceptInvitation(
 	bandId: string,
 	userId: string
 ): Promise<AcceptInvitationResult> {
 	const [row] = await db
-		.update(bandMember)
+		.update(groupMember)
 		.set({ status: 'active' })
 		.where(
 			and(
-				eq(bandMember.bandId, bandId),
-				eq(bandMember.userId, userId),
-				eq(bandMember.status, 'pending')
+				eq(groupMember.groupId, bandId),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'pending')
 			)
 		)
 		.returning();
 
 	if (!row) {
 		const [existing] = await db
-			.select({ status: bandMember.status })
-			.from(bandMember)
-			.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, userId)))
+			.select({ status: groupMember.status })
+			.from(groupMember)
+			.where(and(eq(groupMember.groupId, bandId), eq(groupMember.userId, userId)))
 			.limit(1);
 
 		return existing?.status === 'active' ? { status: 'already_active' } : { status: 'not_found' };
@@ -415,9 +432,9 @@ export async function acceptInvitation(
 	Promise.resolve().then(async () => {
 		try {
 			const [bandRow] = await db
-				.select({ name: band.name })
-				.from(band)
-				.where(eq(band.id, row.bandId))
+				.select({ name: group.name })
+				.from(group)
+				.where(eq(group.id, row.groupId))
 				.limit(1);
 			const [acceptedUser] = await db
 				.select({ name: user.name })
@@ -428,20 +445,20 @@ export async function acceptInvitation(
 			// Get band admins/owners to notify (single join query)
 			const adminUsers = await db
 				.select({ id: user.id, name: user.name, email: user.email })
-				.from(bandMember)
-				.innerJoin(user, eq(user.id, bandMember.userId))
+				.from(groupMember)
+				.innerJoin(user, eq(user.id, groupMember.userId))
 				.where(
 					and(
-						eq(bandMember.bandId, row.bandId),
-						inArray(bandMember.role, ['owner', 'admin']),
-						eq(bandMember.status, 'active'),
-						ne(bandMember.userId, userId)
+						eq(groupMember.groupId, row.groupId),
+						inArray(groupMember.role, ['owner', 'admin']),
+						eq(groupMember.status, 'active'),
+						ne(groupMember.userId, userId)
 					)
 				);
 
 			if (bandRow && acceptedUser) {
 				await domainEvents.emit('band.invitation_accepted', {
-					bandId: row.bandId,
+					bandId: row.groupId,
 					bandName: bandRow.name,
 					acceptedByUserId: userId,
 					acceptedByName: acceptedUser.name,
@@ -457,7 +474,7 @@ export async function acceptInvitation(
 		}
 	});
 
-	return { status: 'accepted', bandId: row.bandId };
+	return { status: 'accepted', bandId: row.groupId };
 }
 
 /**
@@ -467,15 +484,15 @@ export async function acceptInvitation(
  */
 export async function declineInvitation(bandId: string, userId: string): Promise<boolean> {
 	const rows = await db
-		.delete(bandMember)
+		.delete(groupMember)
 		.where(
 			and(
-				eq(bandMember.bandId, bandId),
-				eq(bandMember.userId, userId),
-				eq(bandMember.status, 'pending')
+				eq(groupMember.groupId, bandId),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'pending')
 			)
 		)
-		.returning({ id: bandMember.id });
+		.returning({ id: groupMember.id });
 
 	return rows.length > 0;
 }
@@ -485,29 +502,29 @@ export async function declineInvitation(bandId: string, userId: string): Promise
 // memberId comes from the client. Staff-context callers omit it.
 function memberScope(memberId: string, bandId?: string) {
 	return bandId
-		? and(eq(bandMember.id, memberId), eq(bandMember.bandId, bandId))
-		: eq(bandMember.id, memberId);
+		? and(eq(groupMember.id, memberId), eq(groupMember.groupId, bandId))
+		: eq(groupMember.id, memberId);
 }
 
 export async function revokeInvitation(memberId: string, bandId?: string) {
 	return db
-		.delete(bandMember)
-		.where(and(memberScope(memberId, bandId), eq(bandMember.status, 'pending')));
+		.delete(groupMember)
+		.where(and(memberScope(memberId, bandId), eq(groupMember.status, 'pending')));
 }
 
 export async function removeMember(memberId: string, bandId?: string) {
 	const scope = memberScope(memberId, bandId);
-	const [row] = await db.select({ role: bandMember.role }).from(bandMember).where(scope).limit(1);
+	const [row] = await db.select({ role: groupMember.role }).from(groupMember).where(scope).limit(1);
 
 	if (!row) throw new Error('Member not found');
 	if (row.role === 'owner') throw new CannotRemoveOwnerError();
 
-	return db.delete(bandMember).where(scope);
+	return db.delete(groupMember).where(scope);
 }
 
 export async function updateMember(memberId: string, data: UpdateMemberData, bandId?: string) {
 	const scope = memberScope(memberId, bandId);
-	const [row] = await db.select({ role: bandMember.role }).from(bandMember).where(scope).limit(1);
+	const [row] = await db.select({ role: groupMember.role }).from(groupMember).where(scope).limit(1);
 
 	if (!row) throw new Error('Member not found');
 	if (row.role === 'owner') throw new CannotRemoveOwnerError();
@@ -516,7 +533,7 @@ export async function updateMember(memberId: string, data: UpdateMemberData, ban
 	if (data.role !== undefined) updates.role = data.role;
 	if (data.position !== undefined) updates.position = data.position;
 
-	return db.update(bandMember).set(updates).where(scope);
+	return db.update(groupMember).set(updates).where(scope);
 }
 
 export interface UpdateOwnMembershipData {
@@ -546,22 +563,22 @@ export async function updateOwnMembership(
 	if (Object.keys(updates).length === 0) return;
 
 	return db
-		.update(bandMember)
+		.update(groupMember)
 		.set(updates)
 		.where(
 			and(
-				eq(bandMember.bandId, bandId),
-				eq(bandMember.userId, userId),
-				eq(bandMember.status, 'active')
+				eq(groupMember.groupId, bandId),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'active')
 			)
 		);
 }
 
 export async function transferOwnership(bandId: string, newOwnerId: string, actorId: string) {
 	const [target] = await db
-		.select({ status: bandMember.status })
-		.from(bandMember)
-		.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, newOwnerId)))
+		.select({ status: groupMember.status })
+		.from(groupMember)
+		.where(and(eq(groupMember.groupId, bandId), eq(groupMember.userId, newOwnerId)))
 		.limit(1);
 
 	if (!target || target.status !== 'active') {
@@ -570,42 +587,42 @@ export async function transferOwnership(bandId: string, newOwnerId: string, acto
 
 	await db.batch([
 		db
-			.update(bandMember)
+			.update(groupMember)
 			.set({ role: 'admin' })
 			.where(
 				and(
-					eq(bandMember.bandId, bandId),
-					eq(bandMember.userId, actorId),
-					eq(bandMember.role, 'owner')
+					eq(groupMember.groupId, bandId),
+					eq(groupMember.userId, actorId),
+					eq(groupMember.role, 'owner')
 				)
 			),
 		db
-			.update(bandMember)
+			.update(groupMember)
 			.set({ role: 'owner' })
 			.where(
 				and(
-					eq(bandMember.bandId, bandId),
-					eq(bandMember.userId, newOwnerId),
-					eq(bandMember.status, 'active')
+					eq(groupMember.groupId, bandId),
+					eq(groupMember.userId, newOwnerId),
+					eq(groupMember.status, 'active')
 				)
 			),
-		db.update(band).set({ ownerId: newOwnerId, updatedAt: new Date() }).where(eq(band.id, bandId))
+		db.update(group).set({ ownerId: newOwnerId, updatedAt: new Date() }).where(eq(group.id, bandId))
 	]);
 }
 
 export async function leaveBand(bandId: string, userId: string) {
 	const [row] = await db
-		.select({ role: bandMember.role })
-		.from(bandMember)
-		.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, userId)))
+		.select({ role: groupMember.role })
+		.from(groupMember)
+		.where(and(eq(groupMember.groupId, bandId), eq(groupMember.userId, userId)))
 		.limit(1);
 
 	if (!row) throw new Error('Not a member of this band');
 	if (row.role === 'owner') throw new OwnerCannotLeaveError();
 
 	return db
-		.delete(bandMember)
-		.where(and(eq(bandMember.bandId, bandId), eq(bandMember.userId, userId)));
+		.delete(groupMember)
+		.where(and(eq(groupMember.groupId, bandId), eq(groupMember.userId, userId)));
 }
 
 // ---------------------------------------------------------------------------
@@ -619,46 +636,43 @@ export async function listAll(
 	const conditions = [];
 
 	if (opts?.search) {
-		conditions.push(like(band.name, `%${opts.search}%`));
+		conditions.push(like(group.name, `%${opts.search}%`));
 	}
 	if (opts?.status === 'active') {
-		conditions.push(isNull(band.deletedAt));
+		conditions.push(isNull(group.deletedAt));
 	} else if (opts?.status === 'deactivated') {
-		conditions.push(isNotNull(band.deletedAt));
+		conditions.push(isNotNull(group.deletedAt));
 	}
 	if (opts?.tier) {
-		conditions.push(eq(band.tier, opts.tier));
+		conditions.push(eq(group.tier, opts.tier));
 	}
 
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
 
 	const dataQ = db
 		.select({
-			id: band.id,
-			name: band.name,
-			slug: band.slug,
-			ownerId: band.ownerId,
+			id: group.id,
+			name: group.name,
+			slug: group.slug,
+			ownerId: group.ownerId,
 			// Two records per row: the band the row is, and the member who owns it.
 			ref: bandRefColumns(),
 			owner: memberRefColumns(),
-			tier: band.tier,
-			memberCount: sql<number>`(
-				select count(*) from band_member bm
-				where bm.band_id = ${band.id} and bm.status = 'active'
-			)`,
-			createdAt: band.createdAt,
-			deletedAt: band.deletedAt
+			tier: group.tier,
+			memberCount: activeMemberCount(),
+			createdAt: group.createdAt,
+			deletedAt: group.deletedAt
 		})
-		.from(band)
-		.innerJoin(user, eq(user.id, band.ownerId))
+		.from(group)
+		.innerJoin(user, eq(user.id, group.ownerId))
 		.where(where)
-		.orderBy(band.name)
+		.orderBy(group.name)
 		.$dynamic();
 
 	const countQ = db
 		.select({ count: count() })
-		.from(band)
-		.innerJoin(user, eq(user.id, band.ownerId))
+		.from(group)
+		.innerJoin(user, eq(user.id, group.ownerId))
 		.where(where);
 
 	const { rows, pagination: page } = await paginate(dataQ, countQ, pagination);
@@ -671,35 +685,32 @@ export async function listAll(
 export async function getByIdWithDetails(bandId: string) {
 	const [row] = await db
 		.select({
-			id: band.id,
-			name: band.name,
-			slug: band.slug,
-			bio: band.bio,
-			ownerId: band.ownerId,
+			id: group.id,
+			name: group.name,
+			slug: group.slug,
+			bio: group.bio,
+			ownerId: group.ownerId,
 			owner: memberRefColumns(),
-			avatarKey: band.avatarKey,
-			tier: band.tier,
-			subscription: band.subscription,
-			createdAt: band.createdAt,
-			updatedAt: band.updatedAt,
-			deletedAt: band.deletedAt,
-			memberCount: sql<number>`(
-				select count(*) from band_member bm
-				where bm.band_id = ${band.id} and bm.status = 'active'
-			)`
+			avatarKey: group.avatarKey,
+			tier: group.tier,
+			subscription: group.subscription,
+			createdAt: group.createdAt,
+			updatedAt: group.updatedAt,
+			deletedAt: group.deletedAt,
+			memberCount: activeMemberCount()
 		})
-		.from(band)
-		.innerJoin(user, eq(user.id, band.ownerId))
-		.where(eq(band.id, bandId));
+		.from(group)
+		.innerJoin(user, eq(user.id, group.ownerId))
+		.where(eq(group.id, bandId));
 
 	return row ? { ...row, owner: toMemberRef(row.owner) } : null;
 }
 
 export async function deactivate(bandId: string) {
 	const [row] = await db
-		.update(band)
+		.update(group)
 		.set({ deletedAt: new Date(), updatedAt: new Date() })
-		.where(and(eq(band.id, bandId), isNull(band.deletedAt)))
+		.where(and(eq(group.id, bandId), isNull(group.deletedAt)))
 		.returning();
 
 	if (!row) throw new BandNotFoundError();
@@ -710,7 +721,7 @@ export async function deactivate(bandId: string) {
 		.from(reservation)
 		.where(
 			and(
-				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerType, 'group'),
 				eq(reservation.bookerId, bandId),
 				gt(reservation.startsAt, new Date()),
 				ne(reservation.status, 'cancelled')
@@ -726,9 +737,9 @@ export async function deactivate(bandId: string) {
 
 export async function reactivate(bandId: string) {
 	const [row] = await db
-		.update(band)
+		.update(group)
 		.set({ deletedAt: null, updatedAt: new Date() })
-		.where(and(eq(band.id, bandId), isNotNull(band.deletedAt)))
+		.where(and(eq(group.id, bandId), isNotNull(group.deletedAt)))
 		.returning();
 
 	if (!row) throw new BandNotFoundError();
@@ -750,9 +761,9 @@ export async function setTier(bandId: string, tier: BandTier) {
 	if (existing.subscription) throw new BandTierManagedByStripeError();
 
 	const [row] = await db
-		.update(band)
+		.update(group)
 		.set({ tier, updatedAt: new Date() })
-		.where(eq(band.id, bandId))
+		.where(eq(group.id, bandId))
 		.returning();
 
 	if (!row) throw new BandNotFoundError();
@@ -763,20 +774,20 @@ export async function setTier(bandId: string, tier: BandTier) {
 // Role check
 // ---------------------------------------------------------------------------
 
-export async function getUserRole(bandId: string, userId: string): Promise<BandRole | null> {
+export async function getUserRole(bandId: string, userId: string): Promise<GroupRole | null> {
 	const [row] = await db
-		.select({ role: bandMember.role, status: bandMember.status })
-		.from(bandMember)
+		.select({ role: groupMember.role, status: groupMember.status })
+		.from(groupMember)
 		.where(
 			and(
-				eq(bandMember.bandId, bandId),
-				eq(bandMember.userId, userId),
-				eq(bandMember.status, 'active')
+				eq(groupMember.groupId, bandId),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'active')
 			)
 		)
 		.limit(1);
 
-	return (row?.role as BandRole) ?? null;
+	return (row?.role as GroupRole) ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -786,9 +797,9 @@ export async function getUserRole(bandId: string, userId: string): Promise<BandR
 /** Upload a band avatar to storage and persist its key. */
 export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, contentType: string) {
 	const [row] = await db
-		.select({ avatarKey: band.avatarKey })
-		.from(band)
-		.where(eq(band.id, bandId))
+		.select({ avatarKey: group.avatarKey })
+		.from(group)
+		.where(eq(group.id, bandId))
 		.limit(1);
 	if (!row) throw new BandNotFoundError();
 
@@ -803,16 +814,16 @@ export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, content
 	const key = mediaKey('bands/avatars', bandId, contentType);
 	await uploadFile(buffer, key, contentType);
 
-	await db.update(band).set({ avatarKey: key, updatedAt: new Date() }).where(eq(band.id, bandId));
+	await db.update(group).set({ avatarKey: key, updatedAt: new Date() }).where(eq(group.id, bandId));
 	return key;
 }
 
 /** Remove a band's avatar from storage and clear its key. */
 export async function clearBandAvatar(bandId: string) {
 	const [row] = await db
-		.select({ avatarKey: band.avatarKey })
-		.from(band)
-		.where(eq(band.id, bandId))
+		.select({ avatarKey: group.avatarKey })
+		.from(group)
+		.where(eq(group.id, bandId))
 		.limit(1);
 	if (!row) throw new BandNotFoundError();
 
@@ -824,5 +835,8 @@ export async function clearBandAvatar(bandId: string) {
 		}
 	}
 
-	await db.update(band).set({ avatarKey: null, updatedAt: new Date() }).where(eq(band.id, bandId));
+	await db
+		.update(group)
+		.set({ avatarKey: null, updatedAt: new Date() })
+		.where(eq(group.id, bandId));
 }

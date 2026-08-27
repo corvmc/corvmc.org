@@ -1,19 +1,19 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Modal from '$lib/components/shared/Modal.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import { goto, invalidateAll, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import {
 		createBand,
 		acceptInvite,
@@ -57,7 +57,7 @@
 	<!-- Pending invitations -->
 	{#if pending.length > 0}
 		<section>
-			<h2 class="text-lg font-semibold mb-3">Pending Invitations</h2>
+			<h2 class="mb-3 text-lg font-semibold">Pending Invitations</h2>
 			<div class="space-y-3">
 				{#each pending as invite (invite.id)}
 					{@const accept = acceptInvite.for(invite.id)}
@@ -132,7 +132,7 @@
 				{#each active as b (b.id)}
 					<a
 						href={resolve(`/band/${b.slug}`)}
-						class="card bg-base-100 shadow hover:shadow-md transition-shadow"
+						class="card bg-base-100 shadow transition-shadow hover:shadow-md"
 					>
 						<CardBody row class="py-4">
 							<div>

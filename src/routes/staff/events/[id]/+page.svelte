@@ -1,14 +1,14 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { responseErrorMessage } from '$lib/api';
 	import {
@@ -17,19 +17,18 @@
 		CancelEventAction,
 		DeleteEventAction,
 		CompTicketsAction
-	} from '$lib/components/shared/actions';
+	} from '$lib/components/actions';
 	import {
-		getStaffEventDetail,
+		getStaffEventPage,
 		updateEvent,
 		checkRebook,
 		checkConflicts,
-		getEventRecurringSeries,
 		cancelEventSeries
 	} from '$lib/remote/events.remote';
 	const { fields } = updateEvent;
-	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
+	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import {
 		formatDateShort,
 		formatDollars,
@@ -41,19 +40,19 @@
 		toLocalTime
 	} from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import { EntityChip } from '$lib/components/shared/entity';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { EntityChip } from '$lib/components/ui/entity';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { rejectListing } from '$lib/remote/community-events.remote';
 	import { imageSrc } from '$lib/utils/images';
-	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import ShiftFormFields from '$lib/components/shared/volunteer/ShiftFormFields.svelte';
-	import { getShifts, getVolunteerRoles, createShift } from '$lib/remote/volunteer.remote';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
+	import { createShift } from '$lib/remote/volunteer.remote';
 
 	const rejectFields = rejectListing.fields;
 
@@ -78,19 +77,12 @@
 	 * staffed", and a called-off shift is not staffing. The shift list is where
 	 * you go to see what was called off.
 	 */
-	const loaded = $derived(
-		await Promise.all([
-			getStaffEventDetail(id),
-			getEventRecurringSeries(id),
-			getShifts({ eventId: id }),
-			getVolunteerRoles()
-		])
-	);
+	const loaded = $derived(await getStaffEventPage(id));
 
-	let data = $derived(loaded[0]);
-	const recurringSeries = $derived(loaded[1]);
-	const shifts = $derived(loaded[2]);
-	const volunteerRoles = $derived(loaded[3]);
+	let data = $derived(loaded.detail);
+	const recurringSeries = $derived(loaded.recurringSeries);
+	const shifts = $derived(loaded.shifts);
+	const volunteerRoles = $derived(loaded.volunteerRoles);
 
 	const evt = $derived(data.event);
 	const isBandEvent = $derived(evt.source === 'band');
@@ -269,7 +261,7 @@
 		reserveSpace = false;
 		hasConflicts = false;
 		overrideConflicts = false;
-		void getStaffEventDetail(id).refresh();
+		void getStaffEventPage(id).refresh();
 	}
 
 	async function handlePosterUpload(e: Event) {
@@ -287,7 +279,7 @@
 			});
 			if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
 			toast.success('Poster updated');
-			void getStaffEventDetail(id).refresh();
+			void getStaffEventPage(id).refresh();
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to upload poster');
 		}
@@ -403,7 +395,7 @@
 				<Form
 					remote={cancelEventSeries}
 					successToast="Series cancelled"
-					onsuccess={() => void getEventRecurringSeries(id).refresh()}
+					onsuccess={() => void getStaffEventPage(id).refresh()}
 				>
 					<input {...cancelEventSeries.fields.seriesId.as('hidden', recurringSeries.id)} />
 					<SubmitButton label="Cancel series" variant="ghost" size="xs" class="text-error" />
@@ -450,8 +442,7 @@
 									name="description"
 									bind:value={editDescription}
 									class="textarea w-full"
-									rows="4"
-								></textarea>
+									rows="4"></textarea>
 							</FormField>
 
 							<FormField label="Date" id="editDate" issues={[]}>
@@ -552,7 +543,7 @@
 									class="input w-full"
 									required={editTicketingEnabled}
 								/>
-								<span class="label-text-alt opacity-60 mt-1"> Leave blank for a free event. </span>
+								<span class="label-text-alt mt-1 opacity-60"> Leave blank for a free event. </span>
 							</FormField>
 
 							<!-- Selling through our checkout is the one thing a band gig cannot
@@ -587,7 +578,7 @@
 											class="input w-full"
 										/>
 									</FormField>
-									<p class="text-muted mt-2">Leave capacity blank for unlimited tickets.</p>
+									<p class="mt-2 text-muted">Leave capacity blank for unlimited tickets.</p>
 								</Card>
 							{/if}
 
@@ -611,7 +602,7 @@
 										</label>
 
 										{#if rebookConfirmed}
-											<div class="grid grid-cols-2 gap-4 mt-2">
+											<div class="mt-2 grid grid-cols-2 gap-4">
 												<FormField label="Reservation start" id="editResStart" issues={[]}>
 													<input
 														id="editResStart"
@@ -672,7 +663,7 @@
 									</label>
 
 									{#if reserveSpace}
-										<Card tone="base-200" class="p-4 space-y-4 mt-2">
+										<Card tone="base-200" class="mt-2 space-y-4 p-4">
 											<p class="text-muted">
 												Reservation times can differ from event times to allow for setup and
 												teardown.
@@ -735,7 +726,7 @@
 			{#snippet pending()}
 				<Card>
 					<CardBody class="flex items-center justify-center p-8">
-						<span class="loading loading-spinner loading-md"></span>
+						<span class="loading loading-md loading-spinner"></span>
 					</CardBody>
 				</Card>
 			{/snippet}
@@ -792,19 +783,22 @@
 		{/if}
 
 		{#if evt.externalTicketUrl}
-			<a href={evt.externalTicketUrl} class="link text-sm" target="_blank" rel="noopener noreferrer"
-				>Tickets ↗</a
+			<a
+				href={evt.externalTicketUrl}
+				class="link text-sm"
+				target="_blank"
+				rel="external noopener noreferrer">Tickets ↗</a
 			>
 		{/if}
 
 		{#if evt.description}
-			<div class="mt-4 pt-4 border-t border-base-200">
+			<div class="mt-4 border-t border-base-200 pt-4">
 				<p class="whitespace-pre-wrap">{evt.description}</p>
 			</div>
 		{/if}
 
 		{#if parseTags(evt.tags).length > 0}
-			<div class="mt-4 pt-4 border-t border-base-200 flex gap-1 flex-wrap">
+			<div class="mt-4 flex flex-wrap gap-1 border-t border-base-200 pt-4">
 				{#each parseTags(evt.tags) as tag (tag)}
 					<Badge variant="outline">{tag}</Badge>
 				{/each}
@@ -848,7 +842,7 @@
 				<div class="mt-3">
 					<a
 						href={resolve(`/events/${evt.id}/tickets`)}
-						class="link link-primary text-sm"
+						class="link text-sm link-primary"
 						target="_blank"
 					>
 						View purchase page →
@@ -857,7 +851,7 @@
 			{/if}
 
 			{#if evt.status !== 'cancelled'}
-				<div class="mt-4 pt-4 border-t border-base-200">
+				<div class="mt-4 border-t border-base-200 pt-4">
 					<CompTicketsAction eventId={evt.id} />
 				</div>
 			{/if}
@@ -896,7 +890,7 @@
 				srcset={poster.srcset}
 				sizes={poster.sizes}
 				alt="Event poster"
-				class="rounded max-h-64 object-contain"
+				class="max-h-64 rounded object-contain"
 			/>
 		{:else}
 			<p class="text-sm opacity-50">No poster uploaded</p>
@@ -932,7 +926,7 @@
 			<div class="mt-2">
 				<a
 					href={resolve(`/staff/reservations/${data.linkedReservation.id}`)}
-					class="link link-primary text-sm"
+					class="link text-sm link-primary"
 				>
 					View reservation →
 				</a>
@@ -963,7 +957,7 @@
 						modalTitle="Schedule a shift for {evt.title}"
 						submitLabel="Create"
 						successToast="Shift scheduled"
-						onsuccess={() => getShifts({ eventId: id }).refresh()}
+						onsuccess={() => getStaffEventPage(id).refresh()}
 					>
 						{#snippet form()}
 							<!--

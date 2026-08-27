@@ -15,7 +15,7 @@ vi.mock('./ticket-service', () => ({
 	fulfillPurchase: (...args: unknown[]) => mockFulfillPurchase(...args)
 }));
 
-vi.mock('$lib/server/events/event-bus', () => ({
+vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: { emit: (...args: unknown[]) => mockEmit(...args) }
 }));
 

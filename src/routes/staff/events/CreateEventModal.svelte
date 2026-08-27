@@ -1,15 +1,15 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
 	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import Modal from '$lib/components/shared/Modal.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/shared/Form';
-	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '$lib/components/ui/Form';
+	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { checkConflicts, createEvent, previewRecurringEvents } from '$lib/remote/events.remote';
 	import { responseErrorMessage } from '$lib/api';
 
@@ -204,7 +204,7 @@
 					class="file-input w-full"
 				/>
 				{#if posterFile}
-					<p class="text-muted mt-1">
+					<p class="mt-1 text-muted">
 						{posterFile.name} ({(posterFile.size / 1024).toFixed(0)} KB)
 					</p>
 				{/if}
@@ -228,7 +228,7 @@
 			/>
 
 			{#if ticketingEnabled}
-				<Card tone="base-200" class="p-4 space-y-4">
+				<Card tone="base-200" class="space-y-4 p-4">
 					<Field name="ticketQuantity" type="number" label="Capacity" bind:value={ticketQuantity} />
 					<p class="text-muted">Leave capacity blank for unlimited tickets.</p>
 				</Card>
@@ -242,7 +242,7 @@
 			/>
 
 			{#if reserveSpace}
-				<Card tone="base-200" class="p-4 space-y-4">
+				<Card tone="base-200" class="space-y-4 p-4">
 					<p class="text-muted">
 						Reservation times can differ from event times to allow for setup and teardown.
 					</p>
@@ -280,7 +280,7 @@
 			/>
 
 			{#if recurring}
-				<Card tone="base-200" class="p-4 space-y-4">
+				<Card tone="base-200" class="space-y-4 p-4">
 					<Field
 						name="recurringFrequency"
 						type="select"
@@ -322,7 +322,7 @@
 						{#if recurringPreview.dates.length > 0}
 							<div class="text-sm">
 								<p class="font-medium">Next occurrences:</p>
-								<ul class="opacity-70 mt-1">
+								<ul class="mt-1 opacity-70">
 									{#each recurringPreview.dates as iso (iso)}
 										<li>{formatOccurrence(iso)}</li>
 									{/each}
@@ -350,7 +350,7 @@
 
 		{#snippet pending()}
 			<div class="flex items-center justify-center p-8">
-				<span class="loading loading-spinner loading-md"></span>
+				<span class="loading loading-md loading-spinner"></span>
 			</div>
 		{/snippet}
 	</svelte:boundary>

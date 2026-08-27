@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { DomainError } from '../domain-error';
 import { user, session } from '$lib/server/db/schema/authentication';
-import { band } from '$lib/server/db/schema/band';
+import { group } from '$lib/server/db/schema/group';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, isNull, isNotNull, count, desc } from 'drizzle-orm';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -186,8 +186,8 @@ export async function purgeUser(userId: string) {
 
 	const [{ value: ownedBands }] = await db
 		.select({ value: count() })
-		.from(band)
-		.where(eq(band.ownerId, userId));
+		.from(group)
+		.where(eq(group.ownerId, userId));
 
 	if (ownedBands > 0) throw new UserHasOwnedBandsError();
 

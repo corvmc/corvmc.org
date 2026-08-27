@@ -2,14 +2,14 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { formatDateTime } from '$lib/utils/format';
 	import {
 		suggestionCategoryLabels,
@@ -17,35 +17,28 @@
 		suggestionStatusLabels
 	} from '$lib/config';
 	import {
-		getStaffSuggestionDetail,
-		getMergeCandidates,
+		getStaffSuggestionDetailPage,
 		respondToSuggestion,
 		reviewSuggestion,
 		setSuggestionVisibility,
 		mergeSuggestion,
-		getSuggestionPendingEdit,
 		reviewSuggestionEdit
 	} from '$lib/remote/suggestions.remote';
+	import MergeCandidateOptions from './MergeCandidateOptions.svelte';
 
 	let id = $derived(page.params.id!);
 
-	// Above the `await`s on purpose. Declared after one, `candidates` is compiled
-	// as "blocked", and `{#each await candidates}` below then becomes
-	// `$.async(node, [blocker], [expression], …)` — the shape that crashes with
-	// `null is not an object (evaluating 'c.async_deriveds')` and takes the page
-	// down (JAVASCRIPT-SVELTEKIT-25). See the longer note in
-	// routes/member/reservations/+page.svelte and the guard in
-	// async-effect-shape.spec.ts.
-	let candidates = $derived(getMergeCandidates(id));
+	// The merge candidates used to live here, declared above the awaits so they would not be
+	// compiled as "blocked" — the JAVASCRIPT-SVELTEKIT-25 shape. They load in
+	// MergeCandidateOptions now, where there is no await to be blocked by.
+	const data = $derived(await getStaffSuggestionDetailPage(id));
+	const s = $derived(data.suggestion);
+	const pendingEdit = $derived(data.pendingEdit);
 
-	let s = $derived(await getStaffSuggestionDetail(id));
-
-	let isMerged = $derived(!!s.mergedIntoId);
-	let pendingEdit = $derived(await getSuggestionPendingEdit(id));
+	const isMerged = $derived(!!s.mergedIntoId);
 
 	function refresh() {
-		void getStaffSuggestionDetail(id).refresh();
-		void getSuggestionPendingEdit(id).refresh();
+		void getStaffSuggestionDetailPage(id).refresh();
 	}
 </script>
 
@@ -132,8 +125,7 @@
 							<textarea
 								class="textarea w-full"
 								rows="3"
-								{...reviewSuggestion.fields.note.as('text')}
-							></textarea>
+								{...reviewSuggestion.fields.note.as('text')}></textarea>
 						</label>
 					</div>
 				{/snippet}
@@ -207,8 +199,7 @@
 								<textarea
 									class="textarea w-full"
 									rows="3"
-									{...reviewSuggestionEdit.fields.notes.as('text')}
-								></textarea>
+									{...reviewSuggestionEdit.fields.notes.as('text')}></textarea>
 							</label>
 						</div>
 					{/snippet}
@@ -303,8 +294,7 @@
 							<textarea
 								class="textarea w-full"
 								rows="3"
-								{...setSuggestionVisibility.fields.note.as('text')}
-							></textarea>
+								{...setSuggestionVisibility.fields.note.as('text')}></textarea>
 						</label>
 					{/snippet}
 				</Action>
@@ -335,9 +325,7 @@
 						<label class="form-control w-full">
 							<div class="label"><span class="label-text">Merge into</span></div>
 							<Select class="w-full" {...mergeSuggestion.fields.targetId.as('select')}>
-								{#each await candidates as c (c.id)}
-									<option value={c.id}>{c.title} ({c.voteCount})</option>
-								{/each}
+								<MergeCandidateOptions {id} />
 							</Select>
 						</label>
 						<p class="mt-3 text-muted">

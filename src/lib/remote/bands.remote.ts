@@ -39,7 +39,7 @@ import {
 	clearBandAvatar,
 	BandMemberExistsError
 } from '$lib/server/band/band-service';
-import { bandTiers } from '$lib/server/db/schema/band';
+import { bandTiers } from '$lib/server/db/schema/group';
 import { getBandLayout } from '$lib/remote/layout.remote';
 import {
 	createInvite as createPlatformInvite,
@@ -105,7 +105,7 @@ export const getBandReservations = query(z.string(), async (bandId) => {
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
-		.where(and(eq(reservation.bookerType, 'band'), eq(reservation.bookerId, bandId)))
+		.where(and(eq(reservation.bookerType, 'group'), eq(reservation.bookerId, bandId)))
 		.orderBy(desc(reservation.startsAt))
 		.limit(10);
 });
@@ -152,7 +152,7 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(
 			and(
-				eq(reservation.bookerType, 'band'),
+				eq(reservation.bookerType, 'group'),
 				eq(reservation.bookerId, bandId),
 				gt(reservation.startsAt, now),
 				ne(reservation.status, 'cancelled')
@@ -177,6 +177,26 @@ export const getBandMembersList = query(z.string(), async (bandId) => {
 		active: members.filter((m) => m.status === 'active'),
 		pending: members.filter((m) => m.status === 'pending')
 	};
+});
+
+/**
+ * The band members page's one load-bearing query.
+ *
+ * `getBandPlatformInvites` is admin-guarded and 403s a plain member into the error boundary, so
+ * the page gated it on the viewer's role and held the two queries in flight together — a
+ * permission decision made client-side, and the fan-out that past kit 2.64 stops the page
+ * rendering at all. Both now resolve here, where the role is already known.
+ */
+export const getBandMembersPage = query(z.string(), async (bandId) => {
+	const { role } = await requireBandMember();
+	const canManage = role === 'owner' || role === 'admin';
+
+	const [members, platformInvites] = await Promise.all([
+		getBandMembersList(bandId),
+		canManage ? getBandPlatformInvites() : []
+	]);
+
+	return { members, platformInvites, canManage };
 });
 
 export const getMemberBands = query(async () => {
@@ -213,7 +233,7 @@ export const updateStaffBand = form(
 		const { params } = getRequestEvent();
 		const id = params.id!;
 		await update(id, { name: data.name, bio: data.bio || undefined });
-		void getStaffBand(id).refresh();
+		void getStaffBandPage(id).refresh();
 		return { success: true };
 	}
 );
@@ -231,7 +251,7 @@ export const updateMemberRole = form(
 			position: data.position ?? undefined
 		});
 		const { params } = getRequestEvent();
-		void getStaffBandMembers(params.id!).refresh();
+		void getStaffBandPage(params.id!).refresh();
 		return { success: true };
 	}
 );
@@ -288,7 +308,7 @@ export const setBandTier = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getStaffBand(data.id).refresh();
+		void getStaffBandPage(data.id).refresh();
 		return { success: true };
 	}
 );
@@ -398,7 +418,7 @@ export const createBand = form(
 	}
 );
 
-// `bandId`, not a band_member row id: the invite list only ever knows the band.
+// `bandId`, not a group_member row id: the invite list only ever knows the band.
 // Both outcomes are returned in-band rather than thrown — a stale or
 // already-taken invite is an ordinary user state, and a thrown error would
 // reach Sentry as a 500 while showing the member only a generic toast.
@@ -451,7 +471,10 @@ export const updateBand = form(
 	}
 );
 
-export const deleteBand = form(z.object({}), async () => {
+// A form with no fields of its own. `z.object({})` no longer resolves against
+// kit's schema overload, and there is nothing here to validate anyway — the
+// guard on the first line of the handler is the whole check.
+export const deleteBand = form('unchecked', async () => {
 	const { band } = await requireBandOwner();
 	await deleteBandService(band.id);
 	return { success: true };
@@ -574,7 +597,8 @@ export const transferOwner = form(
 	}
 );
 
-export const leave = form(z.object({}), async () => {
+// No fields to validate — see `deleteBand` above.
+export const leave = form('unchecked', async () => {
 	// `requireBandBySlug()` + `requireUser()` let a non-member's submission reach
 	// the service, which threw a plain Error — a 500 and a generic toast for what
 	// is really a 403. The owner case was worse: `OwnerCannotLeaveError` already
@@ -643,7 +667,8 @@ export const uploadBandAvatar = form(z.object({ file: z.instanceof(File) }), asy
 	return { success: true };
 });
 
-export const removeBandAvatar = form(z.object({}), async () => {
+// No fields to validate — see `deleteBand` above.
+export const removeBandAvatar = form('unchecked', async () => {
 	const { band } = await requireBandAdmin();
 	await clearBandAvatar(band.id);
 	void getBandLayout(band.slug).refresh();
@@ -671,4 +696,21 @@ export const getUserBands = query(z.string(), async (userId) => {
 			subtitle: `${b.memberCount} active members`
 		}
 	}));
+});
+
+/**
+ * The staff band detail page's one load-bearing query.
+ *
+ * Every half is keyed by the same band id, and every mutation that refreshed one of them has that
+ * id in scope, so this composes with nothing left orphaned.
+ */
+export const getStaffBandPage = query(z.string(), async (id) => {
+	const [band, members, reservations, platformInvites] = await Promise.all([
+		getStaffBand(id),
+		getStaffBandMembers(id),
+		getBandReservations(id),
+		getStaffPlatformInvites(id)
+	]);
+
+	return { band, members, reservations, platformInvites };
 });

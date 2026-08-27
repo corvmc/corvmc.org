@@ -1,7 +1,6 @@
 <script lang="ts">
 	import {
-		getStaffArticles,
-		getStaffCategories,
+		getStaffHelpPage,
 		createCategory,
 		updateCategory,
 		deleteCategory,
@@ -9,26 +8,27 @@
 	} from '$lib/remote/help.remote';
 	const { fields: deleteFields } = deleteCategory;
 	const { fields: createCatFields } = createCategory;
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Action from '$lib/components/shared/Action.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Action from '$lib/components/ui/Action.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { IconPlus, IconTrash, IconPencil } from '@tabler/icons-svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
 
-	let articles = $derived(await getStaffArticles());
-	let categories = $derived(await getStaffCategories());
+	const data = $derived(await getStaffHelpPage());
+	const articles = $derived(data.articles);
+	const categories = $derived(data.categories);
 
 	let categoryMap = $derived(Object.fromEntries(categories.map((c) => [c.id, c.name])));
 
@@ -68,8 +68,8 @@
 	}
 
 	function refreshData() {
-		void getStaffArticles().refresh();
-		void getStaffCategories().refresh();
+		// The wrapper this page reads, not the constituents it is assembled from.
+		void getStaffHelpPage().refresh();
 	}
 
 	// Two instances of the same form so the publish and unpublish modals keep
@@ -90,8 +90,8 @@
 </PageHeader>
 <PageContent>
 	<!-- Categories section -->
-	<details class="collapse collapse-arrow border border-base-300 bg-base-100 mb-6">
-		<summary class="collapse-title font-medium text-sm"
+	<details class="collapse-arrow collapse mb-6 border border-base-300 bg-base-100">
+		<summary class="collapse-title text-sm font-medium"
 			>Manage Categories ({categories.length})</summary
 		>
 		<div class="collapse-content">
@@ -100,8 +100,8 @@
 					{@const editCat = updateCategory.for(cat.id)}
 					<div class="flex items-center justify-between gap-2 py-1">
 						<div>
-							<span class="font-medium text-sm">{cat.name}</span>
-							<span class="text-xs opacity-50 ml-2">/{cat.slug}</span>
+							<span class="text-sm font-medium">{cat.name}</span>
+							<span class="ml-2 text-xs opacity-50">/{cat.slug}</span>
 							<Badge variant="ghost" size="xs" class="ml-1">{cat.minRole}</Badge>
 						</div>
 						<div class="flex gap-1">
@@ -124,25 +124,25 @@
 										<FormField name="name" label="Name">
 											<input
 												{...editCat.fields.name.as('text', cat.name)}
-												class="input input-sm w-full"
+												class="input w-full input-sm"
 											/>
 										</FormField>
 										<FormField name="slug" label="Slug">
 											<input
 												{...editCat.fields.slug.as('text', cat.slug)}
-												class="input input-sm w-full"
+												class="input w-full input-sm"
 											/>
 										</FormField>
 										<FormField name="description" label="Description">
 											<input
 												{...editCat.fields.description.as('text', cat.description ?? '')}
-												class="input input-sm w-full"
+												class="input w-full input-sm"
 											/>
 										</FormField>
 										<FormField name="icon" label="Icon">
 											<input
 												{...editCat.fields.icon.as('text', cat.icon ?? '')}
-												class="input input-sm w-full"
+												class="input w-full input-sm"
 												placeholder="tabler-book"
 											/>
 										</FormField>
@@ -160,7 +160,7 @@
 										<FormField name="sortOrder" label="Sort order">
 											<input
 												{...editCat.fields.sortOrder.as('text', String(cat.sortOrder))}
-												class="input input-sm w-full"
+												class="input w-full input-sm"
 											/>
 										</FormField>
 									</div>
@@ -188,12 +188,12 @@
 				{/each}
 			</div>
 			<Form remote={createCategory} successToast="Category created" onsuccess={refreshData}>
-				<div class="flex gap-2 mt-4 items-end">
+				<div class="mt-4 flex items-end gap-2">
 					<FormField name="name" label="Name">
 						<input
 							name="name"
 							type="text"
-							class="input input-sm w-40"
+							class="input w-40 input-sm"
 							placeholder="Category name"
 							bind:value={catNameValue}
 						/>
@@ -202,12 +202,12 @@
 						<input
 							name="slug"
 							type="text"
-							class="input input-sm w-40"
+							class="input w-40 input-sm"
 							placeholder={slugFromName(catNameValue) || 'auto'}
 						/>
 					</FormField>
 					<FormField name="icon" label="Icon">
-						<input name="icon" type="text" class="input input-sm w-32" placeholder="tabler-book" />
+						<input name="icon" type="text" class="input w-32 input-sm" placeholder="tabler-book" />
 					</FormField>
 					<FormField name="minRole" label="Role">
 						<Select size="sm" class="w-32" name="minRole">

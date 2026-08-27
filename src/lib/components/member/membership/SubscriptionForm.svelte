@@ -3,10 +3,10 @@
 	import { formatDollars } from '$lib/utils/format';
 	import { untrack } from 'svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/config';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import Field from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import type { RemoteForm } from '$lib/components/shared/Form/Form.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import Field from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import type { RemoteForm } from '$lib/components/ui/Form/Form.svelte';
 
 	const STEP = DOLLARS_PER_UNIT;
 	const MIN_AMOUNT = DOLLARS_PER_UNIT * 2; // $10 → 2 free hours
@@ -57,7 +57,7 @@
 			max={MAX_AMOUNT}
 			step={STEP}
 			bind:value={amount}
-			class="range range-primary mt-3 w-full"
+			class="range mt-3 w-full range-primary"
 			aria-label="Monthly contribution amount"
 		/>
 		<div class="mt-1 flex w-full justify-between px-1 text-xs opacity-50">

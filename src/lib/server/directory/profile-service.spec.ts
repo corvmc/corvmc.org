@@ -68,8 +68,8 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 	userGenre: { userId: 'user_id', genre: 'genre' }
 }));
 
-vi.mock('$lib/server/db/schema/band', () => ({
-	band: {
+vi.mock('$lib/server/db/schema/group', () => ({
+	group: {
 		id: 'id',
 		tagline: 'tagline',
 		lookingForMembers: 'looking_for_members',
@@ -78,7 +78,10 @@ vi.mock('$lib/server/db/schema/band', () => ({
 		links: 'links',
 		updatedAt: 'updated_at'
 	},
-	bandMember: { bandId: 'band_id', userId: 'user_id', role: 'role', status: 'status' },
+	groupMember: { groupId: 'group_id', userId: 'user_id', role: 'role', status: 'status' }
+}));
+
+vi.mock('$lib/server/db/schema/band', () => ({
 	bandGenre: { bandId: 'band_id', genre: 'genre' }
 }));
 

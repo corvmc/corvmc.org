@@ -1,12 +1,12 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { CERT_DESCRIPTION_MAX } from '$lib/config';
 	import { IconPencil, IconArchive, IconArchiveOff, IconTrash } from '@tabler/icons-svelte';
 	import {

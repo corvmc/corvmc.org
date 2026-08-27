@@ -35,7 +35,14 @@ interface TemplateMeta {
 	Alias: string;
 	Subject?: string;
 	TemplateType: 'Standard' | 'Layout';
-	LayoutTemplate?: string;
+	/**
+	 * `null` means "detached", and is written out explicitly rather than omitted.
+	 * `postmark templates push` only *sets* the keys present in meta.json — an
+	 * absent one leaves whatever the server already had, so a template that drops
+	 * its content.html keeps rendering the old layout around an empty HtmlBody.
+	 * That is a blank branded email, and it is why these are stated, not implied.
+	 */
+	LayoutTemplate?: string | null;
 }
 
 export interface RenderedTemplate {

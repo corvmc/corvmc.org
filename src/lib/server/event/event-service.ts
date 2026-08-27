@@ -7,7 +7,8 @@ import {
 	type EventBandStatus,
 	type LineupEntry
 } from '$lib/server/db/schema/event';
-import { band, bandMember } from '$lib/server/db/schema/band';
+import { groupMember } from '$lib/server/db/schema/group';
+import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
@@ -38,7 +39,7 @@ import { captureException } from '$lib/server/sentry';
 import { uploadFile, deleteObject, copyObject } from '$lib/server/storage';
 import { mediaKey } from '$lib/server/storage-keys';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
-import { domainEvents } from '$lib/server/events/event-bus';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import {
 	formatDateFull,
 	formatDateInTz,
@@ -502,10 +503,10 @@ export async function unpublishWithNotice(
 			bandId: event.bandId,
 			posterKey: event.posterKey,
 			createdByUserId: event.createdByUserId,
-			bandName: band.name
+			bandName: group.name
 		})
 		.from(event)
-		.leftJoin(band, eq(band.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.bandId))
 		.where(eq(event.id, eventId))
 		.limit(1);
 
@@ -615,13 +616,13 @@ export async function unpublishWithNotice(
 
 	const admins = await db
 		.select({ id: user.id, name: user.name, email: user.email })
-		.from(bandMember)
-		.innerJoin(user, eq(user.id, bandMember.userId))
+		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
 		.where(
 			and(
-				inArray(bandMember.bandId, notifyBandIds),
-				inArray(bandMember.role, ['owner', 'admin']),
-				eq(bandMember.status, 'active')
+				inArray(groupMember.groupId, notifyBandIds),
+				inArray(groupMember.role, ['owner', 'admin']),
+				eq(groupMember.status, 'active')
 			)
 		);
 
@@ -914,9 +915,9 @@ export async function listAll(
 	const where = and(...filters);
 
 	const dataQ = db
-		.select({ ...getTableColumns(event), bandName: band.name, bandSlug: band.slug })
+		.select({ ...getTableColumns(event), bandName: group.name, bandSlug: group.slug })
 		.from(event)
-		.leftJoin(band, eq(band.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.bandId))
 		.where(where)
 		.orderBy(desc(event.startsAt))
 		.$dynamic();
@@ -941,7 +942,7 @@ export async function listAll(
 //
 // So a band can credit anyone on its own bill (it's their factual statement
 // about their own show) without that credit appearing on the named band's
-// profile until they agree. See `docs/specs/event-lineup-spec.md`.
+// profile until they agree. See `docs/specs/shipped/event-lineup-spec.md`.
 
 export interface LineupRow {
 	id: string;
@@ -962,13 +963,13 @@ function lineupSelect() {
 			eventId: eventBand.eventId,
 			name: eventBand.name,
 			bandId: eventBand.bandId,
-			bandSlug: band.slug,
+			bandSlug: group.slug,
 			billingOrder: eventBand.billingOrder,
 			status: eventBand.status,
 			note: eventBand.note
 		})
 		.from(eventBand)
-		.leftJoin(band, eq(band.id, eventBand.bandId));
+		.leftJoin(group, eq(group.id, eventBand.bandId));
 }
 
 /** The whole bill, every status, ordered. For rendering an event. */
@@ -1118,26 +1119,26 @@ async function notifyLineupInvites(
 	invitedBandIds: string[]
 ): Promise<void> {
 	const [owner] = evt.bandId
-		? await db.select({ name: band.name }).from(band).where(eq(band.id, evt.bandId)).limit(1)
+		? await db.select({ name: group.name }).from(group).where(eq(group.id, evt.bandId)).limit(1)
 		: [undefined];
 
 	const rows = await db
 		.select({
-			bandId: band.id,
-			bandName: band.name,
-			bandSlug: band.slug,
+			bandId: group.id,
+			bandName: group.name,
+			bandSlug: group.slug,
 			userId: user.id,
 			userName: user.name,
 			userEmail: user.email
 		})
-		.from(bandMember)
-		.innerJoin(band, eq(band.id, bandMember.bandId))
-		.innerJoin(user, eq(user.id, bandMember.userId))
+		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
+		.innerJoin(user, eq(user.id, groupMember.userId))
 		.where(
 			and(
-				inArray(bandMember.bandId, invitedBandIds),
-				inArray(bandMember.role, ['owner', 'admin']),
-				eq(bandMember.status, 'active')
+				inArray(groupMember.groupId, invitedBandIds),
+				inArray(groupMember.role, ['owner', 'admin']),
+				eq(groupMember.status, 'active')
 			)
 		);
 
@@ -1218,7 +1219,7 @@ export interface LineupInvite {
 
 /** Bills this band has been named on but hasn't answered yet. */
 export async function listBandLineupInvites(bandId: string): Promise<LineupInvite[]> {
-	const owner = alias(band, 'owner_band');
+	const owner = alias(group, 'owner_band');
 	return db
 		.select({
 			eventId: event.id,
@@ -1324,9 +1325,9 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 	// Invariant: setting event.bandId always writes the matching confirmed
 	// lineup row. The owner heads its own bill until told otherwise.
 	const [owner] = await db
-		.select({ name: band.name })
-		.from(band)
-		.where(eq(band.id, bandId))
+		.select({ name: group.name })
+		.from(group)
+		.where(eq(group.id, bandId))
 		.limit(1);
 	await db.insert(eventBand).values({
 		eventId: row.id,
@@ -1475,9 +1476,9 @@ export async function importBandEvents(
 	if (rows.length > IMPORT_MAX) throw new Error(`At most ${IMPORT_MAX} gigs per import`);
 
 	const [owner] = await db
-		.select({ name: band.name })
-		.from(band)
-		.where(eq(band.id, bandId))
+		.select({ name: group.name })
+		.from(group)
+		.where(eq(group.id, bandId))
 		.limit(1);
 	if (!owner) throw new Error('Band not found');
 
@@ -1615,11 +1616,11 @@ function confirmedForMember(userId: string) {
 			.select({ id: eventBand.eventId })
 			.from(eventBand)
 			.innerJoin(
-				bandMember,
+				groupMember,
 				and(
-					eq(bandMember.bandId, eventBand.bandId),
-					eq(bandMember.userId, userId),
-					eq(bandMember.status, 'active')
+					eq(groupMember.groupId, eventBand.bandId),
+					eq(groupMember.userId, userId),
+					eq(groupMember.status, 'active')
 				)
 			)
 			.where(eq(eventBand.status, 'confirmed'))
@@ -1638,17 +1639,17 @@ async function withMemberBylines(rows: EventRow[], userId: string): Promise<Memb
 			eventId: eventBand.eventId,
 			billingOrder: eventBand.billingOrder,
 			bandId: eventBand.bandId,
-			bandName: band.name,
-			bandSlug: band.slug
+			bandName: group.name,
+			bandSlug: group.slug
 		})
 		.from(eventBand)
-		.innerJoin(band, eq(band.id, eventBand.bandId))
+		.innerJoin(group, eq(group.id, eventBand.bandId))
 		.innerJoin(
-			bandMember,
+			groupMember,
 			and(
-				eq(bandMember.bandId, eventBand.bandId),
-				eq(bandMember.userId, userId),
-				eq(bandMember.status, 'active')
+				eq(groupMember.groupId, eventBand.bandId),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'active')
 			)
 		)
 		.where(
@@ -1756,9 +1757,9 @@ export async function listPublicCalendarEvents(
 	end: Date
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
-		.select({ event, bandName: band.name, bandSlug: band.slug })
+		.select({ event, bandName: group.name, bandSlug: group.slug })
 		.from(event)
-		.leftJoin(band, eq(band.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.bandId))
 		.where(
 			and(
 				inArray(event.status, [...publicEventStatuses]),
@@ -1785,9 +1786,9 @@ export async function listPublicUpcomingEvents(
 	opts: { limit: number; offset: number }
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
-		.select({ event, bandName: band.name, bandSlug: band.slug })
+		.select({ event, bandName: group.name, bandSlug: group.slug })
 		.from(event)
-		.leftJoin(band, eq(band.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.bandId))
 		.where(and(inArray(event.status, [...publicEventStatuses]), gte(event.startsAt, from)))
 		.orderBy(asc(event.startsAt))
 		.limit(opts.limit + 1)

@@ -3,8 +3,8 @@
 	import { IconAlertTriangle } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
 	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 
 	let {
 		subscription,

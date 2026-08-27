@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
+	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
 
 	let { children } = $props();
 </script>

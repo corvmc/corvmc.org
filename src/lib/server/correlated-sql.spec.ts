@@ -18,7 +18,11 @@ import { user } from './db/schema/authentication';
 // columns qualified and were never affected.
 // ---------------------------------------------------------------------------
 
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('$lib/server/db', () => ({ db: {}, getRowCount: () => 0 }));
+vi.mock('./reservation/conflict-service', () => ({
+	validateBooking: vi.fn(),
+	hasConflict: vi.fn()
+}));
 vi.mock('$lib/server/stripe', () => ({ stripe: {} }));
 vi.mock('$app/server', () => ({ getRequestEvent: vi.fn() }));
 vi.mock('$lib/server/finance/payment-service', () => ({ checkout: vi.fn() }));
@@ -30,6 +34,8 @@ vi.mock('$lib/server/finance/product-config-service', () => ({
 
 const { isSustainingMemberSql } = await import('./finance/subscription-service');
 const { primaryRoleFor } = await import('./authorization');
+const { isFirstReservationSql } = await import('./reservation/reservation-service');
+const { reservation } = await import('./db/schema/reservation');
 
 // A bare drizzle instance is enough to render SQL — no D1 binding needed.
 const db = drizzle({} as never);
@@ -59,5 +65,30 @@ describe('primaryRoleFor', () => {
 		// subquery and the predicate could never match a user id.
 		expect(rendered).toContain('mhr.user_id = "user"."id"');
 		expect(rendered).not.toMatch(/mhr\.user_id = "id"/);
+	});
+});
+
+describe('isFirstReservationSql', () => {
+	const rendered = () =>
+		db.select({ id: reservation.id, first: isFirstReservationSql() }).from(reservation).toSQL().sql;
+
+	it('correlates to the OUTER reservation row in a single-table select', () => {
+		// Unqualified, `created_by_user_id` binds to the inner `r0` alias, the
+		// predicate is always true, and every booking on the page reads as a
+		// first visit.
+		expect(rendered()).toContain('r0.created_by_user_id = "reservation"."created_by_user_id"');
+		expect(rendered()).not.toMatch(/r0\.created_by_user_id = "created_by_user_id"/);
+		expect(rendered()).toContain('r0.starts_at < "reservation"."starts_at"');
+		expect(rendered()).toContain('r0.id < "reservation"."id"');
+	});
+
+	it('counts only member bookings, and never a cancelled one', () => {
+		const sql = rendered();
+		// The flag is for a member walking in for the first time — not a band's
+		// hold, and not a booking nobody will show up to.
+		expect(sql).toContain(`"reservation"."booker_type" = 'user'`);
+		expect(sql).toContain(`"reservation"."status" <> 'cancelled'`);
+		// A cancelled booking is not a visit, so it is not prior history either.
+		expect(sql).toContain(`r0.status <> 'cancelled'`);
 	});
 });

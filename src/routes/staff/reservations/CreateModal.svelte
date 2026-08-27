@@ -8,15 +8,15 @@
 		checkConflicts,
 		createReservation
 	} from '$lib/remote/reservations.remote';
-	import Action from '$lib/components/shared/Action.svelte';
-	import { Field, Select } from '$lib/components/shared/Form';
-	import SearchSelect from '$lib/components/shared/Form/SearchSelect.svelte';
-	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import { Field, Select } from '$lib/components/ui/Form';
+	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
+	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
 	import { formatSlotTime } from '$lib/utils/format';
 
 	const { fields } = createReservation;
 
-	let bookerType = $state<'user' | 'band'>('user');
+	let bookerType = $state<'user' | 'group'>('user');
 	let selectedMember = $state<{ id: string; name: string; email: string } | null>(null);
 	let selectedBand = $state<{
 		id: string;
@@ -30,8 +30,13 @@
 	let endTime = $state('');
 	let notes = $state('');
 
+	// One query for the day, two derivations off it. Two async deriveds each calling
+	// `getStaffSlots(date)` deduped to a single request, but they were still two remote queries in
+	// flight in one component — the shape that stops a component rendering past kit 2.64.
+	const slots = $derived(getStaffSlots(date));
+
 	const startOptions = $derived.by(async () => {
-		const data = await getStaffSlots(date);
+		const data = await slots;
 		return data.slots.map((s) => ({
 			value: s.startTime,
 			label: formatSlotTime(s.startTime),
@@ -41,7 +46,7 @@
 
 	const endOptions = $derived.by(async () => {
 		if (!startTime) return [];
-		const data = await getStaffSlots(date);
+		const data = await slots;
 
 		const opts: Array<{ value: string; label: string; available: boolean }> = [];
 		const startIdx = data.slots.findIndex((s) => s.startTime === startTime);
@@ -115,7 +120,7 @@
 		<svelte:boundary>
 			<input {...fields.memberId.as('hidden', selectedMember?.id ?? '')} />
 			<input
-				{...fields.bandId.as('hidden', bookerType === 'band' ? (selectedBand?.id ?? '') : '')}
+				{...fields.bandId.as('hidden', bookerType === 'group' ? (selectedBand?.id ?? '') : '')}
 			/>
 			<input {...fields.startTime.as('hidden', startTime)} />
 			<input {...fields.endTime.as('hidden', endTime)} />
@@ -124,11 +129,11 @@
 				<legend class="fieldset-legend">Booking for</legend>
 				<Select bind:value={bookerType} class="w-full">
 					<option value="user">A member</option>
-					<option value="band">A band</option>
+					<option value="group">A band</option>
 				</Select>
 			</fieldset>
 
-			{#if bookerType === 'band'}
+			{#if bookerType === 'group'}
 				<fieldset class="fieldset">
 					<legend class="fieldset-legend">Band</legend>
 					<SearchSelect
@@ -143,7 +148,7 @@
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">
-					{bookerType === 'band' ? 'Booked by' : 'Member'}
+					{bookerType === 'group' ? 'Booked by' : 'Member'}
 				</legend>
 				<SearchSelect
 					search={searchMembers}

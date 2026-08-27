@@ -4,21 +4,21 @@
 		getUserCredits,
 		getUserCreditHistory,
 		getUserPayments,
-		getUserOverview
+		getUserPage
 	} from '$lib/remote/users.remote';
-	import { RelatedList } from '$lib/components/shared/entity';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import DataList from '$lib/components/shared/DataList.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import CopyableId from '$lib/components/shared/CopyableId.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-	import { AdjustCreditsAction } from '$lib/components/shared/actions';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	import { RelatedList } from '$lib/components/ui/entity';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import DataList from '$lib/components/ui/DataList.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import CopyableId from '$lib/components/ui/CopyableId.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { AdjustCreditsAction } from '$lib/components/actions';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { creditsToHours } from '$lib/config';
 	import { formatCents, formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
 
@@ -32,7 +32,7 @@
 	function refreshCredits() {
 		void getUserCredits(id).refresh();
 		void getUserCreditHistory({ userId: id, page: creditPage }).refresh();
-		void getUserOverview(id).refresh();
+		void getUserPage(id).refresh();
 	}
 </script>
 

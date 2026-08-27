@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Section from '$lib/components/shared/marketing/Section.svelte';
+	import Section from '$lib/components/public/Section.svelte';
 	import { IconMusic, IconMicrophone, IconHeartHandshake, IconSchool } from '@tabler/icons-svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import PosterCard from '$lib/components/shared/events/PosterCard.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import PosterCard from '$lib/components/events/PosterCard.svelte';
 	import { getPublicEvents } from '$lib/remote/events.remote';
 
 	let { upcoming } = $derived(await getPublicEvents());
@@ -40,22 +40,22 @@
 </svelte:head>
 
 <!-- Hero -->
-<section class="sunburst section-tint-secondary py-24 px-6 text-center">
-	<div class="max-w-2xl mx-auto flex flex-col items-center gap-4">
-		<h1 class="text-5xl font-bold leading-tight tracking-tight text-balance text-cmc-teal">
+<section class="sunburst section-tint-secondary px-6 py-24 text-center">
+	<div class="mx-auto flex max-w-2xl flex-col items-center gap-4">
+		<h1 class="text-5xl leading-tight font-bold tracking-tight text-balance text-cmc-teal">
 			Building and Connecting Music Communities in Corvallis
 		</h1>
 		<p class="text-lg leading-relaxed text-fg-2">
 			We provide shared music resources, affordable practice space, and a supportive community for
 			local musicians to grow, collaborate, and thrive together.
 		</p>
-		<div class="flex flex-col items-center gap-3 mt-4">
+		<div class="mt-4 flex flex-col items-center gap-3">
 			<Button href="/login?register&redirect=/member" variant="primary" shape="wide"
 				>Join Our Community!</Button
 			>
 			<Button href="/about" variant="ghost" shape="wide">Learn More About Us</Button>
 		</div>
-		<div class="flex flex-wrap justify-center gap-2 mt-5">
+		<div class="mt-5 flex flex-wrap justify-center gap-2">
 			{#each ['All-ages', 'Substance-free', 'NOTAFLOF', 'Volunteer-run'] as tag (tag)}
 				<span class="sticker-badge sticker-badge--sm">{tag}</span>
 			{/each}
@@ -65,11 +65,11 @@
 
 <!-- Upcoming Events -->
 <Section>
-	<div class="text-center mb-12">
-		<h2 class="text-4xl font-bold tracking-tight mb-3 text-cmc-teal">Upcoming Events</h2>
+	<div class="mb-12 text-center">
+		<h2 class="mb-3 text-4xl font-bold tracking-tight text-cmc-teal">Upcoming Events</h2>
 	</div>
 	{#if upcoming.length > 0}
-		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+		<div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
 			{#each upcoming as evt (evt.id)}
 				<PosterCard
 					href="/events/{evt.id}"
@@ -86,23 +86,23 @@
 	{:else}
 		<p class="text-center opacity-60">No upcoming events right now. Check back soon!</p>
 	{/if}
-	<div class="text-center mt-8">
+	<div class="mt-8 text-center">
 		<Button href="/events" variant="ghost">View All Events &rarr;</Button>
 	</div>
 </Section>
 
 <!-- What We Do -->
 <Section tint="secondary">
-	<div class="text-center mb-12">
-		<h2 class="text-4xl font-bold tracking-tight mb-3 text-cmc-teal">What We Do</h2>
-		<p class="text-base max-w-xl mx-auto leading-relaxed text-fg-2">
+	<div class="mb-12 text-center">
+		<h2 class="mb-3 text-4xl font-bold tracking-tight text-cmc-teal">What We Do</h2>
+		<p class="mx-auto max-w-xl text-base leading-relaxed text-fg-2">
 			Supporting musicians and building community through various programs
 		</p>
 	</div>
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
 		{#each features as item (item.title)}
 			<div
-				class="flex flex-col items-center text-center gap-3 rounded-lg p-6"
+				class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
 				style="background: var(--surface); border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))"
 			>
 				<div class="text-cmc-navy">
@@ -113,22 +113,22 @@
 			</div>
 		{/each}
 	</div>
-	<div class="text-center mt-10">
+	<div class="mt-10 text-center">
 		<Button href="/programs" variant="ghost">View All Programs &rarr;</Button>
 	</div>
 </Section>
 
 <!-- Get Involved -->
 <Section>
-	<div class="text-center mb-12">
-		<h2 class="text-4xl font-bold tracking-tight mb-3 text-cmc-teal">Get Involved</h2>
-		<p class="text-base max-w-xl mx-auto leading-relaxed text-fg-2">
+	<div class="mb-12 text-center">
+		<h2 class="mb-3 text-4xl font-bold tracking-tight text-cmc-teal">Get Involved</h2>
+		<p class="mx-auto max-w-xl text-base leading-relaxed text-fg-2">
 			Join our mission to support the local music community
 		</p>
 	</div>
-	<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+	<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
 		<div
-			class="rounded-lg p-6 text-center flex flex-col items-center gap-3"
+			class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
 			style="background: var(--cmc-orange); color: #fff"
 		>
 			<h3 class="text-xl font-bold">Become a Member</h3>
@@ -146,7 +146,7 @@
 			>
 		</div>
 		<div
-			class="rounded-lg p-6 text-center flex flex-col items-center gap-3"
+			class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
 			style="background: var(--cmc-navy); color: #fff"
 		>
 			<h3 class="text-xl font-bold">Volunteer</h3>
@@ -163,7 +163,7 @@
 			>
 		</div>
 		<div
-			class="rounded-lg p-6 text-center flex flex-col items-center gap-3"
+			class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
 			style="background: var(--cmc-light-blue); color: var(--cmc-navy)"
 		>
 			<h3 class="text-xl font-bold">Support Us</h3>

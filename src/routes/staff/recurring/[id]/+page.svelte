@@ -1,21 +1,22 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { formatTimeRange, formatDate } from '$lib/utils/format';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
-	import { getSeries, getSeriesHistory, cancelDetailSeries } from '$lib/remote/recurring.remote';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
+	import { getStaffSeriesDetail, cancelDetailSeries } from '$lib/remote/recurring.remote';
 	const { fields: cancelFields } = cancelDetailSeries;
 
 	let id = $derived(page.params.id!);
-	let series = $derived(await getSeries(id));
-	let history = $derived(await getSeriesHistory(id));
+	const data = $derived(await getStaffSeriesDetail(id));
+	const series = $derived(data.series);
+	const history = $derived(data.history);
 
 	let isActive = $derived(!series.cancelledAt);
 </script>
@@ -40,7 +41,7 @@
 	{/if}
 </PageHeader>
 <PageContent width="3xl">
-	<div class="flex items-center gap-2 mb-4">
+	<div class="mb-4 flex items-center gap-2">
 		{#if series.cancelledAt}
 			<StatusBadge status="cancelled" />
 		{:else}
@@ -78,7 +79,7 @@
 				{#each history as h, i (h.id)}
 					<div class="flex items-center gap-3 text-sm" class:opacity-50={i > 0}>
 						<span class="font-mono text-xs">{h.id.slice(0, 8)}</span>
-						<span class="font-mono text-xs flex-1">{h.rrule}</span>
+						<span class="flex-1 font-mono text-xs">{h.rrule}</span>
 						<span>{formatDate(h.createdAt)}</span>
 						{#if h.cancelledAt}
 							<StatusBadge status="cancelled" />

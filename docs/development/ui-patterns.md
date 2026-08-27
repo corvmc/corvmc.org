@@ -27,7 +27,7 @@ Always use `<PageHeader>` for the page title. Never write a bare `<h1>`.
 Wraps the page body with consistent vertical spacing (`space-y-6`) and optional width constraint. PageHeader always sits **outside** PageContent so it keeps full-bleed behavior.
 
 ```svelte
-import PageContent from '$lib/components/shared/PageContent.svelte';
+import PageContent from '$lib/components/ui/PageContent.svelte';
 ```
 
 Props:
@@ -405,7 +405,7 @@ Props: `type` (`info`, `warning`, `error`, `success`), `href` (renders as `<a>` 
 
 ## Entity tiers — chip / row / card / detail
 
-Four ways to show one record, in `$lib/components/shared/entity/`. Every reference to a record in
+Four ways to show one record, in `$lib/components/ui/entity/`. Every reference to a record in
 the staff and member panels should be one of them.
 
 | Tier   | Component                                  | Use                                                                      |
@@ -622,10 +622,67 @@ Prev/next navigation arrows with keyboard shortcuts (← →). Includes `<svelte
 
 When `nextHref` is absent, shows `endLabel` (if provided) or a disabled button.
 
+## Sidebar and panel navigation
+
+`AppShell` → `Sidebar` → `<ul class="menu">` → the `Nav.*` primitives from
+`$lib/components/layout/Nav/`. Three components: `Nav.Item` (a row), `Nav.Collapsible` (a row with
+children, held open by the URL), `Nav.Group` (a titled section).
+
+**Every panel's rows are data — add features there, not in the template.** `staff/nav-items.ts`,
+`member/nav-items.ts`, `band/[slug]/nav-items.ts`. Each layout holds only a `key → Icon` map and, if
+it has badges, a `badgeKey → count` map, which is what makes a renamed field on the layout query a
+type error instead of a badge that quietly stops. Anything conditional — a feature flag, a role —
+belongs in the data module, where a spec can assert it; `band/[slug]/nav-items.ts` records that
+gating expressed as nested `{#if}`s was silently wrong twice.
+
+The panel switcher's tabs come from `$lib/components/layout/panel-tabs.ts`, not hand-built per
+layout.
+
+```svelte
+<Nav.Group title={section.title} collapsible persistKey={section.key} containsActive={…}>
+	<Nav.Item href={item.href} label={item.label} badge={…} active={activeKey === item.key} />
+</Nav.Group>
+```
+
+**Active state.** `Nav.Item` matches the pathname exactly on its own, which lights no row at all on
+a detail page. Pass `active` to override it. The rule lives once, in
+`$lib/components/layout/Nav/active-nav.ts`: `activeNavKey(items, pathname)` picks the item with the
+longest matching href, and each panel wraps it (`activeNavKey`, `activeMemberNavKey`,
+`activeBandNavKey`). Two details it encodes — match on `path === href || path.startsWith(href + '/')`,
+because a bare `startsWith` lets `/staff/users` claim `/staff/usersomething`; and skip any row whose
+href does not start with `/`, because a band's "View Live Site" is filled in by the layout and an
+empty href is a prefix of everything.
+
+A page that resolves to the panel root lights Dashboard, which is the signal that it has no home in
+the nav. `member/nav-items.spec.ts` asserts against that with a commented exemption list — that is
+how you find a surface that shipped without a way in.
+
+**Collapsible groups.** `collapsible` turns the title into a disclosure `<button>`; `persistKey`
+remembers the choice, namespaced by `persistScope` (default `staff`). Groups always render open on
+the server and on the first client paint — the stored state is read in `onMount` — because a
+collapsed group is `display: none`, and e2e selects staff nav links by role. Storage holds the
+_collapsed_ set, so a group added later defaults open with no migration. Navigating into a collapsed
+group opens it and keeps it open.
+
+Group titles are buttons, not headings, deliberately: `getByRole('heading', …)` is how pages assert
+their own titles, and a sidebar full of headings collides with that.
+
+**daisyUI facts this depends on**, each of which will otherwise be rediscovered the hard way:
+
+- `.menu` is `flex-flow: column wrap`. Constrain its height without `flex-nowrap` and the rows wrap
+  into a second column past the sidebar's edge, clipped and unreachable rather than scrolling.
+- A flex child needs `min-h-0` to scroll at all; `overflow-y-auto` alone does nothing, because
+  `min-height: auto` keeps the item at content size.
+- `.menu :where(li ul)` indents and draws a guide rule, so a collapsible group cancels it with
+  `ms-0 ps-0 before:content-none`. `NavGroup`'s plain branch renders a bare `<ul>` sibling with no
+  `<li>` wrapper for exactly this reason — do not "fix" it.
+- `.menu-title` on a `<button>` gets the header look for free, and `.menu-dropdown-toggle` supplies
+  the chevron; neither gets daisyUI's hover treatment, so `NavGroup` adds its own.
+
 ## Card
 
 The panel surface. `Card` + `CardBody` + `CardTitle`, from
-`$lib/components/shared/Card/`. Most sections want `InfoCard` (below) instead — reach for these
+`$lib/components/ui/Card/`. Most sections want `InfoCard` (below) instead — reach for these
 directly only when the section has no title, or when the body needs a non-default layout.
 
 ```svelte
@@ -680,8 +737,8 @@ The label/value grid on staff detail pages. Replaces the hand-written
 that was copy-pasted into nine files.
 
 ```svelte
-import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte'; import
-Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte'; import Fact
+from '$lib/components/ui/DefinitionList/Fact.svelte';
 
 <DefinitionList>
 	<Fact label="Status"><StatusBadge status={item.status} /></Fact>
@@ -835,7 +892,7 @@ below the `@lg` container breakpoint.
 </FilterBar>
 ```
 
-`SearchInput` (`$lib/components/shared/Form/`) owns the 300ms debounce, so a page keeps only the
+`SearchInput` (`$lib/components/ui/Form/`) owns the 300ms debounce, so a page keeps only the
 value it queries on. `bind:value` is the immediate text, for Clear; setting it from outside also
 cancels any search still in flight.
 
@@ -1009,7 +1066,7 @@ Page title with optional back button, subtitle, and right-side action slot.
 
 ## Public site sections
 
-The marketing pages (`(public)/`) compose from `$lib/components/shared/marketing/`:
+The marketing pages (`(public)/`) compose from `$lib/components/public/`:
 
 ```svelte
 <Hero title="Programs">Practice spaces, performances, meetups & clubs for the music community</Hero>
@@ -1053,7 +1110,7 @@ All shared components live in `src/lib/components/`. Panel-specific layout compo
 
 ## Directory profiles
 
-Member and band profiles — public (`/directory/...`) and authenticated (`/member/directory/...`) — are all built from **one parameterised component set** in `src/lib/components/shared/directory/profile/`. Member vs. band and public vs. authenticated are prop differences, never separate designs. The four `+page.svelte` files are thin assemblers: `await` the profile query (+ a shows query), map data to props, compose.
+Member and band profiles — public (`/directory/...`) and authenticated (`/member/directory/...`) — are all built from **one parameterised component set** in `src/lib/components/directory/profile/`. Member vs. band and public vs. authenticated are prop differences, never separate designs. The four `+page.svelte` files are thin assemblers: `await` the profile query (+ a shows query), map data to props, compose.
 
 Components:
 

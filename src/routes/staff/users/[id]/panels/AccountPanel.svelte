@@ -2,7 +2,7 @@
 	import {
 		getUser,
 		getAllRoles,
-		getUserOverview,
+		getUserPage,
 		getUserSessions,
 		deactivateUser,
 		reactivateUser,
@@ -10,15 +10,15 @@
 	} from '$lib/remote/users.remote';
 	import { getUserDirectoryProfile } from '$lib/remote/directory.remote';
 	import StaffUserForm from '../StaffUserForm.svelte';
-	import { RelatedList } from '$lib/components/shared/entity';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Table from '$lib/components/shared/Table.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	import { RelatedList } from '$lib/components/ui/entity';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
@@ -32,8 +32,8 @@
 	// Deactivating cancels bookings and the subscription, so the scoreboard and
 	// the needs-attention list are both wrong until the overview is re-read.
 	function refreshAccount() {
-		void getUser(id).refresh();
-		void getUserOverview(id).refresh();
+		// One refresh: the page reads both halves through `getUserPage`.
+		void getUserPage(id).refresh();
 	}
 </script>
 

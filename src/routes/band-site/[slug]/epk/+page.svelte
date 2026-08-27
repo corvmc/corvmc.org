@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Button from '$lib/components/shared/Button.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { getBandSiteData } from '$lib/remote/band-site.remote';
 	import { sanitizeBio } from '$lib/utils/markdown';
 	import { page } from '$app/state';
@@ -48,33 +48,33 @@
 	</Button>
 </div>
 
-<div class="epk-page max-w-3xl mx-auto px-8 py-12 bg-white text-gray-900 min-h-screen">
+<div class="epk-page mx-auto min-h-screen max-w-3xl bg-white px-8 py-12 text-gray-900">
 	<!-- Header -->
-	<header class="text-center pb-8 border-b-2 border-gray-200 mb-8">
+	<header class="mb-8 border-b-2 border-gray-200 pb-8 text-center">
 		{#if band.avatarUrl}
 			{@const avatar = imageSrc(band.avatarUrl, 'avatar-lg')}
 			<img
 				src={avatar.src}
 				srcset={avatar.srcset}
 				alt={band.name}
-				class="w-28 h-28 rounded-full mx-auto mb-4 object-cover"
+				class="mx-auto mb-4 h-28 w-28 rounded-full object-cover"
 			/>
 		{/if}
 		<h1 class="text-4xl font-bold tracking-tight">{band.name}</h1>
 		{#if band.tagline}
-			<p class="text-lg text-gray-500 mt-1">{band.tagline}</p>
+			<p class="mt-1 text-lg text-gray-500">{band.tagline}</p>
 		{/if}
 		{#if band.genres.length > 0}
-			<p class="text-sm text-gray-400 mt-2">{band.genres.join(' · ')}</p>
+			<p class="mt-2 text-sm text-gray-400">{band.genres.join(' · ')}</p>
 		{/if}
-		<p class="text-xs text-gray-400 mt-3 uppercase tracking-widest">Electronic Press Kit</p>
+		<p class="mt-3 text-xs tracking-widest text-gray-400 uppercase">Electronic Press Kit</p>
 	</header>
 
 	<!-- Bio -->
 	{#if band.bio}
 		<section class="mb-8">
-			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">About</h2>
-			<div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">
+			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">About</h2>
+			<div class="prose prose-sm max-w-none leading-relaxed text-gray-700">
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown bio) -->
 				{@html sanitizeBio(band.bio)}
 			</div>
@@ -84,7 +84,7 @@
 	<!-- Members -->
 	{#if members.length > 0}
 		<section class="mb-8">
-			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Members</h2>
+			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">Members</h2>
 			<div class="flex flex-wrap gap-x-6 gap-y-1">
 				{#each members as member (member.id)}
 					<span class="text-gray-700">
@@ -100,12 +100,12 @@
 	<!-- Press Quotes -->
 	{#if epk?.pressQuotes && epk.pressQuotes.length > 0}
 		<section class="mb-8">
-			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Press</h2>
+			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">Press</h2>
 			<div class="space-y-3">
 				{#each epk.pressQuotes as quote (quote.quote)}
 					<blockquote class="border-l-2 border-gray-300 pl-4">
 						<p class="text-gray-700 italic">"{quote.quote}"</p>
-						<p class="text-sm text-gray-500 mt-1">
+						<p class="mt-1 text-sm text-gray-500">
 							— {quote.publication}
 							{#if quote.date}<span class="text-gray-400">({quote.date})</span>{/if}
 						</p>
@@ -118,10 +118,10 @@
 	<!-- Achievements -->
 	{#if epk?.achievements && epk.achievements.length > 0}
 		<section class="mb-8">
-			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Highlights</h2>
+			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">Highlights</h2>
 			<ul class="space-y-1">
 				{#each epk.achievements as achievement (achievement)}
-					<li class="text-gray-700 flex items-start gap-2">
+					<li class="flex items-start gap-2 text-gray-700">
 						<span class="text-gray-400">•</span>
 						{achievement}
 					</li>
@@ -132,8 +132,8 @@
 
 	<!-- Gallery (first 6 photos) -->
 	{#if galleryMedia.length > 0}
-		<section class="mb-8 page-break">
-			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Photos</h2>
+		<section class="page-break mb-8">
+			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">Photos</h2>
 			<div class="grid grid-cols-3 gap-2">
 				{#each galleryMedia.slice(0, 6) as img (img.id)}
 					{#if img.url}
@@ -144,14 +144,14 @@
 								srcset={shot.srcset}
 								sizes={shot.sizes}
 								alt={img.caption ?? ''}
-								class="w-full h-full object-cover"
+								class="h-full w-full object-cover"
 							/>
 						</div>
 					{/if}
 				{/each}
 			</div>
 			{#if galleryMedia.length > 6}
-				<p class="text-xs text-gray-400 mt-2">
+				<p class="mt-2 text-xs text-gray-400">
 					{galleryMedia.length - 6} more photos available at {band.slug}.corvmc.org
 				</p>
 			{/if}
@@ -161,11 +161,11 @@
 	<!-- Upcoming Events -->
 	{#if events.length > 0}
 		<section class="mb-8">
-			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Upcoming Shows</h2>
+			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">Upcoming Shows</h2>
 			<div class="space-y-1">
 				{#each events.slice(0, 5) as evt (evt.id)}
 					<div class="flex justify-between text-sm">
-						<span class="text-gray-700 font-medium">{evt.title}</span>
+						<span class="font-medium text-gray-700">{evt.title}</span>
 						<span class="text-gray-500">{evt.location ?? ''}</span>
 					</div>
 				{/each}
@@ -175,8 +175,8 @@
 
 	<!-- Technical Requirements -->
 	{#if epk?.backline && epk.backline.length > 0}
-		<section class="mb-8 page-break">
-			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">
+		<section class="page-break mb-8">
+			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">
 				Technical Requirements
 			</h2>
 
@@ -184,7 +184,7 @@
 				<img
 					src={stagePlot.url}
 					alt="Stage Plot"
-					class="rounded mb-4 max-w-full max-h-64 object-contain"
+					class="mb-4 max-h-64 max-w-full rounded object-contain"
 				/>
 			{/if}
 
@@ -212,7 +212,7 @@
 	<!-- Links -->
 	{#if band.links && band.links.length > 0}
 		<section class="mb-8">
-			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Links</h2>
+			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">Links</h2>
 			<div class="flex flex-wrap gap-x-6 gap-y-1 text-sm">
 				{#each band.links as link (link.url)}
 					<a
@@ -230,12 +230,12 @@
 
 	<!-- Contact -->
 	{#if epk?.bookingContact || epk?.managementContact || epk?.prContact}
-		<section class="mt-8 pt-6 border-t-2 border-gray-200">
-			<h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Contact</h2>
-			<div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-sm">
+		<section class="mt-8 border-t-2 border-gray-200 pt-6">
+			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">Contact</h2>
+			<div class="grid grid-cols-1 gap-6 text-sm sm:grid-cols-3">
 				{#if epk.bookingContact}
 					<div>
-						<p class="font-semibold text-gray-600 text-xs uppercase">Booking</p>
+						<p class="text-xs font-semibold text-gray-600 uppercase">Booking</p>
 						<p class="text-gray-700">{epk.bookingContact.name}</p>
 						<p class="text-gray-500">{epk.bookingContact.email}</p>
 						{#if epk.bookingContact.phone}
@@ -245,14 +245,14 @@
 				{/if}
 				{#if epk.managementContact}
 					<div>
-						<p class="font-semibold text-gray-600 text-xs uppercase">Management</p>
+						<p class="text-xs font-semibold text-gray-600 uppercase">Management</p>
 						<p class="text-gray-700">{epk.managementContact.name}</p>
 						<p class="text-gray-500">{epk.managementContact.email}</p>
 					</div>
 				{/if}
 				{#if epk.prContact}
 					<div>
-						<p class="font-semibold text-gray-600 text-xs uppercase">Press</p>
+						<p class="text-xs font-semibold text-gray-600 uppercase">Press</p>
 						<p class="text-gray-700">{epk.prContact.name}</p>
 						<p class="text-gray-500">{epk.prContact.email}</p>
 					</div>
@@ -262,7 +262,7 @@
 	{/if}
 
 	<!-- Footer -->
-	<footer class="mt-12 pt-4 border-t border-gray-100 text-center text-xs text-gray-400">
+	<footer class="mt-12 border-t border-gray-100 pt-4 text-center text-xs text-gray-400">
 		{band.name} &middot; {band.slug}.corvmc.org
 	</footer>
 </div>

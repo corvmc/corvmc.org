@@ -1,6 +1,6 @@
 # Business Workflows, Traced Through Code
 
-This guide walks through the eight core workflows of the app in plain language, with the
+This guide walks through the twelve core workflows of the app in plain language, with the
 actual code path for each. Read the [architecture overview](../architecture/overview.md)
 first — it explains the building blocks these workflows are made of (remote functions,
 guards, the event bus, `db.batch`, site config).
@@ -15,8 +15,9 @@ and reconcile deliberately.
 
 ## 1. Reservation booking, confirmation, and payment
 
-Spec: [specs/reservation-system-spec.md](../specs/reservation-system-spec.md) ·
-[specs/reservation-confirmation-window.md](../specs/reservation-confirmation-window.md)
+Spec: [specs/reservation-system-spec.md](../specs/shipped/reservation-system-spec.md) ·
+[specs/reservation-confirmation-window.md](../specs/reservation-confirmation-window.md) ·
+[specs/staff-reservations-spec.md](../specs/shipped/staff-reservations-spec.md)
 
 ### The story
 
@@ -108,11 +109,31 @@ surface via `getUnresolvedReservations` in `reservations.remote.ts`; staff resol
   (keyed on the reservation). If suspected, read the `creditTransaction` ledger for the
   reservation id.
 
+### The staff side
+
+Staff work the same table from `/staff/reservations` (filterable list, with a resolve modal
+and a create-on-behalf modal) and `/staff/reservations/[id]` (detail plus every action).
+Three things differ from the member path:
+
+- **Staff may override.** Conflicts and business-hours violations are warnings with an
+  override, not refusals. `ConflictWarnings` currently conflates "overlaps a confirmed
+  booking" with "outside operating hours" into one flag — see `CHORES.md`; a double-booking
+  deserves louder treatment than a late night.
+- **Staff confirm at any time.** The 3-day confirmation window is a member gate;
+  `visibleActions` is staff-only and unchanged by it.
+- **The resolve modal only surfaces unpaid reservations.** Paid ones auto-complete after
+  their end time via the `auto-complete` cron, so they never reach the queue — which is why
+  the queue is short enough to be worth working.
+
+Cash settlement (`cashReceived`), comping, refunds and no-shows all live here, each as a
+shared action component under `$lib/components/actions/`, so the member and staff
+surfaces cannot drift in what they do — only in who may do it.
+
 ---
 
 ## 2. Recurring reservations and the waitlist
 
-Spec: [specs/recurring-reservations-spec.md](../specs/recurring-reservations-spec.md)
+Spec: [specs/recurring-reservations-spec.md](../specs/shipped/recurring-reservations-spec.md)
 
 ### The story
 
@@ -137,7 +158,7 @@ one is offered the slot with a 24-hour window to confirm.
   events so the member hears about it. The generation window is ~2.5 weeks
   (`reservation.maxAdvanceDaysRecurring` config, default 17.5).
 - **Waitlist promotion:** `cancel()` emits `reservation.cancelled`; the listener in
-  `src/lib/server/events/register-listeners.ts` calls `promoteNextWaitlisted()` in
+  `src/lib/server/event-bus/register-listeners.ts` calls `promoteNextWaitlisted()` in
   `waitlist-service.ts` — oldest overlapping waitlisted reservation wins, gets
   `waitlistNotifiedAt`/`waitlistExpiresAt` set, and a `waitlist_slot_available`
   notification with a confirm link.
@@ -166,8 +187,8 @@ one is offered the slot with a 24-hour window to confirm.
 
 ## 3. Membership: signup, subscription, monthly credits
 
-Spec: [specs/membership-page-spec.md](../specs/membership-page-spec.md) ·
-[specs/finance-spec.md](../specs/finance-spec.md)
+Spec: [specs/membership-page-spec.md](../specs/shipped/membership-page-spec.md) ·
+[specs/finance-spec.md](../specs/shipped/finance-spec.md)
 
 ### The story
 
@@ -225,8 +246,8 @@ Subscription/Invoice objects.
 
 ## 4. Bands: creation, invitations, premium pages
 
-Spec: [specs/bands-spec.md](../specs/bands-spec.md) ·
-[specs/staff-bands-spec.md](../specs/staff-bands-spec.md)
+Spec: [specs/bands-spec.md](../specs/shipped/bands-spec.md) ·
+[specs/staff-bands-spec.md](../specs/shipped/staff-bands-spec.md)
 
 ### The story
 
@@ -284,7 +305,7 @@ premium subscription that unlocks a public band microsite.
 
 ## 5. Events and tickets
 
-Spec: [specs/tickets-spec.md](../specs/tickets-spec.md)
+Spec: [specs/tickets-spec.md](../specs/shipped/tickets-spec.md)
 
 ### The story
 
@@ -376,7 +397,7 @@ credits are the same ledger as free hours (`credit-service.ts`, type
 
 ## 7. Marketing campaigns
 
-Spec: [specs/email-marketing-spec.md](../specs/email-marketing-spec.md)
+Spec: [specs/email-marketing-spec.md](../specs/shipped/email-marketing-spec.md)
 
 ### The story
 
@@ -467,6 +488,267 @@ and re-labelling it `email` would let unrelated mail from the same address merge
   and Postmark's inbound activity view.
 - **Replies going to the wrong place** → `INBOX_REPLY_ADDRESS` unset silently degrades to
   `Reply-To: STAFF_CONTACT_EMAIL`. That's the intended pre-MX state, not a bug.
+
+---
+
+## 9. The gig guide and community listings
+
+Spec: [specs/community-calendar-spec.md](../specs/shipped/community-calendar-spec.md) ·
+[specs/community-events-spec.md](../specs/shipped/community-events-spec.md) ·
+[specs/event-lineup-spec.md](../specs/shipped/event-lineup-spec.md) ·
+[specs/event-moderation-spec.md](../specs/shipped/event-moderation-spec.md)
+
+### The story
+
+`/events` is one gig guide across three layers, and the layer an event belongs to is a
+single column: `event.source` is `cmc` (staff-created), `band` (published by a band admin
+from the band panel), or `community` (authored by any signed-in member for a show at
+another venue). Nothing else about the row changes between layers — the same table, the
+same detail page, the same poster.
+
+Who may publish differs by layer, and that is the whole moderation model. CMC events are
+staff work; band events are gated to band admins; community listings publish **directly**,
+with no queue, until a report against that member is upheld — after which their later
+listings go to review first. Publishing is reactive-moderated, not pre-approved, because a
+queue nobody works is worse than a listing nobody reported.
+
+Separately, an event credits the acts on the bill. `event.bandId` is **ownership** — whose
+panel it lives in and who may edit it — and `event_band` is **attribution**, who actually
+played. A credited band is a plain text credit until it confirms, so nobody can put a band
+on a bill and have it appear on that band's own profile without their say-so.
+
+### Code path
+
+- **The guide:** `(public)/events` → `calendar.remote.ts`: `getPublicGigGuide({from, offset})`
+  for the poster-forward list and `getPublicCalendar({month})` for the mini-calendar
+  date-jumper. Both read across all three sources; `idx_event_source` on
+  (`source`, `status`, `startsAt`) is the index they are written for.
+- **Member authoring:** `/member/events/submit` and `/member/events/[id]/manage` →
+  `community-events.remote.ts` → `event/community-event-service.ts`:
+  `createCommunityEvent()` (always a draft), `updateCommunityEvent()`, then either
+  `publishCommunityEvent()` — which checks standing and routes to `visible` or a pending
+  submission — or `withdrawCommunityEvent()` / `deleteCommunityEventDraft()`.
+  `checkForDuplicate()` runs before create so two people announcing the same show notice
+  each other.
+- **Staff review of submissions:** `getPendingSubmissions()` / `countPendingSubmissions()`
+  feed the queue; `approveSubmission()` and `rejectSubmission()` decide. A rejected listing
+  stays editable and republishable — that is deliberate, and `listRejectedForUser()` is how
+  the author finds it again.
+- **Lineups:** `event-service.ts`: `setEventLineup()` writes `event_band` rows,
+  `getEventLineup()` / `getEventLineups()` read them (the plural batches, for lists),
+  `listBandLineupInvites()` is the band panel's invite inbox, and
+  `confirmLineupSlot()` / `declineLineupSlot()` are the band's only two answers.
+  `linkLineupSlot()` attaches a previously text-only credit to a real band.
+- **Moderation:** `flags.remote.ts`: `submitEventReport()` files against `entityType:
+'event'`; upholding in `/staff/flags/[id]` can `unpublishWithNotice()` in the same step,
+  which notifies every band on the bill rather than only the owner.
+
+### Data touched
+
+`event` (`source`, `status`, `startsAt`, `bandId`, `submittedByUserId`), `event_band`,
+`content_flag`, `member_standing` (scope `community_event`).
+
+### Where it breaks
+
+- **A listing published straight through when you expected review** → check
+  `member_standing` for that user at scope `community_event`. Absence of a row is good
+  standing, which is the overwhelmingly common case and the default every reader assumes.
+- **A band's gig is missing from its profile** → the `event_band` row is probably still
+  unconfirmed. An unconfirmed credit renders as text on the event and appears nowhere on
+  the band.
+- **A cancelled event vanished instead of showing as cancelled** → cancelled events are
+  meant to stay on the guide until their date passes, so anyone who already had the date
+  finds out. Deleting is the wrong verb; check whether the caller cancelled or deleted.
+
+---
+
+## 10. Messaging: portal threads and direct messages
+
+Spec: [specs/member-portal-chat-spec.md](../specs/shipped/member-portal-chat-spec.md) ·
+[specs/direct-messages-spec.md](../specs/shipped/direct-messages-spec.md)
+
+### The story
+
+`/member/messages` shows a member every conversation they are in — with staff, and with
+other members — as one list. It is one list because both kinds are participant-based:
+`inbox_participant` scales from one signed-in party (a portal thread, where the other side
+is "staff" collectively) to two (a direct message). The transport is the same staff inbox
+described in §8; member↔staff threads land there as `channel: 'portal'` and staff answer
+them with the tools they already use.
+
+Direct messages are almost entirely a safety layer on top of that transport. A first
+message is a **request**: one message, no notification, and no signal back to the sender
+about what happened to it. A decline, a block, messaging switched off, and simply not
+opening it are all indistinguishable from the outside — which is the point, because a
+visible decline is one people hesitate to make.
+
+### Code path
+
+- **The list:** `/member/messages` → `direct-messages.remote.ts`: `getMyMessages()` →
+  `inbox/direct-service.ts`: `listMemberConversations()`, which returns both kinds from a
+  single query.
+- **Portal threads:** `inbox.remote.ts`: `startConversation()` → `inbox/portal-service.ts`:
+  `startPortalConversation()`, `replyToPortalThread()`, `markPortalThreadRead()`. Staff
+  answer from `/staff/inbox` exactly as in §8.
+- **Starting a DM:** `startDirectConversation()` → `direct-service.ts:startDirectThread()`.
+  Every rejection except one comes back as a plain success — the exception is a member whose
+  own standing forbids it, who is entitled to know and to read the staff reason.
+- **Consent:** `acceptDirectRequest()` / `declineDirectRequest()` →
+  `acceptDirectThread()` / `declineDirectThread()`. Declining closes the thread **and**
+  blocks the sender, silently.
+- **Blocks:** `moderation/moderation-service.ts`: `blockUser()`, `unblockUser()`,
+  `isBlockedEitherWay()` — one row covers both directions, and it is enforced on send,
+  reply and accept but deliberately **not** on read, since the person who blocked still
+  needs the conversation in order to report it.
+- **Member switch:** `user.acceptsDirectMessages` via `setAcceptsDirectMessages()`, surfaced
+  on `/member/account`. This is the member's own preference and is not `member_standing`.
+- **Reporting:** `reportDirectThread()` verifies participation before filing, because filing
+  the flag is what makes a private conversation readable by staff.
+
+### Data touched
+
+`inbox_thread`, `inbox_message`, `inbox_participant`, `user_block`,
+`user.acceptsDirectMessages`, `member_standing` (scope `messaging`), `content_flag`.
+
+### Where it breaks
+
+- **A message "sent" but never arrived** → usually working as designed. Check
+  `user_block` both ways, `acceptsDirectMessages`, and `member_standing` at scope
+  `messaging` before suspecting delivery.
+- **Requests not showing in the nav badge** → they never do. An unconsented message must not
+  follow anyone around the site; the count renders on the Messages page only.
+- **A staff reply reads as anonymous** → the staff inbox orients bubbles by `outbound`
+  rather than by author, so a colleague's reply reads as the organisation's. That is
+  deliberate (see `member-portal-chat-spec.md`) and pinned from both sides by
+  `ThreadTimeline.svelte.spec.ts` — do not flip the axis to "fix" it.
+
+---
+
+## 11. Moderation: reports, standing, and the suggestion board
+
+Spec: [specs/member-standing-spec.md](../specs/shipped/member-standing-spec.md) ·
+[specs/member-suggestions-spec.md](../specs/shipped/member-suggestions-spec.md) ·
+[specs/event-moderation-spec.md](../specs/shipped/event-moderation-spec.md)
+
+### The story
+
+One report queue covers everything members write: profiles, bands, event listings,
+suggestions, and reported conversations. A staffer either **dismisses** — which costs the
+reported member nothing at all — or **upholds**, which is the only action that moderates
+anything.
+
+Upholding produces two independent decisions: what happens to the post, and what happens to
+the person. The second is `member_standing`, keyed on (`userId`, `scope`) rather than on
+`userId` alone, so an upheld report about a gig listing does not put someone on probation
+for suggestions. **Absence of a row means good standing** — that is the common case and the
+default every reader is built around — and lifting writes `status: 'none'` rather than
+deleting, so "we looked at this and cleared it" stays distinguishable from "this never came
+up."
+
+The suggestion board is the same machinery applied to a different surface: reporting a
+suggestion pulls it off the board pending review, and an upheld report puts the author's
+later suggestions through review first.
+
+### Code path
+
+- **Filing:** `flags.remote.ts`: `submitFlag()` for profiles and listings (narrowed to
+  `memberReportableEntityTypes`, **not** the full `flagEntityTypes`),
+  `submitEventReport()` for events, `suggestions.remote.ts:flagSuggestion()` for
+  suggestions, and `direct-messages.remote.ts:reportDirectThread()` for conversations. The
+  last two have their own remotes because reporting them has side effects — a suggestion
+  comes down, a conversation becomes readable — that a generic id-taking form must not grant.
+- **The queue:** `/staff/flags` → `getFlagsQueue(filters)` → `flag/flag-service.ts:listFlags()`;
+  `/staff/flags/[id]` → `getFlagDetail()` → `getFlag()` plus `getFlaggedDirectThread()`
+  when the target is a conversation.
+- **Resolving:** `resolveFlag({resolution, notes, unpublishEvent})` →
+  `flag-service.ts:resolveFlag()`. `scopeForFlag()` in `moderation/standing-service.ts` maps
+  an entity type to the standing scope it can affect.
+- **Standing:** `standing-service.ts`: `getStanding()` / `getStandings()`,
+  `restrictStanding()`, `restoreStanding()`, with `setStanding()` underneath. Surfaced on
+  the member record via `standing.remote.ts`.
+- **Suggestions:** `suggestion/suggestion-service.ts` — the board
+  (`getSuggestionBoard`, votes deduped per member), the staff queue
+  (`getSuggestionsQueue`, `respondToSuggestion`, `setSuggestionVisibility`),
+  edit review (`getEditableState()` decides _for_ the caller whether an edit applies
+  directly or files for review — a client that could ask would be asking to skip the check),
+  and `mergeSuggestion()` for duplicates, which transfers and dedupes votes.
+
+### Data touched
+
+`content_flag`, `member_standing`, `suggestion`, `suggestion_vote`, `suggestion_edit`,
+`user_block`, and `event.status` when an upheld report unpublishes a listing.
+
+### Where it breaks
+
+- **A restriction that seems not to apply** → check the _scope_. Restricted at
+  `community_event` does nothing to suggestions or messaging, by design.
+- **A staff-imposed restriction with no report behind it** → `setStanding` takes `flagId` as
+  optional today, and `setMemberStanding` is a staff form that restricts with no report at
+  all. It is the least-reviewed moderation path there is;
+  [specs/moderation-appeals-spec.md](../specs/moderation-appeals-spec.md) is the design that
+  closes it and is **not built**.
+- **A reported suggestion nobody can see** → reporting takes it off the board immediately,
+  so this queue is time-sensitive in a way the flag queue is not.
+
+---
+
+## 12. Volunteering
+
+Spec: [specs/volunteering-spec.md](../specs/shipped/volunteering-spec.md)
+
+### The story
+
+Staff define **roles** — job types with markdown descriptions. Members say which roles
+interest them (a standing note, not a commitment to a date), claim dated **shifts**, and log
+**hours**. Staff work an approval queue, and a date-ranged report rolls approved hours up by
+member, role and month — which is the number the board and grant applications ask for.
+
+Approved hours are a record, not a currency: they never become practice-room credits and
+never touch the finance ledger, and there is a test that enforces it.
+
+Certifications gate _scheduling_, never the record of work already done. A role can require
+one; whether a member held it is evaluated **as of the shift's date**, with a deliberate
+asymmetry — a clearance pulled on the day was not in force, but a card is valid through its
+expiry date. Held certifications append and are never overwritten, which is the only way to
+answer "was their First Aid current on the night of the incident?"
+
+### Code path
+
+- **Roles and interest:** `volunteer/volunteer-role-service.ts`,
+  `volunteer-interest-service.ts` (`listInterestedMembers()` filters by role with an EXISTS,
+  so a filtered member still comes back with all their roles).
+- **Onboarding:** `volunteer-profile-service.ts` — the one-time name/phone/over-18 gate on
+  `/member/volunteer/start`.
+- **Shifts:** `volunteer-shift-service.ts` + `volunteer-signup-service.ts`. A shift may name
+  the event it staffs. Only _confirmed_ signups get the reminder and the auto-complete.
+- **Certifications:** `volunteer-certification-service.ts` (catalog),
+  `member-certification-service.ts` (held; append-only, `expiresAt` stamped at grant time
+  from `validityMonths` and never computed on read).
+- **Hours and review:** `hour-log-service.ts`; the report is `volunteer-report-service.ts`.
+- **Feedback:** `volunteer-feedback-service.ts` — the day-after two-question survey, rolled
+  up per role anonymously.
+- **Crons:** `shift-reminders` (daily), `complete-shifts` (frequent), `shift-feedback`
+  (daily), all under `src/routes/api/cron/`.
+- **Surfaces:** `volunteer.remote.ts` behind `requireFeature('volunteering')` for the member
+  side; the staff pages under `/staff/volunteer/` are always on, per the panel-wide rule
+  that staff surfaces ignore flags.
+
+### Data touched
+
+`volunteer_role`, `volunteer_role_interest`, `volunteer_profile`, `volunteer_hour_log`,
+`volunteer_shift`, `volunteer_signup`, `volunteer_shift_feedback`,
+`volunteer_certification`, `member_certification`, `volunteer_role_certification`.
+
+### Where it breaks
+
+- **Hours bucketed into the wrong month** → `workedOn` is anchored at **noon** club time on
+  purpose. Midnight local is the previous UTC day in any UTC-ahead zone, and the report
+  buckets with `strftime('%Y-%m', worked_on, 'unixepoch')`, which reads the instant in UTC.
+- **A member cannot claim a shift** → check the role's required certifications against the
+  _shift's_ date, not today's.
+- **The member surface is missing entirely** → the `volunteering` flag gates the member side
+  only. The staff panel showing it while members cannot see it is the intended state, not a
+  bug.
 
 ---
 

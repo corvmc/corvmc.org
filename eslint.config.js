@@ -4,6 +4,9 @@ import noRawFormElements from './eslint-rules/no-raw-form-elements.js';
 import noUtilitySoup from './eslint-rules/no-utility-soup.js';
 import noDuplicateFieldNames from './eslint-rules/no-duplicate-field-names.js';
 import noDbTransaction from './eslint-rules/no-db-transaction.js';
+import noConcurrentRemoteQueries from './eslint-rules/no-concurrent-remote-queries.js';
+import refreshTheComposedQuery from './eslint-rules/refresh-the-composed-query.js';
+import noDomainImportsInUi from './eslint-rules/no-domain-imports-in-ui.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -26,7 +29,10 @@ const customPlugin = {
 		'no-raw-form-elements': noRawFormElements,
 		'no-utility-soup': noUtilitySoup,
 		'no-duplicate-field-names': noDuplicateFieldNames,
-		'no-db-transaction': noDbTransaction
+		'no-db-transaction': noDbTransaction,
+		'no-concurrent-remote-queries': noConcurrentRemoteQueries,
+		'refresh-the-composed-query': refreshTheComposedQuery,
+		'no-domain-imports-in-ui': noDomainImportsInUi
 	}
 };
 
@@ -46,9 +52,9 @@ export default defineConfig(
 			// typescript-eslint strongly recommend that you do not use the no-undef lint rule on TypeScript projects.
 			// see: https://typescript-eslint.io/troubleshooting/faqs/eslint/#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
 			'no-undef': 'off',
-			// Downgraded from the typescript-eslint recommended default (error). The codebase has
-			// ~200 pre-existing `any` usages; treat as a warning so it stays visible without
-			// blocking CI, to be paid down incrementally rather than in this lint-cleanup pass.
+			// Downgraded from the typescript-eslint recommended default (error) so the remaining
+			// `any` usages stay visible without blocking CI, to be paid down incrementally. See
+			// the override below for why test files are exempt rather than counted.
 			'@typescript-eslint/no-explicit-any': 'warn',
 			// Honour the conventional `_`-prefix for intentionally-unused bindings (e.g.
 			// `{#each items as _, i}`, unused catch params). The rule still errors on all
@@ -87,16 +93,45 @@ export default defineConfig(
 		plugins: { custom: customPlugin }
 	},
 	{
+		// `no-explicit-any` exists to pay down `any` in *shipped* code. It has no purchase on a
+		// test double: the dominant shape here is
+		// `vi.mocked(db.select).mockReturnValue({ from } as any)` — a one-method stub cast to
+		// drizzle's full query-builder chain type, which is not expressible in less code than the
+		// test itself. Measured at 5b45863: 428 warnings, of which 377 were tests/scripts/e2e and
+		// only 51 were production source. The 377 buried the 51 well enough that the count grew
+		// from ~200 to 428 unnoticed, so the number had stopped meaning anything.
+		//
+		// This is bookkeeping, not a safety gain — it silences warnings rather than typing
+		// anything. It is narrow, though: `vi.mocked(db.select)` stays typed, and only the mock's
+		// *return shape* is cast, so a signature change in the code under test still fails.
+		files: ['**/*.spec.ts', '**/*.test.ts', 'scripts/**', 'e2e/**'],
+		rules: { '@typescript-eslint/no-explicit-any': 'off' }
+	},
+	{
 		files: ['**/+page.svelte'],
 		rules: { 'custom/no-raw-form-elements': 'warn', 'custom/no-utility-soup': 'warn' }
 	},
 	{
 		files: ['**/*.svelte'],
-		rules: { 'custom/no-duplicate-field-names': 'error' }
+		rules: {
+			'custom/no-duplicate-field-names': 'error',
+			'custom/no-concurrent-remote-queries': 'error'
+		}
+	},
+	{
+		files: ['src/lib/remote/**/*.remote.ts'],
+		rules: { 'custom/refresh-the-composed-query': 'error' }
 	},
 	{
 		files: ['src/lib/server/**/*.ts'],
 		ignores: ['**/*.spec.ts'],
 		rules: { 'custom/no-db-transaction': 'error' }
+	},
+	{
+		// components/ui/ is the design system — primitives only, no domain knowledge.
+		// Stories and specs are allowed to reach for fixtures the primitive itself cannot.
+		files: ['src/lib/components/ui/**/*.{ts,svelte}'],
+		ignores: ['**/*.spec.ts', '**/*.stories.svelte'],
+		rules: { 'custom/no-domain-imports-in-ui': 'error' }
 	}
 );

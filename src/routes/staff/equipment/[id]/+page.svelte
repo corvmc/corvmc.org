@@ -1,28 +1,27 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import CategoryOptions from '$lib/components/equipment/CategoryOptions.svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
-		getEquipment,
-		getEquipmentCategories as getCategories,
-		getEquipmentLoanHistory,
+		getStaffEquipmentDetail,
 		editEquipment,
 		deactivateEquipment,
 		reactivateEquipment
 	} from '$lib/remote/equipment.remote';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/shared/Form';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import { ActivateToggleAction } from '$lib/components/shared/actions';
-	import { EntityIdentity } from '$lib/components/shared/entity';
-	import Table from '$lib/components/shared/Table.svelte';
-	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '$lib/components/ui/Form';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import { ActivateToggleAction } from '$lib/components/actions';
+	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Table from '$lib/components/ui/Table.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, formatCents } from '$lib/utils/format';
@@ -31,9 +30,10 @@
 	const { fields } = editEquipment;
 
 	let id = $derived(page.params.id!);
-	let item = $derived(await getEquipment(id));
-	let categories = $derived(await getCategories());
-	let loanHistory = $derived(await getEquipmentLoanHistory(id));
+	// One query. The category list is not in it — see CategoryOptions for why it cannot be.
+	const data = $derived(await getStaffEquipmentDetail(id));
+	const item = $derived(data.item);
+	const loanHistory = $derived(data.loanHistory);
 
 	let isDeactivated = $derived(!!item.deletedAt);
 </script>
@@ -51,15 +51,13 @@
 		</SubmitButton>
 	</PageHeader>
 	<PageContent width="3xl">
-		<div class="grid gap-6 lg:grid-cols-2 mb-6">
+		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title="Equipment Info">
 				<div class="grid grid-cols-1 gap-x-2">
 					<Field field={fields.name} type="text" value={item.name} />
 					<Field field={fields.description} type="textarea" value={item.description ?? ''} />
 					<Field field={fields.categoryId} type="select" value={item.categoryId} label="Category">
-						{#each categories as cat (cat.id)}
-							<option value={cat.id}>{cat.name}</option>
-						{/each}
+						<CategoryOptions selected={item.categoryId} />
 					</Field>
 					<div class="grid grid-cols-2 gap-3">
 						<Field field={fields.condition} type="select" value={item.condition}>
@@ -89,15 +87,15 @@
 					<Fact label="Available" class={item.availableQuantity <= 0 ? 'text-error' : ''}>
 						{item.availableQuantity} of {item.totalQuantity}
 						{#if item.outOfOrderQuantity > 0}
-							<span class="text-warning text-xs">({item.outOfOrderQuantity} out of order)</span>
+							<span class="text-xs text-warning">({item.outOfOrderQuantity} out of order)</span>
 						{/if}
 						{#if item.loanedQuantity > 0}
-							<span class="text-info text-xs">({item.loanedQuantity} on loan)</span>
+							<span class="text-xs text-info">({item.loanedQuantity} on loan)</span>
 						{/if}
 					</Fact>
 				</DefinitionList>
 
-				<div class="grid grid-cols-2 gap-3 mt-4">
+				<div class="mt-4 grid grid-cols-2 gap-3">
 					<Field
 						field={fields.totalQuantity}
 						type="number"

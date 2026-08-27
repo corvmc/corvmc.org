@@ -3,12 +3,12 @@
 	import { replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { getUser, getUserOverview } from '$lib/remote/users.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import TabBar from '$lib/components/shared/TabBar.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import { getUserPage } from '$lib/remote/users.remote';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import { TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import UserScoreboard from './panels/UserScoreboard.svelte';
 	import OverviewPanel from './panels/OverviewPanel.svelte';
@@ -22,11 +22,12 @@
 
 	let id = $derived(page.params.id!);
 
-	// The only two queries the page itself makes. `getUserOverview` is what pays
-	// for the tabs: it backs the identity badges, the scoreboard, every tab
-	// badge and the whole Overview tab, so the default view of a member costs
-	// two requests instead of the twenty an untabbed version of this page would.
-	let [member, overview] = $derived(await Promise.all([getUser(id), getUserOverview(id)]));
+	// The page's one load-bearing query. It carries both the member and the
+	// overview — the overview is what pays for the tabs, backing the identity
+	// badges, the scoreboard, every tab badge and the whole Overview tab — so
+	// the default view of a member costs one request rather than the twenty an
+	// untabbed version of this page would.
+	let { member, overview } = $derived(await getUserPage(id));
 
 	// Seeded from the query string and mirrored back into it, so a staff member
 	// can hand someone a link to the tab they are talking about. Local state

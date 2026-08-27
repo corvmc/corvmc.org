@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Modal from '$lib/components/shared/Modal.svelte';
-	import Form from '$lib/components/shared/Form/Form.svelte';
-	import FormField from '$lib/components/shared/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import Form from '$lib/components/ui/Form/Form.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { importGigsForm } from '$lib/remote/band-events.remote';
 	import { parseGigImport, GIG_IMPORT_MAX_LINES } from '$lib/utils/gig-import';
 	import { invalidateAll } from '$app/navigation';

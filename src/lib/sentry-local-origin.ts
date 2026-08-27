@@ -1,6 +1,7 @@
 /**
  * Shared localhost guard for both Sentry init sites (hooks.client.ts and
- * hooks.server.ts).
+ * hooks.server.ts), and for better-auth's rate limit in src/lib/server/auth.ts
+ * — which has the same problem for the same reason, and wants the same answer.
  *
  * The `enabled` flags in those files gate reporting on
  * `SENTRY_ENVIRONMENT`/`PUBLIC_SENTRY_ENVIRONMENT` being `ci`, which

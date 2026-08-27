@@ -2,16 +2,16 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { getFlagDetail, resolveFlag } from '$lib/remote/flags.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import { EntityChip } from '$lib/components/shared/entity';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
-	import Action from '$lib/components/shared/Action.svelte';
-	import Select from '$lib/components/shared/Form/Select.svelte';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import { EntityChip } from '$lib/components/ui/entity';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { formatDateTime } from '$lib/utils/format';
 	import { entityLabels } from '$lib/config';
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
@@ -46,7 +46,7 @@
 	<StatusBadge status={flag.status} label />
 </PageHeader>
 <PageContent width="3xl">
-	<div class="grid gap-6 lg:grid-cols-2 mb-6">
+	<div class="mb-6 grid gap-6 lg:grid-cols-2">
 		<InfoCard title="Report">
 			<DefinitionList>
 				<Fact label="Type">{entityLabels[flag.target.type].one}</Fact>
@@ -131,7 +131,7 @@
 
 		<InfoCard title="Resolution" class="bg-base-200 shadow-none">
 			{#if flag.status === 'pending'}
-				<p class="text-muted mb-3">
+				<p class="mb-3 text-muted">
 					Review the reported content, then mark this flag resolved (action taken) or dismissed (no
 					action needed).
 				</p>
@@ -167,8 +167,7 @@
 										class="textarea w-full"
 										rows="3"
 										{...fields.notes.as('text')}
-										bind:value={notes}
-									></textarea>
+										bind:value={notes}></textarea>
 								</label>
 								{#if flag.entityType === 'event' && flag.eventContext?.source === 'community' && resolution === 'resolved'}
 									<!-- Say this out loud. Resolving a community-listing flag is

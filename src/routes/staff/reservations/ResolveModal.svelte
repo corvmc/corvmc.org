@@ -1,13 +1,13 @@
 <script lang="ts">
-	import Card from '$lib/components/shared/Card/Card.svelte';
-	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
+	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { IconCheck } from '@tabler/icons-svelte';
-	import Modal from '$lib/components/shared/Modal.svelte';
-	import { CashReceivedAction, NoShowReservationAction } from '$lib/components/shared/actions';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import { CashReceivedAction, NoShowReservationAction } from '$lib/components/actions';
 	import { invalidateAll } from '$app/navigation';
-	import { EntityIdentity } from '$lib/components/shared/entity';
+	import { EntityIdentity } from '$lib/components/ui/entity';
 	import type { MemberRef } from '$lib/types/entity';
-	import Badge from '$lib/components/shared/Badge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { formatCents, formatDate, formatTimeRange } from '$lib/utils/format';
 
 	let {
@@ -63,16 +63,16 @@
 	{/snippet}
 
 	{#if visible.length === 0}
-		<div class="text-center py-8">
-			<IconCheck size={48} class="mx-auto text-success mb-2" />
+		<div class="py-8 text-center">
+			<IconCheck size={48} class="mx-auto mb-2 text-success" />
 			<p class="text-lg font-medium">All caught up!</p>
 		</div>
 	{:else}
-		<div class="space-y-3 max-h-96 overflow-y-auto">
+		<div class="max-h-96 space-y-3 overflow-y-auto">
 			{#each visible as r (r.id)}
 				<Card bordered>
 					<CardBody padding="sm">
-						<div class="flex justify-between mb-2">
+						<div class="mb-2 flex justify-between">
 							<EntityIdentity ref={r.member} size="md" />
 							<div class="text-right">
 								<p class="text-sm">{formatDate(r.startsAt)}</p>

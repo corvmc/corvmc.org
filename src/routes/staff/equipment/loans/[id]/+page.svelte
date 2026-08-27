@@ -2,29 +2,29 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import {
-		getLoan,
-		getAvailableEquipment,
+		getStaffLoanDetail,
 		scheduleLoanForm as schedule,
 		checkoutLoanForm as checkout
 	} from '$lib/remote/equipment.remote';
-	import PageHeader from '$lib/components/shared/PageHeader.svelte';
-	import PageContent from '$lib/components/shared/PageContent.svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Badge from '$lib/components/shared/Badge.svelte';
-	import { CancelLoanAction, MarkReturnedAction } from '$lib/components/shared/actions';
-	import Form, { Field, SubmitButton, Select } from '$lib/components/shared/Form';
-	import { EntityChip } from '$lib/components/shared/entity';
-	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import { CancelLoanAction, MarkReturnedAction } from '$lib/components/actions';
+	import Form, { Field, SubmitButton, Select } from '$lib/components/ui/Form';
+	import { EntityChip } from '$lib/components/ui/entity';
+	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
 
 	const { fields: scheduleFields } = schedule;
 	const { fields: checkoutFields } = checkout;
 
 	let id = $derived(page.params.id!);
-	let loan = $derived(await getLoan(id));
-	let availableEquipment = $derived(await getAvailableEquipment());
+	const data = $derived(await getStaffLoanDetail(id));
+	const loan = $derived(data.loan);
+	const availableEquipment = $derived(data.availableEquipment);
 
 	let chargePreview = $derived.by(() => {
 		if (loan.status !== 'checked_out' || !loan.dailyRateCents || !loan.checkedOutAt) return null;
@@ -46,7 +46,7 @@
 	{/if}
 </PageHeader>
 <PageContent width="3xl">
-	<div class="grid gap-6 lg:grid-cols-2 mb-6">
+	<div class="mb-6 grid gap-6 lg:grid-cols-2">
 		<!-- Loan Details -->
 		<InfoCard title="Loan Details">
 			<DefinitionList>
@@ -110,15 +110,15 @@
 
 			{#if loan.memberNotes}
 				<div class="mt-4">
-					<h4 class="text-muted font-semibold mb-1">Member Notes</h4>
-					<p class="text-sm bg-base-200 rounded p-2">{loan.memberNotes}</p>
+					<h4 class="mb-1 text-muted font-semibold">Member Notes</h4>
+					<p class="rounded bg-base-200 p-2 text-sm">{loan.memberNotes}</p>
 				</div>
 			{/if}
 
 			{#if loan.staffNotes}
 				<div class="mt-4">
-					<h4 class="text-muted font-semibold mb-1">Staff Notes</h4>
-					<p class="text-sm bg-base-200 rounded p-2">{loan.staffNotes}</p>
+					<h4 class="mb-1 text-muted font-semibold">Staff Notes</h4>
+					<p class="rounded bg-base-200 p-2 text-sm">{loan.staffNotes}</p>
 				</div>
 			{/if}
 		</InfoCard>
@@ -126,7 +126,7 @@
 		<!-- Actions Panel -->
 		<InfoCard title="Actions">
 			{#if loan.status === 'requested'}
-				<h4 class="text-sm font-semibold mb-3">Schedule Pickup</h4>
+				<h4 class="mb-3 text-sm font-semibold">Schedule Pickup</h4>
 				<Form remote={schedule} successToast="Pickup scheduled" class="space-y-3">
 					<input {...scheduleFields.loanId.as('hidden', id)} />
 					{#if !loan.equipmentId}
@@ -154,7 +154,7 @@
 					</div>
 				</Form>
 			{:else if loan.status === 'scheduled'}
-				<h4 class="text-sm font-semibold mb-3">Mark as Checked Out</h4>
+				<h4 class="mb-3 text-sm font-semibold">Mark as Checked Out</h4>
 				<Form remote={checkout} successToast="Checked out" class="space-y-3">
 					<input {...checkoutFields.loanId.as('hidden', id)} />
 					<Field name="dueDate" type="date" label="Due Date" />
@@ -164,10 +164,10 @@
 					</div>
 				</Form>
 			{:else if loan.status === 'checked_out'}
-				<h4 class="text-sm font-semibold mb-3">Mark as Returned</h4>
+				<h4 class="mb-3 text-sm font-semibold">Mark as Returned</h4>
 
 				{#if chargePreview}
-					<div class="bg-base-200 rounded p-3 mb-3 text-sm">
+					<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 						<p>
 							<strong>Charge preview:</strong>
 							{chargePreview.days} day{chargePreview.days !== 1 ? 's' : ''} × {formatCents(
