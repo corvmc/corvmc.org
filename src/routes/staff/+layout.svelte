@@ -27,7 +27,8 @@
 		IconReportAnalytics,
 		IconListDetails,
 		IconCertificate,
-		IconCalendarTime
+		IconCalendarTime,
+		IconCalendarMonth
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
@@ -71,6 +72,7 @@
 		equipment: IconTool,
 		'equipment-loans': IconPackage,
 		events: IconCalendarEvent,
+		calendar: IconCalendarMonth,
 		flags: IconFlag,
 		suggestions: IconBulb,
 		campaigns: IconMail,
@@ -84,7 +86,8 @@
 	let badges = $derived({
 		inboxUnread: layout.inboxUnread,
 		suggestionsAwaiting: layout.suggestionsAwaiting,
-		volunteerPending: layout.volunteerPending
+		volunteerPending: layout.volunteerPending,
+		listingsPending: layout.listingsPending
 	} satisfies Record<StaffNavBadgeKey, number>);
 
 	let activeKey = $derived(activeNavKey(page.url.pathname));

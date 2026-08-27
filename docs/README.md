@@ -78,15 +78,15 @@ this split was made.
 
 ### Events
 
-| Doc                                                                    | Status | Lifecycle | Notes                                                                                                                                                |
-| ---------------------------------------------------------------------- | ------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [tickets-spec.md](specs/shipped/tickets-spec.md)                       | ✅     | archived  | Ticketed events, Stripe, guest checkout, member discount                                                                                             |
-| [event-lineup-spec.md](specs/shipped/event-lineup-spec.md)             | ✅     | archived  | `event_band`: who played vs. who manages; confirm/decline a credited slot                                                                            |
-| [community-calendar-spec.md](specs/shipped/community-calendar-spec.md) | ✅     | archived  | Phase 1 — `/events` as a unified gig guide across CMC and member bands                                                                               |
-| [community-events-spec.md](specs/shipped/community-events-spec.md)     | ✅     | archived  | Phase 2 — member-authored `source='community'` listings, event tips, cancelled-not-hidden                                                            |
-| [event-moderation-spec.md](specs/shipped/event-moderation-spec.md)     | ✅     | archived  | `contentFlag` coverage for the gig guide; reactive, no pre-approval queue                                                                            |
-| [production-workflow-spec.md](specs/production-workflow-spec.md)       | 📋     | spec      | CMC-produced shows: booking → run of show → settlement → close-out; venues, external acts. Reconciled with `groups-spec.md`                          |
-| [staff-events-split-spec.md](specs/staff-events-split-spec.md)         | 📋     | spec      | Splits `/staff/events` into Productions (CMC work surface) and `/staff/calendar` (staff view of the public gig guide, all sources); no schema change |
+| Doc                                                                    | Status | Lifecycle | Notes                                                                                                                                                  |
+| ---------------------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [tickets-spec.md](specs/shipped/tickets-spec.md)                       | ✅     | archived  | Ticketed events, Stripe, guest checkout, member discount                                                                                               |
+| [event-lineup-spec.md](specs/shipped/event-lineup-spec.md)             | ✅     | archived  | `event_band`: who played vs. who manages; confirm/decline a credited slot                                                                              |
+| [community-calendar-spec.md](specs/shipped/community-calendar-spec.md) | ✅     | archived  | Phase 1 — `/events` as a unified gig guide across CMC and member bands                                                                                 |
+| [community-events-spec.md](specs/shipped/community-events-spec.md)     | ✅     | archived  | Phase 2 — member-authored `source='community'` listings, event tips, cancelled-not-hidden                                                              |
+| [event-moderation-spec.md](specs/shipped/event-moderation-spec.md)     | ✅     | archived  | `contentFlag` coverage for the gig guide; reactive, no pre-approval queue                                                                              |
+| [production-workflow-spec.md](specs/production-workflow-spec.md)       | 📋     | spec      | CMC-produced shows: booking → run of show → settlement → close-out; venues, external acts. Reconciled with `groups-spec.md`                            |
+| [staff-events-split-spec.md](specs/shipped/staff-events-split-spec.md) | ✅     | archived  | Productions (`/staff/events`, CMC work surface) vs Calendar (`/staff/calendar`, staff view of the public gig guide); why the axis is work-vs-publicity |
 
 ### Members & directory
 

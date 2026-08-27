@@ -3,7 +3,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
-import { bandRefColumns, toBandRef, toEventRef } from '$lib/server/entity/refs';
+import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
 import {
 	create,
 	update,
@@ -15,6 +15,7 @@ import {
 	cancel,
 	getById,
 	listAll as listAllEvents,
+	listStaffCalendar,
 	listUpcoming,
 	listPast,
 	getEventLineup,
@@ -27,7 +28,11 @@ import {
 	getConflictDetails,
 	getValidationWarnings
 } from '$lib/server/reservation/conflict-service';
-import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
+import {
+	buildDateInTz,
+	buildTimeRangeInTz,
+	formatDateInTz
+} from '$lib/server/reservation/timezone';
 import {
 	createEventSeries,
 	getByEvent,
@@ -447,6 +452,64 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 		pagination
 	};
 });
+
+/**
+ * The statuses the staff calendar will read, and the only ones it will.
+ *
+ * `draft` is absent on purpose. A CMC draft is production work and belongs on
+ * `/staff/events`; a community draft is a member's private working copy that no
+ * staffer should read. `listStaffCalendar` excludes the latter again at the
+ * service level — this enum is the first of two guards, not the only one.
+ */
+const calendarStatuses = ['pending_review', 'published', 'cancelled', 'rejected'] as const;
+
+/**
+ * Staff: the public gig guide, plus what is asking to join it.
+ *
+ * The moderation surface. It is scoped by *status* and reads every source,
+ * which is the whole difference from `getStaffEvents` — that one is scoped by
+ * source and runs the shows CMC produces. A CMC show appears in both, in two
+ * roles: something you are building, and something the public can see.
+ */
+export const getStaffCalendar = query(
+	z.object({
+		statuses: z.array(z.enum(calendarStatuses)).min(1).optional(),
+		sources: z.array(z.enum(eventSources)).optional(),
+		page: z.number().optional()
+	}),
+	async (filters) => {
+		await requireStaff();
+		// Midnight tonight in venue time, not UTC — the same anchor the public gig
+		// guide uses, so the two agree about which day a late show belongs to.
+		const from = buildDateInTz(
+			formatDateInTz(new Date(), DEFAULT_TIMEZONE),
+			'00:00',
+			DEFAULT_TIMEZONE
+		);
+		const { rows, pagination } = await listStaffCalendar(
+			from,
+			{
+				// The default view is the queue: a staffer arrives here from a
+				// notification, and landing on the whole calendar would bury it.
+				statuses: [...(filters.statuses ?? ['pending_review'])],
+				sources: filters.sources
+			},
+			{ page: filters.page ?? 1, pageSize: 50 }
+		);
+		return {
+			rows: rows.map((e) => ({
+				...e,
+				ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
+				band: toBandRef({ id: e.bandId, name: e.bandName, slug: e.bandSlug }),
+				// Who is accountable for the row. A band gig answers with its band,
+				// a community listing with its member, a CMC show with neither —
+				// the page renders "CMC" for that case rather than a ref to us.
+				submitter: toMemberRef(e.submitter)
+			})),
+			pagination
+		};
+	}
+);
 
 /**
  * Staff: event lookup for anything that hangs off a show — today, the volunteer

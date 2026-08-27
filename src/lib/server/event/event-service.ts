@@ -26,11 +26,13 @@ import {
 	desc,
 	inArray,
 	not,
+	or,
 	count,
 	getTableColumns
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
+import { memberRefColumns } from '$lib/server/entity/refs';
 import type { EventStatus } from '$lib/server/db/schema/event';
 import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -920,6 +922,74 @@ export async function listAll(
 		.leftJoin(group, eq(group.id, event.bandId))
 		.where(where)
 		.orderBy(desc(event.startsAt))
+		.$dynamic();
+	const countQ = db.select({ count: count() }).from(event).where(where);
+	return paginate(dataQ, countQ, pagination);
+}
+
+/**
+ * The staff calendar: the public gig guide, plus what is asking to join it.
+ *
+ * Modelled on `listPublicUpcomingEvents` rather than on `listAll`, because it
+ * answers a different question. `listAll` is an admin index — newest first,
+ * every status, one source at a time — and it is what `/staff/events` uses to
+ * run the shows CMC produces. This is the moderation surface, and moderation
+ * asks what the public can see, so it reads forward from today across every
+ * source, ordered the way the guide orders it.
+ *
+ * `pending_review` sits alongside the public statuses here and nowhere else. A
+ * listing waiting on staff is not public, but it is asking to be, and it has a
+ * date — so it belongs in the day it would land on rather than in a queue
+ * beside the calendar. That adjacency is the whole point: it is how a staffer
+ * sees that the show they are about to approve is already on the calendar under
+ * a different name. `checkForDuplicate` calls that the characteristic failure of
+ * a community calendar and names moderation as the only backstop, and until this
+ * existed the moderation UI could not see it.
+ *
+ * `from` floors what is *on* the calendar — published and cancelled — and
+ * deliberately does not floor the rows that are merely asking to be. See the
+ * filter below.
+ *
+ * The community-draft exclusion is kept even though `draft` is not a status any
+ * caller should pass. The list arrives from the caller; a member's private
+ * working copy must not become visible because someone widened a Zod enum later.
+ */
+export async function listStaffCalendar(
+	from: Date,
+	opts: { statuses: EventStatus[]; sources?: EventSource[] },
+	pagination: PaginationInput = {}
+) {
+	const filters = [
+		// The date floor is about the calendar, not the queue. A listing whose
+		// date passes while it waits for staff is still a decision someone owes
+		// an answer to, and `countPendingSubmissions` — the sidebar badge —
+		// counts it with no date filter at all. Flooring it here too would leave
+		// the badge reading 3 above a page showing 2, and the stale row would be
+		// unreachable in the only view that can clear it.
+		or(not(inArray(event.status, [...publicEventStatuses])), gte(event.startsAt, from)),
+		inArray(event.status, opts.statuses),
+		opts.sources?.length ? inArray(event.source, opts.sources) : undefined,
+		not(and(eq(event.source, 'community'), eq(event.status, 'draft'))!)
+	].filter(Boolean);
+	const where = and(...filters);
+
+	const dataQ = db
+		.select({
+			...getTableColumns(event),
+			bandName: group.name,
+			bandSlug: group.slug,
+			// Who posted it. `listAll` needs no such join — every row there is
+			// CMC's — but on the calendar the submitter is the first fact a
+			// moderator wants. Left, so a deleted account does not take the event
+			// off the calendar with it; `toMemberRef` renders the missing side as
+			// an unlinked row rather than dropping it.
+			submitter: memberRefColumns()
+		})
+		.from(event)
+		.leftJoin(group, eq(group.id, event.bandId))
+		.leftJoin(user, eq(user.id, event.createdByUserId))
+		.where(where)
+		.orderBy(asc(event.startsAt))
 		.$dynamic();
 	const countQ = db.select({ count: count() }).from(event).where(where);
 	return paginate(dataQ, countQ, pagination);

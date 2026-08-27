@@ -316,6 +316,15 @@ events use RSVP instead.
 
 ### Code path
 
+- **Two staff surfaces, one table.** `/staff/events` (Productions) is `source='cmc'` at every
+  status via `getStaffEvents` → `listAll()`; it is where a show is built, so it is the only
+  page holding drafts. `/staff/calendar` is `getStaffCalendar` → `listStaffCalendar()` —
+  every source, public statuses plus `pending_review`, forward from today — the staff view of
+  the public gig guide, where listings are moderated. A published CMC show is on both. The
+  date floor applies only to rows actually on the calendar, so a `pending_review` listing
+  whose date passed stays reachable and keeps agreeing with the sidebar badge
+  (`countPendingSubmissions`, which has no date filter). The detail page is shared at
+  `/staff/events/[id]`, with the room, shifts and poster upload gated on `source === 'cmc'`.
 - **Create/publish:** `staff/events` UI → `createEvent` / `publishEvent` / `updateEvent`
   forms in `src/lib/remote/events.remote.ts` → `create()` / `publish()` / `update()` in
   `src/lib/server/event/event-service.ts`. Events that reserve practice space create a

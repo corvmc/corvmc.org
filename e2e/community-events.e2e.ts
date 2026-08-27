@@ -73,13 +73,17 @@ test.describe('community listings', () => {
 		await expect(page.getByText(SEED_CE_DRAFT_TITLE)).toHaveCount(0);
 
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		// Straight to the queue by URL, the way the staff notification links —
-		// if the tab didn't read the URL this would silently assert the All tab.
-		await page.goto('/staff/events?status=pending_review');
-		// TabBar's client-state mode is a real tablist, so its items are role=tab.
-		// They were role=radio, from a bits-ui ToggleGroup.
-		await expect(page.getByRole('tab', { name: /Needs review/ })).toHaveClass(/latched/);
+		// The queue is the staff calendar's default view, which is where the
+		// notification now links. Arriving with no query string at all has to land
+		// on Needs review, or that link is a lie.
+		await page.goto('/staff/calendar');
+		await expect(page.getByLabel('Status')).toHaveValue('review');
 		await expect(page.getByText(SEED_CE_DRAFT_TITLE)).toHaveCount(0);
+
+		// The old review URL is bookmarked and was sent in notifications for as
+		// long as the tab existed; it has to survive as a redirect.
+		await page.goto('/staff/events?status=pending_review');
+		await expect(page).toHaveURL(/\/staff\/calendar$/);
 	});
 
 	test('a trusted member publishes straight to the calendar', async ({ page }) => {

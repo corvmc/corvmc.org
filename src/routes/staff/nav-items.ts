@@ -36,6 +36,7 @@ export type StaffNavKey =
 	| 'equipment'
 	| 'equipment-loans'
 	| 'events'
+	| 'calendar'
 	| 'flags'
 	| 'suggestions'
 	| 'campaigns'
@@ -46,7 +47,13 @@ export type StaffNavKey =
 	| 'settings';
 
 export type StaffNavSectionKey =
-	'people' | 'space' | 'programs' | 'moderation' | 'outreach' | 'money' | 'system';
+	| 'people'
+	| 'space'
+	| 'programs'
+	| 'moderation'
+	| 'outreach'
+	| 'money'
+	| 'system';
 
 /**
  * Field names on `getStaffLayout()`'s return. Items name a count rather than
@@ -54,7 +61,11 @@ export type StaffNavSectionKey =
  * integer, never which rows exist, and rebuilding the array on every poll
  * would churn every `{#each}` for nothing.
  */
-export type StaffNavBadgeKey = 'inboxUnread' | 'suggestionsAwaiting' | 'volunteerPending';
+export type StaffNavBadgeKey =
+	| 'inboxUnread'
+	| 'suggestionsAwaiting'
+	| 'volunteerPending'
+	| 'listingsPending';
 
 export interface StaffNavItem extends NavNode<StaffNavKey> {
 	label: string;
@@ -128,7 +139,20 @@ export const staffNavSections: StaffNavSection[] = [
 	{
 		key: 'programs',
 		title: 'Programs',
-		items: [{ key: 'events', label: 'Events', href: '/staff/events' }]
+		items: [
+			// Two surfaces over one table, split by what staff do with a row.
+			// Productions is where a show is built — CMC's own, every status,
+			// drafts included. Calendar is what the public can see, across every
+			// source, plus what is asking to join it. A published CMC show is on
+			// both, in two roles.
+			{ key: 'events', label: 'Productions', href: '/staff/events' },
+			{
+				key: 'calendar',
+				label: 'Calendar',
+				href: '/staff/calendar',
+				badgeKey: 'listingsPending'
+			}
+		]
 	},
 	{
 		key: 'moderation',

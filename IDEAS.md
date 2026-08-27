@@ -166,14 +166,15 @@ The detail page stays at **one route**. `entity-href.ts` sends every event ref t
 `source` to every event-ref producer. Gating the production cards on `source === 'cmc'` removes the
 dead UI for a fraction of that cost.
 
-**Progress:** Specced in `docs/specs/staff-events-split-spec.md`. No schema change, and no change to
+**Progress:** Built. `/staff/events` is Productions and `/staff/calendar` is the staff gig guide;
+the shared detail page gates its production cards on source. No schema change, and no change to
 `listAll` or `getStaffEvents` either — Productions calls the existing query with `source: 'cmc'`,
-and the Calendar gets its own read modelled on the gig guide's. It was originally deferred behind
-Groups on the belief that module would move a join this depends on; in fact phase 1 already
-repointed `event.bandId` at `group.id`, so that churn is behind us. Phase 9 adds a **fourth**
-`eventSources` value, `'group'`, for club and committee sessions rather than renaming an existing
-one — a club session reaches the Calendar for free, like anything else that publishes, while its
-work-side home is left open for the Groups panel design to settle.
+and the Calendar got its own read modelled on the gig guide's. Design rationale, including the
+axis that was rejected, is archived in `docs/specs/shipped/staff-events-split-spec.md`; behaviour
+lives in `docs/development/business-workflows.md` §5. Groups phase 9 will add a **fourth**
+`eventSources` value, `'group'`, for club sessions rather than renaming an existing one — those
+reach the Calendar for free when they publish, while their work-side home stays open for the
+Groups panel design to settle.
 
 ### Club Management
 
