@@ -25,6 +25,7 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 const {
 	generateLockCode,
 	createTemporaryUser,
+	createControlUser,
 	removeTemporaryUser,
 	listLockUsers,
 	LOCK_GRACE_MINUTES,
@@ -107,6 +108,18 @@ describe('createTemporaryUser', () => {
 		expect(cmd.arguments.weeks).toEqual([0, 1, 2, 3, 4, 5, 6]);
 		expect(cmd.arguments.timerange).toEqual(['00:00', '23:59']);
 		expect(cmd.arguments.limit).toBe(0);
+	});
+});
+
+describe('createControlUser', () => {
+	it('sends a minimal normal-user (type 0) add — name/type/password only', async () => {
+		mockFetch({ devices: [{ states: [] }] });
+
+		await createControlUser('CMC Self-Test', 4242);
+
+		const cmd = lastBody.payload.devices[0].command;
+		expect(cmd.name).toBe('add');
+		expect(cmd.arguments).toEqual({ name: 'CMC Self-Test', type: 0, password: 4242 });
 	});
 });
 
