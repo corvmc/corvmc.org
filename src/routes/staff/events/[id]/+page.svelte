@@ -456,8 +456,7 @@
 									name="description"
 									bind:value={editDescription}
 									class="textarea w-full"
-									rows="4"
-								></textarea>
+									rows="4"></textarea>
 							</FormField>
 
 							<FormField label="Date" id="editDate" issues={[]}>
