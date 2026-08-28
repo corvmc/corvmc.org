@@ -111,7 +111,13 @@ vi.mock('$lib/server/storage', () => ({
 	uploadFile: vi.fn(async (_buffer: ArrayBuffer, key: string) => key)
 }));
 
+vi.mock('$lib/server/media/media-service', () => ({
+	replaceSlot: vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' }),
+	detachSlot: vi.fn().mockResolvedValue(undefined)
+}));
+
 const { deleteObject, uploadFile } = await import('$lib/server/storage');
+const { detachSlot, replaceSlot } = await import('$lib/server/media/media-service');
 const {
 	updateMemberProfile,
 	getMemberProfileForEdit,
@@ -328,8 +334,6 @@ describe('updateBandProfile', () => {
 
 describe('setUserAvatar', () => {
 	it('uploads the file and returns a cache-busting, extension-mapped key', async () => {
-		selectResults.push([{ image: null }]);
-
 		const key = await setUserAvatar('user-1', new ArrayBuffer(8), 'image/png');
 
 		// The per-upload token is what stops a replaced avatar reusing its URL.
@@ -337,17 +341,23 @@ describe('setUserAvatar', () => {
 		expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), key, 'image/png');
 	});
 
-	it('deletes a previously-uploaded avatar key before replacing', async () => {
-		selectResults.push([{ image: 'users/avatars/user-1.jpg' }]);
-
+	it('records the new object and releases the slot, without deleting anything', async () => {
+		// The replacement used to delete the previous object inline. It cannot:
+		// this request has no way to know whether something else still points at
+		// it, so the sweep decides. See docs/specs/media-spec.md.
 		await setUserAvatar('user-1', new ArrayBuffer(8), 'image/webp');
 
-		expect(deleteObject).toHaveBeenCalledWith('users/avatars/user-1.jpg');
+		expect(replaceSlot).toHaveBeenCalledWith(
+			expect.objectContaining({ attachableType: 'user', attachableId: 'user-1', slot: 'avatar' })
+		);
+		expect(deleteObject).not.toHaveBeenCalled();
 	});
 
-	it('does not delete an external OAuth image URL', async () => {
-		selectResults.push([{ image: 'https://lh3.googleusercontent.com/abc' }]);
-
+	it('needs no OAuth-URL guard any more', async () => {
+		// `user.image` may hold a provider URL rather than a key, which the old
+		// inline delete had to special-case. A provider URL was never an R2 object
+		// and so never had a `media` row — there is nothing to detach and nothing
+		// to guard.
 		await setUserAvatar('user-1', new ArrayBuffer(8), 'image/png');
 
 		expect(deleteObject).not.toHaveBeenCalled();
@@ -355,19 +365,10 @@ describe('setUserAvatar', () => {
 });
 
 describe('clearUserAvatar', () => {
-	it('deletes an uploaded avatar key', async () => {
-		selectResults.push([{ image: 'users/avatars/user-1.png' }]);
-
+	it('detaches the slot rather than deleting the object', async () => {
 		await clearUserAvatar('user-1');
 
-		expect(deleteObject).toHaveBeenCalledWith('users/avatars/user-1.png');
-	});
-
-	it('does not delete an external OAuth image URL', async () => {
-		selectResults.push([{ image: 'https://lh3.googleusercontent.com/abc' }]);
-
-		await clearUserAvatar('user-1');
-
+		expect(detachSlot).toHaveBeenCalledWith('user', 'user-1', 'avatar');
 		expect(deleteObject).not.toHaveBeenCalled();
 	});
 });

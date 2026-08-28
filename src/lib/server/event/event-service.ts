@@ -38,7 +38,8 @@ import { staffCreate } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
-import { uploadFile, deleteObject, copyObject } from '$lib/server/storage';
+import { uploadFile, copyObject } from '$lib/server/storage';
+import { detachSlot, findByKey, replaceSlot } from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -197,8 +198,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 
 	// Upload poster outside the transaction (non-critical, idempotent)
 	if (posterFile) {
-		const key = mediaKey('events/posters', row.id, posterFile.contentType);
-		await uploadFile(posterFile.buffer, key, posterFile.contentType);
+		const key = await writeEventPoster(row.id, posterFile);
 		await db
 			.update(event)
 			.set({ posterKey: key, updatedAt: new Date() })
@@ -422,12 +422,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 
 	// Handle poster replacement
 	if (params.posterFile) {
-		if (existing.posterKey) {
-			await deleteObject(existing.posterKey);
-		}
-		const key = mediaKey('events/posters', eventId, params.posterFile.contentType);
-		await uploadFile(params.posterFile.buffer, key, params.posterFile.contentType);
-		updates.posterKey = key;
+		updates.posterKey = await writeEventPoster(eventId, params.posterFile);
 	}
 
 	const [updated] = await db.update(event).set(updates).where(eq(event.id, eventId)).returning();
@@ -551,7 +546,29 @@ export async function unpublishWithNotice(
 				// case there is nothing to preserve and nothing to delete.
 				const moved = await copyObject(row.posterKey, withheldKey);
 				if (moved) {
-					await deleteObject(row.posterKey);
+					// The original is detached, not deleted. Deleting it inline is the
+					// one thing this module may not do — the write path cannot tell
+					// whether another event still points at that object — so the sweep
+					// reclaims it instead.
+					//
+					// That is a real change to this control's timing, and worth naming:
+					// a link handed out for the old key stays live until the next daily
+					// sweep rather than dying with the takedown. The row is already
+					// past the grace window (its `createdAt` is the upload's), so it
+					// goes on the first pass, not a day after that.
+					// The copy is byte-identical, so it inherits the original's
+					// recorded size and type rather than inventing them — a fabricated
+					// byteSize is the one thing the backfill refuses to write, and the
+					// sweep treats a zero as a broken row.
+					const original = await findByKey(row.posterKey);
+					await replaceSlot({
+						attachableType: 'event',
+						attachableId: eventId,
+						slot: 'poster',
+						key: withheldKey,
+						contentType: original?.contentType ?? `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+						byteSize: original?.byteSize ?? 0
+					});
 					nextPosterKey = moved;
 				}
 			} catch (err) {
@@ -732,13 +749,9 @@ export async function remove(eventId: string, userId: string): Promise<void> {
 		}
 	}
 
-	if (existing.posterKey) {
-		try {
-			await deleteObject(existing.posterKey);
-		} catch (err) {
-			captureException(err, { event: 'event.deleted_poster', eventId });
-		}
-	}
+	// Detach, not delete. A recurring series' occurrences share one poster
+	// object, so removing one occurrence must not take the others' image with it.
+	await detachSlot('event', eventId, 'poster');
 
 	await db
 		.delete(contentFlag)
@@ -774,10 +787,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 		}
 	}
 
-	// Delete poster from R2
-	if (existing.posterKey) {
-		await deleteObject(existing.posterKey);
-	}
+	await detachSlot('event', eventId, 'poster');
 
 	// Capture ticket holders before voiding their tickets (the query below
 	// filters on live statuses), then mark the tickets cancelled so they can't
@@ -1474,8 +1484,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 	}
 
 	if (posterFile) {
-		const key = mediaKey('events/posters', row.id, posterFile.contentType);
-		await uploadFile(posterFile.buffer, key, posterFile.contentType);
+		const key = await writeEventPoster(row.id, posterFile);
 		await db
 			.update(event)
 			.set({ posterKey: key, updatedAt: new Date() })
@@ -1484,6 +1493,33 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 	}
 
 	return row;
+}
+
+/**
+ * Upload a poster and point the event's `poster` slot at it, returning the key
+ * for `event.posterKey`.
+ *
+ * That column stays as the read path — 60-odd queries select it inline — with
+ * this as its single writer. What the media tables add underneath is the
+ * object's lifetime: the previous poster is *detached*, never deleted here,
+ * because a recurring series' occurrences may share one object and only the
+ * sweep can see that. See docs/specs/media-spec.md.
+ */
+async function writeEventPoster(
+	eventId: string,
+	posterFile: { buffer: ArrayBuffer; contentType: string }
+): Promise<string> {
+	const key = mediaKey('events/posters', eventId, posterFile.contentType);
+	await uploadFile(posterFile.buffer, key, posterFile.contentType);
+	await replaceSlot({
+		attachableType: 'event',
+		attachableId: eventId,
+		slot: 'poster',
+		key,
+		contentType: posterFile.contentType,
+		byteSize: posterFile.buffer.byteLength
+	});
+	return key;
 }
 
 export interface UpdateBandEventParams {
@@ -1529,12 +1565,7 @@ export async function updateBandEvent(
 	}
 
 	if (params.posterFile) {
-		if (existing.posterKey) {
-			await deleteObject(existing.posterKey);
-		}
-		const key = mediaKey('events/posters', eventId, params.posterFile.contentType);
-		await uploadFile(params.posterFile.buffer, key, params.posterFile.contentType);
-		updates.posterKey = key;
+		updates.posterKey = await writeEventPoster(eventId, params.posterFile);
 	}
 
 	const [updated] = await db.update(event).set(updates).where(eq(event.id, eventId)).returning();
@@ -1553,9 +1584,7 @@ export async function cancelBandEvent(eventId: string, bandId: string): Promise<
 		.set({ status: 'cancelled', updatedAt: new Date() })
 		.where(eq(event.id, eventId));
 
-	if (existing.posterKey) {
-		await deleteObject(existing.posterKey);
-	}
+	await detachSlot('event', eventId, 'poster');
 }
 
 /** Remove a gig's poster. Owner-only, like every other edit. */
@@ -1565,7 +1594,7 @@ export async function clearBandEventPoster(eventId: string, bandId: string): Pro
 	if (existing.bandId !== bandId) throw new Error('Event does not belong to this band');
 	if (!existing.posterKey) return;
 
-	await deleteObject(existing.posterKey);
+	await detachSlot('event', eventId, 'poster');
 	await db
 		.update(event)
 		.set({ posterKey: null, updatedAt: new Date() })

@@ -4,7 +4,8 @@ import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
 import { getOrCreateGroupEntryId, getOrCreateUserEntryId, replaceTags } from './entry-service';
 import { groupMember } from '$lib/server/db/schema/group';
 import { eq, and } from 'drizzle-orm';
-import { deleteObject, uploadFile } from '$lib/server/storage';
+import { uploadFile } from '$lib/server/storage';
+import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
 import { sanitizeBio } from '$lib/utils/markdown';
 import type { BatchItem } from 'drizzle-orm/batch';
@@ -243,43 +244,32 @@ export async function updateBandProfile(bandId: string, userId: string, data: Ba
 
 /** Upload a user's avatar to storage and persist its key on `user.image`. */
 export async function setUserAvatar(userId: string, buffer: ArrayBuffer, contentType: string) {
-	const [row] = await db
-		.select({ image: user.image })
-		.from(user)
-		.where(eq(user.id, userId))
-		.limit(1);
-
-	// Only delete a previously-uploaded avatar key, not an external OAuth URL.
-	if (row?.image && !row.image.startsWith('http')) {
-		try {
-			await deleteObject(row.image);
-		} catch {
-			// Old avatar may not exist — that's fine
-		}
-	}
-
 	const key = mediaKey('users/avatars', userId, contentType);
 	await uploadFile(buffer, key, contentType);
 
+	// Releases whatever the slot held and records the new object. No delete: the
+	// previous object's fate is the sweep's to decide. The OAuth-URL case that
+	// used to need guarding here handles itself — a provider URL was never an R2
+	// key, so it never had a `media` row to detach.
+	await replaceSlot({
+		attachableType: 'user',
+		attachableId: userId,
+		slot: 'avatar',
+		key,
+		contentType,
+		byteSize: buffer.byteLength,
+		uploadedByUserId: userId
+	});
+
+	// `user.image` stays as the read path — it is better-auth's column and is
+	// read in ~15 places — kept in step by this one writer.
 	await db.update(user).set({ image: key, updatedAt: new Date() }).where(eq(user.id, userId));
 	return key;
 }
 
 /** Remove a user's avatar from storage and clear `user.image`. */
 export async function clearUserAvatar(userId: string) {
-	const [row] = await db
-		.select({ image: user.image })
-		.from(user)
-		.where(eq(user.id, userId))
-		.limit(1);
-
-	if (row?.image && !row.image.startsWith('http')) {
-		try {
-			await deleteObject(row.image);
-		} catch {
-			// Avatar may not exist — that's fine
-		}
-	}
+	await detachSlot('user', userId, 'avatar');
 
 	await db.update(user).set({ image: null, updatedAt: new Date() }).where(eq(user.id, userId));
 }

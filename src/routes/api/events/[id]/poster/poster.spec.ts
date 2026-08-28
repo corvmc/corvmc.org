@@ -22,6 +22,13 @@ vi.mock('$lib/server/authorization', () => ({
 	hasAnyRole: vi.fn().mockResolvedValue(true)
 }));
 
+const mockReplaceSlot = vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' });
+const mockDetachSlot = vi.fn();
+vi.mock('$lib/server/media/media-service', () => ({
+	replaceSlot: (...args: unknown[]) => mockReplaceSlot(...args),
+	detachSlot: (...args: unknown[]) => mockDetachSlot(...args)
+}));
+
 vi.mock('$lib/server/event/event-service', () => ({
 	getById: (...args: unknown[]) => mockGetById(...args)
 }));
@@ -108,7 +115,13 @@ describe('POST /api/events/[id]/poster', () => {
 		const res = await POST(req(ok));
 
 		expect(res.status).toBe(200);
-		expect(mockDeleteObject).toHaveBeenCalledWith('events/posters/evt-1.jpg');
+		// Replacing a poster records the new object and detaches the old one; the
+		// sweep reclaims it. Deleting inline would take the image from every other
+		// occurrence of a recurring series.
+		expect(mockReplaceSlot).toHaveBeenCalledWith(
+			expect.objectContaining({ attachableType: 'event', attachableId: 'evt-1', slot: 'poster' })
+		);
+		expect(mockDeleteObject).not.toHaveBeenCalled();
 		expect(mockUploadFile).toHaveBeenCalledOnce();
 		expect(whereSpy).toHaveBeenCalled();
 	});

@@ -8,7 +8,7 @@ import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
-import { browserPort, devPort, previewPort } from './scripts/lib/checkout-ports';
+import { browserPort, devPort, previewPort, storybookPort } from './scripts/lib/checkout-ports';
 const dirname =
 	typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
@@ -134,6 +134,10 @@ export default defineConfig({
 					browser: {
 						enabled: true,
 						headless: true,
+						// Its own port. Without one this project takes vitest's default,
+						// which is the number `client` already binds — two browser servers
+						// starting together in the same run, racing for one port.
+						api: { port: storybookPort(dirname), strictPort: true },
 						provider: playwright({}),
 						instances: [
 							{

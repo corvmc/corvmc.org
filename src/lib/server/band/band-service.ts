@@ -14,7 +14,8 @@ import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/s
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { deleteObject, uploadFile } from '$lib/server/storage';
+import { uploadFile } from '$lib/server/storage';
+import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { captureException } from '$lib/server/sentry';
@@ -209,14 +210,10 @@ export async function deleteBand(bandId: string) {
 		await cancelReservation(r.id, row.ownerId, 'Band deleted', { staffOverride: true });
 	}
 
-	// Delete avatar from R2
-	if (row.avatarKey) {
-		try {
-			await deleteObject(row.avatarKey);
-		} catch {
-			// Avatar may not exist — that's fine
-		}
-	}
+	// Release the avatar. Not a delete: `media_attachment` has no foreign key to
+	// the group by design, so nothing cascades here, and whether the object can
+	// be reclaimed is the sweep's question. See docs/specs/media-spec.md.
+	await detachSlot('group', bandId, 'avatar');
 
 	// Delete band (group_member rows cascade)
 	await db.delete(group).where(eq(group.id, bandId));
@@ -887,17 +884,22 @@ export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, content
 		.limit(1);
 	if (!row) throw new BandNotFoundError();
 
-	if (row.avatarKey) {
-		try {
-			await deleteObject(row.avatarKey);
-		} catch {
-			// Old avatar may not exist — that's fine
-		}
-	}
-
 	const key = mediaKey('bands/avatars', bandId, contentType);
 	await uploadFile(buffer, key, contentType);
 
+	// Records the new object and releases the old one. The previous avatar is
+	// detached rather than deleted — see `replaceSlot`.
+	await replaceSlot({
+		attachableType: 'group',
+		attachableId: bandId,
+		slot: 'avatar',
+		key,
+		contentType,
+		byteSize: buffer.byteLength
+	});
+
+	// `group.avatarKey` stays as the read path: it is selected inline by dozens
+	// of existing queries, and one writer keeps it in step with the slot above.
 	await db.update(group).set({ avatarKey: key, updatedAt: new Date() }).where(eq(group.id, bandId));
 	return key;
 }
@@ -911,13 +913,7 @@ export async function clearBandAvatar(bandId: string) {
 		.limit(1);
 	if (!row) throw new BandNotFoundError();
 
-	if (row.avatarKey) {
-		try {
-			await deleteObject(row.avatarKey);
-		} catch {
-			// Avatar may not exist — that's fine
-		}
-	}
+	await detachSlot('group', bandId, 'avatar');
 
 	await db
 		.update(group)
