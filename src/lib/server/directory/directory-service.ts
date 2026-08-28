@@ -50,6 +50,28 @@ function tagCondition<W>(kind: 'genre' | 'instrument', values: string[]): W {
 	} as W;
 }
 
+/**
+ * The predicates a listing carries regardless of what it is attached to: it is
+ * live, it is visible to this audience, and it matches the search term.
+ *
+ * Members and bands keep separate query builders on purpose — their remaining
+ * filters genuinely differ (instruments and three availability booleans on one
+ * side, `lookingFor: 'members'` on the other), and folding them into a single
+ * `OR` over both subject types would put a member's visibility gate and a
+ * band's into one expression. That is the one place in this file where a
+ * mistake exposes somebody who opted out. This shares what is actually shared.
+ */
+function listingConditions<W>(visibility: 'members' | 'public', search?: string): W[] {
+	const conditions: W[] = [
+		{ deletedAt: { isNull: true } } as W,
+		(visibility === 'public'
+			? { visibility: 'public' }
+			: { visibility: { in: ['members', 'public'] } }) as W
+	];
+	if (search) conditions.push({ name: { like: `%${search}%` } } as W);
+	return conditions;
+}
+
 // ---------------------------------------------------------------------------
 // Member queries
 // ---------------------------------------------------------------------------
@@ -74,19 +96,9 @@ function memberWhereConditions(
 ): MemberWhere {
 	const conditions: MemberWhere[] = [
 		{ userId: { isNotNull: true } },
-		{ deletedAt: { isNull: true } },
-		{ user: { deletedAt: { isNull: true } } }
+		{ user: { deletedAt: { isNull: true } } },
+		...listingConditions<MemberWhere>(visibility, filters?.search)
 	];
-
-	if (visibility === 'public') {
-		conditions.push({ visibility: 'public' });
-	} else {
-		conditions.push({ visibility: { in: ['members', 'public'] } });
-	}
-
-	if (filters?.search) {
-		conditions.push({ name: { like: `%${filters.search}%` } });
-	}
 
 	if (filters?.instruments?.length) {
 		conditions.push(tagCondition<MemberWhere>('instrument', filters.instruments));
@@ -320,21 +332,11 @@ type BandWhere = NonNullable<
 function bandWhereConditions(visibility: 'members' | 'public', filters?: BandFilters): BandWhere {
 	const conditions: BandWhere[] = [
 		{ groupId: { isNotNull: true } },
-		{ deletedAt: { isNull: true } },
 		// Only bands. A club or committee (phase 5) is a group with an entry and
 		// no place on this page.
-		{ group: { kind: 'band', deletedAt: { isNull: true } } }
+		{ group: { kind: 'band', deletedAt: { isNull: true } } },
+		...listingConditions<BandWhere>(visibility, filters?.search)
 	];
-
-	if (visibility === 'public') {
-		conditions.push({ visibility: 'public' });
-	} else {
-		conditions.push({ visibility: { in: ['members', 'public'] } });
-	}
-
-	if (filters?.search) {
-		conditions.push({ name: { like: `%${filters.search}%` } });
-	}
 
 	if (filters?.genres?.length) {
 		conditions.push(tagCondition<BandWhere>('genre', filters.genres));

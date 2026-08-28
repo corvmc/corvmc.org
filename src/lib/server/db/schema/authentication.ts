@@ -111,6 +111,10 @@ export const user = sqliteTable(
 	(t) => [uniqueIndex('user_member_number_unique').on(t.memberNumber)]
 );
 
+// `user_instrument` and `user_genre` folded into `directory_tag` in phase 3a and
+// nothing reads or writes them any more; the declarations survive only so
+// `pnpm db:generate` does not emit `DROP TABLE` before phase 3c. See
+// `src/lib/server/db/schema/band.ts` for the same note on `band_genre`.
 export const userInstrument = sqliteTable(
 	'user_instrument',
 	{

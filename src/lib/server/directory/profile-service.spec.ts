@@ -63,9 +63,7 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 		directoryContact: 'directory_contact',
 		links: 'links',
 		updatedAt: 'updated_at'
-	},
-	userInstrument: { userId: 'user_id', instrument: 'instrument' },
-	userGenre: { userId: 'user_id', genre: 'genre' }
+	}
 }));
 
 vi.mock('$lib/server/db/schema/group', () => ({

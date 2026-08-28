@@ -3,18 +3,10 @@ import * as schema from './index';
 
 export const relations = defineRelations(schema, (t) => ({
 	user: {
-		instruments: t.many.userInstrument(),
-		genres: t.many.userGenre(),
 		directoryEntry: t.one.directoryEntry({ from: t.user.id, to: t.directoryEntry.userId }),
 		sessions: t.many.session(),
 		accounts: t.many.account(),
 		groupMembers: t.many.groupMember()
-	},
-	userInstrument: {
-		user: t.one.user({ from: t.userInstrument.userId, to: t.user.id })
-	},
-	userGenre: {
-		user: t.one.user({ from: t.userGenre.userId, to: t.user.id })
 	},
 	session: {
 		user: t.one.user({ from: t.session.userId, to: t.user.id })
@@ -23,7 +15,6 @@ export const relations = defineRelations(schema, (t) => ({
 		user: t.one.user({ from: t.account.userId, to: t.user.id })
 	},
 	group: {
-		genres: t.many.bandGenre(),
 		directoryEntry: t.one.directoryEntry({ from: t.group.id, to: t.directoryEntry.groupId }),
 		members: t.many.groupMember(),
 		/** Events this band OWNS. Shows it merely played are `lineups`. */
@@ -35,9 +26,6 @@ export const relations = defineRelations(schema, (t) => ({
 			to: t.eventBand.bandId,
 			alias: 'eventBand_band'
 		})
-	},
-	bandGenre: {
-		band: t.one.group({ from: t.bandGenre.bandId, to: t.group.id })
 	},
 	directoryEntry: {
 		user: t.one.user({ from: t.directoryEntry.userId, to: t.user.id }),

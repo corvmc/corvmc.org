@@ -36,8 +36,6 @@ function scryptHash(password: string): Promise<string> {
 import {
 	user,
 	account,
-	userInstrument,
-	userGenre,
 	type DirectoryContact,
 	type DirectoryVisibility,
 	type ProfileLink
@@ -53,7 +51,6 @@ import {
 	paymentCache as paymentRecord
 } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
-import { bandGenre } from '../src/lib/server/db/schema/band';
 import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/directory';
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { group } from '../src/lib/server/db/schema/group';
@@ -130,6 +127,17 @@ function ptDate(daysOffset: number, hour: number, minute = 0): Date {
 	d.setUTCHours(hour + 7, minute, 0, 0);
 	return d;
 }
+
+/**
+ * Tags collected while users and bands are seeded, keyed by the SUBJECT id.
+ *
+ * `directory_tag` hangs off the entry, and entries are created at the very end
+ * from everything in the database — so the tags cannot be written at the same
+ * moment as the user or band they describe. Collecting them here keeps that one
+ * ordering constraint in one place instead of making each seed function know
+ * about entries.
+ */
+const pendingTags: { subjectId: string; kind: 'genre' | 'instrument'; value: string }[] = [];
 
 async function batchInsert<T extends Record<string, unknown>>(
 	table: any,
@@ -645,12 +653,11 @@ async function seedUsers(count: number): SeedUser[] {
 			})
 			.returning();
 
-		// Junction tables for instruments and genres
-		for (const instrument of memberInstruments) {
-			await db.insert(userInstrument).values({ userId: id, instrument });
+		for (const value of memberInstruments) {
+			pendingTags.push({ subjectId: id, kind: 'instrument', value });
 		}
-		for (const genre of memberGenres) {
-			await db.insert(userGenre).values({ userId: id, genre });
+		for (const value of memberGenres) {
+			pendingTags.push({ subjectId: id, kind: 'genre', value });
 		}
 
 		users.push({ ...u, email });
@@ -1379,8 +1386,8 @@ async function seedBands(users: SeedUser[]) {
 		);
 		bands.push(b);
 
-		for (const g of genres) {
-			await db.insert(bandGenre).values({ bandId: b.id, genre: g });
+		for (const value of genres) {
+			pendingTags.push({ subjectId: b.id, kind: 'genre', value });
 		}
 
 		const memberCount = randomInt(1, 3);
@@ -4202,26 +4209,19 @@ async function seedDirectoryEntries() {
 	const byGroup = new Map(entries.filter((e) => 'groupId' in e).map((e: any) => [e.groupId, e.id]));
 	const byUser = new Map(entries.filter((e) => 'userId' in e).map((e: any) => [e.userId, e.id]));
 
-	const bandGenres = await db.select().from(bandGenre);
-	const userGenres = await db.select().from(userGenre);
-	const userInstruments = await db.select().from(userInstrument);
-
-	// The three source tables have no unique constraint, so fold through a Set
-	// exactly as the backfill's ON CONFLICT DO NOTHING does. Values are copied
-	// verbatim — normalising case would change what the directory renders.
+	// Deduped through a Set the way the backfill's ON CONFLICT DO NOTHING does:
+	// `directory_tag` has a unique index that the three tables it replaced never
+	// had, so a subject picked the same genre twice would abort the insert.
 	const seen = new Set<string>();
 	const tags: { entryId: string; kind: 'genre' | 'instrument'; value: string }[] = [];
-	const addTag = (entryId: string | undefined, kind: 'genre' | 'instrument', value: string) => {
-		if (!entryId) return;
+	for (const { subjectId, kind, value } of pendingTags) {
+		const entryId = byUser.get(subjectId) ?? byGroup.get(subjectId);
+		if (!entryId) continue;
 		const key = `${entryId}:${kind}:${value}`;
-		if (seen.has(key)) return;
+		if (seen.has(key)) continue;
 		seen.add(key);
 		tags.push({ entryId, kind, value });
-	};
-
-	for (const row of bandGenres) addTag(byGroup.get(row.bandId), 'genre', row.genre);
-	for (const row of userGenres) addTag(byUser.get(row.userId), 'genre', row.genre);
-	for (const row of userInstruments) addTag(byUser.get(row.userId), 'instrument', row.instrument);
+	}
 
 	// 3 columns × 30 = 90.
 	await batchInsert(directoryTag, tags, 30);
