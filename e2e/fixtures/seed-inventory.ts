@@ -39,15 +39,31 @@ export const SEED_ASSET_TAG = 'E2E-000001';
 /** A unit that arrives without a sticker, so tag binding has something to bind. */
 export const SEED_UNTAGGED_ASSET_ID = 'e2e-inv-asset-amp-2';
 
-/** A bulk consumable — counted, and it does not come back. */
+/** A bulk consumable — counted, and it does not come back. Well stocked. */
 export const SEED_CONSUMABLE_ID = 'e2e-inv-item-strings';
 export const SEED_CONSUMABLE_NAME = 'E2E Test Strings';
 export const SEED_CONSUMABLE_RECEIVED = 20;
 export const SEED_CONSUMABLE_REORDER_POINT = 4;
 
+/**
+ * A second consumable, deliberately below its reorder point.
+ *
+ * Without one, the restock list and the dashboard's low-stock section only ever
+ * render their empty states in e2e — the populated path, which is the entire
+ * feature, would go untested.
+ */
+export const SEED_LOW_ID = 'e2e-inv-item-batteries';
+export const SEED_LOW_NAME = 'E2E Test Batteries';
+export const SEED_LOW_RECEIVED = 6;
+export const SEED_LOW_CONSUMED = 4;
+export const SEED_LOW_REORDER_POINT = 5;
+export const SEED_LOW_REORDER_QUANTITY = 20;
+/** 6 received − 4 used = 2, against a point of 5. */
+export const SEED_LOW_ON_HAND = SEED_LOW_RECEIVED - SEED_LOW_CONSUMED;
+
 const SEED_ACQUISITION_ID = 'e2e-inv-acquisition';
 const ASSET_IDS = [SEED_ASSET_ID, SEED_UNTAGGED_ASSET_ID];
-const ITEM_IDS = [SEED_ITEM_ID, SEED_CONSUMABLE_ID];
+const ITEM_IDS = [SEED_ITEM_ID, SEED_CONSUMABLE_ID, SEED_LOW_ID];
 
 async function ensureCategory(db: DrizzleD1Database) {
 	const [existing] = await db
@@ -105,6 +121,16 @@ export async function seedInventory(): Promise<void> {
 				isLoanable: false,
 				reorderPoint: SEED_CONSUMABLE_REORDER_POINT,
 				reorderQuantity: 12
+			},
+			{
+				id: SEED_LOW_ID,
+				name: SEED_LOW_NAME,
+				categoryId: SEED_CATEGORY_ID,
+				kind: 'bulk',
+				unitOfMeasure: 'box',
+				isLoanable: false,
+				reorderPoint: SEED_LOW_REORDER_POINT,
+				reorderQuantity: SEED_LOW_REORDER_QUANTITY
 			}
 		]);
 
@@ -131,6 +157,13 @@ export async function seedInventory(): Promise<void> {
 				itemId: SEED_CONSUMABLE_ID,
 				quantity: SEED_CONSUMABLE_RECEIVED,
 				unitValueCents: 700
+			},
+			{
+				id: 'e2e-inv-line-batteries',
+				acquisitionId: SEED_ACQUISITION_ID,
+				itemId: SEED_LOW_ID,
+				quantity: SEED_LOW_RECEIVED,
+				unitValueCents: 1400
 			}
 		]);
 
@@ -187,6 +220,26 @@ export async function seedInventory(): Promise<void> {
 				locationId: SEED_LOCATION_ID,
 				acquisitionId: SEED_ACQUISITION_ID,
 				occurredAt: now
+			},
+			{
+				id: 'e2e-inv-mv-batteries-in',
+				itemId: SEED_LOW_ID,
+				quantity: SEED_LOW_RECEIVED,
+				reason: 'receive',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_ACQUISITION_ID,
+				occurredAt: now
+			},
+			// Used down below the reorder point through the ledger, not by writing
+			// a total — the same way the app would do it.
+			{
+				id: 'e2e-inv-mv-batteries-out',
+				itemId: SEED_LOW_ID,
+				quantity: -SEED_LOW_CONSUMED,
+				reason: 'consume',
+				locationId: SEED_LOCATION_ID,
+				occurredAt: now,
+				notes: 'Wireless packs'
 			}
 		]);
 	});

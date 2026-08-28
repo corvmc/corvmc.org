@@ -1,11 +1,11 @@
 # Inventory & Assets — gear and consumables on one ledger
 
-> **Status: Phase 1 shipped (#286). Phases 2–4 unbuilt.**
+> **Status: Phases 1–2 shipped (#286 and follow-up). Phases 3–4 unbuilt.**
 >
 > How the shipped half _behaves_ is documented in
 > [business-workflows §6](../development/business-workflows.md#6-inventory-gear-and-consumables),
 > which is where behaviour belongs. What survives here is the design rationale — the
-> options weighed and rejected — plus the three phases that are still only intent.
+> options weighed and rejected — plus the two phases that are still only intent.
 > Read [Phases](#phases) for the split.
 
 ## Purpose
@@ -430,10 +430,32 @@ request with member votes attached — which is exactly what the Gear Library en
 in `IDEAS.md` describes ("like a library purchase request … prioritised, possibly
 informed by member voting"), shipped already under a different name.
 
-So no purchase-request queue gets built. Phase 2 adds the link: a `planned`
-`gear_equipment` suggestion resolves into a catalog item, and the acquisition
-that fulfils it closes the suggestion as `done`. The **Donation Wishlist** idea
-is then the public projection of those same rows, not a fourth list to maintain.
+So no purchase-request queue gets built.
+
+**And no stored link either.** The first draft of this spec had a `planned`
+suggestion resolve into a catalog item, with the acquisition that fulfils it
+closing the suggestion automatically. That needs a foreign key plus a hook in
+`recordAcquisition`, and it was the largest item in Phase 2. Dropped, for three
+reasons:
+
+- `respondToSuggestion` already sets the status **and** writes a public response
+  in one action. A staffer marking the request `done` types "Bought — Yamaha
+  Stage Custom, it's in the main room", and the member learns everything the
+  automation would have told them. That is zero new code, not less code.
+- A foreign key asserts that one suggestion becomes one item, which is often
+  false. "Better vocal mics" may be three purchases; one purchase may satisfy two
+  requests. Prose carries that natively; a column does not, and a join table
+  would only be machinery to work around a claim we need not make.
+- The volume is a handful of gear requests a year. The automation costs more than
+  the labour it saves.
+
+What is genuinely lost: nothing can query which suggestions produced gear, and
+the author is not pinged — they see the response next time they open the board.
+Notifying on a staff response is worth doing, but it applies to every category
+and belongs to the suggestion board rather than to inventory.
+
+The **Donation Wishlist** idea remains the public projection of those same rows,
+not a fourth list to maintain.
 
 Reorder points cover replenishing the known; the suggestions board covers demand
 for the unknown. Between them there is nothing left for a wishlist table to do.
@@ -505,6 +527,9 @@ the member surface.
 ## Surfaces
 
 **Staff** — `/staff/inventory` (items, filterable by kind and low stock),
+`/staff/inventory/restock` (everything at or below its reorder point, grouped by
+category, with the quantity to buy and a Receive action per row),
+`/staff/inventory/spend` (purchase spend per category over a window),
 `/staff/inventory/items/[id]` (the item, its assets, its movement history),
 `/staff/inventory/assets/[id]` (one unit: condition, location, loans, repairs),
 `/staff/inventory/loans` and `/staff/inventory/loans/[id]` (the existing loan
@@ -531,11 +556,25 @@ the member catalog, tag binding and `/a/[tag]` scan resolution. Replaced the
 equipment module outright. Behaviour is documented in
 [business-workflows §6](../development/business-workflows.md#6-inventory-gear-and-consumables).
 
-**Phase 2 — spend and replenishment.** 📋 The `supplier` table normalising what
-Phase 1 records as a free-text source; the low-stock surface on the staff
-_dashboard_ (the item list already flags it); a spend-over-time report UI over
-`spendByCategory()`, which exists and is untested against real data; and the link
-from the suggestions board described in [Acquiring things](#acquiring-things).
+**Phase 2 — spend and replenishment. ✅ Shipped.** Low stock on the staff
+dashboard, a `/staff/inventory/restock` shopping list, and a
+`/staff/inventory/spend` report by category over a window. `spendByCategory()`
+and `inKindContributions()` gained the coverage they shipped without — see
+`reports.spec.ts`, which runs them against a real in-memory SQLite because a
+mocked `db` cannot tell you a `GROUP BY` is wrong.
+
+**No schema was added.** Two things the original Phase 2 called for were dropped
+on purpose:
+
+- **The `supplier` table.** It would normalise `acquisition.sourceName` to give
+  vendor-level spend. The collective buys from a handful of shops, so free text
+  plus a `GROUP BY` answers that; and the same _local business_ entity is wanted
+  by the **Local Resources Directory** and **Affiliate Commissions** entries in
+  IDEAS.md. Building a thin `supplier` now means two tables describing Guitar
+  Center later. Revisit when free text actually fragments, or when one of those
+  features forces the entity into being.
+- **A stored link from a suggestion to the item it became.** See
+  [Acquiring things](#acquiring-things).
 
 **Phase 3 — nonprofit asset reporting.** 📋 The intake _fields_ and
 `inKindContributions()` landed in Phase 1, because they are not backfillable —

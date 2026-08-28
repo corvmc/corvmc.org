@@ -432,6 +432,25 @@ checking out a serialized item without naming a unit throws
 `AssetRequiredError`. Equipment credits are the same ledger as free hours
 (`credit-service.ts`, type `equipment_credits`).
 
+### Replenishment and spend
+
+A `bulk` item can carry a reorder point. `listLowStock()` in `stock-service.ts`
+returns everything at or below it, emptiest first, with a `suggestedOrder` (the
+reorder quantity where one is set, otherwise enough to reach the point) and an
+`isOut` flag. It surfaces twice: the top five on the staff dashboard, and the
+whole list at `/staff/inventory/restock`, grouped by category with a Receive
+action per row so a shop trip can be recorded from the list it came off.
+
+`/staff/inventory/spend` reports purchase spend per category over a window
+(default: the current calendar year) via `spendByCategory()`. **Donations and
+grants are excluded** — a gift is not spend, and counting one would overstate the
+budget by exactly what was given. `inKindContributions()` exists for the
+gifts-in-kind disclosure but has no screen yet; that is Phase 3.
+
+Both queries are covered by `src/lib/server/inventory/reports.spec.ts`, which
+runs them against a real in-memory SQLite rather than a mocked `db` — a mock
+returns whatever the test told it to and cannot catch a wrong `GROUP BY`.
+
 ### Scanning a tag
 
 `/a/[tag]` renders nothing. Its `+page.server.ts` resolves the tag and hands the

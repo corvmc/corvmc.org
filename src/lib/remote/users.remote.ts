@@ -4,6 +4,7 @@ import { SHORT_TEXT_MAX } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
+import { listLowStock } from '$lib/server/inventory/stock-service';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
@@ -71,16 +72,21 @@ export const getStaffDashboard = query(async () => {
 	// No `permissions` count: the spatie-derived permission tables are populated by
 	// the Postgres migrator and read by nothing in this app, so the stat was always
 	// 0. See src/lib/server/db/schema/authorization.ts.
-	const [totalUsersResult, totalRolesResult, newUsersResult, recentUsers] = await Promise.all([
-		db.select({ value: count() }).from(user),
-		db.select({ value: count() }).from(role),
-		db.select({ value: count() }).from(user).where(gte(user.createdAt, startOfMonth)),
-		db
-			.select({ member: memberRefColumns(), createdAt: user.createdAt })
-			.from(user)
-			.orderBy(desc(user.createdAt))
-			.limit(5)
-	]);
+	const [totalUsersResult, totalRolesResult, newUsersResult, recentUsers, lowStock] =
+		await Promise.all([
+			db.select({ value: count() }).from(user),
+			db.select({ value: count() }).from(role),
+			db.select({ value: count() }).from(user).where(gte(user.createdAt, startOfMonth)),
+			db
+				.select({ member: memberRefColumns(), createdAt: user.createdAt })
+				.from(user)
+				.orderBy(desc(user.createdAt))
+				.limit(5),
+			// Folded in rather than fetched by the component: the dashboard gets one
+			// load-bearing query, and a reorder point that only shows up on a page
+			// nobody opens is not doing its job.
+			listLowStock()
+		]);
 
 	return {
 		stats: {
@@ -88,6 +94,11 @@ export const getStaffDashboard = query(async () => {
 			totalRoles: totalRolesResult[0].value,
 			newUsersThisMonth: newUsersResult[0].value
 		},
+		// Capped: the dashboard is a glance, not the list. `/staff/inventory/restock`
+		// is where the whole thing lives, and the count says whether it is worth
+		// opening.
+		lowStock: lowStock.slice(0, 5),
+		lowStockCount: lowStock.length,
 		recentUsers: recentUsers.map((u) => ({
 			id: u.member.id,
 			createdAt: u.createdAt,

@@ -308,6 +308,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/inventory/restock",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inventory/spend",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/marketing/audiences",
 		"panel": "staff"
 	},

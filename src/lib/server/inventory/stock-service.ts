@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
 import {
+	equipmentCategory,
 	inventoryAsset,
 	inventoryItem,
 	inventoryLoan,
@@ -307,9 +308,11 @@ export async function listLowStock() {
 	const rows = await db
 		.select({
 			item: inventoryItem,
+			category: equipmentCategory,
 			onHand: sql<number>`COALESCE(${onHand.qty}, 0)`
 		})
 		.from(inventoryItem)
+		.innerJoin(equipmentCategory, eq(inventoryItem.categoryId, equipmentCategory.id))
 		.leftJoin(onHand, eq(inventoryItem.id, onHand.itemId))
 		.where(
 			and(
@@ -318,7 +321,24 @@ export async function listLowStock() {
 				sql`COALESCE(${onHand.qty}, 0) <= ${inventoryItem.reorderPoint}`
 			)
 		)
-		.orderBy(inventoryItem.name);
+		// Emptiest first: the shopping list should open on whatever ran out, not
+		// on whatever happens to sort first alphabetically.
+		.orderBy(sql`COALESCE(${onHand.qty}, 0) - ${inventoryItem.reorderPoint}`, inventoryItem.name);
 
-	return rows.map((r) => ({ ...r.item, onHand: Number(r.onHand) }));
+	return rows.map((r) => ({
+		...r.item,
+		category: r.category,
+		onHand: Number(r.onHand),
+		/**
+		 * How many to buy. The reorder quantity is the intended order size, so it
+		 * wins where one is set; without it, buy back up to the point. Never less
+		 * than one — an item at exactly its point is on the list precisely because
+		 * it needs restocking.
+		 */
+		suggestedOrder: Math.max(
+			1,
+			r.item.reorderQuantity ?? (r.item.reorderPoint ?? 0) - Number(r.onHand)
+		),
+		isOut: Number(r.onHand) <= 0
+	}));
 }
