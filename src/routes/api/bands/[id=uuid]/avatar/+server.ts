@@ -49,7 +49,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	await uploadFile(buffer, key, file.type);
 
 	// Records the object and releases the old one. Nothing here deletes: see
-	// docs/specs/media-spec.md.
+	// docs/specs/shipped/media-spec.md.
 	await replaceSlot({
 		attachableType: 'group',
 		attachableId: bandId,

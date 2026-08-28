@@ -212,7 +212,7 @@ export async function deleteBand(bandId: string) {
 
 	// Release the avatar. Not a delete: `media_attachment` has no foreign key to
 	// the group by design, so nothing cascades here, and whether the object can
-	// be reclaimed is the sweep's question. See docs/specs/media-spec.md.
+	// be reclaimed is the sweep's question. See docs/specs/shipped/media-spec.md.
 	await detachSlot('group', bandId, 'avatar');
 
 	// Delete band (group_member rows cascade)

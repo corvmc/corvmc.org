@@ -488,7 +488,7 @@ async function processEventSeries(
 		// phase 4 nothing in a request path deletes an object — cancelling detaches,
 		// and the sweep only reclaims what no attachment points at — so sharing is
 		// now the safe option rather than the dangerous one, and a 52-week series
-		// holds one JPEG instead of 52. See docs/specs/media-spec.md.
+		// holds one JPEG instead of 52. See docs/specs/shipped/media-spec.md.
 		if (prototype.posterKey) {
 			try {
 				const attached = await attachExisting('event', newEventId, 'poster', prototype.posterKey);

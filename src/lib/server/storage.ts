@@ -73,7 +73,7 @@ export async function deleteObject(key: string): Promise<void> {
  * It used to have a second caller — recurring-event generation copied the
  * prototype's poster per occurrence. It no longer does: occurrences share one
  * object now that nothing in a request path deletes one. See
- * docs/specs/media-spec.md.
+ * docs/specs/shipped/media-spec.md.
  */
 export async function copyObject(srcKey: string, destKey: string): Promise<string | null> {
 	const bucket = getBucket();

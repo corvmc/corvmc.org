@@ -344,7 +344,7 @@ describe('setUserAvatar', () => {
 	it('records the new object and releases the slot, without deleting anything', async () => {
 		// The replacement used to delete the previous object inline. It cannot:
 		// this request has no way to know whether something else still points at
-		// it, so the sweep decides. See docs/specs/media-spec.md.
+		// it, so the sweep decides. See docs/specs/shipped/media-spec.md.
 		await setUserAvatar('user-1', new ArrayBuffer(8), 'image/webp');
 
 		expect(replaceSlot).toHaveBeenCalledWith(
