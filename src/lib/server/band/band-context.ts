@@ -1,12 +1,22 @@
 import { error } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
-import { requireUser, hasAnyRole } from '$lib/server/authorization';
-import { getBySlug, getUserRole } from '$lib/server/band/band-service';
+import { requireUser } from '$lib/server/authorization';
+import { getBySlug } from '$lib/server/band/band-service';
+import { requireGroupRole, type GroupContext } from '$lib/server/group/group-context';
 
 /**
- * Resolve a band from the current request's `params.slug`.
- * Throws 400 if the request carries no slug, 404 if no such band exists.
+ * @deprecated Phase 4 of docs/specs/groups-spec.md replaces these with
+ * `requireGroupRole(ref, minRole, opts)` from `$lib/server/group/group-context`,
+ * which takes the group as an explicit argument.
  *
+ * Everything here is a thin wrapper that reads `params.slug` and passes it on,
+ * kept for one release so the guard and the call-site port land in separate
+ * reviewable diffs. `params` in a remote function describe the *calling page*
+ * and come from a client-supplied header, which is exactly why they are going
+ * away — see the ref doc on `GroupRef`.
+ */
+
+/**
  * The slug cannot be asserted non-null. Remote functions are their own endpoint
  * under `/_app/remote/...`; they do not run inside a route load, and the
  * pathname their params are resolved against comes from a client-supplied
@@ -16,67 +26,54 @@ import { getBySlug, getUserRole } from '$lib/server/band/band-service';
  * an undefined bind parameter and turned a raced navigation into a 500
  * (`D1_TYPE_ERROR: Type 'undefined' not supported`).
  */
-export async function requireBandBySlug() {
+function slugFromRequest(): string {
 	const { params } = getRequestEvent();
 	const slug = params.slug;
 	if (!slug) throw error(400, 'No band in request context');
-	const band = await getBySlug(slug);
+	return slug;
+}
+
+/**
+ * Band-shaped view of a group context, for the call sites not yet ported.
+ *
+ * `requireUser()` runs before the slug is read so a signed-out caller still
+ * gets 401 rather than the 400 a missing slug would otherwise produce first —
+ * the order these guards had before they delegated.
+ */
+async function bandContext(minRole: 'owner' | 'admin' | 'member', opts?: { allowStaff?: boolean }) {
+	requireUser();
+	const ctx: GroupContext = await requireGroupRole({ slug: slugFromRequest() }, minRole, opts);
+	return { user: ctx.user, band: ctx.group, role: ctx.role };
+}
+
+/** @deprecated Resolve the group explicitly and use `requireGroupRole`. */
+export async function requireBandBySlug() {
+	const band = await getBySlug(slugFromRequest());
 	if (!band) throw error(404, 'Band not found');
 	return band;
 }
 
-/**
- * Require that the current user is a member of the band (resolved from slug).
- * Returns { user, band, role }.
- */
+/** @deprecated Use `requireGroupRole({ slug }, 'member')`. */
 export async function requireBandMember() {
-	const user = requireUser();
-	const band = await requireBandBySlug();
-	const role = await getUserRole(band.id, user.id);
-	if (!role) throw error(403, 'Not a member of this band');
-	return { user, band, role };
+	return bandContext('member');
 }
 
-/**
- * Require membership OR staff, for band-panel *reads*.
- *
- * Staff administer band panels (`getBandLayout` falls back to `userRole:
- * 'staff'`), so a plain `requireBandMember` would lock them out. Mutations stay
- * on `requireBandAdmin` — this is the read-side guard, and it exists because
- * `requireUser()` alone let any signed-in user pull another band's drafts.
- */
+/** @deprecated Use `requireGroupRole({ slug }, 'member', { allowStaff: true })`. */
 export async function requireBandMemberOrStaff() {
-	const user = requireUser();
-	const band = await requireBandBySlug();
-	const role = await getUserRole(band.id, user.id);
-	if (role) return { user, band, role };
-
-	if (await hasAnyRole(user.id, ['admin', 'staff'])) {
-		return { user, band, role: 'staff' as const };
-	}
-	throw error(403, 'Not a member of this band');
+	return bandContext('member', { allowStaff: true });
 }
 
-const HIERARCHY: Record<string, number> = { owner: 0, admin: 1, member: 2 };
-
-/**
- * Require that the current user holds at least `minRole` in the band.
- * Role hierarchy: owner > admin > member.
- */
+/** @deprecated Use `requireGroupRole({ slug }, minRole)`. */
 export async function requireBandRole(minRole: 'owner' | 'admin' | 'member') {
-	const ctx = await requireBandMember();
-	if (HIERARCHY[ctx.role] > HIERARCHY[minRole]) {
-		throw error(403, 'Insufficient permissions');
-	}
-	return ctx;
+	return bandContext(minRole);
 }
 
-/** Shorthand: require at least admin role in the band. */
+/** @deprecated Use `requireGroupRole({ slug }, 'admin')`. */
 export async function requireBandAdmin() {
 	return requireBandRole('admin');
 }
 
-/** Shorthand: require owner role in the band. */
+/** @deprecated Use `requireGroupRole({ slug }, 'owner')`. */
 export async function requireBandOwner() {
 	return requireBandRole('owner');
 }
