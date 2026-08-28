@@ -5,6 +5,8 @@
 		IconStar,
 		IconCalendarEvent,
 		IconAddressBook,
+		IconTool,
+		IconPackage,
 		IconPlus,
 		IconHelp,
 		IconMetronome,
@@ -54,6 +56,10 @@
 		events: IconCalendarEvent,
 		'events-submit': IconPlus,
 		directory: IconAddressBook,
+		// Matches the staff panel's Inventory glyph, so the same thing looks the
+		// same on both sides.
+		equipment: IconTool,
+		'equipment-loans': IconPackage,
 		volunteer: IconHeartHandshake,
 		suggestions: IconBulb,
 		profile: IconUser,
@@ -62,7 +68,10 @@
 		membership: IconStar
 	};
 
-	let navInput = $derived({ features: layout.features });
+	let navInput = $derived({
+		features: layout.features,
+		hasLoanableEquipment: layout.hasLoanableEquipment
+	});
 	let mainItems = $derived(memberNavMain(navInput));
 	let footerItems = $derived(memberNavFooter(navInput));
 

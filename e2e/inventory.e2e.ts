@@ -134,6 +134,28 @@ test.describe('inventory', () => {
 	 * Replenishment. A reorder point that only draws a badge on a detail page is
 	 * not doing anything — these pin that it reaches somewhere a person looks.
 	 */
+	/**
+	 * The Equipment row is derived from the catalogue, not from a flag, so it has
+	 * to be checked against a signed-in member rather than asserted in a unit
+	 * test alone — the unit spec pins the branch, this pins the wiring from
+	 * `getMemberLayout` through to the rendered sidebar.
+	 */
+	test('the member nav offers Equipment once there is something to lend', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/member');
+
+		// `aside ul.menu`, the same handle panel-nav.e2e.ts uses — the sidebar is
+		// a list inside an <aside>, not a <nav>.
+		const nav = page.locator('aside ul.menu').first();
+		await expect(nav.getByRole('link', { name: 'Equipment', exact: true })).toBeVisible();
+
+		// The child only renders once the section is open — `NavCollapsible` keys
+		// that off the path, the same way "Add a Show" hides under Events. So it
+		// is checked from inside the section rather than from the dashboard.
+		await page.goto('/member/equipment');
+		await expect(nav.getByRole('link', { name: 'My Loans' })).toBeVisible();
+	});
+
 	test.describe('running low', () => {
 		test('the dashboard surfaces what needs restocking', async ({ page }) => {
 			await loginAsStaff(page);

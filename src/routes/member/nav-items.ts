@@ -1,7 +1,8 @@
 /**
  * The member panel's sidebar, as data.
  *
- * Two entries are feature-flagged, and they used to be nested `{#if}`s in the
+ * Two entries are feature-flagged and one is data-gated, and they used to be
+ * nested `{#if}`s in the
  * layout. That is the exact shape `band/[slug]/nav-items.ts` was extracted to
  * escape — its header records the gating being silently wrong twice, because a
  * condition buried in markup is invisible until someone reports a missing link.
@@ -22,6 +23,8 @@ export type MemberNavKey =
 	| 'events'
 	| 'events-submit'
 	| 'directory'
+	| 'equipment'
+	| 'equipment-loans'
 	| 'volunteer'
 	| 'suggestions'
 	| 'profile'
@@ -40,6 +43,15 @@ export interface MemberNavItem extends NavNode<MemberNavKey> {
 
 export interface MemberNavInput {
 	features: { volunteering?: boolean; helpArticles?: boolean };
+	/**
+	 * Whether anything in the catalogue is lendable.
+	 *
+	 * Not a feature flag — the equipment flag was cut in #286. This is data: the
+	 * row appears once there is something to borrow, so the catalogue is never
+	 * offered empty. Gear lending was arranged in person for as long as the
+	 * catalogue held nothing, and the row arriving on its own is what ends that.
+	 */
+	hasLoanableEquipment?: boolean;
 }
 
 /** The rows above the "My Bands" group. */
@@ -56,6 +68,17 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 		},
 		{ key: 'directory', label: 'Directory', href: '/member/directory' }
 	];
+
+	// Between Directory and Volunteering: it belongs with the things you do in
+	// the space, not with the bottom cluster.
+	if (input.hasLoanableEquipment) {
+		items.push({
+			key: 'equipment',
+			label: 'Equipment',
+			href: '/member/equipment',
+			children: [{ key: 'equipment-loans', label: 'My Loans', href: '/member/equipment/loans' }]
+		});
+	}
 
 	if (input.features.volunteering) {
 		items.push({ key: 'volunteer', label: 'Volunteering', href: '/member/volunteer' });
