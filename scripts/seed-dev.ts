@@ -1339,7 +1339,12 @@ async function insertBandWithOwner(
 		position: position ?? null,
 		status: 'active'
 	});
-	return b;
+	// `ownerId` rides along in memory only — the column was dropped in phase 3c,
+	// and the owner is the `group_member` row written just above. Seed code
+	// downstream needs the id to attribute events and reservations, and looking
+	// it back up per band would be a query for something this function already
+	// knows.
+	return { ...b, ownerId };
 }
 
 async function seedBands(users: SeedUser[]) {
@@ -1375,8 +1380,7 @@ async function seedBands(users: SeedUser[]) {
 			{
 				name: BAND_NAMES[i],
 				slug,
-				bio: `${BAND_NAMES[i]} is a local band from Corvallis, OR. Formed in 20${randomInt(18, 24)}, they play a mix of ${genres.slice(0, 2).join(' and ')} with influences from all over the map.`,
-				ownerId: owner.id
+				bio: `${BAND_NAMES[i]} is a local band from Corvallis, OR. Formed in 20${randomInt(18, 24)}, they play a mix of ${genres.slice(0, 2).join(' and ')} with influences from all over the map.`
 			},
 			owner.id,
 			pick(BAND_POSITIONS)
@@ -1487,11 +1491,7 @@ async function seedBands(users: SeedUser[]) {
 	];
 	for (let i = 0; i < onboardingStates.length; i++) {
 		const owner = users[(BAND_NAMES.length + 1 + i) % users.length];
-		const b = await insertBandWithOwner(
-			{ ownerId: owner.id, ...onboardingStates[i].band },
-			owner.id,
-			pick(BAND_POSITIONS)
-		);
+		const b = await insertBandWithOwner(onboardingStates[i].band, owner.id, pick(BAND_POSITIONS));
 		bands.push(b);
 		pendingEntries.set(b.id, onboardingStates[i].entry);
 	}

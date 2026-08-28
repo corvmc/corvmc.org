@@ -43,7 +43,9 @@ export interface StaffLayoutResponse {
 }
 
 export interface BandLayoutResponse {
-	band: Pick<Group, 'id' | 'name' | 'slug' | 'bio' | 'ownerId' | 'avatarKey' | 'createdAt'> & {
+	band: Pick<Group, 'id' | 'name' | 'slug' | 'bio' | 'avatarKey' | 'createdAt'> & {
+		// Null when the owner seat is empty, which is legal since phase 3c.
+		ownerId: string | null;
 		memberCount: number;
 	};
 	userRole: string;

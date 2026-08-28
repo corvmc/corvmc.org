@@ -10,6 +10,10 @@ import type { NotificationEmailModel } from '$lib/types/notification-email';
 import type { BandEpk } from '$lib/types/band-page';
 import { db } from '$lib/server/db';
 import { group, groupMember } from '$lib/server/db/schema/group';
+import { alias } from 'drizzle-orm/sqlite-core';
+
+/** The roster row that defines ownership — see `band-service.ts`. */
+const ownerMember = alias(groupMember, 'owner_member');
 import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
 import { listFor as listMediaFor } from '$lib/server/media/media-service';
 import { bandSite } from '$lib/server/db/schema/band-site';
@@ -176,9 +180,24 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 	}
 
 	const [bandRow] = await db
-		.select({ id: group.id, name: group.name, tier: bandSite.tier, ownerId: group.ownerId })
+		.select({
+			id: group.id,
+			name: group.name,
+			tier: bandSite.tier,
+			// The owner is the roster row since phase 3c, and the seat can be
+			// empty — the fallback below already handles a missing address.
+			ownerId: ownerMember.userId
+		})
 		.from(group)
 		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
+		.leftJoin(
+			ownerMember,
+			and(
+				eq(ownerMember.groupId, group.id),
+				eq(ownerMember.role, 'owner'),
+				eq(ownerMember.status, 'active')
+			)
+		)
 		.where(and(eq(group.slug, data.slug), isNull(group.deletedAt)))
 		.limit(1);
 
@@ -198,7 +217,7 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 	const epk = config?.epk as BandEpk | null | undefined;
 
 	let toEmail = epk?.bookingContact?.email;
-	if (!toEmail) {
+	if (!toEmail && bandRow.ownerId) {
 		const [owner] = await db
 			.select({ email: user.email })
 			.from(user)

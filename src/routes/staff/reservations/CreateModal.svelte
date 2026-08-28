@@ -21,9 +21,10 @@
 	let selectedBand = $state<{
 		id: string;
 		name: string;
-		ownerId: string;
-		ownerName: string;
-		ownerEmail: string;
+		// Null when the band's owner seat is empty, which is legal since phase 3c.
+		ownerId: string | null;
+		ownerName: string | null;
+		ownerEmail: string | null;
 	} | null>(null);
 	let date = $state(new Date().toISOString().split('T')[0]);
 	let startTime = $state('');
@@ -85,7 +86,10 @@
 	// Picking a band fills the member field with its owner — a band booking still
 	// needs a person, since free hours and cash settle against them.
 	function onBandSelected(b: typeof selectedBand) {
-		if (b && !selectedMember) {
+		// An ownerless band has nobody to prefill with, so staff pick the member
+		// themselves — the booking still needs a person, since free hours and cash
+		// settle against them.
+		if (b?.ownerId && b.ownerName && b.ownerEmail && !selectedMember) {
 			selectedMember = { id: b.ownerId, name: b.ownerName, email: b.ownerEmail };
 		}
 	}
