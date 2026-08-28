@@ -157,7 +157,9 @@ import {
 	OwnerCannotLeaveError,
 	BandNotFoundError,
 	listForUser,
-	partitionByStatus
+	listAll,
+	partitionByStatus,
+	searchBandsByName
 } from './band-service';
 import { db } from '$lib/server/db';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
@@ -227,6 +229,38 @@ describe('BandService', () => {
 		it('excludes soft-deleted groups', async () => {
 			await listForUser('user-1', ['band']);
 			expect(lastWhere()).toContain('"deleted_at" is null');
+		});
+	});
+
+	describe('listAll', () => {
+		const dialect = new SQLiteSyncDialect();
+
+		it('lists bands only unless asked otherwise', async () => {
+			await listAll();
+			const { sql: text, params } = dialect.sqlToQuery(whereClauses[0] as SQL);
+			expect(text).toContain('"kind" in');
+			expect(params).toContain('band');
+			expect(params).not.toContain('club');
+		});
+
+		it('takes the kinds it is given, for the staff group list', async () => {
+			await listAll({ kinds: ['club', 'committee'] });
+			const { params } = dialect.sqlToQuery(whereClauses[0] as SQL);
+			expect(params).toContain('club');
+			expect(params).toContain('committee');
+			expect(params).not.toContain('band');
+		});
+	});
+
+	describe('searchBandsByName', () => {
+		const dialect = new SQLiteSyncDialect();
+
+		/** A lineup credits acts. A club is not one, so it must not be findable here. */
+		it('will not offer a club as a lineup credit', async () => {
+			await searchBandsByName('real book');
+			const { sql: text, params } = dialect.sqlToQuery(whereClauses.at(-1) as SQL);
+			expect(text).toContain('"kind" =');
+			expect(params).toContain('band');
 		});
 	});
 

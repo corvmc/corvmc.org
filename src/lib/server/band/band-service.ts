@@ -469,11 +469,12 @@ export async function searchMembers(query: string, bandId: string) {
  * `requireStaff()` and returns owner contact details. This is the band-facing
  * shape: just enough to render a chip and store an id.
  */
+/** Bands only — a club is not an act that can be credited on a bill. */
 export async function searchBandsByName(query: string) {
 	return db
 		.select({ id: group.id, name: group.name, slug: group.slug, avatarKey: group.avatarKey })
 		.from(group)
-		.where(and(like(group.name, `%${query}%`), isNull(group.deletedAt)))
+		.where(and(eq(group.kind, 'band'), like(group.name, `%${query}%`), isNull(group.deletedAt)))
 		.orderBy(group.name)
 		.limit(10);
 }
@@ -785,11 +786,22 @@ export async function leaveBand(bandId: string, userId: string) {
 // Staff queries
 // ---------------------------------------------------------------------------
 
+/**
+ * The staff band list. `kinds` defaults to bands alone, which is the filter
+ * `/staff/bands` needs: it is the band work surface, and clubs and committees
+ * get `/staff/groups` instead. Kind-blind, it would start listing every club the
+ * day the first one is created.
+ */
 export async function listAll(
-	opts?: { search?: string; status?: 'active' | 'deactivated'; tier?: BandTier },
+	opts?: {
+		search?: string;
+		status?: 'active' | 'deactivated';
+		tier?: BandTier;
+		kinds?: readonly GroupKind[];
+	},
 	pagination: PaginationInput = {}
 ) {
-	const conditions = [];
+	const conditions = [inArray(group.kind, [...(opts?.kinds ?? ['band'])])];
 
 	if (opts?.search) {
 		conditions.push(like(group.name, `%${opts.search}%`));
@@ -803,13 +815,14 @@ export async function listAll(
 		conditions.push(eq(bandSite.tier, opts.tier));
 	}
 
-	const where = conditions.length > 0 ? and(...conditions) : undefined;
+	const where = and(...conditions);
 
 	const dataQ = db
 		.select({
 			id: group.id,
 			name: group.name,
 			slug: group.slug,
+			kind: group.kind,
 			ownerId: ownerMember.userId,
 			// Two records per row: the band the row is, and the member who owns it.
 			ref: bandRefColumns(),
