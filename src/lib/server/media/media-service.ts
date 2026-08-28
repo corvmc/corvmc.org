@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
 import { media, mediaAttachment } from '$lib/server/db/schema/media';
+import type { Media } from '$lib/server/db/schema/media';
 import type { AttachableType, MediaSlot } from '$lib/server/db/schema/media';
 import { event } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
@@ -114,6 +115,80 @@ export async function detachSlot(
 		);
 }
 
+/**
+ * Point a single-image slot at a new object, releasing whatever it held.
+ *
+ * The avatar/poster shape, where a parent has at most one image in a slot and
+ * replacing it is the only edit. Collapses the three-step dance every such call
+ * site was writing by hand — and, more to the point, is the reason none of them
+ * calls `deleteObject` any more: the previous object is *detached*, and whether
+ * it can be reclaimed is the sweep's question, not this request's. A recurring
+ * series' occurrences share one poster, so the old object may still be in use.
+ *
+ * The caller uploads to R2 first; this records the result and re-points the slot.
+ */
+export async function replaceSlot(input: {
+	attachableType: AttachableType;
+	attachableId: string;
+	slot: MediaSlot;
+	key: string;
+	contentType: string;
+	byteSize: number;
+	filename?: string | null;
+	altText?: string | null;
+	uploadedByUserId?: string | null;
+}): Promise<{ mediaId: string; attachmentId: string }> {
+	await detachSlot(input.attachableType, input.attachableId, input.slot);
+
+	const mediaRow = await record({
+		key: input.key,
+		contentType: input.contentType,
+		byteSize: input.byteSize,
+		filename: input.filename ?? null,
+		altText: input.altText ?? null,
+		uploadedByUserId: input.uploadedByUserId ?? null
+	});
+
+	const attachment = await attach({
+		mediaId: mediaRow.id,
+		attachableType: input.attachableType,
+		attachableId: input.attachableId,
+		slot: input.slot
+	});
+
+	return { mediaId: mediaRow.id, attachmentId: attachment.id };
+}
+
+/**
+ * Point a slot at an object that is already recorded, without uploading one.
+ *
+ * This is what lets a generated recurring occurrence share its prototype's
+ * poster rather than copying the R2 binary per occurrence: same `media` row,
+ * one more attachment.
+ */
+export async function attachExisting(
+	attachableType: AttachableType,
+	attachableId: string,
+	slot: MediaSlot,
+	key: string
+): Promise<string | null> {
+	const [existing] = await db
+		.select({ id: media.id })
+		.from(media)
+		.where(eq(media.key, key))
+		.limit(1);
+	if (!existing) return null;
+
+	await detachSlot(attachableType, attachableId, slot);
+	const attachment = await attach({
+		mediaId: existing.id,
+		attachableType,
+		attachableId,
+		slot
+	});
+	return attachment.id;
+}
+
 // ---------------------------------------------------------------------------
 // Reads
 // ---------------------------------------------------------------------------
@@ -199,6 +274,12 @@ export function liveAttachmentCondition(): SQL {
 		OR (${mediaAttachment.attachableType} = 'user'
 			AND EXISTS (SELECT 1 FROM ${user} WHERE ${user.id} = ${mediaAttachment.attachableId}))
 	)`;
+}
+
+/** The recorded object for an R2 key, or null if none was ever recorded. */
+export async function findByKey(key: string): Promise<Media | null> {
+	const [row] = await db.select().from(media).where(eq(media.key, key)).limit(1);
+	return row ?? null;
 }
 
 /** Total bytes referenced by live attachments. Uses the guard above. */

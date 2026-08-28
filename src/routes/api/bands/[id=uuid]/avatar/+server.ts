@@ -4,7 +4,8 @@ import { db } from '$lib/server/db';
 import { group } from '$lib/server/db/schema/group';
 import { eq } from 'drizzle-orm';
 import { getUserRole } from '$lib/server/band/band-service';
-import { uploadFile, deleteObject, validateUpload } from '$lib/server/storage';
+import { uploadFile, validateUpload } from '$lib/server/storage';
+import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
 
 // ---------------------------------------------------------------------------
@@ -42,19 +43,23 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const reason = validateUpload(file);
 	if (reason) throw error(400, reason);
 
-	// Delete old avatar if exists
-	if (row.avatarKey) {
-		try {
-			await deleteObject(row.avatarKey);
-		} catch {
-			// Old avatar may not exist — that's fine
-		}
-	}
-
 	const buffer = await file.arrayBuffer();
 	const key = mediaKey('bands/avatars', bandId, file.type);
 
 	await uploadFile(buffer, key, file.type);
+
+	// Records the object and releases the old one. Nothing here deletes: see
+	// docs/specs/media-spec.md.
+	await replaceSlot({
+		attachableType: 'group',
+		attachableId: bandId,
+		slot: 'avatar',
+		key,
+		contentType: file.type,
+		byteSize: buffer.byteLength,
+		filename: file.name,
+		uploadedByUserId: locals.user.id
+	});
 
 	await db.update(group).set({ avatarKey: key, updatedAt: new Date() }).where(eq(group.id, bandId));
 
@@ -74,13 +79,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 
 	await requireAdminOfBand(bandId, locals.user.id);
 
-	if (row.avatarKey) {
-		try {
-			await deleteObject(row.avatarKey);
-		} catch {
-			// Avatar may not exist — that's fine
-		}
-	}
+	await detachSlot('group', bandId, 'avatar');
 
 	await db
 		.update(group)

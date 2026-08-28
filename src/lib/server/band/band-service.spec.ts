@@ -115,6 +115,11 @@ vi.mock('$lib/server/storage', () => ({
 	uploadFile: vi.fn(async (_buffer: ArrayBuffer, key: string) => key)
 }));
 
+vi.mock('$lib/server/media/media-service', () => ({
+	replaceSlot: vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' }),
+	detachSlot: vi.fn().mockResolvedValue(undefined)
+}));
+
 import {
 	create,
 	update,
@@ -141,6 +146,7 @@ import { db } from '$lib/server/db';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject, uploadFile } from '$lib/server/storage';
+import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 
 // Walk a drizzle SQL condition (real `and`/`eq` operators — only `db` is
 // mocked) and collect the column names it references, so tests can assert a
@@ -309,10 +315,17 @@ describe('BandService', () => {
 			await deleteBand('band-1');
 
 			expect(cancelReservation).toHaveBeenCalledTimes(2);
-			expect(deleteObject).toHaveBeenCalledWith('bands/avatars/band-1.jpg');
+			// Detached, not deleted: `media_attachment` has no foreign key to the
+			// group, so nothing cascades, and another event or band may still point
+			// at that object. The sweep decides.
+			expect(detachSlot).toHaveBeenCalledWith('group', 'band-1', 'avatar');
+			expect(deleteObject).not.toHaveBeenCalled();
 		});
 
-		it('skips avatar delete when no avatar', async () => {
+		it('releases the slot unconditionally, avatar or not', async () => {
+			// Previously this was guarded on `avatarKey` being set. Detaching an
+			// empty slot is a no-op, and the unconditional call is one less way for
+			// a stale column to strand an attachment.
 			selectResultQueue = [
 				[{ ...mockBand, avatarKey: null }],
 				[] // no future reservations
@@ -320,6 +333,7 @@ describe('BandService', () => {
 
 			await deleteBand('band-1');
 
+			expect(detachSlot).toHaveBeenCalledWith('group', 'band-1', 'avatar');
 			expect(deleteObject).not.toHaveBeenCalled();
 		});
 
@@ -652,12 +666,19 @@ describe('BandService', () => {
 			expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), key, 'image/png');
 		});
 
-		it('deletes the previous avatar before replacing it', async () => {
+		it('records the new object and releases the old, deleting nothing', async () => {
 			selectResult = [{ avatarKey: 'bands/avatars/band-1.jpg' }];
 
 			await setBandAvatar('band-1', new ArrayBuffer(8), 'image/webp');
 
-			expect(deleteObject).toHaveBeenCalledWith('bands/avatars/band-1.jpg');
+			expect(replaceSlot).toHaveBeenCalledWith(
+				expect.objectContaining({
+					attachableType: 'group',
+					attachableId: 'band-1',
+					slot: 'avatar'
+				})
+			);
+			expect(deleteObject).not.toHaveBeenCalled();
 			expect(uploadFile).toHaveBeenCalledWith(
 				expect.any(ArrayBuffer),
 				expect.stringMatching(/^bands\/avatars\/band-1-[0-9a-f]{8}\.webp$/),
@@ -705,19 +726,12 @@ describe('BandService', () => {
 	});
 
 	describe('clearBandAvatar', () => {
-		it('deletes the stored object', async () => {
+		it('detaches the slot rather than deleting the object', async () => {
 			selectResult = [{ avatarKey: 'bands/avatars/band-1.png' }];
 
 			await clearBandAvatar('band-1');
 
-			expect(deleteObject).toHaveBeenCalledWith('bands/avatars/band-1.png');
-		});
-
-		it('is a no-op delete when there is no avatar', async () => {
-			selectResult = [{ avatarKey: null }];
-
-			await clearBandAvatar('band-1');
-
+			expect(detachSlot).toHaveBeenCalledWith('group', 'band-1', 'avatar');
 			expect(deleteObject).not.toHaveBeenCalled();
 		});
 	});

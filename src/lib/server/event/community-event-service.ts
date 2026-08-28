@@ -3,7 +3,8 @@ import { event, type LineupEntry } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, getTableColumns, gte, inArray, like, ne } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { uploadFile, deleteObject } from '$lib/server/storage';
+import { uploadFile } from '$lib/server/storage';
+import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
@@ -321,7 +322,6 @@ export async function updateCommunityEvent(
 	}
 
 	if (params.posterFile) {
-		if (existing.posterKey) await deleteObject(existing.posterKey);
 		updates.posterKey = await uploadPosterKey(eventId, params.posterFile);
 	}
 
@@ -439,13 +439,7 @@ export async function deleteCommunityEventDraft(eventId: string, userId: string)
 			'Only a draft can be deleted — cancel a published listing instead'
 		);
 	}
-	if (existing.posterKey) {
-		try {
-			await deleteObject(existing.posterKey);
-		} catch (err) {
-			captureException(err, { event: 'community_event.draft_delete_poster', eventId });
-		}
-	}
+	await detachSlot('event', eventId, 'poster');
 	await db.delete(event).where(eq(event.id, eventId));
 }
 
@@ -556,12 +550,28 @@ function assertValidTicketPrice(price: number | null | undefined): void {
 	}
 }
 
+/**
+ * Upload a poster and point the event's slot at it.
+ *
+ * Every poster write in this module funnels through here, which is what makes
+ * "no request deletes an R2 object" enforceable in one place rather than at each
+ * call site. The previous poster is detached; the sweep decides its fate. See
+ * docs/specs/media-spec.md.
+ */
 async function uploadPosterKey(
 	eventId: string,
 	file: { buffer: ArrayBuffer; contentType: string }
 ): Promise<string> {
 	const key = mediaKey('events/posters', eventId, file.contentType);
 	await uploadFile(file.buffer, key, file.contentType);
+	await replaceSlot({
+		attachableType: 'event',
+		attachableId: eventId,
+		slot: 'poster',
+		key,
+		contentType: file.contentType,
+		byteSize: file.buffer.byteLength
+	});
 	return key;
 }
 

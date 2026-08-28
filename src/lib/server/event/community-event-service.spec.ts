@@ -68,6 +68,12 @@ vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
 const uploadFile = vi.fn();
 const deleteObject = vi.fn();
+const detachSlot = vi.fn();
+const replaceSlot = vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' });
+vi.mock('$lib/server/media/media-service', () => ({
+	detachSlot: (...a: unknown[]) => detachSlot(...(a as [])),
+	replaceSlot: (...a: unknown[]) => replaceSlot(...(a as []))
+}));
 vi.mock('$lib/server/storage', () => ({
 	uploadFile: (...a: unknown[]) => uploadFile(...(a as [])),
 	deleteObject: (...a: unknown[]) => deleteObject(...(a as []))
@@ -360,12 +366,15 @@ describe('withdraw / unpublish / delete', () => {
 		expect(unpublishEvent).toHaveBeenCalledWith('evt-1');
 	});
 
-	it('hard-deletes a draft and takes its poster with it', async () => {
+	it('hard-deletes a draft and releases its poster', async () => {
 		getById.mockResolvedValue(listing({ posterKey: 'events/posters/evt-1.jpg' }));
 
 		await deleteCommunityEventDraft('evt-1', OWNER);
 
-		expect(deleteObject).toHaveBeenCalledWith('events/posters/evt-1.jpg');
+		// The object is detached, not deleted — this path cannot tell whether
+		// another event still points at it. See docs/specs/media-spec.md.
+		expect(detachSlot).toHaveBeenCalledWith('event', 'evt-1', 'poster');
+		expect(deleteObject).not.toHaveBeenCalled();
 		expect(deleteCalled).toHaveBeenCalled();
 	});
 

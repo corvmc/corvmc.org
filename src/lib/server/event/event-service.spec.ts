@@ -129,6 +129,12 @@ vi.mock('$lib/server/storage', () => ({
 	copyObject: vi.fn((_src: string, dest: string) => Promise.resolve(dest))
 }));
 
+vi.mock('$lib/server/media/media-service', () => ({
+	replaceSlot: vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' }),
+	detachSlot: vi.fn().mockResolvedValue(undefined),
+	findByKey: vi.fn().mockResolvedValue({ contentType: 'image/jpeg', byteSize: 4096 })
+}));
+
 const mockTicketsSold = vi.fn().mockResolvedValue(0);
 vi.mock('$lib/server/ticket/ticket-service', () => ({
 	getTicketsSold: (...args: unknown[]) => mockTicketsSold(...args)
@@ -150,6 +156,7 @@ import {
 } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { uploadFile, deleteObject, copyObject } from '$lib/server/storage';
+import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 
 describe('EventService', () => {
@@ -410,12 +417,15 @@ describe('EventService', () => {
 			});
 		});
 
-		it('deletes poster from R2 when present', async () => {
+		it('releases the poster slot without deleting the object', async () => {
+			// A recurring series' occurrences share one poster object, so cancelling
+			// one must not take the others' image with it. See media-spec.md.
 			selectResult = [{ ...mockEventRow, status: 'draft', posterKey: 'events/posters/evt-1.jpg' }];
 
 			await cancel('evt-1', 'staff-1');
 
-			expect(deleteObject).toHaveBeenCalledWith('events/posters/evt-1.jpg');
+			expect(detachSlot).toHaveBeenCalledWith('event', 'evt-1', 'poster');
+			expect(deleteObject).not.toHaveBeenCalled();
 		});
 
 		it('throws when event is already cancelled', async () => {
@@ -851,8 +861,13 @@ describe('EventService', () => {
 				/^events\/posters\/withheld\/evt-1-[0-9a-f-]{36}\.jpg$/
 			);
 			expect(copyObject).toHaveBeenCalledWith('events/posters/evt-1.jpg', withheldKey);
-			// The guessable key is what goes away.
-			expect(deleteObject).toHaveBeenCalledWith('events/posters/evt-1.jpg');
+			// The original is detached, not deleted — this request cannot tell
+			// whether another event still points at that object. The takedown now
+			// depends on the sweep for the old key's removal.
+			expect(replaceSlot).toHaveBeenCalledWith(
+				expect.objectContaining({ attachableType: 'event', attachableId: 'evt-1', slot: 'poster' })
+			);
+			expect(deleteObject).not.toHaveBeenCalled();
 			expect(lastUpdateSet).toMatchObject({
 				posterKey: withheldKey,
 				reviewNotes: 'No venue given'
@@ -988,14 +1003,16 @@ describe('EventService', () => {
 			});
 		});
 
-		it('takes the poster with it', async () => {
+		it('releases the poster rather than deleting it', async () => {
 			selectResultQueue = [[deletableEvent], [{ value: 0 }]];
 
 			await remove('evt-1', 'staff-1');
 
-			// Nothing about the R2 URL consults the database, so an orphaned object
-			// stays world-readable forever.
-			expect(deleteObject).toHaveBeenCalledWith('events/posters/evt-1.jpg');
+			// This used to delete the object outright, which is what forced every
+			// recurring occurrence to carry its own copy. Detaching is what lets
+			// them share one, and the sweep reclaims it when the last one goes.
+			expect(detachSlot).toHaveBeenCalledWith('event', 'evt-1', 'poster');
+			expect(deleteObject).not.toHaveBeenCalled();
 		});
 
 		it('deletes the row, and the flags that would dangle', async () => {

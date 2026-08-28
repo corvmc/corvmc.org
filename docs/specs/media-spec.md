@@ -190,6 +190,40 @@ integrity story.
 - **Direct-to-R2 presigned uploads.** Uploads pass through the Worker today. Changing that is a
   separate decision and would only sharpen the need for the grace window, not remove it.
 
+## Why `file` and `media` are two tables
+
+`groups-spec.md` gives group documents their own `file` table, and asserts the separation without
+arguing for it. The two overlap in **seven of ten columns** — `id`, `key`, `filename`,
+`contentType`, size, `uploadedBy`, `createdAt` — and since the section below they share a deletion
+discipline too, so the question is a fair one and will be asked again.
+
+What does **not** justify a second table:
+
+- **The bucket.** `media` is public, `file` is `R2_PRIVATE` — that is a column, not a table. The
+  guardrail `groups-spec.md` actually relies on is a _module_ one: `private-storage.ts` exports no
+  URL-minting function, so there is no `getPublicUrl` in scope to reach for by accident. That holds
+  however the rows are stored.
+- **Different accepted types and size caps.** Service constants, not schema.
+
+What does:
+
+**`file.groupId` is `not null`, and ownership has to be intrinsic.** `/api/files/[id]` authorizes
+against the file's own group, and a private object must be authorizable from the moment it exists —
+including after upload and before anything is attached to it. Derive ownership from an attachment
+and an unattached private file has no owner at all. It fails closed rather than leaking, but it is
+broken.
+
+The apparent fix — an owner column on `media` — is the thing this design exists to avoid. `media`
+names no parents in columns precisely so a new consumer never has to migrate it, and adding
+`ownerGroupId` to serve one consumer spends that property.
+
+So: **public media has an open parent set and derived ownership; private files have a closed one and
+intrinsic ownership.** That is the same open-vs-closed axis that separates `media_attachment` from
+`directory_entry`, one level up. Two tables is right, and the overlap is the price.
+
+Worth tidying when documents are built: `file.description` is `media.altText`/`caption` under a
+different name, and `media` has no `deletedAt`/`updatedAt` where `file` has both.
+
 ## Settled: group documents follow the same discipline
 
 `groups-spec.md` originally stated that soft-deleting a document **hard-deletes the R2 object
@@ -223,11 +257,25 @@ Each is its own PR, sequenced so nothing is dropped before its replacement is pr
    into the new tables. The old columns keep their values and stay readable throughout.
 4. **Cut over, one surface at a time.** Band gallery (`band-site.remote.ts`), then avatars
    (`band-service.ts`, `profile-service.ts`), then event posters.
+
+   **Only the gallery moved its reads.** It was a list, and had one reader. The others are single
+   keys selected inline by roughly 127 existing queries — 50 for `group.avatarKey`, 62 for
+   `event.posterKey`, 15 for `user.image` — and turning each into a join costs a join on queries
+   that today read a plain column, for entities that do not need sharing on the read side at all.
+
+   So for those, **the write path moved and the column stayed**, maintained by the single writer
+   that now also records the object. That keeps every benefit the layer exists for — no request
+   deletes an R2 object, lifetime is the sweep's, several parents may share one object — while the
+   column goes on being what it already was: a denormalization with one writer, the same bargain
+   `directory_entry.name` strikes and for the same reason.
+
+   It also still fixes the copy: occurrences point at one key with one `media` row and an attachment
+   each, which is exactly what phase 5 needs.
+
 5. **Delete the poster copy.** Remove `copyObject` from `generation-job.ts`; occurrences attach the
    prototype's `media` row instead. This is the payoff — a 52-week series holds one object.
-6. **Drop the old columns.** Last and separately. Dropping `event.posterKey` rebuilds `event`, which
-   `groups-spec.md` calls the riskiest rebuild in the schema, so it goes through
-   `d1-safe-rebuild.mjs` in a PR of its own.
+6. **Retire `band_media`** — the one table the cut-over genuinely replaced. The key _columns_ stay:
+   see below.
 
 ## Related
 
