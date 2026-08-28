@@ -96,6 +96,21 @@ export const creditTypeConfig: Record<CreditType, { maxBalance: number | null }>
  */
 export const CONFIRMATION_WINDOW_DAYS = 3;
 
+/**
+ * How long an unreferenced `media` row is left alone before the sweep reaps it
+ * and deletes its R2 object.
+ *
+ * Uploading and attaching are two steps, so an object that nothing points at is
+ * an ordinary intermediate state, not garbage — a member picking an image and
+ * then filling in the rest of a form sits in it for as long as the form takes.
+ * The window is what keeps the sweep from deleting a file out from under someone
+ * mid-upload. Rails' `purge_unattached` guards the same hazard.
+ *
+ * A day is far longer than any form takes and still bounds how long an abandoned
+ * upload is billed for. See docs/specs/media-spec.md.
+ */
+export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
+
 /** The earliest instant a member may confirm a reservation starting at `startsAt`. */
 export function confirmWindowOpensAt(startsAt: Date): Date {
 	return new Date(startsAt.getTime() - CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
