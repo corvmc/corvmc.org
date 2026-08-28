@@ -463,6 +463,31 @@ Both queries are covered by `src/lib/server/inventory/reports.spec.ts`, which
 runs them against a real in-memory SQLite rather than a mocked `db` — a mock
 returns whatever the test told it to and cannot catch a wrong `GROUP BY`.
 
+### Attached resources and damage reports
+
+Documentation hangs off the **catalog entry** — the manual for a K12.2 is the
+manual for all four — and evidence hangs off the **unit**. Both go through the
+shared media layer (`media` + `media_attachment`, #289) rather than a table of
+this module's own: `attachableTypes` gained `inventory_item` and
+`inventory_asset`, `mediaSlots` gained `manual` and `damage`.
+
+Tutorials are `help_article` rows joined by `inventory_item_article`, not prose
+of their own — help articles already carry publish state, `minRole`, a category
+and a sync path. The member view filters to published, so a draft imported by
+`help:sync` cannot leak to whoever scanned the amp.
+
+A damage report is a **ledger entry, not a report table**:
+`reportDamage()` in `resources-service.ts` changes the unit's condition and
+writes a `repair_out` movement carrying the note and the reporter. There is no
+queue because the movement history already is one. It takes the unit out of
+service immediately on a member's say-so — the cost of a wrong report is a
+staffer clicking it back, the cost of leaving a broken amp bookable is the next
+member's session, and `actorId` makes a pattern attributable.
+
+**Where it breaks** — a report appears to do nothing: check the form validated.
+A select's empty option submits `''`, which `z.enum([...]).optional()` rejects,
+and a remote `form()` that fails validation runs no handler at all.
+
 ### Form 8282
 
 Disposing of donated property within three years of receipt can oblige the

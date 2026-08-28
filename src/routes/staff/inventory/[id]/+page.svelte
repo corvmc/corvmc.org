@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import CategoryOptions from '$lib/components/inventory/CategoryOptions.svelte';
+	import ItemResources from '$lib/components/inventory/ItemResources.svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
 		getStaffItemDetail,
@@ -36,6 +37,7 @@
 	const { fields } = editItem;
 
 	let id = $derived(page.params.id!);
+	let itemId = $derived(id);
 	// One query. The category list is not in it — see CategoryOptions for why it cannot be.
 	const data = $derived(await getStaffItemDetail(id));
 	const item = $derived(data.item);
@@ -206,6 +208,10 @@
 			{/if}
 		</InfoCard>
 	{/if}
+
+	<div class="mt-6">
+		<ItemResources {itemId} />
+	</div>
 
 	<InfoCard title="Stock movements" class="mt-6">
 		{#if movements.length === 0}
