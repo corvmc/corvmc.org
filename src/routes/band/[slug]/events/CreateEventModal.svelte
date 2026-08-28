@@ -52,7 +52,10 @@
 >
 	{#snippet form()}
 		<div class="space-y-4">
-			<EventFields {fields} {bandId} bind:lineup />
+			<!-- The band this event belongs to. The guard resolves it from here now
+			     that it no longer reads the route's params. -->
+			<input {...fields.slug.as('hidden', bandSlug)} />
+			<EventFields {fields} slug={bandSlug} {bandId} bind:lineup />
 		</div>
 	{/snippet}
 </Action>

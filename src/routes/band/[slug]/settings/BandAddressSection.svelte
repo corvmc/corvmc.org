@@ -80,6 +80,10 @@
 		onfailure={() => {}}
 	>
 		<div class="space-y-4">
+			<!-- The band this renames. `newSlug` is the desired address, so the ref
+			     the guard resolves has to travel separately. -->
+			<input {...fields.slug.as('hidden', slug)} />
+
 			<!-- `oninput` rather than `bind:value`: FormField leaves an input
 			     uncontrolled when it is handed a remote `field`, so a binding here
 			     would never fire and the preview below would sit on the old slug. -->

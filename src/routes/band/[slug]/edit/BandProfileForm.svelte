@@ -78,6 +78,7 @@
 	}}
 	onfailure={() => toast.error('Failed to save')}
 >
+	<input {...profileFields.slug.as('hidden', band.slug)} />
 	<input {...profileFields.genres.as('hidden', JSON.stringify(genres))} />
 
 	<!-- Basics -->

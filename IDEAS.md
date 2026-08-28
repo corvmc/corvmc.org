@@ -192,9 +192,10 @@ who are not members). Clubs and committees reuse the roster machinery without in
 columns. Three kinds: `band | club | committee`. Bands stay member self-service; clubs and
 committees are staff-created, which is what makes free room time safe to grant by kind — a program
 gets the room through its event rather than a credit balance, so the abuse case is closed
-structurally instead of by a check someone has to remember. Phases 0–2 and 3a have landed (the
-`group` table, `band_member` → `group_member`, `directory_entry`); club-facing behaviour arrives at
-phase 5 and phase 9 (group events). Phase 5 deliberately does **not** give a club a panel: a club
+structurally instead of by a check someone has to remember. Phases 0–4 have landed — the whole
+table split (`group`, `group_member`, `directory_entry`, `band_site`, and the column drops) plus
+`requireGroupRole`, which takes the group as an explicit argument so one guard can serve both the
+band panel and the club page; club-facing behaviour arrives at phase 5 and phase 9 (group events). Phase 5 deliberately does **not** give a club a panel: a club
 member's whole surface is four things, three of which already arrive by notification and on the
 calendar, so clubs live on one tabbed page at `/member/groups/{slug}`, indexed at `/member/groups`,
 which does discovery as well as membership. Bands are excluded from that index and keep

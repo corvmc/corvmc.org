@@ -68,7 +68,6 @@ vi.mock('$lib/server/authorization', () => ({
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: testUser },
-		params: { slug: 'the-velvet-underground' },
 		request: { headers: new Headers() }
 	}),
 	form: (_schema: unknown, handler: (...args: any[]) => any) => {
@@ -102,17 +101,22 @@ beforeEach(() => {
 
 describe('changeBandAddress', () => {
 	it('moves the band to the requested address', async () => {
-		const result = await changeBandAddress({ newSlug: 'The Velvets' }, issue);
+		const result = await changeBandAddress(
+			{ slug: 'the-velvet-underground', newSlug: 'The Velvets' },
+			issue
+		);
 
 		// Spaces collapse rather than hyphenating.
 		expect(changeBandSlug).toHaveBeenCalledWith('band-1', 'thevelvets');
 		expect(result).toEqual({ success: true, slug: 'thevelvets', changed: true });
 	});
 
-	it('takes the band from the owner guard, never from the submitted value', async () => {
-		// `newSlug` names a different band on purpose: if it were ever treated as a
-		// lookup key, an owner could move somebody else's address.
-		await changeBandAddress({ newSlug: 'some-other-band' }, issue);
+	it('resolves the band from `slug`, never from `newSlug`', async () => {
+		// Both are submitted values now, which is exactly why they must not be
+		// confused. `slug` is the ref the guard authorizes on; `newSlug` names a
+		// different band on purpose — treated as a lookup key it would let an
+		// owner authorize a move against somebody else's band.
+		await changeBandAddress({ slug: 'the-velvet-underground', newSlug: 'some-other-band' }, issue);
 
 		expect(changeBandSlug).toHaveBeenCalledWith('band-1', 'some-other-band');
 		expect(bandServiceMock.getBySlug).toHaveBeenCalledWith('the-velvet-underground');
@@ -121,19 +125,26 @@ describe('changeBandAddress', () => {
 	it('rejects admins', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
 
-		await expect(changeBandAddress({ newSlug: 'the-velvets' }, issue)).rejects.toThrow();
+		await expect(
+			changeBandAddress({ slug: 'the-velvet-underground', newSlug: 'the-velvets' }, issue)
+		).rejects.toThrow();
 		expect(changeBandSlug).not.toHaveBeenCalled();
 	});
 
 	it('rejects members', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
 
-		await expect(changeBandAddress({ newSlug: 'the-velvets' }, issue)).rejects.toThrow();
+		await expect(
+			changeBandAddress({ slug: 'the-velvet-underground', newSlug: 'the-velvets' }, issue)
+		).rejects.toThrow();
 		expect(changeBandSlug).not.toHaveBeenCalled();
 	});
 
 	it('treats the current address as a no-op without spending a change', async () => {
-		const result = await changeBandAddress({ newSlug: 'The-Velvet-Underground' }, issue);
+		const result = await changeBandAddress(
+			{ slug: 'the-velvet-underground', newSlug: 'The-Velvet-Underground' },
+			issue
+		);
 
 		expect(result).toEqual({ success: true, slug: 'the-velvet-underground', changed: false });
 		expect(allowRateLimited).not.toHaveBeenCalled();
@@ -143,7 +154,9 @@ describe('changeBandAddress', () => {
 	it('stops once the band has used up its recent changes', async () => {
 		allowRateLimited.mockResolvedValue(false);
 
-		await expect(changeBandAddress({ newSlug: 'the-velvets' }, issue)).rejects.toThrow();
+		await expect(
+			changeBandAddress({ slug: 'the-velvet-underground', newSlug: 'the-velvets' }, issue)
+		).rejects.toThrow();
 		expect(allowRateLimited).toHaveBeenCalledWith('band-slug:band-1', 3, 60 * 60 * 24 * 30);
 		expect(changeBandSlug).not.toHaveBeenCalled();
 	});
@@ -153,6 +166,8 @@ describe('changeBandAddress', () => {
 			new SlugUnavailableError('That address is already taken.')
 		);
 
-		await expect(changeBandAddress({ newSlug: 'the-velvets' }, issue)).rejects.toThrow();
+		await expect(
+			changeBandAddress({ slug: 'the-velvet-underground', newSlug: 'the-velvets' }, issue)
+		).rejects.toThrow();
 	});
 });

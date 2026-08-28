@@ -1,9 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireBandOwner } from '$lib/server/band/band-context';
-import { getBySlug } from '$lib/server/band/band-service';
-import { requireUser } from '$lib/server/authorization';
+import { requireGroupRole } from '$lib/server/group/group-context';
 import { requireFeature } from '$lib/server/feature-flags';
 import {
 	getBandSubscription,
@@ -18,9 +16,11 @@ import {
 
 export const getBandSubscriptionInfo = query(z.string(), async (slug) => {
 	await requireFeature('bandPremium');
-	requireUser();
-	const band = await getBySlug(slug);
-	if (!band) throw error(404, 'Band not found');
+	// Was `requireUser()` and nothing else, which served any band's tier and its
+	// whole Stripe subscription record to any signed-in account that knew a slug.
+	// Membership, not ownership: the page renders read-only for a non-owner
+	// member today and this is not the change that takes that away.
+	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
 
 	const subscription = await getBandSubscription(band.id);
 
@@ -40,7 +40,7 @@ export const upgradeToPremium = form(
 		billingInterval: z.enum(['monthly', 'yearly'])
 	}),
 	async (data) => {
-		const { user, band } = await requireBandOwner();
+		const { user, group: band } = await requireGroupRole({ slug: data.slug }, 'owner');
 
 		if (band.tier === 'premium') {
 			throw error(400, 'Band already has premium tier');
@@ -66,14 +66,14 @@ export const upgradeToPremium = form(
 	}
 );
 
-export const cancelPremium = form(z.object({ slug: z.string().min(1) }), async () => {
-	const { band } = await requireBandOwner();
+export const cancelPremium = form(z.object({ slug: z.string().min(1) }), async (data) => {
+	const { group: band } = await requireGroupRole({ slug: data.slug }, 'owner');
 	await cancelBandSubscription(band.id);
 	return { success: true };
 });
 
-export const resumePremium = form(z.object({ slug: z.string().min(1) }), async () => {
-	const { band } = await requireBandOwner();
+export const resumePremium = form(z.object({ slug: z.string().min(1) }), async (data) => {
+	const { group: band } = await requireGroupRole({ slug: data.slug }, 'owner');
 	await resumeBandSubscription(band.id);
 	return { success: true };
 });

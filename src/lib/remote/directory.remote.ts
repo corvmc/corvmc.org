@@ -4,7 +4,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { requireFeature, getAllFeatureFlags } from '$lib/server/feature-flags';
-import { requireBandAdmin } from '$lib/server/band/band-context';
+import { requireGroupRole } from '$lib/server/group/group-context';
 import {
 	listMembers,
 	searchDirectoryMembers,
@@ -597,12 +597,13 @@ export const getMemberProfileEditor = query(z.void(), async () => {
 // Band profile queries & forms
 // ---------------------------------------------------------------------------
 
-export const getBandProfile = query(z.void(), async () => {
-	const { band } = await requireBandAdmin();
+export const getBandProfile = query(z.string(), async (slug) => {
+	const { group: band } = await requireGroupRole({ slug }, 'admin');
 	return getBandProfileForEdit(band.id);
 });
 
 const bandProfileSchema = z.object({
+	slug: z.string().min(1),
 	name: z.string().min(1, 'Name is required').max(200),
 	bio: z.string().max(LONG_TEXT_MAX).optional().default(''),
 	tagline: z.string().max(150).optional().default(''),
@@ -618,7 +619,7 @@ const bandProfileSchema = z.object({
 });
 
 export const saveBandProfile = form(bandProfileSchema, async (data) => {
-	const { user, band } = await requireBandAdmin();
+	const { user, group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
 	const contact = {
 		...(data.contactEmail ? { email: data.contactEmail } : {}),
@@ -639,18 +640,20 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 		links: data.links
 	});
 
-	// Safe to refresh unconditionally: `getBandProfile` resolves its band from
-	// `params.slug`, which for a remote request is the slug the client sent, and
-	// renaming no longer rotates it (see band-service `update`). Only the explicit
-	// address change moves a slug, and that one deliberately refreshes nothing.
-	void getBandProfileEditor().refresh();
+	// Safe to refresh on the submitted slug: renaming no longer rotates it (see
+	// band-service `update`). Only the explicit address change moves a slug, and
+	// that one deliberately refreshes nothing.
+	void getBandProfileEditor(data.slug).refresh();
 
 	return { success: true };
 });
 
 /** The band profile editor's one load-bearing query. See `getMemberProfileEditor`. */
-export const getBandProfileEditor = query(z.void(), async () => {
-	const [profile, genreSuggestions] = await Promise.all([getBandProfile(), getGenreSuggestions()]);
+export const getBandProfileEditor = query(z.string(), async (slug) => {
+	const [profile, genreSuggestions] = await Promise.all([
+		getBandProfile(slug),
+		getGenreSuggestions()
+	]);
 	return { profile, genreSuggestions };
 });
 

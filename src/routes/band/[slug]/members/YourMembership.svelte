@@ -25,9 +25,11 @@
 	 * queries live in the parent, which passes resolved props.
 	 */
 	const fields = updateMyBandMembership.fields;
+	const { fields: leaveFields } = leave;
 
 	let {
 		me,
+		bandId,
 		bandName,
 		role,
 		onchanged,
@@ -39,6 +41,8 @@
 			alias: string | null;
 			position: string | null;
 		} | null;
+		/** The band these two forms act on — the ref their guards resolve. */
+		bandId: string;
 		bandName: string;
 		role: string;
 		onchanged: () => void;
@@ -64,6 +68,8 @@
 				onsuccess={onchanged}
 				class="space-y-4"
 			>
+				<input {...fields.bandId.as('hidden', bandId)} />
+
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<FormField
 						field={fields.alias}
@@ -102,17 +108,26 @@
 						</Button>
 					</Alert>
 				{:else}
+					<!-- `confirm` and a `form` snippet together: Action renders the
+					     confirm copy as a lead-in above the fields, so the band this
+					     leaves can ride the submission without losing the prompt. -->
 					<Action
 						action={leave}
 						label="Leave band"
 						variant="error"
 						size="sm"
 						outline
+						modalTitle="Leave band"
+						submitLabel="Leave band"
 						confirm="Leave {bandName}? You'll need to be re-invited to rejoin."
 						successToast="You have left the band"
 						onsuccess={() => goto(resolve('/member/bands'))}
 						onfailure={() => toast.error('Failed to leave')}
-					/>
+					>
+						{#snippet form()}
+							<input {...leaveFields.bandId.as('hidden', bandId)} />
+						{/snippet}
+					</Action>
 				{/if}
 			</div>
 		</div>

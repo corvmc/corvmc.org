@@ -14,12 +14,15 @@
 	 * only path is `updateMyBandMembership` on the member's own row.
 	 */
 	let {
+		bandId,
 		memberId,
 		memberName,
 		role,
 		position,
 		onchanged
 	}: {
+		/** The band whose roster this row belongs to — the ref the guard resolves. */
+		bandId: string;
 		memberId: string;
 		memberName: string;
 		role: 'admin' | 'member';
@@ -47,6 +50,7 @@
 >
 	{#snippet form()}
 		<div class="space-y-4">
+			<input {...fields.bandId.as('hidden', bandId)} />
 			<input {...fields.memberId.as('hidden', memberId)} />
 			<FormField
 				field={fields.role}

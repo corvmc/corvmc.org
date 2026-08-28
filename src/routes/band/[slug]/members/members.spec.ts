@@ -19,6 +19,10 @@ const mockBand = {
 
 const bandServiceMock = {
 	getBySlug: vi.fn(async () => mockBand),
+	// The band-context forms name their band by id since phase 4, so this is the
+	// lookup the guard actually reaches for. `getBySlug` stays for the queries
+	// that still take a slug.
+	getByIdActive: vi.fn(async () => mockBand),
 	getUserRole: vi.fn(async () => 'owner' as string | null),
 	searchMembers: vi.fn(async () => [{ id: 'user-3', name: 'Lou Reed', email: 'lou@example.com' }]),
 	getMembers: vi.fn(async () => []),
@@ -59,8 +63,9 @@ vi.mock('$lib/server/band/band-service', () => bandServiceMock);
 
 const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 
+const hasAnyRole = vi.fn(async () => false);
 vi.mock('$lib/server/authorization', () => ({
-	hasAnyRole: vi.fn(async () => false),
+	hasAnyRole: (...a: unknown[]) => hasAnyRole(...(a as [])),
 	requireUser: () => testUser
 }));
 
@@ -85,10 +90,11 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
+// No `params` any more: the guard takes its ref as an argument, so a handler
+// that reached for the route path would now be a bug rather than the norm.
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: testUser },
-		params: { slug: 'the-velvet-underground' },
 		request: { headers: new Headers() }
 	}),
 	form: (_schema: unknown, handler: (...args: any[]) => any) => {
@@ -107,6 +113,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const {
+	getBandMembersPage,
 	inviteMember,
 	removeMember,
 	revokeInvitation,
@@ -120,7 +127,38 @@ const {
 beforeEach(() => {
 	vi.clearAllMocks();
 	bandServiceMock.getUserRole.mockResolvedValue('owner');
+	hasAnyRole.mockResolvedValue(false);
 	selectResult = [];
+});
+
+// ---------------------------------------------------------------------------
+// The page query
+// ---------------------------------------------------------------------------
+
+describe('getBandMembersPage', () => {
+	/**
+	 * The page renders an `isStaffOnly` branch — "You're viewing this band as
+	 * staff. Roster changes go through staff tools." — which could never appear:
+	 * `getBandLayout` admits a staff non-member as `userRole: 'staff'`, but this
+	 * query's member-only guard 403'd them into the error boundary first. Phase 4
+	 * passes `allowStaff`, which is what makes that branch reachable.
+	 */
+	it('admits a staff non-member read-only, rather than 403ing the page', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		hasAnyRole.mockResolvedValue(true);
+
+		const data = await getBandMembersPage('band-1');
+
+		expect(data.canManage).toBe(false);
+		expect(data.platformInvites).toEqual([]);
+	});
+
+	it('still refuses someone who is neither a member nor staff', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		hasAnyRole.mockResolvedValue(false);
+
+		await expect(getBandMembersPage('band-1')).rejects.toMatchObject({ status: 403 });
+	});
 });
 
 // ---------------------------------------------------------------------------
@@ -130,6 +168,7 @@ beforeEach(() => {
 describe('inviteMember', () => {
 	it('calls invite with correct params', async () => {
 		const result = await inviteMember({
+			bandId: 'band-1',
 			userId: 'user-3',
 			role: 'member',
 			position: 'Guitar'
@@ -146,7 +185,7 @@ describe('inviteMember', () => {
 	});
 
 	it('sends null position when empty', async () => {
-		await inviteMember({ userId: 'user-3', role: 'admin', position: '' });
+		await inviteMember({ bandId: 'band-1', userId: 'user-3', role: 'admin', position: '' });
 
 		expect(bandServiceMock.invite).toHaveBeenCalledWith(
 			'band-1',
@@ -162,7 +201,7 @@ describe('inviteMember', () => {
 // call to the slug's band (cross-band IDOR regression).
 describe('removeMember', () => {
 	it('calls removeMember scoped to the current band', async () => {
-		const result = await removeMember({ memberId: 'member-42' });
+		const result = await removeMember({ bandId: 'band-1', memberId: 'member-42' });
 
 		expect(bandServiceMock.removeMember).toHaveBeenCalledWith('member-42', 'band-1');
 		expect(result.success).toBe(true);
@@ -171,7 +210,7 @@ describe('removeMember', () => {
 
 describe('revokeInvitation', () => {
 	it('calls revokeInvitation scoped to the current band', async () => {
-		const result = await revokeInvitation({ memberId: 'member-42' });
+		const result = await revokeInvitation({ bandId: 'band-1', memberId: 'member-42' });
 
 		expect(bandServiceMock.revokeInvitation).toHaveBeenCalledWith('member-42', 'band-1');
 		expect(result.success).toBe(true);
@@ -181,6 +220,7 @@ describe('revokeInvitation', () => {
 describe('updateMemberRemote', () => {
 	it('calls updateMember with role and position scoped to the current band', async () => {
 		const result = await updateMemberRemote({
+			bandId: 'band-1',
 			memberId: 'member-42',
 			role: 'admin',
 			position: 'Bass'
@@ -200,7 +240,7 @@ describe('updateMemberRemote', () => {
 
 describe('transferOwner', () => {
 	it('calls transferOwnership with correct params', async () => {
-		const result = await transferOwner({ newOwnerId: 'user-3' });
+		const result = await transferOwner({ bandId: 'band-1', newOwnerId: 'user-3' });
 
 		expect(bandServiceMock.transferOwnership).toHaveBeenCalledWith(
 			'band-1',
@@ -215,7 +255,7 @@ describe('leave', () => {
 	it('calls leaveBand with band and user id', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
 
-		const result = await leave({});
+		const result = await leave({ bandId: 'band-1' });
 
 		expect(bandServiceMock.leaveBand).toHaveBeenCalledWith('band-1', 'user-owner');
 		expect(result.success).toBe(true);
@@ -227,7 +267,7 @@ describe('leave', () => {
 	it('refuses a non-member with 403, not a 500', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
 
-		await expect(leave({})).rejects.toMatchObject({ status: 403 });
+		await expect(leave({ bandId: 'band-1' })).rejects.toMatchObject({ status: 403 });
 		expect(bandServiceMock.leaveBand).not.toHaveBeenCalled();
 	});
 
@@ -239,13 +279,13 @@ describe('leave', () => {
 			new bandServiceMock.OwnerCannotLeaveError('Owner cannot leave the band')
 		);
 
-		await expect(leave({})).rejects.toMatchObject({ status: 422 });
+		await expect(leave({ bandId: 'band-1' })).rejects.toMatchObject({ status: 422 });
 	});
 });
 
 describe('searchUsers', () => {
 	it('returns matching users', async () => {
-		const results = await searchUsers('lou');
+		const results = await searchUsers({ bandId: 'band-1', q: 'lou' });
 
 		expect(bandServiceMock.searchMembers).toHaveBeenCalledWith('lou', 'band-1');
 		expect(results).toHaveLength(1);
@@ -253,7 +293,7 @@ describe('searchUsers', () => {
 	});
 
 	it('returns empty for short queries', async () => {
-		const results = await searchUsers('l');
+		const results = await searchUsers({ bandId: 'band-1', q: 'l' });
 
 		expect(bandServiceMock.searchMembers).not.toHaveBeenCalled();
 		expect(results).toHaveLength(0);
@@ -274,7 +314,7 @@ describe('updateMyBandMembership', () => {
 	});
 
 	it("writes the caller's own row, resolved from the guard", async () => {
-		await updateMyBandMembership({ alias: 'Ziggy', position: 'Bass' });
+		await updateMyBandMembership({ bandId: 'band-1', alias: 'Ziggy', position: 'Bass' });
 
 		expect(bandServiceMock.updateOwnMembership).toHaveBeenCalledWith('band-1', 'user-owner', {
 			alias: 'Ziggy',
@@ -286,7 +326,11 @@ describe('updateMyBandMembership', () => {
 	// which is unique. Keying a mutation on a caller-supplied id when the guard
 	// already knows the row is how one member ends up editing another.
 	it('ignores any submitted member id', async () => {
-		await updateMyBandMembership({ alias: 'Ziggy', memberId: 'member-someone-else' });
+		await updateMyBandMembership({
+			bandId: 'band-1',
+			alias: 'Ziggy',
+			memberId: 'member-someone-else'
+		});
 
 		expect(bandServiceMock.updateOwnMembership).toHaveBeenCalledWith(
 			'band-1',
@@ -302,12 +346,14 @@ describe('updateMyBandMembership', () => {
 	it('lets an owner set their own alias', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('owner');
 
-		await expect(updateMyBandMembership({ alias: 'Ziggy' })).resolves.toEqual({ success: true });
+		await expect(updateMyBandMembership({ bandId: 'band-1', alias: 'Ziggy' })).resolves.toEqual({
+			success: true
+		});
 		expect(bandServiceMock.updateOwnMembership).toHaveBeenCalled();
 	});
 
 	it('clears the alias when submitted empty, rather than skipping it', async () => {
-		await updateMyBandMembership({ alias: '', position: '' });
+		await updateMyBandMembership({ bandId: 'band-1', alias: '', position: '' });
 
 		expect(bandServiceMock.updateOwnMembership).toHaveBeenCalledWith('band-1', 'user-owner', {
 			alias: null,
@@ -318,7 +364,11 @@ describe('updateMyBandMembership', () => {
 	it('refuses a non-member', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
 
-		await expect(updateMyBandMembership({ alias: 'Ziggy' })).rejects.toMatchObject({ status: 403 });
+		await expect(
+			updateMyBandMembership({ bandId: 'band-1', alias: 'Ziggy' })
+		).rejects.toMatchObject({
+			status: 403
+		});
 	});
 });
 
@@ -328,7 +378,12 @@ describe('updateMemberRemote', () => {
 	it('never writes an alias, even if one is submitted', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
 
-		await updateMemberRemote({ memberId: 'member-2', position: 'Drums', alias: 'Not Yours' });
+		await updateMemberRemote({
+			bandId: 'band-1',
+			memberId: 'member-2',
+			position: 'Drums',
+			alias: 'Not Yours'
+		});
 
 		const written = bandServiceMock.updateMember.mock.calls[0]![1];
 		expect(written).not.toHaveProperty('alias');

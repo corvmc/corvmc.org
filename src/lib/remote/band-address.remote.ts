@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { form } from '$app/server';
-import { requireBandOwner } from '$lib/server/band/band-context';
+import { requireGroupRole } from '$lib/server/group/group-context';
 import { allowRateLimited } from '$lib/server/rate-limit';
 import {
 	MAX_BAND_SLUG_LENGTH,
@@ -26,14 +26,18 @@ const MAX_CHANGES = 3;
 const CHANGE_WINDOW_SECONDS = 60 * 60 * 24 * 30;
 
 export const changeBandAddress = form(
-	z.object({ newSlug: z.string().trim().min(1).max(MAX_BAND_SLUG_LENGTH) }),
+	z.object({
+		slug: z.string().min(1),
+		newSlug: z.string().trim().min(1).max(MAX_BAND_SLUG_LENGTH)
+	}),
 	async (data, issue) => {
-		// The band comes from the guard, never from the submitted value: remote
-		// functions take route params from a client-supplied header, so this is the
-		// only place the check can live. `newSlug` is the *desired* address and is
-		// never used as a lookup key — hence the name, since the sibling forms in
-		// band-custom-domain.remote.ts all carry a hidden `slug` they ignore.
-		const { band } = await requireBandOwner();
+		// Two slugs, and the distinction is the whole reason `newSlug` is named
+		// that. `slug` is the ref — a lookup key the guard resolves before
+		// checking the caller's own ownership on the resolved band, so a spoofed
+		// one lands somewhere they own nothing. `newSlug` is the *desired*
+		// address and is never a lookup key; feeding it to the guard would let a
+		// rename authorize itself against whatever band already holds the name.
+		const { group: band } = await requireGroupRole({ slug: data.slug }, 'owner');
 
 		const next = normalizeBandSlug(data.newSlug);
 		try {

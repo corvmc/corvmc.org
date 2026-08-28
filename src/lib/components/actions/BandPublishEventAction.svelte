@@ -5,12 +5,14 @@
 	import { publishBandEvent } from '$lib/remote/band-events.remote';
 
 	// The band panel's own events live in `band-events.remote`, guarded by
-	// `requireBandAdmin` and scoped to the band from the route. The
+	// `requireGroupRole({ slug }, 'admin')` and scoped to the band named by the
+	// `slug` prop. The
 	// similarly-named staff/community wrappers next to this file post to
 	// `events.remote` instead and would 403 here.
 	const { fields } = publishBandEvent;
 
 	let {
+		slug,
 		eventId,
 		variant = 'success',
 		size = 'sm',
@@ -18,6 +20,8 @@
 		onsuccess,
 		...rest
 	}: {
+		/** The band this event belongs to — the ref the guard resolves. */
+		slug: string;
 		eventId: string;
 		variant?: ButtonVariant;
 		size?: ButtonSize;
@@ -38,6 +42,7 @@
 	{...rest}
 >
 	{#snippet form()}
+		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<p class="py-2">
 			Publish this event? It becomes visible on your profile and the public calendar.

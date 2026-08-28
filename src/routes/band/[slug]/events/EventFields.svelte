@@ -1,6 +1,7 @@
 <script lang="ts">
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
+	import { searchBandsForLineup } from '$lib/remote/band-events.remote';
 	import {
 		formatDate,
 		formatDollars,
@@ -46,6 +47,7 @@
 	let {
 		fields,
 		evt,
+		slug,
 		bandId,
 		lineup = $bindable<LineupChip[]>([]),
 		readonly = false
@@ -56,6 +58,8 @@
 		fields: any;
 		/** The saved event. Absent when creating. */
 		evt?: EventForDisplay;
+		/** The band's address, which the lineup lookup guards on. */
+		slug: string;
 		bandId: string;
 		lineup?: LineupChip[];
 		readonly?: boolean;
@@ -165,7 +169,12 @@
 {/if}
 
 <FormField name="lineup" label="Who's playing">
-	<LineupEditor bind:value={lineup} ownerBandId={bandId} {readonly} />
+	<LineupEditor
+		bind:value={lineup}
+		ownerBandId={bandId}
+		{readonly}
+		search={(q) => searchBandsForLineup({ slug, q })}
+	/>
 </FormField>
 
 <!--

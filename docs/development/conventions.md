@@ -116,9 +116,13 @@ What this means in practice:
 
 - Components never import from `$lib/server/` directly; they call remote functions.
 - Every remote function starts with a **guard** (`requireUser`, `requireStaff`,
-  `requireBandMember`, `requireFeature`, ...) and validates its input with a **Zod
+  `requireGroupRole`, `requireFeature`, ...) and validates its input with a **Zod
   schema**. A guard in the layout is not a guard on the data — the remote function is the
   security boundary.
+- A group-scoped guard takes the group as an **argument**, never from `params`. A remote
+  function's `params` describe the page the client says it is on; the slug or id is a
+  lookup key that the guard resolves before checking the caller's role on what it
+  resolved.
 - Business logic lives in services; remotes are thin (guard + validate + orchestrate).
 - Services throw typed domain errors; remotes map them via `mapDomainError()`
   (`src/lib/server/errors.ts`).
