@@ -41,15 +41,15 @@ group.kind  'band' | 'club' | 'committee'
 thing everywhere; announcements, documents, and the roster are one implementation. What kind does
 determine is the line below, which is a governance fact rather than a UI one:
 
-|                                   | `band`                                   | `club`, `committee`                      |
-| --------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| Created by                        | Any member, self-service                 | **Staff only**, from the staff panel     |
-| Owner                             | The creator                              | **Appointed by staff**                   |
-| Deleted by                        | Its owner                                | Staff only                               |
-| May have a band site              | Yes                                      | No                                       |
-| Default join policy               | `invite_only`                            | Either; `open` is the point of a program |
-| Its events may hold the room free | No                                       | **Yes**                                  |
-| Rehearsal bookings                | `bookerType: 'group'`, credits then cash | n/a — see [Room time](#room-time)        |
+|                                   | `band`                                   | `club`, `committee`                  |
+| --------------------------------- | ---------------------------------------- | ------------------------------------ |
+| Created by                        | Any member, self-service                 | **Staff only**, from the staff panel |
+| Owner                             | The creator                              | **Appointed by staff**               |
+| Deleted by                        | Its owner                                | Staff only                           |
+| May have a band site              | Yes                                      | No                                   |
+| Join policy                       | **Always `invite_only`**                 | Any of the three                     |
+| Its events may hold the room free | No                                       | **Yes**                              |
+| Rehearsal bookings                | `bookerType: 'group'`, credits then cash | n/a — see [Room time](#room-time)    |
 
 "Band" is not a table — it is _a group with a directory entry, optionally with a band site_. So
 `kind` carries governance alone: who may create, who may delete, and who gets free room time.
@@ -108,6 +108,17 @@ where a member who would be welcome has no way to say so and often no way to kno
 
 The policy governs only **self-service** joining. Invitations work identically under all three:
 `by_application` does not mean a leader has to wait to be asked.
+
+**A band is always `invite_only`, and that is a constraint rather than a default.** The service
+refuses any other value for `kind = 'band'`, and the band's own edit form does not offer the
+setting — so enrollment policy is a club-and-committee concept, and joining a band stays a
+conversation.
+
+The reason is the same structural one that governs free room time. A band member may book rehearsal
+time as the band, `bookerType: 'group'`, against the band's credits and then its card. An `open`
+band would therefore be a way for any signed-in member to join a stranger's band and spend their
+money, and `by_application` would put that decision behind a leader who may not realise what they
+are approving. Closing it by kind means nobody has to remember to check.
 
 `joinInstructions` remains useful under every policy — under `open` it is the "bring a horn, charts
 provided" prose next to the button; under `by_application` it is the prompt over the application
@@ -981,7 +992,12 @@ own memberships would strand discovery on a route nobody with a membership ever 
 4. **Invite-only programs** — listed with their `joinInstructions`, no action. Seeing that a
    committee exists is the point; the way in is a conversation.
 5. **Bands looking for members** — `lookingForMembers`, linking to the band's directory listing
-   rather than offering a Join. Discovery without inventing a join path a band does not have.
+   rather than offering a Join.
+
+Sections 2 and 3 hold **only clubs and committees**, and by construction rather than by filter:
+bands are always `invite_only`, so no band can appear there however its row is written. Section 5 is
+the whole of a band's presence on this page, and it is a pointer rather than an action, because a
+band has no self-service join path to offer.
 
 Filterable by kind, the same axis as the public `/groups` directory.
 
@@ -1404,13 +1420,10 @@ pass. Findings are anchored to symbols rather than line numbers, which move.
 | `flagEntityTypes` contains `'member_profile'` and `'band_profile'`                                                                                                     | `flag.ts`                                                                 | Both entity types resolve to a `directory_entry` id, since that is where the flagged content (bio, photo, links) lives for a member and a band alike. The enum values keep their names and meanings; only what `content_flag.entityId` points at changes. Add a comment on the enum rather than renaming, which would need a data migration for no gain.                                                                                                                                                                                                                                                 |
 | Two roster reads are status-blind                                                                                                                                      | `band-service.ts` — `listForUser`, `getMembers`                           | Adding `status: 'requested'` is safe everywhere else, because every other status-sensitive query matches **positively** (`eq(status, 'active' \| 'pending')`) rather than negating. These two do not filter at all. `getMemberBands` then splits `listForUser` into `pending` and `active` by explicit equality, so a `'requested'` row falls into **neither bucket and disappears** — a fail-quiet the reviewer cannot see. `getMembers` returns the whole roster, so applications would render mixed into the member list; it must partition three ways. Both change in the same PR as the enum value. |
 
-**One stale comment to fix when the value lands.** `groupJoinPolicies` in `src/lib/config.ts` is
-`['invite_only', 'open']` and its doc comment argues _for_ two values, in the terms this spec used
-before `by_application` was adopted. The vocabulary is live code and stays as it is until phase 5
-builds the flow — but the comment is now an argument against a decision that has been made, so it is
-rewritten in the same change rather than left to be re-litigated. Adding the value itself emits
-**zero SQL**: both `groupJoinPolicies` and the member-status vocabulary are Drizzle `text({ enum })`,
-a TypeScript-only constraint, exactly as widening `eventSources` is.
+**Adding the value emits zero SQL.** Both `groupJoinPolicies` in `src/lib/config.ts` and the
+member-status vocabulary are Drizzle `text({ enum })`, a TypeScript-only constraint, exactly as
+widening `eventSources` is. The vocabularies stay at their current values until phase 5 builds the
+flow; `config.ts` points here for what `by_application` means in the meantime.
 
 **A decision this spec must make, not defer:** whether `processEventSeries()` copies `status` from the prototype. Doing so is required for a club series to publish automatically, but it changes behavior for existing staff CMC series, which today always generate drafts for review. Publish automatically only when `source !== 'cmc'`, preserving the staff review step where it already exists.
 

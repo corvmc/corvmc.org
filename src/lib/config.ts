@@ -162,9 +162,9 @@ export type GroupKind = (typeof groupKinds)[number];
  *                 an active membership with no approval step. The point of a
  *                 drop-in program.
  *
- * Two values, not three: approval-gated joining would need a status meaning "you
- * asked us, awaiting our answer", which is the exact mirror of today's `pending`
- * and cannot share it without making every roster query ambiguous.
+ * `by_application` is designed but not built — it arrives with the club page in
+ * phase 5, along with the `'requested'` member status it needs. See
+ * `docs/specs/groups-spec.md`.
  */
 export const groupJoinPolicies = ['invite_only', 'open'] as const;
 export type GroupJoinPolicy = (typeof groupJoinPolicies)[number];
