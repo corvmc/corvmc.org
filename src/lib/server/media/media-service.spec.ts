@@ -73,6 +73,7 @@ const {
 	totalLiveBytes
 } = await import('./media-service');
 const { deleteObject } = await import('$lib/server/storage');
+const { db } = await import('$lib/server/db');
 const { mediaAttachment } = await import('$lib/server/db/schema/media');
 
 /** Walk a drizzle condition and collect the column names it references. */
@@ -212,6 +213,18 @@ describe('listFor', () => {
 		const cols = collectColumnNames(lastSelect.where);
 		expect(cols).toContain('attachable_id');
 		expect(cols).not.toContain('slot');
+	});
+
+	it('takes several slots in one statement', async () => {
+		// The band microsite wants four slots and must not fan out four queries
+		// for them — and must not take everything attached to the group either,
+		// since the group's avatar is a media_attachment now too.
+		await listFor('group', 'group-1', ['gallery', 'hero', 'stage_plot', 'rider']);
+
+		const cols = collectColumnNames(lastSelect.where);
+		expect(cols).toContain('attachable_id');
+		expect(cols).toContain('slot');
+		expect(db.select).toHaveBeenCalledOnce();
 	});
 
 	it('orders by sortOrder', async () => {

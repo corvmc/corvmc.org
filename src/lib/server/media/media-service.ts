@@ -4,7 +4,7 @@ import type { AttachableType, MediaSlot } from '$lib/server/db/schema/media';
 import { event } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, eq, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -128,18 +128,23 @@ export async function detachSlot(
 export async function listFor(
 	attachableType: AttachableType,
 	attachableId: string,
-	slot?: MediaSlot
+	slot?: MediaSlot | MediaSlot[]
 ): Promise<AttachedMedia[]> {
-	const where = slot
-		? and(
-				eq(mediaAttachment.attachableType, attachableType),
-				eq(mediaAttachment.attachableId, attachableId),
-				eq(mediaAttachment.slot, slot)
-			)
-		: and(
-				eq(mediaAttachment.attachableType, attachableType),
-				eq(mediaAttachment.attachableId, attachableId)
-			);
+	// Several slots in one statement rather than one call each. A parent's media
+	// is a single load-bearing read; fanning it out per slot is the pattern
+	// docs/development/conventions.md rules out.
+	const slotCondition =
+		slot === undefined
+			? undefined
+			: Array.isArray(slot)
+				? inArray(mediaAttachment.slot, slot)
+				: eq(mediaAttachment.slot, slot);
+
+	const where = and(
+		eq(mediaAttachment.attachableType, attachableType),
+		eq(mediaAttachment.attachableId, attachableId),
+		slotCondition
+	);
 
 	return db
 		.select({

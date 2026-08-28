@@ -11,10 +11,11 @@ import type { BandEpk } from '$lib/types/band-page';
 import { db } from '$lib/server/db';
 import { group, groupMember } from '$lib/server/db/schema/group';
 import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
-import { bandPageConfig, bandMedia } from '$lib/server/db/schema/band-page';
+import { bandPageConfig } from '$lib/server/db/schema/band-page';
+import { listFor as listMediaFor } from '$lib/server/media/media-service';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, isNull, asc } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import {
 	listBandEventsUpcoming,
 	listBandEventsPast,
@@ -109,12 +110,10 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 		listBandEventsPast(bandRow.id, { limit: 20, offset: 0 })
 	]);
 
-	// Fetch media
-	const media = await db
-		.select()
-		.from(bandMedia)
-		.where(eq(bandMedia.bandId, bandRow.id))
-		.orderBy(asc(bandMedia.sortOrder));
+	// The four slots the microsite renders. Named explicitly rather than taking
+	// everything attached to the group, because the group's `avatar` is now a
+	// `media_attachment` too and is served from `band.avatarUrl`, not from here.
+	const media = await listMediaFor('group', bandRow.id, ['gallery', 'hero', 'stage_plot', 'rider']);
 
 	return {
 		band: {
@@ -151,9 +150,9 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 		// just shows a fixed slice.
 		pastEvents: pastEvents.slice(0, 20).map(toSiteEvent),
 		media: media.map((m) => ({
-			id: m.id,
+			id: m.attachmentId,
 			url: resolveImageUrl(m.key),
-			type: m.type,
+			slot: m.slot,
 			caption: m.caption
 		}))
 	};
