@@ -272,8 +272,10 @@ Each is its own PR, sequenced so nothing is dropped before its replacement is pr
    It also still fixes the copy: occurrences point at one key with one `media` row and an attachment
    each, which is exactly what phase 5 needs.
 
-5. **Delete the poster copy.** Remove `copyObject` from `generation-job.ts`; occurrences attach the
-   prototype's `media` row instead. This is the payoff — a 52-week series holds one object.
+5. **Delete the poster copy.** Done. `generation-job.ts` no longer calls `copyObject`; an occurrence
+   attaches the prototype's `media` row and shares its key, so a 52-week series holds one object
+   rather than 52. `copyObject` itself stays for its one remaining caller, the moderation takedown,
+   which _moves_ a withheld poster to a fresh key rather than duplicating one.
 6. **Retire `band_media`** — the one table the cut-over genuinely replaced. The key _columns_ stay:
    see below.
 
