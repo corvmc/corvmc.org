@@ -463,6 +463,25 @@ Both queries are covered by `src/lib/server/inventory/reports.spec.ts`, which
 runs them against a real in-memory SQLite rather than a mocked `db` — a mock
 returns whatever the test told it to and cannot catch a wrong `GROUP BY`.
 
+### Form 8282
+
+Disposing of donated property within three years of receipt can oblige the
+collective to file IRS Form 8282 within 125 days, with a copy to the donor.
+`src/lib/server/inventory/form-8282.ts` holds the rule as a pure function with
+`now` injected; `listForm8282Obligations()` narrows candidates in SQL (donated,
+disposed, unresolved) and applies the window in JS so the rule lives in one
+place.
+
+It surfaces on the unit's page when it is retired and on
+`/staff/inventory/compliance` thereafter. Resolving it writes
+`form8282ResolvedAt` plus a free-text `form8282Note`, which covers both "filed"
+and "no filing was due, because…".
+
+**Where it breaks** — nothing appears when expected: check the asset actually
+carries an `acquisitionId` whose acquisition is `kind: 'donation'`. A unit
+created directly rather than through receiving has no acquisition, so the system
+cannot know it was a gift.
+
 ### Scanning a tag
 
 `/a/[tag]` renders nothing. Its `+page.server.ts` resolves the tag and hands the

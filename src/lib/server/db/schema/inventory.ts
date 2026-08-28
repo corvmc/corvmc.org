@@ -311,6 +311,18 @@ export const inventoryAsset = sqliteTable(
 		acquisitionId: text('acquisition_id'),
 		retiredAt: integer('retired_at', { mode: 'timestamp' }),
 		retiredReason: text('retired_reason'),
+		/**
+		 * When somebody recorded what happened about Form 8282 — either that it
+		 * was filed, or that no filing was needed. One nullable stamp rather than
+		 * a status enum: the only question the system can answer is "has a human
+		 * dealt with this", and `form8282Note` carries which way they went.
+		 *
+		 * Disposing of donated property within three years of receipt obliges the
+		 * organisation to file within 125 days and copy the donor. See
+		 * `form-8282.ts` for the rule; the system flags, a person decides.
+		 */
+		form8282ResolvedAt: integer('form_8282_resolved_at', { mode: 'timestamp' }),
+		form8282Note: text('form_8282_note'),
 		notes: text('notes'),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()

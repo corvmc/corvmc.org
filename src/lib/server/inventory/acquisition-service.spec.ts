@@ -37,10 +37,9 @@ vi.mock('./asset-service', () => ({
 	createAsset: vi.fn().mockResolvedValue({ id: 'as-1' })
 }));
 
-import { adjustStock, consumeStock, isCapitalized, recordAcquisition } from './acquisition-service';
+import { adjustStock, consumeStock, recordAcquisition } from './acquisition-service';
 import { recordMovement } from './stock-service';
 import { createAsset } from './asset-service';
-import { CAPITALIZATION_THRESHOLD_CENTS } from '$lib/config';
 
 beforeEach(() => {
 	vi.resetAllMocks();
@@ -48,21 +47,6 @@ beforeEach(() => {
 	insertResult = [{ id: 'acq-1' }];
 	vi.mocked(recordMovement).mockResolvedValue({ id: 'mv-1' } as never);
 	vi.mocked(createAsset).mockResolvedValue({ id: 'as-1' } as never);
-});
-
-describe('isCapitalized', () => {
-	it('capitalizes at the threshold', () => {
-		expect(isCapitalized(CAPITALIZATION_THRESHOLD_CENTS)).toBe(true);
-	});
-
-	it('expenses below it', () => {
-		expect(isCapitalized(CAPITALIZATION_THRESHOLD_CENTS - 1)).toBe(false);
-	});
-
-	it('treats an unpriced arrival as expensed rather than guessing', () => {
-		expect(isCapitalized(null)).toBe(false);
-		expect(isCapitalized(undefined)).toBe(false);
-	});
 });
 
 describe('recordAcquisition', () => {

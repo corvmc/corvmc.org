@@ -282,18 +282,6 @@ export const acquisitionKindLabels: Record<AcquisitionKind, string> = {
 };
 
 /**
- * Above this, an arrival is capitalized as a tracked asset; below it, the thing
- * is stock that gets used up.
- *
- * A policy number rather than a constant of nature — it is the organisation's
- * capitalization policy, which is exactly what FASB ASU 2020-07 leans on when it
- * asks whether a contributed nonfinancial asset was capitalized or expensed. It
- * lives here so changing it is a one-line decision with a paper trail, not a
- * migration.
- */
-export const CAPITALIZATION_THRESHOLD_CENTS = 100_000;
-
-/**
  * How a counted item is counted. Display only — the ledger is always integers,
  * so a "pack" is one unit and never 6 strings.
  */

@@ -8,6 +8,8 @@ import {
 	SEED_CONSUMABLE_RECEIVED,
 	SEED_ITEM_ID,
 	SEED_ITEM_NAME,
+	SEED_DISPOSED_ASSET_ID,
+	SEED_DISPOSED_ASSET_TAG,
 	SEED_LOW_NAME,
 	SEED_LOW_ON_HAND,
 	SEED_LOW_REORDER_QUANTITY,
@@ -206,6 +208,53 @@ test.describe('inventory', () => {
 			await loginAsStaff(page);
 			await page.goto('/staff/inventory/spend?from=1990-01-01&to=1990-12-31');
 			await expect(page.getByText('Nothing purchased in this window')).toBeVisible();
+		});
+	});
+
+	/**
+	 * Form 8282. The whole point is that the disposal and the paperwork are
+	 * separated by months and usually by different people, so these check the
+	 * flag actually reaches somewhere it will be seen.
+	 */
+	test.describe('form 8282', () => {
+		test('a donated unit disposed of inside three years raises a warning', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
+
+			await expect(page.getByText('Form 8282 may be due.')).toBeVisible();
+			await expect(page.getByRole('button', { name: 'Record 8282' })).toBeVisible();
+		});
+
+		test('it is listed where somebody will look for it later', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto('/staff/inventory/compliance');
+
+			const row = page.getByRole('row').filter({ hasText: SEED_DISPOSED_ASSET_TAG });
+			await expect(row).toBeVisible();
+		});
+
+		test('recording an outcome clears it from the list', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto('/staff/inventory/compliance');
+
+			const row = page.getByRole('row').filter({ hasText: SEED_DISPOSED_ASSET_TAG });
+			await row.getByRole('button', { name: 'Record 8282' }).click();
+			await page
+				.getByRole('dialog')
+				.locator('textarea')
+				.first()
+				.fill('Filed 2026-09-02, copy posted to the donor');
+			await page.getByRole('dialog').getByRole('button', { name: 'Record 8282' }).click();
+			await page.waitForTimeout(2000);
+
+			await page.goto('/staff/inventory/compliance');
+			// The obligation is discharged, so it stops asking — the note stays on
+			// the unit as the record that it was handled.
+			await expect(page.getByText(SEED_DISPOSED_ASSET_TAG)).toBeHidden();
+
+			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
+			await expect(page.getByText('Form 8282 may be due.')).toBeHidden();
+			await expect(page.getByText('copy posted to the donor')).toBeVisible();
 		});
 	});
 

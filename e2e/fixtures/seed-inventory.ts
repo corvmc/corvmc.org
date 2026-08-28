@@ -61,8 +61,17 @@ export const SEED_LOW_REORDER_QUANTITY = 20;
 /** 6 received − 4 used = 2, against a point of 5. */
 export const SEED_LOW_ON_HAND = SEED_LOW_RECEIVED - SEED_LOW_CONSUMED;
 
+/**
+ * A donated unit disposed of inside the three-year window, so the Form 8282
+ * warning has something to fire on. Received 400 days ago, retired 40 days ago:
+ * comfortably inside three years, and with most of the 125 days still to run.
+ */
+export const SEED_DONATION_ID = 'e2e-inv-acq-donation';
+export const SEED_DISPOSED_ASSET_ID = 'e2e-inv-asset-donated';
+export const SEED_DISPOSED_ASSET_TAG = 'E2E-000009';
+
 const SEED_ACQUISITION_ID = 'e2e-inv-acquisition';
-const ASSET_IDS = [SEED_ASSET_ID, SEED_UNTAGGED_ASSET_ID];
+const ASSET_IDS = [SEED_ASSET_ID, SEED_UNTAGGED_ASSET_ID, SEED_DISPOSED_ASSET_ID];
 const ITEM_IDS = [SEED_ITEM_ID, SEED_CONSUMABLE_ID, SEED_LOW_ID];
 
 async function ensureCategory(db: DrizzleD1Database) {
@@ -87,7 +96,9 @@ export async function seedInventory(): Promise<void> {
 		await db.delete(stockMovement).where(inArray(stockMovement.itemId, ITEM_IDS));
 		await db.delete(inventoryLoan).where(inArray(inventoryLoan.itemId, ITEM_IDS));
 		await db.delete(acquisitionLine).where(inArray(acquisitionLine.itemId, ITEM_IDS));
-		await db.delete(acquisition).where(eq(acquisition.id, SEED_ACQUISITION_ID));
+		await db
+			.delete(acquisition)
+			.where(inArray(acquisition.id, [SEED_ACQUISITION_ID, SEED_DONATION_ID]));
 		await db.delete(inventoryAsset).where(inArray(inventoryAsset.id, ASSET_IDS));
 		await db.delete(inventoryItem).where(inArray(inventoryItem.id, ITEM_IDS));
 		await db.delete(inventoryLocation).where(eq(inventoryLocation.id, SEED_LOCATION_ID));
@@ -143,6 +154,19 @@ export async function seedInventory(): Promise<void> {
 			totalCents: 100_000
 		});
 
+		// A donation, received well over a year ago. Its unit is retired below,
+		// which is what puts a live Form 8282 obligation on the compliance list.
+		await db.insert(acquisition).values({
+			id: SEED_DONATION_ID,
+			kind: 'donation',
+			occurredAt: new Date(now.getTime() - 400 * 24 * 60 * 60 * 1000),
+			sourceName: 'E2E Donor',
+			fairValueCents: 80_000,
+			fairValueBasis: 'Comparable sales',
+			intendedUse: 'Practice room backline',
+			acknowledgedAt: new Date(now.getTime() - 398 * 24 * 60 * 60 * 1000)
+		});
+
 		await db.insert(acquisitionLine).values([
 			{
 				id: 'e2e-inv-line-amp',
@@ -168,6 +192,19 @@ export async function seedInventory(): Promise<void> {
 		]);
 
 		await db.insert(inventoryAsset).values([
+			{
+				id: SEED_DISPOSED_ASSET_ID,
+				itemId: SEED_ITEM_ID,
+				assetTag: SEED_DISPOSED_ASSET_TAG,
+				condition: 'poor',
+				status: 'retired',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_DONATION_ID,
+				// 40 days ago: inside three years of receipt, and with most of the
+				// 125-day filing window still to run.
+				retiredAt: new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000),
+				retiredReason: 'Cracked cabinet'
+			},
 			{
 				id: SEED_ASSET_ID,
 				itemId: SEED_ITEM_ID,
