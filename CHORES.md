@@ -4,6 +4,17 @@ Low-priority cleanup and tech-debt items. Not blocking, but worth doing.
 
 ## Open
 
+- **The media sweep owes group documents a third pass.** `/api/cron/sweep-media`
+  (`src/lib/server/media/media-sweep-service.ts`) reaps the public bucket: attachment rows whose
+  parent is gone, then `media` rows nothing points at. It knows nothing about the `file` table
+  `docs/specs/groups-spec.md` designs, because that table does not exist yet — and when it does,
+  its objects live in a second bucket (`R2_PRIVATE`) that this job never looks at. Whoever builds
+  group documents adds the pass rather than reintroducing an inline `deleteObject`: `groups-spec.md`
+  moved to detach-and-sweep on the strength of this job existing, so a `file` row soft-deleted with
+  nothing reaping it is a leak that the spec now promises will not happen. The job is deliberately
+  written as two independent passes so a third costs nothing structural. Note the two buckets are
+  the only real difference — the shape of the query is the same one the `media` pass already runs.
+
 - **The staff settings page keeps a fifth, unguarded copy of the flag list.** A feature flag is
   spelled out in four hand-maintained places that `src/lib/server/feature-flags.spec.ts` does guard —
   the `FeatureFlag` union, `ALL_FLAGS`, the `feature.*` default in `site-config-service.ts`, and
