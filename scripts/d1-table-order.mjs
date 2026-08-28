@@ -44,12 +44,9 @@ export const tableOrder = [
 	'product_config',
 	'verification',
 	// leaves
-	'user_genre',
-	'user_instrument',
 	'model_has_permissions',
 	'model_has_roles',
 	'role_has_permissions',
-	'band_genre',
 	'directory_tag',
 	'group_slug_history',
 	'campaign_audience',

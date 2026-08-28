@@ -533,7 +533,6 @@ async function deleteAll() {
 		'band_media',
 		'band_page_config',
 		'band_site',
-		'band_genre',
 		// Child before parent, and both before `group` and `user`.
 		'directory_tag',
 		'directory_entry',
@@ -551,8 +550,6 @@ async function deleteAll() {
 		'role_has_permissions',
 		'roles',
 		'permissions',
-		'user_instrument',
-		'user_genre',
 		'session',
 		'account',
 		'verification',
