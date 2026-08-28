@@ -1,7 +1,7 @@
 /**
  * backfill-media.ts
  *
- * Phase 3 of docs/specs/media-spec.md. Reads the four places an R2 key is stored
+ * Phase 3 of docs/specs/shipped/media-spec.md. Reads the four places an R2 key is stored
  * today into `media` + `media_attachment`, so phase 4 has something to cut over
  * to. Nothing is removed and no behaviour changes: the source columns keep their
  * values and stay authoritative until phase 6 drops them.

@@ -1503,7 +1503,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
  * this as its single writer. What the media tables add underneath is the
  * object's lifetime: the previous poster is *detached*, never deleted here,
  * because a recurring series' occurrences may share one object and only the
- * sweep can see that. See docs/specs/media-spec.md.
+ * sweep can see that. See docs/specs/shipped/media-spec.md.
  */
 async function writeEventPoster(
 	eventId: string,

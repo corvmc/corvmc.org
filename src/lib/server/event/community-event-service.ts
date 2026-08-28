@@ -556,7 +556,7 @@ function assertValidTicketPrice(price: number | null | undefined): void {
  * Every poster write in this module funnels through here, which is what makes
  * "no request deletes an R2 object" enforceable in one place rather than at each
  * call site. The previous poster is detached; the sweep decides its fate. See
- * docs/specs/media-spec.md.
+ * docs/specs/shipped/media-spec.md.
  */
 async function uploadPosterKey(
 	eventId: string,

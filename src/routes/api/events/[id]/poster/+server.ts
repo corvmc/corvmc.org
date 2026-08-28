@@ -35,7 +35,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	await uploadFile(buffer, key, contentType);
 
 	// The previous poster is released, never deleted — a recurring series'
-	// occurrences share one object. See docs/specs/media-spec.md.
+	// occurrences share one object. See docs/specs/shipped/media-spec.md.
 	await replaceSlot({
 		attachableType: 'event',
 		attachableId: params.id,
