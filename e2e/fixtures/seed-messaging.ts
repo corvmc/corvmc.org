@@ -93,11 +93,15 @@ export async function seedMessaging(): Promise<void> {
 				emailVerified: true,
 				createdAt: now,
 				updatedAt: now,
-				// Both halves of reachability, set explicitly rather than left to the
-				// column defaults: these two flags are exactly what the regression
-				// broke, so the fixture should say what it expects them to be.
-				acceptsDirectMessages: true,
-				directoryVisibility: 'members'
+				// Half of reachability, set explicitly rather than left to the column
+				// default: this flag is one of the two the regression broke, so the
+				// fixture should say what it expects it to be.
+				//
+				// The other half, directory visibility, moved to `directory_entry` in
+				// phase 3a and its column was dropped in 3c.
+				// `seed-directory-entries.ts` creates every member's entry as
+				// `members`, which is the value this line used to set.
+				acceptsDirectMessages: true
 			});
 			await db.insert(account).values({
 				id: `${id}-account`,
