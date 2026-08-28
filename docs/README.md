@@ -121,9 +121,9 @@ this split was made.
 
 ### Inventory & assets
 
-| Doc                                          | Status | Lifecycle | Notes                                                                                                                                                                                                 |
-| -------------------------------------------- | ------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [inventory-spec.md](specs/inventory-spec.md) | 🔧     | split     | Phase 1 shipped (#286) — gear and consumables on one append-only ledger, serialized units, acquisitions, `/a/[tag]` scans. Phases 2–4 (spend reports, in-kind disclosure, attached resources) unbuilt |
+| Doc                                          | Status | Lifecycle | Notes                                                                                                                                                                                     |
+| -------------------------------------------- | ------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [inventory-spec.md](specs/inventory-spec.md) | 🔧     | split     | Phases 1–2 shipped — one append-only ledger, serialized units, acquisitions, `/a/[tag]` scans, restock list and spend report. Phases 3–4 (in-kind disclosure, attached resources) unbuilt |
 
 ### Staff platform
 

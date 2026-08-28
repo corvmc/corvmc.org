@@ -30,7 +30,8 @@ import { listLowStock, listMovements } from '$lib/server/inventory/stock-service
 import {
 	adjustStock,
 	consumeStock,
-	recordAcquisition
+	recordAcquisition,
+	spendByCategory
 } from '$lib/server/inventory/acquisition-service';
 import {
 	getLoanById,
@@ -804,6 +805,64 @@ export const returnLoan = form(
 export const getUserLoans = query(z.string(), async (userId) => {
 	await requireStaff();
 	return listUserLoans(userId);
+});
+
+// ---------------------------------------------------------------------------
+// Replenishment & spend
+// ---------------------------------------------------------------------------
+
+/**
+ * Everything at or below its reorder point — the list you take to the shop.
+ *
+ * Deliberately the whole list, not a page of it: it is bounded by how many
+ * things the collective stocks, and a paginated shopping list is a worse
+ * shopping list.
+ */
+export const getRestockList = query(z.void(), async () => {
+	await requireStaff();
+	const rows = await listLowStock();
+	return {
+		rows,
+		outCount: rows.filter((r) => r.isOut).length
+	};
+});
+
+const spendRange = z.object({
+	from: z.string().optional(),
+	to: z.string().optional()
+});
+
+/**
+ * Purchase spend per category over a window.
+ *
+ * Defaults to the current calendar year, because that is the window the board
+ * and the funders ask about. Donations and grants are excluded by
+ * `spendByCategory` itself — counting a gift as spend would overstate the
+ * budget by exactly what the collective was given.
+ */
+export const getSpendReport = query(spendRange, async (range) => {
+	await requireStaff();
+
+	const now = new Date();
+	const from = range.from ? new Date(range.from) : new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+	const to = range.to ? new Date(range.to) : now;
+
+	const rows = await spendByCategory(from, to);
+	const totalCents = rows.reduce((sum, r) => sum + Number(r.totalCents), 0);
+
+	return {
+		from: from.toISOString().slice(0, 10),
+		to: to.toISOString().slice(0, 10),
+		rows: rows.map((r) => ({
+			categoryId: r.categoryId,
+			categoryName: r.categoryName,
+			totalCents: Number(r.totalCents),
+			units: Number(r.units),
+			// Share of the window's spend, so the table reads without arithmetic.
+			share: totalCents > 0 ? Number(r.totalCents) / totalCents : 0
+		})),
+		totalCents
+	};
 });
 
 // ---------------------------------------------------------------------------

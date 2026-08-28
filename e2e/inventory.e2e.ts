@@ -8,6 +8,9 @@ import {
 	SEED_CONSUMABLE_RECEIVED,
 	SEED_ITEM_ID,
 	SEED_ITEM_NAME,
+	SEED_LOW_NAME,
+	SEED_LOW_ON_HAND,
+	SEED_LOW_REORDER_QUANTITY,
 	SEED_UNTAGGED_ASSET_ID
 } from './fixtures/seed-inventory';
 
@@ -125,6 +128,63 @@ test.describe('inventory', () => {
 		// Same record, new label — identity is the row, never the sticker.
 		await expect(page).toHaveURL(new RegExp(SEED_UNTAGGED_ASSET_ID));
 		await expect(page.getByRole('heading', { name: 'E2E-000099' })).toBeVisible();
+	});
+
+	/**
+	 * Replenishment. A reorder point that only draws a badge on a detail page is
+	 * not doing anything — these pin that it reaches somewhere a person looks.
+	 */
+	test.describe('running low', () => {
+		test('the dashboard surfaces what needs restocking', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto('/staff');
+
+			await expect(page.getByText('Running low')).toBeVisible();
+			await expect(page.getByRole('cell', { name: SEED_LOW_NAME })).toBeVisible();
+			// The well-stocked consumable must NOT appear — a low-stock list that
+			// shows everything is just the catalog again.
+			await expect(page.getByRole('cell', { name: SEED_CONSUMABLE_NAME })).toBeHidden();
+		});
+
+		test('the restock list says how many to buy', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto('/staff/inventory/restock');
+
+			await expect(page.getByRole('heading', { name: 'Restock' })).toBeVisible();
+			const row = page.getByRole('row').filter({ hasText: SEED_LOW_NAME });
+			await expect(row).toBeVisible();
+			await expect(row).toContainText(String(SEED_LOW_ON_HAND));
+			// The reorder quantity wins over "enough to reach the point".
+			await expect(row).toContainText(String(SEED_LOW_REORDER_QUANTITY));
+		});
+
+		test('an item above its point stays off the restock list', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto('/staff/inventory/restock');
+			await expect(page.getByText(SEED_CONSUMABLE_NAME)).toBeHidden();
+		});
+	});
+
+	/**
+	 * Spend. The question Phase 1 existed to make answerable — under the old
+	 * schema, using stock up overwrote a number and left nothing to total.
+	 */
+	test.describe('spend', () => {
+		test('totals purchases by category', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto('/staff/inventory/spend');
+
+			await expect(page.getByRole('heading', { name: 'Spend' })).toBeVisible();
+			await expect(page.getByText('Total spend')).toBeVisible();
+			// The fixture's one purchase covers the E2E category, so it has to show.
+			await expect(page.getByRole('cell', { name: 'E2E Test Gear' })).toBeVisible();
+		});
+
+		test('a window with no purchases reports nothing rather than erroring', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto('/staff/inventory/spend?from=1990-01-01&to=1990-12-31');
+			await expect(page.getByText('Nothing purchased in this window')).toBeVisible();
+		});
 	});
 
 	test.describe('scanning a tag', () => {

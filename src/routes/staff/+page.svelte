@@ -10,6 +10,8 @@
 	import { getStaffDashboard } from '$lib/remote/users.remote';
 	import { resolve } from '$app/paths';
 	import { formatDateShortYear } from '$lib/utils/format';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 
 	let data = $derived(await getStaffDashboard());
 </script>
@@ -21,6 +23,40 @@
 		<StatCard title="Active Roles" value={data.stats.totalRoles} />
 		<StatCard title="New This Month" value={data.stats.newUsersThisMonth} />
 	</div>
+
+	{#if data.lowStock.length > 0}
+		<!-- Above recent members on purpose: this is the only thing on the
+		     dashboard that is asking for an action today. -->
+		<SectionLabel label="Running low" />
+		<Table>
+			{#snippet head()}
+				<th>Item</th>
+				<th class="col-support">Category</th>
+				<th class="cell-num">On hand</th>
+				<th class="col-support cell-num">Buy</th>
+			{/snippet}
+			{#each data.lowStock as item (item.id)}
+				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/inventory/${item.id}`)}>
+					<td class="cell-primary">
+						{item.name}
+						{#if item.isOut}
+							<Badge variant="error" size="xs">Out</Badge>
+						{/if}
+					</td>
+					<td class="col-support">{item.category.name}</td>
+					<td class="cell-num" class:text-error={item.isOut}>{item.onHand}</td>
+					<td class="col-support cell-num">{item.suggestedOrder}</td>
+				</tr>
+			{/each}
+		</Table>
+		<div class="mt-2">
+			<Button variant="ghost" size="sm" href={resolve('/staff/inventory/restock')}>
+				{data.lowStockCount > data.lowStock.length
+					? `See all ${data.lowStockCount} to restock`
+					: 'Open the restock list'}
+			</Button>
+		</div>
+	{/if}
 
 	<SectionLabel label="Recent members" />
 	{#if data.recentUsers.length === 0}
