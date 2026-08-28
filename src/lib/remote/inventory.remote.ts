@@ -23,6 +23,8 @@ import {
 	getAssetById,
 	listAssets,
 	listAvailableAssets,
+	listForm8282Obligations,
+	resolveForm8282,
 	setAssetStatus,
 	updateAsset
 } from '$lib/server/inventory/asset-service';
@@ -30,9 +32,11 @@ import { listLowStock, listMovements } from '$lib/server/inventory/stock-service
 import {
 	adjustStock,
 	consumeStock,
+	getAcquisitionById,
 	recordAcquisition,
 	spendByCategory
 } from '$lib/server/inventory/acquisition-service';
+import { form8282Status } from '$lib/server/inventory/form-8282';
 import {
 	getLoanById,
 	getLoanHistory,
@@ -866,6 +870,53 @@ export const getSpendReport = query(spendRange, async (range) => {
 });
 
 // ---------------------------------------------------------------------------
+// Form 8282
+// ---------------------------------------------------------------------------
+
+/**
+ * Donated units disposed of within three years, where nobody has yet recorded
+ * what happened about Form 8282.
+ *
+ * A flag for a human, not a determination. Whether a given disposal is actually
+ * reportable turns on facts the system does not hold — above all whether the
+ * donor filed a Form 8283 that CMC signed. The acknowledgment date is returned
+ * alongside so a staffer can see that at a glance.
+ */
+export const getForm8282Obligations = query(z.void(), async () => {
+	await requireStaff();
+	const rows = await listForm8282Obligations();
+	return {
+		rows: rows.map((r) => ({
+			id: r.id,
+			assetTag: r.assetTag,
+			itemName: r.item.name,
+			donor: r.donor,
+			acquiredAt: r.acquiredAt,
+			disposedAt: r.retiredAt,
+			retiredReason: r.retiredReason,
+			acknowledged: r.acknowledgedAt !== null,
+			fairValueCents: r.fairValueCents,
+			state: r.status.state,
+			dueBy: r.status.dueBy,
+			daysRemaining: r.status.daysRemaining
+		})),
+		overdueCount: rows.filter((r) => r.status.state === 'overdue').length
+	};
+});
+
+export const recordForm8282 = form(
+	z.object({ id: z.string(), note: z.string().min(1).max(1000) }),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as { id: string; note: string };
+		await resolveForm8282(data.id, data.note);
+		void getForm8282Obligations().refresh();
+		void getStaffAssetDetail(data.id).refresh();
+		return { success: true };
+	}
+);
+
+// ---------------------------------------------------------------------------
 // Composed page queries — one load-bearing query per page
 // ---------------------------------------------------------------------------
 
@@ -893,7 +944,22 @@ export const getStaffItemDetail = query(z.string(), async (id) => {
 /** The staff asset detail page's one load-bearing query. */
 export const getStaffAssetDetail = query(z.string(), async (id) => {
 	const [asset, movements] = await Promise.all([getAsset(id), getAssetMovements(id)]);
-	return { asset, movements };
+
+	// Computed here rather than in the component: the rule is server-side and
+	// depends on the acquisition this unit arrived on, which the asset row only
+	// points at.
+	const acq = asset.acquisitionId ? await getAcquisitionById(asset.acquisitionId) : null;
+	const form8282 = form8282Status(
+		{
+			acquiredAt: acq?.occurredAt ?? null,
+			wasDonated: acq?.kind === 'donation',
+			disposedAt: asset.retiredAt,
+			resolvedAt: asset.form8282ResolvedAt
+		},
+		new Date()
+	);
+
+	return { asset, movements, form8282, donor: acq?.donorName ?? null };
 });
 
 /**

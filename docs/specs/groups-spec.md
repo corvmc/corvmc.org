@@ -1246,7 +1246,9 @@ Legacy macro formats (`application/msword`, `application/vnd.ms-excel`), `applic
 
 Quota is `sum(sizeBytes)` for the group where `deletedAt IS NULL`, checked before upload — 250 MB and 50 files per group, as service constants rather than per-group columns until someone asks for tiering.
 
-Soft-deleting a document **hard-deletes the R2 object immediately**; the row is the audit record. A soft-delete flag with no reaper is how storage bills grow silently.
+Soft-deleting a document **detaches it and lets the sweep reclaim the object**; the row is the audit record until then. The original rule here was an immediate hard-delete, reasoning that a soft-delete flag with no reaper is how storage bills grow silently. That reasoning was right and held only while no reaper existed — [`media-spec.md`](media-spec.md) has since built one (`/api/cron/sweep-media`), so the case for deleting inline is gone and the case against it applies here as it does everywhere else: a delete that fires from a write path cannot see whether anything else still references the object, and if the R2 call fails after the row is gone the file is stranded with no record of its key.
+
+Documents keep their own `R2_PRIVATE` bucket and their own table — this adopts the _deletion discipline_, not the `media` table. What that means concretely is that `file.deletedAt` is set, nothing calls `deleteObject` from the request, and the sweep reaps objects no live row points at. Quota (`sum(sizeBytes)` where `deletedAt IS NULL`) is unaffected: it already filters to live rows, so a soft-deleted document stops counting the moment it is deleted rather than when its object is.
 
 `File.type` is browser-supplied and spoofable, and there is no virus scanning. The exposure is bounded — authenticated members only, forced attachment, `nosniff` — but it is a real trade-off and is stated rather than left implicit.
 

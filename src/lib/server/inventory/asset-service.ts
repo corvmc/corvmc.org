@@ -1,11 +1,14 @@
 import { db } from '$lib/server/db';
 import {
+	acquisition,
 	equipmentCategory,
 	inventoryAsset,
 	inventoryItem,
 	inventoryLocation
 } from '$lib/server/db/schema/inventory';
-import { and, asc, eq, isNull, like, or } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, like, or } from 'drizzle-orm';
+import { user } from '$lib/server/db/schema/authentication';
+import { form8282Status, needsAttention } from './form-8282';
 import { recordMovement } from './stock-service';
 import type { AssetStatus, EquipmentCondition } from '$lib/config';
 
@@ -233,6 +236,81 @@ function movementReasonForStatus(from: AssetStatus, to: AssetStatus) {
 	if (to === 'maintenance') return 'repair_out' as const;
 	if (to === 'in_service' && from === 'maintenance') return 'repair_in' as const;
 	return null;
+}
+
+// ---------------------------------------------------------------------------
+// Form 8282
+// ---------------------------------------------------------------------------
+
+/**
+ * Donated units that have been disposed of and may owe a Form 8282.
+ *
+ * The candidate set is narrowed in SQL — donated, disposed, unresolved — and the
+ * three-year window is then applied in JS by `form8282Status`, so the rule lives
+ * in exactly one place and stays testable as a table. The row count here is
+ * small by construction: it is gear the collective was given and has since let
+ * go of.
+ */
+export async function listForm8282Obligations(now = new Date()) {
+	const rows = await db
+		.select({
+			asset: inventoryAsset,
+			item: inventoryItem,
+			acquiredAt: acquisition.occurredAt,
+			donorUserName: user.name,
+			sourceName: acquisition.sourceName,
+			acknowledgedAt: acquisition.acknowledgedAt,
+			fairValueCents: acquisition.fairValueCents
+		})
+		.from(inventoryAsset)
+		.innerJoin(inventoryItem, eq(inventoryAsset.itemId, inventoryItem.id))
+		.innerJoin(acquisition, eq(inventoryAsset.acquisitionId, acquisition.id))
+		// A donor may be a member or an outside party; `sourceName` carries the
+		// latter. The copy of the form has to reach whoever it actually was.
+		.leftJoin(user, eq(acquisition.donorUserId, user.id))
+		.where(
+			and(
+				eq(acquisition.kind, 'donation'),
+				isNotNull(inventoryAsset.retiredAt),
+				isNull(inventoryAsset.form8282ResolvedAt)
+			)
+		);
+
+	return (
+		rows
+			.map((r) => ({
+				...r.asset,
+				item: r.item,
+				acquiredAt: r.acquiredAt,
+				donor: r.donorUserName ?? r.sourceName,
+				acknowledgedAt: r.acknowledgedAt,
+				fairValueCents: r.fairValueCents,
+				status: form8282Status(
+					{
+						acquiredAt: r.acquiredAt,
+						wasDonated: true,
+						disposedAt: r.asset.retiredAt,
+						resolvedAt: r.asset.form8282ResolvedAt
+					},
+					now
+				)
+			}))
+			.filter((r) => needsAttention(r.status))
+			// Soonest deadline first; anything already overdue sorts to the top.
+			.sort((a, b) => (a.status.dueBy?.getTime() ?? 0) - (b.status.dueBy?.getTime() ?? 0))
+	);
+}
+
+/** Record that the filing was made, or that none was needed. */
+export async function resolveForm8282(assetId: string, note: string) {
+	const [row] = await db
+		.update(inventoryAsset)
+		.set({ form8282ResolvedAt: new Date(), form8282Note: note, updatedAt: new Date() })
+		.where(eq(inventoryAsset.id, assetId))
+		.returning();
+
+	if (!row) throw new AssetNotFoundError();
+	return row;
 }
 
 // ---------------------------------------------------------------------------

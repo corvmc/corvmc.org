@@ -26,6 +26,7 @@ export type StaffNavKey =
 	| 'users'
 	| 'bands'
 	| 'volunteer'
+	| 'volunteer-people'
 	| 'volunteer-shifts'
 	| 'volunteer-roles'
 	| 'volunteer-certifications'
@@ -37,6 +38,7 @@ export type StaffNavKey =
 	| 'equipment-loans'
 	| 'inventory-restock'
 	| 'inventory-spend'
+	| 'inventory-compliance'
 	| 'productions'
 	| 'calendar'
 	| 'flags'
@@ -93,6 +95,7 @@ export const staffNavSections: StaffNavSection[] = [
 				href: '/staff/volunteer',
 				badgeKey: 'volunteerPending',
 				children: [
+					{ key: 'volunteer-people', label: 'Volunteers', href: '/staff/volunteer/people' },
 					{ key: 'volunteer-shifts', label: 'Shifts', href: '/staff/volunteer/shifts' },
 					{ key: 'volunteer-roles', label: 'Roles', href: '/staff/volunteer/roles' },
 					{
@@ -132,7 +135,12 @@ export const staffNavSections: StaffNavSection[] = [
 				children: [
 					{ key: 'equipment-loans', label: 'Loans', href: '/staff/inventory/loans' },
 					{ key: 'inventory-restock', label: 'Restock', href: '/staff/inventory/restock' },
-					{ key: 'inventory-spend', label: 'Spend', href: '/staff/inventory/spend' }
+					{ key: 'inventory-spend', label: 'Spend', href: '/staff/inventory/spend' },
+					{
+						key: 'inventory-compliance',
+						label: 'Compliance',
+						href: '/staff/inventory/compliance'
+					}
 				]
 			}
 		]

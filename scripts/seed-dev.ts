@@ -2799,6 +2799,13 @@ async function seedEquipment(users: SeedUser[]) {
 		units: [{ tag: 'CMC-000103', serial: 'GIB-LP-91188', condition: 'excellent' }],
 		locationId: locByName['Main room']
 	});
+	// A donated unit the collective has since let go of, 40 days ago — inside the
+	// three-year window, so it owes a Form 8282 decision and the compliance list
+	// has a live row. Retired below, once the ids exist.
+	received(donation, 'Fender Blues Deluxe', 1, 65_000, {
+		units: [{ tag: 'CMC-000110', serial: 'FEN-BD-55021', condition: 'poor' }],
+		locationId: locByName['Main room']
+	});
 	received(grant, 'QSC K12.2 Powered Speaker', 2, 48_000, {
 		units: [{ tag: 'CMC-000104' }, { tag: 'CMC-000105' }],
 		locationId: locByName['Stage left rack']
@@ -3014,6 +3021,32 @@ async function seedEquipment(users: SeedUser[]) {
 		.update(inventoryAsset)
 		.set({ status: 'maintenance', condition: 'poor' })
 		.where(eq(inventoryAsset.id, blues.id!));
+
+	// Disposed of 40 days ago: donated, inside the three-year window, and nobody
+	// has recorded a Form 8282 outcome — so it shows on /staff/inventory/compliance
+	// with roughly 85 of the 125 days left.
+	const donatedDisposal = assets.find((a) => a.assetTag === 'CMC-000110');
+	if (donatedDisposal) {
+		const disposedAt = new Date(now.getTime() - 40 * day);
+		await db
+			.update(inventoryAsset)
+			.set({
+				status: 'retired',
+				retiredAt: disposedAt,
+				retiredReason: 'Cracked cabinet, sold for parts'
+			})
+			.where(eq(inventoryAsset.id, donatedDisposal.id!));
+		movements.push({
+			id: randomUUID(),
+			itemId: donatedDisposal.itemId,
+			assetId: donatedDisposal.id!,
+			quantity: -1,
+			reason: 'retire',
+			actorId: staffId,
+			occurredAt: disposedAt,
+			notes: 'Cracked cabinet, sold for parts'
+		});
+	}
 
 	await batchInsert(stockMovement, movements, 4);
 

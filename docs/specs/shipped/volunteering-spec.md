@@ -868,9 +868,38 @@ leaves `type` unset, so a trigger nested in the form would post the role edit.
 - Archive, restore, and delete live in the page header. Delete on a role with
   logs surfaces `VolunteerRoleInUseError` as a message pointing at archive.
 
-`/staff/volunteer/interest` remains as a 308 redirect. Searching _members_ across
-roles is deliberately not carried over — that belongs on the users table, and is
-tracked in `CHORES.md`.
+`/staff/volunteer/interest` remains as a 308 redirect, now pointing at
+`/staff/volunteer/people` — a bookmark to that URL was always after names, not
+roles.
+
+### `/staff/volunteer/people` — the volunteers index
+
+The people half of the old interest page, back as its own route. The roles page
+answers "who wants Door?"; this one answers "who are our volunteers?", which the
+roles page structurally cannot — a coordinator looking for a name had nowhere to
+start.
+
+**Keyed on `volunteer_profile`, not on interest rows.** The interests step is
+skippable and a blocked minor never reaches it, so an interest-keyed list drops
+the two groups staff most need to see: the person who signed up and picked
+nothing, and the minor waiting on approval. `listVolunteers` left-joins the
+interests for that reason, where its sibling `listInterestedMembers` inner-joins
+them.
+
+- `FilterBar`: member search, an **Interested in role** `Select` (the same
+  `RoleOptions`), and a status `Select` (Active / Awaiting review). URL-backed,
+  like the hours queue.
+- Five columns: status glyph with a `minor` marker, member, interest badges,
+  lifetime approved hours, and the date they onboarded. An em dash on the
+  interests column is a real answer — they signed up without picking anything —
+  not missing data.
+- The role filter is an **EXISTS**, so a filtered row still shows every role that
+  member picked; narrowing the list must not narrow the row.
+- Hours are a correlated subquery, deliberately not a join: joining the hour log
+  alongside the interest join is a cartesian product, and the `group_concat`
+  would emit a role name once per approved log.
+- No detail route. Rows lead to `/staff/users/[id]?tab=volunteer`, which is
+  already the per-member volunteer record.
 
 ### `/staff/volunteer/report`
 
