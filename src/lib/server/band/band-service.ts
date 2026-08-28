@@ -21,7 +21,7 @@ import { sanitizeBio } from '$lib/utils/markdown';
 import { captureException } from '$lib/server/sentry';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 
-import type { BandTier } from '$lib/server/db/schema/group';
+import type { BandTier } from '$lib/server/db/schema/band-site';
 
 // ---------------------------------------------------------------------------
 // Types

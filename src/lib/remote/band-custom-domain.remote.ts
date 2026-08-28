@@ -4,7 +4,7 @@ import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { group as bandTable } from '$lib/server/db/schema/group';
+import { bandSite } from '$lib/server/db/schema/band-site';
 import { requireBandOwner } from '$lib/server/band/band-context';
 import { requireUser } from '$lib/server/authorization';
 import { requireFeature } from '$lib/server/feature-flags';
@@ -87,7 +87,7 @@ export const setCustomDomain = form(
 			const state = await createCustomHostname(host);
 
 			await db
-				.update(bandTable)
+				.update(bandSite)
 				.set({
 					customDomain: state.domain,
 					customDomainStatus: state.status,
@@ -96,7 +96,7 @@ export const setCustomDomain = form(
 					customDomainAddedAt: new Date(),
 					updatedAt: new Date()
 				})
-				.where(eq(bandTable.id, band.id));
+				.where(eq(bandSite.groupId, band.id));
 
 			await forgetCustomDomain(state.domain);
 			return { success: true, status: state.status };
@@ -117,13 +117,13 @@ export const refreshCustomDomain = form(z.object({ slug: z.string().min(1) }), a
 		const { status, verification } = await readCustomHostname(band.customDomainHostnameId);
 
 		await db
-			.update(bandTable)
+			.update(bandSite)
 			.set({
 				customDomainStatus: status,
 				customDomainVerification: verification,
 				updatedAt: new Date()
 			})
-			.where(eq(bandTable.id, band.id));
+			.where(eq(bandSite.groupId, band.id));
 
 		// The router caches hostname → band; a domain that just went active has to
 		// start resolving now, not in five minutes.
@@ -144,7 +144,7 @@ export const removeCustomDomain = form(z.object({ slug: z.string().min(1) }), as
 		}
 
 		await db
-			.update(bandTable)
+			.update(bandSite)
 			.set({
 				customDomain: null,
 				customDomainStatus: null,
@@ -153,7 +153,7 @@ export const removeCustomDomain = form(z.object({ slug: z.string().min(1) }), as
 				customDomainAddedAt: null,
 				updatedAt: new Date()
 			})
-			.where(eq(bandTable.id, band.id));
+			.where(eq(bandSite.groupId, band.id));
 
 		await forgetCustomDomain(band.customDomain);
 		return { success: true };

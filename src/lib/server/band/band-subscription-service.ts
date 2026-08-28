@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { bandSite } from '$lib/server/db/schema/band-site';
-import { bandSubscriptionSchema, type BandSubscription } from '$lib/server/db/schema/group';
+import { bandSubscriptionSchema, type BandSubscription } from '$lib/server/db/schema/band-site';
 import { stripe } from '$lib/server/stripe';
 import { checkout } from '$lib/server/finance/payment-service';
 import {

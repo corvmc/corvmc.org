@@ -53,14 +53,16 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 	// 404 is the right answer; here the page is granted by `tier`, and a premium
 	// band whose entry went missing should lose its bio, not its site.
 	const [joined] = await db
-		.select({ band: group, entry: directoryEntry })
+		.select({ band: group, entry: directoryEntry, site: bandSite })
 		.from(group)
 		.leftJoin(directoryEntry, eq(directoryEntry.groupId, group.id))
+		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
 		.limit(1);
 
 	const bandRow = joined?.band;
 	const entry = joined?.entry;
+	const site = joined?.site;
 
 	if (!bandRow) {
 		// Not just for stale bookmarks: `/api/host-route` answers with
@@ -74,7 +76,7 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 		}
 		throw error(404, 'Band not found');
 	}
-	if (bandRow.tier !== 'premium') throw error(404, 'Page not found');
+	if (site?.tier !== 'premium') throw error(404, 'Page not found');
 
 	// Fetch page config
 	const [config] = await db
@@ -127,7 +129,7 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 			genres: genres.map((g) => g.value),
 			// Only a live custom domain counts — canonical URLs must not point at a
 			// hostname that isn't serving yet.
-			customDomain: bandRow.customDomainStatus === 'active' ? bandRow.customDomain : null
+			customDomain: site?.customDomainStatus === 'active' ? site.customDomain : null
 		},
 		config: config
 			? {

@@ -67,15 +67,18 @@ export async function seedDirectoryEntries(): Promise<void> {
 			(r) => r.groupId
 		);
 		const unsited = await db
-			.select({ id: group.id, tier: group.tier, createdAt: group.createdAt })
+			.select({ id: group.id, createdAt: group.createdAt })
 			.from(group)
 			.where(sited.length ? notInArray(group.id, sited) : sql`1 = 1`);
 
 		if (unsited.length) {
 			await db.insert(bandSite).values(
+				// `free`, not copied: `group.tier` is gone as of phase 3c, and a
+				// fixture that wants premium writes its own site row (as
+				// `seed-band-onboarding` does for the premium band).
 				unsited.map((g) => ({
 					groupId: g.id,
-					tier: g.tier,
+					tier: 'free' as const,
 					createdAt: g.createdAt,
 					updatedAt: g.createdAt
 				}))
