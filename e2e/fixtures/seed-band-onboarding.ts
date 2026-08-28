@@ -17,6 +17,7 @@ import { groupMember, groupSlugHistory } from '../../src/lib/server/db/schema/gr
 import { group } from '../../src/lib/server/db/schema/group';
 import { directoryEntry, directoryTag } from '../../src/lib/server/db/schema/directory';
 import { bandSite } from '../../src/lib/server/db/schema/band-site';
+import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { scryptHash } from './seed-pay-reservation';
 import { withPlatformEnv } from './platform-db';
 
@@ -50,6 +51,9 @@ export const SEED_MEMBERS_BAND_NAME = 'E2E Members Band';
 export const SEED_PREMIUM_BAND_ID = 'e2e-band-premium';
 export const SEED_PREMIUM_BAND_SLUG = 'e2e-premium-band';
 export const SEED_PREMIUM_BAND_NAME = 'E2E Premium Band';
+/** Its one gallery image, attached through `media` + `media_attachment`. */
+export const SEED_PREMIUM_GALLERY_KEY = 'bands/e2e-premium-band/gallery-0.jpg';
+export const SEED_PREMIUM_GALLERY_CAPTION = 'E2E Premium Band on stage';
 
 /**
  * Exists to be renamed. The address-change test moves this band's slug, so it
@@ -105,6 +109,10 @@ export async function seedBandOnboarding(): Promise<void> {
 			await db.delete(directoryTag).where(eq(directoryTag.entryId, entryIdFor(bandId)));
 			await db.delete(directoryEntry).where(eq(directoryEntry.groupId, bandId));
 			await db.delete(bandSite).where(eq(bandSite.groupId, bandId));
+			// `media_attachment` has no foreign key to its parent by design — the
+			// sweep reconciles it in production — so a fixture has to clear its own.
+			await db.delete(mediaAttachment).where(eq(mediaAttachment.attachableId, bandId));
+			await db.delete(media).where(eq(media.id, `${bandId}-gallery-media`));
 			await db.delete(group).where(eq(group.id, bandId));
 		}
 		for (const userId of [SEED_OWNER_ID, SEED_BANDMATE_ID]) {
@@ -262,6 +270,28 @@ export async function seedBandOnboarding(): Promise<void> {
 				updatedAt: now
 			}))
 		);
+
+		// One gallery image for the premium band, so the microsite has something to
+		// render through the media tables. The key names no real R2 object — the
+		// point is the data path (D1 -> listFor -> renderer), not the bytes.
+		await db.insert(media).values({
+			id: `${SEED_PREMIUM_BAND_ID}-gallery-media`,
+			key: SEED_PREMIUM_GALLERY_KEY,
+			contentType: 'image/jpeg',
+			byteSize: 123456,
+			caption: SEED_PREMIUM_GALLERY_CAPTION,
+			createdAt: now
+		});
+
+		await db.insert(mediaAttachment).values({
+			id: `${SEED_PREMIUM_BAND_ID}-gallery-attachment`,
+			mediaId: `${SEED_PREMIUM_BAND_ID}-gallery-media`,
+			attachableType: 'group',
+			attachableId: SEED_PREMIUM_BAND_ID,
+			slot: 'gallery',
+			sortOrder: 0,
+			createdAt: now
+		});
 
 		await db.insert(directoryTag).values({
 			entryId: entryIdFor(SEED_PUBLIC_BAND_ID),

@@ -52,6 +52,25 @@ test('a premium band subdomain serves its band site', async ({ page }) => {
  * An address a band released by changing its slug keeps forwarding — until some
  * other band claims it, at which point the live band wins and the redirect stops.
  */
+/**
+ * The microsite's gallery comes from `media` + `media_attachment` since the
+ * phase-4 cut-over, not from `band_media`. A broken query renders an empty
+ * gallery rather than an error, so without this the regression is silent — the
+ * page still loads and still has the right title.
+ *
+ * **Asserts the section, not the `<img>`.** The EPK guards each image with
+ * `{#if img.url}` and `resolveImageUrl()` yields null unless R2 is configured,
+ * which it is not under `vite preview`. So the image element never renders here
+ * however healthy the query is, while the "Photos" heading sits inside
+ * `{#if galleryMedia.length > 0}` and therefore appears only when the media
+ * tables actually returned a gallery row for this band.
+ */
+test('the premium microsite renders gallery media from the media tables', async ({ page }) => {
+	await page.goto(`${subdomain(SEED_PREMIUM_BAND_SLUG)}/epk`);
+
+	await expect(page.getByRole('heading', { name: 'Photos' })).toBeVisible();
+});
+
 test('an old subdomain forwards to the address the band moved to', async ({ request }) => {
 	const response = await request.get(`${subdomain(SEED_PUBLIC_BAND_OLD_SLUG)}/`, {
 		maxRedirects: 0
