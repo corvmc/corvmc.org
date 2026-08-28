@@ -6,6 +6,8 @@
 
 Track venue sponsors and their agreements. Manage sponsor logos, tiers, and placement preferences. Sponsors could be linked to events, rooms, or the venue as a whole.
 
+**Progress:** Not built. `docs/specs/committees-and-roles-spec.md` assigns this to the Development committee, alongside `Grant & Fundraising Tracker` and a renewal calendar for permits, licenses and insurance — three unbuilt things that are all the same shape: an agreement with a counterparty, a deadline, and an obligation afterwards.
+
 ### Local Resources Directory
 
 A public-facing directory of local music-related businesses and spaces — record shops, prominent venues, instrument/gear shops, rehearsal studios, etc. Staff-curated with categories, descriptions, and links. Helps position the venue as a community hub and cross-promotes the local music ecosystem.
@@ -105,6 +107,8 @@ Guided checklist for new members: orientation scheduling, safety walkthrough sig
 ### Venue Maintenance Requests
 
 Members report broken gear, room issues, or facility problems. Staff track, prioritize, and resolve them. Keeps the space in shape without relying on hallway conversations.
+
+**Progress:** Not built. `docs/specs/committees-and-roles-spec.md` puts it under the Facility committee with two adjacent gaps it does not cover — a cleaning schedule somebody is assigned to, and a register of key, lock and alarm-code holders (distinct from the reservation door-code integration, and the higher-consequence half). The labor is already served: work parties are a volunteer role and schedule as ordinary shifts.
 
 ### Incident & Safety Log
 
@@ -256,6 +260,60 @@ UI itself and the `supplier` table that normalises the free-text source (Phase 2
 ### Automatic Poster Compositing
 
 Auto-generate event posters by compositing uploaded artwork with a branded footer containing event details (date, time, venue, ticket info) and sponsor logos. Reduces manual design work for recurring events and ensures consistent branding.
+
+### Committee Operations
+
+Give the six committees a working surface: a roster where each member's named position means
+something, a path from "I'm interested in Programming" to actually being on it, a report to the
+board on a cadence, and the spending limit a chair works inside. The groups module already
+carries committees as `kind = 'committee'` with a roster, announcements and documents; what is
+missing is everything that makes a committee a committee rather than a group chat with a
+filing cabinet.
+
+**Progress:** Requirements enumerated in `docs/specs/committees-and-roles-spec.md`, which maps
+the whole committee structure against what the app serves today. Two pieces are near-free —
+`group_member.position` already exists and is read by nothing, and `volunteer_role_interest`
+rows in the `committee` bucket are already a chair's recruiting leads with no view onto them.
+The rest waits on committee-scoped authority, which is the argument that spec makes for
+`admin-vs-staff-spec.md`'s Option B.
+
+### Poster Art Commissioning
+
+Commission the poster for an event from a local artist: a roster of artists and what each has
+made, an info packet sent per event, image rights agreed in writing before work starts, the
+file back before the publication deadline, and a record of what the artist is owed and how they
+are credited. Distinct from `Poster Art Repository` (a library artists upload to and musicians
+license from) and from `Automatic Poster Compositing` (generating the finished image) — this is
+the relationship and the deadline, not the file.
+
+**Progress:** Not built, and the largest uncovered workflow in
+`docs/specs/committees-and-roles-spec.md`. `event.posterKey` is the finished file; nothing
+models how it got there, and the flyer cutoff that Communications is supposed to enforce has
+nothing to enforce against.
+
+### Market Vendor Management
+
+Run a market day: recruit vendors, take applications against a deadline, set and collect table
+fees, lay out the table map, check vendors in on the day, handle no-shows and reassignments,
+and record who sold well enough to invite back. Pairs the Development committee's recruiting
+duties with the vendor host's day-of role as one feature rather than two.
+
+**Progress:** Not built; nothing in the app models a vendor, a table, or a market day. Fee
+collection would ride the existing Stripe integration, and check-in is close in shape to
+`/staff/events/[id]/check-in`.
+
+### Recording Session Management
+
+Track a recording session end to end: booking the session, multitrack capture at sessions and
+at shows, file custody and backups, a signed release before anything is used, and the handoff
+to whoever mixes and masters it. The Production committee already trains and clears the
+engineers through the certification module; the sessions themselves have nowhere to live.
+
+**Progress:** Not built. `media` stores finished files and is not session management. The
+release-form half is shared with two other committees — photo and video subject releases for
+Communications, image-rights agreements for Art and Merch — and is called out in
+`docs/specs/committees-and-roles-spec.md` as one problem that will otherwise be solved three
+times.
 
 ## Laravel-era, not yet reviewed
 
