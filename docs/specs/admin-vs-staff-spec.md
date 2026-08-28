@@ -115,13 +115,30 @@ const admin = ac.newRole({ project: ['create', 'update'] });
 
 Roles are **defined in code and assigned in data**, which is precisely the split this spec
 argues for, arrived at independently by a library we already run. Server-side checking is
-`auth.api.userHasPermission()`. Two caveats before adopting it: the documentation only covers
-use _through_ the admin and organization plugins and does not describe standalone use, and this
-app runs `better-auth/minimal` without either plugin — pulling in the admin plugin would bring
-user ban/impersonate/delete endpoints that are not wanted. **A short spike should establish
-whether `better-auth/plugins/access` is importable on its own.** If it is, adopt it; if not, the
-matrix is roughly thirty lines of TypeScript and one `can()` function, and the shape is worth
-copying either way.
+`auth.api.userHasPermission()`.
+
+**Verified: `better-auth/plugins/access` imports standalone.** The documentation only covers use
+_through_ the admin and organization plugins, so this was run against the installed copy
+(1.6.30) rather than assumed. It is its own subpath export, it exports exactly
+`createAccessControl` and `role`, a role exposes `authorize()` and `statements`, and none of it
+touches a plugin, an auth instance, or the database:
+
+```
+vol_coord {"volunteer":["reviewHours"]}                  -> {"success":true}
+vol_coord {"credit":["adjust"]}                          -> {"success":false, "error":"..."}
+vol_coord {"volunteer":["reviewHours"],"user":["purge"]} -> {"success":false, "error":"..."}
+```
+
+Multi-resource checks AND-compose, as the last line shows. The module is 4KB. **Adopt it**: it
+is zero new dependencies for a primitive that would otherwise be hand-rolled, and the admin
+plugin — whose ban, impersonate and delete endpoints are not wanted here, and which this app
+avoids by running `better-auth/minimal` — does not have to come with it.
+
+Two mechanical notes that follow from it being a library rather than local code. `authorize()`
+returns `{ success, error }` rather than a boolean, so the guard wraps it. And the statement must
+be a plain `as const` literal in `src/lib/config.ts` with the access controller built in
+`src/lib/server/authorization.ts` — calling `createAccessControl` in `config.ts` would pull
+better-auth into the client bundle, since that file is client-importable by convention.
 
 **The heavyweight end of the market is real and is not for us.**
 [OpenFGA](https://openfga.dev/docs/authorization-concepts) and SpiceDB implement Google's
@@ -233,7 +250,15 @@ Two judgement calls, one of them changed since the first draft:
 
 **Additive, and there is no flag day.** `requireStaff()` survives as a function; its definition
 becomes "holds any elevated position". Nothing that works stops working. Then handlers narrow
-one at a time:
+one at a time.
+
+The surface is smaller than it sounds. `requireStaff()` has **266 call sites in 22 files, 18 of
+them under `src/lib/remote/`** — so the narrowing is roughly one PR per remote module, each
+independently revertible. Around them sit `isStaff(` ×11, `hasAnyRole(` ×11, `listStaffUsers(`
+×7 and `primaryRoleFor(` ×3, which are the ones that need thought rather than a swap.
+
+Defining the matrix and the guard while changing no handler is a complete, shippable step with
+**no behavioral change at all** — which is what makes the rest safe to do slowly.
 
 ```ts
 export async function requireCapability(cap: Capability) {
@@ -267,6 +292,12 @@ nav rows drop out. Hiding a control is not a guard — it just stops someone wal
 - **"Primary role" stops being well-defined.** `primaryRoleFor()` is a fixed SQL `CASE` ladder
   rendered as one badge in the users list. Unranked positions have no top one; it becomes a set
   of chips or an explicit display order.
+- **Assignment lookup wants a per-request cache.** `authorize()` is pure and synchronous, but
+  resolving which positions a user holds is a database read. That is no worse than today —
+  `requireStaff()` already reads through `hasAnyRole` — but capability checks invite more of
+  them, and `layout.remote.ts` already does three. `App.Locals` is `{ user, session }` today and
+  `hooks.server.ts` populates it from the session; resolving positions there once per request
+  makes this cheaper than the status quo rather than more expensive.
 - **"Notify all staff" needs a referent.** `listStaffUsers()` backs notifications like the
   volunteer hour-log queue. Those become "notify whoever holds `volunteer.reviewHours`" — a
   better outcome, and real work at every call site.
@@ -322,6 +353,49 @@ mapping that lives only in a database is a mapping nobody reviews, and it buys r
 that an organization changing its org chart a few times a year does not need. It also needs a
 UI and a lockout guard, both of which are real work.
 
+**`better-auth`'s organization plugin, for the committee half.** The obvious question, since the
+access-control primitive above comes from the same library and the plugin exists in the
+installed copy — `organization`, `member`, `invitation`, `team`, `teamMember` and
+`organizationRole` are all present. Rejected on a specific finding rather than on taste:
+**teams follow the organization's permission system and there are no per-team permission
+checks.** `hasPermission` is organization-scoped only, which forces a choice between two bad
+mappings.
+
+- _CMC is the organization, a committee is a team._ Semantically right — one organization with
+  internal groupings — and it delivers nothing, because per-team scope is the entire
+  requirement.
+- _A committee is an organization._ Now the check works, but `group` is one table holding bands,
+  clubs and committees, so every band becomes an organization too; `activeOrganizationId` lands
+  on the session, which is tenant-switching state this app has no use for (somebody on both
+  Programming and Production does not switch between them); and the cross-cutting positions are
+  not organization-scoped at all, so `createAccessControl` is still needed beside it. Two
+  mechanisms rather than one.
+
+Timing seals it. Schema mapping is supported (`modelName`, `fields`, `additionalFields`), so
+pointing `member` at `group_member` is mechanically possible — but `group_member` carries
+`status`, `position`, `alias`, `notifyAnnouncements` and a partial unique owner index that
+better-auth's `member` does not, several of them load-bearing in
+[groups-spec.md](groups-spec.md), and **groups is mid-migration at phase 3c of ten**.
+Retargeting those tables onto a plugin's expectations while the `band` → `group` rename is still
+in flight would put group bugs and migration bugs in one diff, which is the hazard that spec
+spends a page warning about for the phases it already has.
+
+What is actually being declined is small: the relationship check is _"is this user an active
+member of the group owning this resource, at role ≥ X"_ — one query, already designed as
+`requireGroupRole`. The plugin's value is the surrounding machinery (invitations, member CRUD,
+active-organization session state), which this app already has or is deliberately building
+differently.
+
+**Worth stealing, though, and recorded so it is not reinvented badly:** `organizationRole` is a
+role row scoped to one organization with its permissions stored as JSON, created at runtime.
+That is the shape to copy as a `group_role` table _if_ committees ever want their own internal
+positions — "Programming has a booker with these capabilities" — which is the one place
+roles-as-data is right, because the people maintaining it are the committee itself. Not needed
+now: today's positions are cross-cutting and belong in the code matrix.
+
+One trap if the client side looks tempting: `checkRolePermission` is client-only, synchronous,
+and explicitly excludes dynamic roles, so it cannot be the source of truth for UI gating.
+
 **An external authorization service (OpenFGA, SpiceDB, Cedar, Casbin, Oso).** Rejected on scale
 and on shape. The threshold where fine-grained authorization pays for itself is roughly twenty
 roles or resource sharing as a product feature; this is eight positions and one relationship
@@ -342,9 +416,7 @@ position count triples or per-resource sharing becomes a real feature.
    that is too loose, the bound is a ceiling — "up to N hours without escalation" — which is the
    same threshold model the committee spending limit needs. Neither exists, and building one
    mechanism for both is the cheap version.
-3. **Can `better-auth/plugins/access` be imported standalone?** Decides whether the matrix is
-   library-provided or thirty lines of local TypeScript. A spike, not a debate.
-4. **Does `requireCapability` compose with committee scope, or sit beside it?** A capability
+3. **Does `requireCapability` compose with committee scope, or sit beside it?** A capability
    like `event.publish` is unqualified; a committee member holds it _for their own domain_. The
    likely answer is that committee-scoped guards take the resource and resolve the committee
    from it, and the two guards stay separate rather than merging into one call that has to know

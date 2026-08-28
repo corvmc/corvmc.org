@@ -460,7 +460,13 @@ Areas where the npm ecosystem is thin — worth revisiting periodically.
   the shape `docs/specs/admin-vs-staff-spec.md` settles on. The heavyweight tier — OpenFGA and
   SpiceDB for Zanzibar-style ReBAC, Cedar/Casbin/Oso as embedded policy languages — pays off
   past roughly twenty roles or when resource sharing is a product feature. This is eight
-  positions and one relationship type, inside a Worker where an external check is a network hop
+  positions and one relationship type, inside a Worker where an external check is a network hop.
+  `better-auth`'s **organization plugin** was evaluated for the committee half and rejected:
+  teams carry no per-team permissions and `hasPermission` is organization-scoped only, so a
+  committee would have to become an organization — which turns every band into one too and adds
+  tenant-switching session state this app has no use for. Its `organizationRole` table (a
+  role scoped to one group, permissions as JSON, created at runtime) is the shape to copy if
+  committees ever want their own internal positions
 
 ---
 
