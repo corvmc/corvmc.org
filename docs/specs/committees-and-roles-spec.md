@@ -423,7 +423,7 @@ layout (`postmark/templates/_layouts/corvmc-transactional/`) carries the mailing
 **As Communications**, I want a shot list for each event, the files handed in the same week, and
 an archive I can find things in later.
 🔧 The Documentation volunteer role exists and `media` / `media_attachment` plus
-[media-spec.md](media-spec.md) hold the files. 🆕 The shot list, the same-week handoff, and the
+[media-spec.md](shipped/media-spec.md) hold the files. 🆕 The shot list, the same-week handoff, and the
 index of recordings do not.
 
 **As Communications**, I want a release on file for the people who appear in our photos and
