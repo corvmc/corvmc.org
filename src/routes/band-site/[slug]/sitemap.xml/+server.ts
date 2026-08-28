@@ -5,7 +5,7 @@ import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
 import { group } from '$lib/server/db/schema/group';
 import { bandSite } from '$lib/server/db/schema/band-site';
-import { bandPageConfig } from '$lib/server/db/schema/band-page';
+
 import { eq, and, isNull } from 'drizzle-orm';
 
 // Served on band subdomains: {slug}.corvmc.org/sitemap.xml reroutes here.
@@ -27,9 +27,9 @@ export const GET: RequestHandler = async ({ params }) => {
 	if (!row || row.tier !== 'premium') throw error(404, 'Not found');
 
 	const [config] = await db
-		.select({ epk: bandPageConfig.epk })
-		.from(bandPageConfig)
-		.where(eq(bandPageConfig.bandId, row.id))
+		.select({ epk: bandSite.epk })
+		.from(bandSite)
+		.where(eq(bandSite.groupId, row.id))
 		.limit(1);
 
 	const origin = bandSiteUrl(

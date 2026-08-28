@@ -11,7 +11,6 @@ import type { BandEpk } from '$lib/types/band-page';
 import { db } from '$lib/server/db';
 import { group, groupMember } from '$lib/server/db/schema/group';
 import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
-import { bandPageConfig } from '$lib/server/db/schema/band-page';
 import { listFor as listMediaFor } from '$lib/server/media/media-service';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { user } from '$lib/server/db/schema/authentication';
@@ -78,12 +77,8 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 	}
 	if (site?.tier !== 'premium') throw error(404, 'Page not found');
 
-	// Fetch page config
-	const [config] = await db
-		.select()
-		.from(bandPageConfig)
-		.where(eq(bandPageConfig.bandId, bandRow.id))
-		.limit(1);
+	// The page config IS the site row since phase 3c — already fetched above.
+	const config = site;
 
 	// Fetch members
 	const members = await db
@@ -196,9 +191,9 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 
 	// Deliver to the EPK booking contact, falling back to the band owner
 	const [config] = await db
-		.select({ epk: bandPageConfig.epk })
-		.from(bandPageConfig)
-		.where(eq(bandPageConfig.bandId, bandRow.id))
+		.select({ epk: bandSite.epk })
+		.from(bandSite)
+		.where(eq(bandSite.groupId, bandRow.id))
 		.limit(1);
 	const epk = config?.epk as BandEpk | null | undefined;
 

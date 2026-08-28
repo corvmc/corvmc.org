@@ -54,7 +54,6 @@ import { notification, notificationPreference } from '../src/lib/server/db/schem
 import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/directory';
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { group } from '../src/lib/server/db/schema/group';
-import { bandPageConfig } from '../src/lib/server/db/schema/band-page';
 import { media, mediaAttachment } from '../src/lib/server/db/schema/media';
 import { bandSite } from '../src/lib/server/db/schema/band-site';
 import {
@@ -564,7 +563,6 @@ async function deleteAll() {
 		'notification_preference',
 		'notification',
 		'ticket',
-		'band_page_config',
 		'band_site',
 		// Child before parent, and both before `group` and `user`.
 		'directory_tag',
@@ -1846,9 +1844,9 @@ async function seedBandReservations(bands: any[]) {
  * One `band_site` per band, mirroring `scripts/db/backfill/band-site.sql`.
  *
  * Every band gets one regardless of tier: the row is what `tier` lives on, and
- * it is never deleted while the band lives, because `band_page_config` and
- * `band_media` cascade from it — a cancelled subscription must not take a
- * band's blocks, theme, CSS, EPK and images with it.
+ * it is never deleted while the band lives: the microsite's blocks, theme, CSS
+ * and EPK are columns on it as of phase 3c, so deleting the row on a cancelled
+ * subscription would take the band's whole site with it.
  */
 async function seedBandSites(bands: any[]) {
 	console.log('Seeding band sites...');
@@ -1868,7 +1866,7 @@ async function seedBandSites(bands: any[]) {
 	return new Map(rows.map((r) => [r.groupId, r.id]));
 }
 
-async function seedBandPageConfigs(bands: any[], siteIdByBand: Map<string, string>) {
+async function seedBandPageConfigs(bands: any[]) {
 	console.log('Seeding band page configs (premium bands)...');
 	const configs = [];
 	const themes = ['punk', 'jazz', 'electronic', 'metal', 'indie', 'folk'] as const;
@@ -1955,17 +1953,12 @@ async function seedBandPageConfigs(bands: any[], siteIdByBand: Map<string, strin
 					? `.band-site-hero h1 { text-shadow: 0 0 20px var(--bs-accent); }\n.band-site-block { transition: opacity 0.3s; }`
 					: null;
 
+		// The config IS the site row since phase 3c, and that row already exists —
+		// so this updates rather than inserts.
 		const [config] = await db
-			.insert(bandPageConfig)
-			.values({
-				bandId: b.id,
-				bandSiteId: siteIdByBand.get(b.id) ?? null,
-				theme,
-				customCss,
-				blocks,
-				epk,
-				updatedAt: new Date()
-			})
+			.update(bandSite)
+			.set({ theme, customCss, blocks, epk, updatedAt: new Date() })
+			.where(eq(bandSite.groupId, b.id))
 			.returning();
 		configs.push(config);
 
@@ -4408,7 +4401,7 @@ async function main() {
 	await seedCmcEventLineups(events, bands);
 	const bandReservations = await seedBandReservations(bands);
 	const bandSites = await seedBandSites(bands);
-	const pageConfigs = await seedBandPageConfigs(bands, bandSites);
+	const pageConfigs = await seedBandPageConfigs(bands);
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
 	const tickets = await seedTickets(allUsers, events);

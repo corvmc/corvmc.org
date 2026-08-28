@@ -1,8 +1,4 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { group } from './group';
-import { bandSite } from './band-site';
 
 export {
 	BAND_THEMES,
@@ -13,41 +9,8 @@ export {
 	type BacklineItem,
 	type PressQuote
 } from '../../../types/band-page';
-import type { Block, BandEpk } from '../../../types/band-page';
+import type { BandSite } from './band-site';
 import { BAND_THEMES } from '../../../types/band-page';
-
-// ---------------------------------------------------------------------------
-// Band Page Config — stores block layout, theme, and custom CSS for premium pages
-// ---------------------------------------------------------------------------
-
-export const bandPageConfig = sqliteTable(
-	'band_page_config',
-	{
-		id: text('id')
-			.primaryKey()
-			.$defaultFn(() => crypto.randomUUID()),
-		bandId: text('band_id')
-			.notNull()
-			.unique()
-			.references(() => group.id, { onDelete: 'cascade' }),
-		// Where this config is moving. Nullable and alongside `bandId` on purpose:
-		// phase 3b backfills it and switches the readers, and the phase that drops
-		// `bandId` is the one that makes it NOT NULL. Nothing is dropped here, so a
-		// mistake in the backfill is recoverable from the column beside it.
-		bandSiteId: text('band_site_id').references(() => bandSite.id, { onDelete: 'cascade' }),
-		theme: text('theme').notNull().default('default'),
-		customCss: text('custom_css'),
-		blocks: text('blocks', { mode: 'json' }).$type<Block[]>().notNull().default([]),
-		epk: text('epk', { mode: 'json' }).$type<BandEpk>(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' })
-			.notNull()
-			.default(sql`(unixepoch())`)
-	},
-	(t) => [
-		index('idx_band_page_config_band').on(t.bandId),
-		index('idx_band_page_config_site').on(t.bandSiteId)
-	]
-);
 
 // ---------------------------------------------------------------------------
 // Zod schemas for validation
@@ -149,4 +112,5 @@ export const bandPageConfigSchema = z.object({
 // Client-safe types
 // ---------------------------------------------------------------------------
 
-export type BandPageConfig = typeof bandPageConfig.$inferSelect;
+/** The microsite's stored shape, which lives on `band_site` since phase 3c. */
+export type BandPageConfig = Pick<BandSite, 'theme' | 'customCss' | 'blocks' | 'epk'>;

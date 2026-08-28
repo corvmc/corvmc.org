@@ -2,6 +2,7 @@ import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqli
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { group } from './group';
+import type { Block, BandEpk } from '../../../types/band-page';
 
 // ---------------------------------------------------------------------------
 // Tier and custom-domain vocabularies
@@ -97,6 +98,25 @@ export const bandSite = sqliteTable(
 			mode: 'json'
 		}).$type<CustomDomainVerification>(),
 		customDomainAddedAt: integer('custom_domain_added_at', { mode: 'timestamp' }),
+
+		// ---------------------------------------------------------------------
+		// The microsite itself
+		// ---------------------------------------------------------------------
+		// These were `band_page_config`, a second table keyed one-to-one to this
+		// one and cascading from it — the same row split in two. Phase 3c folded
+		// it in: one row per band's site, one cascade, and no upsert branch on the
+		// page editor deciding whether a config exists yet.
+		//
+		// They are bulk (`customCss` caps at 50KB, `blocks` at 50 entries) and this
+		// row is read from `reroute` on every request to a custom host. That is
+		// affordable because SQLite reads only the columns a query names and large
+		// TEXT overflows to pages a `tier`/`custom_domain_status` lookup never
+		// touches — but it is the reason to keep `resolveCustomDomain`'s select
+		// narrow rather than splatting the row.
+		theme: text('theme').notNull().default('default'),
+		customCss: text('custom_css'),
+		blocks: text('blocks', { mode: 'json' }).$type<Block[]>().notNull().default([]),
+		epk: text('epk', { mode: 'json' }).$type<BandEpk>(),
 
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
