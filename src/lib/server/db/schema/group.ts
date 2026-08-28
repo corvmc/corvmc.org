@@ -1,53 +1,7 @@
 import { sqliteTable, text, integer, index, uniqueIndex, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
-import { z } from 'zod';
 import { groupKinds, groupJoinPolicies } from '../../../config';
-
-// ---------------------------------------------------------------------------
-// Tier and custom-domain vocabularies
-// ---------------------------------------------------------------------------
-// These describe columns on `group`, so they live beside it. Everything else that
-// once lived in `band.ts` — the roster, its vocabularies, and the slug history —
-// moved here in phase 2, leaving that file holding `band_genre` alone.
-
-export const bandTiers = ['free', 'premium'] as const;
-export type BandTier = (typeof bandTiers)[number];
-
-export const bandSubscriptionSchema = z
-	.object({
-		startedAt: z.string(),
-		stripeSubscriptionId: z.string(),
-		billingInterval: z.enum(['monthly', 'yearly']),
-		currentPeriodEnd: z.string(),
-		cancelAtPeriodEnd: z.boolean().optional()
-	})
-	.nullable()
-	.default(null);
-
-export type BandSubscription = z.infer<typeof bandSubscriptionSchema>;
-
-export const customDomainStatuses = ['pending', 'active', 'failed'] as const;
-export type CustomDomainStatus = (typeof customDomainStatuses)[number];
-
-/**
- * The DNS records a band must add at their registrar, straight from
- * Cloudflare's custom-hostname response. `ownership` proves they control the
- * domain; `ssl` lets Cloudflare issue the certificate. Both are TXT records, so
- * the band can verify before pointing the domain at us — no window where their
- * live site is broken.
- */
-export const customDomainVerificationSchema = z
-	.object({
-		ownership: z.object({ name: z.string(), value: z.string() }).nullable(),
-		ssl: z.object({ name: z.string(), value: z.string() }).nullable(),
-		/** Where the band points the domain itself, once verified. */
-		cnameTarget: z.string()
-	})
-	.nullable()
-	.default(null);
-
-export type CustomDomainVerification = z.infer<typeof customDomainVerificationSchema>;
 
 /**
  * A set of CMC members who organise together — a band, a club, or a committee.
@@ -101,40 +55,13 @@ export const group = sqliteTable(
 		updatedAt: integer('updated_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),
-		deletedAt: integer('deleted_at', { mode: 'timestamp' }),
-
-		// subscription & tier
-		tier: text('tier', { enum: bandTiers }).notNull().default('free'),
-		subscription: text('subscription', { mode: 'json' }).$type<BandSubscription>(),
-
-		// custom domain (premium only — every band gets {slug}.corvmc.org for free).
-		// Backed by a Cloudflare for SaaS custom hostname; `customDomainHostnameId`
-		// is that hostname's id, needed to poll status and to delete it.
-		// Uniqueness lives in a separate index rather than a column constraint.
-		// SQLite cannot add a UNIQUE column with ALTER TABLE, so `.unique()` here
-		// makes drizzle rebuild the whole table (create-copy-DROP-rename).
-		// `pnpm db:generate` would rewrite that to be D1-safe, but a plain
-		// ADD COLUMN + CREATE UNIQUE INDEX needs no rewriting at all. Same
-		// semantics — SQLite implements a column UNIQUE as a unique index, and
-		// both treat NULLs as distinct, so any number of groups can have none.
-		customDomain: text('custom_domain'),
-		customDomainStatus: text('custom_domain_status', { enum: customDomainStatuses }),
-		customDomainHostnameId: text('custom_domain_hostname_id'),
-		customDomainVerification: text('custom_domain_verification', {
-			mode: 'json'
-		}).$type<CustomDomainVerification>(),
-		customDomainAddedAt: integer('custom_domain_added_at', { mode: 'timestamp' })
+		deletedAt: integer('deleted_at', { mode: 'timestamp' })
 	},
 	// Index names keep their `band` prefix on purpose. SQLite carries indexes
 	// through a table rename untouched, so renaming them here would turn a free
 	// rename into a drop-and-recreate for no behavioural gain. They can be
 	// renamed later in a migration that has a reason to touch them.
-	(t) => [
-		index('idx_band_slug').on(t.slug),
-		// One group per custom domain. Also the lookup index for
-		// resolveCustomDomain(), which runs on every request to a custom host.
-		uniqueIndex('idx_band_custom_domain').on(t.customDomain)
-	]
+	(t) => [index('idx_band_slug').on(t.slug)]
 );
 
 export type Group = typeof group.$inferSelect;

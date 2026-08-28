@@ -12,7 +12,7 @@
 		removeCustomDomain
 	} from '$lib/remote/band-custom-domain.remote';
 	import type { getCustomDomain } from '$lib/remote/band-custom-domain.remote';
-	import type { CustomDomainStatus } from '$lib/server/db/schema/group';
+	import type { CustomDomainStatus } from '$lib/server/db/schema/band-site';
 	import { bandSiteUrl } from '$lib/utils/band-site-url';
 	import { env } from '$env/dynamic/public';
 

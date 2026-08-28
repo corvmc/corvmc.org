@@ -201,7 +201,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				slug: SEED_PREMIUM_BAND_SLUG,
 				bio: 'Premium tier, so its subdomain serves a band site.',
 				ownerId: SEED_OWNER_ID,
-				tier: 'premium',
 				createdAt: now,
 				updatedAt: now
 			},
@@ -279,7 +278,8 @@ export async function seedBandOnboarding(): Promise<void> {
 			BANDS.map((b) => ({
 				id: `${b.id}-site`,
 				groupId: b.id,
-				tier: (b as { tier?: 'free' | 'premium' }).tier ?? 'free',
+				// Premium lives on the site row; `group.tier` was dropped in phase 3c.
+				tier: b.id === SEED_PREMIUM_BAND_ID ? ('premium' as const) : ('free' as const),
 				createdAt: now,
 				updatedAt: now
 			}))

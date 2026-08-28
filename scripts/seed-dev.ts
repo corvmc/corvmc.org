@@ -165,6 +165,15 @@ type PendingEntry = {
 };
 const pendingEntries = new Map<string, PendingEntry>();
 
+/**
+ * The premium half, keyed by band id, for the same reason `pendingEntries`
+ * exists: phase 3c drops `tier`, `subscription` and the five `customDomain*`
+ * columns from `group`, so they travel from the band seeder to
+ * `seedBandSites` rather than being read back off the group row.
+ */
+type PendingSite = Partial<typeof bandSite.$inferInsert>;
+const pendingSites = new Map<string, PendingSite>();
+
 async function batchInsert<T extends Record<string, unknown>>(
 	table: any,
 	rows: T[],
@@ -1370,43 +1379,47 @@ async function seedBands(users: SeedUser[]) {
 				name: BAND_NAMES[i],
 				slug,
 				bio: `${BAND_NAMES[i]} is a local band from Corvallis, OR. Formed in 20${randomInt(18, 24)}, they play a mix of ${genres.slice(0, 2).join(' and ')} with influences from all over the map.`,
-				ownerId: owner.id,
-				tier: isPremiumBand ? 'premium' : 'free',
-				subscription: isPremiumBand
-					? {
-							startedAt: new Date(Date.now() - randomInt(30, 180) * 86400000).toISOString(),
-							stripeSubscriptionId: `sub_seed_${randomUUID().slice(0, 8)}`,
-							billingInterval: i === 0 ? 'yearly' : 'monthly',
-							currentPeriodEnd: new Date(Date.now() + randomInt(10, 30) * 86400000).toISOString(),
-							cancelAtPeriodEnd: false
-						}
-					: null,
-				// The first premium band has a live custom domain, the second is still
-				// waiting on DNS — both states need to be visible in band settings.
-				...(isPremiumBand && i < 2
-					? {
-							customDomain: `${slug.replace(/-/g, '')}.example.com`,
-							customDomainStatus: i === 0 ? ('active' as const) : ('pending' as const),
-							customDomainHostnameId: `seed-hostname-${randomUUID().slice(0, 8)}`,
-							customDomainVerification: {
-								ownership: {
-									name: `_cf-custom-hostname.${slug.replace(/-/g, '')}.example.com`,
-									value: randomUUID()
-								},
-								ssl: {
-									name: `_acme-challenge.${slug.replace(/-/g, '')}.example.com`,
-									value: randomUUID().replace(/-/g, '')
-								},
-								cnameTarget: 'domains.corvmc.org'
-							},
-							customDomainAddedAt: new Date(Date.now() - randomInt(1, 60) * 86400000)
-						}
-					: {})
+				ownerId: owner.id
 			},
 			owner.id,
 			pick(BAND_POSITIONS)
 		);
 		bands.push(b);
+
+		// The premium half — these columns are gone from `group`.
+		pendingSites.set(b.id, {
+			tier: isPremiumBand ? 'premium' : 'free',
+			subscription: isPremiumBand
+				? {
+						startedAt: new Date(Date.now() - randomInt(30, 180) * 86400000).toISOString(),
+						stripeSubscriptionId: `sub_seed_${randomUUID().slice(0, 8)}`,
+						billingInterval: i === 0 ? 'yearly' : 'monthly',
+						currentPeriodEnd: new Date(Date.now() + randomInt(10, 30) * 86400000).toISOString(),
+						cancelAtPeriodEnd: false
+					}
+				: null,
+			// The first premium band has a live custom domain, the second is still
+			// waiting on DNS — both states need to be visible in band settings.
+			...(isPremiumBand && i < 2
+				? {
+						customDomain: `${slug.replace(/-/g, '')}.example.com`,
+						customDomainStatus: i === 0 ? ('active' as const) : ('pending' as const),
+						customDomainHostnameId: `seed-hostname-${randomUUID().slice(0, 8)}`,
+						customDomainVerification: {
+							ownership: {
+								name: `_cf-custom-hostname.${slug.replace(/-/g, '')}.example.com`,
+								value: randomUUID()
+							},
+							ssl: {
+								name: `_acme-challenge.${slug.replace(/-/g, '')}.example.com`,
+								value: randomUUID().replace(/-/g, '')
+							},
+							cnameTarget: 'domains.corvmc.org'
+						},
+						customDomainAddedAt: new Date(Date.now() - randomInt(1, 60) * 86400000)
+					}
+				: {})
+		});
 
 		// The listing half — these columns are gone from `group`.
 		pendingEntries.set(b.id, {
@@ -1840,16 +1853,19 @@ async function seedBandReservations(bands: any[]) {
  */
 async function seedBandSites(bands: any[]) {
 	console.log('Seeding band sites...');
+	// The premium half comes from `pendingSites`, not off the band row: those
+	// columns are gone from `group`.
 	const rows = bands.map((b: any) => ({
 		id: randomUUID(),
 		groupId: b.id,
-		tier: b.tier,
-		subscription: b.subscription ?? null,
+		tier: 'free' as const,
+		subscription: null,
 		createdAt: b.createdAt ?? new Date(),
-		updatedAt: b.updatedAt ?? new Date()
+		updatedAt: b.updatedAt ?? new Date(),
+		...(pendingSites.get(b.id) ?? {})
 	}));
-	// 6 columns × 16 = 96, under D1's 100 bound parameters.
-	await batchInsert(bandSite, rows, 16);
+	// 11 columns at their widest × 9 = 99, under D1's 100 bound parameters.
+	await batchInsert(bandSite, rows, 9);
 	return new Map(rows.map((r) => [r.groupId, r.id]));
 }
 
@@ -1858,8 +1874,11 @@ async function seedBandPageConfigs(bands: any[], siteIdByBand: Map<string, strin
 	const configs = [];
 	const themes = ['punk', 'jazz', 'electronic', 'metal', 'indie', 'folk'] as const;
 
-	// Only premium bands get page configs
-	const premiumBands = bands.filter((b) => b.tier === 'premium' && !b.deletedAt);
+	// Only premium bands get page configs. Tier lives on the site row now, so the
+	// filter reads what was collected for it rather than the band row.
+	const premiumBands = bands.filter(
+		(b) => pendingSites.get(b.id)?.tier === 'premium' && !b.deletedAt
+	);
 
 	for (let i = 0; i < premiumBands.length; i++) {
 		const b = premiumBands[i];
@@ -4432,7 +4451,9 @@ async function main() {
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
-	const premiumBands = bands.filter((b: any) => b.tier === 'premium' && !b.deletedAt);
+	const premiumBands = bands.filter(
+		(b: any) => pendingSites.get(b.id)?.tier === 'premium' && !b.deletedAt
+	);
 	console.log('\nSeed complete:');
 	console.log(`  ${allUsers.length} users (admin: admin@corvallismusic.org / password)`);
 	console.log(`  ${roles.length} roles`);

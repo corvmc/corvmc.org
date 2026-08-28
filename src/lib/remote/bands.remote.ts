@@ -39,7 +39,7 @@ import {
 	clearBandAvatar,
 	BandMemberExistsError
 } from '$lib/server/band/band-service';
-import { bandTiers } from '$lib/server/db/schema/group';
+import { bandTiers } from '$lib/server/db/schema/band-site';
 import { getBandLayout } from '$lib/remote/layout.remote';
 import {
 	createInvite as createPlatformInvite,
