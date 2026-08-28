@@ -43,6 +43,38 @@ export default defineConfig({
 	// `expect.poll`, never a bare read (`e2e/volunteering.e2e.ts` has the note),
 	// and treat a red mutating test as real rather than waiting on a retry.
 	retries: process.env.CI ? 2 : 0,
+	/**
+	 * How long an assertion waits — 15s, not Playwright's 5s.
+	 *
+	 * The suite already disagreed with the default, one assertion at a time: 110
+	 * of them carry a hand-written `{ timeout: 15000 }`. The other 295 carry
+	 * nothing and so ran at 5s, which is the same budget whether the runner is a
+	 * laptop or a CI box serving one preview server to a parallel suite. That
+	 * mismatch is what the note above `retries` describes without naming — "four
+	 * consecutive runs of #242 went red, a different test each time, every one of
+	 * them passing locally in isolation". A different test each time, only under
+	 * contention, is an assertion budget that ran out, not a logic bug.
+	 *
+	 * For scale: the slowest single test in a local run is ~6.4s end to end, so
+	 * an unmarked assertion inside it had less budget than the test's own
+	 * runtime, on hardware several times faster than the runner.
+	 *
+	 * The explicit `{ timeout: 15000 }` call sites are now redundant rather than
+	 * wrong. Leave them where they are; they document which assertions their
+	 * author knew were slow, and rewriting 110 of them would bury that.
+	 */
+	expect: { timeout: 15_000 },
+	/**
+	 * And the per-test budget, raised with it.
+	 *
+	 * These two have to move together. Assertions only spend their timeout when
+	 * they *fail*, so raising `expect` alone costs a passing run nothing — but it
+	 * lets two failing assertions exhaust Playwright's 30s default between them,
+	 * and the report then says "Test timeout of 30000ms exceeded" instead of
+	 * naming the assertion and showing its diff. That trades a slow honest
+	 * failure for a fast useless one.
+	 */
+	timeout: 60_000,
 	webServer: {
 		// `pnpm`, not `npm`: this repo is pnpm-only and a global prettier 2.8.8
 		// shadows its prettier 3, which is why `npm`/`npx` are blocked everywhere
