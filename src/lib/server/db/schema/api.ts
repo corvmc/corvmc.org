@@ -1,6 +1,7 @@
 import type { Credits, SubscriptionInfo, CommunityStats } from './finance';
 import type { User } from './authentication';
 import type { Group, GroupMember } from './group';
+import type { DirectoryEntry } from './directory';
 import type { Reservation } from './reservation';
 import type { Event } from './event';
 import type { InventoryLoan } from './inventory';
@@ -211,37 +212,37 @@ export interface StaffReservationDetailResponse {
 // Directory
 // ---------------------------------------------------------------------------
 
+// The listing half of these shapes is `Pick<DirectoryEntry, …>` since phase 3c,
+// which is where those columns now live. The wire field names are unchanged —
+// the services map `lookingFor` back to `lookingForBand`/`lookingForMembers` and
+// `contact` back to `directoryContact` — so only the type source moved.
 export interface DirectoryResponse {
-	members: (Pick<User, 'id' | 'name' | 'pronouns' | 'image' | 'tagline' | 'lookingForBand'> & {
-		instruments: string[];
-		genres: string[];
-		memberSince: string;
-		bands: Pick<Group, 'name' | 'slug'>[];
-	})[];
-	bands: (Pick<Group, 'id' | 'name' | 'slug' | 'bio' | 'tagline' | 'lookingForMembers'> & {
-		avatarUrl: string | null;
-		memberCount: number;
-		genres: string[];
-	})[];
+	members: (Pick<User, 'id' | 'name' | 'pronouns' | 'image'> &
+		Pick<DirectoryEntry, 'tagline'> & {
+			lookingForBand: boolean;
+			instruments: string[];
+			genres: string[];
+			memberSince: string;
+			bands: Pick<Group, 'name' | 'slug'>[];
+		})[];
+	bands: (Pick<Group, 'id' | 'name' | 'slug' | 'bio'> &
+		Pick<DirectoryEntry, 'tagline'> & {
+			lookingForMembers: boolean;
+			avatarUrl: string | null;
+			memberCount: number;
+			genres: string[];
+		})[];
 }
 
 export interface DirectoryBandResponse {
-	band: Pick<
-		Group,
-		| 'id'
-		| 'name'
-		| 'slug'
-		| 'bio'
-		| 'tagline'
-		| 'createdAt'
-		| 'lookingForMembers'
-		| 'directoryContact'
-		| 'links'
-	> & {
-		avatarUrl: string | null;
-		memberCount: number;
-		genres: string[];
-	};
+	band: Pick<Group, 'id' | 'name' | 'slug' | 'bio' | 'createdAt'> &
+		Pick<DirectoryEntry, 'tagline' | 'links'> & {
+			lookingForMembers: boolean;
+			directoryContact: DirectoryEntry['contact'];
+			avatarUrl: string | null;
+			memberCount: number;
+			genres: string[];
+		};
 	members: (Pick<GroupMember, 'id' | 'role' | 'position'> & {
 		userName: string;
 		userImage: string | null;
@@ -249,21 +250,13 @@ export interface DirectoryBandResponse {
 }
 
 export interface DirectoryMemberResponse {
-	member: Pick<
-		User,
-		| 'id'
-		| 'name'
-		| 'pronouns'
-		| 'image'
-		| 'bio'
-		| 'tagline'
-		| 'lookingForBand'
-		| 'directoryContact'
-		| 'links'
-	> & {
-		instruments: string[];
-		genres: string[];
-	};
+	member: Pick<User, 'id' | 'name' | 'pronouns' | 'image'> &
+		Pick<DirectoryEntry, 'bio' | 'tagline' | 'links'> & {
+			lookingForBand: boolean;
+			directoryContact: DirectoryEntry['contact'];
+			instruments: string[];
+			genres: string[];
+		};
 }
 
 // ---------------------------------------------------------------------------
