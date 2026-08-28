@@ -108,9 +108,9 @@
 						</Button>
 					</Alert>
 				{:else}
-					<!-- A `form` snippet rather than the `confirm` prop, because the band
-					     this leaves now rides the submission as a field. The paragraph
-					     below is the confirm copy the prop used to render. -->
+					<!-- `confirm` and a `form` snippet together: Action renders the
+					     confirm copy as a lead-in above the fields, so the band this
+					     leaves can ride the submission without losing the prompt. -->
 					<Action
 						action={leave}
 						label="Leave band"
@@ -119,15 +119,13 @@
 						outline
 						modalTitle="Leave band"
 						submitLabel="Leave band"
+						confirm="Leave {bandName}? You'll need to be re-invited to rejoin."
 						successToast="You have left the band"
 						onsuccess={() => goto(resolve('/member/bands'))}
 						onfailure={() => toast.error('Failed to leave')}
 					>
 						{#snippet form()}
 							<input {...leaveFields.bandId.as('hidden', bandId)} />
-							<p class="py-2">
-								Leave {bandName}? You'll need to be re-invited to rejoin.
-							</p>
 						{/snippet}
 					</Action>
 				{/if}
