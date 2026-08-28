@@ -252,14 +252,12 @@ export async function listInterestedMembers(
 
 	return {
 		...result,
-		rows: result.rows.map(
-			(r): InterestedMember => ({
-				userId: r.userId,
-				email: r.member.email,
-				member: toMemberRef(r.member),
-				roleNames: String(r.roleNames).split(ROLE_NAME_SEPARATOR).sort(),
-				since: new Date(Number(r.since) * 1000)
-			})
-		)
+		rows: result.rows.map((r): InterestedMember => ({
+			userId: r.userId,
+			email: r.member.email,
+			member: toMemberRef(r.member),
+			roleNames: String(r.roleNames).split(ROLE_NAME_SEPARATOR).sort(),
+			since: new Date(Number(r.since) * 1000)
+		}))
 	};
 }

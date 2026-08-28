@@ -460,16 +460,14 @@ export async function listVolunteers(
 
 	return {
 		...result,
-		rows: result.rows.map(
-			(r): VolunteerListRow => ({
-				userId: r.userId,
-				member: toMemberRef(r.member),
-				status: r.status,
-				isAdult: r.isAdult,
-				roleNames: r.roleNames ? String(r.roleNames).split(ROLE_NAME_SEPARATOR).sort() : [],
-				minutes: Number(r.minutes),
-				since: r.since
-			})
-		)
+		rows: result.rows.map((r): VolunteerListRow => ({
+			userId: r.userId,
+			member: toMemberRef(r.member),
+			status: r.status,
+			isAdult: r.isAdult,
+			roleNames: r.roleNames ? String(r.roleNames).split(ROLE_NAME_SEPARATOR).sort() : [],
+			minutes: Number(r.minutes),
+			since: r.since
+		}))
 	};
 }

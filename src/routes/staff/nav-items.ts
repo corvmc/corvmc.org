@@ -50,13 +50,7 @@ export type StaffNavKey =
 	| 'settings';
 
 export type StaffNavSectionKey =
-	| 'people'
-	| 'space'
-	| 'events'
-	| 'moderation'
-	| 'outreach'
-	| 'money'
-	| 'system';
+	'people' | 'space' | 'events' | 'moderation' | 'outreach' | 'money' | 'system';
 
 /**
  * Field names on `getStaffLayout()`'s return. Items name a count rather than
@@ -65,10 +59,7 @@ export type StaffNavSectionKey =
  * would churn every `{#each}` for nothing.
  */
 export type StaffNavBadgeKey =
-	| 'inboxUnread'
-	| 'suggestionsAwaiting'
-	| 'volunteerPending'
-	| 'listingsPending';
+	'inboxUnread' | 'suggestionsAwaiting' | 'volunteerPending' | 'listingsPending';
 
 export interface StaffNavItem extends NavNode<StaffNavKey> {
 	label: string;
