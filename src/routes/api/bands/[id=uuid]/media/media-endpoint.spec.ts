@@ -32,20 +32,28 @@ vi.mock('$lib/server/db', () => ({
 	db: { select: vi.fn(() => selectChain()) }
 }));
 
-const uploadFile = vi.fn(async (_b: ArrayBuffer, key: string) => key);
-const deleteObject = vi.fn();
+const uploadFile = vi.fn(async (_buffer: ArrayBuffer, key: string) => key);
+const deleteObject = vi.fn(async (_key: string) => undefined);
 vi.mock('$lib/server/storage', () => ({
-	uploadFile: (...a: unknown[]) => uploadFile(...(a as [ArrayBuffer, string])),
-	deleteObject: (...a: unknown[]) => deleteObject(...a)
+	uploadFile: (buffer: ArrayBuffer, key: string) => uploadFile(buffer, key),
+	deleteObject: (key: string) => deleteObject(key)
 }));
 
-const record = vi.fn(async () => ({ id: 'media-1' }));
-const attach = vi.fn(async () => ({ id: 'attachment-1' }));
-const detach = vi.fn(async () => undefined);
+/**
+ * Typed by their argument, not as bare `vi.fn()` — the assertions below read
+ * `attach.mock.calls[0][0]`, which on a zero-arg mock is a `[]` tuple with no
+ * index 0 and fails `svelte-check` even though the test passes at runtime.
+ */
+type RecordArgs = { key: string; contentType: string; byteSize: number };
+type AttachArgs = { mediaId: string; attachableId: string; slot: string; sortOrder: number };
+
+const record = vi.fn(async (_input: RecordArgs) => ({ id: 'media-1' }));
+const attach = vi.fn(async (_input: AttachArgs) => ({ id: 'attachment-1' }));
+const detach = vi.fn(async (_attachmentId: string) => undefined);
 vi.mock('$lib/server/media/media-service', () => ({
-	record: (...a: unknown[]) => record(...(a as [never])),
-	attach: (...a: unknown[]) => attach(...(a as [never])),
-	detach: (...a: unknown[]) => detach(...(a as [never]))
+	record: (input: RecordArgs) => record(input),
+	attach: (input: AttachArgs) => attach(input),
+	detach: (id: string) => detach(id)
 }));
 
 vi.mock('$lib/server/band/band-service', () => ({
@@ -138,7 +146,7 @@ describe('POST', () => {
 	it('numbers a multi-file upload from the existing high-water mark', async () => {
 		selectResult = [{ maxOrder: 4 }];
 		await POST(upload('image', [jpeg('a.jpg'), jpeg('b.jpg')]));
-		expect(attach.mock.calls.map((c) => (c[0] as { sortOrder: number }).sortOrder)).toEqual([5, 6]);
+		expect(attach.mock.calls.map((c) => c[0].sortOrder)).toEqual([5, 6]);
 	});
 
 	it('never deletes an R2 object', async () => {
