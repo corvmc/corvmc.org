@@ -1,6 +1,6 @@
 <script lang="ts">
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import LineupEditor, { type LineupChip } from './LineupEditor.svelte';
+	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
 	import {
 		formatDate,
 		formatDollars,

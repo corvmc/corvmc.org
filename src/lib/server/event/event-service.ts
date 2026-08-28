@@ -995,6 +995,61 @@ export async function listStaffCalendar(
 	return paginate(dataQ, countQ, pagination);
 }
 
+/** How far either side of a show counts as "the same slot". */
+const NEAR_WINDOW_MINUTES = 120;
+
+/**
+ * What else is happening around this show, for the staffer judging it.
+ *
+ * Duplicate postings are the characteristic failure of a community calendar —
+ * `checkForDuplicate` says so, and names moderation as the only backstop. Until
+ * this existed the moderation screen had no view of the date at all, so the
+ * backstop was a person remembering to go and look.
+ *
+ * Deliberately not `checkForDuplicate` itself. That one stems on the title's
+ * first word, so "The Paper Wolves" matches half the calendar; it filters to
+ * `published`, so two *pending* submissions of one gig never see each other;
+ * and it returns a single row. It is a good advisory nudge for a member writing
+ * a listing, which is what it was built for, and a weak signal for a decision.
+ * Showing the window and letting the staffer judge asks less of the heuristic
+ * and gives them more.
+ *
+ * Every source, CMC included: the duplicate most worth catching is a member
+ * re-posting one of the collective's own shows, which a listings-only read
+ * cannot show.
+ */
+export async function listEventsNear(
+	startsAt: Date,
+	opts: { excludeEventId: string; windowMinutes?: number; limit?: number }
+): Promise<Array<EventRow & { bandName: string | null; bandSlug: string | null }>> {
+	const span = (opts.windowMinutes ?? NEAR_WINDOW_MINUTES) * 60_000;
+	const from = new Date(startsAt.getTime() - span);
+	const to = new Date(startsAt.getTime() + span);
+
+	const rows = await db
+		.select({ event, bandName: group.name, bandSlug: group.slug })
+		.from(event)
+		.leftJoin(group, eq(group.id, event.bandId))
+		.where(
+			and(
+				gte(event.startsAt, from),
+				lte(event.startsAt, to),
+				ne(event.id, opts.excludeEventId),
+				// `pending_review` belongs here and is the whole point: two members
+				// submitting one gig is the case the published-only heuristic could
+				// never see.
+				inArray(event.status, ['pending_review', 'published', 'cancelled']),
+				// A member's private working copy stays private, exactly as in
+				// `listAll` and `listStaffCalendar`.
+				not(and(eq(event.source, 'community'), eq(event.status, 'draft'))!)
+			)
+		)
+		.orderBy(asc(event.startsAt))
+		.limit(opts.limit ?? 10);
+
+	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
+}
+
 // ---------------------------------------------------------------------------
 // Lineup (the bill)
 // ---------------------------------------------------------------------------

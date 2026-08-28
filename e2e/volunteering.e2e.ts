@@ -601,10 +601,12 @@ test.describe('volunteering — shifts', () => {
  * unreachable. These cover the three ways in, and the one failure mode that
  * cannot be seen on screen.
  */
+// Staffing is production work, so the card is on the console at
+// `[id]/production` rather than the general event view every staffer lands on.
 test.describe('volunteering — shifts and events', () => {
 	test('the event page lists the shifts staffing that show', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}`);
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production`);
 
 		const card = page.locator('.card').filter({ hasText: 'Volunteer Shifts' });
 		await expect(card).toBeVisible({ timeout: 15000 });
@@ -617,7 +619,7 @@ test.describe('volunteering — shifts and events', () => {
 
 	test('scheduling from the event page attaches the shift to it', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}`);
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production`);
 
 		const card = page.locator('.card').filter({ hasText: 'Volunteer Shifts' });
 		await expect(card).toBeVisible({ timeout: 15000 });

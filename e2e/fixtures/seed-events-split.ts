@@ -46,12 +46,24 @@ export const SEED_SPLIT_LIVE_TITLE = 'E2E Split Warehouse Gig';
 export const SEED_SPLIT_DRAFT_ID = 'e2e-split-community-draft';
 export const SEED_SPLIT_DRAFT_TITLE = 'E2E Split Private Scratchpad';
 
+/**
+ * The pair that proves the "within two hours" panel: one an hour after the
+ * pending listing, one six hours after. Same day for both, so a day-wide query
+ * would return them both and only a real window tells them apart.
+ */
+export const SEED_SPLIT_NEAR_ID = 'e2e-split-near';
+export const SEED_SPLIT_NEAR_TITLE = 'E2E Split Same Slot Show';
+export const SEED_SPLIT_FAR_ID = 'e2e-split-far';
+export const SEED_SPLIT_FAR_TITLE = 'E2E Split Later That Night';
+
 const EVENT_IDS = [
 	SEED_SPLIT_CMC_DRAFT_ID,
 	SEED_SPLIT_CMC_LIVE_ID,
 	SEED_SPLIT_PENDING_ID,
 	SEED_SPLIT_LIVE_ID,
-	SEED_SPLIT_DRAFT_ID
+	SEED_SPLIT_DRAFT_ID,
+	SEED_SPLIT_NEAR_ID,
+	SEED_SPLIT_FAR_ID
 ];
 
 /**
@@ -63,6 +75,11 @@ function daysFromNow(days: number, hour = 20): Date {
 	d.setDate(d.getDate() + days);
 	d.setHours(hour, 0, 0, 0);
 	return d;
+}
+
+/** Offset from a seeded show, for the window pair. */
+function hoursAfter(base: Date, hours: number): Date {
+	return new Date(base.getTime() + hours * 60 * 60 * 1000);
 }
 
 export async function seedEventsSplit(): Promise<void> {
@@ -137,6 +154,24 @@ export async function seedEventsSplit(): Promise<void> {
 				source: 'community' as const,
 				status: 'draft' as const,
 				publishedAt: null
+			},
+			{
+				id: SEED_SPLIT_NEAR_ID,
+				title: SEED_SPLIT_NEAR_TITLE,
+				startsAt: hoursAfter(daysFromNow(26), 1),
+				endsAt: null,
+				source: 'community' as const,
+				status: 'published' as const,
+				publishedAt: now
+			},
+			{
+				id: SEED_SPLIT_FAR_ID,
+				title: SEED_SPLIT_FAR_TITLE,
+				startsAt: hoursAfter(daysFromNow(26), 6),
+				endsAt: null,
+				source: 'community' as const,
+				status: 'published' as const,
+				publishedAt: now
 			}
 		]) {
 			await db.insert(event).values({

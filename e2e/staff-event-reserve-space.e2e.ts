@@ -56,6 +56,18 @@ async function waitForEventPage(page: Page, title: string) {
 	await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
 }
 
+/**
+ * Creating a show lands on the general event view, which is every staffer's
+ * view and carries no production controls. The room — and the edit form that
+ * books it — is the console's, one level down. Everything this file asserts
+ * after a create lives there.
+ */
+async function goToConsole(page: Page, title: string) {
+	await waitForEventPage(page, title);
+	await page.goto(`${new URL(page.url()).pathname}/production`);
+	await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
+}
+
 // A checkbox Field carries the `b:` prefix so SvelteKit submits a real boolean.
 const RESERVE_TOGGLE = 'input[name="b:reserveSpace"]';
 
@@ -78,7 +90,7 @@ test.describe('staff event creation — reserve space', () => {
 		page
 	}) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/events');
+		await page.goto('/staff/productions');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
 		await page.locator('input[name="eventStartTime"]').fill(EVENT_START);
@@ -97,7 +109,7 @@ test.describe('staff event creation — reserve space', () => {
 		retry
 	}) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/events');
+		await page.goto('/staff/productions');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
 		const title = `${SEED_EVENT_TITLE_PREFIX} ${Date.now()}`;
@@ -109,8 +121,9 @@ test.describe('staff event creation — reserve space', () => {
 
 		await page.getByRole('button', { name: 'Create Event' }).click();
 
-		// handleSuccess navigates to the new event's detail page.
-		await waitForEventPage(page, title);
+		// handleSuccess navigates to the new event's general view; the room is the
+		// console's.
+		await goToConsole(page, title);
 
 		// The card only renders off `event.reservationId`, so its presence proves
 		// the reservation was created AND linked. Matched by role, not text: the
@@ -122,7 +135,7 @@ test.describe('staff event creation — reserve space', () => {
 
 	test('re-timing the event carries the setup and teardown padding', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/events');
+		await page.goto('/staff/productions');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
 		await page.locator('input[name="eventStartTime"]').fill('19:00');
@@ -149,7 +162,7 @@ test.describe('staff event creation — reserve space', () => {
 		page
 	}, { retry }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/events');
+		await page.goto('/staff/productions');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
 		const eventDate = bookingDate(SEED_LIST_LINK_DATE, retry);
@@ -193,7 +206,7 @@ test.describe('staff event creation — reserve space', () => {
 
 	test('unchecking the toggle drops the conflict override it raised', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/events');
+		await page.goto('/staff/productions');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
 		await page.locator('input[name="title"]').fill('E2E Conflict Probe');
@@ -230,7 +243,7 @@ test.describe('staff event edit — reserve space', () => {
 		retry
 	}) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/events');
+		await page.goto('/staff/productions');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
 		const title = `${SEED_EVENT_TITLE_PREFIX} edit ${Date.now()}`;
@@ -241,7 +254,7 @@ test.describe('staff event edit — reserve space', () => {
 		// Deliberately left unchecked — this is the state prod is full of.
 		await page.getByRole('button', { name: 'Create Event' }).click();
 
-		await waitForEventPage(page, title);
+		await goToConsole(page, title);
 
 		// The card always renders now; with no hold it says so, rather than
 		// vanishing and leaving "not held" indistinguishable from "not shown".
@@ -269,7 +282,7 @@ test.describe('staff event edit — reserve space', () => {
 		retry
 	}) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/events');
+		await page.goto('/staff/productions');
 		await page.getByRole('button', { name: 'New Event' }).click();
 
 		const title = `${SEED_EVENT_TITLE_PREFIX} self ${Date.now()}`;
@@ -280,7 +293,7 @@ test.describe('staff event edit — reserve space', () => {
 		await page.locator(RESERVE_TOGGLE).check();
 		await page.getByRole('button', { name: 'Create Event' }).click();
 
-		await waitForEventPage(page, title);
+		await goToConsole(page, title);
 		await expect(page.getByRole('link', { name: /View reservation/ })).toBeVisible();
 
 		// Start the show two hours earlier. That escapes the current hold, so the

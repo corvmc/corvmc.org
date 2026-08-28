@@ -7,9 +7,7 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import LineupEditor, {
-		type LineupChip
-	} from '../../../../band/[slug]/events/LineupEditor.svelte';
+	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';

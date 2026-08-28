@@ -55,6 +55,7 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn(
 vi.mock('$lib/server/storage', () => ({ uploadFile: vi.fn(), deleteObject: vi.fn() }));
 
 import {
+	listEventsNear,
 	listPublicCalendarEvents,
 	listPublicUpcomingEvents,
 	listStaffCalendar
@@ -73,6 +74,19 @@ function containsParam(node: unknown, value: unknown): boolean {
 	if (Array.isArray(node)) return node.some((c) => containsParam(c, value));
 	const chunks = (node as { queryChunks?: unknown[] }).queryChunks;
 	return Array.isArray(chunks) && chunks.some((c) => containsParam(c, value));
+}
+
+/**
+ * `containsParam` compares with `===`, and two `Date`s never satisfy that even
+ * when they name the same instant — so a bound date has to be matched by value.
+ */
+function containsDate(node: unknown, value: Date): boolean {
+	if (!node || typeof node !== 'object') return false;
+	const v = (node as { value?: unknown }).value;
+	if (v instanceof Date && v.getTime() === value.getTime()) return true;
+	if (Array.isArray(node)) return node.some((c) => containsDate(c, value));
+	const chunks = (node as { queryChunks?: unknown[] }).queryChunks;
+	return Array.isArray(chunks) && chunks.some((c) => containsDate(c, value));
 }
 
 const cmcEvent = {
@@ -209,6 +223,54 @@ describe('listStaffCalendar', () => {
 	 */
 	it('excludes community drafts even when draft is passed explicitly', async () => {
 		await listStaffCalendar(windowStart, { statuses: ['draft'] });
+		expect(containsParam(capturedWhere, 'community')).toBe(true);
+		expect(containsParam(capturedWhere, 'draft')).toBe(true);
+	});
+});
+
+/**
+ * The two-hour window on the staff event view. A *window*, not a day: two shows
+ * on one date are ordinary, two shows in one slot are the duplicate the
+ * moderation screen exists to catch.
+ */
+describe('listEventsNear', () => {
+	const showAt = new Date('2026-08-08T02:00:00Z');
+
+	it('bounds the window on both sides of the show', async () => {
+		await listEventsNear(showAt, { excludeEventId: 'evt-self' });
+		// ±120 minutes by default.
+		expect(containsDate(capturedWhere, new Date(showAt.getTime() - 120 * 60_000))).toBe(true);
+		expect(containsDate(capturedWhere, new Date(showAt.getTime() + 120 * 60_000))).toBe(true);
+	});
+
+	it('honours a caller-supplied window', async () => {
+		await listEventsNear(showAt, { excludeEventId: 'evt-self', windowMinutes: 30 });
+		expect(containsDate(capturedWhere, new Date(showAt.getTime() - 30 * 60_000))).toBe(true);
+		expect(containsDate(capturedWhere, new Date(showAt.getTime() + 120 * 60_000))).toBe(false);
+	});
+
+	it('excludes the event being judged', async () => {
+		await listEventsNear(showAt, { excludeEventId: 'evt-self' });
+		expect(containsParam(capturedWhere, 'evt-self')).toBe(true);
+	});
+
+	/**
+	 * The reason this is not `checkForDuplicate`: that one filters to `published`,
+	 * so two pending submissions of one gig never see each other.
+	 */
+	it('includes pending_review, which the published-only heuristic could not', async () => {
+		await listEventsNear(showAt, { excludeEventId: 'evt-self' });
+		expect(containsParam(capturedWhere, 'pending_review')).toBe(true);
+	});
+
+	it('applies no source filter, so a member re-posting our own show is visible', async () => {
+		await listEventsNear(showAt, { excludeEventId: 'evt-self' });
+		expect(containsParam(capturedWhere, 'cmc')).toBe(false);
+		expect(containsParam(capturedWhere, 'band')).toBe(false);
+	});
+
+	it("keeps a member's private working copy out", async () => {
+		await listEventsNear(showAt, { excludeEventId: 'evt-self' });
 		expect(containsParam(capturedWhere, 'community')).toBe(true);
 		expect(containsParam(capturedWhere, 'draft')).toBe(true);
 	});
