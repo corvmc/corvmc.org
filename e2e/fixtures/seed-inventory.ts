@@ -27,6 +27,7 @@ import {
 } from '../../src/lib/server/db/schema/inventory';
 import { helpArticle, helpCategory } from '../../src/lib/server/db/schema/help';
 import { withPlatformDb } from './platform-db';
+import { SEED_STAFF_ID } from './seed-staff-user';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
 export const SEED_CATEGORY_ID = 'e2e-inv-category';
@@ -40,6 +41,18 @@ export const SEED_ASSET_TAG = 'E2E-000001';
 
 /** A unit that arrives without a sticker, so tag binding has something to bind. */
 export const SEED_UNTAGGED_ASSET_ID = 'e2e-inv-asset-amp-2';
+
+/**
+ * A unit that is already in the shop, so "you cannot report this twice" has a
+ * subject of its own.
+ *
+ * It used to borrow the unit the damage-report test had just taken out of
+ * service, which made the two order-dependent: a retry of the reporting test
+ * starts from data the fixture never described, and this one then fails for a
+ * reason that has nothing to do with what it is checking.
+ */
+export const SEED_MAINTENANCE_ASSET_ID = 'e2e-inv-asset-in-shop';
+export const SEED_MAINTENANCE_ASSET_TAG = 'E2E-000013';
 
 /** A bulk consumable — counted, and it does not come back. Well stocked. */
 export const SEED_CONSUMABLE_ID = 'e2e-inv-item-strings';
@@ -81,6 +94,28 @@ export const SEED_UNACKED_DONATION_ID = 'e2e-inv-acq-donation-unacked';
 export const SEED_UNACKED_ASSET_ID = 'e2e-inv-asset-unacked';
 export const SEED_UNACKED_ASSET_TAG = 'E2E-000011';
 
+/**
+ * A third donated disposal with no signed 8283 — **owned by the test that signs
+ * one**, which is why it is not the row above.
+ *
+ * The signing test mutates the acquisition, and a spec that mutates a seeded row
+ * owns it: sharing `SEED_UNACKED_DONATION_ID` would leave the "raises nothing"
+ * assertion passing or failing depending on which test ran first, and failing
+ * differently on a retry that starts from data the fixture never described.
+ */
+export const SEED_SIGN_DONATION_ID = 'e2e-inv-acq-donation-to-sign';
+export const SEED_SIGN_ASSET_ID = 'e2e-inv-asset-to-sign';
+export const SEED_SIGN_ASSET_TAG = 'E2E-000012';
+export const SEED_SIGN_DONOR = 'E2E Signable Donor';
+
+/**
+ * A shop trip somebody fronted and has not been paid back for. Owned by the
+ * reimbursement test, which settles it.
+ */
+export const SEED_OWED_ACQUISITION_ID = 'e2e-inv-acq-owed';
+export const SEED_OWED_SUPPLIER = 'E2E Corner Music';
+export const SEED_OWED_CENTS = 4_800;
+
 /** A published how-to linked to the serialized item, for the resources panel. */
 export const SEED_ARTICLE_ID = 'e2e-inv-article';
 export const SEED_ARTICLE_TITLE = 'E2E How To Use The Amp';
@@ -91,7 +126,9 @@ const ASSET_IDS = [
 	SEED_ASSET_ID,
 	SEED_UNTAGGED_ASSET_ID,
 	SEED_DISPOSED_ASSET_ID,
-	SEED_UNACKED_ASSET_ID
+	SEED_UNACKED_ASSET_ID,
+	SEED_SIGN_ASSET_ID,
+	SEED_MAINTENANCE_ASSET_ID
 ];
 const ITEM_IDS = [SEED_ITEM_ID, SEED_CONSUMABLE_ID, SEED_LOW_ID];
 
@@ -120,7 +157,13 @@ export async function seedInventory(): Promise<void> {
 		await db
 			.delete(acquisition)
 			.where(
-				inArray(acquisition.id, [SEED_ACQUISITION_ID, SEED_DONATION_ID, SEED_UNACKED_DONATION_ID])
+				inArray(acquisition.id, [
+					SEED_ACQUISITION_ID,
+					SEED_DONATION_ID,
+					SEED_UNACKED_DONATION_ID,
+					SEED_SIGN_DONATION_ID,
+					SEED_OWED_ACQUISITION_ID
+				])
 			);
 		await db.delete(inventoryAsset).where(inArray(inventoryAsset.id, ASSET_IDS));
 		await db.delete(inventoryItem).where(inArray(inventoryItem.id, ITEM_IDS));
@@ -199,6 +242,28 @@ export async function seedInventory(): Promise<void> {
 			fairValueCents: 4_000
 		});
 
+		// Unsigned, and its unit already disposed of — so signing the 8283 is the
+		// single act that turns it into an obligation. That transition is the one
+		// production could never make: nothing could write `acknowledgedAt`.
+		await db.insert(acquisition).values({
+			id: SEED_SIGN_DONATION_ID,
+			kind: 'donation',
+			occurredAt: new Date(now.getTime() - 200 * 24 * 60 * 60 * 1000),
+			sourceName: SEED_SIGN_DONOR,
+			fairValueCents: 600_000,
+			fairValueBasis: 'Independent appraisal'
+		});
+
+		// Fronted out of pocket by the staff operator, unreimbursed.
+		await db.insert(acquisition).values({
+			id: SEED_OWED_ACQUISITION_ID,
+			kind: 'purchase',
+			occurredAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
+			sourceName: SEED_OWED_SUPPLIER,
+			totalCents: SEED_OWED_CENTS,
+			paidByUserId: SEED_STAFF_ID
+		});
+
 		await db.insert(acquisitionLine).values([
 			{
 				id: 'e2e-inv-line-amp',
@@ -275,6 +340,19 @@ export async function seedInventory(): Promise<void> {
 				retiredReason: 'Beyond repair'
 			},
 			{
+				// Disposed of, donated, and with no 8283 on record — so it owes
+				// nothing until the test signs one. Owned by that test.
+				id: SEED_SIGN_ASSET_ID,
+				itemId: SEED_ITEM_ID,
+				assetTag: SEED_SIGN_ASSET_TAG,
+				condition: 'poor',
+				status: 'retired',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_SIGN_DONATION_ID,
+				retiredAt: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000),
+				retiredReason: 'Sold at the swap meet'
+			},
+			{
 				id: SEED_DISPOSED_ASSET_ID,
 				itemId: SEED_ITEM_ID,
 				assetTag: SEED_DISPOSED_ASSET_TAG,
@@ -286,6 +364,15 @@ export async function seedInventory(): Promise<void> {
 				// 125-day filing window still to run.
 				retiredAt: new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000),
 				retiredReason: 'Cracked cabinet'
+			},
+			{
+				id: SEED_MAINTENANCE_ASSET_ID,
+				itemId: SEED_ITEM_ID,
+				assetTag: SEED_MAINTENANCE_ASSET_TAG,
+				condition: 'poor',
+				status: 'maintenance',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_ACQUISITION_ID
 			},
 			{
 				id: SEED_ASSET_ID,

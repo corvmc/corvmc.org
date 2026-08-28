@@ -426,6 +426,21 @@ export const acquisition = sqliteTable(
 		recordedByUserId: text('recorded_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
+		/**
+		 * Who fronted the money, when it was not the collective's own card.
+		 *
+		 * Deliberately distinct from `recordedByUserId` (who typed the row in) and
+		 * from `donorUserId` (who gave the goods). A volunteer who buys strings on
+		 * the way in is owed for them; a volunteer who *donates* strings is not,
+		 * and conflating the two would turn a gift into a debt.
+		 */
+		paidByUserId: text('paid_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+		/**
+		 * When they were paid back. The transfer itself happens outside the app —
+		 * this records that a person settled it, the same way `form8282ResolvedAt`
+		 * records that a person dealt with a filing.
+		 */
+		reimbursedAt: integer('reimbursed_at', { mode: 'timestamp' }),
 		notes: text('notes'),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
@@ -437,7 +452,8 @@ export const acquisition = sqliteTable(
 	(t) => [
 		index('idx_acquisition_kind').on(t.kind),
 		index('idx_acquisition_occurred').on(t.occurredAt),
-		index('idx_acquisition_donor').on(t.donorUserId)
+		index('idx_acquisition_donor').on(t.donorUserId),
+		index('idx_acquisition_paid_by').on(t.paidByUserId)
 	]
 );
 

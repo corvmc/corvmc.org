@@ -30,11 +30,15 @@ import {
 } from '$lib/server/inventory/asset-service';
 import { listLowStock, listMovements } from '$lib/server/inventory/stock-service';
 import {
+	acknowledgeForm8283,
 	adjustStock,
 	consumeStock,
 	getAcquisitionById,
+	listAcquisitions,
+	markReimbursed,
 	recordAcquisition,
-	spendByCategory
+	spendByCategory,
+	updateAcquisition
 } from '$lib/server/inventory/acquisition-service';
 import { form8282Status } from '$lib/server/inventory/form-8282';
 import {
@@ -502,8 +506,11 @@ export const receiveStock = form(
 		donorUserId: z.string().optional(),
 		reference: z.string().max(100).optional(),
 		unitValueCents: z.number().int().min(0).optional(),
+		fairValueCents: z.number().int().min(0).optional(),
 		fairValueBasis: z.string().max(1000).optional(),
 		intendedUse: z.string().max(1000).optional(),
+		monetized: z.boolean().optional().default(false),
+		paidByUserId: z.string().optional(),
 		locationId: z.string().optional(),
 		notes: z.string().max(2000).optional()
 	}),
@@ -518,8 +525,11 @@ export const receiveStock = form(
 			donorUserId?: string;
 			reference?: string;
 			unitValueCents?: number;
+			fairValueCents?: number;
 			fairValueBasis?: string;
 			intendedUse?: string;
+			monetized?: boolean;
+			paidByUserId?: string;
 			locationId?: string;
 			notes?: string;
 		};
@@ -530,8 +540,11 @@ export const receiveStock = form(
 			sourceName: data.sourceName || undefined,
 			donorUserId: data.donorUserId || undefined,
 			reference: data.reference || undefined,
+			fairValueCents: data.fairValueCents,
 			fairValueBasis: data.fairValueBasis || undefined,
 			intendedUse: data.intendedUse || undefined,
+			monetized: data.monetized ?? false,
+			paidByUserId: data.paidByUserId || undefined,
 			locationId: data.locationId || undefined,
 			notes: data.notes,
 			recordedByUserId: currentUser.id,
@@ -935,6 +948,182 @@ export const recordForm8282 = form(
 		return { success: true };
 	}
 );
+
+// ---------------------------------------------------------------------------
+// Acquisitions
+// ---------------------------------------------------------------------------
+
+/**
+ * What arrived, from whom, for how much.
+ *
+ * Receiving has always written these rows; nothing has ever been able to read
+ * them back. That is why the disclosure columns sat empty in production — a
+ * Form 8283 is signed weeks after the gift walks in, and there was no acquisition
+ * to come back to.
+ */
+export const getAcquisitions = query(
+	z.object({
+		kind: z.enum(acquisitionKinds).optional(),
+		from: z.string().optional(),
+		to: z.string().optional(),
+		awaitingReimbursement: z.boolean().optional()
+	}),
+	async (opts) => {
+		await requireStaff();
+
+		const rows = await listAcquisitions({
+			kind: opts.kind,
+			from: opts.from ? new Date(opts.from) : undefined,
+			to: opts.to ? new Date(opts.to) : undefined,
+			awaitingReimbursement: opts.awaitingReimbursement
+		});
+
+		return {
+			rows: rows.map((r) => ({
+				id: r.id,
+				kind: r.kind,
+				occurredAt: r.occurredAt,
+				donorName: r.donorName,
+				reference: r.reference,
+				totalCents: r.totalCents ?? r.linesTotalCents,
+				lineCount: r.lineCount,
+				paidByName: r.paidByName,
+				awaitingReimbursement: r.paidByUserId !== null && r.reimbursedAt === null,
+				reimbursedAt: r.reimbursedAt,
+				acknowledgedAt: r.acknowledgedAt
+			})),
+			owedCount: rows.filter((r) => r.paidByUserId !== null && r.reimbursedAt === null).length
+		};
+	}
+);
+
+/**
+ * One acquisition, everything about it.
+ *
+ * Composed rather than fanned out: the page reads this once and nothing else.
+ * `getAcquisitionById` already gathers lines, movements and receipts in one
+ * round trip, so this only shapes the DTO. The payer picker searches through
+ * the existing `/api/users/search`, the way `CreateLoanAction` does, rather
+ * than shipping a member list nobody has asked for yet.
+ */
+export const getStaffAcquisitionDetail = query(z.string(), async (id) => {
+	await requireStaff();
+
+	const acq = await getAcquisitionById(id);
+	if (!acq) error(404, 'Acquisition not found');
+
+	return {
+		...acq,
+		linesTotalCents: acq.lines.reduce((sum, l) => sum + l.quantity * (l.unitValueCents ?? 0), 0),
+		awaitingReimbursement: acq.paidByUserId !== null && acq.reimbursedAt === null
+	};
+});
+
+/**
+ * Amending an acquisition.
+ *
+ * A cleared number field is *dropped* from a remote `form()` payload rather than
+ * sent as null, so an absent key here means untouched. Clearing a value that is
+ * already set therefore needs its own signal, which the text fields carry as an
+ * empty string.
+ */
+export const editAcquisition = form(
+	z.object({
+		id: z.string(),
+		sourceName: z.string().max(255).optional(),
+		reference: z.string().max(100).optional(),
+		fairValueCents: z.number().int().min(0).optional(),
+		fairValueBasis: z.string().max(1000).optional(),
+		intendedUse: z.string().max(1000).optional(),
+		monetized: z.boolean().optional().default(false),
+		paidByUserId: z.string().optional(),
+		notes: z.string().max(2000).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as {
+			id: string;
+			sourceName?: string;
+			reference?: string;
+			fairValueCents?: number;
+			fairValueBasis?: string;
+			intendedUse?: string;
+			monetized?: boolean;
+			paidByUserId?: string;
+			notes?: string;
+		};
+
+		try {
+			await updateAcquisition(data.id, {
+				sourceName: data.sourceName || null,
+				reference: data.reference || null,
+				fairValueCents: data.fairValueCents ?? null,
+				fairValueBasis: data.fairValueBasis || null,
+				intendedUse: data.intendedUse || null,
+				monetized: data.monetized ?? false,
+				paidByUserId: data.paidByUserId || null,
+				notes: data.notes || null
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getStaffAcquisitionDetail(data.id).refresh();
+		return { success: true };
+	}
+);
+
+/**
+ * Recording that CMC signed the donor's Form 8283.
+ *
+ * **This is the switch that arms Form 8282.** Until it is set, a donated unit
+ * can be disposed of and `/staff/inventory/compliance` stays silent, because a
+ * gift with no signed 8283 is not "charitable deduction property" and owes
+ * nothing. The rule shipped in #302/#309 with no way to reach it.
+ */
+export const recordForm8283 = form(
+	z.object({
+		id: z.string(),
+		signedOn: z.string().min(1),
+		appraisalRef: z.string().max(255).optional()
+	}),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as { id: string; signedOn: string; appraisalRef?: string };
+
+		const signedOn = new Date(data.signedOn);
+		if (Number.isNaN(signedOn.getTime())) error(400, 'That is not a date');
+
+		try {
+			await acknowledgeForm8283(data.id, {
+				acknowledgedAt: signedOn,
+				appraisalRef: data.appraisalRef || null
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		void getStaffAcquisitionDetail(data.id).refresh();
+		// A newly-signed 8283 can make an already-disposed unit reportable, so the
+		// compliance queue has to be re-read rather than left to go stale.
+		void getForm8282Obligations().refresh();
+		return { success: true };
+	}
+);
+
+export const markAcquisitionReimbursed = form(z.object({ id: z.string() }), async (raw) => {
+	await requireStaff();
+	const data = raw as { id: string };
+
+	try {
+		await markReimbursed(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	void getStaffAcquisitionDetail(data.id).refresh();
+	return { success: true };
+});
 
 // ---------------------------------------------------------------------------
 // Attached resources

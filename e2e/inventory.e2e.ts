@@ -16,10 +16,17 @@ import {
 	SEED_DISPOSED_ASSET_TAG,
 	SEED_UNACKED_ASSET_ID,
 	SEED_UNACKED_ASSET_TAG,
+	SEED_SIGN_ASSET_ID,
+	SEED_SIGN_ASSET_TAG,
+	SEED_SIGN_DONATION_ID,
+	SEED_SIGN_DONOR,
+	SEED_OWED_ACQUISITION_ID,
+	SEED_OWED_SUPPLIER,
 	SEED_LOW_NAME,
 	SEED_LOW_ON_HAND,
 	SEED_LOW_REORDER_QUANTITY,
-	SEED_UNTAGGED_ASSET_ID
+	SEED_UNTAGGED_ASSET_ID,
+	SEED_MAINTENANCE_ASSET_ID
 } from './fixtures/seed-inventory';
 
 /**
@@ -61,6 +68,29 @@ async function readOnHand(page: Page, itemId: string): Promise<number> {
 /** The submit inside an open Action modal, as distinct from the trigger. */
 function modalSubmit(page: Page, name: RegExp) {
 	return page.getByRole('dialog').getByRole('button', { name });
+}
+
+/**
+ * Load a page and wait for it to have actually rendered.
+ *
+ * These pages take their data from an awaited remote query, so the whole
+ * template — heading included — is gated behind it. `page.goto` resolves on
+ * `load`, which is comfortably before that commits, and a read taken then sees
+ * an empty `<main>`.
+ *
+ * This matters most for a *negative* assertion: "the row is not there" is
+ * trivially true of a page that has rendered nothing, so a poll without this
+ * gate reports success for a row that simply had not arrived yet.
+ */
+async function visit(page: Page, path: string, heading: string) {
+	await page.goto(path);
+	await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
+}
+
+/** Whether the compliance queue currently lists a unit, re-read from scratch. */
+async function complianceLists(page: Page, tag: string): Promise<boolean> {
+	await visit(page, '/staff/inventory/compliance', 'Compliance');
+	return page.getByText(tag).isVisible();
 }
 
 test.describe('inventory', () => {
@@ -267,16 +297,97 @@ test.describe('inventory', () => {
 				.first()
 				.fill('Filed 2026-09-02, copy posted to the donor');
 			await page.getByRole('dialog').getByRole('button', { name: 'Record 8282' }).click();
-			await page.waitForTimeout(2000);
+			await expect(page.getByText('Recorded')).toBeVisible({ timeout: 10000 });
 
-			await page.goto('/staff/inventory/compliance');
 			// The obligation is discharged, so it stops asking — the note stays on
 			// the unit as the record that it was handled.
-			await expect(page.getByText(SEED_DISPOSED_ASSET_TAG)).toBeHidden();
+			//
+			// Polled with the navigation *inside* the poll: `toBeHidden` retries
+			// against the DOM it already loaded, so a page fetched a moment early
+			// keeps showing the row and the assertion just fails slowly.
+			await expect
+				.poll(async () => complianceLists(page, SEED_DISPOSED_ASSET_TAG), { timeout: 15000 })
+				.toBe(false);
 
 			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
 			await expect(page.getByText('Form 8282 may be due.')).toBeHidden();
 			await expect(page.getByText('copy posted to the donor')).toBeVisible();
+		});
+	});
+
+	/**
+	 * Acquisitions: what arrived, from whom, and who is owed for it.
+	 *
+	 * Receiving has written these rows since Phase 1 and nothing could read them
+	 * back, which is why the disclosure columns sat empty in production. The
+	 * signing test below is the loop that could not previously run at all.
+	 */
+	test.describe('acquisitions', () => {
+		test('lists what the collective has taken in', async ({ page }) => {
+			await loginAsStaff(page);
+			await visit(page, '/staff/inventory/acquisitions', 'Acquisitions');
+
+			await expect(page.getByRole('row').filter({ hasText: SEED_SIGN_DONOR })).toBeVisible();
+			await expect(page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER })).toBeVisible();
+		});
+
+		/**
+		 * **The transition the module shipped without.** `form8282Status` treats a
+		 * gift with no signed 8283 as owing nothing, and nothing in the app could
+		 * write `acknowledgedAt` — so this unit was disposed of inside the window
+		 * and the compliance page stayed silent about it forever. Signing the 8283
+		 * is the single act that makes it reportable.
+		 */
+		test('signing a Form 8283 turns a silent disposal into an obligation', async ({ page }) => {
+			await loginAsStaff(page);
+
+			// Before: disposed of, donated, inside the window — and not listed.
+			expect(await complianceLists(page, SEED_SIGN_ASSET_TAG)).toBe(false);
+
+			await page.goto(`/staff/inventory/acquisitions/${SEED_SIGN_DONATION_ID}`);
+			await page.getByRole('button', { name: 'Record 8283' }).click();
+			await page.getByRole('dialog').locator('input[name$="signedOn"]').fill('2026-03-04');
+			await page
+				.getByRole('dialog')
+				.locator('input[name$="appraisalRef"]')
+				.fill('Appraisal 2026-03');
+			await modalSubmit(page, /^Record 8283$/).click();
+			await expect(page.getByText('Acknowledgment recorded')).toBeVisible({ timeout: 10000 });
+
+			// After: the same row, now an obligation with a deadline attached.
+			await expect
+				.poll(async () => complianceLists(page, SEED_SIGN_ASSET_TAG), { timeout: 15000 })
+				.toBe(true);
+
+			await page.goto(`/staff/inventory/assets/${SEED_SIGN_ASSET_ID}`);
+			await expect(page.getByText('Form 8282 may be due.')).toBeVisible();
+		});
+
+		/**
+		 * The app moves no money; this records that a person did. Asserted through
+		 * the filter rather than a badge, because leaving the awaiting list is the
+		 * behaviour somebody depends on.
+		 */
+		test('marking a fronted purchase reimbursed clears it from the owed list', async ({ page }) => {
+			await loginAsStaff(page);
+
+			await visit(page, '/staff/inventory/acquisitions?owed=1', 'Acquisitions');
+			await expect(page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER })).toBeVisible();
+
+			await page.goto(`/staff/inventory/acquisitions/${SEED_OWED_ACQUISITION_ID}`);
+			await page.getByRole('button', { name: 'Mark reimbursed' }).click();
+			await modalSubmit(page, /^Mark reimbursed$/).click();
+			await expect(page.getByText('Marked reimbursed')).toBeVisible({ timeout: 10000 });
+
+			await expect
+				.poll(
+					async () => {
+						await visit(page, '/staff/inventory/acquisitions?owed=1', 'Acquisitions');
+						return page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER }).isVisible();
+					},
+					{ timeout: 15000 }
+				)
+				.toBe(false);
 		});
 	});
 
@@ -303,7 +414,6 @@ test.describe('inventory', () => {
 			await page.getByRole('button', { name: 'Report a problem' }).click();
 			await page.getByRole('dialog').locator('textarea').first().fill('Crackling on channel two');
 			await page.getByRole('dialog').getByRole('button', { name: 'Report a problem' }).click();
-			await page.waitForTimeout(2000);
 
 			// Asserted against the database first: the movement *is* the report, so
 			// if it were missing the unit would be out of service with no record of
@@ -330,8 +440,9 @@ test.describe('inventory', () => {
 
 		test('a unit already in the shop is not offered the form again', async ({ page }) => {
 			await loginAsStaff(page);
-			// The previous test left this one in maintenance.
-			await page.goto(`/member/equipment/assets/${SEED_ASSET_ID}`);
+			// Seeded in maintenance rather than left that way by the test above,
+			// which made the two order-dependent.
+			await page.goto(`/member/equipment/assets/${SEED_MAINTENANCE_ASSET_ID}`);
 
 			// Assert the page is actually there before asserting something is not.
 			// `toBeHidden()` passes for an element that does not exist, so on its

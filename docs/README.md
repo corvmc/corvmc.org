@@ -121,9 +121,9 @@ this split was made.
 
 ### Inventory & assets
 
-| Doc                                          | Status | Lifecycle | Notes                                                                                                                                                                                     |
-| -------------------------------------------- | ------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [inventory-spec.md](specs/inventory-spec.md) | 🔧     | split     | Phases 1–2 shipped — one append-only ledger, serialized units, acquisitions, `/a/[tag]` scans, restock list and spend report. Phases 3–4 (in-kind disclosure, attached resources) unbuilt |
+| Doc                                          | Status | Lifecycle | Notes                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [inventory-spec.md](specs/inventory-spec.md) | 🔧     | split     | Phases 1, 2 and 4 shipped — one append-only ledger, serialized units, acquisitions with disclosure and reimbursement, `/a/[tag]` scans, restock list, spend report, manuals and damage reports. Phase 3 shipped bar Schedule M; the in-kind disclosure screen is deliberately unbuilt |
 
 ### Staff platform
 

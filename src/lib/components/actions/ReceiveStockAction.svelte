@@ -4,6 +4,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { receiveStock, getLocations } from '$lib/remote/inventory.remote';
 	import { Field } from '../ui/Form';
+	import MemberPicker from '../ui/MemberPicker.svelte';
 	import { acquisitionKinds, acquisitionKindLabels } from '$lib/config';
 
 	const { fields } = receiveStock;
@@ -32,6 +33,13 @@
 	 * is reconstructable a year later when the report is due.
 	 */
 	let kind = $state<(typeof acquisitionKinds)[number]>('purchase');
+
+	/**
+	 * Who fronted the money. Blank means the collective's own card, which is the
+	 * common case — so this stays out of the way until somebody fills it in.
+	 */
+	let paidByUserId = $state('');
+	let paidByName = $state('');
 </script>
 
 <Action
@@ -78,7 +86,30 @@
 				description="Required for the gifts-in-kind disclosure — e.g. comparable sales, appraisal."
 			/>
 			<Field field={fields.intendedUse} type="text" label="Intended use" />
+			<Field
+				field={fields.fairValueCents}
+				type="number"
+				label="Total fair value (cents)"
+				description="The gift as a whole. Leave blank to let the per-unit values above stand for it."
+			/>
+			<!-- ASU 2020-07 asks whether a gift was sold or put to use, and discloses
+			     the two on separate lines. Nothing could set this before, so every
+			     gift on record reads as utilized. -->
+			<Field
+				field={fields.monetized}
+				type="checkbox"
+				label="Sold rather than used"
+				checkboxLabel="The collective converted this gift to cash"
+			/>
 		{/if}
+		<!-- Distinct from the donor: a volunteer who buys strings is owed for them,
+		     and one who donates strings is not. -->
+		<MemberPicker
+			field={fields.paidByUserId}
+			bind:value={paidByUserId}
+			bind:name={paidByName}
+			label="Paid by (leave blank if the collective paid)"
+		/>
 		{#if locations.length > 0}
 			<Field
 				field={fields.locationId}

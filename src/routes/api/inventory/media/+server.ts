@@ -7,7 +7,7 @@ import { isStaff } from '$lib/server/authorization';
 import type { MediaSlot } from '$lib/server/db/schema/media';
 
 /**
- * Uploading a file for an inventory item or unit.
+ * Uploading a file for an inventory item, unit, or acquisition.
  *
  * An API route rather than a remote function because a remote `form()` carries
  * fields, not a multipart body — the same reason `/api/bands/[id]/media` exists.
@@ -35,7 +35,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	// The slot decides both who may write and what may be written. A manual is
 	// documentation staff publish; damage evidence is something any member can
 	// add, because the person who finds a broken amp is rarely a staffer.
-	let attachableType: 'inventory_item' | 'inventory_asset';
+	let attachableType: 'inventory_item' | 'inventory_asset' | 'acquisition';
 	let allowed: string[];
 
 	if (slot === 'manual') {
@@ -45,6 +45,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	} else if (slot === 'damage') {
 		attachableType = 'inventory_asset';
 		allowed = IMAGE_TYPES;
+	} else if (slot === 'receipt') {
+		// What was paid, against the row that records it. Staff-only because an
+		// acquisition is an accounting record, not something a member touches —
+		// and usually a phone photo of a till receipt rather than a PDF.
+		if (!(await isStaff(locals.user.id))) error(403, 'Staff only');
+		attachableType = 'acquisition';
+		allowed = MANUAL_TYPES;
 	} else {
 		error(400, 'Unsupported slot');
 	}

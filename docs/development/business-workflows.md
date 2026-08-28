@@ -457,7 +457,37 @@ action per row so a shop trip can be recorded from the list it came off.
 (default: the current calendar year) via `spendByCategory()`. **Donations and
 grants are excluded** — a gift is not spend, and counting one would overstate the
 budget by exactly what was given. `inKindContributions()` exists for the
-gifts-in-kind disclosure but has no screen yet; that is Phase 3.
+gifts-in-kind disclosure and still has no screen: ASU 2020-07 binds the financial
+statements rather than the organisation, and CMC has never been asked for a GAAP
+statement.
+
+### Acquisitions
+
+`/staff/inventory/acquisitions` is what arrived, from whom, and for how much;
+`/staff/inventory/acquisitions/[id]` is one of them. Receiving has written these
+rows since Phase 1, but nothing read them back until this existed — and that gap
+is why several columns sat permanently empty in production. A Form 8283 is signed
+weeks after a gift walks in, so capturing it only at the door captured it never.
+
+- `acknowledgeForm8283()` sets `acknowledgedAt` / `appraisalRef`. **This is the
+  switch that arms Form 8282** — see below.
+- `updateAcquisition()` amends the rest, including `fairValueCents` and
+  `monetized`, the flag that splits the ASU 2020-07 disclosure into monetized and
+  utilized gifts.
+- **The lines are read-only.** They have already emitted their `receive`
+  movements; rewriting a quantity would put the ledger and the paperwork into
+  permanent disagreement. A miscount is an `adjust` movement, like every other
+  stock error.
+
+**Reimbursement.** `paidByUserId` records who fronted the money — distinct from
+`recordedByUserId` (who typed the row in) and `donorUserId` (who gave the goods),
+because a volunteer who _buys_ strings is owed for them and one who _donates_
+strings is not. `markReimbursed()` stamps `reimbursedAt`, and is idempotent by
+intent: re-marking keeps the original date rather than moving it, so a double
+click cannot falsify when somebody was actually paid. The app moves no money; it
+records that a person did, the same shape as `resolveForm8282`. Receipts attach
+through the shared media layer under a `receipt` slot on `attachableType:
+'acquisition'` — no table of their own.
 
 Both queries are covered by `src/lib/server/inventory/reports.spec.ts`, which
 runs them against a real in-memory SQLite rather than a mocked `db` — a mock
@@ -502,10 +532,16 @@ It surfaces on the unit's page when it is retired and on
 `form8282ResolvedAt` plus a free-text `form8282Note`, which covers both "filed"
 and "no filing was due, because…".
 
-**Where it breaks** — nothing appears when expected: check the asset actually
-carries an `acquisitionId` whose acquisition is `kind: 'donation'`. A unit
-created directly rather than through receiving has no acquisition, so the system
-cannot know it was a gift.
+**Where it breaks** — nothing appears when expected, in order of likelihood:
+
+- **No Form 8283 is recorded against the acquisition.** This is the usual answer
+  and it is usually correct: an unsigned gift is not "charitable deduction
+  property" and owes nothing. Sign it on the acquisition page if one really was
+  signed. Until #302's follow-up there was no way to record it at all, so every
+  disposal landed in the `noFormOnRecord` count and the page always read zero.
+- The asset carries no `acquisitionId`, or its acquisition is not a donation. A
+  unit created directly rather than through receiving has no acquisition, so the
+  system cannot know it was a gift.
 
 ### Scanning a tag
 
@@ -521,7 +557,8 @@ a remote function because it is navigation, not data: a phone camera should get 
 
 `inventory_item`, `inventory_asset`, `stock_movement`, `inventory_loan`,
 `acquisition`, `acquisition_line`, `inventory_location`, `equipment_category`
-(unchanged), `creditTransaction` (equipment credit spends).
+(unchanged), `media` + `media_attachment` (manuals, damage photos, receipts),
+`creditTransaction` (equipment credit spends).
 
 ### Where it breaks
 

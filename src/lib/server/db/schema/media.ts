@@ -18,7 +18,9 @@ export const attachableTypes = [
 	/** A catalog entry: manuals and spec sheets, the same for every unit of it. */
 	'inventory_item',
 	/** One physical unit: photographs of damage to *this* amp. */
-	'inventory_asset'
+	'inventory_asset',
+	/** How stock arrived: the receipt or the donation paperwork behind it. */
+	'acquisition'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 
@@ -38,7 +40,9 @@ export const mediaSlots = [
 	/** Item-level documentation — a manual, a spec sheet. Usually a PDF. */
 	'manual',
 	/** Asset-level evidence attached to a damage report. */
-	'damage'
+	'damage',
+	/** Proof of what was paid, against the acquisition that records it. */
+	'receipt'
 ] as const;
 export type MediaSlot = (typeof mediaSlots)[number];
 

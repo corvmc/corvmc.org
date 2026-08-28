@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { media, mediaAttachment, attachableTypes } from '$lib/server/db/schema/media';
 import type { AttachableType } from '$lib/server/db/schema/media';
 import { event } from '$lib/server/db/schema/event';
-import { inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
+import { acquisition, inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { deleteObject } from '$lib/server/storage';
@@ -30,7 +30,8 @@ const PARENT_TABLES = {
 	// table to check it against. Without that, a new type's attachments would
 	// simply never be reaped and the objects would leak.
 	inventory_item: inventoryItem,
-	inventory_asset: inventoryAsset
+	inventory_asset: inventoryAsset,
+	acquisition
 } as const satisfies Record<AttachableType, unknown>;
 
 export type SweepResult = {
