@@ -2,6 +2,7 @@ import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { group } from './group';
+import { bandSite } from './band-site';
 
 export {
 	BAND_THEMES,
@@ -29,6 +30,11 @@ export const bandPageConfig = sqliteTable(
 			.notNull()
 			.unique()
 			.references(() => group.id, { onDelete: 'cascade' }),
+		// Where this config is moving. Nullable and alongside `bandId` on purpose:
+		// phase 3b backfills it and switches the readers, and the phase that drops
+		// `bandId` is the one that makes it NOT NULL. Nothing is dropped here, so a
+		// mistake in the backfill is recoverable from the column beside it.
+		bandSiteId: text('band_site_id').references(() => bandSite.id, { onDelete: 'cascade' }),
 		theme: text('theme').notNull().default('default'),
 		customCss: text('custom_css'),
 		blocks: text('blocks', { mode: 'json' }).$type<Block[]>().notNull().default([]),
@@ -37,7 +43,10 @@ export const bandPageConfig = sqliteTable(
 			.notNull()
 			.default(sql`(unixepoch())`)
 	},
-	(t) => [index('idx_band_page_config_band').on(t.bandId)]
+	(t) => [
+		index('idx_band_page_config_band').on(t.bandId),
+		index('idx_band_page_config_site').on(t.bandSiteId)
+	]
 );
 
 // ---------------------------------------------------------------------------
@@ -53,6 +62,8 @@ export const bandMedia = sqliteTable(
 		bandId: text('band_id')
 			.notNull()
 			.references(() => group.id, { onDelete: 'cascade' }),
+		/** See `bandPageConfig.bandSiteId`. */
+		bandSiteId: text('band_site_id').references(() => bandSite.id, { onDelete: 'cascade' }),
 		key: text('key').notNull(),
 		type: text('type').notNull(), // 'image' | 'hero' | 'rider' | 'stage_plot'
 		caption: text('caption'),
@@ -61,7 +72,10 @@ export const bandMedia = sqliteTable(
 			.notNull()
 			.default(sql`(unixepoch())`)
 	},
-	(t) => [index('idx_band_media_band_type').on(t.bandId, t.type, t.sortOrder)]
+	(t) => [
+		index('idx_band_media_band_type').on(t.bandId, t.type, t.sortOrder),
+		index('idx_band_media_site_type').on(t.bandSiteId, t.type, t.sortOrder)
+	]
 );
 
 // ---------------------------------------------------------------------------

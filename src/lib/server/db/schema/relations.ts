@@ -15,6 +15,7 @@ export const relations = defineRelations(schema, (t) => ({
 		user: t.one.user({ from: t.account.userId, to: t.user.id })
 	},
 	group: {
+		site: t.one.bandSite({ from: t.group.id, to: t.bandSite.groupId }),
 		directoryEntry: t.one.directoryEntry({ from: t.group.id, to: t.directoryEntry.groupId }),
 		members: t.many.groupMember(),
 		/** Events this band OWNS. Shows it merely played are `lineups`. */
@@ -26,6 +27,9 @@ export const relations = defineRelations(schema, (t) => ({
 			to: t.eventBand.bandId,
 			alias: 'eventBand_band'
 		})
+	},
+	bandSite: {
+		group: t.one.group({ from: t.bandSite.groupId, to: t.group.id })
 	},
 	directoryEntry: {
 		user: t.one.user({ from: t.directoryEntry.userId, to: t.user.id }),
