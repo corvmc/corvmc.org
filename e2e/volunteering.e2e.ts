@@ -27,6 +27,7 @@ import {
 	SEED_VOL_MINOR_FIRST,
 	SEED_VOL_MINOR_LAST,
 	SEED_VOL_BLOCKED_MINOR_EMAIL,
+	SEED_VOL_BLOCKED_MINOR_NAME,
 	SEED_VOL_BLOCKED_MINOR_FIRST,
 	SEED_VOL_BLOCKED_MINOR_LAST,
 	readVolunteerState,
@@ -311,11 +312,63 @@ test.describe('volunteering — roles', () => {
 		);
 	});
 
-	test('the retired interest route redirects onto roles', async ({ page }) => {
+	test('the retired interest route redirects onto the volunteers index', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/interest');
 
-		await expect(page).toHaveURL(/\/staff\/volunteer\/roles$/);
+		await expect(page).toHaveURL(/\/staff\/volunteer\/people$/);
+	});
+
+	/**
+	 * The index is keyed on the volunteer profile, not on interest rows — which is
+	 * the whole reason it exists as its own page. The blocked minor never reached
+	 * the (skippable) interests step, so an interest-keyed list would drop the one
+	 * person on this page who most needs looking at.
+	 */
+	test('the volunteers index lists somebody who signed up without picking a role', async ({
+		page
+	}) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/people');
+
+		const interested = page.getByRole('row', { name: SEED_VOL_MEMBER_NAME });
+		await expect(interested).toBeVisible({ timeout: 15000 });
+		await expect(interested.getByText(SEED_VOL_ROLE_NAME)).toBeVisible();
+
+		await expect(page.getByRole('row', { name: SEED_VOL_BLOCKED_MINOR_NAME })).toBeVisible();
+	});
+
+	/**
+	 * Narrowing by role must not narrow what each surviving row shows: the member
+	 * is interested in the gated role too, and that badge is the "what else would
+	 * they do" signal the EXISTS filter exists to preserve.
+	 */
+	test('filtering the volunteers index by role keeps every role on the rows that match', async ({
+		page
+	}) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/people');
+		await expect(page.getByRole('row', { name: SEED_VOL_MEMBER_NAME })).toBeVisible({
+			timeout: 15000
+		});
+
+		await page
+			.getByRole('combobox', { name: 'Interested in role' })
+			.selectOption({ label: SEED_VOL_ROLE_NAME });
+
+		const row = page.getByRole('row', { name: SEED_VOL_MEMBER_NAME });
+		await expect(row).toBeVisible();
+		await expect(row.getByText(SEED_VOL_GATED_ROLE_NAME)).toBeVisible();
+
+		// Somebody with no interests at all cannot match a role filter.
+		await expect(page.getByRole('row', { name: SEED_VOL_BLOCKED_MINOR_NAME })).toHaveCount(0);
+
+		// The filter survives a reload, which is what the URL mirroring is for.
+		await expect(page).toHaveURL(/role=/);
+		await page.reload();
+		await expect(page.getByRole('row', { name: SEED_VOL_MEMBER_NAME })).toBeVisible({
+			timeout: 15000
+		});
 	});
 
 	test('the report counts hours logged under a since-archived role', async ({ page }) => {

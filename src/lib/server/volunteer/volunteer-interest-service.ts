@@ -32,7 +32,11 @@ const INSERT_CHUNK = 25;
 // ASCII unit separator. group_concat needs a delimiter that cannot occur
 // inside a staff-authored role name — a comma would split
 // "Clean, maintain, and repair" into three badges.
-const ROLE_NAME_SEPARATOR = String.fromCharCode(31);
+//
+// Exported because the volunteers index collapses the same column the same way
+// from the other side of the join; two copies of the character would be one
+// rename away from splitting names on one page and not the other.
+export const ROLE_NAME_SEPARATOR = String.fromCharCode(31);
 
 // ---------------------------------------------------------------------------
 // Mutations
@@ -248,12 +252,14 @@ export async function listInterestedMembers(
 
 	return {
 		...result,
-		rows: result.rows.map((r): InterestedMember => ({
-			userId: r.userId,
-			email: r.member.email,
-			member: toMemberRef(r.member),
-			roleNames: String(r.roleNames).split(ROLE_NAME_SEPARATOR).sort(),
-			since: new Date(Number(r.since) * 1000)
-		}))
+		rows: result.rows.map(
+			(r): InterestedMember => ({
+				userId: r.userId,
+				email: r.member.email,
+				member: toMemberRef(r.member),
+				roleNames: String(r.roleNames).split(ROLE_NAME_SEPARATOR).sort(),
+				since: new Date(Number(r.since) * 1000)
+			})
+		)
 	};
 }
