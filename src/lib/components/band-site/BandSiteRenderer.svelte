@@ -52,7 +52,8 @@
 	interface MediaData {
 		id: string;
 		url: string | null;
-		type: string;
+		/** `media_attachment.slot` — see docs/specs/media-spec.md. */
+		slot: string;
 		caption: string | null;
 	}
 
@@ -222,7 +223,7 @@
 					block.imageKeys.length > 0
 						? block.imageKeys.map((url) => ({ url, caption: null as string | null }))
 						: media
-								.filter((m) => m.type === 'image')
+								.filter((m) => m.slot === 'gallery')
 								.map((m) => ({ url: m.url, caption: m.caption }))}
 				<div class="mx-auto max-w-4xl px-6 py-8">
 					<div class="grid grid-cols-2 gap-2 md:grid-cols-3">
@@ -340,7 +341,7 @@
 				<div class="mx-auto max-w-3xl px-6 py-8">
 					<h2 class="mb-4 text-2xl font-bold">Technical Requirements</h2>
 					{#if epk?.stagePlotKey}
-						{@const stageMedia = media.find((m) => m.type === 'stage_plot')}
+						{@const stageMedia = media.find((m) => m.slot === 'stage_plot')}
 						{#if stageMedia?.url}
 							<img src={stageMedia.url} alt="Stage Plot" class="mb-4 max-w-full rounded-lg" />
 						{/if}
@@ -369,7 +370,7 @@
 						</div>
 					{/if}
 					{#if epk?.technicalRiderKey}
-						{@const riderMedia = media.find((m) => m.type === 'rider')}
+						{@const riderMedia = media.find((m) => m.slot === 'rider')}
 						{#if riderMedia?.url}
 							<Button
 								href={riderMedia.url}

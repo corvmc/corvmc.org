@@ -55,6 +55,7 @@ import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/direct
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { group } from '../src/lib/server/db/schema/group';
 import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
+import { media, mediaAttachment } from '../src/lib/server/db/schema/media';
 import { bandSite } from '../src/lib/server/db/schema/band-site';
 import {
 	subscriber,
@@ -1909,18 +1910,50 @@ async function seedBandPageConfigs(bands: any[], siteIdByBand: Map<string, strin
 			.returning();
 		configs.push(config);
 
-		// Add some band media entries
-		const mediaTypes = ['image', 'image', 'image', 'hero', 'stage_plot', 'rider'];
-		for (let m = 0; m < mediaTypes.length; m++) {
+		// Band media, in the media tables the microsite now reads and the upload
+		// endpoint now writes. `band_media` is still written alongside — nothing
+		// reads it any more, but the table survives until phase 6 drops it, and
+		// keeping it populated is what makes reverting this cut-over possible.
+		const mediaSlots = [
+			['gallery', 'image'],
+			['gallery', 'image'],
+			['gallery', 'image'],
+			['hero', 'hero'],
+			['stage_plot', 'stage_plot'],
+			['rider', 'rider']
+		] as const;
+		for (let m = 0; m < mediaSlots.length; m++) {
+			const [slot, legacyType] = mediaSlots[m];
+			const key = `bands/${b.slug}/${legacyType}-${m}.jpg`;
+			const caption =
+				slot === 'gallery' ? `${b.name} live at ${pick(BAND_EVENT_LOCATIONS).split(',')[0]}` : null;
+
 			await db.insert(bandMedia).values({
 				bandId: b.id,
 				bandSiteId: siteIdByBand.get(b.id) ?? null,
-				key: `bands/${b.slug}/${mediaTypes[m]}-${m}.jpg`,
-				type: mediaTypes[m],
-				caption:
-					mediaTypes[m] === 'image'
-						? `${b.name} live at ${pick(BAND_EVENT_LOCATIONS).split(',')[0]}`
-						: null,
+				key,
+				type: legacyType,
+				caption,
+				sortOrder: m
+			});
+
+			// Sizes are fabricated: these keys name no real object, which is exactly
+			// why `backfill-media.ts` refuses to invent them and the seed may.
+			const [mediaRow] = await db
+				.insert(media)
+				.values({
+					key,
+					contentType: 'image/jpeg',
+					byteSize: 200_000 + m * 1000,
+					caption
+				})
+				.returning();
+
+			await db.insert(mediaAttachment).values({
+				mediaId: mediaRow.id,
+				attachableType: 'group',
+				attachableId: b.id,
+				slot,
 				sortOrder: m
 			});
 		}

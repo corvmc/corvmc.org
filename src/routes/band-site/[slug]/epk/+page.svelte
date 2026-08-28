@@ -11,8 +11,8 @@
 	const epk = $derived(data.config?.epk);
 	const members = $derived(data.members);
 	const events = $derived(data.events);
-	const galleryMedia = $derived(data.media.filter((m) => m.type === 'image'));
-	const stagePlot = $derived(data.media.find((m) => m.type === 'stage_plot'));
+	const galleryMedia = $derived(data.media.filter((m) => m.slot === 'gallery'));
+	const stagePlot = $derived(data.media.find((m) => m.slot === 'stage_plot'));
 </script>
 
 <svelte:head>
