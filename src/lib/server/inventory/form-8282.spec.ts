@@ -12,6 +12,9 @@ const at = (iso: string) => new Date(iso);
 const gift = (acquired: string, disposed: string | null, resolved: string | null = null) => ({
 	acquiredAt: at(acquired),
 	wasDonated: true,
+	// The default is an acknowledged gift, because that is the only kind that can
+	// owe anything — see the unacknowledged case below.
+	acknowledged: true,
 	disposedAt: disposed ? at(disposed) : null,
 	resolvedAt: resolved ? at(resolved) : null
 });
@@ -50,9 +53,25 @@ describe('form8282Status', () => {
 			{
 				acquiredAt: at('2025-01-01'),
 				wasDonated: false,
+				acknowledged: false,
 				disposedAt: at('2026-01-01'),
 				resolvedAt: null
 			},
+			NOW
+		);
+		expect(status.state).toBe('not_applicable');
+		expect(needsAttention(status)).toBe(false);
+	});
+
+	/**
+	 * The trigger is the signed Form 8283, not the gift. "Charitable deduction
+	 * property" is defined as property the donee signed for — so a donation with
+	 * no 8283 on record can be disposed of the next day and owes nothing.
+	 * Flagging it anyway is how a warning becomes noise nobody reads.
+	 */
+	it('says nothing about a gift with no signed 8283', () => {
+		const status = form8282Status(
+			{ ...gift('2025-01-01', '2026-07-20'), acknowledged: false },
 			NOW
 		);
 		expect(status.state).toBe('not_applicable');

@@ -28,7 +28,9 @@
 	{#if data.rows.length === 0}
 		<EmptyState
 			title="Nothing outstanding"
-			description="No donated gear has been disposed of inside the three-year window without a note against it."
+			description={data.noFormOnRecord > 0
+				? `${data.noFormOnRecord} donated ${data.noFormOnRecord === 1 ? 'unit was' : 'units were'} disposed of inside the three-year window, but none has a signed Form 8283 on record — so no filing is expected.`
+				: 'No donated gear has been disposed of inside the three-year window.'}
 		/>
 	{:else}
 		{#if data.overdueCount > 0}
@@ -42,9 +44,9 @@
 		<!-- Stated once, at the top: the system is flagging, not determining. -->
 		<p class="mb-4 text-subtle">
 			Disposing of donated property within three years of receiving it can oblige the collective to
-			file IRS Form 8282 within 125 days, with a copy to the donor. Whether a given disposal is
-			reportable depends on whether the donor filed a Form 8283 that CMC signed — which is why each
-			row shows that, and why recording an outcome is a person's judgement rather than the system's.
+			file IRS Form 8282 within 125 days, with a copy to the donor. Only gifts CMC signed a Form
+			8283 for are listed here — that signature is what makes something reportable. Recording an
+			outcome stays a person's judgement rather than the system's.
 		</p>
 
 		<Table>
@@ -65,12 +67,7 @@
 						{#if row.assetTag}
 							<div class="font-mono text-subtle">{row.assetTag}</div>
 						{/if}
-						{#if !row.acknowledged}
-							<!-- No signed 8283 on record often means no filing is due — but the
-							     absence may just mean nobody logged it, so it informs rather
-							     than excludes. -->
-							<Badge variant="outline" size="xs">No 8283 recorded</Badge>
-						{:else if row.fairValueCents}
+						{#if row.fairValueCents}
 							<Badge variant="outline" size="xs">{formatCents(row.fairValueCents)}</Badge>
 						{/if}
 					</td>

@@ -70,8 +70,22 @@ export const SEED_DONATION_ID = 'e2e-inv-acq-donation';
 export const SEED_DISPOSED_ASSET_ID = 'e2e-inv-asset-donated';
 export const SEED_DISPOSED_ASSET_TAG = 'E2E-000009';
 
+/**
+ * A second donated disposal, this one with **no signed Form 8283**. It must not
+ * appear as an obligation: the signature is what makes property reportable, so
+ * flagging this would be the false positive the narrowing exists to remove.
+ */
+export const SEED_UNACKED_DONATION_ID = 'e2e-inv-acq-donation-unacked';
+export const SEED_UNACKED_ASSET_ID = 'e2e-inv-asset-unacked';
+export const SEED_UNACKED_ASSET_TAG = 'E2E-000011';
+
 const SEED_ACQUISITION_ID = 'e2e-inv-acquisition';
-const ASSET_IDS = [SEED_ASSET_ID, SEED_UNTAGGED_ASSET_ID, SEED_DISPOSED_ASSET_ID];
+const ASSET_IDS = [
+	SEED_ASSET_ID,
+	SEED_UNTAGGED_ASSET_ID,
+	SEED_DISPOSED_ASSET_ID,
+	SEED_UNACKED_ASSET_ID
+];
 const ITEM_IDS = [SEED_ITEM_ID, SEED_CONSUMABLE_ID, SEED_LOW_ID];
 
 async function ensureCategory(db: DrizzleD1Database) {
@@ -98,7 +112,9 @@ export async function seedInventory(): Promise<void> {
 		await db.delete(acquisitionLine).where(inArray(acquisitionLine.itemId, ITEM_IDS));
 		await db
 			.delete(acquisition)
-			.where(inArray(acquisition.id, [SEED_ACQUISITION_ID, SEED_DONATION_ID]));
+			.where(
+				inArray(acquisition.id, [SEED_ACQUISITION_ID, SEED_DONATION_ID, SEED_UNACKED_DONATION_ID])
+			);
 		await db.delete(inventoryAsset).where(inArray(inventoryAsset.id, ASSET_IDS));
 		await db.delete(inventoryItem).where(inArray(inventoryItem.id, ITEM_IDS));
 		await db.delete(inventoryLocation).where(eq(inventoryLocation.id, SEED_LOCATION_ID));
@@ -167,6 +183,15 @@ export async function seedInventory(): Promise<void> {
 			acknowledgedAt: new Date(now.getTime() - 398 * 24 * 60 * 60 * 1000)
 		});
 
+		// Same shape, no acknowledgment: nothing was ever signed for it.
+		await db.insert(acquisition).values({
+			id: SEED_UNACKED_DONATION_ID,
+			kind: 'donation',
+			occurredAt: new Date(now.getTime() - 300 * 24 * 60 * 60 * 1000),
+			sourceName: 'E2E Casual Donor',
+			fairValueCents: 4_000
+		});
+
 		await db.insert(acquisitionLine).values([
 			{
 				id: 'e2e-inv-line-amp',
@@ -192,6 +217,17 @@ export async function seedInventory(): Promise<void> {
 		]);
 
 		await db.insert(inventoryAsset).values([
+			{
+				id: SEED_UNACKED_ASSET_ID,
+				itemId: SEED_ITEM_ID,
+				assetTag: SEED_UNACKED_ASSET_TAG,
+				condition: 'poor',
+				status: 'retired',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_UNACKED_DONATION_ID,
+				retiredAt: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+				retiredReason: 'Beyond repair'
+			},
 			{
 				id: SEED_DISPOSED_ASSET_ID,
 				itemId: SEED_ITEM_ID,

@@ -54,8 +54,8 @@
 				<p>
 					<strong>Form 8282 may be due.</strong>
 					This unit was donated{#if data.donor}
-						by {data.donor}{/if} and disposed of within three years, which can oblige a filing within
-					125 days — with a copy to the donor.
+						by {data.donor}{/if}, CMC signed a Form 8283 for it, and it was disposed of within three
+					years — which can oblige a filing within 125 days, with a copy to the donor.
 				</p>
 				<p class="mt-1 text-sm">
 					{#if form8282.state === 'overdue'}

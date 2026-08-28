@@ -10,6 +10,8 @@ import {
 	SEED_ITEM_NAME,
 	SEED_DISPOSED_ASSET_ID,
 	SEED_DISPOSED_ASSET_TAG,
+	SEED_UNACKED_ASSET_ID,
+	SEED_UNACKED_ASSET_TAG,
 	SEED_LOW_NAME,
 	SEED_LOW_ON_HAND,
 	SEED_LOW_REORDER_QUANTITY,
@@ -231,6 +233,22 @@ test.describe('inventory', () => {
 
 			const row = page.getByRole('row').filter({ hasText: SEED_DISPOSED_ASSET_TAG });
 			await expect(row).toBeVisible();
+		});
+
+		/**
+		 * The narrowing, which is the whole point of the rule: the signed 8283 is
+		 * what makes property reportable, so a gift without one owes nothing no
+		 * matter when it was disposed of. Flagging it would be a false positive,
+		 * and a warning that is always wrong is one people stop reading.
+		 */
+		test('a donated unit with no signed 8283 raises nothing', async ({ page }) => {
+			await loginAsStaff(page);
+
+			await page.goto(`/staff/inventory/assets/${SEED_UNACKED_ASSET_ID}`);
+			await expect(page.getByText('Form 8282 may be due.')).toBeHidden();
+
+			await page.goto('/staff/inventory/compliance');
+			await expect(page.getByText(SEED_UNACKED_ASSET_TAG)).toBeHidden();
 		});
 
 		test('recording an outcome clears it from the list', async ({ page }) => {

@@ -614,10 +614,18 @@ What is actually owed, in order of value:
    `/staff/inventory/compliance` for the months afterwards — the disposal and the
    paperwork are usually separated by both.
 
-   **It flags; it does not determine.** Whether a disposal is reportable turns on
-   whether the donor filed a Form 8283 that CMC signed, which is a fact about
-   paperwork the system does not hold. Each row shows whether an acknowledgment is
-   on record and leaves the judgement to a person. Recording an outcome takes free
+   **The signed Form 8283 is the trigger, not the donation.** "Charitable
+   deduction property" is defined as property the donee organisation signed a
+   Form 8283 for — sought only above $5,000 — so a gift without one can be
+   disposed of the next day and owes nothing. The first version flagged every
+   donated disposal and merely displayed the acknowledgment state; for CMC, which
+   has never signed an 8283, that produced nothing but false positives, and a
+   warning that is always wrong is one people learn to dismiss before the day it
+   is right. Unacknowledged disposals now come back as a count on the compliance
+   page instead, so "nothing outstanding" still has a denominator.
+
+   **It flags; it does not determine.** What was claimed, and whether a given
+   disposal counts, live on paper. A person resolves it. Recording an outcome takes free
    text rather than a checkbox, so "no 8283 was ever signed, so nothing is due" is
    as recordable as "filed on the 2nd" — `form8282ResolvedAt` says a human dealt
    with it, `form8282Note` says which way they went.
@@ -663,8 +671,14 @@ For reference should it ever come up: federal awards cap equipment
 capitalization at the lower of the organisation's own policy or **$10,000**,
 raised from $5,000 in the 2024 revision of 2 CFR 200.
 
-**Phase 4 — attached resources.** 📋 Manuals, tutorials and damage reports. Deferred,
-but the seams are fixed now because two of them are schema- and URL-shaped:
+**Phase 4 — attached resources.** 📋 Manuals, tutorials and damage reports.
+Deferred, and the reason to keep deferring it is not technical: its value depends
+on members scanning tags, and no physical tag has been printed yet. Attaching a
+manual to a unit nobody scans is work with no reader. Let the member surface get
+used first — the guess here is that damage reports matter more than manuals, and
+that is exactly the sort of guess usage settles.
+
+The seams are fixed regardless, because three of them are schema- and URL-shaped:
 
 - Resources split by what they describe. A manual is the same for all four
   K12.2s, so it hangs off the **item**; a damage report is about one unit, so it
@@ -675,9 +689,13 @@ but the seams are fixed now because two of them are schema- and URL-shaped:
 - **A damage report is a ledger entry**, not a form system: a condition change
   plus a `repair_out` movement carrying the note. What it adds is a member-facing
   entry point and photos.
-- Only files justify a new table — `inventory_document`, with `itemId` and
-  `assetId` both nullable and a check that exactly one is set, keyed into R2
-  through the existing `src/lib/server/storage.ts`.
+- **Files need no new table.** An earlier draft specified `inventory_document`,
+  on the reasoning that the repo had no generic attachment layer. #289 landed
+  one — `media` + `media_attachment`, with `attachableType`/`attachableId`/`slot`
+  and an R2 object deliberately outliving the row that points at it. So Phase 4
+  adds `'inventory_item'` and `'inventory_asset'` to `attachableTypes` and reuses
+  it. A vocabulary extension, not a table, and the lifecycle problem is already
+  solved. **Do not build `inventory_document`.**
 
 The consequence for Phase 1 is that the member arm of the asset page has to exist
 from the start, because it is where a scanned tag lands a member. Phase 1 ships

@@ -250,6 +250,11 @@ function movementReasonForStatus(from: AssetStatus, to: AssetStatus) {
  * in exactly one place and stays testable as a table. The row count here is
  * small by construction: it is gear the collective was given and has since let
  * go of.
+ *
+ * Only gifts CMC signed a Form 8283 for can owe anything, so the rest come back
+ * as a count. They are worth showing — "nothing outstanding" with no denominator
+ * reads like a page that is not looking — without being dressed as obligations
+ * they are not.
  */
 export async function listForm8282Obligations(now = new Date()) {
 	const rows = await db
@@ -276,29 +281,35 @@ export async function listForm8282Obligations(now = new Date()) {
 			)
 		);
 
-	return (
-		rows
-			.map((r) => ({
-				...r.asset,
-				item: r.item,
-				acquiredAt: r.acquiredAt,
-				donor: r.donorUserName ?? r.sourceName,
-				acknowledgedAt: r.acknowledgedAt,
-				fairValueCents: r.fairValueCents,
-				status: form8282Status(
-					{
-						acquiredAt: r.acquiredAt,
-						wasDonated: true,
-						disposedAt: r.asset.retiredAt,
-						resolvedAt: r.asset.form8282ResolvedAt
-					},
-					now
-				)
-			}))
-			.filter((r) => needsAttention(r.status))
-			// Soonest deadline first; anything already overdue sorts to the top.
-			.sort((a, b) => (a.status.dueBy?.getTime() ?? 0) - (b.status.dueBy?.getTime() ?? 0))
-	);
+	// Split rather than filtered in SQL: the unacknowledged ones are not an
+	// obligation, but a bare "nothing outstanding" leaves a staffer wondering
+	// whether anything is being watched at all. They are counted, not listed.
+	const acknowledged = rows.filter((r) => r.acknowledgedAt !== null);
+
+	const obligations = acknowledged
+		.map((r) => ({
+			...r.asset,
+			item: r.item,
+			acquiredAt: r.acquiredAt,
+			donor: r.donorUserName ?? r.sourceName,
+			acknowledgedAt: r.acknowledgedAt,
+			fairValueCents: r.fairValueCents,
+			status: form8282Status(
+				{
+					acquiredAt: r.acquiredAt,
+					wasDonated: true,
+					acknowledged: true,
+					disposedAt: r.asset.retiredAt,
+					resolvedAt: r.asset.form8282ResolvedAt
+				},
+				now
+			)
+		}))
+		.filter((r) => needsAttention(r.status))
+		// Soonest deadline first; anything already overdue sorts to the top.
+		.sort((a, b) => (a.status.dueBy?.getTime() ?? 0) - (b.status.dueBy?.getTime() ?? 0));
+
+	return { obligations, noFormOnRecord: rows.length - acknowledged.length };
 }
 
 /** Record that the filing was made, or that none was needed. */
