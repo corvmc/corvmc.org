@@ -132,10 +132,47 @@ Two things follow, both deliberate:
 - **A chair and their deputy are indistinguishable in the data**, because under first-among-
   equals there is nothing to distinguish. "Who chairs Programming" is answered by
   `group_member.position`, which is a label, not a permission.
-- **The committee still needs an `owner` row**, since a partial unique index expects at most
-  one and several reads assume one. It should be a board or staff account rather than any
-  committee member — ownership is the board's standing over a body it created, which is exactly
-  what the bylaws say it is.
+- **A committee is normally unowned**, and that is legal rather than a gap.
+  [groups-spec.md](groups-spec.md) says so directly — "a group with no owner is legal", a normal
+  transient state for a program between leaders — and the unique index caps a group at one owner
+  without requiring one. The column that would have forced the question, `group.ownerId`, is
+  dropped by that spec anyway. Admins keep working while the seat is empty; the owner-exclusive
+  actions are transferring ownership and deleting the group, and for a committee both belong to
+  staff already.
+
+---
+
+## Admin CRUD is not a workflow
+
+**The committees are meant to become the app's organizing principle, not a permission overlay on
+the one it has.**
+
+The staff panel is filed by entity: Users, Bands, Reservations, Events, Inventory, Payments,
+Credits. That is the shape of the database, and it was the right shape to build first — every
+row has to be reachable before anything can be made pleasant. It is not the shape of anybody's
+job. No committee's work is "the event table"; Programming's booking runs across `event`,
+`production_slot`, `directory_entry`, `reservation` and `volunteer_shift`, and there is no page
+in the panel called booking.
+
+So "what is a committee's domain?" is not first a question about which tables it may write. It
+is a question about **what surface its work is done on**, and the permission boundary follows
+that surface rather than the other way round. A committee-scoped guard over CRUD pages would
+just be the same admin panel with parts greyed out.
+
+**This changes how the markers below should be read.** ✅ means the data exists and there is a
+surface that reaches it. It does not mean the surface is shaped like the work. The difference is
+visible in two stories that are both marked served:
+
+- Assigning an engineer to a show **is** a workflow. The Volunteer Shifts card sits on the event,
+  knows the event, and prefills the times from doors — you are staffing a show, not creating a
+  `volunteer_shift` row.
+- Acquiring equipment another committee asked for is **CRUD**. The inventory catalog holds
+  everything needed and there is no requisition in it: no request, no requester, no decision, no
+  "this is what Production asked for in March".
+
+Read that way, most of the 🆕 list is not missing tables. It is missing workflows over tables
+that already exist — which is a far better position to be in than it looks from the count, and
+is the reason this document is worth having at all.
 
 ---
 
@@ -148,7 +185,9 @@ Each story is what a person needs, followed by one line naming what serves it.
 
 🔧 and 🆕 are not a backlog. Several are deliberate non-goals — a poster route is a paper map
 and a spreadsheet, and putting it in the app would be worse than leaving it alone. The marker
-says what exists, not what should.
+says what exists, not what should — and per
+[Admin CRUD is not a workflow](#admin-crud-is-not-a-workflow), a ✅ can still be an unpleasant
+way to do the job.
 
 ---
 
@@ -512,10 +551,12 @@ the roster from a list of names into a division of labor.
 **As a chair**, I want members to be able to apply to my committee, and to approve or decline
 them myself.
 📋 `joinPolicy = 'by_application'` — phase 5 of [groups-spec.md](groups-spec.md). Approving is
-a `group_member.status` flip from `'requested'` to `'active'`, which is the same flip that
-accepts an invitation. This replaces the interest-to-roster funnel an earlier draft proposed;
-see [What a committee is in this app](#what-a-committee-is-in-this-app) for what retires with
-it.
+a `group_member.status` flip from `'requested'` to `'active'`, the same flip that accepts an
+invitation. This replaces the interest-to-roster funnel an earlier draft proposed; see
+[What a committee is in this app](#what-a-committee-is-in-this-app) for what retires with it.
+🆕 The application itself: joining a committee takes a short written application and an
+interview before the chair approves, and neither the answers nor the interview has anywhere to
+live. There is no seat cap — the gate is the conversation, not the count.
 
 **As a chair**, I want to invite someone onto the committee and hand the seat off cleanly when
 they leave.
@@ -695,8 +736,8 @@ edited away, because each one closes off an alternative that will otherwise be r
 1. **A chair is a group `admin`.** Not an `owner`, and not a fourth role value. The chair is
    first among equals — they run the meeting and report, they do not hold authority the rest of
    the committee lacks. This accepts that a chair and a deputy look identical in the data, which
-   is correct rather than a compromise. See
-   [The authority problem](#the-authority-problem) for what follows, including who holds `owner`.
+   is correct rather than a compromise. See [The authority problem](#the-authority-problem) for
+   what follows, including why a committee is normally left unowned.
 
 2. **A committee is a `by_application` group, and the committee volunteer roles retire.** The
    alternative — keeping both and building a funnel from interest to roster — is more code and
@@ -704,16 +745,27 @@ edited away, because each one closes off an alternative that will otherwise be r
    the motivating case for the policy. See
    [What a committee is in this app](#what-a-committee-is-in-this-app).
 
-3. **A standing release is a file on the person.** `media_attachment` is already polymorphic and
-   `attachableTypes` already carries `'user'`, so no new table is needed for the common case: a
-   member's photo release, a volunteer's likeness release. What this does **not** reach is the
-   per-work release — a band consenting to _this_ recording, an artist licensing _this_ poster —
-   and the audience member who has no account to attach anything to. Those stay open below.
+   **There is no seat count. Joining is a short application, an interview, and the chair's
+   approval.** That is more than `by_application` currently designs for, which is a bare status
+   flip: `joinInstructions` is the prompt over the application and there is nowhere to put the
+   answers, and there is no state between "asked" and "approved" for an interview that has been
+   scheduled or has happened. Both gaps are small and neither exists yet — see the open questions.
 
-4. **Committee reporting is one rollup, not six report pages.** Per
-   [reporting-spec.md](reporting-spec.md), the board packet calls each module's existing report
-   service rather than writing its own queries. A committee's numbers are whatever its domain
-   already computes.
+3. **Releases are polymorphic file attachments, and that covers all of it.**
+   `media_attachment` already attaches a file to a subject by type and id, deliberately without a
+   foreign key on the parent — which is exactly what makes new subject types cheap. A standing
+   release from a member is `attachableType: 'user'` today. A per-work release — a band
+   consenting to _this_ recording, an artist licensing _this_ poster — is the same mechanism
+   pointed at the work once the work is an entity, and needs a value added to `attachableTypes`
+   rather than a table. The non-member photo subject resolves the same way: `contact` exists in
+   [groups-spec.md](groups-spec.md) precisely to hold people who are not members, and a release
+   attaches to a `contact` like anything else. No release table, in any of the three cases.
+
+4. **Two cadences, one strategy.** There is a monthly committee report to the board and an
+   annual report, and both compose the same way: per [reporting-spec.md](reporting-spec.md) the
+   packet calls each module's existing report service rather than writing its own queries. The
+   monthly is the smaller artifact — this committee, since the last meeting — and the annual is
+   the rollup across all of them. Not six standing report pages either way.
 
 5. **Committee members act within their own domain.** This was the question the rest depended
    on, and the answer is the one that costs the most: committee-scoped authority is real work
@@ -722,32 +774,41 @@ edited away, because each one closes off an alternative that will otherwise be r
    documents-and-announcements problem the groups module already solves. It is not the model
    being adopted.
 
+6. **The committees are the organizing principle, not a permission overlay.** What the app has
+   today is admin CRUD filed by entity; what these duties need is dedicated workflow affordances
+   filed by domain. This is why question 1 of the second round — "what is a committee's domain?"
+   — resolved into a design direction rather than a lookup table: the domain is the surface the
+   work is done on, and the permission boundary follows it. See
+   [Admin CRUD is not a workflow](#admin-crud-is-not-a-workflow), which is the through-line of
+   this whole document and the reason the 🆕 count overstates the distance.
+
 ---
 
 ## Open questions
 
-1. **What, exactly, is a committee's domain?** Decision 5 settles that committees act within
-   one and not what one is. The boundaries are not obvious where the app is concerned: an event
-   is Programming's to book and Production's to staff; the inventory catalog is Facility's but
-   Production requisitions from it; a venue is Development's to negotiate and Programming's to
-   book into. `requireCommitteeRole()` cannot be written until this is a table of committee →
-   what it may act on, and that table is the real design work behind decision 5.
+Answering the first round closed four of the five that followed it. What is left is smaller and
+more concrete than what it replaced.
 
-2. **Where does a per-work release live?** Decision 3 covers the standing per-person case and
-   explicitly does not cover a recording session, a commissioned poster, or a photo subject with
-   no account. Three committees need it and the likely outcome, absent a decision, is three
-   implementations.
+1. **What does the staff panel become?** Decision 6 says the committees are the organizing
+   principle and the entity-filed panel is not. It does not say whether that panel stays
+   underneath as the admin layer — the place you go when the workflow did not anticipate you,
+   which every workflow eventually fails to — or is replaced surface by surface as each domain
+   gets its own. Those are different amounts of work and different amounts of risk, and the
+   answer shapes every story marked ✅ or 🔧 below.
 
-3. **Which account owns a committee group?** Decision 1 puts `owner` on the board or staff side
-   rather than on any committee member. Whether that is a named officer's account, a shared
-   board account, or the creating staffer is unsettled, and it decides what happens when that
-   person leaves.
+2. **Which workflow surfaces come first, and who decides?** Six committees is six candidate
+   surfaces and they are not equally ready: Facility's duties are almost entirely served by
+   existing modules and would gain the least; Art and Merch has nearly nothing and would need
+   the tables before the workflow. Sequencing this is the next real decision after
+   `admin-vs-staff-spec.md`.
 
-4. **Is there a monthly committee report, or only the annual rollup?** The board meets on a
-   cadence and the chair reports to it every meeting; `reporting-spec.md` sequences the rollup
-   as an annual artifact. If the monthly report is a real requirement it is a different, smaller
-   thing than the packet, and decision 4 does not settle which.
+3. **Where do application answers and the interview live?** A short application needs somewhere
+   to put its answers — a column on `group_member`, a small table, or the question set as group
+   configuration — and the interview needs either a status between `'requested'` and `'active'`
+   or an explicit decision that it happens off-platform and only its outcome is recorded. The
+   second is cheaper and probably right; it should be chosen rather than defaulted into.
 
-5. **Are committee seats capped?** `by_application` exists for "a committee with a seat count",
-   and nothing in the group model counts seats. If caps are real they belong in the same phase
-   as the application flow, not after it.
+4. **Does anything notice an unstaffed duty?** The chair is supposed to flag when the committee
+   cannot cover its work. That needs `group_member.position` to mean something first, and then
+   needs a definition of what "covered" is — a position with no member, or a workflow with no
+   activity. Neither exists, and the monthly report is where it would surface.

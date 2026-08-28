@@ -280,6 +280,11 @@ Option B a hard prerequisite rather than an adjacent cleanup. The cheapest piece
 deciding what a committee's domain actually contains, which is the spec's first remaining open
 question.
 
+The larger framing that came out of it: the committees are meant to become the app's organizing
+principle rather than a permission overlay on the entity-filed staff panel. Most of what the
+committees lack is not tables — it is dedicated workflow affordances over tables that already
+exist, which is a different and cheaper problem than the raw gap count suggests.
+
 ### Poster Art Commissioning
 
 Commission the poster for an event from a local artist: a roster of artists and what each has
