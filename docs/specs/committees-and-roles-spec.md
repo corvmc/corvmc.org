@@ -543,10 +543,11 @@ Every committee has one chair, appointed by the board.
 
 **As a chair**, I want my committee's roster, and to know which named position each member
 holds.
-🔧 `group_member` is the roster. `position` is free text and read by nothing, so a committee
-that has divided its duties into named positions cannot record that anywhere the rest of the
-app can see. **This is the smallest change in the document with the widest effect** — it turns
-the roster from a list of names into a division of labor.
+✅ `group_member` is the roster and `position` is free text on it. That it is read by nothing is
+**correct rather than a gap**: committee titles and positions are the chair's to invent, rename
+and retire, and any code that read them would be code that constrains them. An earlier draft of
+this document called making `position` meaningful the highest-leverage change available; that
+was wrong, and the label is doing exactly the job it should.
 
 **As a chair**, I want members to be able to apply to my committee, and to approve or decline
 them myself.
@@ -554,9 +555,9 @@ them myself.
 a `group_member.status` flip from `'requested'` to `'active'`, the same flip that accepts an
 invitation. This replaces the interest-to-roster funnel an earlier draft proposed; see
 [What a committee is in this app](#what-a-committee-is-in-this-app) for what retires with it.
-🆕 The application itself: joining a committee takes a short written application and an
-interview before the chair approves, and neither the answers nor the interview has anywhere to
-live. There is no seat cap — the gate is the conversation, not the count.
+The written application and the interview happen **on paper, off the app** — so the request row
+needs no body, and `by_application` as designed is exactly sufficient. There is no seat cap: the
+gate is the conversation, not the count.
 
 **As a chair**, I want to invite someone onto the committee and hand the seat off cleanly when
 they leave.
@@ -580,12 +581,16 @@ that nothing reads it until phase 7 lands.
 
 **As a chair**, I want to report my committee's numbers and status to the board on a schedule,
 and to flag when we cannot cover our work with the people we have.
-📋 Not six committee report pages — one rollup. [reporting-spec.md](reporting-spec.md)'s
+📋 Not six committee report pages — one rollup, at two cadences. [reporting-spec.md](reporting-spec.md)'s
 strategy is that the packet calls each module's existing report service rather than writing its
 own queries, so a committee's numbers are whatever its domain already computes and the board
 reads one document. `/staff/volunteer/report` is both the precedent for the shape (a date
-range, tables, no charts, not cached) and one of the services the rollup would call. 🆕 Nothing
-would notice an unstaffed duty; that needs positions to mean something first.
+range, tables, no charts, not cached) and one of the services the rollup would call.
+
+Noticing that a duty has gone unstaffed is **deliberately not a feature**. It would need
+positions to be machine-readable, which decision 10 rules out, and the judgement is the chair's
+to make and say out loud in the report — a system that flagged it would be inferring from
+activity what a person already knows.
 
 **As a chair**, I want to know the amount my committee can commit without coming back to the
 board, and to work inside it.
@@ -746,10 +751,11 @@ edited away, because each one closes off an alternative that will otherwise be r
    [What a committee is in this app](#what-a-committee-is-in-this-app).
 
    **There is no seat count. Joining is a short application, an interview, and the chair's
-   approval.** That is more than `by_application` currently designs for, which is a bare status
-   flip: `joinInstructions` is the prompt over the application and there is nowhere to put the
-   answers, and there is no state between "asked" and "approved" for an interview that has been
-   scheduled or has happened. Both gaps are small and neither exists yet — see the open questions.
+   approval — and the first two are on paper.** So `by_application` needs nothing added: the
+   in-app request is the front door and the queue, `joinInstructions` is the prompt that points
+   at the paper process, and approval stays the bare `'requested' → 'active'` flip it was
+   designed as. A first draft of this decision called for somewhere to store application answers
+   and a status for the interview; both were solving a problem the Collective does not have.
 
 3. **Releases are polymorphic file attachments, and that covers all of it.**
    `media_attachment` already attaches a file to a subject by type and id, deliberately without a
@@ -782,33 +788,43 @@ edited away, because each one closes off an alternative that will otherwise be r
    [Admin CRUD is not a workflow](#admin-crud-is-not-a-workflow), which is the through-line of
    this whole document and the reason the 🆕 count overstates the distance.
 
+7. **The staff panel stays, as an administrative tool.** Workflow surfaces are added beside it,
+   not in place of it. This is the additive reading of decision 6 and the cheaper one: the
+   entity-filed panel remains the place you go when the workflow did not anticipate you, which
+   every workflow eventually fails to do. Nothing below marked ✅ or 🔧 is at risk of being taken
+   away; it stops being the _only_ way to do the work rather than stopping being a way.
+
+8. **Programming and Production get the first surfaces**, because that is where the surface
+   would ease the most relevant work. Conveniently, most of it is already designed:
+   [production-workflow-spec.md](production-workflow-spec.md) is the back-of-house layer for a
+   show end to end — lineup, advance, run of show, settlement, close-out — and reads in
+   retrospect like the first committee workflow surface written before the framing existed. What
+   it does not cover is Programming's front half: the roster of acts, and the offer that has not
+   become a show yet. Those are its two deferrals — "Public booking inquiries" and emailing
+   external acts — and they are the gap between Productions as specced and Programming as a
+   domain.
+
+9. **The application is paper.** See decision 2 — this is what keeps `by_application` a bare
+   status flip and keeps a schema change out of the committee work entirely.
+
+10. **Committee titles and positions are at the chair's discretion, and nothing reads them.**
+    `group_member.position` stays free text with no consumer. A committee names its own roles,
+    renames them, and drops them without asking the app's permission, and code that read the
+    field would be code that constrained that. The corollary is that nothing can automatically
+    notice an unstaffed duty — which is fine, because the chair already knows and reporting it
+    is their job.
+
 ---
 
 ## Open questions
 
-Answering the first round closed four of the five that followed it. What is left is smaller and
-more concrete than what it replaced.
+None. Every question this document opened across three rounds has been answered, and the
+answers are recorded above.
 
-1. **What does the staff panel become?** Decision 6 says the committees are the organizing
-   principle and the entity-filed panel is not. It does not say whether that panel stays
-   underneath as the admin layer — the place you go when the workflow did not anticipate you,
-   which every workflow eventually fails to — or is replaced surface by surface as each domain
-   gets its own. Those are different amounts of work and different amounts of risk, and the
-   answer shapes every story marked ✅ or 🔧 below.
-
-2. **Which workflow surfaces come first, and who decides?** Six committees is six candidate
-   surfaces and they are not equally ready: Facility's duties are almost entirely served by
-   existing modules and would gain the least; Art and Merch has nearly nothing and would need
-   the tables before the workflow. Sequencing this is the next real decision after
-   `admin-vs-staff-spec.md`.
-
-3. **Where do application answers and the interview live?** A short application needs somewhere
-   to put its answers — a column on `group_member`, a small table, or the question set as group
-   configuration — and the interview needs either a status between `'requested'` and `'active'`
-   or an explicit decision that it happens off-platform and only its outcome is recorded. The
-   second is cheaper and probably right; it should be chosen rather than defaulted into.
-
-4. **Does anything notice an unstaffed duty?** The chair is supposed to flag when the committee
-   cannot cover its work. That needs `group_member.position` to mean something first, and then
-   needs a definition of what "covered" is — a position with no member, or a workflow with no
-   activity. Neither exists, and the monthly report is where it would surface.
+What is left is not a question but a sequence. Committee-scoped authority needs
+[admin-vs-staff-spec.md](admin-vs-staff-spec.md) settled first, because there is no boundary to
+scope to until `admin` and `staff` mean different things. The application flow needs phase 5 of
+[groups-spec.md](groups-spec.md), and carries the status-blind roster reads with it. The first
+workflow surface is Programming and Production, most of which is
+[production-workflow-spec.md](production-workflow-spec.md) already — so the honest next step is
+to build that spec and find out whether a domain surface is what it turns out to be.

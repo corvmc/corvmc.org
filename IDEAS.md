@@ -275,15 +275,16 @@ the whole committee structure against what the app serves today and has settled 
 questions. Two decisions shape the work: a committee is a `by_application` group — so joining
 one rides phase 5 of `groups-spec.md` and the committee `volunteer_role` bucket retires with it
 — and committee members act within their own domain, which makes `admin-vs-staff-spec.md`'s
-Option B a hard prerequisite rather than an adjacent cleanup. The cheapest piece is
-`group_member.position`, which already exists and is read by nothing; the most expensive is
-deciding what a committee's domain actually contains, which is the spec's first remaining open
-question.
+Option B a hard prerequisite rather than an adjacent cleanup. `group_member.position` stays free
+text that nothing reads, deliberately: committee titles are the chair's to invent and rename,
+and code that read them would constrain them.
 
 The larger framing that came out of it: the committees are meant to become the app's organizing
-principle rather than a permission overlay on the entity-filed staff panel. Most of what the
-committees lack is not tables — it is dedicated workflow affordances over tables that already
-exist, which is a different and cheaper problem than the raw gap count suggests.
+principle rather than a permission overlay on the entity-filed staff panel, which stays on as the
+administrative tool underneath. Most of what the committees lack is not tables — it is dedicated
+workflow affordances over tables that already exist, which is a different and cheaper problem
+than the raw gap count suggests. Programming and Production get the first surface, and
+`production-workflow-spec.md` is already most of it.
 
 ### Poster Art Commissioning
 
