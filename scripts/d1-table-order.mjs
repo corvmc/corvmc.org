@@ -11,6 +11,8 @@ export const tableOrder = [
 	'group',
 	// References user and group; parent of directory_tag.
 	'directory_entry',
+	// References group; parent of band_page_config and band_media.
+	'band_site',
 	'reservation',
 	'equipment_category',
 	'inventory_location',

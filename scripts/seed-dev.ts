@@ -55,6 +55,7 @@ import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/direct
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { group } from '../src/lib/server/db/schema/group';
 import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
+import { bandSite } from '../src/lib/server/db/schema/band-site';
 import {
 	subscriber,
 	audience,
@@ -531,6 +532,7 @@ async function deleteAll() {
 		'ticket',
 		'band_media',
 		'band_page_config',
+		'band_site',
 		'band_genre',
 		// Child before parent, and both before `group` and `user`.
 		'directory_tag',
@@ -1789,7 +1791,30 @@ async function seedBandReservations(bands: any[]) {
 	return rows;
 }
 
-async function seedBandPageConfigs(bands: any[]) {
+/**
+ * One `band_site` per band, mirroring `scripts/db/backfill/band-site.sql`.
+ *
+ * Every band gets one regardless of tier: the row is what `tier` lives on, and
+ * it is never deleted while the band lives, because `band_page_config` and
+ * `band_media` cascade from it — a cancelled subscription must not take a
+ * band's blocks, theme, CSS, EPK and images with it.
+ */
+async function seedBandSites(bands: any[]) {
+	console.log('Seeding band sites...');
+	const rows = bands.map((b: any) => ({
+		id: randomUUID(),
+		groupId: b.id,
+		tier: b.tier,
+		subscription: b.subscription ?? null,
+		createdAt: b.createdAt ?? new Date(),
+		updatedAt: b.updatedAt ?? new Date()
+	}));
+	// 6 columns × 16 = 96, under D1's 100 bound parameters.
+	await batchInsert(bandSite, rows, 16);
+	return new Map(rows.map((r) => [r.groupId, r.id]));
+}
+
+async function seedBandPageConfigs(bands: any[], siteIdByBand: Map<string, string>) {
 	console.log('Seeding band page configs (premium bands)...');
 	const configs = [];
 	const themes = ['punk', 'jazz', 'electronic', 'metal', 'indie', 'folk'] as const;
@@ -1877,6 +1902,7 @@ async function seedBandPageConfigs(bands: any[]) {
 			.insert(bandPageConfig)
 			.values({
 				bandId: b.id,
+				bandSiteId: siteIdByBand.get(b.id) ?? null,
 				theme,
 				customCss,
 				blocks,
@@ -1891,6 +1917,7 @@ async function seedBandPageConfigs(bands: any[]) {
 		for (let m = 0; m < mediaTypes.length; m++) {
 			await db.insert(bandMedia).values({
 				bandId: b.id,
+				bandSiteId: siteIdByBand.get(b.id) ?? null,
 				key: `bands/${b.slug}/${mediaTypes[m]}-${m}.jpg`,
 				type: mediaTypes[m],
 				caption:
@@ -4247,7 +4274,8 @@ async function main() {
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
 	const bandReservations = await seedBandReservations(bands);
-	const pageConfigs = await seedBandPageConfigs(bands);
+	const bandSites = await seedBandSites(bands);
+	const pageConfigs = await seedBandPageConfigs(bands, bandSites);
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
 	const tickets = await seedTickets(allUsers, events);
@@ -4287,6 +4315,7 @@ async function main() {
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
 	console.log(`  ${bandEvents.length} band events`);
 	console.log(`  ${bandReservations.length} band reservations`);
+	console.log(`  ${bandSites.size} band sites`);
 	console.log(`  ${pageConfigs.length} band page configs with EPK data`);
 	console.log(`  ${series.length} recurring series`);
 	console.log(`  ${payments.length} payment records`);
