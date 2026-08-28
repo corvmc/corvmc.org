@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
+import { bandSite } from '$lib/server/db/schema/band-site';
 import { bandSubscriptionSchema, type BandSubscription } from '$lib/server/db/schema/group';
 import { stripe } from '$lib/server/stripe';
 import { checkout } from '$lib/server/finance/payment-service';
@@ -109,22 +109,26 @@ export async function syncFromWebhook(
 		};
 
 		await db
-			.update(group)
+			.update(bandSite)
 			.set({
 				tier: 'premium',
 				subscription: subscription as BandSubscription,
 				updatedAt: new Date()
 			})
-			.where(eq(group.id, bandId));
+			.where(eq(bandSite.groupId, bandId));
 	} else if (status === 'canceled' || status === 'unpaid') {
+		// Downgrade, not delete. The row stays and keeps `band_page_config` and
+		// `band_media` alive, so a band that cancels — or whose card simply
+		// lapses — still has its blocks, theme, CSS, EPK and images when it comes
+		// back. Deleting the row here would cascade all of it away.
 		await db
-			.update(group)
+			.update(bandSite)
 			.set({
 				tier: 'free',
 				subscription: null,
 				updatedAt: new Date()
 			})
-			.where(eq(group.id, bandId));
+			.where(eq(bandSite.groupId, bandId));
 	}
 }
 
@@ -137,9 +141,9 @@ export async function syncFromWebhook(
  */
 export async function cancelBandSubscription(bandId: string): Promise<void> {
 	const [bandRow] = await db
-		.select({ subscription: group.subscription })
-		.from(group)
-		.where(eq(group.id, bandId))
+		.select({ subscription: bandSite.subscription })
+		.from(bandSite)
+		.where(eq(bandSite.groupId, bandId))
 		.limit(1);
 
 	if (!bandRow?.subscription) throw new Error('No active band subscription');
@@ -154,12 +158,12 @@ export async function cancelBandSubscription(bandId: string): Promise<void> {
 	// Optimistic update — webhook will confirm
 	const updated: BandSubscription = { ...parsed, cancelAtPeriodEnd: true };
 	await db
-		.update(group)
+		.update(bandSite)
 		.set({
 			subscription: updated as BandSubscription,
 			updatedAt: new Date()
 		})
-		.where(eq(group.id, bandId));
+		.where(eq(bandSite.groupId, bandId));
 }
 
 /**
@@ -167,9 +171,9 @@ export async function cancelBandSubscription(bandId: string): Promise<void> {
  */
 export async function resumeBandSubscription(bandId: string): Promise<void> {
 	const [bandRow] = await db
-		.select({ subscription: group.subscription })
-		.from(group)
-		.where(eq(group.id, bandId))
+		.select({ subscription: bandSite.subscription })
+		.from(bandSite)
+		.where(eq(bandSite.groupId, bandId))
 		.limit(1);
 
 	if (!bandRow?.subscription) throw new Error('No active band subscription');
@@ -187,12 +191,12 @@ export async function resumeBandSubscription(bandId: string): Promise<void> {
 
 	const updated: BandSubscription = { ...parsed, cancelAtPeriodEnd: false };
 	await db
-		.update(group)
+		.update(bandSite)
 		.set({
 			subscription: updated as BandSubscription,
 			updatedAt: new Date()
 		})
-		.where(eq(group.id, bandId));
+		.where(eq(bandSite.groupId, bandId));
 }
 
 // ---------------------------------------------------------------------------
@@ -204,9 +208,9 @@ export async function resumeBandSubscription(bandId: string): Promise<void> {
  */
 export async function getBandSubscription(bandId: string): Promise<BandSubscription> {
 	const [bandRow] = await db
-		.select({ subscription: group.subscription })
-		.from(group)
-		.where(eq(group.id, bandId))
+		.select({ subscription: bandSite.subscription })
+		.from(bandSite)
+		.where(eq(bandSite.groupId, bandId))
 		.limit(1);
 
 	if (!bandRow) throw new Error('Band not found');

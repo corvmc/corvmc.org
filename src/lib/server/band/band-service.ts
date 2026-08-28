@@ -5,6 +5,8 @@ import { group, groupMember, groupSlugHistory, type GroupRole } from '$lib/serve
 import { user } from '$lib/server/db/schema/authentication';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { groupEntryInsert } from '$lib/server/directory/entry-service';
+import { bandSite } from '$lib/server/db/schema/band-site';
+import { bandSiteInsert, getOrCreateBandSiteId } from './band-site-service';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
@@ -137,7 +139,12 @@ export async function create(ownerId: string, data: CreateBandData) {
 			groupId: bandId,
 			name: data.name,
 			bio: data.bio ? sanitizeBio(data.bio) : null
-		})
+		}),
+		// The site record, in the same batch for the same reason. It carries the
+		// band's tier, so a band without one has no tier to read — and it is what
+		// `band_page_config` and `band_media` hang off if the band ever goes
+		// premium.
+		bandSiteInsert(bandId)
 	]);
 
 	const [newBand] = await db.select().from(group).where(eq(group.id, bandId));
@@ -228,21 +235,30 @@ export async function getBySlug(slug: string) {
 			bio: group.bio,
 			ownerId: group.ownerId,
 			avatarKey: group.avatarKey,
-			tier: group.tier,
-			customDomain: group.customDomain,
-			customDomainStatus: group.customDomainStatus,
-			customDomainHostnameId: group.customDomainHostnameId,
-			customDomainVerification: group.customDomainVerification,
+			// From the site row since phase 3b. LEFT, with `?? 'free'` applied by
+			// the caller-facing shape below: a band whose row somehow went missing
+			// should read as free rather than disappear from its own panel.
+			tier: bandSite.tier,
+			customDomain: bandSite.customDomain,
+			customDomainStatus: bandSite.customDomainStatus,
+			customDomainHostnameId: bandSite.customDomainHostnameId,
+			customDomainVerification: bandSite.customDomainVerification,
 			createdAt: group.createdAt,
 			updatedAt: group.updatedAt,
 			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
 		})
 		.from(group)
+		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
 		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
 		.groupBy(group.id);
 
-	return row ?? null;
+	if (!row) return null;
+	// A band with no site row has no tier to read. That should be impossible —
+	// creation writes one in the same batch — but reading as `free` keeps the
+	// band's own panel working rather than typing `tier` as nullable across
+	// every caller.
+	return { ...row, tier: row.tier ?? ('free' as const) };
 }
 
 export async function getById(bandId: string) {
@@ -667,7 +683,7 @@ export async function listAll(
 		conditions.push(isNotNull(group.deletedAt));
 	}
 	if (opts?.tier) {
-		conditions.push(eq(group.tier, opts.tier));
+		conditions.push(eq(bandSite.tier, opts.tier));
 	}
 
 	const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -681,13 +697,17 @@ export async function listAll(
 			// Two records per row: the band the row is, and the member who owns it.
 			ref: bandRefColumns(),
 			owner: memberRefColumns(),
-			tier: group.tier,
+			tier: bandSite.tier,
 			memberCount: activeMemberCount(),
 			createdAt: group.createdAt,
 			deletedAt: group.deletedAt
 		})
 		.from(group)
 		.innerJoin(user, eq(user.id, group.ownerId))
+		// LEFT: a band missing its site row must still appear in the staff list.
+		// This is the staff view of every band, and it is precisely where a band
+		// with something wrong with it needs to be visible rather than hidden.
+		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(where)
 		.orderBy(group.name)
 		.$dynamic();
@@ -696,11 +716,17 @@ export async function listAll(
 		.select({ count: count() })
 		.from(group)
 		.innerJoin(user, eq(user.id, group.ownerId))
+		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(where);
 
 	const { rows, pagination: page } = await paginate(dataQ, countQ, pagination);
 	return {
-		rows: rows.map((r) => ({ ...r, ref: toBandRef(r.ref), owner: toMemberRef(r.owner) })),
+		rows: rows.map((r) => ({
+			...r,
+			tier: r.tier ?? ('free' as const),
+			ref: toBandRef(r.ref),
+			owner: toMemberRef(r.owner)
+		})),
 		pagination: page
 	};
 }
@@ -715,8 +741,8 @@ export async function getByIdWithDetails(bandId: string) {
 			ownerId: group.ownerId,
 			owner: memberRefColumns(),
 			avatarKey: group.avatarKey,
-			tier: group.tier,
-			subscription: group.subscription,
+			tier: bandSite.tier,
+			subscription: bandSite.subscription,
 			createdAt: group.createdAt,
 			updatedAt: group.updatedAt,
 			deletedAt: group.deletedAt,
@@ -724,9 +750,13 @@ export async function getByIdWithDetails(bandId: string) {
 		})
 		.from(group)
 		.innerJoin(user, eq(user.id, group.ownerId))
+		// LEFT: this is the staff detail page, and a band with something wrong
+		// with it is exactly the one staff need to be able to open.
+		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(eq(group.id, bandId));
 
-	return row ? { ...row, owner: toMemberRef(row.owner) } : null;
+	if (!row) return null;
+	return { ...row, tier: row.tier ?? ('free' as const), owner: toMemberRef(row.owner) };
 }
 
 export async function deactivate(bandId: string) {
@@ -796,14 +826,28 @@ export async function reactivate(bandId: string) {
  * staff flip the column would silently diverge from the live subscription.
  */
 export async function setTier(bandId: string, tier: BandTier) {
-	const existing = await getById(bandId);
+	// Existence first, so a missing band still raises the domain error that maps
+	// to a 404 rather than the raw "no group to create a band site for" that
+	// `getOrCreateBandSiteId` would throw.
+	if (!(await getById(bandId))) throw new BandNotFoundError();
+
+	// Both the guard and the write read the site row. Reading `group.subscription`
+	// here would consult a column nothing writes any more, so a band that DOES pay
+	// through Stripe would sail past the guard and have its tier flipped out from
+	// under the live subscription — the exact thing this check exists to stop.
+	const siteId = await getOrCreateBandSiteId(bandId);
+	const [existing] = await db
+		.select({ subscription: bandSite.subscription })
+		.from(bandSite)
+		.where(eq(bandSite.id, siteId))
+		.limit(1);
 	if (!existing) throw new BandNotFoundError();
 	if (existing.subscription) throw new BandTierManagedByStripeError();
 
 	const [row] = await db
-		.update(group)
+		.update(bandSite)
 		.set({ tier, updatedAt: new Date() })
-		.where(eq(group.id, bandId))
+		.where(eq(bandSite.id, siteId))
 		.returning();
 
 	if (!row) throw new BandNotFoundError();

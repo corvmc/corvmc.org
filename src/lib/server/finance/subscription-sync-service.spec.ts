@@ -66,11 +66,29 @@ const dbState: {
 };
 
 // Track which table a select/update chain targets via the last from()/update() arg.
-let lastTable: 'user' | 'group' | 'unknown' = 'unknown';
+let lastTable: 'user' | 'group' | 'band_site' | 'unknown' = 'unknown';
 let pendingCustomerLookup: string | null = null;
 
 vi.mock('$lib/server/db/schema/authentication', () => ({ user: { __table: 'user' } }));
-vi.mock('$lib/server/db/schema/group', () => ({ group: { __table: 'group' } }));
+// `bandTiers` and `customDomainStatuses` ride along because `band-site.ts`
+// imports them from here for its column enums — the vocabularies still live
+// beside the columns they describe until the phase that drops those columns.
+vi.mock('$lib/server/db/schema/group', () => ({
+	group: { __table: 'group' },
+	bandTiers: ['free', 'premium'],
+	customDomainStatuses: ['pending', 'active', 'failed']
+}));
+// Band premium moved off `group` in phase 3b; the stale-subscription sweep
+// reads the site row now.
+vi.mock('$lib/server/db/schema/band-site', () => ({
+	bandSite: {
+		__table: 'band_site',
+		id: 'band_site.id',
+		groupId: 'band_site.group_id',
+		tier: 'band_site.tier',
+		subscription: 'band_site.subscription'
+	}
+}));
 
 vi.mock('drizzle-orm', () => ({
 	eq: (col: unknown, val: unknown) => ({ op: 'eq', col, val }),
@@ -312,8 +330,11 @@ describe('syncAllSubscriptions — bands', () => {
 
 		expect(mockSyncFromWebhook).not.toHaveBeenCalled();
 		expect(summary.bandsCleared).toBe(1);
+		// Cleared on the site row since phase 3b — and it is an UPDATE, not a
+		// delete: `band_page_config` and `band_media` cascade from this row, so a
+		// band whose subscription lapsed keeps its microsite content.
 		expect(dbState.updates).toContainEqual({
-			table: 'group',
+			table: 'band_site',
 			set: expect.objectContaining({ tier: 'free', subscription: null })
 		});
 	});

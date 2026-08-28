@@ -15,6 +15,7 @@ import { and, eq, isNull, ne } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { groupSlugHistory } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
+import { bandSite } from '$lib/server/db/schema/band-site';
 import { generateSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { forgetCustomDomain } from '$lib/server/band/band-host-service';
@@ -109,8 +110,10 @@ export async function changeBandSlug(
 	requested: string
 ): Promise<{ status: 'unchanged' | 'changed'; slug: string; previousSlug: string }> {
 	const [row] = await db
-		.select({ id: group.id, slug: group.slug, customDomain: group.customDomain })
+		.select({ id: group.id, slug: group.slug, customDomain: bandSite.customDomain })
 		.from(group)
+		// LEFT: changing a slug must not depend on the band having a site row.
+		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(eq(group.id, bandId))
 		.limit(1);
 

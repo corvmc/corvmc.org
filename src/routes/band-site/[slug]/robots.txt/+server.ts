@@ -4,6 +4,7 @@ import { bandSiteUrl } from '$lib/utils/band-site-url';
 import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
 import { group } from '$lib/server/db/schema/group';
+import { bandSite } from '$lib/server/db/schema/band-site';
 import { eq, and, isNull } from 'drizzle-orm';
 
 // Served on band subdomains: {slug}.corvmc.org/robots.txt reroutes here.
@@ -12,11 +13,12 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	const [row] = await db
 		.select({
-			tier: group.tier,
-			customDomain: group.customDomain,
-			status: group.customDomainStatus
+			tier: bandSite.tier,
+			customDomain: bandSite.customDomain,
+			status: bandSite.customDomainStatus
 		})
 		.from(group)
+		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(and(eq(group.slug, params.slug!), isNull(group.deletedAt)))
 		.limit(1);
 	if (!row || row.tier !== 'premium') throw error(404, 'Not found');
