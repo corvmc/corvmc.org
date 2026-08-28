@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { media, mediaAttachment, attachableTypes } from '$lib/server/db/schema/media';
 import type { AttachableType } from '$lib/server/db/schema/media';
 import { event } from '$lib/server/db/schema/event';
+import { inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { deleteObject } from '$lib/server/storage';
@@ -23,7 +24,13 @@ import { and, eq, lt, sql, notExists, inArray, type SQLWrapper } from 'drizzle-o
 const PARENT_TABLES = {
 	event,
 	group,
-	user
+	user,
+	// `satisfies Record<AttachableType, …>` is what makes this exhaustive: adding
+	// a value to `attachableTypes` fails to compile until the sweep is told which
+	// table to check it against. Without that, a new type's attachments would
+	// simply never be reaped and the objects would leak.
+	inventory_item: inventoryItem,
+	inventory_asset: inventoryAsset
 } as const satisfies Record<AttachableType, unknown>;
 
 export type SweepResult = {

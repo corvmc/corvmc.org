@@ -38,6 +38,15 @@ import {
 } from '$lib/server/inventory/acquisition-service';
 import { form8282Status } from '$lib/server/inventory/form-8282';
 import {
+	linkArticle,
+	listItemResources,
+	listLinkableArticles,
+	listMemberItemResources,
+	reportDamage,
+	unlinkArticle
+} from '$lib/server/inventory/resources-service';
+import { mapDomainError } from '$lib/server/errors';
+import {
 	getLoanById,
 	getLoanHistory,
 	scheduleLoan,
@@ -268,7 +277,15 @@ export const getMemberAsset = query(z.string(), async (id) => {
 		status: asset.status,
 		locationName: asset.location?.name ?? null,
 		itemId: asset.itemId,
-		isAvailable: asset.status === 'in_service'
+		isAvailable: asset.status === 'in_service',
+		// Already in the shop or gone: the form would change nothing, so the page
+		// says what is happening instead of offering it.
+		canReportDamage: asset.status === 'in_service' || asset.status === 'on_loan',
+		// Assembled here rather than fetched by the component. Both halves are
+		// first paint and keyed by the same id, so a second query from the page
+		// would be a fan-out — which the custom lint rule rejects and which kit
+		// renders as `effect_update_depth_exceeded` past 2.64.
+		resources: await listMemberItemResources(asset.itemId)
 	};
 });
 
@@ -915,6 +932,78 @@ export const recordForm8282 = form(
 		await resolveForm8282(data.id, data.note);
 		void getForm8282Obligations().refresh();
 		void getStaffAssetDetail(data.id).refresh();
+		return { success: true };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Attached resources
+// ---------------------------------------------------------------------------
+
+export const getItemResources = query(z.string(), async (itemId) => {
+	await requireStaff();
+	const [resources, linkable] = await Promise.all([
+		listItemResources(itemId),
+		listLinkableArticles(itemId)
+	]);
+	return { ...resources, linkable };
+});
+
+export const linkItemArticle = form(
+	z.object({ itemId: z.string(), articleId: z.string() }),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as { itemId: string; articleId: string };
+		await linkArticle(data.itemId, data.articleId);
+		void getItemResources(data.itemId).refresh();
+		return { success: true };
+	}
+);
+
+export const unlinkItemArticle = form(
+	z.object({ itemId: z.string(), linkId: z.string() }),
+	async (raw) => {
+		await requireStaff();
+		const data = raw as { itemId: string; linkId: string };
+		await unlinkArticle(data.linkId);
+		void getItemResources(data.itemId).refresh();
+		return { success: true };
+	}
+);
+
+/**
+ * A member reporting a broken unit.
+ *
+ * `requireUser` and not `requireStaff` deliberately — whoever finds a cracked
+ * cabinet is usually the person who just picked it up. The service takes the
+ * unit out of service on their say-so; the trade is argued there.
+ */
+export const reportAssetDamage = form(
+	z.object({
+		assetId: z.string(),
+		note: z.string().min(1).max(1000),
+		// `''` is in the enum because the "Not sure" option submits one, and a
+		// bare `.optional()` rejects an empty string rather than ignoring it —
+		// which silently failed the whole submit, so the unit never went out of
+		// service and the note was never recorded. Not `.transform()`: that breaks
+		// `fields` inference on a remote `form()`.
+		condition: z.enum(['', 'fair', 'poor']).optional()
+	}),
+	async (raw) => {
+		const currentUser = requireUser();
+		const data = raw as { assetId: string; note: string; condition?: '' | 'fair' | 'poor' };
+		try {
+			await reportDamage({
+				assetId: data.assetId,
+				note: data.note,
+				condition: data.condition || undefined,
+				reportedByUserId: currentUser.id
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getMemberAsset(data.assetId).refresh();
+		void getStaffAssetDetail(data.assetId).refresh();
 		return { success: true };
 	}
 );

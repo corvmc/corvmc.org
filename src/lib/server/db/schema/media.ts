@@ -11,7 +11,15 @@ import { user } from './authentication';
  * drizzle's SQLite dialect treats a text enum as a TypeScript-only constraint —
  * which is the property that makes adding `production` or `venue` later free.
  */
-export const attachableTypes = ['event', 'group', 'user'] as const;
+export const attachableTypes = [
+	'event',
+	'group',
+	'user',
+	/** A catalog entry: manuals and spec sheets, the same for every unit of it. */
+	'inventory_item',
+	/** One physical unit: photographs of damage to *this* amp. */
+	'inventory_asset'
+] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 
 /**
@@ -20,7 +28,18 @@ export type AttachableType = (typeof attachableTypes)[number];
  * association name. It is the same idea: one parent can hold several distinct
  * kinds of image without them being confusable.
  */
-export const mediaSlots = ['poster', 'avatar', 'gallery', 'hero', 'rider', 'stage_plot'] as const;
+export const mediaSlots = [
+	'poster',
+	'avatar',
+	'gallery',
+	'hero',
+	'rider',
+	'stage_plot',
+	/** Item-level documentation — a manual, a spec sheet. Usually a PDF. */
+	'manual',
+	/** Asset-level evidence attached to a damage report. */
+	'damage'
+] as const;
 export type MediaSlot = (typeof mediaSlots)[number];
 
 // ---------------------------------------------------------------------------

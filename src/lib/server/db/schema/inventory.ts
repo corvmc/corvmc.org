@@ -516,6 +516,42 @@ export const inventoryLoan = sqliteTable(
 	]
 );
 
+/**
+ * A how-to article that belongs with an item.
+ *
+ * Tutorials are `help_article` rows rather than a second body of prose: they
+ * already carry publish state, a minimum role, a category and a sync path from
+ * `src/content/help/`. This table only says *which* of them belong to which
+ * item, which is the one fact the help system cannot hold on its own.
+ *
+ * Item-level rather than asset-level on purpose — "how to run the PA" is the
+ * same article for all four K12.2s.
+ */
+export const inventoryItemArticle = sqliteTable(
+	'inventory_item_article',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		itemId: text('item_id')
+			.notNull()
+			.references(() => inventoryItem.id, { onDelete: 'cascade' }),
+		articleId: text('article_id').notNull(),
+		sortOrder: integer('sort_order').notNull().default(0),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('idx_item_article_item').on(t.itemId),
+		// One link per pair: adding the same article twice is a mis-click, not a
+		// second association.
+		unique('uniq_item_article').on(t.itemId, t.articleId)
+	]
+);
+
+export type InventoryItemArticle = typeof inventoryItemArticle.$inferSelect;
+
 // ---------------------------------------------------------------------------
 // Client-safe serialized types
 // ---------------------------------------------------------------------------

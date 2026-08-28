@@ -55,6 +55,8 @@ export const tableOrder = [
 	'acquisition_line',
 	'inventory_loan',
 	'stock_movement',
+	// References inventory_item and help_article, so it clears before neither.
+	'inventory_item_article',
 	'notification_preference',
 	'notification',
 	'account',

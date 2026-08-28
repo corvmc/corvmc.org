@@ -20,10 +20,12 @@ import {
 	equipmentCategory,
 	inventoryAsset,
 	inventoryItem,
+	inventoryItemArticle,
 	inventoryLoan,
 	inventoryLocation,
 	stockMovement
 } from '../../src/lib/server/db/schema/inventory';
+import { helpArticle, helpCategory } from '../../src/lib/server/db/schema/help';
 import { withPlatformDb } from './platform-db';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
@@ -78,6 +80,11 @@ export const SEED_DISPOSED_ASSET_TAG = 'E2E-000009';
 export const SEED_UNACKED_DONATION_ID = 'e2e-inv-acq-donation-unacked';
 export const SEED_UNACKED_ASSET_ID = 'e2e-inv-asset-unacked';
 export const SEED_UNACKED_ASSET_TAG = 'E2E-000011';
+
+/** A published how-to linked to the serialized item, for the resources panel. */
+export const SEED_ARTICLE_ID = 'e2e-inv-article';
+export const SEED_ARTICLE_TITLE = 'E2E How To Use The Amp';
+export const SEED_ARTICLE_SLUG = 'e2e-how-to-use-the-amp';
 
 const SEED_ACQUISITION_ID = 'e2e-inv-acquisition';
 const ASSET_IDS = [
@@ -215,6 +222,45 @@ export async function seedInventory(): Promise<void> {
 				unitValueCents: 1400
 			}
 		]);
+
+		// A help article and its link. Tutorials are help rows rather than prose of
+		// this module's own, so the fixture seeds one the same way the app would.
+		await db.delete(inventoryItemArticle).where(inArray(inventoryItemArticle.itemId, ITEM_IDS));
+		await db.delete(helpArticle).where(eq(helpArticle.id, SEED_ARTICLE_ID));
+		// No other fixture seeds help, so this one creates its own category rather
+		// than silently skipping when none exists — which is exactly how the
+		// resources panel came to have no coverage on its first run.
+		const SEED_HELP_CATEGORY_ID = 'e2e-inv-help-cat';
+		await db
+			.insert(helpCategory)
+			.values({
+				id: SEED_HELP_CATEGORY_ID,
+				name: 'E2E Gear Guides',
+				slug: 'e2e-gear-guides',
+				sortOrder: 99,
+				minRole: 'member'
+			})
+			.onConflictDoNothing();
+		const helpCat = { id: SEED_HELP_CATEGORY_ID };
+		{
+			await db.insert(helpArticle).values({
+				id: SEED_ARTICLE_ID,
+				categoryId: helpCat.id,
+				title: SEED_ARTICLE_TITLE,
+				slug: SEED_ARTICLE_SLUG,
+				summary: 'Seeded for the inventory e2e.',
+				content: '## Plug it in\n\nThen turn it up.',
+				source: 'static',
+				minRole: 'member',
+				published: true,
+				sortOrder: 0
+			});
+			await db.insert(inventoryItemArticle).values({
+				id: 'e2e-inv-item-article',
+				itemId: SEED_ITEM_ID,
+				articleId: SEED_ARTICLE_ID
+			});
+		}
 
 		await db.insert(inventoryAsset).values([
 			{
