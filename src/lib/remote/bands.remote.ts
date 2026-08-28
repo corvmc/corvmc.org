@@ -145,7 +145,11 @@ export const getBandPlatformInvites = query(z.string(), async (bandId) => {
 // ===========================================================================
 
 export const getBandUpcoming = query(z.string(), async (bandId) => {
-	const { group: band } = await requireGroupRole({ id: bandId }, 'member');
+	// `allowStaff`, like every band-panel read below it. `getBandLayout` admits a
+	// staff non-member and reports `userRole: 'staff'`, but the member-only guard
+	// these carried 403'd them — so staff rendered the panel frame and every card
+	// inside it failed. See groups-spec.md § The guard.
+	const { group: band } = await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
 	const now = new Date();
 	const rows = await db
 		.select({
@@ -178,7 +182,7 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 });
 
 export const getBandMembersList = query(z.string(), async (bandId) => {
-	await requireGroupRole({ id: bandId }, 'member');
+	await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
 	// `getMembers` already returns a presentation ref per row, alias included.
 	const members = await getMembers(bandId);
 	return {
@@ -196,7 +200,11 @@ export const getBandMembersList = query(z.string(), async (bandId) => {
  * rendering at all. Both now resolve here, where the role is already known.
  */
 export const getBandMembersPage = query(z.string(), async (bandId) => {
-	const { role } = await requireGroupRole({ id: bandId }, 'member');
+	// The page's own `isStaffOnly` branch — "You're viewing this band as staff.
+	// Roster changes go through staff tools." — could never render, because the
+	// member-only guard 403'd staff before the page did. `role` comes back as
+	// `'staff'` now, so `canManage` is false and that branch is reachable.
+	const { role } = await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
 	const canManage = role === 'owner' || role === 'admin';
 
 	const [members, platformInvites] = await Promise.all([

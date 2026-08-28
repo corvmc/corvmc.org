@@ -63,8 +63,9 @@ vi.mock('$lib/server/band/band-service', () => bandServiceMock);
 
 const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 
+const hasAnyRole = vi.fn(async () => false);
 vi.mock('$lib/server/authorization', () => ({
-	hasAnyRole: vi.fn(async () => false),
+	hasAnyRole: (...a: unknown[]) => hasAnyRole(...(a as [])),
 	requireUser: () => testUser
 }));
 
@@ -112,6 +113,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const {
+	getBandMembersPage,
 	inviteMember,
 	removeMember,
 	revokeInvitation,
@@ -125,7 +127,38 @@ const {
 beforeEach(() => {
 	vi.clearAllMocks();
 	bandServiceMock.getUserRole.mockResolvedValue('owner');
+	hasAnyRole.mockResolvedValue(false);
 	selectResult = [];
+});
+
+// ---------------------------------------------------------------------------
+// The page query
+// ---------------------------------------------------------------------------
+
+describe('getBandMembersPage', () => {
+	/**
+	 * The page renders an `isStaffOnly` branch — "You're viewing this band as
+	 * staff. Roster changes go through staff tools." — which could never appear:
+	 * `getBandLayout` admits a staff non-member as `userRole: 'staff'`, but this
+	 * query's member-only guard 403'd them into the error boundary first. Phase 4
+	 * passes `allowStaff`, which is what makes that branch reachable.
+	 */
+	it('admits a staff non-member read-only, rather than 403ing the page', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		hasAnyRole.mockResolvedValue(true);
+
+		const data = await getBandMembersPage('band-1');
+
+		expect(data.canManage).toBe(false);
+		expect(data.platformInvites).toEqual([]);
+	});
+
+	it('still refuses someone who is neither a member nor staff', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		hasAnyRole.mockResolvedValue(false);
+
+		await expect(getBandMembersPage('band-1')).rejects.toMatchObject({ status: 403 });
+	});
 });
 
 // ---------------------------------------------------------------------------

@@ -810,7 +810,11 @@ export const getMembershipStatus = query(async () => {
 
 /** Band: check if any active band member has a sustaining membership. */
 export const getBandMembershipStatus = query(z.string(), async (slug) => {
-	const { group: band } = await requireGroupRole({ slug }, 'member');
+	// `allowStaff` to match `getBandReservations`, which it is composed with in
+	// `getBandReservationsPage`. Without it the composed query admitted staff on
+	// its first read and 403'd them on its second, taking the whole page down —
+	// exactly what the comment on that first read says must not happen.
+	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
 	const members = await getMembers(band.id);
 	const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
 
