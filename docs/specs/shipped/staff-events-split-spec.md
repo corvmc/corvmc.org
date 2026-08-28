@@ -197,9 +197,15 @@ This also dissolved decision 2. Two detail routes had been rejected because `Eve
 discrimination. Production stopped being a route you are _routed to_ and became one you _navigate
 to_, which is why the detail view could split after all.
 
-One nice consequence, and evidence the allocation is right: **no redirects were needed.** The
-pre-split link in the wild, `/staff/events?status=pending_review`, now lands on the Calendar, whose
-default view is the review queue — correct by default rather than by redirect.
+One consequence is worth keeping: the pre-split link in the wild,
+`/staff/events?status=pending_review`, needs no redirect at all under the new allocation — it lands
+on the Calendar, whose default view is the review queue. Correct by default rather than by
+redirect, which is a small sign the addresses are now pointed the right way.
+
+`/staff/calendar` does get a 308, though. The reversal was planned on the assumption that address
+had never shipped, and it had — the first split merged a few hours ahead of the fix. A bookmark
+would be reason enough; the durable one is that the "listing awaiting review" notification wrote
+that path onto every row it created while it was current, and a notification keeps its href.
 
 ### 7. The pending count keeps its own component
 

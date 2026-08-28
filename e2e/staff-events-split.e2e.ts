@@ -41,6 +41,14 @@ test.describe('staff events split', () => {
 		await loginAsStaff(page);
 	});
 
+	// It shipped at /staff/calendar for a few hours, and the notification rows
+	// written in that window keep that href forever.
+	test('the address the calendar briefly held still redirects', async ({ page }) => {
+		await page.goto('/staff/calendar');
+		await expect(page).toHaveURL(/\/staff\/events$/);
+		await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
+	});
+
 	test('the calendar holds /staff/events and opens on the queue', async ({ page }) => {
 		await page.goto('/staff/events');
 		await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
