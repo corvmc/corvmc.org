@@ -1,7 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { hasAnyRole } from '$lib/server/authorization';
-import { uploadFile, deleteObject, validateUpload } from '$lib/server/storage';
+import { uploadFile, validateUpload } from '$lib/server/storage';
+import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
 import { getById } from '$lib/server/event/event-service';
 import { db } from '$lib/server/db';
@@ -29,14 +30,22 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const buffer = await file.arrayBuffer();
 	const contentType = file.type;
 
-	// Delete old poster if replacing
-	if (existing.posterKey) {
-		await deleteObject(existing.posterKey);
-	}
-
 	const key = mediaKey('events/posters', params.id, contentType);
 
 	await uploadFile(buffer, key, contentType);
+
+	// The previous poster is released, never deleted — a recurring series'
+	// occurrences share one object. See docs/specs/media-spec.md.
+	await replaceSlot({
+		attachableType: 'event',
+		attachableId: params.id,
+		slot: 'poster',
+		key,
+		contentType,
+		byteSize: buffer.byteLength,
+		filename: file.name,
+		uploadedByUserId: locals.user.id
+	});
 
 	await db
 		.update(event)
@@ -56,7 +65,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	if (!existing) throw error(404, 'Event not found');
 
 	if (existing.posterKey) {
-		await deleteObject(existing.posterKey);
+		await detachSlot('event', params.id, 'poster');
 		await db
 			.update(event)
 			.set({ posterKey: null, updatedAt: new Date() })
