@@ -88,6 +88,12 @@ vi.mock('$lib/server/storage', () => ({
 	copyObject: (...args: unknown[]) => mockCopyObject(...args)
 }));
 
+const mockAttachExisting = vi.fn();
+
+vi.mock('$lib/server/media/media-service', () => ({
+	attachExisting: (...args: unknown[]) => mockAttachExisting(...args)
+}));
+
 const mockStaffCreate = vi.fn();
 const mockHasConflict = vi.fn();
 
@@ -593,7 +599,14 @@ describe('generateRecurringEvents', () => {
 		expect(mockStaffCreate).not.toHaveBeenCalled();
 	});
 
-	it('copies the prototype poster to a per-occurrence key', async () => {
+	/**
+	 * The payoff the media layer was built for. This used to copy the R2 binary
+	 * per occurrence — a 52-week series was 52 copies of one JPEG — because
+	 * deleting or re-postering one event deleted the object outright, so a shared
+	 * key would have been pulled out from under its siblings. Nothing in a request
+	 * path deletes an object any more, so the occurrences share one.
+	 */
+	it('shares the prototype poster instead of copying the object', async () => {
 		const protoWithPoster = {
 			...EVENT_PROTO,
 			reservationId: null,
@@ -603,16 +616,40 @@ describe('generateRecurringEvents', () => {
 		setupInsert();
 		setupUpdate();
 		mockGetOccurrences.mockReturnValue([OCC1]);
-		mockCopyObject.mockResolvedValue('events/posters/copied.webp');
+		mockAttachExisting.mockResolvedValue('attachment-1');
 
 		await generateRecurringEvents();
 
-		// Copied from the prototype key to a key under the new event id, preserving ext
-		expect(mockCopyObject).toHaveBeenCalledOnce();
-		const [srcKey, destKey] = mockCopyObject.mock.calls[0];
-		expect(srcKey).toBe('events/posters/eproto-1.webp');
-		expect(destKey).toMatch(/^events\/posters\/.+\.webp$/);
-		// The occurrence is updated with the copied poster key
-		expect(updatedRows[0]).toMatchObject({ posterKey: 'events/posters/copied.webp' });
+		expect(mockCopyObject).not.toHaveBeenCalled();
+		// One more attachment on the same object, in the occurrence's poster slot.
+		expect(mockAttachExisting).toHaveBeenCalledWith(
+			'event',
+			expect.any(String),
+			'poster',
+			'events/posters/eproto-1.webp'
+		);
+		// And the column points at the prototype's key, not a new one.
+		expect(updatedRows[0]).toMatchObject({ posterKey: 'events/posters/eproto-1.webp' });
+	});
+
+	it('still shares the key when the prototype poster was never recorded', async () => {
+		// A key with no `media` row means something wrote a poster without
+		// recording it. Losing the poster would be an immediate regression, while
+		// a missing attachment is a latent one the sweep surfaces, so the key is
+		// shared either way and the anomaly is reported.
+		const protoWithPoster = {
+			...EVENT_PROTO,
+			reservationId: null,
+			posterKey: 'events/posters/eproto-1.webp'
+		};
+		queueSelects([EVENT_SERIES], [protoWithPoster], [OWNER], []);
+		setupInsert();
+		setupUpdate();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+		mockAttachExisting.mockResolvedValue(null);
+
+		await generateRecurringEvents();
+
+		expect(updatedRows[0]).toMatchObject({ posterKey: 'events/posters/eproto-1.webp' });
 	});
 });

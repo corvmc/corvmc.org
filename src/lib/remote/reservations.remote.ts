@@ -29,7 +29,11 @@ import {
 	count
 } from 'drizzle-orm';
 import { getById as getBandById } from '$lib/server/band/band-service';
-import { group } from '$lib/server/db/schema/group';
+import { group, groupMember } from '$lib/server/db/schema/group';
+import { alias } from 'drizzle-orm/sqlite-core';
+
+/** The roster row that defines ownership — see `band-service.ts`. */
+const ownerMember = alias(groupMember, 'owner_member');
 import { event } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
@@ -416,18 +420,30 @@ export const searchBands = query(z.string(), async (q) => {
 	if (!q || q.length < 2) return [];
 
 	const pattern = `%${q}%`;
-	return db
-		.select({
-			id: group.id,
-			name: group.name,
-			ownerId: group.ownerId,
-			ownerName: user.name,
-			ownerEmail: user.email
-		})
-		.from(group)
-		.innerJoin(user, eq(user.id, group.ownerId))
-		.where(and(isNull(group.deletedAt), like(group.name, pattern)))
-		.limit(SEARCH_LIMIT);
+	return (
+		db
+			.select({
+				id: group.id,
+				name: group.name,
+				ownerId: ownerMember.userId,
+				ownerName: user.name,
+				ownerEmail: user.email
+			})
+			.from(group)
+			// LEFT: a band with an empty owner seat is still a band staff can book
+			// for. An inner join would drop it from the picker entirely.
+			.leftJoin(
+				ownerMember,
+				and(
+					eq(ownerMember.groupId, group.id),
+					eq(ownerMember.role, 'owner'),
+					eq(ownerMember.status, 'active')
+				)
+			)
+			.leftJoin(user, eq(user.id, ownerMember.userId))
+			.where(and(isNull(group.deletedAt), like(group.name, pattern)))
+			.limit(SEARCH_LIMIT)
+	);
 });
 
 /** Staff: available slots + config for a given date. */

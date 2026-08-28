@@ -11,7 +11,7 @@ export const tableOrder = [
 	'group',
 	// References user and group; parent of directory_tag.
 	'directory_entry',
-	// References group; parent of band_page_config and band_media.
+	// References group.
 	'band_site',
 	'reservation',
 	'equipment_category',
@@ -22,7 +22,7 @@ export const tableOrder = [
 	'event',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
-	// (docs/specs/media-spec.md), so it constrains nothing else in this order.
+	// (docs/specs/shipped/media-spec.md), so it constrains nothing else in this order.
 	'media',
 	'media_attachment',
 	'campaign',
@@ -69,8 +69,6 @@ export const tableOrder = [
 	'platform_invite',
 	'credit_transaction',
 	'help_articles',
-	'band_media',
-	'band_page_config',
 	'inbox_message',
 	'inbox_note',
 	'inbox_participant',

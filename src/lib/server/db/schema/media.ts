@@ -61,7 +61,7 @@ export type MediaSlot = (typeof mediaSlots)[number];
  * strands every gallery object it had. Here the object's lifetime is decided by
  * how many `media_attachment` rows point at it, and by nothing else.
  *
- * See docs/specs/media-spec.md.
+ * See docs/specs/shipped/media-spec.md.
  */
 export const media = sqliteTable(
 	'media',

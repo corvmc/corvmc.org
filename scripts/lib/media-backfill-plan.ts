@@ -3,7 +3,7 @@
  *
  * `scripts/backfill-media.ts` reads D1 and R2; everything it has to get *right*
  * lives here, where it can be tested without either. See
- * docs/specs/media-spec.md phase 3.
+ * docs/specs/shipped/media-spec.md phase 3.
  */
 
 export type AttachableType = 'event' | 'group' | 'user';
@@ -43,18 +43,6 @@ export type Plan = {
 	missing: Source[];
 	/** Usages already recorded by an earlier run. */
 	alreadyDone: number;
-};
-
-/**
- * `band_media.type` is a bare string rather than an enum, so an unrecognised
- * value is possible. Mapping explicitly means such a row is reported rather than
- * silently landing in a slot nothing reads.
- */
-export const SLOT_FOR_BAND_MEDIA: Record<string, string> = {
-	image: 'gallery',
-	hero: 'hero',
-	rider: 'rider',
-	stage_plot: 'stage_plot'
 };
 
 /**

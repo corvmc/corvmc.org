@@ -39,7 +39,7 @@ import {
 	clearBandAvatar,
 	BandMemberExistsError
 } from '$lib/server/band/band-service';
-import { bandTiers } from '$lib/server/db/schema/group';
+import { bandTiers } from '$lib/server/db/schema/band-site';
 import { getBandLayout } from '$lib/remote/layout.remote';
 import {
 	createInvite as createPlatformInvite,
@@ -358,7 +358,11 @@ export const transferOwnership = form(
 		await requireStaff();
 		const band = await getByIdWithDetails(data.bandId);
 		if (!band) throw error(404, 'Band not found');
-		await transferOwnershipService(data.bandId, data.newOwnerId, band.ownerId);
+		// An ownerless band is legal, and transferring INTO an empty seat is the
+		// normal way staff fix one — so the actor is the outgoing owner when there
+		// is one, and the incoming owner when there is not. The service demotes by
+		// this id, which matches nothing in the empty case, which is correct.
+		await transferOwnershipService(data.bandId, data.newOwnerId, band.ownerId ?? data.newOwnerId);
 		return { success: true };
 	}
 );

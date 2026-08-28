@@ -107,7 +107,7 @@ export const CONFIRMATION_WINDOW_DAYS = 3;
  * mid-upload. Rails' `purge_unattached` guards the same hazard.
  *
  * A day is far longer than any form takes and still bounds how long an abandoned
- * upload is billed for. See docs/specs/media-spec.md.
+ * upload is billed for. See docs/specs/shipped/media-spec.md.
  */
 export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
 

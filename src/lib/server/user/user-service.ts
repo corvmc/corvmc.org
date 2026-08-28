@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { DomainError } from '../domain-error';
 import { user, session } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
+import { group, groupMember } from '$lib/server/db/schema/group';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, isNull, isNotNull, count, desc } from 'drizzle-orm';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -184,10 +184,20 @@ export async function purgeUser(userId: string) {
 	if (!target) throw new UserNotFoundError();
 	if (!target.deletedAt) throw new UserNotDeactivatedError();
 
+	// Ownership is the roster row since phase 3c; `group.ownerId` was a second
+	// copy that could drift from it.
 	const [{ value: ownedBands }] = await db
 		.select({ value: count() })
-		.from(group)
-		.where(eq(group.ownerId, userId));
+		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
+		.where(
+			and(
+				eq(groupMember.userId, userId),
+				eq(groupMember.role, 'owner'),
+				eq(groupMember.status, 'active'),
+				isNull(group.deletedAt)
+			)
+		);
 
 	if (ownedBands > 0) throw new UserHasOwnedBandsError();
 

@@ -10,8 +10,11 @@ import type { NotificationEmailModel } from '$lib/types/notification-email';
 import type { BandEpk } from '$lib/types/band-page';
 import { db } from '$lib/server/db';
 import { group, groupMember } from '$lib/server/db/schema/group';
+import { alias } from 'drizzle-orm/sqlite-core';
+
+/** The roster row that defines ownership — see `band-service.ts`. */
+const ownerMember = alias(groupMember, 'owner_member');
 import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
-import { bandPageConfig } from '$lib/server/db/schema/band-page';
 import { listFor as listMediaFor } from '$lib/server/media/media-service';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { user } from '$lib/server/db/schema/authentication';
@@ -53,14 +56,16 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 	// 404 is the right answer; here the page is granted by `tier`, and a premium
 	// band whose entry went missing should lose its bio, not its site.
 	const [joined] = await db
-		.select({ band: group, entry: directoryEntry })
+		.select({ band: group, entry: directoryEntry, site: bandSite })
 		.from(group)
 		.leftJoin(directoryEntry, eq(directoryEntry.groupId, group.id))
+		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
 		.limit(1);
 
 	const bandRow = joined?.band;
 	const entry = joined?.entry;
+	const site = joined?.site;
 
 	if (!bandRow) {
 		// Not just for stale bookmarks: `/api/host-route` answers with
@@ -74,14 +79,10 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 		}
 		throw error(404, 'Band not found');
 	}
-	if (bandRow.tier !== 'premium') throw error(404, 'Page not found');
+	if (site?.tier !== 'premium') throw error(404, 'Page not found');
 
-	// Fetch page config
-	const [config] = await db
-		.select()
-		.from(bandPageConfig)
-		.where(eq(bandPageConfig.bandId, bandRow.id))
-		.limit(1);
+	// The page config IS the site row since phase 3c — already fetched above.
+	const config = site;
 
 	// Fetch members
 	const members = await db
@@ -127,7 +128,7 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 			genres: genres.map((g) => g.value),
 			// Only a live custom domain counts — canonical URLs must not point at a
 			// hostname that isn't serving yet.
-			customDomain: bandRow.customDomainStatus === 'active' ? bandRow.customDomain : null
+			customDomain: site?.customDomainStatus === 'active' ? site.customDomain : null
 		},
 		config: config
 			? {
@@ -179,9 +180,24 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 	}
 
 	const [bandRow] = await db
-		.select({ id: group.id, name: group.name, tier: bandSite.tier, ownerId: group.ownerId })
+		.select({
+			id: group.id,
+			name: group.name,
+			tier: bandSite.tier,
+			// The owner is the roster row since phase 3c, and the seat can be
+			// empty — the fallback below already handles a missing address.
+			ownerId: ownerMember.userId
+		})
 		.from(group)
 		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
+		.leftJoin(
+			ownerMember,
+			and(
+				eq(ownerMember.groupId, group.id),
+				eq(ownerMember.role, 'owner'),
+				eq(ownerMember.status, 'active')
+			)
+		)
 		.where(and(eq(group.slug, data.slug), isNull(group.deletedAt)))
 		.limit(1);
 
@@ -194,14 +210,14 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 
 	// Deliver to the EPK booking contact, falling back to the band owner
 	const [config] = await db
-		.select({ epk: bandPageConfig.epk })
-		.from(bandPageConfig)
-		.where(eq(bandPageConfig.bandId, bandRow.id))
+		.select({ epk: bandSite.epk })
+		.from(bandSite)
+		.where(eq(bandSite.groupId, bandRow.id))
 		.limit(1);
 	const epk = config?.epk as BandEpk | null | undefined;
 
 	let toEmail = epk?.bookingContact?.email;
-	if (!toEmail) {
+	if (!toEmail && bandRow.ownerId) {
 		const [owner] = await db
 			.select({ email: user.email })
 			.from(user)

@@ -4,11 +4,25 @@ import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import { group, groupMember, groupSlugHistory, type GroupRole } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { directoryEntry } from '$lib/server/db/schema/directory';
+import { alias } from 'drizzle-orm/sqlite-core';
 import { groupEntryInsert } from '$lib/server/directory/entry-service';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { bandSiteInsert, getOrCreateBandSiteId } from './band-site-service';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } from 'drizzle-orm';
+import {
+	eq,
+	and,
+	ne,
+	gt,
+	sql,
+	or,
+	like,
+	inArray,
+	isNull,
+	isNotNull,
+	count,
+	type SQL
+} from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
@@ -21,7 +35,7 @@ import { sanitizeBio } from '$lib/utils/markdown';
 import { captureException } from '$lib/server/sentry';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 
-import type { BandTier } from '$lib/server/db/schema/group';
+import type { BandTier } from '$lib/server/db/schema/band-site';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -104,6 +118,38 @@ export class BandTierManagedByStripeError extends DomainError {
 	}
 }
 
+/**
+ * The roster row that defines ownership, aliased so a query can join it beside
+ * the ordinary membership rows.
+ *
+ * `group.ownerId` used to hold this and was dropped in phase 3c. It was never
+ * the authority — `getUserRole()` has always resolved permission through
+ * `group_member` — so it was a second copy that could and did drift; five of
+ * sixteen production bands once had no usable owner row behind it.
+ *
+ * Always LEFT-joined. An ownerless group is legal under the spec (a program
+ * whose leader stepped down, awaiting a staff appointment), and an inner join
+ * drops exactly those rows — hiding from `/staff/bands` the bands staff most
+ * need to act on, and emptying the detail page of a band that plainly exists.
+ */
+const ownerMember = alias(groupMember, 'owner_member');
+
+/** The owner's user id for a band, or null if the seat is empty. */
+export async function getOwnerId(bandId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ userId: groupMember.userId })
+		.from(groupMember)
+		.where(
+			and(
+				eq(groupMember.groupId, bandId),
+				eq(groupMember.role, 'owner'),
+				eq(groupMember.status, 'active')
+			)
+		)
+		.limit(1);
+	return row?.userId ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Create / Update / Delete
 // ---------------------------------------------------------------------------
@@ -123,8 +169,7 @@ export async function create(ownerId: string, data: CreateBandData) {
 			id: bandId,
 			name: data.name,
 			slug,
-			bio: data.bio ? sanitizeBio(data.bio) : null,
-			ownerId
+			bio: data.bio ? sanitizeBio(data.bio) : null
 		}),
 		db.insert(groupMember).values({
 			groupId: bandId,
@@ -206,13 +251,17 @@ export async function deleteBand(bandId: string) {
 			)
 		);
 
+	// The owner is the actor on these cancellations. A band with an empty owner
+	// seat can still be deleted, so fall back to the caller-independent staff
+	// override path with the band's own id — `staffOverride` is already set.
+	const deleteActor = (await getOwnerId(bandId)) ?? row.id;
 	for (const r of futureReservations) {
-		await cancelReservation(r.id, row.ownerId, 'Band deleted', { staffOverride: true });
+		await cancelReservation(r.id, deleteActor, 'Band deleted', { staffOverride: true });
 	}
 
 	// Release the avatar. Not a delete: `media_attachment` has no foreign key to
 	// the group by design, so nothing cascades here, and whether the object can
-	// be reclaimed is the sweep's question. See docs/specs/media-spec.md.
+	// be reclaimed is the sweep's question. See docs/specs/shipped/media-spec.md.
 	await detachSlot('group', bandId, 'avatar');
 
 	// Delete band (group_member rows cascade)
@@ -223,14 +272,20 @@ export async function deleteBand(bandId: string) {
 // Queries
 // ---------------------------------------------------------------------------
 
-export async function getBySlug(slug: string) {
+/**
+ * The one select behind every group-context lookup. `getBySlug` and
+ * `getByIdActive` differ only in their WHERE, and they must not drift: the
+ * guard resolves a group from either ref shape and both have to yield the same
+ * row, soft-delete filter included.
+ */
+async function selectGroupContext(where: SQL | undefined) {
 	const [row] = await db
 		.select({
 			id: group.id,
 			name: group.name,
 			slug: group.slug,
 			bio: group.bio,
-			ownerId: group.ownerId,
+			ownerId: ownerMember.userId,
 			avatarKey: group.avatarKey,
 			// From the site row since phase 3b. LEFT, with `?? 'free'` applied by
 			// the caller-facing shape below: a band whose row somehow went missing
@@ -246,8 +301,16 @@ export async function getBySlug(slug: string) {
 		})
 		.from(group)
 		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
+		.leftJoin(
+			ownerMember,
+			and(
+				eq(ownerMember.groupId, group.id),
+				eq(ownerMember.role, 'owner'),
+				eq(ownerMember.status, 'active')
+			)
+		)
 		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
-		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
+		.where(where)
 		.groupBy(group.id);
 
 	if (!row) return null;
@@ -256,6 +319,19 @@ export async function getBySlug(slug: string) {
 	// band's own panel working rather than typing `tier` as nullable across
 	// every caller.
 	return { ...row, tier: row.tier ?? ('free' as const) };
+}
+
+export async function getBySlug(slug: string) {
+	return selectGroupContext(and(eq(group.slug, slug), isNull(group.deletedAt)));
+}
+
+/**
+ * `getBySlug`'s sibling, keyed on the id. Distinct from `getById` below, which
+ * is a bare row read that does NOT exclude soft-deleted groups — an
+ * authorization guard must not resolve a deleted group, so it uses this one.
+ */
+export async function getByIdActive(groupId: string) {
+	return selectGroupContext(and(eq(group.id, groupId), isNull(group.deletedAt)));
 }
 
 export async function getById(bandId: string) {
@@ -641,8 +717,7 @@ export async function transferOwnership(bandId: string, newOwnerId: string, acto
 					eq(groupMember.userId, newOwnerId),
 					eq(groupMember.status, 'active')
 				)
-			),
-		db.update(group).set({ ownerId: newOwnerId, updatedAt: new Date() }).where(eq(group.id, bandId))
+			)
 	]);
 }
 
@@ -690,7 +765,7 @@ export async function listAll(
 			id: group.id,
 			name: group.name,
 			slug: group.slug,
-			ownerId: group.ownerId,
+			ownerId: ownerMember.userId,
 			// Two records per row: the band the row is, and the member who owns it.
 			ref: bandRefColumns(),
 			owner: memberRefColumns(),
@@ -700,10 +775,19 @@ export async function listAll(
 			deletedAt: group.deletedAt
 		})
 		.from(group)
-		.innerJoin(user, eq(user.id, group.ownerId))
-		// LEFT: a band missing its site row must still appear in the staff list.
-		// This is the staff view of every band, and it is precisely where a band
-		// with something wrong with it needs to be visible rather than hidden.
+		// LEFT on both: a band missing its site row, or with an empty owner seat,
+		// must still appear in the staff list. This is the staff view of every
+		// band, and it is precisely where a band with something wrong with it
+		// needs to be visible rather than hidden.
+		.leftJoin(
+			ownerMember,
+			and(
+				eq(ownerMember.groupId, group.id),
+				eq(ownerMember.role, 'owner'),
+				eq(ownerMember.status, 'active')
+			)
+		)
+		.leftJoin(user, eq(user.id, ownerMember.userId))
 		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(where)
 		.orderBy(group.name)
@@ -712,7 +796,15 @@ export async function listAll(
 	const countQ = db
 		.select({ count: count() })
 		.from(group)
-		.innerJoin(user, eq(user.id, group.ownerId))
+		.leftJoin(
+			ownerMember,
+			and(
+				eq(ownerMember.groupId, group.id),
+				eq(ownerMember.role, 'owner'),
+				eq(ownerMember.status, 'active')
+			)
+		)
+		.leftJoin(user, eq(user.id, ownerMember.userId))
 		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(where);
 
@@ -735,7 +827,7 @@ export async function getByIdWithDetails(bandId: string) {
 			name: group.name,
 			slug: group.slug,
 			bio: group.bio,
-			ownerId: group.ownerId,
+			ownerId: ownerMember.userId,
 			owner: memberRefColumns(),
 			avatarKey: group.avatarKey,
 			tier: bandSite.tier,
@@ -746,9 +838,18 @@ export async function getByIdWithDetails(bandId: string) {
 			memberCount: activeMemberCount()
 		})
 		.from(group)
-		.innerJoin(user, eq(user.id, group.ownerId))
 		// LEFT: this is the staff detail page, and a band with something wrong
-		// with it is exactly the one staff need to be able to open.
+		// with it — no site row, no owner — is exactly the one staff need to be
+		// able to open.
+		.leftJoin(
+			ownerMember,
+			and(
+				eq(ownerMember.groupId, group.id),
+				eq(ownerMember.role, 'owner'),
+				eq(ownerMember.status, 'active')
+			)
+		)
+		.leftJoin(user, eq(user.id, ownerMember.userId))
 		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(eq(group.id, bandId));
 
@@ -788,8 +889,9 @@ export async function deactivate(bandId: string) {
 			)
 		);
 
+	const deactivateActor = (await getOwnerId(bandId)) ?? row.id;
 	for (const r of futureReservations) {
-		await cancelReservation(r.id, row.ownerId, 'Band deactivated', { staffOverride: true });
+		await cancelReservation(r.id, deactivateActor, 'Band deactivated', { staffOverride: true });
 	}
 
 	return row;

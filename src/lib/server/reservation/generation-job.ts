@@ -9,7 +9,7 @@ import { getOccurrences, generationWindowEnd } from './rrule-helpers';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { staffCreate } from './reservation-service';
 import { hasConflict } from './conflict-service';
-import { copyObject } from '$lib/server/storage';
+import { attachExisting } from '$lib/server/media/media-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
 import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -478,19 +478,37 @@ async function processEventSeries(
 		});
 		created++;
 
-		// Give the occurrence its own copy of the prototype's poster, so each
-		// occurrence is independently editable/cancellable without affecting others.
+		// Point the occurrence at the prototype's poster — the same R2 object, not a
+		// copy of it.
+		//
+		// This used to `copyObject` per occurrence, and the reason given was that an
+		// occurrence must be independently editable and cancellable. It had to be:
+		// deleting or re-postering one event deleted the object outright, so a
+		// shared key would have been pulled out from under its siblings. Since
+		// phase 4 nothing in a request path deletes an object — cancelling detaches,
+		// and the sweep only reclaims what no attachment points at — so sharing is
+		// now the safe option rather than the dangerous one, and a 52-week series
+		// holds one JPEG instead of 52. See docs/specs/shipped/media-spec.md.
 		if (prototype.posterKey) {
 			try {
-				const ext = prototype.posterKey.split('.').pop() ?? 'bin';
-				const destKey = `events/posters/${newEventId}.${ext}`;
-				const copied = await copyObject(prototype.posterKey, destKey);
-				if (copied) {
-					await db
-						.update(event)
-						.set({ posterKey: copied, updatedAt: new Date() })
-						.where(eq(event.id, newEventId));
+				const attached = await attachExisting('event', newEventId, 'poster', prototype.posterKey);
+
+				// No `media` row for the prototype's key means something wrote a poster
+				// without recording it — the backfill covered every key that existed,
+				// and every write path has recorded one since. Share the key anyway: a
+				// missing poster is an immediate regression, while a missing attachment
+				// is a latent one the sweep would surface. Reported either way.
+				if (!attached) {
+					captureException(new Error(`No media row for prototype poster ${prototype.posterKey}`), {
+						event: 'event.recurring.poster_unrecorded',
+						eventId: newEventId
+					});
 				}
+
+				await db
+					.update(event)
+					.set({ posterKey: prototype.posterKey, updatedAt: new Date() })
+					.where(eq(event.id, newEventId));
 			} catch (err) {
 				// Best-effort: the draft event remains; staff can add a poster manually.
 				captureException(err, { event: 'event.recurring.poster', eventId: newEventId });

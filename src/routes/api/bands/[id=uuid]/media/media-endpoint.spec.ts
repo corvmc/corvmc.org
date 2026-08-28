@@ -56,8 +56,19 @@ vi.mock('$lib/server/media/media-service', () => ({
 	detach: (id: string) => detach(id)
 }));
 
-vi.mock('$lib/server/band/band-service', () => ({
-	getUserRole: vi.fn(async () => 'owner')
+/**
+ * The endpoint's 401, its band-existence 404 and its role check are one call to
+ * `requireGroupRole({ id }, 'admin')` since phase 4. What that guard *does* is
+ * `group-context.spec.ts`'s subject; what this file owes is that the endpoint
+ * calls it, with the right ref, before touching anything — asserted below.
+ */
+const requireGroupRole = vi.fn(async (_ref: unknown, _minRole: unknown) => ({
+	user: { id: 'user-1' },
+	group: { id: '11111111-1111-1111-1111-111111111111' },
+	role: 'owner' as const
+}));
+vi.mock('$lib/server/group/group-context', () => ({
+	requireGroupRole: (ref: unknown, minRole: unknown) => requireGroupRole(ref, minRole)
 }));
 
 vi.mock('$lib/server/storage-keys', () => ({
@@ -67,7 +78,6 @@ vi.mock('$lib/server/storage-keys', () => ({
 const { POST, DELETE } = await import('./+server');
 
 const BAND = '11111111-1111-1111-1111-111111111111';
-const locals = { user: { id: 'user-1' } };
 
 function upload(type: string, files: File[], caption?: string) {
 	const fd = new FormData();
@@ -76,7 +86,6 @@ function upload(type: string, files: File[], caption?: string) {
 	for (const f of files) fd.append('file', f);
 	return {
 		params: { id: BAND },
-		locals,
 		request: new Request('http://x/api/bands/x/media', { method: 'POST', body: fd })
 	} as never;
 }
@@ -84,12 +93,47 @@ function upload(type: string, files: File[], caption?: string) {
 const jpeg = (name = 'a.jpg') =>
 	new File([new Uint8Array([1, 2, 3])], name, { type: 'image/jpeg' });
 
+function del(mediaId?: string) {
+	const url = new URL('http://x/api/bands/x/media');
+	if (mediaId) url.searchParams.set('mediaId', mediaId);
+	return { params: { id: BAND }, url } as never;
+}
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	selectResult = [{ maxOrder: null }];
 	lastSelectWhere = undefined;
 	record.mockResolvedValue({ id: 'media-1' });
 	attach.mockResolvedValue({ id: 'attachment-1' });
+	requireGroupRole.mockResolvedValue({
+		user: { id: 'user-1' },
+		group: { id: BAND },
+		role: 'owner' as const
+	});
+});
+
+// ---------------------------------------------------------------------------
+
+describe('the guard', () => {
+	it.each([
+		['POST', () => POST(upload('image', [jpeg()]))],
+		['DELETE', () => DELETE(del('attachment-1'))]
+	])('%s requires admin of the band named by the route param', async (_name, call) => {
+		selectResult = [{ id: 'attachment-1', maxOrder: null }];
+		await call();
+		expect(requireGroupRole).toHaveBeenCalledWith({ id: BAND }, 'admin');
+	});
+
+	it.each([
+		['POST', () => POST(upload('image', [jpeg()]))],
+		['DELETE', () => DELETE(del('attachment-1'))]
+	])('%s does no work when the guard rejects', async (_name, call) => {
+		requireGroupRole.mockRejectedValue(Object.assign(new Error('nope'), { status: 403 }));
+		await expect(call()).rejects.toMatchObject({ status: 403 });
+		expect(record).not.toHaveBeenCalled();
+		expect(attach).not.toHaveBeenCalled();
+		expect(detach).not.toHaveBeenCalled();
+	});
 });
 
 // ---------------------------------------------------------------------------
@@ -156,12 +200,6 @@ describe('POST', () => {
 });
 
 describe('DELETE', () => {
-	function del(mediaId?: string) {
-		const url = new URL('http://x/api/bands/x/media');
-		if (mediaId) url.searchParams.set('mediaId', mediaId);
-		return { params: { id: BAND }, locals, url } as never;
-	}
-
 	it('detaches and never deletes the R2 object', async () => {
 		// The rule the media layer exists to hold: another slot or another band
 		// may still point at the object, and only the sweep can see that.

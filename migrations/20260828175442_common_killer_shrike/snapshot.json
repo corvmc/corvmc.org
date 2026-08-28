@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "98363b62-ffba-492a-acef-a6c07dd892f3",
+  "id": "3474ffdf-f6dc-4da5-a989-d9ebe2971272",
   "prevIds": [
-    "d133b99d-08ff-47c4-b254-baaa404a5d7f"
+    "a9db85a3-a797-4a22-9c20-e2b1f10bf4f7"
   ],
   "ddl": [
     {
@@ -164,10 +164,6 @@
     },
     {
       "name": "band_site",
-      "entityType": "tables"
-    },
-    {
-      "name": "band_media",
       "entityType": "tables"
     },
     {
@@ -2604,26 +2600,6 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "paid_by_user_id",
-      "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "reimbursed_at",
-      "entityType": "columns",
-      "table": "acquisition"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
       "name": "notes",
       "entityType": "columns",
       "table": "acquisition"
@@ -3660,76 +3636,6 @@
     },
     {
       "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'free'",
-      "generated": null,
-      "name": "tier",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "subscription",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "custom_domain",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "custom_domain_status",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "custom_domain_hostname_id",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "custom_domain_verification",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "custom_domain_added_at",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -4207,86 +4113,6 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "band_site"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "band_media"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "band_id",
-      "entityType": "columns",
-      "table": "band_media"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "band_site_id",
-      "entityType": "columns",
-      "table": "band_media"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "key",
-      "entityType": "columns",
-      "table": "band_media"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "type",
-      "entityType": "columns",
-      "table": "band_media"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "caption",
-      "entityType": "columns",
-      "table": "band_media"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "sort_order",
-      "entityType": "columns",
-      "table": "band_media"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "band_media"
     },
     {
       "type": "text",
@@ -7355,21 +7181,6 @@
     },
     {
       "columns": [
-        "paid_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_acquisition_paid_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "acquisition"
-    },
-    {
-      "columns": [
         "acquisition_id"
       ],
       "tableTo": "acquisition",
@@ -7712,36 +7523,6 @@
       "name": "fk_band_site_group_id_group_id_fk",
       "entityType": "fks",
       "table": "band_site"
-    },
-    {
-      "columns": [
-        "band_id"
-      ],
-      "tableTo": "group",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_band_media_band_id_band_id_fk",
-      "entityType": "fks",
-      "table": "band_media"
-    },
-    {
-      "columns": [
-        "band_site_id"
-      ],
-      "tableTo": "band_site",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_band_media_band_site_id_band_site_id_fk",
-      "entityType": "fks",
-      "table": "band_media"
     },
     {
       "columns": [
@@ -8888,15 +8669,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "band_media_pk",
-      "table": "band_media",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "band_page_config_pk",
       "table": "band_page_config",
       "entityType": "pks"
@@ -9762,20 +9534,6 @@
     {
       "columns": [
         {
-          "value": "paid_by_user_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_acquisition_paid_by",
-      "entityType": "indexes",
-      "table": "acquisition"
-    },
-    {
-      "columns": [
-        {
           "value": "acquisition_id",
           "isExpression": false
         }
@@ -10098,20 +9856,6 @@
     {
       "columns": [
         {
-          "value": "custom_domain",
-          "isExpression": false
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_band_custom_domain",
-      "entityType": "indexes",
-      "table": "group"
-    },
-    {
-      "columns": [
-        {
           "value": "user_id",
           "isExpression": false
         }
@@ -10294,50 +10038,6 @@
       "name": "idx_band_site_tier",
       "entityType": "indexes",
       "table": "band_site"
-    },
-    {
-      "columns": [
-        {
-          "value": "band_id",
-          "isExpression": false
-        },
-        {
-          "value": "type",
-          "isExpression": false
-        },
-        {
-          "value": "sort_order",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_band_media_band_type",
-      "entityType": "indexes",
-      "table": "band_media"
-    },
-    {
-      "columns": [
-        {
-          "value": "band_site_id",
-          "isExpression": false
-        },
-        {
-          "value": "type",
-          "isExpression": false
-        },
-        {
-          "value": "sort_order",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_band_media_site_type",
-      "entityType": "indexes",
-      "table": "band_media"
     },
     {
       "columns": [

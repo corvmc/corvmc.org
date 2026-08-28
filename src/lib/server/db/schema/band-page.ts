@@ -1,8 +1,4 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { group } from './group';
-import { bandSite } from './band-site';
 
 export {
 	BAND_THEMES,
@@ -13,70 +9,8 @@ export {
 	type BacklineItem,
 	type PressQuote
 } from '../../../types/band-page';
-import type { Block, BandEpk } from '../../../types/band-page';
+import type { BandSite } from './band-site';
 import { BAND_THEMES } from '../../../types/band-page';
-
-// ---------------------------------------------------------------------------
-// Band Page Config — stores block layout, theme, and custom CSS for premium pages
-// ---------------------------------------------------------------------------
-
-export const bandPageConfig = sqliteTable(
-	'band_page_config',
-	{
-		id: text('id')
-			.primaryKey()
-			.$defaultFn(() => crypto.randomUUID()),
-		bandId: text('band_id')
-			.notNull()
-			.unique()
-			.references(() => group.id, { onDelete: 'cascade' }),
-		// Where this config is moving. Nullable and alongside `bandId` on purpose:
-		// phase 3b backfills it and switches the readers, and the phase that drops
-		// `bandId` is the one that makes it NOT NULL. Nothing is dropped here, so a
-		// mistake in the backfill is recoverable from the column beside it.
-		bandSiteId: text('band_site_id').references(() => bandSite.id, { onDelete: 'cascade' }),
-		theme: text('theme').notNull().default('default'),
-		customCss: text('custom_css'),
-		blocks: text('blocks', { mode: 'json' }).$type<Block[]>().notNull().default([]),
-		epk: text('epk', { mode: 'json' }).$type<BandEpk>(),
-		updatedAt: integer('updated_at', { mode: 'timestamp' })
-			.notNull()
-			.default(sql`(unixepoch())`)
-	},
-	(t) => [
-		index('idx_band_page_config_band').on(t.bandId),
-		index('idx_band_page_config_site').on(t.bandSiteId)
-	]
-);
-
-// ---------------------------------------------------------------------------
-// Band Media — R2-stored images for gallery, hero, etc.
-// ---------------------------------------------------------------------------
-
-export const bandMedia = sqliteTable(
-	'band_media',
-	{
-		id: text('id')
-			.primaryKey()
-			.$defaultFn(() => crypto.randomUUID()),
-		bandId: text('band_id')
-			.notNull()
-			.references(() => group.id, { onDelete: 'cascade' }),
-		/** See `bandPageConfig.bandSiteId`. */
-		bandSiteId: text('band_site_id').references(() => bandSite.id, { onDelete: 'cascade' }),
-		key: text('key').notNull(),
-		type: text('type').notNull(), // 'image' | 'hero' | 'rider' | 'stage_plot'
-		caption: text('caption'),
-		sortOrder: integer('sort_order').notNull().default(0),
-		createdAt: integer('created_at', { mode: 'timestamp' })
-			.notNull()
-			.default(sql`(unixepoch())`)
-	},
-	(t) => [
-		index('idx_band_media_band_type').on(t.bandId, t.type, t.sortOrder),
-		index('idx_band_media_site_type').on(t.bandSiteId, t.type, t.sortOrder)
-	]
-);
 
 // ---------------------------------------------------------------------------
 // Zod schemas for validation
@@ -178,5 +112,5 @@ export const bandPageConfigSchema = z.object({
 // Client-safe types
 // ---------------------------------------------------------------------------
 
-export type BandPageConfig = typeof bandPageConfig.$inferSelect;
-export type BandMedia = typeof bandMedia.$inferSelect;
+/** The microsite's stored shape, which lives on `band_site` since phase 3c. */
+export type BandPageConfig = Pick<BandSite, 'theme' | 'customCss' | 'blocks' | 'epk'>;

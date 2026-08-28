@@ -4,6 +4,36 @@ Low-priority cleanup and tech-debt items. Not blocking, but worth doing.
 
 ## Open
 
+- **A moderation takedown no longer kills the poster's old URL immediately.** `unpublishWithNotice`
+  (`src/lib/server/event/event-service.ts`) copies a withheld listing's poster to a fresh key
+  precisely to invalidate links already handed out, and used to `deleteObject` the original in the
+  same breath. Since the media cut-over it detaches instead, so the old key stays live until the
+  next daily sweep. That is correct by the rule — a write path cannot tell whether another event
+  still points at the object — but it is a weaker takedown than the one before it, and nobody has
+  ruled on whether a day is acceptable for this particular control.
+
+  There is a fix that keeps both properties, and it turns on the difference between a _move_ and a
+  _delete_. Rename the `media` row's key rather than detaching and attaching a second row: the
+  attachment never moves, so the event keeps its connection, and `media.key` carries a unique index,
+  so once that row is renamed **nothing in the database references the old key at all** — not the
+  renamed row, not any attachment, since attachments point at row ids rather than keys. A move
+  carries every reference with it, which is exactly what a delete cannot promise, so deleting the
+  source inline is sound here where it is not elsewhere. Order matters: copy, then update the row,
+  then delete, with the delete's failure captured — the other order leaves a row pointing at an
+  object that is gone. Wants a `renameKey`-shaped helper on `media-service.ts` so the reasoning
+  lives in one place rather than at the call site.
+
+- **The media sweep owes group documents a third pass.** `/api/cron/sweep-media`
+  (`src/lib/server/media/media-sweep-service.ts`) reaps the public bucket: attachment rows whose
+  parent is gone, then `media` rows nothing points at. It knows nothing about the `file` table
+  `docs/specs/groups-spec.md` designs, because that table does not exist yet — and when it does,
+  its objects live in a second bucket (`R2_PRIVATE`) that this job never looks at. Whoever builds
+  group documents adds the pass rather than reintroducing an inline `deleteObject`: `groups-spec.md`
+  moved to detach-and-sweep on the strength of this job existing, so a `file` row soft-deleted with
+  nothing reaping it is a leak that the spec now promises will not happen. The job is deliberately
+  written as two independent passes so a third costs nothing structural. Note the two buckets are
+  the only real difference — the shape of the query is the same one the `media` pass already runs.
+
 - **The staff settings page keeps a fifth, unguarded copy of the flag list.** A feature flag is
   spelled out in four hand-maintained places that `src/lib/server/feature-flags.spec.ts` does guard —
   the `FeatureFlag` union, `ALL_FLAGS`, the `feature.*` default in `site-config-service.ts`, and
@@ -50,7 +80,7 @@ Still worth trying: an isolated or non-persisted miniflare state directory for t
 
 - **Reservation times render in two different timezones.** `$lib/utils/format` pins `DEFAULT_TIMEZONE` on every formatter it builds (`venue()`), so a booking's hour is the club's hour everywhere it is formatted through that module — tables, chips, `toReservationRef` titles. But `ReservationSummary` (`src/lib/components/reservations/`), `member/reservations/ReservationCard.svelte`, `member/reservations/+page.svelte` and `ManageRecurringReservations.svelte` format with `date-fns` `format()`, which has no timezone and uses the reader's. For anyone outside Pacific the two disagree: the row says 5:00 PM and the card, or the confirmation modal over it, says 8:00 PM. `ReservationSummary` is the widest exposure — eight action components use it (`CancelReservationAction`, `CompReservationAction`, `CompleteReservationAction`, `NoShowReservationAction`, `RefundReservationAction`, `CashReceivedAction`, `PayReservationAction`, `ConfirmWaitlistedAction`), which put it in front of staff as well as members, at exactly the moment someone is confirming they have the right booking. The fix is to route those through `$lib/utils/format` rather than `date-fns`; watch for the relative strings (`formatDistanceToNow`, "Due in 3 days") which have no venue-time equivalent yet.
 
-- **Media is one R2 key per entity, with no layer in between.** `event.posterKey`, the band avatar and the rest are each a single column holding a single object key, so nothing can share an image and nothing knows who references one. Three consequences. Recurring-event occurrences cannot reference a shared poster and instead copy the R2 binary per occurrence (`copyObject` in `src/lib/server/reservation/generation-job.ts`) — a series of 52 weekly shows is 52 copies of one JPEG. `event-service.update()` and `cancel()` delete `posterKey` outright with no reference check, which is _why_ the occurrences have to copy rather than share: a shared key would be deleted out from under its siblings. And there is nowhere to put alt text, a caption, or a second image. The fix is a `media` table decoupling uploaded files from the entities that use them, plus either reference counting or a many-to-many link table so deletion can ask whether anything still points at the object; `event.posterKey` and the band media would migrate into it. Note this is the layer _under_ Cloudflare Image Transformations, which already work and are unaffected — see the image-delivery section of `docs/reports/feature-catalog.md`. **Now designed in `docs/specs/media-spec.md`** — two tables on the ActiveStorage model (`media` for the object, `media_attachment` for each usage), with deletion as detach-plus-sweep rather than cascade. That spec also records a fourth consequence this entry missed: `band_media` cascades its rows away and orphans their R2 objects _unreclaimably_, since the cascade destroys the only record of the key.
+- **Media is one R2 key per entity, with no layer in between.** `event.posterKey`, the band avatar and the rest are each a single column holding a single object key, so nothing can share an image and nothing knows who references one. Three consequences. Recurring-event occurrences cannot reference a shared poster and instead copy the R2 binary per occurrence (`copyObject` in `src/lib/server/reservation/generation-job.ts`) — a series of 52 weekly shows is 52 copies of one JPEG. `event-service.update()` and `cancel()` delete `posterKey` outright with no reference check, which is _why_ the occurrences have to copy rather than share: a shared key would be deleted out from under its siblings. And there is nowhere to put alt text, a caption, or a second image. The fix is a `media` table decoupling uploaded files from the entities that use them, plus either reference counting or a many-to-many link table so deletion can ask whether anything still points at the object; `event.posterKey` and the band media would migrate into it. Note this is the layer _under_ Cloudflare Image Transformations, which already work and are unaffected — see the image-delivery section of `docs/reports/feature-catalog.md`. **Now designed in `docs/specs/shipped/media-spec.md`** — two tables on the ActiveStorage model (`media` for the object, `media_attachment` for each usage), with deletion as detach-plus-sweep rather than cascade. That spec also records a fourth consequence this entry missed: `band_media` cascades its rows away and orphans their R2 objects _unreclaimably_, since the cascade destroys the only record of the key.
 
 ## Done
 

@@ -6,7 +6,8 @@ import { requireBandAdmin, requireBandMemberOrStaff } from '$lib/server/band/ban
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
 import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
 import { db } from '$lib/server/db';
-import { bandPageConfig, blockSchema, type Block } from '$lib/server/db/schema/band-page';
+import { blockSchema, type Block } from '$lib/server/db/schema/band-page';
+import { bandSite } from '$lib/server/db/schema/band-site';
 import { eq } from 'drizzle-orm';
 import { jsonArrayField, jsonObjectField } from '$lib/utils/zod-json';
 
@@ -23,11 +24,9 @@ export const getBandPageEditor = query(z.string(), async (slug) => {
 	const { band } = await requireBandMemberOrStaff();
 	if (band.slug !== slug) error(403, 'Not authorized');
 
-	const [config] = await db
-		.select()
-		.from(bandPageConfig)
-		.where(eq(bandPageConfig.bandId, band.id))
-		.limit(1);
+	// The microsite's content lives on `band_site` since phase 3c; the row always
+	// exists, so there is nothing to create here.
+	const [config] = await db.select().from(bandSite).where(eq(bandSite.groupId, band.id)).limit(1);
 
 	return {
 		config: config
@@ -90,28 +89,15 @@ export const saveBandPageConfig = form(
 			customCss = css || null;
 		}
 
-		// Upsert config
-		const [existing] = await db
-			.select({ id: bandPageConfig.id })
-			.from(bandPageConfig)
-			.where(eq(bandPageConfig.bandId, band.id))
-			.limit(1);
+		// No upsert branch any more: the site row is created with the band, so
+		// this is always an update. That branch existed only because
+		// `band_page_config` was a second row that might not have been made yet.
+		const updates: Record<string, unknown> = { updatedAt: new Date() };
+		if (data.theme !== undefined) updates.theme = data.theme;
+		if (customCss !== undefined) updates.customCss = customCss;
+		if (blocks !== undefined) updates.blocks = blocks;
 
-		if (existing) {
-			const updates: Record<string, unknown> = { updatedAt: new Date() };
-			if (data.theme !== undefined) updates.theme = data.theme;
-			if (customCss !== undefined) updates.customCss = customCss;
-			if (blocks !== undefined) updates.blocks = blocks;
-
-			await db.update(bandPageConfig).set(updates).where(eq(bandPageConfig.id, existing.id));
-		} else {
-			await db.insert(bandPageConfig).values({
-				bandId: band.id,
-				theme: data.theme ?? 'default',
-				customCss: customCss ?? null,
-				blocks: blocks ?? []
-			});
-		}
+		await db.update(bandSite).set(updates).where(eq(bandSite.groupId, band.id));
 
 		return { success: true };
 	}
@@ -133,26 +119,11 @@ export const saveBandEpk = form(
 
 		const epk = data.epk;
 
-		// Upsert
-		const [existing] = await db
-			.select({ id: bandPageConfig.id })
-			.from(bandPageConfig)
-			.where(eq(bandPageConfig.bandId, band.id))
-			.limit(1);
-
-		if (existing) {
-			await db
-				.update(bandPageConfig)
-				.set({ epk, updatedAt: new Date() })
-				.where(eq(bandPageConfig.id, existing.id));
-		} else {
-			await db.insert(bandPageConfig).values({
-				bandId: band.id,
-				theme: 'default',
-				blocks: [],
-				epk
-			});
-		}
+		// Always an update — see the note on the block save above.
+		await db
+			.update(bandSite)
+			.set({ epk, updatedAt: new Date() })
+			.where(eq(bandSite.groupId, band.id));
 
 		return { success: true };
 	}

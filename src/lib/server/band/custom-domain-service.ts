@@ -20,7 +20,7 @@ import { group } from '$lib/server/db/schema/group';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 import { forgetCustomDomain } from './band-host-service';
-import type { CustomDomainStatus, CustomDomainVerification } from '$lib/server/db/schema/group';
+import type { CustomDomainStatus, CustomDomainVerification } from '$lib/server/db/schema/band-site';
 
 const API_BASE = 'https://api.cloudflare.com/client/v4';
 

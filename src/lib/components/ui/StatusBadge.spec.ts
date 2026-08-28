@@ -13,7 +13,8 @@ import { ticketStatuses } from '$lib/server/db/schema/ticket';
 import { reservationStatuses } from '$lib/server/db/schema/reservation';
 import { eventStatuses } from '$lib/server/db/schema/event';
 import { flagStatuses } from '$lib/server/db/schema/flag';
-import { bandTiers, groupMemberStatuses } from '$lib/server/db/schema/group';
+import { groupMemberStatuses } from '$lib/server/db/schema/group';
+import { bandTiers } from '$lib/server/db/schema/band-site';
 import { inviteStatuses } from '$lib/server/db/schema/platform-invite';
 
 /**

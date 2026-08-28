@@ -1,53 +1,7 @@
 import { sqliteTable, text, integer, index, uniqueIndex, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
-import { z } from 'zod';
 import { groupKinds, groupJoinPolicies } from '../../../config';
-
-// ---------------------------------------------------------------------------
-// Tier and custom-domain vocabularies
-// ---------------------------------------------------------------------------
-// These describe columns on `group`, so they live beside it. Everything else that
-// once lived in `band.ts` — the roster, its vocabularies, and the slug history —
-// moved here in phase 2, leaving that file holding `band_genre` alone.
-
-export const bandTiers = ['free', 'premium'] as const;
-export type BandTier = (typeof bandTiers)[number];
-
-export const bandSubscriptionSchema = z
-	.object({
-		startedAt: z.string(),
-		stripeSubscriptionId: z.string(),
-		billingInterval: z.enum(['monthly', 'yearly']),
-		currentPeriodEnd: z.string(),
-		cancelAtPeriodEnd: z.boolean().optional()
-	})
-	.nullable()
-	.default(null);
-
-export type BandSubscription = z.infer<typeof bandSubscriptionSchema>;
-
-export const customDomainStatuses = ['pending', 'active', 'failed'] as const;
-export type CustomDomainStatus = (typeof customDomainStatuses)[number];
-
-/**
- * The DNS records a band must add at their registrar, straight from
- * Cloudflare's custom-hostname response. `ownership` proves they control the
- * domain; `ssl` lets Cloudflare issue the certificate. Both are TXT records, so
- * the band can verify before pointing the domain at us — no window where their
- * live site is broken.
- */
-export const customDomainVerificationSchema = z
-	.object({
-		ownership: z.object({ name: z.string(), value: z.string() }).nullable(),
-		ssl: z.object({ name: z.string(), value: z.string() }).nullable(),
-		/** Where the band points the domain itself, once verified. */
-		cnameTarget: z.string()
-	})
-	.nullable()
-	.default(null);
-
-export type CustomDomainVerification = z.infer<typeof customDomainVerificationSchema>;
 
 /**
  * A set of CMC members who organise together — a band, a club, or a committee.
@@ -85,9 +39,6 @@ export const group = sqliteTable(
 		name: text('name').notNull(),
 		slug: text('slug').notNull().unique(),
 		bio: text('bio'),
-		ownerId: text('owner_id')
-			.notNull()
-			.references(() => user.id, { onDelete: 'restrict' }),
 		avatarKey: text('avatar_key'),
 
 		/** How the roster is joined — see `groupJoinPolicies`. Nothing reads it until the group panel lands. */
@@ -101,40 +52,13 @@ export const group = sqliteTable(
 		updatedAt: integer('updated_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),
-		deletedAt: integer('deleted_at', { mode: 'timestamp' }),
-
-		// subscription & tier
-		tier: text('tier', { enum: bandTiers }).notNull().default('free'),
-		subscription: text('subscription', { mode: 'json' }).$type<BandSubscription>(),
-
-		// custom domain (premium only — every band gets {slug}.corvmc.org for free).
-		// Backed by a Cloudflare for SaaS custom hostname; `customDomainHostnameId`
-		// is that hostname's id, needed to poll status and to delete it.
-		// Uniqueness lives in a separate index rather than a column constraint.
-		// SQLite cannot add a UNIQUE column with ALTER TABLE, so `.unique()` here
-		// makes drizzle rebuild the whole table (create-copy-DROP-rename).
-		// `pnpm db:generate` would rewrite that to be D1-safe, but a plain
-		// ADD COLUMN + CREATE UNIQUE INDEX needs no rewriting at all. Same
-		// semantics — SQLite implements a column UNIQUE as a unique index, and
-		// both treat NULLs as distinct, so any number of groups can have none.
-		customDomain: text('custom_domain'),
-		customDomainStatus: text('custom_domain_status', { enum: customDomainStatuses }),
-		customDomainHostnameId: text('custom_domain_hostname_id'),
-		customDomainVerification: text('custom_domain_verification', {
-			mode: 'json'
-		}).$type<CustomDomainVerification>(),
-		customDomainAddedAt: integer('custom_domain_added_at', { mode: 'timestamp' })
+		deletedAt: integer('deleted_at', { mode: 'timestamp' })
 	},
 	// Index names keep their `band` prefix on purpose. SQLite carries indexes
 	// through a table rename untouched, so renaming them here would turn a free
 	// rename into a drop-and-recreate for no behavioural gain. They can be
 	// renamed later in a migration that has a reason to touch them.
-	(t) => [
-		index('idx_band_slug').on(t.slug),
-		// One group per custom domain. Also the lookup index for
-		// resolveCustomDomain(), which runs on every request to a custom host.
-		uniqueIndex('idx_band_custom_domain').on(t.customDomain)
-	]
+	(t) => [index('idx_band_slug').on(t.slug)]
 );
 
 export type Group = typeof group.$inferSelect;
@@ -220,12 +144,15 @@ export const groupMember = sqliteTable(
 		unique('band_member_band_user_unique').on(t.groupId, t.userId),
 		index('idx_band_member_user').on(t.userId),
 		index('idx_band_member_status').on(t.status),
-		// Ownership is stored twice — here and on `group.ownerId` — and only
-		// `create()` writes both in one batch. This caps a group at one owner row
-		// so the second drift path (a `transferOwnership` whose demote matched
-		// nothing) can't silently produce two. It cannot enforce that a group has
-		// *at least* one owner, nor that the row agrees with `group.ownerId`:
-		// SQLite has no cross-table constraint. Both stay code-level. See CHORES.
+		// This row IS the ownership as of phase 3c — `group.ownerId` held a second
+		// copy that could drift, and once did: five of sixteen production bands
+		// had no usable owner row behind it. The partial unique index caps a group
+		// at one owner so a `transferOwnership` whose demote matched nothing
+		// cannot silently produce two.
+		//
+		// It permits zero, deliberately. An ownerless group is legal — a program
+		// whose leader stepped down and whose replacement has not been appointed —
+		// which is why every query for an owner LEFT joins.
 		uniqueIndex('idx_band_member_single_owner')
 			.on(t.groupId)
 			.where(sql`role = 'owner'`)

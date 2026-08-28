@@ -54,7 +54,6 @@ import { notification, notificationPreference } from '../src/lib/server/db/schem
 import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/directory';
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { group } from '../src/lib/server/db/schema/group';
-import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
 import { media, mediaAttachment } from '../src/lib/server/db/schema/media';
 import { bandSite } from '../src/lib/server/db/schema/band-site';
 import {
@@ -164,6 +163,15 @@ type PendingEntry = {
 	openToCollaboration?: boolean;
 };
 const pendingEntries = new Map<string, PendingEntry>();
+
+/**
+ * The premium half, keyed by band id, for the same reason `pendingEntries`
+ * exists: phase 3c drops `tier`, `subscription` and the five `customDomain*`
+ * columns from `group`, so they travel from the band seeder to
+ * `seedBandSites` rather than being read back off the group row.
+ */
+type PendingSite = Partial<typeof bandSite.$inferInsert>;
+const pendingSites = new Map<string, PendingSite>();
 
 async function batchInsert<T extends Record<string, unknown>>(
 	table: any,
@@ -555,8 +563,6 @@ async function deleteAll() {
 		'notification_preference',
 		'notification',
 		'ticket',
-		'band_media',
-		'band_page_config',
 		'band_site',
 		// Child before parent, and both before `group` and `user`.
 		'directory_tag',
@@ -1333,7 +1339,12 @@ async function insertBandWithOwner(
 		position: position ?? null,
 		status: 'active'
 	});
-	return b;
+	// `ownerId` rides along in memory only — the column was dropped in phase 3c,
+	// and the owner is the `group_member` row written just above. Seed code
+	// downstream needs the id to attribute events and reservations, and looking
+	// it back up per band would be a query for something this function already
+	// knows.
+	return { ...b, ownerId };
 }
 
 async function seedBands(users: SeedUser[]) {
@@ -1369,44 +1380,47 @@ async function seedBands(users: SeedUser[]) {
 			{
 				name: BAND_NAMES[i],
 				slug,
-				bio: `${BAND_NAMES[i]} is a local band from Corvallis, OR. Formed in 20${randomInt(18, 24)}, they play a mix of ${genres.slice(0, 2).join(' and ')} with influences from all over the map.`,
-				ownerId: owner.id,
-				tier: isPremiumBand ? 'premium' : 'free',
-				subscription: isPremiumBand
-					? {
-							startedAt: new Date(Date.now() - randomInt(30, 180) * 86400000).toISOString(),
-							stripeSubscriptionId: `sub_seed_${randomUUID().slice(0, 8)}`,
-							billingInterval: i === 0 ? 'yearly' : 'monthly',
-							currentPeriodEnd: new Date(Date.now() + randomInt(10, 30) * 86400000).toISOString(),
-							cancelAtPeriodEnd: false
-						}
-					: null,
-				// The first premium band has a live custom domain, the second is still
-				// waiting on DNS — both states need to be visible in band settings.
-				...(isPremiumBand && i < 2
-					? {
-							customDomain: `${slug.replace(/-/g, '')}.example.com`,
-							customDomainStatus: i === 0 ? ('active' as const) : ('pending' as const),
-							customDomainHostnameId: `seed-hostname-${randomUUID().slice(0, 8)}`,
-							customDomainVerification: {
-								ownership: {
-									name: `_cf-custom-hostname.${slug.replace(/-/g, '')}.example.com`,
-									value: randomUUID()
-								},
-								ssl: {
-									name: `_acme-challenge.${slug.replace(/-/g, '')}.example.com`,
-									value: randomUUID().replace(/-/g, '')
-								},
-								cnameTarget: 'domains.corvmc.org'
-							},
-							customDomainAddedAt: new Date(Date.now() - randomInt(1, 60) * 86400000)
-						}
-					: {})
+				bio: `${BAND_NAMES[i]} is a local band from Corvallis, OR. Formed in 20${randomInt(18, 24)}, they play a mix of ${genres.slice(0, 2).join(' and ')} with influences from all over the map.`
 			},
 			owner.id,
 			pick(BAND_POSITIONS)
 		);
 		bands.push(b);
+
+		// The premium half — these columns are gone from `group`.
+		pendingSites.set(b.id, {
+			tier: isPremiumBand ? 'premium' : 'free',
+			subscription: isPremiumBand
+				? {
+						startedAt: new Date(Date.now() - randomInt(30, 180) * 86400000).toISOString(),
+						stripeSubscriptionId: `sub_seed_${randomUUID().slice(0, 8)}`,
+						billingInterval: i === 0 ? 'yearly' : 'monthly',
+						currentPeriodEnd: new Date(Date.now() + randomInt(10, 30) * 86400000).toISOString(),
+						cancelAtPeriodEnd: false
+					}
+				: null,
+			// The first premium band has a live custom domain, the second is still
+			// waiting on DNS — both states need to be visible in band settings.
+			...(isPremiumBand && i < 2
+				? {
+						customDomain: `${slug.replace(/-/g, '')}.example.com`,
+						customDomainStatus: i === 0 ? ('active' as const) : ('pending' as const),
+						customDomainHostnameId: `seed-hostname-${randomUUID().slice(0, 8)}`,
+						customDomainVerification: {
+							ownership: {
+								name: `_cf-custom-hostname.${slug.replace(/-/g, '')}.example.com`,
+								value: randomUUID()
+							},
+							ssl: {
+								name: `_acme-challenge.${slug.replace(/-/g, '')}.example.com`,
+								value: randomUUID().replace(/-/g, '')
+							},
+							cnameTarget: 'domains.corvmc.org'
+						},
+						customDomainAddedAt: new Date(Date.now() - randomInt(1, 60) * 86400000)
+					}
+				: {})
+		});
 
 		// The listing half — these columns are gone from `group`.
 		pendingEntries.set(b.id, {
@@ -1477,11 +1491,7 @@ async function seedBands(users: SeedUser[]) {
 	];
 	for (let i = 0; i < onboardingStates.length; i++) {
 		const owner = users[(BAND_NAMES.length + 1 + i) % users.length];
-		const b = await insertBandWithOwner(
-			{ ownerId: owner.id, ...onboardingStates[i].band },
-			owner.id,
-			pick(BAND_POSITIONS)
-		);
+		const b = await insertBandWithOwner(onboardingStates[i].band, owner.id, pick(BAND_POSITIONS));
 		bands.push(b);
 		pendingEntries.set(b.id, onboardingStates[i].entry);
 	}
@@ -1834,32 +1844,38 @@ async function seedBandReservations(bands: any[]) {
  * One `band_site` per band, mirroring `scripts/db/backfill/band-site.sql`.
  *
  * Every band gets one regardless of tier: the row is what `tier` lives on, and
- * it is never deleted while the band lives, because `band_page_config` and
- * `band_media` cascade from it — a cancelled subscription must not take a
- * band's blocks, theme, CSS, EPK and images with it.
+ * it is never deleted while the band lives: the microsite's blocks, theme, CSS
+ * and EPK are columns on it as of phase 3c, so deleting the row on a cancelled
+ * subscription would take the band's whole site with it.
  */
 async function seedBandSites(bands: any[]) {
 	console.log('Seeding band sites...');
+	// The premium half comes from `pendingSites`, not off the band row: those
+	// columns are gone from `group`.
 	const rows = bands.map((b: any) => ({
 		id: randomUUID(),
 		groupId: b.id,
-		tier: b.tier,
-		subscription: b.subscription ?? null,
+		tier: 'free' as const,
+		subscription: null,
 		createdAt: b.createdAt ?? new Date(),
-		updatedAt: b.updatedAt ?? new Date()
+		updatedAt: b.updatedAt ?? new Date(),
+		...(pendingSites.get(b.id) ?? {})
 	}));
-	// 6 columns × 16 = 96, under D1's 100 bound parameters.
-	await batchInsert(bandSite, rows, 16);
+	// 11 columns at their widest × 9 = 99, under D1's 100 bound parameters.
+	await batchInsert(bandSite, rows, 9);
 	return new Map(rows.map((r) => [r.groupId, r.id]));
 }
 
-async function seedBandPageConfigs(bands: any[], siteIdByBand: Map<string, string>) {
+async function seedBandPageConfigs(bands: any[]) {
 	console.log('Seeding band page configs (premium bands)...');
 	const configs = [];
 	const themes = ['punk', 'jazz', 'electronic', 'metal', 'indie', 'folk'] as const;
 
-	// Only premium bands get page configs
-	const premiumBands = bands.filter((b) => b.tier === 'premium' && !b.deletedAt);
+	// Only premium bands get page configs. Tier lives on the site row now, so the
+	// filter reads what was collected for it rather than the band row.
+	const premiumBands = bands.filter(
+		(b) => pendingSites.get(b.id)?.tier === 'premium' && !b.deletedAt
+	);
 
 	for (let i = 0; i < premiumBands.length; i++) {
 		const b = premiumBands[i];
@@ -1937,24 +1953,18 @@ async function seedBandPageConfigs(bands: any[], siteIdByBand: Map<string, strin
 					? `.band-site-hero h1 { text-shadow: 0 0 20px var(--bs-accent); }\n.band-site-block { transition: opacity 0.3s; }`
 					: null;
 
+		// The config IS the site row since phase 3c, and that row already exists —
+		// so this updates rather than inserts.
 		const [config] = await db
-			.insert(bandPageConfig)
-			.values({
-				bandId: b.id,
-				bandSiteId: siteIdByBand.get(b.id) ?? null,
-				theme,
-				customCss,
-				blocks,
-				epk,
-				updatedAt: new Date()
-			})
+			.update(bandSite)
+			.set({ theme, customCss, blocks, epk, updatedAt: new Date() })
+			.where(eq(bandSite.groupId, b.id))
 			.returning();
 		configs.push(config);
 
-		// Band media, in the media tables the microsite now reads and the upload
-		// endpoint now writes. `band_media` is still written alongside — nothing
-		// reads it any more, but the table survives until phase 6 drops it, and
-		// keeping it populated is what makes reverting this cut-over possible.
+		// Band media, in the media tables the microsite reads and the upload
+		// endpoint writes. `band_media` is gone as of phase 6 — nothing had read it
+		// since the cut-over, and production held no rows in it at all.
 		const mediaSlots = [
 			['gallery', 'image'],
 			['gallery', 'image'],
@@ -1968,15 +1978,6 @@ async function seedBandPageConfigs(bands: any[], siteIdByBand: Map<string, strin
 			const key = `bands/${b.slug}/${legacyType}-${m}.jpg`;
 			const caption =
 				slot === 'gallery' ? `${b.name} live at ${pick(BAND_EVENT_LOCATIONS).split(',')[0]}` : null;
-
-			await db.insert(bandMedia).values({
-				bandId: b.id,
-				bandSiteId: siteIdByBand.get(b.id) ?? null,
-				key,
-				type: legacyType,
-				caption,
-				sortOrder: m
-			});
 
 			// Sizes are fabricated: these keys name no real object, which is exactly
 			// why `backfill-media.ts` refuses to invent them and the seed may.
@@ -4517,7 +4518,7 @@ async function main() {
 	await seedCmcEventLineups(events, bands);
 	const bandReservations = await seedBandReservations(bands);
 	const bandSites = await seedBandSites(bands);
-	const pageConfigs = await seedBandPageConfigs(bands, bandSites);
+	const pageConfigs = await seedBandPageConfigs(bands);
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
 	const tickets = await seedTickets(allUsers, events);
@@ -4549,7 +4550,9 @@ async function main() {
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
-	const premiumBands = bands.filter((b: any) => b.tier === 'premium' && !b.deletedAt);
+	const premiumBands = bands.filter(
+		(b: any) => pendingSites.get(b.id)?.tier === 'premium' && !b.deletedAt
+	);
 	console.log('\nSeed complete:');
 	console.log(`  ${allUsers.length} users (admin: admin@corvallismusic.org / password)`);
 	console.log(`  ${roles.length} roles`);

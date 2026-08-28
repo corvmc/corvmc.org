@@ -3,34 +3,21 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { group } from '$lib/server/db/schema/group';
 import { eq } from 'drizzle-orm';
-import { getUserRole } from '$lib/server/band/band-service';
+import { requireGroupRole } from '$lib/server/group/group-context';
 import { uploadFile, validateUpload } from '$lib/server/storage';
 import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-async function requireAdminOfBand(bandId: string, userId: string) {
-	const role = await getUserRole(bandId, userId);
-	if (!role || (role !== 'owner' && role !== 'admin')) {
-		throw error(403, 'Only owners and admins can manage the avatar');
-	}
-}
-
-// ---------------------------------------------------------------------------
 // POST — upload avatar
 // ---------------------------------------------------------------------------
 
-export const POST: RequestHandler = async ({ params, request, locals }) => {
-	if (!locals.user) throw error(401, 'Not authenticated');
-
+export const POST: RequestHandler = async ({ params, request }) => {
+	// The id is a real route param here, not a remote function's client-supplied
+	// one, so `{ id }` is the honest ref. The guard does the 401, the 404 and the
+	// role check that were three hand-rolled steps.
 	const bandId = params.id;
-	const [row] = await db.select().from(group).where(eq(group.id, bandId)).limit(1);
-	if (!row) throw error(404, 'Band not found');
-
-	await requireAdminOfBand(bandId, locals.user.id);
+	const { user } = await requireGroupRole({ id: bandId }, 'admin');
 
 	const formData = await request.formData();
 	const file = formData.get('file') as File | null;
@@ -49,7 +36,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	await uploadFile(buffer, key, file.type);
 
 	// Records the object and releases the old one. Nothing here deletes: see
-	// docs/specs/media-spec.md.
+	// docs/specs/shipped/media-spec.md.
 	await replaceSlot({
 		attachableType: 'group',
 		attachableId: bandId,
@@ -58,7 +45,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		contentType: file.type,
 		byteSize: buffer.byteLength,
 		filename: file.name,
-		uploadedByUserId: locals.user.id
+		uploadedByUserId: user.id
 	});
 
 	await db.update(group).set({ avatarKey: key, updatedAt: new Date() }).where(eq(group.id, bandId));
@@ -70,14 +57,9 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 // DELETE — remove avatar
 // ---------------------------------------------------------------------------
 
-export const DELETE: RequestHandler = async ({ params, locals }) => {
-	if (!locals.user) throw error(401, 'Not authenticated');
-
+export const DELETE: RequestHandler = async ({ params }) => {
 	const bandId = params.id;
-	const [row] = await db.select().from(group).where(eq(group.id, bandId)).limit(1);
-	if (!row) throw error(404, 'Band not found');
-
-	await requireAdminOfBand(bandId, locals.user.id);
+	await requireGroupRole({ id: bandId }, 'admin');
 
 	await detachSlot('group', bandId, 'avatar');
 

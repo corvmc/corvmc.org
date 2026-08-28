@@ -222,12 +222,14 @@ describe('BandService', () => {
 		// Ownership is recorded twice — `band.ownerId` and a `group_member` row with
 		// role 'owner' — and only the member row is read by the guards
 		// (`requireBandOwner` resolves through `requireBandMember()`). A band
-		// created with just the column has no owner in practice: no address
-		// change, no delete, no transfer, no subscription, no Settings nav. That
-		// is what the Postgres migrator did to 5 of 16 production bands, so the
-		// one path that gets it right is worth pinning to the rows it writes,
-		// not merely to the fact that `db.batch` was called.
-		it('writes exactly one active owner member row agreeing with band.ownerId', async () => {
+		// This used to assert the owner row agreed with `band.ownerId`, because
+		// ownership was stored twice and the copies drifted — the Postgres
+		// migrator left 5 of 16 production bands with a column and no usable
+		// member row, and a band in that state has no address change, no delete,
+		// no transfer, no subscription and no Settings nav. Phase 3c dropped the
+		// column, so there is nothing left to disagree with; what is still worth
+		// pinning is that creation writes the row at all, and writes exactly one.
+		it('writes exactly one active owner member row, and no owner column', async () => {
 			selectResult = [{ ...mockBand }];
 
 			await create('user-owner', { name: 'The Velvet Underground' });
@@ -238,8 +240,8 @@ describe('BandService', () => {
 			);
 
 			expect(bandRows).toHaveLength(1);
+			expect(bandRows[0].values).not.toHaveProperty('ownerId');
 			expect(ownerRows).toHaveLength(1);
-			expect(ownerRows[0].values.userId).toBe(bandRows[0].values.ownerId);
 			expect(ownerRows[0].values.userId).toBe('user-owner');
 			expect(ownerRows[0].values.status).toBe('active');
 			expect(ownerRows[0].values.groupId).toBe(bandRows[0].values.id);
@@ -587,12 +589,13 @@ describe('BandService', () => {
 			);
 		});
 
-		// The transfer is the other way ownership can drift: the demote is scoped
-		// by `actorId`, which the staff wrapper feeds from `band.ownerId`. If that
-		// column and the member row ever disagreed, the demote would match nothing
-		// and leave the band with two owner rows. Exactly one promote, exactly one
-		// demote, and `band.ownerId` moved with them.
-		it('leaves exactly one owner: one promote, one demote, and band.ownerId moved', async () => {
+		// The demote is scoped by `actorId`, which the staff wrapper reads from the
+		// owner member row. That used to come from `band.ownerId`, and a
+		// disagreement between the two copies meant the demote matched nothing and
+		// left the band with two owner rows. Phase 3c removed the second copy, so
+		// the transfer is now entirely roster writes: exactly one promote, exactly
+		// one demote, and nothing written to `group` at all.
+		it('leaves exactly one owner, and touches no owner column', async () => {
 			selectResult = [{ status: 'active' }];
 
 			await transferOwnership('band-1', 'user-2', 'user-owner');
@@ -604,8 +607,7 @@ describe('BandService', () => {
 
 			expect(promotes).toHaveLength(1);
 			expect(demotes).toHaveLength(1);
-			expect(bandWrites).toHaveLength(1);
-			expect(bandWrites[0].values.ownerId).toBe('user-2');
+			expect(bandWrites).toHaveLength(0);
 		});
 	});
 

@@ -272,10 +272,14 @@ Each is its own PR, sequenced so nothing is dropped before its replacement is pr
    It also still fixes the copy: occurrences point at one key with one `media` row and an attachment
    each, which is exactly what phase 5 needs.
 
-5. **Delete the poster copy.** Remove `copyObject` from `generation-job.ts`; occurrences attach the
-   prototype's `media` row instead. This is the payoff — a 52-week series holds one object.
-6. **Retire `band_media`** — the one table the cut-over genuinely replaced. The key _columns_ stay:
-   see below.
+5. **Delete the poster copy.** Done. `generation-job.ts` no longer calls `copyObject`; an occurrence
+   attaches the prototype's `media` row and shares its key, so a 52-week series holds one object
+   rather than 52. `copyObject` itself stays for its one remaining caller, the moderation takedown,
+   which _moves_ a withheld poster to a fresh key rather than duplicating one.
+6. **Retire `band_media`.** Done. Nothing had read it since the gallery cut-over, and the production
+   database held **no rows in it at all** — the copies seen locally were seed fixtures — so stopping
+   writes for a release before dropping had no data to protect. One `DROP TABLE`, no rebuild, no
+   foreign-key children. The key _columns_ stay, per phase 4.
 
 ## Related
 

@@ -64,9 +64,16 @@ export async function deleteObject(key: string): Promise<void> {
 
 /**
  * Copy an existing object to a new key, preserving its content type. Returns the
- * destination key, or null when the source object does not exist. Used to give
- * generated recurring-event occurrences their own independent copy of the
- * prototype's poster (so re-postering or cancelling one never affects others).
+ * destination key, or null when the source object does not exist.
+ *
+ * One caller: the moderation takedown in `event-service.ts`, which *moves* a
+ * withheld poster to a fresh key to invalidate links already handed out. That is
+ * a rename, not a duplication.
+ *
+ * It used to have a second caller — recurring-event generation copied the
+ * prototype's poster per occurrence. It no longer does: occurrences share one
+ * object now that nothing in a request path deletes one. See
+ * docs/specs/shipped/media-spec.md.
  */
 export async function copyObject(srcKey: string, destKey: string): Promise<string | null> {
 	const bucket = getBucket();
