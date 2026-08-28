@@ -173,7 +173,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				// create-band modal has, and the shape that fed the RichTextEditor
 				// reconcile churn in the edit-page crash.
 				bio: 'Plain text bio seeded for the edit page regression test.',
-				ownerId: SEED_OWNER_ID,
 				createdAt: now,
 				updatedAt: now
 			},
@@ -182,7 +181,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				name: 'E2E Hidden Band',
 				slug: SEED_HIDDEN_BAND_SLUG,
 				bio: 'This band opted out of the directory entirely.',
-				ownerId: SEED_OWNER_ID,
 				createdAt: now,
 				updatedAt: now
 			},
@@ -191,7 +189,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				name: SEED_MEMBERS_BAND_NAME,
 				slug: SEED_MEMBERS_BAND_SLUG,
 				bio: 'Visible to logged-in members only.',
-				ownerId: SEED_OWNER_ID,
 				createdAt: now,
 				updatedAt: now
 			},
@@ -200,7 +197,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				name: SEED_PREMIUM_BAND_NAME,
 				slug: SEED_PREMIUM_BAND_SLUG,
 				bio: 'Premium tier, so its subdomain serves a band site.',
-				ownerId: SEED_OWNER_ID,
 				createdAt: now,
 				updatedAt: now
 			},
@@ -209,7 +205,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				name: SEED_RENAME_BAND_NAME,
 				slug: SEED_RENAME_BAND_SLUG,
 				bio: 'Disposable: the address-change test moves this band.',
-				ownerId: SEED_OWNER_ID,
 				createdAt: now,
 				updatedAt: now
 			},
@@ -220,7 +215,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				// Plain-text bio, like the public band: the rename regression rode in
 				// on the edit page, whose RichTextEditor churn needs this shape.
 				bio: 'Disposable: the profile-edit test renames this band.',
-				ownerId: SEED_OWNER_ID,
 				createdAt: now,
 				updatedAt: now
 			}

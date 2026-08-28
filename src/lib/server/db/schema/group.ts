@@ -39,9 +39,6 @@ export const group = sqliteTable(
 		name: text('name').notNull(),
 		slug: text('slug').notNull().unique(),
 		bio: text('bio'),
-		ownerId: text('owner_id')
-			.notNull()
-			.references(() => user.id, { onDelete: 'restrict' }),
 		avatarKey: text('avatar_key'),
 
 		/** How the roster is joined — see `groupJoinPolicies`. Nothing reads it until the group panel lands. */
@@ -147,12 +144,15 @@ export const groupMember = sqliteTable(
 		unique('band_member_band_user_unique').on(t.groupId, t.userId),
 		index('idx_band_member_user').on(t.userId),
 		index('idx_band_member_status').on(t.status),
-		// Ownership is stored twice — here and on `group.ownerId` — and only
-		// `create()` writes both in one batch. This caps a group at one owner row
-		// so the second drift path (a `transferOwnership` whose demote matched
-		// nothing) can't silently produce two. It cannot enforce that a group has
-		// *at least* one owner, nor that the row agrees with `group.ownerId`:
-		// SQLite has no cross-table constraint. Both stay code-level. See CHORES.
+		// This row IS the ownership as of phase 3c — `group.ownerId` held a second
+		// copy that could drift, and once did: five of sixteen production bands
+		// had no usable owner row behind it. The partial unique index caps a group
+		// at one owner so a `transferOwnership` whose demote matched nothing
+		// cannot silently produce two.
+		//
+		// It permits zero, deliberately. An ownerless group is legal — a program
+		// whose leader stepped down and whose replacement has not been appointed —
+		// which is why every query for an owner LEFT joins.
 		uniqueIndex('idx_band_member_single_owner')
 			.on(t.groupId)
 			.where(sql`role = 'owner'`)
