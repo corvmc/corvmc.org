@@ -554,6 +554,19 @@ so it redirects to `/login?redirectTo=…` rather than 404ing. A `load` rather t
 a remote function because it is navigation, not data: a phone camera should get a
 302 off the server, not a blank page that redirects after hydration.
 
+**Staff scan in the app**, through `BarcodeScanner` (`barcode-detector`, ZXing
+via wasm, imported dynamically so the module stays out of the SSR graph). It
+appears at tag binding, the inventory search and loan checkout — always _beside_
+the field it fills, never instead of it, since a USB barcode wedge already types
+into those fields and every camera failure has to degrade to typing.
+
+`parseScan()` in `src/lib/utils/scan.ts` decides what came back: a tag QR carries
+the whole `/a/{tag}` URL (that is what makes a phone camera resolve it), while a
+consumable's own barcode is a bare GTIN. The two read different columns, so
+guessing wrong looks up the wrong record. A digit run that is not a GTIN length
+comes back as unknown rather than assumed — it is far likelier to be a serial
+number.
+
 ### Data touched
 
 `inventory_item`, `inventory_asset`, `stock_movement`, `inventory_loan`,

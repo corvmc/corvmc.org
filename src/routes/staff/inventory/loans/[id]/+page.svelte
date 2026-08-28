@@ -17,6 +17,8 @@
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { formatDate, formatCents } from '$lib/utils/format';
+	import BarcodeScanner from '$lib/components/ui/BarcodeScanner.svelte';
+	import { parseScan } from '$lib/utils/scan';
 
 	const { fields: scheduleFields } = schedule;
 	const { fields: checkoutFields } = checkout;
@@ -33,6 +35,24 @@
 	 */
 	const availableAssets = $derived(data.availableAssets);
 	const needsAsset = $derived(loan.itemKind === 'serialized' && !loan.assetId);
+
+	/** The unit chosen for checkout, so a scan can set it as well as the select. */
+	let chosenAssetId = $state('');
+
+	/**
+	 * Scanning the tag on the amp being handed over picks that unit.
+	 *
+	 * This is the moment the spec describes — a staffer at the counter with the
+	 * gear in front of them — so the scan resolves against the units actually on
+	 * offer. One that is not among them is ignored rather than silently selecting
+	 * nothing: it means the wrong thing was scanned.
+	 */
+	function handleScan(raw: string) {
+		const scan = parseScan(raw);
+		if (scan.kind !== 'tag') return;
+		const match = availableAssets.find((a) => a.assetTag === scan.value);
+		if (match) chosenAssetId = match.id;
+	}
 
 	let chargePreview = $derived.by(() => {
 		if (loan.status !== 'checked_out' || !loan.dailyRateCents || !loan.checkedOutAt) return null;
@@ -171,8 +191,8 @@
 					     service throws `AssetRequiredError` and the form goes nowhere. -->
 					{#if needsAsset}
 						<Field name="assetId" label="Unit Handed Over">
-							<Select class="w-full" name="assetId" required>
-								<option value="" disabled selected>Scan or select the tag...</option>
+							<Select class="w-full" name="assetId" bind:value={chosenAssetId} required>
+								<option value="" disabled>Scan or select the tag...</option>
 								{#each availableAssets as unit (unit.id)}
 									<option value={unit.id}>
 										{unit.assetTag ?? unit.serialNumber ?? 'Untagged unit'}
@@ -181,6 +201,7 @@
 								{/each}
 							</Select>
 						</Field>
+						<BarcodeScanner onscan={handleScan} label="Scan the tag" />
 						{#if availableAssets.length === 0}
 							<p class="text-subtle">
 								No unit of this item is in service, so there is nothing to hand over.

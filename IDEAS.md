@@ -370,10 +370,20 @@ Two things to know before adding either of the above:
 
 ### Inventory & Scanning
 
-| Package            | Downloads/wk | Use                                                                        |
-| ------------------ | ------------ | -------------------------------------------------------------------------- |
-| `barcode-detector` | 1.5M         | Camera-based barcode/QR scanning — ZXing-C++ via wasm, actively maintained |
-| `bwip-js`          | 572K         | Generate barcode/QR labels for printing                                    |
+| Package            | Downloads/wk | Use                                                                    |
+| ------------------ | ------------ | ---------------------------------------------------------------------- |
+| `barcode-detector` | 1.5M         | **Adopted.** Camera scanning — ZXing-C++ via wasm, actively maintained |
+| `bwip-js`          | 572K         | Generate barcode/QR labels for printing                                |
+
+`barcode-detector` is wired into tag binding, the inventory search and loan
+checkout, always beside the field it fills rather than in place of it — a USB
+wedge scanner types into those fields already, and a member scanning a tag uses
+their phone's own camera, which resolves the `/a/{tag}` URL with no app.
+
+`bwip-js` is **not** adopted, and may never need to be. `docs/specs/inventory-spec.md`
+settles that serialized tags are bought pre-printed rather than generated; the
+only printing left is consumable bin labels, and `qrcode-svg` is already a
+dependency for event tickets.
 
 ### Drag & Drop / Pipeline UI
 
