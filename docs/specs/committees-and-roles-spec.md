@@ -107,10 +107,15 @@ consequence of there being one door.
 
 **This document does not solve it, and the structure it describes requires it solved.**
 Committee members are to be **empowered to act within their own domain** — that is the settled
-intent, not an assumption this document made for convenience. It makes
-`admin-vs-staff-spec.md` a hard prerequisite rather than an adjacent cleanup, and the committee
-structure is the strongest argument yet for its Option B: a rotating set of committee
-volunteers is precisely the population that should not inherit account deletion.
+intent, not an assumption this document made for convenience.
+
+An earlier draft of this section called [admin-vs-staff-spec.md](admin-vs-staff-spec.md) a hard
+prerequisite. **That was wrong**, and the correction matters: a committee guard reads
+`group_member`, not the role table, so the two are independent. The true relationship is more
+useful — committees _relieve_ the pressure that motivated that spec, because they stop panel
+access being the thing you hand someone for a mundane reason, which was its stated failure
+mode. That spec has since been rewritten around the same insight this one reached: roles are
+org positions, and guards should name capabilities rather than roles.
 
 One requirement this document adds to that spec, not in it today:
 
@@ -774,8 +779,9 @@ edited away, because each one closes off an alternative that will otherwise be r
    the rollup across all of them. Not six standing report pages either way.
 
 5. **Committee members act within their own domain.** This was the question the rest depended
-   on, and the answer is the one that costs the most: committee-scoped authority is real work
-   and `admin-vs-staff-spec.md` is a hard prerequisite. The cheaper reading — that committees
+   on, and the answer is the one that costs the most: committee-scoped authority is real work.
+   It is not blocked on `admin-vs-staff-spec.md` — that dependency was claimed here and is
+   withdrawn — though the two are now designed together. The cheaper reading — that committees
    meet, decide, and ask staff to execute — would have made most of this document a
    documents-and-announcements problem the groups module already solves. It is not the model
    being adopted.
@@ -821,9 +827,10 @@ edited away, because each one closes off an alternative that will otherwise be r
 None. Every question this document opened across three rounds has been answered, and the
 answers are recorded above.
 
-What is left is not a question but a sequence. Committee-scoped authority needs
-[admin-vs-staff-spec.md](admin-vs-staff-spec.md) settled first, because there is no boundary to
-scope to until `admin` and `staff` mean different things. The application flow needs phase 5 of
+What is left is not a question but a sequence. Committee-scoped authority does not need
+[admin-vs-staff-spec.md](admin-vs-staff-spec.md) settled first — they are independent — but the
+two now share a design: guards name capabilities, and a committee guard resolves the committee
+from the resource. The application flow needs phase 5 of
 [groups-spec.md](groups-spec.md), and carries the status-blind roster reads with it. The first
 workflow surface is Programming and Production, most of which is
 [production-workflow-spec.md](production-workflow-spec.md) already — so the honest next step is
