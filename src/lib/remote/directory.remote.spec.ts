@@ -38,21 +38,27 @@ vi.mock('$lib/server/authorization', () => ({
 	requireUser: () => ({ id: 'user-1', name: 'Member', email: 'member@example.com' })
 }));
 
-// A slug-derived band lookup, faithful to the real `requireBandAdmin()`:
-// it resolves the band from the *route param* slug, which for a remote request
-// comes from the `x-sveltekit-pathname` header the client sent. Keeping the two
-// slugs separate is what lets these tests prove the param never goes stale
-// mid-request — the failure mode that renaming used to cause.
-let routeParamSlug = 'the-regressions';
+// A slug-derived band lookup, faithful to the real `requireGroupRole()`: it
+// resolves the band from the ref it is handed and 404s when nothing matches.
+//
+// The submitted slug and the stored one are kept as separate variables on
+// purpose. Since phase 4 the ref arrives as a form field rather than a route
+// param, but it is still the slug the client held *before* the write — so the
+// staleness these tests pin is the same one, arriving through a different door.
+let submittedSlug = 'the-regressions';
 let storedBandSlug = 'the-regressions';
 
 const bandNotFound = () =>
 	Object.assign(new Error('Band not found'), { status: 404, body: { message: 'Band not found' } });
 
-vi.mock('$lib/server/band/band-context', () => ({
-	requireBandAdmin: vi.fn(async () => {
-		if (routeParamSlug !== storedBandSlug) throw bandNotFound();
-		return { user: { id: 'user-1' }, band: { id: 'band-1', slug: storedBandSlug } };
+vi.mock('$lib/server/group/group-context', () => ({
+	requireGroupRole: vi.fn(async (ref: { slug?: string }) => {
+		if ((ref.slug ?? submittedSlug) !== storedBandSlug) throw bandNotFound();
+		return {
+			user: { id: 'user-1' },
+			group: { id: 'band-1', slug: storedBandSlug },
+			role: 'admin'
+		};
 	})
 }));
 
@@ -152,7 +158,7 @@ const directory = (await import('./directory.remote')) as unknown as Record<
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	routeParamSlug = 'the-regressions';
+	submittedSlug = 'the-regressions';
 	storedBandSlug = 'the-regressions';
 	refreshFailures.length = 0;
 });
@@ -179,6 +185,7 @@ const VALID_MEMBER = {
 };
 
 const VALID_BAND = {
+	slug: 'the-regressions',
 	name: 'The Regressions',
 	bio: '',
 	tagline: '',
@@ -245,13 +252,12 @@ describe('saveBandProfile', () => {
 	}
 
 	// Regression, fixed at the source: renaming a band used to rotate its slug,
-	// while the post-write `getBandProfile().refresh()` re-resolves the band
-	// through `requireBandAdmin()` → `getBySlug(params.slug)` — and `params.slug`
-	// is still the OLD slug, because for a remote request it comes from the
-	// `x-sveltekit-pathname` header the client sent before the rename. The lookup
-	// missed and threw 404, so the save succeeded but the page's profile query was
-	// left in a failed state. `update()` no longer derives the slug from the name,
-	// so the refresh is unconditional and the hazard is gone.
+	// while the post-write `getBandProfileEditor(slug).refresh()` re-resolves the
+	// band through `requireGroupRole({ slug })` — and that slug is still the OLD
+	// one, because it came off the form the client submitted before the rename.
+	// The lookup missed and threw 404, so the save succeeded but the page's
+	// profile query was left in a failed state. `update()` no longer derives the
+	// slug from the name, so the refresh is unconditional and the hazard is gone.
 	it('leaves the slug alone when the name changes, so the refresh still resolves', async () => {
 		const result = await directory.saveBandProfile({
 			...VALID_BAND,

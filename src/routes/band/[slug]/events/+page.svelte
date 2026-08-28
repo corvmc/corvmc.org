@@ -76,6 +76,7 @@
 									onsuccess={() => invalidateAll()}
 									class="inline"
 								>
+									<input {...confirm.fields.slug.as('hidden', band.slug)} />
 									<input {...confirm.fields.eventId.as('hidden', invite.eventId)} />
 									<SubmitButton label="Confirm" variant="primary" size="sm" />
 								</Form>
@@ -85,6 +86,7 @@
 									onsuccess={() => invalidateAll()}
 									class="inline"
 								>
+									<input {...decline.fields.slug.as('hidden', band.slug)} />
 									<input {...decline.fields.eventId.as('hidden', invite.eventId)} />
 									<SubmitButton label="Decline" variant="ghost" size="sm" />
 								</Form>
@@ -138,4 +140,4 @@
 	{/if}
 </PageContent>
 
-<ImportGigsModal bind:open={importing} />
+<ImportGigsModal slug={band.slug} bind:open={importing} />

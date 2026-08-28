@@ -19,6 +19,7 @@ const mockBand = {
 
 const bandServiceMock = {
 	getBySlug: vi.fn(async () => mockBand),
+	getByIdActive: vi.fn(async () => mockBand),
 	getUserRole: vi.fn(async () => 'owner' as string | null),
 	update: vi.fn(async () => ({
 		...mockBand,
@@ -38,7 +39,6 @@ vi.mock('$lib/server/authorization', () => ({
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: testUser },
-		params: { slug: 'the-velvet-underground' },
 		request: { headers: new Headers() }
 	}),
 	form: (_schema: unknown, handler: (...args: any[]) => any) => {
@@ -76,7 +76,7 @@ const { updateBand } = (await import('$lib/remote/bands.remote')) as any;
 
 describe('updateBand', () => {
 	it('updates name and bio', async () => {
-		const result = await updateBand({ name: 'New Name', bio: 'New bio' });
+		const result = await updateBand({ bandId: 'band-1', name: 'New Name', bio: 'New bio' });
 
 		expect(bandServiceMock.update).toHaveBeenCalledWith('band-1', {
 			name: 'New Name',
@@ -86,7 +86,7 @@ describe('updateBand', () => {
 	});
 
 	it('sends null bio when empty', async () => {
-		await updateBand({ name: 'New Name', bio: '' });
+		await updateBand({ bandId: 'band-1', name: 'New Name', bio: '' });
 
 		expect(bandServiceMock.update).toHaveBeenCalledWith('band-1', {
 			name: 'New Name',
@@ -97,13 +97,13 @@ describe('updateBand', () => {
 	it('rejects non-admin users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
 
-		await expect(updateBand({ name: 'X', bio: '' })).rejects.toThrow();
+		await expect(updateBand({ bandId: 'band-1', name: 'X', bio: '' })).rejects.toThrow();
 	});
 
 	it('allows admin users', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
 
-		const result = await updateBand({ name: 'New Name', bio: '' });
+		const result = await updateBand({ bandId: 'band-1', name: 'New Name', bio: '' });
 		expect(result.success).toBe(true);
 	});
 });

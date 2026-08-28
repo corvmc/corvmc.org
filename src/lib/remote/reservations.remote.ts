@@ -95,7 +95,7 @@ import {
 	listActive as listActiveSeries
 } from '$lib/server/reservation/recurring-series-service';
 import { getMembers } from '$lib/server/band/band-service';
-import { requireBandMember, requireBandMemberOrStaff } from '$lib/server/band/band-context';
+import { requireGroupRole } from '$lib/server/group/group-context';
 import { paginate } from '$lib/server/db/paginate';
 import { ensureContactPhone } from '$lib/server/user/user-service';
 import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '$lib/utils/phone';
@@ -180,12 +180,16 @@ export const getBandReservations = query(z.string(), async (slug) => {
 	// band's practice schedule, the name of whoever booked each session, and the
 	// notes on it, just by passing that band's slug — which matters more now the
 	// feature is on for everyone rather than flag-gated off. The read-side guard
-	// rather than `requireBandMember()`: staff administer band panels, and the
-	// layout already lets them in, so the member-only guard would 403 them into
-	// the error boundary. The slug cross-check is what stops the guard's band
-	// (from `params.slug`) and the requested one from diverging.
-	const { user: currentUser, band, role } = await requireBandMemberOrStaff();
-	if (band.slug !== slug) error(403, 'Not authorized');
+	// rather than a member-only one: staff administer band panels, and the layout
+	// already lets them in, so member-only would 403 them into the error
+	// boundary. The slug cross-check this used to carry is gone with the two
+	// sources of truth that needed it — the guard resolves the band from this
+	// argument, so there is no second band for it to diverge from.
+	const {
+		user: currentUser,
+		group: band,
+		role
+	} = await requireGroupRole({ slug }, 'member', { allowStaff: true });
 
 	const now = new Date();
 	// Whether the viewer may cancel each row. `cancel()` authorizes on
@@ -805,8 +809,8 @@ export const getMembershipStatus = query(async () => {
 });
 
 /** Band: check if any active band member has a sustaining membership. */
-export const getBandMembershipStatus = query(z.void(), async () => {
-	const { band } = await requireBandMember();
+export const getBandMembershipStatus = query(z.string(), async (slug) => {
+	const { group: band } = await requireGroupRole({ slug }, 'member');
 	const members = await getMembers(band.id);
 	const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
 
@@ -1515,13 +1519,16 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 
 /** Band: book a reservation (optionally recurring). */
 const bandBookingSchema = createReservationSchema.extend({
+	// The band this books for. A lookup key, not a capability: the guard resolves
+	// the band from it and then checks the caller's own membership on what it
+	// resolved.
+	slug: z.string().min(1),
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
 	monthlyMode: z.enum(['weekday', 'monthday']).optional()
 });
 
 export const bookBandReservation = form(bandBookingSchema, async (data, issue) => {
-	const { band } = await requireBandMember();
-	const currentUser = requireUser();
+	const { user: currentUser, group: band } = await requireGroupRole({ slug: data.slug }, 'member');
 
 	// The band books, but a person is on the hook — same guard as a solo booking.
 	if (!(await ensureContactPhone(currentUser.id, data.phone))) {
@@ -1602,12 +1609,17 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
  */
 export const cancelBandReservation = form(
 	z.object({
+		slug: z.string().min(1),
 		reservationId: z.string().min(1)
 	}),
 	async (data, _issue) => {
-		// A mutation, so the member-only guard — not `…OrStaff`. Staff cancel
-		// through their own reservation surface, which carries the audit trail.
-		const { user: currentUser, band, role } = await requireBandMember();
+		// A mutation, so member-only — no `allowStaff`. Staff cancel through their
+		// own reservation surface, which carries the audit trail.
+		const {
+			user: currentUser,
+			group: band,
+			role
+		} = await requireGroupRole({ slug: data.slug }, 'member');
 
 		const [row] = await db
 			.select({
@@ -2155,7 +2167,7 @@ export const getUserRecurringSeries = query(z.string(), async (userId) => {
 export const getBandReservationsPage = query(z.string(), async (slug) => {
 	const [reservations, membership, contact] = await Promise.all([
 		getBandReservations(slug),
-		getBandMembershipStatus(),
+		getBandMembershipStatus(slug),
 		getBookingContact()
 	]);
 

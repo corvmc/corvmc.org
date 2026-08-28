@@ -46,11 +46,7 @@ import {
 	listForBand,
 	revoke as revokePlatformInviteService
 } from '$lib/server/band/platform-invite-service';
-import {
-	requireBandMember,
-	requireBandAdmin,
-	requireBandOwner
-} from '$lib/server/band/band-context';
+import { requireGroupRole } from '$lib/server/group/group-context';
 
 // ===========================================================================
 // Queries — Staff (list)
@@ -116,17 +112,31 @@ export const getStaffPlatformInvites = query(z.string(), async (bandId) => {
 });
 
 // ===========================================================================
-// Queries — Band-context (slug-based)
+// Queries — Band-context
 // ===========================================================================
 
-export const searchBandUsers = query(z.string(), async (q) => {
-	const { band } = await requireBandAdmin();
-	if (q.length < 2) return [];
-	return searchMembersService(q, band.id);
-});
+const bandIdField = z.string().min(1);
 
-export const getBandPlatformInvites = query(z.void(), async () => {
-	const { band } = await requireBandAdmin();
+/**
+ * The band-context exports below name their band by **id**, not slug.
+ *
+ * Either is a valid `GroupRef`, and the id is the right one here: three of
+ * these queries already took a `bandId` and cross-checked it against the band
+ * the old guard resolved from `params.slug` — two sources of truth for one
+ * value, and the cross-check was the seam between them. Handing the id
+ * straight to the guard deletes the seam rather than translating it.
+ */
+export const searchBandUsers = query(
+	z.object({ bandId: z.string().min(1), q: z.string() }),
+	async ({ bandId, q }) => {
+		const { group: band } = await requireGroupRole({ id: bandId }, 'admin');
+		if (q.length < 2) return [];
+		return searchMembersService(q, band.id);
+	}
+);
+
+export const getBandPlatformInvites = query(z.string(), async (bandId) => {
+	const { group: band } = await requireGroupRole({ id: bandId }, 'admin');
 	return listForBand(band.id);
 });
 
@@ -135,8 +145,7 @@ export const getBandPlatformInvites = query(z.void(), async () => {
 // ===========================================================================
 
 export const getBandUpcoming = query(z.string(), async (bandId) => {
-	const { band } = await requireBandMember();
-	if (band.id !== bandId) error(403, 'Not authorized');
+	const { group: band } = await requireGroupRole({ id: bandId }, 'member');
 	const now = new Date();
 	const rows = await db
 		.select({
@@ -169,8 +178,7 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 });
 
 export const getBandMembersList = query(z.string(), async (bandId) => {
-	const { band } = await requireBandMember();
-	if (band.id !== bandId) error(403, 'Not authorized');
+	await requireGroupRole({ id: bandId }, 'member');
 	// `getMembers` already returns a presentation ref per row, alias included.
 	const members = await getMembers(bandId);
 	return {
@@ -188,12 +196,12 @@ export const getBandMembersList = query(z.string(), async (bandId) => {
  * rendering at all. Both now resolve here, where the role is already known.
  */
 export const getBandMembersPage = query(z.string(), async (bandId) => {
-	const { role } = await requireBandMember();
+	const { role } = await requireGroupRole({ id: bandId }, 'member');
 	const canManage = role === 'owner' || role === 'admin';
 
 	const [members, platformInvites] = await Promise.all([
 		getBandMembersList(bandId),
-		canManage ? getBandPlatformInvites() : []
+		canManage ? getBandPlatformInvites(bandId) : []
 	]);
 
 	return { members, platformInvites, canManage };
@@ -456,16 +464,17 @@ export const declineInvite = form(
 );
 
 // ===========================================================================
-// Forms — Band-context (slug-based, requires band membership)
+// Forms — Band-context (requires band membership)
 // ===========================================================================
 
 export const updateBand = form(
 	z.object({
+		bandId: bandIdField,
 		name: z.string().min(1, 'Name is required').max(200),
 		bio: z.string().max(LONG_TEXT_MAX).optional().default('')
 	}),
 	async (data) => {
-		const { band } = await requireBandAdmin();
+		const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
 		await update(band.id, {
 			name: data.name,
 			bio: data.bio
@@ -475,23 +484,24 @@ export const updateBand = form(
 	}
 );
 
-// A form with no fields of its own. `z.object({})` no longer resolves against
-// kit's schema overload, and there is nothing here to validate anyway — the
-// guard on the first line of the handler is the whole check.
-export const deleteBand = form('unchecked', async () => {
-	const { band } = await requireBandOwner();
+// Was `form('unchecked')` — a form with no fields at all, back when the guard
+// read the band out of the request context. The ref is a field now, so there is
+// something to validate and the schema comes back.
+export const deleteBand = form(z.object({ bandId: bandIdField }), async (data) => {
+	const { group: band } = await requireGroupRole({ id: data.bandId }, 'owner');
 	await deleteBandService(band.id);
 	return { success: true };
 });
 
 export const inviteMember = form(
 	z.object({
+		bandId: bandIdField,
 		userId: z.string().min(1, 'User is required'),
 		role: z.enum(['admin', 'member']),
 		position: z.string().max(100).optional().default('')
 	}),
 	async (data) => {
-		const { user, band } = await requireBandAdmin();
+		const { user, group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
 		const member = await invite(band.id, data.userId, data.role, data.position || null, user.id);
 		return { success: true, memberId: member.id };
 	}
@@ -499,10 +509,11 @@ export const inviteMember = form(
 
 export const removeMember = form(
 	z.object({
+		bandId: bandIdField,
 		memberId: z.string().min(1)
 	}),
 	async (data) => {
-		const { band } = await requireBandAdmin();
+		const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
 		try {
 			await removeMemberService(data.memberId, band.id);
 		} catch (err) {
@@ -514,10 +525,11 @@ export const removeMember = form(
 
 export const revokeInvitation = form(
 	z.object({
+		bandId: bandIdField,
 		memberId: z.string().min(1)
 	}),
 	async (data) => {
-		const { band } = await requireBandAdmin();
+		const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
 		try {
 			await revokeInvitationService(data.memberId, band.id);
 		} catch (err) {
@@ -537,12 +549,13 @@ export const revokeInvitation = form(
  */
 export const updateMemberRemote = form(
 	z.object({
+		bandId: bandIdField,
 		memberId: z.string().min(1),
 		role: z.enum(['admin', 'member']).optional(),
 		position: z.string().max(100).optional()
 	}),
 	async (data) => {
-		const { band } = await requireBandAdmin();
+		const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
 		await updateMember(
 			data.memberId,
 			{
@@ -569,11 +582,12 @@ export const updateMemberRemote = form(
  */
 export const updateMyBandMembership = form(
 	z.object({
+		bandId: bandIdField,
 		alias: z.string().trim().max(100).optional(),
 		position: z.string().trim().max(100).optional()
 	}),
 	async (data) => {
-		const { user, band } = await requireBandMember();
+		const { user, group: band } = await requireGroupRole({ id: data.bandId }, 'member');
 		try {
 			await updateOwnMembership(band.id, user.id, {
 				alias: data.alias !== undefined ? data.alias || null : undefined,
@@ -588,10 +602,11 @@ export const updateMyBandMembership = form(
 
 export const transferOwner = form(
 	z.object({
+		bandId: bandIdField,
 		newOwnerId: z.string().min(1)
 	}),
 	async (data) => {
-		const { user, band } = await requireBandOwner();
+		const { user, group: band } = await requireGroupRole({ id: data.bandId }, 'owner');
 		try {
 			await transferOwnershipService(band.id, data.newOwnerId, user.id);
 		} catch (err) {
@@ -601,13 +616,13 @@ export const transferOwner = form(
 	}
 );
 
-// No fields to validate — see `deleteBand` above.
-export const leave = form('unchecked', async () => {
+// Carries the ref and nothing else — see `deleteBand` above.
+export const leave = form(z.object({ bandId: bandIdField }), async (data) => {
 	// `requireBandBySlug()` + `requireUser()` let a non-member's submission reach
 	// the service, which threw a plain Error — a 500 and a generic toast for what
 	// is really a 403. The owner case was worse: `OwnerCannotLeaveError` already
 	// maps to 422, but nothing routed it through `mapDomainError`.
-	const { user, band } = await requireBandMember();
+	const { user, group: band } = await requireGroupRole({ id: data.bandId }, 'member');
 	try {
 		await leaveBandService(band.id, user.id);
 	} catch (err) {
@@ -618,12 +633,13 @@ export const leave = form('unchecked', async () => {
 
 export const inviteByEmail = form(
 	z.object({
+		bandId: bandIdField,
 		email: z.string().email('Valid email required'),
 		role: z.enum(['admin', 'member']),
 		position: z.string().max(100).optional().default('')
 	}),
 	async (data, issue) => {
-		const { user, band } = await requireBandAdmin();
+		const { user, group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
 		try {
 			const result = await createPlatformInvite(
 				data.email,
@@ -645,12 +661,13 @@ export const inviteByEmail = form(
 
 export const revokePlatformInviteRemote = form(
 	z.object({
+		bandId: bandIdField,
 		inviteId: z.string().min(1)
 	}),
 	async (data) => {
 		// Scoped to this band: the service used to take an invite id alone, so a
 		// band admin holding another band's invite id could revoke it.
-		const { band } = await requireBandAdmin();
+		const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
 		try {
 			await revokePlatformInviteService(data.inviteId, band.id);
 		} catch (err) {
@@ -661,19 +678,22 @@ export const revokePlatformInviteRemote = form(
 );
 
 // ===========================================================================
-// Forms — Band avatar (slug-based)
+// Forms — Band avatar
 // ===========================================================================
 
-export const uploadBandAvatar = form(z.object({ file: z.instanceof(File) }), async (data) => {
-	const { band } = await requireBandAdmin();
-	await setBandAvatar(band.id, await data.file.arrayBuffer(), data.file.type);
-	void getBandLayout(band.slug).refresh();
-	return { success: true };
-});
+export const uploadBandAvatar = form(
+	z.object({ bandId: bandIdField, file: z.instanceof(File) }),
+	async (data) => {
+		const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
+		await setBandAvatar(band.id, await data.file.arrayBuffer(), data.file.type);
+		void getBandLayout(band.slug).refresh();
+		return { success: true };
+	}
+);
 
-// No fields to validate — see `deleteBand` above.
-export const removeBandAvatar = form('unchecked', async () => {
-	const { band } = await requireBandAdmin();
+// Carries the ref and nothing else — see `deleteBand` above.
+export const removeBandAvatar = form(z.object({ bandId: bandIdField }), async (data) => {
+	const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
 	await clearBandAvatar(band.id);
 	void getBandLayout(band.slug).refresh();
 	return { success: true };

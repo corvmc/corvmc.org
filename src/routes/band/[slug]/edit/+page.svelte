@@ -15,9 +15,10 @@
 	// in flight in this component. See `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-	const { profile, genreSuggestions } = await getBandProfileEditor();
-
+	// Above the await, and read from the resolved layout rather than
+	// `page.params`: it is the ref the editor query guards on.
 	const band = layout.band;
+	const { profile, genreSuggestions } = await getBandProfileEditor(band.slug);
 </script>
 
 <PageHeader title="Band Profile" subtitle={band.name} />

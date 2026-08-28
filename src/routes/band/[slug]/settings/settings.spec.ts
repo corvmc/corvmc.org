@@ -19,6 +19,7 @@ const mockBand = {
 
 const bandServiceMock = {
 	getBySlug: vi.fn(async () => mockBand),
+	getByIdActive: vi.fn(async () => mockBand),
 	getUserRole: vi.fn(async () => 'owner' as string | null),
 	deleteBand: vi.fn(async () => undefined)
 };
@@ -34,7 +35,6 @@ vi.mock('$lib/server/authorization', () => ({
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: testUser },
-		params: { slug: 'the-velvet-underground' },
 		request: { headers: new Headers() }
 	}),
 	form: (_schema: unknown, handler: (...args: any[]) => any) => {
@@ -72,7 +72,7 @@ const { deleteBand } = (await import('$lib/remote/bands.remote')) as any;
 
 describe('deleteBand', () => {
 	it('deletes the band', async () => {
-		const result = await deleteBand({});
+		const result = await deleteBand({ bandId: 'band-1' });
 
 		expect(bandServiceMock.deleteBand).toHaveBeenCalledWith('band-1');
 		expect(result.success).toBe(true);

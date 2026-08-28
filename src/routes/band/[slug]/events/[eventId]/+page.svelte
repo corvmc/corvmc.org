@@ -81,14 +81,14 @@
 					class="dropdown-content z-10 flex w-56 flex-col gap-1 rounded-box bg-base-100 p-2 shadow"
 				>
 					{#if evt.status === 'draft'}
-						<BandPublishEventAction eventId={evt.id} class="justify-start" />
+						<BandPublishEventAction slug={band.slug} eventId={evt.id} class="justify-start" />
 					{:else if evt.status === 'published'}
-						<BandUnpublishEventAction eventId={evt.id} class="justify-start" />
+						<BandUnpublishEventAction slug={band.slug} eventId={evt.id} class="justify-start" />
 					{/if}
 					{#if evt.posterUrl}
-						<RemoveEventPosterAction eventId={evt.id} class="justify-start" />
+						<RemoveEventPosterAction slug={band.slug} eventId={evt.id} class="justify-start" />
 					{/if}
-					<BandCancelEventAction eventId={evt.id} outline class="justify-start" />
+					<BandCancelEventAction slug={band.slug} eventId={evt.id} outline class="justify-start" />
 				</div>
 			</details>
 		{/if}
@@ -106,11 +106,19 @@
 			<p class="text-muted text-sm">Band admins can edit this event.</p>
 		{/if}
 
+		<input {...updateFields.slug.as('hidden', band.slug)} />
 		<input {...updateFields.eventId.as('hidden', evt.id)} />
 
 		<InfoCard title="Event details">
 			<div class="space-y-4">
-				<EventFields fields={updateFields} {evt} bandId={band.id} bind:lineup readonly={!canEdit} />
+				<EventFields
+					fields={updateFields}
+					{evt}
+					slug={band.slug}
+					bandId={band.id}
+					bind:lineup
+					readonly={!canEdit}
+				/>
 			</div>
 		</InfoCard>
 	</PageContent>

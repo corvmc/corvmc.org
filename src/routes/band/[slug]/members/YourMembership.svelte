@@ -25,9 +25,11 @@
 	 * queries live in the parent, which passes resolved props.
 	 */
 	const fields = updateMyBandMembership.fields;
+	const { fields: leaveFields } = leave;
 
 	let {
 		me,
+		bandId,
 		bandName,
 		role,
 		onchanged,
@@ -39,6 +41,8 @@
 			alias: string | null;
 			position: string | null;
 		} | null;
+		/** The band these two forms act on — the ref their guards resolve. */
+		bandId: string;
 		bandName: string;
 		role: string;
 		onchanged: () => void;
@@ -64,6 +68,8 @@
 				onsuccess={onchanged}
 				class="space-y-4"
 			>
+				<input {...fields.bandId.as('hidden', bandId)} />
+
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<FormField
 						field={fields.alias}
@@ -102,17 +108,28 @@
 						</Button>
 					</Alert>
 				{:else}
+					<!-- A `form` snippet rather than the `confirm` prop, because the band
+					     this leaves now rides the submission as a field. The paragraph
+					     below is the confirm copy the prop used to render. -->
 					<Action
 						action={leave}
 						label="Leave band"
 						variant="error"
 						size="sm"
 						outline
-						confirm="Leave {bandName}? You'll need to be re-invited to rejoin."
+						modalTitle="Leave band"
+						submitLabel="Leave band"
 						successToast="You have left the band"
 						onsuccess={() => goto(resolve('/member/bands'))}
 						onfailure={() => toast.error('Failed to leave')}
-					/>
+					>
+						{#snippet form()}
+							<input {...leaveFields.bandId.as('hidden', bandId)} />
+							<p class="py-2">
+								Leave {bandName}? You'll need to be re-invited to rejoin.
+							</p>
+						{/snippet}
+					</Action>
 				{/if}
 			</div>
 		</div>

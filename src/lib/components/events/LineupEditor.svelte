@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
-	import { searchBandsForLineup } from '$lib/remote/band-events.remote';
 
 	export type LineupChip = {
 		name: string;
@@ -13,7 +12,7 @@
 		value = $bindable<LineupChip[]>([]),
 		ownerBandId,
 		readonly = false,
-		search = searchBandsForLineup
+		search
 	}: {
 		value?: LineupChip[];
 		/**
@@ -30,11 +29,14 @@
 		 */
 		ownerBandId?: string;
 		/**
-		 * Band lookup. Defaults to the band-panel query, which is guarded by
-		 * band membership; a community listing passes its own `requireUser`
-		 * version, since its author may not be in a band at all.
+		 * Band lookup, always supplied by the caller. It used to default to the
+		 * band-panel query, but that query now takes the band it is searching on
+		 * behalf of and this component has no business knowing one — so each
+		 * caller closes over its own ref: the band panel over its slug, a
+		 * community listing over its own `requireUser` version, since its author
+		 * may not be in a band at all.
 		 */
-		search?: (q: string) => Promise<Array<{ id: string; name: string }>>;
+		search: (q: string) => Promise<Array<{ id: string; name: string }>>;
 	} = $props();
 
 	let query = $state('');

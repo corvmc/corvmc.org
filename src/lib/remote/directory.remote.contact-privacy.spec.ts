@@ -36,7 +36,7 @@ vi.mock('$lib/server/db', () => ({
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (k: string | null) => k }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 vi.mock('$lib/server/authorization', () => ({ requireUser: () => ({ id: 'u1' }) }));
-vi.mock('$lib/server/band/band-context', () => ({ requireBandAdmin: vi.fn() }));
+vi.mock('$lib/server/group/group-context', () => ({ requireGroupRole: vi.fn() }));
 
 import { getPublicMemberProfile } from './directory.remote';
 

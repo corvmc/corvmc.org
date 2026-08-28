@@ -39,6 +39,7 @@
 	const { fields: revokePlatformFields } = revokePlatformInviteRemote;
 	const { fields: inviteFields } = inviteMember;
 	const { fields: transferFields } = transferOwner;
+	const { fields: inviteEmailFields } = inviteByEmail;
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
@@ -94,7 +95,7 @@
 			return;
 		}
 		searching = true;
-		searchResults = await searchUsers(searchQuery).catch(() => []);
+		searchResults = await searchUsers({ bandId: layout.band.id, q: searchQuery }).catch(() => []);
 		searching = false;
 	}
 
@@ -146,6 +147,7 @@
 		{me}
 		bandName={layout.band.name}
 		role={layout.userRole}
+		bandId={layout.band.id}
 		onchanged={refreshMembers}
 		ontransfer={openTransferFromOwnMembership}
 	/>
@@ -172,6 +174,7 @@
 								<StatusBadge status={member.role} />
 								{#if canManage && member.role !== 'owner'}
 									<EditMemberAction
+										bandId={layout.band.id}
 										memberId={member.id}
 										memberName={member.member.title}
 										role={member.role as 'admin' | 'member'}
@@ -189,6 +192,7 @@
 										onfailure={() => toast.error('Failed to remove')}
 									>
 										{#snippet form()}
+											<input {...removeFields.bandId.as('hidden', layout.band.id)} />
 											<input {...removeFields.memberId.as('hidden', member.id)} />
 										{/snippet}
 									</Action>
@@ -237,6 +241,7 @@
 									onfailure={() => toast.error('Failed to revoke')}
 								>
 									{#snippet form()}
+										<input {...revokeFields.bandId.as('hidden', layout.band.id)} />
 										<input {...revokeFields.memberId.as('hidden', invite.id)} />
 									{/snippet}
 								</Action>
@@ -273,6 +278,7 @@
 									onfailure={() => toast.error('Failed to revoke')}
 								>
 									{#snippet form()}
+										<input {...revokePlatformFields.bandId.as('hidden', layout.band.id)} />
 										<input {...revokePlatformFields.inviteId.as('hidden', invite.id)} />
 									{/snippet}
 								</Action>
@@ -320,6 +326,7 @@
 						autocomplete="off"
 					/>
 					{#if selectedUser}
+						<input {...inviteFields.bandId.as('hidden', layout.band.id)} />
 						<input {...inviteFields.userId.as('hidden', selectedUser.id)} />
 					{/if}
 
@@ -376,6 +383,7 @@
 			onfailure={() => toast.error('Failed to send invitation')}
 		>
 			<div class="space-y-4">
+				<input {...inviteEmailFields.bandId.as('hidden', layout.band.id)} />
 				<p class="text-muted">
 					Invite someone who doesn't have a CorvMC account yet. They'll receive an email with a
 					signup link and be automatically added to your band.
@@ -416,6 +424,7 @@
 					<strong>{transferTarget.name}</strong>. You will be demoted to admin. This cannot be
 					undone without the new owner's consent.
 				</Alert>
+				<input {...transferFields.bandId.as('hidden', layout.band.id)} />
 				<input {...transferFields.newOwnerId.as('hidden', transferTarget.userId)} />
 				<div class="flex justify-end pt-2">
 					<SubmitButton label="Transfer Ownership" successLabel="Transferred" variant="warning" />

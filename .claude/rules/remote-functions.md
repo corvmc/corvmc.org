@@ -11,9 +11,14 @@ paths:
 and they take their params from a client-supplied header. A guard in `+layout.server.ts` guards
 nothing here.
 
-- Guard first (`requireUser`, `requireStaff`, `requireBandMember`, `requireBandAdmin`,
-  `requireFeature`, … from `src/lib/server/authorization.ts`), then validate with a Zod schema,
-  then orchestrate. Never key a mutation on a route param.
+- Guard first (`requireUser`, `requireStaff`, `requireFeature`, … from
+  `src/lib/server/authorization.ts`; `requireGroupRole` from
+  `src/lib/server/group/group-context.ts`), then validate with a Zod schema, then orchestrate.
+  Never key a mutation on a route param.
+- `requireGroupRole(ref, minRole, opts?)` takes the group as an explicit `{ slug }` or `{ id }`
+  ref — a field on the form, or the query's own argument. That is a lookup key, not a
+  capability: the guard resolves the group from it and then checks the caller's role on the
+  _resolved_ group.
 - Keep them thin. Business logic lives in the service; remotes guard, validate, and delegate.
 - Services throw typed domain errors; map them with `mapDomainError()` from
   `src/lib/server/errors.ts`.

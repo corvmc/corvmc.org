@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
-import { requireBandAdmin, requireBandMemberOrStaff } from '$lib/server/band/band-context';
+import { requireGroupRole } from '$lib/server/group/group-context';
 import {
 	createBandEvent,
 	updateBandEvent,
@@ -38,8 +38,8 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
  * unpublished drafts, and any signed-in user could previously read another
  * band's by passing their slug.
  */
-export const getBandEvents = query(z.string(), async () => {
-	const { band } = await requireBandMemberOrStaff();
+export const getBandEvents = query(z.string(), async (slug) => {
+	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
 	const events = await listBandEvents(band.id);
 	const lineups = await getEventLineups(events.map((e) => e.id));
 
@@ -58,8 +58,8 @@ export const getBandEvents = query(z.string(), async () => {
 });
 
 /** Bills this band has been named on and hasn't answered. */
-export const getBandLineupInvites = query(z.string(), async () => {
-	const { band } = await requireBandMemberOrStaff();
+export const getBandLineupInvites = query(z.string(), async (slug) => {
+	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
 	return listBandLineupInvites(band.id);
 });
 
@@ -79,8 +79,8 @@ export const getBandEventsPage = query(z.string(), async (slug) => {
 /** One gig, for the detail page. */
 export const getBandEventDetail = query(
 	z.object({ slug: z.string(), eventId: z.string() }),
-	async ({ eventId }) => {
-		const { band } = await requireBandMemberOrStaff();
+	async ({ slug, eventId }) => {
+		const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
 		const evt = await getById(eventId);
 
 		if (!evt) throw error(404, 'Event not found');
@@ -110,11 +110,14 @@ export const getBandEventDetail = query(
 );
 
 /** Band-facing band lookup for the lineup editor. Staff-only `searchBands` can't be reused. */
-export const searchBandsForLineup = query(z.string(), async (q) => {
-	await requireBandMemberOrStaff();
-	if (!q || q.trim().length < 2) return [];
-	return searchBandsByName(q.trim());
-});
+export const searchBandsForLineup = query(
+	z.object({ slug: z.string().min(1), q: z.string() }),
+	async ({ slug, q }) => {
+		await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		if (!q || q.trim().length < 2) return [];
+		return searchBandsByName(q.trim());
+	}
+);
 
 // ---------------------------------------------------------------------------
 // Forms
@@ -155,6 +158,7 @@ function buildGigRange(date: string, startTime: string, endTime: string | undefi
 
 export const createBandEventForm = form(
 	z.object({
+		slug: z.string().min(1),
 		title: z.string().min(1, 'Title is required').max(200),
 		description: z.string().max(5000).optional(),
 		eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
@@ -173,7 +177,7 @@ export const createBandEventForm = form(
 		posterFile: z.instanceof(File).optional()
 	}),
 	async (data, issue) => {
-		const { user, band } = await requireBandAdmin();
+		const { user, group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
 		if (!data.title) {
 			invalid(issue.title('Title is required'));
@@ -224,6 +228,7 @@ export const createBandEventForm = form(
 
 export const updateBandEventForm = form(
 	z.object({
+		slug: z.string().min(1),
 		eventId: z.string().min(1),
 		title: z.string().min(1).max(200).optional(),
 		description: z.string().max(5000).optional(),
@@ -239,7 +244,7 @@ export const updateBandEventForm = form(
 		posterFile: z.instanceof(File).optional()
 	}),
 	async (data, issue) => {
-		const { band } = await requireBandAdmin();
+		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
 		const tz = DEFAULT_TIMEZONE;
 		const params: Parameters<typeof updateBandEvent>[2] = {};
@@ -295,37 +300,46 @@ export const updateBandEventForm = form(
 	}
 );
 
-export const publishBandEvent = form(z.object({ eventId: z.string().min(1) }), async (data) => {
-	const { band } = await requireBandAdmin();
+export const publishBandEvent = form(
+	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
+	async (data) => {
+		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
-	const evt = await getById(data.eventId);
-	if (!evt || evt.bandId !== band.id) throw error(404, 'Event not found');
+		const evt = await getById(data.eventId);
+		if (!evt || evt.bandId !== band.id) throw error(404, 'Event not found');
 
-	await publish(data.eventId);
-	return { success: true };
-});
+		await publish(data.eventId);
+		return { success: true };
+	}
+);
 
-export const unpublishBandEvent = form(z.object({ eventId: z.string().min(1) }), async (data) => {
-	const { band } = await requireBandAdmin();
+export const unpublishBandEvent = form(
+	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
+	async (data) => {
+		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
-	const evt = await getById(data.eventId);
-	if (!evt || evt.bandId !== band.id) throw error(404, 'Event not found');
+		const evt = await getById(data.eventId);
+		if (!evt || evt.bandId !== band.id) throw error(404, 'Event not found');
 
-	await unpublish(data.eventId);
-	return { success: true };
-});
+		await unpublish(data.eventId);
+		return { success: true };
+	}
+);
 
-export const cancelBandEventForm = form(z.object({ eventId: z.string().min(1) }), async (data) => {
-	const { band } = await requireBandAdmin();
+export const cancelBandEventForm = form(
+	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
+	async (data) => {
+		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
-	await cancelBandEvent(data.eventId, band.id);
-	return { success: true };
-});
+		await cancelBandEvent(data.eventId, band.id);
+		return { success: true };
+	}
+);
 
 export const removeBandEventPoster = form(
-	z.object({ eventId: z.string().min(1) }),
+	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
-		const { band } = await requireBandAdmin();
+		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 		await clearBandEventPoster(data.eventId, band.id);
 		return { success: true };
 	}
@@ -340,9 +354,9 @@ export const removeBandEventPoster = form(
  * cost someone a hundred hand-typed lines.
  */
 export const importGigsForm = form(
-	z.object({ text: z.string().min(1).max(80_000) }),
+	z.object({ slug: z.string().min(1), text: z.string().min(1).max(80_000) }),
 	async (data, issue) => {
-		const { user, band } = await requireBandAdmin();
+		const { user, group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
 		const { rows, errors } = parseGigImport(data.text);
 		if (rows.length === 0) {
@@ -371,9 +385,9 @@ export const importGigsForm = form(
  * band's public profile — before this, the credit exists on the event only.
  */
 export const confirmLineupSlotForm = form(
-	z.object({ eventId: z.string().min(1) }),
+	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
-		const { band } = await requireBandAdmin();
+		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 		await confirmLineupSlot(data.eventId, band.id);
 		return { success: true };
 	}
@@ -385,9 +399,9 @@ export const confirmLineupSlotForm = form(
  * the partial unique index stops them re-inviting.
  */
 export const declineLineupSlotForm = form(
-	z.object({ eventId: z.string().min(1) }),
+	z.object({ slug: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
-		const { band } = await requireBandAdmin();
+		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 		await declineLineupSlot(data.eventId, band.id);
 		return { success: true };
 	}

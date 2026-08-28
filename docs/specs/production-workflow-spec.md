@@ -248,9 +248,9 @@ substitute `group_member` for `bandMember` throughout.
 
 The evidence for dropping it:
 
-**Authorization never reads it.** `requireBandOwner()` in
-`src/lib/server/band/band-context.ts` delegates to `requireBandRole('owner')` →
-`requireBandMember()` → `getUserRole()`, and `getUserRole()` reads `bandMember` alone.
+**Authorization never reads it.** `requireGroupRole()` in
+`src/lib/server/group/group-context.ts` resolves the group and then calls `getUserRole()`,
+which reads `group_member` alone.
 There is no path from an access decision to `band.ownerId`. Every remaining use is
 display or bookkeeping, and every one of them is derivable from `bandMember`.
 

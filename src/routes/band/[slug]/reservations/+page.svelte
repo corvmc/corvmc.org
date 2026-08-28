@@ -52,6 +52,7 @@
 
 <PageHeader title="Reservations" subtitle={band.name}>
 	<CreateModal
+		slug={band.slug}
 		hasSustainingMember={membership.hasSustainingMember}
 		needsPhone={contact.needsPhone}
 	/>
@@ -103,6 +104,7 @@
 										onsuccess={() => toast.success('Reservation cancelled')}
 										onfailure={() => toast.error('Failed to cancel')}
 									>
+										<input {...cancelFields.slug.as('hidden', band.slug)} />
 										<input {...cancelFields.reservationId.as('hidden', res.id)} />
 										<SubmitButton label="Cancel" variant="ghost" size="xs" />
 									</Form>

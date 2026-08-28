@@ -18,6 +18,11 @@
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
+	// Above the awaited query below: a declaration that follows a top-level await
+	// is async-gated, which would compile `fields.bandId.as()` into an async
+	// derived. Pinned by `src/async-effect-shape.spec.ts`.
+	const deleteFields = deleteBandForm.fields;
+
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
 	const band = $derived(layout.band);
@@ -87,6 +92,7 @@
 		onfailure={() => toast.error('Failed to delete band')}
 	>
 		<div class="space-y-4">
+			<input {...deleteFields.bandId.as('hidden', band.id)} />
 			<Alert type="error">
 				Are you sure you want to permanently delete <strong>{band.name}</strong>? All future
 				reservations will be cancelled and all members will be removed.

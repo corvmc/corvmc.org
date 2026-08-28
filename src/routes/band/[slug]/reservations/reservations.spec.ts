@@ -20,6 +20,7 @@ const mockBand = {
 
 const bandServiceMock = {
 	getBySlug: vi.fn(async () => mockBand),
+	getByIdActive: vi.fn(async () => mockBand),
 	getUserRole: vi.fn(async () => 'member' as string | null),
 	getMembers: vi.fn(async () => [
 		{ userId: 'user-owner', status: 'active' },
@@ -164,7 +165,6 @@ const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: testUser },
-		params: { slug: 'the-velvet-underground' },
 		request: { headers: new Headers() }
 	}),
 	form: (_schema: unknown, handler: (...args: any[]) => any) => {
@@ -226,6 +226,7 @@ function bandReservationRow(createdByUserId = 'user-owner', bookerId = 'band-1')
 describe('bookReservation', () => {
 	it('creates reservation with band as booker', async () => {
 		const result = await bookReservation({
+			slug: 'the-velvet-underground',
 			date: '2026-06-15',
 			startTime: '09:00',
 			endTime: '10:00'
@@ -243,6 +244,7 @@ describe('bookReservation', () => {
 
 	it('passes notes through', async () => {
 		await bookReservation({
+			slug: 'the-velvet-underground',
 			date: '2026-06-15',
 			startTime: '09:00',
 			endTime: '10:00',
@@ -261,7 +263,10 @@ describe('cancelBandReservation', () => {
 	it('cancels a reservation the caller booked', async () => {
 		selectResult = bandReservationRow('user-owner');
 
-		const result = await cancelBandReservation({ reservationId: 'res-42' });
+		const result = await cancelBandReservation({
+			slug: 'the-velvet-underground',
+			reservationId: 'res-42'
+		});
 
 		expect(reservationServiceMock.cancel).toHaveBeenCalledWith(
 			'res-42',
@@ -279,7 +284,7 @@ describe('cancelBandReservation', () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
 		selectResult = bandReservationRow('user-2');
 
-		await cancelBandReservation({ reservationId: 'res-42' });
+		await cancelBandReservation({ slug: 'the-velvet-underground', reservationId: 'res-42' });
 
 		expect(reservationServiceMock.cancel).toHaveBeenCalled();
 	});
@@ -288,7 +293,9 @@ describe('cancelBandReservation', () => {
 		bandServiceMock.getUserRole.mockResolvedValue('member');
 		selectResult = bandReservationRow('user-2');
 
-		await expect(cancelBandReservation({ reservationId: 'res-42' })).rejects.toMatchObject({
+		await expect(
+			cancelBandReservation({ slug: 'the-velvet-underground', reservationId: 'res-42' })
+		).rejects.toMatchObject({
 			status: 403
 		});
 		expect(reservationServiceMock.cancel).not.toHaveBeenCalled();
@@ -301,7 +308,9 @@ describe('cancelBandReservation', () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
 		selectResult = bandReservationRow('user-2', 'band-other');
 
-		await expect(cancelBandReservation({ reservationId: 'res-42' })).rejects.toMatchObject({
+		await expect(
+			cancelBandReservation({ slug: 'the-velvet-underground', reservationId: 'res-42' })
+		).rejects.toMatchObject({
 			status: 404
 		});
 		expect(reservationServiceMock.cancel).not.toHaveBeenCalled();
@@ -311,7 +320,9 @@ describe('cancelBandReservation', () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
 		selectResult = [{ bookerType: 'user', bookerId: 'user-2', createdByUserId: 'user-2' }];
 
-		await expect(cancelBandReservation({ reservationId: 'res-42' })).rejects.toMatchObject({
+		await expect(
+			cancelBandReservation({ slug: 'the-velvet-underground', reservationId: 'res-42' })
+		).rejects.toMatchObject({
 			status: 404
 		});
 	});
@@ -323,7 +334,7 @@ describe('cancelBandReservation', () => {
 		bandServiceMock.getUserRole.mockResolvedValue('admin');
 		selectResult = bandReservationRow('user-2');
 
-		await cancelBandReservation({ reservationId: 'res-42' });
+		await cancelBandReservation({ slug: 'the-velvet-underground', reservationId: 'res-42' });
 
 		const options = reservationServiceMock.cancel.mock.calls[0][3];
 		expect(options).toEqual({ authorizedActor: true });
@@ -359,9 +370,14 @@ describe('getBandReservations', () => {
 		await expect(getBandReservations('the-velvet-underground')).resolves.toBeDefined();
 	});
 
-	// The guard resolves its band from `params.slug`; the query takes a slug of
-	// its own. Without the cross-check those two could name different bands.
-	it('refuses a slug that is not the guarded band', async () => {
+	// There used to be two slugs here — the guard's, from `params`, and the
+	// query's own argument — and a cross-check between them. There is one now,
+	// and the guard resolves it, so what this pins is that a slug the caller
+	// holds no role in yields 403 rather than their own band's schedule.
+	it('refuses a band the caller is not in', async () => {
+		bandServiceMock.getBySlug.mockResolvedValueOnce({ ...mockBand, id: 'other-band' });
+		bandServiceMock.getUserRole.mockResolvedValueOnce(null);
+
 		await expect(getBandReservations('some-other-band')).rejects.toMatchObject({ status: 403 });
 	});
 
@@ -400,7 +416,7 @@ describe('getBandMembershipStatus', () => {
 	it('returns hasSustainingMember true when an active member has a subscription', async () => {
 		selectResult = [{ id: 'user-owner' }];
 
-		const result = await getBandMembershipStatus();
+		const result = await getBandMembershipStatus('the-velvet-underground');
 
 		expect(result.hasSustainingMember).toBe(true);
 	});
@@ -408,7 +424,7 @@ describe('getBandMembershipStatus', () => {
 	it('returns hasSustainingMember false when no active member has a subscription', async () => {
 		selectResult = [];
 
-		const result = await getBandMembershipStatus();
+		const result = await getBandMembershipStatus('the-velvet-underground');
 
 		expect(result.hasSustainingMember).toBe(false);
 	});
@@ -416,7 +432,7 @@ describe('getBandMembershipStatus', () => {
 	it('returns hasSustainingMember false when no active members exist', async () => {
 		bandServiceMock.getMembers.mockResolvedValueOnce([{ userId: 'user-1', status: 'inactive' }]);
 
-		const result = await getBandMembershipStatus();
+		const result = await getBandMembershipStatus('the-velvet-underground');
 
 		expect(result.hasSustainingMember).toBe(false);
 	});
@@ -428,6 +444,7 @@ describe('bookReservation with recurring', () => {
 		selectResult = [{ id: 'user-owner' }];
 
 		const result = await bookReservation({
+			slug: 'the-velvet-underground',
 			date: '2026-06-15',
 			startTime: '09:00',
 			endTime: '10:00',
@@ -450,6 +467,7 @@ describe('bookReservation with recurring', () => {
 
 		await expect(
 			bookReservation({
+				slug: 'the-velvet-underground',
 				date: '2026-06-15',
 				startTime: '09:00',
 				endTime: '10:00',
@@ -462,6 +480,7 @@ describe('bookReservation with recurring', () => {
 
 	it('does not create series when recurring is empty string', async () => {
 		await bookReservation({
+			slug: 'the-velvet-underground',
 			date: '2026-06-15',
 			startTime: '09:00',
 			endTime: '10:00',
@@ -481,7 +500,12 @@ describe('bookReservation contact phone', () => {
 		ensureContactPhone.mockResolvedValue(false);
 
 		await expect(
-			bookReservation({ date: '2026-06-15', startTime: '09:00', endTime: '10:00' })
+			bookReservation({
+				slug: 'the-velvet-underground',
+				date: '2026-06-15',
+				startTime: '09:00',
+				endTime: '10:00'
+			})
 		).rejects.toMatchObject({
 			issues: [{ name: 'phone', message: expect.stringContaining('phone number is required') }]
 		});
@@ -492,6 +516,7 @@ describe('bookReservation contact phone', () => {
 
 	it('gates on the booking member, not the band', async () => {
 		await bookReservation({
+			slug: 'the-velvet-underground',
 			date: '2026-06-15',
 			startTime: '09:00',
 			endTime: '10:00',

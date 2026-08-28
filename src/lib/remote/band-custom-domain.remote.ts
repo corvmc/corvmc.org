@@ -5,10 +5,8 @@ import { query, form } from '$app/server';
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { bandSite } from '$lib/server/db/schema/band-site';
-import { requireBandOwner } from '$lib/server/band/band-context';
-import { requireUser } from '$lib/server/authorization';
+import { requireGroupRole } from '$lib/server/group/group-context';
 import { requireFeature } from '$lib/server/feature-flags';
-import { getBySlug, getUserRole } from '$lib/server/band/band-service';
 import {
 	assertDomainUnclaimed,
 	cnameTarget,
@@ -24,16 +22,19 @@ import { forgetCustomDomain } from '$lib/server/band/band-host-service';
  * Custom domains are the paid half of band addressing — every band gets
  * {slug}.corvmc.org free, premium bands can bring their own domain.
  *
- * Each function re-derives the band from the caller's owner role rather than
- * trusting the slug it was handed: remote functions take route params from a
- * client-supplied header, so the guard has to live in the handler.
+ * Every function here takes the slug as an argument and hands it to the guard.
+ * That is a lookup key, not a capability: the guard resolves the band from it
+ * and then checks the caller's own ownership on the *resolved* band, so a
+ * spoofed slug lands somewhere the caller owns nothing and yields 403. The
+ * slugs these forms already carried were previously ignored for want of a
+ * guard that could take one.
  */
 
 /** Owner-only, premium-only. Returns the band alongside its domain state. */
-async function requirePremiumOwner() {
+async function requirePremiumOwner(slug: string) {
 	await requireFeature('bandPremium');
-	const ctx = await requireBandOwner();
-	if (ctx.band.tier !== 'premium') {
+	const ctx = await requireGroupRole({ slug }, 'owner');
+	if (ctx.group.tier !== 'premium') {
 		throw error(403, 'Custom domains are part of the premium plan.');
 	}
 	return ctx;
@@ -45,15 +46,12 @@ async function requirePremiumOwner() {
 
 export const getCustomDomain = query(z.string(), async (slug) => {
 	await requireFeature('bandPremium');
-	const user = requireUser();
-	const band = await getBySlug(slug);
-	if (!band) throw error(404, 'Band not found');
-
-	// Band-private configuration — the verification records included below are
-	// the band's own DNS setup. The slug is caller-supplied, so this has to be
-	// checked here rather than left to whichever page happens to render it.
-	const role = await getUserRole(band.id, user.id);
-	if (role !== 'owner') throw error(403, 'Only the band owner can manage the custom domain.');
+	// Band-private configuration — the verification records below are the band's
+	// own DNS setup, which is why this hand-rolled its own owner check before
+	// there was a guard that took a ref. Not `requirePremiumOwner`: a band that
+	// let its subscription lapse still has to be able to read, and remove, the
+	// domain it configured while premium.
+	const { group: band } = await requireGroupRole({ slug }, 'owner');
 
 	return {
 		tier: band.tier,
@@ -72,7 +70,7 @@ export const getCustomDomain = query(z.string(), async (slug) => {
 export const setCustomDomain = form(
 	z.object({ slug: z.string().min(1), domain: z.string().min(1).max(253) }),
 	async (data) => {
-		const { band } = await requirePremiumOwner();
+		const { group: band } = await requirePremiumOwner(data.slug);
 
 		try {
 			const host = normalizeCustomDomain(data.domain);
@@ -107,8 +105,8 @@ export const setCustomDomain = form(
 );
 
 /** Re-reads Cloudflare's view of the hostname — the "Check status" button. */
-export const refreshCustomDomain = form(z.object({ slug: z.string().min(1) }), async () => {
-	const { band } = await requirePremiumOwner();
+export const refreshCustomDomain = form(z.object({ slug: z.string().min(1) }), async (data) => {
+	const { group: band } = await requirePremiumOwner(data.slug);
 	if (!band.customDomainHostnameId || !band.customDomain) {
 		throw error(400, 'No custom domain to check.');
 	}
@@ -134,8 +132,8 @@ export const refreshCustomDomain = form(z.object({ slug: z.string().min(1) }), a
 	}
 });
 
-export const removeCustomDomain = form(z.object({ slug: z.string().min(1) }), async () => {
-	const { band } = await requirePremiumOwner();
+export const removeCustomDomain = form(z.object({ slug: z.string().min(1) }), async (data) => {
+	const { group: band } = await requirePremiumOwner(data.slug);
 	if (!band.customDomain) throw error(400, 'No custom domain to remove.');
 
 	try {

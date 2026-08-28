@@ -25,9 +25,12 @@
 	 * its own change.
 	 */
 	let {
+		slug,
 		hasSustainingMember = false,
 		needsPhone = false
 	}: {
+		/** The band this books for — the ref the guard resolves. */
+		slug: string;
 		/** Unlocks recurring series — at least one active member must be sustaining. */
 		hasSustainingMember?: boolean;
 		/** The person booking has no usable number on file; staff need one to call. */
@@ -54,6 +57,7 @@
 >
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
 	{#snippet form()}
+		<input {...bookBandReservation.fields.slug.as('hidden', slug)} />
 		<DateTimeStep isSustaining={hasSustainingMember} {needsPhone} />
 		<ConfirmStep band />
 	{/snippet}

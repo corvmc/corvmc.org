@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireFeature } from '$lib/server/feature-flags';
-import { requireBandAdmin, requireBandMemberOrStaff } from '$lib/server/band/band-context';
+import { requireGroupRole } from '$lib/server/group/group-context';
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
 import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
 import { db } from '$lib/server/db';
@@ -21,8 +21,11 @@ export const getBandPageEditor = query(z.string(), async (slug) => {
 	// and — the part that actually matters — its `epk`, the band's private press
 	// kit, to any signed-in account that knew a slug. The blocks are semi-public
 	// (the microsite renders them); the EPK never was.
-	const { band } = await requireBandMemberOrStaff();
-	if (band.slug !== slug) error(403, 'Not authorized');
+	//
+	// The `band.slug !== slug` cross-check this used to carry is gone with the
+	// two sources of truth that made it necessary: the guard resolves the group
+	// from this argument, so there is no second slug for it to disagree with.
+	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
 
 	// The microsite's content lives on `band_site` since phase 3c; the row always
 	// exists, so there is nothing to create here.
@@ -69,7 +72,7 @@ export const saveBandPageConfig = form(
 		blocks: blocksField
 	}),
 	async (data) => {
-		const { band } = await requireBandAdmin();
+		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
 		if (band.tier !== 'premium') {
 			throw error(403, 'Premium subscription required');
@@ -111,7 +114,7 @@ export const saveBandEpk = form(
 		epk: jsonObjectField('Invalid EPK data')
 	}),
 	async (data) => {
-		const { band } = await requireBandAdmin();
+		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
 		if (band.tier !== 'premium') {
 			throw error(403, 'Premium subscription required');

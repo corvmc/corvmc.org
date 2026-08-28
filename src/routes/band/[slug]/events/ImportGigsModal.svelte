@@ -7,9 +7,10 @@
 	import { parseGigImport, GIG_IMPORT_MAX_LINES } from '$lib/utils/gig-import';
 	import { invalidateAll } from '$app/navigation';
 
-	// No band prop: `importGigsForm` resolves the band from the route guard, and
-	// the `slug` field it used to carry was never read by the handler.
-	let { open = $bindable(false) }: { open?: boolean } = $props();
+	// The `slug` is back to being read. It used to ride the form and be ignored,
+	// because the guard resolved the band from the route instead; now it is the
+	// ref the guard resolves.
+	let { slug, open = $bindable(false) }: { slug: string; open?: boolean } = $props();
 
 	const fields = importGigsForm.fields;
 
@@ -31,6 +32,8 @@
 		}}
 		class="space-y-4"
 	>
+		<input {...fields.slug.as('hidden', slug)} />
+
 		<FormField name="text" label="One gig per line">
 			<textarea
 				{...fields.text.as('text')}
