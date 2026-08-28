@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { browserPort, devPort, isWorktree, previewPort } from './checkout-ports';
+import { browserPort, devPort, isWorktree, previewPort, storybookPort } from './checkout-ports';
 
 const MAIN = '/Users/someone/Projects/corvmc-svelte';
 const TREE_A = '/Users/someone/Projects/corvmc-svelte/.claude/worktrees/sharp-bohr-8eb1b8';
@@ -126,5 +126,62 @@ describe('environment overrides', () => {
 		expect(() => devPort(MAIN, { PORT: '99999' } as NodeJS.ProcessEnv)).toThrow(
 			/between 1 and 65535/
 		);
+	});
+});
+
+describe('storybookPort', () => {
+	/**
+	 * The bug this exists for: storybook's browser server defaulted to vitest's
+	 * `defaultBrowserPort`, which is the same number `client` binds. Two browser
+	 * servers start in one `pnpm test:unit`, so the loser reported
+	 * `Port 63315 is already in use` — and it surfaced as the client project's
+	 * files missing from the run with **zero failed tests**, which reads as flake.
+	 */
+	it('never matches the client browser port', () => {
+		expect(storybookPort(MAIN, NO_ENV)).not.toBe(browserPort(MAIN, NO_ENV));
+		expect(storybookPort(TREE_A, NO_ENV)).not.toBe(browserPort(TREE_A, NO_ENV));
+		expect(storybookPort(TREE_B, NO_ENV)).not.toBe(browserPort(TREE_B, NO_ENV));
+	});
+
+	it('differs per worktree, like the others', () => {
+		expect(storybookPort(TREE_A, NO_ENV)).not.toBe(storybookPort(TREE_B, NO_ENV));
+	});
+
+	it('takes an explicit override', () => {
+		expect(storybookPort(TREE_A, { VITEST_STORYBOOK_PORT: '61234' })).toBe(61234);
+	});
+
+	it('sits in its own slot, clear of the other three', () => {
+		expect(storybookPort(TREE_A, NO_ENV)).toBeGreaterThanOrEqual(44000);
+		expect(storybookPort(TREE_A, NO_ENV)).toBeLessThan(45000);
+	});
+});
+
+describe('widening the slot range', () => {
+	/**
+	 * Adding a slot widens the span so the slot width stays 1000 — every port
+	 * that already existed keeps its exact number. A worktree's bookmarked URL
+	 * and Playwright's `reuseExistingServer` both depend on that, and a slot
+	 * width change would silently move all of them.
+	 */
+	it('leaves dev, preview and browser exactly where they were', () => {
+		for (const tree of [TREE_A, TREE_B]) {
+			expect(devPort(tree, NO_ENV)).toBeGreaterThanOrEqual(41000);
+			expect(devPort(tree, NO_ENV)).toBeLessThan(42000);
+			expect(previewPort(tree, NO_ENV)).toBeGreaterThanOrEqual(42000);
+			expect(previewPort(tree, NO_ENV)).toBeLessThan(43000);
+			expect(browserPort(tree, NO_ENV)).toBeGreaterThanOrEqual(43000);
+			expect(browserPort(tree, NO_ENV)).toBeLessThan(44000);
+		}
+	});
+
+	it('gives all four a distinct port in one worktree', () => {
+		const ports = [
+			devPort(TREE_A, NO_ENV),
+			previewPort(TREE_A, NO_ENV),
+			browserPort(TREE_A, NO_ENV),
+			storybookPort(TREE_A, NO_ENV)
+		];
+		expect(new Set(ports).size).toBe(4);
 	});
 });
