@@ -54,7 +54,7 @@ treat the spec as intent and the code as reality — reconcile deliberately.
 and rejected — which no manual article carries. Read a shipped spec to find out **why** something is
 the way it is, and the workflow guide to find out **what** it does today.
 
-[reports/spec-audit.md](reports/spec-audit.md) classifies all 31 against the tree and records how
+[reports/spec-audit.md](reports/spec-audit.md) classifies all 32 against the tree and records how
 this split was made.
 
 ### Reservations
@@ -133,6 +133,15 @@ The last four all came out of #164, which closed the follow-ups in
 [reports/staff-user-management-audit.md](reports/staff-user-management-audit.md) by writing a spec
 for each. None has been built since.
 
+### Platform
+
+| Doc                                  | Status | Lifecycle | Notes                                                                                               |
+| ------------------------------------ | ------ | --------- | --------------------------------------------------------------------------------------------------- |
+| [media-spec.md](specs/media-spec.md) | 📋     | spec      | `media` + `media_attachment` over R2: one object shared by many entities, detach-and-sweep deletion |
+
+Cross-cutting rather than owned by one panel. Closes the media-management entry in
+[`CHORES.md`](../CHORES.md), and the `band_media` object leak it found.
+
 ## plans
 
 Sequenced build plans. Mostly historical now that the features have shipped — kept for context.
@@ -184,7 +193,7 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | Doc                                                                      | Status | Notes                                                                                    |
 | ------------------------------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------- |
 | [feature-catalog.md](reports/feature-catalog.md)                         | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship         |
-| [spec-audit.md](reports/spec-audit.md)                                   | ✅     | All 31 specs classified against the tree; which are shipped and where their content goes |
+| [spec-audit.md](reports/spec-audit.md)                                   | ✅     | All 32 specs classified against the tree; which are shipped and where their content goes |
 | [standardization-audit.md](reports/standardization-audit.md)             | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                 |
 | [staff-user-management-audit.md](reports/staff-user-management-audit.md) | 📦     | The audit behind #164; five follow-up specs, one of them built                           |
 | [revenue-audit.md](reports/revenue-audit.md)                             | 📦     | Revenue workflow audit; its findings closed in #131                                      |
