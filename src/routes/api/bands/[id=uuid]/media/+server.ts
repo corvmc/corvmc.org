@@ -1,10 +1,12 @@
-import { json, error, type RequestHandler } from '@sveltejs/kit';
+import { json, error } from '@sveltejs/kit';
+// Typed params from `./$types` rather than the generic kit `RequestHandler`,
+// which types `params.id` as possibly-undefined and forced a `!` at every use.
+import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
 import { mediaAttachment } from '$lib/server/db/schema/media';
 import type { MediaSlot } from '$lib/server/db/schema/media';
 import { eq, and, max } from 'drizzle-orm';
-import { getUserRole } from '$lib/server/band/band-service';
+import { requireGroupRole } from '$lib/server/group/group-context';
 import { uploadFile } from '$lib/server/storage';
 import { extensionForType } from '$lib/server/storage-keys';
 import { attach, detach, record } from '$lib/server/media/media-service';
@@ -37,13 +39,6 @@ function allowedTypesFor(mediaType: string): string[] {
 	return mediaType === 'rider' || mediaType === 'stage_plot' ? DOCUMENT_TYPES : IMAGE_TYPES;
 }
 
-async function requireAdminOfBand(bandId: string, userId: string) {
-	const role = await getUserRole(bandId, userId);
-	if (!role || (role !== 'owner' && role !== 'admin')) {
-		throw error(403, 'Only owners and admins can manage band media');
-	}
-}
-
 // ---------------------------------------------------------------------------
 // POST — upload one or more media files
 // ---------------------------------------------------------------------------
@@ -53,14 +48,12 @@ async function requireAdminOfBand(bandId: string, userId: string) {
 //   caption — optional caption (only applies to single-file uploads)
 // ---------------------------------------------------------------------------
 
-export const POST: RequestHandler = async ({ params, request, locals }) => {
-	if (!locals.user) throw error(401, 'Not authenticated');
-
-	const bandId = params.id!;
-	const [row] = await db.select({ id: group.id }).from(group).where(eq(group.id, bandId)).limit(1);
-	if (!row) throw error(404, 'Band not found');
-
-	await requireAdminOfBand(bandId, locals.user.id);
+export const POST: RequestHandler = async ({ params, request }) => {
+	// The id is a real route param here, not a remote function's client-supplied
+	// one, so `{ id }` is the honest ref. The guard does the 401, the 404 and the
+	// role check that were three hand-rolled steps.
+	const bandId = params.id;
+	const { user } = await requireGroupRole({ id: bandId }, 'admin');
 
 	const formData = await request.formData();
 	const mediaType = (formData.get('type') as string) ?? 'image';
@@ -142,7 +135,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			byteSize: buffer.byteLength,
 			filename: file.name,
 			caption: files.length === 1 ? (caption ?? null) : null,
-			uploadedByUserId: locals.user.id
+			uploadedByUserId: user.id
 		});
 
 		const attachment = await attach({
@@ -168,11 +161,9 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 // Usage: DELETE /api/bands/:id/media?mediaId=<uuid>
 // ---------------------------------------------------------------------------
 
-export const DELETE: RequestHandler = async ({ params, url, locals }) => {
-	if (!locals.user) throw error(401, 'Not authenticated');
-
-	const bandId = params.id!;
-	await requireAdminOfBand(bandId, locals.user.id);
+export const DELETE: RequestHandler = async ({ params, url }) => {
+	const bandId = params.id;
+	await requireGroupRole({ id: bandId }, 'admin');
 
 	const mediaId = url.searchParams.get('mediaId');
 	if (!mediaId) throw error(400, 'Missing mediaId query parameter');

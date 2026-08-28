@@ -9,7 +9,20 @@ import { groupEntryInsert } from '$lib/server/directory/entry-service';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { bandSiteInsert, getOrCreateBandSiteId } from './band-site-service';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } from 'drizzle-orm';
+import {
+	eq,
+	and,
+	ne,
+	gt,
+	sql,
+	or,
+	like,
+	inArray,
+	isNull,
+	isNotNull,
+	count,
+	type SQL
+} from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
@@ -259,7 +272,13 @@ export async function deleteBand(bandId: string) {
 // Queries
 // ---------------------------------------------------------------------------
 
-export async function getBySlug(slug: string) {
+/**
+ * The one select behind every group-context lookup. `getBySlug` and
+ * `getByIdActive` differ only in their WHERE, and they must not drift: the
+ * guard resolves a group from either ref shape and both have to yield the same
+ * row, soft-delete filter included.
+ */
+async function selectGroupContext(where: SQL | undefined) {
 	const [row] = await db
 		.select({
 			id: group.id,
@@ -291,7 +310,7 @@ export async function getBySlug(slug: string) {
 			)
 		)
 		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
-		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
+		.where(where)
 		.groupBy(group.id);
 
 	if (!row) return null;
@@ -300,6 +319,19 @@ export async function getBySlug(slug: string) {
 	// band's own panel working rather than typing `tier` as nullable across
 	// every caller.
 	return { ...row, tier: row.tier ?? ('free' as const) };
+}
+
+export async function getBySlug(slug: string) {
+	return selectGroupContext(and(eq(group.slug, slug), isNull(group.deletedAt)));
+}
+
+/**
+ * `getBySlug`'s sibling, keyed on the id. Distinct from `getById` below, which
+ * is a bare row read that does NOT exclude soft-deleted groups — an
+ * authorization guard must not resolve a deleted group, so it uses this one.
+ */
+export async function getByIdActive(groupId: string) {
+	return selectGroupContext(and(eq(group.id, groupId), isNull(group.deletedAt)));
 }
 
 export async function getById(bandId: string) {
