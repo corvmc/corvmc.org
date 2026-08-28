@@ -32,9 +32,10 @@ have to exist.
 
 ## What a committee is in this app
 
-**A committee is a `group`. The volunteer role of the same name is its recruiting poster.**
+**A committee is a `group` with `joinPolicy = 'by_application'`. The committee volunteer roles
+retire.**
 
-The word already means two unrelated things in the codebase, and nothing links them:
+The word means two unrelated things in the codebase today, with no key between them:
 
 - `groupKinds = ['band', 'club', 'committee']` — [src/lib/config.ts](../../src/lib/config.ts).
   A committee is a `group` row with a roster (`group_member`) and — once phases 7 and 8 of
@@ -44,19 +45,39 @@ The word already means two unrelated things in the codebase, and nothing links t
 - `volunteerRoleGroups = ['at-shows', 'away-from-shows', 'committee']` — same file. A
   presentational bucket on the `/contribute` role picker, holding rows like "Programming
   Committee" from [scripts/seed-volunteer-roles.ts](../../scripts/seed-volunteer-roles.ts).
-  Nothing branches on it; the volunteering spec is explicit that a `volunteer_role` grants
+  Nothing branches on it, and the volunteering spec is explicit that a `volunteer_role` grants
   nothing at all.
 
-There is no foreign key between them, and a Programming Committee would today be two unrelated
-rows with the same name. The split is worth keeping, because the two do different jobs: the
-volunteer role is how somebody who has never been to a meeting says "I'd help with that", and
-the group is the committee they join afterwards. Interest is public and cheap; membership is
-appointed.
+An earlier draft of this section kept both and made the volunteer role a recruiting funnel into
+the group. That is one join table and one chair-facing queue to build, and it leaves two rows
+named "Programming Committee" in unrelated tables forever — a trap somebody eventually falls
+into.
 
-**What is missing is the step between them.** A `volunteer_role_interest` row in the
-`committee` bucket is a lead, and there is nowhere for a chair to see their leads or act on
-one. That is a story below, under Chairs, and it is the smallest change in this document with
-the largest effect on whether committees fill.
+**`by_application` deletes the funnel instead of building it.** A committee group publishes
+itself, a member applies from its own page, and a chair approves — `group_member.status` moves
+`requested → active` and the roster is the only record. Interest and membership stop being two
+objects.
+
+This is not a new idea imported here; [groups-spec.md](groups-spec.md) already names the
+motivating case in almost these words — the policy exists for "the program that wants everyone
+to be able to _find_ it but not everyone to be in it — **a committee with a seat count**, a
+workshop with a skill floor." The committee structure is what that sentence was written for.
+
+What it costs, all of it already on the groups roadmap:
+
+- **`by_application` is designed and unbuilt.** It needs the `'requested'` value on
+  `group_member.status` and the club page that renders an Apply button — phase 5.
+- **Two roster reads are status-blind** and must change in the same PR as the enum value.
+  `listForUser` and `getMembers` in `band-service.ts` do not filter on status at all, so a
+  `'requested'` row falls into neither the pending nor the active bucket and **disappears**,
+  which is a fail-quiet a reviewer cannot see. `groups-spec.md` flags this as a known defect;
+  it becomes load-bearing the moment committees use applications.
+- **Retirement has a paper trail.** The `committee` value in `volunteerRoleGroups`, its label,
+  the seeded committee roles, and the "Committees" bullet in
+  [manual/public/ways-to-contribute.md](../manual/public/ways-to-contribute.md) all go
+  together. Existing `volunteer_role_interest` rows against those roles are the first
+  applications and should be migrated, not dropped — they are people who already put their hand
+  up.
 
 ---
 
@@ -84,18 +105,37 @@ Anyone handed the panel to do committee work today gets the whole panel, includi
 purges and credit adjustments. That is a policy the Collective has not chosen; it is a
 consequence of there being one door.
 
-**This document does not solve it.** `admin-vs-staff-spec.md` is the prerequisite, and the
-committee structure is the strongest argument yet for its Option B — a rotating set of
-committee volunteers is precisely the population that should not inherit account deletion.
-Two further requirements this document adds to that spec, neither of them in it today:
+**This document does not solve it, and the structure it describes requires it solved.**
+Committee members are to be **empowered to act within their own domain** — that is the settled
+intent, not an assumption this document made for convenience. It makes
+`admin-vs-staff-spec.md` a hard prerequisite rather than an adjacent cleanup, and the committee
+structure is the strongest argument yet for its Option B: a rotating set of committee
+volunteers is precisely the population that should not inherit account deletion.
 
-- **Committee-scoped authority.** A guard shaped like `requireCommitteeRole('programming')`,
-  reading `group_member` for a `kind = 'committee'` group. Every ✅ and 🔧 story below is
-  currently "staff can do this"; committee scoping is what would make them "the right people
-  can do this".
-- **A chair is not a group owner.** `group_member.role = 'owner'` carries transfer and delete;
-  a chair is appointed and removed by the board and should hold neither. Either `admin` is the
-  chair's row and staff hold `owner`, or chair becomes a fourth value. Open question below.
+One requirement this document adds to that spec, not in it today:
+
+**Committee-scoped authority.** A guard shaped like `requireCommitteeRole('programming')`,
+reading `group_member` for a `kind = 'committee'` group. Every ✅ and 🔧 story below currently
+means "staff can do this"; committee scoping is what turns them into "the right people can do
+this". Two properties it needs that `requireStaff()` does not have: it resolves a committee
+from the thing being acted on rather than from a route param, and it must compose with staff —
+staff can always act, because somebody has to be able to cover.
+
+**A chair is a group `admin`, not an `owner`.** The chair is first among equals: they run the
+meeting, keep the notes moving, and report — they do not wield authority the rest of the
+committee lacks, and the board appoints and removes them. `owner` carries transfer and delete,
+neither of which belongs to that role, and `groups-spec.md` already makes deleting a committee
+staff-only for the same reason.
+
+Two things follow, both deliberate:
+
+- **A chair and their deputy are indistinguishable in the data**, because under first-among-
+  equals there is nothing to distinguish. "Who chairs Programming" is answered by
+  `group_member.position`, which is a label, not a permission.
+- **The committee still needs an `owner` row**, since a partial unique index expects at most
+  one and several reads assume one. It should be a board or staff account rather than any
+  committee member — ownership is the board's standing over a body it created, which is exactly
+  what the bylaws say it is.
 
 ---
 
@@ -236,8 +276,10 @@ with condition tracked per `inventory_asset`.
 
 **As Production**, I want to run a recording session — capture, file custody, backups, a signed
 release before we use anything, and a handoff to whoever mixes it.
-🆕 Nothing covers this. `media` stores finished files; it is not session management, and there
-is no release-form record anywhere in the app.
+🆕 Nothing covers session management; `media` stores finished files and is not that. 🔧 The
+release is the tractable part: a per-person standing release attaches to the member through
+`media_attachment` with `attachableType: 'user'`. A release for _this recording_ is per-work
+rather than per-person, and a session is not an entity yet, so it has nothing to hang on.
 
 ---
 
@@ -342,8 +384,10 @@ index of recordings do not.
 
 **As Communications**, I want a release on file for the people who appear in our photos and
 video.
-🆕 No release record anywhere in the app. This is the same gap Production has for session
-releases and should be solved once.
+🔧 `media_attachment` already attaches a file to a subject polymorphically and
+`attachableTypes` already includes `'user'`, so a standing release from a member is a file on
+the person — the shape settled for releases generally. 🆕 An audience member who appears in a
+photo and has no account has nothing to attach to, which is the harder half of this duty.
 
 **As Communications**, I want the flyer cutoff enforced, so an event with no art from Art and
 Merch runs on the template flyer and the standard schedule.
@@ -465,11 +509,13 @@ that has divided its duties into named positions cannot record that anywhere the
 app can see. **This is the smallest change in the document with the widest effect** — it turns
 the roster from a list of names into a division of labor.
 
-**As a chair**, I want to see who has expressed interest in my committee, so I can recruit from
-people who already put their hand up.
-🆕 `volunteer_role_interest` rows in the `committee` bucket are exactly these leads, and there
-is no chair-facing view of them and no path from a lead to a roster row. See
-[What a committee is in this app](#what-a-committee-is-in-this-app).
+**As a chair**, I want members to be able to apply to my committee, and to approve or decline
+them myself.
+📋 `joinPolicy = 'by_application'` — phase 5 of [groups-spec.md](groups-spec.md). Approving is
+a `group_member.status` flip from `'requested'` to `'active'`, which is the same flip that
+accepts an invitation. This replaces the interest-to-roster funnel an earlier draft proposed;
+see [What a committee is in this app](#what-a-committee-is-in-this-app) for what retires with
+it.
 
 **As a chair**, I want to invite someone onto the committee and hand the seat off cleanly when
 they leave.
@@ -493,16 +539,21 @@ that nothing reads it until phase 7 lands.
 
 **As a chair**, I want to report my committee's numbers and status to the board on a schedule,
 and to flag when we cannot cover our work with the people we have.
-🆕 No committee report, no cadence, and nothing that would notice an unstaffed duty. Volunteering
-has the closest precedent: `/staff/volunteer/report` produces exactly this shape of packet over
-a date range, with unfilled shift counts already surfaced per role.
+📋 Not six committee report pages — one rollup. [reporting-spec.md](reporting-spec.md)'s
+strategy is that the packet calls each module's existing report service rather than writing its
+own queries, so a committee's numbers are whatever its domain already computes and the board
+reads one document. `/staff/volunteer/report` is both the precedent for the shape (a date
+range, tables, no charts, not cached) and one of the services the rollup would call. 🆕 Nothing
+would notice an unstaffed duty; that needs positions to mean something first.
 
 **As a chair**, I want to know the amount my committee can commit without coming back to the
 board, and to work inside it.
 🆕 No budget, no spending limit, no approval threshold anywhere in the app.
 
 **As a chair**, I want a named backup who can run a meeting in my absence.
-🔧 `group_member.role = 'admin'` is the shape of a deputy. Nothing says that is what it means.
+🔧 The deputy is a second `group_member.role = 'admin'`, and is deliberately indistinguishable
+from the chair in the data — under first among equals there is nothing to distinguish. Which
+one chairs is `position`, a label rather than a permission.
 
 ---
 
@@ -636,33 +687,67 @@ restate it.
 
 ---
 
+## Decisions that were open
+
+All five questions this document opened have been answered. They are recorded here rather than
+edited away, because each one closes off an alternative that will otherwise be re-proposed.
+
+1. **A chair is a group `admin`.** Not an `owner`, and not a fourth role value. The chair is
+   first among equals — they run the meeting and report, they do not hold authority the rest of
+   the committee lacks. This accepts that a chair and a deputy look identical in the data, which
+   is correct rather than a compromise. See
+   [The authority problem](#the-authority-problem) for what follows, including who holds `owner`.
+
+2. **A committee is a `by_application` group, and the committee volunteer roles retire.** The
+   alternative — keeping both and building a funnel from interest to roster — is more code and
+   leaves the name meaning two things permanently. `groups-spec.md` already named a committee as
+   the motivating case for the policy. See
+   [What a committee is in this app](#what-a-committee-is-in-this-app).
+
+3. **A standing release is a file on the person.** `media_attachment` is already polymorphic and
+   `attachableTypes` already carries `'user'`, so no new table is needed for the common case: a
+   member's photo release, a volunteer's likeness release. What this does **not** reach is the
+   per-work release — a band consenting to _this_ recording, an artist licensing _this_ poster —
+   and the audience member who has no account to attach anything to. Those stay open below.
+
+4. **Committee reporting is one rollup, not six report pages.** Per
+   [reporting-spec.md](reporting-spec.md), the board packet calls each module's existing report
+   service rather than writing its own queries. A committee's numbers are whatever its domain
+   already computes.
+
+5. **Committee members act within their own domain.** This was the question the rest depended
+   on, and the answer is the one that costs the most: committee-scoped authority is real work
+   and `admin-vs-staff-spec.md` is a hard prerequisite. The cheaper reading — that committees
+   meet, decide, and ask staff to execute — would have made most of this document a
+   documents-and-announcements problem the groups module already solves. It is not the model
+   being adopted.
+
+---
+
 ## Open questions
 
-1. **Is a chair a group `owner`, a group `admin`, or a fourth role?** Owner carries transfer
-   and delete, neither of which a board-appointed chair should hold; the groups spec already
-   makes deleting a club or committee staff-only for this exact reason. Admin is the honest fit
-   but then a chair and their deputy are indistinguishable. A fourth value costs a vocabulary
-   change and reaches every group, including bands, which have no chairs.
+1. **What, exactly, is a committee's domain?** Decision 5 settles that committees act within
+   one and not what one is. The boundaries are not obvious where the app is concerned: an event
+   is Programming's to book and Production's to staff; the inventory catalog is Facility's but
+   Production requisitions from it; a venue is Development's to negotiate and Programming's to
+   book into. `requireCommitteeRole()` cannot be written until this is a table of committee →
+   what it may act on, and that table is the real design work behind decision 5.
 
-2. **Does the committee `volunteer_role` survive?** If a chair can see interest and act on it,
-   the role is doing real work as a funnel. If not, two rows named "Programming Committee" in
-   unrelated tables is a trap somebody will fall into. Deciding to keep it should come with the
-   funnel; deciding to drop it means the `committee` bucket in `volunteerRoleGroups` goes with
-   it.
+2. **Where does a per-work release live?** Decision 3 covers the standing per-person case and
+   explicitly does not cover a recording session, a commissioned poster, or a photo subject with
+   no account. Three committees need it and the likely outcome, absent a decision, is three
+   implementations.
 
-3. **Where do releases live?** Photo and video subject releases (Communications), recording
-   session releases (Production), and image-rights agreements with poster artists (Art and
-   Merch) are three committees asking for one thing: a signed permission attached to a person
-   and a work. Three separate implementations is the likely outcome if nobody names it once.
+3. **Which account owns a committee group?** Decision 1 puts `owner` on the board or staff side
+   rather than on any committee member. Whether that is a named officer's account, a shared
+   board account, or the creating staffer is unsettled, and it decides what happens when that
+   person leaves.
 
-4. **Is a committee report a feature or a query?** `/staff/volunteer/report` sets the precedent
-   — a date range, four tables, no charts, not cached. If each committee's board report is that
-   shape, six of them are six report pages. If they are meant to compose into one board packet,
-   that is [reporting-spec.md](reporting-spec.md)'s rollup and should wait for it.
+4. **Is there a monthly committee report, or only the annual rollup?** The board meets on a
+   cadence and the chair reports to it every meeting; `reporting-spec.md` sequences the rollup
+   as an annual artifact. If the monthly report is a real requirement it is a different, smaller
+   thing than the packet, and decision 4 does not settle which.
 
-5. **What does a committee actually get to do that a member cannot?** This document assumes the
-   answer is "act on the organization's data within its own domain", which is what
-   committee-scoped authority would mean. If the answer is instead "meet, decide, and ask staff
-   to execute", then almost every 🆕 above is a documents-and-announcements problem the groups
-   module already solves, and the authority work is unnecessary. **This question should be
-   answered before anything here is built.**
+5. **Are committee seats capped?** `by_application` exists for "a committee with a seat count",
+   and nothing in the group model counts seats. If caps are real they belong in the same phase
+   as the application flow, not after it.

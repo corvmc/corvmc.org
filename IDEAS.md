@@ -271,11 +271,14 @@ missing is everything that makes a committee a committee rather than a group cha
 filing cabinet.
 
 **Progress:** Requirements enumerated in `docs/specs/committees-and-roles-spec.md`, which maps
-the whole committee structure against what the app serves today. Two pieces are near-free —
-`group_member.position` already exists and is read by nothing, and `volunteer_role_interest`
-rows in the `committee` bucket are already a chair's recruiting leads with no view onto them.
-The rest waits on committee-scoped authority, which is the argument that spec makes for
-`admin-vs-staff-spec.md`'s Option B.
+the whole committee structure against what the app serves today and has settled its five open
+questions. Two decisions shape the work: a committee is a `by_application` group — so joining
+one rides phase 5 of `groups-spec.md` and the committee `volunteer_role` bucket retires with it
+— and committee members act within their own domain, which makes `admin-vs-staff-spec.md`'s
+Option B a hard prerequisite rather than an adjacent cleanup. The cheapest piece is
+`group_member.position`, which already exists and is read by nothing; the most expensive is
+deciding what a committee's domain actually contains, which is the spec's first remaining open
+question.
 
 ### Poster Art Commissioning
 
