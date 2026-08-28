@@ -33,11 +33,32 @@ becomes unreachable.
 > **An R2 object is never deleted as a side effect of deleting a row.**
 > Rows are detached; objects are reaped by a sweep that can see the whole reference graph.
 
-Everything below follows from taking that seriously. The corollary is the part that resolves the
-long-running argument about polymorphic tables: **a sweep is required for the object regardless of
-what shape the schema takes.** Once one exists, running it over rows as well is free — so the
-referential integrity a foreign key would have bought on the parent side is no longer worth
-contorting the schema for.
+Everything below follows from taking that seriously.
+
+## Why the parent link carries no foreign key
+
+This is the decision the rest of the design turns on, and it is worth stating plainly rather than
+leaving to be inferred from the schema.
+
+**The parent set is open by design.** A media layer earns its keep by being the answer for anything
+that ever needs a file — an event poster today, a production's advance packet, a venue photo, an
+incident report attachment, things not yet designed. Any shape that names its parents in columns
+turns "this new feature wants to attach a file" into a schema change: an `ALTER TABLE ADD COLUMN`,
+an amendment to the exactly-one rule, and an edit to every query that enumerates parents. A shared
+layer that must be modified by each consumer before it can serve them is not shared infrastructure.
+Broad applicability is the requirement, and an unenforced parent link is what it costs.
+
+**This is not the case `directory_entry` settled.** That table uses two nullable typed foreign keys
+for what looks like the same question, and it is right to: its parent set is _closed_ — a user, a
+group, or nothing — and enumerated by the domain itself, so a third would be a real domain event
+rather than a routine one. Paying a column for it is proportionate there and is not here. The two
+tables answer different questions, and the axis that separates them is whether the set of parents is
+known in advance.
+
+**The sweep then makes the cost small rather than being the reason for it.** An R2 object needs a
+sweep whatever shape this table takes, since a cascade deletes rows and never objects. Once one
+exists, reconciling rows with it is nearly free — so the integrity a parent-side foreign key would
+have bought is the smaller half of what it would have cost.
 
 ## Prior art
 
@@ -86,8 +107,8 @@ available evidence that the pattern is sound at far larger scale than CMC will e
   needs application handling anyway is handled there rather than twice.
 
 - **`attachableType` and `slot` are TypeScript enums, not SQL.** Extending either emits **zero SQL**
-  in Drizzle's SQLite dialect, which is what makes adding a parent type — `production`, `venue` —
-  free later. `attachableType` starts as `event | group | user`; `slot` as
+  in Drizzle's SQLite dialect. This is not a convenience — it is the mechanism by which the parent
+  set stays open, so a new consumer adds a string and writes rows rather than migrating this table. `attachableType` starts as `event | group | user`; `slot` as
   `poster | avatar | gallery | hero | rider | stage_plot`, carrying over the `band_media.type`
   vocabulary.
 
