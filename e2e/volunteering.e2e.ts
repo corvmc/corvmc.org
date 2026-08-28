@@ -52,6 +52,16 @@ import {
  *     credit service is never called; this asserts no row actually lands.
  */
 
+/**
+ * Read-backs go through `readLocalDb`, which opens the run's SQLite file
+ * directly while the preview server is still writing through workerd. A row the
+ * page has already stopped rendering is therefore not yet guaranteed to be
+ * visible to a fresh reader — the gap is normal, not a symptom — so every
+ * assertion against the database polls rather than reading once. A one-shot
+ * read here is the bug that failed this spec on CI and nowhere else.
+ */
+const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
+
 async function login(page: Page, email: string, password: string) {
 	await page.goto('/login');
 	// FormField renders a <legend>, not a <label for>, so target inputs by name.
@@ -110,13 +120,22 @@ test.describe('volunteering — staff review queue', () => {
 		// The regression: the row has to leave the table, not just the counts.
 		await expect(row).toHaveCount(0, { timeout: 15000 });
 
-		const state = await readVolunteerState();
-		expect(state.approveLogStatus).toBe('approved');
+		// Polled, not read once. The row leaving the table proves the page is
+		// right; it says nothing about when a reader opening the SQLite file
+		// itself sees the write. Attempt 0 of run 33136967674 read `pending` here
+		// with the row already gone — the UI was correct and the read was early.
+		await expect
+			.poll(async () => (await readVolunteerState()).approveLogStatus, DB_POLL)
+			.toBe('approved');
 		// Volunteer hours are a record, not a currency. Asserted in the same test
 		// as the approval rather than its own: the fixture seeds one approvable
 		// log and the suite shares a database, so a second test approving "the
 		// same" row finds it already gone.
-		expect(state.creditRowCount).toBe(0);
+		//
+		// One-shot is safe: the poll above has already established that this
+		// review is visible to this reader, and a credit row would have been
+		// written by the same request.
+		expect((await readVolunteerState()).creditRowCount).toBe(0);
 	});
 
 	test('rejecting without a reason shows written copy, not raw zod text', async ({ page }) => {
@@ -522,7 +541,7 @@ test.describe('volunteering — shifts', () => {
 		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText('claimed', {
 			timeout: 15000
 		});
-		expect(await readSignupStatus(SEED_VOL_SHIFT_OPEN_ID)).toBe('claimed');
+		await expect.poll(() => readSignupStatus(SEED_VOL_SHIFT_OPEN_ID), DB_POLL).toBe('claimed');
 
 		// Dropping out has to free the place, not just hide the button — the
 		// capacity count is computed from live signups.
@@ -534,7 +553,7 @@ test.describe('volunteering — shifts', () => {
 		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText("I'll do it", {
 			timeout: 15000
 		});
-		expect(await readSignupStatus(SEED_VOL_SHIFT_OPEN_ID)).toBe('cancelled');
+		await expect.poll(() => readSignupStatus(SEED_VOL_SHIFT_OPEN_ID), DB_POLL).toBe('cancelled');
 	});
 
 	test('a shift needing a clearance the member lacks says so instead of offering it', async ({
@@ -589,7 +608,7 @@ test.describe('volunteering — shifts', () => {
 			'confirmed',
 			{ timeout: 15000 }
 		);
-		expect(await readSignupStatus(SEED_VOL_SHIFT_OPEN_ID)).toBe('confirmed');
+		await expect.poll(() => readSignupStatus(SEED_VOL_SHIFT_OPEN_ID), DB_POLL).toBe('confirmed');
 	});
 });
 
@@ -663,7 +682,7 @@ test.describe('volunteering — shifts and events', () => {
 		 * cleared — and an absent field means "untouched", not "cleared". The save
 		 * reports success either way; only the row tells you which happened.
 		 */
-		expect(await readShiftEventId(SEED_VOL_SHIFT_EVENT_ID)).toBeNull();
+		await expect.poll(() => readShiftEventId(SEED_VOL_SHIFT_EVENT_ID), DB_POLL).toBeNull();
 
 		// And back on again, through the search picker this time.
 		await page.getByRole('button', { name: 'Edit' }).click();
@@ -685,7 +704,9 @@ test.describe('volunteering — shifts and events', () => {
 		await expect(page.getByRole('link', { name: SEED_VOL_EVENT_TITLE })).toBeVisible({
 			timeout: 15000
 		});
-		expect(await readShiftEventId(SEED_VOL_SHIFT_EVENT_ID)).toBe(SEED_VOL_EVENT_ID);
+		await expect
+			.poll(() => readShiftEventId(SEED_VOL_SHIFT_EVENT_ID), DB_POLL)
+			.toBe(SEED_VOL_EVENT_ID);
 	});
 });
 

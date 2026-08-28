@@ -12,6 +12,11 @@
  * A failing run keeps its state. The database after a red run is the most
  * useful thing in the directory — it is what the app actually wrote — and the
  * next run clears it before seeding anyway, so nothing accumulates.
+ *
+ * The next run also rebuilds the directory outright if the migration list has
+ * moved on in a way the kept state cannot be migrated into — see
+ * `journalDisagreesWithSchema` in `e2e/reset-db.ts`. Keeping a red run's state
+ * therefore never costs the run after it.
  */
 import { spawnSync } from 'node:child_process';
 import { acquireE2eLock, releaseE2eLock, releaseE2eLockOnExit } from './lock';
@@ -63,7 +68,11 @@ if (status === 0) {
 } else {
 	console.log(
 		'\nLeaving .wrangler/e2e-state intact so the failing run can be inspected.' +
-			'\nClear it with `pnpm tsx e2e/reset-db.ts`.'
+			'\nClear it with `pnpm tsx e2e/reset-db.ts` — which empties the tables, and' +
+			"\ndrops the directory outright when its schema and drizzle's migration" +
+			'\njournal disagree (emptying rows cannot fix that; `rm -rf .wrangler/e2e-state`' +
+			'\nis the same thing by hand). `e2e/prepare.ts` detects that case too, so the' +
+			'\nnext run recovers on its own either way.'
 	);
 }
 

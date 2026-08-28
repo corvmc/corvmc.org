@@ -9,7 +9,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { clearAllTables } from './reset-db';
+import { clearAllTables, journalDisagreesWithSchema } from './reset-db';
 
 /** Two real tables from `tableOrder`, in a real parent → child relationship. */
 function seededDb(): DatabaseSync {
@@ -74,5 +74,60 @@ describe('clearAllTables', () => {
 		} finally {
 			db.close();
 		}
+	});
+});
+
+/**
+ * A schema the journal does not account for.
+ *
+ * `resetE2eDatabase` empties tables and leaves them standing, so a state
+ * directory outlives the run that built it. That is only safe while
+ * `__drizzle_migrations` still describes the tables that are there — otherwise
+ * the next `migrateLocal` replays migration 1 into a schema that already has
+ * `account` and dies, and the rollback hands the same directory to the run after
+ * it. Encountered twice on #297, recoverable only by deleting the directory.
+ */
+describe('journalDisagreesWithSchema', () => {
+	function check(sql?: string): boolean {
+		const handle = new DatabaseSync(':memory:');
+		try {
+			if (sql) handle.exec(sql);
+			return journalDisagreesWithSchema(handle);
+		} finally {
+			handle.close();
+		}
+	}
+
+	it('is false for an empty directory — the first run builds it', () => {
+		expect(check()).toBe(false);
+	});
+
+	it('is false when the journal accounts for the schema', () => {
+		expect(
+			check(`
+				CREATE TABLE "user" (id TEXT PRIMARY KEY);
+				CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY, hash TEXT);
+				INSERT INTO __drizzle_migrations (hash) VALUES ('0000_initial');
+			`)
+		).toBe(false);
+	});
+
+	it('is true when the tables are there and the journal table is not', () => {
+		expect(check('CREATE TABLE "user" (id TEXT PRIMARY KEY);')).toBe(true);
+	});
+
+	it('is true when the journal table is there but empty', () => {
+		expect(
+			check(`
+				CREATE TABLE "user" (id TEXT PRIMARY KEY);
+				CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY, hash TEXT);
+			`)
+		).toBe(true);
+	});
+
+	it('ignores tables the schema does not own, so a bare journal is not stale', () => {
+		// miniflare keeps its own bookkeeping in the same file. Only a table
+		// `tableOrder` names counts as "the schema is already here".
+		expect(check('CREATE TABLE "not_in_the_order" (id TEXT PRIMARY KEY);')).toBe(false);
 	});
 });
