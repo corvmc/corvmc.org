@@ -536,15 +536,26 @@ category, with the quantity to buy and a Receive action per row),
 queue), plus receiving and stocktake actions.
 
 **Member** — `/member/equipment` keeps its URL, and the unit page reached by
-scanning a tag is new. **Neither is in the member nav**, deliberately: gear
-lending is still arranged in person, so a browsable catalogue would invite
-requests the front desk is not yet running through this system. The pages are
-reachable by scanning a tag, by a notification link, or by URL.
+scanning a tag is new. **The Equipment row appears once there is something to
+lend** — `hasLoanableItems()` on the member layout query, surfaced as
+`hasLoanableEquipment`, with "My Loans" nested under it.
 
-Cutting the `equipment` flag did not change that — the member nav never gated on
-the flag, it simply omits the section. Adding the row is the follow-up for when
-lending stops being manual, and `src/routes/member/nav-items.spec.ts` records
-both routes in its stranded-on-dashboard list until then.
+Data, not a flag. The row used to be withheld by hand because gear lending was
+arranged in person, which was true for exactly as long as the catalogue held
+nothing. Deriving it means the nav corrects itself the moment the first loanable
+item is entered, and nobody has to remember to flip anything.
+
+Deliberately **existence, not availability**: if every amp is out on loan the
+catalogue is still worth showing, because a member can see what the collective
+has and put in a request for when it comes back. Hiding it then would answer
+"can I borrow an amp?" with "we don't lend equipment", which is false. The query
+falls back to hidden on error — a missing row is a link someone has to be told
+about, a row onto an empty catalogue is a promise the collective is not keeping.
+
+`/member/equipment/assets/[id]` stays out of the nav permanently: it is reached
+by pointing a phone at a sticker, and there is no "the unit" for a row to point
+at. It remains in `src/routes/member/nav-items.spec.ts`'s stranded list for that
+reason.
 
 **Resolver** — `/a/[tag]`.
 
