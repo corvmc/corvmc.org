@@ -17,7 +17,8 @@ const ALL_ENDPOINTS = [
 	'/api/cron/send-campaigns',
 	'/api/cron/complete-shifts',
 	'/api/cron/shift-reminders',
-	'/api/cron/shift-feedback'
+	'/api/cron/shift-feedback',
+	'/api/cron/sweep-media'
 ];
 
 function okFetcher() {
@@ -42,7 +43,10 @@ describe('CRON_SCHEDULE', () => {
 			// Shift reminders after the reservation ones, and the feedback ask last:
 			// it reads signups that complete-shifts has been marking all night.
 			'/api/cron/shift-reminders',
-			'/api/cron/shift-feedback'
+			'/api/cron/shift-feedback',
+			// Last: it reaps what every job above may have deleted, and nothing
+			// downstream reads its result.
+			'/api/cron/sweep-media'
 		]);
 	});
 });

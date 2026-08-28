@@ -29,7 +29,10 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		// After the reminders: both read confirmed signups, and complete-shifts
 		// has had all night of 15-minute passes before the feedback ask runs.
 		'/api/cron/shift-reminders',
-		'/api/cron/shift-feedback'
+		'/api/cron/shift-feedback',
+		// Last in the batch: it reads what every job above may have deleted, and
+		// nothing downstream depends on its result.
+		'/api/cron/sweep-media'
 	]
 };
 
