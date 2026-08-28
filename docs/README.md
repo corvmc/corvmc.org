@@ -54,8 +54,8 @@ treat the spec as intent and the code as reality — reconcile deliberately.
 and rejected — which no manual article carries. Read a shipped spec to find out **why** something is
 the way it is, and the workflow guide to find out **what** it does today.
 
-[reports/spec-audit.md](reports/spec-audit.md) classifies all 32 against the tree and records how
-this split was made.
+[reports/spec-audit.md](reports/spec-audit.md) classifies the 32 that existed at `9eb95cb` against
+the tree and records how this split was made.
 
 ### Reservations
 
@@ -68,13 +68,14 @@ this split was made.
 
 ### Bands & groups
 
-| Doc                                                        | Status | Lifecycle | Notes                                                                                                                                                                    |
-| ---------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [bands-spec.md](specs/shipped/bands-spec.md)               | ✅     | archived  | Band entity, membership, ownership, invitations — superseded in part by `groups-spec.md`                                                                                 |
-| [staff-bands-spec.md](specs/shipped/staff-bands-spec.md)   | ✅     | archived  | Staff band management & moderation; impersonation deliberately deferred                                                                                                  |
-| [band-domains-spec.md](specs/shipped/band-domains-spec.md) | ✅     | archived  | `{slug}.corvmc.org` for every band; custom domains as the premium tier                                                                                                   |
-| [band-sites-launch.md](specs/shipped/band-sites-launch.md) | 📦     | archived  | Shipped, then superseded outright by `band-domains-spec.md`                                                                                                              |
-| [groups-spec.md](specs/groups-spec.md)                     | 🔧     | spec      | Bands/clubs/committees: `group` + `directory_entry` + `band_site`, roster, announcements, documents. #267 renamed `band` → `group` in place; the split itself is unbuilt |
+| Doc                                                                | Status | Lifecycle | Notes                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------ | ------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [bands-spec.md](specs/shipped/bands-spec.md)                       | ✅     | archived  | Band entity, membership, ownership, invitations — superseded in part by `groups-spec.md`                                                                                                                                                             |
+| [staff-bands-spec.md](specs/shipped/staff-bands-spec.md)           | ✅     | archived  | Staff band management & moderation; impersonation deliberately deferred                                                                                                                                                                              |
+| [band-domains-spec.md](specs/shipped/band-domains-spec.md)         | ✅     | archived  | `{slug}.corvmc.org` for every band; custom domains as the premium tier                                                                                                                                                                               |
+| [band-sites-launch.md](specs/shipped/band-sites-launch.md)         | 📦     | archived  | Shipped, then superseded outright by `band-domains-spec.md`                                                                                                                                                                                          |
+| [groups-spec.md](specs/groups-spec.md)                             | 🔧     | spec      | Bands/clubs/committees: `group` + `directory_entry` + `band_site`, roster, announcements, documents. #267 renamed `band` → `group` in place; the split itself is unbuilt                                                                             |
+| [committees-and-roles-spec.md](specs/committees-and-roles-spec.md) | 📋     | spec      | The six committees and the event roles as user stories, each marked with what serves it today. A requirements map rather than one feature's design; names committee-scoped authority as the prerequisite `admin-vs-staff-spec.md` does not yet cover |
 
 ### Events
 
@@ -127,14 +128,14 @@ this split was made.
 
 ### Staff platform
 
-| Doc                                                                                  | Status | Lifecycle | Notes                                                                                        |
-| ------------------------------------------------------------------------------------ | ------ | --------- | -------------------------------------------------------------------------------------------- |
-| [staff-user-detail-context-spec.md](specs/shipped/staff-user-detail-context-spec.md) | ✅     | archived  | `/staff/users/[id]` as an operational record: 8 tabs, 9 panels                               |
-| [reporting-spec.md](specs/reporting-spec.md)                                         | 📋     | spec      | Module-owned reports over a shared kit; which vendor answers which question                  |
-| [audit-log-spec.md](specs/audit-log-spec.md)                                         | 📋     | spec      | Who did what to a member's account. No audit table exists                                    |
-| [staff-email-change-spec.md](specs/staff-email-change-spec.md)                       | 📋     | spec      | The most common front-desk correction, and the one the panel cannot do                       |
-| [reactivation-restore-spec.md](specs/reactivation-restore-spec.md)                   | 📋     | spec      | Deactivation cancels reservations and the Stripe subscription; reactivation restores neither |
-| [admin-vs-staff-spec.md](specs/admin-vs-staff-spec.md)                               | 📋     | spec      | Two elevated roles with no difference between them                                           |
+| Doc                                                                                  | Status | Lifecycle | Notes                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------ | ------ | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [staff-user-detail-context-spec.md](specs/shipped/staff-user-detail-context-spec.md) | ✅     | archived  | `/staff/users/[id]` as an operational record: 8 tabs, 9 panels                                                                                                                                            |
+| [reporting-spec.md](specs/reporting-spec.md)                                         | 📋     | spec      | Module-owned reports over a shared kit; which vendor answers which question                                                                                                                               |
+| [audit-log-spec.md](specs/audit-log-spec.md)                                         | 📋     | spec      | Who did what to a member's account. No audit table exists                                                                                                                                                 |
+| [staff-email-change-spec.md](specs/staff-email-change-spec.md)                       | 📋     | spec      | The most common front-desk correction, and the one the panel cannot do                                                                                                                                    |
+| [reactivation-restore-spec.md](specs/reactivation-restore-spec.md)                   | 📋     | spec      | Deactivation cancels reservations and the Stripe subscription; reactivation restores neither                                                                                                              |
+| [admin-vs-staff-spec.md](specs/admin-vs-staff-spec.md)                               | 📋     | spec      | Roles are org positions, not tiers: guards name capabilities, the matrix maps positions to them, assignment stays in `model_has_roles`. Drops the dead spatie tables; break-glass is a documented runbook |
 
 The last four all came out of #164, which closed the follow-ups in
 [reports/staff-user-management-audit.md](reports/staff-user-management-audit.md) by writing a spec
