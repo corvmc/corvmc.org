@@ -10,11 +10,12 @@
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { BindTagAction } from '$lib/components/actions';
+	import { BindTagAction, RecordForm8282Action } from '$lib/components/actions';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
 	import { equipmentConditions, stockReasonLabels } from '$lib/config';
@@ -26,6 +27,7 @@
 	const data = $derived(await getStaffAssetDetail(id));
 	const asset = $derived(data.asset);
 	const movements = $derived(data.movements);
+	const form8282 = $derived(data.form8282);
 
 	/**
 	 * `retired` and `lost` are terminal, so the controls that would move a unit
@@ -44,6 +46,31 @@
 </PageHeader>
 
 <PageContent width="3xl">
+	<!-- Above the record itself, because it is the only thing on this page with a
+	     deadline attached. -->
+	{#if form8282.state === 'due' || form8282.state === 'overdue'}
+		<Alert type={form8282.state === 'overdue' ? 'error' : 'warning'} class="mb-4">
+			<div>
+				<p>
+					<strong>Form 8282 may be due.</strong>
+					This unit was donated{#if data.donor}
+						by {data.donor}{/if} and disposed of within three years, which can oblige a filing within
+					125 days — with a copy to the donor.
+				</p>
+				<p class="mt-1 text-sm">
+					{#if form8282.state === 'overdue'}
+						The 125 days ran out on {form8282.dueBy?.toISOString().slice(0, 10)}.
+					{:else}
+						Due by {form8282.dueBy?.toISOString().slice(0, 10)} — {form8282.daysRemaining} days left.
+					{/if}
+				</p>
+				<div class="mt-3">
+					<RecordForm8282Action assetId={id} dueBy={form8282.dueBy} />
+				</div>
+			</div>
+		</Alert>
+	{/if}
+
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
 		<Form remote={editAsset} guard successToast="Unit updated">
 			<input {...fields.id.as('hidden', id)} />
@@ -82,6 +109,14 @@
 				<Fact label="Tag" mono>{asset.assetTag ?? '—'}</Fact>
 				<Fact label="Location">{asset.location?.name ?? 'Unassigned'}</Fact>
 				<Fact label="Added">{formatDateShort(asset.createdAt)}</Fact>
+				{#if asset.form8282ResolvedAt}
+					<Fact label="Form 8282">
+						{asset.form8282Note}
+						<span class="text-subtle">
+							— recorded {asset.form8282ResolvedAt.toISOString().slice(0, 10)}
+						</span>
+					</Fact>
+				{/if}
 				{#if asset.retiredAt}
 					<Fact label="Retired">
 						{formatDateShort(asset.retiredAt)}

@@ -300,6 +300,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/inventory/compliance",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/inventory/loans",
 		"panel": "staff"
 	},
