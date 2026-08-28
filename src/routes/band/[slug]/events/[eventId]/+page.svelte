@@ -12,7 +12,7 @@
 		RemoveEventPosterAction
 	} from '$lib/components/actions';
 	import EventFields from '../EventFields.svelte';
-	import { type LineupChip } from '../LineupEditor.svelte';
+	import { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { getBandEventDetail, updateBandEventForm } from '$lib/remote/band-events.remote';
 	import { getBandLayoutContext } from '../../layout-context';

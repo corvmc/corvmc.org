@@ -16,9 +16,11 @@ import {
 	getById,
 	listAll as listAllEvents,
 	listStaffCalendar,
+	listEventsNear,
 	listUpcoming,
 	listPast,
 	getEventLineup,
+	setEventLineup,
 	listMemberUpcomingShows,
 	listMemberPastShows,
 	type MemberShowRow,
@@ -68,7 +70,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
-import { event, createEventSchema, eventSources } from '$lib/server/db/schema/event';
+import { event, createEventSchema, eventSources, lineupSchema } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
@@ -647,7 +649,10 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			source: evt.source,
 			bandId: evt.bandId,
 			location: evt.location,
-			externalTicketUrl: evt.externalTicketUrl
+			externalTicketUrl: evt.externalTicketUrl,
+			// What staff already told the member, so a second reviewer does not
+			// repeat a note the first one wrote.
+			reviewNotes: evt.reviewNotes
 		},
 		band: bookingBand,
 		/** The same band, ready to render. `band` stays for the fields the form reads. */
@@ -660,6 +665,10 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		submitterStanding:
 			evt.source === 'community' ? await getStanding(evt.createdByUserId, 'community_event') : null,
 		submitterId: evt.createdByUserId,
+		// The bill. The *public* event page has shown this all along, so until
+		// now a visitor to a published listing could see who was playing and the
+		// staffer deciding whether to publish it could not.
+		lineup: await getEventLineup(id),
 		linkedReservation,
 		ticketStats,
 		tickets
@@ -832,7 +841,89 @@ export const previewRecurringEvents = query(
  * Each callee re-guards; `requireStaff()` here is the boundary for this
  * function itself, not a substitute for theirs.
  */
+/** The lineup editor posts JSON in a hidden field; a malformed one is ignored. */
+function parseStaffLineupField(raw: string | undefined) {
+	if (raw === undefined || raw === '') return undefined;
+	try {
+		const parsed = lineupSchema.safeParse(JSON.parse(raw));
+		return parsed.success ? parsed.data : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * The general event view at `/staff/events/[id]` — every source, any staffer.
+ *
+ * This is where `entity-href` sends every event ref, so it is the default
+ * landing point for an event from anywhere in the panel: a volunteer shift, a
+ * reservation, a member's record, a notification. It carries facts and the
+ * moderation actions and nothing that only a producer needs; the console at
+ * `[id]/production` is the specialisation, and has its own query below.
+ */
 export const getStaffEventPage = query(z.string(), async (id) => {
+	await requireStaff();
+
+	const detail = await getStaffEventDetail(id);
+	const nearby = await listEventsNear(detail.event.startsAt, { excludeEventId: id });
+
+	return {
+		detail,
+		nearby: nearby.map((e) => ({
+			id: e.id,
+			startsAt: e.startsAt,
+			endsAt: e.endsAt,
+			status: e.status,
+			source: e.source,
+			ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
+			band: toBandRef({ id: e.bandId, name: e.bandName, slug: e.bandSlug })
+		}))
+	};
+});
+
+/**
+ * The production console's data, which only a CMC show has any use for.
+ *
+ * Separate from `getStaffEventPage` rather than branched inside it: the console
+ * is its own route now, so a listing simply never asks for volunteer roles it
+ * will never render. Branching client-side would have needed `source` first,
+ * which is the await-chain the comment on the old page warned about.
+ */
+/**
+ * Staff set the bill on any event, and `asStaff` is not a formality.
+ *
+ * `setEventLineup` resolves a newly linked act to `confirmed` when `asStaff` is
+ * set — "Staff booked the show, so every act they name is already agreed." That
+ * holds for a CMC production. It is false for a listing: staff did not book a
+ * member's show, and confirming on their behalf would put a credit on the named
+ * band's public profile that the band never agreed to. Consent is the whole
+ * point of the pending state — see `docs/specs/shipped/event-lineup-spec.md`.
+ *
+ * So the flag follows the source, and on a listing a new link lands `pending`
+ * and invites the band, exactly as when a member links it. Do not simplify this
+ * to a constant.
+ *
+ * Both paths are already safe against reviving a refused credit: the prior-row
+ * branch in `setEventLineup` runs first, so `declined` stays `declined`.
+ */
+export const setStaffEventLineup = form(
+	z.object({ eventId: z.string().min(1), lineup: z.string().optional() }),
+	async (data) => {
+		await requireStaff();
+		const evt = await getById(data.eventId);
+		if (!evt) error(404, 'Event not found');
+
+		const lineup = parseStaffLineupField(data.lineup);
+		if (lineup) {
+			await setEventLineup(data.eventId, lineup, { asStaff: evt.source === 'cmc' });
+		}
+
+		void getStaffEventPage(data.eventId).refresh();
+		return { success: true };
+	}
+);
+
+export const getStaffEventProduction = query(z.string(), async (id) => {
 	await requireStaff();
 
 	const [detail, recurringSeries, shifts, volunteerRoles] = await Promise.all([

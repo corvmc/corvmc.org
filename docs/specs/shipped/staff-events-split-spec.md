@@ -170,11 +170,36 @@ current page can never give while it also holds every CMC show.
 `rejected` is reachable from the same filter but is never in the default view — it was never public
 and is terminal.
 
-### 6. Productions keeps the `/staff/events` URL
+### 6. The canonical URL holds the general view — _reversed after shipping_
 
-The label changes to "Productions"; the path does not. `/staff/events/[id]` and `[id]/check-in`
-cannot move — `entity-href`, notification deep links, and e2e all point there — so moving only the
-index would separate a label from its own children's paths, a worse mismatch than the one it fixes.
+This decision originally read "Productions keeps the `/staff/events` URL", on the grounds that
+`/staff/events/[id]` and `[id]/check-in` cannot move — `entity-href`, notification deep links and
+e2e all point at them — so moving only the index would separate a label from its children's paths.
+
+That is factually true and answers the wrong question, and the allocation was reversed before it
+reached anyone. `/staff/events/[id]` is not the production detail page; it is **the default landing
+point for an event from anywhere in the staff panel**. `entity-href` sends every event ref there,
+and five other surfaces link there directly — notifications, `staff/reservations/[id]`,
+`staff/users/[id]`'s bands panel, and both volunteer shift pages. A volunteer coordinator clicking
+the event on a shift was landing on the most privileged view in the domain.
+
+Introduce capabilities and that forces one of three bad moves: build a degraded copy of the console
+for people who should not have it, redirect them off the canonical URL and make every inbound link
+conditional, or re-point `entity-href`. So the pinned route is an argument for putting the
+_general_ view there, not the production one.
+
+**The canonical URL hosts the least-privileged useful view; privilege is additive at more specific
+addresses.** `/staff/events` is the Calendar, `/staff/events/[id]` the general view,
+`/staff/events/[id]/production` the console, and `/staff/productions` the CMC work index.
+
+This also dissolved decision 2. Two detail routes had been rejected because `EventRef` carries no
+`source`, so nothing could decide where to send a ref — but the general view needs no
+discrimination. Production stopped being a route you are _routed to_ and became one you _navigate
+to_, which is why the detail view could split after all.
+
+One nice consequence, and evidence the allocation is right: **no redirects were needed.** The
+pre-split link in the wild, `/staff/events?status=pending_review`, now lands on the Calendar, whose
+default view is the review queue — correct by default rather than by redirect.
 
 ### 7. The pending count keeps its own component
 
