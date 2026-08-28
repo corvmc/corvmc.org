@@ -12,11 +12,15 @@
  * as a table. The date maths is the whole of the risk here: an off-by-one on
  * either window turns a real filing deadline into silence.
  *
- * **This is not tax advice, and the code does not decide anything.** Whether a
- * given disposal is reportable depends on facts the system does not hold — most
- * of all whether the donor filed a Form 8283 that CMC signed, which is what makes
- * something "charitable deduction property" in the first place. This raises a
- * flag for a human; a human resolves it.
+ * **The signed Form 8283 is the trigger, not the donation.** An earlier version
+ * of this flagged every donated disposal and merely displayed whether an
+ * acknowledgment was on record. For an organisation that has never signed an
+ * 8283 — which is CMC — that produces nothing but false positives, and a warning
+ * that is always wrong is one people learn to dismiss before the day it is
+ * right. So `acknowledged` gates it.
+ *
+ * **This is not tax advice, and the code still decides nothing.** It narrows to
+ * the disposals that could plausibly owe a filing and hands them to a person.
  */
 
 /** Three years, the window in which a disposal is reportable. */
@@ -44,6 +48,15 @@ export interface Form8282Input {
 	acquiredAt: Date | null;
 	/** Whether the acquisition it arrived on was a donation. */
 	wasDonated: boolean;
+	/**
+	 * Whether CMC signed a Form 8283 for the gift.
+	 *
+	 * **This is the trigger, not the donation.** The obligation attaches to
+	 * "charitable deduction property", which the IRS defines as property for
+	 * which the donee organisation signed a Form 8283 — sought only above $5,000.
+	 * A gift with no signed 8283 can be disposed of the next day and owes nothing.
+	 */
+	acknowledged: boolean;
 	/** When it was retired, lost or otherwise disposed of. */
 	disposedAt: Date | null;
 	/** When somebody recorded the filing — or recorded that none was needed. */
@@ -77,7 +90,9 @@ export function isWithinLookback(acquiredAt: Date, disposedAt: Date): boolean {
 export function form8282Status(input: Form8282Input, now: Date): Form8282Status {
 	const none: Form8282Status = { state: 'not_applicable', dueBy: null, daysRemaining: null };
 
-	if (!input.wasDonated || !input.acquiredAt || !input.disposedAt) return none;
+	if (!input.wasDonated || !input.acknowledged || !input.acquiredAt || !input.disposedAt) {
+		return none;
+	}
 
 	if (!isWithinLookback(input.acquiredAt, input.disposedAt)) {
 		return { state: 'outside_window', dueBy: null, daysRemaining: null };

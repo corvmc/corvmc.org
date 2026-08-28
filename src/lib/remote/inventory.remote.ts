@@ -877,16 +877,19 @@ export const getSpendReport = query(spendRange, async (range) => {
  * Donated units disposed of within three years, where nobody has yet recorded
  * what happened about Form 8282.
  *
- * A flag for a human, not a determination. Whether a given disposal is actually
- * reportable turns on facts the system does not hold — above all whether the
- * donor filed a Form 8283 that CMC signed. The acknowledgment date is returned
- * alongside so a staffer can see that at a glance.
+ * Only gifts CMC signed a Form 8283 for can owe a filing — that signature is
+ * what makes something "charitable deduction property" — so the rest come back
+ * as `noFormOnRecord`, a count rather than a queue.
+ *
+ * Still a flag for a human rather than a determination: the remaining facts
+ * (what was claimed, whether the disposal counts) live on paper.
  */
 export const getForm8282Obligations = query(z.void(), async () => {
 	await requireStaff();
-	const rows = await listForm8282Obligations();
+	const { obligations, noFormOnRecord } = await listForm8282Obligations();
 	return {
-		rows: rows.map((r) => ({
+		noFormOnRecord,
+		rows: obligations.map((r) => ({
 			id: r.id,
 			assetTag: r.assetTag,
 			itemName: r.item.name,
@@ -900,7 +903,7 @@ export const getForm8282Obligations = query(z.void(), async () => {
 			dueBy: r.status.dueBy,
 			daysRemaining: r.status.daysRemaining
 		})),
-		overdueCount: rows.filter((r) => r.status.state === 'overdue').length
+		overdueCount: obligations.filter((r) => r.status.state === 'overdue').length
 	};
 });
 
@@ -953,6 +956,7 @@ export const getStaffAssetDetail = query(z.string(), async (id) => {
 		{
 			acquiredAt: acq?.occurredAt ?? null,
 			wasDonated: acq?.kind === 'donation',
+			acknowledged: acq?.acknowledgedAt != null,
 			disposedAt: asset.retiredAt,
 			resolvedAt: asset.form8282ResolvedAt
 		},
