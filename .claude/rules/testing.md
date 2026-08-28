@@ -21,6 +21,15 @@ test that asserts nothing fails.
 - Test SQL without a database by rendering drizzle fragments through `SQLiteSyncDialect` (see
   `src/lib/server/authorization.spec.ts`). `better-sqlite3` isn't built in CI, so mock only
   `$lib/server/db`.
+- **The `client` project's browser port is per-checkout too**, via `browserPort()` in the same
+  helper. vitest's own default is the fixed constant 63315, so before this every checkout asked
+  for the same number and the second `pnpm test:unit` on the machine lost the bind. It does not
+  read as a port problem: the project never starts and its files are reported as ordinary test
+  failures.
+- **`maxWorkers` is halved outside CI.** The `server` project's `vmForks` pool takes a fresh VM
+  context per file and is memory-hungry by design; several worktrees running suites at once would
+  each claim nearly every core until the OOM killer took one. That surfaces as `Worker exited
+unexpectedly`, or as a bare SIGKILL, and never as anything about the tests.
 
 ## e2e
 
