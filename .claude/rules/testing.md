@@ -33,6 +33,9 @@ unexpectedly`, or as a bare SIGKILL, and never as anything about the tests.
 
 ## e2e
 
+- **Assertions get 15s and tests get 60s**, set once in `playwright.config.ts` — not Playwright's
+  5s/30s. A new assertion needs no `{ timeout: 15000 }`; the ~110 that carry one are redundant but
+  kept, because they record which assertions their author knew were slow.
 - **Run with `--workers=1` locally.** `playwright.config.ts` sets no worker count, so a many-core
   machine fans out and the suite goes red on contention where CI's narrower runner passes.
   Re-running without `--workers=1` will not fix it.
