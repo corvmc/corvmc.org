@@ -190,7 +190,11 @@ committees are staff-created, which is what makes free room time safe to grant b
 gets the room through its event rather than a credit balance, so the abuse case is closed
 structurally instead of by a check someone has to remember. Phases 0–2 and 3a have landed (the
 `group` table, `band_member` → `group_member`, `directory_entry`); club-facing behaviour arrives at
-phase 5 (the `/group/{slug}` panel) and phase 9 (group events).
+phase 5 and phase 9 (group events). Phase 5 deliberately does **not** give a club a panel: a club
+member's whole surface is four things, three of which already arrive by notification and on the
+calendar, so clubs live on one tabbed page at `/member/groups/{slug}` and `/member/bands` widens
+into `/member/groups`, which does discovery as well as membership. Join policies are `open`,
+`invite_only` and `by_application`.
 
 ### Poster Art Repository
 
