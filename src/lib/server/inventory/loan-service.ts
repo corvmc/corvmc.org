@@ -320,7 +320,13 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 	// A serialized loan has to name the unit that left the building — otherwise
 	// its history is attached to a type, and "which amp came back broken" has no
 	// answer.
-	if (item.kind === 'serialized' && !data.assetId) throw new AssetRequiredError();
+	//
+	// A unit already bound to the loan counts. The write below has always fallen
+	// back to `loan.assetId`, but this guard read only the incoming value, so a
+	// loan created with a specific unit already named could never be checked out
+	// at all — it threw on the way to the line that would have used it.
+	const assetId = data.assetId ?? loan.assetId;
+	if (item.kind === 'serialized' && !assetId) throw new AssetRequiredError();
 
 	const sustaining = await isSustainingMember(loan.userId);
 	const dailyRate = calculateDailyRate(item.pricingTier as PricingTier, sustaining);
@@ -335,7 +341,7 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 	const [updated] = await db
 		.update(inventoryLoan)
 		.set({
-			assetId: data.assetId ?? loan.assetId,
+			assetId,
 			checkedOutAt: now,
 			dueDate: data.dueDate,
 			dailyRateCents: dailyRate,
@@ -345,16 +351,18 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 		.where(eq(inventoryLoan.id, loanId))
 		.returning();
 
-	if (data.assetId) {
+	// Also keyed on the resolved unit: a pre-bound loan would otherwise leave its
+	// asset reading `in_service` while the ledger said it had gone out.
+	if (assetId) {
 		await db
 			.update(inventoryAsset)
 			.set({ status: 'on_loan', updatedAt: now })
-			.where(eq(inventoryAsset.id, data.assetId));
+			.where(eq(inventoryAsset.id, assetId));
 	}
 
 	await recordMovement({
 		itemId: loan.itemId,
-		assetId: data.assetId ?? loan.assetId,
+		assetId,
 		quantity: loan.quantity,
 		reason: 'loan_out',
 		loanId,
@@ -503,6 +511,9 @@ export async function getLoanById(id: string) {
 		.select({
 			loan: inventoryLoan,
 			equipmentName: inventoryItem.name,
+			// The checkout form needs this to know whether to ask which unit is
+			// being handed over: only a serialized loan has one to name.
+			itemKind: inventoryItem.kind,
 			categoryName: equipmentCategory.name,
 			pricingTier: equipmentCategory.pricingTier,
 			assetTag: inventoryAsset.assetTag,
@@ -521,6 +532,7 @@ export async function getLoanById(id: string) {
 	return {
 		...row.loan,
 		equipmentName: row.equipmentName,
+		itemKind: row.itemKind,
 		categoryName: row.categoryName,
 		pricingTier: row.pricingTier,
 		assetTag: row.assetTag,

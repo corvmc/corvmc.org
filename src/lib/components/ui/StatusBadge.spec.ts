@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { variants, badgeClass, labels } from './StatusBadge.svelte';
 import {
-	equipmentStatuses,
+	assetStatuses,
 	loanStatuses,
 	inboxThreadStatuses,
 	volunteerHourStatuses,
@@ -57,7 +57,11 @@ const vocabularies: Record<string, readonly string[]> = {
 	bandTier: bandTiers,
 	platformInvite: inviteStatuses,
 	ticket: ticketStatuses,
-	equipment: equipmentStatuses,
+	// `assetStatuses`, not the pre-#286 `equipmentStatuses`. Guarding the dead
+	// vocabulary is why `in_service`, `on_loan` and `lost` went unmapped: three of
+	// the five statuses a unit can hold rendered the neutral fallback dot, which
+	// this component's own docs describe as saying nothing.
+	inventoryAsset: assetStatuses,
 	equipmentLoan: loanStatuses,
 	inboxThread: inboxThreadStatuses,
 	volunteerHour: volunteerHourStatuses,

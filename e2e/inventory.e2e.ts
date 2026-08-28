@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { stockMovement } from '../src/lib/server/db/schema/inventory';
+import { inventoryLoan, stockMovement } from '../src/lib/server/db/schema/inventory';
 import { readLocalDb } from './fixtures/platform-db';
 import { expect, test, type Page } from '@playwright/test';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
@@ -26,7 +26,17 @@ import {
 	SEED_LOW_ON_HAND,
 	SEED_LOW_REORDER_QUANTITY,
 	SEED_UNTAGGED_ASSET_ID,
-	SEED_MAINTENANCE_ASSET_ID
+	SEED_MAINTENANCE_ASSET_ID,
+	SEED_LOAN_MEMBER_EMAIL,
+	SEED_LOAN_MEMBER_PASSWORD,
+	SEED_SCHEDULE_LOAN_ID,
+	SEED_CHECKOUT_LOAN_ID,
+	SEED_CHECKOUT_ASSET_ID,
+	SEED_CHECKOUT_ASSET_TAG,
+	SEED_RETURN_LOAN_ID,
+	SEED_RETURN_ASSET_ID,
+	SEED_CANCEL_LOAN_ID,
+	SEED_RETURN_DAILY_RATE
 } from './fixtures/seed-inventory';
 
 /**
@@ -63,6 +73,32 @@ async function readOnHand(page: Page, itemId: string): Promise<number> {
 	// The value cell can carry a "(reorder at N)" hint after the number.
 	const value = await term.locator('xpath=following-sibling::dd[1]').innerText();
 	return parseInt(value.trim(), 10);
+}
+
+/**
+ * Sign in as the borrower rather than as staff.
+ *
+ * Every other test in this file runs as staff, including the two that assert on
+ * member-panel pages — so the member half of the loan flow, and `entityHref`'s
+ * member arm, were only ever exercised by a unit spec.
+ */
+async function loginAsMember(page: Page) {
+	await page.goto('/login');
+	await page.locator('input[name="email"]').fill(SEED_LOAN_MEMBER_EMAIL);
+	await page.locator('input[name="password"]').fill(SEED_LOAN_MEMBER_PASSWORD);
+	await page.getByRole('button', { name: 'Sign in' }).click();
+	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+}
+
+/** Every movement recorded against one unit, summed. */
+async function ledgerSumFor(assetId: string): Promise<number> {
+	const rows = await readLocalDb((db) =>
+		db
+			.select({ quantity: stockMovement.quantity })
+			.from(stockMovement)
+			.where(eq(stockMovement.assetId, assetId))
+	);
+	return rows.reduce((total, r) => total + r.quantity, 0);
 }
 
 /** The submit inside an open Action modal, as distinct from the trigger. */
@@ -312,6 +348,147 @@ test.describe('inventory', () => {
 			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
 			await expect(page.getByText('Form 8282 may be due.')).toBeHidden();
 			await expect(page.getByText('copy posted to the donor')).toBeVisible();
+		});
+	});
+
+	/**
+	 * The loan lifecycle, end to end.
+	 *
+	 * Nothing seeded a loan before this, so the five-state machine and the charge
+	 * it settles had no e2e coverage at all — only unit tests against a mocked
+	 * `db`, which cannot see whether the *form* sends what the service needs.
+	 *
+	 * The invariant worth pinning is the ledger: a loan writes `loan_out` when the
+	 * unit leaves and `loan_return` when it comes back, so those two plus the
+	 * original `receive` have to sum to exactly one unit on hand.
+	 */
+	test.describe('loans', () => {
+		test('staff schedule a requested loan', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto(`/staff/inventory/loans/${SEED_SCHEDULE_LOAN_ID}`);
+
+			await expect(page.getByText('Schedule Pickup')).toBeVisible();
+			await page.locator('input[name="scheduledPickupDate"]').fill('2026-09-10');
+			await page.getByRole('button', { name: 'Schedule' }).click();
+			await expect(page.getByText('Pickup scheduled')).toBeVisible({ timeout: 10000 });
+
+			// The state moved on, so the next step's control is the one on offer.
+			await expect(page.getByText('Mark as Checked Out')).toBeVisible();
+		});
+
+		/**
+		 * A serialized loan has to name the unit that left the building, or "which
+		 * amp came back broken" has no answer — `checkoutLoan` throws
+		 * `AssetRequiredError` without one.
+		 *
+		 * This test is the reason the picker exists. The checkout form used to
+		 * submit only a due date, so every serialized checkout failed on that
+		 * throw; with no loan e2e, nothing noticed.
+		 */
+		test('checking out a serialized loan names the unit that left', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto(`/staff/inventory/loans/${SEED_CHECKOUT_LOAN_ID}`);
+
+			await expect(page.getByText('Mark as Checked Out')).toBeVisible();
+			await page.locator('input[name="dueDate"]').fill('2026-09-20');
+
+			// The picker offers units by the tag printed on them, which is what a
+			// staffer is reading off the sticker in their hand.
+			const unitPicker = page.locator('select[name="assetId"]');
+			await expect(unitPicker.locator('option', { hasText: SEED_CHECKOUT_ASSET_TAG })).toHaveCount(
+				1
+			);
+			await unitPicker.selectOption(SEED_CHECKOUT_ASSET_ID);
+			await page.getByRole('button', { name: 'Check Out' }).click();
+			await expect(page.getByText('Checked out')).toBeVisible({ timeout: 10000 });
+
+			// Bound to the loan, and out of the building on the ledger.
+			await expect
+				.poll(async () => ledgerSumFor(SEED_CHECKOUT_ASSET_ID), { timeout: 15000 })
+				.toBe(0);
+
+			await page.goto(`/staff/inventory/assets/${SEED_CHECKOUT_ASSET_ID}`);
+			// The status glyph carries its name on `aria-label`, not as body text —
+			// daisyUI's tooltip draws through ::before and is invisible to a11y.
+			await expect(page.getByRole('img', { name: 'On loan' }).first()).toBeVisible();
+		});
+
+		test('returning it computes the charge and brings the ledger back', async ({ page }) => {
+			await loginAsStaff(page);
+
+			// Out of the building: the `receive` and the `loan_out` cancel.
+			expect(await ledgerSumFor(SEED_RETURN_ASSET_ID)).toBe(0);
+
+			await page.goto(`/staff/inventory/loans/${SEED_RETURN_LOAN_ID}`);
+			await expect(page.getByText('Mark as Returned')).toBeVisible();
+			// The rate it was checked out at, shown before committing. Not the day
+			// count: the fixture stamps `checkedOutAt` exactly N days back, so by the
+			// time this runs it is milliseconds into day N+1 and `Math.ceil` says so.
+			await expect(
+				page.getByText(`× $${SEED_RETURN_DAILY_RATE / 100}.00/day`, { exact: false }).first()
+			).toBeVisible();
+
+			await page.getByRole('button', { name: 'Mark Returned' }).click();
+			await modalSubmit(page, /Mark Returned/).click();
+
+			// Back on the shelf, and the ledger nets to the one unit on hand.
+			await expect.poll(async () => ledgerSumFor(SEED_RETURN_ASSET_ID), { timeout: 15000 }).toBe(1);
+
+			await page.goto(`/staff/inventory/loans/${SEED_RETURN_LOAN_ID}`);
+			await expect(page.getByText('No actions available')).toBeVisible();
+		});
+
+		test('a member requests a loan from the catalog', async ({ page }) => {
+			await loginAsMember(page);
+			await page.goto('/member/equipment');
+
+			await page.getByRole('button', { name: 'Request' }).first().click();
+			const dialog = page.getByRole('dialog');
+			await dialog.locator('input[name="requestedPickupDate"]').fill('2026-09-15');
+			await dialog.locator('input[name="estimatedReturnDate"]').fill('2026-09-18');
+			await dialog.getByRole('button', { name: /Request/ }).click();
+
+			await page.goto('/member/equipment/loans');
+			await expect(page.getByText(SEED_ITEM_NAME).first()).toBeVisible();
+		});
+
+		/** A member may withdraw their own request, but only before it is out. */
+		test('a member cancels their own request', async ({ page }) => {
+			await loginAsMember(page);
+			await page.goto('/member/equipment/loans');
+
+			const card = page.locator('.card').filter({ hasText: 'Changed my mind' }).first();
+			await card.getByRole('button', { name: /Cancel/ }).click();
+			await modalSubmit(page, /Cancel/).click();
+
+			await expect
+				.poll(
+					async () => {
+						const rows = await readLocalDb((db) =>
+							db
+								.select({ status: inventoryLoan.status })
+								.from(inventoryLoan)
+								.where(eq(inventoryLoan.id, SEED_CANCEL_LOAN_ID))
+						);
+						return rows[0]?.status;
+					},
+					{ timeout: 15000 }
+				)
+				.toBe('cancelled');
+		});
+
+		/**
+		 * The member arm of the scan resolver, which nothing covered: the two
+		 * member-panel assertions elsewhere navigate directly while signed in as
+		 * staff, so `entityHref`'s member branch was only ever unit-tested.
+		 */
+		test('a scanned tag sends a member to the member page, not the staff one', async ({ page }) => {
+			await loginAsMember(page);
+			await page.goto(`/a/${SEED_ASSET_TAG}`);
+
+			await expect(page).toHaveURL(`/member/equipment/assets/${SEED_ASSET_ID}`, {
+				timeout: 10000
+			});
 		});
 	});
 

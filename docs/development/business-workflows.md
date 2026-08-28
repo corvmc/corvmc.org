@@ -441,7 +441,8 @@ Pricing helpers `calculateDailyRate()` / `calculateLoanCharge()` are pure
 functions; rates come from `$lib/config.ts` (`DAILY_RATE_MAJOR`,
 `DAILY_RATE_ACCESSORY`). Invalid transitions throw `InvalidLoanTransitionError`;
 checking out a serialized item without naming a unit throws
-`AssetRequiredError`. Equipment credits are the same ledger as free hours
+`AssetRequiredError` — the checkout form asks which unit is being handed over,
+and a unit already bound to the loan satisfies it. Equipment credits are the same ledger as free hours
 (`credit-service.ts`, type `equipment_credits`).
 
 ### Replenishment and spend
@@ -574,7 +575,12 @@ a remote function because it is navigation, not data: a phone camera should get 
 - **"Tag is already bound"** → `AssetTagTakenError`; another unit wears it.
   Rebinding _that_ unit is the fix, not renumbering this one.
 - **Charge looks wrong** → recompute with `calculateLoanCharge()`'s inputs: days
-  borrowed, tier, sustaining status at return time.
+  borrowed, tier, sustaining status at return time. Days are `Math.ceil`'d, so a
+  loan out for a whole number of days plus a minute bills the next day.
+- **A checkout submit appears to do nothing** → `scheduleLoanSchema` and
+  `checkoutLoanSchema` validate `itemId` / `assetId` with `z.uuid()`, and both
+  arrive as hidden inputs. A non-UUID id fails validation with nowhere to render
+  the error, so the form silently goes nowhere.
 
 ---
 

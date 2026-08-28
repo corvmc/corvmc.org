@@ -89,10 +89,14 @@
 		owner: 'badge-warning',
 		admin: 'badge-info',
 		member: 'badge-ghost',
-		// Equipment
+		// Inventory units. `available` is the pre-#286 vocabulary and is kept only
+		// because older rows and copy still say it; `assetStatuses` is the live one.
 		available: 'badge-success',
+		in_service: 'badge-success',
+		on_loan: 'badge-info',
 		maintenance: 'badge-warning',
 		retired: 'badge-ghost',
+		lost: 'badge-error',
 		// Equipment loans
 		requested: 'badge-warning',
 		checked_out: 'badge-info',
@@ -174,10 +178,13 @@
 		admin: { icon: IconShield, color: 'text-info' },
 		member: { icon: IconUser, color: 'text-base-content' },
 
-		// Equipment statuses
+		// Inventory unit statuses
 		available: { icon: IconCircleCheck, color: 'text-success' },
+		in_service: { icon: IconCircleCheck, color: 'text-success' },
+		on_loan: { icon: IconPackageExport, color: 'text-info' },
 		maintenance: { icon: IconTool, color: 'text-warning' },
 		retired: { icon: IconArchive, color: 'text-base-content' },
+		lost: { icon: IconAlertTriangle, color: 'text-error' },
 
 		// Equipment loan statuses
 		requested: { icon: IconClock, color: 'text-warning' },

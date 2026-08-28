@@ -25,6 +25,14 @@
 	const data = $derived(await getStaffLoanDetail(id));
 	const loan = $derived(data.loan);
 	const availableItems = $derived(data.availableItems);
+	/**
+	 * The units that could be handed over. Already loaded by
+	 * `getStaffLoanDetail` — the page simply never rendered them, which meant the
+	 * checkout form submitted no `assetId` and every serialized checkout failed on
+	 * `AssetRequiredError`.
+	 */
+	const availableAssets = $derived(data.availableAssets);
+	const needsAsset = $derived(loan.itemKind === 'serialized' && !loan.assetId);
 
 	let chargePreview = $derived.by(() => {
 		if (loan.status !== 'checked_out' || !loan.dailyRateCents || !loan.checkedOutAt) return null;
@@ -158,6 +166,27 @@
 				<Form remote={checkout} successToast="Checked out" class="space-y-3">
 					<input {...checkoutFields.loanId.as('hidden', id)} />
 					<Field name="dueDate" type="date" label="Due Date" />
+					<!-- A serialized loan has to name the unit that actually left, or
+					     "which amp came back broken" has no answer. Without this the
+					     service throws `AssetRequiredError` and the form goes nowhere. -->
+					{#if needsAsset}
+						<Field name="assetId" label="Unit Handed Over">
+							<Select class="w-full" name="assetId" required>
+								<option value="" disabled selected>Scan or select the tag...</option>
+								{#each availableAssets as unit (unit.id)}
+									<option value={unit.id}>
+										{unit.assetTag ?? unit.serialNumber ?? 'Untagged unit'}
+										{unit.condition ? ` — ${unit.condition}` : ''}
+									</option>
+								{/each}
+							</Select>
+						</Field>
+						{#if availableAssets.length === 0}
+							<p class="text-subtle">
+								No unit of this item is in service, so there is nothing to hand over.
+							</p>
+						{/if}
+					{/if}
 					<div class="flex gap-2">
 						<SubmitButton label="Check Out" variant="primary" size="sm" />
 						<CancelLoanAction loanId={id} />

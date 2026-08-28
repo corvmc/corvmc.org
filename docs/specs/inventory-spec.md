@@ -832,8 +832,28 @@ Specs, colocated:
   statements as well as the `CREATE`** — without that an additive migration
   leaves the spec building a table one column short of production.
 
-E2E: create an item, receive it against an acquisition, bind a tag, request a
-loan, assign that asset, check out, return, and assert the ledger sums back to
-where it started. A consumable run beside it — receive, consume, confirm on-hand
-falls with no counter edited. And `/a/[tag]` resolving three ways: staff to the
-ops record, member to the asset page, signed-out to the login redirect.
+E2E: the loan lifecycle — schedule, check out naming a unit, return, and assert
+the ledger sums back to where it started. A consumable run beside it — receive,
+consume, confirm on-hand falls with no counter edited. And `/a/[tag]` resolving
+three ways: staff to the ops record, member to the asset page, signed-out to the
+login redirect.
+
+Two things the loan half turned up the first time it was driven end to end,
+neither visible to a unit test with a mocked `db`:
+
+- **The checkout form never sent an `assetId`.** `getStaffLoanDetail` had always
+  returned `availableAssets`; the page discarded them, so every serialized
+  checkout hit `AssetRequiredError` and no serialized loan could be handed over
+  through the staff UI at all. The guard also read only the incoming value, so a
+  loan created with a unit already named threw on the way to the line that would
+  have used it.
+- **Fixture ids have to be UUIDs.** `scheduleLoanSchema` and `checkoutLoanSchema`
+  validate ids with `z.uuid()`, and both arrive as hidden inputs — so a readable
+  slug id fails validation with nowhere to render the error and the submit
+  appears to do nothing.
+
+`StatusBadge.spec.ts` guarded `equipmentStatuses`, the pre-#286 vocabulary,
+rather than `assetStatuses`. That is why `in_service`, `on_loan` and `lost` were
+never mapped: three of the five states a unit can hold drew the neutral fallback
+dot, which the component's own docs call saying nothing. The dead vocabulary is
+gone and the spec now guards the live one.

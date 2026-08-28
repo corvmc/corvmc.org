@@ -411,6 +411,35 @@ describe('LoanService lifecycle', () => {
 			);
 		});
 
+		/**
+		 * The write below the guard has always fallen back to `loan.assetId`, but
+		 * the guard itself read only the incoming value — so a loan created with a
+		 * unit already named threw on the way to the line that would have used it.
+		 */
+		it('accepts a unit already bound to the loan', async () => {
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'scheduled',
+						itemId: 'it-1',
+						assetId: 'as-1',
+						quantity: 1,
+						userId: 'user-1'
+					}
+				],
+				[{ name: 'Blues Deluxe', kind: 'serialized', pricingTier: 'major' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await checkoutLoan('loan-1', { dueDate: new Date() });
+
+			// The unit goes out on the ledger under its own id, not as a bare item.
+			expect(recordMovement).toHaveBeenCalledWith(
+				expect.objectContaining({ assetId: 'as-1', reason: 'loan_out' })
+			);
+		});
+
 		it('binds the named unit to the loan and its movement', async () => {
 			selectResultQueue = [
 				[{ id: 'loan-1', status: 'scheduled', itemId: 'it-1', quantity: 1, userId: 'user-1' }],

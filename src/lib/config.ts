@@ -302,7 +302,6 @@ export const equipmentConditionBadge: Record<(typeof equipmentConditions)[number
 	poor: 'badge-error'
 };
 
-export const equipmentStatuses = ['available', 'maintenance', 'retired'] as const;
 export const pricingTiers = ['major', 'accessory'] as const;
 export type PricingTier = (typeof pricingTiers)[number];
 export const loanStatuses = [
