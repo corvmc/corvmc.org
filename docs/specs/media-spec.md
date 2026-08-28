@@ -123,12 +123,17 @@ all schema files, zero exceptions — so a new parent can never take a dead pare
 inherit its attachments. This is the failure mode that makes unenforced links genuinely dangerous in
 schemas with sequential ids, and it is structurally impossible here.
 
-**The exception is counting, and it is real.** `groups-spec.md` specifies a 250 MB / 50-file quota per
-group computed as `sum(sizeBytes)`. Orphans inflate that until the sweep runs, so a group could be
-refused an upload on behalf of files belonging to a deleted parent. Therefore: **every quota or count
-query goes through `liveAttachments()`**, a helper in `media-service.ts` that joins to the live
-parent. A bare `SUM` over `media_attachment` is a bug, and the helper exists so that rule has one
-place to live.
+**The exception is counting across parents.** A **per-parent** read needs no guard at all: it filters
+to an id the caller already holds, and an orphan belongs to a deleted parent, so it can never match.
+That covers `groups-spec.md`'s 250 MB / 50-file quota, which is scoped to one live group and is safe
+as written — the first draft of this spec claimed otherwise, and building the service showed the
+caveat had been drawn too wide.
+
+What is genuinely unsafe is a **global** aggregate — a reporting total, a staff-wide media listing —
+which sees rows belonging to every parent deleted since the last sweep. Those go through
+`liveAttachmentCondition()` in `media-service.ts`, which returns one `EXISTS` arm per
+`attachableType`. A bare `SUM` across `media_attachment` is a bug, and the helper exists so that rule
+has one place to live rather than being restated at each call site.
 
 ## Reads
 
