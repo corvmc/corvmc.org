@@ -192,8 +192,9 @@ structurally instead of by a check someone has to remember. Phases 0–2 and 3a 
 `group` table, `band_member` → `group_member`, `directory_entry`); club-facing behaviour arrives at
 phase 5 and phase 9 (group events). Phase 5 deliberately does **not** give a club a panel: a club
 member's whole surface is four things, three of which already arrive by notification and on the
-calendar, so clubs live on one tabbed page at `/member/groups/{slug}` and `/member/bands` widens
-into `/member/groups`, which does discovery as well as membership. Join policies are `open`,
+calendar, so clubs live on one tabbed page at `/member/groups/{slug}`, indexed at `/member/groups`,
+which does discovery as well as membership. Bands are excluded from that index and keep
+`/member/bands` — two indexes, because "what can I be part of" is not a question a band answers. Join policies are `open`,
 `invite_only` and `by_application`.
 
 ### Poster Art Repository

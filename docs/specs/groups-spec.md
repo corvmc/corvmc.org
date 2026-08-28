@@ -984,35 +984,36 @@ port rather than a design.
 own memberships would strand discovery on a route nobody with a membership ever opens — and an
 `open` join policy that only existing members can see is not open at all.
 
-1. **Your groups** — bands and clubs, plus invitations received _and_ applications sent. Those two
-   are rendered distinctly: same waiting state, opposite direction, and conflating them in the UI
-   would reintroduce exactly the ambiguity `'requested'` exists to prevent.
+1. **Your programs** — the clubs and committees you belong to, plus invitations received _and_
+   applications sent. Those two are rendered distinctly: same waiting state, opposite direction, and
+   conflating them in the UI would reintroduce exactly the ambiguity `'requested'` exists to
+   prevent.
 2. **Open to join** — `joinPolicy: 'open'`, with an inline Join.
 3. **Apply to join** — `joinPolicy: 'by_application'`, with Apply.
 4. **Invite-only programs** — listed with their `joinInstructions`, no action. Seeing that a
    committee exists is the point; the way in is a conversation.
-5. **Bands looking for members** — `lookingForMembers`, linking to the band's directory listing
-   rather than offering a Join.
 
-Sections 2 and 3 hold **only clubs and committees**, and by construction rather than by filter:
-bands are always `invite_only`, so no band can appear there however its row is written. Section 5 is
-the whole of a band's presence on this page, and it is a pointer rather than an action, because a
-band has no self-service join path to offer.
+At the Collective's scale — a handful of programs — list them all rather than ranking. If that stops
+being true, sort by next session date: a program meeting this week is more joinable than a dormant
+one.
 
-Filterable by kind, the same axis as the public `/groups` directory.
+**No bands appear on this page, in any section**, and the name is the one wrinkle in this spec's
+vocabulary: a band _is_ a group in the data model, and the public `/groups` directory does list
+every kind. The member-side index does not, because it exists to answer _what can I be part of_ —
+and a band has no answer to give. Bands are always `invite_only`, so sections 2 through 4 could
+never hold one; and a member's own bands already have their own index at `/member/bands`, their own
+panel, and their own sidebar group. Listing them again here would be a second front door to a place
+that already has one.
+
+So the two indexes stay separate and neither moves: `/member/bands` is untouched by this spec, and
+`/member/groups` is new. Band **discovery** — browsing bands as artists, finding one that is looking
+for a member — stays in `/member/directory/bands`, which is a different question from this one and
+already answers it.
 
 **The Join button stops being public-page-only.** A signed-in member should never bounce out to
 `/groups/{slug}` to join something, so the write lives wherever a joinable group renders. The guard
 does not move: the remote function re-reads `joinPolicy` from the resolved group rather than
 trusting anything from the request, which is what makes three doors no riskier than two.
-
-**This does not replace the band directory.** `/member/directory/bands` browses bands as _artists_ —
-genres, hometown, bio — which is a different question from _what can I be part of_. Section 5 is a
-pointer into the directory, not a copy of it.
-
-At the Collective's scale — a handful of programs — list them all rather than ranking. If that stops
-being true, sort by next session date: a program meeting this week is more joinable than a dormant
-one.
 
 ### One implementation, two mount points
 
@@ -1030,7 +1031,7 @@ One load-bearing query per page, per `docs/checklists/remote-query-fanout.md`.
 - `getMemberGroup(slug)`, guarded by `requireGroupRole`, returns the group, your role, the roster,
   announcements and files in one round trip. A club is small by construction. Announcement
   pagination is the first thing to add if that stops being true.
-- The index needs **one** query returning all five sections. Five sections is precisely the shape
+- The index needs **one** query returning all four sections. Four sections is precisely the shape
   that tempts a per-section remote query fanned out of a section component, which is what that
   checklist exists to stop.
 
@@ -1073,15 +1074,16 @@ Unchanged root, now resolving a **group** slug. Nav splits into two sections so 
 Clubs and committees get **no panel** — see [Interface](#interface). They live on one page inside
 the member panel, and three routes replace the seven a panel would have needed:
 
-| Route                        | Page                                                        | Access       |
-| ---------------------------- | ----------------------------------------------------------- | ------------ |
-| `/member/groups`             | Yours, joinable, discoverable; invitations and applications | member       |
-| `/member/groups/{slug}`      | The club page — tabbed                                      | group member |
-| `/member/groups/{slug}/edit` | Name, description, photo, visibility, join instructions     | owner, admin |
+| Route                        | Page                                                     | Access       |
+| ---------------------------- | -------------------------------------------------------- | ------------ |
+| `/member/groups`             | Your programs, and the ones you could join. **No bands** | member       |
+| `/member/groups/{slug}`      | The club page — tabbed                                   | group member |
+| `/member/groups/{slug}/edit` | Name, description, photo, visibility, join instructions  | owner, admin |
 
-`/member/groups` is a rename-and-widen of today's `/member/bands`, which already carries pending
-invitations and the create-band modal; the old path redirects. It becomes the member-side mirror of
-the public `/groups` index, the way `/member/directory` mirrors `/directory`.
+**`/member/bands` is untouched** — it keeps your bands, their invitations and the create-band modal,
+and nothing about it moves or redirects. The two indexes answer different questions and stay
+separate; see [The index](#the-index-does-membership-and-discovery-together) for why a band never
+appears under `/member/groups` despite being a group.
 
 There is no danger zone and no settings page. Leaving is a control in the page header; ending a club
 or committee is a staff action in `/staff/groups`.
@@ -1131,9 +1133,11 @@ do not, `panel-tabs.ts` stays bands-only, `PanelTab['type']` does not widen, and
 `getPanels(userId)` extraction across `getMemberLayout` / `getStaffLayout` / `getBandLayout` is not
 needed. The topbar blow-out this spec set out to avoid simply does not arise.
 
-What does change is one label in the member sidebar: the **My Bands** group becomes **My Groups**
-and lists both, bands linking to `/band/{slug}` and clubs to `/member/groups/{slug}`. Its "All" link
-and the create-band entry follow `/member/bands` to `/member/groups`.
+The member sidebar gains a **second collapsible group** rather than merging anything. **My Bands**
+stays exactly as it is — same entries, same "All" link to `/member/bands`, same create-band row —
+and a sibling **My Groups** lists your clubs and committees inline, each linking to
+`/member/groups/{slug}`, with its own "All" link to `/member/groups`. Two sidebar groups for two
+indexes, the same separation the routes draw.
 
 ---
 
@@ -1382,7 +1386,7 @@ The split between phases 1 and 2 is drawn at the table, not at the layer, and th
 | Reservations   | `bookerType: 'band'` is renamed `'group'` and its `bookerId` repoints to `group.id`; `kind` stays off the polymorphism              |
 | Enrollment     | `joinPolicy` on `group` — `open`, `invite_only`, `by_application`; `group_member.status` gains `'requested'`                        |
 | Staff panel    | New `/staff/groups` — the only place a club or committee is created                                                                 |
-| Club UI        | No group panel. One tabbed page at `/member/groups/{slug}`; `/member/bands` widens to `/member/groups`                              |
+| Club UI        | No group panel. One tabbed page at `/member/groups/{slug}`, indexed at `/member/groups`; `/member/bands` unchanged                  |
 | Contact sheets | `directory_entry_link` + `/act/{token}` — a magic-linked write surface and the subject-rights door                                  |
 | Attribution    | Public mentions of an external act link **out** to the act's own URL, or render as plain text                                       |
 | Storage        | Second R2 bucket for private documents                                                                                              |
