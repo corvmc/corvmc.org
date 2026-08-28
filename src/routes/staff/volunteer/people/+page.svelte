@@ -9,6 +9,7 @@
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import BadgeList from '$lib/components/ui/BadgeList.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import { rowLink } from '$lib/actions/row-link';
@@ -24,6 +25,11 @@
 	import { getStaffVolunteers } from '$lib/remote/volunteer.remote';
 
 	type StatusFilter = (typeof volunteerProfileStatuses)[number] | '';
+
+	// Two fits the column at its narrowest without wrapping, and the overflow
+	// count carries the rest. Someone with a dozen interests is a fact about them,
+	// not a reason for their row to be four lines tall.
+	const VISIBLE_ROLES = 2;
 
 	// Seeded from the query string and mirrored back into it, so a reload lands on
 	// the same view. Local state rather than reading `page.url` back out, so a
@@ -168,11 +174,7 @@
 
 						<td class="col-support">
 							{#if volunteer.roleNames.length > 0}
-								<div class="flex flex-wrap gap-1">
-									{#each volunteer.roleNames as roleName (roleName)}
-										<Badge variant="ghost">{roleName}</Badge>
-									{/each}
-								</div>
+								<BadgeList items={volunteer.roleNames} max={VISIBLE_ROLES} />
 							{:else}
 								<!-- The interests step is skippable, so this is a real answer and
 								     not missing data: they signed up without picking anything. -->

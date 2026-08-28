@@ -6,6 +6,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import BadgeList from '$lib/components/ui/BadgeList.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -139,13 +140,12 @@
 											{role.description}
 										</div>
 									{/if}
-									{#if role.requiredCertifications.length > 0}
-										<div class="mt-1 flex flex-wrap gap-1">
-											{#each role.requiredCertifications as cert (cert.id)}
-												<span class="badge badge-ghost badge-xs">{cert.name}</span>
-											{/each}
-										</div>
-									{/if}
+									<BadgeList
+										items={role.requiredCertifications.map((c) => c.name)}
+										max={2}
+										size="xs"
+										class="mt-1"
+									/>
 								</td>
 
 								<!--
