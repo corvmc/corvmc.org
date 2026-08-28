@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { browserPort, devPort, isWorktree, previewPort } from './checkout-ports';
+import {
+	browserPort,
+	devPort,
+	isWorktree,
+	previewPort,
+	storybookBrowserPort
+} from './checkout-ports';
 
 const MAIN = '/Users/someone/Projects/corvmc-svelte';
 const TREE_A = '/Users/someone/Projects/corvmc-svelte/.claude/worktrees/sharp-bohr-8eb1b8';
@@ -23,6 +29,10 @@ describe('the main checkout', () => {
 
 	it("keeps vitest's own default browser port", () => {
 		expect(browserPort(MAIN, NO_ENV)).toBe(63315);
+	});
+
+	it('gives the storybook project a different one', () => {
+		expect(storybookBrowserPort(MAIN, NO_ENV)).toBe(63316);
 	});
 });
 
@@ -74,6 +84,24 @@ describe('a worktree', () => {
 		expect(browserPort(TREE_B, NO_ENV)).not.toBe(63315);
 	});
 
+	/**
+	 * The regression that reddened CI after the first pass at this. `client` and
+	 * `storybook` are both browser-mode projects and vitest hands both the same
+	 * `defaultBrowserPort`; pinning only `client`, with `strictPort`, turned a
+	 * quiet auto-increment into a hard collision decided by start order.
+	 *
+	 * It does not present as a port problem. No test fails — the project simply
+	 * never starts, and the run reports every test passing over a file count 25
+	 * short.
+	 */
+	it('never puts the two browser projects on one port', () => {
+		expect(browserPort(TREE_A, NO_ENV)).not.toBe(storybookBrowserPort(TREE_A, NO_ENV));
+		expect(browserPort(TREE_B, NO_ENV)).not.toBe(storybookBrowserPort(TREE_B, NO_ENV));
+		// And across checkouts, which is the case the slices exist for.
+		expect(browserPort(TREE_A, NO_ENV)).not.toBe(storybookBrowserPort(TREE_B, NO_ENV));
+		expect(browserPort(TREE_B, NO_ENV)).not.toBe(storybookBrowserPort(TREE_A, NO_ENV));
+	});
+
 	it('keeps the browser port clear of dev and preview', () => {
 		const a = browserPort(TREE_A, NO_ENV);
 		expect(a).not.toBe(devPort(TREE_A, NO_ENV));
@@ -93,6 +121,8 @@ describe('a worktree', () => {
 		expect(previewPort(TREE_A, NO_ENV)).toBeLessThan(43000);
 		expect(browserPort(TREE_A, NO_ENV)).toBeGreaterThanOrEqual(43000);
 		expect(browserPort(TREE_A, NO_ENV)).toBeLessThan(44000);
+		expect(storybookBrowserPort(TREE_A, NO_ENV)).toBeGreaterThanOrEqual(44000);
+		expect(storybookBrowserPort(TREE_A, NO_ENV)).toBeLessThan(45000);
 	});
 });
 
@@ -119,6 +149,12 @@ describe('environment overrides', () => {
 
 	it('lets VITEST_BROWSER_PORT win', () => {
 		expect(browserPort(TREE_A, { VITEST_BROWSER_PORT: '3002' } as NodeJS.ProcessEnv)).toBe(3002);
+	});
+
+	it('lets VITEST_STORYBOOK_BROWSER_PORT win', () => {
+		expect(
+			storybookBrowserPort(TREE_A, { VITEST_STORYBOOK_BROWSER_PORT: '3003' } as NodeJS.ProcessEnv)
+		).toBe(3003);
 	});
 
 	it('rejects a value that is not a port rather than silently falling back', () => {

@@ -8,7 +8,12 @@ import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
-import { browserPort, devPort, previewPort } from './scripts/lib/checkout-ports';
+import {
+	browserPort,
+	devPort,
+	previewPort,
+	storybookBrowserPort
+} from './scripts/lib/checkout-ports';
 const dirname =
 	typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
@@ -134,6 +139,9 @@ export default defineConfig({
 					browser: {
 						enabled: true,
 						headless: true,
+						// Its own port. Browser mode gives every project the same
+						// default, so this one and `client` were both asking for 63315.
+						api: { port: storybookBrowserPort(dirname), strictPort: true },
 						provider: playwright({}),
 						instances: [
 							{

@@ -35,6 +35,12 @@ const MAIN_DEV_PORT = 5173;
 const MAIN_PREVIEW_PORT = 4173;
 /** vitest's own `defaultBrowserPort`. */
 const MAIN_BROWSER_PORT = 63315;
+/**
+ * The `storybook` project is browser-mode too, and vitest gives *both* projects
+ * the same default. One port pinned with `strictPort` and the other defaulting
+ * onto it is a hard collision, so the second one gets a number of its own here.
+ */
+const MAIN_STORYBOOK_BROWSER_PORT = 63316;
 
 /**
  * Where worktree ports live: high enough to clear the common dev-server numbers,
@@ -43,9 +49,10 @@ const MAIN_BROWSER_PORT = 63315;
  * carries are vanishingly unlikely.
  */
 const WORKTREE_PORT_BASE = 41000;
-const WORKTREE_PORT_SPAN = 3000;
+const WORKTREE_PORT_SPAN = 4000;
 /**
- * Dev, preview, and the vitest browser API. Each slot is `SPAN / SLOTS` wide.
+ * Dev, preview, and the vitest browser API for each of the two browser-mode test
+ * projects. Each slot is `SPAN / SLOTS` wide.
  *
  * Widening from two slots to three deliberately left the first two where they
  * were: the old span was 2000 across 2 slots and the new one is 3000 across 3,
@@ -53,7 +60,7 @@ const WORKTREE_PORT_SPAN = 3000;
  * had. A worktree's bookmarked URL and Playwright's `reuseExistingServer` both
  * depend on that stability.
  */
-const WORKTREE_PORT_SLOTS = 3;
+const WORKTREE_PORT_SLOTS = 4;
 
 /** Worktrees live here — see CLAUDE.md. */
 const WORKTREE_MARKER = `${'.claude'}/worktrees/`;
@@ -83,7 +90,7 @@ export function isWorktree(root: string): boolean {
  * increment would let one worktree's preview port equal the next worktree's dev
  * port.
  */
-function offsetFor(root: string, slot: 0 | 1 | 2): number {
+function offsetFor(root: string, slot: 0 | 1 | 2 | 3): number {
 	const digest = createHash('sha256').update(normalize(root)).digest('hex').slice(0, 8);
 	const span = WORKTREE_PORT_SPAN / WORKTREE_PORT_SLOTS;
 	return WORKTREE_PORT_BASE + slot * span + (parseInt(digest, 16) % span);
@@ -127,6 +134,25 @@ export function browserPort(root: string, env: NodeJS.ProcessEnv = process.env):
 	return (
 		fromEnv('VITEST_BROWSER_PORT', env) ??
 		(isWorktree(root) ? offsetFor(root, 2) : MAIN_BROWSER_PORT)
+	);
+}
+
+/**
+ * The port the `storybook` vitest project binds.
+ *
+ * It is browser-mode like `client`, and vitest hands both the same
+ * `defaultBrowserPort`. That was survivable while neither was pinned — the
+ * second would quietly increment — but pinning `client` with `strictPort` turned
+ * it into a hard failure that depends on which project starts first, so it
+ * passed or failed by luck. Both are named now.
+ *
+ * The failure is worth recognising: no test fails, the project simply never
+ * starts, so the run reports every test passing over a file count 25 short.
+ */
+export function storybookBrowserPort(root: string, env: NodeJS.ProcessEnv = process.env): number {
+	return (
+		fromEnv('VITEST_STORYBOOK_BROWSER_PORT', env) ??
+		(isWorktree(root) ? offsetFor(root, 3) : MAIN_STORYBOOK_BROWSER_PORT)
 	);
 }
 
