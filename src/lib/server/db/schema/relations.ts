@@ -6,7 +6,13 @@ export const relations = defineRelations(schema, (t) => ({
 		directoryEntry: t.one.directoryEntry({ from: t.user.id, to: t.directoryEntry.userId }),
 		sessions: t.many.session(),
 		accounts: t.many.account(),
-		groupMembers: t.many.groupMember()
+		groupMembers: t.many.groupMember(),
+		media: t.many.mediaAttachment({
+			from: t.user.id,
+			to: t.mediaAttachment.attachableId,
+			where: { attachableType: 'user' },
+			alias: 'mediaAttachment_user'
+		})
 	},
 	session: {
 		user: t.one.user({ from: t.session.userId, to: t.user.id })
@@ -16,6 +22,12 @@ export const relations = defineRelations(schema, (t) => ({
 	},
 	group: {
 		site: t.one.bandSite({ from: t.group.id, to: t.bandSite.groupId }),
+		media: t.many.mediaAttachment({
+			from: t.group.id,
+			to: t.mediaAttachment.attachableId,
+			where: { attachableType: 'group' },
+			alias: 'mediaAttachment_group'
+		}),
 		directoryEntry: t.one.directoryEntry({ from: t.group.id, to: t.directoryEntry.groupId }),
 		members: t.many.groupMember(),
 		/** Events this band OWNS. Shows it merely played are `lineups`. */
@@ -55,7 +67,13 @@ export const relations = defineRelations(schema, (t) => ({
 		createdBy: t.one.user({ from: t.event.createdByUserId, to: t.user.id }),
 		/** The owning band, not the bill. Who played is `lineup`. */
 		band: t.one.group({ from: t.event.bandId, to: t.group.id }),
-		lineup: t.many.eventBand()
+		lineup: t.many.eventBand(),
+		media: t.many.mediaAttachment({
+			from: t.event.id,
+			to: t.mediaAttachment.attachableId,
+			where: { attachableType: 'event' },
+			alias: 'mediaAttachment_event'
+		})
 	},
 	eventBand: {
 		event: t.one.event({ from: t.eventBand.eventId, to: t.event.id }),
@@ -331,5 +349,11 @@ export const relations = defineRelations(schema, (t) => ({
 			from: t.volunteerHourLog.volunteerRoleId,
 			to: t.volunteerRole.id
 		})
+	},
+	media: {
+		attachments: t.many.mediaAttachment()
+	},
+	mediaAttachment: {
+		media: t.one.media({ from: t.mediaAttachment.mediaId, to: t.media.id })
 	}
 }));
