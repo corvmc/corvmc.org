@@ -46,6 +46,7 @@ import {
 	approveMinorVolunteer,
 	getVolunteerOnboarding,
 	listBlockedVolunteers,
+	listVolunteers,
 	stageOf,
 	type OnboardingStage
 } from '$lib/server/volunteer/volunteer-profile-service';
@@ -98,6 +99,7 @@ import {
 } from '$lib/server/volunteer/member-certification-service';
 import {
 	volunteerHourStatuses,
+	volunteerProfileStatuses,
 	volunteerRoleGroups,
 	CERT_DESCRIPTION_MAX,
 	CERT_NAME_MAX,
@@ -271,6 +273,35 @@ export const getInterestedVolunteers = query(interestFilters, async (f) => {
 			missing: missingFrom(required, held.get(m.userId) ?? [], now)
 		}))
 	};
+});
+
+const volunteerListFilters = z.object({
+	search: z.string().optional(),
+	volunteerRoleId: z.string().optional(),
+	status: z.enum(volunteerProfileStatuses).optional(),
+	page: z.number().optional()
+});
+
+/**
+ * The volunteers index — everyone who signed up, rather than everyone who
+ * ticked a role.
+ *
+ * The people-side counterpart to `getInterestedVolunteers`, which answers "who
+ * wants this role" for one role's detail page. This one answers "who are our
+ * volunteers", so it is keyed on the profile and a member with no interests is
+ * a row rather than an omission.
+ */
+export const getStaffVolunteers = query(volunteerListFilters, async (f) => {
+	await requireStaff();
+
+	return listVolunteers(
+		{
+			roleId: f.volunteerRoleId || undefined,
+			search: f.search || undefined,
+			status: f.status
+		},
+		{ page: f.page ?? 1, pageSize: 50 }
+	);
 });
 
 /**

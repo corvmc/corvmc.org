@@ -1,12 +1,18 @@
 import { db } from '$lib/server/db';
-import { volunteerProfile } from '$lib/server/db/schema/volunteer';
+import {
+	volunteerProfile,
+	volunteerRole,
+	volunteerRoleInterest
+} from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, like, or, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
+import { ROLE_NAME_SEPARATOR } from './volunteer-interest-service';
 import type { MemberRef } from '$lib/types/entity';
 import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '$lib/config';
-import type { VolunteerProfile } from '$lib/server/db/schema/volunteer';
+import type { VolunteerProfile, VolunteerProfileStatus } from '$lib/server/db/schema/volunteer';
 
 // ---------------------------------------------------------------------------
 // Volunteer profiles
@@ -355,4 +361,113 @@ export async function listBlockedVolunteers(): Promise<BlockedVolunteer[]> {
 		.orderBy(asc(volunteerProfile.createdAt));
 
 	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));
+}
+
+// ---------------------------------------------------------------------------
+// The volunteers index
+// ---------------------------------------------------------------------------
+
+export interface VolunteerListRow {
+	userId: string;
+	member: MemberRef;
+	status: VolunteerProfileStatus;
+	isAdult: boolean;
+	/** Every role they ticked, name-sorted — not just the one filtered on. */
+	roleNames: string[];
+	/** Approved minutes, lifetime. What they actually did, next to what they said. */
+	minutes: number;
+	/** When they onboarded, which is the one date every row here has. */
+	since: Date;
+}
+
+/**
+ * The staff volunteers index: everyone who has signed up to volunteer, with
+ * what they put their hand up for and what they have actually worked.
+ *
+ * Keyed on the profile rather than on interest rows, unlike its sibling
+ * `listInterestedMembers`. The interests step is skippable and a blocked minor
+ * never reaches it, so an interest-keyed list silently drops the two groups
+ * staff most need to see — the person who onboarded and picked nothing, and the
+ * minor waiting on approval.
+ */
+export async function listVolunteers(
+	filters: { roleId?: string; search?: string; status?: VolunteerProfileStatus } = {},
+	pagination: PaginationInput = {}
+): Promise<PaginatedResult<VolunteerListRow>> {
+	// An EXISTS rather than a WHERE on the joined rows, for the reason
+	// `listInterestedMembers` documents: narrowing which *members* appear must
+	// still leave each of them showing every role they picked.
+	const matchesRole = filters.roleId
+		? sql`exists (
+				select 1 from "volunteer_role_interest" vri
+				where vri."user_id" = ${user.id}
+					and vri."volunteer_role_id" = ${filters.roleId}
+			)`
+		: undefined;
+
+	const matchesSearch = filters.search
+		? or(like(user.name, `%${filters.search}%`), like(user.email, `%${filters.search}%`))
+		: undefined;
+
+	const matchesStatus = filters.status ? eq(volunteerProfile.status, filters.status) : undefined;
+
+	// A closed account keeps its profile via the FK, but nobody should be rostered
+	// after closing their account — the same call `listInterestedMembers` makes.
+	const where = and(isNull(user.deletedAt), matchesRole, matchesSearch, matchesStatus);
+
+	// A correlated subquery, deliberately not a join. Joining the hour log
+	// alongside the interest join is a cartesian product, and the group_concat
+	// below would then repeat every role name once per log — six badges reading
+	// "Door, Door, Door" for somebody who worked three shifts.
+	const minutes = sql<number>`(
+			select coalesce(sum(vhl."minutes"), 0) from "volunteer_hour_log" vhl
+			where vhl."user_id" = ${user.id} and vhl."status" = 'approved'
+		)`;
+
+	const dataQuery = db
+		.select({
+			userId: user.id,
+			// Built per call, not at module scope — the import-cycle crash the other
+			// two services in this folder both document.
+			member: memberRefColumns(),
+			status: volunteerProfile.status,
+			isAdult: volunteerProfile.isAdult,
+			since: volunteerProfile.createdAt,
+			// Left-joined, so a volunteer who ticked nothing still gets a row and this
+			// comes back null.
+			roleNames: sql<string | null>`group_concat(${volunteerRole.name}, ${ROLE_NAME_SEPARATOR})`,
+			minutes
+		})
+		.from(volunteerProfile)
+		.innerJoin(user, eq(user.id, volunteerProfile.userId))
+		.leftJoin(volunteerRoleInterest, eq(volunteerRoleInterest.userId, volunteerProfile.userId))
+		.leftJoin(volunteerRole, eq(volunteerRole.id, volunteerRoleInterest.volunteerRoleId))
+		.where(where)
+		.groupBy(user.id)
+		.orderBy(asc(user.name))
+		.$dynamic();
+
+	// No interest join here — the data query's would multiply the rows being
+	// counted and inflate `totalPages`, the trap `getHoursByMember` documents.
+	// One profile per member, so a plain count is the member count.
+	const countQuery = db
+		.select({ count: count() })
+		.from(volunteerProfile)
+		.innerJoin(user, eq(user.id, volunteerProfile.userId))
+		.where(where);
+
+	const result = await paginate(dataQuery, countQuery, pagination);
+
+	return {
+		...result,
+		rows: result.rows.map((r): VolunteerListRow => ({
+			userId: r.userId,
+			member: toMemberRef(r.member),
+			status: r.status,
+			isAdult: r.isAdult,
+			roleNames: r.roleNames ? String(r.roleNames).split(ROLE_NAME_SEPARATOR).sort() : [],
+			minutes: Number(r.minutes),
+			since: r.since
+		}))
+	};
 }

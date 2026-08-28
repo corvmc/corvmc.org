@@ -15,6 +15,13 @@ let updatedSets: { table: string; values: unknown }[] = [];
 let updateReturns: unknown[] = [];
 let batchedCount = 0;
 
+// `listVolunteers` is a read whose correctness lives entirely in the SQL it
+// builds — a mock that returns whatever it was queued cannot tell a correlated
+// subquery from a join. So record both halves of each query: the selection
+// object handed to `db.select(...)` and every chained call after it.
+let selections: (Record<string, unknown> | undefined)[] = [];
+let chainCalls: { method: string; args: unknown[] }[] = [];
+
 /** Stands in for whichever table object drizzle was handed. */
 function tableName(t: unknown): string {
 	const sym = Object.getOwnPropertySymbols(t as object).find((s) => String(s).includes('Name'));
@@ -27,7 +34,10 @@ function chainableSelect() {
 			if (prop === 'then') {
 				return (resolve: (v: unknown[]) => void) => resolve(selectResultQueue.shift() ?? []);
 			}
-			return () => proxy;
+			return (...args: unknown[]) => {
+				chainCalls.push({ method: String(prop), args });
+				return proxy;
+			};
 		}
 	});
 	return proxy;
@@ -35,7 +45,10 @@ function chainableSelect() {
 
 vi.mock('$lib/server/db', () => ({
 	db: {
-		select: vi.fn(() => chainableSelect()),
+		select: vi.fn((selection?: Record<string, unknown>) => {
+			selections.push(selection);
+			return chainableSelect();
+		}),
 		insert: vi.fn(() => ({
 			values: vi.fn((row: unknown) => {
 				insertedValues.push(row);
@@ -64,8 +77,11 @@ vi.mock('$lib/server/db', () => ({
 
 vi.mock('$lib/server/authorization', () => ({ primaryRoleFor: vi.fn(() => null) }));
 
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import type { SQL } from 'drizzle-orm';
 import {
 	completeVolunteerOnboarding,
+	listVolunteers,
 	updateVolunteerProfile,
 	setAvailability,
 	approveMinorVolunteer,
@@ -328,5 +344,141 @@ describe('stageOf', () => {
 		expect(stageOf(null)).toBe('none');
 		expect(stageOf(profile({ status: 'blocked' }) as never)).toBe('blocked');
 		expect(stageOf(profile() as never)).toBe('active');
+	});
+});
+
+/** Render a drizzle fragment so a test can read the SQL the service built. */
+function render(fragment: unknown) {
+	return new SQLiteSyncDialect().sqlToQuery(fragment as SQL);
+}
+
+/**
+ * The selection object for the query that asked for `key`.
+ *
+ * Searched rather than indexed: `listVolunteers` issues a data query and a count
+ * query, and `Promise.all` leaves their order unpinned.
+ */
+function selectionWith(key: string) {
+	return selections.find((sel) => sel && key in sel);
+}
+
+/** Every table `.from()`/`.leftJoin()`/`.innerJoin()` was pointed at. */
+function joinedTables() {
+	return chainCalls
+		.filter((c) => ['from', 'innerJoin', 'leftJoin'].includes(c.method))
+		.map((c) => tableName(c.args[0]));
+}
+
+describe('listVolunteers', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		selectResultQueue = [];
+		selections = [];
+		chainCalls = [];
+	});
+
+	// The reason this list is keyed on the profile and not on interest rows: the
+	// interests step is skippable, so an inner join would drop everyone who
+	// onboarded and picked nothing — including every blocked minor, who never got
+	// that far.
+	it('left-joins the interests, so a volunteer who ticked nothing still has a row', async () => {
+		await listVolunteers({});
+
+		const joins = chainCalls
+			.filter((c) => c.method === 'leftJoin')
+			.map((c) => tableName(c.args[0]));
+		expect(joins).toContain('volunteer_role_interest');
+		expect(joins).toContain('volunteer_role');
+	});
+
+	it('returns an empty role list rather than a null when nobody ticked anything', async () => {
+		selectResultQueue = [
+			[
+				{
+					userId: 'user-1',
+					member: { id: 'user-1', name: 'Ada', email: 'ada@x.com' },
+					status: 'active',
+					isAdult: true,
+					since: new Date('2026-01-01'),
+					roleNames: null,
+					minutes: 0
+				}
+			],
+			[{ count: 1 }]
+		];
+
+		const { rows } = await listVolunteers({});
+		expect(rows[0].roleNames).toEqual([]);
+		expect(rows[0].minutes).toBe(0);
+	});
+
+	// The whole reason hours are a correlated subquery. Joining the hour log
+	// alongside the interest join is a cartesian product, and the group_concat
+	// would then emit a role name once per approved log — three shifts on Door
+	// rendering as three Door badges.
+	it('reads hours through a subquery rather than joining the hour log', async () => {
+		await listVolunteers({});
+
+		expect(joinedTables()).not.toContain('volunteer_hour_log');
+
+		const selection = selectionWith('minutes');
+		expect(selection).toBeDefined();
+		const { sql } = render(selection!.minutes);
+		expect(sql).toContain('volunteer_hour_log');
+		expect(sql).toContain('approved');
+	});
+
+	// A filtered member still shows every role they picked — the same call
+	// `listInterestedMembers` makes, and for the same reason.
+	it('keeps the role filter out of the joined rows', async () => {
+		await listVolunteers({ roleId: 'role-1' });
+
+		const selection = selectionWith('roleNames');
+		expect(selection).toBeDefined();
+		expect(render(selection!.roleNames).sql).not.toContain('role-1');
+
+		const where = chainCalls.find((c) => c.method === 'where');
+		expect(render(where!.args[0]).params).toContain('role-1');
+	});
+
+	// A plain count over the data query's joins would count interest rows and
+	// inflate totalPages — the trap `getHoursByMember` documents. One profile per
+	// member, so the count query has to stay unjoined to the interests.
+	it('counts members, not interest rows', async () => {
+		selectResultQueue = [[], [{ count: 7 }]];
+		const { pagination } = await listVolunteers({});
+
+		expect(pagination.total).toBe(7);
+
+		const countSelection = selectionWith('count');
+		expect(countSelection).toBeDefined();
+		expect(selectionWith('count')).not.toBe(selectionWith('roleNames'));
+		// Both queries call `.from`, but only the data query joins the interests.
+		expect(chainCalls.filter((c) => c.method === 'leftJoin')).toHaveLength(2);
+	});
+
+	it('narrows to one profile status when asked', async () => {
+		await listVolunteers({ status: 'blocked' });
+
+		const where = chainCalls.find((c) => c.method === 'where');
+		expect(render(where!.args[0]).params).toContain('blocked');
+	});
+
+	// A closed account keeps its profile via the FK, but nobody should be rostered
+	// after closing their account.
+	it('always excludes closed accounts', async () => {
+		await listVolunteers({});
+
+		const where = chainCalls.find((c) => c.method === 'where');
+		expect(render(where!.args[0]).sql).toContain('deleted_at" is null');
+	});
+
+	it('searches name and email together', async () => {
+		await listVolunteers({ search: 'ada' });
+
+		const where = chainCalls.find((c) => c.method === 'where');
+		const { sql, params } = render(where!.args[0]);
+		expect(sql).toContain('or');
+		expect(params.filter((p) => p === '%ada%')).toHaveLength(2);
 	});
 });

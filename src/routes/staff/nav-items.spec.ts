@@ -50,6 +50,7 @@ describe('activeNavKey', () => {
 		['/staff/volunteer', 'volunteer'],
 		// Not a nav row of its own — it falls back to the section parent.
 		['/staff/volunteer/clearances', 'volunteer'],
+		['/staff/volunteer/people', 'volunteer-people'],
 		['/staff/volunteer/shifts/abc', 'volunteer-shifts'],
 		// `/staff/events/[id]` and everything under it is the general view, which
 		// the Calendar row owns — including the production console, which is a
@@ -104,6 +105,7 @@ describe('the nav tree', () => {
 		const volunteer = staffNavSections.flatMap((s) => s.items).find((i) => i.key === 'volunteer')!;
 		expect(childHrefsFor(volunteer)).toEqual([
 			'/staff/volunteer',
+			'/staff/volunteer/people',
 			'/staff/volunteer/shifts',
 			'/staff/volunteer/roles',
 			'/staff/volunteer/certifications',

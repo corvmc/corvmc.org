@@ -111,6 +111,7 @@
 </script>
 
 <PageHeader title="Volunteering" subtitle="Staff">
+	<Button href="/staff/volunteer/people" variant="ghost" size="sm">Volunteers</Button>
 	<Button href="/staff/volunteer/shifts" variant="ghost" size="sm">Shifts</Button>
 	<Button href="/staff/volunteer/roles" variant="ghost" size="sm">Roles</Button>
 	<Button href="/staff/volunteer/report" variant="ghost" size="sm">Report</Button>

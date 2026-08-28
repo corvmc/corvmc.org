@@ -26,6 +26,7 @@ export type StaffNavKey =
 	| 'users'
 	| 'bands'
 	| 'volunteer'
+	| 'volunteer-people'
 	| 'volunteer-shifts'
 	| 'volunteer-roles'
 	| 'volunteer-certifications'
@@ -93,6 +94,7 @@ export const staffNavSections: StaffNavSection[] = [
 				href: '/staff/volunteer',
 				badgeKey: 'volunteerPending',
 				children: [
+					{ key: 'volunteer-people', label: 'Volunteers', href: '/staff/volunteer/people' },
 					{ key: 'volunteer-shifts', label: 'Shifts', href: '/staff/volunteer/shifts' },
 					{ key: 'volunteer-roles', label: 'Roles', href: '/staff/volunteer/roles' },
 					{
