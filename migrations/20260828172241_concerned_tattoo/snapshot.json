@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "c82e60a3-486f-4b5b-8801-e889d7f798c8",
+  "id": "a9db85a3-a797-4a22-9c20-e2b1f10bf4f7",
   "prevIds": [
-    "203bc5bd-5e6e-451f-8ba3-1c8125c9adb1"
+    "d133b99d-08ff-47c4-b254-baaa404a5d7f"
   ],
   "ddl": [
     {
@@ -124,6 +124,10 @@
     },
     {
       "name": "inventory_item",
+      "entityType": "tables"
+    },
+    {
+      "name": "inventory_item_article",
       "entityType": "tables"
     },
     {
@@ -3053,6 +3057,56 @@
       "name": "deleted_at",
       "entityType": "columns",
       "table": "inventory_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "inventory_item_article"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "item_id",
+      "entityType": "columns",
+      "table": "inventory_item_article"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "article_id",
+      "entityType": "columns",
+      "table": "inventory_item_article"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "sort_order",
+      "entityType": "columns",
+      "table": "inventory_item_article"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "inventory_item_article"
     },
     {
       "type": "text",
@@ -7293,6 +7347,21 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_inventory_item_article_item_id_inventory_item_id_fk",
+      "entityType": "fks",
+      "table": "inventory_item_article"
+    },
+    {
+      "columns": [
+        "item_id"
+      ],
+      "tableTo": "inventory_item",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_inventory_loan_item_id_inventory_item_id_fk",
@@ -8633,6 +8702,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "inventory_item_article_pk",
+      "table": "inventory_item_article",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "inventory_loan_pk",
       "table": "inventory_loan",
       "entityType": "pks"
@@ -9715,6 +9793,20 @@
       "name": "idx_item_resource_id",
       "entityType": "indexes",
       "table": "inventory_item"
+    },
+    {
+      "columns": [
+        {
+          "value": "item_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_item_article_item",
+      "entityType": "indexes",
+      "table": "inventory_item_article"
     },
     {
       "columns": [
@@ -10986,6 +11078,16 @@
       "name": "uniq_asset_tag",
       "entityType": "uniques",
       "table": "inventory_asset"
+    },
+    {
+      "columns": [
+        "item_id",
+        "article_id"
+      ],
+      "nameExplicit": true,
+      "name": "uniq_item_article",
+      "entityType": "uniques",
+      "table": "inventory_item_article"
     },
     {
       "columns": [
