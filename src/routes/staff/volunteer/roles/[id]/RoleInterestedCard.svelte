@@ -4,6 +4,7 @@
 	import Table from '$lib/components/ui/Table.svelte';
 	import DataList from '$lib/components/ui/DataList.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import BadgeList from '$lib/components/ui/BadgeList.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { toast } from 'svelte-sonner';
@@ -98,13 +99,7 @@
 							</td>
 
 							<td class="col-support">
-								{#if alsoIn.length > 0}
-									<div class="flex flex-wrap gap-1">
-										{#each alsoIn as roleName (roleName)}
-											<span class="badge badge-ghost badge-sm">{roleName}</span>
-										{/each}
-									</div>
-								{/if}
+								<BadgeList items={alsoIn} max={2} />
 							</td>
 
 							<td class="col-extra whitespace-nowrap">{formatDateShort(member.since)}</td>
