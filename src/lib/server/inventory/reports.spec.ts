@@ -1,15 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /**
- * The two reporting queries, run against a real SQLite.
+ * The reporting queries, run against a real SQLite.
+ *
+ * Named for what it covers rather than for a module: there is no `reports.ts`.
+ * `spendByCategory` and `inKindContributions` live in `acquisition-service.ts`
+ * and `listForm8282Obligations` in `asset-service.ts`, but all three are
+ * aggregate SQL that wants a database rather than the mocked `db` their
+ * neighbours use.
  *
  * Every other spec in this folder mocks `$lib/server/db`, which is right for
  * lifecycle logic — it isolates the rules from the storage. It is **wrong for
- * these two**: `spendByCategory` and `inKindContributions` are four-table joins
- * with `GROUP BY` and `SUM`, and a mocked `db` returns whatever the test told it
- * to. It cannot tell you the grouping is wrong. Both queries shipped in Phase 1
- * as forward work with no coverage at all, so this is the first time either has
- * been executed.
+ * these**: they are four-table joins with `GROUP BY` and `SUM`, and a mocked
+ * `db` returns whatever the test told it to, so it agrees with any `WHERE`
+ * clause, right or wrong. All three shipped with no coverage of the SQL itself.
  *
  * Follows the pattern `scripts/db/backfill/directory-entry.spec.ts` established:
  * the DDL is lifted out of the *generated migration* rather than hand-copied, so

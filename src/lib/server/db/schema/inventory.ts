@@ -81,6 +81,18 @@ export const STOCK_REASON_SIGN: Record<StockReason, 1 | -1 | 0> = {
 
 // ---------------------------------------------------------------------------
 // Zod schemas
+//
+// Only the four something actually parses with. Eleven more used to sit here —
+// create/update pairs for locations, items and assets, plus tag binding,
+// movements, acquisitions and loan requests — and nothing outside this file ever
+// imported one.
+//
+// The remote layer declares its own inline, because a `form()` schema is shaped
+// by what the *form* sends (a cleared number field is dropped, `.transform()`
+// breaks `fields` inference) rather than by what the table holds. Two parallel
+// definitions of one shape, only one of them ever executed, is a trap:
+// `createAcquisitionSchema` had quietly fallen behind and was missing
+// `monetized`, `acknowledgedAt` and `appraisalRef` altogether.
 // ---------------------------------------------------------------------------
 
 export const createCategorySchema = z.object({
@@ -90,87 +102,6 @@ export const createCategorySchema = z.object({
 });
 
 export const updateCategorySchema = createCategorySchema.partial();
-
-export const createLocationSchema = z.object({
-	name: z.string().min(1).max(100),
-	parentId: z.uuid().optional(),
-	displayOrder: z.coerce.number().int().min(0).default(0),
-	notes: z.string().max(2000).optional()
-});
-
-export const updateLocationSchema = createLocationSchema.partial();
-
-export const createItemSchema = z.object({
-	name: z.string().min(1).max(255),
-	description: z.string().max(2000).optional(),
-	categoryId: z.uuid(),
-	kind: z.enum(itemKinds),
-	unitOfMeasure: z.enum(unitsOfMeasure).default('each'),
-	gtin: z.string().max(14).optional(),
-	isLoanable: z.coerce.boolean().default(true),
-	reorderPoint: z.coerce.number().int().min(0).optional(),
-	reorderQuantity: z.coerce.number().int().min(1).optional(),
-	resourceId: z.string().max(100).optional(),
-	notes: z.string().max(2000).optional()
-});
-
-export const updateItemSchema = createItemSchema.partial();
-
-export const createAssetSchema = z.object({
-	itemId: z.uuid(),
-	assetTag: z.string().max(64).optional(),
-	serialNumber: z.string().max(100).optional(),
-	condition: z.enum(equipmentConditions),
-	locationId: z.uuid().optional(),
-	notes: z.string().max(2000).optional()
-});
-
-export const updateAssetSchema = createAssetSchema.partial().omit({ itemId: true });
-
-/** Binding a printed tag to a unit. Rebinding is normal; see the spec. */
-export const bindAssetTagSchema = z.object({
-	assetId: z.uuid(),
-	assetTag: z.string().min(1).max(64)
-});
-
-export const recordMovementSchema = z.object({
-	itemId: z.uuid(),
-	assetId: z.uuid().optional(),
-	quantity: z.coerce.number().int(),
-	reason: z.enum(stockReasons),
-	locationId: z.uuid().optional(),
-	toLocationId: z.uuid().optional(),
-	notes: z.string().max(1000).optional()
-});
-
-export const acquisitionLineSchema = z.object({
-	itemId: z.uuid(),
-	quantity: z.coerce.number().int().min(1),
-	unitValueCents: z.coerce.number().int().min(0).optional()
-});
-
-export const createAcquisitionSchema = z.object({
-	kind: z.enum(acquisitionKinds),
-	occurredAt: z.coerce.date(),
-	sourceName: z.string().max(255).optional(),
-	donorUserId: z.string().max(64).optional(),
-	reference: z.string().max(100).optional(),
-	totalCents: z.coerce.number().int().min(0).optional(),
-	fairValueCents: z.coerce.number().int().min(0).optional(),
-	fairValueBasis: z.string().max(1000).optional(),
-	intendedUse: z.string().max(1000).optional(),
-	locationId: z.uuid().optional(),
-	notes: z.string().max(2000).optional(),
-	lines: z.array(acquisitionLineSchema).min(1).max(100)
-});
-
-export const requestLoanSchema = z.object({
-	itemId: z.uuid().optional(),
-	quantity: z.coerce.number().int().min(1).default(1),
-	requestedPickupDate: z.coerce.date(),
-	estimatedReturnDate: z.coerce.date(),
-	memberNotes: z.string().max(1000).optional()
-});
 
 export const scheduleLoanSchema = z.object({
 	itemId: z.uuid(),
