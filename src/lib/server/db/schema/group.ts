@@ -123,16 +123,7 @@ export const group = sqliteTable(
 		customDomainVerification: text('custom_domain_verification', {
 			mode: 'json'
 		}).$type<CustomDomainVerification>(),
-		customDomainAddedAt: integer('custom_domain_added_at', { mode: 'timestamp' }),
-
-		// directory profile
-		tagline: text('tagline'),
-		hometown: text('hometown'),
-		foundedYear: text('founded_year'),
-		lookingForMembers: integer('looking_for_members', { mode: 'boolean' }).notNull().default(false),
-		directoryVisibility: text('directory_visibility').notNull().default('public'),
-		directoryContact: text('directory_contact', { mode: 'json' }),
-		links: text('links', { mode: 'json' })
+		customDomainAddedAt: integer('custom_domain_added_at', { mode: 'timestamp' })
 	},
 	// Index names keep their `band` prefix on purpose. SQLite carries indexes
 	// through a table rename untouched, so renaming them here would turn a free
