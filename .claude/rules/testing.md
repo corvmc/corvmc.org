@@ -41,6 +41,20 @@ unexpectedly`, or as a bare SIGKILL, and never as anything about the tests.
   the preview server then holds alone. Seeds go through `withPlatformDb`/`withPlatformEnv`
   (miniflare, prepare only); a read-back from inside a test goes through `readLocalDb`, which
   reads the same SQLite file without starting a second workerd over it.
+- **Assert against the database through `expect.poll`, never a bare read.** `readLocalDb` opens
+  the file the preview server is still writing through workerd, so a row the page has already
+  stopped rendering can still read stale to a fresh reader. The UI assertion passing does not
+  establish visibility for the next line. `suggestions.e2e.ts` and `volunteering.e2e.ts` keep a
+  `DB_POLL` constant for this; a one-shot read is only safe once a poll in the same test has
+  already seen the write.
+- **Retries do not rescue a mutating test.** `retries: 2` on CI helps a test that fails _before_ it
+  writes. One that fails _after_ has already spent the fixture row it needs, so the retry starts
+  from data the fixture never described and fails differently — and the job is red either way.
+  Per-test seeding is not the escape hatch: a mid-run write is a second writer on the files the
+  preview server holds. See the note at `retries` in `playwright.config.ts`.
+- A red run keeps `.wrangler/e2e-state` on purpose, and the next `e2e/prepare.ts` clears it — or
+  rebuilds the directory outright when its schema and drizzle's journal disagree, the one state
+  that used to need `rm -rf .wrangler/e2e-state` by hand (`journalDisagreesWithSchema`).
 - Fixtures must reset KV rate-limit counters; they survive between runs, and the failure surfaces
   as unrelated state that nothing in the test ever touched.
 - A spec that mutates a seeded row owns that row. The fixture seeds a disposable band per mutating
