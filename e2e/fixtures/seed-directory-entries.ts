@@ -17,6 +17,7 @@ import { notInArray, sql } from 'drizzle-orm';
 import { user } from '../../src/lib/server/db/schema/authentication';
 import { group } from '../../src/lib/server/db/schema/group';
 import { directoryEntry } from '../../src/lib/server/db/schema/directory';
+import { bandSite } from '../../src/lib/server/db/schema/band-site';
 import { withPlatformEnv } from './platform-db';
 
 export async function seedDirectoryEntries(): Promise<void> {
@@ -56,6 +57,29 @@ export async function seedDirectoryEntries(): Promise<void> {
 		// 5 rows × the widest shape stays under D1's 100 bound parameters.
 		for (let i = 0; i < rows.length; i += 5) {
 			await db.insert(directoryEntry).values(rows.slice(i, i + 5));
+		}
+
+		// Every band needs a `band_site` too — `tier` lives there since phase 3b,
+		// and a band without one reads as free. Swept here for the same reason the
+		// entries are: the fixtures that create groups should not each have to
+		// learn about it.
+		const sited = (await db.select({ groupId: bandSite.groupId }).from(bandSite)).map(
+			(r) => r.groupId
+		);
+		const unsited = await db
+			.select({ id: group.id, tier: group.tier, createdAt: group.createdAt })
+			.from(group)
+			.where(sited.length ? notInArray(group.id, sited) : sql`1 = 1`);
+
+		if (unsited.length) {
+			await db.insert(bandSite).values(
+				unsited.map((g) => ({
+					groupId: g.id,
+					tier: g.tier,
+					createdAt: g.createdAt,
+					updatedAt: g.createdAt
+				}))
+			);
 		}
 
 		// A member fixture that wants to be publicly browsable says so on the user

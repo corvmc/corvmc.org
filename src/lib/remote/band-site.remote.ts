@@ -12,6 +12,7 @@ import { db } from '$lib/server/db';
 import { group, groupMember } from '$lib/server/db/schema/group';
 import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
 import { bandPageConfig, bandMedia } from '$lib/server/db/schema/band-page';
+import { bandSite } from '$lib/server/db/schema/band-site';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, isNull, asc } from 'drizzle-orm';
 import {
@@ -179,8 +180,9 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 	}
 
 	const [bandRow] = await db
-		.select({ id: group.id, name: group.name, tier: group.tier, ownerId: group.ownerId })
+		.select({ id: group.id, name: group.name, tier: bandSite.tier, ownerId: group.ownerId })
 		.from(group)
+		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(and(eq(group.slug, data.slug), isNull(group.deletedAt)))
 		.limit(1);
 

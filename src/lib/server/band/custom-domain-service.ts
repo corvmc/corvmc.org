@@ -17,6 +17,7 @@ import { env as publicEnv } from '$env/dynamic/public';
 import { eq, and, isNull, ne } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { group } from '$lib/server/db/schema/group';
+import { bandSite } from '$lib/server/db/schema/band-site';
 import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
 import { forgetCustomDomain } from './band-host-service';
 import type { CustomDomainStatus, CustomDomainVerification } from '$lib/server/db/schema/group';
@@ -91,10 +92,16 @@ export function normalizeCustomDomain(input: string): string {
 
 /** Throws if another band already claimed this domain. */
 export async function assertDomainUnclaimed(host: string, bandId: string): Promise<void> {
+	// The domain lives on the site row now, so the uniqueness check reads there
+	// and joins back for the band's soft-delete flag: a deleted band's domain is
+	// free to claim, which is what `isNull(group.deletedAt)` has always meant here.
 	const [existing] = await db
-		.select({ id: group.id })
-		.from(group)
-		.where(and(eq(group.customDomain, host), ne(group.id, bandId), isNull(group.deletedAt)))
+		.select({ id: bandSite.id })
+		.from(bandSite)
+		.innerJoin(group, eq(group.id, bandSite.groupId))
+		.where(
+			and(eq(bandSite.customDomain, host), ne(bandSite.groupId, bandId), isNull(group.deletedAt))
+		)
 		.limit(1);
 
 	if (existing) throw new CustomDomainError('That domain is already connected to another band.');

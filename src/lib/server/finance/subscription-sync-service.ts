@@ -2,7 +2,7 @@ import type Stripe from 'stripe';
 import { and, eq, isNotNull, notInArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
+import { bandSite } from '$lib/server/db/schema/band-site';
 import type { Subscription } from '$lib/server/db/schema/authentication';
 import { stripe } from '$lib/server/stripe';
 import { buildMemberSubscriptionState } from './subscription-service';
@@ -296,19 +296,21 @@ async function clearStaleBands(
 	summary: SubscriptionSyncSummary
 ): Promise<void> {
 	const seen = [...seenBandIds];
+	// Keyed on the site row since phase 3b — `seenBandIds` are group ids, which
+	// is what `band_site.group_id` holds, so the comparison is unchanged.
 	const where =
 		seen.length > 0
-			? and(isNotNull(group.subscription), notInArray(group.id, seen))
-			: isNotNull(group.subscription);
+			? and(isNotNull(bandSite.subscription), notInArray(bandSite.groupId, seen))
+			: isNotNull(bandSite.subscription);
 
-	const stale = await db.select({ id: group.id }).from(group).where(where);
+	const stale = await db.select({ id: bandSite.id }).from(bandSite).where(where);
 
 	for (const row of stale) {
 		if (!dryRun)
 			await db
-				.update(group)
+				.update(bandSite)
 				.set({ tier: 'free', subscription: null, updatedAt: new Date() })
-				.where(eq(group.id, row.id));
+				.where(eq(bandSite.id, row.id));
 		summary.bandsCleared++;
 	}
 }

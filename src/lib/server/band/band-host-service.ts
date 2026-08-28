@@ -12,6 +12,7 @@
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { group } from '$lib/server/db/schema/group';
+import { bandSite } from '$lib/server/db/schema/band-site';
 import { getJson, putJson } from '$lib/server/kv';
 
 /** Custom-domain lookups are cached this long. Short: a band that just verified shouldn't wait. */
@@ -31,9 +32,14 @@ export type BandHost = {
  * mean a band that just upgraded still gets redirected away from its new site.
  */
 export async function resolveBandSubdomain(slug: string): Promise<BandHost | null> {
+	// One indexed lookup plus a join since phase 3b: `tier` moved to `band_site`.
+	// Still uncached, and still cheap — `group.slug` is unique and the join is on
+	// `band_site.group_id`, which is too. A band with no site row reads as free,
+	// which is the same answer this gave before the column moved.
 	const [row] = await db
-		.select({ slug: group.slug, tier: group.tier })
+		.select({ slug: group.slug, tier: bandSite.tier })
 		.from(group)
+		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
 		.limit(1);
 
@@ -56,10 +62,19 @@ export async function resolveCustomDomain(hostname: string): Promise<BandHost | 
 	const cached = await getJson<BandHost | { miss: true }>(cacheKey);
 	if (cached) return 'miss' in cached ? null : cached;
 
+	// The domain and the tier both live on `band_site` now, so this reads from
+	// there and joins back for the slug — the opposite direction to
+	// `resolveBandSubdomain`, because the lookup key moved with the columns.
+	// INNER: no site row means no custom domain to match in the first place.
+	//
+	// This runs from `reroute`, before routing, on every request to a custom
+	// host. The KV cache above is what keeps that affordable, so the join cost
+	// lands on cache misses only.
 	const [row] = await db
-		.select({ slug: group.slug, tier: group.tier, status: group.customDomainStatus })
-		.from(group)
-		.where(and(eq(group.customDomain, host), isNull(group.deletedAt)))
+		.select({ slug: group.slug, tier: bandSite.tier, status: bandSite.customDomainStatus })
+		.from(bandSite)
+		.innerJoin(group, eq(group.id, bandSite.groupId))
+		.where(and(eq(bandSite.customDomain, host), isNull(group.deletedAt)))
 		.limit(1);
 
 	const resolved: BandHost | null =

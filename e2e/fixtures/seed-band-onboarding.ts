@@ -16,6 +16,7 @@ import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { groupMember, groupSlugHistory } from '../../src/lib/server/db/schema/group';
 import { group } from '../../src/lib/server/db/schema/group';
 import { directoryEntry, directoryTag } from '../../src/lib/server/db/schema/directory';
+import { bandSite } from '../../src/lib/server/db/schema/band-site';
 import { scryptHash } from './seed-pay-reservation';
 import { withPlatformEnv } from './platform-db';
 
@@ -103,6 +104,7 @@ export async function seedBandOnboarding(): Promise<void> {
 			// off, so neither cascade can be relied on here.
 			await db.delete(directoryTag).where(eq(directoryTag.entryId, entryIdFor(bandId)));
 			await db.delete(directoryEntry).where(eq(directoryEntry.groupId, bandId));
+			await db.delete(bandSite).where(eq(bandSite.groupId, bandId));
 			await db.delete(group).where(eq(group.id, bandId));
 		}
 		for (const userId of [SEED_OWNER_ID, SEED_BANDMATE_ID]) {
@@ -241,6 +243,21 @@ export async function seedBandOnboarding(): Promise<void> {
 				hometown: b.hometown ?? null,
 				foundedYear: b.foundedYear ?? null,
 				visibility: b.directoryVisibility,
+				createdAt: now,
+				updatedAt: now
+			}))
+		);
+
+		// The site record. `tier` lives here since phase 3b, so the premium band's
+		// subdomain only serves its microsite if this row says premium — writing
+		// `tier` to `group` alone (as this fixture used to) leaves
+		// `band-subdomain.e2e.ts` asserting against a band the resolver thinks is
+		// free.
+		await db.insert(bandSite).values(
+			BANDS.map((b) => ({
+				id: `${b.id}-site`,
+				groupId: b.id,
+				tier: (b as { tier?: 'free' | 'premium' }).tier ?? 'free',
 				createdAt: now,
 				updatedAt: now
 			}))
