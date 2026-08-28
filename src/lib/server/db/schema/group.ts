@@ -75,7 +75,23 @@ export type Group = typeof group.$inferSelect;
 export const groupRoles = ['owner', 'admin', 'member'] as const;
 export type GroupRole = (typeof groupRoles)[number];
 
-export const groupMemberStatuses = ['pending', 'active'] as const;
+/**
+ * The three states a roster row can be in: one membership and two ways of
+ * waiting to become one.
+ *
+ * `'requested'` is a distinct value rather than a reuse of `'pending'`, and that
+ * distinction is the whole cost of `by_application`. `'pending'` means "we asked
+ * you, awaiting your answer"; a request is its exact mirror. One value covering
+ * both would leave every roster query unable to say which direction a waiting
+ * row faces — approving an invitation you sent and approving an application you
+ * received are different authorizations over identically-shaped rows.
+ *
+ * Adding the value emits zero SQL: this is a drizzle `text({ enum })`, a
+ * TypeScript-only constraint. What it does cost is every place that *splits* a
+ * roster by status, which is why `partitionByStatus` in `band-service.ts` builds
+ * its buckets from this array rather than naming them.
+ */
+export const groupMemberStatuses = ['pending', 'active', 'requested'] as const;
 export type GroupMemberStatus = (typeof groupMemberStatuses)[number];
 
 /**

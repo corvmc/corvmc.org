@@ -61,7 +61,7 @@ export const getMemberLayout = query(async () => {
 		pendingRequests,
 		hasLoanableEquipment
 	] = await Promise.all([
-		listForUser(user.id).catch(() => []),
+		listForUser(user.id, ['band']).catch(() => []),
 		hasAnyRole(user.id, ['admin', 'staff']),
 		getAllFeatureFlags(),
 		countPortalUnread(user.id).catch(() => 0),
@@ -110,7 +110,7 @@ export const getStaffLayout = query(async () => {
 	const user = locals.user;
 	const [userBands, inboxUnread, volunteerPending, listingsPending, suggestionsAwaiting] =
 		await Promise.all([
-			listForUser(user.id).catch(() => []),
+			listForUser(user.id, ['band']).catch(() => []),
 			getUnresolvedCount().catch(() => 0),
 			getVolunteerStatusCounts()
 				.then((c) => c.pending)
@@ -174,7 +174,7 @@ export const getBandLayout = query(z.string(), async (slug) => {
 	const [role, isStaff, userBands, features] = await Promise.all([
 		getUserRole(band.id, locals.user.id),
 		hasAnyRole(locals.user.id, ['admin', 'staff']),
-		listForUser(locals.user.id).catch(() => []),
+		listForUser(locals.user.id, ['band']).catch(() => []),
 		getAllFeatureFlags()
 	]);
 

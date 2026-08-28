@@ -1,7 +1,15 @@
 import { db } from '$lib/server/db';
 import { DomainError } from '../domain-error';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
-import { group, groupMember, groupSlugHistory, type GroupRole } from '$lib/server/db/schema/group';
+import {
+	group,
+	groupMember,
+	groupMemberStatuses,
+	groupSlugHistory,
+	type GroupMemberStatus,
+	type GroupRole
+} from '$lib/server/db/schema/group';
+import type { GroupKind } from '$lib/config';
 import { user } from '$lib/server/db/schema/authentication';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { alias } from 'drizzle-orm/sqlite-core';
@@ -339,12 +347,24 @@ export async function getById(bandId: string) {
 	return row ?? null;
 }
 
+/**
+ * Every group this user has a row in, of whatever status.
+ *
+ * `kinds` narrows it, and every caller passes one. Band surfaces — the sidebar's
+ * My Bands, `/member/bands`, the panel switcher — must not start listing clubs
+ * and committees the moment the first one is created, and the group surfaces
+ * must not list bands: `/member/groups` answers "what can I be part of", and a
+ * band, always `invite_only` and already holding its own index and panel, has no
+ * answer to give. See docs/specs/groups-spec.md § The index.
+ */
 export async function listForUser(
 	userId: string,
+	kinds: readonly GroupKind[],
 	props = {
 		id: group.id,
 		name: group.name,
 		slug: group.slug,
+		kind: group.kind,
 		avatarKey: group.avatarKey,
 		role: groupMember.role,
 		status: groupMember.status,
@@ -355,8 +375,33 @@ export async function listForUser(
 		.select(props)
 		.from(groupMember)
 		.innerJoin(group, eq(group.id, groupMember.groupId))
-		.where(and(eq(groupMember.userId, userId), isNull(group.deletedAt)))
+		.where(
+			and(eq(groupMember.userId, userId), inArray(group.kind, [...kinds]), isNull(group.deletedAt))
+		)
 		.orderBy(group.name);
+}
+
+/**
+ * Split a roster by status, with one bucket per value of `groupMemberStatuses`.
+ *
+ * Built from the vocabulary rather than naming the buckets, which is the point:
+ * every consumer that splits a roster used to write
+ * `rows.filter((r) => r.status === 'active')` beside
+ * `rows.filter((r) => r.status === 'pending')`, so adding `'requested'` would
+ * have dropped those rows into neither bucket and shown nobody anything — a
+ * fail-quiet with no failing test and nothing to see in a diff. Here a new
+ * status gets a bucket automatically, and a consumer that forgets to render it
+ * is at worst incomplete rather than silently lossy.
+ */
+export function partitionByStatus<T extends { status: GroupMemberStatus }>(
+	rows: T[]
+): Record<GroupMemberStatus, T[]> {
+	const buckets = Object.fromEntries(groupMemberStatuses.map((s) => [s, [] as T[]])) as Record<
+		GroupMemberStatus,
+		T[]
+	>;
+	for (const row of rows) buckets[row.status].push(row);
+	return buckets;
 }
 
 export async function getMembers(bandId: string) {

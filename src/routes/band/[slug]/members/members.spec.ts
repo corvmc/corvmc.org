@@ -26,6 +26,13 @@ const bandServiceMock = {
 	getUserRole: vi.fn(async () => 'owner' as string | null),
 	searchMembers: vi.fn(async () => [{ id: 'user-3', name: 'Lou Reed', email: 'lou@example.com' }]),
 	getMembers: vi.fn(async () => []),
+	// Faithful to the real one: a bucket per status, so a test cannot pass by
+	// having the roster silently lose a row.
+	partitionByStatus: <T extends { status: string }>(rows: T[]) => ({
+		pending: rows.filter((r) => r.status === 'pending'),
+		active: rows.filter((r) => r.status === 'active'),
+		requested: rows.filter((r) => r.status === 'requested')
+	}),
 	invite: vi.fn(async () => ({
 		id: 'member-new',
 		bandId: 'band-1',
