@@ -76,6 +76,7 @@ import {
 	stockMovement
 } from '../src/lib/server/db/schema/inventory';
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
+import { inventoryItemArticle } from '../src/lib/server/db/schema/inventory';
 import {
 	inboxThread,
 	inboxMessage,
@@ -3068,6 +3069,34 @@ async function seedEquipment(users: SeedUser[]) {
 // Help Articles
 // ---------------------------------------------------------------------------
 
+/**
+ * Link a how-to to the gear it explains.
+ *
+ * Runs after both `seedEquipment` and `seedHelp`, and looks its rows up by name
+ * rather than threading ids through two unrelated seeders for one join.
+ */
+async function seedItemArticles() {
+	const [pa] = await db
+		.select({ id: inventoryItem.id })
+		.from(inventoryItem)
+		.where(eq(inventoryItem.name, 'QSC K12.2 Powered Speaker'))
+		.limit(1);
+	const [article] = await db
+		.select({ id: helpArticle.id })
+		.from(helpArticle)
+		.where(eq(helpArticle.published, true))
+		.limit(1);
+
+	if (!pa || !article) return { links: 0 };
+
+	await db
+		.insert(inventoryItemArticle)
+		.values({ itemId: pa.id, articleId: article.id })
+		.onConflictDoNothing();
+
+	return { links: 1 };
+}
+
 async function seedHelp() {
 	const cats = await batchInsert(
 		helpCategory,
@@ -4319,6 +4348,7 @@ async function main() {
 	const marketing = await seedMarketing(allUsers);
 	const eq = await seedEquipment(allUsers);
 	const help = await seedHelp();
+	const itemArticles = await seedItemArticles();
 	const inbox = await seedInbox(adminUser, users[0]);
 	const directMessages = await seedDirectMessages(users, adminUser);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
@@ -4363,7 +4393,9 @@ async function main() {
 		`  ${eq.categories} categories, ${eq.locations} locations, ${eq.items} items, ${eq.assets} units,\n` +
 			`  ${eq.acquisitions} acquisitions, ${eq.movements} stock movements, ${eq.loans} loans`
 	);
-	console.log(`  ${help.categories} help categories, ${help.articles} help articles`);
+	console.log(
+		`  ${help.categories} help categories, ${help.articles} help articles, ${itemArticles.links} linked to gear`
+	);
 	console.log(`  ${directory.entries} directory entries, ${directory.tags} directory tags`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(

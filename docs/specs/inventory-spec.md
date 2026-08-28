@@ -671,14 +671,14 @@ For reference should it ever come up: federal awards cap equipment
 capitalization at the lower of the organisation's own policy or **$10,000**,
 raised from $5,000 in the 2024 revision of 2 CFR 200.
 
-**Phase 4 — attached resources.** 📋 Manuals, tutorials and damage reports.
-Deferred, and the reason to keep deferring it is not technical: its value depends
-on members scanning tags, and no physical tag has been printed yet. Attaching a
-manual to a unit nobody scans is work with no reader. Let the member surface get
-used first — the guess here is that damage reports matter more than manuals, and
-that is exactly the sort of guess usage settles.
+**Phase 4 — attached resources. ✅ Shipped.** Manuals, tutorials and damage
+reports.
+Its value still depends on members scanning tags, and no physical tag has been
+printed yet — so the reader may not arrive for a while. Both halves were built
+rather than betting on which matters more, since the plumbing is shared and the
+guess was not worth making.
 
-The seams are fixed regardless, because three of them are schema- and URL-shaped:
+Three seams, all of which held:
 
 - Resources split by what they describe. A manual is the same for all four
   K12.2s, so it hangs off the **item**; a damage report is about one unit, so it
@@ -689,6 +689,25 @@ The seams are fixed regardless, because three of them are schema- and URL-shaped
 - **A damage report is a ledger entry**, not a form system: a condition change
   plus a `repair_out` movement carrying the note. What it adds is a member-facing
   entry point and photos.
+  Built as described below. Two notes from the build:
+
+**The type system caught what a reviewer would not have.**
+`media-sweep-service.ts` keys its `PARENT_TABLES` map with
+`satisfies Record<AttachableType, unknown>`, so adding `inventory_item` and
+`inventory_asset` failed to compile until the sweep was told which table to check
+each against. Without that guard the new attachments would never have been
+reaped and their R2 objects would have leaked in silence. Its spec now counts
+statements off `attachableTypes.length` rather than a hardcoded 3, so the next
+person to extend the vocabulary does not have to edit an unrelated test.
+
+**A `''` from a select is not `undefined`.** The damage form's "Not sure"
+condition option submits an empty string, and `z.enum([...]).optional()` rejects
+it — so the whole submit failed silently and a report changed nothing at all.
+`''` is now a member of the enum, coerced in the handler. Not `.transform()`,
+which breaks `fields` inference on a remote `form()`. A unit test could not have
+found this: with `db` mocked the service passes, because the fault is between the
+form and the service.
+
 - **Files need no new table.** An earlier draft specified `inventory_document`,
   on the reasoning that the repo had no generic attachment layer. #289 landed
   one — `media` + `media_attachment`, with `attachableType`/`attachableId`/`slot`

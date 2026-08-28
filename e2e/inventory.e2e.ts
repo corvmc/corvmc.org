@@ -1,3 +1,6 @@
+import { eq } from 'drizzle-orm';
+import { stockMovement } from '../src/lib/server/db/schema/inventory';
+import { readLocalDb } from './fixtures/platform-db';
 import { expect, test, type Page } from '@playwright/test';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
@@ -9,6 +12,7 @@ import {
 	SEED_ITEM_ID,
 	SEED_ITEM_NAME,
 	SEED_DISPOSED_ASSET_ID,
+	SEED_ARTICLE_TITLE,
 	SEED_DISPOSED_ASSET_TAG,
 	SEED_UNACKED_ASSET_ID,
 	SEED_UNACKED_ASSET_TAG,
@@ -273,6 +277,68 @@ test.describe('inventory', () => {
 			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
 			await expect(page.getByText('Form 8282 may be due.')).toBeHidden();
 			await expect(page.getByText('copy posted to the donor')).toBeVisible();
+		});
+	});
+
+	/**
+	 * Attached resources. Documentation hangs off the catalog entry, because the
+	 * manual for a K12.2 is the manual for all four; a damage report is about one
+	 * unit, so it hangs off the asset and writes to the ledger.
+	 */
+	test.describe('resources and damage', () => {
+		test('a member sees the how-to linked to the gear', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto(`/member/equipment/assets/${SEED_ASSET_ID}`);
+
+			await expect(page.getByText('How to use it')).toBeVisible();
+			await expect(page.getByRole('link', { name: SEED_ARTICLE_TITLE })).toBeVisible();
+		});
+
+		test('reporting damage takes the unit out of service and writes the ledger', async ({
+			page
+		}) => {
+			await loginAsStaff(page);
+			await page.goto(`/member/equipment/assets/${SEED_ASSET_ID}`);
+
+			await page.getByRole('button', { name: 'Report a problem' }).click();
+			await page.getByRole('dialog').locator('textarea').first().fill('Crackling on channel two');
+			await page.getByRole('dialog').getByRole('button', { name: 'Report a problem' }).click();
+			await page.waitForTimeout(2000);
+
+			// Asserted against the database first: the movement *is* the report, so
+			// if it were missing the unit would be out of service with no record of
+			// why. `expect.poll` because the preview server is still writing.
+			await expect
+				.poll(
+					async () => {
+						const rows = await readLocalDb((db) =>
+							db
+								.select({ reason: stockMovement.reason, notes: stockMovement.notes })
+								.from(stockMovement)
+								.where(eq(stockMovement.assetId, SEED_ASSET_ID))
+						);
+						return rows.filter((r) => r.reason === 'repair_out').length;
+					},
+					{ timeout: 15000 }
+				)
+				.toBe(1);
+
+			await page.goto(`/staff/inventory/assets/${SEED_ASSET_ID}`);
+			await expect(page.getByText('Out for repair')).toBeVisible();
+			await expect(page.getByText('Crackling on channel two')).toBeVisible();
+		});
+
+		test('a unit already in the shop is not offered the form again', async ({ page }) => {
+			await loginAsStaff(page);
+			// The previous test left this one in maintenance.
+			await page.goto(`/member/equipment/assets/${SEED_ASSET_ID}`);
+
+			// Assert the page is actually there before asserting something is not.
+			// `toBeHidden()` passes for an element that does not exist, so on its
+			// own it also passes when the page failed to render — which is how this
+			// test sat green while the flow it guards was completely broken.
+			await expect(page.getByText('Maintenance').first()).toBeVisible();
+			await expect(page.getByRole('button', { name: 'Report a problem' })).toBeHidden();
 		});
 	});
 

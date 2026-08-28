@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { attachableTypes } from '$lib/server/db/schema/media';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -89,13 +90,17 @@ beforeEach(() => {
 
 describe('sweepMedia — orphaned attachments', () => {
 	it('reaps one statement per attachable type', async () => {
-		// Three types today. A type with no arm would leave its orphans forever,
-		// which is the failure this pins rather than the count itself.
-		attachmentDeleteReturns = [[{ id: 'a1' }], [], [{ id: 'a2' }]];
+		// Counted off `attachableTypes` rather than hardcoded: a type with no arm
+		// would leave its orphans forever, and that is the failure this pins —
+		// not the number, which moves every time the vocabulary grows.
+		attachmentDeleteReturns = attachableTypes.map((_, i) => (i === 0 ? [{ id: 'a1' }] : []));
+		attachmentDeleteReturns[attachableTypes.length - 1] = [{ id: 'a2' }];
 
 		const result = await sweepMedia(NOW);
 
-		expect(journal.filter((j) => j === 'delete:media_attachment')).toHaveLength(3);
+		expect(journal.filter((j) => j === 'delete:media_attachment')).toHaveLength(
+			attachableTypes.length
+		);
 		expect(result.orphanedAttachments).toBe(2);
 	});
 
