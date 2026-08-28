@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 // ---------------------------------------------------------------------------
@@ -109,32 +109,6 @@ export const user = sqliteTable(
 		links: text('links', { mode: 'json' })
 	},
 	(t) => [uniqueIndex('user_member_number_unique').on(t.memberNumber)]
-);
-
-// `user_instrument` and `user_genre` folded into `directory_tag` in phase 3a and
-// nothing reads or writes them any more; the declarations survive only so
-// `pnpm db:generate` does not emit `DROP TABLE` before phase 3c. See
-// `src/lib/server/db/schema/band.ts` for the same note on `band_genre`.
-export const userInstrument = sqliteTable(
-	'user_instrument',
-	{
-		userId: text('user_id')
-			.notNull()
-			.references(() => user.id, { onDelete: 'cascade' }),
-		instrument: text('instrument').notNull()
-	},
-	(t) => [index('idx_user_instrument_user').on(t.userId)]
-);
-
-export const userGenre = sqliteTable(
-	'user_genre',
-	{
-		userId: text('user_id')
-			.notNull()
-			.references(() => user.id, { onDelete: 'cascade' }),
-		genre: text('genre').notNull()
-	},
-	(t) => [index('idx_user_genre_user').on(t.userId)]
 );
 
 export const session = sqliteTable('session', {

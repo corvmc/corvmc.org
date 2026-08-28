@@ -27,18 +27,19 @@ import { globSync } from 'node:fs';
  * these match the table symbols, not a `BandGenre` type or a `UserGenreList`
  * component that might legitimately exist later.
  *
- * **Deferred to phase 3c: the raw table names** — `/\bband_genre\b/`,
- * `/\buser_genre\b/`, `/\buser_instrument\b/`. They cannot arm yet, because the
- * tables still physically exist in D1 and so must stay listed in
- * `scripts/d1-table-order.mjs` and in `deleteAll()` in `scripts/seed-dev.ts` for
- * the e2e reset and the local seed to keep clearing them. Arming them now would
- * force an ALLOWED entry for the two files this gate most needs to cover.
- * Uncomment them in 3c, once the DROP TABLE migration lands.
+ * Both halves are armed as of phase 3c. The raw table names could not arm
+ * earlier: the tables still physically existed, so `scripts/d1-table-order.mjs`
+ * and `deleteAll()` in `scripts/seed-dev.ts` had to keep naming them for the e2e
+ * reset and the local seed to clear them. The DROP TABLE migration removed that
+ * constraint along with the tables.
  */
 const FORBIDDEN: { pattern: RegExp; instead: string }[] = [
 	{ pattern: /\bbandGenre\b/, instead: "directoryTag with kind: 'genre'" },
 	{ pattern: /\buserGenre\b/, instead: "directoryTag with kind: 'genre'" },
-	{ pattern: /\buserInstrument\b/, instead: "directoryTag with kind: 'instrument'" }
+	{ pattern: /\buserInstrument\b/, instead: "directoryTag with kind: 'instrument'" },
+	{ pattern: /\bband_genre\b/, instead: "directory_tag with kind = 'genre'" },
+	{ pattern: /\buser_genre\b/, instead: "directory_tag with kind = 'genre'" },
+	{ pattern: /\buser_instrument\b/, instead: "directory_tag with kind = 'instrument'" }
 ];
 
 /**
@@ -54,18 +55,28 @@ const GLOBS = [
 ];
 
 /**
- * The two schema files that still *declare* the folded tables, and the file
- * defining what replaced them. The declarations are dead weight kept only to
- * hold `pnpm db:generate` off until 3c; both carry a comment saying so, and both
- * are fully typechecked, so the staleness this gate exists to catch cannot
- * happen there.
+ * The backfill that drained the three tables, and its spec, which has to create
+ * them as fixtures to test it. Both are a record of a migration that has already
+ * run; the SQL is unrunnable now that the tables are gone, and that is fine —
+ * `migrations/` keeps its history the same way.
  */
 const ALLOWED = new Set([
-	'src/lib/server/db/schema/band.ts',
-	'src/lib/server/db/schema/authentication.ts',
-	'src/lib/server/db/schema/directory.ts',
+	'scripts/db/backfill/directory-entry.spec.ts',
 	'scripts/no-directory-tag-tables.spec.ts'
 ]);
+
+/**
+ * Comments are not references. The point of this gate is that no code reads the
+ * folded tables; several files legitimately *name* them while explaining what
+ * replaced them, and an exemption for each would hollow the gate out — the
+ * schema file that defines `directory_tag` is exactly the file it most needs to
+ * cover. Stripping line comments first is what lets the ALLOWED list stay two
+ * entries instead of six.
+ */
+function isComment(line: string): boolean {
+	const t = line.trim();
+	return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('--');
+}
 
 const files = GLOBS.flatMap((g) => globSync(g))
 	.map((f) => f.replaceAll('\\', '/'))
@@ -82,7 +93,7 @@ describe('no folded tag tables', () => {
 		for (const file of files) {
 			const lines = readFileSync(file, 'utf8').split('\n');
 			lines.forEach((line, i) => {
-				if (pattern.test(line)) hits.push(`${file}:${i + 1}  ${line.trim()}`);
+				if (!isComment(line) && pattern.test(line)) hits.push(`${file}:${i + 1}  ${line.trim()}`);
 			});
 		}
 		expect(
