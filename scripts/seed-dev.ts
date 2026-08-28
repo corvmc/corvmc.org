@@ -54,7 +54,7 @@ import { notification, notificationPreference } from '../src/lib/server/db/schem
 import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/directory';
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { group } from '../src/lib/server/db/schema/group';
-import { bandPageConfig, bandMedia } from '../src/lib/server/db/schema/band-page';
+import { bandPageConfig } from '../src/lib/server/db/schema/band-page';
 import { media, mediaAttachment } from '../src/lib/server/db/schema/media';
 import { bandSite } from '../src/lib/server/db/schema/band-site';
 import {
@@ -564,7 +564,6 @@ async function deleteAll() {
 		'notification_preference',
 		'notification',
 		'ticket',
-		'band_media',
 		'band_page_config',
 		'band_site',
 		// Child before parent, and both before `group` and `user`.
@@ -1970,10 +1969,9 @@ async function seedBandPageConfigs(bands: any[], siteIdByBand: Map<string, strin
 			.returning();
 		configs.push(config);
 
-		// Band media, in the media tables the microsite now reads and the upload
-		// endpoint now writes. `band_media` is still written alongside — nothing
-		// reads it any more, but the table survives until phase 6 drops it, and
-		// keeping it populated is what makes reverting this cut-over possible.
+		// Band media, in the media tables the microsite reads and the upload
+		// endpoint writes. `band_media` is gone as of phase 6 — nothing had read it
+		// since the cut-over, and production held no rows in it at all.
 		const mediaSlots = [
 			['gallery', 'image'],
 			['gallery', 'image'],
@@ -1987,15 +1985,6 @@ async function seedBandPageConfigs(bands: any[], siteIdByBand: Map<string, strin
 			const key = `bands/${b.slug}/${legacyType}-${m}.jpg`;
 			const caption =
 				slot === 'gallery' ? `${b.name} live at ${pick(BAND_EVENT_LOCATIONS).split(',')[0]}` : null;
-
-			await db.insert(bandMedia).values({
-				bandId: b.id,
-				bandSiteId: siteIdByBand.get(b.id) ?? null,
-				key,
-				type: legacyType,
-				caption,
-				sortOrder: m
-			});
 
 			// Sizes are fabricated: these keys name no real object, which is exactly
 			// why `backfill-media.ts` refuses to invent them and the seed may.

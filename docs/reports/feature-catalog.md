@@ -212,7 +212,7 @@ are easier to trace.
 
 ## Database schema
 
-**60 tables** in `src/lib/server/db/schema/`, by domain:
+**66 tables** in `src/lib/server/db/schema/`, by domain:
 
 - **auth** — `user`, `session`, `account`, `verification`
 - **authorization** — `permission`, `role`, `model_has_permission`, `model_has_role`,
@@ -220,9 +220,10 @@ are easier to trace.
 - **reservations** — `reservation`, `closure`, `recurring_series`
 - **events** — `event`, `event_band`, `event_rsvp`
 - **finance** — `credit_transaction`, `payment_cache`
-- **groups/bands** — `group`, `group_member`, `group_slug_history`, `band_genre`, `band_media`,
+- **groups/bands** — `group`, `group_member`, `group_slug_history`, `band_site`,
   `band_page_config`
-- **directory** — `user_genre`, `user_instrument`
+- **directory** — `directory_entry`, `directory_tag`
+- **media** — `media`, `media_attachment`
 - **tickets** — `ticket`
 - **notifications** — `notification`, `notification_preference`
 - **marketing** — `subscriber`, `audience`, `audience_member`, `campaign`, `campaign_audience`

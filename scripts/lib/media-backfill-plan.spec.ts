@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-	SLOT_FOR_BAND_MEDIA,
 	attachmentFingerprint,
 	isR2Key,
 	planBackfill,
@@ -44,24 +43,6 @@ describe('isR2Key', () => {
 		expect(isR2Key('')).toBe(false);
 		expect(isR2Key(null)).toBe(false);
 		expect(isR2Key(undefined)).toBe(false);
-	});
-});
-
-describe('SLOT_FOR_BAND_MEDIA', () => {
-	it('maps every type band_media actually stores', () => {
-		// The column is a bare string with this comment as its only contract:
-		// 'image' | 'hero' | 'rider' | 'stage_plot'.
-		expect(Object.keys(SLOT_FOR_BAND_MEDIA).toSorted()).toEqual([
-			'hero',
-			'image',
-			'rider',
-			'stage_plot'
-		]);
-	});
-
-	it("renames only the one whose name differs, 'image' to 'gallery'", () => {
-		expect(SLOT_FOR_BAND_MEDIA.image).toBe('gallery');
-		expect(SLOT_FOR_BAND_MEDIA.hero).toBe('hero');
 	});
 });
 

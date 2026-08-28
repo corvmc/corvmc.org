@@ -50,35 +50,6 @@ export const bandPageConfig = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// Band Media — R2-stored images for gallery, hero, etc.
-// ---------------------------------------------------------------------------
-
-export const bandMedia = sqliteTable(
-	'band_media',
-	{
-		id: text('id')
-			.primaryKey()
-			.$defaultFn(() => crypto.randomUUID()),
-		bandId: text('band_id')
-			.notNull()
-			.references(() => group.id, { onDelete: 'cascade' }),
-		/** See `bandPageConfig.bandSiteId`. */
-		bandSiteId: text('band_site_id').references(() => bandSite.id, { onDelete: 'cascade' }),
-		key: text('key').notNull(),
-		type: text('type').notNull(), // 'image' | 'hero' | 'rider' | 'stage_plot'
-		caption: text('caption'),
-		sortOrder: integer('sort_order').notNull().default(0),
-		createdAt: integer('created_at', { mode: 'timestamp' })
-			.notNull()
-			.default(sql`(unixepoch())`)
-	},
-	(t) => [
-		index('idx_band_media_band_type').on(t.bandId, t.type, t.sortOrder),
-		index('idx_band_media_site_type').on(t.bandSiteId, t.type, t.sortOrder)
-	]
-);
-
-// ---------------------------------------------------------------------------
 // Zod schemas for validation
 // ---------------------------------------------------------------------------
 
@@ -179,4 +150,3 @@ export const bandPageConfigSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export type BandPageConfig = typeof bandPageConfig.$inferSelect;
-export type BandMedia = typeof bandMedia.$inferSelect;

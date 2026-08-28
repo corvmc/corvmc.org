@@ -9,7 +9,9 @@
  *   event.poster_key   -> slot 'poster'   on attachable_type 'event'
  *   group.avatar_key   -> slot 'avatar'   on attachable_type 'group'
  *   user.image         -> slot 'avatar'   on attachable_type 'user'
- *   band_media.key     -> slot from .type on attachable_type 'group'
+ *
+ * It read `band_media` too, until phase 6 retired that table. Production held no
+ * rows in it, so the run this script already performed is unaffected.
  *
  * Usage:
  *   pnpm tsx scripts/backfill-media.ts [--remote] [--commit] [--public-url=URL]
@@ -39,7 +41,6 @@
  */
 
 import {
-	SLOT_FOR_BAND_MEDIA,
 	attachmentFingerprint,
 	isR2Key,
 	planBackfill,
@@ -205,24 +206,9 @@ function collectSources(): Source[] {
 		});
 	}
 
-	for (const r of d1(
-		`SELECT id, band_id, key, type, caption, sort_order FROM band_media ORDER BY band_id, sort_order`
-	)) {
-		const slot = SLOT_FOR_BAND_MEDIA[String(r.type)];
-		if (!slot) {
-			console.error(`  ! band_media ${r.id} has unmapped type "${r.type}" — skipped`);
-			continue;
-		}
-		sources.push({
-			key: String(r.key),
-			attachableType: 'group',
-			attachableId: String(r.band_id),
-			slot,
-			caption: r.caption === null ? null : String(r.caption),
-			sortOrder: Number(r.sort_order ?? 0),
-			label: `band_media ${r.id} (${r.type})`
-		});
-	}
+	// The `band_media` source that used to be here is gone with the table
+	// (phase 6). It contributed nothing to the production run — that database
+	// held no `band_media` rows — and the code cannot outlive the table it reads.
 
 	return sources;
 }

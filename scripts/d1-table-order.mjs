@@ -11,7 +11,7 @@ export const tableOrder = [
 	'group',
 	// References user and group; parent of directory_tag.
 	'directory_entry',
-	// References group; parent of band_page_config and band_media.
+	// References group; parent of band_page_config.
 	'band_site',
 	'reservation',
 	'equipment_category',
@@ -69,7 +69,6 @@ export const tableOrder = [
 	'platform_invite',
 	'credit_transaction',
 	'help_articles',
-	'band_media',
 	'band_page_config',
 	'inbox_message',
 	'inbox_note',
