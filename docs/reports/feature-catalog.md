@@ -319,4 +319,4 @@ intercepted on the `media.corvmc.org` R2 custom domain (verified 2026-08-16), so
 uses a bare-key source.
 
 The one-image-per-entity model it sits on is still ad hoc — see the media-management entry in
-[`CHORES.md`](../../CHORES.md).
+[`CHORES.md`](../../CHORES.md), now designed in [`docs/specs/media-spec.md`](../specs/media-spec.md).
