@@ -143,12 +143,16 @@ for each. None has been built since.
 
 ### Platform
 
-| Doc                                  | Status | Lifecycle | Notes                                                                                               |
-| ------------------------------------ | ------ | --------- | --------------------------------------------------------------------------------------------------- |
-| [media-spec.md](specs/media-spec.md) | 📋     | spec      | `media` + `media_attachment` over R2: one object shared by many entities, detach-and-sweep deletion |
+| Doc                                          | Status | Lifecycle | Notes                                                                                               |
+| -------------------------------------------- | ------ | --------- | --------------------------------------------------------------------------------------------------- |
+| [media-spec.md](specs/shipped/media-spec.md) | ✅     | archived  | `media` + `media_attachment` over R2: one object shared by many entities, detach-and-sweep deletion |
 
-Cross-cutting rather than owned by one panel. Closes the media-management entry in
-[`CHORES.md`](../CHORES.md), and the `band_media` object leak it found.
+Cross-cutting rather than owned by one panel. All six phases shipped; what survives in the spec is
+the design rationale — why the parent link carries no foreign key, and why `file` and `media` are
+two tables. How the layer _behaves_ is in the feature catalog's image-delivery and scheduled-jobs
+sections. Two follow-ups it did not close are in [`CHORES.md`](../CHORES.md): the sweep owes group
+documents a pass over the private bucket, and a moderation takedown no longer kills the old poster
+URL immediately.
 
 ## plans
 

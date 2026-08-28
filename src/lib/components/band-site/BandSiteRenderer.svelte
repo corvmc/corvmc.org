@@ -52,7 +52,7 @@
 	interface MediaData {
 		id: string;
 		url: string | null;
-		/** `media_attachment.slot` — see docs/specs/media-spec.md. */
+		/** `media_attachment.slot` — see docs/specs/shipped/media-spec.md. */
 		slot: string;
 		caption: string | null;
 	}

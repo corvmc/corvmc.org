@@ -22,7 +22,7 @@ export const tableOrder = [
 	'event',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
-	// (docs/specs/media-spec.md), so it constrains nothing else in this order.
+	// (docs/specs/shipped/media-spec.md), so it constrains nothing else in this order.
 	'media',
 	'media_attachment',
 	'campaign',

@@ -3,7 +3,7 @@
  *
  * `scripts/backfill-media.ts` reads D1 and R2; everything it has to get *right*
  * lives here, where it can be tested without either. See
- * docs/specs/media-spec.md phase 3.
+ * docs/specs/shipped/media-spec.md phase 3.
  */
 
 export type AttachableType = 'event' | 'group' | 'user';
