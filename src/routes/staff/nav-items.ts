@@ -156,18 +156,20 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'events',
 		title: 'Events',
 		items: [
-			// Two surfaces over one table, split by what staff do with a row.
-			// Productions is where a show is built — CMC's own, every status,
-			// drafts included. Calendar is what the public can see, across every
-			// source, plus what is asking to join it. A published CMC show is on
-			// both, in two roles.
-			{ key: 'productions', label: 'Productions', href: '/staff/events' },
+			// Two surfaces over one table, split by what staff do with a row, and
+			// the URLs say which is the general case. The Calendar — every source,
+			// everything the public can see plus what is asking to join it — holds
+			// `/staff/events`, the address every event ref resolves to, so a
+			// staffer arriving from a shift or a notification lands on the view
+			// that is safe for anyone with staff access. Productions is the CMC
+			// work surface and sits at its own path, ready to be gated.
 			{
 				key: 'calendar',
 				label: 'Calendar',
-				href: '/staff/calendar',
+				href: '/staff/events',
 				badgeKey: 'listingsPending'
-			}
+			},
+			{ key: 'productions', label: 'Productions', href: '/staff/productions' }
 		]
 	},
 	{

@@ -1,29 +1,30 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
 	SEED_SPLIT_CMC_DRAFT_TITLE,
+	SEED_SPLIT_CMC_LIVE_ID,
 	SEED_SPLIT_CMC_LIVE_TITLE,
+	SEED_SPLIT_PENDING_ID,
 	SEED_SPLIT_PENDING_TITLE,
 	SEED_SPLIT_LIVE_TITLE,
 	SEED_SPLIT_DRAFT_TITLE,
+	SEED_SPLIT_NEAR_TITLE,
+	SEED_SPLIT_FAR_TITLE,
 	SEED_SPLIT_MEMBER_NAME
 } from './fixtures/seed-events-split';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 
 /**
- * The staff events split: Productions versus Calendar.
+ * The staff events split, after the URL reversal.
  *
- * `/staff/events` and `/staff/calendar` read one table through two lenses, and
- * the thing worth proving is that neither is a subset of the other. A CMC draft
- * is production work and must never reach the calendar; a listing is not
- * production work and must never reach Productions; a published CMC show is on
- * both, because it is a thing being run *and* a thing the public can see.
+ * `/staff/events` is the calendar and the general event view — the address
+ * every event ref resolves to, so it is where a staffer lands by default from
+ * anywhere in the panel. `/staff/productions` and `/staff/events/[id]/production`
+ * are the CMC work surfaces, sitting on their own paths so they can be gated
+ * later without making every inbound link conditional.
  *
- * Each is a negative on one page paired with a positive on the other, which no
- * unit test can assert together — and a filter defaulting the wrong way would
- * satisfy either half alone.
- *
- * Every row read here comes from `seed-events-split`, which exists because
- * `community-events.e2e.ts` approves and deletes the rows it seeds.
+ * What is worth a round trip: neither index is a subset of the other, the
+ * general view carries no production controls, the console refuses a listing,
+ * and the two-hour window really is a window rather than a day.
  */
 
 async function loginAsStaff(page: Page) {
@@ -40,59 +41,79 @@ test.describe('staff events split', () => {
 		await loginAsStaff(page);
 	});
 
-	test('Productions holds CMC work, including drafts, and no listings', async ({ page }) => {
-		await page.goto('/staff/events');
-		await expect(page.getByRole('heading', { name: 'Productions' })).toBeVisible();
-
-		// A CMC draft is a show being built. This is the only page that has it.
-		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toBeVisible();
-		await expect(page.getByText(SEED_SPLIT_CMC_LIVE_TITLE)).toBeVisible();
-
-		// Listings are somebody else's show. Scoped out by source, not status, so
-		// a *published* one is absent too.
-		await expect(page.getByText(SEED_SPLIT_PENDING_TITLE)).toHaveCount(0);
-		await expect(page.getByText(SEED_SPLIT_LIVE_TITLE)).toHaveCount(0);
+	// It shipped at /staff/calendar for a few hours, and the notification rows
+	// written in that window keep that href forever.
+	test('the address the calendar briefly held still redirects', async ({ page }) => {
+		await page.goto('/staff/calendar');
+		await expect(page).toHaveURL(/\/staff\/events$/);
+		await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
 	});
 
-	test('the Calendar opens on the review queue, naming who posted', async ({ page }) => {
-		await page.goto('/staff/calendar');
+	test('the calendar holds /staff/events and opens on the queue', async ({ page }) => {
+		await page.goto('/staff/events');
 		await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
 		await expect(page.getByLabel('Status')).toHaveValue('review');
 
 		await expect(page.getByText(SEED_SPLIT_PENDING_TITLE)).toBeVisible();
-		// The fact the old queue never showed: who is accountable for the row.
 		await expect(page.getByRole('link', { name: SEED_SPLIT_MEMBER_NAME })).toBeVisible();
+	});
 
-		// Published rows are on the calendar, not in the queue.
+	test('Productions holds CMC work, including drafts, and no listings', async ({ page }) => {
+		await page.goto('/staff/productions');
+		await expect(page.getByRole('heading', { name: 'Productions' })).toBeVisible();
+
+		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toBeVisible();
+		await expect(page.getByText(SEED_SPLIT_PENDING_TITLE)).toHaveCount(0);
 		await expect(page.getByText(SEED_SPLIT_LIVE_TITLE)).toHaveCount(0);
 	});
 
-	test('a draft of any source never reaches the Calendar, at any filter', async ({ page }) => {
-		await page.goto('/staff/calendar');
+	test('a draft of any source never reaches the calendar, at any filter', async ({ page }) => {
+		await page.goto('/staff/events');
 		await page.getByLabel('Status').selectOption('all');
 		await expect(page.getByText(SEED_SPLIT_PENDING_TITLE)).toBeVisible();
 
-		// "Everything" means every reviewable-or-public status. A draft is
-		// neither: a CMC one is unfinished production work, and a community one is
-		// a member's private working copy no staffer should read.
 		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toHaveCount(0);
 		await expect(page.getByText(SEED_SPLIT_DRAFT_TITLE)).toHaveCount(0);
 	});
 
-	test('the calendar view carries every source, ours included', async ({ page }) => {
-		await page.goto('/staff/calendar');
-		await page.getByLabel('Status').selectOption('calendar');
+	test('the general view carries facts and no production controls', async ({ page }) => {
+		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}`);
+		await expect(page.getByRole('heading', { name: SEED_SPLIT_PENDING_TITLE })).toBeVisible();
 
-		// Both, together, on one page: seeing a member's listing beside our own
-		// show on a nearby date is how a duplicate gets caught at all.
-		await expect(page.getByText(SEED_SPLIT_LIVE_TITLE)).toBeVisible();
-		await expect(page.getByText(SEED_SPLIT_CMC_LIVE_TITLE)).toBeVisible();
-		await expect(page.getByLabel('Source')).toHaveValue('');
+		// Who is accountable, said once — the second "Created by" card is gone.
+		await expect(page.getByRole('heading', { name: 'Posted by' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Created by' })).toHaveCount(0);
+
+		// Production controls belong to the console. Assert on the card headings,
+		// not on text: the sidebar's own Space and Volunteering sections put
+		// "Space Reservations" and "Volunteer…" on every page in the panel.
+		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toHaveCount(0);
+		await expect(page.getByRole('heading', { name: 'Volunteer Shifts' })).toHaveCount(0);
+		await expect(page.getByRole('link', { name: 'Manage production' })).toHaveCount(0);
 	});
 
-	test('the old review URL still lands on the queue', async ({ page }) => {
-		await page.goto('/staff/events?status=pending_review');
-		await expect(page).toHaveURL(/\/staff\/calendar$/);
-		await expect(page.getByText(SEED_SPLIT_PENDING_TITLE)).toBeVisible();
+	test('the window is two hours, not the day', async ({ page }) => {
+		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}`);
+		await expect(page.getByRole('heading', { name: 'Within two hours' })).toBeVisible();
+
+		// Both are on the same date. Only a real window tells them apart, which is
+		// the whole reason this is not a day query.
+		await expect(page.getByText(SEED_SPLIT_NEAR_TITLE)).toBeVisible();
+		await expect(page.getByText(SEED_SPLIT_FAR_TITLE)).toHaveCount(0);
+	});
+
+	test('a production reaches its console, and a listing is turned away', async ({ page }) => {
+		await page.goto(`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}`);
+		await expect(page.getByRole('link', { name: 'Manage production' })).toBeVisible();
+
+		await page.goto(`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}/production`);
+		await expect(page.getByRole('heading', { name: SEED_SPLIT_CMC_LIVE_TITLE })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Volunteer Shifts' })).toBeVisible();
+
+		// The console has nothing to say about a listing, so a hand-typed URL goes
+		// back to the view that does.
+		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}/production`);
+		await expect(page).toHaveURL(new RegExp(`/staff/events/${SEED_SPLIT_PENDING_ID}$`));
 	});
 });

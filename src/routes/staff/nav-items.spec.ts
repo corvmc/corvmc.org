@@ -52,7 +52,12 @@ describe('activeNavKey', () => {
 		['/staff/volunteer/clearances', 'volunteer'],
 		['/staff/volunteer/people', 'volunteer-people'],
 		['/staff/volunteer/shifts/abc', 'volunteer-shifts'],
-		['/staff/events/abc/check-in', 'productions'],
+		// `/staff/events/[id]` and everything under it is the general view, which
+		// the Calendar row owns — including the production console, which is a
+		// page you navigate to rather than a section of its own.
+		['/staff/events/abc/check-in', 'calendar'],
+		['/staff/events/abc/production', 'calendar'],
+		['/staff/productions', 'productions'],
 		['/staff/inventory', 'equipment'],
 		['/staff/inventory/abc', 'equipment'],
 		['/staff/inventory/restock', 'inventory-restock'],

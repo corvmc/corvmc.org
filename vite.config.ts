@@ -4,10 +4,11 @@ import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import fs from 'node:fs';
+import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
-import { devPort, previewPort } from './scripts/lib/checkout-ports';
+import { browserPort, devPort, previewPort } from './scripts/lib/checkout-ports';
 const dirname =
 	typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
@@ -62,6 +63,13 @@ export default defineConfig({
 		expect: {
 			requireAssertions: true
 		},
+		// CI gets a runner to itself and should use all of it. A developer machine
+		// often carries several worktrees running their suites at once, and the
+		// `server` project's vmForks pool is memory-hungry by design — a fresh VM
+		// context per file. Unbounded, N concurrent suites each claim nearly every
+		// core and the OOM killer takes one, which surfaces as `Worker exited
+		// unexpectedly` rather than as anything to do with the tests.
+		maxWorkers: process.env.CI ? undefined : Math.max(1, Math.floor(availableParallelism() / 2)),
 		projects: [
 			{
 				extends: './vite.config.ts',
@@ -69,6 +77,12 @@ export default defineConfig({
 					name: 'client',
 					browser: {
 						enabled: true,
+						// Per-checkout, because vitest's default (63315) is a fixed
+						// constant every worktree would ask for at once — and unlike the
+						// dev server this binds during `pnpm test:unit`, so two suites
+						// collide without anyone starting a server. strictPort makes that
+						// loud rather than letting one suite adopt another's browser.
+						api: { port: browserPort(dirname), strictPort: true },
 						provider: playwright(),
 						instances: [
 							{

@@ -27,16 +27,21 @@
  * still holds — the `SQLITE_BUSY` overlap the whole `prepare.ts` split exists to
  * avoid.
  *
+ * Leaving the schema in place is what makes a state directory outlive the run
+ * that built it, so this file also owns the one case where that is not safe:
+ * `journalDisagreesWithSchema` / `clearE2eStateDir` drop the directory outright
+ * when its tables and drizzle's migration journal have come apart.
+ *
  * D1 only. KV is deliberately left alone: the rate-limit counters that matter
  * are deleted by the fixtures that own them (`band-slug`, `suggestion-flag`,
  * `dm-request`, `dm-send`), and reaching the rest means writing against
  * miniflare's internal KV layout, which is fragile for no observed problem.
  */
-import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, rmSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
-import { E2E_PERSIST_PATH, e2eD1File } from './state-dir';
+import { E2E_PERSIST_PATH, E2E_STATE_ROOT, e2eD1File } from './state-dir';
 // @ts-expect-error -- plain .mjs helper, no types
 import { tableOrder } from '../scripts/d1-table-order.mjs';
 
@@ -111,6 +116,91 @@ export function resetE2eDatabase(): boolean {
 }
 
 /**
+ * Whether the state directory's schema and drizzle's migration journal disagree.
+ *
+ * `resetE2eDatabase` empties tables; it does not drop them, deliberately — the
+ * schema is expensive to rebuild and `migrateLocal` is incremental. That holds
+ * as long as `__drizzle_migrations` still describes the tables that are there.
+ * When it does not — a directory built before this repo moved to drizzle's own
+ * migrator, or one whose journal was lost while its tables survived — the next
+ * `migrateLocal` replays from migration 1 into a schema that already has those
+ * tables and dies on the first `CREATE TABLE`:
+ *
+ *   DrizzleError: Failed to run the query 'CREATE TABLE `account` (…
+ *     [cause]: Error: table account already exists
+ *
+ * — which reaches a `wrangler` caller as the bare `SQL logic error` that names
+ * nothing.
+ *
+ * Nothing in the run recovers from that, because the migrator's transaction
+ * rolls back and leaves the same directory behind for the next attempt to trip
+ * over. `rm -rf .wrangler/e2e-state` was the only way out; this is that, made
+ * automatic and narrow — the one shape of disagreement that is detectable
+ * before it throws.
+ *
+ * @param db an open handle on the run's D1 file.
+ */
+export function journalDisagreesWithSchema(db: DatabaseSync): boolean {
+	const tables = new Set(
+		db
+			.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+			.all()
+			.map((row) => String(row.name))
+	);
+
+	// An empty directory is not a stale one — the first run builds it from here.
+	if (!(tableOrder as string[]).some((table) => tables.has(table))) return false;
+
+	if (!tables.has('__drizzle_migrations')) return true;
+
+	const row = db.prepare('SELECT COUNT(*) AS c FROM __drizzle_migrations').get() as { c: number };
+	return Number(row.c) === 0;
+}
+
+/** `journalDisagreesWithSchema` against the run's own state directory. */
+export function e2eStateIsStale(): boolean {
+	if (!existsSync(join(E2E_PERSIST_PATH, 'd1'))) return false;
+
+	let file: string;
+	try {
+		file = e2eD1File();
+	} catch {
+		// No single D1 file to read: miniflare's layout is not what this expects,
+		// so there is nothing here worth migrating into.
+		return true;
+	}
+
+	const db = new DatabaseSync(file, { timeout: 5_000 });
+	try {
+		return journalDisagreesWithSchema(db);
+	} finally {
+		db.close();
+	}
+}
+
+/**
+ * Delete the run's state directory outright.
+ *
+ * Costs the next run a full migrate, which is why this is not the ordinary
+ * cleanup — `resetE2eDatabase` is. Reach for it only when the directory cannot
+ * be migrated into at all.
+ *
+ * @returns false when there was no directory to delete.
+ */
+export function clearE2eStateDir(): boolean {
+	// The same guard `resetE2eDatabase` carries, for the same reason: a refactor
+	// that pointed `E2E_STATE_ROOT` at `.wrangler/state` would delete the
+	// database `pnpm dev` and every wrangler command use.
+	if (basename(E2E_STATE_ROOT) !== 'e2e-state') {
+		throw new Error(`Refusing to delete ${E2E_STATE_ROOT}: not the e2e state directory.`);
+	}
+	if (!existsSync(E2E_STATE_ROOT)) return false;
+
+	rmSync(E2E_STATE_ROOT, { recursive: true, force: true });
+	return true;
+}
+
+/**
  * Fold the write-ahead log back into the database file.
  *
  * The preview server opens D1 through workerd, and workerd opens it *lazily, on
@@ -147,8 +237,24 @@ export function checkpointE2eDatabase(): boolean {
 
 // `tsx e2e/reset-db.ts` — clear the database by hand, e.g. after a failing run
 // that was left intact for inspection.
+//
+// Emptying the tables is not always enough, and the case where it is not used to
+// send people to `rm -rf .wrangler/e2e-state` by hand: see
+// `journalDisagreesWithSchema`. Do that here instead, so the advice `e2e/run.ts`
+// prints is true for every state this can be run against.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-	console.log(
-		resetE2eDatabase() ? 'Cleared the e2e database.' : 'No e2e state directory — nothing to clear.'
-	);
+	if (e2eStateIsStale()) {
+		clearE2eStateDir();
+		console.log(
+			"Dropped .wrangler/e2e-state: its schema and drizzle's migration journal disagreed," +
+				'\nso clearing rows would have left a directory the next run cannot migrate.' +
+				'\nThe next run rebuilds it.'
+		);
+	} else {
+		console.log(
+			resetE2eDatabase()
+				? 'Cleared the e2e database.'
+				: 'No e2e state directory — nothing to clear.'
+		);
+	}
 }

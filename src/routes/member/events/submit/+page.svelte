@@ -5,7 +5,7 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
-	import LineupEditor, { type LineupChip } from '../../../band/[slug]/events/LineupEditor.svelte';
+	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { createListing, searchBandsForListing } from '$lib/remote/community-events.remote';

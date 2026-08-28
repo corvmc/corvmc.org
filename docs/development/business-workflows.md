@@ -316,15 +316,27 @@ events use RSVP instead.
 
 ### Code path
 
-- **Two staff surfaces, one table.** `/staff/events` (Productions) is `source='cmc'` at every
-  status via `getStaffEvents` → `listAll()`; it is where a show is built, so it is the only
-  page holding drafts. `/staff/calendar` is `getStaffCalendar` → `listStaffCalendar()` —
-  every source, public statuses plus `pending_review`, forward from today — the staff view of
-  the public gig guide, where listings are moderated. A published CMC show is on both. The
-  date floor applies only to rows actually on the calendar, so a `pending_review` listing
-  whose date passed stays reachable and keeps agreeing with the sidebar badge
-  (`countPendingSubmissions`, which has no date filter). The detail page is shared at
-  `/staff/events/[id]`, with the room, shifts and poster upload gated on `source === 'cmc'`.
+- **Two staff surfaces, one table, and the URLs say which is the general case.** `/staff/events`
+  is the **Calendar** — `getStaffCalendar` → `listStaffCalendar()`, every source, public
+  statuses plus `pending_review`, forward from today — the staff view of the public gig guide,
+  where listings are moderated. `/staff/productions` is the CMC work index, `source='cmc'` at
+  every status via `getStaffEvents` → `listAll()`, and the only page holding drafts. A
+  published CMC show is on both. The date floor applies only to rows actually on the calendar,
+  so a `pending_review` listing whose date passed stays reachable and keeps agreeing with the
+  sidebar badge (`countPendingSubmissions`, which has no date filter).
+- **The detail view is layered the same way.** `/staff/events/[id]` is the general view for
+  every source — facts, the bill, the event's lifecycle actions, and a two-hour window of what
+  else is on (`listEventsNear`). It sits at the address `entity-href` resolves every event ref
+  to, so a staffer arriving from a shift, a reservation or a notification lands on the
+  least-privileged useful view. `/staff/events/[id]/production` is the console — the full edit
+  form, ticketing, the ticket ledger, poster upload, the room, volunteer shifts — and redirects
+  to the general view for a non-CMC row. Privilege is additive at the deeper address, which is
+  what makes it gateable later without re-pointing every inbound link.
+- **Staff lineup edits carry a consent rule.** `setStaffEventLineup` passes
+  `asStaff: source === 'cmc'`. Staff booked a production, so acts they name there are already
+  agreed; on a member's listing a newly linked act stays `pending` and the band is invited,
+  because staff cannot agree on a band's behalf. Either way `setEventLineup`'s prior-row branch
+  runs first, so a `declined` credit stays declined.
 - **Create/publish:** `staff/events` UI → `createEvent` / `publishEvent` / `updateEvent`
   forms in `src/lib/remote/events.remote.ts` → `create()` / `publish()` / `update()` in
   `src/lib/server/event/event-service.ts`. Events that reserve practice space create a

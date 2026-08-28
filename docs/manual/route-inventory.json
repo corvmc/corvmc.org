@@ -236,10 +236,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/calendar",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/closures",
 		"panel": "staff"
 	},
@@ -257,6 +253,10 @@
 	},
 	{
 		"route": "/staff/events/[id]/check-in",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/events/[id]/production",
 		"panel": "staff"
 	},
 	{
@@ -341,6 +341,10 @@
 	},
 	{
 		"route": "/staff/payments",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/productions",
 		"panel": "staff"
 	},
 	{

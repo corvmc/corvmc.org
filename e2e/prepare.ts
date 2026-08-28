@@ -28,11 +28,18 @@
  * so this runs it unconditionally and it costs one `SELECT` when the database is
  * already current. To start from nothing (a corrupt state directory, or KV
  * counters a fixture does not own), delete the directory: `rm -rf .wrangler/e2e-state`.
+ * The one case that used to *require* that by hand — a schema the journal does
+ * not account for — is now detected and rebuilt below.
  */
 import { E2E_STATE_ROOT } from './state-dir';
 import { migrateLocal } from '../scripts/db/migrate-local';
 import { acquireE2eLock } from './lock';
-import { checkpointE2eDatabase, resetE2eDatabase } from './reset-db';
+import {
+	checkpointE2eDatabase,
+	clearE2eStateDir,
+	e2eStateIsStale,
+	resetE2eDatabase
+} from './reset-db';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 import { seedStaffUser } from './fixtures/seed-staff-user';
@@ -60,6 +67,20 @@ acquireE2eLock('prepare');
 // suite walks straight into. `run.ts` adopts it and owns releasing it. If this
 // process dies instead, the lock is left with a dead pid and `lock.ts` ages it
 // out as stale.
+
+// A directory whose schema and drizzle's journal disagree cannot be migrated
+// into at all: the migrator replays from migration 1 and dies on a `CREATE
+// TABLE` for a table that is already there, and the rollback leaves the same
+// directory behind for the next attempt. Rebuild rather than fail — the run was
+// going to reset and reseed everything below anyway, so nothing is lost but the
+// migrate itself. See `journalDisagreesWithSchema` in `e2e/reset-db.ts`.
+if (e2eStateIsStale()) {
+	console.warn(
+		"The e2e state directory has tables that drizzle's migration journal does not" +
+			'\naccount for. Rebuilding .wrangler/e2e-state from the committed migrations.'
+	);
+	clearE2eStateDir();
+}
 
 await migrateLocal(E2E_STATE_ROOT);
 

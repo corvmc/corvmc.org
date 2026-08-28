@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Action from '$lib/components/ui/Action.svelte';
 	import EventFields from './EventFields.svelte';
-	import { type LineupChip } from './LineupEditor.svelte';
+	import { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { createBandEventForm } from '$lib/remote/band-events.remote';

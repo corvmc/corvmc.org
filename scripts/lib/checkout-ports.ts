@@ -33,6 +33,8 @@ import { resolve } from 'node:path';
 /** Ports the main checkout keeps, and the base of each worktree range. */
 const MAIN_DEV_PORT = 5173;
 const MAIN_PREVIEW_PORT = 4173;
+/** vitest's own `defaultBrowserPort`. */
+const MAIN_BROWSER_PORT = 63315;
 
 /**
  * Where worktree ports live: high enough to clear the common dev-server numbers,
@@ -41,7 +43,17 @@ const MAIN_PREVIEW_PORT = 4173;
  * carries are vanishingly unlikely.
  */
 const WORKTREE_PORT_BASE = 41000;
-const WORKTREE_PORT_SPAN = 2000;
+const WORKTREE_PORT_SPAN = 3000;
+/**
+ * Dev, preview, and the vitest browser API. Each slot is `SPAN / SLOTS` wide.
+ *
+ * Widening from two slots to three deliberately left the first two where they
+ * were: the old span was 2000 across 2 slots and the new one is 3000 across 3,
+ * so each slot is still 1000 wide and dev/preview keep the exact numbers they
+ * had. A worktree's bookmarked URL and Playwright's `reuseExistingServer` both
+ * depend on that stability.
+ */
+const WORKTREE_PORT_SLOTS = 3;
 
 /** Worktrees live here — see CLAUDE.md. */
 const WORKTREE_MARKER = `${'.claude'}/worktrees/`;
@@ -66,15 +78,15 @@ export function isWorktree(root: string): boolean {
 /**
  * A stable offset for `root` inside the worktree range.
  *
- * Dev and preview must not land on the same number, so they are drawn from two
- * halves of the range rather than from one hash plus an increment — an
+ * The three ports must not land on the same number, so each is drawn from its
+ * own slice of the range rather than from one hash plus an increment — an
  * increment would let one worktree's preview port equal the next worktree's dev
  * port.
  */
-function offsetFor(root: string, half: 0 | 1): number {
+function offsetFor(root: string, slot: 0 | 1 | 2): number {
 	const digest = createHash('sha256').update(normalize(root)).digest('hex').slice(0, 8);
-	const span = WORKTREE_PORT_SPAN / 2;
-	return WORKTREE_PORT_BASE + half * span + (parseInt(digest, 16) % span);
+	const span = WORKTREE_PORT_SPAN / WORKTREE_PORT_SLOTS;
+	return WORKTREE_PORT_BASE + slot * span + (parseInt(digest, 16) % span);
 }
 
 function fromEnv(name: string, env: NodeJS.ProcessEnv): number | null {
@@ -92,6 +104,30 @@ function fromEnv(name: string, env: NodeJS.ProcessEnv): number | null {
 /** The port `vite dev` binds for this checkout. */
 export function devPort(root: string, env: NodeJS.ProcessEnv = process.env): number {
 	return fromEnv('PORT', env) ?? (isWorktree(root) ? offsetFor(root, 0) : MAIN_DEV_PORT);
+}
+
+/**
+ * The port vitest's browser mode binds for this checkout's `client` project.
+ *
+ * This was the last shared-by-default resource, and the one that bit hardest,
+ * because unlike the dev and preview servers it is not something you start
+ * deliberately — `pnpm test:unit` binds it, so two checkouts running their unit
+ * suites at once collide without either one having a server running.
+ *
+ * The collision is total rather than occasional: vitest's `defaultBrowserPort`
+ * is the fixed constant **63315**, so every checkout asks for the same number
+ * and the second one fails with `Port 63315 is already in use`. The failure
+ * reads as three unrelated test failures, because the project never starts and
+ * its files are counted as failed.
+ *
+ * The main checkout keeps 63315 for the same reason it keeps 5173 — it is the
+ * documented default, and anything printing a browser-mode URL stays correct.
+ */
+export function browserPort(root: string, env: NodeJS.ProcessEnv = process.env): number {
+	return (
+		fromEnv('VITEST_BROWSER_PORT', env) ??
+		(isWorktree(root) ? offsetFor(root, 2) : MAIN_BROWSER_PORT)
+	);
 }
 
 /** The port `vite preview` — and therefore the e2e suite — binds for this checkout. */
