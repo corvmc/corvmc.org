@@ -1,10 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "f683787d-fc5d-41c5-9af5-1d6091595842",
+  "id": "d133b99d-08ff-47c4-b254-baaa404a5d7f",
   "prevIds": [
-    "4a5fd943-6805-463a-90bc-600b20ed63f6",
-    "e75a1f57-bb01-4b69-ad05-34f596f60fcd"
+    "203bc5bd-5e6e-451f-8ba3-1c8125c9adb1"
   ],
   "ddl": [
     {
@@ -670,112 +669,12 @@
       "table": "user"
     },
     {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "bio",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "tagline",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "hometown",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "looking_for_band",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "available_for_hire",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "teaches_lessons",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "open_to_collaboration",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
       "default": "true",
       "generated": null,
       "name": "accepts_direct_messages",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'members'",
-      "generated": null,
-      "name": "directory_visibility",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "directory_contact",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "links",
       "entityType": "columns",
       "table": "user"
     },
@@ -3806,76 +3705,6 @@
       "default": null,
       "generated": null,
       "name": "custom_domain_added_at",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "tagline",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "hometown",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "founded_year",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "looking_for_members",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'public'",
-      "generated": null,
-      "name": "directory_visibility",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "directory_contact",
-      "entityType": "columns",
-      "table": "group"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "links",
       "entityType": "columns",
       "table": "group"
     },
