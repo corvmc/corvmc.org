@@ -4,6 +4,7 @@ import { query, getRequestEvent } from '$app/server';
 import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { hasAnyRole } from '$lib/server/authorization';
+import { hasLoanableItems } from '$lib/server/inventory/item-service';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
 import { countPortalUnread } from '$lib/server/inbox/portal-service';
@@ -51,15 +52,27 @@ export const getMemberLayout = query(async () => {
 	if (!locals.user) throw redirect(302, '/login');
 	const user = locals.user;
 
-	const [userBands, isStaff, features, portalUnread, directUnread, pendingRequests] =
-		await Promise.all([
-			listForUser(user.id).catch(() => []),
-			hasAnyRole(user.id, ['admin', 'staff']),
-			getAllFeatureFlags(),
-			countPortalUnread(user.id).catch(() => 0),
-			countDirectUnread(user.id).catch(() => 0),
-			countPendingRequests(user.id).catch(() => 0)
-		]);
+	const [
+		userBands,
+		isStaff,
+		features,
+		portalUnread,
+		directUnread,
+		pendingRequests,
+		hasLoanableEquipment
+	] = await Promise.all([
+		listForUser(user.id).catch(() => []),
+		hasAnyRole(user.id, ['admin', 'staff']),
+		getAllFeatureFlags(),
+		countPortalUnread(user.id).catch(() => 0),
+		countDirectUnread(user.id).catch(() => 0),
+		countPendingRequests(user.id).catch(() => 0),
+		// Data, not a flag: the Equipment row appears once there is something to
+		// lend. Falls back to hidden, which is the harmless direction — a missing
+		// row is a link somebody has to be told about, a row onto an empty
+		// catalogue is a promise the collective is not keeping.
+		hasLoanableItems().catch(() => false)
+	]);
 
 	// Requests are deliberately absent from the badge. They show up in the
 	// Messages list marked as requests, so a member finds them when they go
@@ -78,6 +91,7 @@ export const getMemberLayout = query(async () => {
 		})),
 		isStaff,
 		features,
+		hasLoanableEquipment,
 		messagesUnread,
 		pendingRequests
 	};

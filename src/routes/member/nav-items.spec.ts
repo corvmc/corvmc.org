@@ -15,7 +15,10 @@ import {
  * silently wrong twice. This pins every combination.
  */
 
-const ALL_ON: MemberNavInput = { features: { volunteering: true, helpArticles: true } };
+const ALL_ON: MemberNavInput = {
+	features: { volunteering: true, helpArticles: true },
+	hasLoanableEquipment: true
+};
 const ALL_OFF: MemberNavInput = { features: {} };
 
 const keysOf = (input: MemberNavInput) => memberNavItems(input).map((i) => i.key);
@@ -103,6 +106,11 @@ describe('activeMemberNavKey', () => {
 		['/member/suggestions/abc', 'suggestions'],
 		['/member/volunteer/start', 'volunteer'],
 		['/member/volunteer/feedback/abc', 'volunteer'],
+		['/member/equipment', 'equipment'],
+		['/member/equipment/loans', 'equipment-loans'],
+		// A scanned unit lights the parent: it is gear, and there is no row of its
+		// own for it to light.
+		['/member/equipment/assets/abc', 'equipment'],
 		['/member/help/some-article', 'help']
 	];
 
@@ -138,25 +146,18 @@ describe('route coverage', () => {
 	 *  - `/member/bands` is reachable, just not as a row: the "All" button in the
 	 *    My Bands group header goes there. Highlighting a group's action is not
 	 *    something `NavGroup` models.
-	 *  - `/member/equipment` and its loans page have no row on purpose: gear
-	 *    lending is still arranged in person, so a browsable catalogue would
-	 *    invite requests the front desk is not running through this system yet.
-	 *    Cutting the `equipment` flag (#286) did not change that — the nav never
-	 *    gated on the flag, it just omits the section. The row is the follow-up
-	 *    for when lending stops being manual.
 	 *  - `/member/equipment/assets/[id]` is reached by pointing a phone at the
 	 *    sticker on a piece of gear and nothing else. It is not stranded pending
 	 *    a nav row — a row would be meaningless, since there is no "the unit" to
 	 *    navigate to. This line is expected to stay.
 	 *
+	 * `/member/equipment` and its loans page used to be here. They now get a row
+	 * once `hasLoanableEquipment` is true, which is why `ALL_ON` sets it: the
+	 * stranded check asks what a fully-lit nav reaches.
+	 *
 	 * Delete a line when its page gets a row of its own.
 	 */
-	const strandedOnDashboard = new Set([
-		'/member/equipment',
-		'/member/equipment/loans',
-		'/member/equipment/assets/[id]',
-		'/member/bands'
-	]);
+	const strandedOnDashboard = new Set(['/member/equipment/assets/[id]', '/member/bands']);
 
 	it('leaves no member page unmatched', () => {
 		const orphans = memberPageRoutes().filter(
@@ -171,6 +172,21 @@ describe('route coverage', () => {
 			.filter((r) => activeMemberNavKey(ALL_ON, concrete(r)) === 'dashboard')
 			.filter((r) => !strandedOnDashboard.has(r));
 		expect(stranded).toEqual([]);
+	});
+
+	it('shows Equipment only when there is something to lend', () => {
+		// Data, not a flag. An empty catalogue with a nav row pointing at it is a
+		// promise the collective is not keeping.
+		expect(keysOf({ features: {}, hasLoanableEquipment: true })).toContain('equipment');
+		expect(keysOf({ features: {}, hasLoanableEquipment: false })).not.toContain('equipment');
+		expect(keysOf({ features: {} })).not.toContain('equipment');
+	});
+
+	it('hides My Loans with it — a loans page under no catalogue is a dead end', () => {
+		const withGear = memberNavMain({ features: {}, hasLoanableEquipment: true });
+		const equipment = withGear.find((i) => i.key === 'equipment');
+		expect(equipment?.children?.map((c) => c.key)).toEqual(['equipment-loans']);
+		expect(keysOf({ features: {}, hasLoanableEquipment: false })).not.toContain('equipment-loans');
 	});
 
 	it('keeps the stranded list honest', () => {

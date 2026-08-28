@@ -21,6 +21,7 @@ export const relations = defineRelations(schema, (t) => ({
 		user: t.one.user({ from: t.account.userId, to: t.user.id })
 	},
 	group: {
+		site: t.one.bandSite({ from: t.group.id, to: t.bandSite.groupId }),
 		media: t.many.mediaAttachment({
 			from: t.group.id,
 			to: t.mediaAttachment.attachableId,
@@ -38,6 +39,9 @@ export const relations = defineRelations(schema, (t) => ({
 			to: t.eventBand.bandId,
 			alias: 'eventBand_band'
 		})
+	},
+	bandSite: {
+		group: t.one.group({ from: t.bandSite.groupId, to: t.group.id })
 	},
 	directoryEntry: {
 		user: t.one.user({ from: t.directoryEntry.userId, to: t.user.id }),

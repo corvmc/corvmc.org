@@ -141,6 +141,28 @@ export async function listLocations() {
 		.orderBy(inventoryLocation.displayOrder, inventoryLocation.name);
 }
 
+/**
+ * Is there anything a member could ask to borrow?
+ *
+ * Gates the member panel's Equipment row. Deliberately **existence, not
+ * availability**: if every amp happens to be out on loan, the catalogue is still
+ * worth showing — a member can see what the collective has and put a request in
+ * for when it comes back. Hiding it then would answer "can I borrow an amp?"
+ * with "we don't lend equipment", which is false.
+ *
+ * `LIMIT 1` rather than a count: the question is whether the list would be
+ * empty, and this runs on every member page load.
+ */
+export async function hasLoanableItems(): Promise<boolean> {
+	const [row] = await db
+		.select({ one: sql<number>`1` })
+		.from(inventoryItem)
+		.where(and(isNull(inventoryItem.deletedAt), eq(inventoryItem.isLoanable, true)))
+		.limit(1);
+
+	return !!row;
+}
+
 // ---------------------------------------------------------------------------
 // Item CRUD
 // ---------------------------------------------------------------------------

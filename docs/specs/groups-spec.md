@@ -41,15 +41,15 @@ group.kind  'band' | 'club' | 'committee'
 thing everywhere; announcements, documents, and the roster are one implementation. What kind does
 determine is the line below, which is a governance fact rather than a UI one:
 
-|                                   | `band`                                   | `club`, `committee`                      |
-| --------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| Created by                        | Any member, self-service                 | **Staff only**, from the staff panel     |
-| Owner                             | The creator                              | **Appointed by staff**                   |
-| Deleted by                        | Its owner                                | Staff only                               |
-| May have a band site              | Yes                                      | No                                       |
-| Default join policy               | `invite_only`                            | Either; `open` is the point of a program |
-| Its events may hold the room free | No                                       | **Yes**                                  |
-| Rehearsal bookings                | `bookerType: 'group'`, credits then cash | n/a — see [Room time](#room-time)        |
+|                                   | `band`                                   | `club`, `committee`                  |
+| --------------------------------- | ---------------------------------------- | ------------------------------------ |
+| Created by                        | Any member, self-service                 | **Staff only**, from the staff panel |
+| Owner                             | The creator                              | **Appointed by staff**               |
+| Deleted by                        | Its owner                                | Staff only                           |
+| May have a band site              | Yes                                      | No                                   |
+| Join policy                       | **Always `invite_only`**                 | Any of the three                     |
+| Its events may hold the room free | No                                       | **Yes**                              |
+| Rehearsal bookings                | `bookerType: 'group'`, credits then cash | n/a — see [Room time](#room-time)    |
 
 "Band" is not a table — it is _a group with a directory entry, optionally with a band site_. So
 `kind` carries governance alone: who may create, who may delete, and who gets free room time.
@@ -92,9 +92,37 @@ The index is `unique(slug)`, not `unique(kind, slug)`: one namespace shared by b
 
 **There is no `ownerId`.** The owner is the `group_member` row with `role = 'owner'`, enforced by a partial unique index. See [Ownership](#ownership).
 
-**`joinPolicy` is how open enrollment works.** `invite_only` is today's behavior and stays the default: you get in because someone with authority added you. `open` means any signed-in member may join themselves, landing directly on an active `member` row with no approval step — which is the whole point of a drop-in program like the Real Book Club. The policy governs only self-service joining; invitations work identically under both.
+**`joinPolicy` is how enrollment works.** Three doors, and which one a group opens is the single
+most consequential thing about how it feels to belong to:
 
-`joinInstructions` remains useful under `open` — it is the "bring a horn, charts provided" prose next to the button, not a substitute for it.
+| Policy           | Getting in                                                                   |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `invite_only`    | Someone with authority adds you. Today's behavior, and the default           |
+| `open`           | Any signed-in member joins themselves, landing on an active row. No approval |
+| `by_application` | You ask; an owner or admin approves. `status = 'requested'` while you wait   |
+
+`open` is the whole point of a drop-in program like the Real Book Club. `by_application` is for the
+program that wants everyone to be able to _find_ it but not everyone to be in it — a committee with
+a seat count, a workshop with a skill floor. Without it those groups have to sit at `invite_only`,
+where a member who would be welcome has no way to say so and often no way to know the group exists.
+
+The policy governs only **self-service** joining. Invitations work identically under all three:
+`by_application` does not mean a leader has to wait to be asked.
+
+**A band is always `invite_only`, and that is a constraint rather than a default.** The service
+refuses any other value for `kind = 'band'`, and the band's own edit form does not offer the
+setting — so enrollment policy is a club-and-committee concept, and joining a band stays a
+conversation.
+
+The reason is the same structural one that governs free room time. A band member may book rehearsal
+time as the band, `bookerType: 'group'`, against the band's credits and then its card. An `open`
+band would therefore be a way for any signed-in member to join a stranger's band and spend their
+money, and `by_application` would put that decision behind a leader who may not realise what they
+are approving. Closing it by kind means nobody has to remember to check.
+
+`joinInstructions` remains useful under every policy — under `open` it is the "bring a horn, charts
+provided" prose next to the button; under `by_application` it is the prompt over the application
+box, which is where it earns the most; under `invite_only` it is how a member learns whom to ask.
 
 ### Directory entry
 
@@ -463,7 +491,7 @@ re-key.
 
 ### GroupMember
 
-Tracks membership and pending invitations in one table, exactly as `band_member` does today. Every row is either a pending invitation or an active membership.
+Tracks membership, pending invitations and pending applications in one table, extending what `band_member` does today. Every row is an active membership or one of the two ways of waiting to become one.
 
 ```
 group_member
@@ -473,7 +501,7 @@ group_member
   role                text, not null   ('owner' | 'admin' | 'member')
   position            text, nullable   (e.g. "Lead Guitar", "Treasurer", "Instructor")
   alias               text, nullable   (the name this person goes by in this group)
-  status              text, not null   ('pending' | 'active')
+  status              text, not null   ('pending' | 'requested' | 'active')
   notifyAnnouncements boolean, not null, default true
   invitedById         text, nullable, FK → user (set null on delete)
   createdAt           timestamp, not null
@@ -484,10 +512,24 @@ group_member
 
 - Owner row: `role = 'owner'`, `status = 'active'`, `invitedById = null`.
 - Invited member: `role = 'member' | 'admin'`, `status = 'pending'`, `invitedById` set.
-- Accepting flips `status` to `'active'`. Declining or revoking deletes the row.
+- Applicant: `role = 'member'`, `status = 'requested'`, `invitedById = null`.
+- Accepting an invitation or approving an application both flip `status` to `'active'`. Declining,
+  revoking or withdrawing deletes the row.
 - `position` is free text and carries whatever the group calls it — instrument for a band, office for a committee, "host" or "chart librarian" for a club.
 - `alias` carries over from `band_member` unchanged. It is self-set — an admin can say what you play, but cannot rename you — and null means "use the account name", so the roster falls back rather than storing a copy that goes stale. It generalizes without strain: a stage name for a band, a preferred name anywhere else. Dropping it during the phase-2 port would regress a shipped band feature to save one nullable column.
 - `notifyAnnouncements` is the per-group mute. A member of six groups needs to silence one without silencing all; a single global preference cannot express that.
+
+**`'requested'` is a distinct value rather than a reuse of `'pending'`, and that is the whole cost
+of `by_application`.** `'pending'` means "we asked you, awaiting your answer"; a request is its exact
+mirror, and a single value covering both would leave every roster query unable to say which
+direction a waiting row faces — approving an invitation you sent and approving an application you
+received are different authorizations over identically-shaped rows.
+
+Adding the third value is safe because the roster queries were already written for it: every
+status-sensitive query in `band-service.ts` matches **positively** (`eq(status, 'active')`,
+`eq(status, 'pending')`) rather than negating, so a new value widens nothing. Two queries read
+status-blind and must be updated in the same change — see
+[Prerequisites and known defects](#prerequisites-and-known-defects).
 
 **Membership is not polymorphic.** Because everything managed is a group, `groupId` is a real foreign key with `ON DELETE CASCADE` — as are `group_invite`, `announcement`, and `file`. This is the single largest simplification in the design. A polymorphic `(entityType, entityId)` shape would have required a `purgeEntity()` helper called from every delete path, an orphan-reconcile cron, and a discriminator branch in every query. It would also have invited the bug `content_flag` already has: its rows are never cleaned up when a band is deleted, because there is no FK to enforce it.
 
@@ -748,7 +790,7 @@ Two pieces of this do not exist yet and are the real work: a `createGroupEvent()
 1. Staff enter a name, kind, and description, and pick the member who will lead it.
 2. The service creates the `group` and an owner `group_member` row for that member with `status = 'active'` — appointed, not invited, so there is nothing for them to accept.
 3. Staff set `joinPolicy` and `publicVisibility`.
-4. The appointee gets a notification and the group appears in their panel switcher.
+4. The appointee gets a notification and the group appears under **My Groups** in their sidebar.
 
 The appointee never had to opt in, which is deliberate: staff are recording an arrangement that already exists offline. They can leave or hand off afterwards like any owner.
 
@@ -756,11 +798,31 @@ The appointee never had to opt in, which is deliberate: staff are recording an a
 
 1. A signed-in member opens the public page of a group with `joinPolicy: 'open'` and clicks Join.
 2. The service inserts a `group_member` row with `role = 'member'`, `status = 'active'`, `invitedById = null`.
-3. They land in the panel immediately — no approval, no pending state.
+3. They land on the group's page immediately — no approval, no pending state.
 
 The guard is the group's own policy, not the caller's identity: the remote re-reads `joinPolicy` from the resolved group rather than trusting anything from the request. Re-joining is idempotent against `unique(groupId, userId)`. Leaving and rejoining is unremarkable and expected for a drop-in program.
 
 Owners and admins cannot self-assign — self-join always produces `role = 'member'`.
+
+### Applying to join
+
+1. A signed-in member opens a group with `joinPolicy: 'by_application'` and clicks Apply. The
+   group's `joinInstructions` are the prompt; the member writes a short message.
+2. The service inserts a `group_member` row with `role = 'member'`, `status = 'requested'`,
+   `invitedById = null`.
+3. The request appears under Requests on the group's roster for owners and admins. The applicant
+   sees their own pending application on `/member/groups`.
+4. Approving flips `status` to `'active'` and notifies the applicant — the same flip
+   `acceptInvite` performs, arriving from the other direction, so it reuses that path. Declining
+   deletes the row.
+
+The applicant is **not** a member while waiting: `requireGroupRole` resolves nothing for a
+`'requested'` row, so announcements, documents and the roster stay closed to them. Withdrawing is
+deleting your own row and needs no separate state.
+
+An unanswered application has no expiry. A request that sits is a program with no active leader,
+which [Ownership](#ownership) already says staff can see and fix in `/staff/groups`; expiring it
+silently would hide exactly that signal.
 
 ### Inviting a member
 
@@ -776,7 +838,7 @@ At signup, `resolvePendingInvites(userId, email)` converts pending invites into 
 1. Owner or admin writes a title and a markdown body, then publishes.
 2. The row is written with `publishedAt` set and `notifiedAt` NULL, and `announcement.published` is emitted.
 3. A listener fans out to members — see [Notifications](#notifications).
-4. Members see it on the group dashboard and, unless muted, in-app and by email.
+4. Members see it on the group's Announcements tab and, unless muted, in-app and by email.
 
 Announcements are one-way. Replies, threads, and read receipts are [not in scope](#not-in-scope).
 
@@ -827,7 +889,7 @@ Ordinary members leaving is unremarkable under either policy, and under `open` t
 
 A dissolved committee is a historical fact, and its minutes, roster, and announcements _are_ the record of it. Cascading them away because the committee wound up is the wrong default — the group ending is exactly when its documents become archival rather than operational. `deactivate()` / `reactivate()` already exist in `band-service.ts` and generalize unchanged.
 
-**Deactivating** sets `deletedAt`. The group leaves the public directory and the panel switcher, its events stop generating, and the panel goes read-only — but every row survives, staff can still reach it and its documents from `/staff/groups`, and reactivating restores a working group. No R2 object is touched. Retention is indefinite; a wound-up committee's minutes are a few megabytes and the storage argument does not outweigh losing them.
+**Deactivating** sets `deletedAt`. The group leaves the public directory and the sidebar, its events stop generating, and its page goes read-only — but every row survives, staff can still reach it and its documents from `/staff/groups`, and reactivating restores a working group. No R2 object is touched. Retention is indefinite; a wound-up committee's minutes are a few megabytes and the storage argument does not outweigh losing them.
 
 **Hard deletion** is a staff-only action reserved for rows that should never have existed — a typo'd name, a duplicate, a test. It confirms with an explicit count ("this will permanently delete 14 documents and 62 announcements"), then:
 
@@ -836,6 +898,154 @@ A dissolved committee is a historical fact, and its minutes, roster, and announc
 3. The `directory_entry` survives with `groupId` set back to null and visibility forced to hidden — a deleted band reverts to a staff-kept record rather than vanishing, so its event history keeps a name and its lineup credits keep resolving. Nothing is copied to make that work; only `groupId` changes. A `band_site` row, if one exists, cascades away with the group.
 
 A band owner deleting their own band from Settings keeps today's behavior: it is their project and their call, and the confirmation carries the same document count.
+
+---
+
+## Interface
+
+A band gets a panel. A club gets a page. That asymmetry is deliberate, and this section is the
+argument for it, because the obvious move — give every group the panel bands already have — is
+wrong in a way that only shows up when you count what a club member actually does.
+
+### The asymmetry
+
+A club **member**'s entire relationship with their club is four things:
+
+| What they do          | Where it already happens                                                         |
+| --------------------- | -------------------------------------------------------------------------------- |
+| Read announcements    | Delivered by email and in-app notification — see [Notifications](#notifications) |
+| See upcoming sessions | `/events` and `/member/events`, free, once phase 9 publishes `source: 'group'`   |
+| Download charts       | **Nowhere.** The only genuinely homeless one                                     |
+| Leave                 | One control                                                                      |
+
+Three of the four are already served. Against that, the panel shape costs a layout, a `nav-items.ts`
+and its spec, a `layout-context.ts`, a `PanelTab['type']` widening, a merged topbar dropdown, and a
+`getPanels(userId)` extraction across three layouts — a frame whose full audience is the handful of
+people who lead a program.
+
+The **leader**'s surface is genuinely thicker — announce, upload, manage the roster, run the series,
+edit the public face — but it is thicker in the way a form is thicker than a label, not in the way a
+workspace is thicker than a page.
+
+### Why a panel is the wrong container
+
+A panel is for work you return to. The band panel earns its frame because a band member keeps coming
+back to band-shaped work with money and consequences attached: paid rehearsal bookings, a microsite,
+an EPK, a subscription, a directory listing. You inhabit it.
+
+A club is not a workspace. It is **a subscription to a program** — its whole value arrives in your
+inbox and on the calendar, and the page is where you go when you want the archive or the charts. The
+member's relationship is receive-shaped and the leader's is publish-shaped. Neither is panel-shaped,
+and one panel serving both would be a frame built for the shape neither of them has.
+
+This is also the honest reading of the split this spec already draws. A band is self-created,
+self-run, and pays its own way; a club is staff-sanctioned and staff-owned. Different governance
+getting different containers is consistent, not arbitrary — what would be arbitrary is giving a
+staff-appointed program leader the same chrome as a band owner who bought a subscription.
+
+### One page, tabbed
+
+`/member/groups/{slug}`, using `TabBar` in URL-driven mode
+(`docs/development/ui-patterns.md` § TabBar) so tabs render as `<a>` and the router owns the state.
+Not `replaceState()`, which neither updates `page.url` nor survives a client-side navigation.
+
+| Region        | Holds                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| Header        | Name, kind badge, link out to the public page; overflow with _Mute_ and _Leave_             |
+| Overview      | Next session — the single most useful fact about a program — plus roster size and your role |
+| Announcements | Default tab. Pinned first; owner/admin compose in a modal                                   |
+| Documents     | Download through `/api/files/[id]`; owner/admin upload and remove                           |
+| Sessions      | Upcoming and past. Owner/admin link **out** to the event editor, not a second one           |
+| Roster        | `position` and `alias`, falling back to the account name                                    |
+
+_Mute_ writes `group_member.notifyAnnouncements`; both it and _Leave_ are `Action` components.
+The Sessions tab stays hidden until phase 9.
+
+Editing the public face — name, description, photo, visibility, join instructions — gets its own
+child route rather than a modal. A photo upload over five fields is cramped in a dialog.
+
+### What `joinPolicy` gates on the roster tab
+
+The policy decides which action **leads**; it never removes a capability, because invitations work
+identically under all three.
+
+| Policy           | The roster tab leads with                                                |
+| ---------------- | ------------------------------------------------------------------------ |
+| `open`           | A plain list. _Invite_ demotes to the overflow — anyone may join unaided |
+| `by_application` | **Requests** — pending applications, each with approve and decline       |
+| `invite_only`    | _Invite_, with pending invitations sectioned above active members        |
+
+The `invite_only` shape is the one `/member/bands` already renders for band invitations, so it is a
+port rather than a design.
+
+### The index does membership and discovery together
+
+`/member/groups` answers "where do I go" and "where else could I go" on one page. Scoping it to your
+own memberships would strand discovery on a route nobody with a membership ever opens — and an
+`open` join policy that only existing members can see is not open at all.
+
+1. **Your programs** — the clubs and committees you belong to, plus invitations received _and_
+   applications sent. Those two are rendered distinctly: same waiting state, opposite direction, and
+   conflating them in the UI would reintroduce exactly the ambiguity `'requested'` exists to
+   prevent.
+2. **Open to join** — `joinPolicy: 'open'`, with an inline Join.
+3. **Apply to join** — `joinPolicy: 'by_application'`, with Apply.
+4. **Invite-only programs** — listed with their `joinInstructions`, no action. Seeing that a
+   committee exists is the point; the way in is a conversation.
+
+At the Collective's scale — a handful of programs — list them all rather than ranking. If that stops
+being true, sort by next session date: a program meeting this week is more joinable than a dormant
+one.
+
+**No bands appear on this page, in any section**, and the name is the one wrinkle in this spec's
+vocabulary: a band _is_ a group in the data model, and the public `/groups` directory does list
+every kind. The member-side index does not, because it exists to answer _what can I be part of_ —
+and a band has no answer to give. Bands are always `invite_only`, so sections 2 through 4 could
+never hold one; and a member's own bands already have their own index at `/member/bands`, their own
+panel, and their own sidebar group. Listing them again here would be a second front door to a place
+that already has one.
+
+So the two indexes stay separate and neither moves: `/member/bands` is untouched by this spec, and
+`/member/groups` is new. Band **discovery** — browsing bands as artists, finding one that is looking
+for a member — stays in `/member/directory/bands`, which is a different question from this one and
+already answers it.
+
+**The Join button stops being public-page-only.** A signed-in member should never bounce out to
+`/groups/{slug}` to join something, so the write lives wherever a joinable group renders. The guard
+does not move: the remote function re-reads `joinPolicy` from the resolved group rather than
+trusting anything from the request, which is what makes three doors no riskier than two.
+
+### One implementation, two mount points
+
+What survives from "roles and membership behave identically across all three kinds" is the
+**implementation**, not the container. Announcements, documents and the roster are built as
+components under `src/lib/components/groups/`, mount-agnostic, because phases 7 and 8 mount the same
+three as _pages_ in the band panel (`/band/{slug}/announcements`, `/band/{slug}/documents`) and as
+_tabs_ on the club page. A component that reaches for its group id from a panel layout context
+cannot do that, so they take it as a prop.
+
+### Queries
+
+One load-bearing query per page, per `docs/checklists/remote-query-fanout.md`.
+
+- `getMemberGroup(slug)`, guarded by `requireGroupRole`, returns the group, your role, the roster,
+  announcements and files in one round trip. A club is small by construction. Announcement
+  pagination is the first thing to add if that stops being true.
+- The index needs **one** query returning all four sections. Four sections is precisely the shape
+  that tempts a per-section remote query fanned out of a section component, which is what that
+  checklist exists to stop.
+
+A non-member reaching `/member/groups/{slug}` — including someone whose application is still
+`'requested'` — is redirected to the public page rather than shown an empty shell.
+
+### Alternatives rejected
+
+| Instead of a page in the member panel                           | Why not                                                                                                                                                                                                                                                                        |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Member sections revealed on the public `/groups/{slug}`         | No precedent in the tree — the app mirrors public detail pages into the member panel (`/member/directory/bands/[slug]`) rather than revealing owner affordances publicly. Mixing private documents into a public, cacheable route is a live security surface for one saved URL |
+| A leader-only `/group/{slug}` panel                             | Still a full frame, now for an even smaller audience                                                                                                                                                                                                                           |
+| Scatter it — notifications, `/member/events`, a flat files page | Three of the four member needs are already served this way, but documents have nowhere to go, and nothing would answer "what is this program"                                                                                                                                  |
+| An index scoped to your own memberships                         | Discovery lands on a route only non-members open, and `open` enrollment stops working                                                                                                                                                                                          |
 
 ---
 
@@ -859,21 +1069,24 @@ Unchanged root, now resolving a **group** slug. Nav splits into two sections so 
 | **Manage**      | `/band/{slug}/reservations`    | Practice bookings                             | all members  |
 | **Manage**      | `/band/{slug}/settings`        | Delete band, danger zone                      | owner        |
 
-### Group panel (`/group/{slug}`)
+### Clubs and committees (member panel)
 
-The same two-section shape for clubs and committees. Its _Public face_ is one page — the simple public page — and it has no reservations:
+Clubs and committees get **no panel** — see [Interface](#interface). They live on one page inside
+the member panel, and three routes replace the seven a panel would have needed:
 
-| Section         | Route                         | Page                                                    |
-| --------------- | ----------------------------- | ------------------------------------------------------- |
-| —               | `/group/{slug}`               | Dashboard                                               |
-| **Public face** | `/group/{slug}/edit`          | Name, description, photo, visibility, join instructions |
-| **Manage**      | `/group/{slug}/members`       | Roster, invitations, roles                              |
-| **Manage**      | `/group/{slug}/announcements` | Announcement list & composer                            |
-| **Manage**      | `/group/{slug}/documents`     | Shared files                                            |
-| **Manage**      | `/group/{slug}/events`        | Group sessions, including the recurring series          |
-| **Manage**      | `/group/{slug}/settings`      | Leave, hand off — **no delete**                         |
+| Route                        | Page                                                     | Access       |
+| ---------------------------- | -------------------------------------------------------- | ------------ |
+| `/member/groups`             | Your programs, and the ones you could join. **No bands** | member       |
+| `/member/groups/{slug}`      | The club page — tabbed                                   | group member |
+| `/member/groups/{slug}/edit` | Name, description, photo, visibility, join instructions  | owner, admin |
 
-There is no danger zone here. Ending a club or committee is a staff action, so `/group/{slug}/settings` carries leaving and handing off but not deletion.
+**`/member/bands` is untouched** — it keeps your bands, their invitations and the create-band modal,
+and nothing about it moves or redirects. The two indexes answer different questions and stay
+separate; see [The index](#the-index-does-membership-and-discovery-together) for why a band never
+appears under `/member/groups` despite being a group.
+
+There is no danger zone and no settings page. Leaving is a control in the page header; ending a club
+or committee is a staff action in `/staff/groups`.
 
 ### Public
 
@@ -913,9 +1126,18 @@ Add `act` and `acts` to `RESERVED_SLUGS` alongside the group words, so no group 
 
 ### Panel switcher
 
-`AppTopbar.svelte` currently partitions panels with `p.type !== 'band'`, which would push every group into the top-level button row and blow out the topbar. `PanelTab['type']` widens to include `'group'`, the predicate becomes an explicit `'member' | 'staff'` test, and bands and groups share **one** "My groups" dropdown with sections.
+**The topbar is untouched.** `AppTopbar.svelte` partitions panels with `p.type !== 'band'`, and an
+earlier draft of this spec widened `PanelTab['type']` to `'group'` and merged bands and groups into
+one dropdown — necessary only because every group was getting a panel. Since clubs and committees
+do not, `panel-tabs.ts` stays bands-only, `PanelTab['type']` does not widen, and the
+`getPanels(userId)` extraction across `getMemberLayout` / `getStaffLayout` / `getBandLayout` is not
+needed. The topbar blow-out this spec set out to avoid simply does not arise.
 
-`getMemberLayout`, `getStaffLayout`, and `getBandLayout` all three build this list from `listForUser`. Extract one `getPanels(userId)` rather than letting a fourth copy diverge.
+The member sidebar gains a **second collapsible group** rather than merging anything. **My Bands**
+stays exactly as it is — same entries, same "All" link to `/member/bands`, same create-band row —
+and a sibling **My Groups** lists your clubs and committees inline, each linking to
+`/member/groups/{slug}`, with its own "All" link to `/member/groups`. Two sidebar groups for two
+indexes, the same separation the routes draw.
 
 ---
 
@@ -1086,7 +1308,7 @@ Phase order. Each phase ships green, with bands working at every step.
 | 3b  | `band_site`: move tier, subscription and the five `customDomain*` columns; re-key `band_page_config` and `band_media`. Carries the `band-host-service.ts` join                                                                                                                                                                                                                                                                                 |
 | 3c  | Drop the moved listing columns from `group` and `user`, plus `ownerId`. Carries the owner left-join conversion. **Not** `slug`, `name` or the avatar columns — see [Directory entry](#directory-entry)                                                                                                                                                                                                                                         |
 | 4   | `requireGroupRole` + explicit refs; deprecated wrappers retained                                                                                                                                                                                                                                                                                                                                                                               |
-| 5   | `/staff/groups` + `/group/{slug}` panel + public group page; `joinPolicy` and self-join                                                                                                                                                                                                                                                                                                                                                        |
+| 5   | `/staff/groups` + `/member/groups` and the club page + public group page; all three `joinPolicy` values, self-join and applications                                                                                                                                                                                                                                                                                                            |
 | 6   | `group_invite` replaces `platform_invite`                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 7   | Announcements — bands and groups simultaneously, since it is the same code                                                                                                                                                                                                                                                                                                                                                                     |
 | 8   | Documents — bucket and binding deployed and verified **first**, then the table and route                                                                                                                                                                                                                                                                                                                                                       |
@@ -1162,14 +1384,15 @@ The split between phases 1 and 2 is drawn at the table, not at the layer, and th
 | Lineups        | `event_band` re-keys to `directoryEntryId`; an unowned entry is `confirmed` by construction, and solo members become creditable     |
 | Group events   | New `createGroupEvent()` that can reserve the room free via `bookerType: 'event'`                                                   |
 | Reservations   | `bookerType: 'band'` is renamed `'group'` and its `bookerId` repoints to `group.id`; `kind` stays off the polymorphism              |
-| Enrollment     | `joinPolicy` on `group`; self-join for `open` groups                                                                                |
+| Enrollment     | `joinPolicy` on `group` — `open`, `invite_only`, `by_application`; `group_member.status` gains `'requested'`                        |
 | Staff panel    | New `/staff/groups` — the only place a club or committee is created                                                                 |
+| Club UI        | No group panel. One tabbed page at `/member/groups/{slug}`, indexed at `/member/groups`; `/member/bands` unchanged                  |
 | Contact sheets | `directory_entry_link` + `/act/{token}` — a magic-linked write surface and the subject-rights door                                  |
 | Attribution    | Public mentions of an external act link **out** to the act's own URL, or render as plain text                                       |
 | Storage        | Second R2 bucket for private documents                                                                                              |
 | Email          | `sendTemplateBatch()` added to the Postmark client                                                                                  |
 | Notifications  | One `announcement` type; per-group mute on the membership row                                                                       |
-| Nav            | Band panel splits into Public face / Manage; topbar gains a merged groups dropdown                                                  |
+| Nav            | Band panel splits into Public face / Manage; **My Bands** becomes **My Groups**. The topbar is unchanged                            |
 
 ## What doesn't change
 
@@ -1190,15 +1413,21 @@ The split between phases 1 and 2 is drawn at the table, not at the layer, and th
 Verified against the code, and load-bearing for this design whether or not they are fixed in the same
 pass. Findings are anchored to symbols rather than line numbers, which move.
 
-| Finding                                                                                                                                                                | Location                                                                  | Effect                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `processEventSeries()` hard-codes `source: 'cmc'` and `status: 'draft'`, copying neither owner nor `location`, and creates no reservation unless the prototype had one | `generation-job.ts` — `processEventSeries`                                | A club's recurring jazz night would never reach the gig guide **and** would not hold the room. Latent today only because band events cannot be recurring at all.                                                                                                                                                                                         |
-| `createBandEvent()` creates no reservation at all — it is an off-site gig listing                                                                                      | `event-service.ts` — `createBandEvent`                                    | There is no non-staff path that reserves the room, so `createGroupEvent()` must add one, modelled on `create()` in the same file, including the `hasConflict` pre-check and the compensating delete if the event insert fails.                                                                                                                           |
-| `invitedById` declared `.notNull()` **and** `onDelete: 'set null'`                                                                                                     | `platform-invite.ts` — `platformInvite`                                   | Deleting a user who ever sent an invite fails on a NOT NULL violation. Fixed by the new table.                                                                                                                                                                                                                                                           |
-| A declared parameter that the handler never binds, then authorization off `params.slug`                                                                                | `band-events.remote.ts` — `getBandEventDetail`, `getBandLineupInvites`    | Two sources of truth for one value. The original instance in `createBandEventForm` was fixed and the shape recurred; resolved for good by the explicit-ref refactor.                                                                                                                                                                                     |
-| Three raw-SQL `band_member` subqueries                                                                                                                                 | `band-service.ts` — inside `listForUser`, `listAll`, `getByIdWithDetails` | Invisible to `pnpm check`; throw at runtime after the table is dropped. Needs a CI grep gate on the literal string as part of phase 2.                                                                                                                                                                                                                   |
-| Three `innerJoin(user, eq(user.id, band.ownerId))` — twice in `listAll`, once in `getByIdWithDetails`                                                                  | `band-service.ts`                                                         | An ownerless group is legal under this spec, and an inner join drops any row whose owner is missing. In `listAll` that hides precisely the groups staff need to act on; in `getByIdWithDetails` it empties the detail page of a group that still exists. All three must become left joins during the port. See [Ownership](#ownership).                  |
-| `flagEntityTypes` contains `'member_profile'` and `'band_profile'`                                                                                                     | `flag.ts`                                                                 | Both entity types resolve to a `directory_entry` id, since that is where the flagged content (bio, photo, links) lives for a member and a band alike. The enum values keep their names and meanings; only what `content_flag.entityId` points at changes. Add a comment on the enum rather than renaming, which would need a data migration for no gain. |
+| Finding                                                                                                                                                                | Location                                                                  | Effect                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `processEventSeries()` hard-codes `source: 'cmc'` and `status: 'draft'`, copying neither owner nor `location`, and creates no reservation unless the prototype had one | `generation-job.ts` — `processEventSeries`                                | A club's recurring jazz night would never reach the gig guide **and** would not hold the room. Latent today only because band events cannot be recurring at all.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `createBandEvent()` creates no reservation at all — it is an off-site gig listing                                                                                      | `event-service.ts` — `createBandEvent`                                    | There is no non-staff path that reserves the room, so `createGroupEvent()` must add one, modelled on `create()` in the same file, including the `hasConflict` pre-check and the compensating delete if the event insert fails.                                                                                                                                                                                                                                                                                                                                                                           |
+| `invitedById` declared `.notNull()` **and** `onDelete: 'set null'`                                                                                                     | `platform-invite.ts` — `platformInvite`                                   | Deleting a user who ever sent an invite fails on a NOT NULL violation. Fixed by the new table.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| A declared parameter that the handler never binds, then authorization off `params.slug`                                                                                | `band-events.remote.ts` — `getBandEventDetail`, `getBandLineupInvites`    | Two sources of truth for one value. The original instance in `createBandEventForm` was fixed and the shape recurred; resolved for good by the explicit-ref refactor.                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Three raw-SQL `band_member` subqueries                                                                                                                                 | `band-service.ts` — inside `listForUser`, `listAll`, `getByIdWithDetails` | Invisible to `pnpm check`; throw at runtime after the table is dropped. Needs a CI grep gate on the literal string as part of phase 2.                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Three `innerJoin(user, eq(user.id, band.ownerId))` — twice in `listAll`, once in `getByIdWithDetails`                                                                  | `band-service.ts`                                                         | An ownerless group is legal under this spec, and an inner join drops any row whose owner is missing. In `listAll` that hides precisely the groups staff need to act on; in `getByIdWithDetails` it empties the detail page of a group that still exists. All three must become left joins during the port. See [Ownership](#ownership).                                                                                                                                                                                                                                                                  |
+| `flagEntityTypes` contains `'member_profile'` and `'band_profile'`                                                                                                     | `flag.ts`                                                                 | Both entity types resolve to a `directory_entry` id, since that is where the flagged content (bio, photo, links) lives for a member and a band alike. The enum values keep their names and meanings; only what `content_flag.entityId` points at changes. Add a comment on the enum rather than renaming, which would need a data migration for no gain.                                                                                                                                                                                                                                                 |
+| Two roster reads are status-blind                                                                                                                                      | `band-service.ts` — `listForUser`, `getMembers`                           | Adding `status: 'requested'` is safe everywhere else, because every other status-sensitive query matches **positively** (`eq(status, 'active' \| 'pending')`) rather than negating. These two do not filter at all. `getMemberBands` then splits `listForUser` into `pending` and `active` by explicit equality, so a `'requested'` row falls into **neither bucket and disappears** — a fail-quiet the reviewer cannot see. `getMembers` returns the whole roster, so applications would render mixed into the member list; it must partition three ways. Both change in the same PR as the enum value. |
+
+**Adding the value emits zero SQL.** Both `groupJoinPolicies` in `src/lib/config.ts` and the
+member-status vocabulary are Drizzle `text({ enum })`, a TypeScript-only constraint, exactly as
+widening `eventSources` is. The vocabularies stay at their current values until phase 5 builds the
+flow; `config.ts` points here for what `by_application` means in the meantime.
 
 **A decision this spec must make, not defer:** whether `processEventSeries()` copies `status` from the prototype. Doing so is required for a club series to publish automatically, but it changes behavior for existing staff CMC series, which today always generate drafts for review. Publish automatically only when `source !== 'cmc'`, preserving the staff review step where it already exists.
 
@@ -1224,10 +1453,6 @@ Flat list, so nobody has to guess whether an omission was deliberate.
 - Presigned multipart upload, needed above the 25 MB in-Worker ceiling.
 - Group rehearsal bookings — a group holding the room privately, outside an event. Programs do not
   need it: their sessions are events, and events reserve the room free.
-- Request-to-join. `joinPolicy` has two values, not three. Approval-gated joining needs a
-  `status: 'requested'` rather than reusing `'pending'`, which today means "we invited you, awaiting
-  your answer" — a join request is its exact mirror, and overloading one value would make every
-  roster query ambiguous about which direction it faces.
 - Contact sheets for member bands. A member band edits its entry in its own panel.
 - Group subdomains. Only band microsites claim one.
 - Public directory filtering beyond kind and genre.
