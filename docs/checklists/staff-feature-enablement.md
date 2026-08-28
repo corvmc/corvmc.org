@@ -50,5 +50,7 @@ it is switched back off.
 - Meta/Messenger inbox channel — coded but unprovisioned by design.
 - `productions` — spec only (`docs/specs/production-workflow-spec.md`).
 - The always-pass Turnstile test key in `wrangler.toml`.
-- Staff access to band-context routes (`/band/[slug]/subscription` still 403s non-members) — comp
-  and revoke live on `/staff/bands/[id]` instead.
+- Staff **writes** on band-panel routes. Groups phase 4 gave the panel's reads
+  `requireGroupRole(..., { allowStaff: true })`, so staff can now open
+  `/band/[slug]/subscription` and see it read-only instead of 403ing; every control on it
+  stays owner-only, and comp and revoke still live on `/staff/bands/[id]`.

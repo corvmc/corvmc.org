@@ -760,7 +760,7 @@ Passing the ref explicitly is not a security regression. The slug is a lookup ke
 
 `memberScope(memberId, bandId)` generalizes to `memberScope(memberId, groupId?)`, keeping the staff-omits-scope escape hatch. Every service function taking a client-supplied child id follows the same shape.
 
-**`allowStaff` settles a live inconsistency.** `requireBandMember()` throws 403 for staff who are not members, while `getBandLayout` lets them in and reports `userRole: 'staff'` — so a staff member can currently render a band panel in which every single action fails. The layout and the guard must use the same rule; `allowStaff: true` is that rule, applied to reads and withheld from destructive writes.
+**`allowStaff` settled a live inconsistency.** `requireBandMember()` threw 403 for staff who are not members, while `getBandLayout` let them in and reported `userRole: 'staff'` — so a staff member rendered a band panel in which every single card failed. The layout and the guard now use the same rule; `allowStaff: true` is that rule, applied to reads and withheld from destructive writes. Two cases were visibly broken rather than merely inconsistent, and #324 fixed both: the members page's `isStaffOnly` branch could never render, and `getBandReservationsPage` admitted staff on its first read and 403'd them on its second.
 
 `getUserRole` continues to filter on `status = 'active'`, so a pending invitee gets 403. That is correct, and it means `acceptInvitation` cannot be guarded by `requireGroupRole` — it stays guarded by `requireUser()` plus row ownership in the WHERE clause, as it is today.
 
