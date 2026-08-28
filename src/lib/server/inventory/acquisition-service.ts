@@ -9,7 +9,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { recordMovement } from './stock-service';
 import { createAsset } from './asset-service';
-import { CAPITALIZATION_THRESHOLD_CENTS, type AcquisitionKind } from '$lib/config';
+import { type AcquisitionKind } from '$lib/config';
 import type { EquipmentCondition } from '$lib/config';
 
 /**
@@ -51,18 +51,6 @@ export interface CreateAcquisitionData {
 	notes?: string;
 	lines: AcquisitionLineInput[];
 	recordedByUserId?: string;
-}
-
-/**
- * Whether a thing at this value is tracked as an asset or expensed as stock.
- *
- * The threshold is the organisation's capitalization policy, which is the same
- * number FASB ASU 2020-07 leans on when it asks whether a contributed asset was
- * capitalized or expensed. It lives in config so changing it is a decision with
- * a paper trail rather than a migration.
- */
-export function isCapitalized(unitValueCents: number | null | undefined): boolean {
-	return (unitValueCents ?? 0) >= CAPITALIZATION_THRESHOLD_CENTS;
 }
 
 export async function recordAcquisition(data: CreateAcquisitionData) {

@@ -258,10 +258,11 @@ export const stockReasons = [
 export const assetStatuses = ['in_service', 'on_loan', 'maintenance', 'retired', 'lost'] as const;
 
 export const acquisitionKinds = ['purchase', 'donation', 'grant'] as const;
-
-/** Above this, an arrival becomes a tracked asset; below, it is stock. */
-export const CAPITALIZATION_THRESHOLD_CENTS = 100_000;
 ```
+
+There is deliberately **no capitalization threshold** here. An earlier draft
+carried `CAPITALIZATION_THRESHOLD_CENTS`, and it was wrong twice over — see
+[Why there is no capitalization threshold](#why-there-is-no-capitalization-threshold).
 
 `stockReasons` is seeded from the GS1 EPCIS `bizStep` vocabulary — receiving,
 storing, inspecting, repairing, decommissioning — trimmed to what this domain
@@ -470,11 +471,14 @@ collective nothing.
   `stock_movement`, and the `bizStep` vocabulary as the seed for `stockReasons`.
 - **GS1 GTIN/UPC** — consumables mostly arrive with a barcode already on them.
   Scan it rather than inventing an internal SKU.
-- **FASB ASU 2020-07** — binding on a nonprofit, not optional. Contributed
-  nonfinancial assets must appear as a separate line item, disaggregated by
-  category, with the fair-value basis and whether the asset was monetized or
-  utilized. This dictates the `acquisition` disclosure fields, and it is why they
-  exist from Phase 1 even though the report is Phase 3.
+- **FASB ASU 2020-07** — contributed nonfinancial assets appear as a separate
+  line item, disaggregated by category, with the fair-value basis and whether the
+  asset was monetized or utilized. This dictates the `acquisition` disclosure
+  fields, and it is why they are captured from Phase 1: they are not
+  reconstructable a year later.
+  **It binds the financial statements, not the organisation**, and CMC has never
+  been asked for a GAAP statement — so the fields are insurance against a funder
+  asking, not a live obligation. See [Phases](#phases).
 - **IRS Form 8283** — non-cash gifts over $500 need an acknowledgment and over
   $5,000 an appraisal the organisation signs. Carried as `acknowledgedAt` and
   `appraisalRef`.
@@ -587,12 +591,62 @@ on purpose:
 - **A stored link from a suggestion to the item it became.** See
   [Acquiring things](#acquiring-things).
 
-**Phase 3 — nonprofit asset reporting.** 📋 The intake _fields_ and
-`inKindContributions()` landed in Phase 1, because they are not backfillable —
-what is missing is the disclosure report itself, the donor-acknowledgment flow,
-and wiring `isCapitalized()` into receiving so an arrival is routed to a tracked
-asset or to stock by value rather than by the operator choosing. Feeds the
-**Annual Report Generator** idea.
+**Phase 3 — nonprofit compliance.** 📋 Much smaller than first scoped, because
+CMC has never been asked for a GAAP financial statement. **ASU 2020-07 binds the
+statements, not the organisation**, so the gifts-in-kind disclosure it describes
+is not a live obligation. `inKindContributions()` is written and tested and sits
+ready for the day a funder asks; building a screen for it now would be building
+for a requirement that does not exist.
+
+What is actually owed, in order of value:
+
+1. **A Form 8282 warning.** Disposing of donated property within three years of
+   receiving it obliges the organisation to file within **125 days** and send the
+   donor a copy. The data to spot this is already here — an asset carries its
+   `acquisitionId`, so the system knows it was a gift and when, and retirement
+   writes a dated `retire` movement. A real legal deadline, easy to miss by hand,
+   and exactly the shape software is good at. The most valuable thing left in the
+   module.
+2. **Donor acknowledgment.** Somewhere to record that a donor's Form 8283 was
+   signed. Only bites above $500. `acknowledgedAt` / `appraisalRef` exist for it.
+3. **Schedule M** — the 990's noncash schedule, triggered at **$25,000** of
+   noncash contributions in a year, or by any gift of art or historical
+   treasures. Worth knowing the trigger; not worth building until it is near.
+
+Note that Schedule M and GAAP disagree about scope: donated _services_ and
+donated _use of space_ count under GAAP and are excluded from the 990's noncash
+line. This model only holds goods, so it matches the 990 view and would need
+extending for the other.
+
+### Why there is no capitalization threshold
+
+An earlier draft of this spec had `CAPITALIZATION_THRESHOLD_CENTS = 100_000` in
+config, and Phase 3 wiring `isCapitalized()` into receiving so that value decided
+whether an arrival became a tracked asset or stock. Both are gone. Two separate
+mistakes:
+
+**It named a policy that does not exist.** No rule sets a capitalization
+threshold — the organisation adopts one by board policy, and CMC never has. A
+constant reading `100_000` implied a $1,000 policy was in force and that the code
+was applying it. That is worse than absent: it is a plausible-looking number
+somebody could later cite as _the_ policy.
+
+**It conflated two unrelated questions.** The accounting threshold decides how a
+purchase is booked. `kind: serialized | bulk` decides whether a thing needs its
+own row and its own history. Those do not correlate: a $200 microphone is far
+below any threshold and clearly wants its own record — it has a serial, it goes
+out on loan, it comes back damaged — while a $1,500 bulk cable order is above
+most thresholds and is emphatically not one asset. **Serialization is an
+operational judgement, not a monetary one**, and it is already made correctly
+today by the operator, per item, at creation.
+
+If CMC ever adopts a policy, the right home for the number is the accounting
+records, and the right behaviour here is a _notice_ — "this arrival is above the
+threshold, tell the treasurer" — never a control that routes anything.
+
+For reference should it ever come up: federal awards cap equipment
+capitalization at the lower of the organisation's own policy or **$10,000**,
+raised from $5,000 in the 2024 revision of 2 CFR 200.
 
 **Phase 4 — attached resources.** 📋 Manuals, tutorials and damage reports. Deferred,
 but the seams are fixed now because two of them are schema- and URL-shaped:
