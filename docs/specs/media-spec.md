@@ -190,16 +190,24 @@ integrity story.
 - **Direct-to-R2 presigned uploads.** Uploads pass through the Worker today. Changing that is a
   separate decision and would only sharpen the need for the grace window, not remove it.
 
-## Open question: reconciling with `groups-spec.md`
+## Settled: group documents follow the same discipline
 
-`groups-spec.md` states that soft-deleting a document **hard-deletes the R2 object immediately**,
-reasoning that "a soft-delete flag with no reaper is how storage bills grow silently." That reasoning
-is correct and holds only while no reaper exists. This spec builds one, so group documents should
-move to detach-and-sweep for consistency.
+`groups-spec.md` originally stated that soft-deleting a document **hard-deletes the R2 object
+immediately**, reasoning that "a soft-delete flag with no reaper is how storage bills grow silently."
+That reasoning was correct and held only while no reaper existed. This spec builds one, so group
+documents now detach and let the sweep reclaim — `groups-spec.md` has been updated to say so.
 
-That is a change to a spec whose implementation is in flight — groups phase 3a landed in #283 and
-#285 — so it is recorded here as a question for whoever owns that module rather than made
-unilaterally.
+This is a shared _discipline_, not a shared table. Documents keep their own `R2_PRIVATE` bucket and
+their own row, because the public bucket's custom domain makes its whole keyspace readable. What
+they adopt is the rule: no write path calls `deleteObject`, because no write can see whether
+something else still references the object, and a failed R2 call after the row is gone strands the
+file with no record of its key.
+
+**One thing this owes the documents work.** `/api/cron/sweep-media` reaps `media` today and knows
+nothing about a `file` table, which does not exist yet. Whoever builds group documents adds a third
+pass to it — objects in `R2_PRIVATE` that no live `file` row points at — rather than reintroducing
+an inline delete. The sweep is written as two independent passes precisely so a third costs nothing
+structural.
 
 ## Phasing
 
