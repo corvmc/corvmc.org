@@ -174,9 +174,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				// reconcile churn in the edit-page crash.
 				bio: 'Plain text bio seeded for the edit page regression test.',
 				ownerId: SEED_OWNER_ID,
-				hometown: SEED_PUBLIC_BAND_HOMETOWN,
-				foundedYear: SEED_PUBLIC_BAND_FOUNDED,
-				directoryVisibility: 'public',
 				createdAt: now,
 				updatedAt: now
 			},
@@ -186,7 +183,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				slug: SEED_HIDDEN_BAND_SLUG,
 				bio: 'This band opted out of the directory entirely.',
 				ownerId: SEED_OWNER_ID,
-				directoryVisibility: 'hidden',
 				createdAt: now,
 				updatedAt: now
 			},
@@ -196,7 +192,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				slug: SEED_MEMBERS_BAND_SLUG,
 				bio: 'Visible to logged-in members only.',
 				ownerId: SEED_OWNER_ID,
-				directoryVisibility: 'members',
 				createdAt: now,
 				updatedAt: now
 			},
@@ -207,7 +202,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				bio: 'Premium tier, so its subdomain serves a band site.',
 				ownerId: SEED_OWNER_ID,
 				tier: 'premium',
-				directoryVisibility: 'public',
 				createdAt: now,
 				updatedAt: now
 			},
@@ -217,7 +211,6 @@ export async function seedBandOnboarding(): Promise<void> {
 				slug: SEED_RENAME_BAND_SLUG,
 				bio: 'Disposable: the address-change test moves this band.',
 				ownerId: SEED_OWNER_ID,
-				directoryVisibility: 'public',
 				createdAt: now,
 				updatedAt: now
 			},
@@ -229,13 +222,34 @@ export async function seedBandOnboarding(): Promise<void> {
 				// on the edit page, whose RichTextEditor churn needs this shape.
 				bio: 'Disposable: the profile-edit test renames this band.',
 				ownerId: SEED_OWNER_ID,
-				directoryVisibility: 'public',
 				createdAt: now,
 				updatedAt: now
 			}
 		];
 
 		await db.insert(group).values(BANDS);
+
+		/**
+		 * The listing half, keyed by band id. Split out of the rows above because
+		 * phase 3c dropped these columns from `group` — visibility, hometown and
+		 * foundedYear are the entry's now, and the specs that assert on them
+		 * (`band-onboarding.e2e.ts`, and the directory gate) read them from there.
+		 */
+		const LISTINGS: Record<
+			string,
+			{ visibility: 'public' | 'members' | 'hidden'; hometown?: string; foundedYear?: string }
+		> = {
+			[SEED_PUBLIC_BAND_ID]: {
+				visibility: 'public',
+				hometown: SEED_PUBLIC_BAND_HOMETOWN,
+				foundedYear: SEED_PUBLIC_BAND_FOUNDED
+			},
+			[SEED_HIDDEN_BAND_ID]: { visibility: 'hidden' },
+			[SEED_MEMBERS_BAND_ID]: { visibility: 'members' },
+			[SEED_PREMIUM_BAND_ID]: { visibility: 'public' },
+			[SEED_RENAME_BAND_ID]: { visibility: 'public' },
+			[SEED_RETITLE_BAND_ID]: { visibility: 'public' }
+		};
 
 		// The listing half. Every band needs one: the band directory reads
 		// `directory_entry`, so a band without an entry is simply not in it — and
@@ -248,9 +262,9 @@ export async function seedBandOnboarding(): Promise<void> {
 				groupId: b.id,
 				name: b.name,
 				bio: b.bio,
-				hometown: b.hometown ?? null,
-				foundedYear: b.foundedYear ?? null,
-				visibility: b.directoryVisibility,
+				hometown: LISTINGS[b.id]?.hometown ?? null,
+				foundedYear: LISTINGS[b.id]?.foundedYear ?? null,
+				visibility: LISTINGS[b.id]?.visibility ?? 'public',
 				createdAt: now,
 				updatedAt: now
 			}))

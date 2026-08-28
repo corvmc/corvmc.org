@@ -81,14 +81,5 @@ export async function seedDirectoryEntries(): Promise<void> {
 				}))
 			);
 		}
-
-		// A member fixture that wants to be publicly browsable says so on the user
-		// row it already writes; carry that across rather than making each fixture
-		// learn about entries.
-		await db.run(sql`
-			UPDATE directory_entry
-			   SET visibility = (SELECT directory_visibility FROM "user" WHERE "user".id = directory_entry.user_id)
-			 WHERE user_id IS NOT NULL
-		`);
 	});
 }

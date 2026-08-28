@@ -142,6 +142,29 @@ function ptDate(daysOffset: number, hour: number, minute = 0): Date {
  */
 const pendingTags: { subjectId: string; kind: 'genre' | 'instrument'; value: string }[] = [];
 
+/**
+ * Listing fields collected while users and bands are seeded, keyed by SUBJECT id.
+ *
+ * These used to be read back off `user` and `group`, which worked while the
+ * columns were still there to read. Phase 3c drops them, so the values have to
+ * travel from the place that invents them to the place that writes the entry —
+ * the same shape `pendingTags` already uses, and for the same reason.
+ */
+type PendingEntry = {
+	bio?: string | null;
+	tagline?: string | null;
+	hometown?: string | null;
+	foundedYear?: string | null;
+	links?: ProfileLink[] | null;
+	visibility?: DirectoryVisibility;
+	contact?: DirectoryContact;
+	lookingFor?: 'members' | 'band' | null;
+	availableForHire?: boolean;
+	teachesLessons?: boolean;
+	openToCollaboration?: boolean;
+};
+const pendingEntries = new Map<string, PendingEntry>();
+
 async function batchInsert<T extends Record<string, unknown>>(
 	table: any,
 	rows: T[],
@@ -639,20 +662,25 @@ async function seedUsers(count: number): SeedUser[] {
 				creditFreeHours: randomInt(0, 8),
 				creditEquipment: randomInt(0, 3),
 				memberNumber: 100 + i,
-				bio: hasProfile ? pick(MEMBER_BIOS) : null,
-				tagline: hasProfile ? pick(TAGLINES) : null,
-				hometown: hasProfile ? pick(HOMETOWNS) : null,
-				lookingForBand: hasProfile && Math.random() > 0.7,
-				availableForHire: hasProfile && Math.random() > 0.7,
-				teachesLessons: hasProfile && Math.random() > 0.8,
-				openToCollaboration: hasProfile && Math.random() > 0.5,
-				directoryVisibility: visibility,
-				directoryContact: visibility === 'public' ? { email } : null,
-				links: memberLinks,
 				createdAt,
 				updatedAt: createdAt
 			})
 			.returning();
+
+		// The listing half. Written to `directory_entry` by `seedDirectoryEntries`
+		// once every subject exists — these columns are gone from `user`.
+		pendingEntries.set(id, {
+			bio: hasProfile ? pick(MEMBER_BIOS) : null,
+			tagline: hasProfile ? pick(TAGLINES) : null,
+			hometown: hasProfile ? pick(HOMETOWNS) : null,
+			lookingFor: hasProfile && Math.random() > 0.7 ? 'band' : null,
+			availableForHire: hasProfile && Math.random() > 0.7,
+			teachesLessons: hasProfile && Math.random() > 0.8,
+			openToCollaboration: hasProfile && Math.random() > 0.5,
+			visibility: visibility as DirectoryVisibility,
+			contact: visibility === 'public' ? { email } : null,
+			links: memberLinks
+		});
 
 		for (const value of memberInstruments) {
 			pendingTags.push({ subjectId: id, kind: 'instrument', value });
@@ -1373,19 +1401,23 @@ async function seedBands(users: SeedUser[]) {
 							},
 							customDomainAddedAt: new Date(Date.now() - randomInt(1, 60) * 86400000)
 						}
-					: {}),
-				tagline: `${genres[0]} ${pick(['trio', 'quartet', 'duo', 'ensemble', 'collective'])} from Corvallis`,
-				hometown: pick(HOMETOWNS),
-				foundedYear: String(randomInt(2015, 2024)),
-				lookingForMembers: Math.random() > 0.6,
-				directoryVisibility: bandVisibility,
-				directoryContact: { email: `booking+${slug}@example.com` },
-				links: bandLinks
+					: {})
 			},
 			owner.id,
 			pick(BAND_POSITIONS)
 		);
 		bands.push(b);
+
+		// The listing half — these columns are gone from `group`.
+		pendingEntries.set(b.id, {
+			tagline: `${genres[0]} ${pick(['trio', 'quartet', 'duo', 'ensemble', 'collective'])} from Corvallis`,
+			hometown: pick(HOMETOWNS),
+			foundedYear: String(randomInt(2015, 2024)),
+			lookingFor: Math.random() > 0.6 ? 'members' : null,
+			visibility: bandVisibility as DirectoryVisibility,
+			contact: { email: `booking+${slug}@example.com` },
+			links: bandLinks
+		});
 
 		for (const value of genres) {
 			pendingTags.push({ subjectId: b.id, kind: 'genre', value });
@@ -1418,32 +1450,40 @@ async function seedBands(users: SeedUser[]) {
 	// create-band modal produces) and non-public visibilities, so the
 	// sparse-profile rendering and directoryVisibility gating paths have local
 	// data. Kept out of BAND_NAMES so the fully-filled pool stays untouched.
+	// `bio` stays on `group`; visibility, hometown and foundedYear are listing
+	// fields and go to the entry, so each state carries the two halves apart.
 	const onboardingStates = [
-		{ name: 'Fresh Coat', slug: 'fresh-coat', directoryVisibility: 'public' as const },
+		{ band: { name: 'Fresh Coat', slug: 'fresh-coat' }, entry: { visibility: 'public' as const } },
 		{
-			name: 'Basement Sessions',
-			slug: 'basement-sessions',
-			directoryVisibility: 'hidden' as const,
-			bio: 'We keep to ourselves — hidden from the directory.',
-			hometown: pick(HOMETOWNS)
+			band: {
+				name: 'Basement Sessions',
+				slug: 'basement-sessions',
+				bio: 'We keep to ourselves — hidden from the directory.'
+			},
+			entry: { visibility: 'hidden' as const, hometown: pick(HOMETOWNS) }
 		},
 		{
-			name: 'The Quiet Regulars',
-			slug: 'the-quiet-regulars',
-			directoryVisibility: 'members' as const,
-			bio: 'Members-only listing: visible to logged-in members, not the public.',
-			hometown: pick(HOMETOWNS),
-			foundedYear: String(randomInt(2015, 2024))
+			band: {
+				name: 'The Quiet Regulars',
+				slug: 'the-quiet-regulars',
+				bio: 'Members-only listing: visible to logged-in members, not the public.'
+			},
+			entry: {
+				visibility: 'members' as const,
+				hometown: pick(HOMETOWNS),
+				foundedYear: String(randomInt(2015, 2024))
+			}
 		}
 	];
 	for (let i = 0; i < onboardingStates.length; i++) {
 		const owner = users[(BAND_NAMES.length + 1 + i) % users.length];
 		const b = await insertBandWithOwner(
-			{ ownerId: owner.id, ...onboardingStates[i] },
+			{ ownerId: owner.id, ...onboardingStates[i].band },
 			owner.id,
 			pick(BAND_POSITIONS)
 		);
 		bands.push(b);
+		pendingEntries.set(b.id, onboardingStates[i].entry);
 	}
 
 	const deactivatedOwner = users[BAND_NAMES.length % users.length];
@@ -4240,20 +4280,12 @@ async function seedSuggestions(users: any[], adminUser: any) {
 async function seedDirectoryEntries() {
 	console.log('Seeding directory entries...');
 
+	// Identity and timestamps still come off the subject; everything the listing
+	// owns comes from `pendingEntries`, because phase 3c drops those columns.
 	const users = await db
 		.select({
 			id: user.id,
 			name: user.name,
-			bio: user.bio,
-			tagline: user.tagline,
-			hometown: user.hometown,
-			links: user.links,
-			directoryVisibility: user.directoryVisibility,
-			directoryContact: user.directoryContact,
-			lookingForBand: user.lookingForBand,
-			availableForHire: user.availableForHire,
-			teachesLessons: user.teachesLessons,
-			openToCollaboration: user.openToCollaboration,
 			createdAt: user.createdAt,
 			updatedAt: user.updatedAt,
 			deletedAt: user.deletedAt
@@ -4265,14 +4297,7 @@ async function seedDirectoryEntries() {
 			id: group.id,
 			name: group.name,
 			bio: group.bio,
-			tagline: group.tagline,
-			hometown: group.hometown,
-			foundedYear: group.foundedYear,
 			avatarKey: group.avatarKey,
-			links: group.links,
-			directoryVisibility: group.directoryVisibility,
-			directoryContact: group.directoryContact,
-			lookingForMembers: group.lookingForMembers,
 			createdAt: group.createdAt,
 			updatedAt: group.updatedAt,
 			deletedAt: group.deletedAt
@@ -4282,43 +4307,51 @@ async function seedDirectoryEntries() {
 	// `deletedAt` is carried, not reset: an entry that did not follow its
 	// deactivated band would put that band back in the public directory.
 	const entries = [
-		...groups.map((g) => ({
-			id: randomUUID(),
-			groupId: g.id,
-			name: g.name,
-			bio: g.bio,
-			tagline: g.tagline,
-			hometown: g.hometown,
-			foundedYear: g.foundedYear,
-			avatarKey: g.avatarKey,
-			links: g.links as ProfileLink[] | null,
-			visibility: g.directoryVisibility as DirectoryVisibility,
-			contact: g.directoryContact as DirectoryContact,
-			lookingFor: g.lookingForMembers ? ('members' as const) : null,
-			createdAt: g.createdAt,
-			updatedAt: g.updatedAt,
-			deletedAt: g.deletedAt
-		})),
+		...groups.map((g) => {
+			const p = pendingEntries.get(g.id) ?? {};
+			return {
+				id: randomUUID(),
+				groupId: g.id,
+				name: g.name,
+				// `bio` is a copy that stays canonical on `group`, so it still
+				// comes from there. Everything else below moved.
+				bio: g.bio,
+				tagline: p.tagline ?? null,
+				hometown: p.hometown ?? null,
+				foundedYear: p.foundedYear ?? null,
+				avatarKey: g.avatarKey,
+				links: p.links ?? null,
+				visibility: p.visibility ?? ('public' as DirectoryVisibility),
+				contact: p.contact ?? null,
+				lookingFor: p.lookingFor ?? null,
+				createdAt: g.createdAt,
+				updatedAt: g.updatedAt,
+				deletedAt: g.deletedAt
+			};
+		}),
 		// `avatarKey` is deliberately null for a member: their avatar stays
 		// `user.image`, which may hold a full OAuth URL rather than an R2 key.
-		...users.map((u) => ({
-			id: randomUUID(),
-			userId: u.id,
-			name: u.name,
-			bio: u.bio,
-			tagline: u.tagline,
-			hometown: u.hometown,
-			links: u.links as ProfileLink[] | null,
-			visibility: u.directoryVisibility as DirectoryVisibility,
-			contact: u.directoryContact as DirectoryContact,
-			lookingFor: u.lookingForBand ? ('band' as const) : null,
-			availableForHire: u.availableForHire,
-			teachesLessons: u.teachesLessons,
-			openToCollaboration: u.openToCollaboration,
-			createdAt: u.createdAt,
-			updatedAt: u.updatedAt,
-			deletedAt: u.deletedAt
-		}))
+		...users.map((u) => {
+			const p = pendingEntries.get(u.id) ?? {};
+			return {
+				id: randomUUID(),
+				userId: u.id,
+				name: u.name,
+				bio: p.bio ?? null,
+				tagline: p.tagline ?? null,
+				hometown: p.hometown ?? null,
+				links: p.links ?? null,
+				visibility: p.visibility ?? ('members' as DirectoryVisibility),
+				contact: p.contact ?? null,
+				lookingFor: p.lookingFor ?? null,
+				availableForHire: p.availableForHire ?? false,
+				teachesLessons: p.teachesLessons ?? false,
+				openToCollaboration: p.openToCollaboration ?? false,
+				createdAt: u.createdAt,
+				updatedAt: u.updatedAt,
+				deletedAt: u.deletedAt
+			};
+		})
 	];
 
 	// 19 columns × the default batch of 10 is 190 bound parameters, over D1's

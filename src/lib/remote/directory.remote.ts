@@ -361,10 +361,19 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			alias: groupMember.alias,
 			userName: user.name,
 			userImage: user.image,
-			userVisibility: user.directoryVisibility
+			// The member's OWN directory visibility, which decides whether they are
+			// shown as a locked row on a public band page. It moved to the listing
+			// table in phase 3a; reading `user.directory_visibility` here meant this
+			// gate was consulting a column nothing had written since, so a member
+			// who changed their visibility kept the old answer.
+			//
+			// LEFT, and a missing entry falls back to 'members' below — the safer
+			// direction, since 'members' hides the row from the public page.
+			userVisibility: directoryEntry.visibility
 		})
 		.from(groupMember)
 		.innerJoin(user, eq(user.id, groupMember.userId))
+		.leftJoin(directoryEntry, eq(directoryEntry.userId, user.id))
 		.where(and(eq(groupMember.groupId, row.id), eq(groupMember.status, 'active')))
 		.orderBy(
 			sql`case ${groupMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
@@ -479,9 +488,9 @@ export const getMyDirectoryVisibility = query(z.void(), async () => {
 	if (!locals.user) return null;
 	try {
 		const [row] = await db
-			.select({ directoryVisibility: user.directoryVisibility })
-			.from(user)
-			.where(eq(user.id, locals.user.id));
+			.select({ directoryVisibility: directoryEntry.visibility })
+			.from(directoryEntry)
+			.where(eq(directoryEntry.userId, locals.user.id));
 		return row?.directoryVisibility ?? null;
 	} catch (err) {
 		captureException(err);

@@ -672,8 +672,7 @@ capitalization at the lower of the organisation's own policy or **$10,000**,
 raised from $5,000 in the 2024 revision of 2 CFR 200.
 
 **Phase 4 — attached resources. ✅ Shipped.** Manuals, tutorials and damage
-reports.
-Its value still depends on members scanning tags, and no physical tag has been
+reports. Its value still depends on members scanning tags, and no physical tag has been
 printed yet — so the reader may not arrive for a while. Both halves were built
 rather than betting on which matters more, since the plumbing is shared and the
 guess was not worth making.
@@ -689,7 +688,8 @@ Three seams, all of which held:
 - **A damage report is a ledger entry**, not a form system: a condition change
   plus a `repair_out` movement carrying the note. What it adds is a member-facing
   entry point and photos.
-  Built as described below. Two notes from the build:
+
+Two notes from the build:
 
 **The type system caught what a reviewer would not have.**
 `media-sweep-service.ts` keys its `PARENT_TABLES` map with
