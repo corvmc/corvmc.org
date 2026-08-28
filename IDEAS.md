@@ -130,9 +130,67 @@ A regional music calendar with three event layers: venue events auto-populated f
 
 **Progress:** Phases 1 and 2 shipped. Phase 1 made `/events` a unified gig guide: next-3 CMC hero posters plus a poster-forward list of CMC and member-band events, a compact mini-calendar date-jumper, and band events rendering on `/events/[id]` with band attribution (`docs/specs/shipped/community-calendar-spec.md`). Phase 2 added the third layer the extension point was left for — members author `source='community'` listings for off-site shows, publishing directly until staff uphold a report against them, after which their listings queue for review; anyone with no account can send an "Event Tip" through the contact form into the staff inbox. Cancelled events now stay on the guide marked cancelled instead of vanishing (`docs/specs/shipped/community-events-spec.md`). Still to come: partner feed imports and `.ics`/RSS syndication (no calendar UI package was needed — built on the already-installed `@internationalized/date`).
 
+### Staff Events: Productions and Calendar
+
+`/staff/events` is two jobs on one page. **Moderating** is reactive: a member or band posts a show,
+almost all go straight to the public guide untouched, but a member whose standing is flagged has
+theirs held at `pending_review` and staff get pinged. The questions are fixed — what is this, who's
+behind it, is anything wrong, is it already on the calendar — and the work is done when the queue is
+empty. **Running a production** is the opposite shape: nobody pings you, one show is touched
+repeatedly over weeks, and the characteristic failure is something quietly missing — no room held,
+no poster, no volunteers — until it's too late to fix.
+
+One page can't be shaped for both. Today it toggles between them with a `TabBar` and a source
+`Select`, and the detail page carries every card for every source: a community listing at another
+venue still renders "Space Reservation: no space held" and a "Volunteer Shifts: + schedule one" form
+for a show CMC neither produces nor staffs.
+
+The axis is **work versus publicity**. `/staff/events` becomes **Productions** — `source='cmc'` at
+every status, the surface where a show is built: drafts, the room, the ticket ledger, the check-in
+door. A new `/staff/calendar` is the staff's view of the public gig guide — **every** source,
+public statuses plus `pending_review`, forward-chronological, with the moderation actions on each
+row and a **Posted by** column naming whoever is accountable. A CMC show appears on both, in two
+roles; neither page is a superset of the other, since Productions holds drafts the Calendar must
+never show.
+
+Splitting the moderation half by _source_ was the first design and it was wrong, because it answers
+a question moderators don't ask. The clincher is duplicates: `checkForDuplicate`'s own comment calls
+two people posting the same gig "the characteristic failure of a community calendar" and names
+moderation as the only backstop — yet `findDuplicateListing` returns null unless the caller is the
+listing's own author, so **staff have no duplicate detection at all**. The duplicate is frequently
+one of our own shows, re-posted by a member who didn't know we had it listed. A source-scoped page
+structurally cannot show that; a calendar shows it by construction.
+
+The detail page stays at **one route**. `entity-href.ts` sends every event ref to
+`/staff/events/{id}` and `EventRef` carries no `source`, so two detail routes would mean adding
+`source` to every event-ref producer. Gating the production cards on `source === 'cmc'` removes the
+dead UI for a fraction of that cost.
+
+**Progress:** Built. `/staff/events` is Productions and `/staff/calendar` is the staff gig guide;
+the shared detail page gates its production cards on source. No schema change, and no change to
+`listAll` or `getStaffEvents` either — Productions calls the existing query with `source: 'cmc'`,
+and the Calendar got its own read modelled on the gig guide's. Design rationale, including the
+axis that was rejected, is archived in `docs/specs/shipped/staff-events-split-spec.md`; behaviour
+lives in `docs/development/business-workflows.md` §5. Groups phase 9 will add a **fourth**
+`eventSources` value, `'group'`, for club sessions rather than renaming an existing one — those
+reach the Calendar for free when they publish, while their work-side home stays open for the
+Groups panel design to settle.
+
 ### Club Management
 
 Tools for member-run clubs (jazz night, open mic, songwriter circle, etc.). Each club gets a dedicated space for managing a recurring event series, a member roster, and a simplified email/announcement system for communicating with club members. Club organizers can also share resources (files, links, lesson materials) with their members, similar to the teacher panel. Builds on top of the existing event and email marketing infrastructure without requiring club organizers to use the full staff tools.
+
+**Progress:** Being built as the **Groups** module (`docs/specs/groups-spec.md`) — the Real Book
+Club jazz jam is that spec's driving case. It splits today's `band` table by **purpose** into four:
+`group` (kind, roster, announcements, documents, events), `directory_entry` (the public listing,
+shared with members), `band_site` (the premium microsite), and `contact` (private details of people
+who are not members). Clubs and committees reuse the roster machinery without inheriting band-shaped
+columns. Three kinds: `band | club | committee`. Bands stay member self-service; clubs and
+committees are staff-created, which is what makes free room time safe to grant by kind — a program
+gets the room through its event rather than a credit balance, so the abuse case is closed
+structurally instead of by a check someone has to remember. Phases 0–2 and 3a have landed (the
+`group` table, `band_member` → `group_member`, `directory_entry`); club-facing behaviour arrives at
+phase 5 (the `/group/{slug}` panel) and phase 9 (group events).
 
 ### Poster Art Repository
 

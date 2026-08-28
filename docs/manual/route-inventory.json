@@ -236,6 +236,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/calendar",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/closures",
 		"panel": "staff"
 	},

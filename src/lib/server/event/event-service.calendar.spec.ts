@@ -54,7 +54,11 @@ vi.mock('$lib/server/reservation/conflict-service', () => ({ hasConflict: vi.fn(
 vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
 vi.mock('$lib/server/storage', () => ({ uploadFile: vi.fn(), deleteObject: vi.fn() }));
 
-import { listPublicCalendarEvents, listPublicUpcomingEvents } from './event-service';
+import {
+	listPublicCalendarEvents,
+	listPublicUpcomingEvents,
+	listStaffCalendar
+} from './event-service';
 
 /**
  * Depth-first search of a drizzle SQL tree for a bound parameter value.
@@ -161,5 +165,51 @@ describe('listPublicUpcomingEvents', () => {
 	it('applies no source filter, so band gigs are in the gig guide', async () => {
 		await listPublicUpcomingEvents(windowStart, { limit: 20, offset: 0 });
 		expect(containsParam(capturedWhere, 'cmc')).toBe(false);
+	});
+});
+
+/**
+ * The staff calendar. Same window as the gig guide, but it also carries the
+ * rows asking to join it, which is what the moderation surface is for.
+ */
+describe('listStaffCalendar', () => {
+	it('reads every source, so a duplicate of a CMC show is visible beside it', async () => {
+		await listStaffCalendar(windowStart, { statuses: ['pending_review'] });
+		expect(containsParam(capturedWhere, 'cmc')).toBe(false);
+		expect(containsParam(capturedWhere, 'band')).toBe(false);
+	});
+
+	it('narrows by source when the filter asks it to', async () => {
+		await listStaffCalendar(windowStart, {
+			statuses: ['published'],
+			sources: ['community']
+		});
+		expect(containsParam(capturedWhere, 'community')).toBe(true);
+	});
+
+	/**
+	 * The badge and the queue have to agree. `countPendingSubmissions` counts
+	 * every `pending_review` row with no date filter, so flooring them here would
+	 * strand a listing whose date passed while it waited — counted in the sidebar,
+	 * absent from the only page that can clear it.
+	 */
+	it('does not floor pending rows by date, so a stale listing stays reachable', async () => {
+		await listStaffCalendar(windowStart, { statuses: ['pending_review'] });
+		expect(containsParam(capturedWhere, windowStart)).toBe(true);
+		// The floor is there, but guarded by the public-status test rather than
+		// applied to every row.
+		expect(containsParam(capturedWhere, 'published')).toBe(true);
+		expect(containsParam(capturedWhere, 'cancelled')).toBe(true);
+	});
+
+	/**
+	 * Two guards, and this is the second. The remote's Zod enum omits `draft`,
+	 * but the status list still arrives from the caller — a member's private
+	 * working copy must not become staff-visible because someone widened an enum.
+	 */
+	it('excludes community drafts even when draft is passed explicitly', async () => {
+		await listStaffCalendar(windowStart, { statuses: ['draft'] });
+		expect(containsParam(capturedWhere, 'community')).toBe(true);
+		expect(containsParam(capturedWhere, 'draft')).toBe(true);
 	});
 });

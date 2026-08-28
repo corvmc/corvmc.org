@@ -965,7 +965,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.submitterName} submitted "${event.eventTitle}"`,
 					body: 'A community listing is waiting for review',
-					href: '/staff/events?status=pending_review'
+					href: '/staff/calendar'
 				});
 			} catch (err) {
 				captureException(err, {

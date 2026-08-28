@@ -2,7 +2,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
+	import { EntityIdentity } from '$lib/components/ui/entity';
 	import DataList from '$lib/components/ui/DataList.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import { rowLink } from '$lib/actions/row-link';
@@ -16,32 +16,36 @@
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { getStaffEvents } from '$lib/remote/events.remote';
-	import PendingReviewBadge from './PendingReviewBadge.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 
-	// Read once, at mount: the notification a staffer follows links straight to
-	// ?status=pending_review, and landing on the All tab would make that link a
-	// lie.
+	/**
+	 * Productions: the shows CMC puts on, at every stage of putting them on.
+	 *
+	 * Scoped to `source: 'cmc'` and reading every status, including `draft` —
+	 * this is the surface where a show is *built*, so a half-written one belongs
+	 * here and nowhere else. What the public can see, across every source, is
+	 * `/staff/calendar`; a published CMC show is on both pages, in two roles.
+	 *
+	 * Naming the source rather than excluding the others is deliberate. An
+	 * exclusion filter silently adopts every source added later — Groups adds a
+	 * fourth for club sessions — where naming it means a new source goes visibly
+	 * missing instead, which is the failure you want.
+	 */
 	const initial = new URLSearchParams(pageState.url.search);
 
 	let page = $state(1);
 	let showCreateModal = $state(false);
-	let source = $state<'cmc' | 'band' | 'community' | ''>(
-		(initial.get('source') as 'cmc' | 'band' | 'community' | null) ?? ''
-	);
-	let view = $state<'all' | 'review'>(
-		initial.get('status') === 'pending_review' ? 'review' : 'all'
+	let status = $state<'draft' | 'published' | 'cancelled' | ''>(
+		(initial.get('status') as 'draft' | 'published' | 'cancelled' | null) ?? ''
 	);
 
-	// Writes the URL, never state — the tab above stays the source of truth.
+	// Writes the URL, never state — the filter above stays the source of truth.
 	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
 	// rewrites the address bar, and the router overwrites that entry on the next
-	// navigation, so back from an event landed on the wrong tab.
+	// navigation, so back from an event landed on the wrong filter.
 	$effect(() => {
 		const pairs: [string, string][] = [];
-		if (view === 'review') pairs.push(['status', 'pending_review']);
-		if (source) pairs.push(['source', source]);
+		if (status) pairs.push(['status', status]);
 		if (page > 1) pairs.push(['page', String(page)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
@@ -51,20 +55,12 @@
 		}
 	});
 
-	// The review queue is exactly `pending_review`, never `draft` — a member's
-	// unfinished listing is not staff's to read, and listAll holds those back.
-	// The page's one query, and still a promise rather than an await: `DataList` consumes it with
-	// `{#await}` so a filter keystroke does not suspend the page into the layout boundary's
-	// pending snippet. The review count moved into `PendingReviewBadge`.
-	const result = $derived(
-		getStaffEvents({
-			source: source || undefined,
-			status: view === 'review' ? 'pending_review' : undefined,
-			page
-		})
-	);
+	// The page's one query, and still a promise rather than an await: `DataList`
+	// consumes it with `{#await}` so a filter change does not suspend the page
+	// into the layout boundary's pending snippet.
+	const result = $derived(getStaffEvents({ source: 'cmc', status: status || undefined, page }));
 
-	type Event = Awaited<typeof result>['rows'][number];
+	type Production = Awaited<typeof result>['rows'][number];
 
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
@@ -74,44 +70,28 @@
 			.filter(Boolean);
 	}
 
-	function dayLabel(e: Event): string {
+	function dayLabel(e: Production): string {
 		return formatDate(e.startsAt);
 	}
 
 	function clearFilters() {
-		source = '';
+		status = '';
 		page = 1;
 	}
 </script>
 
-{#snippet reviewBadge()}
-	<PendingReviewBadge />
-{/snippet}
-
-<PageHeader title="Events">
+<PageHeader title="Productions" subtitle="Staff">
 	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>New Event</Button>
 </PageHeader>
 <PageContent>
 	<CreateEventModal bind:open={showCreateModal} />
 
-	<TabBar
-		tabs={[
-			{ key: 'all', label: 'All events' },
-			{ key: 'review', label: 'Needs review', badge: reviewBadge }
-		]}
-		active={view}
-		onchange={(k) => {
-			view = k as 'all' | 'review';
-			page = 1;
-		}}
-	/>
-
-	<FilterBar activeCount={source ? 1 : 0} onclear={clearFilters}>
-		<Select size="sm" aria-label="Source" bind:value={source} onchange={() => (page = 1)}>
-			<option value="">All events</option>
-			<option value="cmc">CMC events</option>
-			<option value="band">Band events</option>
-			<option value="community">Community listings</option>
+	<FilterBar activeCount={status ? 1 : 0} onclear={clearFilters}>
+		<Select size="sm" aria-label="Status" bind:value={status} onchange={() => (page = 1)}>
+			<option value="">Every status</option>
+			<option value="draft">Draft</option>
+			<option value="published">Published</option>
+			<option value="cancelled">Cancelled</option>
 		</Select>
 	</FilterBar>
 
@@ -122,9 +102,8 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Event</th>
-					<th class="col-support">Source</th>
 					<th class="col-support">Tags</th>
-					<th class="col-extra w-px">Space</th>
+					<th class="col-support w-px">Space</th>
 				{/snippet}
 
 				{#each events as e, idx (e.id)}
@@ -133,7 +112,7 @@
 					{#if label !== prevLabel}
 						<tr>
 							<td
-								colspan="5"
+								colspan="4"
 								class="bg-base-200 px-4 py-2 text-subtle font-semibold tracking-wide uppercase"
 							>
 								{label}
@@ -156,18 +135,6 @@
 								{/snippet}
 							</EntityIdentity>
 						</td>
-						<!--
-							The managing band, which used to link to the *public* directory
-							from inside the staff panel — the split `entityHref` exists to
-							close. The collective's own shows have no band to name.
-						-->
-						<td class="col-support">
-							{#if e.source === 'band'}
-								<EntityChip ref={e.band} />
-							{:else}
-								<span class="text-muted">CMC</span>
-							{/if}
-						</td>
 						<td class="col-support">
 							<div class="flex flex-wrap gap-1">
 								{#each parseTags(e.tags) as tag (tag)}
@@ -175,7 +142,13 @@
 								{/each}
 							</div>
 						</td>
-						<td class="col-extra w-px">
+						<!--
+							Promoted from `col-extra` to `col-support`: an unheld room is the
+							characteristic failure of a production, and hiding it below 768px
+							is how a calendar of shows once reached production with none
+							booked. The Source column it replaces only ever said "CMC".
+						-->
+						<td class="col-support w-px">
 							{#if e.reservationId}
 								<Badge size="sm" variant="info">Reserved</Badge>
 							{:else}

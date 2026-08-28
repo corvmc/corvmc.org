@@ -369,7 +369,12 @@ export const rejectListing = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getPendingSubmissions().refresh();
+		// Only the badge is refreshed here. `getPendingSubmissions()` used to be,
+		// and repainted nothing — no route renders it. `getStaffCalendar` would be
+		// no better: it is keyed on its filters, so refreshing one argument shape
+		// leaves the shape the page actually asked for untouched. The list repaints
+		// from the caller's `invalidateAll()`, which is what the Turn down action
+		// on the detail page already does.
 		void getStaffLayout().refresh();
 		return { success: true };
 	}

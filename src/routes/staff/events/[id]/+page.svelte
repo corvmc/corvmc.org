@@ -87,8 +87,20 @@
 	const evt = $derived(data.event);
 	const isBandEvent = $derived(evt.source === 'band');
 	const isCommunityEvent = $derived(evt.source === 'community');
-	// CMC only sells shows CMC produces — see the rule in event-service.update().
-	const cmcCanSell = $derived(evt.source === 'cmc');
+	/**
+	 * Is this show ours to run?
+	 *
+	 * One page serves every source, so this gates the half of it that only means
+	 * something for a show CMC produces: the room, the volunteer shifts, the
+	 * poster upload, and selling tickets through our own checkout. A community
+	 * listing at another venue was rendering all of it — a "no space held" card
+	 * and a "schedule a shift" form for a show CMC neither produces nor staffs.
+	 *
+	 * It gates availability, never a value. A CMC show at an outside venue is
+	 * still `source: 'cmc'`, so it is offered the ticketing toggle and simply
+	 * leaves it off, with `externalTicketUrl` carrying the venue's own ticketing.
+	 */
+	const isProduction = $derived(evt.source === 'cmc');
 	const liveVolunteerRoles = $derived(volunteerRoles.filter((r) => r.isActive));
 
 	/**
@@ -174,7 +186,7 @@
 		// stale flag — `update()` rejects enabling ticketing on a band event but
 		// allows disabling it. The price is untouched: a band gig legitimately has
 		// one for the door or an outside seller.
-		editTicketingEnabled = cmcCanSell ? evt.ticketingEnabled : false;
+		editTicketingEnabled = isProduction ? evt.ticketingEnabled : false;
 		editTicketPriceDollars = evt.ticketPrice ? formatDollars(evt.ticketPrice) : '';
 		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
 
@@ -318,7 +330,9 @@
 	}
 </script>
 
-<PageHeader title={evt.title} backHref="/staff/events">
+<!-- Back where this row came from: a production is on /staff/events, and
+     everything else is only ever reachable from the calendar. -->
+<PageHeader title={evt.title} backHref={isProduction ? '/staff/events' : '/staff/calendar'}>
 	<div class="flex items-center gap-2">
 		{#if evt.ticketingEnabled}
 			<Button href="/staff/events/{evt.id}/check-in" variant="ghost" size="sm">Check-in</Button>
@@ -549,7 +563,7 @@
 							<!-- Selling through our checkout is the one thing a band gig cannot
 							     do: `update()` throws on it, so offering the toggle here would
 							     only produce a failed save. The band's own link takes the money. -->
-							{#if !cmcCanSell}
+							{#if !isProduction}
 								<p class="text-muted">
 									CMC doesn't sell tickets for shows it isn't producing — the price above is what
 									attendees pay at the door or through the {isBandEvent ? "band's" : 'listed'} ticket
@@ -733,19 +747,39 @@
 		</svelte:boundary>
 	{/if}
 
-	{#if isCommunityEvent}
-		<!-- Enough to judge the listing without leaving the page: who posted it,
-		     and whether they're here because of a past problem. -->
-		<InfoCard title="Submitted by">
-			<p class="flex flex-wrap items-center gap-2 text-sm">
-				<a href={resolve(`/staff/users/${data.submitterId}`)} class="link font-medium">
-					{data.creator?.name ?? 'Unknown member'}
-				</a>
-				{#if data.creator?.email}
-					<span class="opacity-60">{data.creator.email}</span>
-				{/if}
-			</p>
-			{#if data.submitterStanding && data.submitterStanding.status !== 'none'}
+	{#if !isProduction}
+		<!--
+			Who is accountable for this, which is a different record per source: a
+			band manages its own gig, a member owns their listing. Both used to be
+			said in different places and different weights — a card for the member,
+			a line buried inside Event Details for the band — which is backwards on
+			a page whose job is judging the thing.
+
+			Enough to judge it without leaving the page, including whether the
+			person is here because of a past problem.
+		-->
+		<InfoCard title="Posted by">
+			{#if isBandEvent}
+				<p class="flex flex-wrap items-center gap-2 text-sm">
+					{#if data.bandRef}
+						<EntityChip ref={data.bandRef} />
+					{:else}
+						<span class="font-medium">a band</span>
+					{/if}
+				</p>
+			{:else}
+				<p class="flex flex-wrap items-center gap-2 text-sm">
+					<a href={resolve(`/staff/users/${data.submitterId}`)} class="link font-medium">
+						{data.creator?.name ?? 'Unknown member'}
+					</a>
+					{#if data.creator?.email}
+						<span class="opacity-60">{data.creator.email}</span>
+					{/if}
+				</p>
+			{/if}
+			<!-- Community only: standing is a member-level fact, and whether a band
+			     can be flagged the same way is a different axis. -->
+			{#if isCommunityEvent && data.submitterStanding && data.submitterStanding.status !== 'none'}
 				<Alert type="warning" class="mt-2">
 					This member's listings are checked before they publish, after a report was upheld against
 					one of them.
@@ -759,16 +793,6 @@
 
 	<!-- Event info card -->
 	<InfoCard title="Event Details">
-		{#if evt.source === 'band'}
-			<p class="mb-2 flex items-center gap-2 text-sm">
-				Posted by
-				{#if data.bandRef}
-					<EntityChip ref={data.bandRef} />
-				{:else}
-					<span class="font-medium">a band</span>
-				{/if}
-			</p>
-		{/if}
 		<p class="text-xl font-medium">{fullDate(evt.startsAt)}</p>
 		<p class="opacity-70">
 			{#if evt.doorsAt}
@@ -896,7 +920,12 @@
 			<p class="text-sm opacity-50">No poster uploaded</p>
 		{/if}
 
-		{#if evt.status !== 'cancelled'}
+		<!--
+			The image shows for every source; the upload does not. A listing's art
+			belongs to whoever posted it, and the moderation remedy for bad art is
+			Turn down or Unpublish, both already in the header.
+		-->
+		{#if isProduction && evt.status !== 'cancelled'}
 			<div class="mt-3">
 				<input
 					type="file"
@@ -909,109 +938,122 @@
 	</InfoCard>
 
 	<!--
-		Linked reservation. Always rendered: omitting the card when nothing is held
-		made "no space held" indistinguishable from "this page doesn't show holds",
-		which is how a whole calendar of events reached production with none.
+		Linked reservation. Gated on source, and on nothing else: within a
+		production it is always rendered, because omitting the card when nothing is
+		held made "no space held" indistinguishable from "this page doesn't show
+		holds", which is how a whole calendar of events reached production with
+		none. A band gig or a community listing is at someone else's venue, so the
+		card had no question to answer there.
+
+		Note this deliberately gets one case wrong: a CMC show at an outside venue
+		still asks for a room that will never be held. Nothing on the record says
+		where a show is — `location` is free text — and the other failure is the
+		one that already happened.
 	-->
-	<InfoCard title="Space Reservation">
-		{#if data.linkedReservation}
-			<div class="flex items-center gap-3">
-				<StatusBadge status={data.linkedReservation.status} />
-				<span
-					>{formatTime(data.linkedReservation.startsAt)} – {formatTime(
-						data.linkedReservation.endsAt
-					)}</span
-				>
-			</div>
-			<div class="mt-2">
-				<a
-					href={resolve(`/staff/reservations/${data.linkedReservation.id}`)}
-					class="link text-sm link-primary"
-				>
-					View reservation →
-				</a>
-			</div>
-		{:else}
-			<p class="text-muted">
-				No space held for this event. Use Edit to reserve the practice space.
-			</p>
-		{/if}
-	</InfoCard>
+	{#if isProduction}
+		<InfoCard title="Space Reservation">
+			{#if data.linkedReservation}
+				<div class="flex items-center gap-3">
+					<StatusBadge status={data.linkedReservation.status} />
+					<span
+						>{formatTime(data.linkedReservation.startsAt)} – {formatTime(
+							data.linkedReservation.endsAt
+						)}</span
+					>
+				</div>
+				<div class="mt-2">
+					<a
+						href={resolve(`/staff/reservations/${data.linkedReservation.id}`)}
+						class="link text-sm link-primary"
+					>
+						View reservation →
+					</a>
+				</div>
+			{:else}
+				<p class="text-muted">
+					No space held for this event. Use Edit to reserve the practice space.
+				</p>
+			{/if}
+		</InfoCard>
+	{/if}
 
 	<!--
-		Volunteer staffing. Always rendered, for the same reason the Space
-		Reservation card above is: with the card hidden, "nobody is staffing this
-		show" and "this page doesn't track staffing" look identical, and the second
-		reading is how a calendar of events reaches production with nothing booked.
+		Volunteer staffing. Gated the same way, for the same reason: within a
+		production it is always rendered, because with the card hidden "nobody is
+		staffing this show" and "this page doesn't track staffing" look identical,
+		and the second reading is how a calendar of events reaches production with
+		nothing booked. CMC does not staff a show it isn't producing.
 	-->
-	<InfoCard title="Volunteer Shifts">
-		{#snippet header(title)}
-			<div class="flex items-center justify-between gap-2">
-				<CardTitle>{title}</CardTitle>
-				{#if liveVolunteerRoles.length > 0}
-					<Action
-						action={createShift}
-						label="Schedule a shift"
-						variant="ghost"
-						size="sm"
-						modalTitle="Schedule a shift for {evt.title}"
-						submitLabel="Create"
-						successToast="Shift scheduled"
-						onsuccess={() => getStaffEventPage(id).refresh()}
-					>
-						{#snippet form()}
-							<!--
+	{#if isProduction}
+		<InfoCard title="Volunteer Shifts">
+			{#snippet header(title)}
+				<div class="flex items-center justify-between gap-2">
+					<CardTitle>{title}</CardTitle>
+					{#if liveVolunteerRoles.length > 0}
+						<Action
+							action={createShift}
+							label="Schedule a shift"
+							variant="ghost"
+							size="sm"
+							modalTitle="Schedule a shift for {evt.title}"
+							submitLabel="Create"
+							successToast="Shift scheduled"
+							onsuccess={() => getStaffEventPage(id).refresh()}
+						>
+							{#snippet form()}
+								<!--
 								The event is the one thing this form already knows, so it is
 								locked rather than offered as a picker.
 							-->
-							<ShiftFormFields
-								form={createShift}
-								roles={liveVolunteerRoles}
-								bind:roleId={shiftRoleId}
-								lockedEvent={{ id: evt.id, title: evt.title }}
-								startsAt={shiftStart}
-								endsAt={shiftEnd}
-								capacity={shiftCapacity}
-							/>
-						{/snippet}
-					</Action>
-				{/if}
-			</div>
-		{/snippet}
+								<ShiftFormFields
+									form={createShift}
+									roles={liveVolunteerRoles}
+									bind:roleId={shiftRoleId}
+									lockedEvent={{ id: evt.id, title: evt.title }}
+									startsAt={shiftStart}
+									endsAt={shiftEnd}
+									capacity={shiftCapacity}
+								/>
+							{/snippet}
+						</Action>
+					{/if}
+				</div>
+			{/snippet}
 
-		{#if shifts.length === 0}
-			<EmptyState
-				title="No volunteer shifts"
-				description="Nobody is scheduled to work this show yet."
-			/>
-		{:else}
-			<Table>
-				{#snippet head()}
-					<th>Role</th>
-					<th class="whitespace-nowrap">When</th>
-					<th class="cell-num">Filled</th>
-				{/snippet}
+			{#if shifts.length === 0}
+				<EmptyState
+					title="No volunteer shifts"
+					description="Nobody is scheduled to work this show yet."
+				/>
+			{:else}
+				<Table>
+					{#snippet head()}
+						<th>Role</th>
+						<th class="whitespace-nowrap">When</th>
+						<th class="cell-num">Filled</th>
+					{/snippet}
 
-				{#each shifts as shift (shift.id)}
-					<tr class="hover">
-						<td class="cell-primary">
-							<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link font-medium"
-								>{shift.roleName}</a
-							>
-						</td>
-						<td class="whitespace-nowrap">
-							{formatDateShort(shift.startsAt)}, {formatTimeRange(shift.startsAt, shift.endsAt)}
-						</td>
-						<td class="cell-num">
-							<span class:text-warning={shift.claimed < shift.capacity}>
-								{shift.claimed}/{shift.capacity}
-							</span>
-						</td>
-					</tr>
-				{/each}
-			</Table>
-		{/if}
-	</InfoCard>
+					{#each shifts as shift (shift.id)}
+						<tr class="hover">
+							<td class="cell-primary">
+								<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link font-medium"
+									>{shift.roleName}</a
+								>
+							</td>
+							<td class="whitespace-nowrap">
+								{formatDateShort(shift.startsAt)}, {formatTimeRange(shift.startsAt, shift.endsAt)}
+							</td>
+							<td class="cell-num">
+								<span class:text-warning={shift.claimed < shift.capacity}>
+									{shift.claimed}/{shift.capacity}
+								</span>
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		</InfoCard>
+	{/if}
 
 	<!-- Creator -->
 	<InfoCard title="Created by">

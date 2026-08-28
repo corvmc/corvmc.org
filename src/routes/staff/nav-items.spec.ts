@@ -51,7 +51,7 @@ describe('activeNavKey', () => {
 		// Not a nav row of its own — it falls back to the section parent.
 		['/staff/volunteer/clearances', 'volunteer'],
 		['/staff/volunteer/shifts/abc', 'volunteer-shifts'],
-		['/staff/events/abc/check-in', 'events'],
+		['/staff/events/abc/check-in', 'productions'],
 		['/staff/inventory', 'equipment'],
 		['/staff/inventory/abc', 'equipment'],
 		['/staff/inventory/loans', 'equipment-loans'],

@@ -35,7 +35,7 @@ test.describe('staff sidebar', () => {
 		for (const title of [
 			'People',
 			'Space',
-			'Programs',
+			'Events',
 			'Moderation',
 			'Outreach',
 			'Money',

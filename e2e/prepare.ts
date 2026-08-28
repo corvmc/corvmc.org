@@ -42,6 +42,7 @@ import { seedReservationPayments } from './fixtures/seed-reservation-payments';
 import { seedVolunteering } from './fixtures/seed-volunteering';
 import { seedFeatureFlags } from './fixtures/seed-feature-flags';
 import { seedCommunityEvents } from './fixtures/seed-community-events';
+import { seedEventsSplit } from './fixtures/seed-events-split';
 import { seedSuggestions } from './fixtures/seed-suggestions';
 import { seedMessaging } from './fixtures/seed-messaging';
 import { seedInboxAwaiting } from './fixtures/seed-inbox-awaiting';
@@ -77,6 +78,8 @@ await seedStaffEvent();
 await seedReservationPayments();
 await seedVolunteering();
 await seedCommunityEvents();
+// Its own rows, because `community-events.e2e.ts` mutates the ones it seeds.
+await seedEventsSplit();
 // After the staff fixture: one seeded vote belongs to the staff user.
 await seedSuggestions();
 await seedMessaging();
