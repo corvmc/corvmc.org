@@ -36,6 +36,7 @@ export type StaffNavKey =
 	| 'closures'
 	| 'equipment'
 	| 'equipment-loans'
+	| 'inventory-acquisitions'
 	| 'inventory-restock'
 	| 'inventory-spend'
 	| 'inventory-compliance'
@@ -134,6 +135,11 @@ export const staffNavSections: StaffNavSection[] = [
 				href: '/staff/inventory',
 				children: [
 					{ key: 'equipment-loans', label: 'Loans', href: '/staff/inventory/loans' },
+					{
+						key: 'inventory-acquisitions',
+						label: 'Acquisitions',
+						href: '/staff/inventory/acquisitions'
+					},
 					{ key: 'inventory-restock', label: 'Restock', href: '/staff/inventory/restock' },
 					{ key: 'inventory-spend', label: 'Spend', href: '/staff/inventory/spend' },
 					{

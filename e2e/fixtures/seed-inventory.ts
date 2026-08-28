@@ -26,23 +26,48 @@ import {
 	stockMovement
 } from '../../src/lib/server/db/schema/inventory';
 import { helpArticle, helpCategory } from '../../src/lib/server/db/schema/help';
+import { account, user } from '../../src/lib/server/db/schema/authentication';
 import { withPlatformDb } from './platform-db';
+import { SEED_STAFF_ID } from './seed-staff-user';
+import { scryptHash } from './seed-pay-reservation';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
+/**
+ * Ids are real UUIDs, not readable slugs.
+ *
+ * `scheduleLoanSchema` validates `itemId` with `z.uuid()` and
+ * `checkoutLoanSchema` does the same for `assetId`, so a slug id fails
+ * validation — and because both are hidden inputs, the error has nowhere to
+ * render and the submit appears to do nothing at all. Every id in production
+ * comes from `crypto.randomUUID()`; a fixture that used slugs was testing a
+ * shape the app never sees.
+ */
 export const SEED_CATEGORY_ID = 'e2e-inv-category';
-export const SEED_LOCATION_ID = 'e2e-inv-location';
+export const SEED_LOCATION_ID = 'e2e010c0-0000-4000-8000-000000000001';
 
 /** A serialized item — one record per physical unit. */
-export const SEED_ITEM_ID = 'e2e-inv-item-amp';
+export const SEED_ITEM_ID = 'e2e0a11e-0000-4000-8000-000000000001';
 export const SEED_ITEM_NAME = 'E2E Test Amplifier';
-export const SEED_ASSET_ID = 'e2e-inv-asset-amp-1';
+export const SEED_ASSET_ID = 'e2e0a55e-0000-4000-8000-000000000001';
 export const SEED_ASSET_TAG = 'E2E-000001';
 
 /** A unit that arrives without a sticker, so tag binding has something to bind. */
-export const SEED_UNTAGGED_ASSET_ID = 'e2e-inv-asset-amp-2';
+export const SEED_UNTAGGED_ASSET_ID = 'e2e0a55e-0000-4000-8000-000000000002';
+
+/**
+ * A unit that is already in the shop, so "you cannot report this twice" has a
+ * subject of its own.
+ *
+ * It used to borrow the unit the damage-report test had just taken out of
+ * service, which made the two order-dependent: a retry of the reporting test
+ * starts from data the fixture never described, and this one then fails for a
+ * reason that has nothing to do with what it is checking.
+ */
+export const SEED_MAINTENANCE_ASSET_ID = 'e2e0a55e-0000-4000-8000-000000000006';
+export const SEED_MAINTENANCE_ASSET_TAG = 'E2E-000013';
 
 /** A bulk consumable — counted, and it does not come back. Well stocked. */
-export const SEED_CONSUMABLE_ID = 'e2e-inv-item-strings';
+export const SEED_CONSUMABLE_ID = 'e2e0a11e-0000-4000-8000-000000000002';
 export const SEED_CONSUMABLE_NAME = 'E2E Test Strings';
 export const SEED_CONSUMABLE_RECEIVED = 20;
 export const SEED_CONSUMABLE_REORDER_POINT = 4;
@@ -54,7 +79,7 @@ export const SEED_CONSUMABLE_REORDER_POINT = 4;
  * render their empty states in e2e — the populated path, which is the entire
  * feature, would go untested.
  */
-export const SEED_LOW_ID = 'e2e-inv-item-batteries';
+export const SEED_LOW_ID = 'e2e0a11e-0000-4000-8000-000000000003';
 export const SEED_LOW_NAME = 'E2E Test Batteries';
 export const SEED_LOW_RECEIVED = 6;
 export const SEED_LOW_CONSUMED = 4;
@@ -69,7 +94,7 @@ export const SEED_LOW_ON_HAND = SEED_LOW_RECEIVED - SEED_LOW_CONSUMED;
  * comfortably inside three years, and with most of the 125 days still to run.
  */
 export const SEED_DONATION_ID = 'e2e-inv-acq-donation';
-export const SEED_DISPOSED_ASSET_ID = 'e2e-inv-asset-donated';
+export const SEED_DISPOSED_ASSET_ID = 'e2e0a55e-0000-4000-8000-000000000003';
 export const SEED_DISPOSED_ASSET_TAG = 'E2E-000009';
 
 /**
@@ -78,8 +103,61 @@ export const SEED_DISPOSED_ASSET_TAG = 'E2E-000009';
  * flagging this would be the false positive the narrowing exists to remove.
  */
 export const SEED_UNACKED_DONATION_ID = 'e2e-inv-acq-donation-unacked';
-export const SEED_UNACKED_ASSET_ID = 'e2e-inv-asset-unacked';
+export const SEED_UNACKED_ASSET_ID = 'e2e0a55e-0000-4000-8000-000000000004';
 export const SEED_UNACKED_ASSET_TAG = 'E2E-000011';
+
+/**
+ * A third donated disposal with no signed 8283 — **owned by the test that signs
+ * one**, which is why it is not the row above.
+ *
+ * The signing test mutates the acquisition, and a spec that mutates a seeded row
+ * owns it: sharing `SEED_UNACKED_DONATION_ID` would leave the "raises nothing"
+ * assertion passing or failing depending on which test ran first, and failing
+ * differently on a retry that starts from data the fixture never described.
+ */
+export const SEED_SIGN_DONATION_ID = 'e2e-inv-acq-donation-to-sign';
+export const SEED_SIGN_ASSET_ID = 'e2e0a55e-0000-4000-8000-000000000005';
+export const SEED_SIGN_ASSET_TAG = 'E2E-000012';
+export const SEED_SIGN_DONOR = 'E2E Signable Donor';
+
+/**
+ * A shop trip somebody fronted and has not been paid back for. Owned by the
+ * reimbursement test, which settles it.
+ */
+/**
+ * A member who can sign in, so the loan lifecycle can be driven from both
+ * sides. The staff fixture's member has no credential row — only its staff user
+ * gets a password — and the member half of this flow needs a real session.
+ */
+export const SEED_LOAN_MEMBER_ID = 'e2e-inv-loan-member';
+export const SEED_LOAN_MEMBER_EMAIL = 'e2e.borrower@example.com';
+export const SEED_LOAN_MEMBER_PASSWORD = 'e2e-password-123';
+export const SEED_LOAN_MEMBER_NAME = 'E2E Borrower';
+
+/**
+ * One loan per mutating test, and one unit per loan that moves stock.
+ *
+ * A spec that mutates a seeded row owns that row. Sharing one loan across the
+ * schedule / checkout / return tests would make them order-dependent, and a
+ * retry then starts from a state the fixture never described — failing for a
+ * reason unrelated to what it checks.
+ */
+export const SEED_SCHEDULE_LOAN_ID = 'e2e010a4-0000-4000-8000-000000000001';
+export const SEED_CHECKOUT_LOAN_ID = 'e2e010a4-0000-4000-8000-000000000002';
+export const SEED_CHECKOUT_ASSET_ID = 'e2e0a55e-0000-4000-8000-000000000007';
+export const SEED_CHECKOUT_ASSET_TAG = 'E2E-000014';
+export const SEED_RETURN_LOAN_ID = 'e2e010a4-0000-4000-8000-000000000003';
+export const SEED_RETURN_ASSET_ID = 'e2e0a55e-0000-4000-8000-000000000008';
+export const SEED_RETURN_ASSET_TAG = 'E2E-000015';
+export const SEED_CANCEL_LOAN_ID = 'e2e010a4-0000-4000-8000-000000000004';
+/** The daily rate the returned loan was checked out at, in cents. */
+export const SEED_RETURN_DAILY_RATE = 500;
+/** Days the returned loan has been out, so the charge is predictable. */
+export const SEED_RETURN_DAYS_OUT = 3;
+
+export const SEED_OWED_ACQUISITION_ID = 'e2e-inv-acq-owed';
+export const SEED_OWED_SUPPLIER = 'E2E Corner Music';
+export const SEED_OWED_CENTS = 4_800;
 
 /** A published how-to linked to the serialized item, for the resources panel. */
 export const SEED_ARTICLE_ID = 'e2e-inv-article';
@@ -91,7 +169,17 @@ const ASSET_IDS = [
 	SEED_ASSET_ID,
 	SEED_UNTAGGED_ASSET_ID,
 	SEED_DISPOSED_ASSET_ID,
-	SEED_UNACKED_ASSET_ID
+	SEED_UNACKED_ASSET_ID,
+	SEED_SIGN_ASSET_ID,
+	SEED_MAINTENANCE_ASSET_ID,
+	SEED_CHECKOUT_ASSET_ID,
+	SEED_RETURN_ASSET_ID
+];
+const LOAN_IDS = [
+	SEED_SCHEDULE_LOAN_ID,
+	SEED_CHECKOUT_LOAN_ID,
+	SEED_RETURN_LOAN_ID,
+	SEED_CANCEL_LOAN_ID
 ];
 const ITEM_IDS = [SEED_ITEM_ID, SEED_CONSUMABLE_ID, SEED_LOW_ID];
 
@@ -115,12 +203,21 @@ export async function seedInventory(): Promise<void> {
 	await withPlatformDb(async (db) => {
 		// Clean slate, children first — FKs may be enforced on local D1.
 		await db.delete(stockMovement).where(inArray(stockMovement.itemId, ITEM_IDS));
+		await db.delete(inventoryLoan).where(inArray(inventoryLoan.id, LOAN_IDS));
 		await db.delete(inventoryLoan).where(inArray(inventoryLoan.itemId, ITEM_IDS));
+		await db.delete(account).where(eq(account.userId, SEED_LOAN_MEMBER_ID));
+		await db.delete(user).where(eq(user.id, SEED_LOAN_MEMBER_ID));
 		await db.delete(acquisitionLine).where(inArray(acquisitionLine.itemId, ITEM_IDS));
 		await db
 			.delete(acquisition)
 			.where(
-				inArray(acquisition.id, [SEED_ACQUISITION_ID, SEED_DONATION_ID, SEED_UNACKED_DONATION_ID])
+				inArray(acquisition.id, [
+					SEED_ACQUISITION_ID,
+					SEED_DONATION_ID,
+					SEED_UNACKED_DONATION_ID,
+					SEED_SIGN_DONATION_ID,
+					SEED_OWED_ACQUISITION_ID
+				])
 			);
 		await db.delete(inventoryAsset).where(inArray(inventoryAsset.id, ASSET_IDS));
 		await db.delete(inventoryItem).where(inArray(inventoryItem.id, ITEM_IDS));
@@ -129,6 +226,9 @@ export async function seedInventory(): Promise<void> {
 		await ensureCategory(db);
 
 		const now = new Date();
+		const DAY_MS = 24 * 60 * 60 * 1000;
+		/** Far enough back that the return charge is a predictable N whole days. */
+		const checkedOutAt = new Date(now.getTime() - SEED_RETURN_DAYS_OUT * DAY_MS);
 
 		await db.insert(inventoryLocation).values({
 			id: SEED_LOCATION_ID,
@@ -197,6 +297,28 @@ export async function seedInventory(): Promise<void> {
 			occurredAt: new Date(now.getTime() - 300 * 24 * 60 * 60 * 1000),
 			sourceName: 'E2E Casual Donor',
 			fairValueCents: 4_000
+		});
+
+		// Unsigned, and its unit already disposed of — so signing the 8283 is the
+		// single act that turns it into an obligation. That transition is the one
+		// production could never make: nothing could write `acknowledgedAt`.
+		await db.insert(acquisition).values({
+			id: SEED_SIGN_DONATION_ID,
+			kind: 'donation',
+			occurredAt: new Date(now.getTime() - 200 * 24 * 60 * 60 * 1000),
+			sourceName: SEED_SIGN_DONOR,
+			fairValueCents: 600_000,
+			fairValueBasis: 'Independent appraisal'
+		});
+
+		// Fronted out of pocket by the staff operator, unreimbursed.
+		await db.insert(acquisition).values({
+			id: SEED_OWED_ACQUISITION_ID,
+			kind: 'purchase',
+			occurredAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
+			sourceName: SEED_OWED_SUPPLIER,
+			totalCents: SEED_OWED_CENTS,
+			paidByUserId: SEED_STAFF_ID
 		});
 
 		await db.insert(acquisitionLine).values([
@@ -275,6 +397,19 @@ export async function seedInventory(): Promise<void> {
 				retiredReason: 'Beyond repair'
 			},
 			{
+				// Disposed of, donated, and with no 8283 on record — so it owes
+				// nothing until the test signs one. Owned by that test.
+				id: SEED_SIGN_ASSET_ID,
+				itemId: SEED_ITEM_ID,
+				assetTag: SEED_SIGN_ASSET_TAG,
+				condition: 'poor',
+				status: 'retired',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_SIGN_DONATION_ID,
+				retiredAt: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000),
+				retiredReason: 'Sold at the swap meet'
+			},
+			{
 				id: SEED_DISPOSED_ASSET_ID,
 				itemId: SEED_ITEM_ID,
 				assetTag: SEED_DISPOSED_ASSET_TAG,
@@ -286,6 +421,15 @@ export async function seedInventory(): Promise<void> {
 				// 125-day filing window still to run.
 				retiredAt: new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000),
 				retiredReason: 'Cracked cabinet'
+			},
+			{
+				id: SEED_MAINTENANCE_ASSET_ID,
+				itemId: SEED_ITEM_ID,
+				assetTag: SEED_MAINTENANCE_ASSET_TAG,
+				condition: 'poor',
+				status: 'maintenance',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_ACQUISITION_ID
 			},
 			{
 				id: SEED_ASSET_ID,
@@ -303,6 +447,27 @@ export async function seedInventory(): Promise<void> {
 				assetTag: null,
 				condition: 'good',
 				status: 'in_service',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_ACQUISITION_ID
+			},
+			{
+				// Waiting to be handed over: the checkout test names this unit.
+				id: SEED_CHECKOUT_ASSET_ID,
+				itemId: SEED_ITEM_ID,
+				assetTag: SEED_CHECKOUT_ASSET_TAG,
+				condition: 'good',
+				status: 'in_service',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_ACQUISITION_ID
+			},
+			{
+				// Already out. Its `loan_out` is seeded below, so returning it has to
+				// bring the ledger back to zero.
+				id: SEED_RETURN_ASSET_ID,
+				itemId: SEED_ITEM_ID,
+				assetTag: SEED_RETURN_ASSET_TAG,
+				condition: 'good',
+				status: 'on_loan',
 				locationId: SEED_LOCATION_ID,
 				acquisitionId: SEED_ACQUISITION_ID
 			}
@@ -359,6 +524,106 @@ export async function seedInventory(): Promise<void> {
 				locationId: SEED_LOCATION_ID,
 				occurredAt: now,
 				notes: 'Wireless packs'
+			},
+			{
+				id: 'e2e-inv-mv-checkout-asset',
+				itemId: SEED_ITEM_ID,
+				assetId: SEED_CHECKOUT_ASSET_ID,
+				quantity: 1,
+				reason: 'receive',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_ACQUISITION_ID,
+				occurredAt: now
+			},
+			{
+				id: 'e2e-inv-mv-return-asset',
+				itemId: SEED_ITEM_ID,
+				assetId: SEED_RETURN_ASSET_ID,
+				quantity: 1,
+				reason: 'receive',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_ACQUISITION_ID,
+				occurredAt: now
+			},
+			{
+				// The leg that put SEED_RETURN_ASSET_ID out of the building. Its
+				// matching `loan_return` is what the return test has to produce, and
+				// the two summing with the `receive` above is the invariant.
+				id: 'e2e-inv-mv-return-loan-out',
+				itemId: SEED_ITEM_ID,
+				assetId: SEED_RETURN_ASSET_ID,
+				quantity: -1,
+				reason: 'loan_out',
+				loanId: SEED_RETURN_LOAN_ID,
+				locationId: SEED_LOCATION_ID,
+				occurredAt: checkedOutAt
+			}
+		]);
+
+		// -------------------------------------------------------------------
+		// The loan half. Nothing seeded a loan before this, so the five-state
+		// machine and the charge it settles had no end-to-end coverage at all.
+		// -------------------------------------------------------------------
+		await db.insert(user).values({
+			id: SEED_LOAN_MEMBER_ID,
+			name: SEED_LOAN_MEMBER_NAME,
+			email: SEED_LOAN_MEMBER_EMAIL,
+			emailVerified: true,
+			creditFreeHours: 0,
+			creditEquipment: 0,
+			createdAt: now,
+			updatedAt: now
+		});
+		await db.insert(account).values({
+			id: 'e2e-inv-loan-member-account',
+			accountId: SEED_LOAN_MEMBER_ID,
+			providerId: 'credential',
+			userId: SEED_LOAN_MEMBER_ID,
+			password: await scryptHash(SEED_LOAN_MEMBER_PASSWORD),
+			createdAt: now,
+			updatedAt: now
+		});
+
+		await db.insert(inventoryLoan).values([
+			{
+				id: SEED_SCHEDULE_LOAN_ID,
+				itemId: SEED_ITEM_ID,
+				userId: SEED_LOAN_MEMBER_ID,
+				quantity: 1,
+				requestedPickupDate: new Date(now.getTime() + 2 * DAY_MS),
+				status: 'requested',
+				memberNotes: 'For a session at the weekend'
+			},
+			{
+				id: SEED_CHECKOUT_LOAN_ID,
+				itemId: SEED_ITEM_ID,
+				userId: SEED_LOAN_MEMBER_ID,
+				quantity: 1,
+				requestedPickupDate: new Date(now.getTime() + 1 * DAY_MS),
+				scheduledPickupDate: new Date(now.getTime() + 1 * DAY_MS),
+				status: 'scheduled'
+			},
+			{
+				id: SEED_RETURN_LOAN_ID,
+				itemId: SEED_ITEM_ID,
+				assetId: SEED_RETURN_ASSET_ID,
+				userId: SEED_LOAN_MEMBER_ID,
+				quantity: 1,
+				requestedPickupDate: checkedOutAt,
+				scheduledPickupDate: checkedOutAt,
+				checkedOutAt,
+				dueDate: new Date(now.getTime() + 4 * DAY_MS),
+				status: 'checked_out',
+				dailyRateCents: SEED_RETURN_DAILY_RATE
+			},
+			{
+				id: SEED_CANCEL_LOAN_ID,
+				itemId: SEED_ITEM_ID,
+				userId: SEED_LOAN_MEMBER_ID,
+				quantity: 1,
+				requestedPickupDate: new Date(now.getTime() + 5 * DAY_MS),
+				status: 'requested',
+				memberNotes: 'Changed my mind about this one'
 			}
 		]);
 	});

@@ -18,6 +18,8 @@
 	import { AddItemAction } from '$lib/components/actions';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { titleCase } from '$lib/utils/format';
+	import BarcodeScanner from '$lib/components/ui/BarcodeScanner.svelte';
+	import { parseScan } from '$lib/utils/scan';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
@@ -28,6 +30,17 @@
 	let page = $state(1);
 
 	let searchDebounced = $state('');
+
+	/**
+	 * Whatever was scanned becomes the search term. A consumable's own barcode
+	 * matches `gtin`; an asset tag scanned off a sticker is unwrapped from its
+	 * `/a/{tag}` URL first, or it would search for a URL and find nothing.
+	 */
+	function handleScan(raw: string) {
+		searchText = parseScan(raw).value;
+		searchDebounced = searchText;
+		page = 1;
+	}
 	let filters = $derived({
 		search: searchDebounced || undefined,
 		categoryId: categoryId || undefined,
@@ -76,6 +89,10 @@
 					page = 1;
 				}}
 			/>
+			<!-- The box already carries a UPC, so scanning it beats reading twelve
+			     digits off a shrink-wrapped packet. Search matches `gtin`, so the
+			     digits go straight in; a tag scan searches on the tag instead. -->
+			<BarcodeScanner onscan={handleScan} label="Scan" />
 		{/snippet}
 		<Select
 			size="sm"

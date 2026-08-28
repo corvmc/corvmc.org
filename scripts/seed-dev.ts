@@ -2794,8 +2794,64 @@ async function seedEquipment(users: SeedUser[]) {
 		intendedUse: 'PA capacity for all-ages programming',
 		recordedByUserId: staffId
 	};
+	/**
+	 * A gift with no signed Form 8283.
+	 *
+	 * Every other seeded donation carries `acknowledgedAt`, which meant a local
+	 * run could only ever see the *flagging* path. This is the suppression path
+	 * — and the common one for CMC, which has never signed an 8283 — so the
+	 * compliance page's "nothing outstanding, and here is the denominator"
+	 * branch has something to count.
+	 */
+	const unackedGift = {
+		id: randomUUID(),
+		kind: 'donation' as const,
+		occurredAt: new Date(now.getTime() - 400 * day),
+		sourceName: 'Anonymous walk-in',
+		fairValueCents: 18_000,
+		fairValueBasis: 'Staff estimate against local used listings',
+		intendedUse: 'Practice-room use',
+		monetized: false,
+		recordedByUserId: staffId
+	};
+	/**
+	 * A shop trip somebody fronted out of pocket and has not been paid back for.
+	 * Nothing else in the seed exercises the reimbursement column.
+	 */
+	const fronted = {
+		id: randomUUID(),
+		kind: 'purchase' as const,
+		occurredAt: new Date(now.getTime() - 6 * day),
+		sourceName: 'Troubadour Music',
+		reference: 'Receipt photographed',
+		totalCents: 4_800,
+		paidByUserId: users[1].id,
+		recordedByUserId: staffId
+	};
+	/** The same, already settled — so the cleared state renders too. */
+	const frontedSettled = {
+		id: randomUUID(),
+		kind: 'purchase' as const,
+		occurredAt: new Date(now.getTime() - 45 * day),
+		sourceName: 'Corvallis Hardware',
+		totalCents: 3_200,
+		paidByUserId: users[3].id,
+		reimbursedAt: new Date(now.getTime() - 38 * day),
+		recordedByUserId: staffId
+	};
 
-	await batchInsert(acquisition, [purchase, donation, restock, grant], 4);
+	// Named so the summary counts them rather than restating a literal that goes
+	// stale the moment another arrival is seeded — which it just had.
+	const acquisitionRows = [
+		purchase,
+		donation,
+		restock,
+		grant,
+		unackedGift,
+		fronted,
+		frontedSettled
+	];
+	await batchInsert(acquisition, acquisitionRows, 4);
 
 	// A helper so a seeded arrival cannot drift from the ledger it implies: one
 	// call writes the line *and* the movement, the way the service does.
@@ -2902,6 +2958,19 @@ async function seedEquipment(users: SeedUser[]) {
 		locationId: locByName['Supply shelf']
 	});
 	received(restock, '9V Batteries', 6, 1_400, { locationId: locByName['Supply shelf'] });
+	// The unsigned gift, and a unit off it that gets disposed of below. Same
+	// three-year window as CMC-000110, but with no Form 8283 on record — so it
+	// lands in the compliance page's *count* rather than its queue, which is the
+	// #309 behaviour and the one CMC actually hits.
+	received(unackedGift, 'Shure SM58', 1, 9_000, {
+		units: [{ tag: 'CMC-000111', serial: 'SM58-77120', condition: 'fair' }],
+		locationId: locByName['Stage left rack']
+	});
+	// Two out-of-pocket shop trips: one outstanding, one already settled.
+	received(fronted, "D'Addario EXL110 Strings", 4, 700, {
+		locationId: locByName['Supply shelf']
+	});
+	received(frontedSettled, '9V Batteries', 2, 1_400, { locationId: locByName['Supply shelf'] });
 
 	await batchInsert(acquisitionLine, lines, 4);
 	await batchInsert(inventoryAsset, assets, 4);
@@ -3123,6 +3192,54 @@ async function seedEquipment(users: SeedUser[]) {
 		});
 	}
 
+	// The unsigned gift's unit, disposed of inside the same window. Nothing owes
+	// a filing for it, which is the point: the compliance page needs a
+	// denominator for "nothing outstanding" or it reads like a page that is not
+	// looking.
+	const unsignedDisposal = assets.find((a) => a.assetTag === 'CMC-000111');
+	if (unsignedDisposal) {
+		const disposedAt = new Date(now.getTime() - 25 * day);
+		await db
+			.update(inventoryAsset)
+			.set({
+				status: 'retired',
+				retiredAt: disposedAt,
+				retiredReason: 'Capsule failed beyond economic repair'
+			})
+			.where(eq(inventoryAsset.id, unsignedDisposal.id!));
+		movements.push({
+			id: randomUUID(),
+			itemId: unsignedDisposal.itemId,
+			assetId: unsignedDisposal.id!,
+			quantity: -1,
+			reason: 'retire',
+			actorId: staffId,
+			occurredAt: disposedAt,
+			notes: 'Capsule failed beyond economic repair'
+		});
+	}
+
+	// `lost` is the one asset status the seed never produced, so its terminal
+	// branch had no local representation at all.
+	const lostUnit = assets.find((a) => a.assetTag === 'CMC-000107');
+	if (lostUnit) {
+		const lostAt = new Date(now.getTime() - 60 * day);
+		await db
+			.update(inventoryAsset)
+			.set({ status: 'lost', retiredAt: lostAt, retiredReason: 'Not returned after a load-out' })
+			.where(eq(inventoryAsset.id, lostUnit.id!));
+		movements.push({
+			id: randomUUID(),
+			itemId: lostUnit.itemId,
+			assetId: lostUnit.id!,
+			quantity: -1,
+			reason: 'loss',
+			actorId: staffId,
+			occurredAt: lostAt,
+			notes: 'Not returned after a load-out'
+		});
+	}
+
 	await batchInsert(stockMovement, movements, 4);
 
 	return {
@@ -3130,7 +3247,7 @@ async function seedEquipment(users: SeedUser[]) {
 		locations: locations.length,
 		items: items.length,
 		assets: assets.length,
-		acquisitions: 4,
+		acquisitions: acquisitionRows.length,
 		movements: movements.length,
 		loans: loans.length
 	};

@@ -1,12 +1,12 @@
 # Inventory & Assets — gear and consumables on one ledger
 
-> **Status: Phases 1–2 shipped (#286 and follow-up). Phases 3–4 unbuilt.**
+> **Status: Phases 1, 2 and 4 shipped. Phase 3 shipped except Schedule M, which is
+> deliberately not built.**
 >
-> How the shipped half _behaves_ is documented in
+> How the shipped module _behaves_ is documented in
 > [business-workflows §6](../development/business-workflows.md#6-inventory-gear-and-consumables),
 > which is where behaviour belongs. What survives here is the design rationale — the
-> options weighed and rejected — plus the two phases that are still only intent.
-> Read [Phases](#phases) for the split.
+> options weighed and rejected. Read [Phases](#phases) for what remains.
 
 ## Purpose
 
@@ -534,10 +534,18 @@ the member surface.
 `/staff/inventory/restock` (everything at or below its reorder point, grouped by
 category, with the quantity to buy and a Receive action per row),
 `/staff/inventory/spend` (purchase spend per category over a window),
-`/staff/inventory/items/[id]` (the item, its assets, its movement history),
+`/staff/inventory/acquisitions` and `/staff/inventory/acquisitions/[id]` (what
+arrived, from whom, for how much; the disclosure paperwork, receipts, and who is
+owed for it), `/staff/inventory/compliance` (the Form 8282 queue),
+`/staff/inventory/[id]` (the item, its assets, its movement history),
 `/staff/inventory/assets/[id]` (one unit: condition, location, loans, repairs),
 `/staff/inventory/loans` and `/staff/inventory/loans/[id]` (the existing loan
 queue), plus receiving and stocktake actions.
+
+The item detail page is `/staff/inventory/[id]`, without an `items/` segment —
+an earlier draft of this section said otherwise, and `entity-href.ts` and
+`nav-items.spec.ts` have always agreed with the route rather than with the
+prose.
 
 **Member** — `/member/equipment` keeps its URL, and the unit page reached by
 scanning a tag is new. **The Equipment row appears once there is something to
@@ -630,8 +638,38 @@ What is actually owed, in order of value:
    as recordable as "filed on the 2nd" — `form8282ResolvedAt` says a human dealt
    with it, `form8282Note` says which way they went.
 
-2. **Donor acknowledgment.** Somewhere to record that a donor's Form 8283 was
-   signed. Only bites above $500. `acknowledgedAt` / `appraisalRef` exist for it.
+2. **Donor acknowledgment. ✅ Shipped.** Somewhere to record that a donor's Form
+   8283 was signed — `acknowledgedAt` / `appraisalRef` had existed since Phase 1
+   with nothing able to write them.
+
+   **This was load-bearing, not a nicety.** The warning above treats a gift with
+   no signed 8283 as owing nothing, which is correct — and it meant the whole of
+   item 1 was unreachable in production: `receiveStock` was the only path into
+   `acquisition` and its schema omitted the column, so every donated disposal
+   fell into the `noFormOnRecord` count and the compliance page could only ever
+   read zero. The rule was tested; the door to it did not exist.
+
+   The reason was structural rather than an oversight. **Acquisitions were
+   write-only**: `listAcquisitions()` was exported and called by nothing, so
+   there was no acquisition to come back to — and an 8283 is signed weeks after
+   the gift walks in, never at the door. `/staff/inventory/acquisitions` is that
+   surface, and the same gap had left `monetized` permanently `false` (collapsing
+   the ASU 2020-07 monetized/utilized split the disclosure asks for),
+   `fairValueCents` unset, and `appraisalRef` entirely dead.
+
+   The **lines stay read-only**. They have already emitted their `receive`
+   movements, so rewriting a quantity would put the ledger and the paperwork into
+   permanent disagreement; a miscount is corrected the way every other stock error
+   is, with an `adjust` movement.
+
+   **Reimbursement rides on the same surface.** Nothing recorded who _paid_ for
+   an arrival — `recordedByUserId` is who typed it in — so a volunteer fronting
+   $40 for strings left no trace that the collective owed anyone. `paidByUserId`
+   and `reimbursedAt` are two nullable columns and one filter; the app moves no
+   money, it records that a person did, exactly as `form8282ResolvedAt` does.
+   Receipts hang off the acquisition through the shared media layer (`receipt`
+   slot), not a table of their own.
+
 3. **Schedule M** — the 990's noncash schedule, triggered at **$25,000** of
    noncash contributions in a year, or by any gift of art or historical
    treasures. Worth knowing the trigger; not worth building until it is near.
@@ -786,9 +824,36 @@ Specs, colocated:
 - `acquisition-service.spec.ts` — receiving emits balanced `receive` movements.
 - `entity-href.spec.ts` — extended with the new arms, including the signed-out
   `null`.
+- `reports.spec.ts` — `spendByCategory`, `inKindContributions` and
+  `listForm8282Obligations` against a real in-memory SQLite. The 8282 narrowing
+  belongs here rather than beside the pure rule: a mocked `db` returns the rows
+  the test named and so agrees with any `WHERE` clause, right or wrong. Its DDL
+  is lifted from the generated migrations, **replaying later `ALTER TABLE … ADD`
+  statements as well as the `CREATE`** — without that an additive migration
+  leaves the spec building a table one column short of production.
 
-E2E: create an item, receive it against an acquisition, bind a tag, request a
-loan, assign that asset, check out, return, and assert the ledger sums back to
-where it started. A consumable run beside it — receive, consume, confirm on-hand
-falls with no counter edited. And `/a/[tag]` resolving three ways: staff to the
-ops record, member to the asset page, signed-out to the login redirect.
+E2E: the loan lifecycle — schedule, check out naming a unit, return, and assert
+the ledger sums back to where it started. A consumable run beside it — receive,
+consume, confirm on-hand falls with no counter edited. And `/a/[tag]` resolving
+three ways: staff to the ops record, member to the asset page, signed-out to the
+login redirect.
+
+Two things the loan half turned up the first time it was driven end to end,
+neither visible to a unit test with a mocked `db`:
+
+- **The checkout form never sent an `assetId`.** `getStaffLoanDetail` had always
+  returned `availableAssets`; the page discarded them, so every serialized
+  checkout hit `AssetRequiredError` and no serialized loan could be handed over
+  through the staff UI at all. The guard also read only the incoming value, so a
+  loan created with a unit already named threw on the way to the line that would
+  have used it.
+- **Fixture ids have to be UUIDs.** `scheduleLoanSchema` and `checkoutLoanSchema`
+  validate ids with `z.uuid()`, and both arrive as hidden inputs — so a readable
+  slug id fails validation with nowhere to render the error and the submit
+  appears to do nothing.
+
+`StatusBadge.spec.ts` guarded `equipmentStatuses`, the pre-#286 vocabulary,
+rather than `assetStatuses`. That is why `in_service`, `on_loan` and `lost` were
+never mapped: three of the five states a unit can hold drew the neutral fallback
+dot, which the component's own docs call saying nothing. The dead vocabulary is
+gone and the spec now guards the live one.

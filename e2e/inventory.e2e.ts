@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { stockMovement } from '../src/lib/server/db/schema/inventory';
+import { inventoryLoan, stockMovement } from '../src/lib/server/db/schema/inventory';
 import { readLocalDb } from './fixtures/platform-db';
 import { expect, test, type Page } from '@playwright/test';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
@@ -16,10 +16,27 @@ import {
 	SEED_DISPOSED_ASSET_TAG,
 	SEED_UNACKED_ASSET_ID,
 	SEED_UNACKED_ASSET_TAG,
+	SEED_SIGN_ASSET_ID,
+	SEED_SIGN_ASSET_TAG,
+	SEED_SIGN_DONATION_ID,
+	SEED_SIGN_DONOR,
+	SEED_OWED_ACQUISITION_ID,
+	SEED_OWED_SUPPLIER,
 	SEED_LOW_NAME,
 	SEED_LOW_ON_HAND,
 	SEED_LOW_REORDER_QUANTITY,
-	SEED_UNTAGGED_ASSET_ID
+	SEED_UNTAGGED_ASSET_ID,
+	SEED_MAINTENANCE_ASSET_ID,
+	SEED_LOAN_MEMBER_EMAIL,
+	SEED_LOAN_MEMBER_PASSWORD,
+	SEED_SCHEDULE_LOAN_ID,
+	SEED_CHECKOUT_LOAN_ID,
+	SEED_CHECKOUT_ASSET_ID,
+	SEED_CHECKOUT_ASSET_TAG,
+	SEED_RETURN_LOAN_ID,
+	SEED_RETURN_ASSET_ID,
+	SEED_CANCEL_LOAN_ID,
+	SEED_RETURN_DAILY_RATE
 } from './fixtures/seed-inventory';
 
 /**
@@ -58,9 +75,58 @@ async function readOnHand(page: Page, itemId: string): Promise<number> {
 	return parseInt(value.trim(), 10);
 }
 
+/**
+ * Sign in as the borrower rather than as staff.
+ *
+ * Every other test in this file runs as staff, including the two that assert on
+ * member-panel pages — so the member half of the loan flow, and `entityHref`'s
+ * member arm, were only ever exercised by a unit spec.
+ */
+async function loginAsMember(page: Page) {
+	await page.goto('/login');
+	await page.locator('input[name="email"]').fill(SEED_LOAN_MEMBER_EMAIL);
+	await page.locator('input[name="password"]').fill(SEED_LOAN_MEMBER_PASSWORD);
+	await page.getByRole('button', { name: 'Sign in' }).click();
+	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+}
+
+/** Every movement recorded against one unit, summed. */
+async function ledgerSumFor(assetId: string): Promise<number> {
+	const rows = await readLocalDb((db) =>
+		db
+			.select({ quantity: stockMovement.quantity })
+			.from(stockMovement)
+			.where(eq(stockMovement.assetId, assetId))
+	);
+	return rows.reduce((total, r) => total + r.quantity, 0);
+}
+
 /** The submit inside an open Action modal, as distinct from the trigger. */
 function modalSubmit(page: Page, name: RegExp) {
 	return page.getByRole('dialog').getByRole('button', { name });
+}
+
+/**
+ * Load a page and wait for it to have actually rendered.
+ *
+ * These pages take their data from an awaited remote query, so the whole
+ * template — heading included — is gated behind it. `page.goto` resolves on
+ * `load`, which is comfortably before that commits, and a read taken then sees
+ * an empty `<main>`.
+ *
+ * This matters most for a *negative* assertion: "the row is not there" is
+ * trivially true of a page that has rendered nothing, so a poll without this
+ * gate reports success for a row that simply had not arrived yet.
+ */
+async function visit(page: Page, path: string, heading: string) {
+	await page.goto(path);
+	await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
+}
+
+/** Whether the compliance queue currently lists a unit, re-read from scratch. */
+async function complianceLists(page: Page, tag: string): Promise<boolean> {
+	await visit(page, '/staff/inventory/compliance', 'Compliance');
+	return page.getByText(tag).isVisible();
 }
 
 test.describe('inventory', () => {
@@ -267,16 +333,238 @@ test.describe('inventory', () => {
 				.first()
 				.fill('Filed 2026-09-02, copy posted to the donor');
 			await page.getByRole('dialog').getByRole('button', { name: 'Record 8282' }).click();
-			await page.waitForTimeout(2000);
+			await expect(page.getByText('Recorded')).toBeVisible({ timeout: 10000 });
 
-			await page.goto('/staff/inventory/compliance');
 			// The obligation is discharged, so it stops asking — the note stays on
 			// the unit as the record that it was handled.
-			await expect(page.getByText(SEED_DISPOSED_ASSET_TAG)).toBeHidden();
+			//
+			// Polled with the navigation *inside* the poll: `toBeHidden` retries
+			// against the DOM it already loaded, so a page fetched a moment early
+			// keeps showing the row and the assertion just fails slowly.
+			await expect
+				.poll(async () => complianceLists(page, SEED_DISPOSED_ASSET_TAG), { timeout: 15000 })
+				.toBe(false);
 
 			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
 			await expect(page.getByText('Form 8282 may be due.')).toBeHidden();
 			await expect(page.getByText('copy posted to the donor')).toBeVisible();
+		});
+	});
+
+	/**
+	 * The loan lifecycle, end to end.
+	 *
+	 * Nothing seeded a loan before this, so the five-state machine and the charge
+	 * it settles had no e2e coverage at all — only unit tests against a mocked
+	 * `db`, which cannot see whether the *form* sends what the service needs.
+	 *
+	 * The invariant worth pinning is the ledger: a loan writes `loan_out` when the
+	 * unit leaves and `loan_return` when it comes back, so those two plus the
+	 * original `receive` have to sum to exactly one unit on hand.
+	 */
+	test.describe('loans', () => {
+		test('staff schedule a requested loan', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto(`/staff/inventory/loans/${SEED_SCHEDULE_LOAN_ID}`);
+
+			await expect(page.getByText('Schedule Pickup')).toBeVisible();
+			await page.locator('input[name="scheduledPickupDate"]').fill('2026-09-10');
+			await page.getByRole('button', { name: 'Schedule' }).click();
+			await expect(page.getByText('Pickup scheduled')).toBeVisible({ timeout: 10000 });
+
+			// The state moved on, so the next step's control is the one on offer.
+			await expect(page.getByText('Mark as Checked Out')).toBeVisible();
+		});
+
+		/**
+		 * A serialized loan has to name the unit that left the building, or "which
+		 * amp came back broken" has no answer — `checkoutLoan` throws
+		 * `AssetRequiredError` without one.
+		 *
+		 * This test is the reason the picker exists. The checkout form used to
+		 * submit only a due date, so every serialized checkout failed on that
+		 * throw; with no loan e2e, nothing noticed.
+		 */
+		test('checking out a serialized loan names the unit that left', async ({ page }) => {
+			await loginAsStaff(page);
+			await page.goto(`/staff/inventory/loans/${SEED_CHECKOUT_LOAN_ID}`);
+
+			await expect(page.getByText('Mark as Checked Out')).toBeVisible();
+			await page.locator('input[name="dueDate"]').fill('2026-09-20');
+
+			// The picker offers units by the tag printed on them, which is what a
+			// staffer is reading off the sticker in their hand.
+			const unitPicker = page.locator('select[name="assetId"]');
+			await expect(unitPicker.locator('option', { hasText: SEED_CHECKOUT_ASSET_TAG })).toHaveCount(
+				1
+			);
+			await unitPicker.selectOption(SEED_CHECKOUT_ASSET_ID);
+			await page.getByRole('button', { name: 'Check Out' }).click();
+			await expect(page.getByText('Checked out')).toBeVisible({ timeout: 10000 });
+
+			// Bound to the loan, and out of the building on the ledger.
+			await expect
+				.poll(async () => ledgerSumFor(SEED_CHECKOUT_ASSET_ID), { timeout: 15000 })
+				.toBe(0);
+
+			await page.goto(`/staff/inventory/assets/${SEED_CHECKOUT_ASSET_ID}`);
+			// The status glyph carries its name on `aria-label`, not as body text —
+			// daisyUI's tooltip draws through ::before and is invisible to a11y.
+			await expect(page.getByRole('img', { name: 'On loan' }).first()).toBeVisible();
+		});
+
+		test('returning it computes the charge and brings the ledger back', async ({ page }) => {
+			await loginAsStaff(page);
+
+			// Out of the building: the `receive` and the `loan_out` cancel.
+			expect(await ledgerSumFor(SEED_RETURN_ASSET_ID)).toBe(0);
+
+			await page.goto(`/staff/inventory/loans/${SEED_RETURN_LOAN_ID}`);
+			await expect(page.getByText('Mark as Returned')).toBeVisible();
+			// The rate it was checked out at, shown before committing. Not the day
+			// count: the fixture stamps `checkedOutAt` exactly N days back, so by the
+			// time this runs it is milliseconds into day N+1 and `Math.ceil` says so.
+			await expect(
+				page.getByText(`× $${SEED_RETURN_DAILY_RATE / 100}.00/day`, { exact: false }).first()
+			).toBeVisible();
+
+			await page.getByRole('button', { name: 'Mark Returned' }).click();
+			await modalSubmit(page, /Mark Returned/).click();
+
+			// Back on the shelf, and the ledger nets to the one unit on hand.
+			await expect.poll(async () => ledgerSumFor(SEED_RETURN_ASSET_ID), { timeout: 15000 }).toBe(1);
+
+			await page.goto(`/staff/inventory/loans/${SEED_RETURN_LOAN_ID}`);
+			await expect(page.getByText('No actions available')).toBeVisible();
+		});
+
+		test('a member requests a loan from the catalog', async ({ page }) => {
+			await loginAsMember(page);
+			await page.goto('/member/equipment');
+
+			await page.getByRole('button', { name: 'Request' }).first().click();
+			const dialog = page.getByRole('dialog');
+			await dialog.locator('input[name="requestedPickupDate"]').fill('2026-09-15');
+			await dialog.locator('input[name="estimatedReturnDate"]').fill('2026-09-18');
+			await dialog.getByRole('button', { name: /Request/ }).click();
+
+			await page.goto('/member/equipment/loans');
+			await expect(page.getByText(SEED_ITEM_NAME).first()).toBeVisible();
+		});
+
+		/** A member may withdraw their own request, but only before it is out. */
+		test('a member cancels their own request', async ({ page }) => {
+			await loginAsMember(page);
+			await page.goto('/member/equipment/loans');
+
+			const card = page.locator('.card').filter({ hasText: 'Changed my mind' }).first();
+			await card.getByRole('button', { name: /Cancel/ }).click();
+			await modalSubmit(page, /Cancel/).click();
+
+			await expect
+				.poll(
+					async () => {
+						const rows = await readLocalDb((db) =>
+							db
+								.select({ status: inventoryLoan.status })
+								.from(inventoryLoan)
+								.where(eq(inventoryLoan.id, SEED_CANCEL_LOAN_ID))
+						);
+						return rows[0]?.status;
+					},
+					{ timeout: 15000 }
+				)
+				.toBe('cancelled');
+		});
+
+		/**
+		 * The member arm of the scan resolver, which nothing covered: the two
+		 * member-panel assertions elsewhere navigate directly while signed in as
+		 * staff, so `entityHref`'s member branch was only ever unit-tested.
+		 */
+		test('a scanned tag sends a member to the member page, not the staff one', async ({ page }) => {
+			await loginAsMember(page);
+			await page.goto(`/a/${SEED_ASSET_TAG}`);
+
+			await expect(page).toHaveURL(`/member/equipment/assets/${SEED_ASSET_ID}`, {
+				timeout: 10000
+			});
+		});
+	});
+
+	/**
+	 * Acquisitions: what arrived, from whom, and who is owed for it.
+	 *
+	 * Receiving has written these rows since Phase 1 and nothing could read them
+	 * back, which is why the disclosure columns sat empty in production. The
+	 * signing test below is the loop that could not previously run at all.
+	 */
+	test.describe('acquisitions', () => {
+		test('lists what the collective has taken in', async ({ page }) => {
+			await loginAsStaff(page);
+			await visit(page, '/staff/inventory/acquisitions', 'Acquisitions');
+
+			await expect(page.getByRole('row').filter({ hasText: SEED_SIGN_DONOR })).toBeVisible();
+			await expect(page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER })).toBeVisible();
+		});
+
+		/**
+		 * **The transition the module shipped without.** `form8282Status` treats a
+		 * gift with no signed 8283 as owing nothing, and nothing in the app could
+		 * write `acknowledgedAt` — so this unit was disposed of inside the window
+		 * and the compliance page stayed silent about it forever. Signing the 8283
+		 * is the single act that makes it reportable.
+		 */
+		test('signing a Form 8283 turns a silent disposal into an obligation', async ({ page }) => {
+			await loginAsStaff(page);
+
+			// Before: disposed of, donated, inside the window — and not listed.
+			expect(await complianceLists(page, SEED_SIGN_ASSET_TAG)).toBe(false);
+
+			await page.goto(`/staff/inventory/acquisitions/${SEED_SIGN_DONATION_ID}`);
+			await page.getByRole('button', { name: 'Record 8283' }).click();
+			await page.getByRole('dialog').locator('input[name$="signedOn"]').fill('2026-03-04');
+			await page
+				.getByRole('dialog')
+				.locator('input[name$="appraisalRef"]')
+				.fill('Appraisal 2026-03');
+			await modalSubmit(page, /^Record 8283$/).click();
+			await expect(page.getByText('Acknowledgment recorded')).toBeVisible({ timeout: 10000 });
+
+			// After: the same row, now an obligation with a deadline attached.
+			await expect
+				.poll(async () => complianceLists(page, SEED_SIGN_ASSET_TAG), { timeout: 15000 })
+				.toBe(true);
+
+			await page.goto(`/staff/inventory/assets/${SEED_SIGN_ASSET_ID}`);
+			await expect(page.getByText('Form 8282 may be due.')).toBeVisible();
+		});
+
+		/**
+		 * The app moves no money; this records that a person did. Asserted through
+		 * the filter rather than a badge, because leaving the awaiting list is the
+		 * behaviour somebody depends on.
+		 */
+		test('marking a fronted purchase reimbursed clears it from the owed list', async ({ page }) => {
+			await loginAsStaff(page);
+
+			await visit(page, '/staff/inventory/acquisitions?owed=1', 'Acquisitions');
+			await expect(page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER })).toBeVisible();
+
+			await page.goto(`/staff/inventory/acquisitions/${SEED_OWED_ACQUISITION_ID}`);
+			await page.getByRole('button', { name: 'Mark reimbursed' }).click();
+			await modalSubmit(page, /^Mark reimbursed$/).click();
+			await expect(page.getByText('Marked reimbursed')).toBeVisible({ timeout: 10000 });
+
+			await expect
+				.poll(
+					async () => {
+						await visit(page, '/staff/inventory/acquisitions?owed=1', 'Acquisitions');
+						return page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER }).isVisible();
+					},
+					{ timeout: 15000 }
+				)
+				.toBe(false);
 		});
 	});
 
@@ -303,7 +591,6 @@ test.describe('inventory', () => {
 			await page.getByRole('button', { name: 'Report a problem' }).click();
 			await page.getByRole('dialog').locator('textarea').first().fill('Crackling on channel two');
 			await page.getByRole('dialog').getByRole('button', { name: 'Report a problem' }).click();
-			await page.waitForTimeout(2000);
 
 			// Asserted against the database first: the movement *is* the report, so
 			// if it were missing the unit would be out of service with no record of
@@ -330,8 +617,9 @@ test.describe('inventory', () => {
 
 		test('a unit already in the shop is not offered the form again', async ({ page }) => {
 			await loginAsStaff(page);
-			// The previous test left this one in maintenance.
-			await page.goto(`/member/equipment/assets/${SEED_ASSET_ID}`);
+			// Seeded in maintenance rather than left that way by the test above,
+			// which made the two order-dependent.
+			await page.goto(`/member/equipment/assets/${SEED_MAINTENANCE_ASSET_ID}`);
 
 			// Assert the page is actually there before asserting something is not.
 			// `toBeHidden()` passes for an element that does not exist, so on its

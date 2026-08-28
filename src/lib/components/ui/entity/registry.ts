@@ -272,6 +272,7 @@ export const ordinaryStatuses: ReadonlySet<string> = new Set([
 	'published',
 	'resolved',
 	'available',
+	'in_service',
 	'returned',
 	'checked_in',
 	'sent',
@@ -282,9 +283,12 @@ export const ordinaryStatuses: ReadonlySet<string> = new Set([
 	'done',
 	'active',
 	// Resting states that happen to be info-toned: a confirmed booking and a
-	// valid ticket are both simply "as expected".
+	// valid ticket are both simply "as expected". So is an amp that is out on
+	// loan — being borrowed is what a loanable unit is *for*, and marking it
+	// would call out the healthy majority of a working catalogue.
 	'confirmed',
 	'valid',
+	'on_loan',
 	// The default band role and tier.
 	'member',
 	'free'

@@ -29,6 +29,8 @@ export { default as ReceiveStockAction } from './ReceiveStockAction.svelte';
 export { default as UseStockAction } from './UseStockAction.svelte';
 export { default as AdjustStockAction } from './AdjustStockAction.svelte';
 export { default as RecordForm8282Action } from './RecordForm8282Action.svelte';
+export { default as RecordForm8283Action } from './RecordForm8283Action.svelte';
+export { default as MarkReimbursedAction } from './MarkReimbursedAction.svelte';
 export { default as ReportDamageAction } from './ReportDamageAction.svelte';
 export { default as RemoveCategoryAction } from './RemoveCategoryAction.svelte';
 export { default as CreateLoanAction } from './CreateLoanAction.svelte';

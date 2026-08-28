@@ -4,6 +4,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import { bindTag } from '$lib/remote/inventory.remote';
 	import { Field } from '../ui/Form';
+	import BarcodeScanner from '../ui/BarcodeScanner.svelte';
+	import { parseScan } from '$lib/utils/scan';
 
 	const { fields } = bindTag;
 
@@ -24,6 +26,23 @@
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
+
+	// Starts empty even when rebinding: the point of a rebind is a *new* sticker,
+	// and the current one is already stated above the field.
+	let assetTag = $state('');
+
+	/**
+	 * A scanned sticker gives back the whole `/a/{tag}` URL, since that is what
+	 * makes a phone camera resolve it with no app; `parseScan` unwraps it.
+	 *
+	 * Anything else lands in the field verbatim rather than being rejected — a
+	 * roll of tags may be numbered in Code 128 rather than QR, and where it really
+	 * is the wrong code the staffer can see that and correct it. Silently dropping
+	 * a scan would just look broken.
+	 */
+	function handleScan(raw: string) {
+		assetTag = parseScan(raw).value;
+	}
 </script>
 
 <Action
@@ -52,6 +71,7 @@
 				<p class="opacity-70">Scan or type the tag printed on the sticker.</p>
 			{/if}
 		</div>
-		<Field field={fields.assetTag} type="text" label="Tag" />
+		<Field field={fields.assetTag} type="text" label="Tag" bind:value={assetTag} />
+		<BarcodeScanner onscan={handleScan} label="Scan the tag" class="mt-2" />
 	{/snippet}
 </Action>

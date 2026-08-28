@@ -296,6 +296,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/inventory/acquisitions",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inventory/acquisitions/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/inventory/assets/[id]",
 		"panel": "staff"
 	},
