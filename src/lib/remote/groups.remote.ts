@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
-import { query, form } from '$app/server';
+import { query, form, getRequestEvent } from '$app/server';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupJoinPolicies } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { requireStaff, requireUser } from '$lib/server/authorization';
@@ -18,8 +18,11 @@ import {
 	getGroupDetail,
 	joinGroup,
 	leaveGroup,
+	getPublicGroup,
+	getUserGroupStatus,
 	listGroups,
 	listMemberGroups,
+	listPublicGroups,
 	reactivate,
 	updateGroupSettings
 } from '$lib/server/group/group-service';
@@ -301,4 +304,42 @@ export const declineApplicationForm = form(applicationSchema, async (data) => {
 	} catch (err) {
 		mapDomainError(err);
 	}
+});
+
+// ---------------------------------------------------------------------------
+// Public — /groups
+// ---------------------------------------------------------------------------
+
+/**
+ * The public group directory.
+ *
+ * No guard beyond the feature flag, deliberately: these are the programs the
+ * Collective is advertising, and `visibility = 'public'` is the whole of the
+ * decision — made per group by staff, not inferred here. A signed-out visitor
+ * and a member see the same list.
+ */
+export const getPublicGroups = query(async () => {
+	await requireFeature('groups');
+	return listPublicGroups();
+});
+
+/**
+ * The public page's one load-bearing query: the group, and whether the person
+ * looking at it can act.
+ *
+ * `viewerStatus` is what decides between a Join button, a "you already belong"
+ * note and a sign-in prompt, and it is computed here because the client cannot
+ * be trusted to. It is null for a signed-out visitor, which is not an error —
+ * the Join button becomes a sign-in prompt that returns them here.
+ */
+export const getPublicGroupPage = query(z.string(), async (slug) => {
+	await requireFeature('groups');
+
+	const group = await getPublicGroup(slug);
+	if (!group) error(404, 'Group not found');
+
+	const { locals } = getRequestEvent();
+	const viewerStatus = locals.user ? await getUserGroupStatus(group.id, locals.user.id) : null;
+
+	return { group, signedIn: !!locals.user, viewerStatus };
 });

@@ -8,7 +8,7 @@
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { resolve } from '$app/paths';
-	import JoinGroupAction from './JoinGroupAction.svelte';
+	import JoinGroupAction from '$lib/components/groups/JoinGroupAction.svelte';
 	import { getMemberGroups } from '$lib/remote/groups.remote';
 
 	/**

@@ -92,6 +92,14 @@
 		"panel": "public"
 	},
 	{
+		"route": "/groups",
+		"panel": "public"
+	},
+	{
+		"route": "/groups/[slug]",
+		"panel": "public"
+	},
+	{
 		"route": "/local-resources",
 		"panel": "public"
 	},
