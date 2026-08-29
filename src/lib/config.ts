@@ -170,6 +170,19 @@ export const groupKinds = ['band', 'club', 'committee'] as const;
 export type GroupKind = (typeof groupKinds)[number];
 
 /**
+ * What to call a group in prose written for someone who is not looking at it.
+ *
+ * An email to an invitee is the case that needs all three: they have no account
+ * and no page open, so "you've been invited to join a band" has to be true, and
+ * for the Real Book Club it is not.
+ */
+export const groupKindLabels: Record<GroupKind, string> = {
+	band: 'band',
+	club: 'club',
+	committee: 'committee'
+};
+
+/**
  * How someone gets onto the roster.
  *
  * `invite_only` — you are added by someone with authority. Today's behaviour.

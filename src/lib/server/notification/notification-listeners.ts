@@ -1,5 +1,6 @@
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { formatCents } from '$lib/utils/format';
+import { groupKindLabels } from '$lib/config';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { captureException } from '$lib/server/sentry';
 import { listStaffUsers } from '$lib/server/authorization';
@@ -334,20 +335,25 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
-	// --- Platform invite (non-user) ---
-	domainEvents.on('platform_invite.created', async ({ data: event }) => {
+	// --- Group invite (non-user) ---
+	//
+	// The recipient has no account and no page open, so the copy has to say what
+	// they are being invited to. "Join a band" was true of every row while the
+	// table was `platform_invite`; a club invitation is now the same code path.
+	domainEvents.on('group_invite.created', async ({ data: event }) => {
 		const signupUrl = `${siteUrl}/login?invite=${event.token}`;
+		const kind = groupKindLabels[event.groupKind];
 		await dispatchEmailOnly({
-			type: 'platform_invitation',
+			type: 'group_invitation',
 			toEmail: event.email,
 			templateAlias: GENERIC_ALIAS,
 			model: {
-				subject: `${event.invitedByName} invited you to join ${event.bandName} on CorvMC`,
-				preview_text: `${event.invitedByName} wants you in ${event.bandName}. Your invite link is good for 7 days.`,
-				heading: "You've Been Invited to Join a Band",
+				subject: `${event.invitedByName} invited you to join ${event.groupName} on CorvMC`,
+				preview_text: `${event.invitedByName} wants you in ${event.groupName}. Your invite link is good for 7 days.`,
+				heading: `You've Been Invited to Join ${event.groupName}`,
 				paragraphs: [
 					{
-						text: `${event.invitedByName} has invited you to join ${event.bandName} as a ${event.role} on CorvMC.`
+						text: `${event.invitedByName} has invited you to join the ${kind} ${event.groupName} as a ${event.role} on CorvMC.`
 					},
 					{
 						text: 'CorvMC is a community music space where bands book rehearsals, manage equipment, and coordinate with their members.'

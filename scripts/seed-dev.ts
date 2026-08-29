@@ -53,6 +53,7 @@ import {
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
 import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/directory';
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
+import { groupInvite } from '../src/lib/server/db/schema/group-invite';
 import { group } from '../src/lib/server/db/schema/group';
 import { media, mediaAttachment } from '../src/lib/server/db/schema/media';
 import { bandSite } from '../src/lib/server/db/schema/band-site';
@@ -1457,6 +1458,22 @@ async function seedBands(users: SeedUser[]) {
 		// data to exercise.
 		if (i === 0 || i === PREMIUM_BAND_COUNT) {
 			await db.insert(groupSlugHistory).values({ slug: `${slug}-old`, groupId: b.id });
+		}
+
+		// One invitation to an address with no account behind it, so the members
+		// page's "Awaiting signup" card and its Revoke control have a row locally.
+		// Deliberately not an address any seeded user holds — that path resolves to
+		// a `group_member` row instead and never reaches this table.
+		if (i === 0) {
+			await db.insert(groupInvite).values({
+				groupId: b.id,
+				email: `newcomer+${slug}@example.com`,
+				role: 'member',
+				position: pick(BAND_POSITIONS),
+				invitedById: owner.id,
+				status: 'pending',
+				expiresAt: new Date(Date.now() + 7 * 86400000)
+			});
 		}
 	}
 

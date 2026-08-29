@@ -19,7 +19,7 @@ export { default as InviteMemberAction } from './InviteMemberAction.svelte';
 export { default as RevokeInviteAction } from './RevokeInviteAction.svelte';
 export { default as TransferOwnershipAction } from './TransferOwnershipAction.svelte';
 export { default as RemoveBandMemberAction } from './RemoveBandMemberAction.svelte';
-export { default as RevokePlatformInviteAction } from './RevokePlatformInviteAction.svelte';
+export { default as RevokeEmailInviteAction } from './RevokeEmailInviteAction.svelte';
 
 // Inventory
 export { default as AddItemAction } from './AddItemAction.svelte';

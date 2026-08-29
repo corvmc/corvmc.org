@@ -650,11 +650,26 @@ group_invite
   unique(groupId, email) where status = 'pending'
 ```
 
+Shipped as `src/lib/server/group/group-invite-service.ts`, moved out of
+`src/lib/server/band/` alongside `group-context.ts` and `group-service.ts`. `listForBand` became
+`listForGroup`; the remote exports lost the misnomer too — `getBandPlatformInvites` is
+`getBandEmailInvites`, `revokePlatformInviteRemote` is `revokeEmailInvite`. **Email invite** is what
+the UI calls it, because "not a platform invite" is only half of what distinguishes it from the
+`group_member` row below.
+
 **Two invite mechanisms, deliberately.** Inviting an existing member stays a `group_member` row with `status = 'pending'` — that row _is_ the invitation, it appears on the invitee's dashboard, and accepting is a status flip. Only the non-user case needs a token and an expiry. Merging them would hang nullable `token`/`email`/`expiresAt` columns off every pending membership and add a branch to the accept path, to unify two flows that genuinely differ.
 
 `invitedById` is **nullable** here. Today's `platform_invite.invitedById` is declared `.notNull()` _and_ `onDelete: 'set null'` — contradictory clauses, so deleting a user who ever sent an invite fails on a NOT NULL violation. The new table is a fresh create, so fixing it is free.
 
 The partial unique index replaces the manual "is there already a pending invite" SELECT in `createInvite`; an `onConflictDoUpdate` refreshes the expiry instead.
+
+One trap in writing that upsert, which no type check sees. SQLite matches an `ON CONFLICT` to a
+partial index by comparing the clause's `WHERE` against the index's own, and drizzle renders
+`targetWhere: eq(groupInvite.status, 'pending')` as a **bound parameter** — which matches nothing, so
+every call fails at runtime with `ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE
+constraint`. It has to be a literal: ``targetWhere: sql`status = 'pending'` ``. Pinned by
+`group-invite-upsert.spec.ts`, which migrates the committed migration set into an in-memory
+`node:sqlite` database and lets the engine judge.
 
 ### Events
 
@@ -1336,7 +1351,7 @@ Phase order. Each phase ships green, with bands working at every step.
 | 3c  | ✅ #307 #312 #318 #321 | Drop the moved listing columns from `group` and `user`, plus `ownerId`. Carries the owner left-join conversion. **Not** `slug`, `name` or the avatar columns — see [Directory entry](#directory-entry)                                                                                                                                                                                                                                         |
 | 4   | ✅ #323 #324           | `requireGroupRole` + explicit refs. **Two PRs**: the guard, with `band-context` reduced to deprecated wrappers, then the call-site port and the wrappers' deletion                                                                                                                                                                                                                                                                             |
 | 5   | ✅ #326 #327 #328 #329 | `/staff/groups` + `/member/groups` and the club page + public group page; all three `joinPolicy` values, self-join and applications. **Four PRs**: the vocabulary values and the reads that would have lost them, the staff panel, the member surfaces, then the public directory                                                                                                                                                              |
-| 6   |                        | `group_invite` replaces `platform_invite`                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 6   | ✅ #332                | `group_invite` replaces `platform_invite`                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 7   |                        | Announcements — bands and groups simultaneously, since it is the same code                                                                                                                                                                                                                                                                                                                                                                     |
 | 8   |                        | Documents — bucket and binding deployed and verified **first**, then the table and route                                                                                                                                                                                                                                                                                                                                                       |
 | 9   |                        | Group events + `event_group` + `createGroupEvent()`; fix the recurring generator                                                                                                                                                                                                                                                                                                                                                               |

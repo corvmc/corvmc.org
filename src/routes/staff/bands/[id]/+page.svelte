@@ -21,7 +21,7 @@
 		RevokeInviteAction,
 		TransferOwnershipAction,
 		RemoveBandMemberAction,
-		RevokePlatformInviteAction
+		RevokeEmailInviteAction
 	} from '$lib/components/actions';
 	import StaffBandForm from './StaffBandForm.svelte';
 
@@ -30,7 +30,7 @@
 	const band = $derived(data.band);
 	const members = $derived(data.members);
 	const reservations = $derived(data.reservations);
-	const platformInvites = $derived(data.platformInvites);
+	const emailInvites = $derived(data.emailInvites);
 </script>
 
 <!-- The band info form lives in a fully synchronous component: a top-level
@@ -118,8 +118,8 @@
 		{/if}
 	</InfoCard>
 
-	<!-- Platform invites -->
-	{#if platformInvites.filter((i) => i.status === 'pending').length > 0}
+	<!-- Email invites — sent to an address with no account behind it -->
+	{#if emailInvites.filter((i) => i.status === 'pending').length > 0}
 		<InfoCard title="Awaiting Signup">
 			<Table>
 				{#snippet head()}
@@ -128,7 +128,7 @@
 					<th class="col-extra">Invited by</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
-				{#each platformInvites.filter((i) => i.status === 'pending') as inv (inv.id)}
+				{#each emailInvites.filter((i) => i.status === 'pending') as inv (inv.id)}
 					<tr class="hover">
 						<td class="cell-primary">
 							<div class="truncate font-medium">{inv.email}</div>
@@ -139,7 +139,7 @@
 						<td class="w-px"><Badge size="sm" variant="outline">{inv.role}</Badge></td>
 						<td class="col-extra truncate">{inv.invitedByName}</td>
 						<td class="w-px">
-							<RevokePlatformInviteAction bandId={id} inviteId={inv.id} email={inv.email} />
+							<RevokeEmailInviteAction bandId={id} inviteId={inv.id} email={inv.email} />
 						</td>
 					</tr>
 				{/each}

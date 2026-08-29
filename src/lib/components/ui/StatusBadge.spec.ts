@@ -15,7 +15,7 @@ import { eventStatuses } from '$lib/server/db/schema/event';
 import { flagStatuses } from '$lib/server/db/schema/flag';
 import { groupMemberStatuses } from '$lib/server/db/schema/group';
 import { bandTiers } from '$lib/server/db/schema/band-site';
-import { inviteStatuses } from '$lib/server/db/schema/platform-invite';
+import { inviteStatuses } from '$lib/server/db/schema/group-invite';
 
 /**
  * An unmapped status falls back to a neutral dot that says nothing. Before this
@@ -56,7 +56,7 @@ const vocabularies: Record<string, readonly string[]> = {
 	flag: flagStatuses,
 	groupMember: groupMemberStatuses,
 	bandTier: bandTiers,
-	platformInvite: inviteStatuses,
+	groupInvite: inviteStatuses,
 	ticket: ticketStatuses,
 	// `assetStatuses`, not the pre-#286 `equipmentStatuses`. Guarding the dead
 	// vocabulary is why `in_service`, `on_loan` and `lost` went unmapped: three of

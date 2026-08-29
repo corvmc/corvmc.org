@@ -262,9 +262,9 @@ export const relations = defineRelations(schema, (t) => ({
 		category: t.one.helpCategory({ from: t.helpArticle.categoryId, to: t.helpCategory.id }),
 		createdBy: t.one.user({ from: t.helpArticle.createdByUserId, to: t.user.id })
 	},
-	platformInvite: {
-		band: t.one.group({ from: t.platformInvite.bandId, to: t.group.id }),
-		invitedBy: t.one.user({ from: t.platformInvite.invitedById, to: t.user.id })
+	groupInvite: {
+		group: t.one.group({ from: t.groupInvite.groupId, to: t.group.id }),
+		invitedBy: t.one.user({ from: t.groupInvite.invitedById, to: t.user.id })
 	},
 	inboxThread: {
 		messages: t.many.inboxMessage(),

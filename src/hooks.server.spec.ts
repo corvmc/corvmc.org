@@ -73,7 +73,7 @@ vi.mock('$lib/server/kv', () => ({
 }));
 
 const mockResolvePendingInvites = vi.fn();
-vi.mock('$lib/server/band/platform-invite-service', () => ({
+vi.mock('$lib/server/group/group-invite-service', () => ({
 	resolvePendingInvites: (...args: unknown[]) => mockResolvePendingInvites(...args)
 }));
 

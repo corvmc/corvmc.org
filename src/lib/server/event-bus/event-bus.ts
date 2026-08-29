@@ -1,4 +1,5 @@
 import Emittery from 'emittery';
+import type { GroupKind } from '$lib/config';
 
 export interface VolunteerShiftEvent {
 	signupId: string;
@@ -205,11 +206,13 @@ export interface EquipmentReturnedEvent {
 	daysBorrowed: number;
 }
 
-export interface PlatformInviteCreatedEvent {
+export interface GroupInviteCreatedEvent {
 	email: string;
 	token: string;
-	bandId: string;
-	bandName: string;
+	groupId: string;
+	groupName: string;
+	/** The invitee has no account, so the email must say what they are joining. */
+	groupKind: GroupKind;
 	role: string;
 	invitedByName: string;
 }
@@ -452,7 +455,7 @@ export type DomainEvents = {
 	'equipment.loan_scheduled': EquipmentLoanScheduledEvent;
 	'equipment.checked_out': EquipmentCheckedOutEvent;
 	'equipment.returned': EquipmentReturnedEvent;
-	'platform_invite.created': PlatformInviteCreatedEvent;
+	'group_invite.created': GroupInviteCreatedEvent;
 	'inbox.message_received': InboxMessageReceivedEvent;
 	'inbox.message_sent': InboxMessageSentEvent;
 	'inbox.direct_message': InboxDirectMessageEvent;
