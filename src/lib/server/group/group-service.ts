@@ -55,6 +55,24 @@ export class LeaderNotFoundError extends DomainError {
 	}
 }
 
+export class NotJoinableError extends DomainError {
+	readonly httpStatus = 422;
+
+	constructor(message: string) {
+		super(message);
+		this.name = 'NotJoinableError';
+	}
+}
+
+export class AlreadyOnRosterError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor() {
+		super('You are already on this roster.');
+		this.name = 'AlreadyOnRosterError';
+	}
+}
+
 export class GroupNotFoundError extends DomainError {
 	readonly httpStatus = 404;
 
@@ -193,6 +211,76 @@ export async function listGroups(
 	};
 }
 
+/**
+ * The `/member/groups` index, in one query.
+ *
+ * It answers two questions on one page — "where do I go" and "where else could
+ * I go" — because scoping it to your own memberships would strand discovery on a
+ * route nobody with a membership ever opens, and an `open` join policy only
+ * existing members can see is not open at all.
+ *
+ * One read, not four. Four sections is precisely the shape that tempts a
+ * per-section remote query fanned out of a section component, which is what
+ * `docs/checklists/remote-query-fanout.md` exists to stop.
+ *
+ * **No bands, in any section.** A band is a group in the data model, but this
+ * page exists to answer *what can I be part of* and a band has no answer to
+ * give: bands are always `invite_only`, so they could never appear under
+ * discovery, and a member's own bands already have `/member/bands`, their own
+ * panel and their own sidebar group.
+ */
+export async function listMemberGroups(userId: string) {
+	const mine = alias(groupMember, 'my_membership');
+
+	const rows = await db
+		.select({
+			id: group.id,
+			kind: group.kind,
+			name: group.name,
+			slug: group.slug,
+			bio: group.bio,
+			avatarKey: group.avatarKey,
+			joinPolicy: group.joinPolicy,
+			joinInstructions: group.joinInstructions,
+			visibility: directoryEntry.visibility,
+			myRole: mine.role,
+			myStatus: mine.status,
+			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
+		})
+		.from(group)
+		// LEFT on my own row: the same query has to return the groups I am in and
+		// the ones I am not, and which is which is exactly what this join answers.
+		.leftJoin(mine, and(eq(mine.groupId, group.id), eq(mine.userId, userId)))
+		.leftJoin(directoryEntry, eq(directoryEntry.groupId, group.id))
+		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
+		.where(and(inArray(group.kind, [...STAFF_GROUP_KINDS]), isNull(group.deletedAt)))
+		.groupBy(group.id)
+		.orderBy(group.name);
+
+	// A group I am not in shows only if its listing is at least members-visible.
+	// A hidden program is one staff are running quietly; being in it is what
+	// makes it visible, which is why the filter runs after the membership join
+	// rather than in the WHERE.
+	const discoverable = (r: (typeof rows)[number]) => r.visibility !== 'hidden';
+
+	return {
+		/** Everything I hold a row in, whatever its status. */
+		mine: rows.filter((r) => r.myStatus !== null),
+		/**
+		 * The three discovery sections, split by the door each group opens.
+		 * `invite_only` is listed with its instructions and no action: seeing that
+		 * a committee exists is the point, and the way in is a conversation.
+		 */
+		open: rows.filter((r) => r.myStatus === null && r.joinPolicy === 'open' && discoverable(r)),
+		byApplication: rows.filter(
+			(r) => r.myStatus === null && r.joinPolicy === 'by_application' && discoverable(r)
+		),
+		inviteOnly: rows.filter(
+			(r) => r.myStatus === null && r.joinPolicy === 'invite_only' && discoverable(r)
+		)
+	};
+}
+
 export interface CreateGroupData {
 	kind: StaffGroupKind;
 	name: string;
@@ -312,6 +400,119 @@ export async function assignLeader(groupId: string, userId: string) {
 					status: 'active'
 				})
 	]);
+}
+
+/**
+ * Join a group unaided, or ask to.
+ *
+ * **The policy is re-read from the resolved group, never taken from the
+ * request.** That is what makes three doors no riskier than two: which door is
+ * open is the group's own fact, and a caller naming a group cannot also tell the
+ * service how to let them in.
+ *
+ * A self-join always produces `role: 'member'` — owners and admins cannot
+ * self-assign — and the `unique(groupId, userId)` index makes a double-click
+ * idempotent rather than a second row.
+ */
+export async function joinGroup(groupId: string, userId: string) {
+	const [row] = await db
+		.select({ joinPolicy: group.joinPolicy, kind: group.kind })
+		.from(group)
+		.where(and(eq(group.id, groupId), isNull(group.deletedAt)))
+		.limit(1);
+	if (!row) throw new GroupNotFoundError();
+
+	// The status the policy leads to. `open` lands you active with no approval —
+	// the whole point of a drop-in program; `by_application` parks you at
+	// `'requested'`, which is `'pending'`'s mirror and is why the two are
+	// separate values.
+	const status =
+		row.joinPolicy === 'open'
+			? ('active' as const)
+			: row.joinPolicy === 'by_application'
+				? ('requested' as const)
+				: null;
+
+	if (!status) {
+		throw new NotJoinableError('This group is invite only — someone in it has to add you.');
+	}
+
+	const [existing] = await db
+		.select({ id: groupMember.id })
+		.from(groupMember)
+		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)))
+		.limit(1);
+	if (existing) throw new AlreadyOnRosterError();
+
+	await db.insert(groupMember).values({
+		groupId,
+		userId,
+		role: 'member',
+		status,
+		// Nobody invited them. The column is what tells an invitation from an
+		// application apart when both are waiting.
+		invitedById: null
+	});
+
+	return { status };
+}
+
+/**
+ * An owner or admin answering an application.
+ *
+ * Approving is the same status flip `acceptInvite` performs, arriving from the
+ * other direction; declining deletes the row, exactly as revoking an invitation
+ * does. The `groupId` scope is not decoration: the member id comes from the
+ * client, and an admin's authority stops at their own group.
+ */
+export async function approveApplication(memberId: string, groupId: string) {
+	const scope = and(
+		eq(groupMember.id, memberId),
+		eq(groupMember.groupId, groupId),
+		eq(groupMember.status, 'requested')
+	);
+
+	const [row] = await db.select({ id: groupMember.id }).from(groupMember).where(scope).limit(1);
+	if (!row) throw new GroupNotFoundError();
+
+	await db.update(groupMember).set({ status: 'active', updatedAt: new Date() }).where(scope);
+}
+
+export async function declineApplication(memberId: string, groupId: string) {
+	await db
+		.delete(groupMember)
+		.where(
+			and(
+				eq(groupMember.id, memberId),
+				eq(groupMember.groupId, groupId),
+				eq(groupMember.status, 'requested')
+			)
+		);
+}
+
+/**
+ * Leave a program, or withdraw an application to one.
+ *
+ * **A program leader may leave without naming a successor**, and this is the one
+ * place programs and bands diverge on leaving. A band owner must transfer first,
+ * because nobody's job it is to pick up an orphaned band. A program leader was
+ * *appointed*, and the body that appointed them is still there — so "find your
+ * own replacement" would trap someone in a volunteer role they have already said
+ * they are done with. The seat goes empty, `/staff/groups` flags it, and the
+ * program keeps running: nothing about it depends on the owner row existing.
+ */
+export async function leaveGroup(groupId: string, userId: string) {
+	// No owner check, deliberately — see above. `leaveBand` has one and keeps it.
+	const [row] = await db
+		.select({ id: groupMember.id })
+		.from(groupMember)
+		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)))
+		.limit(1);
+	if (!row) throw new GroupNotFoundError();
+
+	await db
+		.delete(groupMember)
+		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)));
 }
 
 /**

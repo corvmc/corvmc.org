@@ -1,9 +1,10 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupJoinPolicies } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
-import { requireStaff } from '$lib/server/authorization';
+import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireGroupRole } from '$lib/server/group/group-context';
 import { requireFeature } from '$lib/server/feature-flags';
 import { directoryVisibilities } from '$lib/server/db/schema/directory';
 import { getMembers, partitionByStatus } from '$lib/server/band/band-service';
@@ -12,8 +13,13 @@ import {
 	assignLeader,
 	createGroup,
 	deactivate,
+	approveApplication,
+	declineApplication,
 	getGroupDetail,
+	joinGroup,
+	leaveGroup,
 	listGroups,
+	listMemberGroups,
 	reactivate,
 	updateGroupSettings
 } from '$lib/server/group/group-service';
@@ -159,6 +165,138 @@ export const reactivateGroup = form(z.object({ groupId: z.string().min(1) }), as
 	await requireGroupsStaff();
 	try {
 		await reactivate(data.groupId);
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+// ---------------------------------------------------------------------------
+// Member — /member/groups
+// ---------------------------------------------------------------------------
+
+/**
+ * The member index's one load-bearing query: your programs, and the ones you
+ * could join, in a single round trip. See `listMemberGroups`.
+ */
+export const getMemberGroups = query(async () => {
+	await requireFeature('groups');
+	const user = requireUser();
+	return listMemberGroups(user.id);
+});
+
+/**
+ * The club page's one load-bearing query — the group, your role and the roster
+ * together. A club is small by construction, so this is one read rather than a
+ * tab's worth each.
+ *
+ * `allowStaff`, matching every other panel read: staff administer programs, and
+ * a page that renders for them with every card failing is the inconsistency
+ * phase 4 set out to end.
+ */
+export const getMemberGroup = query(z.string(), async (slug) => {
+	await requireFeature('groups');
+
+	// A non-member — including someone whose application is still `'requested'`,
+	// which `requireGroupRole` resolves nothing for — is sent back to the index
+	// rather than shown an empty shell or an error boundary. A 404 still 404s:
+	// "you cannot see this" and "this does not exist" are different answers and
+	// collapsing them would send people to a list for a slug that never existed.
+	let ctx;
+	try {
+		ctx = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	} catch (err) {
+		if ((err as { status?: number }).status === 403) redirect(302, '/member/groups');
+		throw err;
+	}
+	const { group, role } = ctx;
+
+	const roster = partitionByStatus(await getMembers(group.id));
+	const canManage = role === 'owner' || role === 'admin';
+
+	return {
+		group: {
+			id: group.id,
+			kind: group.kind,
+			name: group.name,
+			slug: group.slug,
+			bio: group.bio,
+			joinPolicy: group.joinPolicy,
+			joinInstructions: group.joinInstructions,
+			memberCount: group.memberCount
+		},
+		role,
+		canManage,
+		members: {
+			active: roster.active,
+			pending: roster.pending,
+			// Only an owner or admin answers these, and only a `by_application`
+			// group has any. Withheld rather than hidden client-side: a plain
+			// member has no business reading who applied.
+			requested: canManage ? roster.requested : []
+		}
+	};
+});
+
+// ---------------------------------------------------------------------------
+// Member — forms
+// ---------------------------------------------------------------------------
+
+/**
+ * Join, or apply to join.
+ *
+ * One form for both doors, because which one it is belongs to the group rather
+ * than to the request: the service re-reads `joinPolicy` from the resolved group
+ * and the caller cannot say how they should be let in. Guarded by `requireUser`
+ * rather than `requireGroupRole` for the obvious reason — someone joining holds
+ * no role yet.
+ */
+export const joinGroupForm = form(z.object({ groupId: z.string().min(1) }), async (data) => {
+	await requireFeature('groups');
+	const user = requireUser();
+	try {
+		const { status } = await joinGroup(data.groupId, user.id);
+		return { success: true, status };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+/** Leave a program, or withdraw an application to one. Your own row, always. */
+export const leaveGroupForm = form(z.object({ groupId: z.string().min(1) }), async (data) => {
+	await requireFeature('groups');
+	const user = requireUser();
+	try {
+		await leaveGroup(data.groupId, user.id);
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+const applicationSchema = z.object({
+	slug: z.string().min(1),
+	memberId: z.string().min(1)
+});
+
+export const approveApplicationForm = form(applicationSchema, async (data) => {
+	await requireFeature('groups');
+	// Admin, and the group comes from the ref rather than from the member id:
+	// the id is the client's, and an admin's authority stops at their own group.
+	const { group } = await requireGroupRole({ slug: data.slug }, 'admin');
+	try {
+		await approveApplication(data.memberId, group.id);
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+export const declineApplicationForm = form(applicationSchema, async (data) => {
+	await requireFeature('groups');
+	const { group } = await requireGroupRole({ slug: data.slug }, 'admin');
+	try {
+		await declineApplication(data.memberId, group.id);
 		return { success: true };
 	} catch (err) {
 		mapDomainError(err);

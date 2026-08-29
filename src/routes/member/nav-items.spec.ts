@@ -157,7 +157,15 @@ describe('route coverage', () => {
 	 *
 	 * Delete a line when its page gets a row of its own.
 	 */
-	const strandedOnDashboard = new Set(['/member/equipment/assets/[id]', '/member/bands']);
+	const strandedOnDashboard = new Set([
+		'/member/equipment/assets/[id]',
+		// Reached through the My Bands and My Groups sidebar groups and their
+		// "All" links, not through a nav row of their own. Two collapsible groups
+		// for two indexes, which is the separation the routes draw.
+		'/member/bands',
+		'/member/groups',
+		'/member/groups/[slug]'
+	]);
 
 	it('leaves no member page unmatched', () => {
 		const orphans = memberPageRoutes().filter(
