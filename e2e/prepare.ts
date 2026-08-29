@@ -48,6 +48,7 @@ import { seedStaffEvent } from './fixtures/seed-staff-event';
 import { seedReservationPayments } from './fixtures/seed-reservation-payments';
 import { seedVolunteering } from './fixtures/seed-volunteering';
 import { seedFeatureFlags } from './fixtures/seed-feature-flags';
+import { seedGroups } from './fixtures/seed-groups';
 import { seedCommunityEvents } from './fixtures/seed-community-events';
 import { seedEventsSplit } from './fixtures/seed-events-split';
 import { seedSuggestions } from './fixtures/seed-suggestions';
@@ -105,6 +106,9 @@ await seedEventsSplit();
 await seedSuggestions();
 await seedMessaging();
 await seedInboxAwaiting();
+// After the staff fixture: both programs are led by the staff user, and the
+// committee's applicant is its role target.
+await seedGroups();
 await seedFeatureFlags();
 // Last of the data fixtures: sweeps every user and group the ones above created
 // into `directory_entry`, which is what the directory reads.

@@ -268,6 +268,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/groups",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/groups/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/help",
 		"panel": "staff"
 	},

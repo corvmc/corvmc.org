@@ -72,17 +72,35 @@ group
   kind               text, not null   ('band' | 'club' | 'committee')
   name               text, not null
   slug               text, not null, unique
-  description        text, nullable
+  bio                text, nullable
   avatarKey          text, nullable   (R2 storage key)
-  publicVisibility   text, not null, default 'public'   ('public' | 'members' | 'hidden')
-  joinPolicy         text, not null, default 'invite_only'   ('invite_only' | 'open')
+  joinPolicy         text, not null, default 'invite_only'
+                       ('invite_only' | 'open' | 'by_application')
   joinInstructions   text, nullable
-  lookingForMembers  boolean, not null, default false
-  contact            json, nullable   (public contact preferences)
   createdAt          timestamp, not null
   updatedAt          timestamp, not null
   deletedAt          timestamp, nullable
 ```
+
+**This block once carried four more columns, and phase 3a moved all four.** An
+earlier draft gave `group` a `description`, a `publicVisibility`, a
+`lookingForMembers` and a `contact` of its own; they are `bio`, `visibility`,
+`lookingFor` and `contact` on [`directory_entry`](#directory-entry) now. The
+reason is the one this spec argues everywhere else: a listing is a listing
+whatever it is a listing of, and two visibility columns are two things that can
+disagree about whether a program is public.
+
+So **a club gets a directory entry exactly as a band does**, written in the same
+`db.batch` as the group row — the service surface below has always said
+`create()` produces "group + owner row + directory entry", and it does so for
+every kind. What a club does _not_ get is a `band_site` row: that is the premium
+microsite, its `groupId` is NOT NULL, and a program simply not having one is the
+whole of the constraint. `/groups` and `/directory/bands` then read the same
+table and differ by a `kind` filter rather than by a second listing.
+
+The cost, stated plainly: a committee's entry carries `genres`, `hometown` and
+`foundedYear` that mean nothing for it. They are nullable and nothing renders
+them off a committee, which is a smaller price than a second listing shape.
 
 **`group` owns the address namespace.** `group.slug` is the only _live_ slug in the system — directory entries have none — so a plain unique index is the whole namespace enforcement: no registry table, no dual-write, no second source of truth. It follows that **a thing is publicly addressable if and only if it has a group**, which is a structural fact rather than a filter anyone can forget to apply.
 
@@ -789,7 +807,7 @@ Two pieces of this do not exist yet and are the real work: a `createGroupEvent()
 
 1. Staff enter a name, kind, and description, and pick the member who will lead it.
 2. The service creates the `group` and an owner `group_member` row for that member with `status = 'active'` — appointed, not invited, so there is nothing for them to accept.
-3. Staff set `joinPolicy` and `publicVisibility`.
+3. Staff set `joinPolicy` and the listing's `visibility`.
 4. The appointee gets a notification and the group appears under **My Groups** in their sidebar.
 
 The appointee never had to opt in, which is deliberate: staff are recording an arrangement that already exists offline. They can leave or hand off afterwards like any owner.
