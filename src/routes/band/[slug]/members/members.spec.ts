@@ -157,7 +157,7 @@ describe('getBandMembersPage', () => {
 		const data = await getBandMembersPage('band-1');
 
 		expect(data.canManage).toBe(false);
-		expect(data.platformInvites).toEqual([]);
+		expect(data.emailInvites).toEqual([]);
 	});
 
 	it('still refuses someone who is neither a member nor staff', async () => {

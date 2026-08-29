@@ -107,7 +107,7 @@ describe('registerAllNotificationListeners', () => {
 			'reservation.cancelled',
 			'band.invitation_sent',
 			'band.invitation_accepted',
-			'platform_invite.created',
+			'group_invite.created',
 			'reservation.recurring_skipped',
 			'reservation.recurring_waitlisted',
 			'reservation.waitlist_slot_available',
@@ -248,21 +248,44 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.emailTemplate.model.subject).toBe('Alice invited you to The Strokes');
 	});
 
-	it('platform_invite.created → email-only notification alias with signup link', async () => {
-		await emit('platform_invite.created', {
+	it('group_invite.created → email-only notification alias with signup link', async () => {
+		await emit('group_invite.created', {
 			email: 'new@test.com',
 			token: 'tok-xyz',
-			bandId: 'band-1',
-			bandName: 'The Strokes',
+			groupId: 'band-1',
+			groupName: 'The Strokes',
+			groupKind: 'band',
 			role: 'member',
 			invitedByName: 'Alice'
 		});
 
 		const params = mockDispatchEmailOnly.mock.calls[0][0];
-		expect(params.type).toBe('platform_invitation');
+		expect(params.type).toBe('group_invitation');
 		expect(params.templateAlias).toBe(GENERIC);
 		expect(params.model.cta.url).toBe('https://test.corvmc.com/login?invite=tok-xyz');
 		expect(params.model.footnote).toBe('This invitation expires in 7 days.');
+	});
+
+	/**
+	 * The recipient has no account and no page open, so the copy is the only
+	 * thing telling them what they are joining. While the table was
+	 * `platform_invite` every row was a band and the email said so in its heading.
+	 */
+	it('group_invite.created → calls a club a club, not a band', async () => {
+		await emit('group_invite.created', {
+			email: 'new@test.com',
+			token: 'tok-xyz',
+			groupId: 'club-1',
+			groupName: 'Real Book Club',
+			groupKind: 'club',
+			role: 'member',
+			invitedByName: 'Alice'
+		});
+
+		const params = mockDispatchEmailOnly.mock.calls[0][0];
+		expect(params.model.paragraphs[0].text).toContain('join the club Real Book Club');
+		expect(params.model.paragraphs[0].text).not.toContain('band');
+		expect(params.model.heading).toBe("You've Been Invited to Join Real Book Club");
 	});
 
 	const contactFormEvent = {
@@ -659,11 +682,12 @@ describe('every notification-alias model', () => {
 			acceptedByName: 'Ada',
 			bandAdmins: [{ userId: 'user-1', userEmail: 'u@test.com', userName: 'Bob' }]
 		});
-		await emit('platform_invite.created', {
+		await emit('group_invite.created', {
 			email: 'new@test.com',
 			token: 'tok',
 			role: 'member',
-			bandName: 'Indigo Kiss',
+			groupName: 'Indigo Kiss',
+			groupKind: 'band',
 			invitedByName: 'Bob'
 		});
 		await emit('equipment.loan_scheduled', {

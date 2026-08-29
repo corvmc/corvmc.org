@@ -42,10 +42,10 @@ import {
 import { bandTiers } from '$lib/server/db/schema/band-site';
 import { getBandLayout } from '$lib/remote/layout.remote';
 import {
-	createInvite as createPlatformInvite,
-	listForBand,
-	revoke as revokePlatformInviteService
-} from '$lib/server/band/platform-invite-service';
+	createInvite as createEmailInviteService,
+	listForGroup as listEmailInvitesForGroup,
+	revoke as revokeEmailInviteService
+} from '$lib/server/group/group-invite-service';
 import { requireGroupRole } from '$lib/server/group/group-context';
 
 // ===========================================================================
@@ -106,9 +106,9 @@ export const getBandReservations = query(z.string(), async (bandId) => {
 		.limit(10);
 });
 
-export const getStaffPlatformInvites = query(z.string(), async (bandId) => {
+export const getStaffEmailInvites = query(z.string(), async (bandId) => {
 	await requireStaff();
-	return listForBand(bandId);
+	return listEmailInvitesForGroup(bandId);
 });
 
 // ===========================================================================
@@ -135,9 +135,14 @@ export const searchBandUsers = query(
 	}
 );
 
-export const getBandPlatformInvites = query(z.string(), async (bandId) => {
+/**
+ * The outstanding `group_invite` rows — invitations sent to an email address
+ * rather than to an account. The other kind of pending invitation is a
+ * `group_member` row and comes back with the roster.
+ */
+export const getBandEmailInvites = query(z.string(), async (bandId) => {
 	const { group: band } = await requireGroupRole({ id: bandId }, 'admin');
-	return listForBand(band.id);
+	return listEmailInvitesForGroup(band.id);
 });
 
 // ===========================================================================
@@ -199,7 +204,7 @@ export const getBandMembersList = query(z.string(), async (bandId) => {
 /**
  * The band members page's one load-bearing query.
  *
- * `getBandPlatformInvites` is admin-guarded and 403s a plain member into the error boundary, so
+ * `getBandEmailInvites` is admin-guarded and 403s a plain member into the error boundary, so
  * the page gated it on the viewer's role and held the two queries in flight together — a
  * permission decision made client-side, and the fan-out that past kit 2.64 stops the page
  * rendering at all. Both now resolve here, where the role is already known.
@@ -212,12 +217,12 @@ export const getBandMembersPage = query(z.string(), async (bandId) => {
 	const { role } = await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
 	const canManage = role === 'owner' || role === 'admin';
 
-	const [members, platformInvites] = await Promise.all([
+	const [members, emailInvites] = await Promise.all([
 		getBandMembersList(bandId),
-		canManage ? getBandPlatformInvites(bandId) : []
+		canManage ? getBandEmailInvites(bandId) : []
 	]);
 
-	return { members, platformInvites, canManage };
+	return { members, emailInvites, canManage };
 });
 
 export const getMemberBands = query(async () => {
@@ -407,7 +412,7 @@ export const inviteByEmailApi = form(
 	async (data, issue) => {
 		const staff = await requireStaff();
 		try {
-			const result = await createPlatformInvite(
+			const result = await createEmailInviteService(
 				data.email,
 				data.bandId,
 				data.role,
@@ -422,13 +427,13 @@ export const inviteByEmailApi = form(
 	}
 );
 
-export const revokePlatformInvite = form(
+export const revokeStaffEmailInvite = form(
 	z.object({
 		inviteId: z.string().min(1)
 	}),
 	async (data) => {
 		await requireStaff();
-		await revokePlatformInviteService(data.inviteId);
+		await revokeEmailInviteService(data.inviteId);
 		return { success: true };
 	}
 );
@@ -663,7 +668,7 @@ export const inviteByEmail = form(
 	async (data, issue) => {
 		const { user, group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
 		try {
-			const result = await createPlatformInvite(
+			const result = await createEmailInviteService(
 				data.email,
 				band.id,
 				data.role,
@@ -681,7 +686,7 @@ export const inviteByEmail = form(
 	}
 );
 
-export const revokePlatformInviteRemote = form(
+export const revokeEmailInvite = form(
 	z.object({
 		bandId: bandIdField,
 		inviteId: z.string().min(1)
@@ -691,7 +696,7 @@ export const revokePlatformInviteRemote = form(
 		// band admin holding another band's invite id could revoke it.
 		const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
 		try {
-			await revokePlatformInviteService(data.inviteId, band.id);
+			await revokeEmailInviteService(data.inviteId, band.id);
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -752,12 +757,12 @@ export const getUserBands = query(z.string(), async (userId) => {
  * id in scope, so this composes with nothing left orphaned.
  */
 export const getStaffBandPage = query(z.string(), async (id) => {
-	const [band, members, reservations, platformInvites] = await Promise.all([
+	const [band, members, reservations, emailInvites] = await Promise.all([
 		getStaffBand(id),
 		getStaffBandMembers(id),
 		getBandReservations(id),
-		getStaffPlatformInvites(id)
+		getStaffEmailInvites(id)
 	]);
 
-	return { band, members, reservations, platformInvites };
+	return { band, members, reservations, emailInvites };
 });

@@ -2,9 +2,9 @@
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { revokePlatformInvite } from '$lib/remote/bands.remote';
+	import { revokeStaffEmailInvite } from '$lib/remote/bands.remote';
 
-	const { fields } = revokePlatformInvite;
+	const { fields } = revokeStaffEmailInvite;
 
 	let {
 		inviteId,
@@ -27,7 +27,7 @@
 </script>
 
 <Action
-	action={revokePlatformInvite}
+	action={revokeStaffEmailInvite}
 	label="Revoke"
 	modalTitle="Confirm"
 	successToast="Invite revoked"

@@ -8,7 +8,7 @@ import { registerListeners } from '$lib/server/event-bus/register-listeners';
 import { initDb } from '$lib/server/db';
 import { initStorage } from '$lib/server/storage';
 import { initKv } from '$lib/server/kv';
-import { resolvePendingInvites } from '$lib/server/band/platform-invite-service';
+import { resolvePendingInvites } from '$lib/server/group/group-invite-service';
 import { captureException } from '$lib/server/sentry';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
 import { isLocalOrigin } from '$lib/sentry-local-origin';

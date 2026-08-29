@@ -252,7 +252,7 @@ Spec: [specs/bands-spec.md](../specs/shipped/bands-spec.md) ·
 ### The story
 
 Any member can create a band and invite others. Invitees who already have accounts get an
-in-app invitation; people without accounts get a **platform invite** by email, which is
+in-app invitation; people without accounts get a **group invite** by email, which is
 automatically resolved into a band membership the first time they log in after signing up.
 Bands have their own role ladder (`owner > admin > member`) and can optionally buy a
 premium subscription that unlocks a public band microsite.
@@ -265,11 +265,11 @@ premium subscription that unlocks a public band microsite.
   `ensureUniqueSlug()`.
 - **Invite:** `invite()` in `band-service.ts`. Existing users get a pending `bandMember`
   row + a `band.invitation_sent` event (email/in-app notification). Unknown emails go
-  through `createInvite()` in `platform-invite-service.ts` (a `platformInvite` row with a
-  token) and a `platform_invite.created` event that emails a signup link.
+  through `createInvite()` in `group-invite-service.ts` (a `groupInvite` row with a token)
+  and a `group_invite.created` event that emails a signup link.
 - **Invite resolution at login:** `src/hooks.server.ts` calls
   `resolvePendingInvites(userId, email)` once per session (tracked in the in-memory
-  `resolvedSessions` set) — any `platformInvite` rows matching the user's email become real
+  `resolvedSessions` set) — any `groupInvite` rows matching the user's email become real
   band memberships. This is why "invite someone with no account" just works after they
   register.
 - **Accept/decline:** `acceptInvitation()` / `declineInvitation()` in `band-service.ts`
@@ -289,13 +289,13 @@ premium subscription that unlocks a public band microsite.
 
 ### Data touched
 
-`band`, `bandMember`, `platformInvite`, `bandPageConfig`, `bandMedia`, Stripe subscription
+`group`, `groupMember`, `groupInvite`, `bandPageConfig`, `bandMedia`, Stripe subscription
 (band premium).
 
 ### Where it breaks
 
 - **Invite email never became a membership** → the email on the invite must match the
-  login email exactly; check `platformInvite` rows and whether `resolvePendingInvites`
+  login email exactly; check `groupInvite` rows and whether `resolvePendingInvites`
   errored (it's fire-and-forget in hooks with `captureException` — look in Sentry).
 - **Premium page not appearing** → feature flag `bandPremium` off, or subscription state
   didn't sync — check the `customer.subscription.*` webhook deliveries and

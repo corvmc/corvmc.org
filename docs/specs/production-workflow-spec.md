@@ -333,7 +333,7 @@ duplicate the reasoning here.
 
 What matters for this migration specifically:
 
-- **Recount the descendants against the split.** `band_member` and `platform_invite` leave
+- **Recount the descendants against the split.** `band_member` and `group_invite` leave
   the band entirely — they become `group_member` and `group_invite`, children of `group`.
   `band_genre`, `band_media`, and `band_page_config` re-key to `band_profile`. `event`
   re-points from `band` to `group`, pulling `ticket` and `event_rsvp` with it as before.

@@ -13,7 +13,7 @@ export * from './group';
 export * from './directory';
 export * from './band-site';
 export * from './band-page';
-export * from './platform-invite';
+export * from './group-invite';
 export * from './help';
 export * from './inbox';
 export * from './flag';

@@ -27,7 +27,7 @@
 		revokeInvitation,
 		transferOwner,
 		inviteByEmail,
-		revokePlatformInviteRemote
+		revokeEmailInvite
 	} from '$lib/remote/bands.remote';
 	import { getBandLayoutContext } from '../layout-context';
 
@@ -36,7 +36,7 @@
 	// derived.
 	const { fields: removeFields } = removeMember;
 	const { fields: revokeFields } = revokeInvitation;
-	const { fields: revokePlatformFields } = revokePlatformInviteRemote;
+	const { fields: revokeEmailFields } = revokeEmailInvite;
 	const { fields: inviteFields } = inviteMember;
 	const { fields: transferFields } = transferOwner;
 	const { fields: inviteEmailFields } = inviteByEmail;
@@ -53,12 +53,12 @@
 
 	// One query. The invites were loaded through an `$effect` into `$state` once, which sat
 	// outside the layout's boundary and needed a hand-rolled re-fetch; then as a second query
-	// gated on `canManage`, because `getBandPlatformInvites` is admin-guarded and 403s a plain
+	// gated on `canManage`, because `getBandEmailInvites` is admin-guarded and 403s a plain
 	// member into the error boundary. Both are resolved server-side now, where the role is
 	// already known — and one query is what this page can hold without kit 2.64 breaking it.
 	const data = $derived(await getBandMembersPage(layout.band.id));
 	const members = $derived(data.members);
-	const platformInvites = $derived(data.platformInvites);
+	const emailInvites = $derived(data.emailInvites);
 
 	const active = $derived(members.active);
 	const pending = $derived(members.pending);
@@ -66,7 +66,7 @@
 	/** The viewer's own row — it heads the page, so it isn't in the list below. */
 	const me = $derived(active.find((m) => m.userId === layout.user.id) ?? null);
 	const others = $derived(active.filter((m) => m.userId !== layout.user.id));
-	const pendingPlatform = $derived(platformInvites.filter((i) => i.status === 'pending'));
+	const pendingEmailInvites = $derived(emailInvites.filter((i) => i.status === 'pending'));
 
 	// Both repoint at the wrapper: nothing reads the constituents directly any more, so
 	// refreshing them would repaint nothing. See `custom/refresh-the-composed-query`.
@@ -253,10 +253,10 @@
 		</InfoCard>
 	{/if}
 
-	{#if canManage && pendingPlatform.length > 0}
-		<InfoCard title={`Awaiting signup (${pendingPlatform.length})`}>
+	{#if canManage && pendingEmailInvites.length > 0}
+		<InfoCard title={`Awaiting signup (${pendingEmailInvites.length})`}>
 			<div class="grid grid-cols-1 gap-2">
-				{#each pendingPlatform as invite (invite.id)}
+				{#each pendingEmailInvites as invite (invite.id)}
 					<Card tone="base-200">
 						<CardBody row class="py-3">
 							<div class="min-w-0">
@@ -268,7 +268,7 @@
 							<div class="flex shrink-0 items-center gap-2">
 								<Badge variant="warning">awaiting signup</Badge>
 								<Action
-									action={revokePlatformInviteRemote}
+									action={revokeEmailInvite}
 									label="Revoke"
 									variant="ghost"
 									size="xs"
@@ -278,8 +278,8 @@
 									onfailure={() => toast.error('Failed to revoke')}
 								>
 									{#snippet form()}
-										<input {...revokePlatformFields.bandId.as('hidden', layout.band.id)} />
-										<input {...revokePlatformFields.inviteId.as('hidden', invite.id)} />
+										<input {...revokeEmailFields.bandId.as('hidden', layout.band.id)} />
+										<input {...revokeEmailFields.inviteId.as('hidden', invite.id)} />
 									{/snippet}
 								</Action>
 							</div>

@@ -66,7 +66,7 @@ export const tableOrder = [
 	'event_rsvp',
 	// The bill: references event and band, so it wipes before either.
 	'event_band',
-	'platform_invite',
+	'group_invite',
 	'credit_transaction',
 	'help_articles',
 	'inbox_message',

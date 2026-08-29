@@ -33,10 +33,14 @@ vi.mock('$lib/server/db', () => ({
 		insert: () => ({
 			values: (row: unknown) => {
 				insertResult.push(row);
-				return {
+				// `createInvite` upserts; `resolvePendingInvites` awaits the values()
+				// result directly. One chainable object serves both.
+				const chain = {
+					onConflictDoUpdate: () => chain,
 					returning: () =>
 						Promise.resolve([{ id: 'inv-new', token: 'tok-abc', ...(row as object) }])
 				};
+				return chain;
 			}
 		}),
 		update: () => {
@@ -46,11 +50,11 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/db/schema/platform-invite', () => ({
-	platformInvite: {
+vi.mock('$lib/server/db/schema/group-invite', () => ({
+	groupInvite: {
 		id: 'id',
 		email: 'email',
-		bandId: 'band_id',
+		groupId: 'group_id',
 		role: 'role',
 		position: 'position',
 		status: 'status',
@@ -63,7 +67,7 @@ vi.mock('$lib/server/db/schema/platform-invite', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/group', () => ({
-	group: { id: 'id', name: 'name' },
+	group: { id: 'id', name: 'name', kind: 'kind' },
 	groupMember: {
 		id: 'id',
 		groupId: 'group_id',
@@ -83,14 +87,15 @@ vi.mock('drizzle-orm', () => ({
 	eq: vi.fn(),
 	and: vi.fn(),
 	gt: vi.fn(),
-	desc: vi.fn()
+	desc: vi.fn(),
+	sql: (strings: TemplateStringsArray) => strings.join('')
 }));
 
 const mockInvite = vi.fn().mockResolvedValue({ id: 'member-1' });
 // `isUniqueConstraintError` deliberately is NOT mocked — it lives in
 // $lib/server/db/constraint-errors (no schema imports) so these tests run the
 // real predicate rather than a stub that would prove nothing.
-vi.mock('./band-service', () => ({
+vi.mock('$lib/server/band/band-service', () => ({
 	invite: (...args: unknown[]) => mockInvite(...args),
 	BandMemberExistsError: class BandMemberExistsError extends Error {
 		constructor(message = 'exists') {
@@ -105,8 +110,8 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: { emit: mockEmit }
 }));
 
-const { createInvite, resolvePendingInvites, listForBand, revoke, getByToken } =
-	await import('./platform-invite-service');
+const { createInvite, resolvePendingInvites, listForGroup, revoke, getByToken } =
+	await import('./group-invite-service');
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -144,34 +149,20 @@ describe('createInvite', () => {
 		);
 	});
 
-	it('refreshes expiry when pending invite already exists for same email+band', async () => {
-		// select 1: user lookup — not found
-		selectResults.push([]);
-		// select 2: existing pending invite — found
-		selectResults.push([{ id: 'inv-existing' }]);
-
-		const result = await createInvite('bob@test.com', 'band-1', 'admin', null, 'inviter-1');
-
-		expect(result.type).toBe('platform_invite');
-		expect(result.id).toBe('inv-existing');
-		expect(updateCalled).toBe(true);
-		expect(insertResult).toHaveLength(0);
-	});
-
-	it('creates a new platform invite when no user and no pending invite exists', async () => {
-		// select 1: user lookup — not found
-		selectResults.push([]);
-		// select 2: existing pending invite — not found
+	it('creates a group invite when the address has no account', async () => {
+		// select 1: user lookup — not found. There is no second select: re-inviting
+		// is an upsert onto the partial unique index now, not a SELECT for an
+		// existing pending row followed by an INSERT.
 		selectResults.push([]);
 
 		const result = await createInvite('new@test.com', 'band-1', 'member', 'Drums', 'inviter-1');
 
-		expect(result.type).toBe('platform_invite');
+		expect(result.type).toBe('group_invite');
 		expect(result.id).toBe('inv-new');
 		expect(insertResult).toHaveLength(1);
 		expect(insertResult[0]).toMatchObject({
 			email: 'new@test.com',
-			bandId: 'band-1',
+			groupId: 'band-1',
 			role: 'member',
 			position: 'Drums',
 			invitedById: 'inviter-1',
@@ -181,32 +172,33 @@ describe('createInvite', () => {
 
 	it('normalizes email to lowercase', async () => {
 		selectResults.push([]);
-		selectResults.push([]);
 
 		await createInvite('  USER@Example.COM  ', 'band-1', 'member', null, 'inviter-1');
 
 		expect(insertResult[0]).toMatchObject({ email: 'user@example.com' });
 	});
 
-	it('emits platform_invite.created event after creating invite', async () => {
-		selectResults.push([]);
+	it('emits group_invite.created with the kind the email has to name', async () => {
 		selectResults.push([]);
 		// After insert, the fire-and-forget block does 2 more selects:
-		// select 3: band name
-		selectResults.push([{ name: 'The Strokes' }]);
-		// select 4: inviter name
+		// select 2: group name and kind
+		selectResults.push([{ name: 'Real Book Club', kind: 'club' }]);
+		// select 3: inviter name
 		selectResults.push([{ name: 'Alice' }]);
 
-		await createInvite('new@test.com', 'band-1', 'member', null, 'inviter-1');
+		await createInvite('new@test.com', 'group-1', 'member', null, 'inviter-1');
 
 		// Event is fire-and-forget (Promise.resolve().then), flush microtasks
 		await new Promise((r) => setTimeout(r, 0));
 
 		expect(mockEmit).toHaveBeenCalledWith(
-			'platform_invite.created',
+			'group_invite.created',
 			expect.objectContaining({
 				email: 'new@test.com',
-				bandName: 'The Strokes',
+				groupName: 'Real Book Club',
+				// The invitee has no account and no page open, so "join a band" is
+				// the one thing the email must not say about a club.
+				groupKind: 'club',
 				invitedByName: 'Alice',
 				role: 'member'
 			})
@@ -223,17 +215,17 @@ describe('resolvePendingInvites', () => {
 		expect(result).toBe(0);
 	});
 
-	it('creates band members and marks invites accepted', async () => {
+	it('creates roster rows and marks invites accepted', async () => {
 		// pending invites query
 		selectResults.push([
 			{
 				id: 'inv-1',
-				bandId: 'band-1',
+				groupId: 'band-1',
 				role: 'member',
 				position: 'Guitar',
 				invitedById: 'inviter-1'
 			},
-			{ id: 'inv-2', bandId: 'band-2', role: 'admin', position: null, invitedById: 'inviter-2' }
+			{ id: 'inv-2', groupId: 'band-2', role: 'admin', position: null, invitedById: 'inviter-2' }
 		]);
 
 		const result = await resolvePendingInvites('user-1', 'ALICE@Test.com');
@@ -257,9 +249,9 @@ describe('resolvePendingInvites', () => {
 		});
 	});
 
-	it('handles UNIQUE constraint (user already in band) gracefully', async () => {
+	it('handles UNIQUE constraint (already on the roster) gracefully', async () => {
 		selectResults.push([
-			{ id: 'inv-1', bandId: 'band-1', role: 'member', position: null, invitedById: 'inviter-1' }
+			{ id: 'inv-1', groupId: 'band-1', role: 'member', position: null, invitedById: 'inviter-1' }
 		]);
 
 		// Override insert to throw UNIQUE error
@@ -283,12 +275,12 @@ describe('resolvePendingInvites', () => {
 		selectResults.push([
 			{
 				id: 'inv-fail',
-				bandId: 'band-1',
+				groupId: 'band-1',
 				role: 'member',
 				position: null,
 				invitedById: 'inviter-1'
 			},
-			{ id: 'inv-ok', bandId: 'band-2', role: 'member', position: null, invitedById: 'inviter-2' }
+			{ id: 'inv-ok', groupId: 'band-2', role: 'member', position: null, invitedById: 'inviter-2' }
 		]);
 
 		const dbMod = await import('$lib/server/db');
@@ -346,7 +338,7 @@ describe('getByToken', () => {
 				role: 'member',
 				status: 'pending',
 				expiresAt: futureDate,
-				bandName: 'The Strokes',
+				groupName: 'The Strokes',
 				inviterName: 'Bob'
 			}
 		]);
@@ -354,7 +346,7 @@ describe('getByToken', () => {
 		const result = await getByToken('tok-abc');
 
 		expect(result).toEqual({
-			bandName: 'The Strokes',
+			groupName: 'The Strokes',
 			inviterName: 'Bob',
 			role: 'member',
 			email: 'alice@test.com'
@@ -377,7 +369,7 @@ describe('getByToken', () => {
 				role: 'member',
 				status: 'pending',
 				expiresAt: pastDate,
-				bandName: 'The Strokes',
+				groupName: 'The Strokes',
 				inviterName: 'Bob'
 			}
 		]);
@@ -395,7 +387,7 @@ describe('getByToken', () => {
 				role: 'member',
 				status: 'revoked',
 				expiresAt: futureDate,
-				bandName: 'The Strokes',
+				groupName: 'The Strokes',
 				inviterName: 'Bob'
 			}
 		]);
@@ -413,7 +405,7 @@ describe('getByToken', () => {
 				role: 'member',
 				status: 'pending',
 				expiresAt: futureDate,
-				bandName: 'The Strokes',
+				groupName: 'The Strokes',
 				inviterName: null
 			}
 		]);
@@ -424,8 +416,8 @@ describe('getByToken', () => {
 	});
 });
 
-describe('listForBand', () => {
-	it('returns invites for the band', async () => {
+describe('listForGroup', () => {
+	it('returns invites for the group', async () => {
 		const invites = [
 			{
 				id: 'inv-1',
@@ -450,7 +442,7 @@ describe('listForBand', () => {
 		];
 		selectResults.push(invites);
 
-		const result = await listForBand('band-1');
+		const result = await listForGroup('band-1');
 
 		expect(result).toHaveLength(2);
 		expect(result[0].email).toBe('a@test.com');

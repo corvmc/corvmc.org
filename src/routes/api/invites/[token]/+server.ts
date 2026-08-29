@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getByToken } from '$lib/server/band/platform-invite-service';
+import { getByToken } from '$lib/server/group/group-invite-service';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const result = await getByToken(params.token);
@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ params }) => {
 	}
 
 	return json({
-		bandName: result.bandName,
+		groupName: result.groupName,
 		inviterName: result.inviterName,
 		role: result.role,
 		email: result.email

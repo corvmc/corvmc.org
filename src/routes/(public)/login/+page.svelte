@@ -35,7 +35,7 @@
 
 	let inviteToken = $derived(page.url.searchParams.get('invite'));
 	let inviteMeta = $state<{
-		bandName: string;
+		groupName: string;
 		inviterName: string;
 		role: string;
 		email: string;
@@ -150,7 +150,7 @@
 						<Alert type="info" class="text-sm">
 							<span
 								><strong>{inviteMeta.inviterName}</strong> invited you to join
-								<strong>{inviteMeta.bandName}</strong>. Create an account to get started.</span
+								<strong>{inviteMeta.groupName}</strong>. Create an account to get started.</span
 							>
 						</Alert>
 					{/if}
