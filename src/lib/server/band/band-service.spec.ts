@@ -235,20 +235,17 @@ describe('BandService', () => {
 	describe('listAll', () => {
 		const dialect = new SQLiteSyncDialect();
 
-		it('lists bands only unless asked otherwise', async () => {
+		/**
+		 * `/staff/bands` is the band work surface, and this read is only ever that
+		 * page. Clubs and committees have `listGroups` in `group-service.ts`, which
+		 * selects different columns and links its rows somewhere else.
+		 */
+		it('lists bands and nothing else', async () => {
 			await listAll();
 			const { sql: text, params } = dialect.sqlToQuery(whereClauses[0] as SQL);
-			expect(text).toContain('"kind" in');
+			expect(text).toContain('"kind" =');
 			expect(params).toContain('band');
 			expect(params).not.toContain('club');
-		});
-
-		it('takes the kinds it is given, for the staff group list', async () => {
-			await listAll({ kinds: ['club', 'committee'] });
-			const { params } = dialect.sqlToQuery(whereClauses[0] as SQL);
-			expect(params).toContain('club');
-			expect(params).toContain('committee');
-			expect(params).not.toContain('band');
 		});
 	});
 

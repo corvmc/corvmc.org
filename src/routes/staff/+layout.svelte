@@ -66,6 +66,7 @@
 		inbox: IconInbox,
 		users: IconUsers,
 		bands: IconMusic,
+		groups: IconUsersGroup,
 		volunteer: IconHeartHandshake,
 		'volunteer-people': IconUsersGroup,
 		'volunteer-shifts': IconCalendarTime,

@@ -25,6 +25,7 @@ export type StaffNavKey =
 	| 'inbox'
 	| 'users'
 	| 'bands'
+	| 'groups'
 	| 'volunteer'
 	| 'volunteer-people'
 	| 'volunteer-shifts'
@@ -90,6 +91,10 @@ export const staffNavSections: StaffNavSection[] = [
 		items: [
 			{ key: 'users', label: 'Users', href: '/staff/users' },
 			{ key: 'bands', label: 'Bands', href: '/staff/bands' },
+			// Clubs and committees, separate from Bands on purpose: a band is a
+			// member's own project and a program is a sanctioned CMC one, and this
+			// is the only place a program comes into existence.
+			{ key: 'groups', label: 'Groups', href: '/staff/groups' },
 			{
 				key: 'volunteer',
 				label: 'Volunteering',

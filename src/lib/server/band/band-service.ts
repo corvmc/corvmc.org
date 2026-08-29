@@ -52,6 +52,21 @@ import type { BandTier } from '$lib/server/db/schema/band-site';
 export interface CreateBandData {
 	name: string;
 	bio?: string;
+	/**
+	 * Defaults to `'band'`, which is what every existing caller means.
+	 *
+	 * A club or committee differs in exactly one thing here: it gets no
+	 * `band_site` row. That table is the premium microsite — tier, subscription,
+	 * custom domain, blocks — and a program has no use for any of it. Its
+	 * `groupId` is NOT NULL, so a club simply not having one is the whole of the
+	 * constraint; nothing has to remember a rule.
+	 *
+	 * Everything else is shared, including the directory entry: a club is
+	 * findable at `/groups` through the same listing table a band is findable
+	 * through at `/directory/bands`, and the two pages differ by a `kind`
+	 * filter rather than by a second listing.
+	 */
+	kind?: GroupKind;
 }
 
 export interface UpdateBandData {
@@ -163,6 +178,7 @@ export async function getOwnerId(bandId: string): Promise<string | null> {
 // ---------------------------------------------------------------------------
 
 export async function create(ownerId: string, data: CreateBandData) {
+	const kind = data.kind ?? 'band';
 	const baseSlug = generateSlug(data.name);
 	const slug = await ensureUniqueSlug(baseSlug, group, group.slug, undefined, isReservedSlug);
 
@@ -175,6 +191,7 @@ export async function create(ownerId: string, data: CreateBandData) {
 		db.delete(groupSlugHistory).where(eq(groupSlugHistory.slug, slug)),
 		db.insert(group).values({
 			id: bandId,
+			kind,
 			name: data.name,
 			slug,
 			bio: data.bio ? sanitizeBio(data.bio) : null
@@ -198,7 +215,11 @@ export async function create(ownerId: string, data: CreateBandData) {
 		// band's tier, so a band without one has no tier to read — and it is what
 		// `band_page_config` and `band_media` hang off if the band ever goes
 		// premium.
-		bandSiteInsert(bandId)
+		//
+		// Bands only. `band_site` is the premium microsite, which is not something
+		// a club or committee can buy, and its NOT NULL `groupId` is what makes
+		// that structural rather than a rule to remember.
+		...(kind === 'band' ? [bandSiteInsert(bandId)] : [])
 	]);
 
 	const [newBand] = await db.select().from(group).where(eq(group.id, bandId));
@@ -787,21 +808,20 @@ export async function leaveBand(bandId: string, userId: string) {
 // ---------------------------------------------------------------------------
 
 /**
- * The staff band list. `kinds` defaults to bands alone, which is the filter
- * `/staff/bands` needs: it is the band work surface, and clubs and committees
- * get `/staff/groups` instead. Kind-blind, it would start listing every club the
- * day the first one is created.
+ * The staff band list, and bands alone.
+ *
+ * It was kind-blind, so it would have started listing every club the day the
+ * first one was created — a club with a tier column, a premium filter and a link
+ * to a band page it does not have. `/staff/groups` has its own read in
+ * `group-service.ts` for exactly that reason: what these two lists select, and
+ * where their rows link, differ enough that sharing one query means one of them
+ * is always slightly wrong.
  */
 export async function listAll(
-	opts?: {
-		search?: string;
-		status?: 'active' | 'deactivated';
-		tier?: BandTier;
-		kinds?: readonly GroupKind[];
-	},
+	opts?: { search?: string; status?: 'active' | 'deactivated'; tier?: BandTier },
 	pagination: PaginationInput = {}
 ) {
-	const conditions = [inArray(group.kind, [...(opts?.kinds ?? ['band'])])];
+	const conditions = [eq(group.kind, 'band')];
 
 	if (opts?.search) {
 		conditions.push(like(group.name, `%${opts.search}%`));
@@ -822,7 +842,6 @@ export async function listAll(
 			id: group.id,
 			name: group.name,
 			slug: group.slug,
-			kind: group.kind,
 			ownerId: ownerMember.userId,
 			// Two records per row: the band the row is, and the member who owns it.
 			ref: bandRefColumns(),

@@ -16,10 +16,14 @@ import { withPlatformEnv } from './platform-db';
  * recipient picker — without it `requireFeature` rejects before any of the
  * messaging lifecycle can be exercised.
  *
+ * `groups` gates `/staff/groups`, which is the only place a club or committee
+ * comes into existence — without it `requireFeature` 404s the page before the
+ * staff guard is even reached.
+ *
  * Inventory is deliberately absent: its flag was cut in #286, so the member
  * surface and the scan-resolution pages need no enabling here.
  */
-export const ENABLED_FLAGS = ['bandPremium', 'directMessages'] as const;
+export const ENABLED_FLAGS = ['bandPremium', 'directMessages', 'groups'] as const;
 
 export async function seedFeatureFlags(): Promise<void> {
 	await withPlatformEnv(async ({ env }) => {

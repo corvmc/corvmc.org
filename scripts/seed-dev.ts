@@ -1514,6 +1514,114 @@ async function seedBands(users: SeedUser[]) {
 }
 
 /**
+ * Clubs and committees — the staff-run half of the groups module.
+ *
+ * Kept out of the `bands` array on purpose. That array feeds `seedBandSites`,
+ * `seedBandEvents` and the lineup seeds, and a program has no microsite, no gig
+ * and no place on a bill. Keeping them apart here is the seed's version of the
+ * `kind` filter every band-facing read now carries.
+ *
+ * Each of the three join policies gets a group, because the roster tab and the
+ * member index lead with a different action under each and none of that can be
+ * looked at locally without one of each. The Real Book Club is `open` because it
+ * is the spec's driving case: a drop-in jazz jam anyone may join unaided.
+ */
+async function seedGroups(users: SeedUser[]) {
+	console.log('Seeding groups...');
+	const groups = [];
+
+	const definitions = [
+		{
+			kind: 'club' as const,
+			name: 'Real Book Club',
+			slug: 'real-book-club',
+			bio: 'A monthly jazz jam out of the Real Book. Every level welcome — we read the head, take turns on solos, and nobody keeps score.',
+			joinPolicy: 'open' as const,
+			joinInstructions: 'Third Thursday, 7pm. Bring a horn; charts provided.',
+			positions: ['Host', 'Chart librarian', 'Piano'],
+			memberCount: 5
+		},
+		{
+			kind: 'committee' as const,
+			name: 'Programming Committee',
+			slug: 'programming-committee',
+			bio: 'Decides what the Collective books, and when. Meets fortnightly.',
+			joinPolicy: 'by_application' as const,
+			joinInstructions:
+				'Tell us what you want to see programmed and roughly how much time you can give.',
+			positions: ['Chair', 'Secretary', 'Member'],
+			memberCount: 3
+		},
+		{
+			kind: 'committee' as const,
+			name: 'Facilities Committee',
+			slug: 'facilities-committee',
+			bio: 'Keeps the room standing: repairs, gear, and the long list of things nobody notices until they break.',
+			joinPolicy: 'invite_only' as const,
+			joinInstructions: null,
+			positions: ['Chair', 'Member'],
+			memberCount: 2
+		}
+	];
+
+	for (let i = 0; i < definitions.length; i++) {
+		const d = definitions[i];
+		// Offset from the band owners so a leader is not also fronting a band —
+		// the two roles look identical on a roster otherwise.
+		const leader = users[(i + 7) % users.length];
+
+		const g = await insertBandWithOwner(
+			{
+				kind: d.kind,
+				name: d.name,
+				slug: d.slug,
+				bio: d.bio,
+				joinPolicy: d.joinPolicy,
+				joinInstructions: d.joinInstructions
+			},
+			leader.id,
+			d.positions[0]
+		);
+		groups.push(g);
+
+		const candidates = users.filter((u) => u.id !== leader.id);
+		for (const m of pickN(candidates, d.memberCount)) {
+			await db.insert(groupMember).values({
+				groupId: g.id,
+				userId: m.id,
+				role: 'member',
+				position: pick(d.positions.slice(1)),
+				status: 'active'
+			});
+		}
+
+		// One waiting row of each direction on the `by_application` committee: an
+		// application it received and an invitation it sent. They are the same
+		// shape and opposite meanings, which is the whole reason `'requested'` is
+		// a distinct status — and the only way to see the roster render them
+		// apart is to have both.
+		if (d.joinPolicy === 'by_application') {
+			const [applicant, invitee] = pickN(
+				users.filter((u) => u.id !== leader.id),
+				2
+			);
+			await db.insert(groupMember).values([
+				{ groupId: g.id, userId: applicant.id, role: 'member', status: 'requested' },
+				{
+					groupId: g.id,
+					userId: invitee.id,
+					role: 'member',
+					status: 'pending',
+					invitedById: leader.id
+				}
+			]);
+		}
+	}
+
+	return groups;
+}
+
+/**
  * Write an event's bill: the owner confirmed at the top, then a mix of the
  * three states a support slot can be in, so every render path has data —
  * plain-text credits, an invitation waiting in a band's inbox, and a decline.
@@ -4513,6 +4621,7 @@ async function main() {
 	await seedClosures();
 	const events = await seedEvents(allUsers);
 	const bands = await seedBands(allUsers);
+	const groups = await seedGroups(allUsers);
 	const bandEvents = await seedBandEvents(bands, allUsers);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
@@ -4559,6 +4668,7 @@ async function main() {
 	console.log(`  ${reservations.length} reservations`);
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
+	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(`  ${bandEvents.length} band events`);
 	console.log(`  ${bandReservations.length} band reservations`);
 	console.log(`  ${bandSites.size} band sites`);
