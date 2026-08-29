@@ -8,7 +8,15 @@ export type FeatureFlag =
 	| 'helpArticles'
 	| 'contentFlags'
 	| 'directMessages'
-	| 'volunteering';
+	| 'volunteering'
+	// The groups module. `groups` gates clubs and committees — the staff panel,
+	// the member page and the public group directory. The other three cover bands
+	// as well, because both capabilities key off group membership and a band is a
+	// group. See docs/specs/groups-spec.md.
+	| 'groups'
+	| 'groupEvents'
+	| 'groupFiles'
+	| 'announcements';
 
 export const ALL_FLAGS: FeatureFlag[] = [
 	'staffInbox',
@@ -17,7 +25,11 @@ export const ALL_FLAGS: FeatureFlag[] = [
 	'helpArticles',
 	'contentFlags',
 	'directMessages',
-	'volunteering'
+	'volunteering',
+	'groups',
+	'groupEvents',
+	'groupFiles',
+	'announcements'
 ];
 
 export async function isFeatureEnabled(flag: FeatureFlag): Promise<boolean> {

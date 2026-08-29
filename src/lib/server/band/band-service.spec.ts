@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import { sql, type SQL } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -46,9 +48,18 @@ function tableName(table: unknown): string {
 	return sym ? String((table as Record<symbol, unknown>)[sym]) : 'unknown';
 }
 
+/** Predicates handed to `.where()`, so a test can render them to real SQL. */
+let whereClauses: unknown[] = [];
+
 function chainable(result?: unknown[]) {
 	const proxy: any = new Proxy(() => proxy, {
 		get(_, prop) {
+			if (prop === 'where') {
+				return (clause: unknown) => {
+					whereClauses.push(clause);
+					return proxy;
+				};
+			}
 			if (prop === 'then') {
 				return (resolve: (v: unknown[]) => void) => {
 					if (result !== undefined) return resolve(result);
@@ -94,6 +105,10 @@ vi.mock('$lib/server/db', () => ({
 				then: (resolve: (v: unknown) => void) => resolve(deleteResult)
 			}))
 		})),
+		// `listForUser`'s default `props` builds a member-count subquery with it.
+		// Returns the fragment rather than a number, which is all these tests need
+		// — they render the WHERE, never the projection.
+		$count: vi.fn(() => sql`0`),
 		// One result array per statement, which is the shape drizzle actually
 		// returns. A flat `[]` let a `const [[row]] = await db.batch(...)` destructure
 		// undefined and fail as a TypeError rather than as the domain error.
@@ -140,7 +155,11 @@ import {
 	BandMemberExistsError,
 	CannotRemoveOwnerError,
 	OwnerCannotLeaveError,
-	BandNotFoundError
+	BandNotFoundError,
+	listForUser,
+	listAll,
+	partitionByStatus,
+	searchBandsByName
 } from './band-service';
 import { db } from '$lib/server/db';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
@@ -171,6 +190,115 @@ describe('BandService', () => {
 		deleteResult = { rowCount: 1 };
 		insertError = null;
 		writes = [];
+		whereClauses = [];
+	});
+
+	// -----------------------------------------------------------------------
+	// listForUser / partitionByStatus
+	//
+	// The two roster reads that were status- and kind-blind. Both had to grow an
+	// answer before `'requested'` and the first club existed, because neither
+	// would have failed — one would have dropped applicants into no bucket at
+	// all, the other would have put a club in the My Bands sidebar.
+	// -----------------------------------------------------------------------
+
+	describe('listForUser', () => {
+		const dialect = new SQLiteSyncDialect();
+		const lastWhere = () => dialect.sqlToQuery(whereClauses.at(-1) as SQL).sql;
+
+		it('scopes to the kinds it was asked for', async () => {
+			await listForUser('user-1', ['band']);
+			expect(lastWhere()).toContain('"kind" in');
+		});
+
+		/**
+		 * The point of the parameter. `/member/bands`, the sidebar's My Bands and
+		 * the panel switcher all read this; without the filter every one of them
+		 * would start listing clubs and committees the day the first is created,
+		 * and a club has no band panel to link to.
+		 */
+		it('asks for exactly the kinds passed, so a club cannot reach a band surface', async () => {
+			await listForUser('user-1', ['club', 'committee']);
+			const { sql: text, params } = dialect.sqlToQuery(whereClauses.at(-1) as SQL);
+			expect(text).toContain('"kind" in');
+			expect(params).toContain('club');
+			expect(params).toContain('committee');
+			expect(params).not.toContain('band');
+		});
+
+		it('excludes soft-deleted groups', async () => {
+			await listForUser('user-1', ['band']);
+			expect(lastWhere()).toContain('"deleted_at" is null');
+		});
+	});
+
+	describe('listAll', () => {
+		const dialect = new SQLiteSyncDialect();
+
+		it('lists bands only unless asked otherwise', async () => {
+			await listAll();
+			const { sql: text, params } = dialect.sqlToQuery(whereClauses[0] as SQL);
+			expect(text).toContain('"kind" in');
+			expect(params).toContain('band');
+			expect(params).not.toContain('club');
+		});
+
+		it('takes the kinds it is given, for the staff group list', async () => {
+			await listAll({ kinds: ['club', 'committee'] });
+			const { params } = dialect.sqlToQuery(whereClauses[0] as SQL);
+			expect(params).toContain('club');
+			expect(params).toContain('committee');
+			expect(params).not.toContain('band');
+		});
+	});
+
+	describe('searchBandsByName', () => {
+		const dialect = new SQLiteSyncDialect();
+
+		/** A lineup credits acts. A club is not one, so it must not be findable here. */
+		it('will not offer a club as a lineup credit', async () => {
+			await searchBandsByName('real book');
+			const { sql: text, params } = dialect.sqlToQuery(whereClauses.at(-1) as SQL);
+			expect(text).toContain('"kind" =');
+			expect(params).toContain('band');
+		});
+	});
+
+	describe('partitionByStatus', () => {
+		it('gives every status a bucket, including ones nothing renders yet', () => {
+			const buckets = partitionByStatus([
+				{ id: 'a', status: 'active' as const },
+				{ id: 'p', status: 'pending' as const },
+				{ id: 'r', status: 'requested' as const }
+			]);
+
+			expect(buckets.active.map((r) => r.id)).toEqual(['a']);
+			expect(buckets.pending.map((r) => r.id)).toEqual(['p']);
+			expect(buckets.requested.map((r) => r.id)).toEqual(['r']);
+		});
+
+		/**
+		 * The failure this exists to prevent: the hand-written pair of filters it
+		 * replaced would have dropped a `'requested'` row into neither bucket, and
+		 * nothing — no type error, no failing test, nothing in the diff — would
+		 * have said so.
+		 */
+		it('loses nothing, whatever the mix', () => {
+			const rows = [
+				{ id: '1', status: 'requested' as const },
+				{ id: '2', status: 'active' as const },
+				{ id: '3', status: 'requested' as const }
+			];
+			const buckets = partitionByStatus(rows);
+			const total = Object.values(buckets).reduce((n, b) => n + b.length, 0);
+			expect(total).toBe(rows.length);
+		});
+
+		it('returns an empty bucket rather than omitting the key', () => {
+			const buckets = partitionByStatus([{ id: 'a', status: 'active' as const }]);
+			expect(buckets.pending).toEqual([]);
+			expect(buckets.requested).toEqual([]);
+		});
 	});
 
 	// -----------------------------------------------------------------------

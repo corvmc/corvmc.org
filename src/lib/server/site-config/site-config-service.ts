@@ -46,7 +46,14 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'feature.helpArticles': false,
 	'feature.contentFlags': false,
 	'feature.directMessages': false,
-	'feature.volunteering': false
+	'feature.volunteering': false,
+	// A flag missing from here makes `config()` *throw* `Unknown site config key`
+	// rather than return false, which is why registering it in all three places
+	// is one step and `feature-flags.spec.ts` asserts the set both ways.
+	'feature.groups': false,
+	'feature.groupEvents': false,
+	'feature.groupFiles': false,
+	'feature.announcements': false
 };
 
 export type SiteConfigKey = keyof typeof DEFAULTS;

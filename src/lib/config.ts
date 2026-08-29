@@ -177,11 +177,19 @@ export type GroupKind = (typeof groupKinds)[number];
  *                 an active membership with no approval step. The point of a
  *                 drop-in program.
  *
- * `by_application` is designed but not built — it arrives with the club page in
- * phase 5, along with the `'requested'` member status it needs. See
- * `docs/specs/groups-spec.md`.
+ * `by_application` — you ask, and an owner or admin approves. The row waits at
+ *                    `status: 'requested'`, which is `'pending'`'s exact mirror:
+ *                    same waiting state, opposite direction. It is for the
+ *                    program that wants everyone to be able to *find* it but not
+ *                    everyone to be in it.
+ *
+ * The policy governs self-service joining only. Invitations work identically
+ * under all three. A band is always `invite_only` and the service refuses any
+ * other value for `kind: 'band'` — a band member may spend the band's credits on
+ * rehearsal time, so an `open` band would be a way to join a stranger's band and
+ * spend their money. See `docs/specs/groups-spec.md`.
  */
-export const groupJoinPolicies = ['invite_only', 'open'] as const;
+export const groupJoinPolicies = ['invite_only', 'open', 'by_application'] as const;
 export type GroupJoinPolicy = (typeof groupJoinPolicies)[number];
 
 // ---------------------------------------------------------------------------

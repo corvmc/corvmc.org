@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupKinds } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
@@ -8,7 +8,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc, gt, ne } from 'drizzle-orm';
 import { requireStaff, requireUser } from '$lib/server/authorization';
-import { listAll, listForUser } from '$lib/server/band/band-service';
+import { listAll, listForUser, partitionByStatus } from '$lib/server/band/band-service';
 import {
 	memberRefColumns,
 	reservationRefColumns,
@@ -184,10 +184,15 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 export const getBandMembersList = query(z.string(), async (bandId) => {
 	await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
 	// `getMembers` already returns a presentation ref per row, alias included.
-	const members = await getMembers(bandId);
+	const members = partitionByStatus(await getMembers(bandId));
 	return {
-		active: members.filter((m) => m.status === 'active'),
-		pending: members.filter((m) => m.status === 'pending')
+		active: members.active,
+		pending: members.pending,
+		// Applications, which only a `by_application` group can have. Returned
+		// rather than dropped: `getMembers` is the whole roster, so filtering to
+		// two buckets is what would have rendered applicants mixed into the member
+		// list — or, here, nowhere at all.
+		requested: members.requested
 	};
 });
 
@@ -217,7 +222,9 @@ export const getBandMembersPage = query(z.string(), async (bandId) => {
 
 export const getMemberBands = query(async () => {
 	const currentUser = requireUser();
-	const bands = await listForUser(currentUser.id);
+	// Bands only. Clubs and committees live at `/member/groups`, which answers a
+	// different question and has its own index.
+	const bands = await listForUser(currentUser.id, ['band']);
 
 	const serialize = (b: (typeof bands)[number]) => ({
 		id: b.id,
@@ -229,9 +236,16 @@ export const getMemberBands = query(async () => {
 		memberCount: b.memberCount
 	});
 
+	// Partitioned rather than filtered twice: a hand-written pair of buckets is
+	// where a third status goes missing without anything failing.
+	const byStatus = partitionByStatus(bands);
 	return {
-		pending: bands.filter((b) => b.status === 'pending').map(serialize),
-		active: bands.filter((b) => b.status === 'active').map(serialize)
+		pending: byStatus.pending.map(serialize),
+		active: byStatus.active.map(serialize),
+		// Always empty for a band, which is `invite_only` by construction — but it
+		// is the shape the data can take, and leaving it out is how the club
+		// mount of this list would lose its applicants.
+		requested: byStatus.requested.map(serialize)
 	};
 });
 
@@ -716,9 +730,10 @@ export const removeBandAvatar = form(z.object({ bandId: bandIdField }), async (d
 
 export const getUserBands = query(z.string(), async (userId) => {
 	await requireStaff();
-	// listForUser is unfiltered by status, so pending invitations come through
-	// too — a staff member needs to see an invite that was never accepted.
-	const bands = await listForUser(userId);
+	// Every kind and every status: a staff member looking at one person's record
+	// wants the whole picture, including an invitation that was never accepted
+	// and any club or committee they sit on.
+	const bands = await listForUser(userId, groupKinds);
 	return bands.map((b) => ({
 		...b,
 		// The member count is what qualifies a band in this list, so it takes the
