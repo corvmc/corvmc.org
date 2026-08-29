@@ -29,8 +29,32 @@ export const SEED_COMMITTEE_ID = 'e2e-group-committee';
 export const SEED_COMMITTEE_SLUG = 'e2e-programming-committee';
 export const SEED_COMMITTEE_NAME = 'E2E Programming Committee';
 
-const GROUP_IDS = [SEED_CLUB_ID, SEED_COMMITTEE_ID];
+/**
+ * Two more, for the member surfaces, and they exist separately because the
+ * join and apply specs *write* to them. A spec that mutates a seeded row owns
+ * that row: sharing the two above would leave `staff-groups.e2e.ts` asserting
+ * on a roster another spec had just changed, and restoring afterwards is not a
+ * substitute — a success toast is often the previous save's, so the assertion
+ * passes instantly and the restore can still be in flight when the page closes.
+ */
+export const SEED_JOINABLE_ID = 'e2e-group-joinable';
+export const SEED_JOINABLE_SLUG = 'e2e-open-workshop';
+export const SEED_JOINABLE_NAME = 'E2E Open Workshop';
+export const SEED_JOINABLE_INSTRUCTIONS = 'Second Tuesday. Bring whatever you are working on.';
+
+export const SEED_APPLY_ID = 'e2e-group-apply';
+export const SEED_APPLY_SLUG = 'e2e-outreach-committee';
+export const SEED_APPLY_NAME = 'E2E Outreach Committee';
+
+const GROUP_IDS = [SEED_CLUB_ID, SEED_COMMITTEE_ID, SEED_JOINABLE_ID, SEED_APPLY_ID];
 const entryIdFor = (groupId: string) => `${groupId}-entry`;
+
+const NAMES: Record<string, string> = {
+	[SEED_CLUB_ID]: SEED_CLUB_NAME,
+	[SEED_COMMITTEE_ID]: SEED_COMMITTEE_NAME,
+	[SEED_JOINABLE_ID]: SEED_JOINABLE_NAME,
+	[SEED_APPLY_ID]: SEED_APPLY_NAME
+};
 
 export async function seedGroups(): Promise<void> {
 	await withPlatformEnv(async ({ db }) => {
@@ -61,6 +85,24 @@ export async function seedGroups(): Promise<void> {
 				bio: 'Decides what the Collective books, and when.',
 				joinPolicy: 'by_application',
 				joinInstructions: 'Tell us what you want to see programmed.'
+			},
+			{
+				id: SEED_JOINABLE_ID,
+				kind: 'club',
+				name: SEED_JOINABLE_NAME,
+				slug: SEED_JOINABLE_SLUG,
+				bio: 'A drop-in workshop.',
+				joinPolicy: 'open',
+				joinInstructions: SEED_JOINABLE_INSTRUCTIONS
+			},
+			{
+				id: SEED_APPLY_ID,
+				kind: 'committee',
+				name: SEED_APPLY_NAME,
+				slug: SEED_APPLY_SLUG,
+				bio: 'Takes the Collective out into the world.',
+				joinPolicy: 'by_application',
+				joinInstructions: 'Say what you would like to work on.'
 			}
 		]);
 
@@ -68,7 +110,7 @@ export async function seedGroups(): Promise<void> {
 			GROUP_IDS.map((groupId) => ({
 				id: entryIdFor(groupId),
 				groupId,
-				name: groupId === SEED_CLUB_ID ? SEED_CLUB_NAME : SEED_COMMITTEE_NAME,
+				name: NAMES[groupId],
 				visibility: 'public' as const
 			}))
 		);
@@ -99,6 +141,23 @@ export async function seedGroups(): Promise<void> {
 				userId: SEED_TARGET_ID,
 				role: 'member',
 				status: 'requested'
+			},
+			// The two the member specs write to get a leader as well, so their
+			// rosters are not empty and the pages have something to render either
+			// side of the change under test.
+			{
+				id: `${SEED_JOINABLE_ID}-owner`,
+				groupId: SEED_JOINABLE_ID,
+				userId: SEED_STAFF_ID,
+				role: 'owner',
+				status: 'active'
+			},
+			{
+				id: `${SEED_APPLY_ID}-owner`,
+				groupId: SEED_APPLY_ID,
+				userId: SEED_STAFF_ID,
+				role: 'owner',
+				status: 'active'
 			}
 		]);
 	});

@@ -152,6 +152,14 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/groups",
+		"panel": "member"
+	},
+	{
+		"route": "/member/groups/[slug]",
+		"panel": "member"
+	},
+	{
 		"route": "/member/help",
 		"panel": "member"
 	},

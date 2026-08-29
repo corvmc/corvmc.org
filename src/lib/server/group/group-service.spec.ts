@@ -14,7 +14,7 @@ let whereClauses: unknown[] = [];
 /** What the batch was asked to write, so a test can assert on rows not calls. */
 let writes: {
 	table: string;
-	op: 'insert' | 'update';
+	op: 'insert' | 'update' | 'delete';
 	values: Record<string, unknown>;
 	where?: unknown;
 }[] = [];
@@ -71,6 +71,12 @@ vi.mock('$lib/server/db', () => ({
 				};
 			}
 		}),
+		delete: (table: unknown) => ({
+			where: (clause: unknown) => {
+				writes.push({ table: tableName(table), op: 'delete', values: {}, where: clause });
+				return { returning: () => Promise.resolve([]) };
+			}
+		}),
 		batch: (queries: unknown[]) => Promise.resolve(queries.map(() => []))
 	}
 }));
@@ -84,11 +90,16 @@ vi.mock('$lib/server/band/band-service', () => ({
 
 import {
 	assignLeader,
+	approveApplication,
 	createGroup,
+	joinGroup,
+	leaveGroup,
 	updateGroupSettings,
+	AlreadyOnRosterError,
 	GroupNotFoundError,
 	LeaderNotFoundError,
-	NotAStaffGroupError
+	NotAStaffGroupError,
+	NotJoinableError
 } from './group-service';
 
 beforeEach(() => {
@@ -219,5 +230,110 @@ describe('updateGroupSettings', () => {
 	it('writes nothing when it is handed nothing', async () => {
 		await updateGroupSettings('group-1', {});
 		expect(writes).toEqual([]);
+	});
+});
+
+describe('joinGroup', () => {
+	/**
+	 * The policy is re-read from the resolved group and never taken from the
+	 * request. That is what makes three doors no riskier than two: which door is
+	 * open is the group's own fact, and a caller naming a group cannot also tell
+	 * the service how to let them in.
+	 */
+	it('lands an `open` group straight on an active membership', async () => {
+		selectResultQueue = [[{ joinPolicy: 'open', kind: 'club' }], []];
+
+		const result = await joinGroup('group-1', 'user-2');
+
+		expect(result.status).toBe('active');
+		expect(writes[0]).toMatchObject({
+			table: 'group_member',
+			op: 'insert',
+			// Self-join never assigns a role: owners and admins cannot self-appoint.
+			values: { role: 'member', status: 'active', invitedById: null }
+		});
+	});
+
+	it('parks a `by_application` group at requested', async () => {
+		selectResultQueue = [[{ joinPolicy: 'by_application', kind: 'committee' }], []];
+
+		const result = await joinGroup('group-1', 'user-2');
+
+		expect(result.status).toBe('requested');
+		expect(writes[0].values).toMatchObject({ status: 'requested' });
+	});
+
+	it('refuses an invite-only group', async () => {
+		selectResultQueue = [[{ joinPolicy: 'invite_only', kind: 'committee' }], []];
+
+		await expect(joinGroup('group-1', 'user-2')).rejects.toBeInstanceOf(NotJoinableError);
+		expect(writes).toEqual([]);
+	});
+
+	/**
+	 * Bands are always `invite_only`, and this is the reason: a band member may
+	 * book rehearsal time against the band's credits and then its card, so an
+	 * `open` band would be a way to join a stranger's band and spend their money.
+	 * Closed by the policy the service reads, not by a check at the call site.
+	 */
+	it('refuses a band, because a band is always invite only', async () => {
+		selectResultQueue = [[{ joinPolicy: 'invite_only', kind: 'band' }], []];
+
+		await expect(joinGroup('band-1', 'user-2')).rejects.toBeInstanceOf(NotJoinableError);
+	});
+
+	it('404s a group that does not exist or is deactivated', async () => {
+		selectResultQueue = [[]];
+		await expect(joinGroup('gone', 'user-2')).rejects.toBeInstanceOf(GroupNotFoundError);
+	});
+
+	it('refuses somebody already on the roster rather than writing a second row', async () => {
+		selectResultQueue = [[{ joinPolicy: 'open', kind: 'club' }], [{ id: 'member-1' }]];
+
+		await expect(joinGroup('group-1', 'user-2')).rejects.toBeInstanceOf(AlreadyOnRosterError);
+		expect(writes).toEqual([]);
+	});
+});
+
+describe('approveApplication', () => {
+	it('flips a requested row to active', async () => {
+		selectResultQueue = [[{ id: 'member-1' }]];
+
+		await approveApplication('member-1', 'group-1');
+
+		expect(writes[0]).toMatchObject({ op: 'update', values: { status: 'active' } });
+	});
+
+	/**
+	 * The member id comes from the client, so the scope is the whole guard: an
+	 * admin's authority stops at their own group, and a row that is not
+	 * `'requested'` is not an application to approve.
+	 */
+	it('does nothing for a row outside the group, or not applying', async () => {
+		selectResultQueue = [[]];
+
+		await expect(approveApplication('member-elsewhere', 'group-1')).rejects.toBeInstanceOf(
+			GroupNotFoundError
+		);
+		expect(writes).toEqual([]);
+	});
+});
+
+describe('leaveGroup', () => {
+	/**
+	 * The one place programs and bands diverge on leaving. A band owner must
+	 * transfer first, because nobody's job it is to pick up an orphaned band; a
+	 * program leader was appointed, and the body that appointed them is still
+	 * there. "Find your own replacement" would trap someone in a volunteer role
+	 * they have already said they are done with.
+	 */
+	it('lets a leader step down without naming a successor', async () => {
+		selectResultQueue = [[{ id: 'member-1' }]];
+		await expect(leaveGroup('group-1', 'user-1')).resolves.toBeUndefined();
+	});
+
+	it('404s somebody who is not on the roster', async () => {
+		selectResultQueue = [[]];
+		await expect(leaveGroup('group-1', 'stranger')).rejects.toBeInstanceOf(GroupNotFoundError);
 	});
 });

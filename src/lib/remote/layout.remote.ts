@@ -54,6 +54,7 @@ export const getMemberLayout = query(async () => {
 
 	const [
 		userBands,
+		userGroups,
 		isStaff,
 		features,
 		portalUnread,
@@ -62,6 +63,10 @@ export const getMemberLayout = query(async () => {
 		hasLoanableEquipment
 	] = await Promise.all([
 		listForUser(user.id, ['band']).catch(() => []),
+		// A sibling list, not a merge. My Bands keeps its entries, its All link and
+		// its create row exactly as they were; clubs and committees get their own
+		// group beside it, because the two indexes answer different questions.
+		listForUser(user.id, ['club', 'committee']).catch(() => []),
 		hasAnyRole(user.id, ['admin', 'staff']),
 		getAllFeatureFlags(),
 		countPortalUnread(user.id).catch(() => 0),
@@ -88,6 +93,15 @@ export const getMemberLayout = query(async () => {
 			slug: b.slug,
 			avatarUrl: resolveImageUrl(b.avatarKey),
 			role: b.role
+		})),
+		// Active only, like the bands above: a pending invitation is not a place
+		// you can go yet, and a nav row that 403s is worse than no row.
+		userGroups: activeOnly(userGroups).map((g) => ({
+			id: g.id,
+			name: g.name,
+			slug: g.slug,
+			avatarUrl: resolveImageUrl(g.avatarKey),
+			role: g.role
 		})),
 		isStaff,
 		features,

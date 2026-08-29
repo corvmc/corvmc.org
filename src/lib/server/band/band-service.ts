@@ -311,9 +311,16 @@ async function selectGroupContext(where: SQL | undefined) {
 	const [row] = await db
 		.select({
 			id: group.id,
+			// The guard resolves a group; what sort of group it is belongs on the
+			// result. Phase 9 grants free room time by kind, and every caller that
+			// has to branch on the three governance facts — kind, and the two
+			// enrollment columns below — would otherwise re-select the same row.
+			kind: group.kind,
 			name: group.name,
 			slug: group.slug,
 			bio: group.bio,
+			joinPolicy: group.joinPolicy,
+			joinInstructions: group.joinInstructions,
 			ownerId: ownerMember.userId,
 			avatarKey: group.avatarKey,
 			// From the site row since phase 3b. LEFT, with `?? 'free'` applied by
