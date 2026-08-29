@@ -8,6 +8,7 @@ import {
 	SEED_APPLY_NAME,
 	SEED_CLUB_SLUG,
 	SEED_JOINABLE_INSTRUCTIONS,
+	SEED_HIDDEN_SLUG,
 	SEED_JOINABLE_NAME,
 	SEED_JOINABLE_SLUG
 } from './fixtures/seed-groups';
@@ -66,11 +67,11 @@ test.describe('member groups index', () => {
 		await loginAsMember(page);
 		await page.goto('/member/groups');
 
-		// `.first()` is the trigger: `Action` renders its modal inside the card, so
-		// the submit button carries the same label and is in the DOM before the
-		// dialog opens. The submit is then reached through the dialog.
-		const card = page.locator('.card', { hasText: SEED_JOINABLE_NAME });
-		await card.getByRole('button', { name: 'Join' }).first().click();
+		// By the trigger's accessible name, which names the group. Scoping by
+		// surrounding text does not work and is not merely awkward: `InfoCard`
+		// renders a `.card` around the whole section, so a `.card`-scoped locator
+		// matched every group in it and this test silently joined a different one.
+		await page.getByRole('button', { name: `Join ${SEED_JOINABLE_NAME}` }).click();
 		await page.getByRole('dialog').getByRole('button', { name: 'Join' }).click();
 
 		// No approval step, and two places say so. The group moves into "Your
@@ -93,8 +94,7 @@ test.describe('member groups index', () => {
 		await loginAsMember(page);
 		await page.goto('/member/groups');
 
-		const card = page.locator('.card', { hasText: SEED_APPLY_NAME });
-		await card.getByRole('button', { name: 'Apply' }).first().click();
+		await page.getByRole('button', { name: `Apply to ${SEED_APPLY_NAME}` }).click();
 		await page.getByRole('dialog').getByRole('button', { name: 'Send application' }).click();
 
 		await expect(page.getByText('you asked to join')).toBeVisible({ timeout: 15000 });
@@ -115,5 +115,44 @@ test.describe('the club page', () => {
 
 		await page.waitForURL('**/member/groups', { timeout: 15000 });
 		await expect(page.getByRole('heading', { name: 'Your programs' })).toBeVisible();
+	});
+});
+
+test.describe('the public group directory', () => {
+	/**
+	 * `visibility = 'public'` is the whole of the decision about what appears
+	 * here, and it is the same column a band's listing uses — which is the point
+	 * of a club having a directory entry rather than a listing shape of its own.
+	 */
+	test('lists public programs to a signed-out visitor', async ({ page }) => {
+		await page.goto('/groups');
+
+		await expect(page.getByRole('heading', { name: 'Groups' })).toBeVisible();
+		await expect(page.getByRole('link', { name: SEED_JOINABLE_NAME })).toBeVisible();
+	});
+
+	/**
+	 * The Join button is the only write on a public page, and it needs a session.
+	 * A prompt that brings them back beats a button that fails.
+	 */
+	test('offers a signed-out visitor a way in, not a button that fails', async ({ page }) => {
+		await page.goto(`/groups/${SEED_JOINABLE_SLUG}`);
+
+		await expect(page.getByRole('heading', { name: SEED_JOINABLE_NAME })).toBeVisible();
+		await expect(page.getByText(SEED_JOINABLE_INSTRUCTIONS)).toBeVisible();
+
+		// Scoped to `main`: the public header carries its own "Sign In" link.
+		const signIn = page.getByRole('main').getByRole('link', { name: 'Sign in' });
+		await expect(signIn).toBeVisible();
+		// The parameter the login page actually reads, which is `redirect` — the
+		// one other caller in the tree spells it `redirectTo` and is silently
+		// ignored.
+		await expect(signIn).toHaveAttribute('href', `/login?redirect=/groups/${SEED_JOINABLE_SLUG}`);
+	});
+
+	/** A members-only or hidden program has no public page at all. */
+	test('404s a group that is not public', async ({ page }) => {
+		const res = await page.goto(`/groups/${SEED_HIDDEN_SLUG}`);
+		expect(res?.status()).toBe(404);
 	});
 });

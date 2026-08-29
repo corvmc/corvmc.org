@@ -281,6 +281,92 @@ export async function listMemberGroups(userId: string) {
 	};
 }
 
+/**
+ * The public group directory, and one group's public page.
+ *
+ * `'public'` visibility only — `'members'` is the member index's business and
+ * `'hidden'` is nobody's. That is the same `directory_entry.visibility` a band
+ * is listed through at `/directory/bands`, which is the whole point of a club
+ * having an entry rather than a second listing shape: one column decides who
+ * can see a listing, whatever kind of thing the listing is for.
+ */
+export async function listPublicGroups(kinds?: readonly StaffGroupKind[]) {
+	return db
+		.select({
+			id: group.id,
+			kind: group.kind,
+			name: group.name,
+			slug: group.slug,
+			bio: group.bio,
+			avatarKey: group.avatarKey,
+			joinPolicy: group.joinPolicy,
+			joinInstructions: group.joinInstructions,
+			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
+		})
+		.from(group)
+		.innerJoin(
+			directoryEntry,
+			and(eq(directoryEntry.groupId, group.id), eq(directoryEntry.visibility, 'public'))
+		)
+		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
+		.where(and(inArray(group.kind, [...(kinds ?? STAFF_GROUP_KINDS)]), isNull(group.deletedAt)))
+		.groupBy(group.id)
+		.orderBy(group.name);
+}
+
+/**
+ * This viewer's row on this group, whatever its status — including the two
+ * waiting ones, which `getUserRole` deliberately does not return.
+ *
+ * The public page needs the difference: somebody with a `'requested'` row is
+ * not a member and `requireGroupRole` resolves nothing for them, but offering
+ * them Apply again would be wrong. Null means no row at all.
+ */
+export async function getUserGroupStatus(groupId: string, userId: string) {
+	const [row] = await db
+		.select({ status: groupMember.status, role: groupMember.role })
+		.from(groupMember)
+		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)))
+		.limit(1);
+	return row ?? null;
+}
+
+/** One public group page. Null rather than throwing, so the route owns the 404. */
+export async function getPublicGroup(slug: string) {
+	const [row] = await db
+		.select({
+			id: group.id,
+			kind: group.kind,
+			name: group.name,
+			slug: group.slug,
+			bio: group.bio,
+			avatarKey: group.avatarKey,
+			joinPolicy: group.joinPolicy,
+			joinInstructions: group.joinInstructions,
+			memberCount: sql<number>`count(case when ${groupMember.status} = 'active' then 1 end)`
+		})
+		.from(group)
+		// INNER, and on `visibility = 'public'`: a members-only or hidden program
+		// has no public page, and the join is what makes that structural rather
+		// than a filter someone has to remember to apply.
+		.innerJoin(
+			directoryEntry,
+			and(eq(directoryEntry.groupId, group.id), eq(directoryEntry.visibility, 'public'))
+		)
+		.leftJoin(groupMember, eq(groupMember.groupId, group.id))
+		.where(
+			and(
+				eq(group.slug, slug),
+				inArray(group.kind, [...STAFF_GROUP_KINDS]),
+				isNull(group.deletedAt)
+			)
+		)
+		.groupBy(group.id)
+		.limit(1);
+
+	return row ?? null;
+}
+
 export interface CreateGroupData {
 	kind: StaffGroupKind;
 	name: string;

@@ -9,6 +9,11 @@
 	 * Which door a group opens is the group's own fact: the service re-reads
 	 * `joinPolicy` from the resolved group rather than trusting anything here, so
 	 * the only thing this component decides is what the button says.
+	 *
+	 * Mount-agnostic, and mounted twice — the member index and the public group
+	 * page. It takes its group as a prop and knows nothing about either route,
+	 * which is the rule the roster, announcements and documents components will
+	 * follow when they are mounted both as band-panel pages and as club tabs.
 	 */
 	let {
 		groupId,
@@ -27,9 +32,15 @@
 	const isApplication = $derived(policy === 'by_application');
 </script>
 
+<!-- `aria-label` names the group. The discovery list renders one of these per
+     card, so without it a screen reader hears "Join", "Join", "Apply" with
+     nothing to tell them apart — and an e2e that scoped by surrounding text
+     joined the wrong group, because `InfoCard` renders a `.card` of its own
+     around them all. Both problems are the same missing fact. -->
 <Action
 	action={joinGroupForm}
 	label={isApplication ? 'Apply' : 'Join'}
+	aria-label={`${isApplication ? 'Apply to' : 'Join'} ${groupName}`}
 	modalTitle={isApplication ? `Apply to ${groupName}` : `Join ${groupName}`}
 	submitLabel={isApplication ? 'Send application' : 'Join'}
 	successToast={isApplication ? 'Application sent' : 'You have joined'}

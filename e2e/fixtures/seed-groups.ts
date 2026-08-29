@@ -42,18 +42,30 @@ export const SEED_JOINABLE_SLUG = 'e2e-open-workshop';
 export const SEED_JOINABLE_NAME = 'E2E Open Workshop';
 export const SEED_JOINABLE_INSTRUCTIONS = 'Second Tuesday. Bring whatever you are working on.';
 
+/** Members-only, so it has a member page and no public one. */
+export const SEED_HIDDEN_ID = 'e2e-group-members-only';
+export const SEED_HIDDEN_SLUG = 'e2e-members-only-circle';
+export const SEED_HIDDEN_NAME = 'E2E Members Only Circle';
+
 export const SEED_APPLY_ID = 'e2e-group-apply';
 export const SEED_APPLY_SLUG = 'e2e-outreach-committee';
 export const SEED_APPLY_NAME = 'E2E Outreach Committee';
 
-const GROUP_IDS = [SEED_CLUB_ID, SEED_COMMITTEE_ID, SEED_JOINABLE_ID, SEED_APPLY_ID];
+const GROUP_IDS = [
+	SEED_CLUB_ID,
+	SEED_COMMITTEE_ID,
+	SEED_JOINABLE_ID,
+	SEED_APPLY_ID,
+	SEED_HIDDEN_ID
+];
 const entryIdFor = (groupId: string) => `${groupId}-entry`;
 
 const NAMES: Record<string, string> = {
 	[SEED_CLUB_ID]: SEED_CLUB_NAME,
 	[SEED_COMMITTEE_ID]: SEED_COMMITTEE_NAME,
 	[SEED_JOINABLE_ID]: SEED_JOINABLE_NAME,
-	[SEED_APPLY_ID]: SEED_APPLY_NAME
+	[SEED_APPLY_ID]: SEED_APPLY_NAME,
+	[SEED_HIDDEN_ID]: SEED_HIDDEN_NAME
 };
 
 export async function seedGroups(): Promise<void> {
@@ -96,6 +108,15 @@ export async function seedGroups(): Promise<void> {
 				joinInstructions: SEED_JOINABLE_INSTRUCTIONS
 			},
 			{
+				id: SEED_HIDDEN_ID,
+				kind: 'club',
+				name: SEED_HIDDEN_NAME,
+				slug: SEED_HIDDEN_SLUG,
+				bio: 'Runs quietly.',
+				joinPolicy: 'open',
+				joinInstructions: null
+			},
+			{
 				id: SEED_APPLY_ID,
 				kind: 'committee',
 				name: SEED_APPLY_NAME,
@@ -111,7 +132,9 @@ export async function seedGroups(): Promise<void> {
 				id: entryIdFor(groupId),
 				groupId,
 				name: NAMES[groupId],
-				visibility: 'public' as const
+				// One deliberately not public, so the directory's filter and the
+				// public page's 404 both have something to be wrong about.
+				visibility: groupId === SEED_HIDDEN_ID ? ('members' as const) : ('public' as const)
 			}))
 		);
 

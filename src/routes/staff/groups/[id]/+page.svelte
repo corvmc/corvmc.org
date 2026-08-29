@@ -10,6 +10,7 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
 	import { getStaffGroupPage, deactivateGroup, reactivateGroup } from '$lib/remote/groups.remote';
 	import GroupSettingsForm from './GroupSettingsForm.svelte';
@@ -111,6 +112,20 @@
 				{/each}
 			</Table>
 		{/if}
+	</InfoCard>
+
+	<InfoCard title="Public page">
+		<p class="text-sm">
+			{#if group.visibility === 'public'}
+				<a class="link link-primary" href={resolve(`/groups/${group.slug}`)}>/groups/{group.slug}</a
+				>
+			{:else}
+				<span class="text-fg-2">
+					Not listed publicly. Set visibility to Public above and it appears at
+					<code class="text-xs">/groups/{group.slug}</code>.
+				</span>
+			{/if}
+		</p>
 	</InfoCard>
 
 	{#if !isDeactivated}
