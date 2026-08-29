@@ -645,12 +645,26 @@ test.describe('inventory', () => {
 		 * signed in on their phone, so this is the common path rather than an
 		 * edge case — and it has to answer with a login, not a 404.
 		 */
-		test('sends a signed-out scan to the login, not a dead end', async ({ page }) => {
+		test('sends a signed-out scan to the login and back to the tag', async ({ page }) => {
 			await page.goto(`/a/${SEED_ASSET_TAG}`);
 			// The tag itself is percent-encoded, but it contains nothing that needs
-			// escaping, so the path survives verbatim in the query string.
-			await expect(page).toHaveURL(`/login?redirectTo=/a/${SEED_ASSET_TAG}`, {
+			// escaping, so the path survives verbatim in the query string. The
+			// parameter has to be spelled `redirect`: the login page reads that
+			// name, and under any other spelling this silently drops the scan on
+			// `/member` instead — which is the whole point of the second half of
+			// this test.
+			await expect(page).toHaveURL(`/login?redirect=/a/${SEED_ASSET_TAG}`, {
 				timeout: 10000
+			});
+
+			await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
+			await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
+			await page.getByRole('button', { name: 'Sign in' }).click();
+
+			// Back through `/a/[tag]`, which now resolves the scan for a signed-in
+			// staff member rather than bouncing it.
+			await expect(page).toHaveURL(`/staff/inventory/assets/${SEED_ASSET_ID}`, {
+				timeout: 15000
 			});
 		});
 

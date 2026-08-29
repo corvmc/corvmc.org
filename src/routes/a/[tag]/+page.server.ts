@@ -34,7 +34,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	// in on their phone, so this is the common path rather than an edge case —
 	// and it answers with a login, not a dead end. Checked before the lookup so
 	// an anonymous scan cannot probe which tags exist.
-	if (!locals.user) redirect(302, `/login?redirectTo=/a/${encodeURIComponent(tag)}`);
+	if (!locals.user) redirect(302, `/login?redirect=/a/${encodeURIComponent(tag)}`);
 
 	const asset = await getAssetByTag(tag);
 	if (!asset) error(404, 'No gear carries that tag');

@@ -393,7 +393,7 @@ is adding arms, not building a mechanism:
   links to it.
 - **There is no public arm.** The gear catalog is not public, so `entityHref`
   correctly returns `null` for a signed-out viewer, and `/a/[tag]` turns that
-  into `/login?redirectTo=/a/{tag}` rather than a 404. The tag is a physical
+  into `/login?redirect=/a/{tag}` rather than a 404. The tag is a physical
   object in a room full of people who may not be signed in on their phone, so
   this is the common path, not an edge case.
 

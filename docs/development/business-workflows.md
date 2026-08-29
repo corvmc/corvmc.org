@@ -550,7 +550,7 @@ and "no filing was due, because…".
 routing decision to `entityHref` — the same policy the identity chips use — so
 staff get `/staff/inventory/assets/[id]` and a member gets
 `/member/equipment/assets/[id]`. A signed-out scan has no public arm to land on,
-so it redirects to `/login?redirectTo=…` rather than 404ing. A `load` rather than
+so it redirects to `/login?redirect=…` rather than 404ing. A `load` rather than
 a remote function because it is navigation, not data: a phone camera should get a
 302 off the server, not a blank page that redirects after hydration.
 
