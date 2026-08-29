@@ -11,16 +11,38 @@ boot.
 
 ## Setup
 
-1. **Dependencies.** Symlink rather than reinstalling:
+1. **Dependencies.** Install them, per worktree:
 
    ```bash
-   ln -s ../../../node_modules node_modules
+   pnpm install --frozen-lockfile
    ```
 
-   Vite already tolerates this: `vite.config.ts` passes
-   `fs.realpathSync(path.resolve(dirname, 'node_modules'))` to `server.fs.allow`. Without that
-   entry a symlinked `node_modules` 403s, which breaks hydration and the `client` vitest project
-   in ways that look like application bugs.
+   **It costs almost no disk.** pnpm keeps one copy of every package in a global store
+   (`pnpm store path`) and brings it into a project by cloning, not copying — on APFS that is
+   copy-on-write, so the blocks are shared until something writes to them. Measured on this
+   machine: cloning a 200 MB file changed free space by **8 KB**. `du` reports a worktree's
+   `node_modules` as over a gigabyte, but that is its logical size, not what the volume gave up.
+
+   This used to say to symlink `../../../node_modules` instead. Don't: it buys a saving that was
+   never real, and costs three things that are.
+
+   - **The shared install drifts from the lockfile.** A worktree rebased onto a `main` that added
+     a dependency gets a build that fails to resolve it and a `pnpm check` error in a file nobody
+     touched. It reads as a mystery, not as stale deps.
+   - **There is no safe way to refresh it.** Running `pnpm install` from a worktree whose
+     `node_modules` is a symlink makes pnpm treat the shared directory as a foreign modules dir
+     and offer to **purge and reinstall it from scratch** — which pulls the floor out from under
+     every other worktree and any suite running in one.
+   - **Vite has to be told to allow it.** `vite.config.ts` passes
+     `fs.realpathSync(path.resolve(dirname, 'node_modules'))` to `server.fs.allow` for this reason;
+     without that entry a symlinked `node_modules` 403s, breaking hydration and the `client`
+     vitest project in ways that look like application bugs. That workaround stays — it is
+     harmless — but a real install does not need it.
+
+   `pnpm install` may exit non-zero on the `prepare` script (`lefthook install` refuses when the
+   hooks path is already set from the main checkout). The install itself has finished by then;
+   the hooks are already installed and shared. Check for the package you needed rather than
+   trusting the exit code.
 
 2. **Secrets.** Copy `.env` and `.dev.vars` from the main checkout — **copy, don't symlink**.
    Editing through a symlink writes into the main checkout and leaks into every other worktree.
