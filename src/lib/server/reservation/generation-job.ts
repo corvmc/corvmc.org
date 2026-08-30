@@ -2,7 +2,9 @@ import { db } from '$lib/server/db';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { closure } from '$lib/server/db/schema/reservation';
-import { event } from '$lib/server/db/schema/event';
+import { event, eventBand } from '$lib/server/db/schema/event';
+import { group } from '$lib/server/db/schema/group';
+import { linkManagingGroup } from '$lib/server/event/event-service';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, isNull, lt, gt, gte, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 import { getOccurrences, generationWindowEnd } from './rrule-helpers';
@@ -391,10 +393,11 @@ async function processEventSeries(
 		.where(eq(user.id, prototype.createdByUserId))
 		.limit(1);
 
-	// Recurring series are staff-created and therefore always CMC-sourced, which
-	// `event_cmc_needs_end` guarantees an end time for. Checked rather than
-	// asserted because this runs unattended — a silent NaN duration would
-	// generate a whole series of broken occurrences.
+	// `event_cmc_needs_end` guarantees this for a CMC prototype, and
+	// `createGroupEvent` requires it for a program's. Still checked rather than
+	// asserted, because this runs unattended and because the guarantee no longer
+	// comes from one place — a silent NaN duration would generate a whole series
+	// of broken occurrences.
 	if (!prototype.endsAt) {
 		throw new Error(`Recurring prototype ${prototype.id} has no end time`);
 	}
@@ -447,6 +450,37 @@ async function processEventSeries(
 			: [];
 	const existingTimes = new Set(existingInstances.map((r) => r.startsAt.getTime()));
 
+	/**
+	 * An occurrence is the prototype repeated, so it inherits what the prototype
+	 * *is* — not a fixed CMC draft.
+	 *
+	 * This used to hard-code `source: 'cmc'` and `status: 'draft'` and to copy
+	 * neither the owner nor the location. Latent until now only because nothing
+	 * but a staff CMC event could be a prototype; the moment a club's jam can be
+	 * one, the old shape would have generated CMC-attributed drafts that reached
+	 * nobody and held no room, week after week, unattended.
+	 *
+	 * **Publishing automatically is conditional, and that is the decision the
+	 * spec makes rather than defers.** A CMC series keeps generating drafts,
+	 * because staff review is a step that already exists and removing it silently
+	 * would be a change nobody asked for. Everything else publishes: a program's
+	 * recurring session that sits in draft is a session its members are never
+	 * told about.
+	 */
+	const inheritsCmcReview = prototype.source === 'cmc';
+	const occurrenceStatus = inheritsCmcReview ? ('draft' as const) : ('published' as const);
+
+	// The owner's display name, for the lineup credit a band occurrence owes.
+	// Looked up once rather than per occurrence.
+	const [ownerGroup] =
+		prototype.source === 'band' && prototype.groupId
+			? await db
+					.select({ name: group.name })
+					.from(group)
+					.where(eq(group.id, prototype.groupId))
+					.limit(1)
+			: [undefined];
+
 	let created = 0;
 	let skipped = 0;
 
@@ -471,12 +505,40 @@ async function processEventSeries(
 			ticketingEnabled: prototype.ticketingEnabled,
 			ticketPrice: prototype.ticketPrice,
 			ticketQuantity: prototype.ticketQuantity,
-			source: 'cmc',
-			status: 'draft',
+			// Inherited, all four. `location` matters for the same reason as the
+			// rest: an occurrence that lost it reads as being held somewhere it is
+			// not.
+			source: prototype.source,
+			groupId: prototype.groupId,
+			location: prototype.location,
+			status: occurrenceStatus,
+			publishedAt: occurrenceStatus === 'published' ? new Date() : null,
 			createdByUserId: prototype.createdByUserId,
 			recurringSeriesId: series.id
 		});
 		created++;
+
+		// The two invariants a write that sets `groupId` owes. They are maintained
+		// here rather than by calling `createGroupEvent`/`createBandEvent`, because
+		// this path deliberately inserts the event *before* booking the room —
+		// reversing that order is what keeps a failed booking from orphaning a
+		// reservation, and it is the opposite of what those creators do.
+		if (prototype.groupId) {
+			await linkManagingGroup([{ eventId: newEventId, groupId: prototype.groupId }]);
+
+			// A band gig's owner heads its own bill. A program's session has no bill
+			// at all — see `createGroupEvent`.
+			if (prototype.source === 'band') {
+				await db.insert(eventBand).values({
+					eventId: newEventId,
+					name: ownerGroup?.name ?? 'Unknown band',
+					bandId: prototype.groupId,
+					billingOrder: 0,
+					status: 'confirmed',
+					addedByBandId: prototype.groupId
+				});
+			}
+		}
 
 		// Point the occurrence at the prototype's poster — the same R2 object, not a
 		// copy of it.

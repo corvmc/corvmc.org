@@ -61,8 +61,12 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 	user: { id: 'id', name: 'name', email: 'email' }
 }));
 
+// `__table` is how `insertTableName` tells these apart. The real tables carry a
+// `drizzle:Name` symbol, but these stand-ins are plain objects, so the
+// discriminator has to be one they actually have.
 vi.mock('$lib/server/db/schema/event', () => ({
 	event: {
+		__table: 'event',
 		id: 'id',
 		title: 'title',
 		description: 'description',
@@ -74,13 +78,36 @@ vi.mock('$lib/server/db/schema/event', () => ({
 		ticketPrice: 'ticketPrice',
 		ticketQuantity: 'ticketQuantity',
 		source: 'source',
+		groupId: 'groupId',
+		location: 'location',
+		publishedAt: 'publishedAt',
 		status: 'status',
 		posterKey: 'posterKey',
 		reservationId: 'reservationId',
 		recurringSeriesId: 'recurringSeriesId',
 		createdByUserId: 'createdByUserId'
-	}
+	},
+	eventBand: { __table: 'event_band', id: 'id', eventId: 'eventId', bandId: 'bandId' },
+	eventGroup: { __table: 'event_group', id: 'id', eventId: 'eventId', groupId: 'groupId' }
 }));
+
+vi.mock('$lib/server/db/schema/group', () => ({
+	group: { __table: 'group', id: 'id', name: 'name' }
+}));
+
+// The real one, so the `event_group` write this job now owes goes through the
+// same helper `createGroupEvent` and `importBandEvents` use rather than a copy.
+vi.mock('$lib/server/event/event-service', async () => {
+	const { db } = await import('$lib/server/db');
+	const { eventGroup } = await import('$lib/server/db/schema/event');
+	return {
+		linkManagingGroup: async (links: { eventId: string; groupId: string }[]) => {
+			await (db as unknown as { insert: (t: unknown) => { values: (v: unknown) => unknown } })
+				.insert(eventGroup)
+				.values(links.map((l) => ({ ...l, sortOrder: 0 })));
+		}
+	};
+});
 
 const mockCopyObject = vi.fn();
 
@@ -171,12 +198,40 @@ function queueSelects(...results: unknown[][]) {
 	});
 }
 
+/**
+ * Which table each insert went to, so a test can tell an `event` row from the
+ * `event_group` link the same write now owes. `insertedRows` keeps its old
+ * meaning — everything, in order — because the existing assertions index into
+ * it, and a CMC prototype still produces exactly one row.
+ */
+let insertedByTable: { table: string; row: unknown }[] = [];
+
+function insertTableName(table: unknown): string {
+	return (table as { __table?: string } | null)?.__table ?? 'unknown';
+}
+
 function setupInsert() {
-	const values = vi.fn().mockImplementation((row: unknown) => {
-		insertedRows.push(row);
-		return Promise.resolve();
-	});
-	dbMock.insert.mockReturnValue({ values });
+	insertedByTable = [];
+	dbMock.insert.mockImplementation((table: unknown) => ({
+		values: vi.fn().mockImplementation((row: unknown) => {
+			const rows = Array.isArray(row) ? row : [row];
+			for (const r of rows) {
+				insertedRows.push(r);
+				insertedByTable.push({ table: insertTableName(table), row: r });
+			}
+			// Thenable *and* chainable: `linkManagingGroup` ends in
+			// `.onConflictDoNothing()`, while the event insert is awaited directly.
+			const chain = {
+				onConflictDoNothing: () => chain,
+				then: (resolve: (v: unknown) => void) => resolve(undefined)
+			};
+			return chain;
+		})
+	}));
+}
+
+function insertsFor(table: string) {
+	return insertedByTable.filter((i) => i.table === table).map((i) => i.row);
 }
 
 let updatedRows: unknown[] = [];
@@ -464,6 +519,33 @@ const EVENT_PROTO = {
 	reservationId: 'eres-proto'
 };
 
+/**
+ * A club's recurring jam. Everything the old generator threw away is here:
+ * a non-CMC source, an owning group, and a location.
+ */
+const GROUP_PROTO = {
+	...{
+		id: 'eproto-2',
+		title: 'Monthly Jam',
+		description: 'Bring a horn',
+		startsAt: new Date('2026-05-13T17:00:00Z'),
+		endsAt: new Date('2026-05-13T19:00:00Z'),
+		doorsAt: null,
+		tags: null,
+		ticketingEnabled: false,
+		ticketPrice: null,
+		ticketQuantity: null,
+		createdByUserId: 'user-1',
+		reservationId: 'eres-proto'
+	},
+	source: 'group' as const,
+	groupId: 'club-1',
+	location: 'Practice Room'
+};
+
+/** A band series, which owes a lineup credit where a program's session does not. */
+const BAND_PROTO = { ...GROUP_PROTO, id: 'eproto-3', source: 'band' as const, groupId: 'band-1' };
+
 /** The prototype's reservation window: starts 30m before, ends 30m after the event. */
 const EVENT_PROTO_RES = {
 	startsAt: new Date('2026-05-13T16:30:00Z'),
@@ -651,5 +733,123 @@ describe('generateRecurringEvents', () => {
 		await generateRecurringEvents();
 
 		expect(updatedRows[0]).toMatchObject({ posterKey: 'events/posters/eproto-1.webp' });
+	});
+});
+
+/**
+ * What phase 9 fixed. `processEventSeries` hard-coded `source: 'cmc'` and
+ * `status: 'draft'` and copied neither the owner nor the location — latent only
+ * because nothing but a staff CMC event could be a prototype. The moment a
+ * club's jam can be one, the old shape generates CMC-attributed drafts that
+ * reach nobody and hold no room, week after week, unattended.
+ */
+describe('generateRecurringEvents — a prototype that is not a CMC event', () => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+		selectResults = [];
+		insertedRows = [];
+		updatedRows = [];
+		mockEmit.mockResolvedValue(undefined);
+		mockGenerationWindowEnd.mockReturnValue(new Date('2026-06-20T00:00:00Z'));
+		mockStaffCreate.mockResolvedValue({ id: 'eres-new' });
+		mockHasConflict.mockResolvedValue(false);
+		mockCopyObject.mockResolvedValue(null);
+	});
+
+	it("inherits the prototype's source, owner and location", async () => {
+		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], []);
+		setupInsert();
+		setupUpdate();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		await generateRecurringEvents();
+
+		expect(insertsFor('event')[0]).toMatchObject({
+			source: 'group',
+			groupId: 'club-1',
+			location: 'Practice Room'
+		});
+	});
+
+	/**
+	 * The decision the spec makes rather than defers. A program's recurring
+	 * session sitting in draft is a session its members are never told about;
+	 * a CMC series keeps its staff review step, which already exists.
+	 */
+	it('publishes a program session, and still drafts a CMC one', async () => {
+		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], []);
+		setupInsert();
+		setupUpdate();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		await generateRecurringEvents();
+
+		const [occurrence] = insertsFor('event') as Record<string, unknown>[];
+		expect(occurrence.status).toBe('published');
+		expect(occurrence.publishedAt).toBeInstanceOf(Date);
+	});
+
+	it('leaves a CMC series generating drafts for review', async () => {
+		queueSelects([EVENT_SERIES], [EVENT_PROTO], [OWNER], [EVENT_PROTO_RES], []);
+		setupInsert();
+		setupUpdate();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		await generateRecurringEvents();
+
+		const [occurrence] = insertsFor('event') as Record<string, unknown>[];
+		expect(occurrence.status).toBe('draft');
+		expect(occurrence.publishedAt).toBeNull();
+	});
+
+	it('gives each occurrence its own event_group row', async () => {
+		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], []);
+		setupInsert();
+		setupUpdate();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		await generateRecurringEvents();
+
+		expect(insertsFor('event_group')).toEqual([
+			{ eventId: expect.any(String), groupId: 'club-1', sortOrder: 0 }
+		]);
+	});
+
+	/** A program's session has no bill; a band's gig heads its own. */
+	it('writes no lineup credit for a program session', async () => {
+		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], []);
+		setupInsert();
+		setupUpdate();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		await generateRecurringEvents();
+
+		expect(insertsFor('event_band')).toHaveLength(0);
+	});
+
+	it('writes the owner credit for a band occurrence', async () => {
+		queueSelects(
+			[EVENT_SERIES],
+			[BAND_PROTO],
+			[OWNER],
+			[EVENT_PROTO_RES],
+			[], // existing instances
+			[{ name: 'The Squares' }] // the owning band's name, looked up once per series
+		);
+		setupInsert();
+		setupUpdate();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		await generateRecurringEvents();
+
+		// Copying `groupId` is what makes this owed: before phase 9 the generator
+		// forced a CMC event with no owner, so the invariant could not be broken
+		// here. It can now, which is why it is maintained here.
+		expect(insertsFor('event_band')[0]).toMatchObject({
+			bandId: 'band-1',
+			name: 'The Squares',
+			billingOrder: 0,
+			status: 'confirmed'
+		});
 	});
 });
