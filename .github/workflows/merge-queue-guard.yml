@@ -1,0 +1,114 @@
+name: Merge queue guard
+
+# A PR queued with `gh pr merge --auto --squash` and then rejected by the queue loses its
+# auto-merge: GitHub disarms it and nothing is left watching, so the PR sits open indefinitely
+# while every check on its own head stays green. This leaves a durable signal instead — a
+# `queue-rejected` label plus a comment naming what failed — so `/queue-triage` (or anyone
+# reading the PR list) can pick it up later.
+#
+# It deliberately never re-arms auto-merge. Re-queueing is a decision, not a retry.
+#
+# `pull_request` workflows resolve from the PR's merge ref rather than from `main`, so a branch cut
+# before this file landed has no guard until it takes `main`.
+on:
+  pull_request:
+    types: [dequeued, enqueued]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  rejected:
+    name: Report queue rejection
+    # `dequeued` fires on every removal from the queue, including the successful merge that is
+    # the whole point of queueing. Only an unmerged removal is a rejection.
+    if: github.event.action == 'dequeued' && github.event.pull_request.merged == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Label and comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.number }}
+          # The webhook carries a removal reason, but its values are undocumented. Logged for
+          # diagnosis, never branched on — the run lookup below is the source of truth.
+          REASON: ${{ github.event.reason }}
+        run: |
+          set -euo pipefail
+          echo "dequeue reason (informational): ${REASON:-<absent>}"
+
+          gh label create queue-rejected \
+            --color B60205 \
+            --description 'Removed from the merge queue without merging' \
+            --force
+
+          # The queue ref (`gh-readonly-queue/main/pr-<n>-<sha>`) is deleted the moment the PR is
+          # dequeued, so there is nothing left to look up by ref — and nothing to re-run either.
+          # The run outlives the ref and is found by the branch name it recorded.
+          run=$(gh run list --event merge_group --limit 50 \
+            --json databaseId,headBranch,conclusion,url \
+            --jq "[.[] | select(.conclusion == \"failure\" and (.headBranch | contains(\"/pr-${PR}-\")))] | first")
+
+          if [ -z "$run" ] || [ "$run" = 'null' ]; then
+            cat > comment.md <<'EOF'
+          ### Removed from the merge queue
+
+          No failed `merge_group` CI run exists for this PR, so this was a manual removal, a merge
+          conflict, or the queue's one-hour check timeout — not a failed build.
+          EOF
+          else
+            id=$(jq -r '.databaseId' <<<"$run")
+            url=$(jq -r '.url' <<<"$run")
+            failed=$(gh run view "$id" --json jobs \
+              --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")')
+            # A run can fail with no failing job — cancelled, or the run itself timed out.
+            [ -n "$failed" ] || failed='(no job reported a failure — cancelled or timed out)'
+
+            cat > comment.md <<EOF
+          ### Rejected by the merge queue
+
+          Failed on the queue ref, where this PR is tested against the queue head rather than
+          against its own base: **${failed}**
+
+          ${url}
+
+          The checks on this PR's own head can still be green — that is the point of the queue, and
+          the reason this needs saying out loud.
+          EOF
+          fi
+
+          cat >> comment.md <<'EOF'
+
+          Auto-merge is disarmed and nothing will re-arm it. Run `/queue-triage` in a Claude
+          session, or re-queue with `gh pr merge --auto --squash`.
+          EOF
+
+          gh pr edit "$PR" --add-label queue-rejected
+          gh pr comment "$PR" --body-file comment.md
+
+  requeued:
+    name: Clear rejection label
+    # Keeps `gh pr list --label queue-rejected` a live worklist rather than a growing archive.
+    if: github.event.action == 'enqueued'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Remove the label if present
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.number }}
+        run: |
+          set -euo pipefail
+          # Not piped into grep: `grep -q` exits on the first match, and the SIGPIPE that hands
+          # `gh` would fail the pipeline under `pipefail` exactly when the label *is* present.
+          labels=$(gh pr view "$PR" --json labels --jq '.labels[].name')
+          # Removing a label the PR does not carry is a 404, and most enqueues are of PRs that
+          # were never rejected.
+          if grep -qx 'queue-rejected' <<<"$labels"; then
+            gh pr edit "$PR" --remove-label queue-rejected
+          fi

@@ -66,9 +66,12 @@ date to be queued and two sessions finishing at once no longer race for the merg
 queue, which is the one way back to the race. No `--delete-branch` either: `gh` refuses it outright
 while a queue is enabled, and the repo deletes merged branches on its own.
 
-The one thing queueing does not survive is a failed check: GitHub disarms auto-merge when a required
-check goes red, so a PR left queued after a flake sits open indefinitely with nothing watching it.
-Re-run the job, then arm it again — the queue does not pick it back up on its own.
+The one thing queueing does not survive is a rejection: GitHub disarms auto-merge when the queue
+run goes red, and the queue does not pick the PR back up on its own. The failed run cannot be
+re-run either — the `gh-readonly-queue/main/pr-<n>-<sha>` ref is deleted on dequeue, so re-arming
+auto-merge is the only way back in. `.github/workflows/merge-queue-guard.yml` catches the rejection
+and leaves a `queue-rejected` label plus a comment naming the failing job; nothing re-arms
+automatically. `/queue-triage` is how a session picks those up and decides.
 
 ## Worktrees
 
