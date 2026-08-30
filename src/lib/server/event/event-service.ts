@@ -72,7 +72,9 @@ export type { EventStatus } from '$lib/server/db/schema/event';
  *
  * Chunked at 20: D1 caps a statement at 100 bound params and a row binds four.
  */
-async function linkManagingGroup(links: { eventId: string; groupId: string }[]): Promise<void> {
+export async function linkManagingGroup(
+	links: { eventId: string; groupId: string }[]
+): Promise<void> {
 	for (let i = 0; i < links.length; i += 20) {
 		await db
 			.insert(eventGroup)
