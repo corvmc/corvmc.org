@@ -206,6 +206,19 @@ export interface EquipmentReturnedEvent {
 	daysBorrowed: number;
 }
 
+export interface AnnouncementPublishedEvent {
+	announcementId: string;
+	groupId: string;
+	groupName: string;
+	groupSlug: string;
+	groupKind: GroupKind;
+	title: string;
+	/** Markdown, as written. The listener renders the excerpt it needs. */
+	body: string;
+	authorId: string | null;
+	authorName: string;
+}
+
 export interface GroupInviteCreatedEvent {
 	email: string;
 	token: string;
@@ -456,6 +469,7 @@ export type DomainEvents = {
 	'equipment.checked_out': EquipmentCheckedOutEvent;
 	'equipment.returned': EquipmentReturnedEvent;
 	'group_invite.created': GroupInviteCreatedEvent;
+	'announcement.published': AnnouncementPublishedEvent;
 	'inbox.message_received': InboxMessageReceivedEvent;
 	'inbox.message_sent': InboxMessageSentEvent;
 	'inbox.direct_message': InboxDirectMessageEvent;

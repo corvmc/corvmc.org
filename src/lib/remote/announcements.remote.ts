@@ -3,13 +3,17 @@ import { query, form } from '$app/server';
 import { mapDomainError } from '$lib/server/errors';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { requireFeature } from '$lib/server/feature-flags';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { captureException } from '$lib/server/sentry';
 import { ANNOUNCEMENT_BODY_MAX, ANNOUNCEMENT_TITLE_MAX } from '$lib/config';
 import {
 	create,
+	getMuteState,
 	listForManager,
 	listPublished,
 	publish,
 	remove,
+	setMuteState,
 	update
 } from '$lib/server/group/announcement-service';
 
@@ -67,13 +71,17 @@ async function requireAuthor(groupId: string) {
  * refactor away from rendering an unpublished post to the whole roster.
  */
 export const getBandAnnouncementsPage = query(groupIdField, async (groupId) => {
-	const { role } = await requireReader(groupId);
+	const { user, role } = await requireReader(groupId);
 	const canManage = role === 'owner' || role === 'admin';
 
-	return {
-		announcements: canManage ? await listForManager(groupId) : await listPublished(groupId),
-		canManage
-	};
+	const [announcements, notifyAnnouncements] = await Promise.all([
+		canManage ? listForManager(groupId) : listPublished(groupId),
+		// Null for a staff non-member: they have no roster row, so there is
+		// nothing for them to mute and the control does not render.
+		getMuteState(groupId, user.id)
+	]);
+
+	return { announcements, canManage, notifyAnnouncements };
 });
 
 // ---------------------------------------------------------------------------
@@ -115,14 +123,51 @@ export const updateAnnouncement = form(
 export const publishAnnouncement = form(
 	z.object({ groupId: groupIdField, id: announcementIdField }),
 	async (data) => {
-		const { group } = await requireAuthor(data.groupId);
+		const { user, group } = await requireAuthor(data.groupId);
+
+		let post;
 		try {
-			await publish(data.id, group.id);
+			post = await publish(data.id, group.id);
 		} catch (err) {
 			// `AlreadyPublishedError` is a 409, not a fault: two admins on one draft
 			// is an ordinary race and must not reach Sentry as a 500.
 			mapDomainError(err);
 		}
+
+		// Outside the try above, and it has its own.
+		//
+		// The row is stamped by this point, so the admin's action succeeded. Letting
+		// a fan-out failure fall into `mapDomainError` would report that success as
+		// an error, and the retry it invites answers `AlreadyPublishedError` — the
+		// post is out, the notification is not, and the screen says neither.
+		//
+		// Emitted only on the path that actually flipped the row: `publish()` writes
+		// `published_at` conditionally, so an admin who lost the race threw above and
+		// never reaches this. That is half of why a roster cannot be notified twice;
+		// the listener's latch is the other half, and it is the half that survives
+		// the bus redelivering.
+		try {
+			await domainEvents.emit('announcement.published', {
+				announcementId: post.id,
+				groupId: group.id,
+				groupName: group.name,
+				groupSlug: group.slug,
+				groupKind: group.kind,
+				title: post.title,
+				body: post.body,
+				authorId: post.author?.id ?? null,
+				// The ref's display name, which already falls back for a deleted
+				// account; the publisher's own name if the post has no author at all.
+				authorName: post.author?.title ?? user.name
+			});
+		} catch (err) {
+			captureException(err, {
+				event: 'announcement.published',
+				announcementId: post.id,
+				groupId: group.id
+			});
+		}
+
 		return { success: true };
 	}
 );
@@ -162,6 +207,26 @@ export const deleteAnnouncement = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
+		return { success: true };
+	}
+);
+
+/**
+ * The per-group mute.
+ *
+ * `requireGroupRole` at `member`, and the id comes from the session rather than
+ * the request: a member may only ever change their own row, so there is no
+ * `userId` field to forge. `allowStaff` is off — a staff non-member has no
+ * roster row to write.
+ *
+ * An intent enum rather than a boolean, for the reason `pinAnnouncement` gives.
+ */
+export const setAnnouncementMute = form(
+	z.object({ groupId: groupIdField, intent: z.enum(['mute', 'unmute']) }),
+	async (data) => {
+		await requireFeature('announcements');
+		const { user, group } = await requireGroupRole({ id: data.groupId }, 'member');
+		await setMuteState(group.id, user.id, data.intent === 'unmute');
 		return { success: true };
 	}
 );
