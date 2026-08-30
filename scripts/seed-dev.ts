@@ -1731,6 +1731,68 @@ async function seedLineup(
 	}
 }
 
+/**
+ * A program's sessions — the thing that distinguishes a club from a band, since
+ * a session happens in the room and holds it.
+ *
+ * Written straight to the tables rather than through `createGroupEvent`, so the
+ * reservation and the `event_group` row are restated here. That the reservation
+ * is `bookerType: 'event'` is the whole point: the room is held for the session,
+ * not booked by the program, and no credit ledger is touched.
+ */
+async function seedGroupSessions(groups: any[]) {
+	const rows: any[] = [];
+
+	for (const g of groups) {
+		// Two behind and two ahead, so the tab has an archive and a calendar.
+		for (const offset of [-21, -7, 7, 21]) {
+			const startsAt = ptDate(offset, 19);
+			const endsAt = ptDate(offset, 21);
+			const eventId = crypto.randomUUID();
+
+			// Only the upcoming ones hold the room — a past session's hold is spent,
+			// and seeding one would put a stale confirmed booking on the calendar.
+			let reservationId: string | null = null;
+			if (offset > 0) {
+				const [res] = await db
+					.insert(reservation)
+					.values({
+						bookerType: 'event',
+						bookerId: eventId,
+						createdByUserId: g.ownerId,
+						status: 'confirmed',
+						startsAt,
+						endsAt
+					})
+					.returning();
+				reservationId = res.id;
+			}
+
+			const [e] = await db
+				.insert(event)
+				.values({
+					id: eventId,
+					title: `${g.name}: ${offset > 0 ? 'next' : 'past'} session`,
+					description: `A regular meeting of ${g.name}.`,
+					startsAt,
+					endsAt,
+					status: 'published',
+					publishedAt: new Date(startsAt.getTime() - 10 * 86400000),
+					groupId: g.id,
+					source: 'group',
+					reservationId,
+					createdByUserId: g.ownerId
+				})
+				.returning();
+
+			await db.insert(eventGroup).values({ eventId: e.id, groupId: g.id, sortOrder: 0 });
+			rows.push(e);
+		}
+	}
+
+	return rows;
+}
+
 async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 	console.log('Seeding band events...');
 	const rows = [];
@@ -4708,6 +4770,7 @@ async function main() {
 	const events = await seedEvents(allUsers);
 	const bands = await seedBands(allUsers);
 	const groups = await seedGroups(allUsers);
+	const groupSessions = await seedGroupSessions(groups);
 	const bandEvents = await seedBandEvents(bands, allUsers);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
@@ -4755,6 +4818,9 @@ async function main() {
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
+	console.log(
+		`  ${groupSessions.length} group sessions (${groupSessions.filter((e) => e.reservationId).length} holding the room)`
+	);
 	console.log(`  ${bandEvents.length} band events`);
 	console.log(`  ${bandReservations.length} band reservations`);
 	console.log(`  ${bandSites.size} band sites`);

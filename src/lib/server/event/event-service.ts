@@ -1524,6 +1524,181 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 }
 
 /**
+ * A group's sessions — everything on its page, in date order.
+ *
+ * Read through `event_group` rather than `event.groupId`, because that is the
+ * question the table answers: "whose page does this appear on." A session the
+ * group manages and one it co-hosts both belong here, and the managing group's
+ * own row is written automatically, so this needs no union with the owner
+ * column.
+ */
+export async function listGroupSessions(
+	groupId: string,
+	opts: { upcomingOnly?: boolean } = {}
+): Promise<EventRow[]> {
+	const conditions = [
+		inArray(
+			event.id,
+			db.select({ id: eventGroup.eventId }).from(eventGroup).where(eq(eventGroup.groupId, groupId))
+		)
+	];
+	if (opts.upcomingOnly) conditions.push(gt(event.startsAt, new Date()));
+
+	return db
+		.select()
+		.from(event)
+		.where(and(...conditions))
+		.orderBy(opts.upcomingOnly ? asc(event.startsAt) : desc(event.startsAt))
+		.limit(100);
+}
+
+export interface CreateGroupEventParams {
+	groupId: string;
+	createdByUserId: string;
+	title: string;
+	description?: string;
+	startsAt: Date;
+	/**
+	 * Required, unlike a band gig's. A group session holds the room, and a
+	 * reservation with no end has nothing to reserve. The `event_cmc_needs_end`
+	 * CHECK does not cover this — widening it would rebuild `event`, which is the
+	 * riskiest rebuild in the schema — so the rule lives here instead.
+	 */
+	endsAt: Date;
+	doorsAt?: Date;
+	tags?: string;
+	/**
+	 * Hold the room for the session. Omitted for a program meeting somewhere
+	 * else, which is a listing like any other.
+	 */
+	reservation?: {
+		startsAt: Date;
+		endsAt: Date;
+		overrideConflicts: boolean;
+	};
+	posterFile?: {
+		buffer: ArrayBuffer;
+		contentType: string;
+	};
+}
+
+/**
+ * A club's or committee's session — and the first path outside the staff panel
+ * that can reserve the room.
+ *
+ * The three existing creators each get one thing wrong for a program. `create()`
+ * reserves the room but is staff-only and produces a CMC event.
+ * `createBandEvent()` is member-reachable but reserves nothing — it is an
+ * off-site gig listing with a `location`. `createCommunityEvent()` is neither
+ * hosted nor managed by CMC. So this is `create()`'s reservation path with
+ * `createBandEvent()`'s ownership.
+ *
+ * **The room is free and the group does not book it.** The reservation belongs
+ * to the *event* — `bookerType: 'event'`, `bookerId` the event id — exactly as a
+ * staff CMC event's does. Booking as the group would imply the group has a
+ * balance to spend, which is precisely what a sanctioned program does not need,
+ * and no credit ledger is touched.
+ *
+ * The write order is `create()`'s, and for the same reason: D1 has no
+ * interactive transactions, so the reservation is written first and the event
+ * inserted with the link already set, never in a half-linked state. A failed
+ * event insert compensates by deleting the reservation it just made.
+ */
+export async function createGroupEvent(params: CreateGroupEventParams): Promise<EventRow> {
+	const {
+		groupId,
+		createdByUserId,
+		title,
+		description,
+		startsAt,
+		endsAt,
+		doorsAt,
+		tags,
+		reservation: reservationParams,
+		posterFile
+	} = params;
+
+	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
+	if (doorsAt && doorsAt > startsAt) throw new Error('Doors must open before event starts');
+
+	const eventId = crypto.randomUUID();
+
+	let reservationId: string | null = null;
+	if (reservationParams) {
+		if (reservationParams.startsAt >= reservationParams.endsAt) {
+			throw new Error('Reservation must end after it starts');
+		}
+		if (!reservationParams.overrideConflicts) {
+			const conflict = await hasConflict(reservationParams.startsAt, reservationParams.endsAt);
+			if (conflict) throw new ReservationConflictError();
+		}
+
+		const res = await staffCreate({
+			userId: createdByUserId,
+			// Not `'group'`. The room is held for the session, not booked by the
+			// program — see docs/specs/groups-spec.md § Room time.
+			bookerType: 'event',
+			bookerId: eventId,
+			startsAt: reservationParams.startsAt,
+			endsAt: reservationParams.endsAt,
+			status: 'confirmed'
+		});
+		reservationId = res.id;
+	}
+
+	let row: EventRow;
+	try {
+		[row] = await db
+			.insert(event)
+			.values({
+				id: eventId,
+				title,
+				description: description ?? null,
+				startsAt,
+				endsAt,
+				doorsAt: doorsAt ?? null,
+				tags: tags ?? null,
+				groupId,
+				source: 'group',
+				reservationId,
+				createdByUserId
+			})
+			.returning();
+	} catch (err) {
+		// Compensating write: the event never persisted, so remove the orphan
+		// reservation made for it.
+		if (reservationId) {
+			try {
+				await db.delete(reservation).where(eq(reservation.id, reservationId));
+			} catch (cleanupErr) {
+				captureException(cleanupErr, {
+					event: 'group_event.create.compensate',
+					reservationId
+				});
+			}
+		}
+		throw err;
+	}
+
+	await linkManagingGroup([{ eventId: row.id, groupId }]);
+
+	// No `event_band` credit, unlike a band event. A club's jam has no bill —
+	// nobody's name is on a poster — and writing the group in as its own act
+	// would put a club into every "bands who played here" read.
+
+	if (posterFile) {
+		const key = await writeEventPoster(row.id, posterFile);
+		await db
+			.update(event)
+			.set({ posterKey: key, updatedAt: new Date() })
+			.where(eq(event.id, row.id));
+		row.posterKey = key;
+	}
+
+	return row;
+}
+
+/**
  * Upload a poster and point the event's `poster` slot at it, returning the key
  * for `event.posterKey`.
  *

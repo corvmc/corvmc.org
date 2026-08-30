@@ -11,6 +11,7 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { resolve } from '$app/paths';
+	import { formatDateTimeShort } from '$lib/utils/format';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -21,6 +22,7 @@
 	} from '$lib/remote/groups.remote';
 	import AnnouncementList from '$lib/components/groups/AnnouncementList.svelte';
 	import MuteAnnouncementsAction from '$lib/components/groups/MuteAnnouncementsAction.svelte';
+	import CreateSessionAction from '$lib/components/groups/CreateSessionAction.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -42,7 +44,7 @@
 	const approveFields = approveApplicationForm.fields;
 	const declineFields = declineApplicationForm.fields;
 
-	type Tab = 'announcements' | 'overview' | 'roster';
+	type Tab = 'announcements' | 'overview' | 'sessions' | 'roster';
 
 	let slug = $derived(page.params.slug!);
 	const data = $derived(await getMemberGroup(slug));
@@ -61,6 +63,7 @@
 		const requested = page.url.searchParams.get('tab');
 		if (requested === 'roster') return 'roster';
 		if (requested === 'overview') return 'overview';
+		if (requested === 'sessions' && data.sessionsEnabled) return 'sessions';
 		if (requested === 'announcements' && data.announcementsEnabled) return 'announcements';
 		return defaultTab;
 	});
@@ -125,6 +128,46 @@
 			announcements={data.announcements}
 			canManage={data.canManage}
 		/>
+	{:else if tab === 'sessions'}
+		{#if data.canManage}
+			<div class="flex justify-end">
+				<CreateSessionAction groupId={group.id} />
+			</div>
+		{/if}
+		<InfoCard title="Sessions">
+			{#if data.sessions.length === 0}
+				<EmptyState
+					description={data.canManage
+						? 'Nothing on the calendar. Put the first session up.'
+						: 'Nothing on the calendar yet.'}
+				/>
+			{:else}
+				<Table>
+					{#snippet head()}
+						<th>When</th>
+						<th>What</th>
+						<th class="w-px"><span class="sr-only">Room</span></th>
+						<th class="w-px">Status</th>
+					{/snippet}
+					{#each data.sessions as s (s.id)}
+						<tr>
+							<td class="whitespace-nowrap">{formatDateTimeShort(s.startsAt)}</td>
+							<td class="cell-primary">
+								<a class="link" href={resolve(`/events/${s.id}`)}>{s.title}</a>
+							</td>
+							<td class="w-px">
+								<!-- The fact that separates a program's session from a listing
+								     it merely advertises: this one holds the room, free. -->
+								{#if s.reservesRoom}
+									<Badge variant="ghost">Room held</Badge>
+								{/if}
+							</td>
+							<td class="w-px"><StatusBadge status={s.status} /></td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		</InfoCard>
 	{:else if tab === 'overview'}
 		<InfoCard title="About">
 			{#if group.bio}
