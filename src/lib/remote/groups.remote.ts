@@ -13,6 +13,7 @@ import {
 	listForManager,
 	listPublished
 } from '$lib/server/group/announcement-service';
+import { listGroupSessions } from '$lib/server/event/event-service';
 import {
 	STAFF_GROUP_KINDS,
 	assignLeader,
@@ -228,12 +229,16 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	//
 	// The flag is resolved here too. A tab whose contents 403 is worse than no
 	// tab, and the page cannot ask the server itself without a second query.
-	const announcementsEnabled = await isFeatureEnabled('announcements');
-	const [roster, announcements, notifyAnnouncements] = await Promise.all([
+	const [announcementsEnabled, sessionsEnabled] = await Promise.all([
+		isFeatureEnabled('announcements'),
+		isFeatureEnabled('groupEvents')
+	]);
+	const [roster, announcements, notifyAnnouncements, sessions] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
 		!announcementsEnabled ? [] : canManage ? listForManager(group.id) : listPublished(group.id),
 		// Null for a staff non-member — no roster row, so nothing to mute.
-		announcementsEnabled ? getMuteState(group.id, ctx.user.id) : null
+		announcementsEnabled ? getMuteState(group.id, ctx.user.id) : null,
+		sessionsEnabled ? listGroupSessions(group.id) : []
 	]);
 
 	return {
@@ -252,6 +257,17 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		announcementsEnabled,
 		announcements,
 		notifyAnnouncements,
+		sessionsEnabled,
+		sessions: sessions.map((e) => ({
+			id: e.id,
+			title: e.title,
+			startsAt: e.startsAt,
+			endsAt: e.endsAt,
+			status: e.status,
+			// Whether this one holds the room, which is the fact that distinguishes
+			// a program's session from a listing it merely advertises.
+			reservesRoom: !!e.reservationId
+		})),
 		members: {
 			active: roster.active,
 			pending: roster.pending,

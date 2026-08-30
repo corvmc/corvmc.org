@@ -162,3 +162,49 @@ test.describe('the band panel mount', () => {
 		});
 	});
 });
+
+test.describe('group sessions', () => {
+	/**
+	 * The one path outside the staff panel that reserves the room. What is worth
+	 * a browser is that the reservation actually happens and is attributed to the
+	 * session rather than to the program — the difference is one enum value and
+	 * looks identical in a diff.
+	 */
+	test('a leader puts a session on the calendar and holds the room', async ({ page }) => {
+		await loginAsMember(page);
+		await page.goto(`/member/groups/${SEED_LED_SLUG}?tab=sessions`);
+
+		await page.getByRole('button', { name: 'New session' }).click();
+		const dialog = page.getByRole('dialog');
+		await dialog.locator('input[name="title"]').fill('E2E monthly jam');
+		await dialog.locator('input[name="sessionDate"]').fill('2027-03-18');
+		await dialog.locator('input[name="startTime"]').fill('19:00');
+		await dialog.locator('input[name="endTime"]').fill('21:00');
+		// The checkbox registers with a `b:` prefix so kit coerces it to a boolean.
+		await dialog.locator('input[name="b:reserveRoom"]').check();
+		await dialog.getByRole('button', { name: 'Create session' }).click();
+
+		const row = page.getByRole('row').filter({ hasText: 'E2E monthly jam' });
+		await expect(row).toBeVisible({ timeout: 15000 });
+		// Read back from the row, not from a toast: this is the fact that
+		// separates a session holding the room from a listing that merely says so.
+		await expect(row.getByText('Room held')).toBeVisible();
+	});
+
+	test('refuses a session that ends before it starts', async ({ page }) => {
+		await loginAsMember(page);
+		await page.goto(`/member/groups/${SEED_LED_SLUG}?tab=sessions`);
+
+		await page.getByRole('button', { name: 'New session' }).click();
+		const dialog = page.getByRole('dialog');
+		await dialog.locator('input[name="title"]').fill('E2E backwards session');
+		await dialog.locator('input[name="sessionDate"]').fill('2027-03-19');
+		await dialog.locator('input[name="startTime"]').fill('21:00');
+		await dialog.locator('input[name="endTime"]').fill('21:00');
+		await dialog.getByRole('button', { name: 'Create session' }).click();
+
+		await expect(dialog.getByText('The session has to end after it starts')).toBeVisible({
+			timeout: 15000
+		});
+	});
+});

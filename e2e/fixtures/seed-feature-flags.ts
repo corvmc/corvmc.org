@@ -20,6 +20,9 @@ import { withPlatformEnv } from './platform-db';
  * comes into existence — without it `requireFeature` 404s the page before the
  * staff guard is even reached.
  *
+ * `groupEvents` gates the club page's Sessions tab and the one path outside the
+ * staff panel that can reserve the room.
+ *
  * `announcements` gates the club page's default tab and the band panel's
  * Announcements entry. Off, the tab does not exist and the club page falls back
  * to Overview, so a spec that asserted on posts would be asserting on the wrong
@@ -28,7 +31,13 @@ import { withPlatformEnv } from './platform-db';
  * Inventory is deliberately absent: its flag was cut in #286, so the member
  * surface and the scan-resolution pages need no enabling here.
  */
-export const ENABLED_FLAGS = ['bandPremium', 'directMessages', 'groups', 'announcements'] as const;
+export const ENABLED_FLAGS = [
+	'bandPremium',
+	'directMessages',
+	'groups',
+	'announcements',
+	'groupEvents'
+] as const;
 
 export async function seedFeatureFlags(): Promise<void> {
 	await withPlatformEnv(async ({ env }) => {
