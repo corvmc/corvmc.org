@@ -2,6 +2,7 @@
 	import {
 		IconLayoutDashboard,
 		IconUsersGroup,
+		IconSpeakerphone,
 		IconCalendar,
 		IconCalendarEvent,
 		IconPencil,
@@ -57,6 +58,7 @@
 	const icons: Record<BandNavKey, typeof IconLayoutDashboard> = {
 		dashboard: IconLayoutDashboard,
 		members: IconUsersGroup,
+		announcements: IconSpeakerphone,
 		reservations: IconCalendar,
 		events: IconCalendarEvent,
 		edit: IconPencil,

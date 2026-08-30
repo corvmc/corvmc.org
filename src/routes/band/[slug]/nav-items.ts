@@ -14,6 +14,7 @@ import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-na
 export type BandNavKey =
 	| 'dashboard'
 	| 'members'
+	| 'announcements'
 	| 'reservations'
 	| 'events'
 	| 'edit'
@@ -29,7 +30,7 @@ export interface BandNavInput {
 	tier: string;
 	userRole: string;
 	isStaff: boolean;
-	features: { bandPremium?: boolean };
+	features: { bandPremium?: boolean; announcements?: boolean };
 }
 
 export interface BandNavItem extends NavNode<BandNavKey> {
@@ -53,6 +54,13 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 		{ key: 'dashboard', label: 'Dashboard', href: base },
 		{ key: 'members', label: 'Members', href: `${base}/members` }
 	];
+
+	// Every member reads announcements; only owner and admin post, which the page
+	// itself gates. Flagged, because the fan-out behind Publish is not built yet
+	// and a band emailing its roster is not a thing to turn on by accident.
+	if (input.features.announcements) {
+		items.push({ key: 'announcements', label: 'Announcements', href: `${base}/announcements` });
+	}
 
 	// Reservations used to sit behind a `bandReservations` flag, retired on main
 	// in #238's wake — band booking is simply on now.

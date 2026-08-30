@@ -64,6 +64,28 @@ describe('bandNavItems', () => {
 		}
 	});
 
+	/**
+	 * Every member reads announcements; only owner and admin post, and the page
+	 * gates that rather than the nav — a member who cannot see the entry cannot
+	 * read what the band told them, which is backwards.
+	 */
+	it('shows Announcements to every role once the flag is on', () => {
+		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
+			const labels = labelsFor({
+				userRole,
+				isStaff: userRole === 'staff',
+				features: { announcements: true }
+			});
+			expect(labels).toContain('Announcements');
+		}
+	});
+
+	it('hides Announcements entirely while the flag is off', () => {
+		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
+			expect(labelsFor({ userRole, isStaff: userRole === 'staff' })).not.toContain('Announcements');
+		}
+	});
+
 	it('shows the page editor only to an admin of a premium band with the flag on', () => {
 		const on = { features: { bandPremium: true }, tier: 'premium' };
 		expect(labelsFor({ ...on, userRole: 'admin' })).toContain('Page Editor');
@@ -105,7 +127,7 @@ describe('activeBandNavKey', () => {
 		tier: 'premium',
 		userRole: 'owner',
 		isStaff: false,
-		features: { bandPremium: true }
+		features: { bandPremium: true, announcements: true }
 	};
 
 	it('lights the section a detail page belongs to', () => {

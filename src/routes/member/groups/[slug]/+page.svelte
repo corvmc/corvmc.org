@@ -19,6 +19,7 @@
 		approveApplicationForm,
 		declineApplicationForm
 	} from '$lib/remote/groups.remote';
+	import AnnouncementList from '$lib/components/groups/AnnouncementList.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -40,15 +41,29 @@
 	const approveFields = approveApplicationForm.fields;
 	const declineFields = declineApplicationForm.fields;
 
-	type Tab = 'overview' | 'roster';
+	type Tab = 'announcements' | 'overview' | 'roster';
 
 	let slug = $derived(page.params.slug!);
 	const data = $derived(await getMemberGroup(slug));
 	const group = $derived(data.group);
 	const members = $derived(data.members);
 
-	const tab = $derived<Tab>(page.url.searchParams.get('tab') === 'roster' ? 'roster' : 'overview');
-	const tabHref = (t: Tab) => (t === 'overview' ? `?` : `?tab=${t}`);
+	/**
+	 * Announcements lead, per docs/specs/groups-spec.md § Interface: the archive
+	 * is what you come back for, where Overview is what you read once. It is also
+	 * the default tab, so `?tab=` names the other two and the bare URL is the
+	 * post list — until the flag is off, when the tab does not exist at all and
+	 * Overview takes the default back.
+	 */
+	const defaultTab = $derived<Tab>(data.announcementsEnabled ? 'announcements' : 'overview');
+	const tab = $derived.by<Tab>(() => {
+		const requested = page.url.searchParams.get('tab');
+		if (requested === 'roster') return 'roster';
+		if (requested === 'overview') return 'overview';
+		if (requested === 'announcements' && data.announcementsEnabled) return 'announcements';
+		return defaultTab;
+	});
+	const tabHref = (t: Tab) => (t === defaultTab ? `?` : `?tab=${t}`);
 
 	const kindLabel = $derived(group.kind === 'committee' ? 'Committee' : 'Club');
 	// Staff read this page without being on the roster, so there is nothing for
@@ -94,7 +109,13 @@
 		active={tab}
 	/>
 
-	{#if tab === 'overview'}
+	{#if tab === 'announcements'}
+		<AnnouncementList
+			groupId={group.id}
+			announcements={data.announcements}
+			canManage={data.canManage}
+		/>
+	{:else if tab === 'overview'}
 		<InfoCard title="About">
 			{#if group.bio}
 				<p class="text-sm">{group.bio}</p>

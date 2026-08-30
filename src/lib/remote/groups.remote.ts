@@ -5,9 +5,10 @@ import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupJoinPolicies } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { requireGroupRole } from '$lib/server/group/group-context';
-import { requireFeature } from '$lib/server/feature-flags';
+import { isFeatureEnabled, requireFeature } from '$lib/server/feature-flags';
 import { directoryVisibilities } from '$lib/server/db/schema/directory';
 import { getMembers, partitionByStatus } from '$lib/server/band/band-service';
+import { listForManager, listPublished } from '$lib/server/group/announcement-service';
 import {
 	STAFF_GROUP_KINDS,
 	assignLeader,
@@ -214,8 +215,20 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	}
 	const { group, role } = ctx;
 
-	const roster = partitionByStatus(await getMembers(group.id));
 	const canManage = role === 'owner' || role === 'admin';
+
+	// One round trip, per docs/checklists/remote-query-fanout.md. Announcements
+	// belong here rather than in a query of the tab's own: a club is small by
+	// construction, and a per-tab query fanned out of a section component is
+	// exactly what that checklist exists to stop.
+	//
+	// The flag is resolved here too. A tab whose contents 403 is worse than no
+	// tab, and the page cannot ask the server itself without a second query.
+	const announcementsEnabled = await isFeatureEnabled('announcements');
+	const [roster, announcements] = await Promise.all([
+		getMembers(group.id).then(partitionByStatus),
+		!announcementsEnabled ? [] : canManage ? listForManager(group.id) : listPublished(group.id)
+	]);
 
 	return {
 		group: {
@@ -230,6 +243,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		},
 		role,
 		canManage,
+		announcementsEnabled,
+		announcements,
 		members: {
 			active: roster.active,
 			pending: roster.pending,
