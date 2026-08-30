@@ -18,7 +18,9 @@ import 'dotenv/config';
 import { eq } from 'drizzle-orm';
 import { group, groupMember } from '../../src/lib/server/db/schema/group';
 import { directoryEntry, directoryTag } from '../../src/lib/server/db/schema/directory';
+import { announcement } from '../../src/lib/server/db/schema/announcement';
 import { SEED_STAFF_ID, SEED_TARGET_ID } from './seed-staff-user';
+import { SEED_BANDMATE_ID } from './seed-band-onboarding';
 import { withPlatformEnv } from './platform-db';
 
 export const SEED_CLUB_ID = 'e2e-group-club';
@@ -47,6 +49,28 @@ export const SEED_HIDDEN_ID = 'e2e-group-members-only';
 export const SEED_HIDDEN_SLUG = 'e2e-members-only-circle';
 export const SEED_HIDDEN_NAME = 'E2E Members Only Circle';
 
+/**
+ * Two groups for the announcement specs, and they are separate because the
+ * viewer's role is the thing under test: on one the member leads and sees
+ * drafts, on the other they are a plain member and must not.
+ */
+export const SEED_LED_ID = 'e2e-group-led';
+export const SEED_LED_SLUG = 'e2e-led-workshop';
+export const SEED_LED_NAME = 'E2E Led Workshop';
+
+export const SEED_READER_ID = 'e2e-group-reader';
+export const SEED_READER_SLUG = 'e2e-reader-circle';
+export const SEED_READER_NAME = 'E2E Reader Circle';
+
+/**
+ * Neither title contains the word "draft". The state is shown as a badge reading
+ * exactly that, and `getByText` matches case-insensitive substrings — a title
+ * with "draft" in it collides with the badge and makes "is this marked as a
+ * draft?" unaskable.
+ */
+export const SEED_PUBLISHED_TITLE = 'E2E announcement everyone can read';
+export const SEED_DRAFT_TITLE = 'E2E post withheld from the roster';
+
 export const SEED_APPLY_ID = 'e2e-group-apply';
 export const SEED_APPLY_SLUG = 'e2e-outreach-committee';
 export const SEED_APPLY_NAME = 'E2E Outreach Committee';
@@ -56,7 +80,9 @@ const GROUP_IDS = [
 	SEED_COMMITTEE_ID,
 	SEED_JOINABLE_ID,
 	SEED_APPLY_ID,
-	SEED_HIDDEN_ID
+	SEED_HIDDEN_ID,
+	SEED_LED_ID,
+	SEED_READER_ID
 ];
 const entryIdFor = (groupId: string) => `${groupId}-entry`;
 
@@ -65,7 +91,9 @@ const NAMES: Record<string, string> = {
 	[SEED_COMMITTEE_ID]: SEED_COMMITTEE_NAME,
 	[SEED_JOINABLE_ID]: SEED_JOINABLE_NAME,
 	[SEED_APPLY_ID]: SEED_APPLY_NAME,
-	[SEED_HIDDEN_ID]: SEED_HIDDEN_NAME
+	[SEED_HIDDEN_ID]: SEED_HIDDEN_NAME,
+	[SEED_LED_ID]: SEED_LED_NAME,
+	[SEED_READER_ID]: SEED_READER_NAME
 };
 
 export async function seedGroups(): Promise<void> {
@@ -114,6 +142,24 @@ export async function seedGroups(): Promise<void> {
 				slug: SEED_HIDDEN_SLUG,
 				bio: 'Runs quietly.',
 				joinPolicy: 'open',
+				joinInstructions: null
+			},
+			{
+				id: SEED_LED_ID,
+				kind: 'club',
+				name: SEED_LED_NAME,
+				slug: SEED_LED_SLUG,
+				bio: 'Led by the e2e member, so the composer has an author.',
+				joinPolicy: 'invite_only',
+				joinInstructions: null
+			},
+			{
+				id: SEED_READER_ID,
+				kind: 'club',
+				name: SEED_READER_NAME,
+				slug: SEED_READER_SLUG,
+				bio: 'The e2e member is a plain member here, and must not see drafts.',
+				joinPolicy: 'invite_only',
 				joinInstructions: null
 			},
 			{
@@ -181,7 +227,53 @@ export async function seedGroups(): Promise<void> {
 				userId: SEED_STAFF_ID,
 				role: 'owner',
 				status: 'active'
+			},
+			// The two announcement groups, and the whole point is the role.
+			{
+				id: `${SEED_LED_ID}-owner`,
+				groupId: SEED_LED_ID,
+				userId: SEED_BANDMATE_ID,
+				role: 'owner',
+				status: 'active'
+			},
+			{
+				id: `${SEED_READER_ID}-owner`,
+				groupId: SEED_READER_ID,
+				userId: SEED_STAFF_ID,
+				role: 'owner',
+				status: 'active'
+			},
+			{
+				id: `${SEED_READER_ID}-member`,
+				groupId: SEED_READER_ID,
+				userId: SEED_BANDMATE_ID,
+				role: 'member',
+				status: 'active'
 			}
 		]);
+
+		// One published post and one draft on each, so "a member sees the post but
+		// not the draft" and "a leader sees both" are the same fixture read twice.
+		// `notifiedAt` stays null: it is the fan-out latch, and nothing has sent.
+		await db.insert(announcement).values(
+			[SEED_LED_ID, SEED_READER_ID].flatMap((groupId) => [
+				{
+					id: `${groupId}-published`,
+					groupId,
+					authorId: SEED_STAFF_ID,
+					title: SEED_PUBLISHED_TITLE,
+					body: 'Everyone on the roster can read this one.',
+					publishedAt: new Date('2026-08-01T00:00:00Z')
+				},
+				{
+					id: `${groupId}-draft`,
+					groupId,
+					authorId: SEED_STAFF_ID,
+					title: SEED_DRAFT_TITLE,
+					body: 'Nobody outside the leadership should ever see this.',
+					publishedAt: null
+				}
+			])
+		);
 	});
 }

@@ -176,6 +176,10 @@ export type GroupKind = (typeof groupKinds)[number];
  * and no page open, so "you've been invited to join a band" has to be true, and
  * for the Real Book Club it is not.
  */
+/** An announcement's title and markdown body — see docs/specs/groups-spec.md. */
+export const ANNOUNCEMENT_TITLE_MAX = 200;
+export const ANNOUNCEMENT_BODY_MAX = 10000;
+
 export const groupKindLabels: Record<GroupKind, string> = {
 	band: 'band',
 	club: 'club',

@@ -20,6 +20,10 @@
 		"panel": "band"
 	},
 	{
+		"route": "/band/[slug]/announcements",
+		"panel": "band"
+	},
+	{
 		"route": "/band/[slug]/edit",
 		"panel": "band"
 	},
