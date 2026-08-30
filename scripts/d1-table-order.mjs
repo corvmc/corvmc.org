@@ -66,6 +66,8 @@ export const tableOrder = [
 	'event_rsvp',
 	// The bill: references event and band, so it wipes before either.
 	'event_band',
+	// Shared advertising: references event and group, so it wipes before either.
+	'event_group',
 	'group_invite',
 	// Child of group and user, and nothing is a child of it.
 	'announcement',

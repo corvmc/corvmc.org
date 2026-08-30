@@ -242,11 +242,11 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	}
 
 	let bandInfo: { name: string; slug: string } | null = null;
-	if (evt.bandId) {
+	if (evt.groupId) {
 		const [row] = await db
 			.select({ name: group.name, slug: group.slug })
 			.from(group)
-			.where(eq(group.id, evt.bandId))
+			.where(eq(group.id, evt.groupId))
 			.limit(1);
 		bandInfo = row ?? null;
 	}
@@ -447,9 +447,9 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 			// The listing's own status is the row's and keeps its column, so the
 			// ref carries none — two marks for one fact reads as two facts.
 			ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
-			// `event.bandId` is who manages the listing; the left join is already
+			// `event.groupId` is who manages the listing; the left join is already
 			// here for the byline.
-			band: toBandRef({ id: e.bandId, name: e.bandName, slug: e.bandSlug })
+			band: toBandRef({ id: e.groupId, name: e.bandName, slug: e.bandSlug })
 		})),
 		pagination
 	};
@@ -502,7 +502,7 @@ export const getStaffCalendar = query(
 			rows: rows.map((e) => ({
 				...e,
 				ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
-				band: toBandRef({ id: e.bandId, name: e.bandName, slug: e.bandSlug }),
+				band: toBandRef({ id: e.groupId, name: e.bandName, slug: e.bandSlug }),
 				// Who is accountable for the row. A band gig answers with its band,
 				// a community listing with its member, a CMC show with neither —
 				// the page renders "CMC" for that case rather than a ref to us.
@@ -571,11 +571,11 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 	// Band attribution: staff need to see whose gig this is before editing or
 	// pulling it, since band events sit in the same list as CMC ones.
 	let bookingBand: { id: string; name: string; slug: string } | null = null;
-	if (evt.bandId) {
+	if (evt.groupId) {
 		const [row] = await db
 			.select(bandRefColumns())
 			.from(group)
-			.where(eq(group.id, evt.bandId))
+			.where(eq(group.id, evt.groupId))
 			.limit(1);
 		if (row) bookingBand = { id: row.id, name: row.name, slug: row.slug };
 	}
@@ -647,7 +647,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			ticketQuantity: evt.ticketQuantity,
 			posterKey: evt.posterKey,
 			source: evt.source,
-			bandId: evt.bandId,
+			bandId: evt.groupId,
 			location: evt.location,
 			externalTicketUrl: evt.externalTicketUrl,
 			// What staff already told the member, so a second reviewer does not
@@ -876,7 +876,7 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 			status: e.status,
 			source: e.source,
 			ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
-			band: toBandRef({ id: e.bandId, name: e.bandName, slug: e.bandSlug })
+			band: toBandRef({ id: e.groupId, name: e.bandName, slug: e.bandSlug })
 		}))
 	};
 });

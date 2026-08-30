@@ -32,7 +32,17 @@ export type EventStatus = (typeof eventStatuses)[number];
 /** Statuses the public gig guide and event detail pages will render. */
 export const publicEventStatuses = ['published', 'cancelled'] as const;
 
-export const eventSources = ['cmc', 'band', 'community'] as const;
+/**
+ * Who authored an event, and therefore which surface it belongs to.
+ *
+ * `group` is a club's or committee's session — a CMC program, held in the room,
+ * and unlike a band gig it reserves that room. It is a separate value from
+ * `band` rather than a reuse of it because the two differ in exactly that: a
+ * band event is an off-site listing with a `location`, a group event holds the
+ * space. Adding the value emits zero SQL — drizzle's `text({ enum })` is a
+ * TypeScript-only constraint.
+ */
+export const eventSources = ['cmc', 'band', 'community', 'group'] as const;
 export type EventSource = (typeof eventSources)[number];
 
 export const event = sqliteTable(
@@ -58,11 +68,15 @@ export const event = sqliteTable(
 		ticketingEnabled: integer('ticketing_enabled', { mode: 'boolean' }).notNull().default(false),
 		ticketPrice: integer('ticket_price'),
 		ticketQuantity: integer('ticket_quantity'),
-		// The band that OWNS this event — whose panel it lives in, and the only band
-		// that may edit, publish or cancel it. Null for CMC-produced events. This is
-		// not the bill: who actually played is `event_band`, and every write that sets
-		// bandId must also write the matching confirmed event_band row.
-		bandId: text('band_id').references(() => group.id, { onDelete: 'set null' }),
+		// The group that OWNS this event — whose panel or page it lives in, and the
+		// only group that may edit, publish or cancel it. Null for CMC-produced
+		// events. This is authority, not billing, and it is not the bill either:
+		// who actually played is `event_band`, and every write that sets `groupId`
+		// on a band event must also write the matching confirmed `event_band` row.
+		//
+		// Which groups *advertise* the event is `event_group` — a different
+		// question, and one that can have several answers.
+		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
 		source: text('source', { enum: eventSources }).notNull().default('cmc'),
 		location: text('location'),
 		externalTicketUrl: text('external_ticket_url'),
@@ -88,7 +102,7 @@ export const event = sqliteTable(
 	(t) => [
 		index('idx_event_status_starts').on(t.status, t.startsAt),
 		index('idx_event_reservation').on(t.reservationId),
-		index('idx_event_band').on(t.bandId),
+		index('idx_event_band').on(t.groupId),
 		index('idx_event_source').on(t.source, t.status, t.startsAt),
 		index('idx_event_recurring_series').on(t.recurringSeriesId),
 		uniqueIndex('uq_event_recurring_instance')
@@ -124,7 +138,7 @@ export const eventBandStatuses = ['unlinked', 'pending', 'confirmed', 'declined'
 export type EventBandStatus = (typeof eventBandStatuses)[number];
 
 /**
- * Who played, as opposed to who manages the record (that is `event.bandId`).
+ * Who played, as opposed to who manages the record (that is `event.groupId`).
  *
  * A row is always a *name*; the band link is optional. That split is the whole
  * point — listing an off-platform band must not require an account, and listing
@@ -169,6 +183,51 @@ export const eventBand = sqliteTable(
 );
 
 export type EventBand = typeof eventBand.$inferSelect;
+
+/**
+ * Which groups' pages an event appears on — **reach**, not credit.
+ *
+ * Three tables describe "who else is on this event" and they do not overlap:
+ *
+ * | Table             | Models                            | Carries                          |
+ * | ----------------- | --------------------------------- | -------------------------------- |
+ * | `production_slot` | the run of show for a CMC show    | set times, lengths, settlement   |
+ * | `event_band`      | who played — a credit on the bill | display name, billing, consent   |
+ * | `event_group`     | shared advertising                | which pages show it, in what order |
+ *
+ * `event_band` answers "whose name is on the poster"; this answers "whose page
+ * does this appear on". A co-hosted show plausibly writes both, and that is
+ * fine — they are different facts about one event, not two encodings of one.
+ *
+ * The managing group (`event.groupId`) is inserted here as the first row
+ * automatically, so no read path needs a "sometimes present, sometimes not"
+ * branch.
+ */
+export const eventGroup = sqliteTable(
+	'event_group',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		eventId: text('event_id')
+			.notNull()
+			.references(() => event.id, { onDelete: 'cascade' }),
+		groupId: text('group_id')
+			.notNull()
+			.references(() => group.id, { onDelete: 'cascade' }),
+		/** 0 = the managing group, ascending for co-hosts. */
+		sortOrder: integer('sort_order').notNull().default(0),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		uniqueIndex('uq_event_group_event_group').on(t.eventId, t.groupId),
+		index('idx_event_group_group').on(t.groupId, t.sortOrder)
+	]
+);
+
+export type EventGroup = typeof eventGroup.$inferSelect;
 
 /** One act on the bill, as submitted by a lineup editor. */
 export const lineupEntrySchema = z.object({

@@ -2,6 +2,7 @@ import { db, getRowCount } from '$lib/server/db';
 import {
 	event,
 	eventBand,
+	eventGroup,
 	publicEventStatuses,
 	type EventSource,
 	type EventBandStatus,
@@ -57,6 +58,29 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 
 export type { EventStatus } from '$lib/server/db/schema/event';
 
+/**
+ * The managing group's own `event_group` row.
+ *
+ * Every write that sets `event.groupId` owes one, exactly as every write that
+ * sets it owes a confirmed `event_band` credit. The point is that read paths can
+ * assume it: the spec has `event_group` list "whose page does this appear on",
+ * and a managing group missing from its own event's list would make every such
+ * read branch on "sometimes present, sometimes not".
+ *
+ * `onConflictDoNothing` because the pair is uniquely indexed and a re-link is
+ * not an error — re-importing a gig, or a co-host that is already the owner.
+ *
+ * Chunked at 20: D1 caps a statement at 100 bound params and a row binds four.
+ */
+async function linkManagingGroup(links: { eventId: string; groupId: string }[]): Promise<void> {
+	for (let i = 0; i < links.length; i += 20) {
+		await db
+			.insert(eventGroup)
+			.values(links.slice(i, i + 20).map((l) => ({ ...l, sortOrder: 0 })))
+			.onConflictDoNothing();
+	}
+}
+
 export interface EventRow {
 	id: string;
 	title: string;
@@ -73,7 +97,7 @@ export interface EventRow {
 	ticketingEnabled: boolean;
 	ticketPrice: number | null;
 	ticketQuantity: number | null;
-	bandId: string | null;
+	groupId: string | null;
 	source: string;
 	location: string | null;
 	externalTicketUrl: string | null;
@@ -497,13 +521,13 @@ export async function unpublishWithNotice(
 			title: event.title,
 			status: event.status,
 			source: event.source,
-			bandId: event.bandId,
+			groupId: event.groupId,
 			posterKey: event.posterKey,
 			createdByUserId: event.createdByUserId,
 			bandName: group.name
 		})
 		.from(event)
-		.leftJoin(group, eq(group.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.groupId))
 		.where(eq(event.id, eventId))
 		.limit(1);
 
@@ -620,7 +644,7 @@ export async function unpublishWithNotice(
 
 	// CMC and band unpublish are reversible staff/band workflows — destroying
 	// the artwork there would be wrong.
-	if (row.source !== 'band' || !row.bandId || !row.bandName) return;
+	if (row.source !== 'band' || !row.groupId || !row.bandName) return;
 
 	// Everyone on the bill loses the date, not just the band that booked it, so
 	// notify every confirmed act. `bandId`/`bandName` in the payload stay the
@@ -630,7 +654,7 @@ export async function unpublishWithNotice(
 		.from(eventBand)
 		.where(and(eq(eventBand.eventId, eventId), eq(eventBand.status, 'confirmed')));
 	const notifyBandIds = [
-		...new Set([row.bandId, ...onBill.map((r) => r.bandId).filter((id): id is string => !!id)])
+		...new Set([row.groupId, ...onBill.map((r) => r.bandId).filter((id): id is string => !!id)])
 	];
 
 	const admins = await db
@@ -648,7 +672,7 @@ export async function unpublishWithNotice(
 	const payload = {
 		eventId: row.id,
 		eventTitle: row.title,
-		bandId: row.bandId,
+		bandId: row.groupId,
 		bandName: row.bandName,
 		notes: opts.notes || null,
 		bandAdmins: admins.map((u) => ({ userId: u.id, userName: u.name, userEmail: u.email }))
@@ -929,7 +953,7 @@ export async function listAll(
 	const dataQ = db
 		.select({ ...getTableColumns(event), bandName: group.name, bandSlug: group.slug })
 		.from(event)
-		.leftJoin(group, eq(group.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.groupId))
 		.where(where)
 		.orderBy(desc(event.startsAt))
 		.$dynamic();
@@ -996,7 +1020,7 @@ export async function listStaffCalendar(
 			submitter: memberRefColumns()
 		})
 		.from(event)
-		.leftJoin(group, eq(group.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.groupId))
 		.leftJoin(user, eq(user.id, event.createdByUserId))
 		.where(where)
 		.orderBy(asc(event.startsAt))
@@ -1039,7 +1063,7 @@ export async function listEventsNear(
 	const rows = await db
 		.select({ event, bandName: group.name, bandSlug: group.slug })
 		.from(event)
-		.leftJoin(group, eq(group.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.groupId))
 		.where(
 			and(
 				gte(event.startsAt, from),
@@ -1066,7 +1090,7 @@ export async function listEventsNear(
 //
 // Two different things live here and must not be conflated:
 //
-//   event.bandId  — who MANAGES the record. One band. Edits, publishes, cancels.
+//   event.groupId — who MANAGES the record. One group. Edits, publishes, cancels.
 //   event_band    — who PLAYED. A list of names, each optionally linked to a
 //                   platform band.
 //
@@ -1187,8 +1211,8 @@ export async function setEventLineup(
 	const byName = new Map(existing.filter((r) => !r.bandId).map((r) => [r.name.toLowerCase(), r]));
 
 	// The owner's slot is not the owner's to delete.
-	const ownerRow = evt.bandId ? byBand.get(evt.bandId) : undefined;
-	const hasOwner = deduped.some((e) => e.bandId && e.bandId === evt.bandId);
+	const ownerRow = evt.groupId ? byBand.get(evt.groupId) : undefined;
+	const hasOwner = deduped.some((e) => e.bandId && e.bandId === evt.groupId);
 	if (ownerRow && !hasOwner) {
 		deduped.unshift({
 			name: ownerRow.name,
@@ -1250,11 +1274,11 @@ export async function setEventLineup(
  * split `unpublishWithNotice` uses.
  */
 async function notifyLineupInvites(
-	evt: { id: string; title: string; startsAt: Date; bandId: string | null },
+	evt: { id: string; title: string; startsAt: Date; groupId: string | null },
 	invitedBandIds: string[]
 ): Promise<void> {
-	const [owner] = evt.bandId
-		? await db.select({ name: group.name }).from(group).where(eq(group.id, evt.bandId)).limit(1)
+	const [owner] = evt.groupId
+		? await db.select({ name: group.name }).from(group).where(eq(group.id, evt.groupId)).limit(1)
 		: [undefined];
 
 	const rows = await db
@@ -1367,7 +1391,7 @@ export async function listBandLineupInvites(bandId: string): Promise<LineupInvit
 		})
 		.from(eventBand)
 		.innerJoin(event, eq(event.id, eventBand.eventId))
-		.leftJoin(owner, eq(owner.id, event.bandId))
+		.leftJoin(owner, eq(owner.id, event.groupId))
 		.where(
 			and(
 				eq(eventBand.bandId, bandId),
@@ -1451,13 +1475,17 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 			location: location ?? null,
 			externalTicketUrl: externalTicketUrl ?? null,
 			ticketPrice: ticketPrice ?? null,
-			bandId,
+			// The event's owner. The `bandId` on the lineup row below is a different
+			// column with a different meaning — a credit, not authority.
+			groupId: bandId,
 			source: 'band',
 			createdByUserId
 		})
 		.returning();
 
-	// Invariant: setting event.bandId always writes the matching confirmed
+	await linkManagingGroup([{ eventId: row.id, groupId: bandId }]);
+
+	// Invariant: setting event.groupId always writes the matching confirmed
 	// lineup row. The owner heads its own bill until told otherwise.
 	const [owner] = await db
 		.select({ name: group.name })
@@ -1546,7 +1574,7 @@ export async function updateBandEvent(
 ): Promise<EventRow> {
 	const existing = await getById(eventId);
 	if (!existing) throw new Error('Event not found');
-	if (existing.bandId !== bandId) throw new Error('Event does not belong to this band');
+	if (existing.groupId !== bandId) throw new Error('Event does not belong to this band');
 	if (existing.status === 'cancelled') throw new Error('Cannot update a cancelled event');
 	assertTimeOrder(existing, params);
 
@@ -1576,7 +1604,7 @@ export async function updateBandEvent(
 export async function cancelBandEvent(eventId: string, bandId: string): Promise<void> {
 	const existing = await getById(eventId);
 	if (!existing) throw new Error('Event not found');
-	if (existing.bandId !== bandId) throw new Error('Event does not belong to this band');
+	if (existing.groupId !== bandId) throw new Error('Event does not belong to this band');
 	if (existing.status === 'cancelled') throw new Error('Event is already cancelled');
 
 	await db
@@ -1591,7 +1619,7 @@ export async function cancelBandEvent(eventId: string, bandId: string): Promise<
 export async function clearBandEventPoster(eventId: string, bandId: string): Promise<void> {
 	const existing = await getById(eventId);
 	if (!existing) throw new Error('Event not found');
-	if (existing.bandId !== bandId) throw new Error('Event does not belong to this band');
+	if (existing.groupId !== bandId) throw new Error('Event does not belong to this band');
 	if (!existing.posterKey) return;
 
 	await detachSlot('event', eventId, 'poster');
@@ -1642,7 +1670,11 @@ export async function importBandEvents(
 		endsAt: null,
 		location: r.location ?? null,
 		externalTicketUrl: r.externalTicketUrl ?? null,
-		bandId,
+		// The owning group. Built through `.map()`, so TypeScript's excess-property
+		// check does not apply here — a stale `bandId` key would have passed
+		// through silently and drizzle would have dropped it, importing every gig
+		// with no owner at all.
+		groupId: bandId,
 		source: 'band' as const,
 		status: 'published' as const,
 		publishedAt: new Date(),
@@ -1658,6 +1690,8 @@ export async function importBandEvents(
 			.returning({ id: event.id });
 		inserted.push(...chunk);
 	}
+
+	await linkManagingGroup(inserted.map((row) => ({ eventId: row.id, groupId: bandId })));
 
 	const credits = inserted.flatMap((row, i) => [
 		{
@@ -1711,7 +1745,7 @@ export async function listBandEvents(bandId: string): Promise<BandEventRow[]> {
 		.from(event)
 		.where(confirmedForBand(bandId))
 		.orderBy(desc(event.startsAt));
-	return rows.map((r) => ({ ...r, isOwner: r.bandId === bandId }));
+	return rows.map((r) => ({ ...r, isOwner: r.groupId === bandId }));
 }
 
 /** Count of a band's published past shows — the legacy / veteran signal. */
@@ -1913,7 +1947,7 @@ export async function listPublicCalendarEvents(
 	const rows = await db
 		.select({ event, bandName: group.name, bandSlug: group.slug })
 		.from(event)
-		.leftJoin(group, eq(group.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.groupId))
 		.where(
 			and(
 				inArray(event.status, [...publicEventStatuses]),
@@ -1942,7 +1976,7 @@ export async function listPublicUpcomingEvents(
 	const rows = await db
 		.select({ event, bandName: group.name, bandSlug: group.slug })
 		.from(event)
-		.leftJoin(group, eq(group.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.groupId))
 		.where(and(inArray(event.status, [...publicEventStatuses]), gte(event.startsAt, from)))
 		.orderBy(asc(event.startsAt))
 		.limit(opts.limit + 1)

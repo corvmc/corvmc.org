@@ -43,7 +43,7 @@ import {
 import { role, modelHasRole } from '../src/lib/server/db/schema/authorization';
 import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
-import { event, eventBand } from '../src/lib/server/db/schema/event';
+import { event, eventBand, eventGroup } from '../src/lib/server/db/schema/event';
 import { ticket } from '../src/lib/server/db/schema/ticket';
 import { eventRsvp } from '../src/lib/server/db/schema/event-rsvp';
 import {
@@ -1635,7 +1635,13 @@ async function seedGroups(users: SeedUser[]) {
 		groups.push(g);
 
 		const candidates = users.filter((u) => u.id !== leader.id);
+		// Tracked, because the waiting rows below draw from the same pool. Picking
+		// them independently collided with a member already seeded here and failed
+		// the whole seed on `group_member.group_id, user_id` — intermittently,
+		// since both picks are random.
+		const taken = new Set<string>([leader.id]);
 		for (const m of pickN(candidates, d.memberCount)) {
+			taken.add(m.id);
 			await db.insert(groupMember).values({
 				groupId: g.id,
 				userId: m.id,
@@ -1652,7 +1658,7 @@ async function seedGroups(users: SeedUser[]) {
 		// apart is to have both.
 		if (d.joinPolicy === 'by_application') {
 			const [applicant, invitee] = pickN(
-				users.filter((u) => u.id !== leader.id),
+				users.filter((u) => !taken.has(u.id)),
 				2
 			);
 			await db.insert(groupMember).values([
@@ -1748,7 +1754,7 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 					status: 'published',
 					publishedAt: new Date(startsAt.getTime() - 14 * 86400000),
 					tags: pickN(EVENT_TAGS_POOL, randomInt(1, 3)).join(', '),
-					bandId: veteran.id,
+					groupId: veteran.id,
 					source: 'band',
 					location: pick(BAND_EVENT_LOCATIONS),
 					ticketPrice: Math.random() > 0.35 ? pick([500, 1000, 1200, 1500]) : null,
@@ -1795,7 +1801,7 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 							? new Date()
 							: null,
 					tags: pickN(EVENT_TAGS_POOL, randomInt(1, 3)).join(', '),
-					bandId: b.id,
+					groupId: b.id,
 					source: 'band',
 					location: pick(BAND_EVENT_LOCATIONS),
 					externalTicketUrl:
@@ -1827,6 +1833,20 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 		}
 	}
 
+	// The managing group's own `event_group` row, for every event seeded above.
+	//
+	// These inserts go straight to the table rather than through
+	// `createBandEvent`, so the invariant that service maintains has to be
+	// restated here — and it is restated as one pass over what was written
+	// rather than beside each insert, which is how the two would drift.
+	// Chunked at 20: D1 caps a statement at 100 bound params.
+	const links = rows
+		.filter((e) => e.groupId)
+		.map((e) => ({ eventId: e.id, groupId: e.groupId as string, sortOrder: 0 }));
+	for (let i = 0; i < links.length; i += 20) {
+		await db.insert(eventGroup).values(links.slice(i, i + 20));
+	}
+
 	return rows;
 }
 
@@ -1838,7 +1858,7 @@ async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 /**
  * Credit member bands on a few CMC-produced shows.
  *
- * These have no owning band — `event.bandId` stays null, staff run the night —
+ * These have no owning group — `event.groupId` stays null, staff run the night —
  * but the bands genuinely played, so the bill is pure attribution. Staff-set
  * slots land confirmed: staff booked the show, the band already agreed.
  */
