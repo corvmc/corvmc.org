@@ -4,6 +4,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { closure } from '$lib/server/db/schema/reservation';
 import { event, eventBand } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
+import { directoryEntry } from '$lib/server/db/schema/directory';
 import { linkManagingGroup } from '$lib/server/event/event-service';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, isNull, lt, gt, gte, lte, ne, notInArray, or, sql } from 'drizzle-orm';
@@ -481,6 +482,18 @@ async function processEventSeries(
 					.limit(1)
 			: [undefined];
 
+	// The band's `directory_entry`, which is what a credit names after the
+	// phase-10 re-key. Looked up once per series, like the name above it.
+	const [ownerEntry] =
+		prototype.source === 'band' && prototype.groupId
+			? await db
+					.select({ id: directoryEntry.id })
+					.from(directoryEntry)
+					.where(eq(directoryEntry.groupId, prototype.groupId))
+					.limit(1)
+			: [undefined];
+	const ownerEntryId = ownerEntry?.id ?? null;
+
 	let created = 0;
 	let skipped = 0;
 
@@ -532,7 +545,9 @@ async function processEventSeries(
 				await db.insert(eventBand).values({
 					eventId: newEventId,
 					name: ownerGroup?.name ?? 'Unknown band',
+					// Both, while `bandId` still exists — see the column comment.
 					bandId: prototype.groupId,
+					directoryEntryId: ownerEntryId,
 					billingOrder: 0,
 					status: 'confirmed',
 					addedByBandId: prototype.groupId

@@ -170,6 +170,16 @@
 							{#if i > 0}<span aria-hidden="true"> · </span>{/if}
 							{#if act.slug}
 								<a href={resolve(`/directory/bands/${act.slug}`)} class="link">{act.name}</a>
+							{:else if act.externalUrl}
+								<!-- An external act: no CMC page exists for it, so its name
+								     points at the presence it chose. `rel` because this leaves
+								     the site for a URL somebody else supplied. -->
+								<a
+									href={act.externalUrl}
+									class="link"
+									target="_blank"
+									rel="noopener noreferrer nofollow">{act.name}</a
+								>
 							{:else}
 								{act.name}
 							{/if}
