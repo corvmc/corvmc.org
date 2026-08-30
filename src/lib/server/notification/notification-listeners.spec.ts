@@ -108,6 +108,7 @@ describe('registerAllNotificationListeners', () => {
 			'band.invitation_sent',
 			'band.invitation_accepted',
 			'group_invite.created',
+			'announcement.published',
 			'reservation.recurring_skipped',
 			'reservation.recurring_waitlisted',
 			'reservation.waitlist_slot_available',

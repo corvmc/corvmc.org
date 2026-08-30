@@ -2,6 +2,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import AnnouncementList from '$lib/components/groups/AnnouncementList.svelte';
+	import MuteAnnouncementsAction from '$lib/components/groups/MuteAnnouncementsAction.svelte';
 	import { getBandAnnouncementsPage } from '$lib/remote/announcements.remote';
 	import { getBandLayoutContext } from '../layout-context';
 
@@ -19,7 +20,16 @@
 	const data = $derived(await getBandAnnouncementsPage(layout.band.id));
 </script>
 
-<PageHeader title="Announcements" subtitle="Posts to everyone on the roster." />
+<PageHeader title="Announcements" subtitle="Posts to everyone on the roster.">
+	<!-- Null for a staff non-member, who has no roster row to mute. -->
+	{#if data.notifyAnnouncements !== null}
+		<MuteAnnouncementsAction
+			groupId={layout.band.id}
+			groupName={layout.band.name}
+			muted={!data.notifyAnnouncements}
+		/>
+	{/if}
+</PageHeader>
 
 <PageContent width="3xl">
 	<AnnouncementList

@@ -111,6 +111,31 @@ test.describe('writing announcements', () => {
 	});
 });
 
+test.describe('the per-group mute', () => {
+	/**
+	 * The global `announcement` preference cannot express this — a member of six
+	 * groups needs to silence one — so it writes their own roster row. It is also
+	 * where the link in every announcement email lands, which is the whole reason
+	 * these are defensible on the transactional stream.
+	 */
+	test('mutes one group without leaving it', async ({ page }) => {
+		await loginAsMember(page);
+		await page.goto(`/member/groups/${SEED_READER_SLUG}`);
+
+		const mute = page.getByRole('button', { name: 'Mute announcements' });
+		await expect(mute).toBeVisible({ timeout: 15000 });
+		await mute.click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Mute announcements' }).click();
+
+		// The control flips, which is read back from the roster row rather than
+		// from local state — and the member is still on the roster.
+		await expect(page.getByRole('button', { name: 'Unmute announcements' })).toBeVisible({
+			timeout: 15000
+		});
+		await expect(page.getByText(SEED_PUBLISHED_TITLE)).toBeVisible();
+	});
+});
+
 test.describe('the band panel mount', () => {
 	/**
 	 * The same component in the other frame. Worth one test because

@@ -8,7 +8,11 @@ import { requireGroupRole } from '$lib/server/group/group-context';
 import { isFeatureEnabled, requireFeature } from '$lib/server/feature-flags';
 import { directoryVisibilities } from '$lib/server/db/schema/directory';
 import { getMembers, partitionByStatus } from '$lib/server/band/band-service';
-import { listForManager, listPublished } from '$lib/server/group/announcement-service';
+import {
+	getMuteState,
+	listForManager,
+	listPublished
+} from '$lib/server/group/announcement-service';
 import {
 	STAFF_GROUP_KINDS,
 	assignLeader,
@@ -225,9 +229,11 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	// The flag is resolved here too. A tab whose contents 403 is worse than no
 	// tab, and the page cannot ask the server itself without a second query.
 	const announcementsEnabled = await isFeatureEnabled('announcements');
-	const [roster, announcements] = await Promise.all([
+	const [roster, announcements, notifyAnnouncements] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
-		!announcementsEnabled ? [] : canManage ? listForManager(group.id) : listPublished(group.id)
+		!announcementsEnabled ? [] : canManage ? listForManager(group.id) : listPublished(group.id),
+		// Null for a staff non-member — no roster row, so nothing to mute.
+		announcementsEnabled ? getMuteState(group.id, ctx.user.id) : null
 	]);
 
 	return {
@@ -245,6 +251,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		canManage,
 		announcementsEnabled,
 		announcements,
+		notifyAnnouncements,
 		members: {
 			active: roster.active,
 			pending: roster.pending,

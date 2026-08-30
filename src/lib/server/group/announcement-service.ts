@@ -1,7 +1,9 @@
-import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, ne } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { announcement } from '$lib/server/db/schema/announcement';
 import { user } from '$lib/server/db/schema/authentication';
+import { groupMember } from '$lib/server/db/schema/group';
+import { getNotificationType, notificationPreference } from '$lib/server/db/schema/notification';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { DomainError } from '$lib/server/domain-error';
 import { renderMarkdown } from '$lib/utils/markdown';
@@ -266,4 +268,143 @@ export async function remove(id: string, groupId: string): Promise<void> {
 		.returning({ id: announcement.id });
 
 	if (result.length === 0) throw new AnnouncementNotFoundError();
+}
+
+// ---------------------------------------------------------------------------
+// The fan-out
+// ---------------------------------------------------------------------------
+
+/**
+ * Claim an announcement for notification, exactly once.
+ *
+ * The event bus delivers at least once, so the listener can run twice for one
+ * publish — a roster emailed twice is the failure this prevents, and it cannot
+ * be prevented by checking `notifiedAt` and then writing it, because two
+ * invocations interleave between the read and the write. `WHERE notified_at IS
+ * NULL` in the UPDATE makes the database decide. No row back means somebody
+ * else is already sending; that is an ordinary outcome, not an error.
+ */
+export async function claimForNotification(id: string): Promise<boolean> {
+	const claimed = await db
+		.update(announcement)
+		.set({ notifiedAt: new Date() })
+		.where(and(eq(announcement.id, id), isNull(announcement.notifiedAt)))
+		.returning({ id: announcement.id });
+
+	return claimed.length > 0;
+}
+
+/** Written after the send, so the number reflects what was actually attempted. */
+export async function recordRecipientCount(id: string, recipientCount: number): Promise<void> {
+	await db.update(announcement).set({ recipientCount }).where(eq(announcement.id, id));
+}
+
+export interface AnnouncementRecipient {
+	userId: string;
+	name: string;
+	email: string;
+	emailEnabled: boolean;
+	inAppEnabled: boolean;
+}
+
+/**
+ * Everyone who should hear about this post, in **one** query.
+ *
+ * `dispatch()` in a loop does not work at group scale: per recipient it is a
+ * preference SELECT, a notification INSERT, an SSE push and one outbound HTTPS
+ * call, all awaited serially — roughly 600 sequential subrequests for a
+ * 200-member group, against a 1000-subrequest ceiling.
+ *
+ * The joins carry all three exclusions so none of them can be forgotten by a
+ * caller: a non-active membership, a member who muted this group, and a
+ * deactivated account. The author is excluded too — being emailed your own post
+ * reads as a bug every time.
+ *
+ * A missing `notification_preference` row means the member never chose, which
+ * is the common case; it coalesces to the type's own defaults here rather than
+ * to a literal, so changing the default in the registry changes it everywhere.
+ */
+export async function listRecipients(
+	groupId: string,
+	authorId: string | null
+): Promise<AnnouncementRecipient[]> {
+	const defaults = getNotificationType('announcement')?.defaults ?? {
+		email: true,
+		inApp: true,
+		sms: false
+	};
+
+	const rows = await db
+		.select({
+			userId: user.id,
+			name: user.name,
+			email: user.email,
+			emailEnabled: notificationPreference.emailEnabled,
+			inAppEnabled: notificationPreference.inAppEnabled
+		})
+		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.leftJoin(
+			notificationPreference,
+			and(
+				eq(notificationPreference.userId, user.id),
+				eq(notificationPreference.notificationType, 'announcement')
+			)
+		)
+		.where(
+			and(
+				eq(groupMember.groupId, groupId),
+				eq(groupMember.status, 'active'),
+				eq(groupMember.notifyAnnouncements, true),
+				isNull(user.deletedAt),
+				authorId ? ne(user.id, authorId) : undefined
+			)
+		);
+
+	return rows.map((r) => ({
+		userId: r.userId,
+		name: r.name,
+		email: r.email,
+		emailEnabled: r.emailEnabled ?? defaults.email,
+		inAppEnabled: r.inAppEnabled ?? defaults.inApp
+	}));
+}
+
+// ---------------------------------------------------------------------------
+// The per-group mute
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether this member wants announcements from this group.
+ *
+ * Defaults to true for a row that has none — but the column is `NOT NULL
+ * DEFAULT true`, so that case is a member who is not on the roster at all
+ * (staff reading the page), for whom there is nothing to mute.
+ */
+export async function getMuteState(groupId: string, userId: string): Promise<boolean | null> {
+	const [row] = await db
+		.select({ notify: groupMember.notifyAnnouncements })
+		.from(groupMember)
+		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)))
+		.limit(1);
+
+	return row?.notify ?? null;
+}
+
+/**
+ * Mute or unmute one group for one member.
+ *
+ * Scoped to the pair, and the pair is the whole authorization: a member may
+ * only ever change their own row, so the caller passes the id from the session
+ * rather than from the request.
+ */
+export async function setMuteState(
+	groupId: string,
+	userId: string,
+	notify: boolean
+): Promise<void> {
+	await db
+		.update(groupMember)
+		.set({ notifyAnnouncements: notify, updatedAt: new Date() })
+		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)));
 }

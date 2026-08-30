@@ -1,6 +1,7 @@
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
+import { fanOutAnnouncement } from '$lib/server/group/announcement-fanout';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { captureException } from '$lib/server/sentry';
 import { listStaffUsers } from '$lib/server/authorization';
@@ -333,6 +334,16 @@ export function registerAllNotificationListeners(): void {
 				});
 			}
 		}
+	});
+
+	// --- Group announcement (fan-out) ---
+	//
+	// The only listener here that does not call `dispatch()`. One published post
+	// goes to a whole roster, and a per-recipient dispatch is ~3 awaited
+	// subrequests each against a Worker's 1000-subrequest ceiling — so this one
+	// delegates to a module that batches. See `announcement-fanout.ts`.
+	domainEvents.on('announcement.published', async ({ data: event }) => {
+		await fanOutAnnouncement(event, siteUrl);
 	});
 
 	// --- Group invite (non-user) ---

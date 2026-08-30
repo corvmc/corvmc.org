@@ -20,6 +20,7 @@
 		declineApplicationForm
 	} from '$lib/remote/groups.remote';
 	import AnnouncementList from '$lib/components/groups/AnnouncementList.svelte';
+	import MuteAnnouncementsAction from '$lib/components/groups/MuteAnnouncementsAction.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -74,6 +75,15 @@
 <PageHeader title={group.name} subtitle={kindLabel}>
 	{#if data.canManage}
 		<Badge variant="ghost">{data.role}</Badge>
+	{/if}
+	<!-- Beside Leave, which is the other thing a member does to a group they are
+	     tired of hearing from. Null for staff, who have no roster row to mute. -->
+	{#if data.notifyAnnouncements !== null}
+		<MuteAnnouncementsAction
+			groupId={group.id}
+			groupName={group.name}
+			muted={!data.notifyAnnouncements}
+		/>
 	{/if}
 	{#if isMember}
 		<Action

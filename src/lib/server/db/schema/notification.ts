@@ -304,6 +304,20 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// which is not something to leave sitting in a bell icon.
 		description: 'Notification when staff remove a listing you published',
 		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'announcement',
+		label: 'Group announcements',
+		// One key rather than one per kind. Four near-identical rows in the
+		// preferences UI would be one user decision, and adding a kind would
+		// become a registry change plus a UI change. The kind goes in the payload
+		// and the copy.
+		//
+		// This preference is global to announcements. The per-group mute is
+		// `group_member.notifyAnnouncements`, which this cannot express: a member
+		// of six groups needs to silence one without silencing all.
+		description: 'Posts from bands, clubs, and committees you belong to',
+		defaults: { email: true, inApp: true, sms: false }
 	}
 ];
 
