@@ -1,6 +1,6 @@
 name: Merge queue guard
 
-# A PR queued with `gh pr merge --auto --squash` and then rejected by the queue loses its
+# A PR queued with `gh pr merge --auto` and then rejected by the queue loses its
 # auto-merge: GitHub disarms it and nothing is left watching, so the PR sits open indefinitely
 # while every check on its own head stays green. This leaves a durable signal instead — a
 # `queue-rejected` label plus a comment naming what failed — so `/queue-triage` (or anyone
@@ -84,7 +84,7 @@ jobs:
           cat >> comment.md <<'EOF'
 
           Auto-merge is disarmed and nothing will re-arm it. Run `/queue-triage` in a Claude
-          session, or re-queue with `gh pr merge --auto --squash`.
+          session, or re-queue with `gh pr merge --auto`.
           EOF
 
           gh pr edit "$PR" --add-label queue-rejected

@@ -34,7 +34,7 @@ Empty output means nothing is stranded. Say so and stop.
 3. Classify honestly. It failed on the queue ref, tested against the queue head, so "green on the
    PR's own head" is not evidence of anything.
    - **A known CI-only flake** — `volunteering.e2e.ts` is the documented one — re-queue with
-     `gh pr merge --auto --squash`. The guard's `enqueued` job clears the label.
+     `gh pr merge --auto`. The guard's `enqueued` job clears the label.
    - **Anything else, including a flake that has now failed three or more times** — leave it
      labelled, report the diagnosis to the user, and do not re-queue. A test that fails on the
      queue head and nowhere else is a real ordering bug more often than it is bad luck.
