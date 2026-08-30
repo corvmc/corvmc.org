@@ -88,7 +88,7 @@ export const getBandEventDetail = query(
 		// Visible if this band owns it, or is credited on the bill.
 		const lineup = await getEventLineup(eventId);
 		const credited = lineup.some((l) => l.bandId === band.id);
-		if (evt.bandId !== band.id && !credited) throw error(404, 'Event not found');
+		if (evt.groupId !== band.id && !credited) throw error(404, 'Event not found');
 
 		return {
 			id: evt.id,
@@ -103,7 +103,7 @@ export const getBandEventDetail = query(
 			externalTicketUrl: evt.externalTicketUrl,
 			ticketPrice: evt.ticketPrice,
 			posterUrl: resolveImageUrl(evt.posterKey),
-			isOwner: evt.bandId === band.id,
+			isOwner: evt.groupId === band.id,
 			lineup
 		};
 	}
@@ -306,7 +306,7 @@ export const publishBandEvent = form(
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
 		const evt = await getById(data.eventId);
-		if (!evt || evt.bandId !== band.id) throw error(404, 'Event not found');
+		if (!evt || evt.groupId !== band.id) throw error(404, 'Event not found');
 
 		await publish(data.eventId);
 		return { success: true };
@@ -319,7 +319,7 @@ export const unpublishBandEvent = form(
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
 		const evt = await getById(data.eventId);
-		if (!evt || evt.bandId !== band.id) throw error(404, 'Event not found');
+		if (!evt || evt.groupId !== band.id) throw error(404, 'Event not found');
 
 		await unpublish(data.eventId);
 		return { success: true };

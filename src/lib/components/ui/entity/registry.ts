@@ -102,7 +102,10 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 		// and marking it would mark almost everything.
 		subtypes: {
 			band: { icon: IconMusic, label: "A band's show" },
-			community: { icon: IconBuildingCommunity, label: 'Community listing' }
+			community: { icon: IconBuildingCommunity, label: 'Community listing' },
+			// A club's or committee's session. Distinct from a band's show in the
+			// one way that matters here: it happens in the room, and it holds it.
+			group: { icon: IconUsersGroup, label: "A program's session" }
 		}
 	},
 	reservation: {

@@ -23,7 +23,7 @@ const mockEventRow = {
 	// implicit before the community layer existed, when the ticketing guard
 	// tested for 'band' rather than not-'cmc'.
 	source: 'cmc',
-	bandId: null,
+	groupId: null,
 	location: null,
 	externalTicketUrl: null,
 	reviewNotes: null,
@@ -742,7 +742,7 @@ describe('EventService', () => {
 			title: 'Loud Show',
 			status: 'published',
 			source: 'band',
-			bandId: 'band-1',
+			groupId: 'band-1',
 			bandName: 'The Squares'
 		};
 
@@ -811,7 +811,7 @@ describe('EventService', () => {
 
 		it('notifies nobody for a CMC event', async () => {
 			selectResultQueue = [
-				[{ ...publishedBandEvent, source: 'cmc', bandId: null, bandName: null }],
+				[{ ...publishedBandEvent, source: 'cmc', groupId: null, bandName: null }],
 				[{ ...mockEventRow, status: 'published' }]
 			];
 
@@ -1081,7 +1081,7 @@ describe('EventService', () => {
 	// params, so `update()` is the only remaining way a non-CMC row could
 	// acquire `ticketingEnabled` — these pin that shut.
 	describe('only CMC events can be ticketed', () => {
-		const bandEvent = { ...mockEventRow, status: 'draft', source: 'band', bandId: 'band-1' };
+		const bandEvent = { ...mockEventRow, status: 'draft', source: 'band', groupId: 'band-1' };
 		const communityListing = { ...mockEventRow, status: 'draft', source: 'community' };
 
 		it('rejects enabling ticketing on a band event', async () => {

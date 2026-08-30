@@ -66,7 +66,7 @@ export const relations = defineRelations(schema, (t) => ({
 		reservation: t.one.reservation({ from: t.event.reservationId, to: t.reservation.id }),
 		createdBy: t.one.user({ from: t.event.createdByUserId, to: t.user.id }),
 		/** The owning band, not the bill. Who played is `lineup`. */
-		band: t.one.group({ from: t.event.bandId, to: t.group.id }),
+		group: t.one.group({ from: t.event.groupId, to: t.group.id }),
 		lineup: t.many.eventBand(),
 		media: t.many.mediaAttachment({
 			from: t.event.id,

@@ -661,7 +661,7 @@ async function resolveEventContext(eventId: string): Promise<FlaggedEventContext
 			bandSlug: group.slug
 		})
 		.from(event)
-		.leftJoin(group, eq(group.id, event.bandId))
+		.leftJoin(group, eq(group.id, event.groupId))
 		.where(eq(event.id, eventId))
 		.limit(1);
 

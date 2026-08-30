@@ -131,7 +131,7 @@ describe('getBandEventDetail', () => {
 	});
 
 	it('404s an event belonging to another band', async () => {
-		getById.mockResolvedValue({ id: 'evt-9', bandId: 'other-band', lineup: [] });
+		getById.mockResolvedValue({ id: 'evt-9', groupId: 'other-band', lineup: [] });
 		getEventLineup.mockResolvedValue([]);
 
 		await expect(getBandEventDetail({ slug: 'our-band', eventId: 'evt-9' })).rejects.toThrow();
@@ -142,7 +142,7 @@ describe('getBandEventDetail', () => {
 	it('admits a band credited on the bill, not just the owner', async () => {
 		getById.mockResolvedValue({
 			id: 'evt-9',
-			bandId: 'other-band',
+			groupId: 'other-band',
 			title: 'Their Show',
 			startsAt: new Date(),
 			endsAt: null,
@@ -222,7 +222,7 @@ describe('updateBandEventForm', () => {
 
 describe('publishBandEvent', () => {
 	it('publishes an event belonging to the band the submission names', async () => {
-		getById.mockResolvedValue({ id: 'evt-1', bandId: 'band-1', status: 'draft' });
+		getById.mockResolvedValue({ id: 'evt-1', groupId: 'band-1', status: 'draft' });
 
 		await expect(
 			(publishBandEvent as unknown as (d: unknown, i: unknown) => Promise<unknown>)(

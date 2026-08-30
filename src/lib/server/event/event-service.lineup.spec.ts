@@ -83,11 +83,16 @@ function containsParam(node: unknown, value: unknown): boolean {
 const OWNER = 'band-owner';
 const OTHER = 'band-other';
 
+/**
+ * `groupId` is the event's owner. Every `bandId` below it is an `event_band`
+ * credit — a different column meaning a different thing, which is exactly the
+ * confusion phase 9's rename removes from the source.
+ */
 const ownedEvent = {
 	id: 'evt-1',
 	title: 'Basement Show',
 	startsAt: new Date('2026-09-01T02:00:00Z'),
-	bandId: OWNER
+	groupId: OWNER
 };
 
 /** Queue: getById(event), then the existing event_band rows. */
