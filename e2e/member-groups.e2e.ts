@@ -144,9 +144,9 @@ test.describe('the public group directory', () => {
 		// Scoped to `main`: the public header carries its own "Sign In" link.
 		const signIn = page.getByRole('main').getByRole('link', { name: 'Sign in' });
 		await expect(signIn).toBeVisible();
-		// The parameter the login page actually reads, which is `redirect` — the
-		// one other caller in the tree spells it `redirectTo` and is silently
-		// ignored.
+		// The parameter the login page actually reads, which is `redirect`. Every
+		// caller in the tree now spells it that way; `/a/[tag]` used to spell it
+		// `redirectTo` and was silently ignored, which #330 fixed.
 		await expect(signIn).toHaveAttribute('href', `/login?redirect=/groups/${SEED_JOINABLE_SLUG}`);
 	});
 
