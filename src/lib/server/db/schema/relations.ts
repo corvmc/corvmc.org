@@ -266,6 +266,10 @@ export const relations = defineRelations(schema, (t) => ({
 		group: t.one.group({ from: t.groupInvite.groupId, to: t.group.id }),
 		invitedBy: t.one.user({ from: t.groupInvite.invitedById, to: t.user.id })
 	},
+	announcement: {
+		group: t.one.group({ from: t.announcement.groupId, to: t.group.id }),
+		author: t.one.user({ from: t.announcement.authorId, to: t.user.id })
+	},
 	inboxThread: {
 		messages: t.many.inboxMessage(),
 		notes: t.many.inboxNote(),

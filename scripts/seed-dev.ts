@@ -54,6 +54,7 @@ import { notification, notificationPreference } from '../src/lib/server/db/schem
 import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/directory';
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { groupInvite } from '../src/lib/server/db/schema/group-invite';
+import { announcement } from '../src/lib/server/db/schema/announcement';
 import { group } from '../src/lib/server/db/schema/group';
 import { media, mediaAttachment } from '../src/lib/server/db/schema/media';
 import { bandSite } from '../src/lib/server/db/schema/band-site';
@@ -1556,7 +1557,28 @@ async function seedGroups(users: SeedUser[]) {
 			joinPolicy: 'open' as const,
 			joinInstructions: 'Third Thursday, 7pm. Bring a horn; charts provided.',
 			positions: ['Host', 'Chart librarian', 'Piano'],
-			memberCount: 5
+			memberCount: 5,
+			announcements: [
+				{
+					title: 'August jam moved to the 27th',
+					body: 'The room is booked for a production on our usual Thursday, so **August only** we meet on the 27th. Same time, same charts.\n\nIf you were bringing someone new, bring them anyway — we always have a spare Real Book.',
+					pinned: true,
+					published: true
+				},
+				{
+					title: 'New charts in the folder',
+					body: 'Added *Blue Bossa*, *Autumn Leaves* and *Song for My Father* to the shared folder. Print your own or read off a tablet, either is fine.',
+					pinned: false,
+					published: true
+				},
+				// A draft, so the composer's unpublished state renders somewhere.
+				{
+					title: 'Thinking about a second monthly session',
+					body: 'Nothing decided. Would a weekday afternoon slot get any takers?',
+					pinned: false,
+					published: false
+				}
+			]
 		},
 		{
 			kind: 'committee' as const,
@@ -1567,7 +1589,15 @@ async function seedGroups(users: SeedUser[]) {
 			joinInstructions:
 				'Tell us what you want to see programmed and roughly how much time you can give.',
 			positions: ['Chair', 'Secretary', 'Member'],
-			memberCount: 3
+			memberCount: 3,
+			announcements: [
+				{
+					title: 'Minutes from the 12 August meeting',
+					body: 'Booked through October. Two holds pending on November — details at the next meeting.\n\n- Approved the fall showcase\n- Deferred the all-ages policy question\n- Asked Facilities about the side room',
+					pinned: false,
+					published: true
+				}
+			]
 		},
 		{
 			kind: 'committee' as const,
@@ -1577,7 +1607,10 @@ async function seedGroups(users: SeedUser[]) {
 			joinPolicy: 'invite_only' as const,
 			joinInstructions: null,
 			positions: ['Chair', 'Member'],
-			memberCount: 2
+			memberCount: 2,
+			// Deliberately none: a group with nothing posted is the empty state,
+			// and it has to be reachable locally.
+			announcements: []
 		}
 	];
 
@@ -1632,6 +1665,22 @@ async function seedGroups(users: SeedUser[]) {
 					invitedById: leader.id
 				}
 			]);
+		}
+
+		// `notifiedAt` stays null on every one of these. It is the fan-out latch,
+		// written only by the notification listener — seeding it would claim these
+		// posts were sent, and seeding it *unset* is what leaves the listener a
+		// backlog to work through locally.
+		for (let j = 0; j < d.announcements.length; j++) {
+			const a = d.announcements[j];
+			await db.insert(announcement).values({
+				groupId: g.id,
+				authorId: leader.id,
+				title: a.title,
+				body: a.body,
+				pinned: a.pinned,
+				publishedAt: a.published ? new Date(Date.now() - (j + 1) * 5 * 86400000) : null
+			});
 		}
 	}
 

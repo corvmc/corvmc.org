@@ -599,6 +599,18 @@ announcement
 
 `notifiedAt` is written by the fan-out listener and never by the remote function. It is the idempotency guarantee, not a display field.
 
+Phase 7 ships in three PRs, split so each one is green on its own:
+
+| PR  | Carries                                                                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------- |
+| 7a  | The table and `announcement-service.ts`. No surface, no fan-out                                               |
+| 7b  | The surfaces — remote functions, the mount-agnostic components, the club tab and `/band/{slug}/announcements` |
+| 7c  | The fan-out — the notification type, `sendTemplateBatch()`, the listener, and the per-group mute              |
+
+The order matters in one direction only: publishing before 7c lands writes `publishedAt` and notifies
+nobody, which is a feature that works minus its email. Shipping the listener first would mean a
+fan-out with nothing to fan out.
+
 ### File
 
 ```
@@ -1339,7 +1351,8 @@ Four flags: `groups`, `groupEvents`, `groupFiles`, `announcements`. The last two
 
 A flag must be registered in **three** places: the `FeatureFlag` union and `ALL_FLAGS`, both in `src/lib/server/feature-flags.ts`, and a `feature.`-prefixed entry in `DEFAULTS` in `src/lib/server/site-config/site-config-service.ts`. Missing the third makes `config()` _throw_ `Unknown site config key`, not return false — but `feature-flags.spec.ts` now asserts the set both ways, so a half-registered flag fails CI rather than reaching production. Register all three and the test is silent.
 
-Phase order. Each phase ships green, with bands working at every step.
+Phase order. Each phase ships green, with bands working at every step. ✅ is a finished phase; 🚧
+names the PRs of one still in flight.
 
 | #   | State                  | Phase                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | --- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1352,7 +1365,7 @@ Phase order. Each phase ships green, with bands working at every step.
 | 4   | ✅ #323 #324           | `requireGroupRole` + explicit refs. **Two PRs**: the guard, with `band-context` reduced to deprecated wrappers, then the call-site port and the wrappers' deletion                                                                                                                                                                                                                                                                             |
 | 5   | ✅ #326 #327 #328 #329 | `/staff/groups` + `/member/groups` and the club page + public group page; all three `joinPolicy` values, self-join and applications. **Four PRs**: the vocabulary values and the reads that would have lost them, the staff panel, the member surfaces, then the public directory                                                                                                                                                              |
 | 6   | ✅ #332                | `group_invite` replaces `platform_invite`                                                                                                                                                                                                                                                                                                                                                                                                      |
-| 7   |                        | Announcements — bands and groups simultaneously, since it is the same code                                                                                                                                                                                                                                                                                                                                                                     |
+| 7   | 🚧 #333                | Announcements — bands and groups simultaneously, since it is the same code                                                                                                                                                                                                                                                                                                                                                                     |
 | 8   |                        | Documents — bucket and binding deployed and verified **first**, then the table and route                                                                                                                                                                                                                                                                                                                                                       |
 | 9   |                        | Group events + `event_group` + `createGroupEvent()`; fix the recurring generator                                                                                                                                                                                                                                                                                                                                                               |
 | 10  |                        | External acts: unowned entries, `contact`, `directory_entry_link` + `/act/{token}`, and `event_band` re-keyed to `directoryEntryId`                                                                                                                                                                                                                                                                                                            |

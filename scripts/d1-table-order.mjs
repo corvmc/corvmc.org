@@ -67,6 +67,8 @@ export const tableOrder = [
 	// The bill: references event and band, so it wipes before either.
 	'event_band',
 	'group_invite',
+	// Child of group and user, and nothing is a child of it.
+	'announcement',
 	'credit_transaction',
 	'help_articles',
 	'inbox_message',
