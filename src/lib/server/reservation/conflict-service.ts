@@ -2,7 +2,8 @@ import { db } from '$lib/server/db';
 import { reservation, closure } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, ne, eq, lt, gt, notInArray } from 'drizzle-orm';
-import { getReservationConfig } from './config';
+import type { BookerType } from '$lib/server/db/schema/reservation';
+import { getReservationConfig, termsFor } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from '$lib/server/db/schema/reservation';
 import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -133,6 +134,16 @@ export interface ValidationResult {
 export interface ValidateBookingOptions {
 	/** Set to true for recurring series generation (uses longer advance window) */
 	isRecurring?: boolean;
+	/**
+	 * Who is booking, which decides the duration floor and the advance window.
+	 * Defaults to `'user'`, so every existing caller keeps member terms.
+	 *
+	 * Without this a teaching booking cannot exist: a half-hour lesson is
+	 * refused by `minDurationHours: 1`, and a term of lessons by the 14-day
+	 * window. `getValidationWarnings` takes it for the same reason — staff
+	 * would otherwise be warned that a perfectly valid lesson is too short.
+	 */
+	bookerType?: BookerType;
 }
 
 /**
@@ -146,6 +157,9 @@ export async function validateBooking(
 ): Promise<ValidationResult> {
 	const tz = DEFAULT_TIMEZONE;
 	const config = await getReservationConfig();
+	// Room facts come from `config`; booker facts from `terms`. Reading a window
+	// off `config` here is exactly what the resolver exists to prevent.
+	const terms = termsFor(options?.bookerType ?? 'user', config);
 
 	if (endsAt <= startsAt) {
 		return { valid: false, error: 'End time must be after start time' };
@@ -154,8 +168,8 @@ export async function validateBooking(
 	const durationMs = endsAt.getTime() - startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 
-	if (durationHours < config.minDurationHours) {
-		return { valid: false, error: `Minimum duration is ${config.minDurationHours} hour` };
+	if (durationHours < terms.minDurationHours) {
+		return { valid: false, error: `Minimum duration is ${terms.minDurationHours} hour` };
 	}
 
 	if (durationHours > config.maxDurationHours) {
@@ -182,9 +196,7 @@ export async function validateBooking(
 	}
 
 	// Check advance booking window
-	const maxDays = options?.isRecurring
-		? config.maxAdvanceDaysRecurring
-		: config.maxAdvanceDaysOneoff;
+	const maxDays = options?.isRecurring ? terms.maxAdvanceDaysRecurring : terms.maxAdvanceDaysOneoff;
 	const maxMs = maxDays * 24 * 60 * 60 * 1000;
 	if (startsAt.getTime() - Date.now() > maxMs) {
 		return {
@@ -276,6 +288,9 @@ export async function getValidationWarnings(
 ): Promise<string[]> {
 	const tz = DEFAULT_TIMEZONE;
 	const config = await getReservationConfig();
+	// Room facts come from `config`; booker facts from `terms`. Reading a window
+	// off `config` here is exactly what the resolver exists to prevent.
+	const terms = termsFor(options?.bookerType ?? 'user', config);
 	const warnings: string[] = [];
 
 	if (endsAt <= startsAt) {
@@ -286,8 +301,8 @@ export async function getValidationWarnings(
 	const durationMs = endsAt.getTime() - startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 
-	if (durationHours < config.minDurationHours) {
-		warnings.push(`Duration is less than the ${config.minDurationHours}-hour minimum`);
+	if (durationHours < terms.minDurationHours) {
+		warnings.push(`Duration is less than the ${terms.minDurationHours}-hour minimum`);
 	}
 
 	if (durationHours > config.maxDurationHours) {
@@ -309,9 +324,7 @@ export async function getValidationWarnings(
 		);
 	}
 
-	const maxDays = options?.isRecurring
-		? config.maxAdvanceDaysRecurring
-		: config.maxAdvanceDaysOneoff;
+	const maxDays = options?.isRecurring ? terms.maxAdvanceDaysRecurring : terms.maxAdvanceDaysOneoff;
 	const maxMs = maxDays * 24 * 60 * 60 * 1000;
 	if (startsAt.getTime() - Date.now() > maxMs) {
 		warnings.push(`More than ${maxDays} days in advance`);

@@ -184,9 +184,22 @@ export function toEventRef(row: EventRefRow | null | undefined): EventRef {
  * the data, and because a page that branched on it would be back to deciding
  * per-site what a booking looks like.
  *
- * `lesson` has no record to point at: nothing in this app writes that booker
- * type — it arrives with migrated rows — so it resolves to the member who holds
- * the booking, and the reservation keeps its own lesson glyph to say what it is.
+ * Two booker types resolve to the member, for opposite reasons.
+ *
+ * `lesson` is **legacy**: nothing in this app writes it — it arrives with rows
+ * migrated from the old system — and its `bookerId` points at nothing, so the
+ * member who holds the booking is the only honest answer.
+ *
+ * `instructor` points at a real `instructor` row, and still resolves to the
+ * member, because **the instructor record is a capacity rather than a party.**
+ * The party is the person; the discriminator names the table that capacity lives
+ * in; the reservation's own glyph says the booking is teaching. The invariant
+ * that makes this free is that a teaching booking's instructor has
+ * `userId === createdByUserId`, so the `member` ref every reservation query
+ * already projects is the right one — no query gains a join.
+ *
+ * It is an explicit branch rather than a fall-through so that it is a decision
+ * on the day the invariant changes, instead of a silently wrong answer.
  */
 export function toBookerRef(row: {
 	bookerType: string;
@@ -199,6 +212,7 @@ export function toBookerRef(row: {
 	// renders unlinked, so the row stays honest about what it is.
 	if (row.bookerType === 'group') return toBandRef(row.band);
 	if (row.bookerType === 'event') return toEventRef(row.event);
+	if (row.bookerType === 'instructor') return toMemberRef(row.member);
 	return toMemberRef(row.member);
 }
 

@@ -68,7 +68,8 @@ import {
 } from '$lib/server/reservation/reservation-service';
 import { mapDomainError } from '$lib/server/errors';
 import { isTerminalStatus } from '$lib/utils/reservation-actions';
-import { getReservationConfig } from '$lib/server/reservation/config';
+import type { BookerType } from '$lib/server/db/schema/reservation';
+import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { config } from '$lib/server/site-config/site-config-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import {
@@ -839,7 +840,10 @@ const staffReservationFiltersSchema = z.object({
 	dateFrom: z.string().optional(),
 	dateTo: z.string().optional(),
 	statusFilter: z.array(z.string()).optional(),
-	bookerType: z.enum(['user', 'group', 'event']).optional(),
+	// Hard-listed rather than derived from `bookerTypes`, and deliberately so:
+	// `'lesson'` is archival and has no staff filter worth offering. Adding a
+	// booker type therefore means deciding whether staff filter on it.
+	bookerType: z.enum(['user', 'group', 'event', 'instructor']).optional(),
 	page: z.number().optional()
 });
 
@@ -1070,7 +1074,10 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 	// Without this, cashDueCents stays null and the reservation reads as comped
 	// with no way to record a door payment.
 	const reservationConfig = await getReservationConfig();
-	const hourlyRateCents = reservationConfig.hourlyRateCents;
+	const hourlyRateCents = termsFor(
+		data.bandId ? 'group' : 'user',
+		reservationConfig
+	).hourlyRateCents;
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 	await commitReservationCredits({
@@ -1260,7 +1267,7 @@ async function commitCreditsAndSettleIfCovered(opts: {
  * (idempotent) and not re-applied inside checkout.
  */
 async function payReservationRemainder(opts: {
-	row: { id: string; startsAt: Date; endsAt: Date };
+	row: { id: string; startsAt: Date; endsAt: Date; bookerType: BookerType };
 	userId: string;
 	email: string;
 	name: string | null;
@@ -1269,7 +1276,7 @@ async function payReservationRemainder(opts: {
 	cancelUrl: string;
 }): Promise<{ paid: true } | { checkoutUrl: string }> {
 	const reservationConfig = await getReservationConfig();
-	const hourlyRateCents = reservationConfig.hourlyRateCents;
+	const hourlyRateCents = termsFor(opts.row.bookerType, reservationConfig).hourlyRateCents;
 	const durationHours =
 		(opts.row.endsAt.getTime() - opts.row.startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
@@ -1422,7 +1429,7 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	}
 
 	const reservationConfig = await getReservationConfig();
-	const hourlyRateCents = reservationConfig.hourlyRateCents;
+	const hourlyRateCents = termsFor('user', reservationConfig).hourlyRateCents;
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
@@ -1684,7 +1691,7 @@ export const payForReservation = form(
 
 		const staff = await isStaff(currentUser.id);
 		const reservationConfig = await getReservationConfig();
-		const hourlyRateCents = reservationConfig.hourlyRateCents;
+		const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
 		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
 		const outsideWindow = !staff && !withinConfirmationWindow(row.startsAt);
@@ -1753,7 +1760,7 @@ export const payReservation = form(
 		const staff = await isStaff(currentUser.id);
 		if (!staff && !withinConfirmationWindow(row.startsAt)) {
 			const reservationConfig = await getReservationConfig();
-			const hourlyRateCents = reservationConfig.hourlyRateCents;
+			const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
 			const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 			const totalCents = Math.round(durationHours * hourlyRateCents);
 			if (await isFullyCreditCovered(currentUser.id, durationHours, totalCents, hourlyRateCents))
@@ -1793,7 +1800,10 @@ export const confirmReservation = form(
 				createdByUserId: reservation.createdByUserId,
 				startsAt: reservation.startsAt,
 				endsAt: reservation.endsAt,
-				status: reservation.status
+				status: reservation.status,
+				// Selected so the rate can be resolved for who booked it. Every
+				// pricing site needs this now; most did not select it before.
+				bookerType: reservation.bookerType
 			})
 			.from(reservation)
 			.where(eq(reservation.id, data.id))
@@ -1833,7 +1843,7 @@ export const confirmReservation = form(
 			.where(eq(user.id, row.createdByUserId))
 			.limit(1);
 		const reservationConfig = await getReservationConfig();
-		const hourlyRateCents = reservationConfig.hourlyRateCents;
+		const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
 		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
 		const { settled } = await commitCreditsAndSettleIfCovered({
@@ -1890,7 +1900,8 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 		.select({
 			createdByUserId: reservation.createdByUserId,
 			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt
+			endsAt: reservation.endsAt,
+			bookerType: reservation.bookerType
 		})
 		.from(reservation)
 		.where(eq(reservation.id, data.id))
@@ -1898,7 +1909,7 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 	if (!row) throw error(404, 'Reservation not found');
 
 	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
-	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
+	const hourlyRateCents = (await getBookingTerms(row.bookerType)).hourlyRateCents;
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
 	// Commit the member's free hours (idempotent — already done if confirmed
@@ -2076,7 +2087,10 @@ export const getReservations = query(
 			after && gt(reservation.endsAt, after),
 			!includeTerminal && inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
 		];
-		const rateInCents = await config<number>('reservation.hourlyRateCents');
+		// Resolved per row rather than once for the list: this query excludes only
+		// `event`, so a member's own teaching bookings appear here too and would
+		// otherwise be priced at the drop-in rate on their own dashboard.
+		const reservationConfig = await getReservationConfig();
 		const freeHoursBalance = await getBalance(forUser ?? locals.user.id, 'free_hours');
 
 		const rows = await db
@@ -2097,6 +2111,7 @@ export const getReservations = query(
 		const hasFreeHours = freeHoursBalance > 0;
 		return rows.map((value: Reservation) => {
 			const durationHours = (value.endsAt.getTime() - value.startsAt.getTime()) / (1000 * 60 * 60);
+			const rateInCents = termsFor(value.bookerType, reservationConfig).hourlyRateCents;
 			const totalCents = Math.round(durationHours * rateInCents);
 			const isTerminal = isTerminalStatus(value.status);
 

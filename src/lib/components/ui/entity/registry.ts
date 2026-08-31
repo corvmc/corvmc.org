@@ -37,6 +37,7 @@ import {
 	IconHeart,
 	IconMusic,
 	IconSchool,
+	IconChalkboard,
 	IconBuildingCommunity
 } from '@tabler/icons-svelte';
 import type { SvelteComponent } from 'svelte';
@@ -117,7 +118,10 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 		subtypes: {
 			group: { icon: IconMusic, label: 'Booked by a band' },
 			event: { icon: IconCalendarEvent, label: 'Held for an event' },
-			lesson: { icon: IconSchool, label: 'Lesson' }
+			lesson: { icon: IconSchool, label: 'Lesson' },
+			// A distinct glyph from `lesson`, which is required rather than chosen:
+			// `registry.spec.ts` refuses two subtypes sharing one within a type.
+			instructor: { icon: IconChalkboard, label: 'Teaching' }
 		}
 	},
 	suggestion: { icon: IconBulb, shape: 'none' },

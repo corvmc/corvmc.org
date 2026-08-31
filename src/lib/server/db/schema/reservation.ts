@@ -16,7 +16,19 @@ import { recurringSeries } from './recurring';
 // Reservation domain types
 // ---------------------------------------------------------------------------
 
-export const bookerTypes = ['user', 'group', 'event', 'lesson'] as const;
+/**
+ * Which table `bookerId` points into — a table discriminator, never a category.
+ * `'instructor'` earns its place because `instructor` is a real table with real
+ * ids; it is the capacity a person is booking in, not a label on the booking.
+ *
+ * `'lesson'` is **archival**. Nothing writes it and nothing ever did in this
+ * app — it arrives only on rows migrated from the old system, whose `bookerId`
+ * points at nothing, which is why `toBookerRef` falls back to the member. It is
+ * kept rather than renamed to `'instructor'`: renaming would relabel those rows
+ * as pointing into `instructor` when they do not, so the discriminator would be
+ * wrong about exactly the rows the rename was performed to describe.
+ */
+export const bookerTypes = ['user', 'group', 'event', 'lesson', 'instructor'] as const;
 export type BookerType = (typeof bookerTypes)[number];
 
 export function isBookerType(value: string): value is BookerType {
