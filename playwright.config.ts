@@ -79,7 +79,14 @@ export default defineConfig({
 		// `pnpm`, not `npm`: this repo is pnpm-only and a global prettier 2.8.8
 		// shadows its prettier 3, which is why `npm`/`npx` are blocked everywhere
 		// else.
-		command: 'pnpm build && pnpm preview',
+		// The checkpoint between the two halves is load-bearing, not tidiness.
+		// `prepare.ts` checkpoints after seeding, but the *build* runs after that
+		// and leaves a WAL of its own — `adapter-cloudflare`'s `emulate()` calls
+		// `getPlatformProxy`, which opens this same D1 file and never disposes it.
+		// workerd then opens D1 lazily on the first request, races Playwright's
+		// readers trying to recover that WAL, and dies with SQLITE_BUSY_RECOVERY,
+		// taking the whole suite rather than one test. See e2e/checkpoint.ts.
+		command: 'pnpm build && pnpm exec tsx e2e/checkpoint.ts && pnpm preview',
 		port: PORT,
 		// The command builds before it serves, and a cold production build here
 		// takes several minutes — well past the 60s default, which reported the

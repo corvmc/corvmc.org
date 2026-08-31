@@ -95,6 +95,10 @@ vi.mock('$lib/server/db/schema/group', () => ({
 	group: { __table: 'group', id: 'id', name: 'name' }
 }));
 
+vi.mock('$lib/server/db/schema/directory', () => ({
+	directoryEntry: { __table: 'directory_entry', id: 'id', groupId: 'group_id' }
+}));
+
 // The real one, so the `event_group` write this job now owes goes through the
 // same helper `createGroupEvent` and `importBandEvents` use rather than a copy.
 vi.mock('$lib/server/event/event-service', async () => {
@@ -834,7 +838,8 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 			[OWNER],
 			[EVENT_PROTO_RES],
 			[], // existing instances
-			[{ name: 'The Squares' }] // the owning band's name, looked up once per series
+			[{ name: 'The Squares' }], // the owning band's name, looked up once per series
+			[{ id: 'entry-band-1' }] // and its directory entry, which the credit names
 		);
 		setupInsert();
 		setupUpdate();
@@ -846,7 +851,9 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 		// forced a CMC event with no owner, so the invariant could not be broken
 		// here. It can now, which is why it is maintained here.
 		expect(insertsFor('event_band')[0]).toMatchObject({
-			bandId: 'band-1',
+			// The entry, not the group — a credit names a party as of phase 10.
+			directoryEntryId: 'entry-band-1',
+			addedByGroupId: 'band-1',
 			name: 'The Squares',
 			billingOrder: 0,
 			status: 'confirmed'

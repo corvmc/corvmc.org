@@ -711,6 +711,68 @@ export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Instructors
+// ---------------------------------------------------------------------------
+
+/**
+ * The five states of an instructor record — see `docs/specs/instructors-spec.md`.
+ *
+ * `requested` and `rejected` are the application; the other three are the grant.
+ * Keeping them in one enum on one row is what makes the application *be* the
+ * draft listing rather than a second table staff have to reconcile against it.
+ *
+ * **Every consumer must match positively** — `eq(status, 'active')`, never
+ * `ne(status, 'retired')`. That is the rule `groupMemberStatuses` already
+ * carries, and here it is what makes an applicant unable to book *by
+ * construction*: `requireInstructor` refuses `requested` and `rejected` without
+ * anyone having written a check for them.
+ *
+ * `rejected` is **the same value meaning the same thing as everywhere else in
+ * this codebase**, not a near-homonym. `StatusBadge` already labels it
+ * "Returned" and its comment already says why — "sent back to its author to
+ * fix" — and `volunteerHourStatusLabels` argues it in prose: staff return a log
+ * for correction and the member logs it again, which "rejected" reads as final.
+ * `event.status = 'rejected'` paired with `event.reviewNotes` is the same shape
+ * again. Reusing the vocabulary is the point; a fifth word for it would not be.
+ */
+export const instructorStatuses = ['requested', 'rejected', 'active', 'paused', 'retired'] as const;
+
+export type InstructorStatus = (typeof instructorStatuses)[number];
+
+/**
+ * **There is deliberately no `instructorStatusLabels`.**
+ *
+ * `StatusBadge` merges every vocabulary's label map into one flat record keyed
+ * by the bare status string, so a label here would apply to every other
+ * vocabulary sharing the value. Two would have collided: `requested` would have
+ * relabelled equipment loans, and `rejected` would have overwritten
+ * `volunteerHourStatusLabels`' "Returned".
+ *
+ * Nothing is lost, because that "Returned" is already the label this module
+ * wants — and for the reason written there: staff return the thing for
+ * correction and the member submits it again, which "rejected" reads as final.
+ * The other four humanise correctly on their own.
+ */
+
+/** Headline on an instructor listing — one line, shown on the card. */
+export const INSTRUCTOR_HEADLINE_MAX = 120;
+
+/** What and how they teach. Markdown, sanitised on write. */
+export const INSTRUCTOR_BLURB_MAX = 2000;
+
+/**
+ * Free text, never cents. CMC does not process lesson money and must not imply
+ * it does by storing a number it could total.
+ */
+export const INSTRUCTOR_RATES_NOTE_MAX = 200;
+
+/** Member-written, staff-only. Never rendered publicly, never in a DTO. */
+export const INSTRUCTOR_APPLICATION_NOTE_MAX = 2000;
+
+/** Staff-written, member-visible: why an application came back. */
+export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
+
+// ---------------------------------------------------------------------------
 // Entity vocabulary
 // ---------------------------------------------------------------------------
 

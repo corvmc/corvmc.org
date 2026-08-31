@@ -4,17 +4,20 @@
  * Usage:
  *   pnpm db:seed
  *
- * This is DESTRUCTIVE — it deletes all data and rebuilds from scratch.
- * Do not run against production.
+ * This is DESTRUCTIVE — it deletes all data and rebuilds from scratch. Running it
+ * twice is fine: `deleteAll()` clears every table first. Do not run against
+ * production.
  *
  * Prerequisites:
- *   - Local D1 SQLite file exists (run `pnpm db:push` first)
+ *   - The local D1 file exists and is migrated. `pnpm db:reset` does that and
+ *     then calls this, so it is the one command to reach for; `pnpm db:seed`
+ *     alone re-seeds a database that is already there.
  */
 import 'dotenv/config';
 import { randomUUID, randomBytes, scrypt } from 'crypto';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
-import { sql, eq, inArray, isNotNull } from 'drizzle-orm';
+import { sql, eq, inArray } from 'drizzle-orm';
 
 // Mirror the app's password hashing (src/lib/server/auth.ts `scryptHash`). We can't
 // import that module here — it pulls SvelteKit-only `$env`/`$app` aliases that don't
@@ -105,6 +108,8 @@ import {
 } from '../src/lib/server/db/schema/volunteer';
 // JSON recurrence format matching the app's rrule-helpers (see scripts/seed-rrule.ts).
 import { buildSeedRRule as seedRRule } from './seed-rrule';
+// @ts-expect-error -- plain .mjs helper, no types
+import { deleteOrder } from './d1-table-order.mjs';
 const { env, dispose } = await getPlatformProxy();
 const db = drizzle(env.DB);
 await db.run(sql`PRAGMA foreign_keys = OFF`);
@@ -520,77 +525,26 @@ const BACKLINE_ITEMS = [
 // Seed functions
 // ---------------------------------------------------------------------------
 
+/**
+ * Empty every table, children first.
+ *
+ * The order — and the list — comes from `scripts/d1-table-order.mjs`, which
+ * `scripts/d1-table-order.spec.ts` holds against the drizzle snapshot. This file
+ * used to keep its own copy, and it drifted: `media` and `media_attachment` were
+ * never added, so seeding an already-seeded database left those rows behind and
+ * died on `UNIQUE constraint failed: media.key`. A table added to the schema now
+ * reddens the unit suite instead of surviving a wipe.
+ *
+ * Tables the list names but this database lacks are skipped — see `deleteOrder`.
+ */
 async function deleteAll() {
 	console.log('Deleting all data...');
-	const tables = [
-		// Child before parent: volunteer_hour_log has an ON DELETE RESTRICT FK to
-		// volunteer_role, so the role rows can't go first. (volunteer_role_interest
-		// cascades, but ordering it explicitly keeps the list readable.)
-		'volunteer_shift_feedback',
-		'volunteer_signup',
-		'volunteer_shift',
-		'member_certification',
-		'volunteer_role_certification',
-		'volunteer_certification',
-		'volunteer_role_interest',
-		'volunteer_hour_log',
-		'volunteer_profile',
-		'volunteer_role',
-		// Before content_flag and user: they reference both.
-		'member_standing',
-		'user_block',
-		'suggestion_edit',
-		'suggestion_vote',
-		'suggestion',
-		'content_flag',
-		'inbox_note',
-		'inbox_message',
-		'inbox_participant',
-		'inbox_thread',
-		'inbox_channel_config',
-		'help_articles',
-		'help_categories',
-		'stock_movement',
-		'inventory_loan',
-		'acquisition_line',
-		'acquisition',
-		'inventory_asset',
-		'inventory_item',
-		'inventory_location',
-		'equipment_category',
-		'campaign_audience',
-		'campaign',
-		'audience_member',
-		'audience',
-		'subscriber',
-		'notification_preference',
-		'notification',
-		'ticket',
-		'band_site',
-		// Child before parent, and both before `group` and `user`.
-		'directory_tag',
-		'directory_entry',
-		'group_member',
-		'group_slug_history',
-		'group',
-		'payment_cache',
-		'credit_transaction',
-		'recurring_series',
-		'event',
-		'closure',
-		'reservation',
-		'model_has_roles',
-		'model_has_permissions',
-		'role_has_permissions',
-		'roles',
-		'permissions',
-		'session',
-		'account',
-		'verification',
-		'user'
-	];
-	for (const t of tables) {
-		await db.run(sql.raw(`DELETE FROM "${t}"`));
+	const rows = await db.all<{ name: string }>(
+		sql`SELECT name FROM sqlite_master WHERE type = 'table'`
+	);
+	const present = new Set(rows.map((row) => row.name));
+	for (const table of deleteOrder(present)) {
+		await db.run(sql.raw(`DELETE FROM "${table}"`));
 	}
 }
 
@@ -1704,29 +1658,44 @@ async function seedLineup(
 	owner: { id: string; name: string } | null,
 	support: { name: string; bandId?: string; status?: string }[]
 ) {
-	// `directoryEntryId` is filled in by `linkLineupCreditsToEntries()` after
-	// `seedDirectoryEntries()`, not here: entries are derived at the very end of
-	// the seed, so none exist yet at this point. Resolving per credit here
-	// silently wrote nulls.
+	// A credit names a `directory_entry`, so the group ids these fixtures carry
+	// have to be resolved. One query for the whole bill.
+	//
+	// This works only because `seedDirectoryEntries()` now runs *before* anything
+	// that writes a credit. It used to run last, and resolving here silently
+	// wrote nulls into every row.
+	const groupIds = [owner?.id, ...support.map((sup) => sup.bandId)].filter(
+		(id): id is string => !!id
+	);
+	const entryRows = groupIds.length
+		? await db
+				.select({ groupId: directoryEntry.groupId, id: directoryEntry.id })
+				.from(directoryEntry)
+				.where(inArray(directoryEntry.groupId, groupIds))
+		: [];
+	const entryFor = new Map(
+		entryRows.filter((r) => r.groupId).map((r) => [r.groupId as string, r.id])
+	);
+
 	const rows: any[] = [];
 	if (owner) {
 		rows.push({
 			eventId,
 			name: owner.name,
-			bandId: owner.id,
+			directoryEntryId: entryFor.get(owner.id) ?? null,
 			billingOrder: 0,
 			status: 'confirmed',
-			addedByBandId: owner.id
+			addedByGroupId: owner.id
 		});
 	}
 	support.forEach((sup, i) => {
 		rows.push({
 			eventId,
 			name: sup.name,
-			bandId: sup.bandId ?? null,
+			directoryEntryId: sup.bandId ? (entryFor.get(sup.bandId) ?? null) : null,
 			billingOrder: rows.length + i,
 			status: sup.status ?? (sup.bandId ? 'pending' : 'unlinked'),
-			addedByBandId: owner?.id ?? null
+			addedByGroupId: owner?.id ?? null
 		});
 	});
 	if (rows.length === 0) return;
@@ -4684,43 +4653,62 @@ async function seedSuggestions(users: any[], adminUser: any) {
  * Derive `directory_entry` and `directory_tag` from everything already seeded,
  * mirroring `scripts/db/backfill/directory-entry.sql` statement for statement.
  *
- * It runs last and reads the tables back rather than being threaded through the
- * dozen places that insert a user or a group, because `pnpm db:reset` replays
- * migrations and then seeds — the backfill script never runs locally or in e2e.
+ * It reads the tables back rather than being threaded through the dozen places
+ * that insert a user or a group, because `pnpm db:reset` replays migrations and
+ * then seeds — the backfill script never runs locally or in e2e. It runs as soon
+ * as the last of those inserts has happened, which is early enough for a lineup
+ * credit to reference an entry and late enough to see every subject.
  * Without this, every directory page goes blank the moment phase 3a's readers
  * land, and it reads as a query bug rather than a fixture gap.
  */
 /**
- * Point every lineup credit at its party's `directory_entry`, mirroring the
- * phase-10 migration's own UPDATE statement for statement.
+ * A handful of external acts — parties CMC booked that are not members here.
  *
- * It runs after `seedDirectoryEntries()` for the reason that function gives
- * about itself: entries are derived at the end from what was already seeded, so
- * nothing written earlier can reference one. `pnpm db:reset` replays migrations
- * against an empty database and then seeds, so the migration's backfill has no
- * rows to touch and this is the only thing that fills the column locally.
+ * Both owner columns null and `visibility: 'hidden'`, which is the whole of what
+ * makes one. They exist locally so the staff acts page, and the "links out, not
+ * in" render rule on a public bill, have something real behind them.
  */
-async function linkLineupCreditsToEntries(): Promise<number> {
-	const credits = await db
-		.select({ id: eventBand.id, bandId: eventBand.bandId })
-		.from(eventBand)
-		.where(isNotNull(eventBand.bandId));
-	if (credits.length === 0) return 0;
+async function seedExternalActs() {
+	const acts = [
+		{
+			name: 'Sawtooth Rivals',
+			hometown: 'Boise, ID',
+			bio: 'Toured through twice in 2025. Easy load-in, brought their own monitors.',
+			links: [{ label: 'Bandcamp', url: 'https://sawtoothrivals.bandcamp.com' }]
+		},
+		{
+			name: 'The Quiet Part',
+			hometown: 'Olympia, WA',
+			bio: 'Three-piece, quiet set, asked for a rug.',
+			links: [{ label: 'Instagram', url: 'https://instagram.com/thequietpart' }]
+		},
+		// No links at all: on a public bill this one is the plain-text case,
+		// which is the branch that has no URL to point at rather than a broken one.
+		{
+			name: 'Fenwick',
+			hometown: 'Eugene, OR',
+			bio: 'Solo act. Books through a manager.',
+			links: null
+		}
+	];
 
-	const entries = await db
-		.select({ groupId: directoryEntry.groupId, id: directoryEntry.id })
-		.from(directoryEntry)
-		.where(isNotNull(directoryEntry.groupId));
-	const entryFor = new Map(entries.map((e) => [e.groupId as string, e.id]));
-
-	let linked = 0;
-	for (const c of credits) {
-		const entryId = entryFor.get(c.bandId as string);
-		if (!entryId) continue;
-		await db.update(eventBand).set({ directoryEntryId: entryId }).where(eq(eventBand.id, c.id));
-		linked++;
+	const rows = [];
+	for (const a of acts) {
+		const [row] = await db
+			.insert(directoryEntry)
+			.values({
+				userId: null,
+				groupId: null,
+				name: a.name,
+				hometown: a.hometown,
+				bio: a.bio,
+				links: a.links,
+				visibility: 'hidden'
+			})
+			.returning();
+		rows.push(row);
 	}
-	return linked;
+	return rows;
 }
 
 async function seedDirectoryEntries() {
@@ -4842,6 +4830,12 @@ async function main() {
 	const events = await seedEvents(allUsers);
 	const bands = await seedBands(allUsers);
 	const groups = await seedGroups(allUsers);
+	// Before anything that writes a lineup credit, because a credit names an
+	// entry. Every user and group the seed creates exists by this point — the
+	// last of them is `seedGroups` directly above — so it can still read them all
+	// back, which is the property it was placed last for.
+	const directory = await seedDirectoryEntries();
+	const externalActs = await seedExternalActs();
 	const groupSessions = await seedGroupSessions(groups);
 	const bandEvents = await seedBandEvents(bands, allUsers);
 	await seedCommunityEvents(users, adminUser);
@@ -4875,9 +4869,6 @@ async function main() {
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
 	const volunteerShifts = await seedVolunteerShifts(activeVolunteers, volunteerRoles, events);
 	const suggestions = await seedSuggestions(allUsers, adminUser);
-	// Last: it reads back every user and group the seed created.
-	const directory = await seedDirectoryEntries();
-	const linkedCredits = await linkLineupCreditsToEntries();
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -4891,7 +4882,7 @@ async function main() {
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
-	console.log(`  ${linkedCredits} lineup credits linked to a directory entry`);
+	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
 	console.log(
 		`  ${groupSessions.length} group sessions (${groupSessions.filter((e) => e.reservationId).length} holding the room)`
 	);

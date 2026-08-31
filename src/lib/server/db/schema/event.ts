@@ -142,9 +142,9 @@ export const event = sqliteTable(
  *               a party *agreeing* to be listed, which presumes somebody with an
  *               account to agree; an unowned entry has nobody, staff entered it,
  *               and there is no consent step to wait on.
- * - declined  — the band said no. Keeps its bandId so the partial unique index
- *               below blocks the owner from re-adding and re-pinging them; it
- *               renders exactly like an unlinked credit.
+ * - declined  — the act said no. Keeps its `directoryEntryId` so the partial
+ *               unique index below blocks the owner from re-adding and
+ *               re-pinging them; it renders exactly like an unlinked credit.
  */
 export const eventBandStatuses = ['unlinked', 'pending', 'confirmed', 'declined'] as const;
 export type EventBandStatus = (typeof eventBandStatuses)[number];
@@ -169,17 +169,8 @@ export const eventBand = sqliteTable(
 		eventId: text('event_id')
 			.notNull()
 			.references(() => event.id, { onDelete: 'cascade' }),
-		/** Display credit. Always set, even when bandId is. */
+		/** Display credit. Always set, even when the entry link is. */
 		name: text('name').notNull(),
-		/**
-		 * Set only when this credit points at a real band.
-		 *
-		 * **Superseded by `directoryEntryId` and dropped in the next phase-10 PR.**
-		 * It is still written and still backfilled so that this migration is
-		 * recoverable from a column that still exists — the same shape phase 3a
-		 * used, and the reason only 3c was irreversible. Nothing reads it any more.
-		 */
-		bandId: text('band_id').references(() => group.id, { onDelete: 'cascade' }),
 		/**
 		 * The party this credit names — a member, a CMC band, or an external act.
 		 *
@@ -195,10 +186,10 @@ export const eventBand = sqliteTable(
 		 * the join returning null is the same fact as "there is no CMC page to link
 		 * to".
 		 *
-		 * `cascade` matches what `bandId` did rather than quietly changing it. It is
-		 * arguably wrong — a credit is a fact about a night and could outlive the
-		 * record of the party — but that is a behaviour change, and this is a
-		 * re-key.
+		 * `cascade` is what the column it replaced did. It is arguably wrong — a
+		 * credit is a fact about a night and could outlive the record of the
+		 * party — but changing it is a behaviour change rather than a re-key, so
+		 * it stays as it was.
 		 */
 		directoryEntryId: text('directory_entry_id').references(() => directoryEntry.id, {
 			onDelete: 'cascade'
@@ -208,7 +199,14 @@ export const eventBand = sqliteTable(
 		status: text('status', { enum: eventBandStatuses }).notNull().default('unlinked'),
 		/** Optional slot label, e.g. "Direct support". */
 		note: text('note'),
-		addedByBandId: text('added_by_band_id').references(() => group.id, { onDelete: 'set null' }),
+		/**
+		 * Which group put this credit on the bill — an act of authority, so it
+		 * names the group rather than the party's entry. Null once that group is
+		 * gone; who added a credit is history, not a live reference.
+		 */
+		addedByGroupId: text('added_by_group_id').references(() => group.id, {
+			onDelete: 'set null'
+		}),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`)

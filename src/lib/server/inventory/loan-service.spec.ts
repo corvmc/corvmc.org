@@ -51,6 +51,7 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 vi.mock('$lib/server/finance/credit-service', () => ({
 	getBalance: vi.fn().mockResolvedValue(0),
 	deductCredits: vi.fn().mockResolvedValue(undefined),
+	addCredits: vi.fn().mockResolvedValue(0),
 	InsufficientCreditsError: class extends Error {
 		constructor() {
 			super('Insufficient credits');
@@ -90,6 +91,7 @@ import { getAvailableQuantity, recordMovement } from './stock-service';
 import {
 	getBalance,
 	deductCredits,
+	addCredits,
 	InsufficientCreditsError
 } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
@@ -342,6 +344,78 @@ describe('LoanService lifecycle', () => {
 			expect(vi.mocked(recordCashPayment)).toHaveBeenCalledWith(
 				expect.objectContaining({ amountCents: 300 })
 			);
+		});
+
+		/**
+		 * The member must not pay for a return that did not happen.
+		 *
+		 * Credits are deducted before the charge, D1 has no transaction to roll
+		 * back, and an external call could not join one anyway — so a failed
+		 * payment used to leave the deduction standing while `returnLoan` aborted
+		 * with the loan still `checked_out`. Retrying then charged a second time
+		 * from a balance already spent. Seen for real when the Stripe payload was
+		 * wrong: three cents gone against a loan that never returned.
+		 */
+		it('puts the credits back when the payment fails, and still reports why', async () => {
+			const checkedOutAt = new Date(Date.now() - 12 * 60 * 60 * 1000);
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'eq-1',
+						userId: 'user-1',
+						dailyRateCents: 500,
+						checkedOutAt,
+						staffNotes: null
+					}
+				],
+				[{ name: 'Test User', stripeId: 'cus_test' }]
+			];
+			selectResultQueue.push([{ name: 'SM58' }]);
+
+			// 200¢ of credits against a 500¢ charge: 300¢ of cash, which fails.
+			vi.mocked(getBalance).mockResolvedValueOnce(200);
+			vi.mocked(deductCredits).mockResolvedValueOnce(0);
+			vi.mocked(recordCashPayment).mockRejectedValueOnce(new Error('card declined'));
+
+			await expect(returnLoan('loan-1')).rejects.toThrow('card declined');
+
+			expect(vi.mocked(addCredits)).toHaveBeenCalledTimes(1);
+			const [userId, creditType, amount, source, sourceId] = vi.mocked(addCredits).mock.calls[0];
+			expect(userId).toBe('user-1');
+			expect(creditType).toBe('equipment_credits');
+			expect(amount).toBe(200);
+			expect(source).toBe('checkout_failed');
+			expect(sourceId).toBe('loan-1');
+		});
+
+		it('does not reverse anything when no credits were spent', async () => {
+			const checkedOutAt = new Date(Date.now() - 12 * 60 * 60 * 1000);
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'eq-1',
+						userId: 'user-1',
+						dailyRateCents: 500,
+						checkedOutAt,
+						staffNotes: null
+					}
+				],
+				[{ name: 'Test User', stripeId: 'cus_test' }]
+			];
+			selectResultQueue.push([{ name: 'SM58' }]);
+
+			vi.mocked(getBalance).mockResolvedValueOnce(0);
+			vi.mocked(recordCashPayment).mockRejectedValueOnce(new Error('card declined'));
+
+			await expect(returnLoan('loan-1')).rejects.toThrow('card declined');
+
+			// A zero-credit reversal would write a transaction saying nothing, and
+			// `addCredits` rejects a non-positive amount outright.
+			expect(vi.mocked(addCredits)).not.toHaveBeenCalled();
 		});
 	});
 
