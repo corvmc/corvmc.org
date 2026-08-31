@@ -13,6 +13,8 @@ export const tableOrder = [
 	'directory_entry',
 	// References group.
 	'band_site',
+	// References user twice (subject + granter). No children.
+	'instructor',
 	'reservation',
 	'equipment_category',
 	'inventory_location',
@@ -95,3 +97,25 @@ export const tableOrder = [
 	'member_certification',
 	'volunteer_role_certification'
 ];
+
+/**
+ * `tableOrder` reversed — the child-first order rows must be DELETEd in — with
+ * any table the database does not have skipped.
+ *
+ * Every full wipe goes through here rather than keeping its own copy of the
+ * list. `scripts/seed-dev.ts` used to hand-maintain a second one, and it drifted:
+ * `media` and `media_attachment` were never added, so `pnpm db:seed` on an
+ * already-seeded database left the old rows in place and died on
+ * `UNIQUE constraint failed: media.key` — an error that names the table but not
+ * the cause. Deriving both callers from one list is what stops that recurring.
+ *
+ * Skipping absent tables rather than throwing is deliberate: `product_config`
+ * is in the list because it was dropped from the schema without a `DROP TABLE`,
+ * and a database built from an older migration set is a normal thing to meet.
+ *
+ * @param {Set<string>} present table names the database actually has.
+ * @returns {string[]} tables to delete, children first.
+ */
+export function deleteOrder(present) {
+	return [...tableOrder].reverse().filter((table) => present.has(table));
+}
