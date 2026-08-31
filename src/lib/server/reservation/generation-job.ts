@@ -545,12 +545,10 @@ async function processEventSeries(
 				await db.insert(eventBand).values({
 					eventId: newEventId,
 					name: ownerGroup?.name ?? 'Unknown band',
-					// Both, while `bandId` still exists — see the column comment.
-					bandId: prototype.groupId,
 					directoryEntryId: ownerEntryId,
 					billingOrder: 0,
 					status: 'confirmed',
-					addedByBandId: prototype.groupId
+					addedByGroupId: prototype.groupId
 				});
 			}
 		}
