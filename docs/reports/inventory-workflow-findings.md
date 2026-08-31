@@ -343,6 +343,95 @@ dated today. The report is accurately reporting bad dates.
 
 ---
 
+## D. Member self-serve, scanning, and the paperwork
+
+Driven from a **genuine non-staff account** (registered through the UI, since the
+dev seed has only the admin login) — which matters, because `entityHref` routes
+staff and members to different pages and an admin cannot test the member arm.
+
+### What works, and works well
+
+**Scan resolution is correct in all four cases.** This is the part of the module
+with the most ways to go wrong and it got them all right:
+
+| who scans `/a/{tag}`   | lands on                                             |
+| ---------------------- | ---------------------------------------------------- |
+| staff                  | `/staff/inventory/assets/…` — the operational record |
+| member                 | `/member/equipment/assets/…` — the narrow unit page  |
+| signed out             | `/login?redirect=/a/{tag}`                           |
+| signed in, unknown tag | `404 — No gear carries that tag`                     |
+
+A signed-out scan of an _unknown_ tag also redirects to login rather than 404ing.
+That is the right call — it means a stranger cannot enumerate which tags exist —
+though a member who mistypes will sign in only to meet the 404 afterwards.
+
+**The member catalog behaves.** Consumables are correctly absent (not loanable),
+items at zero availability render their Request button `disabled`, the category
+filter works, and the live cost estimate was right to the cent — three days on a
+major-tier item quoted **$15.00** before submitting. The Equipment nav row
+appeared for a brand-new member with no configuration, which is the data-driven
+gating (`hasLoanableItems()`) doing exactly what the spec claims.
+
+**Request → My Loans → cancel** all work, including the owner arm of
+`requireStaffOrOwner`: the member cancelled their own request and the list moved
+from Active (1) to Past (1).
+
+**The damage report is sound, including the case the spec says once broke it.**
+Submitting with condition **"Not sure"** — the empty-string option that a
+`z.enum().optional()` used to reject, silently doing nothing — now works. The unit
+went to `maintenance`, the Report button correctly disappeared (already in the
+shop), and the ledger got what it should:
+
+```
+repair_out  −1  "Output jack crackles when the cable moves."  actor: the member
+```
+
+Condition stayed `excellent`, which is right: "not sure" records the report
+without letting a passer-by restate the condition.
+
+**Attached resources reach the member.** The unit page rendered its "How to use
+it" section from the linked help article, so the Phase 4 plumbing works end to
+end — subject to the standing problem that this page is only reachable by
+scanning a tag, and no tag has been printed.
+
+**The compliance loop closes.** Recording a Form 8283 against the walk-in
+donation moved that gift from the silent `noFormOnRecord` count into the Form
+8282 queue, which then listed it with a real deadline ("Due by Dec 8 (100d)").
+That is the exact mechanism #302 and #309 describe, verified rather than assumed.
+Marking a fronted purchase reimbursed also worked, and the banner cleared.
+
+### D1. The date bug reaches the member — **WRONG**
+
+**B1 is worse than it first looked.** It is not confined to staff screens. The
+member requested a loan for **Sep 5 → Sep 8** and their own My Loans page shows
+**"Pickup Fri, Sep 4 · Est. Return Mon, Sep 7"**. The Form 8283 signature date
+did the same thing: entered Aug 1, displayed "Signed Jul 31".
+
+Four separate date fields on four screens, all a day early. Whatever is agreed
+about the rest of this report, this one is a one-line formatting decision with a
+wide blast radius.
+
+### D2. Money is entered in cents, everywhere — _note_
+
+Every monetary input in the module is labelled in cents: "Unit cost (cents)",
+"Fair value each (cents)", "Total fair value (cents)". A staffer recording a $180
+speaker types **18000**. It is consistent and it is honest about the storage unit,
+but it is a multiplication done by a person at a keyboard, at the exact moment
+they are also reading a receipt — and a slipped zero is a tenfold error in the
+spend report that nothing will flag.
+
+### D3. The seed contradicts itself on acquisition totals — _seed bug_
+
+The acquisition page showed "Reese Larsson fronted **$48.00**" directly above
+"Lines total **$28.00**".
+
+The app is not at fault: the page reads `totalCents ?? linesTotalCents`, and since
+`receiveStock` never writes `total_cents`, real acquisitions always fall back to
+the lines and agree. It is `seed-dev.ts` that writes a `total_cents` disagreeing
+with the lines it also writes — on **4 of 10** seeded acquisitions. Worth fixing
+because it makes the reimbursement figure look wrong to anyone testing this, which
+is exactly what a stocktake rehearsal will be doing.
+
 ## What this adds up to
 
 **The ledger is right. The doors into it are thin.**
@@ -391,8 +480,20 @@ blocking findings is about _establishing_ one:
 10. **B6 — every cash payment 500s** and takes the loan return with it. Not an
     inventory bug: reservation cash payments share the call. **Fixed and verified
     end to end.**
-11. **B7 — a failed payment burns the member's credits**, because `settleReturn`
-    deducts before it calls Stripe and nothing compensates. Left for a decision.
+11. **B7 — a failed payment burned the member's credits**, because `settleReturn`
+    deducted before calling Stripe with nothing to compensate. **Fixed**: the
+    deduction is now reversed before the error propagates.
+12. **D1 — the date off-by-one reaches members**, on their own loan dates. One
+    formatting decision, four screens.
+
+### What was checked and found sound
+
+Worth saying plainly, because the list above is all faults: scan resolution in all
+four cases, the member catalog and its live cost estimate, request → cancel
+including the owner guard, the damage report (including the "Not sure" case that
+once failed silently), attached resources on the member unit page, the Form
+8283 → 8282 compliance loop, reimbursement, the restock list, and the spend report.
+The ledger invariant held through every mutation in this pass.
 
 ### Cheapest high-value fixes
 
@@ -505,10 +606,10 @@ is left for a decision rather than folded into the payload fix.
 
 ### Not yet exercised
 
-- **Member self-serve and the scan resolver** (`/a/[tag]`) from a genuine
-  non-staff account — the dev seed has only the admin login, and `entityHref` routes
-  staff differently, so this needs a registered member to be meaningful.
-- **Donations, Form 8283/8282 and reimbursement** beyond reading the register.
+- **Receipt and manual uploads** through `/api/inventory/media` — the slots and
+  permissions are wired, but no file was pushed through them in this pass.
+- **The notification and email side** of the loan lifecycle: the four
+  `equipment.*` events fire listeners that were not read in this pass.
 - Note for whoever picks these up: members have **no per-item page**
   (`/member/equipment/[id]` 302s to the list), so manuals and how-tos are reachable
   only by scanning a tag — and no tag has been printed yet. Phase 4's content is
