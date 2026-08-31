@@ -139,7 +139,8 @@ describe('route coverage', () => {
 	const unlinked = new Set([
 		'/staff/volunteer/clearances', // reached from Certifications; `backHref` points there
 		'/staff/help/create', // the create flow for Help Articles
-		'/staff/marketing/campaigns/new' // the create flow for Campaigns
+		'/staff/marketing/campaigns/new', // the create flow for Campaigns
+		'/staff/inventory/locations' // reached from Inventory, beside Categories; `backHref` points there
 	]);
 
 	it('leaves no staff page without a highlighted row', () => {
