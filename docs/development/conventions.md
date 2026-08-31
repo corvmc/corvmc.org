@@ -106,7 +106,7 @@ What this means in practice:
 - **Never edit an applied migration.** The three pre-existing rebuilds are grandfathered in
   the script; that list is closed. Fix a new migration with `pnpm db:fix-migrations`.
 - **Verify against local D1** for anything touching a table with children:
-  `pnpm db:reset && pnpm db:seed`, then check row counts in the child tables.
+  `pnpm db:reset`, then check row counts in the child tables.
 
 ## Layering rules
 

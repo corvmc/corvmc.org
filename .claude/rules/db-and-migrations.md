@@ -28,7 +28,7 @@ rewrites unsafe table rebuilds. Details and the reasoning are in
   invalidates your snapshot; always regenerate through `pnpm db:generate`, never by hand.
 - An intentional drop of a table with FK children needs the marker comment
   `-- d1-safe-rebuild: intentional drop \`table\``or`pnpm db:check-migrations` fails.
-- Verify anything touching a table with children: `pnpm db:reset && pnpm db:seed`, then check row
+- Verify anything touching a table with children: `pnpm db:reset`, then check row
   counts in the child tables.
 
 CI's **Schema drift** job runs `drizzle-kit check`, regenerates, fails on a dirty tree, and then

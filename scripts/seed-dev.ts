@@ -4,11 +4,14 @@
  * Usage:
  *   pnpm db:seed
  *
- * This is DESTRUCTIVE — it deletes all data and rebuilds from scratch.
- * Do not run against production.
+ * This is DESTRUCTIVE — it deletes all data and rebuilds from scratch. Running it
+ * twice is fine: `deleteAll()` clears every table first. Do not run against
+ * production.
  *
  * Prerequisites:
- *   - Local D1 SQLite file exists (run `pnpm db:push` first)
+ *   - The local D1 file exists and is migrated. `pnpm db:reset` does that and
+ *     then calls this, so it is the one command to reach for; `pnpm db:seed`
+ *     alone re-seeds a database that is already there.
  */
 import 'dotenv/config';
 import { randomUUID, randomBytes, scrypt } from 'crypto';
@@ -105,6 +108,8 @@ import {
 } from '../src/lib/server/db/schema/volunteer';
 // JSON recurrence format matching the app's rrule-helpers (see scripts/seed-rrule.ts).
 import { buildSeedRRule as seedRRule } from './seed-rrule';
+// @ts-expect-error -- plain .mjs helper, no types
+import { deleteOrder } from './d1-table-order.mjs';
 const { env, dispose } = await getPlatformProxy();
 const db = drizzle(env.DB);
 await db.run(sql`PRAGMA foreign_keys = OFF`);
@@ -520,77 +525,26 @@ const BACKLINE_ITEMS = [
 // Seed functions
 // ---------------------------------------------------------------------------
 
+/**
+ * Empty every table, children first.
+ *
+ * The order — and the list — comes from `scripts/d1-table-order.mjs`, which
+ * `scripts/d1-table-order.spec.ts` holds against the drizzle snapshot. This file
+ * used to keep its own copy, and it drifted: `media` and `media_attachment` were
+ * never added, so seeding an already-seeded database left those rows behind and
+ * died on `UNIQUE constraint failed: media.key`. A table added to the schema now
+ * reddens the unit suite instead of surviving a wipe.
+ *
+ * Tables the list names but this database lacks are skipped — see `deleteOrder`.
+ */
 async function deleteAll() {
 	console.log('Deleting all data...');
-	const tables = [
-		// Child before parent: volunteer_hour_log has an ON DELETE RESTRICT FK to
-		// volunteer_role, so the role rows can't go first. (volunteer_role_interest
-		// cascades, but ordering it explicitly keeps the list readable.)
-		'volunteer_shift_feedback',
-		'volunteer_signup',
-		'volunteer_shift',
-		'member_certification',
-		'volunteer_role_certification',
-		'volunteer_certification',
-		'volunteer_role_interest',
-		'volunteer_hour_log',
-		'volunteer_profile',
-		'volunteer_role',
-		// Before content_flag and user: they reference both.
-		'member_standing',
-		'user_block',
-		'suggestion_edit',
-		'suggestion_vote',
-		'suggestion',
-		'content_flag',
-		'inbox_note',
-		'inbox_message',
-		'inbox_participant',
-		'inbox_thread',
-		'inbox_channel_config',
-		'help_articles',
-		'help_categories',
-		'stock_movement',
-		'inventory_loan',
-		'acquisition_line',
-		'acquisition',
-		'inventory_asset',
-		'inventory_item',
-		'inventory_location',
-		'equipment_category',
-		'campaign_audience',
-		'campaign',
-		'audience_member',
-		'audience',
-		'subscriber',
-		'notification_preference',
-		'notification',
-		'ticket',
-		'band_site',
-		// Child before parent, and both before `group` and `user`.
-		'directory_tag',
-		'directory_entry',
-		'group_member',
-		'group_slug_history',
-		'group',
-		'payment_cache',
-		'credit_transaction',
-		'recurring_series',
-		'event',
-		'closure',
-		'reservation',
-		'model_has_roles',
-		'model_has_permissions',
-		'role_has_permissions',
-		'roles',
-		'permissions',
-		'session',
-		'account',
-		'verification',
-		'user'
-	];
-	for (const t of tables) {
-		await db.run(sql.raw(`DELETE FROM "${t}"`));
+	const rows = await db.all<{ name: string }>(
+		sql`SELECT name FROM sqlite_master WHERE type = 'table'`
+	);
+	const present = new Set(rows.map((row) => row.name));
+	for (const table of deleteOrder(present)) {
+		await db.run(sql.raw(`DELETE FROM "${table}"`));
 	}
 }
 
