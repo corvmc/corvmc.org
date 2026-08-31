@@ -10,6 +10,7 @@
 	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { CreateBandAction } from '$lib/components/actions';
 	import { getStaffBands } from '$lib/remote/bands.remote';
 	import { formatDateShortYear } from '$lib/utils/format';
@@ -46,7 +47,7 @@
 	<!-- External acts live beside bands rather than under their own nav entry:
 	     they are the same staff job (who is playing here) and one of them can
 	     turn into the other. -->
-	<a class="btn btn-ghost btn-sm" href={resolve('/staff/bands/acts')}>External acts</a>
+	<Button variant="ghost" size="sm" href={resolve('/staff/bands/acts')}>External acts</Button>
 	<CreateBandAction />
 </PageHeader>
 <PageContent>
