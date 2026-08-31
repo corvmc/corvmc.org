@@ -4672,6 +4672,56 @@ async function seedSuggestions(users: any[], adminUser: any) {
  * Without this, every directory page goes blank the moment phase 3a's readers
  * land, and it reads as a query bug rather than a fixture gap.
  */
+/**
+ * A handful of external acts — parties CMC booked that are not members here.
+ *
+ * Both owner columns null and `visibility: 'hidden'`, which is the whole of what
+ * makes one. They exist locally so the staff acts page, and the "links out, not
+ * in" render rule on a public bill, have something real behind them.
+ */
+async function seedExternalActs() {
+	const acts = [
+		{
+			name: 'Sawtooth Rivals',
+			hometown: 'Boise, ID',
+			bio: 'Toured through twice in 2025. Easy load-in, brought their own monitors.',
+			links: [{ label: 'Bandcamp', url: 'https://sawtoothrivals.bandcamp.com' }]
+		},
+		{
+			name: 'The Quiet Part',
+			hometown: 'Olympia, WA',
+			bio: 'Three-piece, quiet set, asked for a rug.',
+			links: [{ label: 'Instagram', url: 'https://instagram.com/thequietpart' }]
+		},
+		// No links at all: on a public bill this one is the plain-text case,
+		// which is the branch that has no URL to point at rather than a broken one.
+		{
+			name: 'Fenwick',
+			hometown: 'Eugene, OR',
+			bio: 'Solo act. Books through a manager.',
+			links: null
+		}
+	];
+
+	const rows = [];
+	for (const a of acts) {
+		const [row] = await db
+			.insert(directoryEntry)
+			.values({
+				userId: null,
+				groupId: null,
+				name: a.name,
+				hometown: a.hometown,
+				bio: a.bio,
+				links: a.links,
+				visibility: 'hidden'
+			})
+			.returning();
+		rows.push(row);
+	}
+	return rows;
+}
+
 async function seedDirectoryEntries() {
 	console.log('Seeding directory entries...');
 
@@ -4796,6 +4846,7 @@ async function main() {
 	// last of them is `seedGroups` directly above — so it can still read them all
 	// back, which is the property it was placed last for.
 	const directory = await seedDirectoryEntries();
+	const externalActs = await seedExternalActs();
 	const groupSessions = await seedGroupSessions(groups);
 	const bandEvents = await seedBandEvents(bands, allUsers);
 	await seedCommunityEvents(users, adminUser);
@@ -4842,6 +4893,7 @@ async function main() {
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
+	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
 	console.log(
 		`  ${groupSessions.length} group sessions (${groupSessions.filter((e) => e.reservationId).length} holding the room)`
 	);

@@ -43,6 +43,10 @@
 </script>
 
 <PageHeader title="Bands">
+	<!-- External acts live beside bands rather than under their own nav entry:
+	     they are the same staff job (who is playing here) and one of them can
+	     turn into the other. -->
+	<a class="btn btn-ghost btn-sm" href={resolve('/staff/bands/acts')}>External acts</a>
 	<CreateBandAction />
 </PageHeader>
 <PageContent>
