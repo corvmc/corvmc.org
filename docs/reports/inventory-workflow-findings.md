@@ -403,10 +403,67 @@ Roughly in order of value per line changed:
   it is a form change over a service that already does all three.
 - Let the stocktake modal accept the counted total.
 
+### B6. Every cash payment in the app is broken — **WRONG** (found on the paid leg)
+
+Re-run with a Stripe **test** key and a member who has a real test-mode customer,
+the paid return does not merely fail to charge — **it 500s and the loan is never
+returned at all**. Status stayed `checked_out`, `returned_at` null, the ledger
+untouched. A member hands the gear back and the system keeps it on loan.
+
+```
+StripeInvalidRequestError: You may only specify one of these parameters: display_name, type.
+  param: payment_method_details[custom][display_name]
+[500] POST /staff/inventory/loans/5ac43ab7-…
+```
+
+`recordCashPayment` (`src/lib/server/finance/payment-service.ts:363`) sends
+
+```ts
+payment_method_details: {
+  custom: { display_name: displayName, type: 'custom' },  // ← both, and Stripe allows one
+  type: 'custom'
+}
+```
+
+Probing the live test API found **two** incompatibilities, not one. This shape is
+accepted (verified, HTTP 200, `pr_test_…`):
+
+```
+payment_method_details[type]=custom
+payment_method_details[custom][display_name]=Cash        # display_name only
+processor_details[type]=custom
+processor_details[custom][payment_reference]=<ref>       # required, currently absent entirely
+```
+
+So the call is wrong in the `custom` object _and_ omits a now-required
+`processor_details` block.
+
+**Why it broke without anyone touching it.** `src/lib/server/stripe.ts:9` is
+`new Stripe(env.STRIPE_SECRET_KEY)` with **no `apiVersion` pinned**, so the SDK
+follows whatever the account's default has rolled forward to — currently
+`2026-07-29.dahlia`. Payment code that pins nothing changes behaviour on Stripe's
+schedule rather than the repo's.
+
+**This is not an inventory bug.** `recordCashPayment` has three callers:
+
+- `src/lib/server/inventory/loan-service.ts:111` — the loan return above
+- `src/lib/remote/reservations.remote.ts:1220`
+- `src/lib/remote/reservations.remote.ts:1924`
+
+so **reservation cash payments are broken the same way**. Nothing caught it
+because it needs a real Stripe call: unit tests mock the client, and local QA has
+always been steered away from Stripe flows by the live key in `.env`.
+
+Two decisions this needs before it can be fixed, neither of which is mine:
+
+1. What belongs in `processor_details[custom][payment_reference]` — the loan or
+   reservation id is the obvious candidate, but it is a real choice about what the
+   Stripe record should be reconcilable against.
+2. Whether to pin `apiVersion` on the client, which is the actual root cause and
+   would stop the next version roll doing this again.
+
 ### Not yet exercised
 
-- The **paid** loan-return leg (member with a Stripe customer). Needs a test key in
-  `.dev.vars` / `.env`; this worktree still carries `rk_live`.
 - **Member self-serve and the scan resolver** (`/a/[tag]`) from a genuine
   non-staff account — the dev seed has only the admin login, and `entityHref` routes
   staff differently, so this needs a registered member to be meaningful.
