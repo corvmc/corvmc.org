@@ -96,8 +96,24 @@ const ownedEvent = {
 };
 
 /** Queue: getById(event), then the existing event_band rows. */
+/**
+ * The selects `setEventLineup` makes, in order: the event, the existing credits,
+ * then the group→entry lookup a credit needs to name a `directory_entry`.
+ *
+ * The third one is queued here rather than per test because it is unconditional
+ * for any linked credit, and leaving it out silently shifts every later select
+ * by one — which is how the notify query started reading the entry rows and the
+ * invite email stopped being sent, with the write itself still correct.
+ */
 function queueLineupState(existing: unknown[] = []) {
-	selectQueue = [[ownedEvent], existing];
+	selectQueue = [
+		[ownedEvent],
+		existing,
+		[
+			{ groupId: OWNER, id: 'entry-owner' },
+			{ groupId: OTHER, id: 'entry-other' }
+		]
+	];
 }
 
 /** The rows setEventLineup wrote, flattened across chunks. */

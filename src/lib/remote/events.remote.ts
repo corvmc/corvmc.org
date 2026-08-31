@@ -301,13 +301,21 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			externalTicketUrl: evt.externalTicketUrl,
 			bandName: bandInfo?.name ?? null,
 			bandSlug: bandInfo?.slug ?? null,
-			// The whole bill, every status. Only `confirmed` entries carry a slug
-			// and therefore link out — an unconfirmed credit must not push traffic
-			// to a band that hasn't agreed to be listed.
+			// The whole bill, every status, and only `confirmed` credits point
+			// anywhere at all — an unconfirmed credit must not push traffic to a
+			// party that has not agreed to be listed.
+			//
+			// Where a confirmed one points depends on whether the party has a CMC
+			// page. A member or a CMC band does, and gets `slug`. An **external
+			// act** does not: CMC hosts no page for a party with no relationship to
+			// CMC, so its name links *out* to whatever presence the act itself gave
+			// us, or renders as plain text when it gave none. Public attribution
+			// links out, never in.
 			lineup: lineup.map((l) => ({
 				id: l.id,
 				name: l.name,
-				slug: l.status === 'confirmed' ? l.bandSlug : null
+				slug: l.status === 'confirmed' ? l.bandSlug : null,
+				externalUrl: l.status === 'confirmed' && !l.bandSlug ? l.externalUrl : null
 			}))
 		},
 		remaining,

@@ -14,7 +14,7 @@ import 'dotenv/config';
 import { randomUUID, randomBytes, scrypt } from 'crypto';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
-import { sql, eq, inArray } from 'drizzle-orm';
+import { sql, eq, inArray, isNotNull } from 'drizzle-orm';
 
 // Mirror the app's password hashing (src/lib/server/auth.ts `scryptHash`). We can't
 // import that module here — it pulls SvelteKit-only `$env`/`$app` aliases that don't
@@ -1703,6 +1703,10 @@ async function seedLineup(
 	owner: { id: string; name: string } | null,
 	support: { name: string; bandId?: string; status?: string }[]
 ) {
+	// `directoryEntryId` is filled in by `linkLineupCreditsToEntries()` after
+	// `seedDirectoryEntries()`, not here: entries are derived at the very end of
+	// the seed, so none exist yet at this point. Resolving per credit here
+	// silently wrote nulls.
 	const rows: any[] = [];
 	if (owner) {
 		rows.push({
@@ -4651,6 +4655,39 @@ async function seedSuggestions(users: any[], adminUser: any) {
  * Without this, every directory page goes blank the moment phase 3a's readers
  * land, and it reads as a query bug rather than a fixture gap.
  */
+/**
+ * Point every lineup credit at its party's `directory_entry`, mirroring the
+ * phase-10 migration's own UPDATE statement for statement.
+ *
+ * It runs after `seedDirectoryEntries()` for the reason that function gives
+ * about itself: entries are derived at the end from what was already seeded, so
+ * nothing written earlier can reference one. `pnpm db:reset` replays migrations
+ * against an empty database and then seeds, so the migration's backfill has no
+ * rows to touch and this is the only thing that fills the column locally.
+ */
+async function linkLineupCreditsToEntries(): Promise<number> {
+	const credits = await db
+		.select({ id: eventBand.id, bandId: eventBand.bandId })
+		.from(eventBand)
+		.where(isNotNull(eventBand.bandId));
+	if (credits.length === 0) return 0;
+
+	const entries = await db
+		.select({ groupId: directoryEntry.groupId, id: directoryEntry.id })
+		.from(directoryEntry)
+		.where(isNotNull(directoryEntry.groupId));
+	const entryFor = new Map(entries.map((e) => [e.groupId as string, e.id]));
+
+	let linked = 0;
+	for (const c of credits) {
+		const entryId = entryFor.get(c.bandId as string);
+		if (!entryId) continue;
+		await db.update(eventBand).set({ directoryEntryId: entryId }).where(eq(eventBand.id, c.id));
+		linked++;
+	}
+	return linked;
+}
+
 async function seedDirectoryEntries() {
 	console.log('Seeding directory entries...');
 
@@ -4805,6 +4842,7 @@ async function main() {
 	const suggestions = await seedSuggestions(allUsers, adminUser);
 	// Last: it reads back every user and group the seed created.
 	const directory = await seedDirectoryEntries();
+	const linkedCredits = await linkLineupCreditsToEntries();
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -4818,6 +4856,7 @@ async function main() {
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
+	console.log(`  ${linkedCredits} lineup credits linked to a directory entry`);
 	console.log(
 		`  ${groupSessions.length} group sessions (${groupSessions.filter((e) => e.reservationId).length} holding the room)`
 	);

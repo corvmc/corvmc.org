@@ -77,6 +77,12 @@ export const relations = defineRelations(schema, (t) => ({
 	},
 	eventBand: {
 		event: t.one.event({ from: t.eventBand.eventId, to: t.event.id }),
+		/** The party credited — a member, a CMC band, or an external act. */
+		entry: t.one.directoryEntry({
+			from: t.eventBand.directoryEntryId,
+			to: t.directoryEntry.id,
+			alias: 'eventBand_entry'
+		}),
 		band: t.one.group({ from: t.eventBand.bandId, to: t.group.id, alias: 'eventBand_band' }),
 		addedByBand: t.one.group({
 			from: t.eventBand.addedByBandId,

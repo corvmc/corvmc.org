@@ -10,6 +10,7 @@ import {
 } from '$lib/server/db/schema/event';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
+import { directoryEntry } from '$lib/server/db/schema/directory';
 import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
@@ -651,9 +652,12 @@ export async function unpublishWithNotice(
 	// Everyone on the bill loses the date, not just the band that booked it, so
 	// notify every confirmed act. `bandId`/`bandName` in the payload stay the
 	// owner's, which is what the listeners and email template already expect.
+	// Through the entry, so an external act on the bill contributes nobody —
+	// it has no CMC account, and there is no admin to email.
 	const onBill = await db
-		.select({ bandId: eventBand.bandId })
+		.select({ bandId: directoryEntry.groupId })
 		.from(eventBand)
+		.innerJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
 		.where(and(eq(eventBand.eventId, eventId), eq(eventBand.status, 'confirmed')));
 	const notifyBandIds = [
 		...new Set([row.groupId, ...onBill.map((r) => r.bandId).filter((id): id is string => !!id)])
@@ -1108,8 +1112,18 @@ export async function listEventsNear(
 export interface LineupRow {
 	id: string;
 	name: string;
+	/** The CMC band behind this credit, if the entry has one. */
 	bandId: string | null;
 	bandSlug: string | null;
+	/**
+	 * Where to send someone for an act with no CMC page — the first link the act
+	 * gave. Null when they gave none, and then the name renders as plain text.
+	 *
+	 * This is the third case in the spec's render table. `bandSlug` covers
+	 * "confirmed, entry has an owner"; this covers "confirmed, entry has no
+	 * owner"; neither is set for the rest.
+	 */
+	externalUrl: string | null;
 	billingOrder: number;
 	status: EventBandStatus;
 	note: string | null;
@@ -1117,28 +1131,72 @@ export interface LineupRow {
 
 const LINEUP_MAX = 12;
 
+/**
+ * The `directory_entry` id for each of these groups, in one query.
+ *
+ * A lineup editor picks a *CMC band*, so the input still names a group; the
+ * credit stores the party's entry. Every group has an entry — phase 3a
+ * backfilled one per band and `create()` has written one for every group since —
+ * so a missing row here means the entry was deleted out from under a live group,
+ * which is worth failing loudly on rather than silently writing an unlinked
+ * credit for a band the editor explicitly chose.
+ */
+async function entryIdsForGroups(groupIds: string[]): Promise<Map<string, string>> {
+	const unique = [...new Set(groupIds)];
+	if (unique.length === 0) return new Map();
+
+	const rows = await db
+		.select({ groupId: directoryEntry.groupId, id: directoryEntry.id })
+		.from(directoryEntry)
+		.where(inArray(directoryEntry.groupId, unique));
+
+	return new Map(rows.filter((r) => r.groupId).map((r) => [r.groupId as string, r.id]));
+}
+
+/** One group's entry id, for the single-credit write paths. */
+async function entryIdForGroup(groupId: string): Promise<string | null> {
+	return (await entryIdsForGroups([groupId])).get(groupId) ?? null;
+}
+
 function lineupSelect() {
 	return db
 		.select({
 			id: eventBand.id,
 			eventId: eventBand.eventId,
 			name: eventBand.name,
-			bandId: eventBand.bandId,
+			// "Which CMC band is this?" is the entry's group, one join away. Null
+			// for an external act, which is the same fact as "there is no CMC page
+			// to link to".
+			bandId: directoryEntry.groupId,
 			bandSlug: group.slug,
+			// Where an unowned act's name should point instead. Public attribution
+			// links **out**, never in: CMC hosts no page for a party that has no
+			// relationship with CMC, and the act already has a presence it chose.
+			links: directoryEntry.links,
 			billingOrder: eventBand.billingOrder,
 			status: eventBand.status,
 			note: eventBand.note
 		})
 		.from(eventBand)
-		.leftJoin(group, eq(group.id, eventBand.bandId));
+		.leftJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
+		.leftJoin(group, eq(group.id, directoryEntry.groupId));
 }
 
 /** The whole bill, every status, ordered. For rendering an event. */
+/**
+ * The first link an act gave, which is where its name points when it has no CMC
+ * page. One helper so the single and batched reads cannot disagree about it.
+ */
+function toLineupRow(row: Awaited<ReturnType<typeof lineupSelect>>[number]): LineupRow {
+	const { eventId: _eventId, links, ...rest } = row;
+	return { ...rest, externalUrl: links?.[0]?.url ?? null };
+}
+
 export async function getEventLineup(eventId: string): Promise<LineupRow[]> {
 	const rows = await lineupSelect()
 		.where(eq(eventBand.eventId, eventId))
 		.orderBy(asc(eventBand.billingOrder));
-	return rows.map(({ eventId: _eventId, ...r }) => r);
+	return rows.map(toLineupRow);
 }
 
 /** Batched variant — list pages would otherwise fire one query per row. */
@@ -1150,10 +1208,11 @@ export async function getEventLineups(eventIds: string[]): Promise<Map<string, L
 		.where(inArray(eventBand.eventId, eventIds))
 		.orderBy(asc(eventBand.billingOrder));
 
-	for (const { eventId, ...r } of rows) {
-		const list = out.get(eventId);
-		if (list) list.push(r);
-		else out.set(eventId, [r]);
+	for (const row of rows) {
+		const shaped = toLineupRow(row);
+		const list = out.get(row.eventId);
+		if (list) list.push(shaped);
+		else out.set(row.eventId, [shaped]);
 	}
 	return out;
 }
@@ -1224,6 +1283,12 @@ export async function setEventLineup(
 		});
 	}
 
+	// Resolved before the map, in one query, because every linked credit needs
+	// its party's entry id and the map is synchronous.
+	const entryIds = await entryIdsForGroups(
+		deduped.map((e) => e.bandId).filter((id): id is string => !!id)
+	);
+
 	const invited: { bandId: string; name: string }[] = [];
 	const rows = deduped.map((e, i) => {
 		const prior = e.bandId ? byBand.get(e.bandId) : byName.get(e.name.toLowerCase());
@@ -1247,7 +1312,11 @@ export async function setEventLineup(
 		return {
 			eventId,
 			name: e.name,
+			// Both, while `bandId` still exists. It is written and read by nothing,
+			// so the phase-10 backfill stays recoverable from a column that is still
+			// being maintained rather than from one already going stale.
 			bandId: e.bandId ?? null,
+			directoryEntryId: e.bandId ? (entryIds.get(e.bandId) ?? null) : null,
 			billingOrder: i,
 			status,
 			note: e.note ?? null,
@@ -1343,7 +1412,7 @@ async function setLineupSlotStatus(
 	await db
 		.update(eventBand)
 		.set({ status })
-		.where(and(eq(eventBand.eventId, eventId), eq(eventBand.bandId, bandId)));
+		.where(and(eq(eventBand.eventId, eventId), creditBelongsToGroup(bandId)));
 }
 
 /** The invited band agrees. Only now does the show reach their profile. */
@@ -1396,12 +1465,31 @@ export async function listBandLineupInvites(bandId: string): Promise<LineupInvit
 		.leftJoin(owner, eq(owner.id, event.groupId))
 		.where(
 			and(
-				eq(eventBand.bandId, bandId),
+				creditBelongsToGroup(bandId),
 				eq(eventBand.status, 'pending'),
 				ne(event.status, 'cancelled')
 			)
 		)
 		.orderBy(asc(event.startsAt));
+}
+
+/**
+ * "This credit belongs to this CMC band."
+ *
+ * After the phase-10 re-key a credit names a `directory_entry`, so the band it
+ * belongs to is the entry's group — one level of indirection, expressed once
+ * here rather than at each of the four call sites. An external act's entry has
+ * no group, so it matches nothing, which is correct: an act with no CMC
+ * relationship has no band profile to appear on and no admins to notify.
+ */
+function creditBelongsToGroup(groupId: string) {
+	return inArray(
+		eventBand.directoryEntryId,
+		db
+			.select({ id: directoryEntry.id })
+			.from(directoryEntry)
+			.where(eq(directoryEntry.groupId, groupId))
+	);
 }
 
 /**
@@ -1414,7 +1502,7 @@ function confirmedForBand(bandId: string) {
 		db
 			.select({ id: eventBand.eventId })
 			.from(eventBand)
-			.where(and(eq(eventBand.bandId, bandId), eq(eventBand.status, 'confirmed')))
+			.where(and(creditBelongsToGroup(bandId), eq(eventBand.status, 'confirmed')))
 	);
 }
 
@@ -1498,6 +1586,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 		eventId: row.id,
 		name: owner?.name ?? 'Unknown band',
 		bandId,
+		directoryEntryId: await entryIdForGroup(bandId),
 		billingOrder: 0,
 		status: 'confirmed',
 		addedByBandId: bandId
@@ -1870,19 +1959,24 @@ export async function importBandEvents(
 
 	await linkManagingGroup(inserted.map((row) => ({ eventId: row.id, groupId: bandId })));
 
+	const ownerEntryId = await entryIdForGroup(bandId);
 	const credits = inserted.flatMap((row, i) => [
 		{
 			eventId: row.id,
 			name: owner.name,
 			bandId,
+			directoryEntryId: ownerEntryId,
 			billingOrder: 0,
 			status: 'confirmed' as const,
 			addedByBandId: bandId
 		},
+		// Support acts are names only — an imported gig has no way to say which
+		// CMC band a support slot was, which is exactly what `unlinked` means.
 		...(rows[i].support ?? []).slice(0, 11).map((name, j) => ({
 			eventId: row.id,
 			name,
 			bandId: null,
+			directoryEntryId: null,
 			billingOrder: j + 1,
 			status: 'unlinked' as const,
 			addedByBandId: bandId
@@ -1980,10 +2074,14 @@ function confirmedForMember(userId: string) {
 		db
 			.select({ id: eventBand.eventId })
 			.from(eventBand)
+			// The credit names an entry; the entry names the band; the band has
+			// members. An external act's entry has no group, so it joins away —
+			// which is right, since nobody is a member of an external act.
+			.innerJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
 			.innerJoin(
 				groupMember,
 				and(
-					eq(groupMember.groupId, eventBand.bandId),
+					eq(groupMember.groupId, directoryEntry.groupId),
 					eq(groupMember.userId, userId),
 					eq(groupMember.status, 'active')
 				)
@@ -2003,16 +2101,17 @@ async function withMemberBylines(rows: EventRow[], userId: string): Promise<Memb
 		.select({
 			eventId: eventBand.eventId,
 			billingOrder: eventBand.billingOrder,
-			bandId: eventBand.bandId,
+			bandId: directoryEntry.groupId,
 			bandName: group.name,
 			bandSlug: group.slug
 		})
 		.from(eventBand)
-		.innerJoin(group, eq(group.id, eventBand.bandId))
+		.innerJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
+		.innerJoin(group, eq(group.id, directoryEntry.groupId))
 		.innerJoin(
 			groupMember,
 			and(
-				eq(groupMember.groupId, eventBand.bandId),
+				eq(groupMember.groupId, directoryEntry.groupId),
 				eq(groupMember.userId, userId),
 				eq(groupMember.status, 'active')
 			)

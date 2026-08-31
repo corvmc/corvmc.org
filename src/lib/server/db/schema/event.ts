@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
 import { group } from './group';
+import { directoryEntry } from './directory';
 import { reservation } from './reservation';
 import { recurringSeries, RECURRING_FREQUENCIES } from './recurring';
 
@@ -124,12 +125,23 @@ export const event = sqliteTable(
 /**
  * Where a lineup row sits between "just a credit" and "a link to a real band".
  *
- * Invariant: `unlinked` ⇔ `bandId IS NULL`. Everything else has a bandId.
+ * Invariant: `unlinked` ⇔ `directoryEntryId IS NULL`. Everything else has one.
+ *
+ * `unlinked` keeps its exact meaning through the phase-10 re-key: a name with no
+ * record behind it, which is the common case and the whole of backfilled
+ * history. Staff stubbing an act when they book it is what creates the record
+ * and points the row at it.
  *
  * - unlinked  — a name with no account behind it. The common case: most acts on
  *               a bill, especially in backfilled history, aren't CMC members.
  * - pending   — points at a platform band that hasn't agreed yet.
- * - confirmed — the band agreed. Only these reach that band's own profile.
+ * - confirmed — the act agreed. Only these reach that party's own profile.
+ *
+ *               A row pointing at an **external act** — an entry with no user
+ *               and no group — is `confirmed` by construction. `pending` models
+ *               a party *agreeing* to be listed, which presumes somebody with an
+ *               account to agree; an unowned entry has nobody, staff entered it,
+ *               and there is no consent step to wait on.
  * - declined  — the band said no. Keeps its bandId so the partial unique index
  *               below blocks the owner from re-adding and re-pinging them; it
  *               renders exactly like an unlinked credit.
@@ -159,8 +171,38 @@ export const eventBand = sqliteTable(
 			.references(() => event.id, { onDelete: 'cascade' }),
 		/** Display credit. Always set, even when bandId is. */
 		name: text('name').notNull(),
-		/** Set only when this credit points at a real band. */
+		/**
+		 * Set only when this credit points at a real band.
+		 *
+		 * **Superseded by `directoryEntryId` and dropped in the next phase-10 PR.**
+		 * It is still written and still backfilled so that this migration is
+		 * recoverable from a column that still exists — the same shape phase 3a
+		 * used, and the reason only 3c was irreversible. Nothing reads it any more.
+		 */
 		bandId: text('band_id').references(() => group.id, { onDelete: 'cascade' }),
+		/**
+		 * The party this credit names — a member, a CMC band, or an external act.
+		 *
+		 * `event_band` is a credit on one bill: a display name, a billing order, a
+		 * consent status, and nothing about the act beyond how it appeared that
+		 * night. A `directory_entry` is the persistent record of a party, reusable
+		 * across every event they ever play. Pointing at the entry rather than at a
+		 * group is what lets a lineup mix bands, solo members and external acts
+		 * uniformly — no fake band row, and no slug for an act that has no CMC page.
+		 *
+		 * "Which CMC band is this?" is now `directory_entry.groupId`, one join away.
+		 * That is the point rather than a cost: an external act has no group, and
+		 * the join returning null is the same fact as "there is no CMC page to link
+		 * to".
+		 *
+		 * `cascade` matches what `bandId` did rather than quietly changing it. It is
+		 * arguably wrong — a credit is a fact about a night and could outlive the
+		 * record of the party — but that is a behaviour change, and this is a
+		 * re-key.
+		 */
+		directoryEntryId: text('directory_entry_id').references(() => directoryEntry.id, {
+			onDelete: 'cascade'
+		}),
 		/** 0 = headliner, ascending down the bill. */
 		billingOrder: integer('billing_order').notNull().default(0),
 		status: text('status', { enum: eventBandStatuses }).notNull().default('unlinked'),
@@ -172,12 +214,17 @@ export const eventBand = sqliteTable(
 			.default(sql`(unixepoch())`)
 	},
 	(t) => [
-		// Partial: many unlinked credits per event are fine, but a given band can
+		// Partial: many unlinked credits per event are fine, but a given party can
 		// only appear once — which is also what makes `declined` stick.
+		//
+		// Both keep their old names. SQLite carries an index through a table
+		// rebuild only if it is recreated, and these are recreated by the
+		// migration; the names stay so the diff is about the column rather than
+		// about renaming things that already worked.
 		uniqueIndex('uq_event_band_event_band')
-			.on(t.eventId, t.bandId)
-			.where(sql`band_id IS NOT NULL`),
-		index('idx_event_band_band_status').on(t.bandId, t.status),
+			.on(t.eventId, t.directoryEntryId)
+			.where(sql`directory_entry_id IS NOT NULL`),
+		index('idx_event_band_band_status').on(t.directoryEntryId, t.status),
 		index('idx_event_band_event_order').on(t.eventId, t.billingOrder)
 	]
 );
