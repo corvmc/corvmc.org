@@ -4,6 +4,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/act/[token]",
+		"panel": "public"
+	},
+	{
 		"route": "/band-site/[slug]",
 		"panel": "band"
 	},
