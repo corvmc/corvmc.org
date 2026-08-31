@@ -73,6 +73,9 @@ export const tableOrder = [
 	'group_invite',
 	// Child of group and user, and nothing is a child of it.
 	'announcement',
+	// The private half of a party record: child of directory_entry and
+	// subscriber, so it wipes before either.
+	'contact',
 	'credit_transaction',
 	'help_articles',
 	'inbox_message',

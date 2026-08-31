@@ -10,6 +10,7 @@ import { ensureUniqueSlug, generateSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { DomainError } from '$lib/server/domain-error';
+import { archiveContactForClaim } from './contact-service';
 import { SEARCH_LIMIT } from '$lib/config';
 import type { ProfileLink } from '$lib/server/db/schema/authentication';
 
@@ -245,9 +246,10 @@ export async function listExternalActs(search?: string) {
  * theirs to publish, but publishing it is their decision to make on their own
  * profile rather than a side effect of claiming.
  *
- * Archiving the act's `contact` row belongs here too and arrives with that table
- * — the booking contact is frequently a manager rather than one of the members
- * who just joined, so it is retired rather than inherited.
+ * The act's `contact` row is **archived, not inherited**. The booking contact is
+ * frequently a manager rather than one of the members who just joined, so
+ * carrying it forward would leave a member band holding a stale private phone
+ * number that nobody owns. Contact goes through the account from here.
  */
 export async function claimExternalAct(entryId: string, ownerId: string) {
 	const [entry] = await db
@@ -290,6 +292,11 @@ export async function claimExternalAct(entryId: string, ownerId: string) {
 		// The premium microsite record every band has. A claimed act is a band.
 		bandSiteInsert(groupId)
 	]);
+
+	// After the batch rather than in it. Archiving is bookkeeping about a record
+	// that may not exist at all, and a missing contact must not fail a claim that
+	// has already succeeded.
+	await archiveContactForClaim(entryId);
 
 	return { groupId, slug };
 }
