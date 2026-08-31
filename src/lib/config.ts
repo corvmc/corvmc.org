@@ -701,6 +701,61 @@ export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Instructors
+// ---------------------------------------------------------------------------
+
+/**
+ * The five states of an instructor record — see `docs/specs/instructors-spec.md`.
+ *
+ * `requested` and `rejected` are the application; the other three are the grant.
+ * Keeping them in one enum on one row is what makes the application *be* the
+ * draft listing rather than a second table staff have to reconcile against it.
+ *
+ * **Every consumer must match positively** — `eq(status, 'active')`, never
+ * `ne(status, 'retired')`. That is the rule `groupMemberStatuses` already
+ * carries, and here it is what makes an applicant unable to book *by
+ * construction*: `requireInstructor` refuses `requested` and `rejected` without
+ * anyone having written a check for them.
+ *
+ * `rejected` is not terminal, unlike its namesake on `eventStatuses`. Staff hand
+ * an application back with `reviewNotes` and the member edits and resubmits,
+ * which returns the row to `requested`. It is a return state, not a verdict —
+ * appeals contest behaviour calls, and this is a judgement about a proposal.
+ */
+export const instructorStatuses = ['requested', 'rejected', 'active', 'paused', 'retired'] as const;
+
+export type InstructorStatus = (typeof instructorStatuses)[number];
+
+export const instructorStatusLabels: Record<InstructorStatus, string> = {
+	requested: 'Applied',
+	// Not "Rejected". The member is being asked to change something and send it
+	// back, and the label is the first thing that tells them which of the two
+	// this is.
+	rejected: 'Needs changes',
+	active: 'Active',
+	paused: 'Paused',
+	retired: 'Retired'
+};
+
+/** Headline on an instructor listing — one line, shown on the card. */
+export const INSTRUCTOR_HEADLINE_MAX = 120;
+
+/** What and how they teach. Markdown, sanitised on write. */
+export const INSTRUCTOR_BLURB_MAX = 2000;
+
+/**
+ * Free text, never cents. CMC does not process lesson money and must not imply
+ * it does by storing a number it could total.
+ */
+export const INSTRUCTOR_RATES_NOTE_MAX = 200;
+
+/** Member-written, staff-only. Never rendered publicly, never in a DTO. */
+export const INSTRUCTOR_APPLICATION_NOTE_MAX = 2000;
+
+/** Staff-written, member-visible: why an application came back. */
+export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
+
+// ---------------------------------------------------------------------------
 // Entity vocabulary
 // ---------------------------------------------------------------------------
 

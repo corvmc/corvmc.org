@@ -13,6 +13,8 @@ export const tableOrder = [
 	'directory_entry',
 	// References group.
 	'band_site',
+	// References user twice (subject + granter). No children.
+	'instructor',
 	'reservation',
 	'equipment_category',
 	'inventory_location',
