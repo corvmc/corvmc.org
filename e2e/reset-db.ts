@@ -215,12 +215,19 @@ export function clearE2eStateDir(): boolean {
  *       database is locked: SQLITE_BUSY (extended: SQLITE_BUSY_RECOVERY)
  *
  * Observed on run 33113081800: 61 of 61 tests failed this way, on a shard that
- * did not even build (so this is not the build's second workerd — it is purely
- * recovery racing the readers).
+ * did not even build (so that instance was purely recovery racing the readers).
  *
- * So `e2e/prepare.ts` calls this last, after every seed has written and its
- * miniflare has gone. TRUNCATE rather than PASSIVE: it resets the WAL to zero
- * length, so there is nothing left for workerd to recover.
+ * **Called twice, and both are necessary.** `e2e/prepare.ts` calls it last,
+ * after every seed has written and its miniflare has gone — that clears the WAL
+ * the seeds leave. `e2e/checkpoint.ts` calls it again between `pnpm build` and
+ * `pnpm preview`, because the build leaves one too: `adapter-cloudflare`'s
+ * `emulate()` hook calls `getPlatformProxy`, which opens this same file and
+ * never disposes it. Only the first call existed for a while, and the race kept
+ * happening — five merge-queue ejections' worth — because the build recreated
+ * what prepare had just cleared.
+ *
+ * TRUNCATE rather than PASSIVE: it resets the WAL to zero length, so there is
+ * nothing left for workerd to recover.
  *
  * @returns false when there is no database yet.
  */
