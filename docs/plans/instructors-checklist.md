@@ -45,8 +45,12 @@ Zero `lesson` rows → delete the value from `bookerTypes` **and** `prototypeTyp
 inherits `IconSchool`. Non-zero → keep it archival, and `'instructor'` needs `IconChalkboard`
 because `registry.spec.ts` forbids two subtypes sharing a glyph.
 
-**2. `reservation.teachingRateCents` is a placeholder ($25/hr).** With no feature flag holding the
-door, staff must set the real number before Step 5 deploys.
+**2. `reservation.teachingRateCents` is `500` — $5/hr, a third of the $15 member rate.** A
+deliberate subsidy to incentivise teaching, not a premium. Two consequences carried into Step 5:
+credits still do not apply (the subsidy is in the rate; free hours on top would subsidise the same
+hour twice), and **nothing structurally stops an instructor booking teaching time and rehearsing in
+it** — at a third of the price that is the cheapest rehearsal in the building. The spec records
+trust / cap / watch as the options and leaves the choice to CMC.
 
 ## Step 1 — Design spec
 
