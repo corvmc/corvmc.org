@@ -74,6 +74,8 @@
 
 <PageHeader title="Inventory">
 	<div class="flex gap-2">
+		<Button variant="ghost" size="sm" href={resolve('/staff/inventory/locations')}>Locations</Button
+		>
 		<Button variant="ghost" size="sm" onclick={() => (showCategoryModal = true)}>Categories</Button>
 		<AddItemAction />
 	</div>

@@ -142,6 +142,46 @@ export async function listLocations() {
 }
 
 /**
+ * Locations with how many units each holds, plus the Unassigned count.
+ *
+ * The count is what makes the page worth visiting rather than a settings list:
+ * during a stocktake the question is "have I done that shelf yet", and
+ * "Unassigned (37)" is the one number that says the answer is no. Retired and
+ * lost units are excluded — they are history, not somewhere to walk to.
+ */
+export async function listLocationsWithCounts() {
+	const [locations, counts, unassigned] = await Promise.all([
+		listLocations(),
+		db
+			.select({ locationId: inventoryAsset.locationId, n: count() })
+			.from(inventoryAsset)
+			.where(
+				and(
+					sql`${inventoryAsset.locationId} is not null`,
+					sql`${inventoryAsset.status} not in ('retired','lost')`
+				)
+			)
+			.groupBy(inventoryAsset.locationId),
+		db
+			.select({ n: count() })
+			.from(inventoryAsset)
+			.where(
+				and(
+					isNull(inventoryAsset.locationId),
+					sql`${inventoryAsset.status} not in ('retired','lost')`
+				)
+			)
+	]);
+
+	const byId = new Map(counts.map((c) => [c.locationId, c.n]));
+
+	return {
+		locations: locations.map((l) => ({ ...l, unitCount: byId.get(l.id) ?? 0 })),
+		unassignedCount: unassigned[0]?.n ?? 0
+	};
+}
+
+/**
  * Is there anything a member could ask to borrow?
  *
  * Gates the member panel's Equipment row. Deliberately **existence, not

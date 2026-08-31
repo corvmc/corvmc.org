@@ -12,6 +12,7 @@ import {
 	listCategories,
 	listItems,
 	listLocations,
+	listLocationsWithCounts,
 	restoreItem,
 	softDeleteItem,
 	updateCategory,
@@ -95,6 +96,12 @@ export const getEquipmentCategories = query(z.void(), async () => {
 export const getLocations = query(z.void(), async () => {
 	await requireStaff();
 	return listLocations();
+});
+
+/** The locations page's one load-bearing query: the tree plus what sits in each. */
+export const getLocationsWithCounts = query(z.void(), async () => {
+	await requireStaff();
+	return listLocationsWithCounts();
 });
 
 export const getItemLoanHistory = query(z.string(), async (itemId) => {
@@ -454,7 +461,16 @@ export const editAsset = form(
 		await updateAsset(data.id, {
 			serialNumber: data.serialNumber,
 			condition: data.condition,
-			locationId: data.locationId || null,
+			// Absent and empty mean different things, and collapsing them erased
+			// data: the unit form did not carry a location field, so every Save
+			// sent no `locationId`, this coerced that to `null`, and `updateAsset`
+			// — which skips `undefined` but writes `null` — filed the unit under
+			// Unassigned. Typing a serial number silently moved gear out of the
+			// room it was in.
+			//
+			// `undefined` is "the form did not ask", `''` is "the operator chose
+			// Unassigned". Only the second may clear the column.
+			locationId: data.locationId === undefined ? undefined : data.locationId || null,
 			notes: data.notes
 		});
 		void getStaffAssetDetail(data.id).refresh();
@@ -677,6 +693,7 @@ export const addLocation = form(
 			notes: data.notes
 		});
 		void getLocations().refresh();
+		void getLocationsWithCounts().refresh();
 		return { locationId: loc.id };
 	}
 );

@@ -6,6 +6,7 @@ import {
 	inboxThreadStatuses,
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
+	instructorStatuses,
 	suggestionStatuses,
 	suggestionVisibilities
 } from '$lib/config';
@@ -67,6 +68,7 @@ const vocabularies: Record<string, readonly string[]> = {
 	inboxThread: inboxThreadStatuses,
 	volunteerHour: volunteerHourStatuses,
 	volunteerProfile: volunteerProfileStatuses,
+	instructor: instructorStatuses,
 	suggestion: suggestionStatuses,
 	// `visible` is intentionally absent: an on-the-board suggestion shows no badge.
 	suggestionVisibility: suggestionVisibilities.filter((v) => v !== 'visible'),
