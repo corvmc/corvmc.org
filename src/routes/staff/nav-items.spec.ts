@@ -140,6 +140,7 @@ describe('route coverage', () => {
 		'/staff/volunteer/clearances', // reached from Certifications; `backHref` points there
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
+		'/staff/inventory/locations', // reached from Inventory, beside Categories; `backHref` points there
 		// Reached from Bands, which links to it in its header. Not its own row on
 		// purpose: an external act is the same staff job as a band — who is
 		// playing here — and one of them can turn into the other, so splitting

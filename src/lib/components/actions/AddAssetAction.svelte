@@ -2,7 +2,8 @@
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { createAsset, getLocations } from '$lib/remote/inventory.remote';
+	import { createAsset } from '$lib/remote/inventory.remote';
+	import LocationField from '$lib/components/inventory/LocationField.svelte';
 	import { Field } from '../ui/Form';
 	import { equipmentConditions } from '$lib/config';
 
@@ -23,8 +24,6 @@
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
-
-	const locations = $derived(await getLocations());
 </script>
 
 <Action
@@ -56,17 +55,7 @@
 			value="good"
 			options={equipmentConditions.map((c) => ({ value: c, label: c }))}
 		/>
-		{#if locations.length > 0}
-			<Field
-				field={fields.locationId}
-				type="select"
-				label="Location"
-				options={[
-					{ value: '', label: 'Unassigned' },
-					...locations.map((l) => ({ value: l.id, label: l.name }))
-				]}
-			/>
-		{/if}
+		<LocationField field={fields.locationId} />
 		<Field field={fields.notes} type="textarea" label="Notes" />
 	{/snippet}
 </Action>
