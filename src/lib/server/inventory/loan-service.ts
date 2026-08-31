@@ -112,7 +112,8 @@ async function settleReturn(
 			userId,
 			stripeCustomerId,
 			amountCents: cashRemaining,
-			metadata: { equipment_loan_id: loanId }
+			metadata: { equipment_loan_id: loanId },
+			reference: loanId
 		});
 	}
 

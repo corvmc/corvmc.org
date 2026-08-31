@@ -388,6 +388,11 @@ blocking findings is about _establishing_ one:
 8. **B1 — date-only values display one day early** west of UTC.
 9. **B2 — member credit balance is shown in the wrong unit** — "2500 credits" for
    $25.00.
+10. **B6 — every cash payment 500s** and takes the loan return with it. Not an
+    inventory bug: reservation cash payments share the call. **Fixed and verified
+    end to end.**
+11. **B7 — a failed payment burns the member's credits**, because `settleReturn`
+    deducts before it calls Stripe and nothing compensates. Left for a decision.
 
 ### Cheapest high-value fixes
 
@@ -438,29 +443,65 @@ processor_details[custom][payment_reference]=<ref>       # required, currently a
 So the call is wrong in the `custom` object _and_ omits a now-required
 `processor_details` block.
 
-**Why it broke without anyone touching it.** `src/lib/server/stripe.ts:9` is
-`new Stripe(env.STRIPE_SECRET_KEY)` with **no `apiVersion` pinned**, so the SDK
-follows whatever the account's default has rolled forward to — currently
-`2026-07-29.dahlia`. Payment code that pins nothing changes behaviour on Stripe's
-schedule rather than the repo's.
+**It never worked — this is not version drift.** The first read of this blamed the
+unpinned API version. That was wrong, and the matrix says so: the payload is
+refused identically on the SDK's version and the account's, so `recordCashPayment`
+has never succeeded on any version. It is "deployed but never exercised", not a
+regression.
+
+| payload                        | `2026-05-27.dahlia` | `2026-07-29.dahlia` |
+| ------------------------------ | ------------------- | ------------------- |
+| `custom.type` + `display_name` | rejected            | rejected            |
+| no `processor_details`         | rejected            | rejected            |
+| corrected                      | ✅                  | ✅                  |
 
 **This is not an inventory bug.** `recordCashPayment` has three callers:
 
-- `src/lib/server/inventory/loan-service.ts:111` — the loan return above
-- `src/lib/remote/reservations.remote.ts:1220`
-- `src/lib/remote/reservations.remote.ts:1924`
+- `src/lib/server/inventory/loan-service.ts` — the loan return above
+- `src/lib/remote/reservations.remote.ts:1220` — the $0 credit settlement
+- `src/lib/remote/reservations.remote.ts:1924` — reservation cash
 
-so **reservation cash payments are broken the same way**. Nothing caught it
-because it needs a real Stripe call: unit tests mock the client, and local QA has
-always been steered away from Stripe flows by the live key in `.env`.
+so **reservation cash payments were broken the same way**. Nothing caught it
+because it needs a real Stripe call: the unit tests mock the client, and local QA
+has always been steered off Stripe flows by the live key in `.env`.
 
-Two decisions this needs before it can be fixed, neither of which is mine:
+**Why the existing test passed.** `payment-service.spec.ts` asserted the call with
+`expect.objectContaining({ amount_requested, metadata, customer_details })` — and
+`objectContaining` waves through every key it does not name, including the one
+that was wrong. A mocked client agrees with any payload at all.
 
-1. What belongs in `processor_details[custom][payment_reference]` — the loan or
-   reservation id is the obvious candidate, but it is a real choice about what the
-   Stripe record should be reconcilable against.
-2. Whether to pin `apiVersion` on the client, which is the actual root cause and
-   would stop the next version roll doing this again.
+**Fixed.** The payload now sends `display_name` alone and the required
+`processor_details`, with `payment_reference` carrying the loan or reservation id
+so a Stripe record can be reconciled back to what it paid for. Verified end to
+end: the SM58 loan returned for **$70.00**, `pr_test_…` retrieved from Stripe with
+`processor_details.custom.payment_reference` equal to the loan id, ledger closed
+(`loan_out −1`, `loan_return +1`, on-hand 2 = 2 live units). The regression test
+asserts both sub-objects exactly, and fails on the old payload.
+
+The API version is now pinned to the SDK's own `ApiVersion`, which is hygiene
+rather than a fix — unpinned, the request version could move without a commit.
+
+### B7. A failed payment burns the member's credits — **WRONG**
+
+Found because the first attempt failed: the 500 above did not leave the loan
+untouched. `settleReturn` deducts credits **before** it calls Stripe, and nothing
+compensates when the call throws. After the failed return:
+
+```
+credit_transaction  equipment_credits  −3  balance_after 0
+                    source: checkout   source_id: 5ac43ab7-…
+inventory_loan      status: checked_out   returned_at: null
+```
+
+Three cents, so nobody would have noticed — but the shape is the problem, not the
+amount. The member paid, the collective recorded no payment, and the gear is still
+booked out. Retrying the return then charges them again from a balance that has
+already been spent.
+
+D1 has no transactions and an external API call could not join one anyway, so
+this wants an explicit compensating credit-refund on failure — or deferring the
+deduction until Stripe has answered. That is a change to money-handling order and
+is left for a decision rather than folded into the payload fix.
 
 ### Not yet exercised
 
