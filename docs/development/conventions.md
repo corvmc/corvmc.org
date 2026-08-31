@@ -106,7 +106,7 @@ What this means in practice:
 - **Never edit an applied migration.** The three pre-existing rebuilds are grandfathered in
   the script; that list is closed. Fix a new migration with `pnpm db:fix-migrations`.
 - **Verify against local D1** for anything touching a table with children:
-  `pnpm db:reset && pnpm db:seed`, then check row counts in the child tables.
+  `pnpm db:reset` — it wipes, migrates and seeds — then check row counts in the child tables.
 
 ## Layering rules
 
@@ -277,7 +277,7 @@ Every script in `package.json`:
 | `db:check-migrations`           | Fail if any migration has an unsafe table rebuild (runs in CI)                                 |
 | `db:migrate`                    | drizzle-kit: apply pending migrations to **remote** D1                                         |
 | `db:migrate:local`              | Apply pending migrations to the local D1 (tracked; a no-op when current)                       |
-| `db:seed`                       | Run `scripts/seed-dev.ts` against local D1                                                     |
+| `db:seed`                       | Run `scripts/seed-dev.ts` against local D1 — wipes every table first, so it re-runs cleanly    |
 | `volunteer:seed-roles`          | Seed the volunteer role catalogue (`scripts/seed-volunteer-roles.ts`)                          |
 | `db:reset`                      | Wipe local D1 + migrate + seed                                                                 |
 | `db:studio`                     | drizzle-kit studio GUI (**remote** D1 — needs `CLOUDFLARE_*` vars)                             |

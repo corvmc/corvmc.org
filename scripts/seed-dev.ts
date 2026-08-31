@@ -15,6 +15,8 @@ import { randomUUID, randomBytes, scrypt } from 'crypto';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
 import { sql, eq, inArray } from 'drizzle-orm';
+// @ts-expect-error -- plain .mjs helper, no types
+import { tableOrder } from './d1-table-order.mjs';
 
 // Mirror the app's password hashing (src/lib/server/auth.ts `scryptHash`). We can't
 // import that module here — it pulls SvelteKit-only `$env`/`$app` aliases that don't
@@ -520,77 +522,34 @@ const BACKLINE_ITEMS = [
 // Seed functions
 // ---------------------------------------------------------------------------
 
+/**
+ * Wipe every table, child-first.
+ *
+ * The list is `scripts/d1-table-order.mjs` reversed — the same one
+ * `e2e/reset-db.ts` clears from, and the one `scripts/d1-table-order.spec.ts`
+ * holds to the drizzle snapshot. This function kept a second copy of it until
+ * that copy had drifted nine tables behind, `media` among them. Because `media`
+ * has a unique `key` and the seed builds its keys from the band slug, a second
+ * `pnpm db:seed` died on `UNIQUE constraint failed: media.key` instead of
+ * rebuilding — while `announcement`, `event_band`, `event_group`, `event_rsvp`,
+ * `group_invite`, `inventory_item_article` and `media_attachment` simply
+ * survived the wipe, unnoticed because nothing failed. A hand-maintained second
+ * list has no way to stay right; the checked one does.
+ *
+ * Tables the list names but this database lacks are skipped, matching the
+ * sibling in `e2e/reset-db.ts`: `product_config` is in the list because it was
+ * dropped from the schema without a `DROP TABLE`, and a database built from an
+ * older migration set is a normal thing to seed into.
+ */
 async function deleteAll() {
 	console.log('Deleting all data...');
-	const tables = [
-		// Child before parent: volunteer_hour_log has an ON DELETE RESTRICT FK to
-		// volunteer_role, so the role rows can't go first. (volunteer_role_interest
-		// cascades, but ordering it explicitly keeps the list readable.)
-		'volunteer_shift_feedback',
-		'volunteer_signup',
-		'volunteer_shift',
-		'member_certification',
-		'volunteer_role_certification',
-		'volunteer_certification',
-		'volunteer_role_interest',
-		'volunteer_hour_log',
-		'volunteer_profile',
-		'volunteer_role',
-		// Before content_flag and user: they reference both.
-		'member_standing',
-		'user_block',
-		'suggestion_edit',
-		'suggestion_vote',
-		'suggestion',
-		'content_flag',
-		'inbox_note',
-		'inbox_message',
-		'inbox_participant',
-		'inbox_thread',
-		'inbox_channel_config',
-		'help_articles',
-		'help_categories',
-		'stock_movement',
-		'inventory_loan',
-		'acquisition_line',
-		'acquisition',
-		'inventory_asset',
-		'inventory_item',
-		'inventory_location',
-		'equipment_category',
-		'campaign_audience',
-		'campaign',
-		'audience_member',
-		'audience',
-		'subscriber',
-		'notification_preference',
-		'notification',
-		'ticket',
-		'band_site',
-		// Child before parent, and both before `group` and `user`.
-		'directory_tag',
-		'directory_entry',
-		'group_member',
-		'group_slug_history',
-		'group',
-		'payment_cache',
-		'credit_transaction',
-		'recurring_series',
-		'event',
-		'closure',
-		'reservation',
-		'model_has_roles',
-		'model_has_permissions',
-		'role_has_permissions',
-		'roles',
-		'permissions',
-		'session',
-		'account',
-		'verification',
-		'user'
-	];
-	for (const t of tables) {
-		await db.run(sql.raw(`DELETE FROM "${t}"`));
+	const present = new Set(
+		(await db.all<{ name: string }>(sql`SELECT name FROM sqlite_master WHERE type = 'table'`)).map(
+			(row) => row.name
+		)
+	);
+	for (const t of [...(tableOrder as string[])].reverse()) {
+		if (present.has(t)) await db.run(sql.raw(`DELETE FROM "${t}"`));
 	}
 }
 

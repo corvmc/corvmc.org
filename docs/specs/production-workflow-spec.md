@@ -343,7 +343,7 @@ What matters for this migration specifically:
   tables around the `band` rebuild, which is correct and looks alarming.
 - **Land it on its own**, ahead of the productions tables, so the one risky migration in
   this feature can be applied and verified in isolation.
-- **Verify against local D1** before it goes near production: `pnpm db:reset && pnpm db:seed`,
+- **Verify against local D1** before it goes near production: `pnpm db:reset`,
   then confirm row counts in `group_member`, `group_invite`, `band_genre`, `band_media`,
   `band_page_config`, `ticket`, and `event_rsvp`, plus non-null `event.group_id` values.
 

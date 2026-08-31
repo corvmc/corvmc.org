@@ -51,8 +51,9 @@ import { tableOrder } from '../scripts/d1-table-order.mjs';
  * `tableOrder` (parents → children) is hand-maintained, and
  * `scripts/d1-table-order.spec.ts` holds it to the drizzle snapshot — a table
  * added to the schema without being added there turns the unit suite red, so
- * this can't silently start missing one. This is now its only consumer: the
- * Postgres ETL that also read it was deleted once D1 became canonical.
+ * this can't silently start missing one. `deleteAll()` in `scripts/seed-dev.ts`
+ * clears from the same list, for the same reason and in the same order — it
+ * used to keep a copy, and the copy drifted nine tables behind.
  *
  * Tables the list names but the database doesn't have are skipped rather than
  * thrown on: `product_config` is in the list because it was dropped from the
