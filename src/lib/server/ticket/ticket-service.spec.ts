@@ -25,6 +25,8 @@ let selectResultQueue: unknown[][] = [];
 let updateResult: unknown = { rowCount: 1 };
 let insertResult: unknown[] = [{ ...mockTicket }];
 let lastUpdateSet: Record<string, unknown> | null = null;
+/** Rows handed to db.insert().values(...) by the call under test. */
+let lastInsertValues: Record<string, unknown>[] = [];
 
 function chainable(result?: unknown[]) {
 	const proxy: any = new Proxy(() => proxy, {
@@ -45,9 +47,10 @@ function chainable(result?: unknown[]) {
 const mockDb = {
 	select: vi.fn(() => chainable()),
 	insert: vi.fn(() => ({
-		values: vi.fn(() => ({
-			returning: vi.fn(() => Promise.resolve(insertResult))
-		}))
+		values: vi.fn((rows: Record<string, unknown>[]) => {
+			lastInsertValues = rows;
+			return { returning: vi.fn(() => Promise.resolve(insertResult)) };
+		})
 	})),
 	update: vi.fn(() => ({
 		set: vi.fn((vals: Record<string, unknown>) => {
@@ -141,6 +144,7 @@ beforeEach(() => {
 	selectResultQueue = [];
 	updateResult = { rowCount: 1 };
 	insertResult = [{ ...mockTicket }];
+	lastInsertValues = [];
 });
 
 describe('generateCodeString', () => {
@@ -186,6 +190,56 @@ describe('createTickets', () => {
 
 		expect(result).toHaveLength(2);
 		expect(mockDb.insert).toHaveBeenCalled();
+	});
+
+	it('records what each pass cost and whether the discount was waived', async () => {
+		await createTickets({
+			eventId: 'event-1',
+			purchaseId: 'purchase-1',
+			quantity: 2,
+			attendeeName: 'Alice',
+			attendeeEmail: 'alice@example.com',
+			unitPriceCents: 750,
+			discountWaived: true
+		});
+
+		expect(lastInsertValues).toHaveLength(2);
+		for (const row of lastInsertValues) {
+			expect(row).toMatchObject({ unitPriceCents: 750, discountWaived: true });
+		}
+	});
+
+	it('records the order contribution on one ticket, not on every ticket', async () => {
+		// The gift belongs to the purchase. Copying it onto each pass would
+		// multiply it by the quantity for anyone summing a purchase.
+		await createTickets({
+			eventId: 'event-1',
+			purchaseId: 'purchase-1',
+			quantity: 3,
+			attendeeName: 'Alice',
+			attendeeEmail: 'alice@example.com',
+			unitPriceCents: 1500,
+			contributionCents: 1000
+		});
+
+		expect(lastInsertValues.map((r) => r.contributionCents)).toEqual([1000, 0, 0]);
+	});
+
+	it('defaults the money fields to zero for comps and free claims', async () => {
+		await createTickets({
+			eventId: 'event-1',
+			purchaseId: 'comp-1',
+			quantity: 1,
+			attendeeName: 'Alice',
+			attendeeEmail: 'alice@example.com',
+			status: 'valid'
+		});
+
+		expect(lastInsertValues[0]).toMatchObject({
+			unitPriceCents: 0,
+			contributionCents: 0,
+			discountWaived: false
+		});
 	});
 
 	it('creates tickets with pending status by default', async () => {

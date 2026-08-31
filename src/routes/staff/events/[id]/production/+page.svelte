@@ -24,6 +24,7 @@
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import {
+		formatCents,
 		formatDateShort,
 		formatDollars,
 		formatTime,
@@ -73,6 +74,12 @@
 	const volunteerRoles = $derived(loaded.volunteerRoles);
 
 	const evt = $derived(data.event);
+
+	// Gifts are recorded once per purchase, so a plain sum across the ledger is
+	// the show's contribution total — no de-duplication needed.
+	const contributionsTotal = $derived(
+		data.tickets.reduce((sum, t) => sum + t.contributionCents, 0)
+	);
 	const liveVolunteerRoles = $derived(volunteerRoles.filter((r) => r.isActive));
 
 	/**
@@ -710,6 +717,12 @@
 						<p class="text-lg font-medium">{data.ticketStats.remaining ?? '∞'}</p>
 					</div>
 				{/if}
+				{#if contributionsTotal > 0}
+					<div>
+						<p class="text-muted">Contributions</p>
+						<p class="text-lg font-medium">{formatCents(contributionsTotal)}</p>
+					</div>
+				{/if}
 			</div>
 
 			{#if evt.status === 'published' && evt.ticketingEnabled}
@@ -738,6 +751,7 @@
 					{#snippet head()}
 						<th class="w-px"><span class="sr-only">Status</span></th>
 						<th>Attendee</th>
+						<th class="w-px text-right">Paid</th>
 						<th class="col-support w-px">Code</th>
 					{/snippet}
 					{#each data.tickets as t (t.id)}
@@ -746,6 +760,19 @@
 							<td class="cell-primary">
 								<div class="truncate font-medium">{t.attendeeName}</div>
 								<div class="truncate text-muted">{t.attendeeEmail}</div>
+							</td>
+							<td class="w-px text-right whitespace-nowrap">
+								<div class="font-medium">
+									{t.unitPriceCents === null ? '—' : formatCents(t.unitPriceCents)}
+								</div>
+								{#if t.contributionCents > 0}
+									<div class="text-sm text-success">
+										+{formatCents(t.contributionCents)} contributed
+									</div>
+								{/if}
+								{#if t.discountWaived}
+									<div class="text-muted">Waived discount</div>
+								{/if}
 							</td>
 							<td class="col-support w-px"><span class="font-mono text-sm">{t.code}</span></td>
 						</tr>

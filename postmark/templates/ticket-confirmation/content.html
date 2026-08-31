@@ -35,6 +35,12 @@
         <td style="padding:8px 12px 8px 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:14px; line-height:1.5; color:#5a3d2b;">{{quantity}} &times; {{unitPrice}} ticket{{#multiple}}s{{/multiple}}</td>
         <td align="right" style="padding:8px 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:14px; line-height:1.5; color:#1a2330; white-space:nowrap;">{{subtotal}}</td>
       </tr>
+      {{#contributionMade}}
+      <tr>
+        <td style="padding:8px 12px 8px 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:14px; line-height:1.5; color:#5a3d2b;">Contribution to the band &amp; venue</td>
+        <td align="right" style="padding:8px 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:14px; line-height:1.5; color:#1a2330; white-space:nowrap;">{{contribution}}</td>
+      </tr>
+      {{/contributionMade}}
       {{#feesCovered}}
       <tr>
         <td style="padding:8px 12px 8px 0; font-family:'Lexend','Trebuchet MS',Helvetica,Arial,sans-serif; font-size:14px; line-height:1.5; color:#5a3d2b;">Processing fees covered</td>

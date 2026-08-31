@@ -81,12 +81,13 @@ describe('getProductConfig', () => {
 });
 
 describe('getAllProductConfigs', () => {
-	it('returns all four products', async () => {
+	it('returns every product, in DEFAULTS order', async () => {
 		const all = await getAllProductConfigs();
 		expect(all.map((p) => p.key)).toEqual([
 			'contribution',
 			'fee_coverage',
 			'ticket',
+			'ticket_contribution',
 			'band_premium'
 		]);
 	});

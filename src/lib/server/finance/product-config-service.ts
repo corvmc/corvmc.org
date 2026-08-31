@@ -18,7 +18,8 @@ const KV_PREFIX = 'product-config:';
 // Product config defaults — used when no KV entry exists yet
 // ---------------------------------------------------------------------------
 
-export type ProductKey = 'contribution' | 'fee_coverage' | 'ticket' | 'band_premium';
+export type ProductKey =
+	'contribution' | 'fee_coverage' | 'ticket' | 'ticket_contribution' | 'band_premium';
 
 interface ProductDefault {
 	name: string;
@@ -45,6 +46,15 @@ const DEFAULTS: Record<ProductKey, ProductDefault> = {
 		description: 'Ticket for a Corvallis Music Collective event',
 		unitAmountCents: 0,
 		unitLabel: 'per ticket'
+	},
+	// Its own product, deliberately not folded into `ticket` or `contribution`:
+	// gifts on a show stay separable from ticket revenue and from recurring
+	// membership contributions in Stripe reporting.
+	ticket_contribution: {
+		name: 'Show Support',
+		description: 'Optional contribution to the band and the venue on top of a ticket',
+		unitAmountCents: 0,
+		unitLabel: 'per order'
 	},
 	band_premium: {
 		name: 'Band Premium Page',
