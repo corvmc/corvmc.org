@@ -500,7 +500,8 @@ describe('recordCashPayment', () => {
 			userId: 'user-1',
 			stripeCustomerId: 'cus_123',
 			amountCents: 2500,
-			metadata: { reservation_id: 'res-5' }
+			metadata: { reservation_id: 'res-5' },
+			reference: 'res-5'
 		});
 
 		expect(result).toEqual({ paymentRecordId: 'pr_cash_1' });
@@ -514,6 +515,64 @@ describe('recordCashPayment', () => {
 			})
 		);
 		expect(mockDbInsert).toHaveBeenCalled();
+	});
+
+	/**
+	 * The shape Stripe actually accepts, pinned exactly.
+	 *
+	 * This call was rejected by the live API on every version tried — `custom`
+	 * takes `display_name` *or* `type` and was sent both, and `processor_details`
+	 * is required and was absent entirely — which 500'd the request and, on a
+	 * loan return, left the loan `checked_out` with the gear already handed back.
+	 *
+	 * The test above did not catch it and could not have: `objectContaining`
+	 * asserts the keys it names and waves through the ones it does not, and a
+	 * mocked client agrees with any payload at all. So this asserts the two
+	 * sub-objects *exactly*, which is the only form that fails if somebody
+	 * reintroduces `custom.type` or drops the processor block.
+	 */
+	it('sends the payload Stripe accepts: display_name without type, and a processor reference', async () => {
+		mockStripe.paymentRecords.reportPayment.mockResolvedValue({ id: 'pr_cash_2' });
+
+		await recordCashPayment({
+			userId: 'user-1',
+			stripeCustomerId: 'cus_123',
+			amountCents: 7000,
+			metadata: { equipment_loan_id: 'loan-9' },
+			reference: 'loan-9'
+		});
+
+		const [payload] = mockStripe.paymentRecords.reportPayment.mock.calls[0];
+
+		expect(payload.payment_method_details).toEqual({
+			type: 'custom',
+			custom: { display_name: 'Cash' }
+		});
+		expect(payload.processor_details).toEqual({
+			type: 'custom',
+			custom: { payment_reference: 'loan-9' }
+		});
+	});
+
+	it('labels a $0 credit settlement without changing the shape', async () => {
+		mockStripe.paymentRecords.reportPayment.mockResolvedValue({ id: 'pr_credits' });
+
+		await recordCashPayment({
+			userId: 'user-1',
+			stripeCustomerId: 'cus_123',
+			amountCents: 0,
+			displayName: 'Credits',
+			metadata: { reservation_id: 'res-7' },
+			reference: 'res-7'
+		});
+
+		const [payload] = mockStripe.paymentRecords.reportPayment.mock.calls[0];
+
+		expect(payload.payment_method_details).toEqual({
+			type: 'custom',
+			custom: { display_name: 'Credits' }
+		});
+		expect(payload.processor_details.custom.payment_reference).toBe('res-7');
 	});
 });
 
