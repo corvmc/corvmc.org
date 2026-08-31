@@ -4,19 +4,20 @@
  * Usage:
  *   pnpm db:seed
  *
- * This is DESTRUCTIVE — it deletes all data and rebuilds from scratch.
- * Do not run against production.
+ * This is DESTRUCTIVE — it deletes all data and rebuilds from scratch. Running it
+ * twice is fine: `deleteAll()` clears every table first. Do not run against
+ * production.
  *
  * Prerequisites:
- *   - Local D1 SQLite file exists (run `pnpm db:push` first)
+ *   - The local D1 file exists and is migrated. `pnpm db:reset` does that and
+ *     then calls this, so it is the one command to reach for; `pnpm db:seed`
+ *     alone re-seeds a database that is already there.
  */
 import 'dotenv/config';
 import { randomUUID, randomBytes, scrypt } from 'crypto';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
 import { sql, eq, inArray } from 'drizzle-orm';
-// @ts-expect-error -- plain .mjs helper, no types
-import { tableOrder } from './d1-table-order.mjs';
 
 // Mirror the app's password hashing (src/lib/server/auth.ts `scryptHash`). We can't
 // import that module here — it pulls SvelteKit-only `$env`/`$app` aliases that don't
@@ -107,6 +108,8 @@ import {
 } from '../src/lib/server/db/schema/volunteer';
 // JSON recurrence format matching the app's rrule-helpers (see scripts/seed-rrule.ts).
 import { buildSeedRRule as seedRRule } from './seed-rrule';
+// @ts-expect-error -- plain .mjs helper, no types
+import { deleteOrder } from './d1-table-order.mjs';
 const { env, dispose } = await getPlatformProxy();
 const db = drizzle(env.DB);
 await db.run(sql`PRAGMA foreign_keys = OFF`);
@@ -523,33 +526,25 @@ const BACKLINE_ITEMS = [
 // ---------------------------------------------------------------------------
 
 /**
- * Wipe every table, child-first.
+ * Empty every table, children first.
  *
- * The list is `scripts/d1-table-order.mjs` reversed — the same one
- * `e2e/reset-db.ts` clears from, and the one `scripts/d1-table-order.spec.ts`
- * holds to the drizzle snapshot. This function kept a second copy of it until
- * that copy had drifted nine tables behind, `media` among them. Because `media`
- * has a unique `key` and the seed builds its keys from the band slug, a second
- * `pnpm db:seed` died on `UNIQUE constraint failed: media.key` instead of
- * rebuilding — while `announcement`, `event_band`, `event_group`, `event_rsvp`,
- * `group_invite`, `inventory_item_article` and `media_attachment` simply
- * survived the wipe, unnoticed because nothing failed. A hand-maintained second
- * list has no way to stay right; the checked one does.
+ * The order — and the list — comes from `scripts/d1-table-order.mjs`, which
+ * `scripts/d1-table-order.spec.ts` holds against the drizzle snapshot. This file
+ * used to keep its own copy, and it drifted: `media` and `media_attachment` were
+ * never added, so seeding an already-seeded database left those rows behind and
+ * died on `UNIQUE constraint failed: media.key`. A table added to the schema now
+ * reddens the unit suite instead of surviving a wipe.
  *
- * Tables the list names but this database lacks are skipped, matching the
- * sibling in `e2e/reset-db.ts`: `product_config` is in the list because it was
- * dropped from the schema without a `DROP TABLE`, and a database built from an
- * older migration set is a normal thing to seed into.
+ * Tables the list names but this database lacks are skipped — see `deleteOrder`.
  */
 async function deleteAll() {
 	console.log('Deleting all data...');
-	const present = new Set(
-		(await db.all<{ name: string }>(sql`SELECT name FROM sqlite_master WHERE type = 'table'`)).map(
-			(row) => row.name
-		)
+	const rows = await db.all<{ name: string }>(
+		sql`SELECT name FROM sqlite_master WHERE type = 'table'`
 	);
-	for (const t of [...(tableOrder as string[])].reverse()) {
-		if (present.has(t)) await db.run(sql.raw(`DELETE FROM "${t}"`));
+	const present = new Set(rows.map((row) => row.name));
+	for (const table of deleteOrder(present)) {
+		await db.run(sql.raw(`DELETE FROM "${table}"`));
 	}
 }
 

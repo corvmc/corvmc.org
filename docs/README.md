@@ -59,12 +59,13 @@ the tree and records how this split was made.
 
 ### Reservations
 
-| Doc                                                                            | Status | Lifecycle | Notes                                                                                  |
-| ------------------------------------------------------------------------------ | ------ | --------- | -------------------------------------------------------------------------------------- |
-| [reservation-system-spec.md](specs/shipped/reservation-system-spec.md)         | ✅     | archived  | Practice-room reservations, lock integration, book-then-pay                            |
-| [recurring-reservations-spec.md](specs/shipped/recurring-reservations-spec.md) | ✅     | archived  | RRULE series, prototype cloning, advance windows                                       |
-| [staff-reservations-spec.md](specs/shipped/staff-reservations-spec.md)         | ✅     | archived  | Staff reservation backend, resolve modal, overrides                                    |
-| [reservation-confirmation-window.md](specs/reservation-confirmation-window.md) | 🔧     | split     | Phases 1–2 shipped; Phase 3 (door codes minted on confirm, 3-day provisioning) unbuilt |
+| Doc                                                                            | Status | Lifecycle | Notes                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------ | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [reservation-system-spec.md](specs/shipped/reservation-system-spec.md)         | ✅     | archived  | Practice-room reservations, lock integration, book-then-pay                                                                                                                                      |
+| [recurring-reservations-spec.md](specs/shipped/recurring-reservations-spec.md) | ✅     | archived  | RRULE series, prototype cloning, advance windows                                                                                                                                                 |
+| [staff-reservations-spec.md](specs/shipped/staff-reservations-spec.md)         | ✅     | archived  | Staff reservation backend, resolve modal, overrides                                                                                                                                              |
+| [reservation-confirmation-window.md](specs/reservation-confirmation-window.md) | 🔧     | split     | Phases 1–2 shipped; Phase 3 (door codes minted on confirm, 3-day provisioning) unbuilt                                                                                                           |
+| [instructors-spec.md](specs/instructors-spec.md)                               | 📋     | spec      | Teaching in the practice room: a staff-granted `instructor`, its own rate and booking horizon, a public instructor listing. CMC rents teachers the space — no enrolment, no students, no payouts |
 
 ### Bands & groups
 

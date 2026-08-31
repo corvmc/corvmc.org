@@ -218,6 +218,18 @@ Track setlists and song performances for music licensing compliance. Log what ge
 
 Tools for members who teach music lessons at the venue. A teacher panel for sharing resources with students, keeping lesson notes, and coordinating schedules. Could integrate with the reservation system for booking lesson rooms and with member profiles to link teachers to their specialties.
 
+**Progress:** Specced in `docs/specs/instructors-spec.md`, and **deliberately narrower than this
+entry.** The scope decision is that CMC's relationship is with the teacher, not the student — CMC
+rents teachers the space, and the teacher bills their own students. That rules out two of the three
+clauses above: shared student resources and lesson notes both presume CMC holds a record of a
+teaching relationship it is not party to, and "coordinating schedules" would be a second scheduling
+system beside the room calendar. What survives is the third clause, which is the whole module: a
+staff-granted `instructor` record with its own room rate and booking horizon (the `bookerType:
+'lesson'` value that has sat unwritten since the reservation system shipped finally gets a real table
+to point at), and a public instructor listing so a teacher can be found by someone who is not a
+member. Payouts stay out for the same reason band gigs cannot sell tickets through CMC checkout —
+there is no payout path, and adding one is a larger project than this.
+
 ### Gear Library
 
 Track gear donations with donor attribution, condition notes, and provenance. Members can submit acquisition requests for gear the venue doesn't have yet — like a library purchase request. Staff review, prioritize (possibly informed by member voting), and fulfill. Ties into the donation wishlist for sourcing and the equipment system for cataloging once acquired.

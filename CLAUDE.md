@@ -23,7 +23,7 @@ reports results that are simply wrong.
 | `pnpm test:e2e`           | playwright — add `--workers=1` locally                     |
 | `pnpm docs:check`         | docs integrity; CI fails the PR on it                      |
 | `pnpm db:generate`        | the only way to create a migration                         |
-| `pnpm db:reset`           | rebuild local D1 — wipe, migrate, seed                     |
+| `pnpm db:reset`           | rebuild local D1 (wipe + migrate + seed)                   |
 
 These mirror the CI jobs in `.github/workflows/ci.yml`, so a green local gate is a green PR.
 

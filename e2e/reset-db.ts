@@ -43,7 +43,7 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { E2E_PERSIST_PATH, E2E_STATE_ROOT, e2eD1File } from './state-dir';
 // @ts-expect-error -- plain .mjs helper, no types
-import { tableOrder } from '../scripts/d1-table-order.mjs';
+import { tableOrder, deleteOrder } from '../scripts/d1-table-order.mjs';
 
 /**
  * Delete every application row, child-first.
@@ -51,9 +51,9 @@ import { tableOrder } from '../scripts/d1-table-order.mjs';
  * `tableOrder` (parents → children) is hand-maintained, and
  * `scripts/d1-table-order.spec.ts` holds it to the drizzle snapshot — a table
  * added to the schema without being added there turns the unit suite red, so
- * this can't silently start missing one. `deleteAll()` in `scripts/seed-dev.ts`
- * clears from the same list, for the same reason and in the same order — it
- * used to keep a copy, and the copy drifted nine tables behind.
+ * this can't silently start missing one. `scripts/seed-dev.ts` derives its own
+ * wipe from the same list, through `deleteOrder`; the Postgres ETL that also
+ * read it was deleted once D1 became canonical.
  *
  * Tables the list names but the database doesn't have are skipped rather than
  * thrown on: `product_config` is in the list because it was dropped from the
@@ -74,7 +74,7 @@ export function clearAllTables(db: DatabaseSync): string[] {
 			.map((row) => String(row.name))
 	);
 
-	const cleared = ([...tableOrder] as string[]).reverse().filter((table) => present.has(table));
+	const cleared: string[] = deleteOrder(present);
 
 	db.exec('PRAGMA foreign_keys = OFF');
 	try {
