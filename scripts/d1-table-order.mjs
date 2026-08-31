@@ -76,6 +76,8 @@ export const tableOrder = [
 	// The private half of a party record: child of directory_entry and
 	// subscriber, so it wipes before either.
 	'contact',
+	// The contact-sheet link: child of directory_entry and user.
+	'directory_entry_link',
 	'credit_transaction',
 	'help_articles',
 	'inbox_message',
