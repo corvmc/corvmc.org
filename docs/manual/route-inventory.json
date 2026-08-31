@@ -256,6 +256,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/bands/acts",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/closures",
 		"panel": "staff"
 	},
