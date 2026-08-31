@@ -11,7 +11,7 @@
 		"prepare": "svelte-kit sync || echo '' && lefthook install",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test:unit": "vitest",
+		"test:unit": "tsx scripts/run-unit-tests.ts",
 		"test:components": "vitest --run --project=client --project=storybook",
 		"test:server": "vitest --run --project=server",
 		"test:changed": "vitest --run --changed",
