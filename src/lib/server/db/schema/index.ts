@@ -15,6 +15,7 @@ export * from './band-site';
 export * from './band-page';
 export * from './group-invite';
 export * from './announcement';
+export * from './contact';
 export * from './help';
 export * from './inbox';
 export * from './flag';
