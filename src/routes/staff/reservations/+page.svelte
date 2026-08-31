@@ -266,13 +266,15 @@
 										<IconRepeat size={14} class="text-base-content" />
 									</span>
 								{/if}
-								{#if r.bookerType === 'lesson'}
+								{#if r.bookerType === 'instructor'}
 									<!--
-										The one booker type with no record to point at, so the chip
-										beside it cannot say what this is. Every other type reads
-										off its own glyph in the Booker column.
+										Retargeted from `lesson`, which held this slot for the same
+										reason and was removed once production confirmed no rows
+										carried it. A teaching booking's Booker ref resolves to the
+										member — the capacity is not the party — so without this the
+										row could not say it is teaching rather than rehearsal.
 									-->
-									<span class="tooltip" data-tip="lesson">
+									<span class="tooltip" data-tip="Teaching">
 										<BookerTypeIcon type={r.bookerType} size={14} />
 									</span>
 								{/if}

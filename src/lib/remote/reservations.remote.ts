@@ -68,7 +68,7 @@ import {
 } from '$lib/server/reservation/reservation-service';
 import { mapDomainError } from '$lib/server/errors';
 import { isTerminalStatus } from '$lib/utils/reservation-actions';
-import type { BookerType } from '$lib/server/db/schema/reservation';
+import { bookerTypes, type BookerType } from '$lib/server/db/schema/reservation';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { config } from '$lib/server/site-config/site-config-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
@@ -840,10 +840,11 @@ const staffReservationFiltersSchema = z.object({
 	dateFrom: z.string().optional(),
 	dateTo: z.string().optional(),
 	statusFilter: z.array(z.string()).optional(),
-	// Hard-listed rather than derived from `bookerTypes`, and deliberately so:
-	// `'lesson'` is archival and has no staff filter worth offering. Adding a
-	// booker type therefore means deciding whether staff filter on it.
-	bookerType: z.enum(['user', 'group', 'event', 'instructor']).optional(),
+	// Derived rather than hard-listed. It was hard-listed to leave out `'lesson'`,
+	// which had no staff filter worth offering; with that value gone the two lists
+	// are identical, and deriving means a booker type added later cannot be
+	// filterable in the schema but missing from the filter, or the reverse.
+	bookerType: z.enum(bookerTypes).optional(),
 	page: z.number().optional()
 });
 

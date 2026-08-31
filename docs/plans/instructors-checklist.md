@@ -29,12 +29,12 @@ Branch: `claude/teaching-tools-ffff44` (off `main`).
 
 ## Blocked — resolve before Step 3
 
-**1. The production census — still unrun, and now deliberately routed around.**
-`wrangler d1 execute --remote` returns `code: 7403` from this environment. Rather than block,
-Step 3 took the branch that is **correct under either outcome**: `'lesson'` stays as an
-archival value and `'instructor'` takes `IconChalkboard`. If the census later shows zero
-`lesson` rows, deleting the value and reclaiming `IconSchool` is a small, safe follow-up. If it
-shows rows, nothing needs doing. Neither branch emits SQL.
+**1. ~~The production census~~ — run, and the answer was zero.** No reservation carries
+`booker_type = 'lesson'`. The value is deleted from `bookerTypes` and `prototypeTypes`, and
+`'instructor'` reclaims `IconSchool`. Nothing renamed, nothing backfilled, no SQL emitted. The staff
+reservations page's `'lesson'` glyph branch was **retargeted** to `'instructor'` rather than deleted:
+it exists because a booker type whose ref resolves to the member leaves the Booker column unable to
+say what the booking is, and teaching has that property too.
 
 **2. `reservation.teachingRateCents` is `500` — $5/hr, which is the rate a sustaining member's
 contribution already buys.** `webhook-handlers.ts` computes it: `$5 = 1 hour = 2 credits`. So this is

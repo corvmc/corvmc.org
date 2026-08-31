@@ -37,7 +37,6 @@ import {
 	IconHeart,
 	IconMusic,
 	IconSchool,
-	IconChalkboard,
 	IconBuildingCommunity
 } from '@tabler/icons-svelte';
 import type { SvelteComponent } from 'svelte';
@@ -113,15 +112,13 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 		icon: IconMetronome,
 		shape: 'none',
 		// `user` is absent: a member booking for themselves is the ordinary case.
-		// `lesson` is present because `BookerTypeIcon` silently rendered *nothing*
-		// for it — the one booker type with no glyph at all.
+		// `instructor` is present because its ref resolves to the member — the
+		// capacity is not the party — so without a glyph the row could not say
+		// that this booking is teaching rather than rehearsal.
 		subtypes: {
 			group: { icon: IconMusic, label: 'Booked by a band' },
 			event: { icon: IconCalendarEvent, label: 'Held for an event' },
-			lesson: { icon: IconSchool, label: 'Lesson' },
-			// A distinct glyph from `lesson`, which is required rather than chosen:
-			// `registry.spec.ts` refuses two subtypes sharing one within a type.
-			instructor: { icon: IconChalkboard, label: 'Teaching' }
+			instructor: { icon: IconSchool, label: 'Teaching' }
 		}
 	},
 	suggestion: { icon: IconBulb, shape: 'none' },

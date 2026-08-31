@@ -21,14 +21,13 @@ import { recurringSeries } from './recurring';
  * `'instructor'` earns its place because `instructor` is a real table with real
  * ids; it is the capacity a person is booking in, not a label on the booking.
  *
- * `'lesson'` is **archival**. Nothing writes it and nothing ever did in this
- * app — it arrives only on rows migrated from the old system, whose `bookerId`
- * points at nothing, which is why `toBookerRef` falls back to the member. It is
- * kept rather than renamed to `'instructor'`: renaming would relabel those rows
- * as pointing into `instructor` when they do not, so the discriminator would be
- * wrong about exactly the rows the rename was performed to describe.
+ * A `'lesson'` value sat here unwritten from the reservation system's first day,
+ * reserved for a module that had not been designed. It was removed once
+ * production confirmed **zero rows carried it** — so nothing was renamed and
+ * nothing was backfilled, which is what a rename would have required and what
+ * would have minted staff grants out of historical data.
  */
-export const bookerTypes = ['user', 'group', 'event', 'lesson', 'instructor'] as const;
+export const bookerTypes = ['user', 'group', 'event', 'instructor'] as const;
 export type BookerType = (typeof bookerTypes)[number];
 
 export function isBookerType(value: string): value is BookerType {
