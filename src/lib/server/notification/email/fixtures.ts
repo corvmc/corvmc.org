@@ -130,13 +130,16 @@ export const FIXTURES: Fixture[] = [
 				{ code: 'CMC-7B3M-2LZ8' },
 				{ code: 'CMC-1N9V-6RT4' }
 			],
-			// Buyer covered fees — exercises the {{#feesCovered}} row.
+			// Buyer contributed AND covered fees — exercises both optional receipt
+			// rows, and their order relative to each other.
 			orderId: 'B82D5E60',
 			unitPrice: '$20.00',
 			subtotal: '$60.00',
+			contributionMade: true,
+			contribution: '$15.00',
 			feesCovered: true,
-			fees: '$2.04',
-			total: '$62.04',
+			fees: '$2.55',
+			total: '$77.55',
 			ticketsUrl: 'https://corvmc.org/events/evt-2/tickets/success?purchase_id=b82d5e60'
 		}
 	},

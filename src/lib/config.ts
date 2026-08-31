@@ -122,6 +122,16 @@ export function withinConfirmationWindow(startsAt: Date, now: Date = new Date())
 }
 
 // ---------------------------------------------------------------------------
+// Ticket contributions
+// ---------------------------------------------------------------------------
+
+/** Quick-pick amounts, in cents, offered beside the ticket contribution field. */
+export const TICKET_CONTRIBUTION_PRESETS = [500, 1000, 2500] as const;
+
+/** Anything above this is a typo, not a gift. */
+export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
+
+// ---------------------------------------------------------------------------
 // Equipment pricing
 // ---------------------------------------------------------------------------
 

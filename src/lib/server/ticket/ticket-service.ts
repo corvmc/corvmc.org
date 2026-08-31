@@ -18,6 +18,12 @@ export interface CreateTicketsOptions {
 	attendeeName: string;
 	attendeeEmail: string;
 	status?: TicketStatus;
+	/** What each pass cost after any member discount. 0 for comps and free claims. */
+	unitPriceCents?: number;
+	/** The order's optional gift. Lands on the first ticket only — see the schema. */
+	contributionCents?: number;
+	/** An eligible sustaining member paid full price on purpose. */
+	discountWaived?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,19 +73,27 @@ export async function createTickets(options: CreateTicketsOptions) {
 		userId,
 		attendeeName,
 		attendeeEmail,
-		status = 'pending'
+		status = 'pending',
+		unitPriceCents = 0,
+		contributionCents = 0,
+		discountWaived = false
 	} = options;
 
 	const codes = await generateUniqueCodes(quantity);
 
-	const rows = codes.map((code) => ({
+	const rows = codes.map((code, i) => ({
 		eventId,
 		purchaseId,
 		userId: userId ?? null,
 		attendeeName,
 		attendeeEmail,
 		code,
-		status
+		status,
+		unitPriceCents,
+		// The gift belongs to the order, not to any one pass. Writing it on every
+		// row would multiply it by the quantity the moment anyone sums a purchase.
+		contributionCents: i === 0 ? contributionCents : 0,
+		discountWaived
 	}));
 
 	const created = await db.insert(ticket).values(rows).returning();
@@ -224,6 +238,9 @@ export async function getEventTickets(eventId: string, statusFilter?: TicketStat
 			attendeeEmail: ticket.attendeeEmail,
 			code: ticket.code,
 			status: ticket.status,
+			unitPriceCents: ticket.unitPriceCents,
+			contributionCents: ticket.contributionCents,
+			discountWaived: ticket.discountWaived,
 			checkedInAt: ticket.checkedInAt,
 			checkedInByUserId: ticket.checkedInByUserId,
 			checkedInByName: user.name,

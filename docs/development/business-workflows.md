@@ -349,6 +349,22 @@ events use RSVP instead.
   `checkout.completed` bus event → `handleTicketCheckout()` in
   `ticket/checkout-listener.ts` → `fulfillPurchase(purchaseId)` flips the purchase's
   tickets `pending → valid` and emits `ticket.purchased` (confirmation email with codes).
+- **What the buyer chooses, and what the row remembers.** The 50% sustaining-member rate is a
+  default, not a rule: `waiveDiscount` on the form charges full price for that purchase, and the
+  ticket records `discountWaived` so a waiver stays legible after the fact (a non-member checking
+  the box waives nothing — `discountWaived` is derived from whether a discount actually applied).
+  An optional `contribution` becomes a second line item under the `ticket_contribution` product,
+  never a bigger ticket price. Both purchase surfaces — the public `/events/[id]/tickets` page and
+  the member event page's `<Action>` modal — render the same `TicketPurchaseFields` component, so
+  the total they preview is the total Stripe charges; fee coverage is computed on the ticket
+  subtotal _plus_ the gift, because that is what Stripe takes its cut of.
+- **The receipt has to unpick the charge.** `handleTicketCheckout` has no line-item breakdown to
+  read, so it derives fees by subtracting the known parts from `amount_subtotal`. The contribution
+  is one of those parts (`ticket_contribution_cents` in the session metadata) and must come out
+  before the remainder is called fees — otherwise the buyer's confirmation email reports their gift
+  back to them as a processing charge. Guarded by `checkout-listener.spec.ts`.
+- **NOTAFLOF is still a door policy.** Checkout cannot sell a $0 ticket, so the purchase page says
+  so in as many words and staff `compTickets` remains the mechanism for a free ticket.
 - **Check-in:** `staff/events/[id]/check-in` → `checkInTicket` form → `checkIn()` in
   `ticket-service.ts` (records who checked in and when; rejects reused codes).
 - **Cancellation:** `cancelEvent` → `event-service.cancel()` — collects ticket holders and
@@ -358,8 +374,9 @@ events use RSVP instead.
 
 ### Data touched
 
-`event`, `ticket` (status: `pending → valid → checked_in`, or `cancelled`), `eventRsvp`,
-linked `reservation` rows for space-holding events.
+`event`, `ticket` (status: `pending → valid → checked_in`, or `cancelled`; plus the money the
+purchase settled at — `unitPriceCents`, `contributionCents` on the purchase's first row only, and
+`discountWaived`), `eventRsvp`, linked `reservation` rows for space-holding events.
 
 ### Where it breaks
 

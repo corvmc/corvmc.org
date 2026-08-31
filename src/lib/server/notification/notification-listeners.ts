@@ -173,6 +173,8 @@ export function registerAllNotificationListeners(): void {
 				orderId: event.purchaseId.slice(0, 8).toUpperCase(),
 				unitPrice: formatCents(event.unitPriceCents),
 				subtotal: formatCents(event.subtotalCents),
+				contributionMade: event.contributionCents > 0,
+				contribution: formatCents(event.contributionCents),
 				feesCovered: event.feesCents > 0,
 				fees: formatCents(event.feesCents),
 				total: formatCents(event.totalCents),

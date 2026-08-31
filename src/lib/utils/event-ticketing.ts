@@ -1,4 +1,5 @@
 import { formatCents } from './format';
+import { TICKET_CONTRIBUTION_MAX_CENTS } from '$lib/config';
 
 /**
  * Who sells the tickets, and what that means for the price.
@@ -73,6 +74,24 @@ export function dollarsToCents(input: string | undefined | null): number | null 
 	const dollars = Number(raw);
 	if (!Number.isFinite(dollars) || dollars <= 0) return undefined;
 	return Math.round(dollars * 100);
+}
+
+/**
+ * Parse the optional contribution a ticket buyer adds on top of the price.
+ *
+ * Not `dollarsToCents`: that one reads a typed `0` as a typo, which is exactly
+ * what someone means here when they change their mind about giving. Blank and
+ * zero are both "no gift"; only junk, a negative, or an implausible amount are
+ * errors, so callers can tell "didn't give" apart from "fat-fingered it".
+ */
+export function contributionToCents(input: string | null | undefined): number | undefined {
+	const raw = (input ?? '').trim().replace(/^\$/, '').replace(/,/g, '');
+	if (raw === '') return 0;
+	const dollars = Number(raw);
+	if (!Number.isFinite(dollars) || dollars < 0) return undefined;
+	const cents = Math.round(dollars * 100);
+	if (cents > TICKET_CONTRIBUTION_MAX_CENTS) return undefined;
+	return cents;
 }
 
 /** The half-price sustaining-member rate, or null where the discount doesn't apply. */

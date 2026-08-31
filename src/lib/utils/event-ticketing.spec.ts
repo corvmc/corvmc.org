@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { ticketingMode, isFreeEvent, priceDisplay, sustainingMemberPrice } from './event-ticketing';
+import {
+	ticketingMode,
+	isFreeEvent,
+	priceDisplay,
+	sustainingMemberPrice,
+	contributionToCents
+} from './event-ticketing';
 
 // Regression: `ticketPrice` used to be meaningful only when `ticketingEnabled`
 // was on, so every price renderer read "no platform ticketing" as "free" — an
@@ -92,5 +98,35 @@ describe('sustainingMemberPrice', () => {
 		expect(sustainingMemberPrice(external)).toBeNull();
 		expect(sustainingMemberPrice(door)).toBeNull();
 		expect(sustainingMemberPrice(platformFree)).toBeNull();
+	});
+});
+
+describe('contributionToCents', () => {
+	it('reads a blank field and an explicit zero as no contribution', () => {
+		// Both mean "I'm not giving today" — only one of them is a mistake, and
+		// neither is. dollarsToCents can't be reused because it calls 0 a typo.
+		expect(contributionToCents('')).toBe(0);
+		expect(contributionToCents('   ')).toBe(0);
+		expect(contributionToCents(null)).toBe(0);
+		expect(contributionToCents(undefined)).toBe(0);
+		expect(contributionToCents('0')).toBe(0);
+	});
+
+	it('parses dollars into whole cents', () => {
+		expect(contributionToCents('5')).toBe(500);
+		expect(contributionToCents('$12.50')).toBe(1250);
+		expect(contributionToCents('1,000')).toBe(100000);
+		expect(contributionToCents('7.005')).toBe(701);
+	});
+
+	it('rejects what is not a gift', () => {
+		expect(contributionToCents('abc')).toBeUndefined();
+		expect(contributionToCents('-1')).toBeUndefined();
+	});
+
+	it('rejects an implausible amount as a typo rather than charging it', () => {
+		expect(contributionToCents('1000')).toBe(100000);
+		expect(contributionToCents('1000.01')).toBeUndefined();
+		expect(contributionToCents('100000')).toBeUndefined();
 	});
 });

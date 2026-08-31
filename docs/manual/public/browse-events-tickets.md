@@ -19,6 +19,19 @@ When an event sells tickets, you can buy them without an account:
 2. Enter your details and pay through the secure checkout.
 3. You'll get a confirmation by email.
 
+## Paying more than the ticket price
+
+Tickets are NOTAFLOF — no one is turned away for lack of funds. If the price is a
+barrier, get in touch or come to the door.
+
+If you're in a position to give more, checkout has two ways to do it:
+
+- **Add a contribution** — any amount on top of the ticket price, which goes to the
+  band on the bill and to keeping the room open.
+- **Pay full price** — sustaining members can skip their 50% discount for a
+  particular show. It's a per-show choice, not a setting; your discount is back the
+  next time you buy.
+
 ## Why sign in
 
 With a [free account](create-account.md), your tickets are saved under **My
