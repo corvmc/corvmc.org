@@ -5,6 +5,7 @@
  * wrapper that takes it, runs vitest, and gives it back.
  */
 import { spawnSync } from 'node:child_process';
+import { forwardedArgs } from './lib/forwarded-args';
 import {
 	acquireUnitLock,
 	releaseUnitLock,
@@ -13,13 +14,11 @@ import {
 } from './lib/unit-lock';
 
 /**
- * `pnpm test:unit -- --run` forwards the separator itself, so vitest is handed a
- * literal `--` alongside the flag. It tolerates it today; `playwright` did not,
- * and read it as a file filter that matched nothing — a *green*-looking failure
- * that `e2e/run.ts` now strips for the same reason. Dropping it here keeps both
- * spellings identical rather than resting on which tool happens to be lenient.
+ * This run's flags. `pnpm test:unit -- --run` forwards the separator itself and
+ * vitest reads everything after it as a filename filter, so `--run` would stop
+ * meaning one-shot — see `scripts/lib/forwarded-args.ts`.
  */
-const args = process.argv.slice(2).filter((arg) => arg !== '--');
+const args = forwardedArgs();
 
 /**
  * Watch mode holds the terminal for as long as somebody is working, and a
