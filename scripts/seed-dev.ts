@@ -14,7 +14,7 @@ import 'dotenv/config';
 import { randomUUID, randomBytes, scrypt } from 'crypto';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
-import { sql, eq, inArray, isNotNull } from 'drizzle-orm';
+import { sql, eq, inArray } from 'drizzle-orm';
 
 // Mirror the app's password hashing (src/lib/server/auth.ts `scryptHash`). We can't
 // import that module here — it pulls SvelteKit-only `$env`/`$app` aliases that don't
@@ -1703,29 +1703,44 @@ async function seedLineup(
 	owner: { id: string; name: string } | null,
 	support: { name: string; bandId?: string; status?: string }[]
 ) {
-	// `directoryEntryId` is filled in by `linkLineupCreditsToEntries()` after
-	// `seedDirectoryEntries()`, not here: entries are derived at the very end of
-	// the seed, so none exist yet at this point. Resolving per credit here
-	// silently wrote nulls.
+	// A credit names a `directory_entry`, so the group ids these fixtures carry
+	// have to be resolved. One query for the whole bill.
+	//
+	// This works only because `seedDirectoryEntries()` now runs *before* anything
+	// that writes a credit. It used to run last, and resolving here silently
+	// wrote nulls into every row.
+	const groupIds = [owner?.id, ...support.map((sup) => sup.bandId)].filter(
+		(id): id is string => !!id
+	);
+	const entryRows = groupIds.length
+		? await db
+				.select({ groupId: directoryEntry.groupId, id: directoryEntry.id })
+				.from(directoryEntry)
+				.where(inArray(directoryEntry.groupId, groupIds))
+		: [];
+	const entryFor = new Map(
+		entryRows.filter((r) => r.groupId).map((r) => [r.groupId as string, r.id])
+	);
+
 	const rows: any[] = [];
 	if (owner) {
 		rows.push({
 			eventId,
 			name: owner.name,
-			bandId: owner.id,
+			directoryEntryId: entryFor.get(owner.id) ?? null,
 			billingOrder: 0,
 			status: 'confirmed',
-			addedByBandId: owner.id
+			addedByGroupId: owner.id
 		});
 	}
 	support.forEach((sup, i) => {
 		rows.push({
 			eventId,
 			name: sup.name,
-			bandId: sup.bandId ?? null,
+			directoryEntryId: sup.bandId ? (entryFor.get(sup.bandId) ?? null) : null,
 			billingOrder: rows.length + i,
 			status: sup.status ?? (sup.bandId ? 'pending' : 'unlinked'),
-			addedByBandId: owner?.id ?? null
+			addedByGroupId: owner?.id ?? null
 		});
 	});
 	if (rows.length === 0) return;
@@ -4649,45 +4664,14 @@ async function seedSuggestions(users: any[], adminUser: any) {
  * Derive `directory_entry` and `directory_tag` from everything already seeded,
  * mirroring `scripts/db/backfill/directory-entry.sql` statement for statement.
  *
- * It runs last and reads the tables back rather than being threaded through the
- * dozen places that insert a user or a group, because `pnpm db:reset` replays
- * migrations and then seeds — the backfill script never runs locally or in e2e.
+ * It reads the tables back rather than being threaded through the dozen places
+ * that insert a user or a group, because `pnpm db:reset` replays migrations and
+ * then seeds — the backfill script never runs locally or in e2e. It runs as soon
+ * as the last of those inserts has happened, which is early enough for a lineup
+ * credit to reference an entry and late enough to see every subject.
  * Without this, every directory page goes blank the moment phase 3a's readers
  * land, and it reads as a query bug rather than a fixture gap.
  */
-/**
- * Point every lineup credit at its party's `directory_entry`, mirroring the
- * phase-10 migration's own UPDATE statement for statement.
- *
- * It runs after `seedDirectoryEntries()` for the reason that function gives
- * about itself: entries are derived at the end from what was already seeded, so
- * nothing written earlier can reference one. `pnpm db:reset` replays migrations
- * against an empty database and then seeds, so the migration's backfill has no
- * rows to touch and this is the only thing that fills the column locally.
- */
-async function linkLineupCreditsToEntries(): Promise<number> {
-	const credits = await db
-		.select({ id: eventBand.id, bandId: eventBand.bandId })
-		.from(eventBand)
-		.where(isNotNull(eventBand.bandId));
-	if (credits.length === 0) return 0;
-
-	const entries = await db
-		.select({ groupId: directoryEntry.groupId, id: directoryEntry.id })
-		.from(directoryEntry)
-		.where(isNotNull(directoryEntry.groupId));
-	const entryFor = new Map(entries.map((e) => [e.groupId as string, e.id]));
-
-	let linked = 0;
-	for (const c of credits) {
-		const entryId = entryFor.get(c.bandId as string);
-		if (!entryId) continue;
-		await db.update(eventBand).set({ directoryEntryId: entryId }).where(eq(eventBand.id, c.id));
-		linked++;
-	}
-	return linked;
-}
-
 async function seedDirectoryEntries() {
 	console.log('Seeding directory entries...');
 
@@ -4807,6 +4791,11 @@ async function main() {
 	const events = await seedEvents(allUsers);
 	const bands = await seedBands(allUsers);
 	const groups = await seedGroups(allUsers);
+	// Before anything that writes a lineup credit, because a credit names an
+	// entry. Every user and group the seed creates exists by this point — the
+	// last of them is `seedGroups` directly above — so it can still read them all
+	// back, which is the property it was placed last for.
+	const directory = await seedDirectoryEntries();
 	const groupSessions = await seedGroupSessions(groups);
 	const bandEvents = await seedBandEvents(bands, allUsers);
 	await seedCommunityEvents(users, adminUser);
@@ -4840,9 +4829,6 @@ async function main() {
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
 	const volunteerShifts = await seedVolunteerShifts(activeVolunteers, volunteerRoles, events);
 	const suggestions = await seedSuggestions(allUsers, adminUser);
-	// Last: it reads back every user and group the seed created.
-	const directory = await seedDirectoryEntries();
-	const linkedCredits = await linkLineupCreditsToEntries();
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -4856,7 +4842,6 @@ async function main() {
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
-	console.log(`  ${linkedCredits} lineup credits linked to a directory entry`);
 	console.log(
 		`  ${groupSessions.length} group sessions (${groupSessions.filter((e) => e.reservationId).length} holding the room)`
 	);

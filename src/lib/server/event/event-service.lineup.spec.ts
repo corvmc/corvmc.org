@@ -83,10 +83,17 @@ function containsParam(node: unknown, value: unknown): boolean {
 const OWNER = 'band-owner';
 const OTHER = 'band-other';
 
+/** What those groups' `directory_entry` rows are, per `queueLineupState`. */
+const OWNER_ENTRY = 'entry-owner';
+const OTHER_ENTRY = 'entry-other';
+
 /**
- * `groupId` is the event's owner. Every `bandId` below it is an `event_band`
- * credit — a different column meaning a different thing, which is exactly the
- * confusion phase 9's rename removes from the source.
+ * `groupId` is the event's owner.
+ *
+ * Two vocabularies below, deliberately. A `bandId` in a `setEventLineup` *input*
+ * is a group — that is what a lineup editor picks. A stored credit names a
+ * `directory_entry`, so assertions on written rows read `directoryEntryId`. The
+ * service resolves one to the other, which is the whole of phase 10a.
  */
 const ownedEvent = {
 	id: 'evt-1',
@@ -108,11 +115,14 @@ const ownedEvent = {
 function queueLineupState(existing: unknown[] = []) {
 	selectQueue = [
 		[ownedEvent],
-		existing,
+		// The entry lookup runs *before* the existing credits are read: matching an
+		// incoming group against a stored credit goes through this map, so it has
+		// to exist first.
 		[
 			{ groupId: OWNER, id: 'entry-owner' },
 			{ groupId: OTHER, id: 'entry-other' }
-		]
+		],
+		existing
 	];
 }
 
@@ -137,7 +147,7 @@ describe('setEventLineup — status resolution', () => {
 		});
 
 		expect(writtenLineup()).toEqual([
-			expect.objectContaining({ name: 'Paper Wolves', bandId: null, status: 'unlinked' })
+			expect.objectContaining({ name: 'Paper Wolves', directoryEntryId: null, status: 'unlinked' })
 		]);
 	});
 
@@ -158,7 +168,10 @@ describe('setEventLineup — status resolution', () => {
 			actingBandId: OWNER
 		});
 
-		expect(writtenLineup()[0]).toMatchObject({ bandId: OWNER, status: 'confirmed' });
+		expect(writtenLineup()[0]).toMatchObject({
+			directoryEntryId: OWNER_ENTRY,
+			status: 'confirmed'
+		});
 	});
 
 	it('leaves another band pending, and asks them', async () => {
@@ -180,7 +193,7 @@ describe('setEventLineup — status resolution', () => {
 			actingBandId: OWNER
 		});
 
-		expect(writtenLineup()[0]).toMatchObject({ bandId: OTHER, status: 'pending' });
+		expect(writtenLineup()[0]).toMatchObject({ directoryEntryId: OTHER_ENTRY, status: 'pending' });
 
 		await Promise.resolve();
 		await Promise.resolve();
@@ -204,7 +217,13 @@ describe('setEventLineup — status resolution', () => {
 describe('setEventLineup — existing rows', () => {
 	it('keeps a confirmed act confirmed when the bill is reordered', async () => {
 		queueLineupState([
-			{ id: 'eb-1', eventId: 'evt-1', name: 'Paper Wolves', bandId: OTHER, status: 'confirmed' }
+			{
+				id: 'eb-1',
+				eventId: 'evt-1',
+				name: 'Paper Wolves',
+				directoryEntryId: OTHER_ENTRY,
+				status: 'confirmed'
+			}
 		]);
 
 		await setEventLineup(
@@ -216,7 +235,7 @@ describe('setEventLineup — existing rows', () => {
 			{ actingBandId: OWNER }
 		);
 
-		const other = writtenLineup().find((r) => r.bandId === OTHER);
+		const other = writtenLineup().find((r) => r.directoryEntryId === OTHER_ENTRY);
 		expect(other).toMatchObject({ status: 'confirmed', billingOrder: 1 });
 	});
 
@@ -224,7 +243,13 @@ describe('setEventLineup — existing rows', () => {
 	// that said no and generate a fresh invitation every time.
 	it('never resurrects a declined act, and does not re-notify', async () => {
 		queueLineupState([
-			{ id: 'eb-1', eventId: 'evt-1', name: 'Paper Wolves', bandId: OTHER, status: 'declined' }
+			{
+				id: 'eb-1',
+				eventId: 'evt-1',
+				name: 'Paper Wolves',
+				directoryEntryId: OTHER_ENTRY,
+				status: 'declined'
+			}
 		]);
 
 		await setEventLineup('evt-1', [{ name: 'Paper Wolves', bandId: OTHER, billingOrder: 0 }], {
@@ -237,14 +262,21 @@ describe('setEventLineup — existing rows', () => {
 
 	it('keeps the owner on its own bill even when omitted', async () => {
 		queueLineupState([
-			{ id: 'eb-0', eventId: 'evt-1', name: 'Us', bandId: OWNER, status: 'confirmed', note: null }
+			{
+				id: 'eb-0',
+				eventId: 'evt-1',
+				name: 'Us',
+				directoryEntryId: OWNER_ENTRY,
+				status: 'confirmed',
+				note: null
+			}
 		]);
 
 		await setEventLineup('evt-1', [{ name: 'Paper Wolves', billingOrder: 0 }], {
 			actingBandId: OWNER
 		});
 
-		expect(writtenLineup().map((r) => r.bandId)).toContain(OWNER);
+		expect(writtenLineup().map((r) => r.directoryEntryId)).toContain(OWNER_ENTRY);
 	});
 });
 

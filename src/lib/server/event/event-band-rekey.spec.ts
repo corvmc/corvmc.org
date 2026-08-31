@@ -31,14 +31,18 @@ beforeAll(() => {
 afterAll(() => db?.close());
 
 describe('the migrated event_band', () => {
-	it('carries directory_entry_id beside the column it replaces', () => {
+	it('has replaced band_id outright', () => {
 		const cols = (db.prepare(`PRAGMA table_info('event_band')`).all() as { name: string }[]).map(
 			(c) => c.name
 		);
 		expect(cols).toContain('directory_entry_id');
-		// Still there, still written, read by nothing — so the backfill stays
-		// recoverable until its own migration drops it.
-		expect(cols).toContain('band_id');
+		// Gone as of 10b. It was kept through 10a so the backfill stayed
+		// recoverable from a column still being maintained.
+		expect(cols).not.toContain('band_id');
+		// Renamed rather than recreated: `added_by_band_id` named a group all
+		// along, and the values had to survive.
+		expect(cols).toContain('added_by_group_id');
+		expect(cols).not.toContain('added_by_band_id');
 	});
 
 	/**
