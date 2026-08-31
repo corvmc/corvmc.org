@@ -90,6 +90,8 @@ export interface TicketPurchasedEvent {
 	unitPriceCents: number;
 	/** Tickets only: unitPriceCents × quantity. */
 	subtotalCents: number;
+	/** Optional gift the buyer added on top of the tickets; 0 when they didn't. */
+	contributionCents: number;
 	/** Fee-coverage line item; 0 when the buyer didn't cover fees. */
 	feesCents: number;
 	/** What the card was actually charged. */

@@ -45,6 +45,7 @@ import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 import { seedStaffUser } from './fixtures/seed-staff-user';
 import { seedInventory } from './fixtures/seed-inventory';
 import { seedStaffEvent } from './fixtures/seed-staff-event';
+import { seedTicketPurchase } from './fixtures/seed-ticket-purchase';
 import { seedReservationPayments } from './fixtures/seed-reservation-payments';
 import { seedVolunteering } from './fixtures/seed-volunteering';
 import { seedFeatureFlags } from './fixtures/seed-feature-flags';
@@ -97,6 +98,8 @@ await seedBandOnboarding();
 await seedStaffUser();
 await seedInventory();
 await seedStaffEvent();
+// After the staff fixture: the show is created by the staff user.
+await seedTicketPurchase();
 await seedReservationPayments();
 await seedVolunteering();
 await seedCommunityEvents();

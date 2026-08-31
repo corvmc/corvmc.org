@@ -53,10 +53,19 @@ export async function handleTicketCheckout(session: Stripe.Checkout.Session): Pr
 		// unit price we stamped on the session at checkout. Sessions predating
 		// that metadata fall back to reporting the total with no fee line rather
 		// than booking the whole charge as fees.
+		//
+		// An optional contribution is a line item of its own, so it lands inside
+		// amount_subtotal too. It has to come out before the remainder can be
+		// called fees, or the buyer's gift is reported back to them as a
+		// processing charge.
 		const unitPriceCents = Number(session.metadata?.ticket_unit_price_cents) || 0;
+		const contributionCents = Number(session.metadata?.ticket_contribution_cents) || 0;
 		const totalCents = session.amount_total ?? 0;
 		const subtotalCents = unitPriceCents > 0 ? unitPriceCents * tickets.length : totalCents;
-		const feesCents = Math.max(0, (session.amount_subtotal ?? totalCents) - subtotalCents);
+		const feesCents = Math.max(
+			0,
+			(session.amount_subtotal ?? totalCents) - subtotalCents - contributionCents
+		);
 
 		await domainEvents.emit('ticket.purchased', {
 			purchaseId,
@@ -70,6 +79,7 @@ export async function handleTicketCheckout(session: Stripe.Checkout.Session): Pr
 			quantity: tickets.length,
 			unitPriceCents,
 			subtotalCents,
+			contributionCents,
 			feesCents,
 			totalCents
 		});
