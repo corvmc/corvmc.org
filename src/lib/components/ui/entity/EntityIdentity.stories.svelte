@@ -44,7 +44,7 @@
 				[null, 'Mar 14, 7:00–9:00 PM'],
 				['band', 'Mar 15, 6:00–8:00 PM'],
 				['event', 'Mar 16, 5:00–11:00 PM'],
-				['lesson', 'Mar 17, 4:00–5:00 PM']
+				['instructor', 'Mar 17, 4:00–5:00 PM']
 			]
 		},
 		{

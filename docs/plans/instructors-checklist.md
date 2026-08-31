@@ -29,21 +29,12 @@ Branch: `claude/teaching-tools-ffff44` (off `main`).
 
 ## Blocked — resolve before Step 3
 
-**1. The production census.** `wrangler d1 execute --remote` was unauthorized from the authoring
-environment, so this was never run. **It does not block the schema** — that was an overstatement
-in the spec, corrected once the migration was generated without it: both outcomes are
-TypeScript-only enum edits emitting zero SQL, and neither renames nor backfills anything. What it
-gates is Step 3. Someone with prod access must run it and record the result in the
-spec:
-
-```sql
-SELECT booker_type, count(*) n FROM reservation GROUP BY 1;
-SELECT prototype_type, count(*) n FROM recurring_series GROUP BY 1;
-```
-
-Zero `lesson` rows → delete the value from `bookerTypes` **and** `prototypeTypes`, and `'instructor'`
-inherits `IconSchool`. Non-zero → keep it archival, and `'instructor'` needs `IconChalkboard`
-because `registry.spec.ts` forbids two subtypes sharing a glyph.
+**1. ~~The production census~~ — run, and the answer was zero.** No reservation carries
+`booker_type = 'lesson'`. The value is deleted from `bookerTypes` and `prototypeTypes`, and
+`'instructor'` reclaims `IconSchool`. Nothing renamed, nothing backfilled, no SQL emitted. The staff
+reservations page's `'lesson'` glyph branch was **retargeted** to `'instructor'` rather than deleted:
+it exists because a booker type whose ref resolves to the member leaves the Booker column unable to
+say what the booking is, and teaching has that property too.
 
 **2. `reservation.teachingRateCents` is `500` — $5/hr, which is the rate a sustaining member's
 contribution already buys.** `webhook-handlers.ts` computes it: `$5 = 1 hour = 2 credits`. So this is
@@ -103,15 +94,16 @@ off-peak spec owns. `commitReservationCredits` keeps its `creditsApply` paramete
 
 ## Step 3 — Booker type + terms (inert refactor; nothing writes the new value)
 
-- [ ] `bookerTypes` gains `'instructor'` (and loses `'lesson'` per census)
-- [ ] `src/lib/components/ui/entity/registry.ts` — reservation subtype + glyph
-- [ ] `src/lib/server/entity/refs.ts` — explicit `'instructor'` branch above the fallback
-- [ ] `staffReservationFiltersSchema` — widen the `bookerType` enum
-- [ ] `src/lib/server/reservation/config.ts` — `termsFor()` / `getBookingTerms()` + four
+- [x] `bookerTypes` gains `'instructor'` (and loses `'lesson'` per census)
+- [x] `src/lib/components/ui/entity/registry.ts` — reservation subtype + glyph
+- [x] `src/lib/server/entity/refs.ts` — explicit `'instructor'` branch above the fallback
+- [ ] `staffReservationFiltersSchema` — widen the `bookerType` enum (may be automatic: it likely
+      derives from `bookerTypes` rather than re-listing them — check before editing)
+- [x] `src/lib/server/reservation/config.ts` — `termsFor()` / `getBookingTerms()` + four
       `reservation.teaching*` defaults
-- [ ] `site-config-service.ts` `DEFAULTS` — the four keys **plus the missing `minAdvanceMinutes`**
-- [ ] `settings.remote.ts` — settings form fields
-- [ ] `conflict-service.ts` — `validateBooking` takes `bookerType`; `create`/`staffCreate` forward it
+- [x] `site-config-service.ts` `DEFAULTS` — the four keys **plus the missing `minAdvanceMinutes`**
+- [x] `settings.remote.ts` — settings form fields
+- [x] `conflict-service.ts` — `validateBooking` takes `bookerType`; `create`/`staffCreate` forward it
 - [ ] **Convert the rate reads to the resolver** — each must start selecting `bookerType`.
       Measured, since the plan's "~20" was an estimate: **27 config-read sites**
       (6 `config<number>('reservation.hourlyRateCents')` + 21 `getReservationConfig()`, of which not
@@ -123,7 +115,10 @@ off-peak spec owns. `commitReservationCredits` keeps its `creditsApply` paramete
       contract, not an internal read: both must report the rate _resolved for that reservation_, or
       an API consumer is told a teaching booking costs the member rate. Check for external consumers
       before changing the meaning of the field.
-- [ ] `config.spec.ts`, `conflict-service.spec.ts`, `refs.spec.ts`
+- [x] `config.spec.ts` — `termsFor` is pure, so it needs no mock; pins that a _new_ booker type
+      inherits member terms rather than teaching ones, and that one credit is exactly one half-hour
+      of teaching
+- [ ] `conflict-service.spec.ts`, `refs.spec.ts`
 
 ## Step 4 — Staff surface (staff-only; nothing member-facing)
 

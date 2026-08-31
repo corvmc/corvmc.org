@@ -18,7 +18,17 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'reservation.bufferMinutes': 0,
 	'reservation.maxAdvanceDaysOneoff': 14,
 	'reservation.maxAdvanceDaysRecurring': 17.5,
+	// Written by `updateReservationSettings` but absent here until now, so
+	// `config('reservation.minAdvanceMinutes')` threw Unknown site config key.
+	// It worked only because `reservation/config.ts` supplies its own fallback.
+	'reservation.minAdvanceMinutes': 60,
 	'reservation.hourlyRateCents': 1500,
+	// Teaching terms. The rate is not a discount on the one above — it is what a
+	// sustaining member's contribution already buys, with the monthly cap lifted.
+	'reservation.teachingRateCents': 500,
+	'reservation.teachingMinDurationHours': 0.5,
+	'reservation.teachingMaxAdvanceDaysOneoff': 60,
+	'reservation.teachingMaxAdvanceDaysRecurring': 90,
 
 	'org.name': 'Corvallis Music Collective',
 	'org.shortName': 'CorvMC',

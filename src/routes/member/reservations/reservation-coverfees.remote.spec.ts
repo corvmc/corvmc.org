@@ -24,7 +24,11 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 	formatDateInTz: vi.fn(() => ''),
 	buildDateInTz: vi.fn((date: string, time: string) => new Date(`${date}T${time}:00`))
 }));
-vi.mock('$lib/server/reservation/config', () => ({
+// `termsFor` and `getBookingTerms` come through real: they are pure, and a
+// stubbed rate resolver would let this spec pass while the resolver it is
+// standing in for returned something else. Only the config *read* is faked.
+vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
+	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 vi.mock('$lib/server/reservation/recurring-series-service', () => ({ create: vi.fn() }));

@@ -89,7 +89,7 @@ export async function deactivateUser(userId: string) {
 	await db.delete(session).where(eq(session.userId, userId));
 
 	// Cancel all future personal reservations booked by this user. Scoped to
-	// personal bookings (bookerType 'user') — band/event/lesson reservations
+	// personal bookings (bookerType 'user') — band/event reservations
 	// belong to those entities, not the leaving user.
 	const futureReservations = await db
 		.select({ id: reservation.id })

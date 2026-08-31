@@ -83,7 +83,12 @@ describe('ReservationService', () => {
 
 			const result = await create(params);
 
-			expect(validateBooking).toHaveBeenCalledWith(params.startsAt, params.endsAt);
+			// The booker type is forwarded, not defaulted: without it a half-hour
+			// teaching booking is refused by the member `minDurationHours`, and a
+			// term of lessons by the member advance window.
+			expect(validateBooking).toHaveBeenCalledWith(params.startsAt, params.endsAt, {
+				bookerType: params.bookerType
+			});
 			expect(result.id).toBe('res-1');
 		});
 

@@ -16,7 +16,18 @@ import { recurringSeries } from './recurring';
 // Reservation domain types
 // ---------------------------------------------------------------------------
 
-export const bookerTypes = ['user', 'group', 'event', 'lesson'] as const;
+/**
+ * Which table `bookerId` points into — a table discriminator, never a category.
+ * `'instructor'` earns its place because `instructor` is a real table with real
+ * ids; it is the capacity a person is booking in, not a label on the booking.
+ *
+ * A `'lesson'` value sat here unwritten from the reservation system's first day,
+ * reserved for a module that had not been designed. It was removed once
+ * production confirmed **zero rows carried it** — so nothing was renamed and
+ * nothing was backfilled, which is what a rename would have required and what
+ * would have minted staff grants out of historical data.
+ */
+export const bookerTypes = ['user', 'group', 'event', 'instructor'] as const;
 export type BookerType = (typeof bookerTypes)[number];
 
 export function isBookerType(value: string): value is BookerType {

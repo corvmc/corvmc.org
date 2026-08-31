@@ -302,22 +302,22 @@ values addressing one table, distinguished by what sort of thing the row is.
 
 #### The legacy `'lesson'` value
 
-> **Blocked.** The production census has not been run — `wrangler d1
-execute --remote` was unauthorized from the authoring environment. Someone with prod access must run
-> it and record the result here before the booker-type phase. It does **not** gate the schema:
-> both outcomes below are TypeScript-only enum edits emitting zero SQL.
+> **Run, and the answer was zero.** Production holds **no reservation with
+> `booker_type = 'lesson'`.** The value sat in the enum from the reservation
+> system's first day, reserved for a module that had not been designed, and was
+> never once written.
 >
-> ```
-> SELECT booker_type, count(*) n FROM reservation GROUP BY 1;
-> SELECT prototype_type, count(*) n FROM recurring_series GROUP BY 1;
-> ```
+> So `'lesson'` is **deleted** — from `bookerTypes` and `prototypeTypes` alike —
+> and `'instructor'` takes `IconSchool` back. Nothing is renamed and nothing is
+> backfilled, which are the two things a rename would have required and the
+> second of which would have minted staff grants out of historical data.
+> Removing an enum value emits no SQL.
 >
-> **Result: _(pending)_**
-
-| Census             | What ships                                                                                                                                                                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Zero `lesson` rows | Delete `'lesson'` from `bookerTypes` **and** `prototypeTypes` in the same migration that adds `'instructor'`. `'instructor'` inherits `IconSchool`; `toBookerRef` loses its fallback branch and the staff reservations page loses a special case |
-| Rows exist         | Keep `'lesson'` as an archival value, retitle its `refs.ts` comment _legacy-only_, and give `'instructor'` `IconChalkboard` — `registry.spec.ts` forbids two subtypes sharing a glyph                                                            |
+> One consequence is not a deletion. The staff reservations page carried a
+> special case giving `'lesson'` its own glyph, because a booker type whose ref
+> resolves to the member leaves the Booker column unable to say what the booking
+> is. **`'instructor'` has exactly that property**, so the branch was retargeted
+> rather than removed.
 
 **`'lesson'` is not renamed to `'instructor'`, whatever the census says.** The `band` → `group` rename
 was safe because the rows stayed correct: `group.id` **is** `band.id`, so every stored `bookerId`
