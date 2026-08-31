@@ -11,7 +11,8 @@ TICKET{{#multiple}}S{{/multiple}}:
 RECEIPT
 ORDER: {{orderId}}
 {{quantity}} x {{unitPrice}} ticket{{#multiple}}s{{/multiple}}: {{subtotal}}
-{{#feesCovered}}Processing fees covered: {{fees}}
+{{#contributionMade}}Contribution to the band & venue: {{contribution}}
+{{/contributionMade}}{{#feesCovered}}Processing fees covered: {{fees}}
 {{/feesCovered}}TOTAL PAID: {{total}}
 
 View your tickets: {{{ticketsUrl}}}

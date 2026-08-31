@@ -1222,7 +1222,8 @@ async function commitCreditsAndSettleIfCovered(opts: {
 			stripeCustomerId,
 			amountCents: 0,
 			displayName: 'Credits',
-			metadata: { reservation_id: opts.reservationId }
+			metadata: { reservation_id: opts.reservationId },
+			reference: opts.reservationId
 		});
 		stripePaymentRecordId = rec.paymentRecordId;
 	} catch (err) {
@@ -1925,7 +1926,8 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 			userId: row.createdByUserId,
 			stripeCustomerId: member.stripeId,
 			amountCents: remainingCents,
-			metadata: { reservation_id: data.id }
+			metadata: { reservation_id: data.id },
+			reference: data.id
 		}));
 	} else {
 		// Fully covered by credits — already settled by the commit (creditsUsed set).

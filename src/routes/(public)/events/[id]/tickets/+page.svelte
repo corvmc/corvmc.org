@@ -11,7 +11,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { Field, Select } from '$lib/components/ui/Form';
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
-	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
+	import TicketPurchaseFields from '$lib/components/events/TicketPurchaseFields.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { IconHeartHandshake } from '@tabler/icons-svelte';
@@ -27,7 +27,6 @@
 	let quantity = $state(1);
 	let attendeeName = $state('');
 	let attendeeEmail = $state('');
-	let coverFees = $state(false);
 
 	const evt = $derived(data.event);
 	const isFreeEvent = $derived(!evt.ticketPrice || evt.ticketPrice === 0);
@@ -36,8 +35,6 @@
 	const subtotal = $derived(discountedPrice * quantity);
 	const memberSubtotal = $derived(Math.round(unitPrice / 2) * quantity);
 	const memberSavings = $derived(subtotal - memberSubtotal);
-	const feeCents = $derived(calculateTotalWithFeeCoverage(subtotal).feeCents);
-	const total = $derived(coverFees ? subtotal + feeCents : subtotal);
 	const soldOut = $derived(data.remaining === 0);
 	const maxQuantity = $derived(data.remaining !== null ? Math.min(data.remaining, 10) : 10);
 
@@ -80,6 +77,14 @@
 				<div class="mt-2">
 					<Badge variant="info">Free event</Badge>
 				</div>
+			{/if}
+			{#if !isFreeEvent}
+				<!-- The purchase form can't sell a $0 ticket, so the policy has to be
+				     said out loud rather than implied by the price field. -->
+				<p class="mt-3 text-muted text-sm">
+					No one is turned away for lack of funds. If the price is a barrier,
+					<a href={resolve('/contact')} class="link">get in touch</a> or just come to the door.
+				</p>
 			{/if}
 			{#if data.remaining !== null}
 				<p class="mt-1 text-sm">
@@ -184,34 +189,11 @@
 						<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
 					{/if}
 
-					<Field
-						name="coverFees"
-						type="checkbox"
-						bind:value={coverFees}
-						checkboxLabel="Add {formatCents(
-							feeCents
-						)} to cover processing fees so the collective receives the full amount"
+					<TicketPurchaseFields
+						fullPrice={unitPrice}
+						{quantity}
+						isSustainingMember={data.isSustainingMember}
 					/>
-
-					<div class="border-t border-base-200 pt-4">
-						{#if coverFees}
-							<div class="flex justify-between text-muted">
-								<span>Subtotal</span>
-								<span>{formatCents(subtotal)}</span>
-							</div>
-							<div class="flex justify-between text-muted">
-								<span>Processing fees</span>
-								<span>{formatCents(feeCents)}</span>
-							</div>
-						{/if}
-						<div class="flex justify-between text-lg font-medium">
-							<span>Total</span>
-							<span>{formatCents(total)}</span>
-						</div>
-						{#if data.isSustainingMember}
-							<p class="mt-1 text-sm text-success">Sustaining member discount applied</p>
-						{/if}
-					</div>
 
 					<SubmitButton
 						label="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"

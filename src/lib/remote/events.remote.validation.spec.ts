@@ -279,6 +279,42 @@ describe('purchaseTickets validation', () => {
 		expect(checkout).not.toHaveBeenCalled();
 	});
 
+	it('rejects an unparseable contribution without starting a checkout', async () => {
+		await expectRejects(
+			() =>
+				events.purchaseTickets(
+					{
+						eventId: 'evt-1',
+						quantity: 1,
+						attendeeName: 'Ada',
+						attendeeEmail: 'ada@example.com',
+						contribution: 'twenty bucks'
+					},
+					makeIssue()
+				),
+			'contribution'
+		);
+		expect(checkout).not.toHaveBeenCalled();
+	});
+
+	it('rejects a contribution far above the cap rather than charging a typo', async () => {
+		await expectRejects(
+			() =>
+				events.purchaseTickets(
+					{
+						eventId: 'evt-1',
+						quantity: 1,
+						attendeeName: 'Ada',
+						attendeeEmail: 'ada@example.com',
+						contribution: '150000'
+					},
+					makeIssue()
+				),
+			'contribution'
+		);
+		expect(checkout).not.toHaveBeenCalled();
+	});
+
 	it('rejects a guest with no name or email without starting a checkout', async () => {
 		await expectRejects(
 			() => events.purchaseTickets({ eventId: 'evt-1', quantity: 2 }, makeIssue()),

@@ -256,6 +256,69 @@ describe('handleTicketCheckout receipt amounts', () => {
 		});
 	});
 
+	it('reports a contribution as a contribution, not as processing fees', async () => {
+		// Two $20 tickets plus a $10 gift, no fee coverage. Deriving fees by
+		// subtracting only the ticket subtotal from Stripe's subtotal would book
+		// the entire gift as a processing fee on the buyer's receipt.
+		await handleTicketCheckout({
+			id: 'cs_gift',
+			amount_subtotal: 5000,
+			amount_total: 5000,
+			metadata: {
+				type: 'ticket',
+				purchase_id: 'purchase-abc',
+				ticket_quantity: '2',
+				ticket_unit_price_cents: '2000',
+				ticket_contribution_cents: '1000'
+			}
+		} as any);
+
+		expect(emittedPayload()).toMatchObject({
+			subtotalCents: 4000,
+			contributionCents: 1000,
+			feesCents: 0,
+			totalCents: 5000
+		});
+	});
+
+	it('separates a contribution from covered fees on the same order', async () => {
+		await handleTicketCheckout({
+			id: 'cs_gift_fees',
+			amount_subtotal: 5180,
+			amount_total: 5180,
+			metadata: {
+				type: 'ticket',
+				purchase_id: 'purchase-abc',
+				ticket_quantity: '2',
+				ticket_unit_price_cents: '2000',
+				ticket_contribution_cents: '1000'
+			}
+		} as any);
+
+		expect(emittedPayload()).toMatchObject({
+			subtotalCents: 4000,
+			contributionCents: 1000,
+			feesCents: 180,
+			totalCents: 5180
+		});
+	});
+
+	it('reports no contribution when the buyer did not add one', async () => {
+		await handleTicketCheckout({
+			id: 'cs_nogift',
+			amount_subtotal: 4000,
+			amount_total: 4000,
+			metadata: {
+				type: 'ticket',
+				purchase_id: 'purchase-abc',
+				ticket_quantity: '2',
+				ticket_unit_price_cents: '2000'
+			}
+		} as any);
+
+		expect(emittedPayload()).toMatchObject({ contributionCents: 0, feesCents: 0 });
+	});
+
 	it('falls back to the charged total when the unit price metadata is missing', async () => {
 		// Sessions created before this metadata existed must still produce a
 		// coherent receipt rather than booking the whole charge as fees.

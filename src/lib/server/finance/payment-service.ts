@@ -352,20 +352,43 @@ export interface CashPaymentOptions {
 	metadata?: Record<string, string>;
 	/** Payment method label (default 'Cash'); use 'Credits' for $0 credit settlements. */
 	displayName?: string;
+	/**
+	 * What this payment reconciles against, for `processor_details.payment_reference`
+	 * — Stripe's "opaque string for manual reconciliation". Required rather than
+	 * defaulted: the whole value of the field is that somebody holding a Stripe
+	 * record can find the thing it paid for, and a generated placeholder would
+	 * satisfy the API while destroying that.
+	 */
+	reference: string;
 }
 
 export async function recordCashPayment(
 	options: CashPaymentOptions
 ): Promise<{ paymentRecordId: string }> {
-	const { userId, stripeCustomerId, amountCents, metadata = {}, displayName = 'Cash' } = options;
+	const {
+		userId,
+		stripeCustomerId,
+		amountCents,
+		metadata = {},
+		displayName = 'Cash',
+		reference
+	} = options;
 
 	const now = Math.floor(Date.now() / 1000);
 	const stripeRecord = await stripe.paymentRecords.reportPayment({
 		amount_requested: { value: amountCents, currency: 'usd' },
 		initiated_at: now,
+		// `custom` takes `display_name` OR `type`, never both — sending both is
+		// rejected outright, on every API version tested. And `processor_details`
+		// is required, not optional as the shape here long implied. Both facts were
+		// established against the live test API; see the note below.
 		payment_method_details: {
-			custom: { display_name: displayName, type: 'custom' },
-			type: 'custom'
+			type: 'custom',
+			custom: { display_name: displayName }
+		},
+		processor_details: {
+			type: 'custom',
+			custom: { payment_reference: reference }
 		},
 		metadata,
 		outcome: 'guaranteed',
