@@ -14,16 +14,16 @@ Stripe, Postmark. Documentation index: `docs/README.md`.
 Always through `pnpm`. A global prettier 2.8.8 shadows this project's prettier 3, so `npx prettier`
 reports results that are simply wrong.
 
-| Command                         | Gate                                                       |
-| ------------------------------- | ---------------------------------------------------------- |
-| `pnpm check`                    | svelte-check — the type gate                               |
-| `pnpm lint:changed`             | prettier + eslint vs `origin/main` (what PR CI runs)       |
-| `pnpm lint`                     | the whole tree, including markdown — run before committing |
-| `pnpm test:unit -- --run`       | vitest, one shot                                           |
-| `pnpm test:e2e`                 | playwright — add `--workers=1` locally                     |
-| `pnpm docs:check`               | docs integrity; CI fails the PR on it                      |
-| `pnpm db:generate`              | the only way to create a migration                         |
-| `pnpm db:reset && pnpm db:seed` | rebuild local D1                                           |
+| Command                   | Gate                                                       |
+| ------------------------- | ---------------------------------------------------------- |
+| `pnpm check`              | svelte-check — the type gate                               |
+| `pnpm lint:changed`       | prettier + eslint vs `origin/main` (what PR CI runs)       |
+| `pnpm lint`               | the whole tree, including markdown — run before committing |
+| `pnpm test:unit -- --run` | vitest, one shot                                           |
+| `pnpm test:e2e`           | playwright — add `--workers=1` locally                     |
+| `pnpm docs:check`         | docs integrity; CI fails the PR on it                      |
+| `pnpm db:generate`        | the only way to create a migration                         |
+| `pnpm db:reset`           | rebuild local D1 (wipe + migrate + seed)                   |
 
 These mirror the CI jobs in `.github/workflows/ci.yml`, so a green local gate is a green PR.
 
