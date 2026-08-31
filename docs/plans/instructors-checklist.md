@@ -45,12 +45,19 @@ Zero `lesson` rows → delete the value from `bookerTypes` **and** `prototypeTyp
 inherits `IconSchool`. Non-zero → keep it archival, and `'instructor'` needs `IconChalkboard`
 because `registry.spec.ts` forbids two subtypes sharing a glyph.
 
-**2. `reservation.teachingRateCents` is `500` — $5/hr, a third of the $15 member rate.** A
-deliberate subsidy to incentivise teaching, not a premium. Two consequences carried into Step 5:
-credits still do not apply (the subsidy is in the rate; free hours on top would subsidise the same
-hour twice), and **nothing structurally stops an instructor booking teaching time and rehearsing in
-it** — at a third of the price that is the cheapest rehearsal in the building. The spec records
-trust / cap / watch as the options and leaves the choice to CMC.
+**2. `reservation.teachingRateCents` is `500` — $5/hr, which is the rate a sustaining member's
+contribution already buys.** `webhook-handlers.ts` computes it: `$5 = 1 hour = 2 credits`. So this is
+not a discount, it is **the member rate with the monthly cap lifted** — the $15
+`hourlyRateCents` is the drop-in rate for hours past your allocation. Two consequences for Step 5:
+**credits DO apply** (the goal is extending the allocation, which presupposes spending it first, and
+at $5/hr one credit covers exactly one half-hour slot), and the abuse case is far smaller than an
+earlier draft claimed — an instructor rehearsing on teaching time pays what they would have paid with
+credits, and gains only that their hours are uncapped.
+
+**3. Off-peak pricing is coming and is a separate spec.** Lower prices before 4pm, for everyone. The
+seam: the applicable rate is `min(bookerRate, timeRate)`, and pricing stops being `duration × rate`
+because a booking spanning 4pm has two rates — that replaces the formula at 8+ sites, which the
+off-peak spec owns. `commitReservationCredits` keeps its `creditsApply` parameter for it.
 
 ## Step 1 — Design spec
 

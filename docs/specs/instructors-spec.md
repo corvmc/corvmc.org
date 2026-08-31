@@ -359,49 +359,51 @@ two places to look for "the rate." Merely widening `ReservationConfig` was rejec
 parallel set of every term with nothing stopping a caller reading `config.hourlyRateCents` when it
 meant the teaching one, and there are already about twenty such reads.
 
-| Key                                           | Default | Note                                                                                |
-| --------------------------------------------- | ------- | ----------------------------------------------------------------------------------- |
-| `reservation.teachingRateCents`               | `500`   | **$5/hr — a third of the member rehearsal rate.** Deliberately a subsidy; see below |
-| `reservation.teachingMinDurationHours`        | `0.5`   | `minDurationHours: 1` blocks a half-hour lesson today                               |
-| `reservation.teachingMaxAdvanceDaysOneoff`    | `60`    |                                                                                     |
-| `reservation.teachingMaxAdvanceDaysRecurring` | `90`    |                                                                                     |
+| Key                                           | Default | Note                                                                                      |
+| --------------------------------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `reservation.teachingRateCents`               | `500`   | **$5/hr — the rate a sustaining member's contribution already buys, uncapped.** See below |
+| `reservation.teachingMinDurationHours`        | `0.5`   | `minDurationHours: 1` blocks a half-hour lesson today                                     |
+| `reservation.teachingMaxAdvanceDaysOneoff`    | `60`    |                                                                                           |
+| `reservation.teachingMaxAdvanceDaysRecurring` | `90`    |                                                                                           |
 
-#### The rate is a subsidy, and that inverts two arguments
+#### $5/hr is the member rate, not a discount on it
 
-$5/hr is **a third of the $15 member rehearsal rate**, not a premium on it. CMC is paying — in
-forgone room revenue — to have teaching happen here. Everything below follows from that being
-deliberate.
+**A sustaining member's contribution already buys room time at exactly $5 an hour.**
+`webhook-handlers.ts` states it in a comment and then computes it:
 
-**It makes the staff grant carry more weight, not less.** The original argument for staff-granting was
-about the booking horizon: a self-declared flag would let anyone claim a longer window. At a third of
-the price the incentive is money, and it applies to every member who books rehearsal time. "Instructor"
-is now worth claiming for its own sake.
+```
+$5 = 1 hour = 2 credits
+freeHoursCredits = contributionCents / (DOLLARS_PER_UNIT * 50)   // cents / 250
+```
 
-**And it opens a gap this spec cannot close structurally: nothing stops an approved instructor booking
-teaching time and rehearsing in it.** The room does not know what happens inside it. At a rate above
-the member rate nobody would bother; at a third of it, the cheapest rehearsal in the building is a
-teaching booking. Three honest options, and the choice is CMC's rather than this spec's:
+So `$5 → 2 credits → 1 hour`. The $15 `reservation.hourlyRateCents` is the **drop-in** rate: what an
+hour costs once your monthly allocation is spent, or if you never contributed.
 
-- **Trust it.** Staff grant instructors they know, the collective is small, and a leader who abuses
-  this is a conversation. Costs nothing and is probably right today.
-- **Cap it.** A weekly teaching-hours ceiling per instructor, which bounds the exposure without
-  anyone having to police what happens in the room.
-- **Watch it.** Surface teaching hours per instructor on the staff page and let the number make the
-  case if it ever needs making.
+That makes the teaching rate not a subsidy and not a favour. **It is the member rate with the monthly
+cap lifted.** A teacher whose contribution buys ten credits runs out after five hours; teaching status
+lets them keep buying at the same price instead of stepping up to drop-in. CMC forgoes the _difference
+between drop-in and member pricing on hours past the allocation_ — not two thirds of its room revenue.
 
-This is recorded rather than solved because a structural fix would mean supervising a room CMC
-deliberately does not supervise. What must not happen is the gap going unnamed and then being
-discovered as a surprise.
+Three things follow, and the first two reverse what an earlier draft of this spec claimed.
 
-**It also sharpens the capacity question.** Teaching time is cheap _and_ bookable 90 days out, while
-member rehearsal is full price and 14 days out. An instructor can hold prime evening slots for a term
-at a third of the rate, and the long horizon — argued below as a protection for the teacher — is what
-makes that reach so far. If the room starts filling with teaching, the lever is the horizon and the
-cap, not the rate: cutting the subsidy would defeat the point of having one.
+**The abuse case is much smaller than "a third of the price" suggested.** An instructor who books
+teaching time and rehearses in it is paying what they would have paid with credits. Nothing stops
+them, and nothing needs to: the only thing they gain over any other member is that their hours are not
+capped at the allocation. That is worth naming — an uncapped member rate is still worth something —
+but it is a long way from the cheapest rehearsal in the building, which is what a genuine third-price
+rate would have created. Trust it; surface teaching hours on the staff page if it ever needs watching.
 
-**A last, small consequence.** A 30-minute lesson at $5/hr is a **$2.50** charge, against a Stripe fee
-of roughly $0.38 — about 15%. Cash at the door already exists and avoids it, and this is a reason to
-prefer it for teaching rather than a reason to raise the minimum duration.
+**And it makes the rate defensible without appeal to what CMC likes.** "Teachers pay what members
+pay" answers the member who asks why someone else's business is being subsidised. "Teachers pay a
+third" does not.
+
+**The remaining asymmetry is the cap, so that is the number to tune if this ever goes wrong** — not
+the rate. Cutting the rate would break the equivalence that makes it defensible; capping teaching
+hours per week would not.
+
+**A last, small consequence.** A 30-minute lesson is a **$2.50** charge against a Stripe fee of
+roughly $0.38 — about 15%. Cash at the door already exists and avoids it. A reason to prefer it for
+teaching, not a reason to raise the minimum duration.
 
 **The windows are the load-bearing number, and they are policy.** The member 14-day window rations a
 scarce room among many members. A teaching studio is a standing arrangement a student pays for a
@@ -418,22 +420,54 @@ lost the room they teach in every Tuesday." The mitigation needs no new machiner
 longer than any member can book into means the series is already materialized before a member can
 reach that week. Assert it in `termsFor` so it cannot drift.
 
-### Credits do not apply to teaching
+#### Where off-peak pricing meets this
 
-`creditsApply: false` for `'instructor'`. **The subsidy is already in the rate**, and free hours on top
-of it would be subsidising the same hour twice — once by pricing it at a third, again by making it
-free. One lever, deliberately.
+CMC also intends to price the room lower before 4pm, for everyone, to fill hours that are otherwise
+empty. That is a room-pricing change rather than an instructor one and gets its own spec; two things
+about the seam belong here.
 
-The original framing here was that a membership must not subsidise a commercial activity. That is the
-weaker argument now that CMC has decided to subsidise teaching outright, and the arithmetic is the
-stronger one: `creditValueCents(hourlyRateCents)` values a credit at **half the hourly rate**, so a
-credit spent on teaching would be worth $2.50 where the same credit spent on rehearsal is worth $7.50.
-Letting credits reach this path would mean either the same benefit buying different value depending on
-how it is spent, or — if credits were valued at the member rate but redeemed at the teaching one — a
-route to convert a membership into heavily discounted room time.
+**The rate is the lowest that applies.** `min(bookerRate, timeRate)` — a teaching booking at 2pm pays
+$5, not some compounded figure, and a teacher never has to reason about which discount they are on.
+Since the teaching rate is already the member rate, off-peak will in practice rarely go below it, so
+this mostly means teaching is unaffected by the time of day. That is the right outcome: the two
+instruments target different things, and stacking them would be pricing the same hour down twice for
+reasons that have nothing to do with each other.
 
-`creditsApply: false` is also the only thing keeping `creditValueCents` off a second rate at all;
-without it, introducing one would quietly re-price everyone's free hours.
+**Off-peak is where `creditsApply` earns its keep.** Credits and the teaching rate agree at $5, so
+credits on teaching time are exact. An off-peak rate that is _not_ a whole number of credit-halves
+would leave a member's credit over- or under-covering a slot, and `commitReservationCredits` needs the
+flag to say so. Keeping the parameter is what stops that being discovered later as a rounding bug.
+
+**Pricing stops being `duration × rate`.** A booking spanning 4pm has two rates, so the total is a sum
+over half-hour slots rather than a multiplication. That is not a change of rate _source_, which is what
+`termsFor` was built for — it is a change of _formula_, and it replaces
+`Math.round(durationHours * hourlyRateCents)` at eight-plus sites. The off-peak spec owns that work;
+this module only has to not assume a single scalar rate per booking.
+
+### Credits apply to teaching, and the arithmetic is already exact
+
+`creditsApply: true` for `'instructor'`. An earlier draft of this spec said the opposite, on the
+grounds that a credit would be "worth $2.50 in teaching where the same credit is worth $7.50 in
+rehearsal." That was wrong twice over.
+
+**A credit is always thirty minutes.** `hoursToCredits` and `creditValueCents` are both derived from
+`MINUTES_PER_CREDIT = 30`, so `creditValueCents(rate) = rate / 2` is exactly what thirty minutes costs
+at that rate — at $5 and at $15 alike. One credit buys half an hour whatever it is spent on. Its cash
+value tracks the rate because the rate is what it is discounting; it does not "lose value."
+
+**And the goal is to extend the allocation, not to bypass it.** Teaching status exists so a teacher
+can keep going _past_ their ten credits, which presupposes the credits were spent first. Refusing them
+would mean a teacher paying cash from the first hour while their allocation sat unused — the opposite
+of extending it.
+
+The two prices agreeing is what makes this seamless rather than merely permitted: at $5/hr one credit
+covers exactly one half-hour slot, so the ledger does not have to reason about partial coverage on a
+teaching booking at all.
+
+`computeReservationCredit` needs no change for any of this — it already takes `hourlyRateCents` and
+`freeHoursBalance` as arguments and is agnostic about where they came from. `commitReservationCredits`
+still needs its `creditsApply` parameter, because off-peak pricing below introduces the one case that
+genuinely wants credits withheld.
 
 ### Recurring
 
