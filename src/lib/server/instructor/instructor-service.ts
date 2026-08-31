@@ -2,6 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { db, getRowCount } from '$lib/server/db';
 import { instructor, type Instructor } from '$lib/server/db/schema/instructor';
 import { DomainError } from '$lib/server/domain-error';
+import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import type { InstructorStatus } from '$lib/config';
 
 /**
@@ -125,13 +126,24 @@ export async function apply(userId: string, listing: InstructorListingInput): Pr
 		return;
 	}
 
-	await db.insert(instructor).values({
-		userId,
-		status: 'requested',
-		...listing,
-		createdAt: now,
-		updatedAt: now
-	});
+	// The read above and this insert are two statements, so two tabs submitting at
+	// once both see no row and both insert. `instructor.userId` is unique, which is
+	// what actually enforces one record per member — but the raw D1 violation
+	// escapes as a 500 unless it is caught here. That is not hypothetical: the
+	// comment on `isUniqueConstraintError` names the Sentry issue where exactly
+	// this shape got out.
+	try {
+		await db.insert(instructor).values({
+			userId,
+			status: 'requested',
+			...listing,
+			createdAt: now,
+			updatedAt: now
+		});
+	} catch (err) {
+		if (isUniqueConstraintError(err)) throw new AlreadyAnInstructorError();
+		throw err;
+	}
 }
 
 /**
@@ -231,6 +243,13 @@ export async function sendBack(
 	staffUserId: string,
 	reviewNotes: string
 ): Promise<void> {
+	// The note is the entire point of a return state: the member cannot fix what
+	// they cannot see. Guarded here as well as in the Zod schema, because the
+	// service is reachable from the staff panel and a test alike.
+	if (!reviewNotes.trim()) {
+		throw new InstructorStateError('Say what needs changing — the applicant only sees this note.');
+	}
+
 	const now = new Date();
 	const result = await db
 		.update(instructor)
@@ -273,15 +292,21 @@ export async function grant(userId: string, staffUserId: string): Promise<void> 
 		return;
 	}
 
-	await db.insert(instructor).values({
-		userId,
-		status: 'active',
-		grantedByUserId: staffUserId,
-		grantedAt: now,
-		statusChangedAt: now,
-		createdAt: now,
-		updatedAt: now
-	});
+	// Same race as `apply()`, reachable from two staff panels at once.
+	try {
+		await db.insert(instructor).values({
+			userId,
+			status: 'active',
+			grantedByUserId: staffUserId,
+			grantedAt: now,
+			statusChangedAt: now,
+			createdAt: now,
+			updatedAt: now
+		});
+	} catch (err) {
+		if (isUniqueConstraintError(err)) throw new AlreadyAnInstructorError();
+		throw err;
+	}
 }
 
 /**

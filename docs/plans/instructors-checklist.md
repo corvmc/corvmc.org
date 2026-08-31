@@ -27,10 +27,13 @@ Branch: `claude/teaching-tools-ffff44` (off `main`).
 - **No feature flag.** The phase order carries the guarantee instead: staff-only surfaces may land
   early, member-facing surfaces may not land before the thing they advertise works.
 
-## Blocked — resolve before Step 2
+## Blocked — resolve before Step 3
 
 **1. The production census.** `wrangler d1 execute --remote` was unauthorized from the authoring
-environment, so this was never run. Someone with prod access must run it and record the result in the
+environment, so this was never run. **It does not block the schema** — that was an overstatement
+in the spec, corrected once the migration was generated without it: both outcomes are
+TypeScript-only enum edits emitting zero SQL, and neither renames nor backfills anything. What it
+gates is Step 3. Someone with prod access must run it and record the result in the
 spec:
 
 ```sql
@@ -54,23 +57,38 @@ door, staff must set the real number before Step 5 deploys.
 
 ## Step 2 — Schema + service
 
-- [ ] `src/lib/server/db/schema/instructor.ts` — table, types, zod schemas. Two details taken from
+- [x] `src/lib/server/db/schema/instructor.ts` — table, types, zod schemas. Two details taken from
       `volunteer_profile` rather than from the plan: the index is **(status, createdAt)**, not status
       alone — it is the staff review queue, oldest first — and **`updatedAt` is `notNull` with a
       `unixepoch()` default**, because this is a fresh CREATE TABLE. (`group_member`'s nullable
       `updatedAt` is an artefact of being added by ALTER, where SQLite rejects a non-constant
       default; that constraint does not apply here.)
-- [ ] `src/lib/config.ts` — `instructorStatuses` + labels (NOT the schema file; the staff page
+- [x] `src/lib/config.ts` — `instructorStatuses` + labels (NOT the schema file; the staff page
       imports it, and `$lib/server` is unreachable from the browser)
-- [ ] `src/lib/server/db/schema/index.ts` — export line
-- [ ] `src/lib/server/db/schema/relations.ts` — `instructor` block (`user`, `grantedBy`)
-- [ ] `scripts/d1-table-order.mjs` — after `user`
-- [ ] `src/lib/components/ui/StatusBadge.svelte` — verify the five values; expect only `paused` new
-- [ ] `src/lib/server/instructor/instructor-service.ts` — full set including the application half,
+- [x] `src/lib/server/db/schema/index.ts` — export line
+- [x] ~~`relations.ts`~~ — **not needed.** `volunteer_profile`, the closest analogue, has no
+      relations block either: drizzle relations exist for the `db.query.*` API, and this module
+      uses explicit joins like the rest of the directory code. Adding an untraversed block
+      would be config nothing reads.
+- [x] `scripts/d1-table-order.mjs` — after `user`
+- [x] `src/lib/components/ui/StatusBadge.svelte` — `paused` added to `variants` and `badgeClass`
+      (`IconPlayerPause` / `badge-warning`, distinct from `retired`'s ghost archive so the staff list
+      can tell "back in autumn" from "gone"). The other four were already mapped. Registered in
+      `StatusBadge.spec.ts`'s `vocabularies`.
+- [x] **No `instructorStatusLabels`** — `StatusBadge` flat-merges every vocabulary's labels by bare
+      status string, so one here would have relabelled equipment loans' `requested` and clobbered
+      `volunteerHourStatusLabels`' `rejected` → "Returned". That "Returned" is the label this module
+      wanted anyway, which is also why `rejected` is the right value rather than a coined one.
+- [x] `src/lib/server/instructor/instructor-service.ts` — full set including the application half,
       even though nothing calls it until Step 7
-- [ ] `src/lib/server/instructor/instructor-context.ts` — `requireInstructor(userId)`
-- [ ] Migration via `pnpm db:generate` — `CREATE TABLE` + whatever the census decided
-- [ ] `instructor-service.spec.ts`, `instructor-context.spec.ts`
+- [x] `src/lib/server/instructor/instructor-context.ts` — `requireInstructor(userId)`
+- [x] Migration via `pnpm db:generate` — `CREATE TABLE` + whatever the census decided
+- [x] `instructor-service.spec.ts` — runs the real statements against real SQLite over the
+      committed migrations (`group-invite-upsert.spec.ts`'s approach), because every risk here
+      is a WHERE clause and a mocked db would pass while matching the wrong rows. Covers
+      `requireInstructor` too rather than getting its own file: the usual
+      don't-merge-sibling-specs rule guards against unioning conflicting `vi.mock` preambles,
+      and there is one mock here that both modules want identically.
 
 ## Step 3 — Booker type + terms (inert refactor; nothing writes the new value)
 
@@ -83,9 +101,17 @@ door, staff must set the real number before Step 5 deploys.
 - [ ] `site-config-service.ts` `DEFAULTS` — the four keys **plus the missing `minAdvanceMinutes`**
 - [ ] `settings.remote.ts` — settings form fields
 - [ ] `conflict-service.ts` — `validateBooking` takes `bookerType`; `create`/`staffCreate` forward it
-- [ ] **Convert ~20 rate reads to the resolver** — each must start selecting `bookerType`.
+- [ ] **Convert the rate reads to the resolver** — each must start selecting `bookerType`.
+      Measured, since the plan's "~20" was an estimate: **27 config-read sites**
+      (6 `config<number>('reservation.hourlyRateCents')` + 21 `getReservationConfig()`, of which not
+      all read the rate), and 44 `hourlyRateCents` mentions in `reservations.remote.ts` alone.
       Highest risk: the charge paths, the credit commit, and `getReservations` (the member's own
       list, which excludes only `'event'`, so teaching bookings would show $15/hr)
+- [ ] **`src/lib/server/db/schema/api.ts` exposes `hourlyRateCents` publicly** — on
+      `ReservationPayResponse` and the staff detail response. Not named in the plan and it is a
+      contract, not an internal read: both must report the rate _resolved for that reservation_, or
+      an API consumer is told a teaching booking costs the member rate. Check for external consumers
+      before changing the meaning of the field.
 - [ ] `config.spec.ts`, `conflict-service.spec.ts`, `refs.spec.ts`
 
 ## Step 4 — Staff surface (staff-only; nothing member-facing)
@@ -141,5 +167,7 @@ door, staff must set the real number before Step 5 deploys.
 ## Gates
 
 `pnpm check` · `pnpm test:unit -- --run` · `pnpm lint` before every commit.
-Schema steps: `pnpm db:reset && pnpm db:seed`, then check child row counts.
+Schema steps: **`pnpm db:reset` alone** — it already migrates _and_ seeds, so the
+`db:reset && pnpm db:seed` that CLAUDE.md and conventions.md both tell you to run seeds twice
+and dies on `UNIQUE constraint failed: media.key`. Then check child row counts.
 Regenerate migrations via `pnpm db:generate` after merging `main` — never by hand.

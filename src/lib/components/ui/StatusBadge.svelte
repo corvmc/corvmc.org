@@ -28,6 +28,7 @@
 		IconUser,
 		IconTool,
 		IconArchive,
+		IconPlayerPause,
 		IconPackageExport,
 		IconPackageImport,
 		IconTicket,
@@ -96,6 +97,10 @@
 		on_loan: 'badge-info',
 		maintenance: 'badge-warning',
 		retired: 'badge-ghost',
+		// Instructors. Warning rather than ghost, and distinct from `retired`: a
+		// pause is a state somebody means to come back from, and the staff list
+		// exists to tell "off for the summer" from "no longer teaches here".
+		paused: 'badge-warning',
 		lost: 'badge-error',
 		// Equipment loans
 		requested: 'badge-warning',
@@ -184,6 +189,7 @@
 		on_loan: { icon: IconPackageExport, color: 'text-info' },
 		maintenance: { icon: IconTool, color: 'text-warning' },
 		retired: { icon: IconArchive, color: 'text-base-content' },
+		paused: { icon: IconPlayerPause, color: 'text-warning' },
 		lost: { icon: IconAlertTriangle, color: 'text-error' },
 
 		// Equipment loan statuses

@@ -243,6 +243,18 @@ resubmission loop. If someone abuses resubmission, that is the second question, 
 `volunteer_hour_log.reviewNotes` are the other two, and the event one names the volunteer one as its
 model. Reusing the column name is what makes the fourth reader recognize it on sight.
 
+**`rejected` is reused, not coined.** `StatusBadge` already labels that value "Returned", and its
+comment already gives this module's reason — "sent back to its author to fix".
+`volunteerHourStatusLabels` argues it in prose: staff return a log for correction and the member logs
+it again, which "rejected" reads as final. So the vocabulary was settled before this spec, and a
+fifth word for the same idea would only have hidden the pattern.
+
+That also means this module ships **no status label map**. `StatusBadge` merges every vocabulary's
+labels into one flat record keyed by the bare status string, so an `instructorStatusLabels` would
+have relabelled equipment loans' `requested` and overwritten the `rejected` → "Returned" it wants
+anyway. The remaining four humanise correctly unaided; only `paused` needed adding, to `variants`
+and `badgeClass`.
+
 **`applicationNote` and `reviewNotes` point in opposite directions and must not be merged.** One is
 the member telling staff something the public never sees; the other is staff telling the member why
 their application came back. A single "notes" column would be a staff-only field the member is also
@@ -290,9 +302,10 @@ values addressing one table, distinguished by what sort of thing the row is.
 
 #### The legacy `'lesson'` value
 
-> **Blocked, and phase 1 depends on it.** The production census has not been run — `wrangler d1
+> **Blocked.** The production census has not been run — `wrangler d1
 execute --remote` was unauthorized from the authoring environment. Someone with prod access must run
-> it and record the result here before phase 1's migration is written:
+> it and record the result here before the booker-type phase. It does **not** gate the schema:
+> both outcomes below are TypeScript-only enum edits emitting zero SQL.
 >
 > ```
 > SELECT booker_type, count(*) n FROM reservation GROUP BY 1;

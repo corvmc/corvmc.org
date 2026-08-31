@@ -727,25 +727,32 @@ export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
  * construction*: `requireInstructor` refuses `requested` and `rejected` without
  * anyone having written a check for them.
  *
- * `rejected` is not terminal, unlike its namesake on `eventStatuses`. Staff hand
- * an application back with `reviewNotes` and the member edits and resubmits,
- * which returns the row to `requested`. It is a return state, not a verdict —
- * appeals contest behaviour calls, and this is a judgement about a proposal.
+ * `rejected` is **the same value meaning the same thing as everywhere else in
+ * this codebase**, not a near-homonym. `StatusBadge` already labels it
+ * "Returned" and its comment already says why — "sent back to its author to
+ * fix" — and `volunteerHourStatusLabels` argues it in prose: staff return a log
+ * for correction and the member logs it again, which "rejected" reads as final.
+ * `event.status = 'rejected'` paired with `event.reviewNotes` is the same shape
+ * again. Reusing the vocabulary is the point; a fifth word for it would not be.
  */
 export const instructorStatuses = ['requested', 'rejected', 'active', 'paused', 'retired'] as const;
 
 export type InstructorStatus = (typeof instructorStatuses)[number];
 
-export const instructorStatusLabels: Record<InstructorStatus, string> = {
-	requested: 'Applied',
-	// Not "Rejected". The member is being asked to change something and send it
-	// back, and the label is the first thing that tells them which of the two
-	// this is.
-	rejected: 'Needs changes',
-	active: 'Active',
-	paused: 'Paused',
-	retired: 'Retired'
-};
+/**
+ * **There is deliberately no `instructorStatusLabels`.**
+ *
+ * `StatusBadge` merges every vocabulary's label map into one flat record keyed
+ * by the bare status string, so a label here would apply to every other
+ * vocabulary sharing the value. Two would have collided: `requested` would have
+ * relabelled equipment loans, and `rejected` would have overwritten
+ * `volunteerHourStatusLabels`' "Returned".
+ *
+ * Nothing is lost, because that "Returned" is already the label this module
+ * wants — and for the reason written there: staff return the thing for
+ * correction and the member submits it again, which "rejected" reads as final.
+ * The other four humanise correctly on their own.
+ */
 
 /** Headline on an instructor listing — one line, shown on the card. */
 export const INSTRUCTOR_HEADLINE_MAX = 120;
