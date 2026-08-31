@@ -1,10 +1,10 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "e003aafe-7840-4d17-8310-9a5734dd666b",
+  "id": "50770e85-54b5-4791-a70b-1eeda95cd3ce",
   "prevIds": [
     "3791fd25-09fb-4793-b243-86ee64ba2362",
-    "92a96ca6-b3a1-4428-94d1-80fef5a5d556"
+    "ae0c4ed1-c13f-478c-b35e-99e31a226879"
   ],
   "ddl": [
     {
@@ -273,6 +273,10 @@
     },
     {
       "name": "volunteer_signup",
+      "entityType": "tables"
+    },
+    {
+      "name": "instructor",
       "entityType": "tables"
     },
     {
@@ -6771,6 +6775,176 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'requested'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "headline",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "blurb",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rates_note",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "booking_url",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "teaching_contact",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "true",
+      "generated": null,
+      "name": "accepting_students",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "application_note",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "review_notes",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "granted_by_user_id",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "granted_at",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status_changed_at",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status_note",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "media"
     },
     {
@@ -8620,6 +8794,36 @@
     },
     {
       "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_instructor_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "instructor"
+    },
+    {
+      "columns": [
+        "granted_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_instructor_granted_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "instructor"
+    },
+    {
+      "columns": [
         "uploaded_by_user_id"
       ],
       "tableTo": "user",
@@ -9246,6 +9450,15 @@
       "nameExplicit": false,
       "name": "volunteer_signup_pk",
       "table": "volunteer_signup",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "instructor_pk",
+      "table": "instructor",
       "entityType": "pks"
     },
     {
@@ -11311,6 +11524,24 @@
     {
       "columns": [
         {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "created_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "instructor_status_idx",
+      "entityType": "indexes",
+      "table": "instructor"
+    },
+    {
+      "columns": [
+        {
           "value": "key",
           "isExpression": false
         }
@@ -11592,6 +11823,15 @@
       "name": "volunteer_shift_feedback_signup_id_unique",
       "entityType": "uniques",
       "table": "volunteer_shift_feedback"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "nameExplicit": false,
+      "name": "instructor_user_id_unique",
+      "entityType": "uniques",
+      "table": "instructor"
     },
     {
       "value": "ends_at > starts_at",
