@@ -174,12 +174,16 @@
 								<!-- An external act: no CMC page exists for it, so its name
 								     points at the presence it chose. `rel` because this leaves
 								     the site for a URL somebody else supplied. -->
+								<!-- A block rather than the usual disable-next-line: prettier wraps
+								     this tag, so the `href` is not on the next line. -->
+								<!-- eslint-disable svelte/no-navigation-without-resolve -- an act's own URL, not an internal route -->
 								<a
 									href={act.externalUrl}
 									class="link"
 									target="_blank"
 									rel="noopener noreferrer nofollow">{act.name}</a
 								>
+								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							{:else}
 								{act.name}
 							{/if}
