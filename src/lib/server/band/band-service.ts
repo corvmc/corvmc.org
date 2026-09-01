@@ -132,6 +132,28 @@ export class OwnerCannotLeaveError extends Error {
 	}
 }
 
+/**
+ * The membership row does not exist, or does not belong to the band doing the
+ * asking. Both read the same to the caller on purpose — a band-scoped lookup
+ * that finds nothing must not reveal that the id is real somewhere else.
+ */
+export class BandMemberNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+
+	constructor(message = 'Member not found') {
+		super(message);
+	}
+}
+
+/** The proposed new owner is not on the roster, or is still pending. */
+export class NotAnActiveBandMemberError extends DomainError {
+	readonly httpStatus = 400;
+
+	constructor() {
+		super('New owner must be an active band member');
+	}
+}
+
 export class BandTierManagedByStripeError extends DomainError {
 	readonly httpStatus = 409;
 
@@ -702,7 +724,7 @@ export async function removeMember(memberId: string, bandId?: string) {
 	const scope = memberScope(memberId, bandId);
 	const [row] = await db.select({ role: groupMember.role }).from(groupMember).where(scope).limit(1);
 
-	if (!row) throw new Error('Member not found');
+	if (!row) throw new BandMemberNotFoundError();
 	if (row.role === 'owner') throw new CannotRemoveOwnerError();
 
 	return db.delete(groupMember).where(scope);
@@ -712,7 +734,7 @@ export async function updateMember(memberId: string, data: UpdateMemberData, ban
 	const scope = memberScope(memberId, bandId);
 	const [row] = await db.select({ role: groupMember.role }).from(groupMember).where(scope).limit(1);
 
-	if (!row) throw new Error('Member not found');
+	if (!row) throw new BandMemberNotFoundError();
 	if (row.role === 'owner') throw new CannotRemoveOwnerError();
 
 	const updates: Record<string, unknown> = {};
@@ -768,7 +790,7 @@ export async function transferOwnership(bandId: string, newOwnerId: string, acto
 		.limit(1);
 
 	if (!target || target.status !== 'active') {
-		throw new Error('New owner must be an active band member');
+		throw new NotAnActiveBandMemberError();
 	}
 
 	await db.batch([
@@ -802,7 +824,7 @@ export async function leaveBand(bandId: string, userId: string) {
 		.where(and(eq(groupMember.groupId, bandId), eq(groupMember.userId, userId)))
 		.limit(1);
 
-	if (!row) throw new Error('Not a member of this band');
+	if (!row) throw new BandMemberNotFoundError('Not a member of this band');
 	if (row.role === 'owner') throw new OwnerCannotLeaveError();
 
 	return db

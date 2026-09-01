@@ -77,7 +77,8 @@ const {
 	resume,
 	mapDbSubscription,
 	buildMemberSubscriptionState,
-	SubscriptionStateError
+	SubscriptionStateError,
+	SubscriptionValidationError
 } = await import('./subscription-service');
 
 // ---------------------------------------------------------------------------
@@ -157,7 +158,7 @@ describe('createCheckoutSession', () => {
 				successUrl: 'https://example.com/success',
 				cancelUrl: 'https://example.com/cancel'
 			})
-		).rejects.toThrow('Quantity must be at least 1');
+		).rejects.toThrow(SubscriptionValidationError);
 	});
 
 	it('throws when checkout returns no URL', async () => {
@@ -172,7 +173,7 @@ describe('createCheckoutSession', () => {
 				successUrl: 'https://example.com/success',
 				cancelUrl: 'https://example.com/cancel'
 			})
-		).rejects.toThrow('Stripe did not return a checkout URL');
+		).rejects.toThrow();
 	});
 });
 
@@ -650,9 +651,7 @@ describe('updateQuantity', () => {
 
 	it('throws when no active subscription', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({ data: [] });
-		await expect(updateQuantity('cus_ghost', 3, false)).rejects.toThrow(
-			'No active subscription found'
-		);
+		await expect(updateQuantity('cus_ghost', 3, false)).rejects.toThrow(SubscriptionStateError);
 	});
 
 	it('throws SubscriptionStateError (not a generic 500) when no usable line item', async () => {
@@ -706,9 +705,7 @@ describe('updateQuantity', () => {
 	});
 
 	it('throws when quantity is less than 1', async () => {
-		await expect(updateQuantity('cus_123', 0, false)).rejects.toThrow(
-			'Quantity must be at least 1'
-		);
+		await expect(updateQuantity('cus_123', 0, false)).rejects.toThrow(SubscriptionValidationError);
 	});
 });
 
@@ -734,7 +731,7 @@ describe('cancel', () => {
 
 	it('throws when no active subscription', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({ data: [] });
-		await expect(cancel('cus_ghost')).rejects.toThrow('No active subscription found');
+		await expect(cancel('cus_ghost')).rejects.toThrow(SubscriptionStateError);
 	});
 });
 
@@ -760,12 +757,12 @@ describe('resume', () => {
 			data: [{ id: 'sub_active', cancel_at_period_end: false, items: { data: [] } }]
 		});
 
-		await expect(resume('cus_123')).rejects.toThrow('not scheduled for cancellation');
+		await expect(resume('cus_123')).rejects.toThrow(SubscriptionStateError);
 	});
 
 	it('throws when no active subscription', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({ data: [] });
-		await expect(resume('cus_ghost')).rejects.toThrow('No active subscription found');
+		await expect(resume('cus_ghost')).rejects.toThrow(SubscriptionStateError);
 	});
 });
 

@@ -82,7 +82,7 @@ test('a member appears in the member directory, and not in the public one', asyn
 	// renders a first slice of them, so asserting on a name straight away would
 	// depend on where that slice happens to end. Typing also exercises the name
 	// search, which runs against the entry's copy of the name since phase 3a.
-	await page.getByPlaceholder('Search by name').fill(SEED_TARGET_NAME);
+	await page.locator('.directory-filters input[type="text"]').first().fill(SEED_TARGET_NAME);
 	await expect(page.getByRole('link', { name: new RegExp(SEED_TARGET_NAME) })).toBeVisible({
 		timeout: 15000
 	});

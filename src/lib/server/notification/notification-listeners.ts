@@ -1,4 +1,5 @@
 import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { INVITE_EXPIRY_DAYS } from '$lib/config';
 import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement } from '$lib/server/group/announcement-fanout';
@@ -373,7 +374,7 @@ export function registerAllNotificationListeners(): void {
 					}
 				],
 				cta: { url: signupUrl, label: 'Create your account & join' },
-				footnote: 'This invitation expires in 7 days.'
+				footnote: `This invitation expires in ${INVITE_EXPIRY_DAYS} days.`
 			} satisfies NotificationEmailModel
 		});
 	});

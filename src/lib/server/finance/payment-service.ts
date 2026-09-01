@@ -10,6 +10,16 @@ import {
 } from '$lib/server/db/schema/finance';
 import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 import { getStripeProductId } from './product-config-service';
+import { DomainError } from '$lib/server/domain-error';
+
+/** The cart or its options do not describe a chargeable checkout. */
+export class CheckoutValidationError extends DomainError {
+	readonly httpStatus = 400;
+
+	constructor(message: string) {
+		super(message);
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Local line item type — avoids Stripe namespace resolution issues in v22
@@ -109,15 +119,18 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 		cancelUrl
 	} = options;
 
-	if (lineItems.length === 0) throw new Error('Cart must have at least one line item');
+	if (lineItems.length === 0)
+		throw new CheckoutValidationError('Cart must have at least one line item');
 	if (mode === 'subscription' && !stripeCustomerId) {
-		throw new Error('Subscription checkouts require a Stripe customer');
+		throw new CheckoutValidationError('Subscription checkouts require a Stripe customer');
 	}
 	// Credit coupons are only wired for one-time payments (see step 5). In
 	// subscription mode the deduction would happen but the discount never
 	// applied — the member's credits would silently vanish.
 	if (mode === 'subscription' && eligibleCredits.length > 0) {
-		throw new Error('Credit discounts are not supported on subscription checkouts');
+		throw new CheckoutValidationError(
+			'Credit discounts are not supported on subscription checkouts'
+		);
 	}
 
 	// 1. Calculate cart total by resolving each line item's amount.

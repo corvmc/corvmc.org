@@ -213,12 +213,15 @@ describe('holding the room', () => {
 
 describe('validation', () => {
 	it('refuses an end at or before the start', async () => {
-		await expect(createGroupEvent(params({ endsAt: STARTS }))).rejects.toThrow(/end after/i);
+		await expect(createGroupEvent(params({ endsAt: STARTS }))).rejects.toMatchObject({
+			name: 'EventValidationError',
+			field: 'endsAt'
+		});
 	});
 
 	it('refuses doors after the start', async () => {
 		await expect(
 			createGroupEvent(params({ doorsAt: new Date('2026-09-17T03:00:00Z') }))
-		).rejects.toThrow(/Doors/i);
+		).rejects.toMatchObject({ name: 'EventValidationError', field: 'doorsAt' });
 	});
 });

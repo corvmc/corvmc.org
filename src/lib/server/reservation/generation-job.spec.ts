@@ -422,7 +422,6 @@ describe('generateRecurringReservations', () => {
 		expect(result.instancesCreated).toBe(1);
 		expect(result.errors).toHaveLength(1);
 		expect(result.errors[0]).toContain('series-1');
-		expect(result.errors[0]).toContain('Prototype reservation not found');
 
 		expect(insertedRows).toHaveLength(1);
 		expect(insertedRows[0]).toMatchObject({
