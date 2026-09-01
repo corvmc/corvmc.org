@@ -44,11 +44,20 @@
 			{#await interested then r}
 				<CardTitle>
 					{title}
-					<!-- The count that matters when the role is gated is how many could
-					     actually take a shift, not how many said yes. -->
+					<!--
+						The count that matters when the role is gated is how many could actually
+						take a shift, not how many said yes.
+
+						"today" is load-bearing. This page has no one shift in mind, so the gate
+						can only be evaluated against now — while the gate that actually refuses a
+						claim is evaluated as of the shift's date, and a card expiring next week
+						does not cover a shift the week after
+						(docs/reports/volunteer-workflow-findings.md#a7). The shift-scoped version
+						of this list lives in AddVolunteerAction, which passes the date.
+					-->
 					{#if r.gated && r.rows.length > 0}
 						<span class="text-muted font-normal">
-							· {r.rows.filter((m) => m.missing.length === 0).length} of {r.rows.length} ready
+							· {r.rows.filter((m) => m.missing.length === 0).length} of {r.rows.length} cleared today
 						</span>
 					{/if}
 				</CardTitle>
@@ -77,7 +86,7 @@
 							<th class="w-px"><span class="sr-only">Cleared</span></th>
 						{/if}
 						<th>Member</th>
-						<th class="col-support">Also interested in</th>
+						<th class="col-support">When they can help</th>
 						<th class="col-extra whitespace-nowrap">Since</th>
 					{/snippet}
 
@@ -99,7 +108,13 @@
 							</td>
 
 							<td class="col-support">
-								<BadgeList items={alsoIn} max={2} />
+								{#if member.availability}
+									<div class="truncate" title={member.availability}>{member.availability}</div>
+								{/if}
+								{#if member.phone}
+									<div class="text-subtle">{member.phone}</div>
+								{/if}
+								<BadgeList items={alsoIn} max={2} class="mt-1" />
 							</td>
 
 							<td class="col-extra whitespace-nowrap">{formatDateShort(member.since)}</td>

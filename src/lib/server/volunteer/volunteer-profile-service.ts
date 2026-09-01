@@ -376,6 +376,21 @@ export interface VolunteerListRow {
 	roleNames: string[];
 	/** Approved minutes, lifetime. What they actually did, next to what they said. */
 	minutes: number;
+	/**
+	 * "Weekday evenings, some weekends" — what they told us about when they can help.
+	 *
+	 * The whole reason the interest table exists is to know who to contact when a role
+	 * needs filling, and this is the half of that answer the app was collecting and never
+	 * showing anybody. See docs/reports/volunteer-workflow-findings.md#a6.
+	 */
+	availability: string | null;
+	/**
+	 * `user.phone`, not `directoryContact.phone` — the latter is opt-in *display* data with
+	 * its own visibility toggle, and reading it here would conflate "publish this" with
+	 * "reach me". Null for most members; a coordinator filling Saturday wants the ones who
+	 * gave one.
+	 */
+	phone: string | null;
 	/** When they onboarded, which is the one date every row here has. */
 	since: Date;
 }
@@ -432,6 +447,8 @@ export async function listVolunteers(
 			member: memberRefColumns(),
 			status: volunteerProfile.status,
 			isAdult: volunteerProfile.isAdult,
+			availability: volunteerProfile.availability,
+			phone: user.phone,
 			since: volunteerProfile.createdAt,
 			// Left-joined, so a volunteer who ticked nothing still gets a row and this
 			// comes back null.
@@ -467,6 +484,8 @@ export async function listVolunteers(
 			isAdult: r.isAdult,
 			roleNames: r.roleNames ? String(r.roleNames).split(ROLE_NAME_SEPARATOR).sort() : [],
 			minutes: Number(r.minutes),
+			availability: r.availability,
+			phone: r.phone,
 			since: r.since
 		}))
 	};

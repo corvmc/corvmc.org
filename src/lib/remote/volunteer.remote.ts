@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
+import { getStaffLayout } from './layout.remote';
 import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
 import { listInterestsForUser } from '$lib/server/volunteer/volunteer-interest-service';
 import { listSignupsForUser } from '$lib/server/volunteer/volunteer-signup-service';
@@ -71,13 +72,20 @@ import {
 	listOpenShiftsForMember,
 	getShiftDetail
 } from '$lib/server/volunteer/volunteer-shift-service';
+import type { ShiftWithCounts } from '$lib/server/volunteer/volunteer-shift-service';
 import {
 	claimShift as claimShiftService,
 	cancelSignup as cancelSignupService,
+	releaseSignup as releaseSignupService,
 	confirmSignup as confirmSignupService,
 	markNoShow as markNoShowService,
 	listClaimants,
-	listUnloggedCompletions
+	listOutstandingClaims,
+	listUnclosedSignups,
+	listUnloggedCompletions,
+	countVolunteerWorkWaiting,
+	CLOSE_OUT_LOOKBACK_DAYS,
+	SignupNotFoundError
 } from '$lib/server/volunteer/volunteer-signup-service';
 import {
 	submitFeedback as submitFeedbackService,
@@ -94,7 +102,7 @@ import {
 	listHeldForGate,
 	listHeldForGateMany,
 	missingFrom,
-	missingRequirements,
+	listLapsingBeforeRosteredShift,
 	flagUnclearedLogs
 } from '$lib/server/volunteer/member-certification-service';
 import {
@@ -229,7 +237,18 @@ export const getVolunteerRoleDetail = query(z.string(), async (id) => {
 const interestFilters = z.object({
 	volunteerRoleId: z.string().optional(),
 	search: z.string().optional(),
-	page: z.number().optional()
+	page: z.number().optional(),
+	/**
+	 * The date readiness is judged against, ISO. Omitted means today.
+	 *
+	 * A clearance covers a date, not a person: the spec is explicit that "a card that
+	 * lapses next week does not cover a shift the week after", and `getOpenShifts` has
+	 * always passed the shift's own date. This list did not, so a role page asked about a
+	 * shift three weeks out was answering about today
+	 * (docs/reports/volunteer-workflow-findings.md#a7). Callers with a shift in scope pass
+	 * its start; the role page, which has no one shift in mind, does not.
+	 */
+	asOf: z.string().optional()
 });
 
 /**
@@ -263,14 +282,14 @@ export const getInterestedVolunteers = query(interestFilters, async (f) => {
 	}
 
 	const held = await listHeldForGateMany(result.rows.map((m) => m.userId));
-	const now = new Date();
+	const at = f.asOf ? new Date(f.asOf) : new Date();
 
 	return {
 		...result,
 		gated: true,
 		rows: result.rows.map((m) => ({
 			...m,
-			missing: missingFrom(required, held.get(m.userId) ?? [], now)
+			missing: missingFrom(required, held.get(m.userId) ?? [], at)
 		}))
 	};
 });
@@ -327,7 +346,13 @@ export const approveVolunteerSignup = form(
 			mapDomainError(err);
 		}
 
-		await getBlockedVolunteers().refresh();
+		// Three: the dashboard renders the row, `getBlockedVolunteers` still backs the
+		// volunteers index's own reads, and the sidebar badge counts them.
+		await Promise.all([
+			getBlockedVolunteers().refresh(),
+			getVolunteerWorklist().refresh(),
+			getStaffLayout().refresh()
+		]);
 		return { success: true };
 	}
 );
@@ -683,6 +708,46 @@ export const approveVolunteerHours = form(
 	}
 );
 
+/**
+ * Record hours on a member's behalf.
+ *
+ * The missing half of the loop (docs/reports/volunteer-workflow-findings.md#b1): the help
+ * article and the service's own backdate error both tell members to "ask staff to add
+ * anything older", and until now staff could not add anything at all. Every report figure
+ * reads approved logs, so without this the hours the board is given are only the hours of
+ * volunteers who use the web app.
+ *
+ * `enteredByUserId` is what changes the rules — the backdate window lifts and the row lands
+ * approved, stamped with the staffer. See `submitHours` for why.
+ */
+export const logHoursForMember = form(
+	hoursFormSchema.extend({ userId: z.string().min(1, 'Pick a member') }),
+	async (data) => {
+		const staff = await requireStaff();
+
+		try {
+			await submitHours(
+				data.userId,
+				{
+					volunteerRoleId: data.volunteerRoleId,
+					workedOn: data.workedOn,
+					minutes: hoursToMinutes(data.hours),
+					description: data.description,
+					shiftId: data.shiftId || null
+				},
+				{ enteredByUserId: staff.id }
+			);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		// Approved on entry, so the pending count does not move — but the badge and the
+		// dashboard's close-out card can, and `refreshStaffQueue` covers all three.
+		await refreshStaffQueue();
+		return { success: true };
+	}
+);
+
 export const rejectVolunteerHours = form(
 	z.object({
 		id: z.string().min(1),
@@ -859,7 +924,19 @@ async function refreshMemberViews() {
  * /staff/volunteer and the mount refresh on /staff/volunteer/report.
  */
 async function refreshStaffQueue() {
-	await getVolunteerStatusCounts().refresh();
+	// The dashboard renders the top of this queue with the same approve and return
+	// actions, so a review from there has to drop the row it just cleared — the exact
+	// failure `e2e/volunteering.e2e.ts` pins on the full queue, one page along.
+	//
+	// The sidebar badge counts everything waiting on a coordinator now, so a review
+	// moves it too — and a badge that only settles on the next full navigation is the
+	// kind of stale number people learn to stop trusting. Same call `inbox.remote.ts`
+	// and `community-events.remote.ts` make after their own queue writes.
+	await Promise.all([
+		getVolunteerStatusCounts().refresh(),
+		getVolunteerWorklist().refresh(),
+		getStaffLayout().refresh()
+	]);
 }
 
 // Role edits change the member picker, the staff table (log counts included),
@@ -923,13 +1000,6 @@ export const getClearances = query(clearanceFilters, async (f) => {
 export const getRoleRequirements = query(z.string(), async (roleId) => {
 	await requireStaff();
 	return getRequirementsForRole(roleId);
-});
-
-/** What a member still needs before they could claim this role's shifts. */
-export const getMyMissingRequirements = query(z.string(), async (roleId) => {
-	await requireFeature('volunteering');
-	const currentUser = requireUser();
-	return missingRequirements(currentUser.id, roleId);
 });
 
 const certificationFormSchema = z.object({
@@ -1127,6 +1197,25 @@ async function refreshCertificationViews() {
 // Shifts
 // ---------------------------------------------------------------------------
 
+/**
+ * Everything argless that a change to one shift's roster invalidates.
+ *
+ * The dashboard is in here because its whole point is that a claim waiting to be confirmed
+ * is visible somewhere; a confirm that left the card showing the row it had just cleared
+ * would be the same bug the hours queue documents, one page along.
+ *
+ * The shift detail page is arg-keyed but the id is known here, so it comes too — the same
+ * opt-in `refreshRoleViews` makes.
+ */
+async function refreshShiftViews(shiftId?: string) {
+	await Promise.all([
+		getVolunteerWorklist().refresh(),
+		getStaffLayout().refresh(),
+		getMemberVolunteerPage().refresh(),
+		...(shiftId ? [getStaffShiftPage(shiftId).refresh()] : [])
+	]);
+}
+
 const shiftFilters = z.object({
 	volunteerRoleId: z.string().optional(),
 	eventId: z.string().optional(),
@@ -1304,6 +1393,64 @@ export const cancelMySignup = form(z.object({ signupId: z.string().min(1) }), as
 	return { success: true };
 });
 
+/**
+ * Put a member on a shift.
+ *
+ * The staff half of `claimShift`, and the reason it exists is in
+ * docs/reports/volunteer-workflow-findings.md#a1: a volunteer who says "put me down for
+ * Saturday" at the front desk could not be put down for Saturday, because the only door
+ * into the service read the session user.
+ *
+ * The service takes the userId and carries every guard with it — onboarding, shift open,
+ * capacity race, and the clearance check as of the shift's own date. None of them is
+ * relaxed for staff. A missing clearance comes back as `NotClearedError`, which
+ * `mapDomainError` turns into a 403 naming the certification, so the coordinator learns
+ * what to go and grant rather than being told "no".
+ */
+export const assignShiftToMember = form(
+	z.object({
+		shiftId: z.string().min(1),
+		userId: z.string().min(1, 'Pick a member')
+	}),
+	async (data) => {
+		await requireStaff();
+
+		try {
+			await claimShiftService(data.shiftId, data.userId, { assignedByStaff: true });
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await refreshShiftViews(data.shiftId);
+		return { success: true };
+	}
+);
+
+/**
+ * Take somebody off a shift, on their behalf.
+ *
+ * Distinct from `markSignupNoShow`, and that distinction is the finding
+ * (docs/reports/volunteer-workflow-findings.md#a2): before this, a coordinator told on
+ * Thursday that somebody could not make Saturday had to either leave the shift looking
+ * full or record a no-show that had not happened. A cancellation is notice; a no-show is
+ * not.
+ */
+export const releaseSignup = form(
+	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		try {
+			await releaseSignupService(data.signupId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await refreshShiftViews(data.shiftId);
+		return { success: true };
+	}
+);
+
 export const confirmSignup = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
@@ -1315,8 +1462,40 @@ export const confirmSignup = form(
 			mapDomainError(err);
 		}
 
-		void getStaffShiftPage(data.shiftId).refresh();
+		await refreshShiftViews(data.shiftId);
 		return { success: true };
+	}
+);
+
+/**
+ * Confirm every outstanding claim on one shift.
+ *
+ * A loop, not a bulk statement: `confirmSignup` is a conditional update guarded on
+ * `status = 'claimed'`, so a signup somebody cancelled between the page rendering and the
+ * button being pressed is skipped rather than resurrected. That guard is worth more than
+ * the round trips it costs — a shift has a handful of claimants, not a thousand.
+ *
+ * A signup that has already moved on is not an error. The coordinator asked for "everyone
+ * on this shift confirmed", and that is the state they end in.
+ */
+export const confirmSignups = form(
+	z.object({ shiftId: z.string().min(1), signupIds: z.array(z.string().min(1)).min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		let confirmed = 0;
+		for (const signupId of data.signupIds) {
+			try {
+				await confirmSignupService(signupId);
+				confirmed++;
+			} catch (err) {
+				if (err instanceof SignupNotFoundError) continue;
+				mapDomainError(err);
+			}
+		}
+
+		await refreshShiftViews(data.shiftId);
+		return { success: true, confirmed };
 	}
 );
 
@@ -1331,7 +1510,7 @@ export const markSignupNoShow = form(
 			mapDomainError(err);
 		}
 
-		void getStaffShiftPage(data.shiftId).refresh();
+		await refreshShiftViews(data.shiftId);
 		return { success: true };
 	}
 );
@@ -1438,16 +1617,30 @@ export const getUserHourLogs = query(z.string(), async (userId) => {
 export const getMemberVolunteerPage = query(z.void(), async () => {
 	const access = await getMyVolunteerAccess();
 
-	const [roles, interests, openShifts, unloggedShifts, logs, summary] = await Promise.all([
-		getActiveVolunteerRoles(),
-		getMyVolunteerInterests(),
-		getOpenShifts(),
-		getUnloggedShifts(),
-		getMyVolunteerHours(),
-		getMyVolunteerSummary()
-	]);
+	const [roles, interests, openShifts, unloggedShifts, logs, summary, certifications] =
+		await Promise.all([
+			getActiveVolunteerRoles(),
+			getMyVolunteerInterests(),
+			getOpenShifts(),
+			getUnloggedShifts(),
+			getMyVolunteerHours(),
+			getMyVolunteerSummary(),
+			// `getMyCertifications` was written and then had no caller anywhere, so a member
+			// could be told a shift needs a clearance and had no page saying which ones they
+			// already hold (docs/reports/volunteer-workflow-findings.md#d4).
+			getMyCertifications()
+		]);
 
-	return { access, roles, interests, openShifts, unloggedShifts, logs, summary };
+	return {
+		access,
+		roles,
+		interests,
+		openShifts,
+		unloggedShifts,
+		logs,
+		summary,
+		certifications
+	};
 });
 
 /**
@@ -1523,5 +1716,128 @@ export const getVolunteerReportPage = query(
 		]);
 
 		return { report, feedbackByRole, byMember };
+	}
+);
+
+// ---------------------------------------------------------------------------
+// The coordinator's dashboard
+// ---------------------------------------------------------------------------
+
+/** How far ahead the dashboard looks. Two weeks is far enough to still fill a shift. */
+const WORKLIST_HORIZON_DAYS = 14;
+/** Pending hours shown inline before the card sends you to the full queue. */
+const WORKLIST_HOURS_PREVIEW = 5;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Everything waiting on a coordinator, in one query.
+ *
+ * `/staff/volunteer` used to open on a filtered table of hour logs, which is one of the
+ * five things below and the only one that had a surface at all. The rest were spread over
+ * pages you had to already know to visit — see
+ * docs/reports/volunteer-workflow-findings.md#d1.
+ *
+ * One query rather than five, per `custom/no-concurrent-remote-queries`, and unparameterized
+ * so every mutation that changes it can refresh it by name. The horizons are constants and
+ * not arguments for the same reason: an argument would make the key move with the clock and
+ * `refresh()` would miss.
+ *
+ * Note what is NOT here. The dashboard shows the top few pending hour logs and links to the
+ * queue; it does not paginate, filter, or replace it. A dashboard that grows a filter bar
+ * has become the table it was meant to summarise.
+ */
+export const getVolunteerWorklist = query(async () => {
+	await requireStaff();
+
+	const now = new Date();
+	const horizon = new Date(now.getTime() + WORKLIST_HORIZON_DAYS * DAY_MS);
+	const lookback = new Date(now.getTime() - CLOSE_OUT_LOOKBACK_DAYS * DAY_MS);
+
+	const [claims, unclosed, upcoming, hours, counts, blocked, lapsing, waitingCount] =
+		await Promise.all([
+			listOutstandingClaims({}, now),
+			listUnclosedSignups({ since: lookback }, now),
+			listShifts({ from: now, to: horizon }),
+			listHourLogs({ status: 'pending' }, { page: 1, pageSize: WORKLIST_HOURS_PREVIEW }).then(
+				// Flagged the same way the full queue flags them, so the advisory warning does
+				// not appear only on the page somebody was already going to visit.
+				async (result) => {
+					const uncleared = await flagUnclearedLogs(
+						result.rows.map((r) => ({
+							id: r.id,
+							userId: r.userId,
+							volunteerRoleId: r.volunteerRoleId,
+							workedOn: r.workedOn
+						}))
+					);
+					return result.rows.map((r) => ({ ...r, uncleared: uncleared.has(r.id) }));
+				}
+			),
+			getStatusCounts(),
+			listBlockedVolunteers(),
+			listLapsingBeforeRosteredShift(now),
+			// The same call the sidebar badge makes, rather than a sum of the arrays above:
+			// one source means the number on the nav and the rows on this page cannot
+			// disagree.
+			countVolunteerWorkWaiting(now)
+		]);
+
+	// Computed here rather than asked of the database: `listShifts` already returns both
+	// counts per row, so "which of these is short" is a filter over rows we already hold
+	// rather than another round trip.
+	const shortStaffed = upcoming
+		.filter((shift) => shift.claimed < shift.capacity)
+		.map((shift) => ({
+			id: shift.id,
+			roleName: shift.roleName,
+			volunteerRoleId: shift.volunteerRoleId,
+			eventTitle: shift.eventTitle,
+			startsAt: shift.startsAt,
+			endsAt: shift.endsAt,
+			capacity: shift.capacity,
+			claimed: shift.claimed,
+			confirmed: shift.confirmed,
+			short: shift.capacity - shift.claimed
+		}));
+
+	return {
+		/** Claims on upcoming shifts nobody has confirmed. The reason the badge moved. */
+		needsConfirming: claims,
+		shortStaffed,
+		pendingHours: hours,
+		pendingHoursTotal: counts.pending,
+		blockedVolunteers: blocked,
+		/** Finished shifts whose claims never completed, so no hours were ever offered. */
+		closeOut: unclosed,
+		lapsing,
+		/** What the sidebar badge counts — the same call, so the two always agree. */
+		waitingCount
+	};
+});
+
+/**
+ * Shifts inside an explicit window — the Schedule page's one query.
+ *
+ * `listShifts` has taken a `to` since it was written and no caller ever passed one
+ * (docs/reports/volunteer-workflow-findings.md#a4), which is why "who is on tonight" meant
+ * scrolling an unbounded list. Dates cross the wire as ISO strings, like every other date
+ * on this layer.
+ */
+export const getShiftsInWindow = query(
+	z.object({
+		from: z.string().min(1),
+		to: z.string().min(1),
+		volunteerRoleId: z.string().optional(),
+		includeCancelled: z.boolean().optional()
+	}),
+	async (f): Promise<ShiftWithCounts[]> => {
+		await requireStaff();
+		return listShifts({
+			from: new Date(f.from),
+			to: new Date(f.to),
+			volunteerRoleId: f.volunteerRoleId || undefined,
+			includeCancelled: f.includeCancelled
+		});
 	}
 );

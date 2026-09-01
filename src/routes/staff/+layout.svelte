@@ -34,6 +34,8 @@
 		IconListDetails,
 		IconCertificate,
 		IconCalendarTime,
+		IconCalendarWeek,
+		IconClockHour4,
 		IconCalendarMonth
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
@@ -69,6 +71,8 @@
 		bands: IconMusic,
 		groups: IconUsersGroup,
 		volunteer: IconHeartHandshake,
+		'volunteer-schedule': IconCalendarWeek,
+		'volunteer-hours': IconClockHour4,
 		'volunteer-people': IconUsersGroup,
 		'volunteer-shifts': IconCalendarTime,
 		'volunteer-roles': IconListDetails,

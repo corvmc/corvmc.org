@@ -17,12 +17,18 @@ import {
 	SEED_VOL_GATED_DEFAULT_CAPACITY,
 	SEED_VOL_SHIFT_OPEN_ID,
 	SEED_VOL_SHIFT_OPEN_NOTE,
+	SEED_VOL_SHIFT_ASSIGN_ID,
+	SEED_VOL_SHIFT_RELEASE_ID,
+	SEED_VOL_OTHER_MEMBER_ID,
+	SEED_VOL_MEMBER_ID,
 	SEED_VOL_SHIFT_FULL_NOTE,
 	SEED_VOL_SHIFT_EVENT_ID,
 	SEED_VOL_EVENT_ID,
 	SEED_VOL_EVENT_TITLE,
 	SEED_VOL_SIGNUP_DONE_ID,
 	SEED_VOL_NEW_MEMBER_EMAIL,
+	SEED_VOL_NEW_MEMBER_ID,
+	SEED_VOL_NEW_MEMBER_NAME,
 	SEED_VOL_MINOR_EMAIL,
 	SEED_VOL_MINOR_FIRST,
 	SEED_VOL_MINOR_LAST,
@@ -32,6 +38,8 @@ import {
 	SEED_VOL_BLOCKED_MINOR_LAST,
 	readVolunteerState,
 	readSignupStatus,
+	readShiftSignups,
+	readNewestHourLog,
 	readShiftEventId
 } from './fixtures/seed-volunteering';
 
@@ -110,7 +118,9 @@ function modalSubmit(page: Page, name: string) {
 test.describe('volunteering — staff review queue', () => {
 	test('approving a log removes it from Pending and moves the counts', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer');
+		// The queue moved off the section root when that became the coordinator's
+		// dashboard. Everything it asserts is unchanged; only the address is.
+		await page.goto('/staff/volunteer/hours');
 
 		const row = rowFor(page, SEED_VOL_LOG_APPROVE_DESC);
 		await expect(row).toBeVisible();
@@ -141,7 +151,7 @@ test.describe('volunteering — staff review queue', () => {
 
 	test('rejecting without a reason shows written copy, not raw zod text', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer');
+		await page.goto('/staff/volunteer/hours');
 
 		const row = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
 		await rowAction(row, 'Return').click();
@@ -153,7 +163,7 @@ test.describe('volunteering — staff review queue', () => {
 
 	test('a rejection records its reason and leaves the pending queue', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer');
+		await page.goto('/staff/volunteer/hours');
 
 		const reason = 'E2E: hours look doubled for this shift.';
 		const row = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
@@ -224,7 +234,12 @@ test.describe('volunteering — roles', () => {
 		await openRole(page, SEED_VOL_GATED_ROLE_NAME);
 		await expect(page.getByText(SEED_VOL_MEMBER_NAME).first()).toBeVisible({ timeout: 15000 });
 		await expect(page.getByText(`needs ${SEED_VOL_CERT_NAME}`)).toBeVisible();
-		await expect(page.getByText('0 of 1 ready')).toBeVisible();
+		// "cleared today", not "ready". This page has no one shift in mind, so the gate can
+		// only be evaluated against now — while the gate that actually refuses a claim is
+		// evaluated as of the shift's date, and a card expiring next week does not cover a
+		// shift the week after (docs/reports/volunteer-workflow-findings.md#a7). The
+		// shift-scoped version of this count lives on AddVolunteerAction, which passes one.
+		await expect(page.getByText('0 of 1 cleared today')).toBeVisible();
 	});
 
 	test('roles are sectioned by group, with a short-staffed count', async ({ page }) => {
@@ -803,5 +818,83 @@ test.describe('volunteering — post-shift feedback', () => {
 			timeout: 15000
 		});
 		await expect(rollupRow).toContainText('/ 5');
+	});
+});
+
+/**
+ * The coordinator's half of the roster.
+ *
+ * All three of these were impossible through the UI before — the services took the user as
+ * a parameter and only the remote functions were bound to the session
+ * (docs/reports/volunteer-workflow-findings.md#a1, #a2, #b1). Each asserts against the
+ * database, because what makes them right is the row that lands, not the toast.
+ */
+test.describe('volunteering — staff acting on somebody else', () => {
+	test('staff can put a member on a shift, and they land confirmed', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_ASSIGN_ID}`);
+
+		await page.getByRole('button', { name: 'Add someone', exact: true }).click();
+		const dialog = page.getByRole('dialog');
+		await expect(dialog).toBeVisible({ timeout: 15000 });
+
+		// Through the search box rather than the interest shortlist: the shortlist is a
+		// convenience, and the path that has to work is "somebody walked up to the desk".
+		await dialog.getByPlaceholder(/search by name or email/i).fill(SEED_VOL_MEMBER_NAME);
+		await dialog.getByRole('button', { name: new RegExp(SEED_VOL_MEMBER_NAME) }).click();
+		await modalSubmit(page, 'Add to shift').click();
+
+		// Confirmed, not claimed. A coordinator typing the name in IS the decision, and
+		// leaving it claimed would cost the member the day-before reminder.
+		await expect
+			.poll(() => readShiftSignups(SEED_VOL_SHIFT_ASSIGN_ID), DB_POLL)
+			.toMatchObject({ [SEED_VOL_MEMBER_ID]: 'confirmed' });
+	});
+
+	test('taking somebody off a shift is a cancellation, never a no-show', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_RELEASE_ID}`);
+
+		await page.locator('button[data-button-root][aria-label="Take off the shift"]').first().click();
+		await modalSubmit(page, 'Take them off').click();
+
+		// The distinction is the whole point: a cancellation is notice and a no-show is
+		// not, and before this the only staff lever was the wrong one.
+		await expect
+			.poll(() => readShiftSignups(SEED_VOL_SHIFT_RELEASE_ID), DB_POLL)
+			.toMatchObject({ [SEED_VOL_OTHER_MEMBER_ID]: 'cancelled' });
+	});
+
+	test('staff can log hours outside the member backdate window', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/hours');
+
+		await page.getByRole('button', { name: 'Log hours for someone' }).click();
+		const dialog = page.getByRole('dialog');
+		await expect(dialog).toBeVisible({ timeout: 15000 });
+
+		await dialog.getByPlaceholder(/search by name or email/i).fill(SEED_VOL_NEW_MEMBER_NAME);
+		await dialog.getByRole('button', { name: new RegExp(SEED_VOL_NEW_MEMBER_NAME) }).click();
+		await dialog.locator('select[name="volunteerRoleId"]').selectOption({
+			label: SEED_VOL_ROLE_NAME
+		});
+
+		// Well past the 90 days a member gets. The help article and this service's own
+		// error both say "ask staff to add anything older"; this is that.
+		const old = new Date();
+		old.setDate(old.getDate() - 200);
+		await dialog.locator('input[name="workedOn"]').fill(old.toISOString().slice(0, 10));
+		await dialog.locator('input[name="hours"]').fill('2');
+		await dialog
+			.locator('textarea[name="description"]')
+			.fill('E2E: taken off the paper sign-in sheet.');
+		await modalSubmit(page, 'Record').click();
+
+		// Approved on entry and attributed to the staffer — so it never appears in the
+		// Pending queue the same person is standing in, which is why this reads the row.
+		await expect
+			.poll(() => readNewestHourLog(SEED_VOL_NEW_MEMBER_ID), DB_POLL)
+			.toMatchObject({ status: 'approved', minutes: 120 });
+		expect((await readNewestHourLog(SEED_VOL_NEW_MEMBER_ID))?.reviewedByUserId).toBeTruthy();
 	});
 });
