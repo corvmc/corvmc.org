@@ -181,6 +181,14 @@
 						label: 'Musicians',
 						badge: musicianMatches.length,
 						href: directoryHref('musicians', searchText, genre)
+					},
+					{
+						// Points at a sibling route rather than a `?tab=`: the reader and
+						// the columns both differ. TabBar renders an <a> in URL mode, so
+						// cross-route tabs compose with no shared state.
+						key: 'instructors',
+						label: 'Teachers',
+						href: resolve('/directory/instructors')
 					}
 				]}
 				active={tab}

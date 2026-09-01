@@ -30,7 +30,7 @@
 		const p: ProfilePill[] = [];
 		if (member.lookingForBand) p.push({ label: 'Looking for a band', variant: 'warm' });
 		if (member.availableForHire) p.push({ label: 'Available for hire' });
-		if (member.teachesLessons) p.push({ label: 'Teaches lessons' });
+		if (member.teachesLessons) p.push({ label: 'Teaches privately' });
 		if (member.openToCollaboration) p.push({ label: 'Open to collaboration' });
 		return p;
 	});
