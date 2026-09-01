@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { onOrderQuantities } from './order-service';
 import {
 	equipmentCategory,
 	inventoryAsset,
@@ -325,19 +326,37 @@ export async function listLowStock() {
 		// on whatever happens to sort first alphabetically.
 		.orderBy(sql`COALESCE(${onHand.qty}, 0) - ${inventoryItem.reorderPoint}`, inventoryItem.name);
 
+	/**
+	 * What is already on the way, so the list stops asking twice.
+	 *
+	 * This is the concrete cost of having had no order state: buy ten packs of
+	 * strings on Monday and this list said "out — buy 10" all week, because
+	 * nothing could tell *"we are out"* from *"we are out but ten arrive
+	 * Thursday"*. One extra query for the whole page, not one per row.
+	 */
+	const onOrder = await onOrderQuantities(rows.map((r) => r.item.id));
+
 	return rows.map((r) => ({
 		...r.item,
 		category: r.category,
 		onHand: Number(r.onHand),
+		onOrder: onOrder.get(r.item.id) ?? 0,
 		/**
 		 * How many to buy. The reorder quantity is the intended order size, so it
 		 * wins where one is set; without it, buy back up to the point. Never less
 		 * than one — an item at exactly its point is on the list precisely because
 		 * it needs restocking.
 		 */
+		/**
+		 * How many to buy *now*. The reorder quantity is the intended order size,
+		 * so it wins where one is set; without it, buy back up to the point. What
+		 * is already on order comes off the top, and a row whose shortfall is
+		 * fully covered suggests nothing rather than a misleading zero.
+		 */
 		suggestedOrder: Math.max(
-			1,
-			r.item.reorderQuantity ?? (r.item.reorderPoint ?? 0) - Number(r.onHand)
+			0,
+			Math.max(1, r.item.reorderQuantity ?? (r.item.reorderPoint ?? 0) - Number(r.onHand)) -
+				(onOrder.get(r.item.id) ?? 0)
 		),
 		isOut: Number(r.onHand) <= 0
 	}));

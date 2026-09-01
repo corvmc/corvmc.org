@@ -10,9 +10,11 @@ import { user } from '$lib/server/db/schema/authentication';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { listFor } from '$lib/server/media/media-service';
 import { resolveImageUrl } from '$lib/server/storage';
-import { and, desc, eq, gte, isNotNull, isNull, lte, sql } from 'drizzle-orm';
-import { recordMovement } from './stock-service';
-import { createAsset } from './asset-service';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import { recordMovement, signedQuantity } from './stock-service';
+import { createAsset, AssetTagTakenError } from './asset-service';
+import { inventoryAsset } from '$lib/server/db/schema/inventory';
+import { DomainError } from '$lib/server/domain-error';
 import { type AcquisitionKind } from '$lib/config';
 import type { EquipmentCondition } from '$lib/config';
 
@@ -123,6 +125,264 @@ export async function recordAcquisition(data: CreateAcquisitionData) {
 	}
 
 	return header;
+}
+
+/**
+ * Two tags in one payload that are the same string.
+ *
+ * `assertTagFree` only ever sees the database, so two rows in a single paste
+ * carrying the same tag both pass validation and then collide mid-write —
+ * after some of the batch has already committed. This is checked in memory,
+ * before anything is written.
+ */
+export class DuplicateAssetTagError extends DomainError {
+	readonly httpStatus = 409;
+	constructor(tags: string[]) {
+		super(`This intake lists the same tag more than once: ${tags.join(', ')}`);
+	}
+}
+
+/** A payload that cannot describe a real arrival. */
+export class InvalidAcquisitionError extends DomainError {
+	readonly httpStatus = 400;
+}
+
+/** An item id in the payload that no live item has. */
+export class UnknownItemError extends DomainError {
+	readonly httpStatus = 404;
+	constructor(ids: string[]) {
+		super(`No live item for ${ids.length === 1 ? 'id' : 'ids'}: ${ids.join(', ')}`);
+	}
+}
+
+/**
+ * D1 caps one statement at 100 bound parameters, so a multi-row insert has to
+ * be split by *column count*, not by a single round number. Each of these is
+ * `floor(100 / columns)` for the row shape below it, which is why they differ.
+ */
+const LINE_COLUMNS = 5;
+const ASSET_COLUMNS = 8;
+const MOVEMENT_COLUMNS = 9;
+const chunkSize = (columns: number) => Math.floor(100 / columns);
+
+function chunk<T>(rows: T[], size: number): T[][] {
+	const out: T[][] = [];
+	for (let i = 0; i < rows.length; i += size) out.push(rows.slice(i, i + size));
+	return out;
+}
+
+export interface BulkAcquisitionResult {
+	acquisitionId: string;
+	lineCount: number;
+	/** Serialized units created. Bulk lines contribute none. */
+	unitCount: number;
+	movementCount: number;
+}
+
+/**
+ * One arrival, many lines, written in batches.
+ *
+ * The batched sibling of `recordAcquisition`, which stays exactly as it was for
+ * its single-item callers. This exists because the sequential path cannot
+ * survive a stocktake: it costs an INSERT and a SELECT per line, and
+ * `createAsset` costs two SELECTs and two INSERTs per unit, so two hundred
+ * units is roughly eight hundred sequential D1 round trips inside one request.
+ * On a Worker that is a timeout, not a slow page.
+ *
+ * The shape that makes it work is **validate everything, then write**:
+ *
+ * - one `SELECT … IN (…)` resolves every item's kind and proves it is live,
+ * - one more resolves every tag collision already in the database,
+ * - and an in-memory pass catches duplicates *within* the payload, which the
+ *   database cannot see because none of those rows exist yet.
+ *
+ * Only then is anything written, so the write phase can fail on infrastructure
+ * but not on the data. That matters because `db.batch` is atomic within one
+ * batch and this needs several: a partial commit is possible in principle, and
+ * it stays legible — the acquisition page renders its lines beside the
+ * movements they produced.
+ *
+ * `db.batch`, never `db.transaction()` — the latter is broken on D1 and the
+ * `custom/no-db-transaction` rule errors on it.
+ */
+export async function recordAcquisitionBulk(
+	data: CreateAcquisitionData
+): Promise<BulkAcquisitionResult> {
+	if (data.lines.length === 0) {
+		throw new InvalidAcquisitionError('An acquisition needs at least one line');
+	}
+	for (const line of data.lines) {
+		if (!Number.isInteger(line.quantity) || line.quantity < 1) {
+			throw new InvalidAcquisitionError('Every line needs a whole quantity of at least one');
+		}
+	}
+
+	// --- Validation: two queries, regardless of how many lines arrived. ---
+
+	const itemIds = [...new Set(data.lines.map((l) => l.itemId))];
+	const items = await db
+		.select({ id: inventoryItem.id, kind: inventoryItem.kind })
+		.from(inventoryItem)
+		.where(and(inArray(inventoryItem.id, itemIds), isNull(inventoryItem.deletedAt)));
+
+	const kindById = new Map(items.map((i) => [i.id, i.kind]));
+	const missing = itemIds.filter((id) => !kindById.has(id));
+	if (missing.length > 0) throw new UnknownItemError(missing);
+
+	// A serialized line may name its units; a bulk line may not, because a
+	// counted item has no units to name.
+	for (const line of data.lines) {
+		if (line.units?.length && kindById.get(line.itemId) !== 'serialized') {
+			throw new InvalidAcquisitionError(
+				'Only a serialized item can list individual units on a line'
+			);
+		}
+	}
+
+	const tags = data.lines
+		.flatMap((l) => l.units ?? [])
+		.map((u) => u.assetTag)
+		.filter((t): t is string => !!t);
+
+	const seen = new Set<string>();
+	const duplicated = new Set<string>();
+	for (const tag of tags) {
+		if (seen.has(tag)) duplicated.add(tag);
+		seen.add(tag);
+	}
+	if (duplicated.size > 0) throw new DuplicateAssetTagError([...duplicated]);
+
+	if (tags.length > 0) {
+		// Chunked for the same bound-parameter cap the inserts respect: an `IN`
+		// list is bound parameters too, and a stocktake can easily name more than
+		// a hundred tags at once.
+		const taken: string[] = [];
+		for (const group of chunk(tags, 90)) {
+			const rows = await db
+				.select({ assetTag: inventoryAsset.assetTag })
+				.from(inventoryAsset)
+				.where(inArray(inventoryAsset.assetTag, group));
+			taken.push(...rows.map((r) => r.assetTag).filter((t): t is string => !!t));
+		}
+		if (taken.length > 0) throw new AssetTagTakenError(taken.join(', '));
+	}
+
+	// --- Build every row in memory, ids and all. ---
+
+	const acquisitionId = crypto.randomUUID();
+	const occurredAt = data.occurredAt;
+
+	const lineRows: (typeof acquisitionLine.$inferInsert)[] = [];
+	const assetRows: (typeof inventoryAsset.$inferInsert)[] = [];
+	const movementRows: (typeof stockMovement.$inferInsert)[] = [];
+
+	for (const line of data.lines) {
+		lineRows.push({
+			id: crypto.randomUUID(),
+			acquisitionId,
+			itemId: line.itemId,
+			quantity: line.quantity,
+			unitValueCents: line.unitValueCents ?? null
+		});
+
+		if (kindById.get(line.itemId) === 'serialized') {
+			// One asset per unit, and one `receive` per asset — the same one-to-one
+			// `createAsset` writes. An untagged unit is normal: gear reaches the
+			// bench before the sticker roll does.
+			const units = line.units?.length
+				? line.units
+				: Array.from(
+						{ length: line.quantity },
+						() => ({}) as NonNullable<typeof line.units>[number]
+					);
+
+			for (const unit of units) {
+				const assetId = crypto.randomUUID();
+				assetRows.push({
+					id: assetId,
+					itemId: line.itemId,
+					assetTag: unit.assetTag ?? null,
+					serialNumber: unit.serialNumber ?? null,
+					condition: unit.condition ?? 'good',
+					status: 'in_service',
+					locationId: data.locationId ?? null,
+					acquisitionId
+				});
+				movementRows.push({
+					id: crypto.randomUUID(),
+					itemId: line.itemId,
+					assetId,
+					quantity: signedQuantity('receive', 1),
+					reason: 'receive',
+					locationId: data.locationId ?? null,
+					acquisitionId,
+					actorId: data.recordedByUserId ?? null,
+					occurredAt
+				});
+			}
+		} else {
+			movementRows.push({
+				id: crypto.randomUUID(),
+				itemId: line.itemId,
+				assetId: null,
+				quantity: signedQuantity('receive', line.quantity),
+				reason: 'receive',
+				locationId: data.locationId ?? null,
+				acquisitionId,
+				actorId: data.recordedByUserId ?? null,
+				occurredAt
+			});
+		}
+	}
+
+	// --- Write. Header first: everything else points at it. ---
+
+	await db.batch([
+		db.insert(acquisition).values({
+			id: acquisitionId,
+			kind: data.kind,
+			occurredAt,
+			sourceName: data.sourceName ?? null,
+			donorUserId: data.donorUserId ?? null,
+			reference: data.reference ?? null,
+			totalCents: data.totalCents ?? null,
+			fairValueCents: data.fairValueCents ?? null,
+			fairValueBasis: data.fairValueBasis ?? null,
+			intendedUse: data.intendedUse ?? null,
+			monetized: data.monetized ?? false,
+			paidByUserId: data.paidByUserId ?? null,
+			recordedByUserId: data.recordedByUserId ?? null,
+			notes: data.notes ?? null
+		}),
+		...chunk(lineRows, chunkSize(LINE_COLUMNS)).map((g) => db.insert(acquisitionLine).values(g))
+	] as unknown as Parameters<typeof db.batch>[0]);
+
+	// Assets before movements: a movement carries `asset_id`, so the row it
+	// names has to exist first.
+	if (assetRows.length > 0) {
+		for (const batch of chunk(chunk(assetRows, chunkSize(ASSET_COLUMNS)), 10)) {
+			await db.batch(
+				batch.map((g) => db.insert(inventoryAsset).values(g)) as unknown as Parameters<
+					typeof db.batch
+				>[0]
+			);
+		}
+	}
+
+	for (const batch of chunk(chunk(movementRows, chunkSize(MOVEMENT_COLUMNS)), 10)) {
+		await db.batch(
+			batch.map((g) => db.insert(stockMovement).values(g)) as unknown as Parameters<
+				typeof db.batch
+			>[0]
+		);
+	}
+
+	return {
+		acquisitionId,
+		lineCount: lineRows.length,
+		unitCount: assetRows.length,
+		movementCount: movementRows.length
+	};
 }
 
 /** Using up bulk stock. The one movement that has no return leg. */

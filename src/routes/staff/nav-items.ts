@@ -41,8 +41,11 @@ export type StaffNavKey =
 	| 'instructors'
 	| 'equipment'
 	| 'equipment-loans'
+	| 'inventory-intake'
+	| 'inventory-tagging'
 	| 'inventory-acquisitions'
 	| 'inventory-restock'
+	| 'inventory-orders'
 	| 'inventory-spend'
 	| 'inventory-compliance'
 	| 'productions'
@@ -162,6 +165,12 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Inventory',
 				href: resolve('/staff/inventory'),
 				children: [
+					{ key: 'inventory-intake', label: 'Intake', href: resolve('/staff/inventory/intake') },
+					{
+						key: 'inventory-tagging',
+						label: 'Needs tagging',
+						href: resolve('/staff/inventory/tagging')
+					},
 					{ key: 'equipment-loans', label: 'Loans', href: resolve('/staff/inventory/loans') },
 					{
 						key: 'inventory-acquisitions',
@@ -169,6 +178,7 @@ export const staffNavSections: StaffNavSection[] = [
 						href: resolve('/staff/inventory/acquisitions')
 					},
 					{ key: 'inventory-restock', label: 'Restock', href: resolve('/staff/inventory/restock') },
+					{ key: 'inventory-orders', label: 'Orders', href: resolve('/staff/inventory/orders') },
 					{ key: 'inventory-spend', label: 'Spend', href: resolve('/staff/inventory/spend') },
 					{
 						key: 'inventory-compliance',

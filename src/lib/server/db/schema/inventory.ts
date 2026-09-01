@@ -8,6 +8,7 @@ import {
 	equipmentConditions,
 	itemKinds,
 	loanStatuses,
+	orderStatuses,
 	pricingTiers,
 	stockReasons,
 	unitsOfMeasure
@@ -367,6 +368,21 @@ export const acquisition = sqliteTable(
 		 */
 		paidByUserId: text('paid_by_user_id').references(() => user.id, { onDelete: 'set null' }),
 		/**
+		 * The order this arrival fulfilled, when it fulfilled one.
+		 *
+		 * Nullable and always will be: most arrivals are not ordered — a donation
+		 * walks in, and a stocktake's opening balance was never bought at all.
+		 *
+		 * Bare `text`, with no `references()`, and that is the one deliberate
+		 * exception in this pair. Adding a foreign key to an *existing* table is
+		 * not an `ALTER` in SQLite — it is a table rebuild, and a rebuild of
+		 * `acquisition` on D1 takes its `ON DELETE CASCADE` children
+		 * (`acquisition_line`) with it. A nullable column is a plain
+		 * `ADD COLUMN`; the two new tables below carry real references because
+		 * nothing has to be rebuilt to create them.
+		 */
+		purchaseOrderId: text('purchase_order_id'),
+		/**
 		 * When they were paid back. The transfer itself happens outside the app —
 		 * this records that a person settled it, the same way `form8282ResolvedAt`
 		 * records that a person dealt with a filing.
@@ -410,6 +426,94 @@ export const acquisitionLine = sqliteTable(
 		index('idx_acq_line_acquisition').on(t.acquisitionId),
 		index('idx_acq_line_item').on(t.itemId),
 		check('acq_line_qty_positive', sql`quantity > 0`)
+	]
+);
+
+/**
+ * A purchase order: what we have decided to buy, before it exists here.
+ *
+ * The gap this closes is **duplicate buying**. `/staff/inventory/restock` is
+ * recomputed from reorder points on every load and remembers nothing, so
+ * ordering ten packs of strings on Monday leaves the list saying "out — buy 10"
+ * all week. Nothing in the schema could tell *"we are out"* from *"we are out
+ * but ten arrive Thursday"*, and that failure lands on the module's most-used
+ * surface.
+ *
+ * Its own table rather than a status on `acquisition`, for the reason written
+ * out at `orderStatuses`: an acquisition means *something arrived*, and this
+ * means *something was promised*. Keeping them apart is what lets every money
+ * report stay exactly as it is.
+ *
+ * `supplierName` is free text, matching `acquisition.sourceName`. A `supplier`
+ * table was argued out and declined in the spec; the multi-line receipt is what
+ * actually fixes the `GROUP BY sourceName` fragmentation.
+ */
+export const purchaseOrder = sqliteTable(
+	'purchase_order',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		status: text('status', { enum: orderStatuses }).notNull().default('draft'),
+		supplierName: text('supplier_name'),
+		reference: text('reference'),
+		/** When it was sent to the supplier. Null while it is still a draft. */
+		placedAt: integer('placed_at', { mode: 'timestamp' }),
+		/** When the supplier said it would arrive; drives the "late" list. */
+		expectedAt: integer('expected_at', { mode: 'timestamp' }),
+		createdByUserId: text('created_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		notes: text('notes'),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('idx_purchase_order_status').on(t.status),
+		index('idx_purchase_order_expected').on(t.expectedAt)
+	]
+);
+
+/**
+ * One item on an order, and how much of it has turned up.
+ *
+ * `quantityReceived` is what makes receiving **partial by default**: a supplier
+ * ships six of ten and the order stays `placed` with four still on the way,
+ * which is the common case and the one a single boolean cannot express.
+ *
+ * Real `references()` rather than the bare-`text` foreign keys the findings
+ * flagged elsewhere in this schema: `restrict` on the item, because an item
+ * that something is on order for is not a candidate for deletion.
+ */
+export const purchaseOrderLine = sqliteTable(
+	'purchase_order_line',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		orderId: text('order_id')
+			.notNull()
+			.references(() => purchaseOrder.id, { onDelete: 'cascade' }),
+		itemId: text('item_id')
+			.notNull()
+			.references(() => inventoryItem.id, { onDelete: 'restrict' }),
+		quantityOrdered: integer('quantity_ordered').notNull(),
+		/** An estimate at order time; the acquisition records what was actually paid. */
+		unitCostCents: integer('unit_cost_cents'),
+		quantityReceived: integer('quantity_received').notNull().default(0),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('idx_po_line_order').on(t.orderId),
+		index('idx_po_line_item').on(t.itemId),
+		check('po_line_qty_positive', sql`quantity_ordered > 0`),
+		check('po_line_received_sane', sql`quantity_received >= 0`)
 	]
 );
 

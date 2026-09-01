@@ -332,6 +332,40 @@ export const acquisitionKindLabels: Record<AcquisitionKind, string> = {
 };
 
 /**
+ * Where a purchase order is in its life.
+ *
+ * Deliberately *not* a column on `acquisition`. The spec's central rule is that
+ * an acquisition is the thing a `receive` movement hangs off — allow one to
+ * exist with nothing received and that rule becomes conditional, and every
+ * money report would need a status filter it does not have, starting with
+ * `spendByCategory`, which would begin counting money for goods that have not
+ * arrived. An order is a separate record of intent; the acquisition it
+ * eventually produces still means what it always meant.
+ */
+export const orderStatuses = ['draft', 'placed', 'received', 'cancelled'] as const;
+export type OrderStatus = (typeof orderStatuses)[number];
+
+export const orderStatusLabels: Record<OrderStatus, string> = {
+	draft: 'Draft',
+	placed: 'Placed',
+	received: 'Received',
+	cancelled: 'Cancelled'
+};
+
+/**
+ * The badge colour carries the same meaning as the word, so the status does not
+ * have to be read twice. `as const` keeps the values as literals, which is what
+ * `Badge`'s `variant` prop accepts — a plain `Record<_, string>` widens them and
+ * every call site needs a cast.
+ */
+export const orderStatusBadge = {
+	draft: 'outline',
+	placed: 'info',
+	received: 'success',
+	cancelled: 'ghost'
+} as const satisfies Record<OrderStatus, string>;
+
+/**
  * How a counted item is counted. Display only — the ledger is always integers,
  * so a "pack" is one unit and never 6 strings.
  */

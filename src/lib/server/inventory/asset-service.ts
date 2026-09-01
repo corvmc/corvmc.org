@@ -6,7 +6,7 @@ import {
 	inventoryItem,
 	inventoryLocation
 } from '$lib/server/db/schema/inventory';
-import { and, asc, eq, isNotNull, isNull, like, or } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, like, notInArray, or } from 'drizzle-orm';
 import { user } from '$lib/server/db/schema/authentication';
 import { form8282Status, needsAttention } from './form-8282';
 import { recordMovement } from './stock-service';
@@ -384,6 +384,34 @@ export async function listAssets(opts: { itemId?: string; status?: AssetStatus; 
 		.leftJoin(inventoryLocation, eq(inventoryAsset.locationId, inventoryLocation.id))
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		.orderBy(asc(inventoryItem.name), asc(inventoryAsset.assetTag))
+		.then((rows) => rows.map((r) => ({ ...r.asset, item: r.item, location: r.location })));
+}
+
+/**
+ * Units with no tag bound yet — the tagging backlog.
+ *
+ * Derived every time rather than stored: "needs tagging" is exactly
+ * `asset_tag IS NULL`, and a stored flag would be a second source of truth that
+ * `bindAssetTag` would have to remember to clear. Retired and lost units are
+ * excluded because nobody is going to walk over and put a sticker on them.
+ *
+ * Oldest first: a stocktake enters gear faster than it labels it, so the
+ * backlog is worked in the order it accumulated.
+ */
+export async function listUntaggedAssets(opts: { itemId?: string } = {}) {
+	const conditions = [
+		isNull(inventoryAsset.assetTag),
+		notInArray(inventoryAsset.status, ['retired', 'lost'])
+	];
+	if (opts.itemId) conditions.push(eq(inventoryAsset.itemId, opts.itemId));
+
+	return db
+		.select({ asset: inventoryAsset, item: inventoryItem, location: inventoryLocation })
+		.from(inventoryAsset)
+		.innerJoin(inventoryItem, eq(inventoryAsset.itemId, inventoryItem.id))
+		.leftJoin(inventoryLocation, eq(inventoryAsset.locationId, inventoryLocation.id))
+		.where(and(...conditions))
+		.orderBy(asc(inventoryAsset.createdAt))
 		.then((rows) => rows.map((r) => ({ ...r.asset, item: r.item, location: r.location })));
 }
 
