@@ -4,17 +4,20 @@
  * Usage:
  *   pnpm db:seed
  *
- * This is DESTRUCTIVE — it deletes all data and rebuilds from scratch.
- * Do not run against production.
+ * This is DESTRUCTIVE — it deletes all data and rebuilds from scratch. Running it
+ * twice is fine: `deleteAll()` clears every table first. Do not run against
+ * production.
  *
  * Prerequisites:
- *   - Local D1 SQLite file exists (run `pnpm db:push` first)
+ *   - The local D1 file exists and is migrated. `pnpm db:reset` does that and
+ *     then calls this, so it is the one command to reach for; `pnpm db:seed`
+ *     alone re-seeds a database that is already there.
  */
 import 'dotenv/config';
 import { randomUUID, randomBytes, scrypt } from 'crypto';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
-import { sql, eq, inArray, isNotNull } from 'drizzle-orm';
+import { sql, eq, inArray } from 'drizzle-orm';
 
 // Mirror the app's password hashing (src/lib/server/auth.ts `scryptHash`). We can't
 // import that module here — it pulls SvelteKit-only `$env`/`$app` aliases that don't
@@ -45,6 +48,7 @@ import { reservation, closure } from '../src/lib/server/db/schema/reservation';
 import { recurringSeries } from '../src/lib/server/db/schema/recurring';
 import { event, eventBand, eventGroup } from '../src/lib/server/db/schema/event';
 import { ticket } from '../src/lib/server/db/schema/ticket';
+import { TICKET_CONTRIBUTION_PRESETS } from '../src/lib/config';
 import { eventRsvp } from '../src/lib/server/db/schema/event-rsvp';
 import {
 	creditTransaction,
@@ -52,6 +56,7 @@ import {
 } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
 import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/directory';
+import { instructor } from '../src/lib/server/db/schema/instructor';
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { groupInvite } from '../src/lib/server/db/schema/group-invite';
 import { announcement } from '../src/lib/server/db/schema/announcement';
@@ -104,6 +109,8 @@ import {
 } from '../src/lib/server/db/schema/volunteer';
 // JSON recurrence format matching the app's rrule-helpers (see scripts/seed-rrule.ts).
 import { buildSeedRRule as seedRRule } from './seed-rrule';
+// @ts-expect-error -- plain .mjs helper, no types
+import { deleteOrder } from './d1-table-order.mjs';
 const { env, dispose } = await getPlatformProxy();
 const db = drizzle(env.DB);
 await db.run(sql`PRAGMA foreign_keys = OFF`);
@@ -519,77 +526,26 @@ const BACKLINE_ITEMS = [
 // Seed functions
 // ---------------------------------------------------------------------------
 
+/**
+ * Empty every table, children first.
+ *
+ * The order — and the list — comes from `scripts/d1-table-order.mjs`, which
+ * `scripts/d1-table-order.spec.ts` holds against the drizzle snapshot. This file
+ * used to keep its own copy, and it drifted: `media` and `media_attachment` were
+ * never added, so seeding an already-seeded database left those rows behind and
+ * died on `UNIQUE constraint failed: media.key`. A table added to the schema now
+ * reddens the unit suite instead of surviving a wipe.
+ *
+ * Tables the list names but this database lacks are skipped — see `deleteOrder`.
+ */
 async function deleteAll() {
 	console.log('Deleting all data...');
-	const tables = [
-		// Child before parent: volunteer_hour_log has an ON DELETE RESTRICT FK to
-		// volunteer_role, so the role rows can't go first. (volunteer_role_interest
-		// cascades, but ordering it explicitly keeps the list readable.)
-		'volunteer_shift_feedback',
-		'volunteer_signup',
-		'volunteer_shift',
-		'member_certification',
-		'volunteer_role_certification',
-		'volunteer_certification',
-		'volunteer_role_interest',
-		'volunteer_hour_log',
-		'volunteer_profile',
-		'volunteer_role',
-		// Before content_flag and user: they reference both.
-		'member_standing',
-		'user_block',
-		'suggestion_edit',
-		'suggestion_vote',
-		'suggestion',
-		'content_flag',
-		'inbox_note',
-		'inbox_message',
-		'inbox_participant',
-		'inbox_thread',
-		'inbox_channel_config',
-		'help_articles',
-		'help_categories',
-		'stock_movement',
-		'inventory_loan',
-		'acquisition_line',
-		'acquisition',
-		'inventory_asset',
-		'inventory_item',
-		'inventory_location',
-		'equipment_category',
-		'campaign_audience',
-		'campaign',
-		'audience_member',
-		'audience',
-		'subscriber',
-		'notification_preference',
-		'notification',
-		'ticket',
-		'band_site',
-		// Child before parent, and both before `group` and `user`.
-		'directory_tag',
-		'directory_entry',
-		'group_member',
-		'group_slug_history',
-		'group',
-		'payment_cache',
-		'credit_transaction',
-		'recurring_series',
-		'event',
-		'closure',
-		'reservation',
-		'model_has_roles',
-		'model_has_permissions',
-		'role_has_permissions',
-		'roles',
-		'permissions',
-		'session',
-		'account',
-		'verification',
-		'user'
-	];
-	for (const t of tables) {
-		await db.run(sql.raw(`DELETE FROM "${t}"`));
+	const rows = await db.all<{ name: string }>(
+		sql`SELECT name FROM sqlite_master WHERE type = 'table'`
+	);
+	const present = new Set(rows.map((row) => row.name));
+	for (const table of deleteOrder(present)) {
+		await db.run(sql.raw(`DELETE FROM "${table}"`));
 	}
 }
 
@@ -1703,29 +1659,44 @@ async function seedLineup(
 	owner: { id: string; name: string } | null,
 	support: { name: string; bandId?: string; status?: string }[]
 ) {
-	// `directoryEntryId` is filled in by `linkLineupCreditsToEntries()` after
-	// `seedDirectoryEntries()`, not here: entries are derived at the very end of
-	// the seed, so none exist yet at this point. Resolving per credit here
-	// silently wrote nulls.
+	// A credit names a `directory_entry`, so the group ids these fixtures carry
+	// have to be resolved. One query for the whole bill.
+	//
+	// This works only because `seedDirectoryEntries()` now runs *before* anything
+	// that writes a credit. It used to run last, and resolving here silently
+	// wrote nulls into every row.
+	const groupIds = [owner?.id, ...support.map((sup) => sup.bandId)].filter(
+		(id): id is string => !!id
+	);
+	const entryRows = groupIds.length
+		? await db
+				.select({ groupId: directoryEntry.groupId, id: directoryEntry.id })
+				.from(directoryEntry)
+				.where(inArray(directoryEntry.groupId, groupIds))
+		: [];
+	const entryFor = new Map(
+		entryRows.filter((r) => r.groupId).map((r) => [r.groupId as string, r.id])
+	);
+
 	const rows: any[] = [];
 	if (owner) {
 		rows.push({
 			eventId,
 			name: owner.name,
-			bandId: owner.id,
+			directoryEntryId: entryFor.get(owner.id) ?? null,
 			billingOrder: 0,
 			status: 'confirmed',
-			addedByBandId: owner.id
+			addedByGroupId: owner.id
 		});
 	}
 	support.forEach((sup, i) => {
 		rows.push({
 			eventId,
 			name: sup.name,
-			bandId: sup.bandId ?? null,
+			directoryEntryId: sup.bandId ? (entryFor.get(sup.bandId) ?? null) : null,
 			billingOrder: rows.length + i,
 			status: sup.status ?? (sup.bandId ? 'pending' : 'unlinked'),
-			addedByBandId: owner?.id ?? null
+			addedByGroupId: owner?.id ?? null
 		});
 	});
 	if (rows.length === 0) return;
@@ -2409,6 +2380,16 @@ async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 		.from(event)
 		.where(eq(event.ticketingEnabled, true));
 
+	// Who actually gets the half-price rate. Pricing every seeded buyer as a
+	// member would make the staff ledger look like the discount is automatic for
+	// everyone, which is the one thing it is not.
+	const sustainingIds = new Set(
+		(await db.select({ id: user.id, subscription: user.subscription }).from(user))
+			.filter((u) => u.subscription != null)
+			.map((u) => u.id)
+	);
+	const sustainingBuyers = users.filter((u) => sustainingIds.has(u.id));
+
 	for (const evt of ticketedEvents) {
 		const ticketCount = randomInt(3, 8);
 		const isPast = evt.startsAt < new Date();
@@ -2423,8 +2404,28 @@ async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 			remaining -= qty;
 
 			const purchaseId = isFree ? `rsvp-${randomUUID()}` : randomUUID();
-			const buyer = pick(users);
+
+			// Deterministic rather than sampled, and cast by purchase index so every
+			// paid show carries all four money states a staffer might see:
+			//   p=0  a member who took the discount and chipped in anyway
+			//   p=1  a member who declined the discount to support the show
+			//   p≥2  whoever, usually a non-member at full price
+			// Rolling dice for these left the ledger empty often enough that the
+			// feature looked unused locally.
+			const wantsMember = !isFree && p < 2 && sustainingBuyers.length > 0;
+			const buyer = wantsMember ? pick(sustainingBuyers) : pick(users);
 			const email = `${buyer.name.toLowerCase().replace(' ', '.')}@example.com`;
+
+			const isMember = sustainingIds.has(buyer.id);
+			const contributionCents = !isFree && p === 0 ? pick([...TICKET_CONTRIBUTION_PRESETS]) : 0;
+			const discountWaived = wantsMember && p === 1;
+			// Free shows cost nothing. Otherwise the member rate applies unless the
+			// buyer isn't a member, or is one and declined it.
+			const unitPriceCents = isFree
+				? 0
+				: isMember && !discountWaived
+					? Math.round(evt.ticketPrice! / 2)
+					: evt.ticketPrice!;
 
 			for (let i = 0; i < qty; i++) {
 				const code = `${TICKET_CODES_PREFIX}-${randomUUID().slice(0, 8).toUpperCase()}`;
@@ -2440,6 +2441,10 @@ async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 						attendeeEmail: email,
 						code,
 						status: checkedIn ? 'checked_in' : 'valid',
+						unitPriceCents,
+						// Order-level, so it rides on the purchase's first ticket only.
+						contributionCents: i === 0 ? contributionCents : 0,
+						discountWaived,
 						checkedInAt: checkedIn ? evt.startsAt : null,
 						checkedInByUserId: checkedIn ? users[0].id : null
 					})
@@ -4649,43 +4654,257 @@ async function seedSuggestions(users: any[], adminUser: any) {
  * Derive `directory_entry` and `directory_tag` from everything already seeded,
  * mirroring `scripts/db/backfill/directory-entry.sql` statement for statement.
  *
- * It runs last and reads the tables back rather than being threaded through the
- * dozen places that insert a user or a group, because `pnpm db:reset` replays
- * migrations and then seeds — the backfill script never runs locally or in e2e.
+ * It reads the tables back rather than being threaded through the dozen places
+ * that insert a user or a group, because `pnpm db:reset` replays migrations and
+ * then seeds — the backfill script never runs locally or in e2e. It runs as soon
+ * as the last of those inserts has happened, which is early enough for a lineup
+ * credit to reference an entry and late enough to see every subject.
  * Without this, every directory page goes blank the moment phase 3a's readers
  * land, and it reads as a query bug rather than a fixture gap.
  */
 /**
- * Point every lineup credit at its party's `directory_entry`, mirroring the
- * phase-10 migration's own UPDATE statement for statement.
+ * A handful of external acts — parties CMC booked that are not members here.
  *
- * It runs after `seedDirectoryEntries()` for the reason that function gives
- * about itself: entries are derived at the end from what was already seeded, so
- * nothing written earlier can reference one. `pnpm db:reset` replays migrations
- * against an empty database and then seeds, so the migration's backfill has no
- * rows to touch and this is the only thing that fills the column locally.
+ * Both owner columns null and `visibility: 'hidden'`, which is the whole of what
+ * makes one. They exist locally so the staff acts page, and the "links out, not
+ * in" render rule on a public bill, have something real behind them.
  */
-async function linkLineupCreditsToEntries(): Promise<number> {
-	const credits = await db
-		.select({ id: eventBand.id, bandId: eventBand.bandId })
-		.from(eventBand)
-		.where(isNotNull(eventBand.bandId));
-	if (credits.length === 0) return 0;
+/**
+ * Teachers, across every state the status enum allows.
+ *
+ * The awkward ones are the point. A staff review queue with nothing in it, an
+ * application that has been handed back, a paused grant — those are the screens
+ * that otherwise only ever get looked at empty, and the empty case is the one
+ * that is already obviously right.
+ *
+ * Runs after `seedDirectoryEntries` because an instructor without a listing does
+ * not appear publicly, which is correct behaviour and useless as fixture data.
+ */
+async function seedInstructors(users: any[], reviewer: any) {
+	console.log('Seeding instructors...');
+	if (users.length < 8) return { rows: 0 };
+
+	const now = new Date();
+	const day = 86_400_000;
+
+	// Deterministic slices rather than random picks: a fresh seed should put the
+	// same people in the same states every time, so a screenshot means something.
+	const [gtr, drums, reachable, paused, applicant, returned] = users.slice(2, 8);
 
 	const entries = await db
-		.select({ groupId: directoryEntry.groupId, id: directoryEntry.id })
+		.select({ id: directoryEntry.id, userId: directoryEntry.userId })
 		.from(directoryEntry)
-		.where(isNotNull(directoryEntry.groupId));
-	const entryFor = new Map(entries.map((e) => [e.groupId as string, e.id]));
+		.where(
+			inArray(
+				directoryEntry.userId,
+				[gtr, drums, reachable, paused, applicant, returned].map((u) => u.id)
+			)
+		);
+	const entryFor = new Map(entries.map((e) => [e.userId, e.id]));
 
-	let linked = 0;
-	for (const c of credits) {
-		const entryId = entryFor.get(c.bandId as string);
-		if (!entryId) continue;
-		await db.update(eventBand).set({ directoryEntryId: entryId }).where(eq(eventBand.id, c.id));
-		linked++;
+	// The two live listings need a *public* entry and a public contact, or the
+	// public directory correctly shows nothing — the gate that makes the whole
+	// module safe would make the fixture invisible.
+	for (const u of [gtr, drums]) {
+		await db
+			.update(directoryEntry)
+			.set({
+				visibility: 'public',
+				contact: {
+					email: `teach.${String(u.name).split(' ')[0].toLowerCase()}@example.com`,
+					visibility: 'public'
+				}
+			})
+			.where(eq(directoryEntry.userId, u.id));
 	}
-	return linked;
+
+	// One **active** instructor deliberately keeps a members-only contact and sets
+	// no teaching one. The nudge only renders for an active grant, so putting this
+	// on the paused row — as a first pass did — produced a fixture for a screen
+	// that could never show it. They stay listed to members and lose only their
+	// contact publicly, which is the exact case the exposure test pins.
+	await db
+		.update(directoryEntry)
+		.set({ visibility: 'public', contact: { email: 'private@example.com', visibility: 'members' } })
+		.where(eq(directoryEntry.userId, reachable.id));
+
+	// The paused one is publicly contactable — it is paused status, not a missing
+	// contact, that keeps them off the listing.
+	await db
+		.update(directoryEntry)
+		.set({ visibility: 'public', contact: { email: 'piano@example.com', visibility: 'public' } })
+		.where(eq(directoryEntry.userId, paused.id));
+
+	const rows = [
+		{
+			id: randomUUID(),
+			userId: gtr.id,
+			status: 'active' as const,
+			headline: 'Guitar — beginner to intermediate',
+			blurb: 'Electric and acoustic. Mostly rock, blues and whatever you turn up wanting to play.',
+			ratesNote: '$40 per half hour',
+			bookingUrl: 'https://example.com/book-a-lesson',
+			acceptingStudents: true,
+			grantedByUserId: reviewer.id,
+			grantedAt: new Date(now.getTime() - 120 * day),
+			statusChangedAt: new Date(now.getTime() - 120 * day),
+			createdAt: new Date(now.getTime() - 130 * day),
+			updatedAt: now
+		},
+		{
+			id: randomUUID(),
+			userId: drums.id,
+			status: 'active' as const,
+			headline: 'Drums and percussion',
+			blurb: 'Kit from scratch, or rudiments if you already play. Bring sticks.',
+			ratesNote: '$35 / 45 min, or $120 a month',
+			// No booking link: the card has to read properly without one.
+			acceptingStudents: false,
+			grantedByUserId: reviewer.id,
+			grantedAt: new Date(now.getTime() - 60 * day),
+			statusChangedAt: new Date(now.getTime() - 60 * day),
+			createdAt: new Date(now.getTime() - 70 * day),
+			updatedAt: now
+		},
+		{
+			// Active and taking students, but reachable only by members — so the
+			// public card shows no contact and their own profile shows the nudge.
+			id: randomUUID(),
+			userId: reachable.id,
+			status: 'active' as const,
+			headline: 'Voice and songwriting',
+			blurb: 'Finding your range, and finishing the song you started two years ago.',
+			acceptingStudents: true,
+			grantedByUserId: reviewer.id,
+			grantedAt: new Date(now.getTime() - 40 * day),
+			statusChangedAt: new Date(now.getTime() - 40 * day),
+			createdAt: new Date(now.getTime() - 45 * day),
+			updatedAt: now
+		},
+		{
+			id: randomUUID(),
+			userId: paused.id,
+			status: 'paused' as const,
+			headline: 'Piano and theory',
+			acceptingStudents: true,
+			grantedByUserId: reviewer.id,
+			grantedAt: new Date(now.getTime() - 300 * day),
+			statusChangedAt: new Date(now.getTime() - 20 * day),
+			statusNote: 'Off for the summer — back in September.',
+			createdAt: new Date(now.getTime() - 310 * day),
+			updatedAt: now
+		},
+		{
+			// Waiting on staff. Without one of these the review queue only ever
+			// renders its empty state.
+			id: randomUUID(),
+			userId: applicant.id,
+			status: 'requested' as const,
+			headline: 'Fiddle and mandolin',
+			blurb: 'Old-time and bluegrass, all ages.',
+			ratesNote: '$30 an hour, sliding scale',
+			applicationNote:
+				'Taught at a community school in Eugene for six years. Happy to give references.',
+			acceptingStudents: true,
+			createdAt: new Date(now.getTime() - 3 * day),
+			updatedAt: new Date(now.getTime() - 3 * day)
+		},
+		{
+			// Handed back, waiting on the member — the state the return-state
+			// mechanism exists for, and the one nobody would think to click into.
+			id: randomUUID(),
+			userId: returned.id,
+			status: 'rejected' as const,
+			headline: 'Lessons',
+			applicationNote: 'Been playing 20 years.',
+			reviewNotes:
+				'Could you say which instruments and roughly what level? "Lessons" on its own is hard for a parent to act on.',
+			acceptingStudents: true,
+			grantedByUserId: reviewer.id,
+			statusChangedAt: new Date(now.getTime() - day),
+			createdAt: new Date(now.getTime() - 6 * day),
+			updatedAt: new Date(now.getTime() - day)
+		}
+	];
+
+	await batchInsert(instructor, rows, 5);
+
+	// Instruments come from the directory tags, not from the instructor row —
+	// "what I play" and "what I teach" are the same set until someone proves
+	// otherwise. Without these the cards render with no instruments at all.
+	const tags = [
+		[gtr, 'Guitar'],
+		[gtr, 'Bass'],
+		[drums, 'Drums'],
+		[reachable, 'Voice'],
+		[paused, 'Piano']
+	]
+		.map(([u, value]: any) => ({ entryId: entryFor.get(u.id), kind: 'instrument' as const, value }))
+		.filter((t) => t.entryId);
+	if (tags.length) await batchInsert(directoryTag, tags, 10);
+
+	// Teaching bookings, so the member reservation list and the staff calendar
+	// both show a row priced at the teaching rate rather than the drop-in one.
+	const teaching = rows[0];
+	const lessons = [0, 7, 14].map((offset, i) => ({
+		id: randomUUID(),
+		bookerType: 'instructor' as const,
+		bookerId: teaching.id,
+		bookerName: null,
+		createdByUserId: gtr.id,
+		status: 'confirmed' as const,
+		startsAt: new Date(now.getTime() + (offset + 2) * day + 16 * 3_600_000),
+		endsAt: new Date(now.getTime() + (offset + 2) * day + 16.5 * 3_600_000),
+		notes: i === 0 ? 'Weekly lesson block' : null,
+		createdAt: now,
+		updatedAt: now
+	}));
+	await batchInsert(reservation, lessons, 5);
+
+	return { rows: rows.length, lessons: lessons.length };
+}
+
+async function seedExternalActs() {
+	const acts = [
+		{
+			name: 'Sawtooth Rivals',
+			hometown: 'Boise, ID',
+			bio: 'Toured through twice in 2025. Easy load-in, brought their own monitors.',
+			links: [{ label: 'Bandcamp', url: 'https://sawtoothrivals.bandcamp.com' }]
+		},
+		{
+			name: 'The Quiet Part',
+			hometown: 'Olympia, WA',
+			bio: 'Three-piece, quiet set, asked for a rug.',
+			links: [{ label: 'Instagram', url: 'https://instagram.com/thequietpart' }]
+		},
+		// No links at all: on a public bill this one is the plain-text case,
+		// which is the branch that has no URL to point at rather than a broken one.
+		{
+			name: 'Fenwick',
+			hometown: 'Eugene, OR',
+			bio: 'Solo act. Books through a manager.',
+			links: null
+		}
+	];
+
+	const rows = [];
+	for (const a of acts) {
+		const [row] = await db
+			.insert(directoryEntry)
+			.values({
+				userId: null,
+				groupId: null,
+				name: a.name,
+				hometown: a.hometown,
+				bio: a.bio,
+				links: a.links,
+				visibility: 'hidden'
+			})
+			.returning();
+		rows.push(row);
+	}
+	return rows;
 }
 
 async function seedDirectoryEntries() {
@@ -4807,6 +5026,13 @@ async function main() {
 	const events = await seedEvents(allUsers);
 	const bands = await seedBands(allUsers);
 	const groups = await seedGroups(allUsers);
+	// Before anything that writes a lineup credit, because a credit names an
+	// entry. Every user and group the seed creates exists by this point — the
+	// last of them is `seedGroups` directly above — so it can still read them all
+	// back, which is the property it was placed last for.
+	const directory = await seedDirectoryEntries();
+	const instructors = await seedInstructors(allUsers, adminUser);
+	const externalActs = await seedExternalActs();
 	const groupSessions = await seedGroupSessions(groups);
 	const bandEvents = await seedBandEvents(bands, allUsers);
 	await seedCommunityEvents(users, adminUser);
@@ -4840,9 +5066,6 @@ async function main() {
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
 	const volunteerShifts = await seedVolunteerShifts(activeVolunteers, volunteerRoles, events);
 	const suggestions = await seedSuggestions(allUsers, adminUser);
-	// Last: it reads back every user and group the seed created.
-	const directory = await seedDirectoryEntries();
-	const linkedCredits = await linkLineupCreditsToEntries();
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -4856,7 +5079,11 @@ async function main() {
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
-	console.log(`  ${linkedCredits} lineup credits linked to a directory entry`);
+	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
+	console.log(
+		`  ${instructors.rows} instructors (3 active, 1 paused, 1 awaiting review, 1 sent back)` +
+			` with ${instructors.lessons ?? 0} teaching bookings`
+	);
 	console.log(
 		`  ${groupSessions.length} group sessions (${groupSessions.filter((e) => e.reservationId).length} holding the room)`
 	);

@@ -123,12 +123,13 @@ describe('toBookerRef', () => {
 	});
 
 	/**
-	 * Nothing in this app writes `lesson`; it arrives with migrated rows and has
-	 * no record to point at, so the booking falls back to whoever holds it and
-	 * the row keeps its own lesson glyph to say what it is.
+	 * A teaching booking names the person, not the grant: the instructor record is
+	 * a capacity rather than a party. The reservation's own subtype glyph is what
+	 * says the booking is teaching, which is why the chip may safely read as the
+	 * member without losing information.
 	 */
-	it('falls back to the member for a lesson, which has no booker record', () => {
-		expect(toBookerRef({ bookerType: 'lesson', member })).toMatchObject({
+	it('resolves an instructor booking to the member who holds it', () => {
+		expect(toBookerRef({ bookerType: 'instructor', member })).toMatchObject({
 			type: 'member',
 			title: 'Ada'
 		});

@@ -82,7 +82,22 @@ vi.mock('$lib/server/band/band-service', () => ({
 }));
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+// `db` is a bare object because this suite is about validation and slug
+// behaviour, not reads. It carries a chainable `select` only so that
+// `getMemberProfileEditor` — which now assembles the teaching card server-side —
+// resolves instead of rejecting with "db.select is not a function". An
+// unexpected read returns an empty result rather than throwing three frames away
+// from the test that caused it.
+function emptySelect(): unknown {
+	const proxy: unknown = new Proxy(() => proxy, {
+		get(_t, prop) {
+			if (prop === 'then') return (resolve: (v: unknown[]) => void) => resolve([]);
+			return () => proxy;
+		}
+	});
+	return proxy;
+}
+vi.mock('$lib/server/db', () => ({ db: { select: () => emptySelect() } }));
 
 /**
  * A faithful-enough `form()`: the real one runs the Zod schema before the

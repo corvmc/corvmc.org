@@ -70,15 +70,15 @@ plus a precise spec beats a long session with accumulated corrections nearly eve
 An agent stops when the work _looks_ done. Give it something that returns pass or fail and it
 iterates on its own instead of handing you the verification job.
 
-| You changed…                       | Prove it with                                           |
-| ---------------------------------- | ------------------------------------------------------- |
-| Anything typed                     | `pnpm check`                                            |
-| Service or domain logic            | `pnpm test:unit -- --run <path>`                        |
-| A component                        | `pnpm test:components`                                  |
-| A user-visible flow                | `pnpm test:e2e --workers=1`                             |
-| Schema                             | `pnpm db:generate` then `pnpm db:reset && pnpm db:seed` |
-| Routes or help articles            | `pnpm docs:routes && pnpm docs:check`                   |
-| Anything at all, before committing | `pnpm lint`                                             |
+| You changed…                       | Prove it with                           |
+| ---------------------------------- | --------------------------------------- |
+| Anything typed                     | `pnpm check`                            |
+| Service or domain logic            | `pnpm test:unit -- --run <path>`        |
+| A component                        | `pnpm test:components`                  |
+| A user-visible flow                | `pnpm test:e2e --workers=1`             |
+| Schema                             | `pnpm db:generate` then `pnpm db:reset` |
+| Routes or help articles            | `pnpm docs:routes && pnpm docs:check`   |
+| Anything at all, before committing | `pnpm lint`                             |
 
 Each row maps onto a CI job in `.github/workflows/ci.yml`, so a green local gate is a green PR.
 

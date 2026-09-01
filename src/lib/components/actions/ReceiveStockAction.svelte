@@ -2,7 +2,8 @@
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { receiveStock, getLocations } from '$lib/remote/inventory.remote';
+	import { receiveStock } from '$lib/remote/inventory.remote';
+	import LocationField from '$lib/components/inventory/LocationField.svelte';
 	import { Field } from '../ui/Form';
 	import MemberPicker from '../ui/MemberPicker.svelte';
 	import { acquisitionKinds, acquisitionKindLabels } from '$lib/config';
@@ -24,8 +25,6 @@
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
-
-	const locations = $derived(await getLocations());
 
 	/**
 	 * A donation has to answer things a purchase does not — what it was worth and
@@ -110,17 +109,7 @@
 			bind:name={paidByName}
 			label="Paid by (leave blank if the collective paid)"
 		/>
-		{#if locations.length > 0}
-			<Field
-				field={fields.locationId}
-				type="select"
-				label="Location"
-				options={[
-					{ value: '', label: 'Unassigned' },
-					...locations.map((l) => ({ value: l.id, label: l.name }))
-				]}
-			/>
-		{/if}
+		<LocationField field={fields.locationId} />
 		<Field field={fields.notes} type="textarea" label="Notes" />
 	{/snippet}
 </Action>

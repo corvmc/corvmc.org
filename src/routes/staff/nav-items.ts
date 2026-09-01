@@ -35,6 +35,7 @@ export type StaffNavKey =
 	| 'reservations'
 	| 'recurring'
 	| 'closures'
+	| 'instructors'
 	| 'equipment'
 	| 'equipment-loans'
 	| 'inventory-acquisitions'
@@ -124,7 +125,11 @@ export const staffNavSections: StaffNavSection[] = [
 				href: '/staff/reservations',
 				children: [
 					{ key: 'recurring', label: 'Recurring', href: '/staff/recurring' },
-					{ key: 'closures', label: 'Closures', href: '/staff/closures' }
+					{ key: 'closures', label: 'Closures', href: '/staff/closures' },
+					// Under Reservations rather than beside Users: teaching status is a
+					// right in the room, and what it grants is a rate and a booking
+					// window. Everything about the room is one place.
+					{ key: 'instructors', label: 'Instructors', href: '/staff/instructors' }
 				]
 			},
 			{

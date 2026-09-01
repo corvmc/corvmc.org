@@ -10,7 +10,7 @@ import { eq, and, sql, like, or, desc, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { memberRefColumns, toGenericRef, toMemberRef } from '$lib/server/entity/refs';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { getBalance, deductCredits } from '$lib/server/finance/credit-service';
+import { getBalance, deductCredits, addCredits } from '$lib/server/finance/credit-service';
 import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { isSustainingMember } from '$lib/server/finance/subscription-service';
@@ -108,12 +108,51 @@ async function settleReturn(
 
 	const cashRemaining = totalCents - creditsUsed;
 	if (cashRemaining > 0 && stripeCustomerId) {
-		await recordCashPayment({
-			userId,
-			stripeCustomerId,
-			amountCents: cashRemaining,
-			metadata: { equipment_loan_id: loanId }
-		});
+		try {
+			await recordCashPayment({
+				userId,
+				stripeCustomerId,
+				amountCents: cashRemaining,
+				metadata: { equipment_loan_id: loanId },
+				reference: loanId
+			});
+		} catch (err) {
+			// The credits above are already spent, and D1 has no transaction to roll
+			// back — nor could one hold an external API call. So put them back before
+			// the throw propagates, the way `checkout()` reverses its own deductions
+			// on a failed session.
+			//
+			// Without this the member pays and gets nothing: the deduction stands,
+			// no payment is recorded, `returnLoan` aborts with the loan still
+			// `checked_out`, and retrying charges them a second time from a balance
+			// that has already been spent. Observed for real when the Stripe payload
+			// was wrong — three cents, which is exactly small enough that nobody
+			// would have caught it.
+			if (creditsUsed > 0) {
+				try {
+					await addCredits(
+						userId,
+						'equipment_credits',
+						creditsUsed,
+						'checkout_failed',
+						loanId,
+						`Reversed ${creditsUsed} equipment_credits — payment failed for loan ${loanId}`
+					);
+				} catch (reverseErr) {
+					// Never let the compensation's failure replace the original cause:
+					// that error is what says why the return failed. This one is a
+					// balance now owed to a member, which is a person's problem to
+					// resolve, so it has to be loud somewhere other than the stack.
+					captureException(reverseErr, {
+						loanId,
+						userId,
+						creditsUsed,
+						note: 'equipment credits deducted but neither charged nor reversed'
+					});
+				}
+			}
+			throw err;
+		}
 	}
 
 	return { creditsCents: creditsUsed, cashCents: cashRemaining };

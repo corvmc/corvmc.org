@@ -65,6 +65,9 @@ import { isSustainingMember as checkSustainingMember } from '$lib/server/finance
 import { checkout } from '$lib/server/finance/payment-service';
 import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
+import { contributionToCents } from '$lib/utils/event-ticketing';
+import { formatCents } from '$lib/utils/format';
+import { TICKET_CONTRIBUTION_MAX_CENTS } from '$lib/config';
 import { resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
@@ -613,6 +616,9 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		attendeeEmail: string;
 		code: string;
 		status: string;
+		unitPriceCents: number | null;
+		contributionCents: number;
+		discountWaived: boolean;
 		checkedInAt: Date | null;
 		createdAt: Date;
 	}[] = [];
@@ -631,6 +637,9 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			attendeeEmail: t.attendeeEmail,
 			code: t.code,
 			status: t.status,
+			unitPriceCents: t.unitPriceCents,
+			contributionCents: t.contributionCents,
+			discountWaived: t.discountWaived,
 			checkedInAt: t.checkedInAt,
 			createdAt: t.createdAt
 		}));
@@ -1304,7 +1313,12 @@ export const purchaseTickets = form(
 		quantity: z.string().transform(Number),
 		attendeeName: z.string().optional(),
 		attendeeEmail: z.string().optional(),
-		coverFees: z.boolean().default(false)
+		coverFees: z.boolean().default(false),
+		// A dollars string rather than a number: an emptied number field is dropped
+		// from the payload entirely, and `.transform()` in a form() schema breaks
+		// the `fields` inference the <Form> component relies on.
+		contribution: z.string().optional(),
+		waiveDiscount: z.boolean().default(false)
 	}),
 	async (data, issue) => {
 		const { locals, url } = getRequestEvent();
@@ -1312,6 +1326,15 @@ export const purchaseTickets = form(
 		const issues: FormIssue[] = [];
 		if (isNaN(data.quantity) || data.quantity < 1 || data.quantity > 10) {
 			issues.push(issue.quantity('Quantity must be between 1 and 10'));
+		}
+
+		const contributionCents = contributionToCents(data.contribution);
+		if (contributionCents === undefined) {
+			issues.push(
+				issue.contribution(
+					`Enter a contribution up to ${formatCents(TICKET_CONTRIBUTION_MAX_CENTS)}`
+				)
+			);
 		}
 
 		// Logged-in buyers needn't re-enter their details; fall back to their account.
@@ -1337,6 +1360,18 @@ export const purchaseTickets = form(
 
 		const coverFees = data.coverFees;
 		const purchaseId = randomUUID();
+		const gift = contributionCents ?? 0;
+
+		// Member discount keyed off the DB subscription snapshot — the same source
+		// every other flow uses (a live Stripe read can disagree after webhook lag
+		// or past_due, showing one price and charging another).
+		//
+		// Membership and the discount are tracked apart because a member can decline
+		// it for a given show: waiving is only meaningful for someone who had
+		// something to waive.
+		const isMember = locals.user ? await checkSustainingMember(locals.user.id) : false;
+		const discountApplied = isMember && !data.waiveDiscount;
+		const unitPrice = discountApplied ? Math.round(evt.ticketPrice / 2) : evt.ticketPrice;
 
 		await createTickets({
 			eventId: evt.id,
@@ -1345,18 +1380,18 @@ export const purchaseTickets = form(
 			userId: locals.user?.id ?? undefined,
 			attendeeName: attendee.name,
 			attendeeEmail: attendee.email,
-			status: 'pending'
+			status: 'pending',
+			unitPriceCents: unitPrice,
+			contributionCents: gift,
+			discountWaived: isMember && !discountApplied
 		});
 
-		// Member discount keyed off the DB subscription snapshot — the same source
-		// every other flow uses (a live Stripe read can disagree after webhook lag
-		// or past_due, showing one price and charging another).
-		let unitPrice = evt.ticketPrice;
-		if (locals.user && (await checkSustainingMember(locals.user.id))) {
-			unitPrice = Math.round(unitPrice / 2);
+		const lineItems = [await buildLineItem('ticket', unitPrice, data.quantity)];
+		// Its own line item under its own product, so a gift never reads as ticket
+		// revenue in Stripe — and so the receipt can name it.
+		if (gift > 0) {
+			lineItems.push(await buildLineItem('ticket_contribution', gift, 1));
 		}
-
-		const lineItem = await buildLineItem('ticket', unitPrice, data.quantity);
 
 		// checkout() spends any credits the buyer has before charging the card, and
 		// payment-service reverses every completed deduction if a later one fails.
@@ -1376,16 +1411,17 @@ export const purchaseTickets = form(
 				customerEmail: locals.user?.email ?? attendee.email,
 				userId: locals.user?.id ?? undefined,
 				mode: 'payment',
-				lineItems: [lineItem],
+				lineItems,
 				coverFees,
 				metadata: {
 					type: 'ticket',
 					purchase_id: purchaseId,
 					event_id: evt.id,
 					ticket_quantity: String(data.quantity),
-					// The webhook needs this to break the charge into tickets vs. covered
-					// fees on the receipt — the session alone can't tell them apart.
-					ticket_unit_price_cents: String(unitPrice)
+					// The webhook needs these to break the charge into tickets, gift, and
+					// covered fees on the receipt — the session alone can't tell them apart.
+					ticket_unit_price_cents: String(unitPrice),
+					ticket_contribution_cents: String(gift)
 				},
 				successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
 				cancelUrl: `${url.origin}/events/${evt.id}/tickets`

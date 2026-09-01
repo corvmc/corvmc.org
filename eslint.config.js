@@ -7,6 +7,7 @@ import noDbTransaction from './eslint-rules/no-db-transaction.js';
 import noConcurrentRemoteQueries from './eslint-rules/no-concurrent-remote-queries.js';
 import refreshTheComposedQuery from './eslint-rules/refresh-the-composed-query.js';
 import noDomainImportsInUi from './eslint-rules/no-domain-imports-in-ui.js';
+import noContactSchemaImports from './eslint-rules/no-contact-schema-imports.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -32,7 +33,8 @@ const customPlugin = {
 		'no-db-transaction': noDbTransaction,
 		'no-concurrent-remote-queries': noConcurrentRemoteQueries,
 		'refresh-the-composed-query': refreshTheComposedQuery,
-		'no-domain-imports-in-ui': noDomainImportsInUi
+		'no-domain-imports-in-ui': noDomainImportsInUi,
+		'no-contact-schema-imports': noContactSchemaImports
 	}
 };
 
@@ -133,5 +135,15 @@ export default defineConfig(
 		files: ['src/lib/components/ui/**/*.{ts,svelte}'],
 		ignores: ['**/*.spec.ts', '**/*.stories.svelte'],
 		rules: { 'custom/no-domain-imports-in-ui': 'error' }
+	},
+	{
+		// The private contact table has one access path. Unlike the rules above,
+		// this one is deliberately NOT scoped to a folder and does NOT exempt
+		// specs: the whole point is that no file anywhere reaches the table except
+		// the service that guards it, and a spec that imported it directly would
+		// be demonstrating exactly the leak the boundary exists to prevent. The
+		// rule keeps its own allow-list.
+		files: ['**/*.{ts,svelte}'],
+		rules: { 'custom/no-contact-schema-imports': 'error' }
 	}
 );

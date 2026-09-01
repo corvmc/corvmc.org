@@ -32,12 +32,15 @@ export const relations = defineRelations(schema, (t) => ({
 		members: t.many.groupMember(),
 		/** Events this band OWNS. Shows it merely played are `lineups`. */
 		events: t.many.event(),
-		// eventBand points at band twice (the act, and who added it), so both
-		// sides need a matching alias to say which FK this relation follows.
-		lineups: t.many.eventBand({
+		// No `lineups` here any more. A credit names a `directory_entry`, so a
+		// group's credits are two hops away (group → its entry → its credits) and
+		// the relations API expresses one. `confirmedForBand()` in
+		// `event-service.ts` is the query that answers this, and it is the single
+		// definition of "shows on this band's profile".
+		creditsAdded: t.many.eventBand({
 			from: t.group.id,
-			to: t.eventBand.bandId,
-			alias: 'eventBand_band'
+			to: t.eventBand.addedByGroupId,
+			alias: 'eventBand_addedBy'
 		})
 	},
 	bandSite: {
@@ -83,9 +86,8 @@ export const relations = defineRelations(schema, (t) => ({
 			to: t.directoryEntry.id,
 			alias: 'eventBand_entry'
 		}),
-		band: t.one.group({ from: t.eventBand.bandId, to: t.group.id, alias: 'eventBand_band' }),
-		addedByBand: t.one.group({
-			from: t.eventBand.addedByBandId,
+		addedByGroup: t.one.group({
+			from: t.eventBand.addedByGroupId,
 			to: t.group.id,
 			alias: 'eventBand_addedBy'
 		})

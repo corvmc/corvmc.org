@@ -106,7 +106,7 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 	const { userId, bookerType, bookerId, startsAt, endsAt, notes } = params;
 
 	// Validate time constraints
-	const validation = await validateBooking(startsAt, endsAt);
+	const validation = await validateBooking(startsAt, endsAt, { bookerType });
 	if (!validation.valid) {
 		throw new ReservationValidationError(validation.error!);
 	}
@@ -170,7 +170,7 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 export async function createWaitlisted(params: CreateReservationParams): Promise<ReservationRow> {
 	const { userId, bookerType, bookerId, startsAt, endsAt, notes } = params;
 
-	const validation = await validateBooking(startsAt, endsAt);
+	const validation = await validateBooking(startsAt, endsAt, { bookerType });
 	if (!validation.valid) {
 		throw new ReservationValidationError(validation.error!);
 	}

@@ -140,24 +140,42 @@ export const updateProduct = form(updateProductSchema, async (raw) => {
 // Forms — Reservation settings
 // ---------------------------------------------------------------------------
 
-const reservationSettingsSchema = z.object({
-	operatingHoursStart: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
-	operatingHoursEnd: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
-	timeSlotMinutes: z.string().regex(/^\d+$/).transform(Number),
-	minDurationHours: z
-		.string()
-		.regex(/^\d+(\.\d+)?$/)
-		.transform(Number),
-	maxDurationHours: z.string().regex(/^\d+$/).transform(Number),
-	bufferMinutes: z.string().regex(/^\d+$/).transform(Number),
-	minAdvanceMinutes: z.string().regex(/^\d+$/).transform(Number),
-	maxAdvanceDaysOneoff: z.string().regex(/^\d+$/).transform(Number),
-	maxAdvanceDaysRecurring: z
-		.string()
-		.regex(/^\d+(\.\d+)?$/)
-		.transform(Number),
-	hourlyRateCents: z.string().regex(/^\d+$/).transform(Number)
-});
+const reservationSettingsSchema = z
+	.object({
+		operatingHoursStart: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
+		operatingHoursEnd: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
+		timeSlotMinutes: z.string().regex(/^\d+$/).transform(Number),
+		minDurationHours: z
+			.string()
+			.regex(/^\d+(\.\d+)?$/)
+			.transform(Number),
+		maxDurationHours: z.string().regex(/^\d+$/).transform(Number),
+		bufferMinutes: z.string().regex(/^\d+$/).transform(Number),
+		minAdvanceMinutes: z.string().regex(/^\d+$/).transform(Number),
+		maxAdvanceDaysOneoff: z.string().regex(/^\d+$/).transform(Number),
+		maxAdvanceDaysRecurring: z
+			.string()
+			.regex(/^\d+(\.\d+)?$/)
+			.transform(Number),
+		hourlyRateCents: z.string().regex(/^\d+$/).transform(Number),
+		teachingRateCents: z.string().regex(/^\d+$/).transform(Number),
+		teachingMinDurationHours: z
+			.string()
+			.regex(/^\d+(\.\d+)?$/)
+			.transform(Number),
+		teachingMaxAdvanceDaysOneoff: z.string().regex(/^\d+$/).transform(Number),
+		teachingMaxAdvanceDaysRecurring: z.string().regex(/^\d+$/).transform(Number)
+	})
+	// A teaching series is Tier 2 in the generator, so it can be waitlisted behind
+	// a member's one-off. The mitigation needs no machinery — a teaching horizon
+	// longer than any member can book into means the series is already
+	// materialised before a member can reach that week — but it only holds while
+	// this stays true, so it is refused at the point of saving rather than left to
+	// drift.
+	.refine((d) => d.teachingMaxAdvanceDaysRecurring > d.maxAdvanceDaysOneoff, {
+		path: ['teachingMaxAdvanceDaysRecurring'],
+		message: 'Must exceed the member one-off window, or teachers lose their standing slots'
+	});
 
 export const updateReservationSettings = form(reservationSettingsSchema, async (raw) => {
 	await requireStaff();
@@ -173,7 +191,17 @@ export const updateReservationSettings = form(reservationSettingsSchema, async (
 		{ key: 'reservation.minAdvanceMinutes', value: data.minAdvanceMinutes },
 		{ key: 'reservation.maxAdvanceDaysOneoff', value: data.maxAdvanceDaysOneoff },
 		{ key: 'reservation.maxAdvanceDaysRecurring', value: data.maxAdvanceDaysRecurring },
-		{ key: 'reservation.hourlyRateCents', value: data.hourlyRateCents }
+		{ key: 'reservation.hourlyRateCents', value: data.hourlyRateCents },
+		{ key: 'reservation.teachingRateCents', value: data.teachingRateCents },
+		{ key: 'reservation.teachingMinDurationHours', value: data.teachingMinDurationHours },
+		{
+			key: 'reservation.teachingMaxAdvanceDaysOneoff',
+			value: data.teachingMaxAdvanceDaysOneoff
+		},
+		{
+			key: 'reservation.teachingMaxAdvanceDaysRecurring',
+			value: data.teachingMaxAdvanceDaysRecurring
+		}
 	]);
 
 	void getStaffSettingsPage().refresh();

@@ -2,8 +2,17 @@ import { db } from '$lib/server/db';
 import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull, like } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
+import { groupMember, groupSlugHistory } from '$lib/server/db/schema/group';
+import { bandSiteInsert } from '$lib/server/band/band-site-service';
+import { ensureUniqueSlug, generateSlug } from '$lib/server/utils/slug';
+import { isReservedSlug } from '$lib/reserved-slugs';
+import { sanitizeBio } from '$lib/utils/markdown';
+import { DomainError } from '$lib/server/domain-error';
+import { archiveContactForClaim } from './contact-service';
+import { SEARCH_LIMIT } from '$lib/config';
+import type { ProfileLink } from '$lib/server/db/schema/authentication';
 
 /**
  * The `directory_entry` a subject owns — created with it, and the one row every
@@ -132,4 +141,162 @@ export function replaceTags(
 		);
 	}
 	return statements;
+}
+
+// ---------------------------------------------------------------------------
+// External acts
+// ---------------------------------------------------------------------------
+
+/**
+ * An act CMC has booked but which is not a member of anything here.
+ *
+ * It is a `directory_entry` with **both** `userId` and `groupId` null, and that
+ * is the whole of its representation — no `group` row, no slug, no page. Three
+ * needs justify keeping a record at all, and they are why lineup rows cannot
+ * serve: marketing material for when the act comes back, a contact record for
+ * later reference, and a promotion path when somebody from the act joins.
+ * `event_band` rows are keyed to an event, so anything stored there is a fact
+ * about one night rather than a reusable record of a party.
+ */
+export class ExternalActNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+	constructor() {
+		super('External act not found');
+		this.name = 'ExternalActNotFoundError';
+	}
+}
+
+/** The entry already belongs to a member or a band, so there is nothing to claim. */
+export class ActAlreadyClaimedError extends DomainError {
+	readonly httpStatus = 409;
+	constructor() {
+		super('That act has already been claimed.');
+		this.name = 'ActAlreadyClaimedError';
+	}
+}
+
+export interface CreateExternalActData {
+	name: string;
+	bio?: string | null;
+	hometown?: string | null;
+	links?: ProfileLink[] | null;
+}
+
+/**
+ * Stub an act when staff book it.
+ *
+ * **Forced to `hidden`, and the caller does not get a say.** An external act is
+ * a staff-facing record and nothing else: no public profile, no share link, no
+ * page rendered to the world at any URL. That is the point of directory
+ * visibility being a member benefit, taken to its conclusion — CMC does not host
+ * a page for a band that has no relationship with CMC, and the act already has a
+ * presence it chose. Taking visibility as a parameter would make "hidden" a
+ * default somebody could pass around.
+ */
+export async function createExternalAct(data: CreateExternalActData): Promise<string> {
+	const [row] = await db
+		.insert(directoryEntry)
+		.values({
+			// Both null: that pair *is* what makes this an external act.
+			userId: null,
+			groupId: null,
+			name: data.name.trim(),
+			bio: data.bio ? sanitizeBio(data.bio) : null,
+			hometown: data.hometown || null,
+			links: data.links ?? null,
+			visibility: 'hidden'
+		})
+		.returning({ id: directoryEntry.id });
+
+	return row.id;
+}
+
+/** Everything staff can book — unowned entries, newest first. */
+export async function listExternalActs(search?: string) {
+	const conditions = [isNull(directoryEntry.userId), isNull(directoryEntry.groupId)];
+	if (search?.trim()) {
+		conditions.push(like(directoryEntry.name, `%${search.trim()}%`));
+	}
+
+	return db
+		.select({
+			id: directoryEntry.id,
+			name: directoryEntry.name,
+			hometown: directoryEntry.hometown,
+			links: directoryEntry.links,
+			createdAt: directoryEntry.createdAt
+		})
+		.from(directoryEntry)
+		.where(and(...conditions))
+		.orderBy(desc(directoryEntry.createdAt))
+		.limit(SEARCH_LIMIT);
+}
+
+/**
+ * Somebody from the act joined CMC and is claiming it.
+ *
+ * **One column changes on the entry: `groupId`.** That is the whole benefit of
+ * splitting the old `band` table by purpose — under the earlier `band_profile`
+ * design this step had to move name, description and avatar between tables and
+ * null the originals. Here nothing merges and no rows are reconciled, and the
+ * act's entire prior history comes with it for free, because `event_band`
+ * pointed at the entry all along rather than at a band that did not exist.
+ *
+ * The entry keeps its `hidden` visibility. It is now a member band's listing and
+ * theirs to publish, but publishing it is their decision to make on their own
+ * profile rather than a side effect of claiming.
+ *
+ * The act's `contact` row is **archived, not inherited**. The booking contact is
+ * frequently a manager rather than one of the members who just joined, so
+ * carrying it forward would leave a member band holding a stale private phone
+ * number that nobody owns. Contact goes through the account from here.
+ */
+export async function claimExternalAct(entryId: string, ownerId: string) {
+	const [entry] = await db
+		.select({
+			id: directoryEntry.id,
+			name: directoryEntry.name,
+			userId: directoryEntry.userId,
+			groupId: directoryEntry.groupId
+		})
+		.from(directoryEntry)
+		.where(eq(directoryEntry.id, entryId))
+		.limit(1);
+
+	if (!entry) throw new ExternalActNotFoundError();
+	if (entry.userId || entry.groupId) throw new ActAlreadyClaimedError();
+
+	const slug = await ensureUniqueSlug(
+		generateSlug(entry.name),
+		group,
+		group.slug,
+		undefined,
+		isReservedSlug
+	);
+	const groupId = crypto.randomUUID();
+
+	await db.batch([
+		// Same slug-history retirement `create()` does: a live `group.slug` always
+		// shadows a released one, so a stale redirect could only resurface later.
+		db.delete(groupSlugHistory).where(eq(groupSlugHistory.slug, slug)),
+		db.insert(group).values({ id: groupId, kind: 'band', name: entry.name, slug }),
+		db.insert(groupMember).values({
+			groupId,
+			userId: ownerId,
+			role: 'owner',
+			status: 'active'
+		}),
+		// The one column that changes. No entry is created — the act already had
+		// one, and that is what carries its history.
+		db.update(directoryEntry).set({ groupId }).where(eq(directoryEntry.id, entryId)),
+		// The premium microsite record every band has. A claimed act is a band.
+		bandSiteInsert(groupId)
+	]);
+
+	// After the batch rather than in it. Archiving is bookkeeping about a record
+	// that may not exist at all, and a missing contact must not fail a claim that
+	// has already succeeded.
+	await archiveContactForClaim(entryId);
+
+	return { groupId, slug };
 }

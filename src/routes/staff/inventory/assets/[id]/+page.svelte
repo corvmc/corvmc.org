@@ -16,6 +16,7 @@
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { BindTagAction, RecordForm8282Action } from '$lib/components/actions';
+	import LocationField from '$lib/components/inventory/LocationField.svelte';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
 	import { equipmentConditions, stockReasonLabels } from '$lib/config';
@@ -88,6 +89,11 @@
 					value={asset.condition}
 					options={equipmentConditions.map((c) => ({ value: c, label: c }))}
 				/>
+				<!-- Load-bearing, not decorative: without this field the form sent no
+				     `locationId` on every save, and the handler read that absence as
+				     "clear it". Gear moved to Unassigned whenever anyone edited a
+				     serial number. -->
+				<LocationField field={fields.locationId} value={asset.locationId} />
 				<Field field={fields.notes} type="textarea" label="Notes" value={asset.notes ?? ''} />
 				<div class="mt-3">
 					<SubmitButton>

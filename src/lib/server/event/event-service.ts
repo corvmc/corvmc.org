@@ -1267,31 +1267,45 @@ export async function setEventLineup(
 		deduped.push({ ...e, name });
 	}
 
+	// One query for every group named here — the entries the credits will point
+	// at, and the owner's, which the "not the owner's to delete" rule below needs
+	// even when the editor left them off the bill entirely.
+	const entryIds = await entryIdsForGroups([
+		...deduped.map((e) => e.bandId).filter((id): id is string => !!id),
+		...(evt.groupId ? [evt.groupId] : [])
+	]);
+
 	const existing = await db.select().from(eventBand).where(eq(eventBand.eventId, eventId));
-	const byBand = new Map(existing.filter((r) => r.bandId).map((r) => [r.bandId!, r]));
-	const byName = new Map(existing.filter((r) => !r.bandId).map((r) => [r.name.toLowerCase(), r]));
+	// Existing credits are keyed by the entry they name, so matching an incoming
+	// group against them goes through `entryIds` rather than comparing directly.
+	const byEntry = new Map(
+		existing.filter((r) => r.directoryEntryId).map((r) => [r.directoryEntryId!, r])
+	);
+	const byName = new Map(
+		existing.filter((r) => !r.directoryEntryId).map((r) => [r.name.toLowerCase(), r])
+	);
+	const priorFor = (groupId: string | undefined) => {
+		const entryId = groupId ? entryIds.get(groupId) : undefined;
+		return entryId ? byEntry.get(entryId) : undefined;
+	};
 
 	// The owner's slot is not the owner's to delete.
-	const ownerRow = evt.groupId ? byBand.get(evt.groupId) : undefined;
+	const ownerRow = priorFor(evt.groupId ?? undefined);
 	const hasOwner = deduped.some((e) => e.bandId && e.bandId === evt.groupId);
 	if (ownerRow && !hasOwner) {
 		deduped.unshift({
 			name: ownerRow.name,
-			bandId: ownerRow.bandId ?? undefined,
+			// The event's own group: `ownerRow` is by definition its credit, and the
+			// row itself no longer carries a group id to read back.
+			bandId: evt.groupId ?? undefined,
 			billingOrder: 0,
 			note: ownerRow.note ?? undefined
 		});
 	}
 
-	// Resolved before the map, in one query, because every linked credit needs
-	// its party's entry id and the map is synchronous.
-	const entryIds = await entryIdsForGroups(
-		deduped.map((e) => e.bandId).filter((id): id is string => !!id)
-	);
-
 	const invited: { bandId: string; name: string }[] = [];
 	const rows = deduped.map((e, i) => {
-		const prior = e.bandId ? byBand.get(e.bandId) : byName.get(e.name.toLowerCase());
+		const prior = e.bandId ? priorFor(e.bandId) : byName.get(e.name.toLowerCase());
 
 		let status: EventBandStatus;
 		if (!e.bandId) {
@@ -1312,15 +1326,13 @@ export async function setEventLineup(
 		return {
 			eventId,
 			name: e.name,
-			// Both, while `bandId` still exists. It is written and read by nothing,
-			// so the phase-10 backfill stays recoverable from a column that is still
-			// being maintained rather than from one already going stale.
-			bandId: e.bandId ?? null,
+			// `e.bandId` is the *group* a lineup editor picked; the credit stores
+			// that band's entry.
 			directoryEntryId: e.bandId ? (entryIds.get(e.bandId) ?? null) : null,
 			billingOrder: i,
 			status,
 			note: e.note ?? null,
-			addedByBandId: opts.actingBandId ?? null
+			addedByGroupId: opts.actingBandId ?? null
 		};
 	});
 
@@ -1429,11 +1441,21 @@ export async function declineLineupSlot(eventId: string, bandId: string): Promis
 	await setLineupSlotStatus(eventId, bandId, 'declined');
 }
 
-/** Staff: attach a platform band to a name that was typed in free-text. */
+/**
+ * Staff: attach a party to a name that was typed in free-text.
+ *
+ * Still takes the *group* a staffer picked, and resolves it to that band's
+ * entry — the picker names bands, the credit names entries. A group with no
+ * entry leaves the slot unlinked rather than half-linking it, since `unlinked`
+ * ⇔ `directoryEntryId IS NULL` is the invariant the whole render path reads.
+ */
 export async function linkLineupSlot(eventBandId: string, bandId: string): Promise<void> {
+	const directoryEntryId = await entryIdForGroup(bandId);
+	if (!directoryEntryId) return;
+
 	await db
 		.update(eventBand)
-		.set({ bandId, status: 'pending' })
+		.set({ directoryEntryId, status: 'pending' })
 		.where(and(eq(eventBand.id, eventBandId), eq(eventBand.status, 'unlinked')));
 }
 
@@ -1585,11 +1607,10 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 	await db.insert(eventBand).values({
 		eventId: row.id,
 		name: owner?.name ?? 'Unknown band',
-		bandId,
 		directoryEntryId: await entryIdForGroup(bandId),
 		billingOrder: 0,
 		status: 'confirmed',
-		addedByBandId: bandId
+		addedByGroupId: bandId
 	});
 
 	if (support?.length) {
@@ -1964,22 +1985,20 @@ export async function importBandEvents(
 		{
 			eventId: row.id,
 			name: owner.name,
-			bandId,
 			directoryEntryId: ownerEntryId,
 			billingOrder: 0,
 			status: 'confirmed' as const,
-			addedByBandId: bandId
+			addedByGroupId: bandId
 		},
 		// Support acts are names only — an imported gig has no way to say which
 		// CMC band a support slot was, which is exactly what `unlinked` means.
 		...(rows[i].support ?? []).slice(0, 11).map((name, j) => ({
 			eventId: row.id,
 			name,
-			bandId: null,
 			directoryEntryId: null,
 			billingOrder: j + 1,
 			status: 'unlinked' as const,
-			addedByBandId: bandId
+			addedByGroupId: bandId
 		}))
 	]);
 

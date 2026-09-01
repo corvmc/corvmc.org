@@ -3,7 +3,7 @@ import { DomainError } from '../domain-error';
 import { user, session } from '$lib/server/db/schema/authentication';
 import { group, groupMember } from '$lib/server/db/schema/group';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { eq, and, ne, gt, isNull, isNotNull, count, desc } from 'drizzle-orm';
+import { and, count, desc, eq, gt, isNotNull, isNull, ne, or } from 'drizzle-orm';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelSubscription } from '$lib/server/finance/subscription-service';
 import { isValidPhone, normalizePhone } from '$lib/utils/phone';
@@ -88,16 +88,29 @@ export async function deactivateUser(userId: string) {
 	// cache rather than adding a second gate.
 	await db.delete(session).where(eq(session.userId, userId));
 
-	// Cancel all future personal reservations booked by this user. Scoped to
-	// personal bookings (bookerType 'user') — band/event/lesson reservations
-	// belong to those entities, not the leaving user.
+	// Cancel this user's own future reservations — the personal ones and the
+	// teaching ones, which are two booker types and one person.
+	//
+	// Band and event bookings are deliberately excluded: they belong to those
+	// entities rather than to the leaving member, and the band outlives them.
+	//
+	// Teaching bookings need the second arm because they are matched differently.
+	// A personal booking has `bookerId = userId`; a teaching booking's `bookerId`
+	// is the *instructor row's* id, so the original condition could never match
+	// one and a deactivated instructor's lessons went on holding the room —
+	// silently, with the `instructor` row cascading away underneath them.
 	const futureReservations = await db
 		.select({ id: reservation.id })
 		.from(reservation)
 		.where(
 			and(
-				eq(reservation.bookerType, 'user'),
-				eq(reservation.bookerId, userId),
+				or(
+					and(eq(reservation.bookerType, 'user'), eq(reservation.bookerId, userId)),
+					// Matched on who booked it rather than on `bookerId`, which points
+					// into `instructor` here. The invariant that makes this exact:
+					// a teaching booking's instructor has `userId === createdByUserId`.
+					and(eq(reservation.bookerType, 'instructor'), eq(reservation.createdByUserId, userId))
+				),
 				gt(reservation.startsAt, new Date()),
 				ne(reservation.status, 'cancelled')
 			)

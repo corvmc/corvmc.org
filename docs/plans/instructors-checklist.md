@@ -1,0 +1,253 @@
+# Instructor module — progress checklist
+
+Design: `docs/specs/shipped/instructors-spec.md`.
+Plan: `~/.claude/plans/let-s-talk-about-tools-ethereal-iverson.md` (approved).
+Branch: `claude/teaching-tools-ffff44` (off `main`).
+
+## Model recap
+
+- An **instructor** is a person CMC granted the right to rent the practice room on teaching terms.
+  **CMC's relationship is with the teacher, not the student** — no enrolment, no student records, no
+  minors machinery, no payouts. That one line is why this module is small.
+- One table. `instructor.userId` is `NOT NULL UNIQUE FK → user`, mirroring `volunteer_profile`.
+  Status `requested | rejected | active | paused | retired`.
+- **The application IS the draft listing.** Staff approve exactly what they would publish. One form.
+- Declining **sends it back** (`'rejected'` + `reviewNotes`) rather than deleting — this departs from
+  `declineApplication()` deliberately, because a group application carries no content and this one
+  does. Not an appeal: appeals contest behavior calls, and this is a judgment about a proposal.
+- `requireInstructor` matches **positively** on `eq(status, 'active')`. That is what makes
+  `'requested'`/`'rejected'` unable to book _by construction_.
+- `bookerType` gains `'instructor'`, pointing at `instructor.id` — a real table, so the discriminator
+  stays honest. Legacy `'lesson'` is **not** renamed and **not** backfilled.
+- Teaching terms come from `getBookingTerms(bookerType)`, never a direct rate read. Teaching time
+  does **not** consume `free_hours`.
+- `teachingContact` is nullable; null falls back to `directory_entry.contact`, and the fallback runs
+  through `contactForView('public', …)` so a members-only contact is withheld rather than published.
+- `teachesLessons` **stays** and keeps meaning "I teach, possibly nowhere near CMC."
+- **No feature flag.** The phase order carries the guarantee instead: staff-only surfaces may land
+  early, member-facing surfaces may not land before the thing they advertise works.
+
+## Blocked — resolve before Step 3
+
+**1. ~~The production census~~ — run, and the answer was zero.** No reservation carries
+`booker_type = 'lesson'`. The value is deleted from `bookerTypes` and `prototypeTypes`, and
+`'instructor'` reclaims `IconSchool`. Nothing renamed, nothing backfilled, no SQL emitted. The staff
+reservations page's `'lesson'` glyph branch was **retargeted** to `'instructor'` rather than deleted:
+it exists because a booker type whose ref resolves to the member leaves the Booker column unable to
+say what the booking is, and teaching has that property too.
+
+**2. `reservation.teachingRateCents` is `500` — $5/hr, which is the rate a sustaining member's
+contribution already buys.** `webhook-handlers.ts` computes it: `$5 = 1 hour = 2 credits`. So this is
+not a discount, it is **the member rate with the monthly cap lifted** — the $15
+`hourlyRateCents` is the drop-in rate for hours past your allocation. Two consequences for Step 5:
+**credits DO apply** (the goal is extending the allocation, which presupposes spending it first, and
+at $5/hr one credit covers exactly one half-hour slot), and the abuse case is far smaller than an
+earlier draft claimed — an instructor rehearsing on teaching time pays what they would have paid with
+credits, and gains only that their hours are uncapped.
+
+**3. Off-peak pricing is coming and is a separate spec.** Lower prices before 4pm, for everyone. The
+seam: the applicable rate is `min(bookerRate, timeRate)`, and pricing stops being `duration × rate`
+because a booking spanning 4pm has two rates — that replaces the formula at 8+ sites, which the
+off-peak spec owns. `commitReservationCredits` keeps its `creditsApply` parameter for it.
+
+## Step 1 — Design spec
+
+- [x] `docs/specs/shipped/instructors-spec.md`
+- [x] `docs/plans/instructors-checklist.md` — this file
+- [x] `IDEAS.md` — `**Progress:**` line under "Lessons / Teacher Panel", noting the narrowing
+- [x] `docs/README.md` — spec table row
+
+## Step 2 — Schema + service
+
+- [x] `src/lib/server/db/schema/instructor.ts` — table, types, zod schemas. Two details taken from
+      `volunteer_profile` rather than from the plan: the index is **(status, createdAt)**, not status
+      alone — it is the staff review queue, oldest first — and **`updatedAt` is `notNull` with a
+      `unixepoch()` default**, because this is a fresh CREATE TABLE. (`group_member`'s nullable
+      `updatedAt` is an artefact of being added by ALTER, where SQLite rejects a non-constant
+      default; that constraint does not apply here.)
+- [x] `src/lib/config.ts` — `instructorStatuses` + labels (NOT the schema file; the staff page
+      imports it, and `$lib/server` is unreachable from the browser)
+- [x] `src/lib/server/db/schema/index.ts` — export line
+- [x] ~~`relations.ts`~~ — **not needed.** `volunteer_profile`, the closest analogue, has no
+      relations block either: drizzle relations exist for the `db.query.*` API, and this module
+      uses explicit joins like the rest of the directory code. Adding an untraversed block
+      would be config nothing reads.
+- [x] `scripts/d1-table-order.mjs` — after `user`
+- [x] `src/lib/components/ui/StatusBadge.svelte` — `paused` added to `variants` and `badgeClass`
+      (`IconPlayerPause` / `badge-warning`, distinct from `retired`'s ghost archive so the staff list
+      can tell "back in autumn" from "gone"). The other four were already mapped. Registered in
+      `StatusBadge.spec.ts`'s `vocabularies`.
+- [x] **No `instructorStatusLabels`** — `StatusBadge` flat-merges every vocabulary's labels by bare
+      status string, so one here would have relabelled equipment loans' `requested` and clobbered
+      `volunteerHourStatusLabels`' `rejected` → "Returned". That "Returned" is the label this module
+      wanted anyway, which is also why `rejected` is the right value rather than a coined one.
+- [x] `src/lib/server/instructor/instructor-service.ts` — full set including the application half,
+      even though nothing calls it until Step 7
+- [x] `src/lib/server/instructor/instructor-context.ts` — `requireInstructor(userId)`
+- [x] Migration via `pnpm db:generate` — `CREATE TABLE` + whatever the census decided
+- [x] `instructor-service.spec.ts` — runs the real statements against real SQLite over the
+      committed migrations (`group-invite-upsert.spec.ts`'s approach), because every risk here
+      is a WHERE clause and a mocked db would pass while matching the wrong rows. Covers
+      `requireInstructor` too rather than getting its own file: the usual
+      don't-merge-sibling-specs rule guards against unioning conflicting `vi.mock` preambles,
+      and there is one mock here that both modules want identically.
+
+## Step 3 — Booker type + terms (inert refactor; nothing writes the new value)
+
+- [x] `bookerTypes` gains `'instructor'` (and loses `'lesson'` per census)
+- [x] `src/lib/components/ui/entity/registry.ts` — reservation subtype + glyph
+- [x] `src/lib/server/entity/refs.ts` — explicit `'instructor'` branch above the fallback
+- [ ] `staffReservationFiltersSchema` — widen the `bookerType` enum (may be automatic: it likely
+      derives from `bookerTypes` rather than re-listing them — check before editing)
+- [x] `src/lib/server/reservation/config.ts` — `termsFor()` / `getBookingTerms()` + four
+      `reservation.teaching*` defaults
+- [x] `site-config-service.ts` `DEFAULTS` — the four keys **plus the missing `minAdvanceMinutes`**
+- [x] `settings.remote.ts` — settings form fields
+- [x] `conflict-service.ts` — `validateBooking` takes `bookerType`; `create`/`staffCreate` forward it
+- [ ] **Convert the rate reads to the resolver** — each must start selecting `bookerType`.
+      Measured, since the plan's "~20" was an estimate: **27 config-read sites**
+      (6 `config<number>('reservation.hourlyRateCents')` + 21 `getReservationConfig()`, of which not
+      all read the rate), and 44 `hourlyRateCents` mentions in `reservations.remote.ts` alone.
+      Highest risk: the charge paths, the credit commit, and `getReservations` (the member's own
+      list, which excludes only `'event'`, so teaching bookings would show $15/hr)
+- [ ] **`src/lib/server/db/schema/api.ts` exposes `hourlyRateCents` publicly** — on
+      `ReservationPayResponse` and the staff detail response. Not named in the plan and it is a
+      contract, not an internal read: both must report the rate _resolved for that reservation_, or
+      an API consumer is told a teaching booking costs the member rate. Check for external consumers
+      before changing the meaning of the field.
+- [x] `config.spec.ts` — `termsFor` is pure, so it needs no mock; pins that a _new_ booker type
+      inherits member terms rather than teaching ones, and that one credit is exactly one half-hour
+      of teaching
+- [ ] `conflict-service.spec.ts`, `refs.spec.ts`
+
+## Step 4 — Staff surface (staff-only; nothing member-facing)
+
+- [x] `src/routes/staff/instructors/+page.svelte` — Applications block first (the only rows waiting
+      on staff), then the roster, then a "Not currently teaching" section
+- [x] `src/routes/staff/users/[id]/panels/InstructorPanel.svelte` — on the **`space`** tab, mounted
+      above the bookings it changes the price of. Read-only: granting lives at `/staff/instructors`,
+      where the roster gives the decision its context
+- [x] Actions — `GrantInstructorAction`, `ReviewApplicationActions` (approve / send back),
+      `EndGrantActions` (pause / retire). Grouped by decision rather than one file per verb: approve
+      and send back are the two halves of one choice, as are pause and retire
+- [x] `src/lib/remote/instructors.remote.ts` — staff half only. **A `.remote.ts` module may export
+      only remote functions**; re-exporting a Zod schema through it fails at import time, not at type
+      check, so shared schemas are imported from `schema/instructor.ts` by whoever needs them
+- [x] `src/lib/server/instructor/instructor-service.ts` — `listForStaff()`, bucketed by _who the row
+      is waiting on_ rather than by status: `awaitingReview` is waiting on staff, `resolved` is
+      waiting on the member or on nobody
+- [x] `src/routes/staff/nav-items.ts` — under Reservations, since teaching status is a right in the
+      room. Plus the icon map in `staff/+layout.svelte`, which the nav key type makes mandatory
+- [x] `instructors.remote.spec.ts` — every mutation guards before touching the service, and the
+      **acting staffer** is the id recorded on the grant. Schema validation is not reachable through
+      this harness (the mocked `form` skips it), so the note-is-required rules stay pinned in
+      `instructor-service.spec.ts` against real SQLite
+
+## Step 5 — Booking path
+
+- [x] `bookInstructorReservation` in `reservations.remote.ts` — `bookerType: 'instructor'` with
+      `bookerId` on the instructor row, guarded by `requireInstructor`, and **no
+      sustaining-membership gate** on the recurring branch
+- [x] ~~`creditsApply` on `commitReservationCredits`~~ — **not needed, and the reason is the whole
+      pricing model.** This was listed as a defect while the plan still called $5/hr a subsidy. At
+      the member-equivalent rate `creditValueCents(500)` is exactly what half an hour costs, so one
+      credit covers one slot and the ordinary confirm and pay paths settle a teaching booking without
+      knowing it is one. Correcting the rate story removed one of the four defects outright.
+- [x] `deactivateUser` — **defect fix.** A personal booking matches `bookerId = userId`; a teaching
+      booking's `bookerId` points into `instructor`, so the original condition could never match one
+      and a deactivated instructor's lessons went on holding the room. Now matched on
+      `createdByUserId` for the teaching arm, which is exact because a teaching booking's instructor
+      has `userId === createdByUserId`.
+- [x] `TeachingCreateModal` — **a second button, not a mode inside the rehearsal wizard.** `Action`
+      binds one remote form, so a booking-type step meant restructuring the wizard to swap actions
+      mid-flight; and the two are not variants of one booking, having different rates, floors,
+      windows and settlement. `isInstructor` rides on the page's existing load-bearing query rather
+      than a second remote query fanned out of the component, and it is a **boolean** so
+      `applicationNote` cannot reach a member-facing DTO by construction.
+- [x] `reservations.remote.instructor.spec.ts` — pins the two properties invisible in a diff: the row
+      lands on the instructor record, and the recurring branch has no membership gate (an absence,
+      which is what regresses silently)
+
+## Step 6 — Recurring
+
+- [x] `generationWindowEnd(from, bookerType)` — per booker type rather than global; `processSeries`
+      passes `prototype.bookerType` and `processEventSeries` passes `'event'`
+- [x] Recurring branch with **no** sustaining gate — landed with the booking path in Step 5
+- [x] `cancelAllForUser` scoped to `booker_type = 'user'` — **defect fix.** A lapse ends a membership
+      benefit; teaching time is a rental the subscription never bought. Without the scope an
+      instructor who let their membership lapse lost their standing lessons **silently**, because a
+      cancelled series does not error — it just stops generating
+- [x] `recurring-series-lapse.spec.ts` — **its own file, against real SQLite.** The whole fix is a
+      WHERE clause and the existing `recurring-series-service.spec.ts` mocks `db.update` wholesale,
+      so it can see _that_ something was cancelled but not _which rows_ — it would pass with the
+      predicate deleted. Verified the new spec fails without the fix (2 failed) and passes with it.
+      Kept separate because a unioned `vi.mock` would replace the real database with that spec's stub
+      and quietly turn this back into the test that cannot fail
+- [x] `rrule-helpers.spec.ts` — the teaching horizon exceeds the member one, and every other booker
+      type inherits the member window
+
+## Step 7 — Going public: listing + applications
+
+- [x] `src/routes/(public)/directory/instructors/+page.svelte` — public, unauthenticated
+- [x] `src/routes/member/directory/instructors/+page.svelte` — the member mirror
+- [x] `src/lib/components/directory/InstructorCard.svelte` — a sibling of `IdCard`, sharing its
+      `poster-gen`/initials treatment so the two read as one family
+- [x] Third `TabBar` tab on both directory roots, pointing at the sibling route
+- [x] `instructor-directory-service.ts` — **three gates**, all in one function with one test file
+- [x] `/member/profile` → `TeachingCard.svelte`, five states. **Takes plain props and never awaits**:
+      a top-level await would mark later declarations blocked and turn each `fields` expression into
+      an async derived, which is the `effect_update_depth_exceeded` crash the page already carries a
+      comment about. The page resolves all three queries in one `Promise.all` rather than three
+      awaited declarations, which would be serial round trips.
+- [x] `instructors.remote.ts` — member half: apply, edit, accepting-students, withdraw, and the two
+      listing queries. **Two listing entry points rather than one with a viewer argument**, because
+      a gate chosen by a parameter is a gate somebody can pass the wrong value to
+- [x] `teachesLessons` copy → **"Teaches privately"** across six sites, and the help article now
+      explains that it and teaching at the Collective are different things you can have either,
+      both, or neither of
+- [x] **`instructor-directory-service.spec.ts` — the exposure test.** 17 tests against real SQLite:
+      no unapproved applicant, no hidden or members-only entry publicly, no soft-deleted entry or
+      user, no instructor without a profile, `applicationNote` never in a returned shape, and the
+      contact fallback gated rather than bypassed
+- [x] **Notifications.** Four pieces: event types on `event-bus.ts`, emits from the service,
+      listeners in `notification-listeners.ts`, and two keys in `schema/notification.ts`.
+      `instructor.application_submitted` fires on a **resubmit as well as a first submission** — a
+      returned application coming back is exactly when it needs looking at again, and would otherwise
+      sit in the queue unannounced. `instructor.application_reviewed` carries the note, which is the
+      load-bearing half of the return state: the member is not watching their profile, so a note
+      nobody delivers is the failure the whole mechanism exists to prevent. Emits are not awaited —
+      the dispatcher swallows and logs, and an application must not fail because a notification did.
+      Pinned with the events **real** (only the database is substituted), including the negative
+      case: a transition that throws announces nothing.
+
+## Step 8 — Seed, docs, close out
+
+- [x] `scripts/seed-dev.ts` — **six instructors covering every status**, and the awkward ones are the
+      point: one active but not accepting (excluded from the listing, still books), one active whose
+      contact is members-only (listed, contact withheld publicly, and the profile nudge renders), one
+      paused with a _public_ contact so it is clearly status and not reachability keeping them off,
+      one awaiting review so the staff queue is not empty, and one sent back carrying `reviewNotes`.
+      Plus three teaching bookings so the reservation surfaces show a row at the teaching rate.
+      A first pass put the members-only contact on the _paused_ row, which produced a fixture for a
+      nudge that only renders when active — caught by reading the seeded rows back rather than
+      trusting the insert.
+- [x] `docs/reports/feature-catalog.md` — three rows: staff, member, public
+- [x] `pnpm docs:routes && pnpm docs:check` — Integrity OK, route drift +0/-0
+- [x] Spec retired to `docs/specs/shipped/`, `docs/README.md` row flipped to ✅ archived, and the
+      five code comments pointing at the old path repointed
+- [x] `docs/development/conventions.md` — **seed data moved from step 5 into step 2**, with the
+      reason: every surface built between the schema landing and the seed being written is developed
+      and reviewed against no rows, and the browser-preview step cannot verify anything until the
+      end, which is when it is least useful. That is this module's own mistake, written down where
+      the next feature will read it.
+
+---
+
+## Not done, and deliberately
+
+- **The `$5/hr` production value.** `reservation.teachingRateCents` defaults to `500` in
+  `site-config-service.ts`, but the production `site_config` row has to be set before the module is
+  live. There is no feature flag, so the phase order was the only thing holding the door — and once
+  the listing PR merges, `/directory/instructors` exists.
+- **An e2e for the booking path.** The unit and integration coverage is thorough (real SQLite for
+  every gate and every WHERE clause), but nothing drives the browser end to end.

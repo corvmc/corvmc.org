@@ -6,7 +6,22 @@ let _stripe: Stripe | null = null;
 export function getStripe(): Stripe {
 	if (!_stripe) {
 		if (!env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not set');
-		_stripe = new Stripe(env.STRIPE_SECRET_KEY);
+		/**
+		 * Pinned to the version this SDK's types were generated from.
+		 *
+		 * Unpinned, the client follows the *account's* default, which Stripe rolls
+		 * forward on its own schedule — so the request version could move without a
+		 * commit, while the types the code compiles against would not. They happen
+		 * to agree today, and the `recordCashPayment` fault found alongside this was
+		 * a payload wrong on every version rather than a drift, so this fixes no
+		 * live bug. It closes the gap that would let the next roll be discovered in
+		 * production instead of in CI.
+		 *
+		 * The literal is the SDK's own `ApiVersion`, which is a single-value type.
+		 * Upgrading `stripe` therefore fails `pnpm check` here until the pin is
+		 * updated deliberately — which is the point.
+		 */
+		_stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-08-26.dahlia' });
 	}
 	return _stripe;
 }

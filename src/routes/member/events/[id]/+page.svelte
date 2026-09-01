@@ -14,6 +14,7 @@
 	import PosterCard from '$lib/components/events/PosterCard.svelte';
 	import TicketStub from '$lib/components/events/TicketStub.svelte';
 	import TicketQRModal from '$lib/components/events/TicketQRModal.svelte';
+	import TicketPurchaseFields from '$lib/components/events/TicketPurchaseFields.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
 	import {
 		ticketingMode,
@@ -90,14 +91,8 @@
 	let quantity = $state(1);
 	let attendeeName = $state((page.data as any).user?.name ?? '');
 	let attendeeEmail = $state((page.data as any).user?.email ?? '');
-	let coverFees = $state(false);
 	let qrOpen = $state(false);
 	let qrIndex = $state(0);
-
-	// What this member is actually charged per ticket — the member rate when it
-	// applies, the list price otherwise.
-	const unitPrice = $derived(discountedPrice ?? evt.ticketPrice ?? 0);
-	const subtotal = $derived(unitPrice * quantity);
 
 	function parseTags(tags: string | null): string[] {
 		if (!tags) return [];
@@ -401,22 +396,11 @@
 										label="Email"
 										bind:value={attendeeEmail}
 									/>
-									<Field
-										name="coverFees"
-										type="checkbox"
-										bind:value={coverFees}
-										checkboxLabel="Cover processing fees so the collective receives the full amount"
+									<TicketPurchaseFields
+										fullPrice={evt.ticketPrice ?? 0}
+										{quantity}
+										isSustainingMember={data.isSustainingMember}
 									/>
-
-									<div class="border-t border-base-200 pt-4">
-										<div class="flex justify-between text-lg font-medium">
-											<span>Total</span>
-											<span>{formatCents(subtotal)}</span>
-										</div>
-										{#if data.isSustainingMember}
-											<p class="mt-1 text-sm text-success">Sustaining member discount applied</p>
-										{/if}
-									</div>
 								{/snippet}
 							</Action>
 						{/if}

@@ -4,6 +4,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/act/[token]",
+		"panel": "public"
+	},
+	{
 		"route": "/band-site/[slug]",
 		"panel": "band"
 	},
@@ -76,6 +80,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/directory/instructors",
+		"panel": "public"
+	},
+	{
 		"route": "/directory/members/[id]",
 		"panel": "public"
 	},
@@ -129,6 +137,10 @@
 	},
 	{
 		"route": "/member/directory/bands/[slug]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/directory/instructors",
 		"panel": "member"
 	},
 	{
@@ -256,6 +268,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/bands/acts",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/closures",
 		"panel": "staff"
 	},
@@ -316,6 +332,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/instructors",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/inventory",
 		"panel": "staff"
 	},
@@ -345,6 +365,10 @@
 	},
 	{
 		"route": "/staff/inventory/loans/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inventory/locations",
 		"panel": "staff"
 	},
 	{

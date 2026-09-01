@@ -173,6 +173,8 @@ export function registerAllNotificationListeners(): void {
 				orderId: event.purchaseId.slice(0, 8).toUpperCase(),
 				unitPrice: formatCents(event.unitPriceCents),
 				subtotal: formatCents(event.subtotalCents),
+				contributionMade: event.contributionCents > 0,
+				contribution: formatCents(event.contributionCents),
 				feesCovered: event.feesCents > 0,
 				fees: formatCents(event.feesCents),
 				total: formatCents(event.totalCents),
@@ -991,6 +993,74 @@ export function registerAllNotificationListeners(): void {
 				});
 			}
 		}
+	});
+
+	// --- Teaching application submitted (notify staff) ---
+	//
+	// Fires on a resubmit too: a returned application coming back is exactly when
+	// it needs looking at again, and would otherwise sit in the queue unannounced.
+	domainEvents.on('instructor.application_submitted', async ({ data: event }) => {
+		const staff = await listStaffUsers();
+		for (const member of staff) {
+			try {
+				await dispatch({
+					type: 'instructor_application_submitted',
+					userId: member.id,
+					userEmail: member.email,
+					title: `${event.applicantName} applied to teach`,
+					body: event.headline ?? 'A teaching application is waiting for review',
+					href: '/staff/instructors'
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.instructor_application_submitted',
+					to: member.email
+				});
+			}
+		}
+	});
+
+	// --- Teaching application approved or sent back (notify the member) ---
+	domainEvents.on('instructor.application_reviewed', async ({ data: event }) => {
+		const approved = event.approved;
+		await dispatch({
+			type: 'instructor_application_reviewed',
+			userId: event.applicantUserId,
+			userEmail: event.applicantEmail,
+			title: approved ? 'You can teach at the Collective' : 'Your teaching application came back',
+			body: event.reviewNotes ?? undefined,
+			href: '/member/profile',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: approved
+						? 'You can now teach at the Collective'
+						: 'A change to your teaching application',
+					heading: approved ? 'You can teach at the Collective' : 'One change first',
+					greeting: `Hi ${event.applicantName},`,
+					paragraphs: approved
+						? [
+								{
+									text: 'Your teaching application is approved. You can book the practice room on teaching terms — the member rate, with the monthly cap lifted — and your listing is now on the teacher directory.'
+								}
+							]
+						: [
+								{
+									// Not a rejection, and the wording has to say so: the row is
+									// untouched and resubmitting is one edit away.
+									text: 'Staff had a look at your teaching application and asked for one change before it goes live. Nothing is lost — everything you wrote is still there.'
+								}
+							],
+					// The note is the entire point of a return: a member who cannot see
+					// what was asked for cannot answer it.
+					...(event.reviewNotes ? { quote: event.reviewNotes } : {}),
+					cta: {
+						url: `${siteUrl}/member/profile`,
+						label: approved ? 'See your listing' : 'Edit and send it back'
+					}
+				} satisfies NotificationEmailModel
+			}
+		});
 	});
 
 	// --- Community listing approved or turned down (notify the member) ---

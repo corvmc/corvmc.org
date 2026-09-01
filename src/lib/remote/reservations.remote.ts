@@ -68,7 +68,10 @@ import {
 } from '$lib/server/reservation/reservation-service';
 import { mapDomainError } from '$lib/server/errors';
 import { isTerminalStatus } from '$lib/utils/reservation-actions';
-import { getReservationConfig } from '$lib/server/reservation/config';
+import { bookerTypes, type BookerType } from '$lib/server/db/schema/reservation';
+import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
+import { requireInstructor } from '$lib/server/instructor/instructor-context';
+import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
 import { config } from '$lib/server/site-config/site-config-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import {
@@ -839,7 +842,11 @@ const staffReservationFiltersSchema = z.object({
 	dateFrom: z.string().optional(),
 	dateTo: z.string().optional(),
 	statusFilter: z.array(z.string()).optional(),
-	bookerType: z.enum(['user', 'group', 'event']).optional(),
+	// Derived rather than hard-listed. It was hard-listed to leave out `'lesson'`,
+	// which had no staff filter worth offering; with that value gone the two lists
+	// are identical, and deriving means a booker type added later cannot be
+	// filterable in the schema but missing from the filter, or the reverse.
+	bookerType: z.enum(bookerTypes).optional(),
 	page: z.number().optional()
 });
 
@@ -1070,7 +1077,10 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 	// Without this, cashDueCents stays null and the reservation reads as comped
 	// with no way to record a door payment.
 	const reservationConfig = await getReservationConfig();
-	const hourlyRateCents = reservationConfig.hourlyRateCents;
+	const hourlyRateCents = termsFor(
+		data.bandId ? 'group' : 'user',
+		reservationConfig
+	).hourlyRateCents;
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 	await commitReservationCredits({
@@ -1222,7 +1232,8 @@ async function commitCreditsAndSettleIfCovered(opts: {
 			stripeCustomerId,
 			amountCents: 0,
 			displayName: 'Credits',
-			metadata: { reservation_id: opts.reservationId }
+			metadata: { reservation_id: opts.reservationId },
+			reference: opts.reservationId
 		});
 		stripePaymentRecordId = rec.paymentRecordId;
 	} catch (err) {
@@ -1259,7 +1270,7 @@ async function commitCreditsAndSettleIfCovered(opts: {
  * (idempotent) and not re-applied inside checkout.
  */
 async function payReservationRemainder(opts: {
-	row: { id: string; startsAt: Date; endsAt: Date };
+	row: { id: string; startsAt: Date; endsAt: Date; bookerType: BookerType };
 	userId: string;
 	email: string;
 	name: string | null;
@@ -1268,7 +1279,7 @@ async function payReservationRemainder(opts: {
 	cancelUrl: string;
 }): Promise<{ paid: true } | { checkoutUrl: string }> {
 	const reservationConfig = await getReservationConfig();
-	const hourlyRateCents = reservationConfig.hourlyRateCents;
+	const hourlyRateCents = termsFor(opts.row.bookerType, reservationConfig).hourlyRateCents;
 	const durationHours =
 		(opts.row.endsAt.getTime() - opts.row.startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
@@ -1421,7 +1432,7 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	}
 
 	const reservationConfig = await getReservationConfig();
-	const hourlyRateCents = reservationConfig.hourlyRateCents;
+	const hourlyRateCents = termsFor('user', reservationConfig).hourlyRateCents;
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
@@ -1519,6 +1530,85 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	}
 
 	return { reservationId: res.id, paid: false as const, redirectUrl: result.checkoutUrl! };
+});
+
+/** Instructor: book the room to teach (optionally recurring). */
+const instructorBookingSchema = createReservationSchema.extend({
+	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
+	monthlyMode: z.enum(['weekday', 'monthday']).optional()
+});
+
+/**
+ * Book the room on teaching terms.
+ *
+ * `bookerType: 'instructor'` with `bookerId` on the instructor row — the same
+ * person booking rehearsal produces `('user', user.id)`, and the pair differ in
+ * exactly the right way: same human, different capacity, different table,
+ * different terms. `create()` forwards the booker type to `validateBooking`,
+ * which is what admits a half-hour lesson and a booking a term out.
+ *
+ * **No sustaining-membership gate on the recurring branch, and its absence is
+ * the decision.** `bookMemberReservation` requires one because recurring
+ * rehearsal time is a membership *benefit* — the subscription is what buys it.
+ * Teaching time is a rental at a rate CMC granted directly, so requiring a
+ * membership on top of a staff grant would mean staff granting something the
+ * member then cannot use.
+ *
+ * Credits need no special handling. At $5/hr `creditValueCents` is exactly what
+ * half an hour costs, so one credit covers one slot and the ordinary confirm and
+ * pay paths settle a teaching booking without knowing it is one.
+ */
+export const bookInstructorReservation = form(instructorBookingSchema, async (data, issue) => {
+	const currentUser = requireUser();
+	// The grant is the authorization, and it is checked here rather than inferred
+	// from anything the client sent. Returns the row, so `bookerId` needs no
+	// second read.
+	const instructor = await requireInstructor(currentUser.id);
+
+	// Same reason as every other booking path: a reservation staff cannot call
+	// about is the problem this guard exists to prevent.
+	if (!(await ensureContactPhone(currentUser.id, data.phone))) {
+		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
+	}
+
+	const recurringFrequency = data.recurring || undefined;
+	const isRecurring = recurringFrequency != null;
+	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
+	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
+
+	const booking = {
+		userId: currentUser.id,
+		bookerType: 'instructor' as const,
+		bookerId: instructor.id,
+		startsAt,
+		endsAt,
+		notes: data.notes
+	};
+
+	let res;
+	let waitlisted = false;
+
+	try {
+		res = await create(booking);
+	} catch (err) {
+		if (isRecurring && err instanceof ReservationConflictError) {
+			res = await createWaitlisted(booking);
+			waitlisted = true;
+		} else {
+			mapDomainError(err);
+		}
+	}
+
+	if (recurringFrequency) {
+		await createSeries({
+			prototypeReservationId: res.id,
+			frequency: recurringFrequency as RecurringFrequency,
+			prototypeStartsAt: startsAt,
+			monthlyMode: data.monthlyMode
+		});
+	}
+
+	return { reservationId: res.id, waitlisted };
 });
 
 /** Band: book a reservation (optionally recurring). */
@@ -1683,7 +1773,7 @@ export const payForReservation = form(
 
 		const staff = await isStaff(currentUser.id);
 		const reservationConfig = await getReservationConfig();
-		const hourlyRateCents = reservationConfig.hourlyRateCents;
+		const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
 		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
 		const outsideWindow = !staff && !withinConfirmationWindow(row.startsAt);
@@ -1752,7 +1842,7 @@ export const payReservation = form(
 		const staff = await isStaff(currentUser.id);
 		if (!staff && !withinConfirmationWindow(row.startsAt)) {
 			const reservationConfig = await getReservationConfig();
-			const hourlyRateCents = reservationConfig.hourlyRateCents;
+			const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
 			const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 			const totalCents = Math.round(durationHours * hourlyRateCents);
 			if (await isFullyCreditCovered(currentUser.id, durationHours, totalCents, hourlyRateCents))
@@ -1792,7 +1882,10 @@ export const confirmReservation = form(
 				createdByUserId: reservation.createdByUserId,
 				startsAt: reservation.startsAt,
 				endsAt: reservation.endsAt,
-				status: reservation.status
+				status: reservation.status,
+				// Selected so the rate can be resolved for who booked it. Every
+				// pricing site needs this now; most did not select it before.
+				bookerType: reservation.bookerType
 			})
 			.from(reservation)
 			.where(eq(reservation.id, data.id))
@@ -1832,7 +1925,7 @@ export const confirmReservation = form(
 			.where(eq(user.id, row.createdByUserId))
 			.limit(1);
 		const reservationConfig = await getReservationConfig();
-		const hourlyRateCents = reservationConfig.hourlyRateCents;
+		const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
 		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
 		const { settled } = await commitCreditsAndSettleIfCovered({
@@ -1889,7 +1982,8 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 		.select({
 			createdByUserId: reservation.createdByUserId,
 			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt
+			endsAt: reservation.endsAt,
+			bookerType: reservation.bookerType
 		})
 		.from(reservation)
 		.where(eq(reservation.id, data.id))
@@ -1897,7 +1991,7 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 	if (!row) throw error(404, 'Reservation not found');
 
 	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
-	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
+	const hourlyRateCents = (await getBookingTerms(row.bookerType)).hourlyRateCents;
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
 	// Commit the member's free hours (idempotent — already done if confirmed
@@ -1925,7 +2019,8 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 			userId: row.createdByUserId,
 			stripeCustomerId: member.stripeId,
 			amountCents: remainingCents,
-			metadata: { reservation_id: data.id }
+			metadata: { reservation_id: data.id },
+			reference: data.id
 		}));
 	} else {
 		// Fully covered by credits — already settled by the commit (creditsUsed set).
@@ -2074,7 +2169,10 @@ export const getReservations = query(
 			after && gt(reservation.endsAt, after),
 			!includeTerminal && inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
 		];
-		const rateInCents = await config<number>('reservation.hourlyRateCents');
+		// Resolved per row rather than once for the list: this query excludes only
+		// `event`, so a member's own teaching bookings appear here too and would
+		// otherwise be priced at the drop-in rate on their own dashboard.
+		const reservationConfig = await getReservationConfig();
 		const freeHoursBalance = await getBalance(forUser ?? locals.user.id, 'free_hours');
 
 		const rows = await db
@@ -2095,6 +2193,7 @@ export const getReservations = query(
 		const hasFreeHours = freeHoursBalance > 0;
 		return rows.map((value: Reservation) => {
 			const durationHours = (value.endsAt.getTime() - value.startsAt.getTime()) / (1000 * 60 * 60);
+			const rateInCents = termsFor(value.bookerType, reservationConfig).hourlyRateCents;
 			const totalCents = Math.round(durationHours * rateInCents);
 			const isTerminal = isTerminalStatus(value.status);
 
@@ -2210,12 +2309,22 @@ export const getStaffReservationsPage = query(staffReservationFiltersSchema, asy
  * separate `.refresh()` calls.
  */
 export const getMemberReservationsPage = query(z.void(), async () => {
-	const [active, all, membership, contact] = await Promise.all([
+	const currentUser = requireUser();
+
+	// Joined into the page query rather than fetched by the component that needs
+	// it: a second remote query fanned out of a child is the waterfall this
+	// query exists to collapse.
+	const [active, all, membership, contact, instructor] = await Promise.all([
 		getReservations({ after: new Date().toISOString() }),
 		getReservations({ includeTerminal: true }),
 		getMembershipStatus(),
-		getBookingContact()
+		getBookingContact(),
+		getInstructorByUserId(currentUser.id)
 	]);
 
-	return { active, all, membership, contact };
+	// The booking surface only ever asks whether teaching terms are available, and
+	// `requireInstructor` is what actually authorizes the booking. Sending a
+	// boolean rather than the record keeps `applicationNote` — staff-only — off a
+	// member-facing DTO by construction rather than by remembering to omit it.
+	return { active, all, membership, contact, isInstructor: instructor?.status === 'active' };
 });

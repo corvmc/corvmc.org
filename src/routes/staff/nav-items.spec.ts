@@ -139,7 +139,13 @@ describe('route coverage', () => {
 	const unlinked = new Set([
 		'/staff/volunteer/clearances', // reached from Certifications; `backHref` points there
 		'/staff/help/create', // the create flow for Help Articles
-		'/staff/marketing/campaigns/new' // the create flow for Campaigns
+		'/staff/marketing/campaigns/new', // the create flow for Campaigns
+		'/staff/inventory/locations', // reached from Inventory, beside Categories; `backHref` points there
+		// Reached from Bands, which links to it in its header. Not its own row on
+		// purpose: an external act is the same staff job as a band — who is
+		// playing here — and one of them can turn into the other, so splitting
+		// them in the nav would imply two jobs where there is one.
+		'/staff/bands/acts'
 	]);
 
 	it('leaves no staff page without a highlighted row', () => {

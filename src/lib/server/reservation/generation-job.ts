@@ -141,7 +141,10 @@ async function processSeries(
 
 	// Generate occurrences within the window
 	const now = new Date();
-	let windowEnd = await generationWindowEnd(now);
+	// The prototype's booker type, not a default: a teaching series generates to
+	// the teaching horizon, which is what keeps it materialised beyond any
+	// member's one-off window.
+	let windowEnd = await generationWindowEnd(now, prototype.bookerType);
 	if (series.endsAt && series.endsAt < windowEnd) {
 		windowEnd = series.endsAt;
 	}
@@ -429,7 +432,9 @@ async function processEventSeries(
 
 	// Generate occurrences within the window
 	const now = new Date();
-	let windowEnd = await generationWindowEnd(now);
+	// Event series hold the room outright; `'event'` is the only booker type a
+	// CMC event ever books as.
+	let windowEnd = await generationWindowEnd(now, 'event');
 	if (series.endsAt && series.endsAt < windowEnd) {
 		windowEnd = series.endsAt;
 	}
@@ -545,12 +550,10 @@ async function processEventSeries(
 				await db.insert(eventBand).values({
 					eventId: newEventId,
 					name: ownerGroup?.name ?? 'Unknown band',
-					// Both, while `bandId` still exists — see the column comment.
-					bandId: prototype.groupId,
 					directoryEntryId: ownerEntryId,
 					billingOrder: 0,
 					status: 'confirmed',
-					addedByBandId: prototype.groupId
+					addedByGroupId: prototype.groupId
 				});
 			}
 		}

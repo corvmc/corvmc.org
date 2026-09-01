@@ -18,14 +18,24 @@ When building a new feature, work through these phases in order:
    Add shared types to `src/lib/types/` if the feature introduces new structures (JSONB
    shapes, enums). If the migration rebuilds a table, read
    [table rebuilds on D1](#table-rebuilds-on-d1) below.
+
+   **Extend `scripts/seed-dev.ts` in the same change.** Every surface built between the
+   schema landing and the seed being written is developed and reviewed against _no rows_ —
+   a staff queue, an empty state, a listing all render the zero case and nothing else, and
+   the browser-preview step cannot verify anything until the end, which is when it is least
+   useful. Cover each value the enums allow, including the awkward ones: a returned
+   application, a paused grant, a record excluded for two different reasons. Those are the
+   screens that otherwise only ever get looked at empty, and empty is the case that is
+   already obviously right.
+
 3. **Services** — server logic in `src/lib/server/<domain>/`. Keep query functions and
    mutation functions separated. Validate inputs in the service layer with explicit limits
    (max lengths, max item counts).
 4. **Routes & UI** — build pages using [ui-patterns.md](ui-patterns.md). Data access via
    remote functions (`query()`/`form()` in `src/lib/remote/`). Add nav links in the
    relevant layout (member / band / staff).
-5. **Seed data** — extend `scripts/seed-dev.ts` so the feature has realistic local data.
-   Use pools of sample values and randomized assignment for domain-specific fields.
+5. ~~**Seed data**~~ — **do this with step 2, as soon as the schema settles.** Kept numbered
+   here only so the steps below keep their numbers.
 6. **Tests** — write tests that describe **intended behavior**, not the current
    implementation. Service-level mocks where direct DB access isn't practical. A failing
    test that reflects unfinished business logic is acceptable.
@@ -106,7 +116,7 @@ What this means in practice:
 - **Never edit an applied migration.** The three pre-existing rebuilds are grandfathered in
   the script; that list is closed. Fix a new migration with `pnpm db:fix-migrations`.
 - **Verify against local D1** for anything touching a table with children:
-  `pnpm db:reset && pnpm db:seed`, then check row counts in the child tables.
+  `pnpm db:reset`, then check row counts in the child tables.
 
 ## Layering rules
 
@@ -186,6 +196,25 @@ Do not merge two spec files just because they cover the same module. Sibling spe
 different `vi.mock` preambles, and unioning those quietly guts whatever the stricter one was
 testing.
 
+#### One full suite per machine
+
+`pnpm test:unit -- --run` takes a machine-wide lock (`scripts/lib/unit-lock.ts`) and **waits**
+if another one-shot suite is already running, printing who holds it. `vite.config.ts` halves
+`maxWorkers` off `availableParallelism()` for the same reason, but that is a per-process guess:
+on eight cores one suite takes four workers as intended and two suites take all eight, plus a
+headless-chromium pool each for the `client` and `storybook` projects.
+
+This is the sibling of `e2e/lock.ts`, with the difference that matters: **e2e refuses a second
+run, this one queues it.** e2e refuses because its runs share database state and its assertions
+are load-dominated, so a queued run would still be worth nothing. Unit tests share no state —
+two of them give the same answers as one, only far slower — so waiting is lossless and refusing
+would turn "a colleague is testing" into a red suite.
+
+Watch mode and CI both skip the lock: watch mode would hold it all afternoon and idles between
+runs anyway, and a CI runner has the machine to itself. If a wait ever exhausts its 15 minutes
+the run proceeds regardless — overlapping is slow, never wrong, so the worst case is today's
+behaviour rather than a new way to fail.
+
 ## Forms: no raw elements
 
 Every form in a route file uses the shared components from
@@ -243,7 +272,7 @@ Every script in `package.json`:
 | `preview`                       | Serve the production build on :4173 (a worktree gets its own port)                             |
 | `prepare`                       | (auto on install) svelte-kit sync + lefthook install                                           |
 | `check` / `check:watch`         | svelte-check type checking                                                                     |
-| `test:unit`                     | Vitest (watch mode; `--run` for one-shot)                                                      |
+| `test:unit`                     | Vitest (watch mode; `--run` for one-shot, which queues behind any other full suite)            |
 | `test:components`               | One-shot client (browser) + storybook vitest projects                                          |
 | `test:e2e`                      | Migrate + seed a local D1, then run Playwright `e2e/**/*.e2e.ts`                               |
 | `test:e2e:prepare`              | Just the migrate + seed half (CI runs it as its own step)                                      |
