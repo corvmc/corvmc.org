@@ -117,10 +117,6 @@
 		contentFlags: {
 			label: 'Content Flags',
 			description: 'Lets members report profiles and gives staff a moderation queue'
-		},
-		volunteering: {
-			label: 'Volunteering',
-			description: 'Volunteer roles, member hour logging, and a staff approval queue'
 		}
 	};
 

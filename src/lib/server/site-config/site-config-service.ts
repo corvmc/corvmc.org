@@ -62,11 +62,10 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// always shows every feature — so they all start off.
 	'feature.bandPremium': false,
 	'feature.contentFlags': false,
-	'feature.directMessages': false,
+	'feature.directMessages': false
 	// A flag missing from here makes `config()` *throw* `Unknown site config key`
 	// rather than return false, which is why registering it in both places is one
 	// step and `feature-flags.spec.ts` asserts the set both ways.
-	'feature.volunteering': false
 };
 
 export type SiteConfigKey = keyof typeof DEFAULTS;

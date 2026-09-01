@@ -6,7 +6,6 @@ import { getStaffLayout } from './layout.remote';
 import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
 import { listInterestsForUser } from '$lib/server/volunteer/volunteer-interest-service';
 import { listSignupsForUser } from '$lib/server/volunteer/volunteer-signup-service';
-import { requireFeature } from '$lib/server/feature-flags';
 import { mapDomainError } from '$lib/server/errors';
 import { renderMarkdown } from '$lib/utils/markdown';
 import {
@@ -395,7 +394,6 @@ export const getVolunteerReportByMember = query(
  * keeps `marked` and `xss` out of the client bundle.
  */
 export const getActiveVolunteerRoles = query(async () => {
-	await requireFeature('volunteering');
 	requireUser();
 	const roles = await listVolunteerRoles();
 	return roles.map((r) => ({
@@ -408,19 +406,16 @@ export const getActiveVolunteerRoles = query(async () => {
 
 /** Role ids the member has ticked, for rendering their own interest form. */
 export const getMyVolunteerInterests = query(async () => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 	return getInterestsForUser(currentUser.id);
 });
 
 export const getMyVolunteerHours = query(async () => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 	return listUserHourLogs(currentUser.id);
 });
 
 export const getMyVolunteerSummary = query(async () => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 	return getUserHourSummary(currentUser.id);
 });
@@ -447,7 +442,6 @@ function splitName(name: string): { firstName: string; lastName: string } {
 }
 
 async function loadOnboarding() {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 	const { profile, account } = await getVolunteerOnboarding(currentUser.id);
 	const fallback = splitName(account.name);
@@ -532,7 +526,6 @@ const onboardingSchema = profileFieldsSchema.extend({
 });
 
 export const startVolunteerOnboarding = form(onboardingSchema, async (data) => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 
 	let status: string;
@@ -557,7 +550,6 @@ export const startVolunteerOnboarding = form(onboardingSchema, async (data) => {
 
 /** The Profile modal. No `isAdult` — see updateVolunteerProfile in the service. */
 export const updateVolunteerProfile = form(profileFieldsSchema, async (data) => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 
 	try {
@@ -591,7 +583,6 @@ const hoursFormSchema = z.object({
 });
 
 export const submitVolunteerHours = form(hoursFormSchema, async (data) => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 
 	try {
@@ -628,7 +619,6 @@ export const saveVolunteerInterests = form(
 			.default('')
 	}),
 	async (data) => {
-		await requireFeature('volunteering');
 		const currentUser = requireUser();
 
 		try {
@@ -652,7 +642,6 @@ export const saveVolunteerInterests = form(
 export const editVolunteerHours = form(
 	hoursFormSchema.extend({ id: z.string().min(1) }),
 	async (data) => {
-		await requireFeature('volunteering');
 		const currentUser = requireUser();
 
 		try {
@@ -672,7 +661,6 @@ export const editVolunteerHours = form(
 );
 
 export const withdrawVolunteerHours = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 
 	try {
@@ -979,7 +967,6 @@ export const getMemberCertifications = query(z.string(), async (userId) => {
 
 /** The member's own — what they hold, and what it unlocks. */
 export const getMyCertifications = query(async () => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 	return listCertificationsForUser(currentUser.id);
 });
@@ -1249,7 +1236,6 @@ export const getShift = query(z.string(), async (id) => {
  * half of a refusal.
  */
 export const getOpenShifts = query(async () => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 
 	const shifts = await listOpenShiftsForMember(currentUser.id);
@@ -1273,7 +1259,6 @@ export const getOpenShifts = query(async () => {
 
 /** Completed shifts with no hour log yet — the pre-fill offer. */
 export const getUnloggedShifts = query(async () => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 	return listUnloggedCompletions(currentUser.id);
 });
@@ -1366,7 +1351,6 @@ export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data
 // ---------------------------------------------------------------------------
 
 export const claimShift = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 
 	try {
@@ -1380,7 +1364,6 @@ export const claimShift = form(z.object({ shiftId: z.string().min(1) }), async (
 });
 
 export const cancelMySignup = form(z.object({ signupId: z.string().min(1) }), async (data) => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 
 	try {
@@ -1521,7 +1504,6 @@ export const markSignupNoShow = form(
 
 /** What the form shows above the questions; null when it isn't theirs to answer. */
 export const getShiftFeedbackContext = query(z.string(), async (signupId) => {
-	await requireFeature('volunteering');
 	const currentUser = requireUser();
 	return getFeedbackContext(signupId, currentUser.id);
 });
@@ -1543,7 +1525,6 @@ export const submitShiftFeedback = form(
 			.optional()
 	}),
 	async (data) => {
-		await requireFeature('volunteering');
 		const currentUser = requireUser();
 
 		try {

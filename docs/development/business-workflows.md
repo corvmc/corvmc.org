@@ -989,7 +989,7 @@ So:
   up per role anonymously.
 - **Crons:** `shift-reminders` (daily), `complete-shifts` (frequent), `shift-feedback`
   (daily), all under `src/routes/api/cron/`.
-- **Surfaces:** `volunteer.remote.ts` behind `requireFeature('volunteering')` for the member
+- **Surfaces:** `volunteer.remote.ts` for the member
   side; the staff pages under `/staff/volunteer/` are always on, per the panel-wide rule
   that staff surfaces ignore flags.
 

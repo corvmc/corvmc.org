@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ALL_FLAGS, type FeatureFlag } from './feature-flags';
+import { ALL_FLAGS } from './feature-flags';
 import { DEFAULTS } from './site-config/site-config-service';
 
 /**
@@ -32,10 +32,5 @@ describe('feature flags', () => {
 
 	it('lists no duplicates', () => {
 		expect(new Set(ALL_FLAGS).size).toBe(ALL_FLAGS.length);
-	});
-
-	it('includes the volunteering flag, defaulting off', () => {
-		expect(ALL_FLAGS).toContain<FeatureFlag>('volunteering');
-		expect(DEFAULTS['feature.volunteering']).toBe(false);
 	});
 });

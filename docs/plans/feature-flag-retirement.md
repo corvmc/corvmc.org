@@ -95,7 +95,7 @@ Counts are non-spec call sites in `src/`, taken at `63e5890`.
 | `directMessages` | 7                | 0                  | **no**  | false                 | Unlink — **held** on `contentFlags`                  |      |
 | `bandPremium`    | 8                | 1                  | yes     | **false** (confirmed) | Unlink — **held**, launch is imminent                |      |
 | `contentFlags`   | 4                | 1                  | yes     | ?                     | needs the staff page                                 |      |
-| `volunteering`   | 19               | 0                  | yes     | ?                     | needs the staff page                                 |      |
+| `volunteering`   | 19               | 0                  | yes     | **true** (confirmed)  | ✅ Flag deleted, feature **stays live**              | #380 |
 
 ### The two that gate nothing
 

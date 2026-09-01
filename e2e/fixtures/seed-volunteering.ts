@@ -202,12 +202,7 @@ function workedOnDaysAgo(days: number): Date {
 }
 
 export async function seedVolunteering(): Promise<void> {
-	await withPlatformEnv(async ({ db, env }) => {
-		const kv = (env as { KV: KVNamespace }).KV;
-
-		// The flag lives in KV, not D1 — without this every volunteer route 404s.
-		await kv.put('site-config:feature.volunteering', JSON.stringify(true));
-
+	await withPlatformEnv(async ({ db }) => {
 		// Child before parent: the role FK is ON DELETE RESTRICT, and signups and
 		// held certifications both point at rows recreated below.
 		//
