@@ -59,19 +59,19 @@ Staff Settings → Features is not a substitute: it shows six of the eleven.
 
 Counts are non-spec call sites in `src/`, taken at `63e5890`.
 
-| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod  | Decision                                             | PR      |
-| ---------------- | ---------------- | ------------------ | ------- | ----- | ---------------------------------------------------- | ------- |
-| `staffInbox`     | 0                | 0                  | yes     | n/a   | ✅ Deleted — gated nothing                           | #373    |
-| `groupFiles`     | 0                | 0                  | **no**  | false | ✅ Deleted — gated nothing                           | #373    |
+| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod  | Decision                                             | PR   |
+| ---------------- | ---------------- | ------------------ | ------- | ----- | ---------------------------------------------------- | ---- |
+| `staffInbox`     | 0                | 0                  | yes     | n/a   | ✅ Deleted — gated nothing                           | #373 |
+| `groupFiles`     | 0                | 0                  | **no**  | false | ✅ Deleted — gated nothing                           | #373 |
 | `groups`         | 9                | 0                  | **no**  | false | ✅ **Unlinked** — nav entry removed, routes URL-only | #375 |
 | `groupEvents`    | 1                | 1                  | **no**  | false | ✅ **Unlinked**                                      | #375 |
 | `announcements`  | 3                | 1                  | **no**  | false | ✅ **Unlinked** — band nav row removed               | #375 |
-| `directMessages` | 7                | 0                  | **no**  | false | Unlink — **held**, see below                         |         |
-| `bandPremium`    | 8                | 1                  | yes     | ?     | blocked on prod read                                 |         |
-| `emailMarketing` | 6                | 2                  | yes     | ?     | blocked on prod read                                 |         |
-| `helpArticles`   | 5                | 0                  | yes     | ?     | blocked on prod read                                 |         |
-| `contentFlags`   | 4                | 1                  | yes     | ?     | blocked on prod read                                 |         |
-| `volunteering`   | 19               | 0                  | yes     | ?     | blocked on prod read                                 |         |
+| `directMessages` | 7                | 0                  | **no**  | false | Unlink — **held**, see below                         |      |
+| `bandPremium`    | 8                | 1                  | yes     | ?     | blocked on prod read                                 |      |
+| `emailMarketing` | 6                | 2                  | yes     | ?     | blocked on prod read                                 |      |
+| `helpArticles`   | 5                | 0                  | yes     | ?     | blocked on prod read                                 |      |
+| `contentFlags`   | 4                | 1                  | yes     | ?     | blocked on prod read                                 |      |
+| `volunteering`   | 19               | 0                  | yes     | ?     | blocked on prod read                                 |      |
 
 ### The two that gate nothing
 
