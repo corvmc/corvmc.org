@@ -7,7 +7,8 @@ import {
 	getBandSubscription,
 	createBandPremiumCheckout,
 	cancelBandSubscription,
-	resumeBandSubscription
+	resumeBandSubscription,
+	getBandPremiumPricing
 } from '$lib/server/band/band-subscription-service';
 
 // ---------------------------------------------------------------------------
@@ -22,11 +23,17 @@ export const getBandSubscriptionInfo = query(z.string(), async (slug) => {
 	// member today and this is not the change that takes that away.
 	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
 
-	const subscription = await getBandSubscription(band.id);
+	const [subscription, pricing] = await Promise.all([
+		getBandSubscription(band.id),
+		// Sent with the rest rather than fetched by the page: the upsell has to
+		// quote the same number checkout will charge.
+		getBandPremiumPricing()
+	]);
 
 	return {
 		tier: band.tier,
-		subscription
+		subscription,
+		pricing
 	};
 });
 
