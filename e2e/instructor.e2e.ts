@@ -1,15 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
-import {
-	SEED_OWNER_EMAIL,
-	SEED_OWNER_PASSWORD,
-	SEED_BANDMATE_EMAIL,
-	SEED_BANDMATE_PASSWORD
-} from './fixtures/seed-band-onboarding';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
+	SEED_TEACHER_EMAIL,
+	SEED_TEACHER_PASSWORD,
+	SEED_TEACHER_CONTACT,
+	SEED_APPLICANT_EMAIL,
+	SEED_APPLICANT_PASSWORD,
 	SEED_INSTRUCTOR_HEADLINE,
-	SEED_INSTRUCTOR_CONTACT,
-	SEED_APPLICANT_HEADLINE
+	SEED_APPLICANT_HEADLINE,
+	SEED_APPLICANT_NOTE
 } from './fixtures/seed-instructors';
 
 /**
@@ -42,17 +41,17 @@ test('the teacher directory is public, and shows only approved instructors', asy
 	await expect(page.getByText(SEED_INSTRUCTOR_HEADLINE)).toBeVisible({ timeout: 15000 });
 	// The contact is public, so it renders. A members-only one would be withheld
 	// here and the card would still show — the case the unit spec pins.
-	await expect(page.getByText(SEED_INSTRUCTOR_CONTACT)).toBeVisible();
+	await expect(page.getByText(SEED_TEACHER_CONTACT)).toBeVisible();
 
 	// The applicant is `requested`, not `active`. Their headline is a real row in
 	// the same table, one missing predicate from this page.
 	await expect(page.getByText(SEED_APPLICANT_HEADLINE)).toHaveCount(0);
 	// And their staff-only note must not be anywhere in the document.
-	await expect(page.locator('body')).not.toContainText('staff only');
+	await expect(page.locator('body')).not.toContainText(SEED_APPLICANT_NOTE);
 });
 
 test('an instructor can book teaching time; a member without a grant cannot', async ({ page }) => {
-	await login(page, SEED_OWNER_EMAIL, SEED_OWNER_PASSWORD);
+	await login(page, SEED_TEACHER_EMAIL, SEED_TEACHER_PASSWORD);
 	await page.goto('/member/reservations');
 
 	const teachingButton = page.getByRole('button', { name: 'Book teaching time' });
@@ -88,7 +87,7 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 	// A member with no grant is offered nothing — the button is the visible half
 	// of `requireInstructor`, which refuses them on the server regardless.
 	await page.context().clearCookies();
-	await login(page, SEED_BANDMATE_EMAIL, SEED_BANDMATE_PASSWORD);
+	await login(page, SEED_APPLICANT_EMAIL, SEED_APPLICANT_PASSWORD);
 	await page.goto('/member/reservations');
 	await expect(page.getByRole('button', { name: 'Reserve Space' })).toBeVisible({
 		timeout: 15000
@@ -107,7 +106,7 @@ test('staff see a waiting application, and approving it clears the queue', async
 	await expect(page.getByText(SEED_APPLICANT_HEADLINE)).toBeVisible({ timeout: 15000 });
 	// The private half of the application is staff-only, and this is the one
 	// surface allowed to render it.
-	await expect(page.getByText('E2E application note')).toBeVisible();
+	await expect(page.getByText(SEED_APPLICANT_NOTE)).toBeVisible();
 
 	await page.getByRole('button', { name: 'Approve' }).first().click();
 	const dialog = page.getByRole('dialog');
