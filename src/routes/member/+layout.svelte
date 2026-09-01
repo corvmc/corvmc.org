@@ -146,35 +146,11 @@
 			</Nav.Item>
 		</Nav.Group>
 
-		<!-- A second group rather than a merge. A band is a member's own project
-		     with a panel; a club is a program with a page, and the two indexes
-		     answer different questions. Hidden when the feature is off, which is
-		     the same rule the routes behind it apply. -->
-		{#if layout.features.groups && layout.userGroups.length > 0}
-			<Nav.Group
-				title="My Groups"
-				collapsible
-				persistKey="my-groups"
-				persistScope="member"
-				containsActive={page.url.pathname.startsWith('/member/groups')}
-			>
-				{#snippet action()}
-					<Button href="/member/groups" variant="ghost" size="xs">All</Button>
-				{/snippet}
-				{#each layout.userGroups as group (group.slug)}
-					<Nav.Item href={`/member/groups/${group.slug}`} label={group.name}>
-						{#snippet icon()}
-							<Avatar
-								class="size-8"
-								size="avatar-sm"
-								src={group.avatarUrl ?? undefined}
-								name={group.name}
-							/>
-						{/snippet}
-					</Nav.Item>
-				{/each}
-			</Nav.Group>
-		{/if}
+		<!-- The "My Groups" nav group used to live here, gated on the `groups`
+		     feature flag. The flag is gone and the module is not launched, so the
+		     nav entry is simply absent: /member/groups and the club pages work by
+		     direct URL. Launching is putting this block back — see
+		     docs/plans/feature-flag-retirement.md. -->
 
 		<div class="flex grow"></div>
 

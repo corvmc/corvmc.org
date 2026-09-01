@@ -153,13 +153,27 @@ test.describe('the band panel mount', () => {
 		await expect(page.getByRole('button', { name: 'New announcement' })).toHaveCount(0);
 	});
 
-	test('puts Announcements in the band nav', async ({ page }) => {
+	/**
+	 * The inverse of what this used to assert. Announcements had a band nav row
+	 * gated on an `announcements` flag; the flag is retired and the module is
+	 * unlinked rather than launched, so the page above answers by direct URL and
+	 * nothing in the panel points at it.
+	 *
+	 * Kept rather than deleted because it is the assertion that fails first when
+	 * someone relaunches the module, which is exactly the moment to be reminded
+	 * that the nav row is the thing to put back. See
+	 * docs/plans/feature-flag-retirement.md.
+	 */
+	test('keeps Announcements out of the band nav while the module is unlinked', async ({ page }) => {
 		await loginAsMember(page);
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}`);
 
-		await expect(page.getByRole('link', { name: 'Announcements' }).first()).toBeVisible({
+		// Wait for the panel to actually render before asserting on an absence —
+		// otherwise this passes against a nav that has not mounted yet.
+		await expect(page.getByRole('link', { name: 'Reservations' }).first()).toBeVisible({
 			timeout: 15000
 		});
+		await expect(page.getByRole('link', { name: 'Announcements' })).toHaveCount(0);
 	});
 });
 

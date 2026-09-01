@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
 	SEED_BANDMATE_EMAIL,
+	SEED_BANDMATE_ID,
 	SEED_BANDMATE_PASSWORD,
 	SEED_PUBLIC_BAND_NAME
 } from './fixtures/seed-band-onboarding';
@@ -10,8 +11,13 @@ import {
 	SEED_JOINABLE_INSTRUCTIONS,
 	SEED_HIDDEN_SLUG,
 	SEED_JOINABLE_NAME,
-	SEED_JOINABLE_SLUG
+	SEED_JOINABLE_SLUG,
+	readMemberStatus
 } from './fixtures/seed-groups';
+
+// `readLocalDb` opens the file the preview server is still writing through
+// workerd, so a fresh reader can see stale rows — poll rather than read once.
+const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 /**
  * `/member/groups` — membership and discovery on one page.
@@ -74,17 +80,20 @@ test.describe('member groups index', () => {
 		await page.getByRole('button', { name: `Join ${SEED_JOINABLE_NAME}` }).click();
 		await page.getByRole('dialog').getByRole('button', { name: 'Join' }).click();
 
-		// No approval step, and two places say so. The group moves into "Your
-		// programs" on this page, and — because the membership is active rather
-		// than pending — it appears in the My Groups sidebar too. The sidebar is
-		// the stricter claim: it lists active rows only, so a row there is proof
-		// the join did not land as `'pending'` or `'requested'`.
+		// No approval step, and two things say so. The group moves into "Your
+		// programs" on this page, and the roster row itself reads `'active'`.
+		//
+		// That second assertion used to be the "My Groups" sidebar, which listed
+		// active rows only. The groups module is unlinked from navigation now, so
+		// the row is read directly — a stricter claim than the sidebar was, since
+		// it distinguishes `'pending'` from `'requested'` rather than just
+		// excluding both.
 		await expect(
 			page.getByRole('main').getByRole('link', { name: SEED_JOINABLE_NAME, exact: true })
 		).toBeVisible({ timeout: 15000 });
-		await expect(
-			page.locator('aside').getByRole('link', { name: new RegExp(SEED_JOINABLE_NAME) })
-		).toBeVisible();
+		await expect
+			.poll(() => readMemberStatus(SEED_JOINABLE_SLUG, SEED_BANDMATE_ID), DB_POLL)
+			.toBe('active');
 
 		await page.goto(`/member/groups/${SEED_JOINABLE_SLUG}`);
 		await expect(page.getByRole('heading', { name: SEED_JOINABLE_NAME })).toBeVisible();

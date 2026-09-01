@@ -250,11 +250,14 @@ more (`venue`, `production`, `production_slot`, `production_task`, `production_e
 
 ## Feature flags
 
-Nine flags, all defaulting to **off**, toggled from Staff Settings → Features — except the four
-groups-module flags (`groups`, `groupEvents`, `announcements` and, until it was retired,
-`groupFiles`), which were never added to that tab and so have never been switchable at all. The
+Six flags, all defaulting to **off**, toggled from Staff Settings → Features — except
+`directMessages`, which was never added to that tab and so has never been switchable at all. The
 whole system is being retired in favour of feature branches; see
-[the ledger](../plans/feature-flag-retirement.md). Source of truth is
+[the ledger](../plans/feature-flag-retirement.md).
+
+The groups module (`groups`, `groupEvents`, `announcements`) and `groupFiles` were retired without
+being launched: the flags are gone, the routes answer unconditionally, and the nav entries that
+reached them were removed instead. Relaunching means putting those nav entries back. Source of truth is
 `ALL_FLAGS` in `src/lib/server/feature-flags.ts`; values are `feature.*` keys in the site config KV
 store.
 
