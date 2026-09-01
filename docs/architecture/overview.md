@@ -390,8 +390,10 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 otherwise the default. **Feature flags** are just `feature.*` config keys, wrapped by
 `src/lib/server/feature-flags.ts` (`isFeatureEnabled`, `getAllFeatureFlags`,
 `requireFeature` — the latter 404s so a disabled feature is indistinguishable from a
-missing page). Current flags: `bandPremium`,
-`emailMarketing`, `equipment`, `helpArticles`, `contentFlags`.
+missing page). Current flags: `bandPremium`, `emailMarketing`, `helpArticles`,
+`contentFlags`, `directMessages`, `volunteering` — and the whole mechanism is being
+retired in favour of feature branches, see
+[the ledger](../plans/feature-flag-retirement.md).
 
 A flag gates the **member, band and public** surfaces only. The staff panel ignores flags
 entirely — `getStaffLayout` does not read them, the staff nav is unconditional, and staff

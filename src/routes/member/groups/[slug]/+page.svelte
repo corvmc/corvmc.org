@@ -54,17 +54,16 @@
 	/**
 	 * Announcements lead, per docs/specs/groups-spec.md § Interface: the archive
 	 * is what you come back for, where Overview is what you read once. It is also
-	 * the default tab, so `?tab=` names the other two and the bare URL is the
-	 * post list — until the flag is off, when the tab does not exist at all and
-	 * Overview takes the default back.
+	 * the default tab, so `?tab=` names the other three and the bare URL is the
+	 * post list.
 	 */
-	const defaultTab = $derived<Tab>(data.announcementsEnabled ? 'announcements' : 'overview');
+	const defaultTab: Tab = 'announcements';
 	const tab = $derived.by<Tab>(() => {
 		const requested = page.url.searchParams.get('tab');
 		if (requested === 'roster') return 'roster';
 		if (requested === 'overview') return 'overview';
-		if (requested === 'sessions' && data.sessionsEnabled) return 'sessions';
-		if (requested === 'announcements' && data.announcementsEnabled) return 'announcements';
+		if (requested === 'sessions') return 'sessions';
+		if (requested === 'announcements') return 'announcements';
 		return defaultTab;
 	});
 	const tabHref = (t: Tab) => (t === defaultTab ? `?` : `?tab=${t}`);

@@ -17,9 +17,30 @@ five have no toggle anywhere. Unless someone wrote the KV key by hand, they sit 
 value of `false` — which means the entire groups module and member↔member DMs have been dark in
 production since they shipped.
 
-## Step 0 — read the production values (blocking)
+## The posture: unlink, don't launch
 
-Not yet done. `wrangler kv key get` returns **401**; the local OAuth token needs refreshing first,
+Decided Sep 1 2026. A flag comes out and the feature does **not** go live with it: the nav entry
+points are removed in the same change, so the routes answer only by direct URL. That ships the
+cleanup without shipping the feature, and relaunching later is a small, obvious PR putting the nav
+entries back rather than a flag flip nobody can see.
+
+The three flags with no toggle and no ambiguity — `groups`, `groupEvents`, `announcements` — went
+first, since they were provably off in production and unlinking them changed nothing a member could
+see.
+
+### `directMessages` is held
+
+It is the one case where unlinking **increases** exposure rather than leaving it flat. Today the
+guard 404s every member↔member endpoint. Remove it and the DM lifecycle answers to anyone who
+constructs the URL — while `contentFlags`, which gates reporting a message, may itself still be off.
+That combination is a working messaging system with no reporting path: a moderation decision, not a
+cleanup. It waits for the `contentFlags` value below.
+
+## Step 0 — read the production values (still blocking for the last five)
+
+Not yet done. A re-auth was attempted Sep 1 and did not take — `wrangler kv namespace list` still
+answers `Authentication error [code: 10000]`, so the stored token is being rejected outright rather
+than the namespace being wrong. `wrangler kv key get` returns **401**; the local OAuth token needs refreshing first,
 which is interactive:
 
 ```bash
@@ -38,19 +59,19 @@ Staff Settings → Features is not a substitute: it shows six of the eleven.
 
 Counts are non-spec call sites in `src/`, taken at `63e5890`.
 
-| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod | Decision            | PR  |
-| ---------------- | ---------------- | ------------------ | ------- | ---- | ------------------- | --- |
-| `staffInbox`     | 0                | 0                  | yes     | ?    | Delete registration |     |
-| `groupFiles`     | 0                | 0                  | **no**  | ?    | Delete registration |     |
-| `bandPremium`    | 8                | 1                  | yes     | ?    |                     |     |
-| `emailMarketing` | 6                | 2                  | yes     | ?    |                     |     |
-| `helpArticles`   | 5                | 0                  | yes     | ?    |                     |     |
-| `contentFlags`   | 4                | 1                  | yes     | ?    |                     |     |
-| `volunteering`   | 19               | 0                  | yes     | ?    |                     |     |
-| `directMessages` | 7                | 0                  | **no**  | ?    | Launch decision     |     |
-| `groups`         | 9                | 0                  | **no**  | ?    | Launch decision     |     |
-| `groupEvents`    | 1                | 1                  | **no**  | ?    | Launch decision     |     |
-| `announcements`  | 3                | 1                  | **no**  | ?    | Launch decision     |     |
+| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod  | Decision                                             | PR   |
+| ---------------- | ---------------- | ------------------ | ------- | ----- | ---------------------------------------------------- | ---- |
+| `staffInbox`     | 0                | 0                  | yes     | n/a   | ✅ Deleted — gated nothing                           | #373 |
+| `groupFiles`     | 0                | 0                  | **no**  | false | ✅ Deleted — gated nothing                           | #373 |
+| `groups`         | 9                | 0                  | **no**  | false | ✅ **Unlinked** — nav entry removed, routes URL-only | #375 |
+| `groupEvents`    | 1                | 1                  | **no**  | false | ✅ **Unlinked**                                      | #375 |
+| `announcements`  | 3                | 1                  | **no**  | false | ✅ **Unlinked** — band nav row removed               | #375 |
+| `directMessages` | 7                | 0                  | **no**  | false | Unlink — **held**, see below                         |      |
+| `bandPremium`    | 8                | 1                  | yes     | ?     | blocked on prod read                                 |      |
+| `emailMarketing` | 6                | 2                  | yes     | ?     | blocked on prod read                                 |      |
+| `helpArticles`   | 5                | 0                  | yes     | ?     | blocked on prod read                                 |      |
+| `contentFlags`   | 4                | 1                  | yes     | ?     | blocked on prod read                                 |      |
+| `volunteering`   | 19               | 0                  | yes     | ?     | blocked on prod read                                 |      |
 
 ### The two that gate nothing
 
