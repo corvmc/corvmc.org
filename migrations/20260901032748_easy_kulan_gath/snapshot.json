@@ -1,10 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "19b9d954-c537-4d50-a4b8-aebffc5c44f1",
+  "id": "d9af6fd1-3d5f-4220-ba66-00c52446ec48",
   "prevIds": [
-    "3791fd25-09fb-4793-b243-86ee64ba2362",
-    "92a96ca6-b3a1-4428-94d1-80fef5a5d556"
+    "f7818cb6-0666-4526-9049-000509d4e23d"
   ],
   "ddl": [
     {
@@ -180,6 +179,14 @@
       "entityType": "tables"
     },
     {
+      "name": "contact",
+      "entityType": "tables"
+    },
+    {
+      "name": "directory_entry_link",
+      "entityType": "tables"
+    },
+    {
       "name": "help_articles",
       "entityType": "tables"
     },
@@ -269,6 +276,10 @@
     },
     {
       "name": "volunteer_signup",
+      "entityType": "tables"
+    },
+    {
+      "name": "instructor",
       "entityType": "tables"
     },
     {
@@ -4497,6 +4508,216 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "entry_id",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subscriber_id",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "booking_name",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "booking_email",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "booking_phone",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payment_ref",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "retain_until",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "directory_entry_link"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "entry_id",
+      "entityType": "columns",
+      "table": "directory_entry_link"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "token",
+      "entityType": "columns",
+      "table": "directory_entry_link"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "entityType": "columns",
+      "table": "directory_entry_link"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "table": "directory_entry_link"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_id",
+      "entityType": "columns",
+      "table": "directory_entry_link"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_used_at",
+      "entityType": "columns",
+      "table": "directory_entry_link"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "revoked_at",
+      "entityType": "columns",
+      "table": "directory_entry_link"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "directory_entry_link"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "help_articles"
     },
     {
@@ -6657,6 +6878,176 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'requested'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "headline",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "blurb",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rates_note",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "booking_url",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "teaching_contact",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "true",
+      "generated": null,
+      "name": "accepting_students",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "application_note",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "review_notes",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "granted_by_user_id",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "granted_at",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status_changed_at",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status_note",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "instructor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "media"
     },
     {
@@ -7801,6 +8192,66 @@
     },
     {
       "columns": [
+        "entry_id"
+      ],
+      "tableTo": "directory_entry",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_contact_entry_id_directory_entry_id_fk",
+      "entityType": "fks",
+      "table": "contact"
+    },
+    {
+      "columns": [
+        "subscriber_id"
+      ],
+      "tableTo": "subscriber",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_contact_subscriber_id_subscriber_id_fk",
+      "entityType": "fks",
+      "table": "contact"
+    },
+    {
+      "columns": [
+        "entry_id"
+      ],
+      "tableTo": "directory_entry",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_directory_entry_link_entry_id_directory_entry_id_fk",
+      "entityType": "fks",
+      "table": "directory_entry_link"
+    },
+    {
+      "columns": [
+        "created_by_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_directory_entry_link_created_by_id_user_id_fk",
+      "entityType": "fks",
+      "table": "directory_entry_link"
+    },
+    {
+      "columns": [
         "category_id"
       ],
       "tableTo": "help_categories",
@@ -8476,6 +8927,36 @@
     },
     {
       "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_instructor_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "instructor"
+    },
+    {
+      "columns": [
+        "granted_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_instructor_granted_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "instructor"
+    },
+    {
+      "columns": [
         "uploaded_by_user_id"
       ],
       "tableTo": "user",
@@ -8911,6 +9392,24 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "contact_pk",
+      "table": "contact",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "directory_entry_link_pk",
+      "table": "directory_entry_link",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "help_articles_pk",
       "table": "help_articles",
       "entityType": "pks"
@@ -9093,6 +9592,15 @@
       "nameExplicit": false,
       "name": "volunteer_signup_pk",
       "table": "volunteer_signup",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "instructor_pk",
+      "table": "instructor",
       "entityType": "pks"
     },
     {
@@ -10398,6 +10906,76 @@
     {
       "columns": [
         {
+          "value": "entry_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contact_entry",
+      "entityType": "indexes",
+      "table": "contact"
+    },
+    {
+      "columns": [
+        {
+          "value": "subscriber_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contact_subscriber",
+      "entityType": "indexes",
+      "table": "contact"
+    },
+    {
+      "columns": [
+        {
+          "value": "retain_until",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contact_retain_until",
+      "entityType": "indexes",
+      "table": "contact"
+    },
+    {
+      "columns": [
+        {
+          "value": "entry_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_entry_link_entry",
+      "entityType": "indexes",
+      "table": "directory_entry_link"
+    },
+    {
+      "columns": [
+        {
+          "value": "expires_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_directory_entry_link_expires",
+      "entityType": "indexes",
+      "table": "directory_entry_link"
+    },
+    {
+      "columns": [
+        {
           "value": "category_id",
           "isExpression": false
         }
@@ -11116,6 +11694,24 @@
     {
       "columns": [
         {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "created_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "instructor_status_idx",
+      "entityType": "indexes",
+      "table": "instructor"
+    },
+    {
+      "columns": [
+        {
           "value": "key",
           "isExpression": false
         }
@@ -11355,6 +11951,15 @@
     },
     {
       "columns": [
+        "token"
+      ],
+      "nameExplicit": false,
+      "name": "directory_entry_link_token_unique",
+      "entityType": "uniques",
+      "table": "directory_entry_link"
+    },
+    {
+      "columns": [
         "channel"
       ],
       "nameExplicit": false,
@@ -11397,6 +12002,15 @@
       "name": "volunteer_shift_feedback_signup_id_unique",
       "entityType": "uniques",
       "table": "volunteer_shift_feedback"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "nameExplicit": false,
+      "name": "instructor_user_id_unique",
+      "entityType": "uniques",
+      "table": "instructor"
     },
     {
       "value": "ends_at > starts_at",
