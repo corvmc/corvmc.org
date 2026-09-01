@@ -15,6 +15,31 @@ import { eq } from 'drizzle-orm';
 
 const YEARLY_DISCOUNT_MONTHS = 2; // yearly = 10 months cost (2 free)
 
+export interface BandPremiumPricing {
+	monthlyCents: number;
+	yearlyCents: number;
+	/** Months free on the yearly plan, for the badge the upsell renders. */
+	yearlyMonthsFree: number;
+}
+
+/**
+ * The prices the upsell advertises and checkout charges — one calculation, so
+ * they cannot drift.
+ *
+ * They did drift: the page hardcoded "$15/mo" and "$120/yr" while checkout read
+ * `getProductConfig('band_premium')`, so editing the price in Staff Settings →
+ * Pricing would have left the page quoting the old number and the checkout
+ * taking the new one.
+ */
+export async function getBandPremiumPricing(): Promise<BandPremiumPricing> {
+	const config = await getProductConfig('band_premium');
+	return {
+		monthlyCents: config.unitAmountCents,
+		yearlyCents: config.unitAmountCents * (12 - YEARLY_DISCOUNT_MONTHS),
+		yearlyMonthsFree: YEARLY_DISCOUNT_MONTHS
+	};
+}
+
 // ---------------------------------------------------------------------------
 // Checkout
 // ---------------------------------------------------------------------------
@@ -34,14 +59,9 @@ export interface BandCheckoutOptions {
 export async function createBandPremiumCheckout(options: BandCheckoutOptions): Promise<string> {
 	const { bandId, stripeCustomerId, billingInterval, successUrl, cancelUrl } = options;
 
-	const config = await getProductConfig('band_premium');
+	const pricing = await getBandPremiumPricing();
 	const interval = billingInterval === 'yearly' ? 'year' : 'month';
-
-	// Yearly pricing: monthly rate * (12 - discount months)
-	const unitAmount =
-		billingInterval === 'yearly'
-			? config.unitAmountCents * (12 - YEARLY_DISCOUNT_MONTHS)
-			: config.unitAmountCents;
+	const unitAmount = billingInterval === 'yearly' ? pricing.yearlyCents : pricing.monthlyCents;
 
 	const lineItem = await buildSubscriptionLineItem('band_premium', unitAmount, 1, interval);
 
