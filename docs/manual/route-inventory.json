@@ -80,6 +80,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/directory/instructors",
+		"panel": "public"
+	},
+	{
 		"route": "/directory/members/[id]",
 		"panel": "public"
 	},
@@ -133,6 +137,10 @@
 	},
 	{
 		"route": "/member/directory/bands/[slug]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/directory/instructors",
 		"panel": "member"
 	},
 	{
@@ -324,6 +332,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/instructors",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/inventory",
 		"panel": "staff"
 	},
@@ -353,6 +365,10 @@
 	},
 	{
 		"route": "/staff/inventory/loans/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inventory/locations",
 		"panel": "staff"
 	},
 	{
