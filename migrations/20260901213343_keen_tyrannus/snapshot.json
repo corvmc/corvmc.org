@@ -1,10 +1,10 @@
 {
-  "id": "17d4aa70-3058-4c2f-8b26-f05e12f94545",
-  "prevIds": [
-    "d9af6fd1-3d5f-4220-ba66-00c52446ec48"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "1ee115a4-ca95-488e-8f04-97e0b1470e40",
+  "prevIds": [
+    "17d4aa70-3058-4c2f-8b26-f05e12f94545"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -140,6 +140,14 @@
     },
     {
       "name": "inventory_location",
+      "entityType": "tables"
+    },
+    {
+      "name": "purchase_order",
+      "entityType": "tables"
+    },
+    {
+      "name": "purchase_order_line",
       "entityType": "tables"
     },
     {
@@ -2711,6 +2719,16 @@
       "table": "acquisition"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "purchase_order_id",
+      "entityType": "columns",
+      "table": "acquisition"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -3509,6 +3527,176 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "inventory_location"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'draft'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "supplier_name",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reference",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "placed_at",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expected_at",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "purchase_order_line"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "order_id",
+      "entityType": "columns",
+      "table": "purchase_order_line"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "item_id",
+      "entityType": "columns",
+      "table": "purchase_order_line"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "quantity_ordered",
+      "entityType": "columns",
+      "table": "purchase_order_line"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "unit_cost_cents",
+      "entityType": "columns",
+      "table": "purchase_order_line"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "quantity_received",
+      "entityType": "columns",
+      "table": "purchase_order_line"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "purchase_order_line"
     },
     {
       "type": "text",
@@ -7937,6 +8125,51 @@
     },
     {
       "columns": [
+        "created_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_purchase_order_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "purchase_order"
+    },
+    {
+      "columns": [
+        "order_id"
+      ],
+      "tableTo": "purchase_order",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_purchase_order_line_order_id_purchase_order_id_fk",
+      "entityType": "fks",
+      "table": "purchase_order_line"
+    },
+    {
+      "columns": [
+        "item_id"
+      ],
+      "tableTo": "inventory_item",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "nameExplicit": false,
+      "name": "fk_purchase_order_line_item_id_inventory_item_id_fk",
+      "entityType": "fks",
+      "table": "purchase_order_line"
+    },
+    {
+      "columns": [
         "item_id"
       ],
       "tableTo": "inventory_item",
@@ -9320,6 +9553,24 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "purchase_order_pk",
+      "table": "purchase_order",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "purchase_order_line_pk",
+      "table": "purchase_order_line",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "stock_movement_pk",
       "table": "stock_movement",
       "entityType": "pks"
@@ -10536,6 +10787,62 @@
       "name": "idx_location_parent",
       "entityType": "indexes",
       "table": "inventory_location"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_purchase_order_status",
+      "entityType": "indexes",
+      "table": "purchase_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "expected_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_purchase_order_expected",
+      "entityType": "indexes",
+      "table": "purchase_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "order_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_po_line_order",
+      "entityType": "indexes",
+      "table": "purchase_order_line"
+    },
+    {
+      "columns": [
+        {
+          "value": "item_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_po_line_item",
+      "entityType": "indexes",
+      "table": "purchase_order_line"
     },
     {
       "columns": [
@@ -12053,6 +12360,18 @@
       "name": "loan_qty_positive",
       "entityType": "checks",
       "table": "inventory_loan"
+    },
+    {
+      "value": "quantity_ordered > 0",
+      "name": "po_line_qty_positive",
+      "entityType": "checks",
+      "table": "purchase_order_line"
+    },
+    {
+      "value": "quantity_received >= 0",
+      "name": "po_line_received_sane",
+      "entityType": "checks",
+      "table": "purchase_order_line"
     },
     {
       "value": "quantity != 0",

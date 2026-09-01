@@ -789,7 +789,7 @@ export const recordIntake = form(
 			// Everything this touched: the catalog's on-hand numbers, the tagging
 			// backlog it just added to, and the register the receipt now appears in.
 			void getUntaggedAssets().refresh();
-			void getLowStock().refresh();
+			void getRestockList().refresh();
 
 			return { success: true, ...result };
 		} catch (err) {
@@ -886,7 +886,7 @@ export const markOrderPlaced = form(z.object({ id: z.string() }), async (raw) =>
 	// be refreshed by name — it has no id to key on.
 	void getOrder(data.id).refresh();
 	void getOrders().refresh();
-	void getLowStock().refresh();
+	void getRestockList().refresh();
 	return { success: true };
 });
 
@@ -901,7 +901,7 @@ export const dropOrder = form(z.object({ id: z.string() }), async (raw) => {
 	void getOrder(data.id).refresh();
 	void getOrders().refresh();
 	// Cancelling puts the shortfall back on the shopping list.
-	void getLowStock().refresh();
+	void getRestockList().refresh();
 	return { success: true };
 });
 
@@ -915,7 +915,7 @@ export const closeOrder = form(z.object({ id: z.string() }), async (raw) => {
 	}
 	void getOrder(data.id).refresh();
 	void getOrders().refresh();
-	void getLowStock().refresh();
+	void getRestockList().refresh();
 	return { success: true };
 });
 
