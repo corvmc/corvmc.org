@@ -288,4 +288,75 @@ describe('FormField', () => {
 			expect(container.querySelector('.whitespace-pre-wrap')).not.toBeNull();
 		});
 	});
+
+	// Regression: `type="select"` with `<option>` children.
+	//
+	// The children branch used to precede the select branch, so children won and
+	// the options rendered with no `<select>` around them — bare text in a
+	// fieldset, no control, and nothing to submit. Two call sites shipped that
+	// way: the item Category field and `CreateLoanAction`, which meant staff
+	// could not create a loan against a specific item at all.
+	describe('a select whose options are children', () => {
+		const options = createRawSnippet(() => ({
+			render: () => `<option value="amp-1">Fender Twin</option>`
+		}));
+
+		it('renders the options inside a real select', async () => {
+			const { container } = await render(FormField, {
+				field: fakeField('itemId'),
+				type: 'select',
+				label: 'Equipment',
+				children: options
+			});
+
+			const select = container.querySelector('select');
+			expect(select).not.toBeNull();
+			// Inside the control, not loose in the fieldset. This is the assertion
+			// that fails against the old branch order.
+			expect(select!.querySelectorAll('option')).toHaveLength(1);
+			expect(select!.querySelector('option')!.value).toBe('amp-1');
+		});
+
+		it('submits under the field name', async () => {
+			// The whole point: no `[name]` meant the field posted nothing, and the
+			// handler saw an absent itemId rather than a validation error.
+			const { container } = await render(FormField, {
+				field: fakeField('itemId'),
+				type: 'select',
+				label: 'Equipment',
+				children: options
+			});
+
+			expect(container.querySelector('select')!.name).toBe('itemId');
+		});
+
+		it('keeps the placeholder above children and selects it', async () => {
+			const { container } = await render(FormField, {
+				field: fakeField('itemId'),
+				type: 'select',
+				label: 'Equipment',
+				placeholder: '-- Select equipment --',
+				value: '',
+				children: options
+			});
+
+			const select = container.querySelector('select')!;
+			expect(select.options[0].textContent).toBe('-- Select equipment --');
+			expect(select.value).toBe('');
+		});
+
+		it('still renders children as a custom control when no type is given', async () => {
+			// Custom-input mode is not what was broken, so it must keep working.
+			const { container } = await render(FormField, {
+				name: 'bio',
+				label: 'Bio',
+				children: createRawSnippet(() => ({
+					render: () => `<textarea name="bio"></textarea>`
+				}))
+			});
+
+			expect(container.querySelector('textarea')).not.toBeNull();
+			expect(container.querySelector('select')).toBeNull();
+		});
+	});
 });

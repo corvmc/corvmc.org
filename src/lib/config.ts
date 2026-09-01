@@ -306,14 +306,29 @@ export const assetStatusLabels: Record<AssetStatus, string> = {
 	lost: 'Lost'
 };
 
-/** How stock arrived. One table covers all three; only the fields differ. */
-export const acquisitionKinds = ['purchase', 'donation', 'grant'] as const;
+/**
+ * How a thing came to be ours. One table covers every kind; only the fields differ.
+ *
+ * `opening_balance` is the odd one out and exists for the stocktake: gear the
+ * collective has owned for years, with no receipt and no traceable donor. Every
+ * arrival must hang off an acquisition — that rule is what makes provenance and
+ * spend answerable — so without a fourth kind, recording a decade-old amp means
+ * inventing a purchase that never happened and inflating this year's spend by
+ * the value of the entire building.
+ *
+ * It is deliberately excluded from both money reports rather than filtered out
+ * of them: `spendByCategory` counts `kind = 'purchase'` and the FASB
+ * gifts-in-kind report counts `kind = 'donation'`, so an opening balance is
+ * invisible to both by construction and cannot drift back in.
+ */
+export const acquisitionKinds = ['purchase', 'donation', 'grant', 'opening_balance'] as const;
 export type AcquisitionKind = (typeof acquisitionKinds)[number];
 
 export const acquisitionKindLabels: Record<AcquisitionKind, string> = {
 	purchase: 'Purchase',
 	donation: 'Donation',
-	grant: 'Grant'
+	grant: 'Grant',
+	opening_balance: 'Already owned'
 };
 
 /**
