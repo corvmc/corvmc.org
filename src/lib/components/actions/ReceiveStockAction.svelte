@@ -4,9 +4,9 @@
 	import { invalidateAll } from '$app/navigation';
 	import { receiveStock } from '$lib/remote/inventory.remote';
 	import LocationField from '$lib/components/inventory/LocationField.svelte';
-	import { Field } from '../ui/Form';
+	import { Field, MoneyField } from '../ui/Form';
 	import MemberPicker from '../ui/MemberPicker.svelte';
-	import { acquisitionKinds, acquisitionKindLabels } from '$lib/config';
+	import { acquisitionKinds, acquisitionKindLabels, clubToday } from '$lib/config';
 
 	const { fields } = receiveStock;
 
@@ -32,6 +32,15 @@
 	 * is reconstructable a year later when the report is due.
 	 */
 	let kind = $state<(typeof acquisitionKinds)[number]>('purchase');
+
+	/**
+	 * Only a gift owes the FASB ASU 2020-07 disclosure, so this is an allow-list
+	 * rather than `kind !== 'purchase'`. That negation was correct while there
+	 * were three kinds and quietly wrong the moment `opening_balance` arrived —
+	 * it would have asked how the fair value of a decade-old amp was determined
+	 * and put the answer in the gifts-in-kind report.
+	 */
+	const isGift = $derived(kind === 'donation' || kind === 'grant');
 
 	/**
 	 * Who fronted the money. Blank means the collective's own card, which is the
@@ -64,20 +73,32 @@
 				options={acquisitionKinds.map((k) => ({ value: k, label: acquisitionKindLabels[k] }))}
 			/>
 		</div>
+		<!-- Defaulted to today in club time, not UTC — after 5pm PT the UTC date is
+		     tomorrow, which a date input would offer as a default. -->
 		<Field
-			field={fields.sourceName}
-			type="text"
-			label={kind === 'purchase' ? 'Supplier' : 'Donor / grantor'}
+			field={fields.occurredAt}
+			type="date"
+			label="When it arrived"
+			value={clubToday()}
+			description={kind === 'opening_balance'
+				? 'A guess is fine. Nothing counts an opening balance as spending.'
+				: undefined}
 		/>
-		<div class="grid grid-cols-2 gap-3">
+		{#if kind !== 'opening_balance'}
 			<Field
+				field={fields.sourceName}
+				type="text"
+				label={kind === 'purchase' ? 'Supplier' : 'Donor / grantor'}
+			/>
+		{/if}
+		<div class="grid grid-cols-2 gap-3">
+			<MoneyField
 				field={fields.unitValueCents}
-				type="number"
-				label={kind === 'purchase' ? 'Unit cost (cents)' : 'Fair value each (cents)'}
+				label={kind === 'purchase' ? 'Unit cost' : 'Value each'}
 			/>
 			<Field field={fields.reference} type="text" label="Reference / receipt no." />
 		</div>
-		{#if kind !== 'purchase'}
+		{#if isGift}
 			<Field
 				field={fields.fairValueBasis}
 				type="text"
@@ -85,10 +106,9 @@
 				description="Required for the gifts-in-kind disclosure — e.g. comparable sales, appraisal."
 			/>
 			<Field field={fields.intendedUse} type="text" label="Intended use" />
-			<Field
+			<MoneyField
 				field={fields.fairValueCents}
-				type="number"
-				label="Total fair value (cents)"
+				label="Total fair value"
 				description="The gift as a whole. Leave blank to let the per-unit values above stand for it."
 			/>
 			<!-- ASU 2020-07 asks whether a gift was sold or put to use, and discloses

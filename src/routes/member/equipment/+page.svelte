@@ -92,8 +92,12 @@
 
 <PageHeader title="Equipment Catalog">
 	<div class="flex items-center gap-3">
+		<!-- Equipment credits are stored in cents, the same as every other amount
+		     the ledger holds — `checkoutLoan` spends them against a cents total.
+		     Printed raw, a $25 balance read as "2500 credits", which is either a
+		     fortune or a currency nobody could name. -->
 		{#if meta.creditBalance > 0}
-			<Badge variant="info" size="md">{meta.creditBalance} credits</Badge>
+			<Badge variant="info" size="md">{formatCents(meta.creditBalance)} credit</Badge>
 		{/if}
 		<Button href="/member/equipment/loans" variant="ghost" size="sm">My Loans</Button>
 	</div>

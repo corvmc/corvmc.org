@@ -3105,18 +3105,44 @@ async function seedEquipment(users: SeedUser[]) {
 		recordedByUserId: staffId
 	};
 
+	/**
+	 * The stocktake row: gear CMC has owned for years, with no receipt and no
+	 * traceable donor.
+	 *
+	 * This is the shape the whole inventory rework exists to serve, and nothing
+	 * local could produce it before — the only kinds were `purchase`, `donation`
+	 * and `grant`, so recording a decade-old amp meant inventing a purchase and
+	 * inflating the year's spend by the value of the building.
+	 *
+	 * Deliberately missing `sourceName` and `totalCents`, and its lines carry no
+	 * unit values: nobody knows what any of it cost, and a seed that guessed
+	 * would hide the fact that the reports must cope with not knowing. It is
+	 * also the only multi-line arrival in the seed, so `acquisition_line`'s
+	 * one-to-many is exercised rather than merely declared.
+	 */
+	const openingBalance = {
+		id: randomUUID(),
+		kind: 'opening_balance' as const,
+		occurredAt: new Date(now.getTime() - 900 * day),
+		reference: 'Stocktake 2026',
+		notes: 'Entered during the first full inventory. Owned for years; no receipts survive.',
+		recordedByUserId: staffId
+	};
+
 	// Named so the summary counts them rather than restating a literal that goes
 	// stale the moment another arrival is seeded — which it just had.
-	const acquisitionRows = [
+	// Typed as the insert row so the reconciliation below can read `totalCents`
+	// on every member, including the gifts that do not set one.
+	const acquisitionRows: (typeof acquisition.$inferInsert)[] = [
 		purchase,
 		donation,
 		restock,
 		grant,
 		unackedGift,
 		fronted,
-		frontedSettled
+		frontedSettled,
+		openingBalance
 	];
-	await batchInsert(acquisition, acquisitionRows, 4);
 
 	// A helper so a seeded arrival cannot drift from the ledger it implies: one
 	// call writes the line *and* the movement, the way the service does.
@@ -3236,7 +3262,46 @@ async function seedEquipment(users: SeedUser[]) {
 		locationId: locByName['Supply shelf']
 	});
 	received(frontedSettled, '9V Batteries', 2, 1_400, { locationId: locByName['Supply shelf'] });
+	/**
+	 * What the stocktake actually looks like: several kinds of thing on one
+	 * record, no costs, no tags yet, and nothing filed anywhere.
+	 *
+	 * Every other seeded unit arrives tagged and shelved, which made two whole
+	 * states unreachable locally — the `Unassigned` row on the locations page,
+	 * and the "needs tagging" backlog the next phase is built around. A real
+	 * stocktake produces both by the hundred: you carry the gear to the bench
+	 * before the sticker roll arrives, and you file it afterwards.
+	 */
+	received(openingBalance, 'Shure SM58', 2, null, { units: [{}, {}] });
+	received(openingBalance, 'Fender Blues Deluxe', 1, null, {
+		units: [{ serial: 'FBD-091144', condition: 'poor' }]
+	});
+	received(openingBalance, 'XLR Cable (25ft)', 8, null);
+	received(openingBalance, 'Boom Mic Stand', 3, null);
 
+	/**
+	 * A receipt's total and the lines it is made of must agree.
+	 *
+	 * They did not: four of the five seeded receipts disagreed with their own
+	 * lines, the worst by $1,012, and `fronted` claimed $48 owed to a volunteer
+	 * the lines put at $28 — a wrong number on a screen whose whole job is to
+	 * tell somebody what they are owed. Hand-written totals drift the moment a
+	 * line is added, so the total is now derived and cannot.
+	 *
+	 * Gifts keep a null total on purpose: a donation's worth is `fairValueCents`,
+	 * which is a different claim from what it cost, and `opening_balance` has
+	 * neither.
+	 */
+	for (const acq of acquisitionRows) {
+		if (acq.totalCents == null) continue;
+		acq.totalCents = lines
+			.filter((l) => l.acquisitionId === acq.id)
+			.reduce((sum, l) => sum + l.quantity * (l.unitValueCents ?? 0), 0);
+	}
+
+	// Acquisitions first: `acquisition_line` and `inventory_asset` both point at
+	// them. This insert used to sit above, before the lines existed to total.
+	await batchInsert(acquisition, acquisitionRows, 4);
 	await batchInsert(acquisitionLine, lines, 4);
 	await batchInsert(inventoryAsset, assets, 4);
 
