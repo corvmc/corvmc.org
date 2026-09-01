@@ -12,8 +12,14 @@
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear, formatTimeRange } from '$lib/utils/format';
 
+	import InstructorPanel from './InstructorPanel.svelte';
+
 	let { id }: { id: string } = $props();
 </script>
+
+<!-- Teaching status leads: it is the thing that changes what the bookings
+     below cost and how far ahead they could be made. -->
+<InstructorPanel {id} />
 
 <RelatedList title="Reservations" result={getUserReservations(id)}>
 	{#snippet children(data)}

@@ -5,6 +5,7 @@
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import Nav from '$lib/components/layout/Nav';
 	import {
+		IconSchool,
 		IconBulb,
 		IconUsers,
 		IconClipboardCheck,
@@ -76,6 +77,7 @@
 		reservations: IconClipboardCheck,
 		recurring: IconRepeat,
 		closures: IconBan,
+		instructors: IconSchool,
 		equipment: IconTool,
 		'equipment-loans': IconPackage,
 		'inventory-acquisitions': IconReceipt,
