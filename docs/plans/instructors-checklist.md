@@ -1,6 +1,6 @@
 # Instructor module — progress checklist
 
-Design: `docs/specs/instructors-spec.md`.
+Design: `docs/specs/shipped/instructors-spec.md`.
 Plan: `~/.claude/plans/let-s-talk-about-tools-ethereal-iverson.md` (approved).
 Branch: `claude/teaching-tools-ffff44` (off `main`).
 
@@ -52,7 +52,7 @@ off-peak spec owns. `commitReservationCredits` keeps its `creditsApply` paramete
 
 ## Step 1 — Design spec
 
-- [x] `docs/specs/instructors-spec.md`
+- [x] `docs/specs/shipped/instructors-spec.md`
 - [x] `docs/plans/instructors-checklist.md` — this file
 - [x] `IDEAS.md` — `**Progress:**` line under "Lessons / Teacher Panel", noting the narrowing
 - [x] `docs/README.md` — spec table row
@@ -188,31 +188,66 @@ off-peak spec owns. `commitReservationCredits` keeps its `creditsApply` paramete
 
 ## Step 7 — Going public: listing + applications
 
-- [ ] `src/routes/(public)/directory/instructors/+page.svelte`
-- [ ] `src/routes/member/directory/instructors/+page.svelte`
-- [ ] `src/lib/components/directory/InstructorCard.svelte`
-- [ ] Third `TabBar` tab on both directory roots
-- [ ] `instructor-directory-service.ts` — **three gates**: `status = 'active'`,
-      `directory_entry.visibility`, `contactForView` over the resolved contact
-- [ ] `/member/profile` — the five-state card, `teachingContact` editor, members-only-contact nudge
-- [ ] `instructors.remote.ts` — member half
-- [ ] Three notification listeners: submit → staff, approve → member, send back → member
-- [ ] `teachesLessons` copy rename → "Teaches privately" across 7 sites
-- [ ] `src/content/help/` article
-- [ ] **`instructor-directory-service.spec.ts` — the exposure test**
-- [ ] `e2e/instructor-application.e2e.ts`
+- [x] `src/routes/(public)/directory/instructors/+page.svelte` — public, unauthenticated
+- [x] `src/routes/member/directory/instructors/+page.svelte` — the member mirror
+- [x] `src/lib/components/directory/InstructorCard.svelte` — a sibling of `IdCard`, sharing its
+      `poster-gen`/initials treatment so the two read as one family
+- [x] Third `TabBar` tab on both directory roots, pointing at the sibling route
+- [x] `instructor-directory-service.ts` — **three gates**, all in one function with one test file
+- [x] `/member/profile` → `TeachingCard.svelte`, five states. **Takes plain props and never awaits**:
+      a top-level await would mark later declarations blocked and turn each `fields` expression into
+      an async derived, which is the `effect_update_depth_exceeded` crash the page already carries a
+      comment about. The page resolves all three queries in one `Promise.all` rather than three
+      awaited declarations, which would be serial round trips.
+- [x] `instructors.remote.ts` — member half: apply, edit, accepting-students, withdraw, and the two
+      listing queries. **Two listing entry points rather than one with a viewer argument**, because
+      a gate chosen by a parameter is a gate somebody can pass the wrong value to
+- [x] `teachesLessons` copy → **"Teaches privately"** across six sites, and the help article now
+      explains that it and teaching at the Collective are different things you can have either,
+      both, or neither of
+- [x] **`instructor-directory-service.spec.ts` — the exposure test.** 17 tests against real SQLite:
+      no unapproved applicant, no hidden or members-only entry publicly, no soft-deleted entry or
+      user, no instructor without a profile, `applicationNote` never in a returned shape, and the
+      contact fallback gated rather than bypassed
+- [x] **Notifications.** Four pieces: event types on `event-bus.ts`, emits from the service,
+      listeners in `notification-listeners.ts`, and two keys in `schema/notification.ts`.
+      `instructor.application_submitted` fires on a **resubmit as well as a first submission** — a
+      returned application coming back is exactly when it needs looking at again, and would otherwise
+      sit in the queue unannounced. `instructor.application_reviewed` carries the note, which is the
+      load-bearing half of the return state: the member is not watching their profile, so a note
+      nobody delivers is the failure the whole mechanism exists to prevent. Emits are not awaited —
+      the dispatcher swallows and logs, and an application must not fail because a notification did.
+      Pinned with the events **real** (only the database is substituted), including the negative
+      case: a transition that throws announces nothing.
 
 ## Step 8 — Seed, docs, close out
 
-- [ ] `scripts/seed-dev.ts` — 2 active with bookings, 1 paused, 1 requested, 1 rejected w/ notes
-- [ ] `docs/reports/feature-catalog.md` row
-- [ ] `pnpm docs:routes && pnpm docs:check`
-- [ ] Move spec to `docs/specs/shipped/`, update `docs/README.md`
+- [x] `scripts/seed-dev.ts` — **six instructors covering every status**, and the awkward ones are the
+      point: one active but not accepting (excluded from the listing, still books), one active whose
+      contact is members-only (listed, contact withheld publicly, and the profile nudge renders), one
+      paused with a _public_ contact so it is clearly status and not reachability keeping them off,
+      one awaiting review so the staff queue is not empty, and one sent back carrying `reviewNotes`.
+      Plus three teaching bookings so the reservation surfaces show a row at the teaching rate.
+      A first pass put the members-only contact on the _paused_ row, which produced a fixture for a
+      nudge that only renders when active — caught by reading the seeded rows back rather than
+      trusting the insert.
+- [x] `docs/reports/feature-catalog.md` — three rows: staff, member, public
+- [x] `pnpm docs:routes && pnpm docs:check` — Integrity OK, route drift +0/-0
+- [x] Spec retired to `docs/specs/shipped/`, `docs/README.md` row flipped to ✅ archived, and the
+      five code comments pointing at the old path repointed
+- [x] `docs/development/conventions.md` — **seed data moved from step 5 into step 2**, with the
+      reason: every surface built between the schema landing and the seed being written is developed
+      and reviewed against no rows, and the browser-preview step cannot verify anything until the
+      end, which is when it is least useful. That is this module's own mistake, written down where
+      the next feature will read it.
 
-## Gates
+---
 
-`pnpm check` · `pnpm test:unit -- --run` · `pnpm lint` before every commit.
-Schema steps: **`pnpm db:reset` alone** — it already migrates _and_ seeds, so the
-`db:reset && pnpm db:seed` that CLAUDE.md and conventions.md both tell you to run seeds twice
-and dies on `UNIQUE constraint failed: media.key`. Then check child row counts.
-Regenerate migrations via `pnpm db:generate` after merging `main` — never by hand.
+## Not done, and deliberately
+
+- **The `$5/hr` production value.** `reservation.teachingRateCents` defaults to `500` in
+  `site-config-service.ts`, but the production `site_config` row has to be set before the module is
+  live. There is no feature flag, so the phase order was the only thing holding the door — and once
+  the listing PR merges, `/directory/instructors` exists.
+- **An e2e for the booking path.** The unit and integration coverage is thorough (real SQLite for
+  every gate and every WHERE clause), but nothing drives the browser end to end.

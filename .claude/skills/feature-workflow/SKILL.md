@@ -7,6 +7,11 @@ description: The nine-phase checklist for building a feature in this repo — de
 
 The checklist below is the canonical version. A few notes on what the phases mean in practice:
 
+- **Branch** — the phase that used to be a feature flag. A member-facing feature needing more than
+  one PR to work goes on a `feature/<slug>` branch and reaches `main` once, finished;
+  `/feature-branch` runs it. Staff-only surfaces, schema and refactors go straight to `main`. Read
+  `docs/development/conventions.md#long-lived-feature-branches` before the first merge from `main`
+  — the migration rule there is counter-intuitive and the failure is silent.
 - **Design** — a spec in `docs/specs/` is the deliverable for anything with new schema or
   cross-file reach. The existing specs are the templates; `reservation-system-spec.md` is a good
   short one, `volunteering-spec.md` a good long one.

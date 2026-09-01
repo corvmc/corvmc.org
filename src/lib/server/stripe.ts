@@ -21,7 +21,7 @@ export function getStripe(): Stripe {
 		 * Upgrading `stripe` therefore fails `pnpm check` here until the pin is
 		 * updated deliberately — which is the point.
 		 */
-		_stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-07-29.dahlia' });
+		_stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-08-26.dahlia' });
 	}
 	return _stripe;
 }

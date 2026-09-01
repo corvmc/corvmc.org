@@ -111,7 +111,10 @@
 	<TabBar
 		tabs={[
 			{ key: 'members', label: 'Members', badge: members.length, href: directoryHref('members') },
-			{ key: 'bands', label: 'Bands', badge: bands.length, href: directoryHref('bands') }
+			{ key: 'bands', label: 'Bands', badge: bands.length, href: directoryHref('bands') },
+			// A sibling route rather than a `?tab=`: different reader, different
+			// columns, and a different truth from the self-declared flag.
+			{ key: 'instructors', label: 'Teachers', href: '/member/directory/instructors' }
 		]}
 		active={tab}
 	/>
@@ -138,7 +141,7 @@
 				</label>
 				<label class="directory-filters__toggle">
 					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={teachesLessons} />
-					<span>Teaches lessons</span>
+					<span>Teaches privately</span>
 				</label>
 				<label class="directory-filters__toggle">
 					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={openToCollaboration} />

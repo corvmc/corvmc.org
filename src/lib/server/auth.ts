@@ -128,7 +128,7 @@ export async function scryptHash(password: string): Promise<string> {
 	const salt = randomBytes(16);
 	const key = await scryptDerive(password, salt);
 	const { N, r, p } = SCRYPT_PARAMS;
-	return `scrypt:${N}:${r}:${p}:${salt.toString('hex')}:${key.toString('hex')}`;
+	return `scrypt:${N}:${r}:${p}:${hexEncode(salt)}:${hexEncode(key)}`;
 }
 
 export async function scryptVerify(hash: string, password: string): Promise<boolean> {

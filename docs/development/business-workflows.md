@@ -660,7 +660,7 @@ unsubscribe link. Behind the `emailMarketing` feature flag.
 Inbound email (to the support address), contact-form submissions, and SMS all land in a
 unified staff inbox as threaded conversations. Staff reply from the app; replies go out
 through Postmark (email) or Twilio (SMS). Every inbound message notifies all staff. Behind
-the `staffInbox` feature flag. (A Meta/Messenger handler exists but the Meta integration is
+the retired `staffInbox` feature flag, which never guarded anything. (A Meta/Messenger handler exists but the Meta integration is
 not provisioned.)
 
 Contact-form ('web') threads reply **by email** — the submitter gave us their address, and

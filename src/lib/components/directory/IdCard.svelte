@@ -49,7 +49,7 @@
 		[
 			lookingForBand && { icon: IconUserSearch, label: 'Seeking a band' },
 			availableForHire && { icon: IconBriefcase, label: 'Available for hire' },
-			teachesLessons && { icon: IconSchool, label: 'Teaches lessons' },
+			teachesLessons && { icon: IconSchool, label: 'Teaches privately' },
 			openToCollaboration && { icon: IconUsersPlus, label: 'Open to collaboration' }
 		].filter(Boolean) as { icon: typeof IconUserSearch; label: string }[]
 	);

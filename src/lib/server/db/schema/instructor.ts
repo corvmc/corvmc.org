@@ -13,7 +13,7 @@ import {
 
 /**
  * A person CMC has granted the right to rent the practice room on teaching
- * terms. See `docs/specs/instructors-spec.md`.
+ * terms. See `docs/specs/shipped/instructors-spec.md`.
  *
  * **CMC's relationship is with the teacher, not the student.** CMC rents
  * teachers the space; the teacher bills their own students. That is why there is

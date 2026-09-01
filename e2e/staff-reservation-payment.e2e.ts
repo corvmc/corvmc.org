@@ -38,7 +38,7 @@ test.describe('staff reservations payment column', () => {
 
 		// Narrow to the fixture's member so the assertions below don't have to
 		// survive whatever else the dev seed put on the calendar.
-		await page.getByPlaceholder('Search member, band, or event...').fill(SEED_PAYMENTS_NAME);
+		await page.getByRole('searchbox').fill(SEED_PAYMENTS_NAME);
 
 		const rows = page.getByRole('row').filter({ hasText: SEED_PAYMENTS_NAME });
 		await expect(rows).toHaveCount(PAYMENT_CASES.length);
@@ -51,7 +51,7 @@ test.describe('staff reservations payment column', () => {
 	test('omits the half that evaluates to zero', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/reservations');
-		await page.getByPlaceholder('Search member, band, or event...').fill(SEED_PAYMENTS_NAME);
+		await page.getByRole('searchbox').fill(SEED_PAYMENTS_NAME);
 
 		const rows = page.getByRole('row').filter({ hasText: SEED_PAYMENTS_NAME });
 		await expect(rows).toHaveCount(PAYMENT_CASES.length);
@@ -66,7 +66,7 @@ test.describe('staff reservations payment column', () => {
 	test('strikes the amount on a comped reservation', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/reservations');
-		await page.getByPlaceholder('Search member, band, or event...').fill(SEED_PAYMENTS_NAME);
+		await page.getByRole('searchbox').fill(SEED_PAYMENTS_NAME);
 
 		const rows = page.getByRole('row').filter({ hasText: SEED_PAYMENTS_NAME });
 		await expect(rows).toHaveCount(PAYMENT_CASES.length);

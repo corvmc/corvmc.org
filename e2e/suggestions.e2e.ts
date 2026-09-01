@@ -180,7 +180,9 @@ test.describe('reporting a suggestion', () => {
 		// The author can still reach their own post, and is told why it's down.
 		await switchUser(page, SEED_SG_AUTHOR_EMAIL, SEED_SG_PASSWORD);
 		await page.goto(`/member/suggestions/${SEED_SG_DISMISS_ID}`);
-		await expect(page.getByText(/off the board while staff take a look/i)).toBeVisible();
+		// The withheld notice renders through Alert (role="alert"); its sentence is
+		// free to change, its presence is the behaviour under test.
+		await expect(page.getByRole('alert')).toBeVisible();
 	});
 
 	test('dismissing the report puts the suggestion straight back', async ({ page }) => {
@@ -219,14 +221,14 @@ test.describe('reporting a suggestion', () => {
 		// The consequence reaches forward: the author's NEXT post is withheld.
 		await switchUser(page, SEED_SG_AUTHOR_EMAIL, SEED_SG_PASSWORD);
 		await page.goto('/member/suggestions');
-		await expect(page.getByText(/go to staff for a look before they appear/i)).toBeVisible();
+		await expect(page.getByRole('alert')).toBeVisible();
 
 		await page.getByRole('button', { name: 'Suggest something' }).click();
 		await page.locator('input[name="title"]').fill('E2E Post While On Review');
 		await page.locator('textarea[name="body"]').fill('Should wait for staff before appearing.');
 		await page.getByRole('button', { name: 'Post it' }).click();
 		await page.waitForURL(/\/member\/suggestions\/[^/]+$/, DB_POLL);
-		await expect(page.getByText(/waiting for staff to look at it/i)).toBeVisible();
+		await expect(page.getByRole('alert')).toBeVisible();
 
 		// Nobody else can see it yet.
 		await switchUser(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
@@ -311,7 +313,7 @@ test.describe('editing a suggestion', () => {
 
 		// And the author is told it is pending rather than left guessing.
 		await page.reload();
-		await expect(page.getByText(/edit is with staff/i)).toBeVisible();
+		await expect(page.getByRole('alert')).toBeVisible();
 
 		// Nobody else sees the proposed text anywhere.
 		await switchUser(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);

@@ -75,6 +75,14 @@ function tag(args: unknown[], type: string) {
 
 const issue = new Proxy({}, { get: () => (m: string) => ({ message: m }) });
 
+// Imported once at module scope, not inside each test. `reservations.remote.ts`
+// pulls in a large module graph, and on a cold Vite cache an in-test
+// `await import` of it blows the 5s per-test timeout — which reads as flakiness
+// and is not.
+const { bookInstructorReservation } = (await import('./reservations.remote')) as unknown as {
+	bookInstructorReservation: (d: unknown, i: unknown) => Promise<unknown>;
+};
+
 const booking = {
 	date: '2026-09-15',
 	startTime: '16:00',
@@ -87,11 +95,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe('bookInstructorReservation', () => {
 	it('books against the instructor record, not the user', async () => {
-		const { bookInstructorReservation } = await import('./reservations.remote');
-		await (bookInstructorReservation as never as (d: unknown, i: unknown) => Promise<unknown>)(
-			booking,
-			issue
-		);
+		await bookInstructorReservation(booking, issue);
 
 		expect(create).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -107,14 +111,8 @@ describe('bookInstructorReservation', () => {
 
 	it('refuses anyone without an active grant, before writing anything', async () => {
 		requireInstructor.mockRejectedValueOnce(new Error('403'));
-		const { bookInstructorReservation } = await import('./reservations.remote');
 
-		await expect(
-			(bookInstructorReservation as never as (d: unknown, i: unknown) => Promise<unknown>)(
-				booking,
-				issue
-			)
-		).rejects.toThrow('403');
+		await expect(bookInstructorReservation(booking, issue)).rejects.toThrow('403');
 		expect(create).not.toHaveBeenCalled();
 	});
 
@@ -124,10 +122,7 @@ describe('bookInstructorReservation', () => {
 		// rental CMC granted directly, so requiring a subscription on top of a
 		// staff grant would mean staff granting something the member cannot use.
 		// Nothing in this file mocks a subscription, and that is deliberate.
-		const { bookInstructorReservation } = await import('./reservations.remote');
-		const result = await (
-			bookInstructorReservation as never as (d: unknown, i: unknown) => Promise<unknown>
-		)({ ...booking, recurring: 'weekly' }, issue);
+		const result = await bookInstructorReservation({ ...booking, recurring: 'weekly' }, issue);
 
 		expect(createSeries).toHaveBeenCalledWith(
 			expect.objectContaining({ prototypeReservationId: 'res-1', frequency: 'weekly' })

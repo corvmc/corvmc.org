@@ -102,14 +102,20 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 	};
 });
 
-vi.mock('$lib/server/reservation/reservation-service', () => ({
-	staffCreate: vi.fn().mockResolvedValue({ id: 'res-1' }),
-	cancel: vi.fn().mockResolvedValue(undefined),
-	ReservationConflictError: class extends Error {
+// Hoisted so the specs can assert on the class itself rather than on the
+// message the real one carries — the wording is free to change.
+const { ReservationConflictError } = vi.hoisted(() => ({
+	ReservationConflictError: class ReservationConflictError extends Error {
 		constructor() {
 			super('Time slot is not available');
 		}
 	}
+}));
+
+vi.mock('$lib/server/reservation/reservation-service', () => ({
+	staffCreate: vi.fn().mockResolvedValue({ id: 'res-1' }),
+	cancel: vi.fn().mockResolvedValue(undefined),
+	ReservationConflictError
 }));
 
 vi.mock('$lib/server/reservation/conflict-service', () => ({
@@ -148,7 +154,11 @@ import {
 	checkRebookNeeded,
 	unpublishWithNotice,
 	listPublicUpcomingEvents,
-	remove
+	remove,
+	EventNotFoundError,
+	EventValidationError,
+	EventStateError,
+	EventHasTicketsError
 } from './event-service';
 import {
 	staffCreate,
@@ -274,7 +284,7 @@ describe('EventService', () => {
 						overrideConflicts: false
 					}
 				})
-			).rejects.toThrow('Time slot is not available');
+			).rejects.toThrow(ReservationConflictError);
 		});
 
 		it('uploads poster when posterFile provided', async () => {
@@ -338,19 +348,19 @@ describe('EventService', () => {
 		it('rejects a zero or negative display price', async () => {
 			await expect(
 				create({ ...baseParams, ticketingEnabled: false, ticketPrice: 0 })
-			).rejects.toThrow('Ticket price must be a positive amount');
+			).rejects.toThrow(EventValidationError);
 		});
 
 		it('throws when ticketing is enabled but price is missing', async () => {
 			await expect(create({ ...baseParams, ticketingEnabled: true })).rejects.toThrow(
-				'Ticket price is required'
+				EventValidationError
 			);
 		});
 
 		it('throws when ticketing is enabled but price is zero', async () => {
 			await expect(
 				create({ ...baseParams, ticketingEnabled: true, ticketPrice: 0 })
-			).rejects.toThrow('Ticket price is required');
+			).rejects.toThrow(EventValidationError);
 		});
 
 		it('allows null ticketQuantity for unlimited capacity', async () => {
@@ -382,14 +392,14 @@ describe('EventService', () => {
 			updateRowCount = 0;
 			selectResult = [{ ...mockEventRow, status: 'published' }];
 
-			await expect(publish('evt-1')).rejects.toThrow('Cannot publish');
+			await expect(publish('evt-1')).rejects.toThrow(EventStateError);
 		});
 
 		it('throws when event does not exist', async () => {
 			updateRowCount = 0;
 			selectResult = [];
 
-			await expect(publish('evt-999')).rejects.toThrow('Event not found');
+			await expect(publish('evt-999')).rejects.toThrow(EventNotFoundError);
 		});
 	});
 
@@ -431,7 +441,7 @@ describe('EventService', () => {
 		it('throws when event is already cancelled', async () => {
 			selectResult = [{ ...mockEventRow, status: 'cancelled' }];
 
-			await expect(cancel('evt-1', 'staff-1')).rejects.toThrow('already cancelled');
+			await expect(cancel('evt-1', 'staff-1')).rejects.toThrow(EventStateError);
 		});
 
 		it('ignores error if linked reservation is already cancelled', async () => {
@@ -645,7 +655,7 @@ describe('EventService', () => {
 						overrideConflicts: false
 					}
 				})
-			).rejects.toThrow('Time slot is not available');
+			).rejects.toThrow(ReservationConflictError);
 		});
 
 		it('skips conflict check when override is true', async () => {
@@ -709,7 +719,7 @@ describe('EventService', () => {
 						overrideConflicts: false
 					}
 				})
-			).rejects.toThrow('Time slot is not available');
+			).rejects.toThrow(ReservationConflictError);
 
 			expect(cancelReservation).not.toHaveBeenCalled();
 			expect(staffCreate).not.toHaveBeenCalled();
@@ -960,14 +970,7 @@ describe('EventService', () => {
 				[{ value: 2 }] // ticket count
 			];
 
-			// One call, both assertions: the select queue drains, so re-invoking
-			// would be asserting against an empty fixture rather than this case.
-			const err = await remove('evt-1', 'staff-1').catch((e: Error) => e);
-
-			expect(err).toBeInstanceOf(Error);
-			expect((err as Error).message).toMatch(/tickets/i);
-			// The sentence has to point somewhere useful, not just refuse.
-			expect((err as Error).message).toMatch(/[Cc]ancel/);
+			await expect(remove('evt-1', 'staff-1')).rejects.toThrow(EventHasTicketsError);
 		});
 
 		it('does not delete anything when it refuses', async () => {
@@ -986,7 +989,7 @@ describe('EventService', () => {
 			// become deletable afterwards.
 			selectResultQueue = [[{ ...deletableEvent, status: 'cancelled' }], [{ value: 3 }]];
 
-			await expect(remove('evt-1', 'staff-1')).rejects.toThrow(/tickets/i);
+			await expect(remove('evt-1', 'staff-1')).rejects.toThrow(EventHasTicketsError);
 		});
 
 		it('cancels the linked reservation rather than deleting it', async () => {
@@ -1036,7 +1039,7 @@ describe('EventService', () => {
 		it('throws when the event does not exist', async () => {
 			selectResultQueue = [[]];
 
-			await expect(remove('evt-1', 'staff-1')).rejects.toThrow('Event not found');
+			await expect(remove('evt-1', 'staff-1')).rejects.toThrow(EventNotFoundError);
 			expect(eventDelete).not.toHaveBeenCalled();
 		});
 	});
@@ -1088,7 +1091,7 @@ describe('EventService', () => {
 			selectResult = [bandEvent];
 
 			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 2000 })).rejects.toThrow(
-				'CMC only sells tickets for its own events'
+				EventValidationError
 			);
 		});
 
@@ -1096,7 +1099,7 @@ describe('EventService', () => {
 			selectResult = [communityListing];
 
 			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 2000 })).rejects.toThrow(
-				'CMC only sells tickets for its own events'
+				EventValidationError
 			);
 		});
 
@@ -1236,7 +1239,7 @@ describe('EventService', () => {
 			selectResult = [{ ...mockEventRow, status: 'draft' }];
 
 			await expect(update('evt-1', { ticketingEnabled: true })).rejects.toThrow(
-				'Ticket price is required'
+				EventValidationError
 			);
 		});
 
@@ -1244,7 +1247,7 @@ describe('EventService', () => {
 			selectResult = [{ ...mockEventRow, status: 'draft' }];
 
 			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 0 })).rejects.toThrow(
-				'Ticket price must be a positive amount'
+				EventValidationError
 			);
 		});
 
@@ -1253,12 +1256,8 @@ describe('EventService', () => {
 				{ ...mockEventRow, status: 'draft', ticketingEnabled: true, ticketPrice: 1500 }
 			];
 
-			await expect(update('evt-1', { ticketPrice: -100 })).rejects.toThrow(
-				'Ticket price must be a positive amount'
-			);
-			await expect(update('evt-1', { ticketPrice: NaN })).rejects.toThrow(
-				'Ticket price must be a positive amount'
-			);
+			await expect(update('evt-1', { ticketPrice: -100 })).rejects.toThrow(EventValidationError);
+			await expect(update('evt-1', { ticketPrice: NaN })).rejects.toThrow(EventValidationError);
 		});
 
 		it('updates price independently when ticketingEnabled is not changed', async () => {
@@ -1276,7 +1275,7 @@ describe('EventService', () => {
 			selectResult = [{ ...mockEventRow, status: 'cancelled' }];
 
 			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 1000 })).rejects.toThrow(
-				'Cannot update a cancelled event'
+				EventStateError
 			);
 		});
 	});

@@ -150,7 +150,7 @@
 				field={fields.teachesLessons}
 				type="toggle"
 				value={teachesLessons}
-				checkboxLabel="I teach lessons"
+				checkboxLabel="I teach lessons privately"
 			/>
 			<FormField
 				field={fields.openToCollaboration}

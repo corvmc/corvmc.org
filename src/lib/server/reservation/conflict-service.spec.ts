@@ -98,37 +98,37 @@ describe('validateBooking', () => {
 	it('rejects end time before start time', async () => {
 		const result = await validateBooking(makeDate(date, '11:00'), makeDate(date, '10:00'));
 		expect(result.valid).toBe(false);
-		expect(result.error).toContain('after start time');
+		expect(result.code).toBe('END_BEFORE_START');
 	});
 
 	it('rejects duration shorter than minimum', async () => {
 		const result = await validateBooking(makeDate(date, '10:00'), makeDate(date, '10:30'));
 		expect(result.valid).toBe(false);
-		expect(result.error).toContain('Minimum duration');
+		expect(result.code).toBe('MIN_DURATION');
 	});
 
 	it('rejects duration longer than maximum', async () => {
 		const result = await validateBooking(makeDate(date, '09:00'), makeDate(date, '18:00'));
 		expect(result.valid).toBe(false);
-		expect(result.error).toContain('Maximum duration');
+		expect(result.code).toBe('MAX_DURATION');
 	});
 
 	it('rejects start time not on 30-minute boundary', async () => {
 		const result = await validateBooking(makeDate(date, '10:15'), makeDate(date, '11:15'));
 		expect(result.valid).toBe(false);
-		expect(result.error).toContain('30-minute boundaries');
+		expect(result.code).toBe('SLOT_BOUNDARY');
 	});
 
 	it('rejects start time before operating hours', async () => {
 		const result = await validateBooking(makeDate(date, '08:00'), makeDate(date, '09:00'));
 		expect(result.valid).toBe(false);
-		expect(result.error).toContain('Cannot start before');
+		expect(result.code).toBe('BEFORE_OPENING');
 	});
 
 	it('rejects end time after operating hours', async () => {
 		const result = await validateBooking(makeDate(date, '21:00'), makeDate(date, '23:00'));
 		expect(result.valid).toBe(false);
-		expect(result.error).toContain('Cannot end after');
+		expect(result.code).toBe('AFTER_CLOSING');
 	});
 
 	it('accepts half-hour boundaries', async () => {
@@ -143,7 +143,7 @@ describe('validateBooking', () => {
 		const end = makeDate(dateStr, '11:00');
 		const result = await validateBooking(start, end);
 		expect(result.valid).toBe(false);
-		expect(result.error).toContain('14 days in advance');
+		expect(result.code).toBe('TOO_FAR_AHEAD');
 	});
 
 	it('accepts booking within recurring advance window', async () => {

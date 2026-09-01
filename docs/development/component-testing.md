@@ -94,10 +94,17 @@ describe('MyComponent', () => {
 		// Import the component AFTER vi.mock is registered.
 		const MyComponent = (await import('./MyComponent.svelte')).default;
 		await render(MyComponent);
+		// `Jane Doe` comes from the mock above — the spec asserts its own fixture
+		// reaches the DOM, not that any particular wording is on the page.
 		await expect.element(page.getByText('Jane Doe')).toBeVisible();
 	});
 });
 ```
+
+Asserting a fixture you supplied is fine. Asserting the component's _own_ copy is not — see
+[Do not assert on copy](conventions.md#do-not-assert-on-copy). An empty state, a button label or a
+tooltip sentence should be reached through a role, a `name` attribute or an exported label map, so
+that rewording it is a one-file change.
 
 `render()` returns a promise and must be awaited. Dropping the `await` does not
 fail loudly — you get a `Promise` where the `RenderResult` should be, so

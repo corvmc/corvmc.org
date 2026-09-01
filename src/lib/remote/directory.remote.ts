@@ -50,6 +50,8 @@ import { eq, and, sql, isNull } from 'drizzle-orm';
 import { profileLinkSchema } from '$lib/server/db/schema/authentication';
 import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
 import { jsonArrayField } from '$lib/utils/zod-json';
+import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
+import { publicContactStatus } from '$lib/server/instructor/instructor-directory-service';
 
 // ---------------------------------------------------------------------------
 // JSON-encoded form/filter fields
@@ -584,13 +586,32 @@ export const saveMemberProfile = form(memberProfileSchema, async (data) => {
  * them for its filter chips, which is a different page with a different refresh story.
  */
 export const getMemberProfileEditor = query(z.void(), async () => {
-	const [profile, instrumentSuggestions, genreSuggestions] = await Promise.all([
-		getMemberProfile(),
-		getInstrumentSuggestions(),
-		getGenreSuggestions()
-	]);
+	const currentUser = requireUser();
 
-	return { profile, instrumentSuggestions, genreSuggestions };
+	// Teaching rides along rather than being fetched by the card that needs it.
+	// `custom/no-concurrent-remote-queries` refuses a page that fans several
+	// remote queries out at once, and it is right to: past kit 2.64 that shape
+	// renders as `effect_update_depth_exceeded`. Assembling on the server is what
+	// the rule asks for, and it is one round trip instead of three.
+	const [profile, instrumentSuggestions, genreSuggestions, instructor, contactStatus] =
+		await Promise.all([
+			getMemberProfile(),
+			getInstrumentSuggestions(),
+			getGenreSuggestions(),
+			getInstructorByUserId(currentUser.id),
+			publicContactStatus(currentUser.id)
+		]);
+
+	return {
+		profile,
+		instrumentSuggestions,
+		genreSuggestions,
+		teaching: {
+			instructor,
+			hasPublicContact: contactStatus.hasPublicContact,
+			hasAnyContact: contactStatus.hasAnyContact
+		}
+	};
 });
 
 // ---------------------------------------------------------------------------

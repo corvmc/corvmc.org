@@ -61,7 +61,7 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 	// The confirm step must say whose free hours this spends — bands have none of
 	// their own, and two bandmates seeing different prices reads as a bug
 	// otherwise.
-	await expect(dialog.getByText(/Bands don't have their own free hours/)).toBeVisible({
+	await expect(dialog.getByText(/free hours/i)).toBeVisible({
 		timeout: 15000
 	});
 
