@@ -251,10 +251,10 @@ export const setThreadAwaiting = form(awaitingSchema, async (data) => {
 // Channel configuration
 // ---------------------------------------------------------------------------
 
-// Channel configuration is staff-only but deliberately *not* feature-gated: it
-// lives on the settings page next to the staffInbox flag itself, so requiring
-// the flag to read it would make the inbox impossible to configure before
-// turning it on.
+// Channel configuration is staff-only and not feature-gated. There was a
+// `staffInbox` flag, but it never guarded anything — the inbox is staff-only and
+// the staff panel ignored flags by design — so it was retired rather than wired
+// up.
 export const getInboxChannelConfigs = query(z.void(), async () => {
 	await requireStaff();
 	return getAllChannelConfigs();

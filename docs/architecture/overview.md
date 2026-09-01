@@ -381,7 +381,6 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 	'reservation.operatingHoursEnd': '22:00',
 	'reservation.hourlyRateCents': 1500,
 	'org.timezone': 'America/Los_Angeles',
-	'feature.staffInbox': false,
 	'feature.emailMarketing': false
 	// ...
 };
@@ -391,7 +390,7 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 otherwise the default. **Feature flags** are just `feature.*` config keys, wrapped by
 `src/lib/server/feature-flags.ts` (`isFeatureEnabled`, `getAllFeatureFlags`,
 `requireFeature` — the latter 404s so a disabled feature is indistinguishable from a
-missing page). Current flags: `staffInbox`, `bandPremium`,
+missing page). Current flags: `bandPremium`,
 `emailMarketing`, `equipment`, `helpArticles`, `contentFlags`.
 
 A flag gates the **member, band and public** surfaces only. The staff panel ignores flags
