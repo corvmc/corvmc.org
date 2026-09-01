@@ -28,7 +28,7 @@ export const SEED_APPLICANT_HEADLINE = 'E2E Fiddle lessons';
 const ALL_IDS = [SEED_INSTRUCTOR_ID, SEED_APPLICANT_ID];
 
 export async function seedInstructors() {
-	await withPlatformEnv(async (db) => {
+	await withPlatformEnv(async ({ db }) => {
 		await db.delete(instructor).where(inArray(instructor.id, ALL_IDS));
 
 		const now = new Date();
@@ -46,14 +46,10 @@ export async function seedInstructors() {
 			.returning({ id: directoryEntry.id });
 
 		if (entry) {
-			await db
-				.delete(directoryTag)
-				.where(eq(directoryTag.entryId, entry.id))
-				.catch(() => undefined);
+			await db.delete(directoryTag).where(eq(directoryTag.entryId, entry.id));
 			await db
 				.insert(directoryTag)
-				.values({ entryId: entry.id, kind: 'instrument', value: 'Guitar' })
-				.onConflictDoNothing();
+				.values({ entryId: entry.id, kind: 'instrument', value: 'Guitar' });
 		}
 
 		await db.insert(instructor).values([
