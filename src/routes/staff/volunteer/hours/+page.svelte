@@ -2,6 +2,7 @@
 	import VolunteerStatusTabs from './VolunteerStatusTabs.svelte';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -212,8 +213,8 @@
 							{#if log.shiftId}
 								<!-- Filed against a shift staff scheduled — the person was
 								     rostered, so this can be approved with less scrutiny. -->
-								<span class="mt-1 badge badge-ghost badge-xs" title="Logged from a scheduled shift"
-									>scheduled</span
+								<Badge variant="ghost" size="xs" class="mt-1" title="Logged from a scheduled shift"
+									>scheduled</Badge
 								>
 							{/if}
 						</td>
@@ -237,8 +238,7 @@
 						</td>
 
 						<td class="col-support">
-							{log.roleName}{#if !log.roleIsActive}<span class="ml-1 text-xs opacity-50"
-									>(archived)</span
+							{log.roleName}{#if !log.roleIsActive}<span class="ml-1 text-subtle">(archived)</span
 								>{/if}
 						</td>
 						<td class="col-support whitespace-nowrap" title={relativeDay(log.createdAt)}>

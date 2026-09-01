@@ -5,7 +5,6 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import Action from '$lib/components/ui/Action.svelte';
