@@ -24,6 +24,13 @@ import {
  * - a staff approval moves an application out of the review queue, which spans
  *   two panels and a write.
  */
+/** Minutes between two `HH:MM` strings, for asserting the offered slot length. */
+function minutesBetween(from: string, to: string): number {
+	const [fh, fm] = from.split(':').map(Number);
+	const [th, tm] = to.split(':').map(Number);
+	return th * 60 + tm - (fh * 60 + fm);
+}
+
 async function login(page: Page, email: string, password: string) {
 	await page.goto('/login');
 	// FormField renders a <legend>, not a <label for>, so target inputs by name.
@@ -67,13 +74,22 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 
 	const endTime = dialog.locator('select[name="endTime"]');
 	await expect(endTime).toBeEnabled({ timeout: 15000 });
-	// The first option is a half-hour slot, which `minDurationHours: 1` forbids
-	// for a member booking and the teaching terms allow. That difference is the
-	// module's reason for a per-booker-type duration floor.
-	await endTime.selectOption({ index: 0 });
+	// Index 1, not 0: the Select renders a placeholder at 0, and choosing it
+	// leaves `endTime` empty so `step1Valid` never clears and Continue stays
+	// disabled. Index 1 is the *shortest* offered end — which for a teaching
+	// booking is a half-hour, the duration `minDurationHours: 1` forbids a member.
+	// Asserted below rather than assumed, because it is the whole reason the
+	// duration floor is resolved per booker type.
+	const shortest = await endTime.locator('option').nth(1).getAttribute('value');
+	await endTime.selectOption({ index: 1 });
 
 	const phone = dialog.locator('input[name="phone"]');
 	if (await phone.count()) await phone.fill('541-555-0199');
+
+	// 16:00 + 30 minutes. If the picker ever reverts to the member floor this is
+	// the assertion that says so, instead of a booking that quietly got longer.
+	const start = await startTime.inputValue();
+	expect(minutesBetween(start, shortest ?? '')).toBe(30);
 
 	const advance = dialog.getByRole('button', { name: 'Continue' });
 	await expect(advance).toBeEnabled({ timeout: 15000 });

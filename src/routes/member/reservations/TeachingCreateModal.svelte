@@ -49,7 +49,7 @@
 >
 	{#snippet icon()}<IconSchool size={18} />{/snippet}
 	{#snippet form()}
-		<DateTimeStep isSustaining {needsPhone} />
+		<DateTimeStep isSustaining {needsPhone} bookerType="instructor" />
 		<ConfirmStep />
 	{/snippet}
 </Action>
