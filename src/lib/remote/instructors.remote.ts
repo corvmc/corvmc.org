@@ -13,7 +13,6 @@ import {
 } from '$lib/config';
 import {
 	listInstructors,
-	publicContactStatus,
 	type InstructorFilters
 } from '$lib/server/instructor/instructor-directory-service';
 
@@ -203,17 +202,7 @@ export const withdrawApplication = form('unchecked', async () => {
 });
 
 /** The caller's own instructor record, or null. No argument — the subject is the session. */
-export const getMyInstructor = query(async () => {
-	const currentUser = requireUser();
-	return instructorService.getByUserId(currentUser.id);
-});
-
 /** Whether this member's teaching listing would show a contact publicly. */
-export const getMyContactStatus = query(async () => {
-	const currentUser = requireUser();
-	return publicContactStatus(currentUser.id);
-});
-
 // ---------------------------------------------------------------------------
 // The listing
 // ---------------------------------------------------------------------------

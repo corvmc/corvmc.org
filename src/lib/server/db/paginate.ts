@@ -1,4 +1,4 @@
-import type { Pagination } from '$lib/server/db/schema/api';
+import type { Pagination } from '$lib/types/pagination';
 import type { SQLiteSelect } from 'drizzle-orm/sqlite-core';
 
 export interface PaginationInput {

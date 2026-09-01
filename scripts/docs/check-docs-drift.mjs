@@ -1,11 +1,15 @@
 /**
  * Deterministic docs-drift detector. No LLM, no dependencies — runs with bare `node`.
  *
- * Two kinds of signal:
+ * Three kinds of signal:
  *   1. Help-content INTEGRITY (hard errors): frontmatter parses, slugs are unique,
  *      every seeded `static` slug has a backing file, and every internal
  *      `/member/help/<slug>` link resolves. Mirrors scripts/sync-help-articles.ts.
- *   2. Route DRIFT (work signal): routes added/removed vs the committed snapshot
+ *   2. Doc INDEX integrity (hard errors): every doc under docs/ is linked from the
+ *      index that owns it. docs/README.md is the map of this folder and is only a map
+ *      while it names everything; four docs had quietly fallen out of it, which is
+ *      invisible precisely because an unlisted doc is one nobody opens.
+ *   3. Route DRIFT (work signal): routes added/removed vs the committed snapshot
  *      at docs/manual/route-inventory.json (regenerate with `docs:routes`).
  *
  * Usage:
@@ -24,6 +28,7 @@ import { join, relative } from 'path';
 import { listRoutes, readSnapshot, SNAPSHOT_PATH } from './route-inventory.mjs';
 
 const HELP_DIR = 'src/content/help';
+const DOCS_DIR = 'docs';
 const SEED_FILE = 'scripts/seed-dev.ts';
 const REPORT_PATH = 'docs-drift-report.json';
 const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
@@ -124,6 +129,55 @@ function checkHelpContent() {
 	return { errors, slugs };
 }
 
+/**
+ * Every `.md` under `docs/` has to be named by the index that owns it — the nearest `README.md`
+ * at or above it. `docs/README.md` owns `docs/plans/*`, `docs/manual/public/README.md` owns the
+ * public articles beside it, and so on.
+ *
+ * An index is only a map while it names everything, and an unlisted doc is invisible in exactly
+ * the way that keeps it unlisted: nobody opens it, so nobody notices. Four had fallen out of
+ * `docs/README.md` this way.
+ *
+ * Matching on basename rather than full path is deliberate. The indexes link with relative
+ * paths, anchors and URL-encoded spaces, and a filename is a unique enough key here to avoid
+ * teaching this script markdown.
+ */
+function checkDocIndexes() {
+	const errors = [];
+	const files = walk(DOCS_DIR).map((f) => relative('.', f));
+	const readmes = new Set(files.filter((f) => f.endsWith('/README.md')));
+	const bodies = new Map();
+
+	/** The nearest `README.md` at or above `file`, or null if the doc tree has none. */
+	function ownerOf(file) {
+		let dir = file.slice(0, file.lastIndexOf('/'));
+		for (;;) {
+			const candidate = `${dir}/README.md`;
+			if (candidate !== file && readmes.has(candidate)) return candidate;
+			if (!dir.includes('/')) return null;
+			dir = dir.slice(0, dir.lastIndexOf('/'));
+		}
+	}
+
+	for (const file of files) {
+		// A README is indexed by its own parent folder's link, not by name; the folders are few
+		// and linked as directories, so checking them by basename would only produce noise.
+		if (file.endsWith('/README.md')) continue;
+
+		const owner = ownerOf(file);
+		if (!owner) {
+			errors.push(`${file} has no index above it (expected a README.md in docs/)`);
+			continue;
+		}
+		if (!bodies.has(owner)) bodies.set(owner, readFileSync(owner, 'utf-8'));
+		const name = file.slice(file.lastIndexOf('/') + 1);
+		if (!bodies.get(owner).includes(name)) {
+			errors.push(`${file} is not linked from ${owner}`);
+		}
+	}
+	return errors;
+}
+
 function checkRouteDrift() {
 	const current = listRoutes();
 	const snapshot = readSnapshot();
@@ -147,10 +201,11 @@ function main() {
 	const jsonOnly = process.argv.includes('--json');
 
 	const help = checkHelpContent();
+	const docIndexErrors = checkDocIndexes();
 	const routes = checkRouteDrift();
 
 	const report = {
-		integrityErrors: help.errors,
+		integrityErrors: [...help.errors, ...docIndexErrors],
 		routeAdded: routes.added.map((r) => (typeof r === 'string' ? r : r.route)),
 		routeRemoved: routes.removed.map((r) => (typeof r === 'string' ? r : r.route)),
 		snapshotMissing: routes.snapshotMissing,

@@ -35,8 +35,14 @@ ID), so no data-port script is required.
 - [x] Verify: `pnpm run check` (0 errors), targeted specs green, full unit suite
       (636/638; the 2 failures are pre-existing flaky band specs that pass in
       isolation, unrelated to this change).
-- [ ] **User action:** run `drizzle-kit` to generate the migration dropping the
-      `product_config` table. (Per project rule, agent does not write migrations.)
+- [x] Drop the `product_config` table —
+      `migrations/20260901200904_drop_orphan_product_config`. This one could not come from a
+      plain `pnpm db:generate`: deleting the schema file also removed the table from the
+      snapshot, and `generate` diffs the schema against the snapshot, so by the time anyone
+      looked there was nothing left to diff. The table outlived its schema in every database
+      for three months. It took `drizzle-kit generate --custom` to carry the `DROP`, and
+      `scripts/migration-replay.spec.ts` now replays the migrations against the snapshot so a
+      table can no longer go missing from both sides at once.
 
 ## Notes
 

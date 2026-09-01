@@ -25,5 +25,4 @@ export * from './standing';
 export * from './suggestion';
 export * from './volunteer';
 export * from './instructor';
-export * from './api';
 export * from './media';

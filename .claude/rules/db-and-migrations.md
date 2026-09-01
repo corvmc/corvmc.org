@@ -17,9 +17,11 @@ paths:
 
 ## Generating a migration
 
-`pnpm db:generate` runs `drizzle-kit generate` and then `scripts/db/d1-safe-rebuild.mjs`, which
-rewrites unsafe table rebuilds. Details and the reasoning are in
-`docs/development/conventions.md#table-rebuilds-on-d1`.
+`pnpm db:generate` runs `drizzle-kit generate`, then `scripts/db/d1-safe-rebuild.mjs`, which
+rewrites unsafe table rebuilds, then `scripts/db/prune-snapshots.mjs`, which deletes the
+snapshots nothing will read again. Details and the reasoning are in
+`docs/development/conventions.md#table-rebuilds-on-d1` and
+`docs/development/conventions.md#snapshots-are-pruned`.
 
 - **Review the rewritten SQL.** It is longer than drizzle's output and rebuilds tables your change
   never mentioned — those are the cascade children, and that is correct.
@@ -34,6 +36,16 @@ rewrites unsafe table rebuilds. Details and the reasoning are in
 - **`pnpm db:reset`, not `db:migrate:local`, after a merge from `main`.** Migrations are selected by
   name with no timestamp watermark, so an incremental run applies main's older migrations after
   yours and builds an order nothing else has.
+- **Only the newest migration keeps a snapshot**, plus anything not yet on `origin/main`.
+  `generate` reads exactly one snapshot as its diff base, `migrate` reads none, and `check`
+  tolerates an absent parent — so the other 60-odd were 12MB of never-read JSON. Nothing to do
+  by hand; `db:generate` prunes. A migration on `origin/main` that turns up _without_ a snapshot
+  is normal and `db:check-migrations` says how many it skipped.
+- **A table can go missing from the schema _and_ the snapshot at once**, which is invisible to
+  `generate` — that is how `product_config` survived three months in production with nothing
+  declaring it. `scripts/migration-replay.spec.ts` replays the SQL and compares, so this now
+  fails the unit suite. Fixing one needs `drizzle-kit generate --custom` to carry the `DROP`,
+  since `generate` has nothing left to diff.
 - An intentional drop of a table with FK children needs the marker comment
   `-- d1-safe-rebuild: intentional drop \`table\``or`pnpm db:check-migrations` fails.
 - Verify anything touching a table with children: `pnpm db:reset`, then check row

@@ -197,9 +197,6 @@ importers:
       playwright:
         specifier: ^1.62.1
         version: 1.62.1
-      postgres:
-        specifier: ^3.4.9
-        version: 3.4.9
       postmark-cli:
         specifier: ^1.5.0
         version: 1.6.19(@babel/core@7.29.7)(handlebars@4.7.9)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -9980,7 +9977,8 @@ snapshots:
       xtend: 4.0.2
     optional: true
 
-  postgres@3.4.9: {}
+  postgres@3.4.9:
+    optional: true
 
   postmark-cli@1.6.19(@babel/core@7.29.7)(handlebars@4.7.9)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:

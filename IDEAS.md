@@ -16,7 +16,7 @@ A public-facing directory of local music-related businesses and spaces — recor
 
 Manage volunteer sign-ups, shift scheduling, and hour tracking for events and venue operations. Members could browse open volunteer slots, sign up, and log hours. Staff get a dashboard to define needs per event, confirm sign-ups, and track contributions.
 
-**Progress:** Built, both phases, specced in `docs/specs/shipped/volunteering-spec.md` and gated by the `volunteering` flag. Phase 1: staff-defined roles with job descriptions, member hour logging, a staff approval queue, and a date-ranged report by member/role/month. Phase 2 (#235): volunteer shifts with member sign-up, a shift attachable to the show it staffs, certifications and clearances (who is cleared for which role, and when that lapses), post-shift feedback, and three crons. Approved hours are tracking only; they grant no practice-room credits. Still open: per-**production** staffing, which waits on productions existing at all; CSV export; bulk approve.
+**Progress:** Built, both phases, specced in `docs/specs/shipped/volunteering-spec.md`. The `volunteering` flag was retired in #380 — it was confirmed on in production, so the feature simply stays live. Phase 1: staff-defined roles with job descriptions, member hour logging, a staff approval queue, and a date-ranged report by member/role/month. Phase 2 (#235): volunteer shifts with member sign-up, a shift attachable to the show it staffs, certifications and clearances (who is cleared for which role, and when that lapses), post-shift feedback, and three crons. Approved hours are tracking only; they grant no practice-room credits. Still open: per-**production** staffing, which waits on productions existing at all; CSV export; bulk approve.
 
 ### Member Voting / Proposals
 
@@ -495,18 +495,19 @@ Areas where the npm ecosystem is thin — worth revisiting periodically.
 
 ## Feature-Flagged (Built, Not Yet Enabled)
 
-Features behind feature flags in `src/lib/server/feature-flags.ts` — all seven of `ALL_FLAGS`, in declaration order. Toggled via Staff Settings.
+Two flags are left in `src/lib/server/feature-flags.ts` — `ALL_FLAGS` is
+`['bandPremium', 'directMessages']`. Toggled via Staff Settings.
 
-Inventory used to be here as `equipment`; its flag was cut in #286 and the module is now always on.
+Nine of the original eleven are gone, and most of those removals were launches rather than
+cleanups: five flags had no staff toggle at all, so their features had been dark in production
+since the day they shipped. `docs/plans/feature-flag-retirement.md` is the per-flag ledger — what
+each one gated, whether it was on in production, and whether removing it went live or only
+unlinked the nav. Inventory left this list earlier still, as `equipment`, cut in #286.
 
-## Staff Inbox
-
-**Flag:** `staffInbox`
-
-Multi-channel unified inbox for email, SMS, and web messages. Adds an Inbox nav item to the staff sidebar with conversation list and detail views. Inbound webhooks for Postmark (email) and Twilio (SMS) are gated behind the flag.
-
-**Routes:** `/staff/inbox`, `/staff/inbox/[id]`
-**API:** `/api/inbox/postmark`, `/api/inbox/twilio`
+Retired since: `staffInbox` and `groupFiles` (#373, gated nothing), `groups`, `groupEvents` and
+`announcements` (#375, unlinked — routes answer by direct URL only), `helpArticles` (#376,
+unlinked) and `emailMarketing` (#376, stays live), `contentFlags` (#381, launched) and
+`volunteering` (#380, stays live).
 
 ## Band Premium
 
@@ -516,33 +517,6 @@ Premium tier system for bands with page editor, EPK, and public band sites. When
 
 **Routes:** `/band/[slug]/subscription`, `/band/[slug]/page-editor`
 
-## Email Marketing
-
-**Flag:** `emailMarketing`
-
-Audience management, campaigns, and broadcast emails. Adds a Marketing section to the staff sidebar with Campaigns and Audiences views. Includes campaign creation, editing, and a cron-based send pipeline.
-
-**Routes:** `/staff/marketing/campaigns`, `/staff/marketing/campaigns/new`, `/staff/marketing/campaigns/[id]`, `/staff/marketing/campaigns/[id]/edit`, `/staff/marketing/audiences`, `/staff/marketing/audiences/[id]`
-**API:** `/api/cron/send-campaigns`
-
-## Help Articles
-
-**Flag:** `helpArticles`
-
-Knowledge base with staff-managed articles for members. Staff can create and edit articles; members can browse and search them. Adds a Content section to the staff sidebar and a Help section to the member sidebar.
-
-**Routes (staff):** `/staff/help`, `/staff/help/create`, `/staff/help/[id]`
-**Routes (member):** `/member/help`, `/member/help/[slug]`
-**API:** `/api/help`, `/api/help/search`, `/api/help/[slug]`
-
-## Content Flags
-
-**Flag:** `contentFlags`
-
-Member reporting and the staff triage queue. Members report a profile, band, event or suggestion; staff uphold or dismiss, and an upheld report writes `member_standing`. The flag gates the member-facing report button only — the staff queue is always on.
-
-**Routes (staff):** `/staff/flags`, `/staff/flags/[id]`
-
 ## Direct Messages
 
 **Flag:** `directMessages`
@@ -550,13 +524,3 @@ Member reporting and the staff triage queue. Members report a profile, band, eve
 Member↔member messaging with request/accept consent, blocks, silent drops and reporting. Shares the inbox transport with member↔staff portal chat, which is not flagged.
 
 **Routes:** `/member/messages`, `/member/messages/[id]`
-
-## Volunteering
-
-**Flag:** `volunteering`
-
-Volunteer roles, hour logging and approval, shifts and sign-up, certifications and clearances, post-shift feedback. Gates the member surface only; the staff panel always shows it.
-
-**Routes (staff):** `/staff/volunteer`, `/staff/volunteer/{roles,roles/[id],shifts,shifts/[id],certifications,clearances,report}`
-**Routes (member):** `/member/volunteer`, `/member/volunteer/{start,interests,blocked,feedback/[signupId]}`
-**API:** `/api/cron/{shift-reminders,complete-shifts,shift-feedback}`
