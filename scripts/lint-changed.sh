@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
-# Lint only the files changed relative to origin/main — fast feedback on feature branches.
-# The full `pnpm lint` still runs on merge to main to catch errors in untouched files.
+# Lint only the files changed relative to the branch this work merges into — fast
+# feedback on feature branches. The full `pnpm lint` still runs on merge to main to
+# catch errors in untouched files.
 set -euo pipefail
 
-BASE=$(git merge-base origin/main HEAD)
+# `BASE_REF` is the branch this work merges into. CI passes the PR's own base so a
+# phase PR into an integration branch is diffed against that branch, not against
+# `main` — otherwise the changed-file set grows with every phase already merged and
+# "Lint (changed)" eventually goes red on your PR for a file a sibling phase touched.
+# Push, merge_group and local runs keep `origin/main`.
+BASE_REF=${BASE_REF:-origin/main}
+BASE=$(git merge-base "$BASE_REF" HEAD)
 
 # ESLint only understands the code globs.
 CODE=$(git diff --name-only --diff-filter=ACMR "$BASE"...HEAD -- '*.ts' '*.js' '*.svelte')

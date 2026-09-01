@@ -61,16 +61,24 @@ jobs:
     # Everything except a push to `main`, which the full `lint` job above covers. This
     # must not be narrowed back to `pull_request`: "Lint (changed)" is a required check,
     # a job skipped by its `if:` reports success, and the queue would then merge code
-    # nothing linted. `pnpm lint:changed` diffs against `origin/main`, an ancestor of the
-    # queue ref, so the changed-file set is still right there.
+    # nothing linted. On a `merge_group` run `pnpm lint:changed` diffs against
+    # `origin/main`, an ancestor of the queue ref, so the changed-file set is still
+    # right there.
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # A phase PR into an integration branch is diffed against that branch, not
+    # against `main`. `github.base_ref` is the PR's base and is empty for
+    # `merge_group`, whose ref is built from main — so the fallback keeps the
+    # queue's behavior byte-identical to before.
+    env:
+      BASE_BRANCH: ${{ github.base_ref || 'main' }}
+      BASE_REF: origin/${{ github.base_ref || 'main' }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - run: git fetch origin main
+      - run: git fetch origin "$BASE_BRANCH"
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:

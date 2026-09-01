@@ -16,6 +16,10 @@
 					{
 						"type": "command",
 						"command": "bash scripts/claude/block-bare-npm.sh"
+					},
+					{
+						"type": "command",
+						"command": "bash scripts/claude/block-shipped-migration-delete.sh"
 					}
 				]
 			}
