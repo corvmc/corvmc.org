@@ -342,16 +342,16 @@ Authorization: Bearer <CRON_SECRET>
 The eight endpoints and their schedule (cron expressions are UTC — Pacific wall-clock
 times shift an hour with DST):
 
-| Endpoint                                    | Purpose                                                                                | Cron (UTC)     |
-| ------------------------------------------- | -------------------------------------------------------------------------------------- | -------------- |
-| `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                              | `*/15 * * * *` |
-| `/api/cron/cancel-unconfirmed`              | Cancel `scheduled` (never confirmed) reservations at their start time; frees the slot  | `*/15 * * * *` |
-| `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line                | `*/15 * * * *` |
-| `/api/cron/confirmation-reminders`          | Emit confirmation-reminder events for unconfirmed reservations starting within 24h     | `0 16 * * *`   |
-| `/api/cron/reservation-reminders`           | Emit reminder events for confirmed reservations starting within 24h                    | `0 16 * * *`   |
-| `/api/cron/generate-recurring-reservations` | Expand active recurring series into concrete reservation/event rows (2.5-week window)  | `0 16 * * *`   |
-| `/api/cron/lock-access`                     | Provision/clean up U-Tec door lock access for the day's reservations                   | `0 16 * * *`   |
-| `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived (gated by `emailMarketing` flag) | `*/5 * * * *`  |
+| Endpoint                                    | Purpose                                                                               | Cron (UTC)     |
+| ------------------------------------------- | ------------------------------------------------------------------------------------- | -------------- |
+| `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                             | `*/15 * * * *` |
+| `/api/cron/cancel-unconfirmed`              | Cancel `scheduled` (never confirmed) reservations at their start time; frees the slot | `*/15 * * * *` |
+| `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line               | `*/15 * * * *` |
+| `/api/cron/confirmation-reminders`          | Emit confirmation-reminder events for unconfirmed reservations starting within 24h    | `0 16 * * *`   |
+| `/api/cron/reservation-reminders`           | Emit reminder events for confirmed reservations starting within 24h                   | `0 16 * * *`   |
+| `/api/cron/generate-recurring-reservations` | Expand active recurring series into concrete reservation/event rows (2.5-week window) | `0 16 * * *`   |
+| `/api/cron/lock-access`                     | Provision/clean up U-Tec door lock access for the day's reservations                  | `0 16 * * *`   |
+| `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived                                 | `*/5 * * * *`  |
 
 The `0 16 * * *` batch (8am PST / 9am PDT) runs its four jobs sequentially, generation
 first, so freshly generated occurrences are visible to lock provisioning and the reminder
@@ -381,7 +381,7 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 	'reservation.operatingHoursEnd': '22:00',
 	'reservation.hourlyRateCents': 1500,
 	'org.timezone': 'America/Los_Angeles',
-	'feature.emailMarketing': false
+	'feature.volunteering': false
 	// ...
 };
 ```
@@ -390,8 +390,8 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 otherwise the default. **Feature flags** are just `feature.*` config keys, wrapped by
 `src/lib/server/feature-flags.ts` (`isFeatureEnabled`, `getAllFeatureFlags`,
 `requireFeature` — the latter 404s so a disabled feature is indistinguishable from a
-missing page). Current flags: `bandPremium`, `emailMarketing`, `helpArticles`,
-`contentFlags`, `directMessages`, `volunteering` — and the whole mechanism is being
+missing page). Current flags: `bandPremium`, `contentFlags`, `directMessages`,
+`volunteering` — and the whole mechanism is being
 retired in favour of feature branches, see
 [the ledger](../plans/feature-flag-retirement.md).
 

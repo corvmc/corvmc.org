@@ -26,7 +26,12 @@ entries back rather than a flag flip nobody can see.
 
 The three flags with no toggle and no ambiguity — `groups`, `groupEvents`, `announcements` — went
 first, since they were provably off in production and unlinking them changed nothing a member could
-see.
+see. `helpArticles` followed once probing showed it off too.
+
+**A flag whose feature is already live is the other case, and it is not an unlink.** `emailMarketing`
+was on in production, so removing its guards is pure cleanup: the `/subscribe` surfaces, the campaign
+cron and the Postmark webhook keep working exactly as they did, and nothing is unlinked. Unlinking a
+live feature would be a regression, not a deferral.
 
 ### `directMessages` is held
 
@@ -36,42 +41,49 @@ constructs the URL — while `contentFlags`, which gates reporting a message, ma
 That combination is a working messaging system with no reporting path: a moderation decision, not a
 cleanup. It waits for the `contentFlags` value below.
 
-## Step 0 — read the production values (still blocking for the last five)
+## Reading production flag values
 
-Not yet done. A re-auth was attempted Sep 1 and did not take — `wrangler kv namespace list` still
-answers `Authentication error [code: 10000]`, so the stored token is being rejected outright rather
-than the namespace being wrong. `wrangler kv key get` returns **401**; the local OAuth token needs refreshing first,
-which is interactive:
+**Not through wrangler.** `pnpm exec wrangler login` completes and `whoami` works, but KV and D1
+API calls are still rejected with `Authentication error [code: 10000]` while
+`/accounts/<id>/workers/scripts` on the same bearer succeeds — the OAuth grant claims scopes it was
+not issued. Don't diagnose this with `/user/tokens/verify` either: that endpoint is for API tokens
+and calls a perfectly good OAuth bearer invalid. Either read the value from the app, or make a
+scoped API token in the dashboard (Account → Workers KV Storage → Read) and set
+`CLOUDFLARE_API_TOKEN`.
 
-```bash
-pnpm exec wrangler login
-```
+Two ways to read a value without any of that:
 
-Then:
+1. **Staff Settings → Features**, which shows every flag with a `featureMeta` entry.
+2. **Probe production.** `requireFeature` throws `error(404, 'Not found')`, and a handler-thrown
+   404 is distinguishable from an unmatched route: the handler returns
+   `content-type: application/json` with `{"message":"Not found"}`, while an unmatched route
+   returns an HTML page carrying `x-sveltekit-page: true`. That is how `helpArticles` was settled.
+   A guard placed _before_ an auth check gives an even cleaner reading — `/api/help` returns 404
+   when the flag is off and 401 when it is on.
 
-```bash
-for f in staffInbox bandPremium emailMarketing helpArticles contentFlags directMessages volunteering groups groupEvents groupFiles announcements; do printf '%s = ' "$f"; pnpm exec wrangler kv key get "site-config:feature.$f" --namespace-id fc85459046fe47f9bbfae4f343012041 --remote; echo; done
-```
+   The trap is a surface where both branches 404 identically. `/band-site/[slug]/robots.txt` checks
+   the flag and then the tier, and throws the same 404 either way, so it proves nothing.
 
-Staff Settings → Features is not a substitute: it shows six of the eleven.
+A flag with no `featureMeta` entry needs no reading at all: `updateFeatureFlag` is the only write
+path in the codebase, so it is provably at its `DEFAULTS` value of `false`.
 
 ## The ledger
 
 Counts are non-spec call sites in `src/`, taken at `63e5890`.
 
-| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod  | Decision                                             | PR   |
-| ---------------- | ---------------- | ------------------ | ------- | ----- | ---------------------------------------------------- | ---- |
-| `staffInbox`     | 0                | 0                  | yes     | n/a   | ✅ Deleted — gated nothing                           | #373 |
-| `groupFiles`     | 0                | 0                  | **no**  | false | ✅ Deleted — gated nothing                           | #373 |
-| `groups`         | 9                | 0                  | **no**  | false | ✅ **Unlinked** — nav entry removed, routes URL-only | #375 |
-| `groupEvents`    | 1                | 1                  | **no**  | false | ✅ **Unlinked**                                      | #375 |
-| `announcements`  | 3                | 1                  | **no**  | false | ✅ **Unlinked** — band nav row removed               | #375 |
-| `directMessages` | 7                | 0                  | **no**  | false | Unlink — **held**, see below                         |      |
-| `bandPremium`    | 8                | 1                  | yes     | ?     | blocked on prod read                                 |      |
-| `emailMarketing` | 6                | 2                  | yes     | ?     | blocked on prod read                                 |      |
-| `helpArticles`   | 5                | 0                  | yes     | ?     | blocked on prod read                                 |      |
-| `contentFlags`   | 4                | 1                  | yes     | ?     | blocked on prod read                                 |      |
-| `volunteering`   | 19               | 0                  | yes     | ?     | blocked on prod read                                 |      |
+| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod               | Decision                                             | PR      |
+| ---------------- | ---------------- | ------------------ | ------- | ------------------ | ---------------------------------------------------- | ------- |
+| `staffInbox`     | 0                | 0                  | yes     | n/a                | ✅ Deleted — gated nothing                           | #373    |
+| `groupFiles`     | 0                | 0                  | **no**  | false              | ✅ Deleted — gated nothing                           | #373    |
+| `groups`         | 9                | 0                  | **no**  | false              | ✅ **Unlinked** — nav entry removed, routes URL-only | #375    |
+| `groupEvents`    | 1                | 1                  | **no**  | false              | ✅ **Unlinked**                                      | #375    |
+| `announcements`  | 3                | 1                  | **no**  | false              | ✅ **Unlinked** — band nav row removed               | #375    |
+| `helpArticles`   | 5                | 0                  | yes     | **false** (probed) | ✅ **Unlinked** — footer row removed                 | this PR |
+| `emailMarketing` | 6                | 2                  | yes     | **true** (probed)  | ✅ Flag deleted, feature **stays live**              | this PR |
+| `directMessages` | 7                | 0                  | **no**  | false              | Unlink — **held** on `contentFlags`                  |         |
+| `bandPremium`    | 8                | 1                  | yes     | ?                  | needs the staff page                                 |         |
+| `contentFlags`   | 4                | 1                  | yes     | ?                  | needs the staff page                                 |         |
+| `volunteering`   | 19               | 0                  | yes     | ?                  | needs the staff page                                 |         |
 
 ### The two that gate nothing
 

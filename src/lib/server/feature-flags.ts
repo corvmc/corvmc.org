@@ -1,18 +1,10 @@
 import { error } from '@sveltejs/kit';
 import { config, getConfigsByPrefix } from './site-config/site-config-service';
 
-export type FeatureFlag =
-	| 'bandPremium'
-	| 'emailMarketing'
-	| 'helpArticles'
-	| 'contentFlags'
-	| 'directMessages'
-	| 'volunteering';
+export type FeatureFlag = 'bandPremium' | 'contentFlags' | 'directMessages' | 'volunteering';
 
 export const ALL_FLAGS: FeatureFlag[] = [
 	'bandPremium',
-	'emailMarketing',
-	'helpArticles',
 	'contentFlags',
 	'directMessages',
 	'volunteering'

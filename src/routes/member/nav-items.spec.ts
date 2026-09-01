@@ -10,13 +10,13 @@ import {
 } from './nav-items';
 
 /**
- * Volunteering and Help are feature-flagged, and they used to be nested `{#if}`s
- * in the layout — the shape `band/[slug]/nav-items.ts` records as having been
+ * Volunteering is feature-flagged, and these rows used to be nested `{#if}`s in
+ * the layout — the shape `band/[slug]/nav-items.ts` records as having been
  * silently wrong twice. This pins every combination.
  */
 
 const ALL_ON: MemberNavInput = {
-	features: { volunteering: true, helpArticles: true },
+	features: { volunteering: true },
 	hasLoanableEquipment: true
 };
 const ALL_OFF: MemberNavInput = { features: {} };
@@ -63,8 +63,14 @@ describe('flag gating', () => {
 		expect(keysOf(ALL_OFF)).not.toContain('volunteer');
 	});
 
-	it('gates Help on the helpArticles flag', () => {
-		expect(keysOf({ features: { helpArticles: true } })).toContain('help');
+	/**
+	 * Help had a footer row gated on a `helpArticles` flag. The flag is retired
+	 * and the help centre is unlinked rather than launched, so no input produces
+	 * the row — relaunching means putting it back, and this is what fails first
+	 * when someone does.
+	 */
+	it('keeps Help out of the nav entirely while the help centre is unlinked', () => {
+		expect(keysOf(ALL_ON)).not.toContain('help');
 		expect(keysOf(ALL_OFF)).not.toContain('help');
 	});
 
@@ -73,17 +79,15 @@ describe('flag gating', () => {
 	});
 
 	it('never lets a flag disturb the bottom cluster order', () => {
-		expect(memberNavFooter(ALL_OFF).map((i) => i.key)).toEqual([
-			'profile',
-			'account',
-			'membership'
-		]);
-		expect(memberNavFooter(ALL_ON).map((i) => i.key)).toEqual([
-			'profile',
-			'account',
-			'help',
-			'membership'
-		]);
+		// Identical for both inputs now: Help was the only footer row a flag could
+		// add, and it is unlinked.
+		for (const input of [ALL_OFF, ALL_ON]) {
+			expect(memberNavFooter(input).map((i) => i.key)).toEqual([
+				'profile',
+				'account',
+				'membership'
+			]);
+		}
 	});
 
 	it('keeps the two zones disjoint', () => {
@@ -110,8 +114,7 @@ describe('activeMemberNavKey', () => {
 		['/member/equipment/loans', 'equipment-loans'],
 		// A scanned unit lights the parent: it is gear, and there is no row of its
 		// own for it to light.
-		['/member/equipment/assets/abc', 'equipment'],
-		['/member/help/some-article', 'help']
+		['/member/equipment/assets/abc', 'equipment']
 	];
 
 	it.each(cases)('lights one row for %s', (path, key) => {
@@ -164,7 +167,13 @@ describe('route coverage', () => {
 		// for two indexes, which is the separation the routes draw.
 		'/member/bands',
 		'/member/groups',
-		'/member/groups/[slug]'
+		'/member/groups/[slug]',
+		// Unlinked rather than launched: the `helpArticles` flag was off in
+		// production and was retired without turning the help centre on, so the
+		// footer row went with it. Relaunching restores the row and these two
+		// lines come out. See docs/plans/feature-flag-retirement.md.
+		'/member/help',
+		'/member/help/[slug]'
 	]);
 
 	it('leaves no member page unmatched', () => {

@@ -2,7 +2,6 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { suppressByEmail } from '$lib/server/marketing/subscriber-service';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
 
 // ---------------------------------------------------------------------------
 // Postmark event webhook (bounces + spam complaints)
@@ -32,10 +31,6 @@ interface PostmarkEventPayload {
 const PERMANENT_BOUNCE_TYPES = new Set(['HardBounce', 'BadEmailAddress', 'Blocked']);
 
 export const POST: RequestHandler = async ({ request }) => {
-	if (!(await isFeatureEnabled('emailMarketing'))) {
-		return json({ ok: true, skipped: 'feature disabled' });
-	}
-
 	const token = request.headers.get('x-postmark-token');
 	const expectedToken = env.POSTMARK_WEBHOOK_TOKEN;
 	if (!expectedToken || token !== expectedToken) {

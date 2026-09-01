@@ -624,7 +624,7 @@ Staff compose email campaigns, pick audiences (rule-based or manual lists of sub
 and either send immediately or schedule. A frequent cron sweeps for due campaigns and sends
 them through Postmark's **broadcast** message stream (separate from transactional mail, so
 newsletter complaints can't hurt receipt deliverability). Every recipient gets a signed
-unsubscribe link. Behind the `emailMarketing` feature flag.
+unsubscribe link.
 
 ### Code path
 
@@ -634,8 +634,7 @@ unsubscribe link. Behind the `emailMarketing` feature flag.
   (`scheduledFor`, `sentAt`) → `draft | scheduled | sending | sent`.
 - **Audiences:** `audience-service.ts` + `subscriber-service.ts`;
   `getRecipientsForCampaign()` resolves and dedupes recipients at send time.
-- **The send:** cron `send-campaigns` (`src/routes/api/cron/send-campaigns/+server.ts`,
-  gated by `requireFeature('emailMarketing')` semantics via the flag check) →
+- **The send:** cron `send-campaigns` (`src/routes/api/cron/send-campaigns/+server.ts`) →
   `processDueCampaigns()` → `executeSend(campaignId)` — renders per-recipient HTML with the
   layout compiled from MJML at build time (`scripts/compile-email-layouts.ts` →
   `src/lib/server/generated/`) and sends via the Postmark client
@@ -645,8 +644,8 @@ unsubscribe link. Behind the `emailMarketing` feature flag.
 
 ### Where it breaks
 
-- **Scheduled campaign never sent** → the cron isn't running or the `emailMarketing` flag
-  is off. `processDueCampaigns()` picks up anything with `scheduledFor <= now` and
+- **Scheduled campaign never sent** → the cron isn't running.
+  `processDueCampaigns()` picks up anything with `scheduledFor <= now` and
   `sentAt IS NULL`, so a late cron still sends (late).
 - **Broken layout** → the MJML compile happens at build; check the build log and the
   generated file, not the runtime.

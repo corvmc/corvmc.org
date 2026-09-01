@@ -61,8 +61,6 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// Flags gate the member, band and public surfaces only — the staff panel
 	// always shows every feature — so they all start off.
 	'feature.bandPremium': false,
-	'feature.emailMarketing': false,
-	'feature.helpArticles': false,
 	'feature.contentFlags': false,
 	'feature.directMessages': false,
 	// A flag missing from here makes `config()` *throw* `Unknown site config key`
