@@ -1,6 +1,7 @@
 import { addWeeks } from 'date-fns';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
-import { getReservationConfig } from './config';
+import type { BookerType } from '$lib/server/db/schema/reservation';
+import { getReservationConfig, termsFor } from './config';
 import { getPartsInTz } from './timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -152,10 +153,28 @@ export function getOccurrences(rruleString: string, after: Date, before: Date): 
 
 /**
  * Compute the generation window end from a reference time.
+ *
+ * Per booker type, not global. A teaching series is materialised further ahead
+ * than a member one, and that is not a courtesy — it is what stops a teacher
+ * losing the slot they teach in every week.
+ *
+ * `checkEventAndClosureConflict` treats only `bookerType: 'event'` as a hard
+ * block, so a teaching series is Tier 2 and *can* be waitlisted behind a
+ * member's one-off booking. The mitigation needs no new machinery: a teaching
+ * horizon longer than any member can book into means the series already exists
+ * before a member can reach that week. `updateReservationSettings` refuses to
+ * save config that breaks the inequality.
+ *
+ * Defaults to `'user'` so a caller that has no booker in hand keeps the member
+ * window it had before this parameter existed.
  */
-export async function generationWindowEnd(from: Date = new Date()): Promise<Date> {
+export async function generationWindowEnd(
+	from: Date = new Date(),
+	bookerType: BookerType = 'user'
+): Promise<Date> {
 	const config = await getReservationConfig();
-	return new Date(from.getTime() + config.maxAdvanceDaysRecurring * 24 * 60 * 60 * 1000);
+	const { maxAdvanceDaysRecurring } = termsFor(bookerType, config);
+	return new Date(from.getTime() + maxAdvanceDaysRecurring * 24 * 60 * 60 * 1000);
 }
 
 /**
