@@ -1,4 +1,14 @@
 import { getJson, putJson, listKeys } from '$lib/server/kv';
+import { DomainError } from '$lib/server/domain-error';
+
+/** The caller asked for a config key that is not in the registry. */
+export class UnknownSiteConfigKeyError extends DomainError {
+	readonly httpStatus = 400;
+
+	constructor(key: string) {
+		super(`Unknown site config key: ${key}`);
+	}
+}
 
 const KV_PREFIX = 'site-config:';
 
@@ -76,7 +86,7 @@ export async function config<T extends string | number | boolean = string | numb
 	const fallback = DEFAULTS[key];
 	if (fallback !== undefined) return fallback as T;
 
-	throw new Error(`Unknown site config key: ${key}`);
+	throw new UnknownSiteConfigKeyError(key);
 }
 
 /** @deprecated Use config() instead */
