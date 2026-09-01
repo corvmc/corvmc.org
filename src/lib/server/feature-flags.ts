@@ -2,7 +2,6 @@ import { error } from '@sveltejs/kit';
 import { config, getConfigsByPrefix } from './site-config/site-config-service';
 
 export type FeatureFlag =
-	| 'staffInbox'
 	| 'bandPremium'
 	| 'emailMarketing'
 	| 'helpArticles'
@@ -10,16 +9,14 @@ export type FeatureFlag =
 	| 'directMessages'
 	| 'volunteering'
 	// The groups module. `groups` gates clubs and committees — the staff panel,
-	// the member page and the public group directory. The other three cover bands
-	// as well, because both capabilities key off group membership and a band is a
+	// the member page and the public group directory. The other two cover bands as
+	// well, because both capabilities key off group membership and a band is a
 	// group. See docs/specs/groups-spec.md.
 	| 'groups'
 	| 'groupEvents'
-	| 'groupFiles'
 	| 'announcements';
 
 export const ALL_FLAGS: FeatureFlag[] = [
-	'staffInbox',
 	'bandPremium',
 	'emailMarketing',
 	'helpArticles',
@@ -28,7 +25,6 @@ export const ALL_FLAGS: FeatureFlag[] = [
 	'volunteering',
 	'groups',
 	'groupEvents',
-	'groupFiles',
 	'announcements'
 ];
 

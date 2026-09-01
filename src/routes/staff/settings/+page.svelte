@@ -110,10 +110,6 @@
 	let statsResult = $state<CommunityStats | null>(null);
 
 	const featureMeta: Record<string, { label: string; description: string }> = {
-		staffInbox: {
-			label: 'Staff Inbox',
-			description: 'Multi-channel unified inbox for email, SMS, and web messages'
-		},
 		bandPremium: {
 			label: 'Band Premium',
 			description: 'Premium tier with page editor, EPK, and public band sites'

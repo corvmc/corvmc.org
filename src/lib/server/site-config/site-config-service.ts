@@ -50,7 +50,6 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 
 	// Flags gate the member, band and public surfaces only — the staff panel
 	// always shows every feature — so they all start off.
-	'feature.staffInbox': false,
 	'feature.bandPremium': false,
 	'feature.emailMarketing': false,
 	'feature.helpArticles': false,
@@ -62,7 +61,6 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// is one step and `feature-flags.spec.ts` asserts the set both ways.
 	'feature.groups': false,
 	'feature.groupEvents': false,
-	'feature.groupFiles': false,
 	'feature.announcements': false
 };
 
