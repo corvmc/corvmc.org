@@ -45,9 +45,21 @@
 				Awaited here rather than fetched from `/api/equipment` — that route
 				does not exist, so the select silently stayed empty and every
 				staff-created loan quietly became a free-form request.
+
+				That fix was only half of it: these `<option>`s are children, and
+				`FormField` used to render children *instead of* the select, so they
+				came out as bare text with no control around them and the field
+				submitted nothing at all. The branch order is fixed; the placeholder
+				moves to the prop that owns it, and `value=""` selects it, so the
+				closed select reads as a prompt rather than a blank box.
 			-->
-				<Field field={fields.itemId} type="select" label="Equipment">
-					<option value="">-- Select equipment --</option>
+				<Field
+					field={fields.itemId}
+					type="select"
+					label="Equipment"
+					placeholder="-- Select equipment --"
+					value=""
+				>
 					{#each await getAvailableItems() as eq (eq.id)}
 						<option value={eq.id}>{eq.name}</option>
 					{/each}
