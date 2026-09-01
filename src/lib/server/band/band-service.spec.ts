@@ -148,8 +148,6 @@ import {
 	transferOwnership,
 	leaveBand,
 	getUserRole,
-	setBandAvatar,
-	clearBandAvatar,
 	setTier,
 	BandTierManagedByStripeError,
 	BandMemberExistsError,
@@ -166,8 +164,8 @@ import {
 import { db } from '$lib/server/db';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { deleteObject, uploadFile } from '$lib/server/storage';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
+import { deleteObject } from '$lib/server/storage';
+import { detachSlot } from '$lib/server/media/media-service';
 
 // Walk a drizzle SQL condition (real `and`/`eq` operators — only `db` is
 // mocked) and collect the column names it references, so tests can assert a
@@ -784,46 +782,6 @@ describe('BandService', () => {
 		});
 	});
 
-	describe('setBandAvatar', () => {
-		it('uploads the file and returns a cache-busting, extension-mapped key', async () => {
-			selectResult = [{ avatarKey: null }];
-
-			const key = await setBandAvatar('band-1', new ArrayBuffer(8), 'image/png');
-
-			// The per-upload token is what stops a replaced avatar reusing its URL.
-			expect(key).toMatch(/^bands\/avatars\/band-1-[0-9a-f]{8}\.png$/);
-			expect(uploadFile).toHaveBeenCalledWith(expect.any(ArrayBuffer), key, 'image/png');
-		});
-
-		it('records the new object and releases the old, deleting nothing', async () => {
-			selectResult = [{ avatarKey: 'bands/avatars/band-1.jpg' }];
-
-			await setBandAvatar('band-1', new ArrayBuffer(8), 'image/webp');
-
-			expect(replaceSlot).toHaveBeenCalledWith(
-				expect.objectContaining({
-					attachableType: 'group',
-					attachableId: 'band-1',
-					slot: 'avatar'
-				})
-			);
-			expect(deleteObject).not.toHaveBeenCalled();
-			expect(uploadFile).toHaveBeenCalledWith(
-				expect.any(ArrayBuffer),
-				expect.stringMatching(/^bands\/avatars\/band-1-[0-9a-f]{8}\.webp$/),
-				'image/webp'
-			);
-		});
-
-		it('throws when the band does not exist', async () => {
-			selectResult = [];
-
-			await expect(setBandAvatar('nope', new ArrayBuffer(8), 'image/png')).rejects.toThrow(
-				BandNotFoundError
-			);
-		});
-	});
-
 	describe('setTier', () => {
 		it('comps premium on a band with no Stripe subscription', async () => {
 			selectResult = [{ ...mockBand, tier: 'free', subscription: null }];
@@ -851,17 +809,6 @@ describe('BandService', () => {
 			selectResult = [];
 
 			await expect(setTier('nope', 'premium')).rejects.toThrow(BandNotFoundError);
-		});
-	});
-
-	describe('clearBandAvatar', () => {
-		it('detaches the slot rather than deleting the object', async () => {
-			selectResult = [{ avatarKey: 'bands/avatars/band-1.png' }];
-
-			await clearBandAvatar('band-1');
-
-			expect(detachSlot).toHaveBeenCalledWith('group', 'band-1', 'avatar');
-			expect(deleteObject).not.toHaveBeenCalled();
 		});
 	});
 });

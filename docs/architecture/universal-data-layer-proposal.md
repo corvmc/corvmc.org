@@ -1,5 +1,17 @@
 # Proposal: Universal Data Layer for Web + Kiosk
 
+> **📦 Not adopted — kept for the reasoning.** The problem this proposal names is real and was
+> solved a different way: SvelteKit remote functions (`query()`/`form()` in `src/lib/remote/`) give
+> one definition that serves SSR and client navigation alike, without an API layer or a second set
+> of load functions to keep in step. The convention that came out of it is in
+> [conventions.md](../development/conventions.md) and
+> [overview.md](overview.md); the project rule is now that remote functions are the security
+> boundary and `+page.ts` loaders and API routes are not how data is fetched.
+>
+> The response types this document specifies were written — `src/lib/server/db/schema/api.ts`,
+> 297 lines of them — and never imported by anything. They were deleted three months later. Read
+> below for why an API layer looked necessary at the time; the kiosk it was for has not been built.
+
 ## Context
 
 CorvMC is 7 days old with 40 server load functions, 13 form actions, and a clean service layer in `src/lib/server/<domain>/`. A kiosk app (Capacitor + Stripe Terminal) is already planned. Right now every page fetches data via direct Drizzle calls in `+page.server.ts`, which locks the app to SSR-only. By introducing an API layer and switching load functions to `fetch()`, the same Svelte templates can serve both an SSR web app and an SPA kiosk app with zero branching.

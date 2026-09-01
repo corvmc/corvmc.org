@@ -56,9 +56,8 @@ import { tableOrder, deleteOrder } from '../scripts/d1-table-order.mjs';
  * read it was deleted once D1 became canonical.
  *
  * Tables the list names but the database doesn't have are skipped rather than
- * thrown on: `product_config` is in the list because it was dropped from the
- * schema without a `DROP TABLE`, and a database built from an older migration
- * set is a normal thing to find here.
+ * thrown on: a database built from an older migration set is a normal thing to
+ * find here.
  *
  * Foreign keys go off for the loop. The order is already correct — belt and
  * braces so a cleanup can never half-succeed and leave the next run seeding

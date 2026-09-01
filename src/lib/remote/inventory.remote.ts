@@ -164,11 +164,6 @@ export const getAvailableAssets = query(z.string(), async (itemId) => {
 	return listAvailableAssets(itemId);
 });
 
-export const getLowStock = query(z.void(), async () => {
-	await requireStaff();
-	return listLowStock();
-});
-
 const staffItemFilters = z.object({
 	search: z.string().optional(),
 	categoryId: z.string().optional(),

@@ -48,7 +48,6 @@ export const tableOrder = [
 	// independents (no FKs)
 	'closure',
 	'inbox_channel_config',
-	'product_config',
 	'verification',
 	// leaves
 	'model_has_permissions',
@@ -118,9 +117,9 @@ export const tableOrder = [
  * `UNIQUE constraint failed: media.key` — an error that names the table but not
  * the cause. Deriving both callers from one list is what stops that recurring.
  *
- * Skipping absent tables rather than throwing is deliberate: `product_config`
- * is in the list because it was dropped from the schema without a `DROP TABLE`,
- * and a database built from an older migration set is a normal thing to meet.
+ * Skipping absent tables rather than throwing is deliberate: a database built
+ * from an older migration set is a normal thing to meet, and a table this list
+ * names may simply not exist there yet.
  *
  * @param {Set<string>} present table names the database actually has.
  * @returns {string[]} tables to delete, children first.

@@ -275,11 +275,21 @@ function main() {
 	const unsafeRebuilds = [];
 	const unsafeDrops = [];
 	const commentOnly = [];
+	let pruned = 0;
 	for (const dir of migrationDirs()) {
 		if (GRANDFATHERED.has(dir)) continue;
 		const sqlPath = join(MIGRATIONS_DIR, dir, 'migration.sql');
 		const snapPath = join(MIGRATIONS_DIR, dir, 'snapshot.json');
-		if (!existsSync(sqlPath) || !existsSync(snapPath)) continue;
+		if (!existsSync(sqlPath)) continue;
+		// No snapshot means `scripts/db/prune-snapshots.mjs` has been here, which it only does
+		// to a migration that is already on `origin/main`. That SQL is history: it has been
+		// applied, editing it would desynchronise the migration record, and there is nothing
+		// this script could usefully do to it. Counted rather than passed over in silence, so
+		// that a *new* migration arriving without a snapshot still reads as wrong.
+		if (!existsSync(snapPath)) {
+			pruned++;
+			continue;
+		}
 
 		const sql = readFileSync(sqlPath, 'utf8');
 		const snapshot = JSON.parse(readFileSync(snapPath, 'utf8'));
@@ -311,6 +321,12 @@ function main() {
 		const kids = childGraph(readSnapshot(snapshot));
 		const drops = findUnsafeDrops(finalSql, kids, findRebuiltTables(finalSql));
 		if (drops.length) unsafeDrops.push({ dir, drops });
+	}
+
+	if (pruned) {
+		console.log(
+			`skipped ${pruned} applied migration(s) whose snapshot has been pruned — their SQL is history.`
+		);
 	}
 
 	if (unsafeRebuilds.length) {

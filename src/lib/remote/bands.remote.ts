@@ -35,12 +35,9 @@ import {
 	deactivate,
 	reactivate,
 	setTier,
-	setBandAvatar,
-	clearBandAvatar,
 	BandMemberExistsError
 } from '$lib/server/band/band-service';
 import { bandTiers } from '$lib/server/db/schema/band-site';
-import { getBandLayout } from '$lib/remote/layout.remote';
 import {
 	createInvite as createEmailInviteService,
 	listForGroup as listEmailInvitesForGroup,
@@ -707,24 +704,6 @@ export const revokeEmailInvite = form(
 // ===========================================================================
 // Forms — Band avatar
 // ===========================================================================
-
-export const uploadBandAvatar = form(
-	z.object({ bandId: bandIdField, file: z.instanceof(File) }),
-	async (data) => {
-		const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
-		await setBandAvatar(band.id, await data.file.arrayBuffer(), data.file.type);
-		void getBandLayout(band.slug).refresh();
-		return { success: true };
-	}
-);
-
-// Carries the ref and nothing else — see `deleteBand` above.
-export const removeBandAvatar = form(z.object({ bandId: bandIdField }), async (data) => {
-	const { group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
-	await clearBandAvatar(band.id);
-	void getBandLayout(band.slug).refresh();
-	return { success: true };
-});
 
 // ---------------------------------------------------------------------------
 // Staff user record (/staff/users/[id])

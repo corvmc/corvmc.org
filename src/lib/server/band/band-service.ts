@@ -36,9 +36,7 @@ import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/s
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { uploadFile } from '$lib/server/storage';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
-import { mediaKey } from '$lib/server/storage-keys';
+import { detachSlot } from '$lib/server/media/media-service';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { captureException } from '$lib/server/sentry';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -1077,54 +1075,4 @@ export async function getUserRole(bandId: string, userId: string): Promise<Group
 		.limit(1);
 
 	return (row?.role as GroupRole) ?? null;
-}
-
-// ---------------------------------------------------------------------------
-// Avatar
-// ---------------------------------------------------------------------------
-
-/** Upload a band avatar to storage and persist its key. */
-export async function setBandAvatar(bandId: string, buffer: ArrayBuffer, contentType: string) {
-	const [row] = await db
-		.select({ avatarKey: group.avatarKey })
-		.from(group)
-		.where(eq(group.id, bandId))
-		.limit(1);
-	if (!row) throw new BandNotFoundError();
-
-	const key = mediaKey('bands/avatars', bandId, contentType);
-	await uploadFile(buffer, key, contentType);
-
-	// Records the new object and releases the old one. The previous avatar is
-	// detached rather than deleted — see `replaceSlot`.
-	await replaceSlot({
-		attachableType: 'group',
-		attachableId: bandId,
-		slot: 'avatar',
-		key,
-		contentType,
-		byteSize: buffer.byteLength
-	});
-
-	// `group.avatarKey` stays as the read path: it is selected inline by dozens
-	// of existing queries, and one writer keeps it in step with the slot above.
-	await db.update(group).set({ avatarKey: key, updatedAt: new Date() }).where(eq(group.id, bandId));
-	return key;
-}
-
-/** Remove a band's avatar from storage and clear its key. */
-export async function clearBandAvatar(bandId: string) {
-	const [row] = await db
-		.select({ avatarKey: group.avatarKey })
-		.from(group)
-		.where(eq(group.id, bandId))
-		.limit(1);
-	if (!row) throw new BandNotFoundError();
-
-	await detachSlot('group', bandId, 'avatar');
-
-	await db
-		.update(group)
-		.set({ avatarKey: null, updatedAt: new Date() })
-		.where(eq(group.id, bandId));
 }
