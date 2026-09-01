@@ -16,6 +16,7 @@ import {
 	countThreadsByStatus,
 	listThreadsByContactEmail
 } from '$lib/server/inbox/thread-service';
+import type { ListThreadsFilters } from '$lib/server/inbox/thread-service';
 import {
 	getAllChannelConfigs,
 	getEnabledChannels,
@@ -34,7 +35,8 @@ import {
 } from '$lib/server/inbox/portal-service';
 import { submitContactFormSchema } from '$lib/server/db/schema/inbox';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE, inboxChannels, inboxThreadStatuses } from '$lib/config';
+import { DEFAULT_TIMEZONE, inboxChannels, inboxThreadStatuses, inboxViews } from '$lib/config';
+import type { InboxView } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Public forms
@@ -53,12 +55,31 @@ export const submitContactForm = form(submitContactFormSchema, async (data, issu
 // Staff queries
 // ---------------------------------------------------------------------------
 
+/**
+ * The five tabs, and what each one is in database terms.
+ *
+ * Open and Awaiting reply are both `status = 'open'`; the awaiting marker is
+ * what separates them, and Open is the half that needs a human — the same set
+ * the staff nav badge counts. The two views that nobody is waiting on keep the
+ * old newest-first order.
+ */
+const VIEWS = {
+	open: { status: 'open', awaitingReply: false, sort: 'waiting' },
+	awaiting: { status: 'open', awaitingReply: true, sort: 'waiting' },
+	snoozed: { status: 'snoozed', sort: 'waiting' },
+	resolved: { status: 'resolved', sort: 'recent' },
+	all: { sort: 'recent' }
+} as const satisfies Record<
+	InboxView,
+	Omit<ListThreadsFilters, 'channel' | 'assignedToUserId' | 'search'>
+>;
+
 const threadFiltersSchema = z.object({
-	status: z.enum(inboxThreadStatuses).optional(),
+	view: z.enum(inboxViews).optional(),
 	channel: z.enum(inboxChannels).optional(),
 	/** A staff user id, or the sentinels `mine` / `unassigned`. */
 	assigned: z.string().optional(),
-	/** Who the conversation is waiting on: `yes` them, `no` us. */
+	/** Narrows *within* a view. The view already sets this on Open and Awaiting. */
 	awaiting: z.enum(['yes', 'no']).optional(),
 	search: z.string().optional(),
 	page: z.coerce.number().int().min(1).optional()
@@ -78,12 +99,22 @@ export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
 					? staff.id
 					: filters.assigned;
 
+	const view = VIEWS[filters.view ?? 'open'];
+
 	return listThreads(
 		{
-			status: filters.status,
+			...view,
 			channel: filters.channel,
 			assignedToUserId,
-			awaitingReply: filters.awaiting === undefined ? undefined : filters.awaiting === 'yes',
+			// An explicit `awaiting` narrows the view rather than fighting it: on
+			// Open and Awaiting the view has already decided, and the filter panel
+			// only offers this on the views that have not.
+			awaitingReply:
+				filters.awaiting === undefined
+					? 'awaitingReply' in view
+						? view.awaitingReply
+						: undefined
+					: filters.awaiting === 'yes',
 			search: filters.search
 		},
 		{ page: filters.page ?? 1, pageSize: 25 }

@@ -23,6 +23,8 @@
 		IconClockPause,
 		IconInboxOff,
 		IconAlarmSnooze,
+		IconAlarmOff,
+		IconMailQuestion,
 		IconCrown,
 		IconShield,
 		IconUser,
@@ -64,7 +66,9 @@
 		...suggestionStatusLabels,
 		// "Pending review" reads as a state; the humanised enum ("Pending_review")
 		// does not.
-		pending_review: 'In review'
+		pending_review: 'In review',
+		// Same problem, and "Snooze expired" is the phrase the queue uses.
+		snooze_expired: 'Snooze expired'
 	};
 
 	export const badgeClass: Record<string, string> = {
@@ -87,6 +91,13 @@
 		resolved: 'badge-success',
 		dismissed: 'badge-ghost',
 		snoozed: 'badge-ghost',
+		// Why an open thread is in the queue — openReason() in
+		// components/inbox/thread-status.ts. All three are ghost: the row is
+		// already in a view that means "needs you", so the chip is telling you
+		// which kind of work it is, not raising an alarm about it.
+		unanswered: 'badge-ghost',
+		replied: 'badge-ghost',
+		snooze_expired: 'badge-ghost',
 		// Band roles
 		owner: 'badge-warning',
 		admin: 'badge-info',
@@ -178,6 +189,10 @@
 		resolved: { icon: IconInboxOff, color: 'text-success' },
 		dismissed: { icon: IconCircleX, color: 'text-base-content' },
 		snoozed: { icon: IconAlarmSnooze, color: 'text-base-content' },
+		// Open-queue reasons, also derived — openReason() in the same file.
+		unanswered: { icon: IconMailQuestion, color: 'text-base-content' },
+		replied: { icon: IconArrowBackUp, color: 'text-base-content' },
+		snooze_expired: { icon: IconAlarmOff, color: 'text-base-content' },
 
 		// Band roles
 		owner: { icon: IconCrown, color: 'text-warning' },

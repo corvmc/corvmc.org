@@ -1,10 +1,10 @@
 {
+  "id": "b13b133f-e66f-420a-bd20-858037789c2c",
+  "prevIds": [
+    "b2242035-4ed4-4930-b1a7-0e6da6d265c1"
+  ],
   "version": "7",
   "dialect": "sqlite",
-  "id": "1ee115a4-ca95-488e-8f04-97e0b1470e40",
-  "prevIds": [
-    "17d4aa70-3058-4c2f-8b26-f05e12f94545"
-  ],
   "ddl": [
     {
       "name": "account",
@@ -5535,6 +5535,16 @@
       "default": null,
       "generated": null,
       "name": "last_message_at",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_outbound_at",
       "entityType": "columns",
       "table": "inbox_thread"
     },

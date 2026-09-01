@@ -43,6 +43,9 @@ const derivedStatuses = {
 	// components/inbox/thread-status.ts `threadDisplayStatus` — an open thread
 	// carrying `awaitingReplySince`, never a stored status value
 	inboxDerived: ['awaiting_reply'],
+	// components/inbox/thread-status.ts `openReason` — why an open thread is in
+	// the queue. Derived from the snooze date and lastOutboundAt, never stored.
+	inboxOpenReason: ['unanswered', 'replied', 'snooze_expired'],
 
 	// member-certification-service.ts `certificationState` — the state of one
 	// held clearance, shown on the staff user record and the clearances list

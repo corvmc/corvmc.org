@@ -80,14 +80,18 @@ describe('wakeSnoozedThreads', () => {
 		expect(sql).toContain('"snoozed_until" <= ?');
 	});
 
-	it('reopens due threads and clears the snooze date', async () => {
+	// The date is deliberately left behind. An open thread carrying a snooze date
+	// in the past is how `openReason()` recognises one that came back on its own
+	// — clearing it here would make "Snooze expired" indistinguishable from
+	// "never answered", which are different reasons to be looking at a thread.
+	it('reopens due threads without erasing the snooze date', async () => {
 		const now = new Date('2026-08-03T15:00:00Z');
 		selectRows = [{ id: 'a' }, { id: 'b' }];
 
 		const result = await wakeSnoozedThreads(now);
 
 		expect(result).toEqual({ woken: 2 });
-		expect(calls.updateSet[0]).toEqual({ status: 'open', snoozedUntil: null, updatedAt: now });
+		expect(calls.updateSet[0]).toEqual({ status: 'open', updatedAt: now });
 	});
 
 	// A snooze with no date was set by hand and has no due time; sweeping those
@@ -127,15 +131,41 @@ describe('getUnresolvedCount', () => {
 });
 
 describe('countThreadsByStatus', () => {
-	it('maps grouped rows onto every status and totals them', async () => {
+	it('maps grouped rows onto every view and totals them', async () => {
 		groupedRows = [
-			{ status: 'open', count: 4 },
-			{ status: 'resolved', count: 9 }
+			{ status: 'open', awaiting: 0, count: 4 },
+			{ status: 'resolved', awaiting: 0, count: 9 }
 		];
 
 		const counts = await countThreadsByStatus();
 
-		expect(counts).toEqual({ open: 4, resolved: 9, snoozed: 0, all: 13 });
+		expect(counts).toEqual({ open: 4, awaiting: 0, resolved: 9, snoozed: 0, all: 13 });
+	});
+
+	// The split the whole queue turns on: both halves are `status = 'open'` in
+	// the database, and only the marker tells Open (needs a human) from Awaiting
+	// reply (the ball is with the contact). Folding them together is what the
+	// Open tab used to do, and it is why the tab and the nav badge disagreed.
+	it('splits open rows on the awaiting marker', async () => {
+		groupedRows = [
+			{ status: 'open', awaiting: 0, count: 4 },
+			{ status: 'open', awaiting: 1, count: 6 }
+		];
+
+		const counts = await countThreadsByStatus();
+
+		expect(counts).toMatchObject({ open: 4, awaiting: 6, all: 10 });
+	});
+
+	// A resolved thread can still carry a stale marker — `updateStatus` clears
+	// it, but an older row need not have gone through that path. It must not
+	// land in the awaiting bucket regardless.
+	it('ignores the marker on anything that is not open', async () => {
+		groupedRows = [{ status: 'resolved', awaiting: 1, count: 3 }];
+
+		const counts = await countThreadsByStatus();
+
+		expect(counts).toMatchObject({ resolved: 3, awaiting: 0, all: 3 });
 	});
 
 	it('reports zeroes for an empty inbox', async () => {
@@ -143,7 +173,7 @@ describe('countThreadsByStatus', () => {
 
 		const counts = await countThreadsByStatus();
 
-		expect(counts).toEqual({ open: 0, resolved: 0, snoozed: 0, all: 0 });
+		expect(counts).toEqual({ open: 0, awaiting: 0, resolved: 0, snoozed: 0, all: 0 });
 	});
 });
 

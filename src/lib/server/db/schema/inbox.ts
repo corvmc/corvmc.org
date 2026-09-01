@@ -72,6 +72,17 @@ export const inboxThread = sqliteTable(
 		awaitingReplySince: integer('awaiting_reply_since', { mode: 'timestamp' }),
 		messageCount: integer('message_count').notNull().default(0),
 		lastMessageAt: integer('last_message_at', { mode: 'timestamp' }),
+		/**
+		 * When staff last sent anything on this thread. Null means nobody here has
+		 * ever answered it, which is what separates the two reasons an open thread
+		 * is sitting in the queue: *unanswered* (we never replied) from *replied*
+		 * (we did, and they came back). The list says which, so the pair has to be
+		 * distinguishable without counting messages per row.
+		 *
+		 * Distinct from `awaitingReplySince`, which is cleared the moment they
+		 * answer. This one only ever moves forward.
+		 */
+		lastOutboundAt: integer('last_outbound_at', { mode: 'timestamp' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),

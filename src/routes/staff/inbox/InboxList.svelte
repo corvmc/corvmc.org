@@ -1,5 +1,5 @@
 <script lang="ts">
-	import InboxStatusTabs from './InboxStatusTabs.svelte';
+	import InboxViews from './InboxViews.svelte';
 	import InboxChannelOptions from './InboxChannelOptions.svelte';
 	import InboxStaffOptions from './InboxStaffOptions.svelte';
 	/**
@@ -18,13 +18,17 @@
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { resolve } from '$app/paths';
 	import { relativeDay } from '$lib/utils/format';
-	import { inboxChannels } from '$lib/config';
+	import { inboxChannels, inboxViews } from '$lib/config';
+	import type { InboxView } from '$lib/config';
 	import { getInboxThreads } from '$lib/remote/inbox.remote';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
-	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
+	import {
+		openReason,
+		threadDisplayStatus,
+		waitingDays
+	} from '$lib/components/inbox/thread-status';
 
-	type StatusView = 'open' | 'snoozed' | 'resolved' | 'all';
-	const statusViews: StatusView[] = ['open', 'snoozed', 'resolved', 'all'];
+	type StatusView = InboxView;
 
 	// Filter state is seeded from the query string and mirrored back into it, so
 	// opening a thread and pressing back lands on the same filtered view instead
@@ -36,9 +40,9 @@
 	// filter should not sit between the list and the thread you open from it.
 	const initial = page.url.searchParams;
 	const parseStatus = (raw: string | null): StatusView =>
-		statusViews.includes(raw as StatusView) ? (raw as StatusView) : 'open';
+		inboxViews.includes(raw as StatusView) ? (raw as StatusView) : 'open';
 
-	let statusView = $state(parseStatus(initial.get('status')));
+	let statusView = $state(parseStatus(initial.get('view')));
 	let channelFilter = $state(initial.get('channel') ?? '');
 	let assignedFilter = $state(initial.get('assigned') ?? '');
 	// '' | 'yes' (waiting on them) | 'no' (waiting on us).
@@ -64,7 +68,7 @@
 		// Pairs rather than URLSearchParams: the lint rule bans mutable instances of
 		// it, and defaults are simply left out so a clean view has a clean URL.
 		const pairs: [string, string][] = [];
-		if (statusView !== 'open') pairs.push(['status', statusView]);
+		if (statusView !== 'open') pairs.push(['view', statusView]);
 		if (channelFilter) pairs.push(['channel', channelFilter]);
 		if (assignedFilter) pairs.push(['assigned', assignedFilter]);
 		if (waitingFilter) pairs.push(['waiting', waitingFilter]);
@@ -81,7 +85,7 @@
 
 	let filters = $derived({
 		search: searchQuery || undefined,
-		status: statusView === 'all' ? undefined : statusView,
+		view: statusView,
 		channel: (channelFilter || undefined) as (typeof inboxChannels)[number] | undefined,
 		assigned: assignedFilter || undefined,
 		awaiting: (waitingFilter || undefined) as 'yes' | 'no' | undefined,
@@ -94,13 +98,26 @@
 
 	const openId = $derived(page.params.id);
 
+	// Mirrors the two views listThreads sorts by `waitingSince`. Saying "6 days"
+	// beside a row whose order came from `lastMessageAt` would be two different
+	// clocks in one line.
+	const sortedByWaiting = $derived(
+		statusView === 'open' || statusView === 'awaiting' || statusView === 'snoozed'
+	);
+
+	const formatWait = (days: number) => (days === 0 ? 'today' : `${days}d`);
+
+	// Open and Awaiting reply *are* the two sides of this filter, so offering it
+	// there is offering a control that can only contradict the tab.
+	const waitingFilterApplies = $derived(statusView !== 'open' && statusView !== 'awaiting');
+
 	// The status view is a view, not a filter — it always has a value, so counting
 	// it would leave "Clear" permanently offered.
 	const activeFilterCount = $derived(
 		(searchQuery ? 1 : 0) +
 			(channelFilter ? 1 : 0) +
 			(assignedFilter ? 1 : 0) +
-			(waitingFilter ? 1 : 0)
+			(waitingFilterApplies && waitingFilter ? 1 : 0)
 	);
 
 	function clearFilters() {
@@ -114,9 +131,7 @@
 </script>
 
 <div class="flex min-h-0 flex-col gap-3">
-	<h1 class="text-xl font-bold">Inbox</h1>
-
-	<InboxStatusTabs
+	<InboxViews
 		bind:view={statusView}
 		onchange={() => {
 			pageNumber = 1;
@@ -156,22 +171,31 @@
 		>
 			<InboxStaffOptions />
 		</Select>
-		<!-- Which side the ball is on. Awaiting threads stay in the Open tab, so
-		     this is how staff narrow it down to what they still owe an answer. -->
-		<Select
-			size="sm"
-			aria-label="Waiting on"
-			value={waitingFilter}
-			onchange={(e: Event) => {
-				waitingFilter = (e.currentTarget as HTMLSelectElement).value;
-				pageNumber = 1;
-			}}
-		>
-			<option value="">Waiting on anyone</option>
-			<option value="no">Needs a reply</option>
-			<option value="yes">Awaiting their reply</option>
-		</Select>
+		<!-- Which side the ball is on. Only on the views that have not already
+		     decided: Open is "waiting on us" and Awaiting reply is its complement,
+		     so this control there could only argue with the tab above it. -->
+		{#if waitingFilterApplies}
+			<Select
+				size="sm"
+				aria-label="Waiting on"
+				value={waitingFilter}
+				onchange={(e: Event) => {
+					waitingFilter = (e.currentTarget as HTMLSelectElement).value;
+					pageNumber = 1;
+				}}
+			>
+				<option value="">Waiting on anyone</option>
+				<option value="no">Needs a reply</option>
+				<option value="yes">Awaiting their reply</option>
+			</Select>
+		{/if}
 	</FilterBar>
+
+	{#if sortedByWaiting}
+		<!-- The order is not obvious from the rows, and an unexplained order reads
+		     as an arbitrary one. -->
+		<p class="text-subtle text-xs">Sorted by longest waiting</p>
+	{/if}
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		<DataList
@@ -188,6 +212,7 @@
 						{@const Icon = channelIcon(t.channel)}
 						{@const active = t.id === openId}
 						{@const who = t.contactName ?? t.contactEmail ?? t.contactPhone ?? null}
+						{@const reason = openReason(t)}
 						<li>
 							<a
 								{href}
@@ -210,9 +235,17 @@
 										<span class="truncate font-medium">
 											{who ?? t.subject ?? channelLabel(t.channel)}
 										</span>
-										<!-- `label`: "Awaiting reply" is the whole point of the marker,
-										     and an icon-only badge would say nothing. -->
-										<StatusBadge status={threadDisplayStatus(t)} label />
+										<!-- `label` throughout: every one of these badges is the reason
+										     the row is in front of you, and an icon-only badge says
+										     nothing. On the Open view that reason is *why* it is open
+										     (never answered, they replied, the snooze ran out); on the
+										     others it is the status itself, which the tab does not
+										     repeat once you have filtered or searched across views. -->
+										{#if reason}
+											<StatusBadge status={reason} label />
+										{:else}
+											<StatusBadge status={threadDisplayStatus(t)} label />
+										{/if}
 									</span>
 
 									{#if t.subject && who}
@@ -224,6 +257,7 @@
 
 									<span class="text-subtle text-xs">
 										{t.lastMessageAt ? relativeDay(t.lastMessageAt) : '—'}
+										{#if sortedByWaiting}· {formatWait(waitingDays(t))}{/if}
 										{#if t.assignedToName}· {t.assignedToName}{/if}
 									</span>
 								</span>

@@ -8,14 +8,15 @@ import {
 
 /**
  * The awaiting-reply marker, across the seam no unit test spans: it is written
- * on one layer, read on another, and shown as a status the database never
- * stores. Two rules carry the whole feature and both are asserted here —
+ * on one layer, read on another, and shown as a view the database never stores.
+ * Two rules carry the whole feature and both are asserted here —
  *
- *   - an awaiting thread stays in the Open queue. If it ever starts behaving
- *     like a fourth status, the Open tab quietly loses conversations that are
- *     still live.
- *   - it drops out of the nav badge anyway. That is what makes the badge mean
- *     "waiting on us", and it is the one number staff actually work from.
+ *   - Open holds only what needs a human. A thread we have already answered is
+ *     somebody else's move and belongs under Awaiting reply, which is a
+ *     separate view rather than a fourth status.
+ *   - the nav badge is exactly the Open view. The badge is the one number staff
+ *     work from, and a tab beside it reading a different total is the bug this
+ *     split fixes.
  */
 
 async function loginAsStaff(page: Page) {
@@ -35,16 +36,14 @@ async function navBadgeCount(page: Page): Promise<number> {
 }
 
 /**
- * Reveal the filter controls.
+ * One of the five view tabs.
  *
- * The queue is a ~24rem list pane now, and `FilterBar` collapses everything but
- * search behind a disclosure below its `@lg` container width — search plus three
- * selects does not fit beside an open conversation.
+ * Matched on a prefix because the accessible name carries the count badge —
+ * "Open 3", not "Open" — and the count is exactly what these tests are trying
+ * not to hard-code.
  */
-async function openFilters(page: Page) {
-	// A <label> driving a peer checkbox, not a button — FilterBar uses that
-	// because <details> cannot be forced open by CSS at wide widths.
-	await page.locator('label').filter({ hasText: 'Filters' }).first().click();
+function viewTab(page: Page, label: string) {
+	return page.getByRole('tab', { name: new RegExp(`^${label}\\b`) });
 }
 
 function row(page: Page, contact: string) {
@@ -53,33 +52,48 @@ function row(page: Page, contact: string) {
 }
 
 test.describe('inbox awaiting reply', () => {
-	test('an awaiting thread stays in Open, badged apart from the rest', async ({ page }) => {
+	test('Open holds what needs a reply and nothing else', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/inbox');
 
-		// The default view is Open, and both seeded threads are open.
-		await expect(row(page, SEED_AWAITING_CONTACT)).toContainText('Awaiting reply');
-		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toContainText('Open');
+		// Both threads are `status = 'open'`; only one of them is work.
+		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toBeVisible();
+		await expect(row(page, SEED_AWAITING_CONTACT)).toHaveCount(0);
+
+		// The Open row says *why* it is there — nobody here has ever answered it.
+		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toContainText('Unanswered');
 	});
 
-	test('the waiting-on filter splits the two, and survives a round trip', async ({ page }) => {
+	test('the awaiting view holds the other half, and survives a round trip', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/inbox');
-		await openFilters(page);
 
-		await page.getByLabel('Waiting on').selectOption('yes');
+		await viewTab(page, 'Awaiting reply').click();
 		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
 		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toHaveCount(0);
 
 		// Mirrored into the URL, so opening a thread and coming back holds it.
-		await expect(page).toHaveURL(/waiting=yes/);
+		await expect(page).toHaveURL(/view=awaiting/);
 
-		await page.getByLabel('Waiting on').selectOption('no');
-		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toBeVisible();
-		await expect(row(page, SEED_AWAITING_CONTACT)).toHaveCount(0);
+		// And a reload lands on the same view rather than back on Open.
+		await page.reload();
+		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
 	});
 
-	test('clearing the marker returns the thread to the nav badge', async ({ page }) => {
+	// The claim the split exists to make: the number on the nav item and the
+	// number on the Open tab are the same set counted twice.
+	test('the nav badge and the Open tab agree', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/inbox');
+
+		await expect(viewTab(page, 'Open')).toBeVisible();
+		const badge = await navBadgeCount(page);
+		const tab = Number((await viewTab(page, 'Open').innerText()).replace(/\D+/g, ''));
+
+		expect(tab).toBe(badge);
+	});
+
+	test('clearing the marker returns the thread to Open and to the badge', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/inbox/${SEED_AWAITING_THREAD_ID}`);
 

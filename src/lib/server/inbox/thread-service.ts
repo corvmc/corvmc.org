@@ -11,6 +11,7 @@ import {
 	eq,
 	ne,
 	and,
+	asc,
 	desc,
 	count,
 	like,
@@ -46,6 +47,33 @@ export const staffVisibleThread = or(
 	            WHERE cf.entity_type = 'inbox_thread'
 	              AND cf.entity_id = ${inboxThread.id}
 	              AND cf.status = 'pending')`
+)!;
+
+/**
+ * The moment the clock started on a conversation — what "waiting longest" is
+ * measured from, and the queue's default sort key.
+ *
+ * `awaitingReplySince` first: once we have answered, the wait that matters is
+ * theirs, and it starts at our reply rather than at their last message.
+ * Otherwise the last message, and for a thread that somehow has none, its
+ * creation. The column is never null, so the sort is total.
+ *
+ * Exported because the same expression has to order the list, filter it
+ * ("waiting longer than N days") and colour the age chip. Three hand-written
+ * copies of a COALESCE is three chances to disagree about what waiting means.
+ */
+export const waitingSince = sql<number>`coalesce(${inboxThread.awaitingReplySince}, ${inboxThread.lastMessageAt}, ${inboxThread.createdAt})`;
+
+/**
+ * Open *and waiting on us* — the Open view and the staff nav badge, which are
+ * now the same number by construction rather than by coincidence.
+ *
+ * A thread we have already answered is somebody else's move. It is still open,
+ * still live, and still listed — under Awaiting reply, its own view.
+ */
+export const needsUsCondition = and(
+	eq(inboxThread.status, 'open'),
+	isNull(inboxThread.awaitingReplySince)
 )!;
 
 const PREVIEW_LENGTH = 200;
@@ -157,6 +185,12 @@ export interface ListThreadsFilters {
 	/** True: waiting on the contact. False: waiting on us. Undefined: both. */
 	awaitingReply?: boolean;
 	search?: string;
+	/**
+	 * `waiting` puts whoever has been waiting longest at the top — the order the
+	 * queue is meant to be worked in. `recent` is the old newest-first order,
+	 * which is what Resolved and All want: nobody is waiting on those.
+	 */
+	sort?: 'waiting' | 'recent';
 }
 
 /**
@@ -216,6 +250,11 @@ export async function listThreads(filters: ListThreadsFilters, pagination: Pagin
 			assignedToUserId: inboxThread.assignedToUserId,
 			assignedToName: user.name,
 			awaitingReplySince: inboxThread.awaitingReplySince,
+			// Both feed `openReason()` on the client — see thread-status.ts. Sent as
+			// columns rather than a computed reason so the list can also show how
+			// long, and so the rule lives in one place shared with the thread page.
+			snoozedUntil: inboxThread.snoozedUntil,
+			lastOutboundAt: inboxThread.lastOutboundAt,
 			messageCount: inboxThread.messageCount,
 			lastMessageAt: inboxThread.lastMessageAt,
 			createdAt: inboxThread.createdAt
@@ -223,7 +262,9 @@ export async function listThreads(filters: ListThreadsFilters, pagination: Pagin
 		.from(inboxThread)
 		.leftJoin(user, eq(inboxThread.assignedToUserId, user.id))
 		.where(where)
-		.orderBy(desc(inboxThread.lastMessageAt))
+		// Ascending on the wait clock is longest-waiting-first: the oldest
+		// timestamp is the person who has been ignored longest.
+		.orderBy(filters.sort === 'recent' ? desc(inboxThread.lastMessageAt) : asc(waitingSince))
 		.$dynamic();
 
 	const countQuery = db.select({ count: count() }).from(inboxThread).where(where);
@@ -368,32 +409,45 @@ export async function getUnresolvedCount(): Promise<number> {
 	const [row] = await db
 		.select({ count: count() })
 		.from(inboxThread)
-		.where(
-			and(
-				eq(inboxThread.status, 'open'),
-				isNull(inboxThread.awaitingReplySince),
-				staffVisibleThread
-			)
-		);
+		.where(and(needsUsCondition, staffVisibleThread));
 	return row?.count ?? 0;
 }
 
-export type ThreadStatusCounts = Record<InboxThreadStatus, number> & { all: number };
-
 /**
- * Thread totals per status, for the badges on the list page's status tabs. One
- * grouped query rather than one count per tab.
+ * The five views the queue offers, as numbers.
+ *
+ * `open` and `awaiting` both have status `open` in the database — the split is
+ * on the awaiting marker, which is why this groups by the pair rather than by
+ * status alone. `open` is now exactly {@link getUnresolvedCount}: the tab and
+ * the nav badge are the same claim, so they had better be the same arithmetic.
  */
+export type ThreadStatusCounts = {
+	open: number;
+	awaiting: number;
+	snoozed: number;
+	resolved: number;
+	all: number;
+};
+
 export async function countThreadsByStatus(): Promise<ThreadStatusCounts> {
 	const rows = await db
-		.select({ status: inboxThread.status, count: count() })
+		.select({
+			status: inboxThread.status,
+			// A 0/1 flag rather than the timestamp — grouping by the raw column
+			// would return one row per distinct instant.
+			awaiting: sql<number>`(${inboxThread.awaitingReplySince} is not null)`,
+			count: count()
+		})
 		.from(inboxThread)
 		.where(staffVisibleThread)
-		.groupBy(inboxThread.status);
+		.groupBy(inboxThread.status, sql`(${inboxThread.awaitingReplySince} is not null)`);
 
-	const counts = { open: 0, resolved: 0, snoozed: 0, all: 0 } satisfies ThreadStatusCounts;
+	const counts: ThreadStatusCounts = { open: 0, awaiting: 0, snoozed: 0, resolved: 0, all: 0 };
 	for (const row of rows) {
-		counts[row.status] = row.count;
+		// The marker only means anything on an open thread; every other status
+		// clears it, and a stale one must not move a resolved thread's count.
+		if (row.status === 'open') counts[row.awaiting ? 'awaiting' : 'open'] += row.count;
+		else counts[row.status] += row.count;
 		counts.all += row.count;
 	}
 	return counts;
@@ -406,6 +460,12 @@ export async function countThreadsByStatus(): Promise<ThreadStatusCounts> {
  *
  * Rows with a null `snoozedUntil` are left alone — those were snoozed without a
  * date and are only reopened by hand or by an inbound reply.
+ *
+ * `snoozedUntil` is deliberately *kept* on the way out. An open thread with a
+ * snooze date in the past is a thread that came back on its own, and the queue
+ * says so — "Snooze expired" is a different reason to be looking at a
+ * conversation than "they replied". Everything that moves the thread on from
+ * there clears the date: `updateStatus`, `reopenThread`, and a later snooze.
  */
 export async function wakeSnoozedThreads(now: Date = new Date()): Promise<{ woken: number }> {
 	const due = and(
@@ -417,10 +477,7 @@ export async function wakeSnoozedThreads(now: Date = new Date()): Promise<{ woke
 	const rows = await db.select({ id: inboxThread.id }).from(inboxThread).where(due);
 	if (rows.length === 0) return { woken: 0 };
 
-	await db
-		.update(inboxThread)
-		.set({ status: 'open', snoozedUntil: null, updatedAt: now })
-		.where(due);
+	await db.update(inboxThread).set({ status: 'open', updatedAt: now }).where(due);
 
 	return { woken: rows.length };
 }

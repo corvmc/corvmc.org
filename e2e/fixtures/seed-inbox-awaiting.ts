@@ -4,9 +4,10 @@
  *
  * Why a round trip is needed at all: the marker is written by one layer
  * (`addOutboundMessage` / `setAwaitingReply`), read by another (`listThreads`,
- * `getUnresolvedCount`), and rendered as a *derived* status. The two facts that
- * matter — an awaiting thread stays in the Open queue, and drops out of the nav
- * badge anyway — are the seam between those layers, and no unit test spans it.
+ * `getUnresolvedCount`), and rendered as a *derived* status. The fact that
+ * matters — Open holds what needs a human and Awaiting reply holds what does
+ * not, and the nav badge is exactly the first of those — is the seam between
+ * those layers, and no unit test spans it.
  *
  * Both threads are `web`, so neither needs a channel enabled or an external
  * service to exist.
@@ -45,6 +46,7 @@ export async function seedInboxAwaiting(): Promise<void> {
 				contactName: SEED_AWAITING_CONTACT,
 				contactEmail: 'e2e.awaiting@example.com',
 				awaitingReplySince: new Date(now.getTime() - hour),
+				lastOutboundAt: new Date(now.getTime() - hour),
 				messageCount: 2,
 				lastMessageAt: new Date(now.getTime() - hour),
 				createdAt: new Date(now.getTime() - 4 * hour),
