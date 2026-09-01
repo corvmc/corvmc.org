@@ -114,14 +114,6 @@
 			label: 'Band Premium',
 			description: 'Premium tier with page editor, EPK, and public band sites'
 		},
-		emailMarketing: {
-			label: 'Email Marketing',
-			description: 'Audience management, campaigns, and broadcast emails'
-		},
-		helpArticles: {
-			label: 'Help Articles',
-			description: 'Knowledge base with staff-managed articles for members'
-		},
 		contentFlags: {
 			label: 'Content Flags',
 			description: 'Lets members report profiles and gives staff a moderation queue'

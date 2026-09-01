@@ -5,7 +5,6 @@ import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff } from '$lib/server/authorization';
 import { generateSlug } from '$lib/server/utils/slug';
-import { requireFeature } from '$lib/server/feature-flags';
 import {
 	listCategories,
 	listNonEmptyCategories,
@@ -45,7 +44,6 @@ async function requireUserWithRole() {
 // ---------------------------------------------------------------------------
 
 export const getMemberCategories = query(z.void(), async () => {
-	await requireFeature('helpArticles');
 	const { role } = await requireUserWithRole();
 	const categories = await listNonEmptyCategories(role);
 
@@ -60,7 +58,6 @@ export const getMemberCategories = query(z.void(), async () => {
 });
 
 export const getMemberArticle = query(z.string(), async (slug) => {
-	await requireFeature('helpArticles');
 	const { role } = await requireUserWithRole();
 	const article = await getArticleBySlug(slug, role);
 	if (!article) throw error(404, 'Article not found');
