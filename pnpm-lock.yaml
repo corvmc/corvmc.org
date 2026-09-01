@@ -71,8 +71,8 @@ importers:
         specifier: ^18.0.10
         version: 18.0.10
       postmark:
-        specifier: ^4.0.7
-        version: 4.0.7(debug@4.4.3)
+        specifier: ^5.1.0
+        version: 5.1.0
       qrcode-svg:
         specifier: ^1.1.0
         version: 1.1.0
@@ -4749,6 +4749,10 @@ packages:
 
   postmark@4.0.7:
     resolution: {integrity: sha512-DjNniUl1XNCGUKhCR98ePd5gv16rlUAVKKaU9TUqnE3hDSqfT9XDulu1idjagQmdyGscqnRtXk/puAEiYMeevg==}
+
+  postmark@5.1.0:
+    resolution: {integrity: sha512-8lj2Fu94pL3fzx9Sy599opqpK4Z/0/1xCHZS8tbGBnqSS5rAcXtcHQ+TI0Jc4VwlBWma1Ug0Qm98FEe+v94BIQ==}
+    engines: {node: '>=18.0.0'}
 
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
@@ -10024,6 +10028,8 @@ snapshots:
     transitivePeerDependencies:
       - debug
       - supports-color
+
+  postmark@5.1.0: {}
 
   prelude-ls@1.2.1: {}
 
