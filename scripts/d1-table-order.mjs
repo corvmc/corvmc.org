@@ -21,6 +21,11 @@ export const tableOrder = [
 	'inventory_item',
 	'inventory_asset',
 	'acquisition',
+	// References user, and is the parent of purchase_order_line. Note that
+	// `acquisition.purchase_order_id` carries no foreign key — adding one to an
+	// existing table is a rebuild in SQLite, which on D1 would take
+	// `acquisition_line` with it — so it imposes no ordering here.
+	'purchase_order',
 	'event',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
@@ -55,6 +60,8 @@ export const tableOrder = [
 	'session',
 	'audience_member',
 	'acquisition_line',
+	// References purchase_order and inventory_item, so it clears before neither.
+	'purchase_order_line',
 	'inventory_loan',
 	'stock_movement',
 	// References inventory_item and help_article, so it clears before neither.
