@@ -1,4 +1,5 @@
 import type Stripe from 'stripe';
+import { DomainError } from '$lib/server/domain-error';
 import { eq, getColumnTable, getTableName, sql, type AnyColumn } from 'drizzle-orm';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/server/db';
@@ -32,6 +33,15 @@ import {
  * in the expected state — no active subscription, or a missing line item. These
  * are expected conflicts (stale UI, mid-cancellation), not server faults.
  */
+/** The caller asked for a quantity Stripe cannot represent. */
+export class SubscriptionValidationError extends DomainError {
+	readonly httpStatus = 400;
+
+	constructor(message: string) {
+		super(message);
+	}
+}
+
 export class SubscriptionStateError extends Error {
 	constructor(message: string) {
 		super(message);
@@ -72,7 +82,7 @@ export interface SubscriptionInfo {
 export async function createCheckoutSession(options: CreateSubscriptionOptions): Promise<string> {
 	const { userId, stripeCustomerId, quantity, coverFees, successUrl, cancelUrl } = options;
 
-	if (quantity < 1) throw new Error('Quantity must be at least 1');
+	if (quantity < 1) throw new SubscriptionValidationError('Quantity must be at least 1');
 
 	const config = await getProductConfig('contribution');
 	const lineItem = await buildSubscriptionLineItem(
@@ -304,7 +314,7 @@ export async function updateQuantity(
 	newQuantity: number,
 	coverFees: boolean
 ): Promise<void> {
-	if (newQuantity < 1) throw new Error('Quantity must be at least 1');
+	if (newQuantity < 1) throw new SubscriptionValidationError('Quantity must be at least 1');
 
 	const subscriptions = await stripe.subscriptions.list({
 		customer: stripeCustomerId,
@@ -391,8 +401,6 @@ export async function updateQuantity(
 		});
 	}
 
-	// @ts-expect-error — Stripe v22 Item type requires all fields; we only send
-	// the subset needed for quantity update + price_data fee items + deleted flags.
 	await stripe.subscriptions.update(sub.id, { items });
 }
 
@@ -430,7 +438,7 @@ export async function resume(stripeCustomerId: string): Promise<void> {
 	if (!sub) throw new SubscriptionStateError('No active subscription found');
 
 	if (!sub.cancel_at_period_end) {
-		throw new Error('Subscription is not scheduled for cancellation');
+		throw new SubscriptionStateError('Subscription is not scheduled for cancellation');
 	}
 
 	await stripe.subscriptions.update(sub.id, { cancel_at_period_end: false });

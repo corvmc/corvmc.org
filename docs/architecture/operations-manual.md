@@ -42,6 +42,11 @@ pnpm build`: `build` is `vite build` and does **not** migrate, so the dashboard 
    `/directory/bands/[slug]` 500ed in production until the migration was applied by hand.
    `scripts/ci-migrate.spec.ts` pins the branch matching.
 
+   A `feature/*` branch is not production by that test, and deliberately: its build uploads a
+   version and never touches the database, which is what keeps its migrations regenerable right up
+   until it lands. The whole feature's migrations then apply in a single queue build when its PR
+   merges.
+
 4. `pnpm build` compiles the MJML email layout (`scripts/compile-email-layouts.ts`) and
    then runs `vite build`; the Worker is published from `.svelte-kit/cloudflare/`.
 

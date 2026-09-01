@@ -3,6 +3,29 @@ import { ticket, type TicketStatus } from '$lib/server/db/schema/ticket';
 import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, inArray, lt, sql, asc, desc } from 'drizzle-orm';
+import { DomainError } from '$lib/server/domain-error';
+
+// ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+
+/** The ticket does not exist. */
+export class TicketNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+
+	constructor() {
+		super('Ticket not found');
+	}
+}
+
+/** The ticket is not in a status that allows the requested operation. */
+export class TicketStateError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor(message: string) {
+		super(message);
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -174,9 +197,9 @@ export async function cancelTicket(ticketId: string): Promise<void> {
 		.where(eq(ticket.id, ticketId))
 		.limit(1);
 
-	if (!row) throw new Error('Ticket not found');
+	if (!row) throw new TicketNotFoundError();
 	if (row.status !== 'pending' && row.status !== 'valid') {
-		throw new Error(`Cannot cancel ticket with status "${row.status}"`);
+		throw new TicketStateError(`Cannot cancel ticket with status "${row.status}"`);
 	}
 
 	await db
@@ -196,8 +219,9 @@ export async function checkIn(ticketId: string, staffUserId: string): Promise<vo
 		.where(eq(ticket.id, ticketId))
 		.limit(1);
 
-	if (!row) throw new Error('Ticket not found');
-	if (row.status !== 'valid') throw new Error(`Cannot check in ticket with status "${row.status}"`);
+	if (!row) throw new TicketNotFoundError();
+	if (row.status !== 'valid')
+		throw new TicketStateError(`Cannot check in ticket with status "${row.status}"`);
 
 	await db
 		.update(ticket)

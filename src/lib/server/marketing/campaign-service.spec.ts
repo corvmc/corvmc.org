@@ -88,7 +88,10 @@ import {
 	deleteCampaign,
 	scheduleCampaign,
 	sendNow,
-	executeSend
+	executeSend,
+	CampaignNotFoundError,
+	CampaignValidationError,
+	CampaignStateError
 } from './campaign-service';
 
 // ---------------------------------------------------------------------------
@@ -257,7 +260,7 @@ describe('campaign-service', () => {
 					audienceIds: ['aud-1'],
 					sentById: 'user-1'
 				})
-			).rejects.toThrow('Subject too long (max 500)');
+			).rejects.toThrow(CampaignValidationError);
 		});
 
 		it('throws when audienceIds is empty', async () => {
@@ -268,7 +271,7 @@ describe('campaign-service', () => {
 					audienceIds: [],
 					sentById: 'user-1'
 				})
-			).rejects.toThrow('At least one audience is required');
+			).rejects.toThrow(CampaignValidationError);
 		});
 
 		it('throws when more than 20 audiences are provided', async () => {
@@ -280,7 +283,7 @@ describe('campaign-service', () => {
 					audienceIds: ids,
 					sentById: 'user-1'
 				})
-			).rejects.toThrow('Too many audiences (max 20)');
+			).rejects.toThrow(CampaignValidationError);
 		});
 
 		it('inserts campaign row then audience links, returns created row', async () => {
@@ -314,7 +317,7 @@ describe('campaign-service', () => {
 			selectResults = [[]];
 
 			await expect(updateCampaign('camp-999', { subject: 'New Subject' })).rejects.toThrow(
-				'Campaign not found'
+				CampaignNotFoundError
 			);
 		});
 
@@ -322,7 +325,7 @@ describe('campaign-service', () => {
 			selectResults = [[{ ...mockCampaign, sentAt: new Date() }]];
 
 			await expect(updateCampaign('camp-1', { subject: 'New Subject' })).rejects.toThrow(
-				'Can only edit draft campaigns'
+				CampaignStateError
 			);
 		});
 
@@ -330,7 +333,7 @@ describe('campaign-service', () => {
 			selectResults = [[{ ...mockCampaign, scheduledFor: new Date(Date.now() + 60_000) }]];
 
 			await expect(updateCampaign('camp-1', { subject: 'New Subject' })).rejects.toThrow(
-				'Can only edit draft campaigns'
+				CampaignStateError
 			);
 		});
 
@@ -338,7 +341,7 @@ describe('campaign-service', () => {
 			selectResults = [[{ ...mockCampaign }]];
 
 			await expect(updateCampaign('camp-1', { subject: 'x'.repeat(501) })).rejects.toThrow(
-				'Subject too long (max 500)'
+				CampaignValidationError
 			);
 		});
 
@@ -346,7 +349,7 @@ describe('campaign-service', () => {
 			selectResults = [[{ ...mockCampaign }]];
 
 			await expect(updateCampaign('camp-1', { audienceIds: [] })).rejects.toThrow(
-				'At least one audience is required'
+				CampaignValidationError
 			);
 		});
 
@@ -374,13 +377,13 @@ describe('campaign-service', () => {
 		it('throws when campaign is not found', async () => {
 			selectResults = [[]];
 
-			await expect(deleteCampaign('camp-999')).rejects.toThrow('Campaign not found');
+			await expect(deleteCampaign('camp-999')).rejects.toThrow(CampaignNotFoundError);
 		});
 
 		it('throws when campaign is not in draft status', async () => {
 			selectResults = [[{ ...mockCampaign, sentAt: new Date() }]];
 
-			await expect(deleteCampaign('camp-1')).rejects.toThrow('Can only delete draft campaigns');
+			await expect(deleteCampaign('camp-1')).rejects.toThrow(CampaignStateError);
 		});
 
 		it('deletes a draft campaign', async () => {
@@ -400,18 +403,14 @@ describe('campaign-service', () => {
 			selectResults = [[{ ...mockCampaign, sentAt: new Date() }]];
 			const future = new Date(Date.now() + 60_000);
 
-			await expect(scheduleCampaign('camp-1', future)).rejects.toThrow(
-				'Can only schedule draft campaigns'
-			);
+			await expect(scheduleCampaign('camp-1', future)).rejects.toThrow(CampaignStateError);
 		});
 
 		it('throws when scheduledFor is in the past', async () => {
 			selectResults = [[{ ...mockCampaign }]];
 			const past = new Date(Date.now() - 60_000);
 
-			await expect(scheduleCampaign('camp-1', past)).rejects.toThrow(
-				'Scheduled time must be in the future'
-			);
+			await expect(scheduleCampaign('camp-1', past)).rejects.toThrow(CampaignValidationError);
 		});
 
 		it('sets scheduledFor on a draft campaign', async () => {
@@ -433,7 +432,7 @@ describe('campaign-service', () => {
 		it('throws when campaign is not in draft status', async () => {
 			selectResults = [[{ ...mockCampaign, sentAt: new Date() }]];
 
-			await expect(sendNow('camp-1')).rejects.toThrow('Can only send draft campaigns');
+			await expect(sendNow('camp-1')).rejects.toThrow(CampaignStateError);
 		});
 
 		it('updates scheduledFor and calls executeSend for a draft campaign', async () => {
@@ -461,13 +460,13 @@ describe('campaign-service', () => {
 		it('throws when campaign is not found', async () => {
 			selectResults = [[]];
 
-			await expect(executeSend('camp-999')).rejects.toThrow('Campaign not found');
+			await expect(executeSend('camp-999')).rejects.toThrow(CampaignNotFoundError);
 		});
 
 		it('throws when campaign is already sent', async () => {
 			selectResults = [[{ ...mockCampaign, sentAt: new Date() }]];
 
-			await expect(executeSend('camp-1')).rejects.toThrow('Campaign already sent');
+			await expect(executeSend('camp-1')).rejects.toThrow(CampaignStateError);
 		});
 
 		it('returns 0 and marks campaign sent with recipientCount 0 when no recipients', async () => {

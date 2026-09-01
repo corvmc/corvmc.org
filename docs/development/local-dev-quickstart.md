@@ -125,8 +125,9 @@ crash or a Ctrl-C can't leave rows for the next run to trip over.
 
 Run the minimum tests you need while iterating; save `pnpm test` for pre-commit.
 
-Lint/format: `pnpm lint` (check), `pnpm format` (write), `pnpm lint:changed` (only files
-changed vs `origin/main` — what PR CI runs).
+Lint/format: `pnpm lint` (check), `pnpm format` (write), `pnpm lint:changed` (only files changed
+vs `BASE_REF`, default `origin/main` — what PR CI runs, passing the PR's own base branch, so on a
+phase PR run it as `BASE_REF=origin/feature/<slug> pnpm lint:changed`).
 
 ## 6. Stripe locally (optional)
 

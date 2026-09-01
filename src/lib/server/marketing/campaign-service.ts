@@ -12,6 +12,38 @@ import { renderCampaignPreview, renderCampaignForSend } from './campaign-render'
 import { signUnsubscribeToken } from './unsubscribe';
 import { sendBroadcastBatch, type BroadcastMessage } from '$lib/server/notification/email';
 import { env } from '$env/dynamic/private';
+import { DomainError } from '$lib/server/domain-error';
+
+// ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+
+/** The campaign does not exist. */
+export class CampaignNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+
+	constructor() {
+		super('Campaign not found');
+	}
+}
+
+/** The submitted campaign fields are out of range or incomplete. */
+export class CampaignValidationError extends DomainError {
+	readonly httpStatus = 400;
+
+	constructor(message: string) {
+		super(message);
+	}
+}
+
+/** The campaign is not in a status that allows the requested operation. */
+export class CampaignStateError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor(message: string) {
+		super(message);
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Campaign service
@@ -43,9 +75,11 @@ export async function createCampaign(data: {
 	audienceIds: string[];
 	sentById: string;
 }) {
-	if (data.subject.length > 500) throw new Error('Subject too long (max 500)');
-	if (data.audienceIds.length === 0) throw new Error('At least one audience is required');
-	if (data.audienceIds.length > 20) throw new Error('Too many audiences (max 20)');
+	if (data.subject.length > 500) throw new CampaignValidationError('Subject too long (max 500)');
+	if (data.audienceIds.length === 0)
+		throw new CampaignValidationError('At least one audience is required');
+	if (data.audienceIds.length > 20)
+		throw new CampaignValidationError('Too many audiences (max 20)');
 
 	const htmlBody = renderCampaignPreview(data.markdownBody);
 
@@ -76,17 +110,17 @@ export async function updateCampaign(
 	data: { subject?: string; markdownBody?: string; audienceIds?: string[] }
 ) {
 	const existing = await getCampaignRaw(id);
-	if (!existing) throw new Error('Campaign not found');
+	if (!existing) throw new CampaignNotFoundError();
 
 	const status = deriveCampaignStatus(existing.scheduledFor, existing.sentAt);
-	if (status !== 'draft') throw new Error('Can only edit draft campaigns');
+	if (status !== 'draft') throw new CampaignStateError('Can only edit draft campaigns');
 
 	if (data.subject !== undefined && data.subject.length > 500)
-		throw new Error('Subject too long (max 500)');
+		throw new CampaignValidationError('Subject too long (max 500)');
 	if (data.audienceIds !== undefined && data.audienceIds.length === 0)
-		throw new Error('At least one audience is required');
+		throw new CampaignValidationError('At least one audience is required');
 	if (data.audienceIds !== undefined && data.audienceIds.length > 20)
-		throw new Error('Too many audiences (max 20)');
+		throw new CampaignValidationError('Too many audiences (max 20)');
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (data.subject !== undefined) updates.subject = data.subject;
@@ -114,10 +148,10 @@ export async function updateCampaign(
 
 export async function deleteCampaign(id: string) {
 	const existing = await getCampaignRaw(id);
-	if (!existing) throw new Error('Campaign not found');
+	if (!existing) throw new CampaignNotFoundError();
 
 	const status = deriveCampaignStatus(existing.scheduledFor, existing.sentAt);
-	if (status !== 'draft') throw new Error('Can only delete draft campaigns');
+	if (status !== 'draft') throw new CampaignStateError('Can only delete draft campaigns');
 
 	await db.delete(campaign).where(eq(campaign.id, id));
 }
@@ -189,21 +223,23 @@ export async function listCampaigns(statusFilter?: CampaignStatus) {
 
 export async function scheduleCampaign(id: string, scheduledFor: Date) {
 	const existing = await getCampaignRaw(id);
-	if (!existing) throw new Error('Campaign not found');
+	if (!existing) throw new CampaignNotFoundError();
 
 	const status = deriveCampaignStatus(existing.scheduledFor, existing.sentAt);
-	if (status !== 'draft') throw new Error('Can only schedule draft campaigns');
-	if (scheduledFor <= new Date()) throw new Error('Scheduled time must be in the future');
+	if (status !== 'draft') throw new CampaignStateError('Can only schedule draft campaigns');
+	if (scheduledFor <= new Date())
+		throw new CampaignValidationError('Scheduled time must be in the future');
 
 	await db.update(campaign).set({ scheduledFor, updatedAt: new Date() }).where(eq(campaign.id, id));
 }
 
 export async function unscheduleCampaign(id: string) {
 	const existing = await getCampaignRaw(id);
-	if (!existing) throw new Error('Campaign not found');
+	if (!existing) throw new CampaignNotFoundError();
 
 	const status = deriveCampaignStatus(existing.scheduledFor, existing.sentAt);
-	if (status !== 'scheduled') throw new Error('Can only unschedule scheduled campaigns');
+	if (status !== 'scheduled')
+		throw new CampaignStateError('Can only unschedule scheduled campaigns');
 
 	await db
 		.update(campaign)
@@ -213,10 +249,10 @@ export async function unscheduleCampaign(id: string) {
 
 export async function sendNow(id: string) {
 	const existing = await getCampaignRaw(id);
-	if (!existing) throw new Error('Campaign not found');
+	if (!existing) throw new CampaignNotFoundError();
 
 	const status = deriveCampaignStatus(existing.scheduledFor, existing.sentAt);
-	if (status !== 'draft') throw new Error('Can only send draft campaigns');
+	if (status !== 'draft') throw new CampaignStateError('Can only send draft campaigns');
 
 	// Set scheduledFor to now — executeSend picks it up
 	await db
@@ -305,8 +341,8 @@ export async function getRecipientsForCampaign(campaignId: string) {
  */
 export async function executeSend(campaignId: string): Promise<number> {
 	const row = await getCampaignRaw(campaignId);
-	if (!row) throw new Error('Campaign not found');
-	if (row.sentAt) throw new Error('Campaign already sent');
+	if (!row) throw new CampaignNotFoundError();
+	if (row.sentAt) throw new CampaignStateError('Campaign already sent');
 
 	const recipients = await getRecipientsForCampaign(campaignId);
 	if (recipients.length === 0) {

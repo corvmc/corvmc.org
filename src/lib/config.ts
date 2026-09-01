@@ -599,6 +599,9 @@ export const VOLUNTEER_SHIFT_NOTES_MAX = 1000;
 /** A card inside this window of expiry reads as "expiring soon" rather than current. */
 export const CERT_EXPIRY_WARNING_DAYS = 60;
 
+/** How long a group invite stays valid. The invite email's footnote interpolates it. */
+export const INVITE_EXPIRY_DAYS = 7;
+
 export const CERT_NAME_MAX = 100;
 export const CERT_DESCRIPTION_MAX = 2000;
 export const CERT_REFERENCE_MAX = 100;

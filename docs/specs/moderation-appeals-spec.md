@@ -203,7 +203,7 @@ somebody has to navigate to and remember to press once the conversation ends,
 which is precisely the failure `IDEAS.md` names as the reason to build this.
 Reusing the inbox would produce a nicer-looking version of the status quo.
 
-Two smaller strikes. The inbox is behind the `staffInbox` feature flag, so
+Two smaller strikes. The inbox had a `staffInbox` feature flag that never guarded anything, so
 appeals would inherit a kill switch that has nothing to do with them. And
 splitting the record from the decision means a staffer reads the objection in one
 place and the report it objects to in another.

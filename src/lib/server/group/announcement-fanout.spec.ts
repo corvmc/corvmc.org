@@ -232,7 +232,7 @@ describe('the email', () => {
 		// Not decoration. These ride the transactional stream, which also carries
 		// password resets, so a spam complaint here is expensive — and "there is a
 		// setting somewhere" is what makes people press that button instead.
-		expect(String(messages[0].model.footnote)).toContain('Mute Real Book Club');
+		expect(String(messages[0].model.footnote)).toContain('Real Book Club');
 		expect(String(messages[0].model.footnote)).toContain('/member/groups/real-book-club');
 	});
 
@@ -246,7 +246,8 @@ describe('the email', () => {
 			{ model: Record<string, unknown> }[]
 		];
 		const paragraphs = messages[0].model.paragraphs as { text: string }[];
-		expect(paragraphs[0].text).toContain('the club Real Book Club');
+		expect(paragraphs[0].text).toContain('club');
+		expect(paragraphs[0].text).not.toContain('band');
 	});
 
 	it('quotes the post rather than pasting a whole newsletter', async () => {

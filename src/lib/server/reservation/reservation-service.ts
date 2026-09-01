@@ -454,8 +454,10 @@ export async function recordCashAndComplete(
 			.where(eq(reservation.id, reservationId))
 			.limit(1);
 
-		if (!row) throw new Error('Reservation not found');
-		throw new Error(`Expected status "scheduled" or "confirmed", got "${row.status}"`);
+		if (!row) throw new ReservationNotFoundError();
+		throw new ReservationStateError(
+			`Expected status "scheduled" or "confirmed", got "${row.status}"`
+		);
 	}
 }
 
@@ -504,8 +506,8 @@ async function updateStatus(
 			.where(eq(reservation.id, reservationId))
 			.limit(1);
 
-		if (!row) throw new Error('Reservation not found');
-		throw new Error(`Cannot transition from "${row.status}" to "${newStatus}"`);
+		if (!row) throw new ReservationNotFoundError();
+		throw new ReservationStateError(`Cannot transition from "${row.status}" to "${newStatus}"`);
 	}
 }
 

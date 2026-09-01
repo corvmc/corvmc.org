@@ -1,4 +1,5 @@
 import { db, getRowCount } from '$lib/server/db';
+import { DomainError } from '$lib/server/domain-error';
 import {
 	event,
 	eventBand,
@@ -33,6 +34,7 @@ import {
 	getTableColumns
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
+
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { memberRefColumns } from '$lib/server/entity/refs';
 import type { EventStatus } from '$lib/server/db/schema/event';
@@ -52,6 +54,61 @@ import {
 	nextDay
 } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
+
+// ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+
+/** The event does not exist. */
+export class EventNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+
+	constructor() {
+		super('Event not found');
+	}
+}
+
+/**
+ * The submitted event fields do not describe a bookable event. `field` names
+ * which one is wrong, so a caller (or a test) can tell the cases apart without
+ * reading the sentence.
+ */
+export class EventValidationError extends DomainError {
+	readonly httpStatus = 400;
+	readonly field?: string;
+
+	constructor(message: string, field?: string) {
+		super(message);
+		this.field = field;
+	}
+}
+
+/**
+ * The event cannot make the requested transition from the status it is in —
+ * publishing a cancelled event, cancelling twice, a concurrent status change.
+ * An ordinary conflict (stale UI, double-click), not a server fault.
+ */
+export class EventStateError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor(message: string) {
+		super(message);
+	}
+}
+
+/**
+ * Deleting would strand the people holding tickets. Cancelling is the way out:
+ * it voids the tickets and notifies their holders.
+ */
+export class EventHasTicketsError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor() {
+		super(
+			'This event has tickets and cannot be deleted. Cancel it instead — that voids the tickets and tells the people holding them.'
+		);
+	}
+}
 
 // ---------------------------------------------------------------------------
 // EventService — create, update, publish, cancel events
@@ -153,14 +210,19 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		posterFile
 	} = params;
 
-	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
-	if (doorsAt && doorsAt > startsAt) throw new Error('Doors must open before event starts');
+	if (startsAt >= endsAt)
+		throw new EventValidationError('Event must end after it starts', 'endsAt');
+	if (doorsAt && doorsAt > startsAt)
+		throw new EventValidationError('Doors must open before event starts', 'doorsAt');
 
 	// Validate ticketing fields. The price is what an attendee pays wherever they
 	// buy — our checkout, an off-site seller, or the door — so it stands on its
 	// own; only selling through us makes it mandatory.
 	if (ticketingEnabled && (ticketPrice == null || ticketPrice <= 0)) {
-		throw new Error('Ticket price is required when ticketing is enabled');
+		throw new EventValidationError(
+			'Ticket price is required when ticketing is enabled',
+			'ticketPrice'
+		);
 	}
 	assertValidTicketPrice(ticketPrice);
 
@@ -279,7 +341,7 @@ export async function checkRebookNeeded(
 	reason: string | null;
 }> {
 	const evt = await getById(eventId);
-	if (!evt) throw new Error('Event not found');
+	if (!evt) throw new EventNotFoundError();
 
 	if (!evt.reservationId) {
 		return { needed: false, currentReservation: null, reason: null };
@@ -330,21 +392,22 @@ function assertTimeOrder(
 	// An open-ended gig has nothing to order against — a band backfilling old
 	// shows usually can't say when the night finished.
 	if (endsAt == null) return;
-	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
+	if (startsAt >= endsAt)
+		throw new EventValidationError('Event must end after it starts', 'endsAt');
 }
 
 /** A stored ticket price is either null (no price) or a positive whole-cent integer. */
 function assertValidTicketPrice(price: number | null | undefined): void {
 	if (price == null) return;
 	if (!Number.isInteger(price) || price <= 0) {
-		throw new Error('Ticket price must be a positive amount');
+		throw new EventValidationError('Ticket price must be a positive amount', 'ticketPrice');
 	}
 }
 
 export async function update(eventId: string, params: UpdateEventParams): Promise<EventRow> {
 	const existing = await getById(eventId);
-	if (!existing) throw new Error('Event not found');
-	if (existing.status === 'cancelled') throw new Error('Cannot update a cancelled event');
+	if (!existing) throw new EventNotFoundError();
+	if (existing.status === 'cancelled') throw new EventStateError('Cannot update a cancelled event');
 	assertTimeOrder(existing, params);
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -372,7 +435,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	// Stripe account with no payout path back to whoever is actually putting it
 	// on. Applies to band gigs and community listings alike.
 	if (existing.source !== 'cmc' && params.ticketingEnabled === true) {
-		throw new Error('CMC only sells tickets for its own events');
+		throw new EventValidationError('CMC only sells tickets for its own events', 'ticketingEnabled');
 	}
 
 	// Ticketing fields. The price survives whatever happens to the ticketing
@@ -389,7 +452,10 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		if (params.ticketingEnabled) {
 			const price = params.ticketPrice === undefined ? existing.ticketPrice : params.ticketPrice;
 			if (price == null) {
-				throw new Error('Ticket price is required when ticketing is enabled');
+				throw new EventValidationError(
+					'Ticket price is required when ticketing is enabled',
+					'ticketPrice'
+				);
 			}
 			updates.ticketQuantity = params.ticketQuantity ?? null;
 		} else {
@@ -477,8 +543,8 @@ export async function publish(eventId: string): Promise<void> {
 
 	if (getRowCount(result) === 0) {
 		const existing = await getById(eventId);
-		if (!existing) throw new Error('Event not found');
-		throw new Error(`Cannot publish an event with status "${existing.status}"`);
+		if (!existing) throw new EventNotFoundError();
+		throw new EventStateError(`Cannot publish an event with status "${existing.status}"`);
 	}
 }
 
@@ -488,15 +554,15 @@ export async function publish(eventId: string): Promise<void> {
 
 export async function unpublish(eventId: string): Promise<void> {
 	const existing = await getById(eventId);
-	if (!existing) throw new Error('Event not found');
+	if (!existing) throw new EventNotFoundError();
 	if (existing.status !== 'published') {
-		throw new Error(`Cannot unpublish an event with status "${existing.status}"`);
+		throw new EventStateError(`Cannot unpublish an event with status "${existing.status}"`);
 	}
 
 	const { getTicketsSold } = await import('$lib/server/ticket/ticket-service');
 	const sold = await getTicketsSold(eventId);
 	if (sold > 0) {
-		throw new Error(`Cannot unpublish: ${sold} ticket(s) have been sold`);
+		throw new EventStateError(`Cannot unpublish: ${sold} ticket(s) have been sold`);
 	}
 
 	await db
@@ -756,7 +822,7 @@ export async function getDeletionImpact(eventId: string): Promise<EventDeletionI
  */
 export async function remove(eventId: string, userId: string): Promise<void> {
 	const existing = await getById(eventId);
-	if (!existing) throw new Error('Event not found');
+	if (!existing) throw new EventNotFoundError();
 
 	const [tickets] = await db
 		.select({ value: count() })
@@ -764,9 +830,7 @@ export async function remove(eventId: string, userId: string): Promise<void> {
 		.where(eq(ticket.eventId, eventId));
 
 	if ((tickets?.value ?? 0) > 0) {
-		throw new Error(
-			'This event has tickets and cannot be deleted. Cancel it instead — that voids the tickets and tells the people holding them.'
-		);
+		throw new EventHasTicketsError();
 	}
 
 	if (existing.reservationId) {
@@ -796,15 +860,15 @@ export async function remove(eventId: string, userId: string): Promise<void> {
 
 export async function cancel(eventId: string, userId: string): Promise<void> {
 	const existing = await getById(eventId);
-	if (!existing) throw new Error('Event not found');
-	if (existing.status === 'cancelled') throw new Error('Event is already cancelled');
+	if (!existing) throw new EventNotFoundError();
+	if (existing.status === 'cancelled') throw new EventStateError('Event is already cancelled');
 
 	const result = await db
 		.update(event)
 		.set({ status: 'cancelled', updatedAt: new Date() })
 		.where(and(eq(event.id, eventId), ne(event.status, 'cancelled')));
 
-	if (getRowCount(result) === 0) throw new Error('Event status changed concurrently');
+	if (getRowCount(result) === 0) throw new EventStateError('Event status changed concurrently');
 
 	// Cancel linked reservation if present
 	if (existing.reservationId) {
@@ -1246,7 +1310,7 @@ export async function setEventLineup(
 	}
 
 	const evt = await getById(eventId);
-	if (!evt) throw new Error('Event not found');
+	if (!evt) throw new EventNotFoundError();
 
 	// Dedupe on band identity first, then on the visible name, so "Paper Wolves"
 	// typed twice collapses even when neither entry is linked.
@@ -1571,8 +1635,10 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 		support
 	} = params;
 
-	if (endsAt != null && startsAt >= endsAt) throw new Error('Event must end after it starts');
-	if (doorsAt && doorsAt > startsAt) throw new Error('Doors must open before event starts');
+	if (endsAt != null && startsAt >= endsAt)
+		throw new EventValidationError('Event must end after it starts', 'endsAt');
+	if (doorsAt && doorsAt > startsAt)
+		throw new EventValidationError('Doors must open before event starts', 'doorsAt');
 	assertValidTicketPrice(ticketPrice);
 
 	const [row] = await db
@@ -1730,8 +1796,10 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 		posterFile
 	} = params;
 
-	if (startsAt >= endsAt) throw new Error('Event must end after it starts');
-	if (doorsAt && doorsAt > startsAt) throw new Error('Doors must open before event starts');
+	if (startsAt >= endsAt)
+		throw new EventValidationError('Event must end after it starts', 'endsAt');
+	if (doorsAt && doorsAt > startsAt)
+		throw new EventValidationError('Doors must open before event starts', 'doorsAt');
 
 	const eventId = crypto.randomUUID();
 
@@ -1860,9 +1928,9 @@ export async function updateBandEvent(
 	params: UpdateBandEventParams
 ): Promise<EventRow> {
 	const existing = await getById(eventId);
-	if (!existing) throw new Error('Event not found');
+	if (!existing) throw new EventNotFoundError();
 	if (existing.groupId !== bandId) throw new Error('Event does not belong to this band');
-	if (existing.status === 'cancelled') throw new Error('Cannot update a cancelled event');
+	if (existing.status === 'cancelled') throw new EventStateError('Cannot update a cancelled event');
 	assertTimeOrder(existing, params);
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -1890,9 +1958,9 @@ export async function updateBandEvent(
 
 export async function cancelBandEvent(eventId: string, bandId: string): Promise<void> {
 	const existing = await getById(eventId);
-	if (!existing) throw new Error('Event not found');
+	if (!existing) throw new EventNotFoundError();
 	if (existing.groupId !== bandId) throw new Error('Event does not belong to this band');
-	if (existing.status === 'cancelled') throw new Error('Event is already cancelled');
+	if (existing.status === 'cancelled') throw new EventStateError('Event is already cancelled');
 
 	await db
 		.update(event)
@@ -1905,7 +1973,7 @@ export async function cancelBandEvent(eventId: string, bandId: string): Promise<
 /** Remove a gig's poster. Owner-only, like every other edit. */
 export async function clearBandEventPoster(eventId: string, bandId: string): Promise<void> {
 	const existing = await getById(eventId);
-	if (!existing) throw new Error('Event not found');
+	if (!existing) throw new EventNotFoundError();
 	if (existing.groupId !== bandId) throw new Error('Event does not belong to this band');
 	if (!existing.posterKey) return;
 

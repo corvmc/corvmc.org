@@ -131,7 +131,9 @@ const {
 	getTicketsRemaining,
 	getTicketsByPurchase,
 	getEventTickets,
-	getUserTickets
+	getUserTickets,
+	TicketNotFoundError,
+	TicketStateError
 } = await import('./ticket-service');
 
 // ---------------------------------------------------------------------------
@@ -344,28 +346,22 @@ describe('cancelStalePendingTickets', () => {
 describe('checkIn', () => {
 	it('throws when ticket not found', async () => {
 		selectResult = [];
-		await expect(checkIn('nonexistent', 'staff-1')).rejects.toThrow('Ticket not found');
+		await expect(checkIn('nonexistent', 'staff-1')).rejects.toThrow(TicketNotFoundError);
 	});
 
 	it('throws when ticket is not valid', async () => {
 		selectResult = [{ status: 'pending' }];
-		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(
-			'Cannot check in ticket with status "pending"'
-		);
+		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(TicketStateError);
 	});
 
 	it('throws when ticket is already checked in', async () => {
 		selectResult = [{ status: 'checked_in' }];
-		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(
-			'Cannot check in ticket with status "checked_in"'
-		);
+		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(TicketStateError);
 	});
 
 	it('throws when ticket is cancelled', async () => {
 		selectResult = [{ status: 'cancelled' }];
-		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(
-			'Cannot check in ticket with status "cancelled"'
-		);
+		await expect(checkIn('ticket-1', 'staff-1')).rejects.toThrow(TicketStateError);
 	});
 
 	it('updates the ticket when valid', async () => {
@@ -426,21 +422,17 @@ describe('getTicketsRemaining', () => {
 describe('cancelTicket', () => {
 	it('throws when ticket not found', async () => {
 		selectResult = [];
-		await expect(cancelTicket('nonexistent')).rejects.toThrow('Ticket not found');
+		await expect(cancelTicket('nonexistent')).rejects.toThrow(TicketNotFoundError);
 	});
 
 	it('throws when ticket is already cancelled', async () => {
 		selectResult = [{ status: 'cancelled' }];
-		await expect(cancelTicket('ticket-1')).rejects.toThrow(
-			'Cannot cancel ticket with status "cancelled"'
-		);
+		await expect(cancelTicket('ticket-1')).rejects.toThrow(TicketStateError);
 	});
 
 	it('throws when ticket is already checked in', async () => {
 		selectResult = [{ status: 'checked_in' }];
-		await expect(cancelTicket('ticket-1')).rejects.toThrow(
-			'Cannot cancel ticket with status "checked_in"'
-		);
+		await expect(cancelTicket('ticket-1')).rejects.toThrow(TicketStateError);
 	});
 
 	it('cancels a pending ticket', async () => {
