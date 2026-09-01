@@ -184,7 +184,7 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                             | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting  |
 | [d1-migration-proposal.md](architecture/d1-migration-proposal.md)                     | ✅     | Postgres → Cloudflare D1 proposal                                                                    |
 | [universal-data-layer-proposal.md](architecture/universal-data-layer-proposal.md)     | ✅     | API layer for SSR/SPA + kiosk parity (proposal)                                                      |
-| [product-config-kv-migration.md](architecture/product-config-kv-migration.md)         | ⚠️     | product_config → KV — migration pending user action                                                  |
+| [product-config-kv-migration.md](architecture/product-config-kv-migration.md)         | ✅     | product_config → KV; the orphaned table is dropped and the replay spec guards the class              |
 | [postmark-template-migration.md](architecture/postmark-template-migration.md)         | ✅     | Transactional email moved to Postmark-hosted templates; repo source and `pnpm email:push`            |
 | [U-Tec Api.postman_collection.json](architecture/U-Tec%20Api.postman_collection.json) | 📦     | Vendor API collection for the door-lock integration — reference only, not maintained here            |
 
@@ -238,7 +238,6 @@ the in-app Help/KB via `pnpm help:sync`. The manifest tracks coverage across all
 
 ### Open action items (from the docs above)
 
-- ⚠️ **product_config → KV migration** — pending in `architecture/product-config-kv-migration.md`.
 - ⚠️ **Credit/cash rework** — awaiting migration in `plans/reservation-credits-cash-checklist.md`.
 - ⚠️ **Door-code timing** — Phase 3 of `specs/reservation-confirmation-window.md`, the only
   half-built thing left in `specs/`.

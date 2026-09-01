@@ -26,21 +26,13 @@ const schemaTables: string[] = snapshot.ddl
 	.filter((n: string) => !n.startsWith('sqlite_') && n !== '__drizzle_migrations');
 const foreignKeys = snapshot.ddl.filter((e: { entityType: string }) => e.entityType === 'fks');
 
-// Dropped from the drizzle schema, but no `DROP TABLE` was ever emitted, so the table
-// still physically exists in D1 and must still be cleared. Remove from this list once a
-// migration actually drops it.
-const ORPHANED_BUT_STILL_IN_D1 = ['product_config'];
-
 describe('d1 table order', () => {
 	it('lists every table in the current schema', () => {
 		expect(schemaTables.filter((t) => !tableOrder.includes(t))).toEqual([]);
 	});
 
-	it('lists no table that is absent from both the schema and D1', () => {
-		const extra = tableOrder.filter(
-			(t: string) => !schemaTables.includes(t) && !ORPHANED_BUT_STILL_IN_D1.includes(t)
-		);
-		expect(extra).toEqual([]);
+	it('lists no table that is absent from the schema', () => {
+		expect(tableOrder.filter((t: string) => !schemaTables.includes(t))).toEqual([]);
 	});
 
 	it('has no duplicate entries', () => {
