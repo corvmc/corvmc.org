@@ -268,11 +268,11 @@ export const flagSuggestion = form(
 		description: z.string().trim().max(FLAG_DESCRIPTION_MAX).optional()
 	}),
 	async (data, issue) => {
-		// Deliberately no requireFeature('contentFlags'), even though this writes a
-		// content_flag row. Reporting is how a suggestion comes off this board — it
-		// belongs to the board, not to the optional content-flag surface, and the
-		// board itself is not flag-gated. Staff queues are never gated either, so
-		// these reports always land somewhere visible.
+		// This writes a `content_flag` row but was deliberately never gated on the
+		// `contentFlags` flag, back when there was one: reporting is how a
+		// suggestion comes off this board, so it belongs to the board rather than
+		// to the reporting surface. The flag is retired now and the distinction no
+		// longer bites, but it is why this path never had a guard to remove.
 		const me = requireUser();
 
 		if (

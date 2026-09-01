@@ -75,7 +75,6 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
 import { event, createEventSchema, eventSources, lineupSchema } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
@@ -330,7 +329,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		// Cancelled listings aren't reportable: they're already on their way
 		// off the guide, so opening them up only widens the id-probing surface
 		// the moderation spec closed.
-		canReport: evt.status === 'published' && (await isFeatureEnabled('contentFlags')),
+		canReport: evt.status === 'published',
 		upcoming
 	};
 });

@@ -251,7 +251,6 @@ const reportDirectSchema = z.object({
 
 export const reportDirectThread = form(reportDirectSchema, async (data, issue) => {
 	await requireFeature('directMessages');
-	await requireFeature('contentFlags');
 	const reporter = requireUser();
 
 	// Participation IS the authorisation, and it reuses the member's own read

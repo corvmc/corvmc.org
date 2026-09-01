@@ -218,7 +218,7 @@ export const getDirectoryMember = query(z.string(), async (userId) => {
 		profile,
 		shows,
 		viewer: {
-			canReport: features.contentFlags && viewer.id !== userId,
+			canReport: viewer.id !== userId,
 			// No "message yourself" button. Whether they will actually receive it depends on
 			// blocks and their own messaging switch — checked server-side and deliberately not
 			// reflected here: showing or hiding this would tell the sender things the
@@ -235,16 +235,13 @@ export const getDirectoryBand = query(z.string(), async (slug) => {
 	// Serial, because the shows are keyed by the band id the profile resolves — but both hops
 	// are local to the server, where the fan-out was three network round trips.
 	const profile = await loadBandProfile(slug, 'members');
-	const [shows, features] = await Promise.all([
-		getBandShows(profile.band.id),
-		getAllFeatureFlags()
-	]);
+	const shows = await getBandShows(profile.band.id);
 
 	return {
 		...profile,
 		shows,
 		viewer: {
-			canReport: features.contentFlags && !profile.members.some((m) => m.userId === viewer.id)
+			canReport: !profile.members.some((m) => m.userId === viewer.id)
 		}
 	};
 });
