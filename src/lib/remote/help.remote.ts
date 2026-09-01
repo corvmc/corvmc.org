@@ -10,7 +10,6 @@ import {
 	listNonEmptyCategories,
 	listArticlesByCategory,
 	getArticleBySlug,
-	searchArticles,
 	listAllArticles,
 	resolveUserHelpRole,
 	createArticle as createArticleSvc,
@@ -75,12 +74,6 @@ export const getMemberArticle = query(z.string(), async (slug) => {
 export const getMemberArticlePage = query(z.string(), async (slug) => {
 	const [article, categories] = await Promise.all([getMemberArticle(slug), getMemberCategories()]);
 	return { article, categories };
-});
-
-export const searchHelp = query(z.string(), async (q) => {
-	const { role } = await requireUserWithRole();
-	if (q.trim().length < 2) return [];
-	return searchArticles(q.trim(), role);
 });
 
 // ---------------------------------------------------------------------------

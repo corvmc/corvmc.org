@@ -373,11 +373,12 @@ function mapBandRow<
 		...rest,
 		id: groupId!,
 		slug: group?.slug ?? '',
-		// From the GROUP, not the entry. `group.avatarKey` is canonical and has
-		// three writers (`setBandAvatar`, `clearBandAvatar`, and the avatar route,
-		// which duplicates them inline); reading the entry's copy instead would
-		// mean keeping all three in sync for no gain, since the group is joined
-		// here anyway. The entry's copy exists for an act that has no group.
+		// From the GROUP, not the entry. `group.avatarKey` is canonical and its one
+		// writer is the avatar route (`/api/bands/[id]/avatar`); the band-service
+		// pair that used to duplicate it had no caller and is gone. Reading the
+		// entry's copy instead would mean keeping two in sync for no gain, since
+		// the group is joined here anyway. The entry's copy exists for an act that
+		// has no group.
 		avatarKey: group?.avatarKey ?? null,
 		genres: tags.filter((t) => t.kind === 'genre').map((t) => t.value),
 		memberCount: (group?.members ?? []).filter((m) => m.status === 'active').length,

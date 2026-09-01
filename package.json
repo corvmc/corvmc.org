@@ -85,7 +85,6 @@
 		"lefthook": "^2.1.12",
 		"mdsvex": "^0.12.8",
 		"playwright": "^1.62.1",
-		"postgres": "^3.4.9",
 		"postmark-cli": "^1.5.0",
 		"prettier": "^3.9.6",
 		"prettier-plugin-svelte": "^4.1.1",
