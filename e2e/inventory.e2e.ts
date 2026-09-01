@@ -176,9 +176,11 @@ test.describe('inventory', () => {
 
 		// Put them back with a stocktake correction — the one caller-signed reason.
 		// The modal asks for the counted total now, not the difference; the delta
-		// it derives is what still reaches the ledger.
+		// it derives is what still reaches the ledger. By name rather than by
+		// label — a `FormField` label is a `<legend>` naming the fieldset, so no
+		// FormField input in this app is reachable by its label text.
 		await page.getByRole('button', { name: 'Stocktake' }).click();
-		await page.getByRole('dialog').getByLabel('Counted on the shelf').fill(String(before));
+		await page.getByRole('dialog').locator('input[name="counted"]').fill(String(before));
 		await modalSubmit(page, /^Stocktake$/).click();
 		await expect(page.getByText('Correction recorded')).toBeVisible({ timeout: 10000 });
 
