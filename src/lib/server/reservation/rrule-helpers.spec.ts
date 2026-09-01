@@ -234,6 +234,30 @@ describe('generationWindowEnd', () => {
 		expect(result.getTime()).toBe(expectedMs);
 	});
 
+	it('generates a teaching series further out than a member one', async () => {
+		// Not a courtesy — it is what stops a teacher losing the slot they teach in
+		// every week. A teaching series is Tier 2 in the generator and can be
+		// waitlisted behind a member's one-off, and the mitigation is that the
+		// series already exists before a member can reach that week.
+		const from = new Date('2026-05-12T00:00:00.000Z');
+		const teaching = await generationWindowEnd(from, 'instructor');
+		const member = await generationWindowEnd(from, 'user');
+
+		expect(teaching.getTime()).toBeGreaterThan(member.getTime());
+		expect(teaching.getTime()).toBe(from.getTime() + 90 * 24 * 60 * 60 * 1000);
+	});
+
+	it('gives every other booker type the member window', async () => {
+		// Positively matched, so a booker type added later inherits the member
+		// horizon rather than silently acquiring the teaching one.
+		const from = new Date('2026-05-12T00:00:00.000Z');
+		for (const t of ['user', 'group', 'event'] as const) {
+			expect((await generationWindowEnd(from, t)).getTime()).toBe(
+				from.getTime() + 17.5 * 24 * 60 * 60 * 1000
+			);
+		}
+	});
+
 	it('defaults to current time when no argument is given', async () => {
 		const before = new Date();
 		const result = await generationWindowEnd();
