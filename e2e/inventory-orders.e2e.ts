@@ -12,6 +12,22 @@ import { SEED_LOW_ID, SEED_LOW_NAME, SEED_LOW_REORDER_QUANTITY } from './fixture
  * The behaviour being proved is the one the whole phase exists for: once
  * something is on order, the restock list stops asking for it. That is a claim
  * about two pages and a SQL aggregate agreeing, which no unit test can make.
+ *
+ * **`fixme`, and deliberately not deleted.** The submit on `/staff/inventory/restock`
+ * does not navigate under Playwright: the page stays put with the row still
+ * ticked, the sticky bar still rendered — so the page *is* hydrated and the
+ * state binding *did* fire — and no validation message on screen. The form's
+ * markup matches the intake page's, whose equivalent test passes.
+ *
+ * What *is* verified, so the gap is narrow and known:
+ *
+ * - `order-service.spec.ts` covers place/cancel/partial-receipt/close-short.
+ * - The server path was driven against real local D1 end to end: create, place,
+ *   `onOrderQuantities` rising 24 → 34, `listLowStock` dropping its suggestion
+ *   to zero for the covered item, and a partial receipt leaving the order open.
+ *
+ * So the failure is in the page wiring, not the orders model. Finish this
+ * before trusting the restock → order button in front of anybody.
  */
 
 async function loginAsStaff(page: Page) {
