@@ -189,6 +189,30 @@ For inputs FormField can't render (date pickers, file uploads, compound inputs),
 
 `FormField` with `type="textarea"` spreads only its own input props, so `rows`, `placeholder` and `maxlength` are **silently dropped** on that branch. Use custom input mode for a textarea that needs any of them.
 
+**`type="select"` is the exception to "children replace the input".** Children win over
+every other built-in type, but a select renders them _inside_ the control, after any
+`options`. That order is deliberate and load-bearing: while children came first, a
+`type="select"` field with `<option>` children emitted bare options with no `<select>`
+around them — unstyled text that submitted nothing, which is how the item Category field
+and `CreateLoanAction` both shipped broken. Prefer `options` for a plain list; use
+children when the options come from a component that owns its own query (`CategoryOptions`,
+`RoleOptions`), and pass the empty choice as `placeholder` rather than a hand-written
+`<option value="">`.
+
+### MoneyField
+
+Money is stored in integer cents everywhere, so a form that asks for cents directly
+invites the operator to type `45` for a $45 cable. `MoneyField` shows a `$` input in
+dollars and submits cents from a hidden sibling registered as a number:
+
+```svelte
+<MoneyField field={fields.unitValueCents} label="Unit cost" value={item.unitValueCents} />
+```
+
+`value` is in **cents**, matching what the record holds. An emptied box submits nothing at
+all rather than zero — an absent price and a price of zero are different claims. Use it
+for every amount; do not hand-roll the dollars/cents pair.
+
 **A remote form encodes its field names**, so a component's own `name="foo"` prop does not reach it. Take the attributes from the form instead — `<input {...myForm.fields.foo.as('hidden', value)} />` — or the field arrives as `undefined` and fails Zod with nothing on screen to show for it. This bites hardest with `SearchSelect`, whose `name` prop emits a plain attribute: bind its value and render the hidden input from the remote form yourself.
 
 ### Key props

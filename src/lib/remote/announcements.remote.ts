@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { query, form } from '$app/server';
 import { mapDomainError } from '$lib/server/errors';
 import { requireGroupRole } from '$lib/server/group/group-context';
-import { requireFeature } from '$lib/server/feature-flags';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
 import { ANNOUNCEMENT_BODY_MAX, ANNOUNCEMENT_TITLE_MAX } from '$lib/config';
@@ -41,7 +40,6 @@ const groupIdField = z.string().min(1);
 const announcementIdField = z.string().min(1);
 
 async function requireReader(groupId: string) {
-	await requireFeature('announcements');
 	return requireGroupRole({ id: groupId }, 'member', { allowStaff: true });
 }
 
@@ -54,7 +52,6 @@ async function requireReader(groupId: string) {
  * table gives posting to owner and admin, and staff are neither.
  */
 async function requireAuthor(groupId: string) {
-	await requireFeature('announcements');
 	return requireGroupRole({ id: groupId }, 'admin');
 }
 
@@ -224,7 +221,6 @@ export const deleteAnnouncement = form(
 export const setAnnouncementMute = form(
 	z.object({ groupId: groupIdField, intent: z.enum(['mute', 'unmute']) }),
 	async (data) => {
-		await requireFeature('announcements');
 		const { user, group } = await requireGroupRole({ id: data.groupId }, 'member');
 		await setMuteState(group.id, user.id, data.intent === 'unmute');
 		return { success: true };

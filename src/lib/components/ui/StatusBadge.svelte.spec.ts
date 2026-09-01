@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import StatusBadge from './StatusBadge.svelte';
+import StatusBadge, { labels } from './StatusBadge.svelte';
 
 /**
  * The icon-only form is the one used in every staff table's status column and,
@@ -18,9 +18,12 @@ describe('StatusBadge accessibility', () => {
 
 	it('uses the humanised label, not the raw enum value', async () => {
 		await render(StatusBadge, { status: 'pending_review' });
-		// `labels` overrides this one: "Pending review" reads as a state,
-		// "Pending_review" reads as a database column.
-		expect(document.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('In review');
+		// The `labels` override wins over the humanised enum value. Asserting
+		// against the map rather than its current wording keeps a relabel in
+		// config.ts from reddening this file.
+		const name = document.querySelector('[role="img"]')?.getAttribute('aria-label');
+		expect(name).toBe(labels.pending_review);
+		expect(name).not.toBe('Pending review');
 	});
 
 	it('does not double up the name when the label is already visible', async () => {

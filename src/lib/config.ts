@@ -306,14 +306,29 @@ export const assetStatusLabels: Record<AssetStatus, string> = {
 	lost: 'Lost'
 };
 
-/** How stock arrived. One table covers all three; only the fields differ. */
-export const acquisitionKinds = ['purchase', 'donation', 'grant'] as const;
+/**
+ * How a thing came to be ours. One table covers every kind; only the fields differ.
+ *
+ * `opening_balance` is the odd one out and exists for the stocktake: gear the
+ * collective has owned for years, with no receipt and no traceable donor. Every
+ * arrival must hang off an acquisition — that rule is what makes provenance and
+ * spend answerable — so without a fourth kind, recording a decade-old amp means
+ * inventing a purchase that never happened and inflating this year's spend by
+ * the value of the entire building.
+ *
+ * It is deliberately excluded from both money reports rather than filtered out
+ * of them: `spendByCategory` counts `kind = 'purchase'` and the FASB
+ * gifts-in-kind report counts `kind = 'donation'`, so an opening balance is
+ * invisible to both by construction and cannot drift back in.
+ */
+export const acquisitionKinds = ['purchase', 'donation', 'grant', 'opening_balance'] as const;
 export type AcquisitionKind = (typeof acquisitionKinds)[number];
 
 export const acquisitionKindLabels: Record<AcquisitionKind, string> = {
 	purchase: 'Purchase',
 	donation: 'Donation',
-	grant: 'Grant'
+	grant: 'Grant',
+	opening_balance: 'Already owned'
 };
 
 /**
@@ -599,6 +614,9 @@ export const VOLUNTEER_SHIFT_NOTES_MAX = 1000;
 /** A card inside this window of expiry reads as "expiring soon" rather than current. */
 export const CERT_EXPIRY_WARNING_DAYS = 60;
 
+/** How long a group invite stays valid. The invite email's footnote interpolates it. */
+export const INVITE_EXPIRY_DAYS = 7;
+
 export const CERT_NAME_MAX = 100;
 export const CERT_DESCRIPTION_MAX = 2000;
 export const CERT_REFERENCE_MAX = 100;
@@ -715,7 +733,7 @@ export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
 // ---------------------------------------------------------------------------
 
 /**
- * The five states of an instructor record — see `docs/specs/instructors-spec.md`.
+ * The five states of an instructor record — see `docs/specs/shipped/instructors-spec.md`.
  *
  * `requested` and `rejected` are the application; the other three are the grant.
  * Keeping them in one enum on one row is what makes the application *be* the

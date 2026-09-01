@@ -400,6 +400,27 @@ export interface CommunityEventSubmittedEvent {
 }
 
 /** Staff approved or turned down a community listing. */
+export interface InstructorApplicationSubmittedEvent {
+	instructorId: string;
+	applicantUserId: string;
+	applicantName: string;
+	/** What they say they teach — enough for a staffer to triage without opening it. */
+	headline: string | null;
+}
+
+export interface InstructorApplicationReviewedEvent {
+	instructorId: string;
+	applicantUserId: string;
+	applicantName: string;
+	applicantEmail: string;
+	approved: boolean;
+	/**
+	 * Required when it comes back. The note is the whole of a return state — a
+	 * member who cannot see what was asked for cannot answer it.
+	 */
+	reviewNotes: string | null;
+}
+
 export interface CommunityEventReviewedEvent {
 	eventId: string;
 	eventTitle: string;
@@ -482,6 +503,8 @@ export type DomainEvents = {
 	'event.unpublished_by_staff': EventUnpublishedByStaffEvent;
 	'community_event.submitted': CommunityEventSubmittedEvent;
 	'community_event.reviewed': CommunityEventReviewedEvent;
+	'instructor.application_submitted': InstructorApplicationSubmittedEvent;
+	'instructor.application_reviewed': InstructorApplicationReviewedEvent;
 	'community_event.unpublished': CommunityEventUnpublishedEvent;
 	'event.lineup_invited': EventLineupInvitedEvent;
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;

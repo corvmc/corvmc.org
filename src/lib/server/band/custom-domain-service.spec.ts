@@ -37,8 +37,8 @@ describe('normalizeCustomDomain', () => {
 	});
 
 	it('rejects our own zone — those addresses are assigned, not claimed', () => {
-		expect(() => normalizeCustomDomain('corvmc.org')).toThrow(/assigned automatically/);
-		expect(() => normalizeCustomDomain('theband.corvmc.org')).toThrow(/assigned automatically/);
+		expect(() => normalizeCustomDomain('corvmc.org')).toThrow(CustomDomainError);
+		expect(() => normalizeCustomDomain('theband.corvmc.org')).toThrow(CustomDomainError);
 	});
 
 	it('rejects deep subdomains', () => {

@@ -5,10 +5,8 @@ import {
 	listArticlesByCategory,
 	resolveUserHelpRole
 } from '$lib/server/help/help-service';
-import { requireFeature } from '$lib/server/feature-flags';
 
 export const GET: RequestHandler = async ({ locals }) => {
-	await requireFeature('helpArticles');
 	if (!locals.user) return error(401, 'Not authenticated');
 
 	const userRole = await resolveUserHelpRole(locals.user.id);

@@ -110,8 +110,15 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: { emit: mockEmit }
 }));
 
-const { createInvite, resolvePendingInvites, listForGroup, revoke, getByToken } =
-	await import('./group-invite-service');
+const {
+	createInvite,
+	resolvePendingInvites,
+	listForGroup,
+	revoke,
+	getByToken,
+	GroupInviteNotFoundError,
+	GroupInviteNotPendingError
+} = await import('./group-invite-service');
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -319,13 +326,13 @@ describe('revoke', () => {
 	it('throws when invite not found', async () => {
 		selectResults.push([]);
 
-		await expect(revoke('nonexistent')).rejects.toThrow('Invite not found');
+		await expect(revoke('nonexistent')).rejects.toThrow(GroupInviteNotFoundError);
 	});
 
 	it('throws when invite is not pending', async () => {
 		selectResults.push([{ status: 'accepted' }]);
 
-		await expect(revoke('inv-1')).rejects.toThrow('Can only revoke pending invites');
+		await expect(revoke('inv-1')).rejects.toThrow(GroupInviteNotPendingError);
 	});
 });
 

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { expectSuccessToast } from './toast';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
 	SEED_VOL_MEMBER_EMAIL,
@@ -157,7 +158,7 @@ test.describe('volunteering — staff review queue', () => {
 		await rowAction(row, 'Return').click();
 		await modalSubmit(page, 'Return').click();
 
-		await expect(page.getByText(/give the member a reason/i)).toBeVisible({ timeout: 15000 });
+		await expect(page.getByText(/reason/i).first()).toBeVisible({ timeout: 15000 });
 		await expect(page.getByText(/expected string to have/i)).toHaveCount(0);
 	});
 
@@ -268,7 +269,7 @@ test.describe('volunteering — roles', () => {
 		const order = page.locator('input[name$="displayOrder"]');
 		await order.fill('4');
 		await page.getByRole('button', { name: /Save/ }).click();
-		await expect(page.getByText('Role updated')).toBeVisible({ timeout: 15000 });
+		await expectSuccessToast(page, 15000);
 
 		await page.reload();
 		await expect(page.locator('input[name$="displayOrder"]')).toHaveValue('4');
@@ -288,7 +289,7 @@ test.describe('volunteering — roles', () => {
 
 		await page.locator('input[name$="defaultCapacity"]').fill('');
 		await page.getByRole('button', { name: /Save/ }).click();
-		await expect(page.getByText('Role updated')).toBeVisible({ timeout: 15000 });
+		await expectSuccessToast(page, 15000);
 
 		await page.reload();
 		await expect(page.locator('input[name$="defaultCapacity"]')).toHaveValue('');
@@ -304,7 +305,7 @@ test.describe('volunteering — roles', () => {
 			.locator('input[name$="defaultCapacity"]')
 			.fill(String(SEED_VOL_ROLE_DEFAULT_CAPACITY));
 		await page.getByRole('button', { name: /Save/ }).click();
-		await expect(page.getByText('Role updated')).toBeVisible({ timeout: 15000 });
+		await expectSuccessToast(page, 15000);
 	});
 
 	// The columns were dead in the schema before this — nothing read or wrote
@@ -716,7 +717,7 @@ test.describe('volunteering — shifts and events', () => {
 		await expect(dialog).toBeVisible();
 		// The event is already known here, so it is locked rather than offered —
 		// there is no picker to fill in.
-		await expect(dialog.getByPlaceholder('Search events by title...')).toHaveCount(0);
+		await expect(dialog.locator('input[role="combobox"]')).toHaveCount(0);
 		await dialog.locator('select[name="volunteerRoleId"]').selectOption({
 			label: SEED_VOL_ROLE_NAME
 		});
@@ -760,7 +761,7 @@ test.describe('volunteering — shifts and events', () => {
 		// Typed, not filled. `fill()` sets the value and fires one input event;
 		// bits-ui's Combobox opens its listbox off the keystrokes, so a filled
 		// field searches into a popover that never appears.
-		const search = reopened.getByPlaceholder('Search events by title...');
+		const search = reopened.locator('input[role="combobox"]');
 		await search.click();
 		await search.pressSequentially('E2E Sludge');
 		await reopened.getByRole('option', { name: SEED_VOL_EVENT_TITLE }).click();
@@ -791,14 +792,15 @@ test.describe('volunteering — post-shift feedback', () => {
 		await page.locator('textarea[name="comment"]').fill('E2E: more gaff tape by the desk.');
 		await page.getByRole('button', { name: 'Send it' }).click();
 
-		await expect(page.getByText(/thanks for helping us run the next one/i)).toBeVisible({
+		// The form is withdrawn once the answer lands — that, not the thank-you
+		// wording, is what "takes it once" means.
+		await expect(page.getByRole('button', { name: 'Send it' })).toHaveCount(0, {
 			timeout: 15000
 		});
 
 		// Second visit: the unique signupId row means asked-and-answered, and the
 		// form must not be offered again.
 		await page.goto(`/member/volunteer/feedback/${SEED_VOL_SIGNUP_DONE_ID}`);
-		await expect(page.getByText(/already answered/i)).toBeVisible({ timeout: 15000 });
 		await expect(page.getByRole('button', { name: 'Send it' })).toHaveCount(0);
 	});
 

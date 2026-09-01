@@ -119,6 +119,20 @@ export const account = sqliteTable('account', {
 	id: text('id').primaryKey(),
 	accountId: text('account_id').notNull(),
 	providerId: text('provider_id').notNull(),
+	/**
+	 * better-auth >= 1.7 scopes account identity by issuer and matches on it
+	 * during credential sign-in, so a row without one authenticates nobody — the
+	 * route reports "User not found", the same message an unknown email gets.
+	 *
+	 * For providers with no issuer of their own better-auth synthesises one:
+	 * `local:<providerId>` for local methods, `local:oauth:<providerId>` for
+	 * OAuth. We are credential-only, so every row is `local:credential` — which
+	 * is a constant, and therefore usable as a column default. That default is
+	 * what backfills the rows that predate this column. better-auth sets the
+	 * value explicitly on every account it writes; the default only covers
+	 * direct inserts in seeds and fixtures.
+	 */
+	issuer: text('issuer').notNull().default('local:credential'),
 	userId: text('user_id')
 		.notNull()
 		.references(() => user.id, { onDelete: 'cascade' }),

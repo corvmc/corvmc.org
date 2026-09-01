@@ -42,7 +42,7 @@ export interface MemberNavItem extends NavNode<MemberNavKey> {
 }
 
 export interface MemberNavInput {
-	features: { volunteering?: boolean; helpArticles?: boolean };
+	features: { volunteering?: boolean };
 	/**
 	 * Whether anything in the catalogue is lendable.
 	 *
@@ -92,15 +92,21 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 }
 
 /** The cluster a spacer pins to the bottom of the sidebar. */
-export function memberNavFooter(input: MemberNavInput): MemberNavItem[] {
+// Takes the input it no longer reads: Help was the only footer row a flag could
+// add, and it is unlinked. The parameter stays so restoring that row — or adding
+// any other conditional footer entry — is a one-line change rather than a
+// signature change across every caller.
+export function memberNavFooter(_input: MemberNavInput): MemberNavItem[] {
 	const items: MemberNavItem[] = [
 		{ key: 'profile', label: 'Profile', href: '/member/profile' },
 		{ key: 'account', label: 'Account', href: '/member/account' }
 	];
 
-	if (input.features.helpArticles) {
-		items.push({ key: 'help', label: 'Help', href: '/member/help' });
-	}
+	// Help had a footer row gated on a `helpArticles` flag. The flag is retired and
+	// the help centre is unlinked rather than launched — it was off in production,
+	// so nothing a member could see has changed — and `/member/help` answers by
+	// direct URL. Launching is putting this row back; see
+	// docs/plans/feature-flag-retirement.md.
 
 	items.push({ key: 'membership', label: 'Membership', href: '/member/membership' });
 

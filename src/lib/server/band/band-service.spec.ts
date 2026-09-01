@@ -156,6 +156,8 @@ import {
 	CannotRemoveOwnerError,
 	OwnerCannotLeaveError,
 	BandNotFoundError,
+	BandMemberNotFoundError,
+	NotAnActiveBandMemberError,
 	listForUser,
 	listAll,
 	partitionByStatus,
@@ -618,7 +620,7 @@ describe('BandService', () => {
 		it('throws when member not found', async () => {
 			selectResult = [];
 
-			await expect(removeMember('member-999')).rejects.toThrow('Member not found');
+			await expect(removeMember('member-999')).rejects.toThrow(BandMemberNotFoundError);
 		});
 
 		// Regression (cross-band IDOR): a band admin's memberId comes from the
@@ -629,7 +631,7 @@ describe('BandService', () => {
 			const { db } = await import('$lib/server/db');
 
 			await expect(removeMember('other-bands-member', 'band-1')).rejects.toThrow(
-				'Member not found'
+				BandMemberNotFoundError
 			);
 			expect(db.delete).not.toHaveBeenCalled();
 		});
@@ -671,7 +673,7 @@ describe('BandService', () => {
 			const { db } = await import('$lib/server/db');
 
 			await expect(updateMember('other-bands-member', { role: 'admin' }, 'band-1')).rejects.toThrow(
-				'Member not found'
+				BandMemberNotFoundError
 			);
 			expect(db.update).not.toHaveBeenCalled();
 		});
@@ -703,14 +705,14 @@ describe('BandService', () => {
 		it('throws when new owner is not an active member', async () => {
 			selectResult = [{ status: 'pending' }];
 			await expect(transferOwnership('band-1', 'user-2', 'user-owner')).rejects.toThrow(
-				'New owner must be an active band member'
+				NotAnActiveBandMemberError
 			);
 		});
 
 		it('throws when new owner is not a band member', async () => {
 			selectResult = [];
 			await expect(transferOwnership('band-1', 'user-2', 'user-owner')).rejects.toThrow(
-				'New owner must be an active band member'
+				NotAnActiveBandMemberError
 			);
 		});
 
@@ -758,7 +760,7 @@ describe('BandService', () => {
 		it('throws when not a member', async () => {
 			selectResult = [];
 
-			await expect(leaveBand('band-1', 'user-999')).rejects.toThrow('Not a member');
+			await expect(leaveBand('band-1', 'user-999')).rejects.toThrow(BandMemberNotFoundError);
 		});
 	});
 

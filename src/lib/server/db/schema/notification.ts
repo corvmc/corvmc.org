@@ -164,6 +164,23 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'instructor_application_submitted',
+		label: 'Teaching application',
+		description: 'When a member applies to teach at the Collective',
+		// Staff-facing. Email on, because an application nobody looks at is a
+		// member waiting on silence.
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'instructor_application_reviewed',
+		label: 'Your teaching application',
+		description: 'When staff approve your application to teach, or send it back for a change',
+		// Email on, and this is the one that matters: a return state nobody
+		// receives is the failure the return state exists to prevent. The member
+		// would otherwise only find out by revisiting their profile.
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'direct_message_request',
 		label: 'New message request',
 		description: 'When another member asks to start a conversation with you',
