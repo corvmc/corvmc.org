@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import { hashPattern } from '$lib/utils/patterns';
 	import { imageSrc } from '$lib/utils/images';
 	import { initials } from '$lib/utils/format';
@@ -14,17 +15,19 @@
 	 * bolting a mode onto `IdCard` would give one component two layouts and two
 	 * prop sets.
 	 *
-	 * Two `href`s here trip `svelte/no-navigation-without-resolve` as warnings, the
-	 * same way `IdCard` does: the profile link arrives as a prop already resolved
-	 * by the page, and `bookingUrl` is an arbitrary external URL the instructor
-	 * supplied, which `resolve()` is not for.
+	 * The profile link arrives already resolved by the page, so `href` is typed
+	 * `ResolvedPathname` rather than `string` — that is what satisfies
+	 * `svelte/no-navigation-without-resolve`, which is type-aware. `bookingUrl` is
+	 * an arbitrary external URL the instructor supplied, so its anchor carries
+	 * `rel="external"`, which the rule exempts and which also tells the router to
+	 * hand it to the browser rather than match it as a route.
 	 *
 	 * It shares the `poster-gen` pattern and initials treatment so the two still
 	 * read as one family. The directory routes are art-directed per
 	 * `ui-patterns.md` and deliberately keep their own cards.
 	 */
 	interface Props {
-		href: string;
+		href: ResolvedPathname;
 		name: string;
 		image?: string | null;
 		pronouns?: string | null;
@@ -120,7 +123,7 @@
 				{#if bookingUrl}
 					<a
 						href={bookingUrl}
-						rel="noopener noreferrer nofollow"
+						rel="noopener noreferrer nofollow external"
 						target="_blank"
 						class="btn btn-primary btn-sm"
 					>

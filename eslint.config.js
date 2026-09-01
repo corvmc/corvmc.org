@@ -65,14 +65,25 @@ export default defineConfig(
 				'error',
 				{ argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }
 			],
-			// Downgraded from svelte recommended (error). SvelteKit's typed `resolve()` only accepts
-			// statically-known route ids, but this codebase navigates to many runtime/dynamic string
-			// paths (generic `href` props on Nav/Button/IdCard/etc., remote `redirectUrl`s, computed
-			// nav targets). Wrapping those in `resolve()` produces type errors (`string` is not a
-			// known route id), so the rule cannot be satisfied type-safely for them. Static literal
-			// links are still wrapped in `resolve()`; keep this as a warning so the guidance stays
-			// visible without forcing untypable wraps or dozens of inline disables.
-			'svelte/no-navigation-without-resolve': 'warn'
+			// Error, not warn — the rule IS satisfiable, which the note it used to carry
+			// got wrong. It is type-aware: `expressionIsAllowedType` accepts any
+			// expression whose type is structurally `ResolvedPathname` from
+			// `$app/types`. So a shared component that takes a route as a prop types
+			// it `ResolvedPathname` rather than `string`, and the obligation moves to
+			// the caller, which is the one place that actually holds the route
+			// literal. (`Pathname` does not work — the rule tests assignability in
+			// both directions and `Pathname` is a strict subtype.)
+			//
+			// `ignoreGoto` / `ignoreReplaceState` are the genuine exemptions. Links get
+			// `allowAbsolute`, `allowFragment` and `allowNullish`, but `goto()` and
+			// `replaceState()` get no allowances at all, and this app's list pages
+			// navigate by rebuilding `page.url` with new search params — a resolved
+			// route with a query string appended, which has no route id to resolve as
+			// a whole. See docs/development/template-audit.md.
+			'svelte/no-navigation-without-resolve': [
+				'error',
+				{ ignoreGoto: true, ignoreReplaceState: true }
+			]
 		}
 	},
 	{
@@ -110,8 +121,19 @@ export default defineConfig(
 		rules: { '@typescript-eslint/no-explicit-any': 'off' }
 	},
 	{
+		// The Form boundary applies to every theme, so this one keeps its full reach.
 		files: ['**/+page.svelte'],
-		rules: { 'custom/no-raw-form-elements': 'warn', 'custom/no-utility-soup': 'warn' }
+		rules: { 'custom/no-raw-form-elements': 'warn' }
+	},
+	{
+		// `band-site/` is a separate theme context with its own token set
+		// (`src/lib/themes/band-site/index.css`) and deliberately neutral print-style
+		// greys, so the app's components and semantic utilities are the wrong target
+		// for it. template-audit.md has declared it out of scope since Phase 1; this
+		// is that decision written where the rule can read it.
+		files: ['**/+page.svelte'],
+		ignores: ['src/routes/band-site/**'],
+		rules: { 'custom/no-utility-soup': 'warn' }
 	},
 	{
 		files: ['**/*.svelte'],

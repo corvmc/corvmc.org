@@ -34,7 +34,6 @@ export function rowLink(node: HTMLElement, href: string) {
 		if (window.getSelection()?.toString()) return;
 		// `target` is already the output of `resolve()` at the call site — the rule
 		// only checks for a literal `resolve(...)` in this expression.
-		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		void goto(target);
 	}
 

@@ -11,7 +11,13 @@
 		warning: 'btn-warning',
 		error: 'btn-error',
 		ghost: 'btn-ghost',
-		link: 'btn-link'
+		link: 'btn-link',
+		/* Brand skins, defined in src/routes/layout.css. daisyUI's modifiers cover
+		   its own palette only, and the CMC palette is outside it — before these,
+		   reaching brand ink meant an inline `style` on the component. */
+		'cmc-navy': 'btn-cmc-navy',
+		'cmc-orange': 'btn-cmc-orange',
+		'cmc-navy-outline': 'btn-cmc-navy-outline'
 	} as const;
 
 	const SIZES = { xs: 'btn-xs', sm: 'btn-sm', md: '', lg: 'btn-lg' } as const;

@@ -1,3 +1,4 @@
+import type Stripe from 'stripe';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/server/db';
 import { paymentCache } from '$lib/server/db/schema/finance';
@@ -33,7 +34,7 @@ export interface CheckoutLineItem {
 		product?: string;
 		product_data?: { name: string; description?: string };
 		unit_amount: number;
-		recurring?: { interval: string };
+		recurring?: { interval: Stripe.PriceCreateParams.Recurring.Interval };
 	};
 	quantity?: number;
 }
@@ -258,17 +259,11 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 		finalLineItems.push(feeLineItem);
 	}
 
-	const sessionParams: {
-		mode: string;
-		line_items: CheckoutLineItem[];
-		success_url: string;
-		cancel_url: string;
-		metadata: Record<string, string>;
-		payment_intent_data?: { metadata: Record<string, string> };
-		customer?: string;
-		customer_email?: string;
-		discounts?: Array<{ coupon: string }>;
-	} = {
+	// Stripe's own params type rather than a hand-rolled shape: the local one
+	// declared `mode: string` where Stripe wants the literal union, and that
+	// single widening was the only thing the `as any` at the call below existed
+	// to paper over.
+	const sessionParams: Stripe.Checkout.SessionCreateParams = {
 		mode,
 		line_items: finalLineItems,
 		success_url: successUrl,
@@ -300,7 +295,7 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 			sessionParams.discounts = [{ coupon: coupon.id }];
 		}
 
-		const session = await stripe.checkout.sessions.create(sessionParams as any);
+		const session = await stripe.checkout.sessions.create(sessionParams);
 
 		if (!session.url) {
 			throw new Error('Stripe did not return a checkout URL');

@@ -294,8 +294,7 @@
 						src={current.src}
 						srcset={current.srcset}
 						alt=""
-						class="mb-2 h-32 w-auto rounded border"
-						style="border-color: var(--surface-border)"
+						class="mb-2 h-32 w-auto rounded border-surface"
 					/>
 				{/if}
 				<input

@@ -75,7 +75,6 @@
 		const href = `${page.url.pathname}${search ? `?${search}` : ''}`;
 		if (page.url.pathname + page.url.search !== href) {
 			// Already a real pathname off `page.url`, so there is nothing to resolve.
-			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
 		}
 	});

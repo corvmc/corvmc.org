@@ -53,6 +53,17 @@
 		 * A remote form, one of its `.for(id)` instances (which drops `for` from
 		 * the type), or a plain async callback.
 		 */
+		/*
+		 * `RemoteForm<Input, Output>` is invariant in `Input` — it appears
+		 * covariantly in `fields` and contravariantly in `preflight`/`enhance` —
+		 * so a container that accepts more than one remote form has no single
+		 * generic instantiation. Expressing "some remote form, I don't care
+		 * which" needs an existential type, which TypeScript does not have.
+		 *
+		 * Generics were tried and reverted; `ConfirmReservationAction` passes
+		 * `confirmReservation | payForReservation`, differing in both parameters, proves the point.
+		 */
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		action: (() => Promise<unknown>) | RemoteForm<any, any> | Omit<RemoteForm<any, any>, 'for'>;
 		label?: string;
 		icon?: Snippet;
@@ -90,6 +101,11 @@
 	// ---------------------------------------------------------------------------
 	// Mode detection
 	// ---------------------------------------------------------------------------
+
+	// Hoisted so the disable can sit on a statement — an eslint comment cannot
+	// live inside an element's attribute list. Same invariance as the prop above.
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const remoteAction = $derived(action as RemoteForm<any, any>);
 
 	const isForm = $derived(typeof action !== 'function');
 	const hasModal = $derived(isForm || !!body || !!confirm);
@@ -199,7 +215,7 @@
 			     is never involved. `confirm`, when set, renders as a lead-in above the fields. -->
 			<Form
 				class="space-y-4"
-				remote={action as RemoteForm<any, any>}
+				remote={remoteAction}
 				{successToast}
 				onsuccess={handleFormSuccess}
 				onfailure={handleFormFailure}

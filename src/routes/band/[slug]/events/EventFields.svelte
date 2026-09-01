@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { RemoteFormField } from '@sveltejs/kit';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
 	import { searchBandsForLineup } from '$lib/remote/band-events.remote';
@@ -52,10 +53,26 @@
 		lineup = $bindable<LineupChip[]>([]),
 		readonly = false
 	}: {
-		// The remote form's `.fields`. Typed loosely on purpose: create and update
-		// are different form objects with overlapping but not identical shapes.
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		fields: any;
+		/**
+		 * The subset of `remote.fields` this set posts into. Named rather than
+		 * `any`: create and update are different form objects, but they overlap
+		 * on exactly these fields, so listing them is both accurate and checked —
+		 * a form missing one is now a build error here rather than an `undefined`
+		 * spread onto an input.
+		 */
+		fields: {
+			title: RemoteFormField<string>;
+			description: RemoteFormField<string>;
+			eventDate: RemoteFormField<string>;
+			eventStartTime: RemoteFormField<string>;
+			eventEndTime: RemoteFormField<string>;
+			doorsTime: RemoteFormField<string>;
+			location: RemoteFormField<string>;
+			tags: RemoteFormField<string>;
+			posterFile: RemoteFormField<File>;
+			externalTicketUrl: RemoteFormField<string>;
+			ticketPriceDollars: RemoteFormField<string>;
+		};
 		/** The saved event. Absent when creating. */
 		evt?: EventForDisplay;
 		/** The band's address, which the lineup lookup guards on. */

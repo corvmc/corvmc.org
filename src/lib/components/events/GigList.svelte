@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { IconMapPin, IconTicket } from '@tabler/icons-svelte';
 	import {
 		toLocalDate,
@@ -20,10 +21,15 @@
 		showByline = true
 	}: {
 		events: CalendarEntry[];
-		/** Base path for event links — member routes pass '/member/events'. */
-		eventBase?: string;
-		/** Base path for the byline band link. */
-		bandBase?: string;
+		/**
+		 * Which event route the rows link into. A route id rather than a base
+		 * path so the link is built with `resolve()` and checked — a base string
+		 * concatenated with an id is unverifiable and was the reason these links
+		 * could not satisfy `no-navigation-without-resolve`.
+		 */
+		eventBase?: '/events' | '/member/events';
+		/** Which band-profile route the byline links into. */
+		bandBase?: '/directory/bands' | '/member/directory/bands';
 		/** Off on a band's own profile, where every row is that band. */
 		showByline?: boolean;
 	} = $props();
@@ -53,7 +59,10 @@
 			<h3 class="gig-list__section-head">{label}</h3>
 			<ul class="gig-list__rows">
 				{#each rows as evt (evt.id)}
-					{@const href = `${eventBase}/${evt.id}`}
+					{@const href =
+						eventBase === '/member/events'
+							? resolve(`/member/events/${evt.id}`)
+							: resolve(`/events/${evt.id}`)}
 					{@const isPast = evt.startsAt < now}
 					{@const isCancelled = evt.status === 'cancelled'}
 					<li
@@ -93,7 +102,12 @@
 									{#if evt.source === 'band' && evt.bandName}
 										by
 										{#if evt.bandSlug}
-											<a href="{bandBase}/{evt.bandSlug}" class="gig-row__band">{evt.bandName}</a>
+											<a
+												href={bandBase === '/member/directory/bands'
+													? resolve(`/member/directory/bands/${evt.bandSlug}`)
+													: resolve(`/directory/bands/${evt.bandSlug}`)}
+												class="gig-row__band">{evt.bandName}</a
+											>
 										{:else}
 											{evt.bandName}
 										{/if}

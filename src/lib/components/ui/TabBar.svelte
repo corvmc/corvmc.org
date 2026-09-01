@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import type { Snippet } from 'svelte';
 	import { Tabs, DropdownMenu } from 'bits-ui';
 	import { IconChevronDown } from '@tabler/icons-svelte';
@@ -14,7 +15,7 @@
 		 * would put a second query in flight there — see `custom/no-concurrent-remote-queries`.
 		 */
 		badge?: string | number | Snippet;
-		href?: string;
+		href?: ResolvedPathname;
 	};
 
 	let {

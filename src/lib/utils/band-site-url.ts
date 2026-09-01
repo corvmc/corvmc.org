@@ -7,6 +7,7 @@
  *
  * `path` is the band-site-relative path ('' for home, '/events', '/epk').
  */
+import type { ResolvedPathname } from '$app/types';
 import { isReservedSlug } from '$lib/reserved-slugs';
 
 /**
@@ -83,13 +84,26 @@ export function bandSitePath(slug: string, currentUrl: URL): string {
 	return currentUrl.pathname;
 }
 
-export function bandSiteHref(slug: string, path: string, currentUrl: URL): string {
+/**
+ * Returns `ResolvedPathname` rather than `string` so callers satisfy
+ * `no-navigation-without-resolve` without a disable at every link.
+ *
+ * The cast is the honest part of the contract and lives here, once: this
+ * function returns one of three shapes depending on how the band site is being
+ * served — a root-relative path on a band subdomain, that same path carrying
+ * `?__band_subdomain=` on localhost, or a `/band-site/{slug}` prefix on direct
+ * access. Only the last is a route in this app's tree, so there is no route id
+ * for `resolve()` to check. Every branch below is a path this module builds
+ * itself, which is why asserting it here is safe in a way that widening the
+ * callers' `href` props to `string` would not be.
+ */
+export function bandSiteHref(slug: string, path: string, currentUrl: URL): ResolvedPathname {
 	const devOverride = currentUrl.searchParams.get('__band_subdomain');
 	if (devOverride) {
-		return `${path || '/'}?__band_subdomain=${encodeURIComponent(devOverride)}`;
+		return `${path || '/'}?__band_subdomain=${encodeURIComponent(devOverride)}` as ResolvedPathname;
 	}
 	if (currentUrl.pathname.startsWith('/band-site/')) {
-		return `/band-site/${slug}${path}`;
+		return `/band-site/${slug}${path}` as ResolvedPathname;
 	}
-	return path || '/';
+	return (path || '/') as ResolvedPathname;
 }

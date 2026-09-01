@@ -38,7 +38,7 @@
 		</article>
 
 		{#if headings.length > 2}
-			<aside class="sticky top-20 hidden w-48 shrink-0 self-start lg:block">
+			<aside class="toc-rail hidden shrink-0 lg:block">
 				<TableOfContents {headings} />
 			</aside>
 		{/if}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 	import FormField from './FormField.svelte';
 
 	/**
@@ -28,9 +28,9 @@
 		description,
 		...rest
 	}: {
-		// FormField's own `field?: RemoteFormField<any>`; narrowing it here would
-		// reject every caller's concrete field type.
-		field: RemoteFormField<any>;
+		// `RemoteFormFieldValue` is the constraint's own upper bound — the union of
+		// everything a form field can hold — which says what `any` said, checkably.
+		field: RemoteFormField<RemoteFormFieldValue>;
 		label?: string;
 		/** Existing amount, in cents. */
 		value?: number | null;

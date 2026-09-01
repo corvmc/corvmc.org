@@ -2,6 +2,8 @@
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import {
@@ -113,7 +115,7 @@
 			</header>
 
 			{#if conflicts.length > 0}
-				<div role="alert" class="alert py-2 text-sm alert-warning">
+				<Alert type="warning" class="py-2 text-sm">
 					<span>
 						Overlaps {conflicts.length} other {conflicts.length === 1 ? 'booking' : 'bookings'}:
 						{conflicts
@@ -123,11 +125,11 @@
 							)
 							.join(', ')}
 					</span>
-				</div>
+				</Alert>
 			{/if}
 
 			{#if actions.has('confirm') || actions.has('complete') || actions.has('noShow') || actions.has('cancel')}
-				<div class="flex flex-wrap items-center gap-2 border-t border-base-200 pt-3">
+				<div class="flex flex-wrap items-center gap-2 pt-3 rule-top">
 					{#if actions.has('confirm')}
 						<ConfirmReservationAction reservation={r} staff />
 					{/if}
@@ -169,7 +171,7 @@
 		>
 			{#snippet header(title)}
 				<header class="flex justify-between">
-					<span class="card-title">{title}</span>
+					<CardTitle>{title}</CardTitle>
 					{#if r.bookerType === 'group' && r.bandId}
 						<Button href="/staff/bands/{r.bandId}" variant="default" size="sm">View Band</Button>
 					{:else if r.bookerType === 'event' && r.eventId}
@@ -220,7 +222,7 @@
 				{/if}
 
 				{#if actions.has('cashReceived') || actions.has('comp') || actions.has('refund')}
-					<div class="mt-3 flex flex-wrap gap-2 border-t border-base-200 pt-3">
+					<div class="mt-3 flex flex-wrap gap-2 pt-3 rule-top">
 						{#if actions.has('cashReceived')}
 							<CashReceivedAction
 								reservation={r}

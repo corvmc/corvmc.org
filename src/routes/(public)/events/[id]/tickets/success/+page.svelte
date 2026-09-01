@@ -53,14 +53,14 @@
 			<h3 class="mb-3 font-medium">Your Tickets</h3>
 			<div class="space-y-3">
 				{#each data.tickets as ticket (ticket.id)}
-					<div class="flex items-center justify-between rounded bg-base-200 p-3">
+					<div class="flex items-center justify-between inset p-3">
 						<div>
 							<p class="font-medium">{ticket.attendeeName}</p>
 							<p class="text-muted">{ticket.attendeeEmail}</p>
 						</div>
 						<div class="text-right">
 							<p class="font-mono text-lg font-bold tracking-wider">{ticket.code}</p>
-							<p class="text-xs opacity-50">Ticket code</p>
+							<p class="text-subtle">Ticket code</p>
 						</div>
 					</div>
 				{/each}

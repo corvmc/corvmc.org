@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Hero from '$lib/components/public/Hero.svelte';
+	import Tile from '$lib/components/public/Tile.svelte';
 	import Section from '$lib/components/public/Section.svelte';
 	import SectionHeading from '$lib/components/public/SectionHeading.svelte';
 	import {
@@ -84,7 +85,7 @@
 	</div>
 	<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 		<!-- Free -->
-		<div class="flex flex-col gap-4 rounded-lg p-8 surface">
+		<Tile align="stack" gap="4" pad="lg">
 			<div>
 				<div class="text-3xl font-bold">Free Account</div>
 				<div class="text-sm text-fg-3">Always free</div>
@@ -101,13 +102,10 @@
 			<Button href="/login?register&redirect=/member" variant="default" outline class="mt-auto"
 				>Create an Account</Button
 			>
-		</div>
+		</Tile>
 
 		<!-- Sustaining -->
-		<div
-			class="flex flex-col gap-4 rounded-lg p-8"
-			style="background: var(--cmc-navy); color: #fff"
-		>
+		<Tile align="stack" gap="4" pad="lg" fill="navy">
 			<div>
 				<div class="text-3xl font-bold">Sustaining Member</div>
 				<div class="text-sm" style="opacity: 0.85">From $10/month · sliding scale</div>
@@ -124,14 +122,13 @@
 			</ul>
 			<Button
 				href={resolve('/login?register&redirect=/member/membership')}
-				variant="default"
+				variant="cmc-orange"
 				size="sm"
 				class="mt-auto"
-				style="background: var(--cmc-orange); color: #fff; border-color: rgba(0,0,0,0.3)"
 			>
 				Become a Sustaining Member
 			</Button>
-		</div>
+		</Tile>
 	</div>
 </Section>
 
@@ -140,16 +137,13 @@
 	<SectionHeading title="What Sustaining Members Get" />
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
 		{#each benefits as item (item.title)}
-			<div
-				class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
-				style="background: var(--surface); border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))"
-			>
+			<Tile fill="raised">
 				<div class="text-cmc-navy">
 					<item.icon size={40} />
 				</div>
 				<h3 class="text-lg font-bold">{item.title}</h3>
 				<p class="text-muted leading-relaxed">{item.desc}</p>
-			</div>
+			</Tile>
 		{/each}
 	</div>
 </Section>
@@ -166,12 +160,7 @@
 	</div>
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
 		{#each tiers as tier (tier.amount)}
-			<div
-				class="flex flex-col items-center rounded-lg p-8 text-center"
-				style={tier.featured
-					? 'background: var(--cmc-orange); color: #fff'
-					: 'background: var(--surface); border: 1px solid var(--surface-border)'}
-			>
+			<Tile pad="lg" gap="none" fill={tier.featured ? 'orange' : 'surface'}>
 				<div class="mb-1 text-5xl leading-none font-bold">{tier.amount}</div>
 				<div class="mb-3 text-xs" style={tier.featured ? 'opacity: 0.85' : 'color: var(--fg-3)'}>
 					per month
@@ -200,7 +189,7 @@
 				>
 					Become a Member
 				</Button>
-			</div>
+			</Tile>
 		{/each}
 	</div>
 	<p class="mt-8 text-center text-sm text-fg-3">

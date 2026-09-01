@@ -25,6 +25,17 @@
 		 * `updateShift.for(id)`. Taken as a prop only so the event picker can build
 		 * its hidden input from `form.fields`; see the comment on it below.
 		 */
+		/*
+		 * `RemoteForm<Input, Output>` is invariant in `Input` — it appears
+		 * covariantly in `fields` and contravariantly in `preflight`/`enhance` —
+		 * so a container that accepts more than one remote form has no single
+		 * generic instantiation. Expressing "some remote form, I don't care
+		 * which" needs an existential type, which TypeScript does not have.
+		 *
+		 * Generics were tried and reverted; three call sites pass `createShift` (no `id`)
+		 * and a fourth passes `updateShift.for(id)` (has one), proves the point.
+		 */
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		form: RemoteForm<any, any> | Omit<RemoteForm<any, any>, 'for'>;
 		/** Roles to choose from. Omit to lock the shift to `roleId`. */
 		roles?: { id: string; name: string }[];

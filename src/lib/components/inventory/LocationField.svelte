@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import type { RemoteFormFieldValue, RemoteFormField } from '@sveltejs/kit';
 	import { Field } from '$lib/components/ui/Form';
 	import { getLocations } from '$lib/remote/inventory.remote';
 
@@ -31,7 +31,7 @@
 	}: {
 		// FormField's own `field?: RemoteFormField<any>`; narrowing it here would
 		// reject every caller's concrete field type.
-		field: RemoteFormField<any>;
+		field: RemoteFormField<RemoteFormFieldValue>;
 		value?: string | null;
 		label?: string;
 	} = $props();

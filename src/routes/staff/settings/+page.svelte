@@ -3,6 +3,7 @@
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import {
 		getStaffSettingsPage,
 		updateProduct,
@@ -227,9 +228,9 @@
 							</div>
 
 							{#if product.stripeProductId}
-								<p class="font-mono text-xs opacity-50">{product.stripeProductId}</p>
+								<p class="font-mono text-subtle">{product.stripeProductId}</p>
 							{:else}
-								<p class="text-xs opacity-50">Stripe product will be created on first checkout</p>
+								<p class="text-subtle">Stripe product will be created on first checkout</p>
 							{/if}
 
 							<input {...instance.fields.key.as('hidden', product.key)} />
@@ -753,7 +754,7 @@
 								Redirect URI — register this exact value in the U-tec developer console:
 							</p>
 							<div class="mt-1 flex items-center gap-2">
-								<code class="flex-1 truncate rounded bg-base-200 px-2 py-1 font-mono text-xs">
+								<code class="flex-1 truncate code-block px-2 py-1">
 									{utecRedirectUri}
 								</code>
 								<Button
@@ -771,7 +772,7 @@
 							</div>
 						</div>
 
-						<p class="mt-2 text-xs opacity-50">
+						<p class="mt-2 text-subtle">
 							Click "Connect to U-tec" to authorize and fill the Refresh Token automatically, or set
 							credentials via environment variables (ULTRALOC_CLIENT_ID, etc.). Values saved here
 							take precedence over environment variables.
@@ -845,7 +846,7 @@
 								</div>
 							</div>
 							{#if isAlwaysOn}
-								<span class="badge badge-sm badge-success">Always On</span>
+								<Badge variant="success">Always On</Badge>
 							{:else}
 								<Form
 									remote={toggleForm}
@@ -910,7 +911,7 @@
 						<ul class="mt-1 list-disc space-y-0.5 pl-5 text-sm">
 							{#each syncResult.errors as err, i (i)}
 								<li>
-									<span class="badge badge-ghost badge-sm">{err.kind}</span>
+									<Badge variant="ghost">{err.kind}</Badge>
 									{err.message}{err.ref ? ` (${err.ref})` : ''}
 								</li>
 							{/each}

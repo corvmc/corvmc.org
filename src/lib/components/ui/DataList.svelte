@@ -1,4 +1,5 @@
 <script lang="ts" generics="T">
+	import type { ResolvedPathname } from '$app/types';
 	/**
 	 * The async envelope shared by every paginated list page: pending state,
 	 * empty state, and pagination.
@@ -27,7 +28,7 @@
 		empty?: string;
 		emptyTitle?: string;
 		actionLabel?: string;
-		actionHref?: string;
+		actionHref?: ResolvedPathname;
 		/** Omit for un-paginated lists; `Pagination` is then not rendered. */
 		onpage?: (page: number) => void;
 		children: Snippet<[T[]]>;

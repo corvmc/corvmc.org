@@ -9,11 +9,11 @@
 	let menuOpen = $state(false);
 
 	const links = [
-		{ href: '/events', label: 'Events' },
-		{ href: '/directory', label: 'Directory' },
-		{ href: '/programs', label: 'Programs' },
-		{ href: '/membership', label: 'Membership' },
-		{ href: '/about', label: 'About' }
+		{ href: resolve('/events'), label: 'Events' },
+		{ href: resolve('/directory'), label: 'Directory' },
+		{ href: resolve('/programs'), label: 'Programs' },
+		{ href: resolve('/membership'), label: 'Membership' },
+		{ href: resolve('/about'), label: 'About' }
 	];
 
 	function isActive(href: string): boolean {
@@ -105,7 +105,7 @@
 			style="border-bottom: 1px solid var(--surface-border); background: var(--bg-page)"
 		>
 			<ul class="menu menu-sm p-2">
-				{#each [...links, { href: '/contribute', label: 'Contribute' }, { href: '/contact', label: 'Contact' }] as link (link.href)}
+				{#each [...links, { href: resolve('/contribute'), label: 'Contribute' }, { href: resolve('/contact'), label: 'Contact' }] as link (link.href)}
 					<li>
 						<a
 							href={link.href}

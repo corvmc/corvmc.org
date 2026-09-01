@@ -3,6 +3,7 @@
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -192,7 +193,7 @@
 						{:else}
 							<div class="mt-4 space-y-3">
 								{#each epk.pressQuotes as quote, i (i)}
-									<div class="flex items-start gap-2 rounded-lg bg-base-200 p-3">
+									<div class="flex items-start gap-2 inset p-3">
 										<div class="flex-1 space-y-2">
 											<textarea
 												class="textarea w-full textarea-sm"
@@ -295,70 +296,64 @@
 						{#if !epk.backline || epk.backline.length === 0}
 							<p class="mt-2 text-muted">No backline items yet.</p>
 						{:else}
-							<div class="mt-4 overflow-x-auto">
-								<table class="table table-sm">
-									<thead>
-										<tr>
-											<th>Instrument</th>
-											<th>Details</th>
-											<th>Provided by</th>
-											<th></th>
-										</tr>
-									</thead>
-									<tbody>
-										{#each epk.backline as item, i (i)}
-											<tr>
-												<td>
-													<input
-														type="text"
-														class="input w-full input-sm"
-														placeholder="e.g. Drums"
-														value={item.instrument}
-														oninput={(e) => {
-															epk.backline![i] = { ...item, instrument: e.currentTarget.value };
-														}}
-													/>
-												</td>
-												<td>
-													<input
-														type="text"
-														class="input w-full input-sm"
-														placeholder="e.g. 5-piece kit, 22&quot; kick"
-														value={item.details}
-														oninput={(e) => {
-															epk.backline![i] = { ...item, details: e.currentTarget.value };
-														}}
-													/>
-												</td>
-												<td>
-													<Select
-														size="sm"
-														value={item.provided ? 'band' : 'venue'}
-														onchange={(e: Event) => {
-															epk.backline![i] = {
-																...item,
-																provided: (e.currentTarget as HTMLSelectElement).value === 'band'
-															};
-														}}
-													>
-														<option value="band">Band</option>
-														<option value="venue">Venue</option>
-													</Select>
-												</td>
-												<td>
-													<Button
-														type="button"
-														variant="ghost"
-														size="sm"
-														shape="square"
-														onclick={() => removeBacklineItem(i)}>✕</Button
-													>
-												</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
-							</div>
+							<Table zebra={false} class="mt-4">
+								{#snippet head()}
+									<th>Instrument</th>
+									<th>Details</th>
+									<th>Provided by</th>
+									<th></th>
+								{/snippet}
+								{#each epk.backline as item, i (i)}
+									<tr>
+										<td>
+											<input
+												type="text"
+												class="input w-full input-sm"
+												placeholder="e.g. Drums"
+												value={item.instrument}
+												oninput={(e) => {
+													epk.backline![i] = { ...item, instrument: e.currentTarget.value };
+												}}
+											/>
+										</td>
+										<td>
+											<input
+												type="text"
+												class="input w-full input-sm"
+												placeholder="e.g. 5-piece kit, 22&quot; kick"
+												value={item.details}
+												oninput={(e) => {
+													epk.backline![i] = { ...item, details: e.currentTarget.value };
+												}}
+											/>
+										</td>
+										<td>
+											<Select
+												size="sm"
+												value={item.provided ? 'band' : 'venue'}
+												onchange={(e: Event) => {
+													epk.backline![i] = {
+														...item,
+														provided: (e.currentTarget as HTMLSelectElement).value === 'band'
+													};
+												}}
+											>
+												<option value="band">Band</option>
+												<option value="venue">Venue</option>
+											</Select>
+										</td>
+										<td>
+											<Button
+												type="button"
+												variant="ghost"
+												size="sm"
+												shape="square"
+												onclick={() => removeBacklineItem(i)}>✕</Button
+											>
+										</td>
+									</tr>
+								{/each}
+							</Table>
 						{/if}
 					</CardBody>
 				</Card>

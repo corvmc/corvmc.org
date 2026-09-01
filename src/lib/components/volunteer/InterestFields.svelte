@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { RemoteFormField } from '@sveltejs/kit';
 	/**
 	 * "What you'd help with" — the grouped role checkboxes plus the availability
 	 * note. Shared by the onboarding interests step and the Interests modal on
@@ -23,7 +24,11 @@
 		availability = ''
 	}: {
 		/** `remote.fields` from the form this is rendered inside. */
-		fields: Record<string, any>;
+		/** The subset of `remote.fields` this set posts into. */
+		fields: {
+			roleIds: RemoteFormField<string[]>;
+			availability: RemoteFormField<string>;
+		};
 		roleOptions: Role[];
 		selected?: string[];
 		availability?: string;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { RemoteFormField } from '@sveltejs/kit';
 	/**
 	 * The "about you" half of volunteer onboarding, shared by the start step and
 	 * the Profile modal on /member/volunteer. The step adds the 18-or-older
@@ -25,7 +26,13 @@
 		email
 	}: {
 		/** `remote.fields` from the form this is rendered inside. */
-		fields: Record<string, any>;
+		/** The subset of `remote.fields` this set posts into. */
+		fields: {
+			firstName: RemoteFormField<string>;
+			lastName: RemoteFormField<string>;
+			pronouns: RemoteFormField<string>;
+			phone: RemoteFormField<string>;
+		};
 		firstName?: string;
 		lastName?: string;
 		pronouns?: string;

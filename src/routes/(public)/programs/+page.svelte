@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Hero from '$lib/components/public/Hero.svelte';
+	import Tile from '$lib/components/public/Tile.svelte';
 	import Section from '$lib/components/public/Section.svelte';
 	import {
 		IconMusic,
@@ -46,15 +47,12 @@
 				system, microphones, a drum kit, backline, and our full gear library — included. Book
 				online, show up, and play.
 			</p>
-			<div
-				class="mt-4 flex items-start gap-3 rounded-lg p-4"
-				style="background: color-mix(in oklch, var(--cmc-teal) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-teal) 20%, transparent)"
-			>
+			<Tile fill="tint-teal" pad="sm" align="start" class="mt-4">
 				<IconInfoCircle size={20} class="mt-0.5 shrink-0 text-cmc-teal" />
 				<p class="text-muted leading-relaxed">
 					Practice space access requires a free CMC membership.
 				</p>
-			</div>
+			</Tile>
 		</div>
 		<div class="flex flex-col items-center justify-center">
 			<Keyfob class="w-[clamp(120px,40%,200px)] -rotate-3" />
@@ -62,18 +60,15 @@
 	</div>
 	<div class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
 		<div class="rounded-lg p-6 text-center surface">
-			<div class="mb-2 text-sm font-bold tracking-wider text-fg-3 uppercase">Standard Rate</div>
+			<div class="eyebrow-muted mb-2">Standard Rate</div>
 			<div class="text-4xl font-bold text-cmc-navy">$15/hour</div>
 			<div class="mt-1 text-muted">All equipment included</div>
 		</div>
 		<a
 			href={resolve('/login?register&redirect=/member')}
-			class="program-block__cta rounded-lg p-6 text-center"
-			style="background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent)"
+			class="program-block__cta rounded-lg p-6 text-center tint-cmc-orange"
 		>
-			<div class="mb-2 text-sm font-bold tracking-wider text-fg-3 uppercase">
-				Sustaining Members
-			</div>
+			<div class="eyebrow-muted mb-2">Sustaining Members</div>
 			<div class="text-4xl font-bold text-cmc-orange">up to 12 Free Hours</div>
 			<div class="mt-1 text-muted">every month, then $15/hour</div>
 		</a>
@@ -97,32 +92,22 @@
 				a full catalogue online yet — <a href={resolve('/contact')} class="link">reach out</a> and we'll
 				tell you what we've got, or come by and take a look.
 			</p>
-			<div
-				class="mt-4 flex items-start gap-3 rounded-lg p-4"
-				style="background: color-mix(in oklch, var(--cmc-teal) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-teal) 20%, transparent)"
-			>
+			<Tile fill="tint-teal" pad="sm" align="start" class="mt-4">
 				<IconGuitarPick size={20} class="mt-0.5 shrink-0 text-cmc-teal" />
 				<p class="text-muted leading-relaxed">
 					Got gear collecting dust? We accept instrument and equipment donations in any condition —
 					email <a href="mailto:contact@corvmc.org" class="link">contact@corvmc.org</a>.
 				</p>
-			</div>
+			</Tile>
 		</div>
 		<div class="grid grid-cols-1 gap-6 self-center sm:grid-cols-2">
 			<div class="rounded-lg p-6 text-center surface">
-				<div class="mb-2 text-sm font-bold tracking-wider text-fg-3 uppercase">
-					Instruments & Amps
-				</div>
+				<div class="eyebrow-muted mb-2">Instruments & Amps</div>
 				<div class="text-4xl font-bold text-cmc-navy">$5/day</div>
 				<div class="mt-1 text-muted">per item</div>
 			</div>
-			<div
-				class="rounded-lg p-6 text-center"
-				style="background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent)"
-			>
-				<div class="mb-2 text-sm font-bold tracking-wider text-fg-3 uppercase">
-					Cables & Accessories
-				</div>
+			<div class="rounded-lg p-6 text-center tint-cmc-orange">
+				<div class="eyebrow-muted mb-2">Cables & Accessories</div>
 				<div class="text-4xl font-bold text-cmc-orange">$1/day</div>
 				<div class="mt-1 text-muted">free for sustaining members</div>
 			</div>
@@ -155,13 +140,7 @@
 				<Button href="/events" variant="default" class="program-block__cta"
 					>View Upcoming Shows</Button
 				>
-				<Button
-					href="/contact"
-					variant="default"
-					outline
-					style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)"
-					>Apply to Perform</Button
-				>
+				<Button href="/contact" variant="default" outline>Apply to Perform</Button>
 			</div>
 		</div>
 		<div class="flex flex-col items-center justify-center">
@@ -185,10 +164,7 @@
 			<Setlist class="w-[clamp(200px,80%,340px)] -rotate-[1.4deg]" />
 		</div>
 		<div class="flex flex-col gap-5">
-			<div
-				class="rounded-lg p-6"
-				style="background: color-mix(in oklch, var(--cmc-goldenrod) 25%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-goldenrod) 30%, transparent)"
-			>
+			<div class="rounded-lg p-6 tint-cmc-goldenrod">
 				<div class="mb-3 flex items-center gap-3">
 					<IconMusic size={24} class="text-cmc-navy" />
 					<h3 class="text-xl font-bold">Real Book Club</h3>
@@ -197,15 +173,12 @@
 					Our flagship jazz jam club where musicians of all levels come together to explore the
 					Great American Songbook and beyond.
 				</p>
-				<div
-					class="flex items-start gap-3 rounded-lg p-3"
-					style="background: color-mix(in oklch, var(--cmc-teal) 10%, var(--surface)); border: 1px solid color-mix(in oklch, var(--cmc-teal) 15%, transparent)"
-				>
+				<Tile fill="tint-teal" pad="xs" align="start">
 					<IconBulb size={18} class="mt-0.5 shrink-0 text-cmc-teal" />
 					<p class="text-subtle leading-relaxed">
 						Bring your instrument and a Real Book (or we'll share!)
 					</p>
-				</div>
+				</Tile>
 			</div>
 			<div class="rounded-lg p-6 surface">
 				<div class="mb-2 flex items-center gap-3">
@@ -270,12 +243,6 @@
 		<Button href="/login?register&redirect=/member" variant="default" size="lg"
 			>Become a Member</Button
 		>
-		<Button
-			href="/contact"
-			variant="default"
-			outline
-			style="--btn-fill: transparent; border-color: var(--cmc-navy); color: var(--cmc-navy)"
-			>Ask Questions</Button
-		>
+		<Button href="/contact" variant="default" outline>Ask Questions</Button>
 	</div>
 </Section>

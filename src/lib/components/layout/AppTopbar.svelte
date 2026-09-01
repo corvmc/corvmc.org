@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import Button from '../ui/Button.svelte';
 	import { IconMenu2, IconMusic, IconChevronDown } from '@tabler/icons-svelte';
 	import NotificationBell from './NotificationBell.svelte';
@@ -9,7 +10,7 @@
 	export interface PanelTab {
 		key: string;
 		label: string;
-		href: string;
+		href: ResolvedPathname;
 		type: 'member' | 'staff' | 'band';
 	}
 

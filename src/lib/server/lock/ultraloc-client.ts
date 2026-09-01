@@ -91,7 +91,7 @@ async function apiCall(
 	namespace: string,
 	name: string,
 	payload: Record<string, unknown>
-): Promise<any> {
+): Promise<unknown> {
 	const token = await getAccessToken();
 
 	const res = await fetch(API_URL, {
@@ -166,7 +166,7 @@ function lockDateTime(date: Date): string {
 }
 
 /** Run a single `st.lockUser` command against the configured lock. */
-async function lockUserCommand(name: string, args?: Record<string, unknown>): Promise<any> {
+async function lockUserCommand(name: string, args?: Record<string, unknown>): Promise<unknown> {
 	const { deviceId } = await getConfig();
 
 	return apiCall('Uhome.Device', 'Command', {
@@ -224,8 +224,9 @@ export async function removeTemporaryUser(userId: number): Promise<void> {
 
 /** List all users currently on the lock. */
 export async function listLockUsers(): Promise<LockUser[]> {
-	const result = await lockUserCommand('list');
-	return result.devices?.[0]?.users ?? [];
+	const result = (await lockUserCommand('list')) as
+		{ devices?: Array<{ users?: LockUser[] }> } | undefined;
+	return result?.devices?.[0]?.users ?? [];
 }
 
 // ---------------------------------------------------------------------------

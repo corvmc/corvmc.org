@@ -9,6 +9,7 @@
  * invisible; as a list it can be asserted against, which `nav-items.spec.ts`
  * does for every role and flag combination.
  */
+import { resolve } from '$app/paths';
 import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
 
 export type BandNavKey =
@@ -40,19 +41,18 @@ export interface BandNavItem extends NavNode<BandNavKey> {
 	 * is filled in by the layout, which is the only place that knows the band's
 	 * custom domain — it stays empty here, and `activeBandNavKey` skips it.
 	 */
-	href: string;
 	external?: boolean;
 }
 
 export function bandNavItems(input: BandNavInput): BandNavItem[] {
-	const base = `/band/${input.slug}`;
+	const slug = input.slug;
 	const isOwner = input.userRole === 'owner';
 	const isOwnerOrAdmin = isOwner || input.userRole === 'admin';
 	const premium = !!input.features.bandPremium && input.tier === 'premium';
 
 	const items: BandNavItem[] = [
-		{ key: 'dashboard', label: 'Dashboard', href: base },
-		{ key: 'members', label: 'Members', href: `${base}/members` }
+		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }) },
+		{ key: 'members', label: 'Members', href: resolve('/band/[slug]/members', { slug }) }
 	];
 
 	// Announcements used to sit here behind an `announcements` flag, whose comment
@@ -64,15 +64,27 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 
 	// Reservations used to sit behind a `bandReservations` flag, retired on main
 	// in #238's wake — band booking is simply on now.
-	items.push({ key: 'reservations', label: 'Reservations', href: `${base}/reservations` });
-	items.push({ key: 'events', label: 'Events', href: `${base}/events` });
+	items.push({
+		key: 'reservations',
+		label: 'Reservations',
+		href: resolve('/band/[slug]/reservations', { slug })
+	});
+	items.push({ key: 'events', label: 'Events', href: resolve('/band/[slug]/events', { slug }) });
 
 	if (isOwnerOrAdmin) {
-		items.push({ key: 'edit', label: 'Edit Profile', href: `${base}/edit` });
+		items.push({
+			key: 'edit',
+			label: 'Edit Profile',
+			href: resolve('/band/[slug]/edit', { slug })
+		});
 	}
 
 	if (premium && isOwnerOrAdmin) {
-		items.push({ key: 'page-editor', label: 'Page Editor', href: `${base}/page-editor` });
+		items.push({
+			key: 'page-editor',
+			label: 'Page Editor',
+			href: resolve('/band/[slug]/page-editor', { slug })
+		});
 		items.push({ key: 'live-site', label: 'View Live Site', href: '', external: true });
 	}
 
@@ -80,15 +92,27 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 		// Billing is genuinely owner-only — `upgradeToPremium` and friends are
 		// `requireBandOwner` — so unlike Settings this one stays keyed on owner.
 		if (input.features.bandPremium && isOwner) {
-			items.push({ key: 'subscription', label: 'Subscription', href: `${base}/subscription` });
+			items.push({
+				key: 'subscription',
+				label: 'Subscription',
+				href: resolve('/band/[slug]/subscription', { slug })
+			});
 		}
 		// Admins get Settings: the page shows them the band's address read-only,
 		// which is the thing they could not reach at all before.
-		items.push({ key: 'settings', label: 'Settings', href: `${base}/settings` });
+		items.push({
+			key: 'settings',
+			label: 'Settings',
+			href: resolve('/band/[slug]/settings', { slug })
+		});
 	} else if (input.isStaff) {
 		// A staff non-member resolves to the pseudo-role 'staff'. Every control on
 		// the settings page is owner-guarded, so send them where they can act.
-		items.push({ key: 'staff-tools', label: 'Staff tools', href: `/staff/bands/${input.bandId}` });
+		items.push({
+			key: 'staff-tools',
+			label: 'Staff tools',
+			href: resolve('/staff/bands/[id]', { id: input.bandId })
+		});
 	}
 
 	return items;

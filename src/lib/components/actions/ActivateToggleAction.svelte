@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="TOffOut, TOnOut">
 	import type { RemoteForm } from '@sveltejs/kit';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
@@ -19,8 +19,8 @@
 	}: {
 		entityId: string;
 		isDeactivated: boolean;
-		deactivateAction: RemoteForm<any, any>;
-		reactivateAction: RemoteForm<any, any>;
+		deactivateAction: RemoteForm<{ id: string }, TOffOut>;
+		reactivateAction: RemoteForm<{ id: string }, TOnOut>;
 		entityLabel?: string;
 		deactivateWarning?: string;
 		/** Defaults to the direction of travel: green to reactivate, red to deactivate. */

@@ -54,7 +54,7 @@
 					<div>
 						<p class="font-medium">{ticket.attendeeName}</p>
 						<p class="text-muted">{ticket.attendeeEmail}</p>
-						<p class="mt-1 font-mono text-xs opacity-50">{ticket.code}</p>
+						<p class="mt-1 font-mono text-subtle">{ticket.code}</p>
 					</div>
 
 					<div class="flex items-center gap-3">

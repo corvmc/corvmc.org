@@ -1,12 +1,17 @@
-<script lang="ts" generics="T extends Record<string, any>">
+<script lang="ts" generics="T extends { id: string }">
+	/** The keys of `T` whose value is a string — the only ones that can label an option. */
+	type StringKey<O> = {
+		[K in keyof O]: O[K] extends string | null | undefined ? K : never;
+	}[keyof O] &
+		string;
 	import { Combobox } from 'bits-ui';
 	import Button from '$lib/components/ui/Button.svelte';
 
 	let {
 		search,
 		value = $bindable(null),
-		labelKey = 'name' as keyof T & string,
-		descriptionKey = 'email' as keyof T & string,
+		labelKey = 'name' as StringKey<T>,
+		descriptionKey = 'email' as StringKey<T>,
 		placeholder = 'Search by name or email...',
 		minChars = 2,
 		name,
@@ -14,8 +19,8 @@
 	}: {
 		search: (query: string) => Promise<T[]>;
 		value?: T | null;
-		labelKey?: keyof T & string;
-		descriptionKey?: keyof T & string;
+		labelKey?: StringKey<T>;
+		descriptionKey?: StringKey<T>;
 		placeholder?: string;
 		minChars?: number;
 		name?: string;
@@ -109,7 +114,7 @@
 					{#each results as item (item.id)}
 						<Combobox.Item
 							value={item.id}
-							label={item[labelKey]}
+							label={String(item[labelKey] ?? '')}
 							class="rounded-btn cursor-pointer px-3 py-2 data-[highlighted]:bg-base-200"
 						>
 							<span class="font-medium">{item[labelKey]}</span>

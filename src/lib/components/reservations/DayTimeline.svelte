@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import BookerTypeIcon from './BookerTypeIcon.svelte';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -8,7 +9,7 @@
 		endsAt: Date;
 		bookerType: string;
 		label?: string;
-		href?: string;
+		href?: ResolvedPathname;
 	};
 
 	let {

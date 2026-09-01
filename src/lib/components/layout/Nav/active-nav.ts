@@ -1,3 +1,4 @@
+import type { ResolvedPathname } from '$app/types';
 /**
  * Which sidebar row to light up for a pathname, shared by all three panels.
  *
@@ -13,7 +14,12 @@
 
 export interface NavNode<K extends string = string> {
 	key: K;
-	href: string;
+	/**
+	 * `''` marks a row with no in-app destination — the band panel's live-site
+	 * row, whose URL only the layout knows. `activeNavKey` skips those, which is
+	 * why the empty string is meaningful rather than merely absent.
+	 */
+	href: ResolvedPathname | '';
 	children?: NavNode<K>[];
 }
 

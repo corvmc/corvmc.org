@@ -90,7 +90,7 @@
 					{#each resources.manuals as manual (manual.attachmentId)}
 						<li class="flex items-start gap-2">
 							<IconFileText size={18} class="mt-0.5 shrink-0 opacity-60" />
-							<a class="link" href={manual.url ?? '#'} target="_blank" rel="noopener">
+							<a class="link" href={manual.url ?? '#'} target="_blank" rel="noopener external">
 								{manual.filename ?? 'Manual'}
 							</a>
 						</li>

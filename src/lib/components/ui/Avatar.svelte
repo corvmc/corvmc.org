@@ -8,7 +8,7 @@
 		name,
 		size = 'avatar-md',
 		...rest
-	}: { src?: string; name: string; size?: ImagePreset; [key: string]: any } = $props();
+	}: { src?: string; name: string; size?: ImagePreset; [key: string]: unknown } = $props();
 
 	const img = $derived(imageSrc(src, size));
 

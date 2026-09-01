@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
 	import { hashPattern } from '$lib/utils/patterns';
 	import { imageSrc } from '$lib/utils/images';
@@ -6,7 +7,7 @@
 	import { initials } from '$lib/utils/format';
 
 	interface Props {
-		href: string;
+		href: ResolvedPathname;
 		name: string;
 		image?: string | null;
 		pronouns?: string | null;

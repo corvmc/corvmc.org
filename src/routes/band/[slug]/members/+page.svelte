@@ -331,7 +331,7 @@
 					{/if}
 
 					{#if searchResults.length > 0 && !selectedUser}
-						<ul class="menu mt-1 max-h-48 overflow-y-auto rounded-box bg-base-200">
+						<ul class="menu mt-1 max-h-48 overflow-y-auto inset">
 							{#each searchResults as result (result.id)}
 								<li>
 									<button type="button" onclick={() => selectUser(result)}>

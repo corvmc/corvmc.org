@@ -124,7 +124,7 @@
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<!-- Monthly -->
-				<div class="card border bg-base-100 shadow-sm">
+				<Card class="border">
 					<CardBody center>
 						<h3 class="text-lg font-bold">Monthly</h3>
 						<p class="text-3xl font-bold">
@@ -139,10 +139,10 @@
 							</Form>
 						{/if}
 					</CardBody>
-				</div>
+				</Card>
 
 				<!-- Yearly -->
-				<div class="card border border-primary bg-base-100 shadow-sm">
+				<Card class="border border-primary">
 					<CardBody center>
 						<Badge variant="primary">
 							{info.pricing.yearlyMonthsFree} months free
@@ -159,7 +159,7 @@
 							</Form>
 						{/if}
 					</CardBody>
-				</div>
+				</Card>
 			</div>
 
 			<!-- Feature list -->

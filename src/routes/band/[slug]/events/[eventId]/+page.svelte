@@ -77,9 +77,7 @@
 			<SubmitButton label="Save" shortcut="mod+s" />
 			<details class="dropdown dropdown-end">
 				<summary class="btn btn-ghost btn-sm">More</summary>
-				<div
-					class="dropdown-content z-10 flex w-56 flex-col gap-1 rounded-box bg-base-100 p-2 shadow"
-				>
+				<div class="dropdown-content dropdown-panel flex w-56 flex-col gap-1">
 					{#if evt.status === 'draft'}
 						<BandPublishEventAction slug={band.slug} eventId={evt.id} class="justify-start" />
 					{:else if evt.status === 'published'}

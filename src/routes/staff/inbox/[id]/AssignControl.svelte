@@ -24,6 +24,17 @@
 		assignedToUserId
 	}: {
 		// `.for(...)` hands back a form with `for` omitted, which is what the page passes.
+		/*
+		 * `RemoteForm<Input, Output>` is invariant in `Input` — it appears
+		 * covariantly in `fields` and contravariantly in `preflight`/`enhance` —
+		 * so a container that accepts more than one remote form has no single
+		 * generic instantiation. Expressing "some remote form, I don't care
+		 * which" needs an existential type, which TypeScript does not have.
+		 *
+		 * Generics were tried and reverted; the page passes a `.for(...)` instance, whose
+		 * type differs from the bare form's, proves the point.
+		 */
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		action: RemoteForm<any, any> | Omit<RemoteForm<any, any>, 'for'>;
 		threadId: string;
 		assignedToUserId: string | null;

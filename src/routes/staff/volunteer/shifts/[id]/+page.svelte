@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -320,7 +320,7 @@
 									{#if !response.wasSetUp}
 										<!-- The actionable signal: enjoyment and preparedness pull
 										     apart exactly where the briefing needs work. -->
-										<span class="badge badge-sm badge-warning">wasn't set up</span>
+										<Badge variant="warning">wasn't set up</Badge>
 									{/if}
 								</div>
 								{#if response.comment}

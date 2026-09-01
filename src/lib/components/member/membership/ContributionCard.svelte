@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { formatDollars } from '$lib/utils/format';
@@ -13,6 +13,7 @@
 	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
 	import SubscriptionForm from './SubscriptionForm.svelte';
 	import type { RemoteForm } from '$lib/components/ui/Form/Form.svelte';
+	import type { RemoteFormInput } from '@sveltejs/kit';
 
 	let {
 		subscription,
@@ -22,7 +23,7 @@
 	}: {
 		subscription: SubscriptionInfo;
 		billingPortalUrl: string | null;
-		updateRemote: RemoteForm<any, any>;
+		updateRemote: RemoteForm<TInput, TOutput>;
 		showModifyForm?: boolean;
 	} = $props();
 

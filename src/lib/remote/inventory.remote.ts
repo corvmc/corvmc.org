@@ -733,9 +733,18 @@ export const scheduleLoanForm = form('unchecked', async (data, issue) => {
 	const result = scheduleLoanSchema.safeParse(data);
 	if (!result.success) {
 		const issues = result.error.issues
-			.map((err: any) => {
+			.map((err) => {
 				const key = String(err.path[0] ?? '');
-				return (issue as any)[key]?.(err.message);
+				// `issue` is the form() helper's per-field bag, keyed by field name;
+				// the field being reported comes from Zod at runtime, so the lookup
+				// is a string index rather than a known property.
+				// `issue` is kit's per-field bag, whose members are
+				// `(message: string) => Issue`. The field name comes from Zod at
+				// runtime, so this is a string index; the value type is taken from
+				// `issue` itself rather than from `@standard-schema/spec`, which kit
+				// pulls in transitively and this package does not depend on.
+				type IssueFn = Extract<(typeof issue)[keyof typeof issue], (message: string) => unknown>;
+				return (issue as Record<string, IssueFn | undefined>)[key]?.(err.message);
 			})
 			.filter(Boolean);
 		(await import('@sveltejs/kit')).invalid(...issues);
@@ -755,9 +764,18 @@ export const checkoutLoanForm = form('unchecked', async (data, issue) => {
 	const result = checkoutLoanSchema.safeParse(data);
 	if (!result.success) {
 		const issues = result.error.issues
-			.map((err: any) => {
+			.map((err) => {
 				const key = String(err.path[0] ?? '');
-				return (issue as any)[key]?.(err.message);
+				// `issue` is the form() helper's per-field bag, keyed by field name;
+				// the field being reported comes from Zod at runtime, so the lookup
+				// is a string index rather than a known property.
+				// `issue` is kit's per-field bag, whose members are
+				// `(message: string) => Issue`. The field name comes from Zod at
+				// runtime, so this is a string index; the value type is taken from
+				// `issue` itself rather than from `@standard-schema/spec`, which kit
+				// pulls in transitively and this package does not depend on.
+				type IssueFn = Extract<(typeof issue)[keyof typeof issue], (message: string) => unknown>;
+				return (issue as Record<string, IssueFn | undefined>)[key]?.(err.message);
 			})
 			.filter(Boolean);
 		(await import('@sveltejs/kit')).invalid(...issues);

@@ -78,11 +78,7 @@
 	</div>
 
 	{#if showNotice}
-		<div
-			class="mb-8 flex items-center justify-between gap-4 rounded-lg border px-4 py-3"
-			style="border-color: var(--cmc-navy); color: var(--cmc-navy)"
-			role="status"
-		>
+		<div class="mb-8 flex items-center justify-between gap-4 notice-bar" role="status">
 			<p class="text-sm font-medium">
 				No show at the Collective tonight — here's what's coming up.
 			</p>
@@ -97,7 +93,7 @@
 	{/if}
 
 	{#if upcoming.length > 0}
-		<div class="mb-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+		<div class="mb-14 grid-gallery gap-8">
 			{#each upcoming as evt (evt.id)}
 				<PosterCard
 					href="/events/{evt.id}"

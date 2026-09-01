@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import type { Snippet } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 
@@ -20,7 +21,7 @@
 		class: className = ''
 	}: {
 		type?: AlertType;
-		href?: string;
+		href?: ResolvedPathname;
 		reset?: () => void;
 		children: Snippet;
 		action?: Snippet;

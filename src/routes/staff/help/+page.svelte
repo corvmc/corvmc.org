@@ -90,7 +90,7 @@
 </PageHeader>
 <PageContent>
 	<!-- Categories section -->
-	<details class="collapse-arrow collapse mb-6 border border-base-300 bg-base-100">
+	<details class="collapse-arrow collapse mb-6 collapse-panel">
 		<summary class="collapse-title text-sm font-medium"
 			>Manage Categories ({categories.length})</summary
 		>
@@ -101,7 +101,7 @@
 					<div class="flex items-center justify-between gap-2 py-1">
 						<div>
 							<span class="text-sm font-medium">{cat.name}</span>
-							<span class="ml-2 text-xs opacity-50">/{cat.slug}</span>
+							<span class="ml-2 text-subtle">/{cat.slug}</span>
 							<Badge variant="ghost" size="xs" class="ml-1">{cat.minRole}</Badge>
 						</div>
 						<div class="flex gap-1">

@@ -46,9 +46,10 @@
 		volunteerProfileStatusLabels,
 		suggestionStatusLabels
 	} from '$lib/config';
-	import type { SvelteComponent } from 'svelte';
 
-	type IconComponent = typeof SvelteComponent<any>;
+	/** Every tabler icon shares one props shape; borrow it from a concrete icon
+	   rather than reaching into the package's un-exported `dist/types`. */
+	type IconComponent = typeof IconWorld;
 
 	export type StatusVariant = { icon: IconComponent; color: string };
 

@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -154,7 +155,7 @@
 								-->
 								<td class="cell-num whitespace-nowrap">
 									{#if role.unfilled > 0}
-										<span class="badge badge-sm badge-warning">{role.unfilled}</span>
+										<Badge variant="warning">{role.unfilled}</Badge>
 									{:else}
 										<span class="opacity-40">—</span>
 									{/if}

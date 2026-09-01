@@ -232,6 +232,18 @@ p {
 	color: var(--color-primary);
 }
 
+/* The same label in the quiet tier. `/programs` spelled this out four times as
+   `text-sm font-bold tracking-wider text-fg-3 uppercase` — the eyebrow shape,
+   but labelling a figure rather than introducing a heading, so it recedes
+   instead of carrying brand colour. */
+.eyebrow-muted {
+	font-size: 0.875rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--fg-3);
+}
+
 /* Display headline — chunky retro look for hero / poster moments */
 .display {
 	font-weight: 700;
@@ -316,11 +328,218 @@ p {
 	color: var(--cmc-orange);
 }
 
+/* Borders in the same two token families the `text-*` utilities cover.
+   `border-surface` carries its own width — it is the border half of `surface`,
+   and spelling it `border border-surface` would cost two class slots to say one
+   thing. `border-cmc-navy` is colour only: the brand borders in circulation set
+   their own width. */
+@utility border-cmc-navy {
+	border-color: var(--cmc-navy);
+}
+
+@utility border-surface {
+	border: 1px solid var(--surface-border);
+}
+
+/* The two directory galleries. Both are a centred, responsive grid of the
+   art-directed cards (`VinylCard`, `IdCard`, `PosterCard`); they differ only in
+   how many fit per row, which is a property of the card, not of the page — so
+   the breakpoints belong here rather than being retyped on both directories.
+
+   `grid-gallery` holds the wide cards, `grid-gallery-tight` the narrow ones. */
+@utility grid-gallery {
+	display: grid;
+	justify-items: center;
+	gap: calc(var(--spacing) * 6);
+	grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (width >= 40rem) {
+	.grid-gallery {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (width >= 64rem) {
+	.grid-gallery {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@utility grid-gallery-tight {
+	display: grid;
+	justify-items: center;
+	gap: calc(var(--spacing) * 6);
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (width >= 40rem) {
+	.grid-gallery-tight {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@media (width >= 64rem) {
+	.grid-gallery-tight {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+
+/* A block of monospace on a recessed ground — a payload dump, an API key, an id
+   the user is meant to copy. Padding and clamping stay on the element; they are
+   what differs between a one-line chip and a scrolling block. */
+@utility code-block {
+	border-radius: var(--radius-field);
+	background: var(--color-base-200);
+	font-family: ui-monospace, Menlo, monospace;
+	font-size: 0.75rem;
+	line-height: 1rem;
+}
+
+/* A recessed strip inside a card — a summary row, a stat band, a nested list
+   item. `bg-base-200` plus a radius, five times over. */
+@utility inset {
+	border-radius: var(--radius-field);
+	background: var(--color-base-200);
+}
+
+/* A brand-outlined status bar — the "nothing on tonight" notice above the events
+   list. Not an `Alert`: daisyUI's alert set is semantic (info/warning/error) and
+   this carries brand ink, not a severity. */
+@utility notice-bar {
+	border: 1px solid var(--cmc-navy);
+	border-radius: var(--radius-field);
+	color: var(--cmc-navy);
+	padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4);
+}
+
+/* The surface under a daisyUI `collapse` — the same border-and-ground `Card`
+   gives a bordered panel, but a `<details>` cannot wrap itself in a component. */
+@utility collapse-panel {
+	border: 1px solid var(--color-base-300);
+	background: var(--color-base-100);
+}
+
+/* The sticky table-of-contents rail beside a help article. */
+@utility toc-rail {
+	position: sticky;
+	top: calc(var(--spacing) * 20);
+	align-self: flex-start;
+	width: calc(var(--spacing) * 48);
+}
+
+/* A card that is a link: the shadow lifts on hover to say so. */
+@utility card-interactive {
+	transition-property: box-shadow;
+	transition-timing-function: var(--default-transition-timing-function);
+	transition-duration: var(--default-transition-duration);
+}
+
+@utility card-interactive {
+	&:hover {
+		box-shadow: var(--shadow-md);
+	}
+}
+
+/* The floating panel a `dropdown-content` sits in. Four menus each spelled out
+   the same `z-10 rounded-box bg-base-100 p-2 shadow`; the width is what actually
+   differs between them, so that stays on the element. */
+@utility dropdown-panel {
+	z-index: 10;
+	border-radius: var(--radius-box);
+	background: var(--color-base-100);
+	padding: calc(var(--spacing) * 2);
+	box-shadow: var(--shadow-sm, 0 1px 3px rgb(0 0 0 / 0.08));
+}
+
+/* A hairline above a trailing block — the actions row under a card's body, and
+   the footnote under a section. Nine places spelled it `border-t border-base-200`
+   plus a `pt-*`; the padding varies, the rule does not. */
+@utility rule-top {
+	border-top: 1px solid var(--color-base-200);
+}
+
+/* A centred measure: a narrow column of stacked, centred content. The public
+   pages wrote this out four times as
+   `mx-auto flex max-w-2xl flex-col items-center gap-4 text-center` — it is what
+   sits inside a `Section` when the section is prose rather than a grid.
+
+   A utility rather than a component: this is pure layout, and template-audit.md
+   is explicit that a wrapper component for a flex block buys a DOM node and an
+   import to delete a few tokens. A utility costs neither. */
+@utility measure-center {
+	margin-inline: auto;
+	display: flex;
+	max-width: var(--container-2xl);
+	flex-direction: column;
+	align-items: center;
+	gap: calc(var(--spacing) * 4);
+	text-align: center;
+}
+
 /* The standard raised panel surface — replaces
    `style="background: var(--surface); border: 1px solid var(--surface-border)"`. */
 @utility surface {
 	background: var(--surface);
 	border: 1px solid var(--surface-border);
+}
+
+/* `surface` plus the standard drop shadow. Three marketing pages spelled this as
+   an inline `style` because `surface` stops at the border, and the shadow is the
+   difference between a panel that sits on the page and one that floats above it. */
+@utility surface-raised {
+	background: var(--surface);
+	border: 1px solid var(--surface-border);
+	box-shadow: var(--shadow-sm, 0 1px 3px rgb(0 0 0 / 0.08));
+}
+
+/* ---------------------------------------------------------------------------
+   Brand fills
+   ---------------------------------------------------------------------------
+   The brand palette is not in Tailwind's colour space, so a filled brand panel
+   had no spelling but an inline `style`. These carry the paired foreground with
+   them: the point of a fill is that the text on it stays legible, and every one
+   of the eight inline styles these replace set `color` right beside `background`
+   for exactly that reason.
+
+   `#fff` rather than a token because it is the ink colour on a saturated fill in
+   both themes — the surrounding page inverts, the fill does not. */
+
+@utility fill-cmc-navy {
+	background: var(--cmc-navy);
+	color: #fff;
+}
+
+@utility fill-cmc-orange {
+	background: var(--cmc-orange);
+	color: #fff;
+}
+
+@utility fill-cmc-light-blue {
+	background: var(--cmc-light-blue);
+	color: var(--cmc-navy);
+}
+
+/* ---------------------------------------------------------------------------
+   Brand tints
+   ---------------------------------------------------------------------------
+   A panel washed with a brand hue over the page surface, used for the callout
+   boxes on `/programs`. `color-mix` against `--surface` rather than a fixed
+   colour so the tint tracks light and dark. */
+
+@utility tint-cmc-teal {
+	background: color-mix(in oklch, var(--cmc-teal) 12%, var(--surface));
+	border: 1px solid color-mix(in oklch, var(--cmc-teal) 20%, transparent);
+}
+
+@utility tint-cmc-orange {
+	background: color-mix(in oklch, var(--cmc-orange) 12%, var(--surface));
+	border: 1px solid color-mix(in oklch, var(--cmc-orange) 20%, transparent);
+}
+
+@utility tint-cmc-goldenrod {
+	background: color-mix(in oklch, var(--cmc-goldenrod) 25%, var(--surface));
+	border: 1px solid color-mix(in oklch, var(--cmc-goldenrod) 30%, transparent);
 }
 
 /* ---------------------------------------------------------------------------
@@ -347,6 +566,20 @@ p {
 	@container (width < 48rem) {
 		display: none;
 	}
+}
+
+/* The group-header row inside a table — a full-width band naming the section of
+   rows below it. Three staff tables had each spelled out the same six utilities.
+   Sits with the other `cell-*` utilities because it is applied to a `<td>`. */
+@utility cell-group {
+	background: var(--color-base-200);
+	padding: 0.5rem 1rem;
+	font-size: 0.75rem;
+	line-height: 1rem;
+	color: var(--fg-2);
+	font-weight: 600;
+	letter-spacing: 0.025em;
+	text-transform: uppercase;
 }
 
 /* Numeric table cell: right-aligned, tabular, never wraps. */
@@ -1298,6 +1531,37 @@ p {
 /* ---------------------------------------------------------------------------
    Latch Button — filter toggle that stays depressed when active
    --------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------------
+   Brand button skins
+   ---------------------------------------------------------------------------
+   Reached through `<Button variant="cmc-navy">`, not by hand. daisyUI's colour
+   modifiers cover its own palette; the brand palette is outside it, so before
+   these the marketing pages set `background`/`color` in an inline `style` on the
+   component — eight times, in three spellings.
+
+   Written as full class names, never `btn-cmc-${x}`: Tailwind v4's scanner only
+   sees literals, and a computed name emits no CSS at all (Button.svelte and
+   Table.svelte both carry this note). */
+
+.btn-cmc-navy {
+	background: var(--cmc-navy);
+	color: #fff;
+	border-color: rgb(0 0 0 / 0.3);
+}
+
+.btn-cmc-orange {
+	background: var(--cmc-orange);
+	color: #fff;
+	border-color: rgb(0 0 0 / 0.3);
+}
+
+/* The unfilled counterpart — brand ink and border over the page. */
+.btn-cmc-navy-outline {
+	background: transparent;
+	border-color: var(--cmc-navy);
+	color: var(--cmc-navy);
+}
+
 .btn--latch {
 	display: inline-flex;
 	align-items: center;

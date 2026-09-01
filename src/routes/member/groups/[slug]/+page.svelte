@@ -66,7 +66,8 @@
 		if (requested === 'announcements') return 'announcements';
 		return defaultTab;
 	});
-	const tabHref = (t: Tab) => (t === defaultTab ? `?` : `?tab=${t}`);
+	const tabHref = (t: Tab) =>
+		resolve(`/member/groups/${slug}${t === defaultTab ? '' : `?tab=${t}`}`);
 
 	const kindLabel = $derived(group.kind === 'committee' ? 'Committee' : 'Club');
 	// Staff read this page without being on the roster, so there is nothing for

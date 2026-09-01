@@ -45,7 +45,7 @@
 				{
 					key: 'musicians',
 					label: 'Musicians',
-					href: `${resolve('/member/directory')}?tab=musicians`
+					href: resolve('/member/directory?tab=musicians')
 				},
 				{ key: 'instructors', label: 'Teachers', href: resolve('/member/directory/instructors') }
 			]}

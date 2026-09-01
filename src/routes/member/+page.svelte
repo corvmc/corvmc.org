@@ -78,7 +78,7 @@
 				{:else}
 					<div class="space-y-2">
 						{#each data.weekReservations as res (res.id)}
-							<div class="flex items-center justify-between rounded-lg bg-base-200 px-3 py-2">
+							<div class="flex items-center justify-between inset px-3 py-2">
 								<div class="flex items-center gap-3">
 									<BookerTypeIcon type={res.bookerType} size={18} class="opacity-60" />
 									<div>

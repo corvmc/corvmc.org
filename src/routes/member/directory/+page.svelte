@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { getMemberDirectory } from '$lib/remote/directory.remote';
@@ -25,8 +26,10 @@
 	// one are async-gated and wouldn't exist during the first render.
 	const tab = $derived<Tab>(page.url.searchParams.get('tab') === 'bands' ? 'bands' : 'members');
 
-	function directoryHref(target: Tab): string {
-		return `${resolve('/member/directory')}${target === 'bands' ? '?tab=bands' : ''}`;
+	function directoryHref(target: Tab): ResolvedPathname {
+		return target === 'bands'
+			? resolve('/member/directory?tab=bands')
+			: resolve('/member/directory');
 	}
 
 	// Filtering here stays server-side (see `filters` below) — unlike the public
@@ -180,7 +183,7 @@
 		{#if members.length === 0}
 			{@render empty('members')}
 		{:else}
-			<div class="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-3">
+			<div class="grid-gallery">
 				{#each members.slice(0, limit) as member (member.id)}
 					<IdCard
 						href="/member/directory/members/{member.id}"
@@ -203,7 +206,7 @@
 	{:else if bands.length === 0}
 		{@render empty('bands')}
 	{:else}
-		<div class="grid grid-cols-2 justify-items-center gap-6 sm:grid-cols-3 lg:grid-cols-4">
+		<div class="grid-gallery-tight">
 			{#each bands.slice(0, limit) as b (b.id)}
 				<VinylCard
 					href="/member/directory/bands/{b.slug}"

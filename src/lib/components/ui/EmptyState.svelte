@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import type { Snippet } from 'svelte';
 
 	let {
@@ -14,7 +15,7 @@
 		description?: string;
 		message?: string;
 		actionLabel?: string;
-		actionHref?: string;
+		actionHref?: ResolvedPathname;
 		class?: string;
 		children?: Snippet;
 	} = $props();

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { CalendarDate, today as todayIn, getLocalTimeZone } from '@internationalized/date';
 	import { IconChevronLeft, IconChevronRight } from '@tabler/icons-svelte';
@@ -116,7 +117,7 @@
 				{@const key = date.toString()}
 				{@const dot = dayDots[key]}
 				<a
-					href="/events?from={key}"
+					href="{resolve('/events')}?from={key}"
 					class="mini-cal__day"
 					class:mini-cal__day--out={date.month !== monthNumber}
 					class:mini-cal__day--today={key === todayStr}
