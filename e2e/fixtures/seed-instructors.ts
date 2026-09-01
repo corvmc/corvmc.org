@@ -9,9 +9,15 @@
  * to the band and directory specs, and changing its visibility leaves them
  * asserting on data another fixture rewrote underneath them.
  *
- * Runs after `seedDirectoryEntries`, which sweeps users with no entry into one
- * at `members` visibility. These entries are written here, so the sweep finds
- * them already present and leaves them alone.
+ * Runs **before** `seedDirectoryEntries`, which only claims users that have no
+ * entry — "a fixture that needs a public member sets its own entry", as its own
+ * note puts it.
+ *
+ * That ordering is also what keeps `checkpointE2eDatabase()` safe. It must run
+ * once every seed's miniflare has exited, and each `withPlatformEnv` call is one
+ * more workerd start and dispose; slotting a new one in as the *last* writer
+ * narrowed that window until the preview server failed to start outright with
+ * `SQLITE_BUSY_RECOVERY`, taking every test in the suite with it.
  *
  * Idempotent: deletes and recreates its rows on every run.
  */
