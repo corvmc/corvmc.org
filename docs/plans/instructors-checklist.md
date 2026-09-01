@@ -178,19 +178,32 @@ off-peak spec owns. `commitReservationCredits` keeps its `creditsApply` paramete
 
 ## Step 7 — Going public: listing + applications
 
-- [ ] `src/routes/(public)/directory/instructors/+page.svelte`
-- [ ] `src/routes/member/directory/instructors/+page.svelte`
-- [ ] `src/lib/components/directory/InstructorCard.svelte`
-- [ ] Third `TabBar` tab on both directory roots
-- [ ] `instructor-directory-service.ts` — **three gates**: `status = 'active'`,
-      `directory_entry.visibility`, `contactForView` over the resolved contact
-- [ ] `/member/profile` — the five-state card, `teachingContact` editor, members-only-contact nudge
-- [ ] `instructors.remote.ts` — member half
-- [ ] Three notification listeners: submit → staff, approve → member, send back → member
-- [ ] `teachesLessons` copy rename → "Teaches privately" across 7 sites
-- [ ] `src/content/help/` article
-- [ ] **`instructor-directory-service.spec.ts` — the exposure test**
-- [ ] `e2e/instructor-application.e2e.ts`
+- [x] `src/routes/(public)/directory/instructors/+page.svelte` — public, unauthenticated
+- [x] `src/routes/member/directory/instructors/+page.svelte` — the member mirror
+- [x] `src/lib/components/directory/InstructorCard.svelte` — a sibling of `IdCard`, sharing its
+      `poster-gen`/initials treatment so the two read as one family
+- [x] Third `TabBar` tab on both directory roots, pointing at the sibling route
+- [x] `instructor-directory-service.ts` — **three gates**, all in one function with one test file
+- [x] `/member/profile` → `TeachingCard.svelte`, five states. **Takes plain props and never awaits**:
+      a top-level await would mark later declarations blocked and turn each `fields` expression into
+      an async derived, which is the `effect_update_depth_exceeded` crash the page already carries a
+      comment about. The page resolves all three queries in one `Promise.all` rather than three
+      awaited declarations, which would be serial round trips.
+- [x] `instructors.remote.ts` — member half: apply, edit, accepting-students, withdraw, and the two
+      listing queries. **Two listing entry points rather than one with a viewer argument**, because
+      a gate chosen by a parameter is a gate somebody can pass the wrong value to
+- [x] `teachesLessons` copy → **"Teaches privately"** across six sites, and the help article now
+      explains that it and teaching at the Collective are different things you can have either,
+      both, or neither of
+- [x] **`instructor-directory-service.spec.ts` — the exposure test.** 17 tests against real SQLite:
+      no unapproved applicant, no hidden or members-only entry publicly, no soft-deleted entry or
+      user, no instructor without a profile, `applicationNote` never in a returned shape, and the
+      contact fallback gated rather than bypassed
+- [ ] **Notifications — deferred to its own PR, and this is a real gap until it lands.** Needs four
+      files: event types in `event-bus.ts`, emits from the service, listeners in
+      `notification-listeners.ts`, and keys in `schema/notification.ts`. Until then a member whose
+      application is sent back **only finds out by revisiting their profile**, which is the failure
+      the return state exists to prevent. The note itself is already shown there prominently.
 
 ## Step 8 — Seed, docs, close out
 

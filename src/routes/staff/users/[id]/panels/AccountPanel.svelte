@@ -91,7 +91,7 @@
 				<Fact label="Open to" class="flex flex-wrap gap-1">
 					{#if data.profile.lookingForBand}<Badge size="sm">Looking for a band</Badge>{/if}
 					{#if data.profile.availableForHire}<Badge size="sm">For hire</Badge>{/if}
-					{#if data.profile.teachesLessons}<Badge size="sm">Teaches lessons</Badge>{/if}
+					{#if data.profile.teachesLessons}<Badge size="sm">Teaches privately</Badge>{/if}
 					{#if data.profile.openToCollaboration}<Badge size="sm">Collaboration</Badge>{/if}
 					{#if !data.profile.lookingForBand && !data.profile.availableForHire && !data.profile.teachesLessons && !data.profile.openToCollaboration}
 						—
