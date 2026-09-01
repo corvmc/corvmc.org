@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { INVITE_EXPIRY_DAYS } from '$lib/config';
 import { groupInvite } from '$lib/server/db/schema/group-invite';
 import { groupMember, group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
@@ -9,8 +10,6 @@ import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
 import { DomainError } from '$lib/server/domain-error';
-
-const INVITE_EXPIRY_DAYS = 7;
 
 function expiresAt(): Date {
 	const d = new Date();

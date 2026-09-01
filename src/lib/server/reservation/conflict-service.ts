@@ -126,8 +126,23 @@ export async function getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
 // Validation
 // ---------------------------------------------------------------------------
 
+/**
+ * Why a booking was refused. The `error` beside it is the sentence shown to the
+ * member and is free to be reworded; `code` is the stable handle tests and
+ * callers branch on.
+ */
+export type BookingRejection =
+	| 'END_BEFORE_START'
+	| 'MIN_DURATION'
+	| 'MAX_DURATION'
+	| 'SLOT_BOUNDARY'
+	| 'BEFORE_OPENING'
+	| 'AFTER_CLOSING'
+	| 'TOO_FAR_AHEAD';
+
 export interface ValidationResult {
 	valid: boolean;
+	code?: BookingRejection;
 	error?: string;
 }
 
@@ -162,25 +177,37 @@ export async function validateBooking(
 	const terms = termsFor(options?.bookerType ?? 'user', config);
 
 	if (endsAt <= startsAt) {
-		return { valid: false, error: 'End time must be after start time' };
+		return { valid: false, code: 'END_BEFORE_START', error: 'End time must be after start time' };
 	}
 
 	const durationMs = endsAt.getTime() - startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 
 	if (durationHours < terms.minDurationHours) {
-		return { valid: false, error: `Minimum duration is ${terms.minDurationHours} hour` };
+		return {
+			valid: false,
+			code: 'MIN_DURATION',
+			error: `Minimum duration is ${terms.minDurationHours} hour`
+		};
 	}
 
 	if (durationHours > config.maxDurationHours) {
-		return { valid: false, error: `Maximum duration is ${config.maxDurationHours} hours` };
+		return {
+			valid: false,
+			code: 'MAX_DURATION',
+			error: `Maximum duration is ${config.maxDurationHours} hours`
+		};
 	}
 
 	// Check slot boundaries
 	const startMinutes = startsAt.getMinutes();
 	const endMinutes = endsAt.getMinutes();
 	if (startMinutes % config.timeSlotMinutes !== 0 || endMinutes % config.timeSlotMinutes !== 0) {
-		return { valid: false, error: `Times must be on ${config.timeSlotMinutes}-minute boundaries` };
+		return {
+			valid: false,
+			code: 'SLOT_BOUNDARY',
+			error: `Times must be on ${config.timeSlotMinutes}-minute boundaries`
+		};
 	}
 
 	// Check operating hours
@@ -188,11 +215,19 @@ export async function validateBooking(
 	const endTime = formatTimeInTz(endsAt, tz);
 
 	if (startTime < config.operatingHoursStart) {
-		return { valid: false, error: `Cannot start before ${config.operatingHoursStart}` };
+		return {
+			valid: false,
+			code: 'BEFORE_OPENING',
+			error: `Cannot start before ${config.operatingHoursStart}`
+		};
 	}
 
 	if (endTime > config.operatingHoursEnd) {
-		return { valid: false, error: `Cannot end after ${config.operatingHoursEnd}` };
+		return {
+			valid: false,
+			code: 'AFTER_CLOSING',
+			error: `Cannot end after ${config.operatingHoursEnd}`
+		};
 	}
 
 	// Check advance booking window
@@ -201,6 +236,7 @@ export async function validateBooking(
 	if (startsAt.getTime() - Date.now() > maxMs) {
 		return {
 			valid: false,
+			code: 'TOO_FAR_AHEAD',
 			error: `Cannot book more than ${maxDays} days in advance`
 		};
 	}

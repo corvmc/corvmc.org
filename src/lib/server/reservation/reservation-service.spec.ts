@@ -40,7 +40,11 @@ import {
 	markNoShow,
 	recordCashAndComplete,
 	autoCompleteExpired,
-	ReservationStateError
+	ReservationStateError,
+	ReservationValidationError,
+	ReservationConflictError,
+	ReservationNotFoundError,
+	ReservationAuthorizationError
 } from './reservation-service';
 import { validateBooking } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
@@ -95,7 +99,7 @@ describe('ReservationService', () => {
 		it('throws ReservationValidationError when time is invalid', async () => {
 			vi.mocked(validateBooking).mockResolvedValue({ valid: false, error: 'Too short' });
 
-			await expect(create(params)).rejects.toThrow('Too short');
+			await expect(create(params)).rejects.toThrow(ReservationValidationError);
 		});
 
 		it('throws ReservationConflictError when slot is taken', async () => {
@@ -106,7 +110,7 @@ describe('ReservationService', () => {
 			const txFrom = vi.fn().mockReturnValue({ where: txWhere });
 			txSelect.mockReturnValue({ from: txFrom });
 
-			await expect(create(params)).rejects.toThrow('Time slot is not available');
+			await expect(create(params)).rejects.toThrow(ReservationConflictError);
 		});
 	});
 
@@ -175,7 +179,7 @@ describe('ReservationService', () => {
 				stripePaymentRecordId: null
 			});
 
-			await expect(cancel('res-1', 'user-2')).rejects.toThrow('Not authorized');
+			await expect(cancel('res-1', 'user-2')).rejects.toThrow(ReservationAuthorizationError);
 		});
 
 		it('rejects cancellation of already-cancelled reservation', async () => {
@@ -186,7 +190,7 @@ describe('ReservationService', () => {
 				stripePaymentRecordId: null
 			});
 
-			await expect(cancel('res-1', 'user-1')).rejects.toThrow('Cannot cancel');
+			await expect(cancel('res-1', 'user-1')).rejects.toThrow(ReservationStateError);
 		});
 
 		it('throws ReservationStateError (not a generic 500) for already-cancelled', async () => {
@@ -206,7 +210,7 @@ describe('ReservationService', () => {
 			const from = vi.fn().mockReturnValue({ where });
 			vi.mocked(db.select).mockReturnValue({ from } as any);
 
-			await expect(cancel('res-999', 'user-1')).rejects.toThrow('Reservation not found');
+			await expect(cancel('res-999', 'user-1')).rejects.toThrow(ReservationNotFoundError);
 		});
 
 		it('throws when status changed concurrently', async () => {
@@ -220,9 +224,7 @@ describe('ReservationService', () => {
 			});
 			setupUpdateMock(0);
 
-			await expect(cancel('res-1', 'user-1')).rejects.toThrow(
-				'Reservation status changed concurrently'
-			);
+			await expect(cancel('res-1', 'user-1')).rejects.toThrow(ReservationStateError);
 		});
 
 		it('allows staff override even if not owner', async () => {
@@ -252,8 +254,7 @@ describe('ReservationService', () => {
 			});
 			const set = setupUpdateMock(1);
 
-			await expect(cancel('res-1', 'user-1')).rejects.toBeInstanceOf(ReservationStateError);
-			await expect(cancel('res-1', 'user-1')).rejects.toThrow('already started');
+			await expect(cancel('res-1', 'user-1')).rejects.toThrow(ReservationStateError);
 			expect(set).not.toHaveBeenCalled();
 		});
 	});
@@ -325,15 +326,13 @@ describe('ReservationService', () => {
 			const from = vi.fn().mockReturnValue({ where });
 			vi.mocked(db.select).mockReturnValue({ from } as any);
 
-			await expect(confirm('res-999')).rejects.toThrow('Reservation not found');
+			await expect(confirm('res-999')).rejects.toThrow(ReservationNotFoundError);
 		});
 
 		it('throws when status is not scheduled', async () => {
 			setupUpdateMock(0, { status: 'completed' });
 
-			await expect(confirm('res-1')).rejects.toThrow(
-				'Cannot transition from "completed" to "confirmed"'
-			);
+			await expect(confirm('res-1')).rejects.toThrow(ReservationStateError);
 		});
 	});
 
@@ -360,9 +359,7 @@ describe('ReservationService', () => {
 		it('throws when reservation has wrong status', async () => {
 			setupUpdateMock(0, { status: 'scheduled' });
 
-			await expect(markComplete('res-1')).rejects.toThrow(
-				'Cannot transition from "scheduled" to "completed"'
-			);
+			await expect(markComplete('res-1')).rejects.toThrow(ReservationStateError);
 		});
 	});
 
@@ -386,7 +383,7 @@ describe('ReservationService', () => {
 			const from = vi.fn().mockReturnValue({ where });
 			vi.mocked(db.select).mockReturnValue({ from } as any);
 
-			await expect(markNoShow('res-999')).rejects.toThrow('Reservation not found');
+			await expect(markNoShow('res-999')).rejects.toThrow(ReservationNotFoundError);
 		});
 	});
 
@@ -411,7 +408,7 @@ describe('ReservationService', () => {
 			vi.mocked(db.select).mockReturnValue({ from } as any);
 
 			await expect(recordCashAndComplete('res-999', 'pr_abc')).rejects.toThrow(
-				'Reservation not found'
+				ReservationNotFoundError
 			);
 		});
 
@@ -422,9 +419,7 @@ describe('ReservationService', () => {
 			const from = vi.fn().mockReturnValue({ where });
 			vi.mocked(db.select).mockReturnValue({ from } as any);
 
-			await expect(recordCashAndComplete('res-1', 'pr_abc')).rejects.toThrow(
-				'Expected status "scheduled" or "confirmed", got "completed"'
-			);
+			await expect(recordCashAndComplete('res-1', 'pr_abc')).rejects.toThrow(ReservationStateError);
 		});
 	});
 
