@@ -360,6 +360,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/inventory/intake",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/inventory/loans",
 		"panel": "staff"
 	},
@@ -372,11 +376,23 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/inventory/orders",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inventory/orders/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/inventory/restock",
 		"panel": "staff"
 	},
 	{
 		"route": "/staff/inventory/spend",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inventory/tagging",
 		"panel": "staff"
 	},
 	{

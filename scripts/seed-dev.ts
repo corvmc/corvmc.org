@@ -75,6 +75,8 @@ import { SYSTEM_AUDIENCES } from '../src/lib/server/marketing/system-audience-de
 import {
 	acquisition,
 	acquisitionLine,
+	purchaseOrder,
+	purchaseOrderLine,
 	equipmentCategory,
 	inventoryAsset,
 	inventoryItem,
@@ -3369,6 +3371,107 @@ async function seedEquipment(users: SeedUser[]) {
 	const lespaul = assetByTag['CMC-000103'];
 	const speaker = assetByTag['CMC-000104'];
 
+	/**
+	 * Purchase orders, one per state.
+	 *
+	 * The restock list subtracts what is on a *placed* order, so without at least
+	 * one of these a local run can never see the behaviour orders exist for —
+	 * the list would go on asking you to buy strings that are already coming.
+	 * The late one is what the Orders page flags for chasing; the draft proves a
+	 * shopping list still counts as missing until it is actually sent.
+	 */
+	const placedOrder = {
+		id: randomUUID(),
+		status: 'placed' as const,
+		supplierName: 'Sweetwater',
+		reference: 'SW-4472880',
+		placedAt: new Date(now.getTime() - 4 * day),
+		expectedAt: new Date(now.getTime() + 3 * day),
+		createdByUserId: staffId,
+		notes: 'Standing restock — strings and sticks.'
+	};
+	const lateOrder = {
+		id: randomUUID(),
+		status: 'placed' as const,
+		supplierName: 'Troubadour Music',
+		reference: 'TM-9912',
+		placedAt: new Date(now.getTime() - 21 * day),
+		expectedAt: new Date(now.getTime() - 5 * day),
+		createdByUserId: staffId,
+		notes: 'Chased once already.'
+	};
+	const draftOrder = {
+		id: randomUUID(),
+		status: 'draft' as const,
+		supplierName: 'Corvallis Hardware',
+		createdByUserId: staffId,
+		notes: 'Not sent yet.'
+	};
+	const receivedOrder = {
+		id: randomUUID(),
+		status: 'received' as const,
+		supplierName: 'Sweetwater',
+		reference: 'SW-4471902',
+		placedAt: new Date(now.getTime() - 26 * day),
+		expectedAt: new Date(now.getTime() - 21 * day),
+		createdByUserId: staffId
+	};
+
+	await batchInsert(purchaseOrder, [placedOrder, lateOrder, draftOrder, receivedOrder], 4);
+
+	const orderLines: (typeof purchaseOrderLine.$inferInsert)[] = [
+		// Partly delivered: six of ten arrived, four still out. This is the state
+		// a boolean cannot express and the reason `quantityReceived` is a number.
+		{
+			id: randomUUID(),
+			orderId: placedOrder.id,
+			itemId: itemByName["D'Addario EXL110 Strings"].id,
+			quantityOrdered: 10,
+			unitCostCents: 700,
+			quantityReceived: 6
+		},
+		{
+			id: randomUUID(),
+			orderId: placedOrder.id,
+			itemId: itemByName['Vic Firth 5A Drumsticks'].id,
+			quantityOrdered: 6,
+			unitCostCents: 1_100,
+			quantityReceived: 0
+		},
+		{
+			id: randomUUID(),
+			orderId: lateOrder.id,
+			itemId: itemByName['9V Batteries'].id,
+			quantityOrdered: 24,
+			unitCostCents: 1_400,
+			quantityReceived: 0
+		},
+		{
+			id: randomUUID(),
+			orderId: draftOrder.id,
+			itemId: itemByName['XLR Cable (25ft)'].id,
+			quantityOrdered: 6,
+			unitCostCents: 1_800,
+			quantityReceived: 0
+		},
+		{
+			id: randomUUID(),
+			orderId: receivedOrder.id,
+			itemId: itemByName["D'Addario EXL110 Strings"].id,
+			quantityOrdered: 12,
+			unitCostCents: 700,
+			quantityReceived: 12
+		}
+	];
+	await batchInsert(purchaseOrderLine, orderLines, 4);
+
+	// The receipt that closed the received order — the link the detail page
+	// renders as "what arrived".
+	await db
+		.update(acquisition)
+		.set({ purchaseOrderId: receivedOrder.id })
+		.where(eq(acquisition.id, restock.id));
+
 	const loanRows: (typeof inventoryLoan.$inferInsert)[] = [
 		{
 			id: randomUUID(),
@@ -3578,6 +3681,7 @@ async function seedEquipment(users: SeedUser[]) {
 		items: items.length,
 		assets: assets.length,
 		acquisitions: acquisitionRows.length,
+		orders: 4,
 		movements: movements.length,
 		loans: loans.length
 	};
@@ -5167,7 +5271,7 @@ async function main() {
 	);
 	console.log(
 		`  ${eq.categories} categories, ${eq.locations} locations, ${eq.items} items, ${eq.assets} units,\n` +
-			`  ${eq.acquisitions} acquisitions, ${eq.movements} stock movements, ${eq.loans} loans`
+			`  ${eq.acquisitions} acquisitions, ${eq.orders} purchase orders, ${eq.movements} stock movements, ${eq.loans} loans`
 	);
 	console.log(
 		`  ${help.categories} help categories, ${help.articles} help articles, ${itemArticles.links} linked to gear`

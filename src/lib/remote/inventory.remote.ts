@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { toGenericRef } from '$lib/server/entity/refs';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
 import {
@@ -24,6 +24,7 @@ import {
 	getAssetById,
 	listAssets,
 	listAvailableAssets,
+	listUntaggedAssets,
 	listForm8282Obligations,
 	resolveForm8282,
 	setAssetStatus,
@@ -38,9 +39,19 @@ import {
 	listAcquisitions,
 	markReimbursed,
 	recordAcquisition,
+	recordAcquisitionBulk,
 	spendByCategory,
 	updateAcquisition
 } from '$lib/server/inventory/acquisition-service';
+import {
+	applyReceipt,
+	cancelOrder,
+	closeOrderShort,
+	createOrder,
+	getOrderById,
+	listOrders,
+	placeOrder
+} from '$lib/server/inventory/order-service';
 import { form8282Status } from '$lib/server/inventory/form-8282';
 import {
 	linkArticle,
@@ -200,6 +211,18 @@ export const getStaffLoans = query(staffLoansFilters, async (filters) => {
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);
+});
+
+/**
+ * The tagging backlog — every unit with no tag bound.
+ *
+ * Derived, never stored: "needs tagging" is `asset_tag IS NULL`, so binding a
+ * tag removes a row here with nothing to keep in sync. One query for the whole
+ * page, per `no-concurrent-remote-queries`.
+ */
+export const getUntaggedAssets = query(z.void(), async () => {
+	await requireStaff();
+	return listUntaggedAssets();
 });
 
 export const getAsset = query(z.string(), async (id) => {
@@ -446,8 +469,15 @@ export const bindTag = form(
 	async (raw) => {
 		await requireStaff();
 		const data = raw as { assetId: string; assetTag: string };
-		await bindAssetTag(data.assetId, data.assetTag);
+		try {
+			await bindAssetTag(data.assetId, data.assetTag);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		void getStaffAssetDetail(data.assetId).refresh();
+		// The tagging page is a list of exactly the units this call removes from
+		// it, so it has to be refreshed by name — the page has no id to key on.
+		void getUntaggedAssets().refresh();
 		return { success: true };
 	}
 );
@@ -598,6 +628,296 @@ export const receiveStock = form(
 		return { success: true };
 	}
 );
+
+/**
+ * Everything the intake page needs, in one query.
+ *
+ * One load-bearing query per page (`no-concurrent-remote-queries`): the item
+ * picker and the running totals both read this. `LocationField` still owns its
+ * own `getLocations()`, the same way `CategoryOptions` does — it is
+ * unparameterized and refreshed by name, so folding it in here would leave it
+ * stale after somebody adds a location mid-session.
+ */
+export const getIntakePage = query(z.object({ orderId: z.string().optional() }), async (input) => {
+	await requireStaff();
+	// Unpaginated on purpose: the picker filters in the browser, and a stocktake
+	// jumps between categories constantly — a paged picker would put a round
+	// trip between the operator and every second row they enter.
+	//
+	// The order is fetched here rather than by the page, because two remote
+	// queries in flight from one component is what `no-concurrent-remote-queries`
+	// forbids — and past kit 2.64 it renders the error boundary instead of the
+	// page. Composed on the server, these are two local database hops.
+	const [{ rows }, order] = await Promise.all([
+		listItems({}, { pageSize: 1000 }),
+		input.orderId ? getOrderById(input.orderId) : Promise.resolve(null)
+	]);
+
+	return {
+		items: rows.map((i) => ({
+			id: i.id,
+			name: i.name,
+			kind: i.kind,
+			unitOfMeasure: i.unitOfMeasure,
+			categoryName: i.category?.name ?? null
+		})),
+		order: order && {
+			id: order.id,
+			supplierName: order.supplierName,
+			lines: order.lines.map((l) => ({
+				itemId: l.itemId,
+				outstanding: l.outstanding,
+				unitCostCents: l.unitCostCents
+			}))
+		}
+	};
+});
+
+/**
+ * Caps, enforced here as well as in the editor.
+ *
+ * The editor is a convenience; this is the boundary. A stocktake of the whole
+ * building is a few hundred units, so these are set well above a real session
+ * and exist to stop a malformed or hostile payload asking D1 for tens of
+ * thousands of rows in one request.
+ */
+const INTAKE_MAX_LINES = 250;
+const INTAKE_MAX_UNITS_PER_LINE = 500;
+
+const intakeUnitSchema = z.object({
+	assetTag: z.string().max(64).optional(),
+	serialNumber: z.string().max(100).optional(),
+	condition: z.enum(equipmentConditions).optional()
+});
+
+const intakeLineSchema = z.object({
+	itemId: z.string().min(1),
+	quantity: z.number().int().min(1).max(9999),
+	unitValueCents: z.number().int().min(0).optional(),
+	units: z.array(intakeUnitSchema).max(INTAKE_MAX_UNITS_PER_LINE).optional()
+});
+
+const intakeLinesSchema = z.array(intakeLineSchema).min(1).max(INTAKE_MAX_LINES);
+
+/**
+ * The whole arrival, in one POST.
+ *
+ * Lines ride as a hidden JSON field, the same shape `LineupEditor` uses for a
+ * bill — a remote form's `FormData` cannot express an array of objects, and the
+ * alternative (a request per line) is the round-trip explosion this phase
+ * exists to avoid.
+ *
+ * `recordAcquisitionBulk`, not `recordAcquisition`: the sequential path costs
+ * a select per line and four round trips per unit, which two hundred units
+ * turns into a Worker timeout.
+ */
+export const recordIntake = form(
+	z.object({
+		kind: z.enum(acquisitionKinds),
+		occurredAt: z.string().optional(),
+		sourceName: z.string().max(255).optional(),
+		reference: z.string().max(100).optional(),
+		donorUserId: z.string().optional(),
+		paidByUserId: z.string().optional(),
+		locationId: z.string().optional(),
+		notes: z.string().max(2000).optional(),
+		/** Set when this arrival is being received against an order. */
+		purchaseOrderId: z.string().optional(),
+		/** JSON, written by the line editor. */
+		lines: z.string().min(1)
+	}),
+	async (raw, issue) => {
+		await requireStaff();
+		const currentUser = requireUser();
+		const data = raw as {
+			kind: AcquisitionKind;
+			occurredAt?: string;
+			sourceName?: string;
+			reference?: string;
+			donorUserId?: string;
+			paidByUserId?: string;
+			locationId?: string;
+			notes?: string;
+			purchaseOrderId?: string;
+			lines: string;
+		};
+
+		let lines: z.infer<typeof intakeLinesSchema>;
+		try {
+			lines = intakeLinesSchema.parse(JSON.parse(data.lines));
+		} catch {
+			// A field issue rather than a 400: the editor is on screen, and this
+			// is the only thing on the form the operator cannot see or correct.
+			invalid(
+				issue.lines('That list of arrivals could not be read. Remove the last row and try again.')
+			);
+		}
+
+		try {
+			const result = await recordAcquisitionBulk({
+				kind: data.kind,
+				occurredAt: calendarDate(data.occurredAt),
+				sourceName: data.sourceName || undefined,
+				reference: data.reference || undefined,
+				donorUserId: data.donorUserId || undefined,
+				paidByUserId: data.paidByUserId || undefined,
+				locationId: data.locationId || undefined,
+				notes: data.notes || undefined,
+				recordedByUserId: currentUser.id,
+				lines: lines.map((l) => ({
+					itemId: l.itemId,
+					quantity: l.quantity,
+					unitValueCents: l.unitValueCents,
+					units: l.units
+				}))
+			});
+
+			// Receiving *is* intake, prefilled — so an arrival against an order
+			// links back to it and bumps what has been received, partially or in
+			// full. The acquisition is written first either way, so the ledger
+			// never forks on whether something was ordered.
+			if (data.purchaseOrderId) {
+				await applyReceipt({
+					orderId: data.purchaseOrderId,
+					acquisitionId: result.acquisitionId,
+					received: lines.map((l) => ({ itemId: l.itemId, quantity: l.quantity }))
+				});
+				void getOrder(data.purchaseOrderId).refresh();
+				void getOrders().refresh();
+			}
+
+			// Everything this touched: the catalog's on-hand numbers, the tagging
+			// backlog it just added to, and the register the receipt now appears in.
+			void getUntaggedAssets().refresh();
+			void getRestockList().refresh();
+
+			return { success: true, ...result };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Purchase orders
+// ---------------------------------------------------------------------------
+
+export const getOrders = query(z.void(), async () => {
+	await requireStaff();
+	return listOrders();
+});
+
+export const getOrder = query(z.string(), async (id) => {
+	await requireStaff();
+	const order = await getOrderById(id);
+	if (!order) error(404, 'Order not found');
+	return order;
+});
+
+/**
+ * Turn a restock selection into an order.
+ *
+ * The lines ride as JSON for the same reason intake's do — a remote form's
+ * `FormData` cannot express an array of objects.
+ */
+const orderLinesSchema = z
+	.array(
+		z.object({
+			itemId: z.string().min(1),
+			quantityOrdered: z.number().int().min(1).max(9999),
+			unitCostCents: z.number().int().min(0).optional()
+		})
+	)
+	.min(1)
+	.max(250);
+
+export const startOrder = form(
+	z.object({
+		supplierName: z.string().max(255).optional(),
+		reference: z.string().max(100).optional(),
+		expectedAt: z.string().optional(),
+		notes: z.string().max(2000).optional(),
+		lines: z.string().min(1)
+	}),
+	async (raw, issue) => {
+		await requireStaff();
+		const currentUser = requireUser();
+		const data = raw as {
+			supplierName?: string;
+			reference?: string;
+			expectedAt?: string;
+			notes?: string;
+			lines: string;
+		};
+
+		let lines: z.infer<typeof orderLinesSchema>;
+		try {
+			lines = orderLinesSchema.parse(JSON.parse(data.lines));
+		} catch {
+			invalid(issue.lines('Pick at least one thing to order.'));
+		}
+
+		try {
+			const orderId = await createOrder({
+				supplierName: data.supplierName || undefined,
+				reference: data.reference || undefined,
+				expectedAt: data.expectedAt ? calendarDate(data.expectedAt) : undefined,
+				notes: data.notes || undefined,
+				createdByUserId: currentUser.id,
+				lines
+			});
+			void getOrders().refresh();
+			return { success: true, orderId };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+export const markOrderPlaced = form(z.object({ id: z.string() }), async (raw) => {
+	await requireStaff();
+	const data = raw as { id: string };
+	try {
+		await placeOrder(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	// Placing is what removes an item from the restock list, so that list has to
+	// be refreshed by name — it has no id to key on.
+	void getOrder(data.id).refresh();
+	void getOrders().refresh();
+	void getRestockList().refresh();
+	return { success: true };
+});
+
+export const dropOrder = form(z.object({ id: z.string() }), async (raw) => {
+	await requireStaff();
+	const data = raw as { id: string };
+	try {
+		await cancelOrder(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	void getOrder(data.id).refresh();
+	void getOrders().refresh();
+	// Cancelling puts the shortfall back on the shopping list.
+	void getRestockList().refresh();
+	return { success: true };
+});
+
+export const closeOrder = form(z.object({ id: z.string() }), async (raw) => {
+	await requireStaff();
+	const data = raw as { id: string };
+	try {
+		await closeOrderShort(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	void getOrder(data.id).refresh();
+	void getOrders().refresh();
+	void getRestockList().refresh();
+	return { success: true };
+});
 
 export const useStock = form(
 	z.object({

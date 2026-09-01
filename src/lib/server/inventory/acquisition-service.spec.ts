@@ -47,11 +47,17 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 vi.mock('./stock-service', () => ({
-	recordMovement: vi.fn().mockResolvedValue({ id: 'mv-1' })
+	recordMovement: vi.fn().mockResolvedValue({ id: 'mv-1' }),
+	// `recordAcquisitionBulk` shares the sign convention rather than restating
+	// it, so this module now exports two things and the mock has to carry both —
+	// a mock missing one fails the whole file at import, not at the assertion.
+	signedQuantity: (reason: string, quantity: number) =>
+		reason === 'receive' ? quantity : -quantity
 }));
 
 vi.mock('./asset-service', () => ({
-	createAsset: vi.fn().mockResolvedValue({ id: 'as-1' })
+	createAsset: vi.fn().mockResolvedValue({ id: 'as-1' }),
+	AssetTagTakenError: class AssetTagTakenError extends Error {}
 }));
 
 import {
