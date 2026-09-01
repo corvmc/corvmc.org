@@ -95,9 +95,10 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 	await expect(advance).toBeEnabled({ timeout: 15000 });
 	await advance.click();
 
-	// `ConfirmStep`'s submit is hardcoded 'Book Session' for every booker; the
-	// wizard's own label is on the trigger, outside this dialog.
-	await dialog.getByRole('button', { name: 'Book Session' }).click();
+	// 'Confirm', not 'Book Session': that label belongs to `ConfirmStep`'s band
+	// branch. A member-shaped booking submits through Confirm, and with
+	// `payAhead={false}` it is the only action on the step.
+	await dialog.getByRole('button', { name: 'Confirm' }).click();
 	await expect(dialog).toBeHidden({ timeout: 20000 });
 
 	// A member with no grant is offered nothing — the button is the visible half

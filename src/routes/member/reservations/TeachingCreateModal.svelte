@@ -50,6 +50,11 @@
 	{#snippet icon()}<IconSchool size={18} />{/snippet}
 	{#snippet form()}
 		<DateTimeStep isSustaining {needsPhone} bookerType="instructor" />
-		<ConfirmStep />
+		<!--
+			`payAhead={false}` because `bookInstructorReservation` takes no payment:
+			Pay Ahead advances to a payment step this modal does not have. Teaching
+			time settles at the door, the way a band session does.
+		-->
+		<ConfirmStep bookerType="instructor" payAhead={false} />
 	{/snippet}
 </Action>

@@ -608,13 +608,19 @@ export const getReservationPricing = query(
 		date: z.string(),
 		startTime: z.string(),
 		endTime: z.string(),
+		/**
+		 * Who is booking. The quote is a rate times a duration, and the rate is a
+		 * fact about the booker — omitted, it falls back to member terms, which is
+		 * what every existing caller wants.
+		 */
+		bookerType: z.enum(bookerTypes).optional(),
 		// When confirming an existing reservation, pricing must reflect the
 		// reservation OWNER's free hours / sustaining status — not the acting user
 		// (e.g. a staff member confirming on the owner's behalf). Omitted by the
 		// create flow, which has no reservation yet and keys to the acting user.
 		reservationId: z.string().optional()
 	}),
-	async ({ date, startTime, endTime, reservationId }) => {
+	async ({ date, startTime, endTime, reservationId, bookerType }) => {
 		const { locals } = getRequestEvent();
 		const config = await getReservationConfig();
 
@@ -625,7 +631,10 @@ export const getReservationPricing = query(
 		const endsAt = buildDateInTz(date, endTime, DEFAULT_TIMEZONE);
 		const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 
-		const hourlyRateCents = config.hourlyRateCents;
+		// Resolved for who is booking, not read off the config. Without this the
+		// confirm step quotes a teaching booking at the drop-in rate — the wrong
+		// number at the exact moment somebody commits to it.
+		const { hourlyRateCents } = termsFor(bookerType ?? 'user', config);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
 
 		// Resolve whose free hours apply. For an existing reservation, that's the

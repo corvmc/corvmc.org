@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { BookerType } from '$lib/server/db/schema/reservation';
 	import {
 		getReservationPricing,
 		previewRecurringInstances
@@ -22,7 +23,9 @@
 		reservation,
 		fields = {},
 		staff = false,
-		band = false
+		band = false,
+		bookerType = undefined,
+		payAhead = true
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
 		fields?: { id?: RemoteFormField<string> };
@@ -35,6 +38,17 @@
 		 * nobody and show a receipt for it.
 		 */
 		band?: boolean;
+		/**
+		 * Who is booking, so the quote uses their rate. Undefined means member
+		 * terms, which is what every existing caller wants.
+		 */
+		bookerType?: BookerType;
+		/**
+		 * Whether a balance owed can be paid up front. False for a booking whose
+		 * remote takes no payment — offering Pay Ahead there advances the wizard to
+		 * a payment step that does not exist.
+		 */
+		payAhead?: boolean;
 	} = $props();
 
 	const formCtx = getFormContext()!;
@@ -65,7 +79,7 @@
 
 	// Only offer "Pay Ahead" when a balance is actually owed; otherwise "Confirm"
 	// (which skips payment) is the single action — no redundant payment screen.
-	const showPayAhead = $derived(!!pricing && pricing.remainingCents > 0);
+	const showPayAhead = $derived(payAhead && !!pricing && pricing.remainingCents > 0);
 
 	function formatPreviewDate(iso: string): string {
 		return formatDate(new Date(iso));
@@ -129,11 +143,15 @@
 
 			if (date && startTime && endTime) {
 				pricing = null;
-				getReservationPricing({ date, startTime, endTime, reservationId: reservation?.id }).then(
-					(result) => {
-						pricing = result;
-					}
-				);
+				getReservationPricing({
+					date,
+					startTime,
+					endTime,
+					bookerType,
+					reservationId: reservation?.id
+				}).then((result) => {
+					pricing = result;
+				});
 			}
 		}
 	});
