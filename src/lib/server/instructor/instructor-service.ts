@@ -1,6 +1,9 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db, getRowCount } from '$lib/server/db';
 import { instructor, type Instructor } from '$lib/server/db/schema/instructor';
+import { user } from '$lib/server/db/schema/authentication';
+import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import type { EntityRef } from '$lib/types/entity';
 import { DomainError } from '$lib/server/domain-error';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import type { InstructorStatus } from '$lib/config';
@@ -349,4 +352,74 @@ export function pause(id: string, staffUserId: string, statusNote: string): Prom
 
 export function retire(id: string, staffUserId: string, statusNote: string): Promise<void> {
 	return setBlockedStatus(id, staffUserId, 'retired', statusNote, ['active', 'paused']);
+}
+
+// ---------------------------------------------------------------------------
+// The staff read
+// ---------------------------------------------------------------------------
+
+export interface StaffInstructorRow {
+	id: string;
+	userId: string;
+	status: InstructorStatus;
+	headline: string | null;
+	acceptingStudents: boolean;
+	/** Staff-only, and this is the one query allowed to carry it. */
+	applicationNote: string | null;
+	reviewNotes: string | null;
+	statusNote: string | null;
+	grantedAt: Date | null;
+	createdAt: Date;
+	member: EntityRef;
+}
+
+/**
+ * Everyone who has ever asked or been granted, in three buckets.
+ *
+ * The split is by **who the row is waiting on**, not by status, because that is
+ * the question a staffer opening this page is asking:
+ *
+ * - `awaitingReview` — `requested`. Waiting on staff. Nothing else here is.
+ * - `active` — the roster.
+ * - `resolved` — `rejected`, `paused`, `retired`. Waiting on the member, or on
+ *   nobody. The status badge tells them apart, and lumping them keeps the page
+ *   from growing a section per status.
+ *
+ * Oldest first within each bucket, which is what `instructor_status_idx` is
+ * ordered for.
+ */
+export async function listForStaff(): Promise<{
+	awaitingReview: StaffInstructorRow[];
+	active: StaffInstructorRow[];
+	resolved: StaffInstructorRow[];
+}> {
+	const rows = await db
+		.select({
+			id: instructor.id,
+			userId: instructor.userId,
+			status: instructor.status,
+			headline: instructor.headline,
+			acceptingStudents: instructor.acceptingStudents,
+			applicationNote: instructor.applicationNote,
+			reviewNotes: instructor.reviewNotes,
+			statusNote: instructor.statusNote,
+			grantedAt: instructor.grantedAt,
+			createdAt: instructor.createdAt,
+			member: memberRefColumns()
+		})
+		.from(instructor)
+		.innerJoin(user, eq(user.id, instructor.userId))
+		.orderBy(asc(instructor.createdAt));
+
+	const shaped = rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
+
+	return {
+		awaitingReview: shaped.filter((r) => r.status === 'requested'),
+		active: shaped.filter((r) => r.status === 'active'),
+		// Positively matched, so a sixth status shows up somewhere rather than
+		// vanishing from a page whose whole job is to account for everyone.
+		resolved: shaped.filter((r) =>
+			(['rejected', 'paused', 'retired'] as string[]).includes(r.status)
+		)
+	};
 }

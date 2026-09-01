@@ -122,12 +122,26 @@ off-peak spec owns. `commitReservationCredits` keeps its `creditsApply` paramete
 
 ## Step 4 — Staff surface (staff-only; nothing member-facing)
 
-- [ ] `src/routes/staff/instructors/+page.svelte` + Requested block
-- [ ] `src/routes/staff/users/[id]/panels/InstructorPanel.svelte` — on the **`space`** tab, not a 9th
-- [ ] Five `*Action.svelte`: Approve, Send back, Grant, Pause, Retire
-- [ ] `src/lib/remote/instructors.remote.ts` — staff half only
-- [ ] `src/routes/staff/nav-items.ts` + `nav-items.spec.ts`
-- [ ] `instructors.remote.spec.ts` (staff half)
+- [x] `src/routes/staff/instructors/+page.svelte` — Applications block first (the only rows waiting
+      on staff), then the roster, then a "Not currently teaching" section
+- [x] `src/routes/staff/users/[id]/panels/InstructorPanel.svelte` — on the **`space`** tab, mounted
+      above the bookings it changes the price of. Read-only: granting lives at `/staff/instructors`,
+      where the roster gives the decision its context
+- [x] Actions — `GrantInstructorAction`, `ReviewApplicationActions` (approve / send back),
+      `EndGrantActions` (pause / retire). Grouped by decision rather than one file per verb: approve
+      and send back are the two halves of one choice, as are pause and retire
+- [x] `src/lib/remote/instructors.remote.ts` — staff half only. **A `.remote.ts` module may export
+      only remote functions**; re-exporting a Zod schema through it fails at import time, not at type
+      check, so shared schemas are imported from `schema/instructor.ts` by whoever needs them
+- [x] `src/lib/server/instructor/instructor-service.ts` — `listForStaff()`, bucketed by _who the row
+      is waiting on_ rather than by status: `awaitingReview` is waiting on staff, `resolved` is
+      waiting on the member or on nobody
+- [x] `src/routes/staff/nav-items.ts` — under Reservations, since teaching status is a right in the
+      room. Plus the icon map in `staff/+layout.svelte`, which the nav key type makes mandatory
+- [x] `instructors.remote.spec.ts` — every mutation guards before touching the service, and the
+      **acting staffer** is the id recorded on the grant. Schema validation is not reachable through
+      this harness (the mocked `form` skips it), so the note-is-required rules stay pinned in
+      `instructor-service.spec.ts` against real SQLite
 
 ## Step 5 — Booking path
 
