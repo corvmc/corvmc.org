@@ -33,6 +33,33 @@ async function openPurchasePage(page: import('@playwright/test').Page) {
 	return page.getByText('Total', { exact: true }).locator('..');
 }
 
+/**
+ * Click a contribution preset, and be sure the click actually landed.
+ *
+ * The heading this page waits on is server-rendered, so it is visible before
+ * the page's JavaScript has loaded and Svelte has attached its handlers. A
+ * click in that window hits a button that is not wired to anything yet and is
+ * simply lost — the preset never applies, and the assertion that follows waits
+ * out its timeout against a total that will never change. It bit the *first*
+ * interactive test in this file and no other, because by the second one the
+ * browser has the page's modules cached and hydration wins the race.
+ *
+ * Retrying is only safe because this re-reads the button before each attempt:
+ * the handler toggles, so a blind second click would clear the preset it just
+ * set. `btn-primary` is how `Button` renders `variant="primary"`, which the
+ * component gives the preset whose value is currently applied — the same state
+ * the assertions below are about to read, so it cannot pass while the click is
+ * still lost.
+ */
+async function pickContribution(page: import('@playwright/test').Page, label: string) {
+	const button = page.getByRole('button', { name: label });
+	await expect(async () => {
+		const applied = ((await button.getAttribute('class')) ?? '').includes('btn-primary');
+		if (!applied) await button.click();
+		expect((await button.getAttribute('class')) ?? '').toContain('btn-primary');
+	}).toPass({ timeout: 15000 });
+}
+
 test('a guest sees the ticket price as the total before adding anything', async ({ page }) => {
 	const totals = await openPurchasePage(page);
 
@@ -42,7 +69,7 @@ test('a guest sees the ticket price as the total before adding anything', async 
 test('a contribution quick-pick lands in the total', async ({ page }) => {
 	const totals = await openPurchasePage(page);
 
-	await page.getByRole('button', { name: '$10.00' }).click();
+	await pickContribution(page, '$10.00');
 
 	await expect(page.getByText('Contribution', { exact: true })).toBeVisible();
 	await expect(totals).toContainText(`$${(PRICE + 10).toFixed(2)}`);
@@ -74,7 +101,7 @@ test('the fee-coverage offer is priced on the gift as well as the tickets', asyn
 
 	await expect(coverFees).toContainText('$0.91');
 
-	await page.getByRole('button', { name: '$25.00' }).click();
+	await pickContribution(page, '$25.00');
 
 	await expect(coverFees).toContainText('$1.66');
 });
