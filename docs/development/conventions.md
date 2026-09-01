@@ -8,6 +8,12 @@ any page) and the [architecture overview](../architecture/overview.md).
 
 When building a new feature, work through these phases in order:
 
+0. **Branch** — decide where the work lands before writing any of it. Anything member-facing or
+   public that takes more than one PR to become usable goes on a long-lived
+   [feature branch](#long-lived-feature-branches); phases are PRs into that branch and `main` sees
+   the feature once, working. Staff-only surfaces, schema, and refactors still go straight to
+   `main` — a half-built admin page is a normal intermediate state. `/feature-branch start <slug>`
+   sets one up.
 1. **Design** — understand the domain and map the workflows before proposing models. For
    anything that touches multiple files or introduces schema, write a spec in
    `docs/specs/` first. `docs/specs/shipped/` holds specs for features that already
@@ -32,12 +38,15 @@ When building a new feature, work through these phases in order:
 7. **Verify** — `pnpm check` and confirm no new type errors in files you touched
    (pre-existing errors in unrelated files can be ignored).
 8. **Document** — add the feature row to the feature catalog
-   (`docs/reports/feature-catalog.md`); update/add help
+   (`docs/reports/feature-catalog.md`) — one row per feature, written in the final phase, because
+   that table is a recurring merge conflict when every phase edits it; update/add help
    articles and run the docs checks (see
    [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). If the
    feature had a spec, **retire it now** — see below.
-9. **Commit** — descriptive message summarizing what the feature adds. **No co-author
-   lines.**
+9. **Land** — descriptive message summarizing what the feature adds. **No co-author lines.**
+   A phase PR targets its feature branch and merges with `gh pr merge --squash`; the finished
+   feature targets `main` and is queued with `gh pr merge --auto`. See
+   [Long-lived feature branches](#long-lived-feature-branches).
 
 ### Retiring a spec
 
@@ -62,6 +71,100 @@ So when a feature lands, do three things in the same PR:
 
 Nothing enforces this. It is the last thing anyone feels like doing and the first thing that
 rots, which is exactly why it is written down.
+
+## Long-lived feature branches
+
+Feature flags used to be how a half-built feature reached `main` without members seeing it. They
+were not a kill switch and not a rollout tool — the staff panel ignored them deliberately — so a
+branch does the same job without the registration, the toggle, the guard at every call site, and the
+404 that hides a bug as effectively as it hides a feature.
+
+The shape: `feature/<slug>` cut from `main`, phases are PRs **into** that branch squash-merged as
+they pass, and one PR merges the finished feature into `main` through the queue. `/feature-branch`
+carries the sequences; what follows is why they are what they are.
+
+**Not everything needs a branch.** Instructors shipped six phases straight to `main` with no flag
+and no branch, ordering the work so nothing advertised a capability that did not exist yet
+(`docs/specs/instructors-spec.md`). That is the better default when it is available:
+
+- Staff-only surfaces land on `main` directly.
+- Schema and refactors land on `main` when they are safe standing alone.
+- The branch is for member-facing and public surfaces that need more than one PR to work.
+
+### What the branch costs
+
+The queue squashes, so `main` gets **one commit per feature** rather than one per phase. `git
+bisect` resolves to the whole feature and a revert is all-or-nothing — which is the point, since a
+half-shipped feature is the thing being eliminated. The phase commits stay reachable after the
+branch is deleted, because GitHub keeps `refs/pull/<n>/head` indefinitely:
+`git fetch origin refs/pull/353/head`.
+
+Nothing enforces the branch, and **nothing protects it**: branch protection covers `main` only, so
+a phase PR can be merged with CI red. Read the checks before merging one.
+
+### Migrations on a branch that outlives a merge from `main`
+
+Git never conflicts under `migrations/` — each migration is its own directory, so both sides simply
+coexist. That is exactly why this is worth writing down.
+
+Snapshots carry **`prevIds`** — plural. The chain is a DAG, and `drizzle-kit generate` merges forks
+by itself: `20260831171927_lame_hydra` lists both #341's and #342's snapshots as parents, and
+nobody hand-edited anything. `drizzle-kit check` fails only when the two branches' statement
+footprints **overlap**; disjoint schema changes are commutative and legal.
+
+So after `git merge origin/main` on a branch that owns migrations, run `pnpm exec drizzle-kit check`
+and believe it:
+
+- **Exit 0** — change nothing. The next real `pnpm db:generate` closes the fork. `main` itself
+  shipped with an open fork between #342 and #353.
+- **Non-zero** — collapse this branch's own migrations into one:
+
+  ```bash
+  git log --oneline --diff-filter=A --name-only origin/main..HEAD -- migrations/
+  git rm -r <only the directories that listing names>
+  pnpm db:generate && pnpm db:check-migrations
+  ```
+
+  Collapse regardless of what `check` says if the branch owns a `d1-safe-rebuild` migration whose
+  detach set includes a table `main` has since altered: `rebuildBlock` renders each detached child
+  from _that migration's own snapshot_, so it has to meet the database in the state its snapshot
+  describes.
+
+  This is safe only because a feature branch's migrations have never run anywhere but a local D1 —
+  `scripts/ci-migrate.mjs` migrates for `main` and `gh-readonly-queue/main/*` only, so a branch
+  build uploads a version and skips the migrate entirely.
+  `scripts/claude/block-shipped-migration-delete.sh` refuses to delete anything `origin/main` has.
+
+Either way, finish with **`pnpm db:reset`** in every worktree holding the branch, with nothing
+serving. Not `db:migrate:local`: `getMigrationsToRun()` selects by migration _name_ with no
+timestamp watermark, so an incremental run applies `main`'s older migrations _after_ yours and
+leaves a schema no other machine will reproduce. `db:reset` replays from empty in directory order,
+which is the order a fresh production uses.
+
+CI's **Schema drift** job catches a non-commutative fork — both `check` and `generate` run the same
+`checkHandler` — and correctly ignores a benign one. The feature PR's `merge_group` run is the
+first place both chains coexist, so a real conflict is caught there and the queue rejects.
+
+### Conflicts that recur
+
+A branch that merges `origin/main` repeatedly hits the same conflicts each time. Turn on
+`git config rerere.enabled true` once per clone (it is not committed, and the common `.git` shares
+it across worktrees) and it replays the resolutions.
+
+| File                                | How it conflicts, and what to do                                                                                                                                                                                                 |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/d1-table-order.mjs`        | **Position is semantic** — a table must follow everything it references. Taking both sides produces a file that lints clean and breaks the seed at runtime. Re-derive placement from the foreign-key graph.                      |
+| `scripts/seed-dev.ts`               | 5,000+ lines with two hot spots, `main()` and `deleteAll()`. A feature owns one `seedX()` appended at the end plus one line in `main()`, written in its first phase and extended after — one insertion point, not one per phase. |
+| `src/lib/server/db/schema/index.ts` | Chronological `export *` lines. Append; never reorder. Take both sides.                                                                                                                                                          |
+| `src/routes/*/nav-items.ts`         | Ordered arrays where the order is cosmetic. Take both sides, then run the adjacent `nav-items.spec.ts`, which asserts the list.                                                                                                  |
+| `docs/reports/feature-catalog.md`   | A wide table plus a `Last updated:` line every phase wants to touch. One row per feature, in the landing PR.                                                                                                                     |
+| `pnpm-lock.yaml`                    | Never hand-resolve: `git checkout --theirs pnpm-lock.yaml && pnpm install`.                                                                                                                                                      |
+| `migrations/`                       | Never conflicts, which is the trap. See above.                                                                                                                                                                                   |
+
+Never rebase a feature branch and never force-push one. Other worktrees hold it, open phase PRs
+would redisplay every merged phase as new commits, and `allow_force_pushes=false` protects `main`
+only — nothing stops the push. Commit rather than stashing, too: the stash lives in the common
+`.git` and every worktree in this repo shares it.
 
 ## Table rebuilds on D1
 
@@ -270,7 +373,7 @@ Every script in `package.json`:
 | `test`                          | Full suite: unit one-shot + e2e (what CI runs)                                                 |
 | `test:report`                   | Vitest with JSON output → `test-results.json`                                                  |
 | `lint`                          | prettier `--check` + eslint over everything                                                    |
-| `lint:changed`                  | Lint only files changed vs `origin/main` (`scripts/lint-changed.sh`; PR CI uses this)          |
+| `lint:changed`                  | Lint only files changed vs `BASE_REF` (default `origin/main`; PR CI passes the PR's base)      |
 | `format`                        | prettier `--write` everything                                                                  |
 | `db:generate`                   | drizzle-kit: generate a migration from schema changes, then make any table rebuild D1-safe     |
 | `db:fix-migrations`             | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                             |
