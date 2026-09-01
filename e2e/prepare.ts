@@ -114,12 +114,22 @@ await seedInboxAwaiting();
 // committee's applicant is its role target.
 await seedGroups();
 await seedFeatureFlags();
+// Before the sweep, not after. It writes its own `directory_entry` rows — one
+// public, one members-only — and the sweep only claims users that have none, as
+// its own note says: "a fixture that needs a public member sets its own entry".
+//
+// Position matters beyond correctness. `checkpointE2eDatabase()` below has to run
+// once every seed's miniflare has exited, and each `withPlatformEnv` call is one
+// more workerd start and dispose. Slotting a new one in as the *last* writer
+// narrowed that window and the preview server then failed to start outright —
+// `SENTRY_DO SQLite failed; database is locked: SQLITE_BUSY_RECOVERY`, taking
+// every test in the suite with it. Keeping the directory sweep last leaves the
+// ordering exactly as it is on main.
+await seedInstructors();
+
 // Last of the data fixtures: sweeps every user and group the ones above created
 // into `directory_entry`, which is what the directory reads.
 await seedDirectoryEntries();
-// After the directory sweep: it puts every user at `members` visibility, and the
-// public instructor listing gates on that column.
-await seedInstructors();
 
 // Last, once every seed's miniflare has exited: leave the file with no WAL for
 // the preview server to recover. workerd opens D1 on the first *request*, by
