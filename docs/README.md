@@ -212,6 +212,8 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | [staff-user-management-audit.md](reports/staff-user-management-audit.md) | 📦     | The audit behind #164; five follow-up specs, one of them built                           |
 | [revenue-audit.md](reports/revenue-audit.md)                             | 📦     | Revenue workflow audit; its findings closed in #131                                      |
 | [sentry-triage.md](reports/sentry-triage.md)                             | ✅     | Production error triage                                                                  |
+| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md) | 📦     | Friction log driven as the coordinator; its blocking findings are fixed                  |
+| [volunteer-view-handoff.md](reports/volunteer-view-handoff.md)           | ✅     | Every volunteer screen, shot populated, with its users and stories — the wireframe brief |
 
 ## checklists
 
