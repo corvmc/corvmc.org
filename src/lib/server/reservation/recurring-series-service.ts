@@ -205,8 +205,22 @@ export async function cancel(seriesId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// cancelAllForUser() — cancel all active series for a user (subscription lapse)
+// cancelAllForUser() — cancel a user's *rehearsal* series on a subscription lapse
 // ---------------------------------------------------------------------------
+
+/**
+ * Called from the `subscription.deleted` webhook.
+ *
+ * **Scoped to `bookerType: 'user'`, and that scope is the point.** A recurring
+ * rehearsal series is a membership benefit, so a lapse ends it. Teaching time is
+ * not a benefit — it is a rental at a rate CMC granted directly — and the
+ * subscription never bought it, so a lapse must not take it away.
+ *
+ * Without the scope an instructor who let their membership lapse would lose
+ * their standing lesson slots **silently**: a cancelled series does not error,
+ * it simply stops generating, so the first anyone would know is a teacher
+ * arriving to find the room gone.
+ */
 
 export async function cancelAllForUser(userId: string): Promise<number> {
 	const now = new Date();
@@ -222,6 +236,7 @@ export async function cancelAllForUser(userId: string): Promise<number> {
 				sql`${recurringSeries.prototypeId} IN (
 					SELECT ${reservation.id} FROM ${reservation}
 					WHERE ${reservation.createdByUserId} = ${userId}
+					  AND ${reservation.bookerType} = 'user'
 				)`
 			)
 		);

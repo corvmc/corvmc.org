@@ -170,11 +170,21 @@ off-peak spec owns. `commitReservationCredits` keeps its `creditsApply` paramete
 
 ## Step 6 — Recurring
 
-- [ ] `generationWindowEnd(from, bookerType)`; `processSeries` passes `prototype.bookerType`
-- [ ] Recurring branch with **no** sustaining-membership gate
-- [ ] `cancelAllForUser` scoped to `booker_type = 'user'` — **defect fix**, an instructor whose
-      membership lapses would otherwise silently lose their standing slots
-- [ ] `generation-job.spec.ts`, `recurring-series-service.spec.ts`
+- [x] `generationWindowEnd(from, bookerType)` — per booker type rather than global; `processSeries`
+      passes `prototype.bookerType` and `processEventSeries` passes `'event'`
+- [x] Recurring branch with **no** sustaining gate — landed with the booking path in Step 5
+- [x] `cancelAllForUser` scoped to `booker_type = 'user'` — **defect fix.** A lapse ends a membership
+      benefit; teaching time is a rental the subscription never bought. Without the scope an
+      instructor who let their membership lapse lost their standing lessons **silently**, because a
+      cancelled series does not error — it just stops generating
+- [x] `recurring-series-lapse.spec.ts` — **its own file, against real SQLite.** The whole fix is a
+      WHERE clause and the existing `recurring-series-service.spec.ts` mocks `db.update` wholesale,
+      so it can see _that_ something was cancelled but not _which rows_ — it would pass with the
+      predicate deleted. Verified the new spec fails without the fix (2 failed) and passes with it.
+      Kept separate because a unioned `vi.mock` would replace the real database with that spec's stub
+      and quietly turn this back into the test that cannot fail
+- [x] `rrule-helpers.spec.ts` — the teaching horizon exceeds the member one, and every other booker
+      type inherits the member window
 
 ## Step 7 — Going public: listing + applications
 
