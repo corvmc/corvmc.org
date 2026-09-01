@@ -391,8 +391,6 @@ export async function updateQuantity(
 		});
 	}
 
-	// @ts-expect-error — Stripe v22 Item type requires all fields; we only send
-	// the subset needed for quantity update + price_data fee items + deleted flags.
 	await stripe.subscriptions.update(sub.id, { items });
 }
 
