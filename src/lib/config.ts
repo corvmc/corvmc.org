@@ -715,7 +715,7 @@ export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
 // ---------------------------------------------------------------------------
 
 /**
- * The five states of an instructor record — see `docs/specs/instructors-spec.md`.
+ * The five states of an instructor record — see `docs/specs/shipped/instructors-spec.md`.
  *
  * `requested` and `rejected` are the application; the other three are the grant.
  * Keeping them in one enum on one row is what makes the application *be* the

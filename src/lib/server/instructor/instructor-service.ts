@@ -11,7 +11,7 @@ import type { InstructorStatus } from '$lib/config';
 
 /**
  * Instructors — people CMC has granted the right to rent the practice room on
- * teaching terms. See `docs/specs/instructors-spec.md`.
+ * teaching terms. See `docs/specs/shipped/instructors-spec.md`.
  *
  * Two things this module is not, both load-bearing:
  *
