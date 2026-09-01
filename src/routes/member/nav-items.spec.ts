@@ -10,16 +10,16 @@ import {
 } from './nav-items';
 
 /**
- * Volunteering is feature-flagged, and these rows used to be nested `{#if}`s in
- * the layout — the shape `band/[slug]/nav-items.ts` records as having been
- * silently wrong twice. This pins every combination.
+ * These rows used to be nested `{#if}`s in the layout — the shape
+ * `band/[slug]/nav-items.ts` records as having been silently wrong twice — and
+ * then feature flags. Every member-nav flag is now retired, so what varies is
+ * data (`hasLoanableEquipment`) rather than configuration. The two fixtures are
+ * kept, and named for what they now mean, because the assertions below are still
+ * about a fully-lit nav versus a minimal one.
  */
 
-const ALL_ON: MemberNavInput = {
-	features: { volunteering: true },
-	hasLoanableEquipment: true
-};
-const ALL_OFF: MemberNavInput = { features: {} };
+const ALL_ON: MemberNavInput = { hasLoanableEquipment: true };
+const ALL_OFF: MemberNavInput = {};
 
 const keysOf = (input: MemberNavInput) => memberNavItems(input).map((i) => i.key);
 
@@ -58,9 +58,13 @@ describe('flag gating', () => {
 		}
 	});
 
-	it('gates Volunteering on the volunteering flag', () => {
-		expect(keysOf({ features: { volunteering: true } })).toContain('volunteer');
-		expect(keysOf(ALL_OFF)).not.toContain('volunteer');
+	// Volunteering was flag-gated and the flag was on in production, so retiring it
+	// left the row permanently present rather than unlinking it. Both fixtures get
+	// it now, which is the assertion that would catch it being made conditional
+	// again by accident.
+	it('always shows Volunteering, which is no longer gated', () => {
+		expect(keysOf(ALL_ON)).toContain('volunteer');
+		expect(keysOf(ALL_OFF)).toContain('volunteer');
 	});
 
 	/**
@@ -121,9 +125,11 @@ describe('activeMemberNavKey', () => {
 		expect(activeMemberNavKey(ALL_ON, path)).toBe(key);
 	});
 
-	it('falls back to the panel root when a flagged row is off', () => {
-		// The page still guards itself; the nav just has nothing to highlight.
-		expect(activeMemberNavKey(ALL_OFF, '/member/volunteer/start')).toBe('dashboard');
+	// Was "falls back to the panel root when a flagged row is off". No member-nav
+	// row is flag-gated any more, so the surviving claim is the useful half: a
+	// sub-path of a row that *is* present lights that row.
+	it('lights the parent row for a sub-path', () => {
+		expect(activeMemberNavKey(ALL_OFF, '/member/volunteer/start')).toBe('volunteer');
 	});
 
 	it('lights nothing for a band, which leaves the panel', () => {
@@ -194,16 +200,16 @@ describe('route coverage', () => {
 	it('shows Equipment only when there is something to lend', () => {
 		// Data, not a flag. An empty catalogue with a nav row pointing at it is a
 		// promise the collective is not keeping.
-		expect(keysOf({ features: {}, hasLoanableEquipment: true })).toContain('equipment');
-		expect(keysOf({ features: {}, hasLoanableEquipment: false })).not.toContain('equipment');
-		expect(keysOf({ features: {} })).not.toContain('equipment');
+		expect(keysOf({ hasLoanableEquipment: true })).toContain('equipment');
+		expect(keysOf({ hasLoanableEquipment: false })).not.toContain('equipment');
+		expect(keysOf({})).not.toContain('equipment');
 	});
 
 	it('hides My Loans with it — a loans page under no catalogue is a dead end', () => {
-		const withGear = memberNavMain({ features: {}, hasLoanableEquipment: true });
+		const withGear = memberNavMain({ hasLoanableEquipment: true });
 		const equipment = withGear.find((i) => i.key === 'equipment');
 		expect(equipment?.children?.map((c) => c.key)).toEqual(['equipment-loans']);
-		expect(keysOf({ features: {}, hasLoanableEquipment: false })).not.toContain('equipment-loans');
+		expect(keysOf({ hasLoanableEquipment: false })).not.toContain('equipment-loans');
 	});
 
 	it('keeps the stranded list honest', () => {

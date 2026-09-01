@@ -43,7 +43,6 @@ export interface MemberNavItem extends NavNode<MemberNavKey> {
 }
 
 export interface MemberNavInput {
-	features: { volunteering?: boolean };
 	/**
 	 * Whether anything in the catalogue is lendable.
 	 *
@@ -90,9 +89,10 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 		});
 	}
 
-	if (input.features.volunteering) {
-		items.push({ key: 'volunteer', label: 'Volunteering', href: resolve('/member/volunteer') });
-	}
+	// Was gated on a `volunteering` flag. The flag is retired and the feature was
+	// on in production, so the row is simply always here — this is a flag removal,
+	// not an unlink.
+	items.push({ key: 'volunteer', label: 'Volunteering', href: resolve('/member/volunteer') });
 
 	// Not flag-gated: a suggestion board with no audience collects single-vote
 	// posts, so there is nothing useful to dark-launch.

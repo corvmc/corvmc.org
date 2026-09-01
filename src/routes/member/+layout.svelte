@@ -69,8 +69,9 @@
 		membership: IconStar
 	};
 
+	// No `features` any more: every flag the member nav consulted is retired.
+	// `layout.features` still exists for the surfaces that read it directly.
 	let navInput = $derived({
-		features: layout.features,
 		hasLoanableEquipment: layout.hasLoanableEquipment
 	});
 	let mainItems = $derived(memberNavMain(navInput));
