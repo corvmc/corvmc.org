@@ -23,7 +23,8 @@ import {
 	getSiteConfig,
 	getConfigsByPrefix,
 	updateSiteConfig,
-	updateSiteConfigs
+	updateSiteConfigs,
+	UnknownSiteConfigKeyError
 } from './site-config-service';
 
 beforeEach(() => {
@@ -52,7 +53,7 @@ describe('getSiteConfig', () => {
 	});
 
 	it('throws for unknown keys', async () => {
-		await expect(getSiteConfig('unknown.key')).rejects.toThrow('Unknown site config key');
+		await expect(getSiteConfig('unknown.key')).rejects.toThrow(UnknownSiteConfigKeyError);
 	});
 });
 

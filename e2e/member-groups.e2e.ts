@@ -106,7 +106,11 @@ test.describe('member groups index', () => {
 		await page.getByRole('button', { name: `Apply to ${SEED_APPLY_NAME}` }).click();
 		await page.getByRole('dialog').getByRole('button', { name: 'Send application' }).click();
 
-		await expect(page.getByText('you asked to join')).toBeVisible({ timeout: 15000 });
+		// Applying is not membership: the Apply button is withdrawn rather than
+		// replaced by a members-only surface.
+		await expect(page.getByRole('button', { name: `Apply to ${SEED_APPLY_NAME}` })).toHaveCount(0, {
+			timeout: 15000
+		});
 	});
 });
 

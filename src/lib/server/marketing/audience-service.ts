@@ -10,6 +10,32 @@ import {
 	isSystemAudienceKey,
 	previewSystemAudience
 } from './system-audiences';
+import { DomainError } from '$lib/server/domain-error';
+
+// ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+
+/**
+ * A built-in audience's membership is computed, so it cannot be edited,
+ * deleted, re-slugged, or opened to public opt-in.
+ */
+export class BuiltInAudienceError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor(message: string) {
+		super(message);
+	}
+}
+
+/** The submitted audience fields are out of range or malformed. */
+export class AudienceValidationError extends DomainError {
+	readonly httpStatus = 400;
+
+	constructor(message: string) {
+		super(message);
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Audience service
@@ -36,7 +62,9 @@ async function systemKeyFor(audienceId: string): Promise<string | null> {
 /** Reject a mutation that only makes sense for a staff-curated list. */
 async function assertNotSystem(audienceId: string, action: string): Promise<void> {
 	if (isSystemAudienceKey(await systemKeyFor(audienceId))) {
-		throw new Error(`Cannot ${action} a built-in audience — its membership is computed`);
+		throw new BuiltInAudienceError(
+			`Cannot ${action} a built-in audience — its membership is computed`
+		);
 	}
 }
 
@@ -50,10 +78,10 @@ export async function createAudience(data: {
 	description?: string;
 	allowOptIn?: boolean;
 }) {
-	if (data.name.length > 255) throw new Error('Audience name too long (max 255)');
-	if (data.slug.length > 100) throw new Error('Audience slug too long (max 100)');
+	if (data.name.length > 255) throw new AudienceValidationError('Audience name too long (max 255)');
+	if (data.slug.length > 100) throw new AudienceValidationError('Audience slug too long (max 100)');
 	if (!/^[a-z0-9-]+$/.test(data.slug))
-		throw new Error('Slug must be lowercase alphanumeric with hyphens');
+		throw new AudienceValidationError('Slug must be lowercase alphanumeric with hyphens');
 
 	const [created] = await db
 		.insert(audience)
@@ -73,17 +101,19 @@ export async function updateAudience(
 	data: { name?: string; slug?: string; description?: string; allowOptIn?: boolean }
 ) {
 	if (data.name !== undefined && data.name.length > 255)
-		throw new Error('Audience name too long (max 255)');
+		throw new AudienceValidationError('Audience name too long (max 255)');
 	if (data.slug !== undefined && data.slug.length > 100)
-		throw new Error('Audience slug too long (max 100)');
+		throw new AudienceValidationError('Audience slug too long (max 100)');
 	if (data.slug !== undefined && !/^[a-z0-9-]+$/.test(data.slug))
-		throw new Error('Slug must be lowercase alphanumeric with hyphens');
+		throw new AudienceValidationError('Slug must be lowercase alphanumeric with hyphens');
 
 	if (isSystemAudienceKey(await systemKeyFor(id))) {
 		// Name and description are staff-editable copy. The slug is the systemKey
 		// contract, and opt-in makes no sense for an attribute-defined audience.
-		if (data.slug !== undefined) throw new Error('Cannot change the slug of a built-in audience');
-		if (data.allowOptIn) throw new Error('A built-in audience cannot accept public opt-in');
+		if (data.slug !== undefined)
+			throw new BuiltInAudienceError('Cannot change the slug of a built-in audience');
+		if (data.allowOptIn)
+			throw new BuiltInAudienceError('A built-in audience cannot accept public opt-in');
 	}
 
 	const [updated] = await db.update(audience).set(data).where(eq(audience.id, id)).returning();

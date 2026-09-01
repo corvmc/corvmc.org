@@ -180,7 +180,7 @@ test.describe('staff event creation — reserve space', () => {
 		await page.goto('/staff/reservations');
 		// Searching the title is itself part of the change: the list only matched
 		// member and band names, so an event hold was unfindable by its show.
-		await page.getByPlaceholder('Search member, band, or event...').fill(title);
+		await page.getByRole('searchbox').fill(title);
 		// The date bounds keep the row off a later page of the 50-row list.
 		await page.getByLabel('From date').fill(eventDate);
 		await page.getByLabel('To date').fill(eventDate);
@@ -258,7 +258,7 @@ test.describe('staff event edit — reserve space', () => {
 
 		// The card always renders now; with no hold it says so, rather than
 		// vanishing and leaving "not held" indistinguishable from "not shown".
-		await expect(page.getByText('No space held for this event')).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
 
 		await page.getByRole('button', { name: 'Edit' }).click();
 		const reserve = page.getByRole('checkbox', RESERVE_CHECKBOX);

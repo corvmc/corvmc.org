@@ -31,6 +31,11 @@ class FakeEventSource {
 // race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
 const NotificationBell = (await import('./NotificationBell.svelte')).default;
 
+// The dropdown is the wrapper's only other direct child. `.notification-bell-wrapper`
+// is load-bearing markup — the click-outside handler keys off it — so this asks
+// whether the panel is open without pinning any of the copy inside it.
+const dropdown = () => document.querySelector('.notification-bell-wrapper > div');
+
 describe('NotificationBell', () => {
 	beforeEach(() => {
 		vi.stubGlobal('EventSource', FakeEventSource);
@@ -43,11 +48,11 @@ describe('NotificationBell', () => {
 		await expect.element(trigger).toBeVisible();
 
 		await trigger.click();
-		await expect.element(page.getByText('No notifications yet')).toBeVisible();
+		expect(dropdown()).not.toBeNull();
 
 		// Click outside the bell wrapper — the dropdown must close.
 		document.body.click();
-		await expect.element(page.getByText('No notifications yet')).not.toBeInTheDocument();
+		await vi.waitFor(() => expect(dropdown()).toBeNull());
 	});
 
 	// Regression test for JAVASCRIPT-SVELTEKIT-Q / JAVASCRIPT-SVELTEKIT-1A: the
@@ -60,7 +65,7 @@ describe('NotificationBell', () => {
 
 		const trigger = page.getByRole('button', { name: 'Notifications' });
 		await trigger.click();
-		await expect.element(page.getByText('No notifications yet')).toBeVisible();
+		expect(dropdown()).not.toBeNull();
 
 		const uncaught: unknown[] = [];
 		const onError = (e: ErrorEvent) => {

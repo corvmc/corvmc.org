@@ -217,7 +217,7 @@ test.describe('group sessions', () => {
 		await dialog.locator('input[name="endTime"]').fill('21:00');
 		await dialog.getByRole('button', { name: 'Create session' }).click();
 
-		await expect(dialog.getByText('The session has to end after it starts')).toBeVisible({
+		await expect(dialog.getByText(/end after/i)).toBeVisible({
 			timeout: 15000
 		});
 	});

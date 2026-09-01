@@ -67,11 +67,16 @@ test('the fee-coverage offer is priced on the gift as well as the tickets', asyn
 	// $20 grosses up to a $0.91 fee; $20 + a $25 gift to $1.66.
 	await openPurchasePage(page);
 
-	await expect(page.getByText(/Add \$0\.91 to cover processing fees/i)).toBeVisible();
+	// Scoped to the checkbox by `name` rather than matched on its sentence: the
+	// grossed-up amount is the contract, the wording around it is not.
+	// `name$=`: a remote form prefixes a boolean field's name (`b:coverFees`).
+	const coverFees = page.locator('input[name$="coverFees"]').locator('..');
+
+	await expect(coverFees).toContainText('$0.91');
 
 	await page.getByRole('button', { name: '$25.00' }).click();
 
-	await expect(page.getByText(/Add \$1\.66 to cover processing fees/i)).toBeVisible();
+	await expect(coverFees).toContainText('$1.66');
 });
 
 test('a guest is never offered the member-discount waiver', async ({ page }) => {
@@ -79,7 +84,7 @@ test('a guest is never offered the member-discount waiver', async ({ page }) => 
 	// to a signed-out buyer reads as a way to pay less.
 	await openPurchasePage(page);
 
-	await expect(page.getByText(/skip my 50% member discount/i)).toBeHidden();
+	await expect(page.locator('input[name$="waiveDiscount"]')).toHaveCount(0);
 });
 
 test('the door policy is stated on the page, since checkout cannot sell a free ticket', async ({
@@ -87,5 +92,6 @@ test('the door policy is stated on the page, since checkout cannot sell a free t
 }) => {
 	await openPurchasePage(page);
 
-	await expect(page.getByText(/No one is turned away for lack of funds/i)).toBeVisible();
+	// The policy paragraph is the only thing on the page linking to /contact.
+	await expect(page.locator('main a[href="/contact"]')).toBeVisible();
 });

@@ -1,4 +1,6 @@
 import { eq } from 'drizzle-orm';
+import { expectSuccessToast } from './toast';
+import { assetStatusLabels, stockReasonLabels } from '../src/lib/config';
 import { inventoryLoan, stockMovement } from '../src/lib/server/db/schema/inventory';
 import { readLocalDb } from './fixtures/platform-db';
 import { expect, test, type Page } from '@playwright/test';
@@ -169,7 +171,7 @@ test.describe('inventory', () => {
 		await page.getByRole('button', { name: 'Use' }).click();
 		await page.getByRole('dialog').locator('input[name$="quantity"]').fill('3');
 		await modalSubmit(page, /^Use$/).click();
-		await expect(page.getByText('Recorded')).toBeVisible({ timeout: 10000 });
+		await expectSuccessToast(page, 10000);
 
 		const afterUse = await readOnHand(page, SEED_CONSUMABLE_ID);
 		expect(afterUse).toBe(before - 3);
@@ -178,14 +180,14 @@ test.describe('inventory', () => {
 		await page.getByRole('button', { name: 'Stocktake' }).click();
 		await page.getByRole('dialog').locator('input[name$="delta"]').fill('3');
 		await modalSubmit(page, /^Stocktake$/).click();
-		await expect(page.getByText('Correction recorded')).toBeVisible({ timeout: 10000 });
+		await expectSuccessToast(page, 10000);
 
 		const afterCorrection = await readOnHand(page, SEED_CONSUMABLE_ID);
 		expect(afterCorrection).toBe(before);
 
 		// Both steps survive as history. Overwriting a total would have left none.
-		await expect(page.getByText('Used')).toBeVisible();
-		await expect(page.getByText('Adjusted')).toBeVisible();
+		await expect(page.getByText(stockReasonLabels.consume)).toBeVisible();
+		await expect(page.getByText(stockReasonLabels.adjust)).toBeVisible();
 	});
 
 	test('binding a tag keeps the unit, and its history, intact', async ({ page }) => {
@@ -197,7 +199,7 @@ test.describe('inventory', () => {
 		await page.getByRole('button', { name: 'Bind tag' }).click();
 		await page.getByRole('dialog').locator('input[name$="assetTag"]').fill('E2E-000099');
 		await modalSubmit(page, /^Bind tag$/).click();
-		await expect(page.getByText('Tag bound')).toBeVisible({ timeout: 10000 });
+		await expectSuccessToast(page, 10000);
 
 		// Same record, new label — identity is the row, never the sticker.
 		await expect(page).toHaveURL(new RegExp(SEED_UNTAGGED_ASSET_ID));
@@ -279,7 +281,8 @@ test.describe('inventory', () => {
 		test('a window with no purchases reports nothing rather than erroring', async ({ page }) => {
 			await loginAsStaff(page);
 			await page.goto('/staff/inventory/spend?from=1990-01-01&to=1990-12-31');
-			await expect(page.getByText('Nothing purchased in this window')).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Spend' })).toBeVisible();
+			await expect(page.getByRole('cell', { name: 'E2E Test Gear' })).toHaveCount(0);
 		});
 	});
 
@@ -293,7 +296,7 @@ test.describe('inventory', () => {
 			await loginAsStaff(page);
 			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
 
-			await expect(page.getByText('Form 8282 may be due.')).toBeVisible();
+			await expect(page.getByRole('alert').filter({ hasText: /8282/ })).toBeVisible();
 			await expect(page.getByRole('button', { name: 'Record 8282' })).toBeVisible();
 		});
 
@@ -315,7 +318,7 @@ test.describe('inventory', () => {
 			await loginAsStaff(page);
 
 			await page.goto(`/staff/inventory/assets/${SEED_UNACKED_ASSET_ID}`);
-			await expect(page.getByText('Form 8282 may be due.')).toBeHidden();
+			await expect(page.getByRole('alert').filter({ hasText: /8282/ })).toHaveCount(0);
 
 			await page.goto('/staff/inventory/compliance');
 			await expect(page.getByText(SEED_UNACKED_ASSET_TAG)).toBeHidden();
@@ -333,7 +336,7 @@ test.describe('inventory', () => {
 				.first()
 				.fill('Filed 2026-09-02, copy posted to the donor');
 			await page.getByRole('dialog').getByRole('button', { name: 'Record 8282' }).click();
-			await expect(page.getByText('Recorded')).toBeVisible({ timeout: 10000 });
+			await expectSuccessToast(page, 10000);
 
 			// The obligation is discharged, so it stops asking — the note stays on
 			// the unit as the record that it was handled.
@@ -346,7 +349,7 @@ test.describe('inventory', () => {
 				.toBe(false);
 
 			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
-			await expect(page.getByText('Form 8282 may be due.')).toBeHidden();
+			await expect(page.getByRole('alert').filter({ hasText: /8282/ })).toHaveCount(0);
 			await expect(page.getByText('copy posted to the donor')).toBeVisible();
 		});
 	});
@@ -370,7 +373,7 @@ test.describe('inventory', () => {
 			await expect(page.getByText('Schedule Pickup')).toBeVisible();
 			await page.locator('input[name="scheduledPickupDate"]').fill('2026-09-10');
 			await page.getByRole('button', { name: 'Schedule' }).click();
-			await expect(page.getByText('Pickup scheduled')).toBeVisible({ timeout: 10000 });
+			await expectSuccessToast(page, 10000);
 
 			// The state moved on, so the next step's control is the one on offer.
 			await expect(page.getByText('Mark as Checked Out')).toBeVisible();
@@ -400,7 +403,7 @@ test.describe('inventory', () => {
 			);
 			await unitPicker.selectOption(SEED_CHECKOUT_ASSET_ID);
 			await page.getByRole('button', { name: 'Check Out' }).click();
-			await expect(page.getByText('Checked out')).toBeVisible({ timeout: 10000 });
+			await expectSuccessToast(page, 10000);
 
 			// Bound to the loan, and out of the building on the ledger.
 			await expect
@@ -435,7 +438,9 @@ test.describe('inventory', () => {
 			await expect.poll(async () => ledgerSumFor(SEED_RETURN_ASSET_ID), { timeout: 15000 }).toBe(1);
 
 			await page.goto(`/staff/inventory/loans/${SEED_RETURN_LOAN_ID}`);
-			await expect(page.getByText('No actions available')).toBeVisible();
+			await expect(
+				page.getByRole('button', { name: /Mark Returned|Mark as Checked Out/ })
+			).toHaveCount(0);
 		});
 
 		test('a member requests a loan from the catalog', async ({ page }) => {
@@ -529,7 +534,7 @@ test.describe('inventory', () => {
 				.locator('input[name$="appraisalRef"]')
 				.fill('Appraisal 2026-03');
 			await modalSubmit(page, /^Record 8283$/).click();
-			await expect(page.getByText('Acknowledgment recorded')).toBeVisible({ timeout: 10000 });
+			await expectSuccessToast(page, 10000);
 
 			// After: the same row, now an obligation with a deadline attached.
 			await expect
@@ -537,7 +542,7 @@ test.describe('inventory', () => {
 				.toBe(true);
 
 			await page.goto(`/staff/inventory/assets/${SEED_SIGN_ASSET_ID}`);
-			await expect(page.getByText('Form 8282 may be due.')).toBeVisible();
+			await expect(page.getByRole('alert').filter({ hasText: /8282/ })).toBeVisible();
 		});
 
 		/**
@@ -554,7 +559,7 @@ test.describe('inventory', () => {
 			await page.goto(`/staff/inventory/acquisitions/${SEED_OWED_ACQUISITION_ID}`);
 			await page.getByRole('button', { name: 'Mark reimbursed' }).click();
 			await modalSubmit(page, /^Mark reimbursed$/).click();
-			await expect(page.getByText('Marked reimbursed')).toBeVisible({ timeout: 10000 });
+			await expectSuccessToast(page, 10000);
 
 			await expect
 				.poll(
@@ -611,7 +616,7 @@ test.describe('inventory', () => {
 				.toBe(1);
 
 			await page.goto(`/staff/inventory/assets/${SEED_ASSET_ID}`);
-			await expect(page.getByText('Out for repair')).toBeVisible();
+			await expect(page.getByText(stockReasonLabels.repair_out)).toBeVisible();
 			await expect(page.getByText('Crackling on channel two')).toBeVisible();
 		});
 
@@ -625,7 +630,7 @@ test.describe('inventory', () => {
 			// `toBeHidden()` passes for an element that does not exist, so on its
 			// own it also passes when the page failed to render — which is how this
 			// test sat green while the flow it guards was completely broken.
-			await expect(page.getByText('Maintenance').first()).toBeVisible();
+			await expect(page.getByText(assetStatusLabels.maintenance).first()).toBeVisible();
 			await expect(page.getByRole('button', { name: 'Report a problem' })).toBeHidden();
 		});
 	});

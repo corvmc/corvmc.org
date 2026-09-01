@@ -78,7 +78,7 @@ describe('dispatchReply — web channel (contact form)', () => {
 		expect(mockSendInboxReply).toHaveBeenCalledTimes(1);
 		const arg = mockSendInboxReply.mock.calls[0][0];
 		expect(arg.to).toBe('charlie@example.com');
-		expect((arg.model as Record<string, unknown>).subject).toBe('Re: General Inquiry');
+		expect((arg.model as Record<string, unknown>).subject).toBe(`Re: ${params().subject}`);
 		expect((arg.model as Record<string, unknown>).body).toBe('Thanks for reaching out!');
 		expect(messageId).toBe('pm-message-id');
 	});

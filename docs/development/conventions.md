@@ -24,14 +24,24 @@ When building a new feature, work through these phases in order:
    Add shared types to `src/lib/types/` if the feature introduces new structures (JSONB
    shapes, enums). If the migration rebuilds a table, read
    [table rebuilds on D1](#table-rebuilds-on-d1) below.
+
+   **Extend `scripts/seed-dev.ts` in the same change.** Every surface built between the
+   schema landing and the seed being written is developed and reviewed against _no rows_ —
+   a staff queue, an empty state, a listing all render the zero case and nothing else, and
+   the browser-preview step cannot verify anything until the end, which is when it is least
+   useful. Cover each value the enums allow, including the awkward ones: a returned
+   application, a paused grant, a record excluded for two different reasons. Those are the
+   screens that otherwise only ever get looked at empty, and empty is the case that is
+   already obviously right.
+
 3. **Services** — server logic in `src/lib/server/<domain>/`. Keep query functions and
    mutation functions separated. Validate inputs in the service layer with explicit limits
    (max lengths, max item counts).
 4. **Routes & UI** — build pages using [ui-patterns.md](ui-patterns.md). Data access via
    remote functions (`query()`/`form()` in `src/lib/remote/`). Add nav links in the
    relevant layout (member / band / staff).
-5. **Seed data** — extend `scripts/seed-dev.ts` so the feature has realistic local data.
-   Use pools of sample values and randomized assignment for domain-specific fields.
+5. ~~**Seed data**~~ — **do this with step 2, as soon as the schema settles.** Kept numbered
+   here only so the steps below keep their numbers.
 6. **Tests** — write tests that describe **intended behavior**, not the current
    implementation. Service-level mocks where direct DB access isn't practical. A failing
    test that reflects unfinished business logic is acceptable.
@@ -288,6 +298,48 @@ module it covers in a directory listing.
 Do not merge two spec files just because they cover the same module. Sibling specs carry
 different `vi.mock` preambles, and unioning those quietly guts whatever the stricter one was
 testing.
+
+#### Do not assert on copy
+
+A test must not pin the wording of anything a person reads. Rewording an empty state, a toast, an
+error message or a marketing paragraph is a copy edit; it should not also be a test edit, and a
+suite that makes it one is a suite that discourages fixing the copy.
+
+Assert the thing the wording stands for:
+
+| Instead of                                             | Assert                                                                    |
+| ------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `getByText('Pickup scheduled')`                        | `expectSuccessToast(page)` (`e2e/toast.ts`)                               |
+| `getByText('This is off the board while…')`            | `getByRole('alert')`                                                      |
+| `getByPlaceholder('Search by name or email…')`         | `getByRole('combobox')` / `getByRole('searchbox')` / `input[name]`        |
+| `getByText('Out for repair')`                          | `stockReasonLabels.repair_out` from `$lib/config`                         |
+| `rejects.toThrow('Reservation not found')`             | `rejects.toThrow(ReservationNotFoundError)`                               |
+| `expect(result.error).toContain('Minimum duration')`   | `expect(result.code).toBe('MIN_DURATION')`                                |
+| `expect(subject).toBe('Reservation reminder: May 21')` | `expect(subject).toContain('May 21')` — the interpolation is the contract |
+
+When a service throws a bare `Error` and there is no class to assert, add one: a `DomainError`
+subclass needs no registration in `errors.ts`, because `mapDomainError()` already branches on the
+base — and it upgrades a 500 into the status the case deserves.
+
+Do not add a `data-testid`. There are none in this codebase, and every case above was solved with
+markup that already existed.
+
+What is **not** copy, and stays:
+
+- **Fixture echo** — a spec passing `title: 'X'` in and asserting `X` comes back. `SEED_*`
+  constants are fixture data, not copy.
+- **Render gates** — `e2e/inventory.e2e.ts`'s `visit()` waits on an `h1` by name to know an awaited
+  remote query has committed. That is synchronisation, not an assertion.
+- **Deliberate copy tests** — `e2e/staff-events-split.e2e.ts` asserts `Posted by` is present and
+  `Created by` is absent; `e2e/band-subscription.e2e.ts` asserts premium no longer advertises a
+  subdomain. These exist _because_ of the wording. Say so in a comment.
+- **Short field and column labels** used as keys (`Date`, `Total`, `Reason`) — they behave like an
+  API, not like prose.
+- **Framework crash guards** — `not.toContainText('effect_update_depth_exceeded')` and friends.
+
+`e2e/directory-tabs.e2e.ts`, `e2e/panel-nav.e2e.ts`, `e2e/staff-nav.e2e.ts` and
+`e2e/create-band-modal.e2e.ts` are the model e2e specs; `src/lib/server/errors.spec.ts` and
+`src/lib/enum-labels.spec.ts` are the model unit specs.
 
 #### One full suite per machine
 
