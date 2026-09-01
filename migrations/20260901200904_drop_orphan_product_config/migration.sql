@@ -1,0 +1,14 @@
+-- Drop `product_config`, which exists in every database but in no schema file.
+--
+-- The table was created by `open_the_phantom` and rebuilt by `sloppy_apocalypse`.
+-- When the product catalogue moved to KV (docs/architecture/product-config-kv-migration.md)
+-- its schema file was deleted, and the snapshot stopped declaring the table between
+-- `material_spiral` and `keen_warbound` — but no migration ever emitted the DROP. Because
+-- drizzle diffs the schema against the *snapshot*, and the snapshot had already forgotten
+-- the table, `db:generate` could never propose one: the divergence was invisible to the
+-- one check that looks for it. Hence `--custom`, and hence `scripts/migration-replay.spec.ts`,
+-- which replays the migrations and compares the result to the snapshot so this cannot recur.
+--
+-- Nothing references it: no schema, no service, no foreign key. The rows are dead pricing
+-- data superseded by the `product-config:` KV prefix.
+DROP TABLE `product_config`;

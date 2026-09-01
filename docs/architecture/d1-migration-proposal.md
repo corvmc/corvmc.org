@@ -1,5 +1,16 @@
 # Proposal: Migrate from PostgreSQL to Cloudflare D1
 
+> **📦 Shipped — kept for the reasoning, not as a runbook.** Option 2 was taken and D1 is now the
+> production database. **Do not follow the migration steps below.** D1 is canonical; the Postgres
+> instance stopped being so long ago, and every tool that moved data from it — `pnpm db:sync`,
+> `scripts/migrate-from-postgres.ts` and the rest of the ETL — has been deleted precisely because
+> keeping them meant keeping a documented way to overwrite production with a stale snapshot. The
+> last three scripts that read `DATABASE_URL` went too. There is no supported path from Postgres
+> any more; write against the current schema instead.
+>
+> What survives here is the decision: why D1 over Hyperdrive, and which Postgres features had to
+> be given up. Live operations are in [operations-manual.md](operations-manual.md) §6.
+
 ## Context
 
 CorvMC currently runs on PostgreSQL via Drizzle ORM with the `postgres` npm package. If we deploy to Cloudflare Workers (per the universal data layer proposal), we need a database strategy. The options are:

@@ -221,6 +221,57 @@ What this means in practice:
 - **Verify against local D1** for anything touching a table with children:
   `pnpm db:reset`, then check row counts in the child tables.
 
+### Snapshots are pruned
+
+drizzle-kit writes a full schema snapshot into every migration directory. Ours are ~270KB each,
+against a median `migration.sql` of well under a kilobyte, so `migrations/` was 12MB of which
+12.38MB was snapshots — and it grew by another 270KB every time anyone touched the schema.
+
+Almost none of that is ever read again. Checked against drizzle-kit 1.0.0-rc.3 and drizzle-orm
+1.0.0-rc.3 rather than assumed:
+
+| Command                | Snapshots it reads                                                                                  |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| `drizzle-kit generate` | **one** — `snapshots[snapshots.length - 1]`, the newest by path. It is the diff base for the schema |
+| `drizzle-kit check`    | all, to validate each one's shape and find two migrations generated from the same parent            |
+| `drizzle-kit migrate`  | **none**                                                                                            |
+| `d1-safe-rebuild`      | the snapshot of each migration it rewrites, for the foreign-key graph                               |
+
+The one that surprises people is `migrate`. It selects work by directory **name** —
+`getMigrationsToRun` is `localMigrations.filter((lm) => !dbNamesSet.has(lm.name))` — and the
+`hash` and `created_at` columns it writes into `__drizzle_migrations` are never read back. No
+snapshot is consulted, so pruning cannot change what is or isn't applied to a database.
+
+So `pnpm db:generate` ends by running `scripts/db/prune-snapshots.mjs`, which **keeps the newest
+snapshot plus any migration not yet on `origin/main`** and deletes the rest. The second half is
+what keeps a PR that generates two migrations checkable: `d1-safe-rebuild` needs the older one's
+snapshot, and until it merges, it is still being authored. If `origin/main` can't be resolved the
+script prunes nothing — failing open costs disk, failing closed deletes something in use.
+
+`drizzle-kit check` still catches two branches that generated from the same parent, which is the
+property worth protecting: it looks at a parent only when that parent has more than one child, and
+it explicitly tolerates the parent's own snapshot being absent. Both children survive a prune,
+because neither is on `origin/main` while it is still in flight.
+
+### A table can go missing from the schema and the snapshot at once
+
+`generate` diffs the schema files against the snapshot, so when both forget a table on the same
+day, they agree and there is nothing left to generate. `product_config` did exactly that: its
+schema file was deleted when the product catalogue moved to KV, the snapshot stopped declaring it
+between `material_spiral` and `keen_warbound`, and no migration ever emitted the `DROP`. The
+table sat in production, in every local D1 and in every e2e state directory for three months, and
+the Schema drift job was always going to report no drift.
+
+`scripts/migration-replay.spec.ts` is the check that can see it: it replays every migration's SQL
+statement by statement and compares the surviving tables to the newest snapshot. Statement-level
+because a table rebuild drops the table it is rebuilding, which a file-wide regex misreads as a
+deletion.
+
+Fixing one takes `pnpm exec drizzle-kit generate --custom`, which prepares an empty migration
+directory with a correctly-parented snapshot for hand-written SQL. That is the one supported way
+to author migration SQL yourself, and it does not break the "migrations come only from
+`db:generate`" rule.
+
 ## Layering rules
 
 ```

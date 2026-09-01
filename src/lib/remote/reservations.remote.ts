@@ -87,11 +87,7 @@ import {
 	reverseReservationCredits
 } from '$lib/server/reservation/reservation-credit-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
-import {
-	RECURRING_FREQUENCIES,
-	recurringSeries,
-	type RecurringFrequency
-} from '$lib/server/db/schema/recurring';
+import { recurringSeries, type RecurringFrequency } from '$lib/server/db/schema/recurring';
 import { formatSlotTime } from '$lib/utils/format';
 import { buildRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
 import {
@@ -514,31 +510,6 @@ export const getAvailableDates = query(async () => {
 	return results;
 });
 
-/**
- * Member: available slots + config + recurring frequencies for a given date.
- * Deliberately unguarded — returns only which slots are free plus public
- * booking config, never who booked them.
- */
-export const getMemberSlots = query(z.string(), async (dateParam) => {
-	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
-	const [slots, reservationConfig] = await Promise.all([
-		getAvailableSlots(dateStr),
-		getReservationConfig()
-	]);
-
-	return {
-		date: dateStr,
-		slots,
-		recurringFrequencies: RECURRING_FREQUENCIES,
-		config: {
-			hourlyRateCents: reservationConfig.hourlyRateCents,
-			slotMinutes: reservationConfig.timeSlotMinutes,
-			minDurationHours: reservationConfig.minDurationHours,
-			maxDurationHours: reservationConfig.maxDurationHours
-		}
-	};
-});
-
 /** Available start times for a given date, with pricing config. */
 export const getReservationStartTimes = query(z.string(), async (dateParam) => {
 	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
@@ -689,41 +660,6 @@ export const getReservationPricing = query(
 );
 
 /** Recurring: all operating-hour time slots (no per-date availability filtering). */
-export const getRecurringTimeSlots = query(async () => {
-	const cfg = await getReservationConfig();
-	const slotMinutes = cfg.timeSlotMinutes;
-	const [startH, startM] = cfg.operatingHoursStart.split(':').map(Number);
-	const [endH, endM] = cfg.operatingHoursEnd.split(':').map(Number);
-
-	const startSlots: { value: string; label: string }[] = [];
-	const allSlots: string[] = [];
-
-	for (let m = startH * 60 + startM; m < endH * 60 + endM; m += slotMinutes) {
-		const hh = String(Math.floor(m / 60)).padStart(2, '0');
-		const mm = String(m % 60).padStart(2, '0');
-		const time = `${hh}:${mm}`;
-		allSlots.push(time);
-	}
-	// Add the closing time as a valid end time
-	allSlots.push(cfg.operatingHoursEnd);
-
-	const minSlots = cfg.minDurationHours * (60 / slotMinutes);
-	// Start times must leave room for at least minDuration
-	for (let i = 0; i < allSlots.length - minSlots; i++) {
-		startSlots.push({ value: allSlots[i], label: formatSlotTime(allSlots[i]) });
-	}
-
-	return {
-		startSlots,
-		allSlots: allSlots.map((t) => ({ value: t, label: formatSlotTime(t) })),
-		config: {
-			slotMinutes,
-			minDurationHours: cfg.minDurationHours,
-			maxDurationHours: cfg.maxDurationHours
-		}
-	};
-});
-
 /**
  * Recurring: preview upcoming instances for a given schedule.
  * Deliberately unguarded — pure date arithmetic over caller-supplied input,
