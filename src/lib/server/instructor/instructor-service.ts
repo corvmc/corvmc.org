@@ -5,6 +5,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { EntityRef } from '$lib/types/entity';
 import { DomainError } from '$lib/server/domain-error';
+import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
 import type { InstructorStatus } from '$lib/config';
 
@@ -121,11 +122,13 @@ export async function apply(userId: string, listing: InstructorListingInput): Pr
 	}
 
 	const now = new Date();
+
 	if (existing) {
 		await db
 			.update(instructor)
 			.set({ ...listing, status: 'requested', updatedAt: now })
 			.where(and(eq(instructor.id, existing.id), inArray(instructor.status, APPLICATION_STATES)));
+		await announceSubmission(userId);
 		return;
 	}
 
@@ -147,6 +150,32 @@ export async function apply(userId: string, listing: InstructorListingInput): Pr
 		if (isUniqueConstraintError(err)) throw new AlreadyAnInstructorError();
 		throw err;
 	}
+
+	await announceSubmission(userId);
+}
+
+/**
+ * Tell staff an application is waiting.
+ *
+ * Emitted on a resubmit as well as a first submission: a returned application
+ * coming back is exactly the moment it needs looking at again, and it would
+ * otherwise sit in the queue with nobody told.
+ *
+ * The emit is not awaited — the dispatcher swallows and logs its own failures,
+ * and an application must not fail because a notification did.
+ */
+async function announceSubmission(userId: string): Promise<void> {
+	const row = await getByUserId(userId);
+	if (!row) return;
+
+	const [u] = await db.select({ name: user.name }).from(user).where(eq(user.id, userId)).limit(1);
+
+	void domainEvents.emit('instructor.application_submitted', {
+		instructorId: row.id,
+		applicantUserId: userId,
+		applicantName: u?.name ?? 'A member',
+		headline: row.headline
+	});
 }
 
 /**
@@ -201,6 +230,36 @@ export async function withdraw(userId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
+ * Tell the applicant what staff decided.
+ *
+ * On a return this is the load-bearing half of the whole mechanism: the member
+ * is not watching their profile, so a note nobody delivers is the failure the
+ * return state exists to prevent.
+ */
+async function announceReview(
+	instructorId: string,
+	approved: boolean,
+	reviewNotes: string | null
+): Promise<void> {
+	const [row] = await db
+		.select({ userId: instructor.userId, name: user.name, email: user.email })
+		.from(instructor)
+		.innerJoin(user, eq(user.id, instructor.userId))
+		.where(eq(instructor.id, instructorId))
+		.limit(1);
+	if (!row) return;
+
+	void domainEvents.emit('instructor.application_reviewed', {
+		instructorId,
+		applicantUserId: row.userId,
+		applicantName: row.name,
+		applicantEmail: row.email,
+		approved,
+		reviewNotes
+	});
+}
+
+/**
  * Approve an application.
  *
  * Scoped positively to the two application states, mirroring
@@ -227,6 +286,8 @@ export async function approve(id: string, staffUserId: string): Promise<void> {
 		.where(and(eq(instructor.id, id), inArray(instructor.status, APPLICATION_STATES)));
 
 	if (getRowCount(result) === 0) throw new InstructorNotFoundError();
+
+	await announceReview(id, true, null);
 }
 
 /**
@@ -266,6 +327,8 @@ export async function sendBack(
 		.where(and(eq(instructor.id, id), eq(instructor.status, 'requested')));
 
 	if (getRowCount(result) === 0) throw new InstructorNotFoundError();
+
+	await announceReview(id, false, reviewNotes);
 }
 
 /**

@@ -259,3 +259,82 @@ describe('requireInstructor matches positively', () => {
 		await expect(requireInstructor(USER)).rejects.toThrow(svc.InstructorNotActiveError);
 	});
 });
+
+describe('what gets announced', () => {
+	// The events are real here — only the database is substituted — so this
+	// asserts the emit actually happens rather than that a mock was called.
+	async function captureEvents<T>(name: T, run: () => Promise<void>) {
+		const { domainEvents } = await import('$lib/server/event-bus/event-bus');
+		const seen: Record<string, unknown>[] = [];
+		const off = domainEvents.on(name as never, (e: unknown) => {
+			seen.push((e as { data: Record<string, unknown> }).data);
+		});
+		await run();
+		// The emits are deliberately not awaited by the service, so give the
+		// microtask queue a turn before reading.
+		await new Promise((r) => setTimeout(r, 0));
+		off();
+		return seen;
+	}
+
+	it('tells staff when an application arrives', async () => {
+		const seen = await captureEvents('instructor.application_submitted', () =>
+			svc.apply(USER, { headline: 'Guitar' })
+		);
+		expect(seen).toHaveLength(1);
+		expect(seen[0]).toMatchObject({ applicantUserId: USER, headline: 'Guitar' });
+	});
+
+	it('tells staff again when a returned application comes back', async () => {
+		// The resubmit is exactly when it needs looking at again; without this it
+		// would sit in the queue with nobody told.
+		await svc.apply(USER, { headline: 'Guitar' });
+		const id = row()!.id as string;
+		await svc.sendBack(id, STAFF, 'which levels?');
+
+		const seen = await captureEvents('instructor.application_submitted', () =>
+			svc.apply(USER, { headline: 'Guitar, beginner to intermediate' })
+		);
+		expect(seen).toHaveLength(1);
+	});
+
+	it('carries the note to the member when it is sent back', async () => {
+		// The load-bearing half of the return state: the member is not watching
+		// their profile, so a note nobody delivers is the failure it exists to
+		// prevent.
+		await svc.apply(USER, { headline: 'Guitar' });
+		const id = row()!.id as string;
+
+		const seen = await captureEvents('instructor.application_reviewed', () =>
+			svc.sendBack(id, STAFF, 'Say which levels you teach.')
+		);
+		expect(seen[0]).toMatchObject({
+			approved: false,
+			reviewNotes: 'Say which levels you teach.',
+			applicantUserId: USER
+		});
+	});
+
+	it('announces an approval with no note', async () => {
+		await svc.apply(USER, { headline: 'Guitar' });
+		const id = row()!.id as string;
+
+		const seen = await captureEvents('instructor.application_reviewed', () =>
+			svc.approve(id, STAFF)
+		);
+		expect(seen[0]).toMatchObject({ approved: true, reviewNotes: null });
+	});
+
+	it('says nothing when the transition did not happen', async () => {
+		// `approve` on a retired row throws and changes nothing, so it must not
+		// tell the member they were approved.
+		await svc.grant(USER, STAFF);
+		const id = row()!.id as string;
+		await svc.retire(id, STAFF, 'moved away');
+
+		const seen = await captureEvents('instructor.application_reviewed', async () => {
+			await expect(svc.approve(id, STAFF)).rejects.toThrow();
+		});
+		expect(seen).toHaveLength(0);
+	});
+});
