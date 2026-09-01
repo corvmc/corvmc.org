@@ -2,6 +2,7 @@
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
@@ -91,12 +92,13 @@
 				{#snippet head()}
 					<th>When</th>
 					<th class="col-support">Event</th>
-					<th class="cell-num whitespace-nowrap">Claimed</th>
+					<th class="cell-num whitespace-nowrap">Confirmed</th>
 				{/snippet}
 
 				{#each rows as shift (shift.id)}
 					{@const href = resolve(`/staff/volunteer/shifts/${shift.id}`)}
 					{@const short = shift.claimed < shift.capacity}
+					{@const unconfirmed = shift.claimed - shift.confirmed}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="cell-primary whitespace-nowrap">
 							<a {href} class="font-medium">{formatDateShort(shift.startsAt)}</a>
@@ -109,10 +111,17 @@
 								<span class="truncate">{shift.eventTitle}</span>
 							{/if}
 						</td>
+						<!--
+							Confirmed against capacity, with claims nobody has confirmed called out
+							separately. One number for both made a shift with three unconfirmed
+							claims read as staffed (docs/reports/volunteer-workflow-findings.md#a3).
+						-->
 						<td class="cell-num whitespace-nowrap">
-							{shift.claimed}/{shift.capacity}
-							{#if short}
-								<span class="ml-2 badge badge-sm badge-warning">short</span>
+							{shift.confirmed}/{shift.capacity}
+							{#if unconfirmed > 0}
+								<Badge variant="warning" size="xs" class="ml-2">+{unconfirmed}</Badge>
+							{:else if short}
+								<Badge variant="warning" size="xs" class="ml-2">short</Badge>
 							{/if}
 						</td>
 					</tr>

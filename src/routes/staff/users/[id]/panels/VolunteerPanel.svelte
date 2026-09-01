@@ -67,6 +67,20 @@
 					{/if}
 				</Fact>
 
+				<!--
+					Written on the member's own interests form and, until now, read back only
+					into that same form (docs/reports/volunteer-workflow-findings.md#a6).
+					Always rendered, never hidden when unset: "they didn't say" and "this page
+					doesn't track that" have to look different.
+				-->
+				<Fact label="When they can help">
+					{#if data.profile.availability}
+						{data.profile.availability}
+					{:else}
+						<span class="text-muted">Not given</span>
+					{/if}
+				</Fact>
+
 				<Fact label="Interested in" class="flex flex-wrap gap-1">
 					{#each data.interests as i (i.roleId)}
 						<a href={resolve(`/staff/volunteer/roles/${i.roleId}`)}>

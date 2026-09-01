@@ -899,7 +899,7 @@
 				{#snippet head()}
 					<th>Role</th>
 					<th class="whitespace-nowrap">When</th>
-					<th class="cell-num">Filled</th>
+					<th class="cell-num">Confirmed</th>
 				{/snippet}
 
 				{#each shifts as shift (shift.id)}
@@ -912,10 +912,21 @@
 						<td class="whitespace-nowrap">
 							{formatDateShort(shift.startsAt)}, {formatTimeRange(shift.startsAt, shift.endsAt)}
 						</td>
-						<td class="cell-num">
-							<span class:text-warning={shift.claimed < shift.capacity}>
-								{shift.claimed}/{shift.capacity}
+						<!--
+							Confirmed, not "filled". Only a confirmed signup gets the day-before
+							reminder and completes afterwards, so a show whose shifts are all
+							claimed and none confirmed is not staffed
+							(docs/reports/volunteer-workflow-findings.md#a3).
+						-->
+						<td class="cell-num whitespace-nowrap">
+							<span class:text-warning={shift.confirmed < shift.capacity}>
+								{shift.confirmed}/{shift.capacity}
 							</span>
+							{#if shift.claimed > shift.confirmed}
+								<Badge variant="warning" size="xs" class="ml-1">
+									+{shift.claimed - shift.confirmed}
+								</Badge>
+							{/if}
 						</td>
 					</tr>
 				{/each}

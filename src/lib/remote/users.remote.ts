@@ -5,6 +5,13 @@ import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { listLowStock } from '$lib/server/inventory/stock-service';
+import { listShortStaffedShifts } from '$lib/server/volunteer/volunteer-shift-service';
+
+/**
+ * How far ahead the dashboard's volunteering panel looks. A week, because the panel is a
+ * glance at this week's problem; the two-week view lives on /staff/volunteer.
+ */
+const DASHBOARD_SHIFT_HORIZON_DAYS = 7;
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
@@ -72,7 +79,7 @@ export const getStaffDashboard = query(async () => {
 	// No `permissions` count: the spatie-derived permission tables are populated by
 	// the Postgres migrator and read by nothing in this app, so the stat was always
 	// 0. See src/lib/server/db/schema/authorization.ts.
-	const [totalUsersResult, totalRolesResult, newUsersResult, recentUsers, lowStock] =
+	const [totalUsersResult, totalRolesResult, newUsersResult, recentUsers, lowStock, shortShifts] =
 		await Promise.all([
 			db.select({ value: count() }).from(user),
 			db.select({ value: count() }).from(role),
@@ -85,7 +92,12 @@ export const getStaffDashboard = query(async () => {
 			// Folded in rather than fetched by the component: the dashboard gets one
 			// load-bearing query, and a reorder point that only shows up on a page
 			// nobody opens is not doing its job.
-			listLowStock()
+			listLowStock(),
+			// Same argument, one module along. Inventory has had a "this needs an action
+			// today" panel here since it shipped and volunteering had nothing at all
+			// (docs/reports/volunteer-workflow-findings.md#d1) — while a show that runs a
+			// person short is at least as urgent as a low drumstick count.
+			listShortStaffedShifts(DASHBOARD_SHIFT_HORIZON_DAYS)
 		]);
 
 	return {
@@ -99,6 +111,10 @@ export const getStaffDashboard = query(async () => {
 		// opening.
 		lowStock: lowStock.slice(0, 5),
 		lowStockCount: lowStock.length,
+		// Capped the same way and for the same reason. `/staff/volunteer` is where the
+		// whole worklist lives.
+		shortShifts: shortShifts.slice(0, 5),
+		shortShiftCount: shortShifts.length,
 		recentUsers: recentUsers.map((u) => ({
 			id: u.member.id,
 			createdAt: u.createdAt,

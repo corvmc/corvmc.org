@@ -42,6 +42,10 @@
 	const unloggedShifts = $derived(pageData.then((d) => d.unloggedShifts));
 	const logs = $derived(pageData.then((d) => d.logs));
 	const summary = $derived(pageData.then((d) => d.summary));
+	// `getMyCertifications` existed and had no caller anywhere, so a member could be told a
+	// shift needed a clearance and had no page saying which ones they already hold
+	// (docs/reports/volunteer-workflow-findings.md#d4).
+	const certifications = $derived(pageData.then((d) => d.certifications));
 
 	// Club time, not UTC: after 5pm PT the UTC date is already tomorrow, and the
 	// service rejects a future date — so a UTC-defaulted input offered a value
@@ -227,6 +231,29 @@
 
 	{#await openShifts then shifts}
 		<OpenShifts {shifts} />
+	{/await}
+
+	{#await certifications then held}
+		{@const current = held.filter((c) => c.state === 'current' || c.state === 'expiring')}
+		{#if current.length > 0}
+			<InfoCard title="What you're cleared for">
+				<ul class="flex flex-col gap-2">
+					{#each current as record (record.id)}
+						<li class="flex flex-wrap items-center justify-between gap-2">
+							<span class="font-medium">{record.certificationName}</span>
+							{#if record.expiresAt}
+								<span class:text-warning={record.state === 'expiring'} class="text-subtle">
+									{record.state === 'expiring' ? 'expires' : 'valid until'}
+									{formatDateShortYear(record.expiresAt)}
+								</span>
+							{:else}
+								<span class="text-subtle">no expiry</span>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			</InfoCard>
+		{/if}
 	{/await}
 
 	{#await logs then rows}

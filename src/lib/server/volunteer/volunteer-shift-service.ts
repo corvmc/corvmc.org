@@ -275,7 +275,18 @@ export interface ShiftWithCounts extends VolunteerShift {
 	roleName: string;
 	roleGroup: VolunteerRoleGroup;
 	eventTitle: string | null;
+	/** Places taken: claimed + confirmed + completed. */
 	claimed: number;
+	/**
+	 * How many of those places are actually booked.
+	 *
+	 * Separate from `claimed` because the difference is the whole of
+	 * docs/reports/volunteer-workflow-findings.md#a3: only a confirmed signup gets the
+	 * day-before reminder, auto-completes, and produces an hour log. A shift showing 3/3
+	 * where none are confirmed is not staffed, and a list that prints one number cannot
+	 * say so.
+	 */
+	confirmed: number;
 }
 
 function withCounts(
@@ -285,6 +296,7 @@ function withCounts(
 		roleGroup: VolunteerRoleGroup;
 		eventTitle: string | null;
 		claimed: number;
+		confirmed: number;
 	}[]
 ): ShiftWithCounts[] {
 	return rows.map((r) => ({
@@ -292,7 +304,8 @@ function withCounts(
 		roleName: r.roleName,
 		roleGroup: r.roleGroup,
 		eventTitle: r.eventTitle,
-		claimed: Number(r.claimed)
+		claimed: Number(r.claimed),
+		confirmed: Number(r.confirmed)
 	}));
 }
 
@@ -354,6 +367,14 @@ function shiftRowsQuery() {
 				select count(*) from "volunteer_signup" vs
 				where vs."shift_id" = ${volunteerShift.id}
 					and vs."status" in ('claimed', 'confirmed', 'completed')
+			)`,
+			// `completed` counts as confirmed: the completion sweep only ever promotes a
+			// confirmed signup, so a completed one WAS booked. Leaving it out would make
+			// every past shift read as unconfirmed forever.
+			confirmed: sql<number>`(
+				select count(*) from "volunteer_signup" vs
+				where vs."shift_id" = ${volunteerShift.id}
+					and vs."status" in ('confirmed', 'completed')
 			)`
 		})
 		.from(volunteerShift)
@@ -468,6 +489,11 @@ export async function listOpenShiftsForMember(
 				where vs."shift_id" = ${volunteerShift.id}
 					and vs."status" in ('claimed', 'confirmed', 'completed')
 			)`,
+			confirmed: sql<number>`(
+				select count(*) from "volunteer_signup" vs
+				where vs."shift_id" = ${volunteerShift.id}
+					and vs."status" in ('confirmed', 'completed')
+			)`,
 			myStatus: myStatusSql,
 			// The id comes back too, so "drop out" has something to post without a
 			// second round trip per shift.
@@ -487,9 +513,26 @@ export async function listOpenShiftsForMember(
 		roleGroup: r.roleGroup,
 		eventTitle: r.eventTitle,
 		claimed: Number(r.claimed),
+		confirmed: Number(r.confirmed),
 		myStatus: r.myStatus,
 		mySignupId: r.mySignupId,
 		interested: Number(r.interested) > 0,
 		isFull: Number(r.claimed) >= r.shift.capacity
 	}));
+}
+
+/**
+ * Upcoming shifts still short of people, as rows rather than a per-role count.
+ *
+ * `countUnfilledByRole` answers "which roles need attention" for the roles table. This
+ * answers "which nights are short", which is what a dashboard panel and a coordinator
+ * planning the week both want. Cancelled shifts are out — nobody can fill one of those.
+ */
+export async function listShortStaffedShifts(
+	withinDays: number,
+	from = new Date()
+): Promise<ShiftWithCounts[]> {
+	const to = new Date(from.getTime() + withinDays * 24 * 60 * 60 * 1000);
+	const rows = await listShifts({ from, to });
+	return rows.filter((shift) => shift.claimed < shift.capacity);
 }
