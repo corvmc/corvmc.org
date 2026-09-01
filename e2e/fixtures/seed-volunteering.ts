@@ -16,7 +16,7 @@
  *
  * Mirrors the D1 access pattern in seed-staff-user.ts.
  */
-import { eq, inArray } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import { readLocalDb, withPlatformEnv } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
@@ -101,6 +101,18 @@ export const SEED_VOL_SHIFT_FULL_NOTE = 'E2E already spoken for';
 export const SEED_VOL_OTHER_MEMBER_ID = 'e2e-vol-other-member';
 
 /**
+ * Two shifts owned by the staff-side roster tests, and nothing else asserts on them.
+ *
+ * A spec that mutates a seeded row owns that row: borrowing `SEED_VOL_SHIFT_OPEN_ID` would
+ * put the assign test in a race with the member's own claim test over one capacity-1 place,
+ * and neither would survive being run alone.
+ */
+export const SEED_VOL_SHIFT_ASSIGN_ID = 'e2e-vol-shift-assign';
+export const SEED_VOL_SHIFT_ASSIGN_NOTE = 'E2E waiting on a coordinator';
+export const SEED_VOL_SHIFT_RELEASE_ID = 'e2e-vol-shift-release';
+export const SEED_VOL_SIGNUP_RELEASE_ID = 'e2e-vol-signup-release';
+
+/**
  * A member with an account but no volunteer profile, for the onboarding gate.
  * Kept separate from SEED_VOL_MEMBER_ID, which every pre-existing member test
  * expects to land straight on /member/volunteer.
@@ -152,6 +164,8 @@ const SHIFT_IDS = [
 	SEED_VOL_SHIFT_OPEN_ID,
 	SEED_VOL_SHIFT_GATED_ID,
 	SEED_VOL_SHIFT_FULL_ID,
+	SEED_VOL_SHIFT_ASSIGN_ID,
+	SEED_VOL_SHIFT_RELEASE_ID,
 	SEED_VOL_SHIFT_DONE_ID,
 	SEED_VOL_SHIFT_EVENT_ID
 ];
@@ -455,6 +469,27 @@ export async function seedVolunteering(): Promise<void> {
 				notes: SEED_VOL_SHIFT_FULL_NOTE,
 				createdAt: now,
 				updatedAt: now
+			},
+			// Empty, and the staff-assign test's alone.
+			{
+				id: SEED_VOL_SHIFT_ASSIGN_ID,
+				volunteerRoleId: SEED_VOL_ROLE_ID,
+				startsAt: daysFromNow(7, 2),
+				endsAt: daysFromNow(7, 6),
+				capacity: 2,
+				notes: SEED_VOL_SHIFT_ASSIGN_NOTE,
+				createdAt: now,
+				updatedAt: now
+			},
+			// Carries one live claim for the staff-release test to take off again.
+			{
+				id: SEED_VOL_SHIFT_RELEASE_ID,
+				volunteerRoleId: SEED_VOL_ROLE_ID,
+				startsAt: daysFromNow(8, 2),
+				endsAt: daysFromNow(8, 6),
+				capacity: 1,
+				createdAt: now,
+				updatedAt: now
 			}
 		]);
 
@@ -521,6 +556,18 @@ export async function seedVolunteering(): Promise<void> {
 			updatedAt: now
 		});
 
+		// `claimed`, not `confirmed`: the release test needs a live claim, and this is
+		// also the row the dashboard's "needs confirming" card is built to surface.
+		await db.insert(volunteerSignup).values({
+			id: SEED_VOL_SIGNUP_RELEASE_ID,
+			shiftId: SEED_VOL_SHIFT_RELEASE_ID,
+			userId: SEED_VOL_OTHER_MEMBER_ID,
+			status: 'claimed',
+			claimedAt: now,
+			createdAt: now,
+			updatedAt: now
+		});
+
 		await db.insert(volunteerHourLog).values([
 			{
 				id: SEED_VOL_LOG_APPROVE_ID,
@@ -581,6 +628,46 @@ export async function readSignupStatus(shiftId: string): Promise<string | null> 
 			.where(eq(volunteerSignup.shiftId, shiftId))
 			.limit(1);
 		return row?.status ?? null;
+	});
+}
+
+/** Every signup on a shift, keyed by user — what the roster actually says. */
+export async function readShiftSignups(shiftId: string): Promise<Record<string, string>> {
+	return readLocalDb(async (db) => {
+		const rows = await db
+			.select({ userId: volunteerSignup.userId, status: volunteerSignup.status })
+			.from(volunteerSignup)
+			.where(eq(volunteerSignup.shiftId, shiftId));
+		return Object.fromEntries(rows.map((r) => [r.userId, r.status]));
+	});
+}
+
+/**
+ * The newest hour log for a member.
+ *
+ * The staff-entered log is invisible in the Pending queue by design — it lands approved —
+ * so the only way to assert it landed at all, on the date asked for and attributed to the
+ * staffer, is to read it back.
+ */
+export async function readNewestHourLog(userId: string): Promise<{
+	status: string;
+	reviewedByUserId: string | null;
+	workedOn: Date;
+	minutes: number;
+} | null> {
+	return readLocalDb(async (db) => {
+		const [row] = await db
+			.select({
+				status: volunteerHourLog.status,
+				reviewedByUserId: volunteerHourLog.reviewedByUserId,
+				workedOn: volunteerHourLog.workedOn,
+				minutes: volunteerHourLog.minutes
+			})
+			.from(volunteerHourLog)
+			.where(eq(volunteerHourLog.userId, userId))
+			.orderBy(desc(volunteerHourLog.createdAt))
+			.limit(1);
+		return row ?? null;
 	});
 }
 

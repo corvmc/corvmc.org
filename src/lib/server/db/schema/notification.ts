@@ -253,6 +253,33 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'volunteer_shift_claimed',
+		label: 'Volunteer shift claimed (staff)',
+		// In-app only, like the hours queue above and for the same reason: it is
+		// queue work, not news. But it has to exist — until now a claim produced
+		// no signal at all, and confirming is what turns it into a booking that
+		// gets a reminder and completes afterwards.
+		description: 'Notification when a member claims a volunteer shift and needs confirming',
+		defaults: { email: false, inApp: true, sms: false }
+	},
+	{
+		key: 'volunteer_shift_confirmed',
+		label: 'You are on the roster',
+		// Email on: this is the message that turns "I put my hand up" into "I am
+		// expected on Saturday", and it is the only one the member gets before
+		// the day-before reminder.
+		description: 'Notification when staff confirm you for a shift, or put you on one',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'volunteer_shift_dropped',
+		label: 'Volunteer dropped a shift (staff)',
+		// In-app only. The useful half is that a place reopened, which is a
+		// coordinator's problem and nobody else's.
+		description: 'Notification when somebody comes off a shift and their place reopens',
+		defaults: { email: false, inApp: true, sms: false }
+	},
+	{
 		key: 'volunteer_shift_reminder',
 		label: 'Volunteer shift reminder',
 		// Email on by default: the whole point is reaching somebody who isn't

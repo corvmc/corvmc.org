@@ -27,6 +27,8 @@ export type StaffNavKey =
 	| 'bands'
 	| 'groups'
 	| 'volunteer'
+	| 'volunteer-schedule'
+	| 'volunteer-hours'
 	| 'volunteer-people'
 	| 'volunteer-shifts'
 	| 'volunteer-roles'
@@ -97,11 +99,18 @@ export const staffNavSections: StaffNavSection[] = [
 			// is the only place a program comes into existence.
 			{ key: 'groups', label: 'Groups', href: '/staff/groups' },
 			{
+				// The parent row is a dashboard, not an index — see
+				// docs/development/ui-patterns.md#section-dashboards. It keeps its own href
+				// because `Nav.Collapsible` treats the parent as clickable and holds the
+				// children open while you are on it, so the worklist is one click from
+				// anywhere and each table is one click from the worklist.
 				key: 'volunteer',
 				label: 'Volunteering',
 				href: '/staff/volunteer',
 				badgeKey: 'volunteerPending',
 				children: [
+					{ key: 'volunteer-schedule', label: 'Schedule', href: '/staff/volunteer/schedule' },
+					{ key: 'volunteer-hours', label: 'Hours', href: '/staff/volunteer/hours' },
 					{ key: 'volunteer-people', label: 'Volunteers', href: '/staff/volunteer/people' },
 					{ key: 'volunteer-shifts', label: 'Shifts', href: '/staff/volunteer/shifts' },
 					{ key: 'volunteer-roles', label: 'Roles', href: '/staff/volunteer/roles' },

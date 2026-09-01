@@ -930,6 +930,41 @@ asymmetry — a clearance pulled on the day was not in force, but a card is vali
 expiry date. Held certifications append and are never overwritten, which is the only way to
 answer "was their First Aid current on the night of the incident?"
 
+### The coordinator's half
+
+Everything above is the member's path. The staff side was inferred from it, and a hands-on
+pass ([reports/volunteer-workflow-findings.md](../reports/volunteer-workflow-findings.md))
+found the asymmetry: a coordinator could not put anybody on a shift, take anybody off one,
+or record hours for somebody — while the help text told members to ask them to do the last
+of those. All three services already took the user as a parameter; only the remote functions
+were bound to the session.
+
+So:
+
+- **`/staff/volunteer` is a dashboard, not a table.** Cards for the things waiting on a
+  person — claims to confirm, shifts that are short, hours to review, under-18 approvals,
+  shifts that finished without being closed out, clearances lapsing before a shift somebody
+  is already on — each with its action on the row. The hour-log queue it replaced moved to
+  `/staff/volunteer/hours`. See
+  [ui-patterns.md#section-dashboards](./ui-patterns.md#section-dashboards).
+- **`/staff/volunteer/schedule`** is the next two weeks grouped by day. `/staff/volunteer/shifts`
+  remains the whole catalog.
+- **Staff can assign, release and confirm.** `assignShiftToMember` lands the signup
+  `confirmed` — a coordinator typing the name in _is_ the decision, and leaving it `claimed`
+  would cost the member their reminder. The clearance gate is **not** relaxed for staff: an
+  uncleared member is refused with the certification named.
+- **A staff release is a cancellation, not a no-show.** Notice given is not a mark against
+  somebody, and the two were previously the same button.
+- **`logHoursForMember`** lifts the 90-day backdate window and lands the log `approved`,
+  stamped with the staffer. The window stays for members, which is what makes "ask staff to
+  add anything older" a real sentence.
+- **Claims, confirmations and cancellations emit events** (`volunteer.signup_claimed`,
+  `…_confirmed`, `…_cancelled`). Before them a claim produced no signal at all: staff were
+  never told one had arrived, and confirming — which is what earns the reminder, the
+  auto-complete and the hour log — had nothing prompting it.
+- **Every list splits `confirmed` from `claimed`.** One conflated number made a shift with
+  three unconfirmed claims read as fully staffed.
+
 ### Code path
 
 - **Roles and interest:** `volunteer/volunteer-role-service.ts`,
@@ -939,6 +974,13 @@ answer "was their First Aid current on the night of the incident?"
   `/member/volunteer/start`.
 - **Shifts:** `volunteer-shift-service.ts` + `volunteer-signup-service.ts`. A shift may name
   the event it staffs. Only _confirmed_ signups get the reminder and the auto-complete.
+  `claimShift(shiftId, userId, { assignedByStaff })` serves both the member's claim and the
+  coordinator's assignment; `releaseSignup` is `cancelSignup` without the owner clause.
+- **The dashboard:** `listOutstandingClaims`, `listUnclosedSignups` and
+  `countVolunteerWorkWaiting` in the signup service, `listShortStaffedShifts` in the shift
+  service, and `listLapsingBeforeRosteredShift` in the certification service — composed by
+  `getVolunteerWorklist`. The sidebar badge reads `countVolunteerWorkWaiting` too, so the
+  number on the nav and the rows on the page cannot disagree.
 - **Certifications:** `volunteer-certification-service.ts` (catalog),
   `member-certification-service.ts` (held; append-only, `expiresAt` stamped at grant time
   from `validityMonths` and never computed on read).

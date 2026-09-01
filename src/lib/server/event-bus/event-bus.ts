@@ -510,6 +510,14 @@ export type DomainEvents = {
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
 	'volunteer.hours_approved': VolunteerHoursReviewedEvent;
 	'volunteer.hours_rejected': VolunteerHoursReviewedEvent;
+	// The three moments a place on a shift changes hands. All carry
+	// VolunteerShiftEvent because the answer to "who, which shift, when" is the
+	// same question in each case; only the audience differs — a claim is news for
+	// staff, a confirmation is news for the member, and a cancellation is news for
+	// staff again because the place has reopened.
+	'volunteer.signup_claimed': VolunteerShiftEvent;
+	'volunteer.signup_confirmed': VolunteerShiftEvent;
+	'volunteer.signup_cancelled': VolunteerShiftEvent;
 	'volunteer.shift_reminder_due': VolunteerShiftEvent;
 	'volunteer.shift_completed': VolunteerShiftEvent;
 	'volunteer.shift_feedback_due': VolunteerShiftEvent;

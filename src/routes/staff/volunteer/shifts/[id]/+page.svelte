@@ -3,19 +3,24 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import Action from '$lib/components/ui/Action.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import ShiftRoleFields from '$lib/components/volunteer/ShiftRoleFields.svelte';
+	import AddVolunteerAction from './AddVolunteerAction.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import { formatDateShort, formatDateShortYear, toLocalDateTime } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { resolve } from '$app/paths';
-	import { IconCheck, IconUserX, IconPencil } from '@tabler/icons-svelte';
+	import { IconCheck, IconUserX, IconUserMinus, IconPencil } from '@tabler/icons-svelte';
 	import {
 		getStaffShiftPage,
 		confirmSignup,
+		confirmSignups,
+		releaseSignup,
 		markSignupNoShow,
 		cancelShift,
 		updateShift
@@ -47,12 +52,27 @@
 </script>
 
 {#await data then { shift, claimants }}
+	<!--
+		Immediate children of the await block, not of `PageContent`: `{@const}` has to be a
+		direct child of a block, and both the header and the two cards below read them.
+	-->
+	{@const unconfirmed = claimants.filter((c) => c.status === 'claimed')}
+	{@const booked = claimants.filter((c) => c.status === 'confirmed' || c.status === 'completed')}
 	<PageHeader
 		title={formatDateShortYear(shift.startsAt)}
 		subtitle="Shift"
 		backHref="/staff/volunteer/shifts"
 	>
 		{#if !shift.cancelledAt}
+			<AddVolunteerAction
+				shiftId={shift.id}
+				volunteerRoleId={shift.volunteerRoleId}
+				roleName={shift.roleName}
+				startsAt={shift.startsAt}
+				label="Add someone"
+				iconOnly={false}
+			/>
+
 			<!--
 					Until now a shift could only be created, copied, or called off —
 					a wrong time or a missing event meant cancelling and starting over,
@@ -137,8 +157,19 @@
 						<span class="text-muted">Not tied to an event</span>
 					{/if}
 				</Fact>
-				<Fact label="Needed">
-					{claimants.filter((c) => c.status !== 'no_show').length} of {shift.capacity} filled
+				<!--
+					Two numbers, because "filled" was doing work it had not earned: a shift
+					reading "3 of 3 filled" where none of the three was confirmed gets no
+					reminders, never completes, and produces no hours
+					(docs/reports/volunteer-workflow-findings.md#a3).
+				-->
+				<Fact label="Confirmed">
+					{booked.length} of {shift.capacity}
+					{#if unconfirmed.length > 0}
+						<Badge variant="warning" size="sm" class="ml-1">
+							{unconfirmed.length} unconfirmed
+						</Badge>
+					{/if}
 				</Fact>
 				{#if shift.notes}
 					<Fact label="Notes">{shift.notes}</Fact>
@@ -147,6 +178,35 @@
 		</InfoCard>
 
 		<InfoCard title="Who's on it">
+			{#snippet header(title)}
+				<div class="flex items-center justify-between gap-2">
+					<CardTitle>{title}</CardTitle>
+					{#if unconfirmed.length > 1}
+						<Action
+							action={confirmSignups.for(shift.id)}
+							label="Confirm all {unconfirmed.length}"
+							variant="ghost"
+							size="sm"
+							class="text-success"
+							modalTitle="Confirm everyone waiting?"
+							submitLabel="Confirm all"
+							successToast="Confirmed"
+						>
+							{#snippet form()}
+								<input type="hidden" name="shiftId" value={shift.id} />
+								{#each unconfirmed as c (c.signupId)}
+									<input type="hidden" name="signupIds" value={c.signupId} />
+								{/each}
+								<p class="text-sm">
+									{unconfirmed.map((c) => c.member.title).join(', ')} — all confirmed for this shift.
+									Each of them gets a reminder the day before.
+								</p>
+							{/snippet}
+						</Action>
+					{/if}
+				</div>
+			{/snippet}
+
 			{#if claimants.length === 0}
 				<EmptyState
 					title="Nobody yet"
@@ -183,6 +243,35 @@
 											<p class="text-sm">
 												They'll get a reminder the day before. Only confirmed claims complete
 												automatically afterwards, so this is what turns a claim into a booking.
+											</p>
+										{/snippet}
+									</Action>
+								{/if}
+
+								{#if claimant.status === 'claimed' || claimant.status === 'confirmed'}
+									<!--
+										Notice, not a no-show. Before this the only lever staff had on a
+										claimant was No-show, so somebody who rang on Thursday to say they
+										couldn't make Saturday either stayed on the roster or got a mark
+										against them (docs/reports/volunteer-workflow-findings.md#a2).
+									-->
+									<Action
+										action={releaseSignup.for(claimant.signupId)}
+										label="Take off the shift"
+										iconOnly
+										icon={releaseIcon}
+										variant="ghost"
+										size="sm"
+										modalTitle="Take {claimant.member.title} off this shift?"
+										submitLabel="Take them off"
+										successToast="Place reopened"
+									>
+										{#snippet form()}
+											<input type="hidden" name="signupId" value={claimant.signupId} />
+											<input type="hidden" name="shiftId" value={shift.id} />
+											<p class="text-sm">
+												Their place opens up straight away. Use this when they gave you notice — a
+												no-show is for somebody who simply didn't turn up.
 											</p>
 										{/snippet}
 									</Action>
@@ -252,4 +341,8 @@
 
 {#snippet noShowIcon()}
 	<IconUserX size={16} />
+{/snippet}
+
+{#snippet releaseIcon()}
+	<IconUserMinus size={16} />
 {/snippet}
