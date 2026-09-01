@@ -72,9 +72,25 @@ import {
 	itemKinds,
 	unitsOfMeasure,
 	type AssetStatus,
+	type AcquisitionKind,
 	type ItemKind,
-	type LoanStatus
+	type LoanStatus,
+	DEFAULT_TIMEZONE
 } from '$lib/config';
+import { buildDateInTz } from '$lib/server/reservation/timezone';
+
+/**
+ * A calendar date the operator typed, as an instant.
+ *
+ * Noon in venue time, which is the house convention — the reasoning is written
+ * out at `schema/volunteer.ts`. Midnight UTC would land the previous evening
+ * locally, so a stocktake entered on the 1st would file itself on the 31st.
+ * Absent means today, because "when did this arrive" is answered by the form
+ * only when the answer is not now.
+ */
+function calendarDate(value: string | undefined): Date {
+	return value ? buildDateInTz(value, '12:00', DEFAULT_TIMEZONE) : new Date();
+}
 
 // ---------------------------------------------------------------------------
 // Queries — Staff
@@ -528,6 +544,15 @@ export const receiveStock = form(
 		monetized: z.boolean().optional().default(false),
 		paidByUserId: z.string().optional(),
 		locationId: z.string().optional(),
+		/**
+		 * When it actually arrived. Absent means today.
+		 *
+		 * A stocktake records gear bought years ago, and the arrival date was
+		 * hardcoded to `new Date()` — so every one of ~200 units would have
+		 * claimed to arrive on the day it was typed in, which is the one date it
+		 * certainly did not arrive.
+		 */
+		occurredAt: z.string().optional(),
 		notes: z.string().max(2000).optional()
 	}),
 	async (raw) => {
@@ -536,7 +561,7 @@ export const receiveStock = form(
 		const data = raw as {
 			itemId: string;
 			quantity: number;
-			kind: (typeof acquisitionKinds)[number];
+			kind: AcquisitionKind;
 			sourceName?: string;
 			donorUserId?: string;
 			reference?: string;
@@ -547,12 +572,13 @@ export const receiveStock = form(
 			monetized?: boolean;
 			paidByUserId?: string;
 			locationId?: string;
+			occurredAt?: string;
 			notes?: string;
 		};
 
 		await recordAcquisition({
 			kind: data.kind,
-			occurredAt: new Date(),
+			occurredAt: calendarDate(data.occurredAt),
 			sourceName: data.sourceName || undefined,
 			donorUserId: data.donorUserId || undefined,
 			reference: data.reference || undefined,
@@ -1054,6 +1080,15 @@ export const editAcquisition = form(
 		intendedUse: z.string().max(1000).optional(),
 		monetized: z.boolean().optional().default(false),
 		paidByUserId: z.string().optional(),
+		/**
+		 * Date and kind are editable because both are now *guessed* at entry.
+		 * Two hundred rows typed in one sitting will contain wrong ones, and a
+		 * mistyped kind is the expensive kind of wrong: it decides whether the
+		 * row lands in this year's spend, in the gifts-in-kind report, or in
+		 * neither. Without this the only fix was to delete and re-enter.
+		 */
+		occurredAt: z.string().optional(),
+		kind: z.enum(acquisitionKinds).optional(),
 		notes: z.string().max(2000).optional()
 	}),
 	async (raw) => {
@@ -1067,11 +1102,17 @@ export const editAcquisition = form(
 			intendedUse?: string;
 			monetized?: boolean;
 			paidByUserId?: string;
+			occurredAt?: string;
+			kind?: AcquisitionKind;
 			notes?: string;
 		};
 
 		try {
 			await updateAcquisition(data.id, {
+				// Absent means "the form did not ask", not "clear it" — the same
+				// distinction that made saving a unit erase its location.
+				...(data.occurredAt ? { occurredAt: calendarDate(data.occurredAt) } : {}),
+				...(data.kind ? { kind: data.kind } : {}),
 				sourceName: data.sourceName || null,
 				reference: data.reference || null,
 				fairValueCents: data.fairValueCents ?? null,
