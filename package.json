@@ -120,7 +120,7 @@
 		"date-fns": "^4.4.0",
 		"emittery": "^2.0.0",
 		"marked": "^18.0.10",
-		"postmark": "^4.0.7",
+		"postmark": "^5.1.0",
 		"qrcode-svg": "^1.1.0",
 		"stripe": "^22.5.0",
 		"svelte-sonner": "^1.2.1",
