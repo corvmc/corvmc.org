@@ -145,13 +145,28 @@ off-peak spec owns. `commitReservationCredits` keeps its `creditsApply` paramete
 
 ## Step 5 — Booking path
 
-- [ ] `bookInstructorReservation` in `reservations.remote.ts`
-- [ ] `commitReservationCredits` gains `creditsApply` — **defect fix**, would otherwise spend the
-      instructor's free hours
-- [ ] `CreateModal.svelte` — booking-type step, shown only to instructors
-- [ ] `deactivateUser` — second arm on `createdByUserId` — **defect fix**
-- [ ] `reservations.remote.instructor.spec.ts`, `reservation-credit-service.spec.ts`
-- [ ] `e2e/instructor-booking.e2e.ts`
+- [x] `bookInstructorReservation` in `reservations.remote.ts` — `bookerType: 'instructor'` with
+      `bookerId` on the instructor row, guarded by `requireInstructor`, and **no
+      sustaining-membership gate** on the recurring branch
+- [x] ~~`creditsApply` on `commitReservationCredits`~~ — **not needed, and the reason is the whole
+      pricing model.** This was listed as a defect while the plan still called $5/hr a subsidy. At
+      the member-equivalent rate `creditValueCents(500)` is exactly what half an hour costs, so one
+      credit covers one slot and the ordinary confirm and pay paths settle a teaching booking without
+      knowing it is one. Correcting the rate story removed one of the four defects outright.
+- [x] `deactivateUser` — **defect fix.** A personal booking matches `bookerId = userId`; a teaching
+      booking's `bookerId` points into `instructor`, so the original condition could never match one
+      and a deactivated instructor's lessons went on holding the room. Now matched on
+      `createdByUserId` for the teaching arm, which is exact because a teaching booking's instructor
+      has `userId === createdByUserId`.
+- [x] `TeachingCreateModal` — **a second button, not a mode inside the rehearsal wizard.** `Action`
+      binds one remote form, so a booking-type step meant restructuring the wizard to swap actions
+      mid-flight; and the two are not variants of one booking, having different rates, floors,
+      windows and settlement. `isInstructor` rides on the page's existing load-bearing query rather
+      than a second remote query fanned out of the component, and it is a **boolean** so
+      `applicationNote` cannot reach a member-facing DTO by construction.
+- [x] `reservations.remote.instructor.spec.ts` — pins the two properties invisible in a diff: the row
+      lands on the instructor record, and the recurring branch has no membership gate (an absence,
+      which is what regresses silently)
 
 ## Step 6 — Recurring
 

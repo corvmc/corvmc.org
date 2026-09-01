@@ -70,6 +70,8 @@ import { mapDomainError } from '$lib/server/errors';
 import { isTerminalStatus } from '$lib/utils/reservation-actions';
 import { bookerTypes, type BookerType } from '$lib/server/db/schema/reservation';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
+import { requireInstructor } from '$lib/server/instructor/instructor-context';
+import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
 import { config } from '$lib/server/site-config/site-config-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import {
@@ -1530,6 +1532,85 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	return { reservationId: res.id, paid: false as const, redirectUrl: result.checkoutUrl! };
 });
 
+/** Instructor: book the room to teach (optionally recurring). */
+const instructorBookingSchema = createReservationSchema.extend({
+	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
+	monthlyMode: z.enum(['weekday', 'monthday']).optional()
+});
+
+/**
+ * Book the room on teaching terms.
+ *
+ * `bookerType: 'instructor'` with `bookerId` on the instructor row — the same
+ * person booking rehearsal produces `('user', user.id)`, and the pair differ in
+ * exactly the right way: same human, different capacity, different table,
+ * different terms. `create()` forwards the booker type to `validateBooking`,
+ * which is what admits a half-hour lesson and a booking a term out.
+ *
+ * **No sustaining-membership gate on the recurring branch, and its absence is
+ * the decision.** `bookMemberReservation` requires one because recurring
+ * rehearsal time is a membership *benefit* — the subscription is what buys it.
+ * Teaching time is a rental at a rate CMC granted directly, so requiring a
+ * membership on top of a staff grant would mean staff granting something the
+ * member then cannot use.
+ *
+ * Credits need no special handling. At $5/hr `creditValueCents` is exactly what
+ * half an hour costs, so one credit covers one slot and the ordinary confirm and
+ * pay paths settle a teaching booking without knowing it is one.
+ */
+export const bookInstructorReservation = form(instructorBookingSchema, async (data, issue) => {
+	const currentUser = requireUser();
+	// The grant is the authorization, and it is checked here rather than inferred
+	// from anything the client sent. Returns the row, so `bookerId` needs no
+	// second read.
+	const instructor = await requireInstructor(currentUser.id);
+
+	// Same reason as every other booking path: a reservation staff cannot call
+	// about is the problem this guard exists to prevent.
+	if (!(await ensureContactPhone(currentUser.id, data.phone))) {
+		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
+	}
+
+	const recurringFrequency = data.recurring || undefined;
+	const isRecurring = recurringFrequency != null;
+	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
+	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
+
+	const booking = {
+		userId: currentUser.id,
+		bookerType: 'instructor' as const,
+		bookerId: instructor.id,
+		startsAt,
+		endsAt,
+		notes: data.notes
+	};
+
+	let res;
+	let waitlisted = false;
+
+	try {
+		res = await create(booking);
+	} catch (err) {
+		if (isRecurring && err instanceof ReservationConflictError) {
+			res = await createWaitlisted(booking);
+			waitlisted = true;
+		} else {
+			mapDomainError(err);
+		}
+	}
+
+	if (recurringFrequency) {
+		await createSeries({
+			prototypeReservationId: res.id,
+			frequency: recurringFrequency as RecurringFrequency,
+			prototypeStartsAt: startsAt,
+			monthlyMode: data.monthlyMode
+		});
+	}
+
+	return { reservationId: res.id, waitlisted };
+});
+
 /** Band: book a reservation (optionally recurring). */
 const bandBookingSchema = createReservationSchema.extend({
 	// The band this books for. A lookup key, not a capability: the guard resolves
@@ -2228,12 +2309,22 @@ export const getStaffReservationsPage = query(staffReservationFiltersSchema, asy
  * separate `.refresh()` calls.
  */
 export const getMemberReservationsPage = query(z.void(), async () => {
-	const [active, all, membership, contact] = await Promise.all([
+	const currentUser = requireUser();
+
+	// Joined into the page query rather than fetched by the component that needs
+	// it: a second remote query fanned out of a child is the waterfall this
+	// query exists to collapse.
+	const [active, all, membership, contact, instructor] = await Promise.all([
 		getReservations({ after: new Date().toISOString() }),
 		getReservations({ includeTerminal: true }),
 		getMembershipStatus(),
-		getBookingContact()
+		getBookingContact(),
+		getInstructorByUserId(currentUser.id)
 	]);
 
-	return { active, all, membership, contact };
+	// The booking surface only ever asks whether teaching terms are available, and
+	// `requireInstructor` is what actually authorizes the booking. Sending a
+	// boolean rather than the record keeps `applicationNote` — staff-only — off a
+	// member-facing DTO by construction rather than by remembering to omit it.
+	return { active, all, membership, contact, isInstructor: instructor?.status === 'active' };
 });
