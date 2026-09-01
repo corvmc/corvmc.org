@@ -154,7 +154,7 @@ describe('route coverage', () => {
 	});
 
 	it('gives every static staff page either a nav row or an explicit exemption', () => {
-		const hrefs = new Set(allStaffNavItems().map((i) => i.href));
+		const hrefs = new Set<string>(allStaffNavItems().map((i) => i.href));
 		const missing = staffPageRoutes()
 			.filter((r) => !r.includes('['))
 			.filter((r) => !hrefs.has(r) && !unlinked.has(r));

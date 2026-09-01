@@ -158,7 +158,7 @@
 		>
 			<div class="space-y-4">
 				<p class="text-sm">A slot has opened up for your waitlisted reservation:</p>
-				<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
+				<div class="inset border border-base-300 px-4 py-3">
 					<p class="font-medium">{format(confirmReservation.startsAt, 'PPP')}</p>
 					<p class="text-muted">
 						{format(confirmReservation.startsAt, 'p')} – {format(confirmReservation.endsAt, 'p')}

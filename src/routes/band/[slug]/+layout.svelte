@@ -77,13 +77,13 @@
 		{#each navItems as item (item.key)}
 			{@const Icon = icons[item.key]}
 			<Nav.Item
-				href={item.key === 'live-site'
+				href={item.href}
+				externalHref={item.key === 'live-site'
 					? bandSiteUrl(layout.band.slug, env.PUBLIC_SITE_URL, liveCustomDomain)
-					: item.href}
+					: undefined}
 				label={item.label}
 				active={activeKey === item.key}
 				target={item.external ? '_blank' : undefined}
-				rel={item.external ? 'noopener' : undefined}
 			>
 				{#snippet icon()}<Icon />{/snippet}
 			</Nav.Item>

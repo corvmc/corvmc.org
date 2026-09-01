@@ -21,7 +21,7 @@
 		"test:e2e:run": "tsx e2e/run.ts",
 		"worktree:ports": "tsx scripts/print-ports.ts",
 		"test:report": "vitest run --reporter=verbose --reporter=json --outputFile=test-results.json",
-		"lint": "prettier --cache --check . && eslint .",
+		"lint": "prettier --cache --check . && eslint . --max-warnings 0",
 		"lint:changed": "bash scripts/lint-changed.sh",
 		"format": "prettier --write .",
 		"db:generate": "drizzle-kit generate && node scripts/db/d1-safe-rebuild.mjs --write",

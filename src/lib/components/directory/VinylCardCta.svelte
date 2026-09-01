@@ -1,11 +1,13 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
+	import type { ResolvedPathname } from '$app/types';
 	import logoMono from '$lib/assets/cmc-logo-mono.svg';
 
 	interface Props {
-		href?: string;
+		href?: ResolvedPathname;
 	}
 
-	let { href = '/login?register' }: Props = $props();
+	let { href = resolve('/login?register') }: Props = $props();
 </script>
 
 <a {href} class="vinyl-card vinyl-card--cta">

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { IconBrandFacebook, IconBrandInstagram } from '@tabler/icons-svelte';
 	import { getFooterInfo } from '$lib/remote/settings.remote';
 
@@ -13,15 +14,15 @@
 	);
 
 	const footerLinks = [
-		{ href: '/about', label: 'About' },
-		{ href: '/programs', label: 'Programs' },
-		{ href: '/events', label: 'Events' },
-		{ href: '/directory', label: 'Directory' },
-		{ href: '/local-resources', label: 'Local Resources' },
-		{ href: '/contribute', label: 'Contribute' },
-		{ href: '/about/bylaws', label: 'Bylaws' },
-		{ href: '/about/privacy', label: 'Privacy' },
-		{ href: '/contact', label: 'Contact' }
+		{ href: resolve('/about'), label: 'About' },
+		{ href: resolve('/programs'), label: 'Programs' },
+		{ href: resolve('/events'), label: 'Events' },
+		{ href: resolve('/directory'), label: 'Directory' },
+		{ href: resolve('/local-resources'), label: 'Local Resources' },
+		{ href: resolve('/contribute'), label: 'Contribute' },
+		{ href: resolve('/about/bylaws'), label: 'Bylaws' },
+		{ href: resolve('/about/privacy'), label: 'Privacy' },
+		{ href: resolve('/contact'), label: 'Contact' }
 	];
 
 	const socials = $derived(

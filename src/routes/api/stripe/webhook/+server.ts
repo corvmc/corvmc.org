@@ -36,7 +36,12 @@ export const POST: RequestHandler = async ({ request }) => {
 		error(400, 'Invalid signature');
 	}
 
-	const handler = webhookHandlerMap[event.type as keyof typeof webhookHandlerMap];
+	// The map pairs each event name with a handler for that event's payload, but
+	// the lookup is by a runtime string, so TypeScript cannot carry the pairing
+	// through. Widening to `unknown` here keeps the guarantee where it is
+	// checkable — the map literal — instead of switching it off with `any`.
+	const handler = webhookHandlerMap[event.type as keyof typeof webhookHandlerMap] as
+		((data: unknown) => Promise<void>) | undefined;
 	if (handler) {
 		if (import.meta.env.DEV) {
 			await handler(event.data.object);

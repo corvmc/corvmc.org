@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -339,7 +340,7 @@
 	<div class="flex items-center gap-2">
 		<StatusBadge status={evt.status} />
 		{#if evt.publishedAt}
-			<span class="text-sm opacity-50">Published {fullDate(evt.publishedAt)}</span>
+			<span class="text-muted">Published {fullDate(evt.publishedAt)}</span>
 		{/if}
 	</div>
 
@@ -348,9 +349,9 @@
 		<div class="flex flex-wrap items-center gap-2">
 			<Badge class="badge-info">Recurring · {recurringSeries.frequencyLabel}</Badge>
 			{#if recurringSeries.cancelledAt}
-				<span class="text-sm opacity-50">Series cancelled — no new occurrences</span>
+				<span class="text-muted">Series cancelled — no new occurrences</span>
 			{:else}
-				<span class="text-sm opacity-50">
+				<span class="text-muted">
 					{#if recurringSeries.endsAt}
 						Repeats until {fullDate(recurringSeries.endsAt)}
 					{:else}
@@ -538,7 +539,7 @@
 
 							<!-- Rebook warning -->
 							{#if rebookNeeded}
-								<div class="alert alert-warning" role="alert">
+								<Alert type="warning">
 									<div class="w-full space-y-3">
 										<p class="font-medium">Reservation needs rebooking</p>
 										<p class="text-sm">
@@ -597,7 +598,7 @@
 											{/if}
 										{/if}
 									</div>
-								</div>
+								</Alert>
 							{/if}
 
 							<!--
@@ -794,7 +795,7 @@
 				class="max-h-64 rounded object-contain"
 			/>
 		{:else}
-			<p class="text-sm opacity-50">No poster uploaded</p>
+			<p class="text-muted">No poster uploaded</p>
 		{/if}
 
 		{#if evt.status !== 'cancelled'}

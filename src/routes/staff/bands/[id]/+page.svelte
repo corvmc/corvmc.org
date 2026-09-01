@@ -3,6 +3,7 @@
 
 	import { getStaffBandPage, updateMemberRole } from '$lib/remote/bands.remote';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -43,7 +44,7 @@
 	<InfoCard title="Members">
 		{#snippet header(title)}
 			<header class="flex items-center justify-between">
-				<span class="card-title">{title}</span>
+				<CardTitle>{title}</CardTitle>
 				<div class="flex gap-2">
 					<InviteByEmailAction bandId={id} />
 					<InviteMemberAction bandId={id} />

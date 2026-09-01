@@ -26,7 +26,8 @@ import {
 	isNull,
 	asc,
 	desc,
-	count
+	count,
+	type SQL
 } from 'drizzle-orm';
 import { getById as getBandById } from '$lib/server/band/band-service';
 import { group, groupMember } from '$lib/server/db/schema/group';
@@ -2178,7 +2179,7 @@ export const getReservations = query(
 		const rows = await db
 			.select()
 			.from(reservation)
-			.where(and(...(filters.filter(Boolean) as any[])))
+			.where(and(...filters.filter((f): f is SQL => Boolean(f))))
 			.orderBy(reservation.startsAt);
 
 		// `price` is the full room rate. We deliberately do NOT project a credit
@@ -2236,7 +2237,7 @@ export const getRecurringReservations = query(
 			})
 			.from(recurringSeries)
 			.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
-			.where(and(...(filters.filter(Boolean) as any[])));
+			.where(and(...filters.filter((f): f is SQL => Boolean(f))));
 
 		return rows.map((r) => ({
 			...r,

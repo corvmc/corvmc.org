@@ -1,5 +1,6 @@
 <script lang="ts">
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import { goto } from '$app/navigation';
@@ -142,7 +143,7 @@
 					<h3 class="mb-2 text-muted font-semibold">{groupName}</h3>
 					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 						{#each items as eq (eq.id)}
-							<div class="card border bg-base-100 shadow-sm">
+							<Card class="border">
 								<CardBody padding="sm">
 									<CardTitle size="sm">{eq.name}</CardTitle>
 									{#if eq.description}
@@ -168,7 +169,7 @@
 										</Button>
 									</div>
 								</CardBody>
-							</div>
+							</Card>
 						{/each}
 					</div>
 				</div>

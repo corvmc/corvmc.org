@@ -139,7 +139,7 @@
 						{#each r.byRole as row (row.volunteerRoleId)}
 							<tr>
 								<td class="cell-primary">
-									{row.roleName}{#if !row.roleIsActive}<span class="ml-1 text-xs opacity-50"
+									{row.roleName}{#if !row.roleIsActive}<span class="ml-1 text-subtle"
 											>(archived)</span
 										>{/if}
 								</td>

@@ -23,9 +23,9 @@
 		/** Fetches the next page of past shows. Omit to disable the pager. */
 		loadMorePast?: (offset: number) => Promise<{ events: CalendarEntry[]; hasMore: boolean }>;
 		/** Base path for event links — member routes pass '/member/events'. */
-		eventBase?: string;
+		eventBase?: '/events' | '/member/events';
 		/** Base path for band links in the byline. */
-		bandBase?: string;
+		bandBase?: '/directory/bands' | '/member/directory/bands';
 		/** Off on a band's own profile, where every row is that band. */
 		showByline?: boolean;
 	} = $props();

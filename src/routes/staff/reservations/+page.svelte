@@ -231,10 +231,7 @@
 					{@const prevLabel = idx > 0 ? dayLabel(reservations[idx - 1]) : null}
 					{#if label !== prevLabel}
 						<tr>
-							<td
-								colspan="5"
-								class="bg-base-200 px-4 py-2 text-subtle font-semibold tracking-wide uppercase"
-							>
+							<td colspan="5" class="cell-group">
 								{label}
 							</td>
 						</tr>

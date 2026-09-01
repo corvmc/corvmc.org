@@ -115,7 +115,7 @@
 	</FilterBar>
 
 	{#if selected.size > 0}
-		<div class="mb-4 flex items-center gap-3 rounded-box bg-base-200 px-4 py-2">
+		<div class="mb-4 flex items-center gap-3 inset px-4 py-2">
 			<span class="text-sm">{selected.size} selected</span>
 			<Action
 				action={bulkDeactivateUsers}
@@ -199,10 +199,7 @@
 									<IconDots size={16} />
 								</Button>
 								<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-								<ul
-									tabindex="0"
-									class="menu dropdown-content z-10 w-44 rounded-box bg-base-200 p-2 shadow"
-								>
+								<ul tabindex="0" class="menu dropdown-content dropdown-panel w-44 bg-base-200">
 									<li>
 										<a href={resolve(`/staff/users/${row.id}`)}><IconEye size={16} />View</a>
 									</li>

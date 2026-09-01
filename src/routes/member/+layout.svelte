@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
 		IconLayoutDashboard,
@@ -141,7 +142,7 @@
 					{/snippet}
 				</Nav.Item>
 			{/each}
-			<Nav.Item href="/member/bands?create=1" label="Create Band" data-sveltekit-reload>
+			<Nav.Item href={resolve('/member/bands?create=1')} label="Create Band" data-sveltekit-reload>
 				{#snippet icon()}<IconPlus />{/snippet}
 			</Nav.Item>
 		</Nav.Group>

@@ -65,7 +65,7 @@
 			{#each data.manuals as manual (manual.attachmentId)}
 				<li class="flex items-center gap-2">
 					<IconFileText size={18} class="shrink-0 opacity-60" />
-					<a class="grow link" href={manual.url ?? '#'} target="_blank" rel="noopener">
+					<a class="grow link" href={manual.url ?? '#'} target="_blank" rel="noopener external">
 						{manual.filename ?? 'Manual'}
 					</a>
 				</li>

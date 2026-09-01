@@ -1,5 +1,5 @@
-<script lang="ts">
-	import type { RemoteForm } from '@sveltejs/kit';
+<script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
+	import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit';
 	import { IconAlertTriangle } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
 	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
@@ -13,7 +13,7 @@
 	}: {
 		subscription: SubscriptionInfo;
 		billingPortalUrl: string | null;
-		resumeAction: RemoteForm<any, any>;
+		resumeAction: RemoteForm<TInput, TOutput>;
 	} = $props();
 
 	const endDate = $derived(

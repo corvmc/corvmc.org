@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { type Snippet } from 'svelte';
-	import type { RemoteFormField, RemoteFormIssue } from '@sveltejs/kit';
+	import type { RemoteFormFieldValue, RemoteFormField, RemoteFormIssue } from '@sveltejs/kit';
 	import TagInput from './TagInput.svelte';
 	import CalendarSelect from './CalendarSelect.svelte';
 	import Select from './Select.svelte';
@@ -47,13 +47,23 @@
 		name?: string;
 		id?: string;
 		label?: string;
-		field?: RemoteFormField<any>;
+		field?: RemoteFormField<RemoteFormFieldValue>;
 		input?: Snippet<[id: string]>;
 		children?: Snippet;
 		/** Hint under the label. A snippet when the hint needs an inline link. */
 		description?: string | Snippet;
 		type?: InputType;
 		class?: string;
+		/**
+		 * eslint-disable-next-line @typescript-eslint/no-explicit-any --
+		 * `value` is polymorphic across `type`: `string[]` for tags, `boolean` for
+		 * the checkbox and toggle variants, `string` elsewhere. Every one of those
+		 * is reached through `bind:value` / `bind:checked`, and a two-way binding
+		 * needs the exact type — it cannot take a cast or a widened union. Fixing
+		 * this means splitting these props into a discriminated union keyed on
+		 * `type`, which is a change to every call site, not to this line.
+		 */
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		value?: any;
 		readonly?: boolean;
 		/**
@@ -69,10 +79,28 @@
 		upload?: (file: File) => Promise<string>;
 		accept?: string;
 		src?: string;
-		[key: string]: any;
+		/** Inline label beside the `checkbox` / `toggle` input. */
+		checkboxLabel?: string;
+		placeholder?: string;
+		multiple?: boolean;
+		orientation?: 'row' | 'col';
+		previewClass?: string;
+		emptyLabel?: string;
+		replaceLabel?: string;
+		/** Anything else is forwarded to the input untouched. */
+		[key: string]: unknown;
 	} = $props();
 
 	const form = getFormContext();
+
+	// `options` means two different shapes depending on `type` — TagInput keys on
+	// `id`, the selects on `value` — so it stays in the forwarded rest props and
+	// is narrowed here, once per variant, instead of being declared as one shape
+	// that would be wrong for the other.
+	const tagOptions = $derived((rest.options ?? []) as { id: string; label: string }[]);
+	const selectOptions = $derived(
+		(rest.options ?? []) as { value: string | number; label: string }[]
+	);
 
 	const uid = Math.random().toString(16).slice(2, 8);
 	let _name = $derived(name ?? propId ?? '');
@@ -116,9 +144,18 @@
 		// Forward the supplied value so plain inputs render pre-filled from existing
 		// data (edit forms). `.as(type, value)` controls the rendered value.
 		// A file field has no renderable value to forward — the browser owns it.
+		//
+		// `as()` is overloaded per input type, and each overload pins its value
+		// parameter to that type, so no single variable can satisfy the set —
+		// only a literal at the call site can. Rewriting this as one branch per
+		// literal was tried and changed behaviour (it forced a value onto the
+		// checkbox overload and coerced the others through `String`), so the
+		// cast stays and is marked rather than hidden.
 		return ownsValue || value === undefined || asType === 'file'
-			? field.as(asType as any)
-			: field.as(asType as any, value);
+			? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+				field.as(asType as any)
+			: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+				field.as(asType as any, value);
 	});
 
 	// When field is provided, `fieldAttrs.name` already carries the `b:` prefix. For
@@ -203,7 +240,7 @@
 	{:else if type === 'tags'}
 		<!-- `value` is its own prop, so it is not in `...rest` and must be forwarded
 		     explicitly — without it TagInput starts empty and submits `[]`. -->
-		<TagInput {...rest} options={rest.options} {...inputProps} {value} disabled={pending} />
+		<TagInput {...rest} options={tagOptions} {...inputProps} {value} disabled={pending} />
 	{:else if type === 'calendar'}
 		<CalendarSelect {...rest} name={resolvedName} bind:value disabled={pending || readonly} />
 	{:else if type === 'checkbox'}
@@ -267,7 +304,7 @@
 				hidden.value = JSON.stringify(value);
 			}}
 		>
-			{#each rest.options as option (option.value)}
+			{#each selectOptions as option (option.value)}
 				<option
 					value={option.value}
 					selected={Array.isArray(value) && value.includes(option.value)}
@@ -281,7 +318,7 @@
 			{#if rest.placeholder}
 				<option value="">{rest.placeholder}</option>
 			{/if}
-			{#each rest.options as option (option.value)}
+			{#each selectOptions as option (option.value)}
 				<option value={option.value}>{option.label}</option>
 			{/each}
 		</Select>

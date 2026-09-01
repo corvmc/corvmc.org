@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import ProfileSection from './ProfileSection.svelte';
 	import EntityAvatar from '$lib/components/ui/entity/EntityAvatar.svelte';
 	import { IconArrowRight, IconLock } from '@tabler/icons-svelte';
@@ -6,7 +7,7 @@
 	export type CrossRef = {
 		name: string;
 		sub?: string | null;
-		href?: string | null;
+		href?: ResolvedPathname | null;
 		image?: string | null;
 		/** referenced entity shape: band = square, member = round */
 		avatarShape: 'round' | 'square';

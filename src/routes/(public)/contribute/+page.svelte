@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Hero from '$lib/components/public/Hero.svelte';
+	import Tile from '$lib/components/public/Tile.svelte';
 	import Section from '$lib/components/public/Section.svelte';
 	import SectionHeading from '$lib/components/public/SectionHeading.svelte';
 	import {
@@ -132,7 +133,7 @@
 	"sign up" reads as "pay us" to anyone skimming.
 -->
 <Section>
-	<div class="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-4 text-center">
+	<div class="measure-center mb-12">
 		<h2 class="text-4xl font-bold tracking-tight">Volunteer with Us</h2>
 		<p class="text-base leading-relaxed text-fg-2">
 			Volunteers are the beating heart of our organization! Every show, every piece of gear, and
@@ -143,7 +144,7 @@
 
 	<div class="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
 		{#each volunteerGroups as group (group.title)}
-			<div class="flex flex-col gap-3 rounded-lg p-6 surface">
+			<Tile align="stack">
 				<div class="flex items-center gap-2 text-cmc-navy">
 					<group.icon size={24} />
 					<h3 class="text-lg font-bold">{group.title}</h3>
@@ -159,11 +160,11 @@
 						</li>
 					{/each}
 				</ul>
-			</div>
+			</Tile>
 		{/each}
 	</div>
 
-	<div class="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
+	<div class="measure-center">
 		<Button href={VOLUNTEER_SIGNUP_URL} variant="default" size="lg"
 			>Create a Free Account to Volunteer</Button
 		>
@@ -172,7 +173,7 @@
 
 <!-- Become a Sustaining Member (pointer to /membership) -->
 <section class="section-tint-secondary px-6 py-16">
-	<div class="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
+	<div class="measure-center">
 		<h2 class="text-4xl font-bold tracking-tight">Become a Sustaining Member</h2>
 		<p class="text-base leading-relaxed text-fg-2">
 			The most direct way to support the space is a monthly contribution on a sliding scale —
@@ -189,10 +190,7 @@
 	<SectionHeading title="Other Ways to Contribute" />
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
 		{#each otherWays as item (item.title)}
-			<div
-				class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
-				style="background: var(--surface); border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))"
-			>
+			<Tile fill="raised">
 				<div class="text-cmc-navy">
 					<item.icon size={40} />
 				</div>
@@ -206,7 +204,7 @@
 					target={item.external ? '_blank' : undefined}
 					rel={item.external ? 'noopener noreferrer' : undefined}>{item.cta}</Button
 				>
-			</div>
+			</Tile>
 		{/each}
 	</div>
 </Section>

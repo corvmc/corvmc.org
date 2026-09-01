@@ -8,6 +8,7 @@
 // (see subscription-service.ts) — so getStripeProductId reuses an existing
 // product tagged with `metadata.corvmc_key` before creating a new one. That keeps
 // IDs stable across an empty-KV cutover without a data-port step.
+import type Stripe from 'stripe';
 import { getJson, putJson } from '$lib/server/kv';
 import { stripe } from '$lib/server/stripe';
 import type { CheckoutLineItem } from './payment-service';
@@ -199,7 +200,7 @@ export async function buildSubscriptionLineItem(
 	key: ProductKey,
 	unitAmountCents: number,
 	quantity: number,
-	interval: string = 'month'
+	interval: Stripe.PriceCreateParams.Recurring.Interval = 'month'
 ): Promise<CheckoutLineItem> {
 	const productId = await getStripeProductId(key);
 

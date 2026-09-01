@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import Section from '$lib/components/public/Section.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -58,7 +59,7 @@
 	const bands = $derived(data.bands);
 
 	/** Shared by the tab links and the URL mirror, so they can't disagree. */
-	function directoryHref(target: Tab, q: string, g: string): string {
+	function directoryHref(target: Tab, q: string, g: string): ResolvedPathname {
 		// Pairs rather than URLSearchParams — the lint rule bans mutable instances
 		// of it — and defaults are simply left out so a clean view has a clean URL.
 		const pairs: [string, string][] = [];
@@ -67,7 +68,11 @@
 		if (g) pairs.push(['genre', g]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		return `${resolve('/directory')}${search ? `?${search}` : ''}`;
+		// The path is resolved; the query is built above from this page's own
+		// filters. `resolve()` cannot check an arbitrary suffix, so the join is
+		// asserted here rather than the whole expression being left untyped.
+		const base = resolve('/directory');
+		return (search ? `${base}?${search}` : base) as ResolvedPathname;
 	}
 
 	// Writes the URL, never state — `searchText` and `genre` stay the source of
@@ -222,7 +227,7 @@
 			{#if matchCount === 0}
 				{@render empty('band', 'bands', bands.length)}
 			{:else}
-				<div class="grid grid-cols-2 justify-items-center gap-6 sm:grid-cols-3 lg:grid-cols-4">
+				<div class="grid-gallery-tight">
 					{#each visibleBands as b (b.id)}
 						<VinylCard
 							href="/directory/bands/{b.slug}"
@@ -241,7 +246,7 @@
 		{:else if matchCount === 0}
 			{@render empty('musician', 'musicians', members.length)}
 		{:else}
-			<div class="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-3">
+			<div class="grid-gallery">
 				{#each visibleMusicians as member (member.id)}
 					<IdCard
 						href="/directory/members/{member.id}"

@@ -21,7 +21,6 @@
 				pendingNavigation = () => {
 					bypassing = true;
 					form.reset();
-					// eslint-disable-next-line svelte/no-navigation-without-resolve -- `url` is the already-resolved navigation target supplied by SvelteKit's beforeNavigate
 					goto(url);
 				};
 				confirmModal?.showModal();

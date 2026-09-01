@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Hero from '$lib/components/public/Hero.svelte';
+	import Tile from '$lib/components/public/Tile.svelte';
 	import { IconBuildingStore, IconMicrophone, IconDisc, IconUsers } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
@@ -49,10 +50,10 @@
 	<div class="mx-auto max-w-4xl">
 		<div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
 			{#each categories as cat (cat.label)}
-				<div class="flex flex-col items-center gap-2 rounded-lg p-5 text-center surface">
+				<Tile gap="2">
 					<div class="text-cmc-teal"><cat.icon size={32} /></div>
 					<span class="text-sm font-medium">{cat.label}</span>
-				</div>
+				</Tile>
 			{/each}
 		</div>
 	</div>

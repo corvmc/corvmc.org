@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import type { RemoteFormFieldValue, RemoteFormField } from '@sveltejs/kit';
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import type { ProfileLink } from '$lib/server/db/schema/authentication';
@@ -9,7 +9,7 @@
 		field
 	}: {
 		value?: ProfileLink[];
-		field?: RemoteFormField<any>;
+		field?: RemoteFormField<RemoteFormFieldValue>;
 	} = $props();
 
 	function addLink() {

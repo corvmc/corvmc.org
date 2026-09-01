@@ -1,5 +1,7 @@
 <script lang="ts">
+	import Hero from '$lib/components/public/Hero.svelte';
 	import Section from '$lib/components/public/Section.svelte';
+	import Tile from '$lib/components/public/Tile.svelte';
 	import { IconMusic, IconMicrophone, IconHeartHandshake, IconSchool } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import PosterCard from '$lib/components/events/PosterCard.svelte';
@@ -39,29 +41,22 @@
 	/>
 </svelte:head>
 
-<!-- Hero -->
-<section class="sunburst section-tint-secondary px-6 py-24 text-center">
-	<div class="mx-auto flex max-w-2xl flex-col items-center gap-4">
-		<h1 class="text-5xl leading-tight font-bold tracking-tight text-balance text-cmc-teal">
-			Building and Connecting Music Communities in Corvallis
-		</h1>
-		<p class="text-lg leading-relaxed text-fg-2">
-			We provide shared music resources, affordable practice space, and a supportive community for
-			local musicians to grow, collaborate, and thrive together.
-		</p>
-		<div class="mt-4 flex flex-col items-center gap-3">
-			<Button href="/login?register&redirect=/member" variant="primary" shape="wide"
-				>Join Our Community!</Button
-			>
-			<Button href="/about" variant="ghost" shape="wide">Learn More About Us</Button>
-		</div>
-		<div class="mt-5 flex flex-wrap justify-center gap-2">
+<Hero title="Building and Connecting Music Communities in Corvallis" tone="teal">
+	We provide shared music resources, affordable practice space, and a supportive community for local
+	musicians to grow, collaborate, and thrive together.
+
+	{#snippet actions()}
+		<Button href="/login?register&redirect=/member" variant="primary" shape="wide"
+			>Join Our Community!</Button
+		>
+		<Button href="/about" variant="ghost" shape="wide">Learn More About Us</Button>
+		<div class="mt-1 flex flex-wrap justify-center gap-2">
 			{#each ['All-ages', 'Substance-free', 'NOTAFLOF', 'Volunteer-run'] as tag (tag)}
 				<span class="sticker-badge sticker-badge--sm">{tag}</span>
 			{/each}
 		</div>
-	</div>
-</section>
+	{/snippet}
+</Hero>
 
 <!-- Upcoming Events -->
 <Section>
@@ -101,16 +96,13 @@
 	</div>
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
 		{#each features as item (item.title)}
-			<div
-				class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
-				style="background: var(--surface); border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))"
-			>
+			<Tile fill="raised">
 				<div class="text-cmc-navy">
 					<item.icon size={40} />
 				</div>
 				<h3 class="text-lg font-bold">{item.title}</h3>
 				<p class="text-muted leading-relaxed">{item.desc}</p>
-			</div>
+			</Tile>
 		{/each}
 	</div>
 	<div class="mt-10 text-center">
@@ -127,57 +119,29 @@
 		</p>
 	</div>
 	<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
-		<div
-			class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
-			style="background: var(--cmc-orange); color: #fff"
-		>
+		<Tile fill="orange">
 			<h3 class="text-xl font-bold">Become a Member</h3>
 			<p class="text-sm leading-relaxed" style="opacity: 0.9">
 				Join our community of musicians and gain access to practice space, events, and networking
 				opportunities.
 			</p>
-			<Button
-				href="/login?register&redirect=/member"
-				variant="default"
-				size="sm"
-				class="mt-2"
-				style="background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)"
+			<Button href="/login?register&redirect=/member" variant="cmc-navy" size="sm" class="mt-2"
 				>Join Now</Button
 			>
-		</div>
-		<div
-			class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
-			style="background: var(--cmc-navy); color: #fff"
-		>
+		</Tile>
+		<Tile fill="navy">
 			<h3 class="text-xl font-bold">Volunteer</h3>
 			<p class="text-sm leading-relaxed" style="opacity: 0.9">
 				Help us organize events, maintain our space, and support fellow musicians in our community.
 			</p>
-			<Button
-				href="/contribute"
-				variant="default"
-				size="sm"
-				class="mt-2"
-				style="background: var(--cmc-orange); color: #fff; border-color: rgba(0,0,0,0.3)"
-				>Learn More</Button
-			>
-		</div>
-		<div
-			class="flex flex-col items-center gap-3 rounded-lg p-6 text-center"
-			style="background: var(--cmc-light-blue); color: var(--cmc-navy)"
-		>
+			<Button href="/contribute" variant="cmc-orange" size="sm" class="mt-2">Learn More</Button>
+		</Tile>
+		<Tile fill="light-blue">
 			<h3 class="text-xl font-bold">Support Us</h3>
 			<p class="text-sm leading-relaxed" style="opacity: 0.85">
 				Your donation helps us provide affordable space and programs for the local music community.
 			</p>
-			<Button
-				href="/contribute"
-				variant="default"
-				size="sm"
-				class="mt-2"
-				style="background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)"
-				>Contribute</Button
-			>
-		</div>
+			<Button href="/contribute" variant="cmc-navy" size="sm" class="mt-2">Contribute</Button>
+		</Tile>
 	</div>
 </Section>

@@ -1,11 +1,12 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import logoMono from '$lib/assets/cmc-logo-mono.svg';
 	import { hashPattern } from '$lib/utils/patterns';
 	import { initials } from '$lib/utils/format';
 	import { imageSrc } from '$lib/utils/images';
 
 	interface Props {
-		href: string;
+		href: ResolvedPathname;
 		name: string;
 		avatarUrl?: string | null;
 		tagline?: string | null;

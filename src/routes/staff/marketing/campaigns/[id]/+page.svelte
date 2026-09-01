@@ -56,7 +56,7 @@
 
 			<InfoCard title="Markdown Source">
 				<pre
-					class="max-h-64 overflow-auto rounded bg-base-200 p-3 font-mono text-xs whitespace-pre-wrap">{campaign.markdownBody}</pre>
+					class="max-h-64 overflow-auto code-block p-3 whitespace-pre-wrap">{campaign.markdownBody}</pre>
 			</InfoCard>
 		</div>
 

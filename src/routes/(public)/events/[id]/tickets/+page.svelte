@@ -66,12 +66,12 @@
 				<div class="mt-2 flex items-baseline gap-2">
 					{#if data.isSustainingMember}
 						<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
-						<span class="text-sm line-through opacity-50">{formatCents(unitPrice)}</span>
+						<span class="text-muted line-through">{formatCents(unitPrice)}</span>
 						<Badge variant="success">Member 50% off</Badge>
 					{:else}
 						<span class="text-lg font-bold">{formatCents(unitPrice)}</span>
 					{/if}
-					<span class="text-sm opacity-50">per ticket</span>
+					<span class="text-muted">per ticket</span>
 				</div>
 			{:else}
 				<div class="mt-2">

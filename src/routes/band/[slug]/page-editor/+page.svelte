@@ -224,7 +224,7 @@
 
 					<!-- Block type picker -->
 					{#if showBlockPicker}
-						<div class="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-base-200 p-4 sm:grid-cols-3">
+						<div class="mt-4 grid grid-cols-2 gap-2 inset p-4 sm:grid-cols-3">
 							{#each BLOCK_TYPES as bt (bt.type)}
 								<Button
 									type="button"
@@ -254,7 +254,7 @@
 									<!-- Block header row -->
 									<div class="flex items-center gap-2 p-3">
 										<span class="font-mono text-sm opacity-40">{i + 1}</span>
-										<span class="badge badge-sm capitalize">{block.type}</span>
+										<Badge class="capitalize">{block.type}</Badge>
 										<span class="flex-1 truncate text-muted">{blockLabel(block)}</span>
 										<div class="flex items-center gap-1">
 											<Button
@@ -293,7 +293,7 @@
 
 									<!-- Block configuration panel -->
 									{#if editingBlockId === block.id}
-										<div class="space-y-3 border-t border-base-300 px-3 pt-3 pb-3">
+										<div class="space-y-3 px-3 pt-3 pb-3 rule-top">
 											{#if block.type === 'hero'}
 												<label class="form-control">
 													<span class="label-text text-xs">Image Key (R2 path or URL)</span>
@@ -542,7 +542,11 @@
 													placeholder="custom-class"
 													value={block.cssClass ?? ''}
 													oninput={(e) => {
-														(block as any).cssClass = e.currentTarget.value || undefined;
+														// Every member of the Block union carries `cssClass`, but TypeScript
+														// will not pick a member to write through on a union, so the
+														// write is narrowed to just that property.
+														(block as { cssClass?: string }).cssClass =
+															e.currentTarget.value || undefined;
 													}}
 												/>
 											</label>

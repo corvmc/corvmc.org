@@ -146,10 +146,7 @@
 					{@const prevLabel = idx > 0 ? dayLabel(events[idx - 1]) : null}
 					{#if label !== prevLabel}
 						<tr>
-							<td
-								colspan="4"
-								class="bg-base-200 px-4 py-2 text-subtle font-semibold tracking-wide uppercase"
-							>
+							<td colspan="4" class="cell-group">
 								{label}
 							</td>
 						</tr>

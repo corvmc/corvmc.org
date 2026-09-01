@@ -13,6 +13,7 @@
  * administer a feature before it is switched on for everyone else.
  */
 
+import { resolve } from '$app/paths';
 import {
 	activeNavKey as resolveActiveNavKey,
 	childHrefsFor as resolveChildHrefs,
@@ -81,8 +82,8 @@ export interface StaffNavSection {
 
 /** Rows above the first section header. */
 export const staffNavTop: StaffNavItem[] = [
-	{ key: 'dashboard', label: 'Dashboard', href: '/staff' },
-	{ key: 'inbox', label: 'Inbox', href: '/staff/inbox', badgeKey: 'inboxUnread' }
+	{ key: 'dashboard', label: 'Dashboard', href: resolve('/staff') },
+	{ key: 'inbox', label: 'Inbox', href: resolve('/staff/inbox'), badgeKey: 'inboxUnread' }
 ];
 
 export const staffNavSections: StaffNavSection[] = [
@@ -90,27 +91,31 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'people',
 		title: 'People',
 		items: [
-			{ key: 'users', label: 'Users', href: '/staff/users' },
-			{ key: 'bands', label: 'Bands', href: '/staff/bands' },
+			{ key: 'users', label: 'Users', href: resolve('/staff/users') },
+			{ key: 'bands', label: 'Bands', href: resolve('/staff/bands') },
 			// Clubs and committees, separate from Bands on purpose: a band is a
 			// member's own project and a program is a sanctioned CMC one, and this
 			// is the only place a program comes into existence.
-			{ key: 'groups', label: 'Groups', href: '/staff/groups' },
+			{ key: 'groups', label: 'Groups', href: resolve('/staff/groups') },
 			{
 				key: 'volunteer',
 				label: 'Volunteering',
-				href: '/staff/volunteer',
+				href: resolve('/staff/volunteer'),
 				badgeKey: 'volunteerPending',
 				children: [
-					{ key: 'volunteer-people', label: 'Volunteers', href: '/staff/volunteer/people' },
-					{ key: 'volunteer-shifts', label: 'Shifts', href: '/staff/volunteer/shifts' },
-					{ key: 'volunteer-roles', label: 'Roles', href: '/staff/volunteer/roles' },
+					{
+						key: 'volunteer-people',
+						label: 'Volunteers',
+						href: resolve('/staff/volunteer/people')
+					},
+					{ key: 'volunteer-shifts', label: 'Shifts', href: resolve('/staff/volunteer/shifts') },
+					{ key: 'volunteer-roles', label: 'Roles', href: resolve('/staff/volunteer/roles') },
 					{
 						key: 'volunteer-certifications',
 						label: 'Certifications',
-						href: '/staff/volunteer/certifications'
+						href: resolve('/staff/volunteer/certifications')
 					},
-					{ key: 'volunteer-report', label: 'Report', href: '/staff/volunteer/report' }
+					{ key: 'volunteer-report', label: 'Report', href: resolve('/staff/volunteer/report') }
 				]
 			}
 		]
@@ -122,14 +127,14 @@ export const staffNavSections: StaffNavSection[] = [
 			{
 				key: 'reservations',
 				label: 'Reservations',
-				href: '/staff/reservations',
+				href: resolve('/staff/reservations'),
 				children: [
-					{ key: 'recurring', label: 'Recurring', href: '/staff/recurring' },
-					{ key: 'closures', label: 'Closures', href: '/staff/closures' },
+					{ key: 'recurring', label: 'Recurring', href: resolve('/staff/recurring') },
+					{ key: 'closures', label: 'Closures', href: resolve('/staff/closures') },
 					// Under Reservations rather than beside Users: teaching status is a
 					// right in the room, and what it grants is a rate and a booking
 					// window. Everything about the room is one place.
-					{ key: 'instructors', label: 'Instructors', href: '/staff/instructors' }
+					{ key: 'instructors', label: 'Instructors', href: resolve('/staff/instructors') }
 				]
 			},
 			{
@@ -142,20 +147,20 @@ export const staffNavSections: StaffNavSection[] = [
 				// looking for the drumstick count somewhere else.
 				key: 'equipment',
 				label: 'Inventory',
-				href: '/staff/inventory',
+				href: resolve('/staff/inventory'),
 				children: [
-					{ key: 'equipment-loans', label: 'Loans', href: '/staff/inventory/loans' },
+					{ key: 'equipment-loans', label: 'Loans', href: resolve('/staff/inventory/loans') },
 					{
 						key: 'inventory-acquisitions',
 						label: 'Acquisitions',
-						href: '/staff/inventory/acquisitions'
+						href: resolve('/staff/inventory/acquisitions')
 					},
-					{ key: 'inventory-restock', label: 'Restock', href: '/staff/inventory/restock' },
-					{ key: 'inventory-spend', label: 'Spend', href: '/staff/inventory/spend' },
+					{ key: 'inventory-restock', label: 'Restock', href: resolve('/staff/inventory/restock') },
+					{ key: 'inventory-spend', label: 'Spend', href: resolve('/staff/inventory/spend') },
 					{
 						key: 'inventory-compliance',
 						label: 'Compliance',
-						href: '/staff/inventory/compliance'
+						href: resolve('/staff/inventory/compliance')
 					}
 				]
 			}
@@ -179,21 +184,21 @@ export const staffNavSections: StaffNavSection[] = [
 			{
 				key: 'calendar',
 				label: 'Calendar',
-				href: '/staff/events',
+				href: resolve('/staff/events'),
 				badgeKey: 'listingsPending'
 			},
-			{ key: 'productions', label: 'Productions', href: '/staff/productions' }
+			{ key: 'productions', label: 'Productions', href: resolve('/staff/productions') }
 		]
 	},
 	{
 		key: 'moderation',
 		title: 'Moderation',
 		items: [
-			{ key: 'flags', label: 'Content Flags', href: '/staff/flags' },
+			{ key: 'flags', label: 'Content Flags', href: resolve('/staff/flags') },
 			{
 				key: 'suggestions',
 				label: 'Suggestions',
-				href: '/staff/suggestions',
+				href: resolve('/staff/suggestions'),
 				badgeKey: 'suggestionsAwaiting'
 			}
 		]
@@ -202,23 +207,23 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'outreach',
 		title: 'Outreach',
 		items: [
-			{ key: 'campaigns', label: 'Campaigns', href: '/staff/marketing/campaigns' },
-			{ key: 'audiences', label: 'Audiences', href: '/staff/marketing/audiences' },
-			{ key: 'help', label: 'Help Articles', href: '/staff/help' }
+			{ key: 'campaigns', label: 'Campaigns', href: resolve('/staff/marketing/campaigns') },
+			{ key: 'audiences', label: 'Audiences', href: resolve('/staff/marketing/audiences') },
+			{ key: 'help', label: 'Help Articles', href: resolve('/staff/help') }
 		]
 	},
 	{
 		key: 'money',
 		title: 'Money',
 		items: [
-			{ key: 'payments', label: 'Payments', href: '/staff/payments' },
-			{ key: 'credits', label: 'Credits', href: '/staff/credits' }
+			{ key: 'payments', label: 'Payments', href: resolve('/staff/payments') },
+			{ key: 'credits', label: 'Credits', href: resolve('/staff/credits') }
 		]
 	},
 	{
 		key: 'system',
 		title: 'System',
-		items: [{ key: 'settings', label: 'Settings', href: '/staff/settings' }]
+		items: [{ key: 'settings', label: 'Settings', href: resolve('/staff/settings') }]
 	}
 ];
 

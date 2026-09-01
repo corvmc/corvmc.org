@@ -302,7 +302,7 @@
 				href={evt.externalTicketUrl}
 				class="link text-sm"
 				target="_blank"
-				rel="noopener noreferrer"
+				rel="noopener noreferrer external"
 			>
 				Tickets ↗
 			</a>
@@ -334,7 +334,7 @@
 		{/if}
 
 		{#if parseTags(evt.tags).length > 0}
-			<div class="mt-4 flex flex-wrap gap-1 border-t border-base-200 pt-4">
+			<div class="mt-4 flex flex-wrap gap-1 pt-4 rule-top">
 				{#each parseTags(evt.tags) as tag (tag)}
 					<Badge variant="outline">{tag}</Badge>
 				{/each}

@@ -37,6 +37,13 @@
 		editingCategory = null;
 		void getEquipmentCategories().refresh();
 	}
+
+	// `editCategory` and `addCategory` have different inputs, and `RemoteForm` is
+	// invariant in that parameter, so the ternary has no common type. Hoisted
+	// because an eslint comment cannot live inside an attribute list. See the
+	// note in Action.svelte.
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const categoryForm = $derived(editingCategory?.id ? (editCategory as any) : addCategory);
 </script>
 
 <Modal bind:open title="Manage Categories" maxWidth="max-w-lg">
@@ -97,7 +104,7 @@
 			</Button>
 		{:else}
 			<Form
-				remote={editingCategory.id ? (editCategory as any) : addCategory}
+				remote={categoryForm}
 				successToast={editingCategory.id ? 'Category updated' : 'Category added'}
 				onsuccess={refreshCategories}
 				class="space-y-3"

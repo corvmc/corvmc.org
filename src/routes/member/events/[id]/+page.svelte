@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -89,8 +90,10 @@
 	});
 
 	let quantity = $state(1);
-	let attendeeName = $state((page.data as any).user?.name ?? '');
-	let attendeeEmail = $state((page.data as any).user?.email ?? '');
+	// Deliberately the initial value only: these are editable form defaults, so
+	// re-reading `detail` would overwrite whatever the buyer had typed.
+	let attendeeName = $state(untrack(() => detail.viewer.name ?? ''));
+	let attendeeEmail = $state(untrack(() => detail.viewer.email ?? ''));
 	let qrOpen = $state(false);
 	let qrIndex = $state(0);
 
@@ -129,7 +132,7 @@
 				<IconCalendarPlus size={18} />
 				Add to calendar
 			</summary>
-			<ul class="menu dropdown-content z-10 w-48 rounded-box bg-base-100 p-2 shadow">
+			<ul class="menu dropdown-content dropdown-panel w-48">
 				<li>
 					<a
 						href={googleCalendarUrl(calendarEvt)}
@@ -371,14 +374,12 @@
 									<div class="flex items-baseline gap-2">
 										{#if data.isSustainingMember && discountedPrice}
 											<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
-											<span class="text-sm line-through opacity-50"
-												>{formatCents(evt.ticketPrice!)}</span
-											>
+											<span class="text-muted line-through">{formatCents(evt.ticketPrice!)}</span>
 											<Badge variant="success">Member 50% off</Badge>
 										{:else}
 											<span class="text-lg font-bold">{formatCents(evt.ticketPrice!)}</span>
 										{/if}
-										<span class="text-sm opacity-50">per ticket</span>
+										<span class="text-muted">per ticket</span>
 									</div>
 
 									<Field

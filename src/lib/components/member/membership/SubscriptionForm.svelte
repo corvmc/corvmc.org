@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
 	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 	import { formatDollars } from '$lib/utils/format';
 	import { untrack } from 'svelte';
@@ -7,6 +7,7 @@
 	import Field from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import type { RemoteForm } from '$lib/components/ui/Form/Form.svelte';
+	import type { RemoteFormInput } from '@sveltejs/kit';
 
 	const STEP = DOLLARS_PER_UNIT;
 	const MIN_AMOUNT = DOLLARS_PER_UNIT * 2; // $10 → 2 free hours
@@ -22,7 +23,7 @@
 		mode: 'create' | 'modify';
 		currentAmount?: number;
 		currentCoverFees?: boolean;
-		remote: RemoteForm<any, any>;
+		remote: RemoteForm<TInput, TOutput>;
 		onsuccess?: () => void;
 	} = $props();
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import type { RemoteFormFieldValue, RemoteFormField } from '@sveltejs/kit';
 	import FormField from './FormField.svelte';
 
 	let {
@@ -8,7 +8,7 @@
 		publicDescription = 'Anyone can see your profile, no login required',
 		name = 'directoryVisibility'
 	}: {
-		field?: RemoteFormField<any>;
+		field?: RemoteFormField<RemoteFormFieldValue>;
 		value?: string;
 		publicDescription?: string;
 		name?: string;

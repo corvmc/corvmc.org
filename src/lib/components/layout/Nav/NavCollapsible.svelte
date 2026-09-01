@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 
@@ -11,7 +12,8 @@
 		childHrefs,
 		children
 	}: {
-		href: string;
+		/** `''` for a row with no in-app destination; rendered as no `href` at all. */
+		href: ResolvedPathname | '';
 		label: string;
 		icon?: Snippet;
 		/** Queue count on the parent row, same treatment as Nav.Item. */
@@ -27,7 +29,7 @@
 </script>
 
 <li>
-	<a {href} class:active={isActive}>
+	<a href={href || undefined} class:active={isActive}>
 		{@render icon?.()}
 		<span class="grow">{label}</span>
 		{#if badge}

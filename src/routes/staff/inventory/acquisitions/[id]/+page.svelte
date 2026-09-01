@@ -232,7 +232,12 @@
 						{#each data.receipts as receipt (receipt.attachmentId)}
 							<li class="flex items-center gap-2">
 								<IconFileText size={18} class="shrink-0 opacity-60" />
-								<a class="grow link" href={receipt.url ?? '#'} target="_blank" rel="noopener">
+								<a
+									class="grow link"
+									href={receipt.url ?? '#'}
+									target="_blank"
+									rel="noopener external"
+								>
 									{receipt.filename ?? 'Receipt'}
 								</a>
 							</li>

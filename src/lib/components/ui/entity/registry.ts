@@ -39,12 +39,13 @@ import {
 	IconSchool,
 	IconBuildingCommunity
 } from '@tabler/icons-svelte';
-import type { SvelteComponent } from 'svelte';
 import { entityTypes, entityLabels, type EntityType } from '$lib/config';
 import type { EntityRef } from '$lib/types/entity';
 import { variants } from '../StatusBadge.svelte';
 
-type IconComponent = typeof SvelteComponent<any>;
+/** Every tabler icon shares one props shape; borrow it from a concrete icon
+ * rather than reaching into the package's un-exported `dist/types`. */
+type IconComponent = typeof IconMusic;
 
 export type EntitySubtype = { icon: IconComponent; label: string };
 

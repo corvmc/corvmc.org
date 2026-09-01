@@ -2,6 +2,7 @@
 	import DirectMessagesSection from './DirectMessagesSection.svelte';
 	import EmailSubscriptionsSection from './EmailSubscriptionsSection.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Table from '$lib/components/ui/Table.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -77,61 +78,57 @@
 		{#if notifPrefs.length === 0}
 			<EmptyState message="No notification preferences available." />
 		{:else}
-			<table class="table">
-				<thead>
+			<Table size="md" zebra={false}>
+				{#snippet head()}
+					<th>Notification</th>
+					<th class="w-20 text-center">
+						<span class="tooltip" data-tip="Email"><IconMail size={16} /></span>
+						<span class="sr-only">Email</span>
+					</th>
+					<th class="w-20 text-center">
+						<span class="tooltip" data-tip="In-app"><IconBell size={16} /></span>
+						<span class="sr-only">In-app</span>
+					</th>
+				{/snippet}
+				{#each notifPrefs as pref (pref.key)}
 					<tr>
-						<th>Notification</th>
-						<th class="w-20 text-center">
-							<span class="tooltip" data-tip="Email"><IconMail size={16} /></span>
-							<span class="sr-only">Email</span>
-						</th>
-						<th class="w-20 text-center">
-							<span class="tooltip" data-tip="In-app"><IconBell size={16} /></span>
-							<span class="sr-only">In-app</span>
-						</th>
+						<td>
+							<div>
+								<p class="text-sm font-medium">{pref.label}</p>
+								<p class="text-subtle">{pref.description}</p>
+							</div>
+						</td>
+						<td class="w-20 text-center">
+							<input
+								type="checkbox"
+								class="toggle toggle-primary toggle-sm"
+								checked={pref.email}
+								aria-label={`Email notifications for ${pref.label}`}
+								onchange={() =>
+									setNotificationPreference({
+										notificationType: pref.key,
+										email: !pref.email,
+										inApp: pref.inApp
+									})}
+							/>
+						</td>
+						<td class="w-20 text-center">
+							<input
+								type="checkbox"
+								class="toggle toggle-primary toggle-sm"
+								checked={pref.inApp}
+								aria-label={`In-app notifications for ${pref.label}`}
+								onchange={() =>
+									setNotificationPreference({
+										notificationType: pref.key,
+										email: pref.email,
+										inApp: !pref.inApp
+									})}
+							/>
+						</td>
 					</tr>
-				</thead>
-				<tbody>
-					{#each notifPrefs as pref (pref.key)}
-						<tr>
-							<td>
-								<div>
-									<p class="text-sm font-medium">{pref.label}</p>
-									<p class="text-subtle">{pref.description}</p>
-								</div>
-							</td>
-							<td class="w-20 text-center">
-								<input
-									type="checkbox"
-									class="toggle toggle-primary toggle-sm"
-									checked={pref.email}
-									aria-label={`Email notifications for ${pref.label}`}
-									onchange={() =>
-										setNotificationPreference({
-											notificationType: pref.key,
-											email: !pref.email,
-											inApp: pref.inApp
-										})}
-								/>
-							</td>
-							<td class="w-20 text-center">
-								<input
-									type="checkbox"
-									class="toggle toggle-primary toggle-sm"
-									checked={pref.inApp}
-									aria-label={`In-app notifications for ${pref.label}`}
-									onchange={() =>
-										setNotificationPreference({
-											notificationType: pref.key,
-											email: pref.email,
-											inApp: !pref.inApp
-										})}
-								/>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+				{/each}
+			</Table>
 		{/if}
 	</InfoCard>
 

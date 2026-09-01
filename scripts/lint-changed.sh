@@ -22,8 +22,13 @@ fi
 if [ -n "$CODE" ]; then
 	echo "Linting changed files:"
 	echo "$CODE" | sed 's/^/  /'
+	# `--max-warnings 0`, same as the full run. There is no grandfathered backlog
+	# left to trip over: the tree is at zero, so any warning here is one the PR
+	# introduced. An earlier version of this comment argued for leaving the cap
+	# off because a whole-file lint would fail a PR for warnings it did not add —
+	# true while a backlog existed, moot now that none does.
 	# shellcheck disable=SC2086
-	eslint $CODE
+	eslint --max-warnings 0 $CODE
 fi
 
 if [ -n "$FORMATTABLE" ]; then

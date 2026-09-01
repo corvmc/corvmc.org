@@ -91,7 +91,7 @@
 								{/each}
 							</ul>
 						{:else}
-							<p class="mt-3 text-xs italic opacity-50">No articles yet</p>
+							<p class="mt-3 text-subtle italic">No articles yet</p>
 						{/if}
 					</CardBody>
 				</Card>

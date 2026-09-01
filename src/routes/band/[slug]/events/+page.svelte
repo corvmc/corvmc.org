@@ -1,6 +1,7 @@
 <script lang="ts">
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -112,7 +113,7 @@
 			{#each events as evt (evt.id)}
 				<a
 					href={resolve(`/band/${band.slug}/events/${evt.id}`)}
-					class="card block bg-base-100 shadow-sm transition-shadow hover:shadow-md"
+					class="card block bg-base-100 shadow-sm card-interactive"
 				>
 					<CardBody row class="py-4">
 						<div>
@@ -129,7 +130,7 @@
 						</div>
 						<div class="flex shrink-0 items-center gap-2">
 							{#if !evt.isOwner}
-								<span class="badge badge-ghost badge-sm">guest</span>
+								<Badge variant="ghost">guest</Badge>
 							{/if}
 							<StatusBadge status={evt.status} />
 						</div>

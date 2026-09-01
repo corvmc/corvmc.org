@@ -14,6 +14,7 @@
  * pushes to the foot of the sidebar. Twelve rows do not need regrouping.
  */
 
+import { resolve } from '$app/paths';
 import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
 
 export type MemberNavKey =
@@ -57,16 +58,23 @@ export interface MemberNavInput {
 /** The rows above the "My Bands" group. */
 export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 	const items: MemberNavItem[] = [
-		{ key: 'dashboard', label: 'Dashboard', href: '/member' },
-		{ key: 'messages', label: 'Messages', href: '/member/messages', badgeKey: 'messagesUnread' },
-		{ key: 'reservations', label: 'Reservations', href: '/member/reservations' },
+		{ key: 'dashboard', label: 'Dashboard', href: resolve('/member') },
+		{
+			key: 'messages',
+			label: 'Messages',
+			href: resolve('/member/messages'),
+			badgeKey: 'messagesUnread'
+		},
+		{ key: 'reservations', label: 'Reservations', href: resolve('/member/reservations') },
 		{
 			key: 'events',
 			label: 'Events',
-			href: '/member/events',
-			children: [{ key: 'events-submit', label: 'Add a Show', href: '/member/events/submit' }]
+			href: resolve('/member/events'),
+			children: [
+				{ key: 'events-submit', label: 'Add a Show', href: resolve('/member/events/submit') }
+			]
 		},
-		{ key: 'directory', label: 'Directory', href: '/member/directory' }
+		{ key: 'directory', label: 'Directory', href: resolve('/member/directory') }
 	];
 
 	// Between Directory and Volunteering: it belongs with the things you do in
@@ -75,18 +83,20 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 		items.push({
 			key: 'equipment',
 			label: 'Equipment',
-			href: '/member/equipment',
-			children: [{ key: 'equipment-loans', label: 'My Loans', href: '/member/equipment/loans' }]
+			href: resolve('/member/equipment'),
+			children: [
+				{ key: 'equipment-loans', label: 'My Loans', href: resolve('/member/equipment/loans') }
+			]
 		});
 	}
 
 	if (input.features.volunteering) {
-		items.push({ key: 'volunteer', label: 'Volunteering', href: '/member/volunteer' });
+		items.push({ key: 'volunteer', label: 'Volunteering', href: resolve('/member/volunteer') });
 	}
 
 	// Not flag-gated: a suggestion board with no audience collects single-vote
 	// posts, so there is nothing useful to dark-launch.
-	items.push({ key: 'suggestions', label: 'Suggestions', href: '/member/suggestions' });
+	items.push({ key: 'suggestions', label: 'Suggestions', href: resolve('/member/suggestions') });
 
 	return items;
 }
@@ -94,15 +104,15 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 /** The cluster a spacer pins to the bottom of the sidebar. */
 export function memberNavFooter(input: MemberNavInput): MemberNavItem[] {
 	const items: MemberNavItem[] = [
-		{ key: 'profile', label: 'Profile', href: '/member/profile' },
-		{ key: 'account', label: 'Account', href: '/member/account' }
+		{ key: 'profile', label: 'Profile', href: resolve('/member/profile') },
+		{ key: 'account', label: 'Account', href: resolve('/member/account') }
 	];
 
 	if (input.features.helpArticles) {
-		items.push({ key: 'help', label: 'Help', href: '/member/help' });
+		items.push({ key: 'help', label: 'Help', href: resolve('/member/help') });
 	}
 
-	items.push({ key: 'membership', label: 'Membership', href: '/member/membership' });
+	items.push({ key: 'membership', label: 'Membership', href: resolve('/member/membership') });
 
 	return items;
 }

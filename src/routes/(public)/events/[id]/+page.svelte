@@ -73,14 +73,19 @@
 	const isCancelled = $derived(evt.status === 'cancelled');
 
 	const isBandEvent = $derived(evt.source === 'band');
-	const bandHref = $derived(evt.bandSlug ? `/directory/bands/${evt.bandSlug}` : null);
+	const bandHref = $derived(evt.bandSlug ? resolve(`/directory/bands/${evt.bandSlug}`) : null);
 
 	// /tickets only exists for events we sell — it 404s otherwise, so anything
 	// else follows the off-site seller (or the band, or the listing).
+	// Split in two because the off-site seller is not a route: `PosterCard` and
+	// `Button` take a resolved route in `href` and anything leaving the app in
+	// `externalHref`, which renders with `rel="external"` so the router hands it
+	// to the browser instead of trying to match it.
+	const ticketsExternalHref = $derived(
+		evt.ticketingEnabled ? undefined : (evt.externalTicketUrl ?? undefined)
+	);
 	const ticketsHref = $derived(
-		evt.ticketingEnabled
-			? resolve(`/events/${evt.id}/tickets`)
-			: (evt.externalTicketUrl ?? bandHref ?? resolve('/events'))
+		evt.ticketingEnabled ? resolve(`/events/${evt.id}/tickets`) : (bandHref ?? resolve('/events'))
 	);
 </script>
 
@@ -104,7 +109,7 @@
 						<IconCalendarPlus size={18} />
 						Add to calendar
 					</summary>
-					<ul class="menu dropdown-content z-10 w-48 rounded-box bg-base-100 p-2 shadow">
+					<ul class="menu dropdown-content dropdown-panel w-48">
 						<li>
 							<a
 								href={googleCalendarUrl(calendarEvt)}
@@ -130,6 +135,7 @@
 			<div class="edet__poster">
 				<PosterCard
 					href={ticketsHref}
+					externalHref={ticketsExternalHref}
 					title={evt.title}
 					posterUrl={evt.posterUrl}
 					startsAt={evt.startsAt}

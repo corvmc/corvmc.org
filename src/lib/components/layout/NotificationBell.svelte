@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import Button from '../ui/Button.svelte';
 	import { IconBell } from '@tabler/icons-svelte';
 	import { onMount, onDestroy } from 'svelte';
@@ -168,8 +169,11 @@
 						{@const isUnread = !n.readAt}
 						<div class="relative">
 							{#if n.href}
+								<!-- A route this app stored in D1 when the notification was created; the
+								     round trip through the database erases the type, so the cast restores
+								     the contract rather than switching the rule off. -->
 								<a
-									href={n.href}
+									href={n.href as ResolvedPathname}
 									class="border-base-300/50} block border-b px-4 py-3 transition-colors hover:bg-base-200"
 									class:bg-primary={isUnread}
 									onclick={() => {

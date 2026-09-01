@@ -30,9 +30,24 @@ export { registeredEvents };
 // Webhook handler map
 // ---------------------------------------------------------------------------
 
-export type WebhookHandlerFn = (data: any) => Promise<void>;
+/**
+ * The map is keyed on the Stripe event name, and each handler receives exactly
+ * the object that event carries — `checkout.session.completed` hands its
+ * handler a `Checkout.Session`, not the 80-member union of everything Stripe
+ * can send. A mapped type over `Stripe.Event` says that, so adding an event to
+ * `registeredEvents` and pairing it with the wrong handler is a build error.
+ *
+ * The dispatch site cannot keep the pairing (it looks the handler up by a
+ * runtime string), so it widens to `unknown` there — see the note in
+ * `routes/api/stripe/webhook/+server.ts`.
+ */
+type PayloadOf<E extends RegisteredEvent> = Extract<Stripe.Event, { type: E }>['data']['object'];
 
-export const webhookHandlerMap: Record<RegisteredEvent, WebhookHandlerFn> = {
+export type WebhookHandlerMap = {
+	[E in RegisteredEvent]: (data: PayloadOf<E>) => Promise<void>;
+};
+
+export const webhookHandlerMap: WebhookHandlerMap = {
 	'checkout.session.completed': handleCheckoutCompleted,
 	'invoice.paid': handleInvoicePaid,
 	'customer.subscription.updated': handleSubscriptionUpdated,

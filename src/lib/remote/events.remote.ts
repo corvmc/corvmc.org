@@ -1505,7 +1505,12 @@ export const getUserTicketsAndRsvps = query(z.string(), async (userId) => {
  */
 export const getMemberEventDetailPage = query(z.string(), async (id) => {
 	const [event, tickets] = await Promise.all([getMemberEventDetail(id), getMemberTickets()]);
-	return { event, tickets };
+	// The ticket form prefills the buyer's own name and email. The page used to
+	// read these off `page.data`, but nothing in this app populates `page.data` —
+	// there are no layout loads, only remote functions — so the fields silently
+	// always started empty. An `as any` cast on `page.data` was hiding it.
+	const viewer = requireUser();
+	return { event, tickets, viewer: { name: viewer.name, email: viewer.email } };
 });
 
 /** The public events page's one load-bearing query. Neither half has a refresh site. */

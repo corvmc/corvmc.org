@@ -1,11 +1,19 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import { formatDate, formatTime } from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import { hashPattern, darkTextPatterns } from '$lib/utils/patterns';
 	import { imageSrc } from '$lib/utils/images';
 
 	interface Props {
-		href: string;
+		href: ResolvedPathname;
+		/**
+		 * An off-site destination — a third-party ticket seller. Rendered instead
+		 * of `href`, with `rel="external"`. Separate from `href` for the same
+		 * reason as `NavItem`: widening `href` to `string` would give up the
+		 * check on every in-app card to accommodate the few that leave.
+		 */
+		externalHref?: string;
 		title: string;
 		posterUrl?: string | null;
 		startsAt: Date;
@@ -26,6 +34,7 @@
 
 	let {
 		href,
+		externalHref,
 		title,
 		posterUrl,
 		startsAt,
@@ -105,37 +114,71 @@
 		</div>
 	</div>
 {:else}
-	<a {href} class="poster-card {stateClasses} {className}">
-		{#if tapeLabel}
-			<span class="polaroid__tape {tapeColor ? `polaroid__tape--${tapeColor}` : ''}"
-				>{tapeLabel}</span
-			>
-		{/if}
-		<figure class="poster-card__figure">
-			{#if posterUrl}
-				<img src={poster.src} srcset={poster.srcset} sizes={poster.sizes} alt={title} />
-			{:else}
-				<div class="poster-gen {patternClass}">
-					<span class="poster-gen__eyebrow">{formatDate(startsAt)}</span>
-					<span class="poster-gen__title {needsDarkText ? 'poster-gen__title--dark' : ''}"
-						>{title}</span
-					>
-					<span class="poster-gen__spacer"></span>
-					<span class="poster-gen__date {needsDarkText ? 'poster-gen__date--dark' : ''}"
-						>{formatTime(startsAt)}</span
-					>
-				</div>
+	{#if externalHref}
+		<a href={externalHref} rel="external noopener" class="poster-card {stateClasses} {className}">
+			{#if tapeLabel}
+				<span class="polaroid__tape {tapeColor ? `polaroid__tape--${tapeColor}` : ''}"
+					>{tapeLabel}</span
+				>
 			{/if}
-		</figure>
-		<div class="poster-card__caption">
-			<div class="poster-card__title">{title}</div>
-			<div class="poster-card__date">
-				{formatDate(startsAt)} · {formatTime(startsAt)}
+			<figure class="poster-card__figure">
+				{#if posterUrl}
+					<img src={poster.src} srcset={poster.srcset} sizes={poster.sizes} alt={title} />
+				{:else}
+					<div class="poster-gen {patternClass}">
+						<span class="poster-gen__eyebrow">{formatDate(startsAt)}</span>
+						<span class="poster-gen__title {needsDarkText ? 'poster-gen__title--dark' : ''}"
+							>{title}</span
+						>
+						<span class="poster-gen__spacer"></span>
+						<span class="poster-gen__date {needsDarkText ? 'poster-gen__date--dark' : ''}"
+							>{formatTime(startsAt)}</span
+						>
+					</div>
+				{/if}
+			</figure>
+			<div class="poster-card__caption">
+				<div class="poster-card__title">{title}</div>
+				<div class="poster-card__date">
+					{formatDate(startsAt)} · {formatTime(startsAt)}
+				</div>
+				{@render priceLine()}
+				{@render tagBadges()}
 			</div>
-			{@render priceLine()}
-			{@render tagBadges()}
-		</div>
-	</a>
+		</a>
+	{:else}
+		<a {href} class="poster-card {stateClasses} {className}">
+			{#if tapeLabel}
+				<span class="polaroid__tape {tapeColor ? `polaroid__tape--${tapeColor}` : ''}"
+					>{tapeLabel}</span
+				>
+			{/if}
+			<figure class="poster-card__figure">
+				{#if posterUrl}
+					<img src={poster.src} srcset={poster.srcset} sizes={poster.sizes} alt={title} />
+				{:else}
+					<div class="poster-gen {patternClass}">
+						<span class="poster-gen__eyebrow">{formatDate(startsAt)}</span>
+						<span class="poster-gen__title {needsDarkText ? 'poster-gen__title--dark' : ''}"
+							>{title}</span
+						>
+						<span class="poster-gen__spacer"></span>
+						<span class="poster-gen__date {needsDarkText ? 'poster-gen__date--dark' : ''}"
+							>{formatTime(startsAt)}</span
+						>
+					</div>
+				{/if}
+			</figure>
+			<div class="poster-card__caption">
+				<div class="poster-card__title">{title}</div>
+				<div class="poster-card__date">
+					{formatDate(startsAt)} · {formatTime(startsAt)}
+				</div>
+				{@render priceLine()}
+				{@render tagBadges()}
+			</div>
+		</a>
+	{/if}
 {/if}
 
 {#snippet priceLine()}
