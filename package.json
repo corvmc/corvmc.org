@@ -113,7 +113,7 @@
 		"@tiptap/pm": "^3.30.2",
 		"@tiptap/starter-kit": "^3.30.2",
 		"barcode-detector": "^3.2.2",
-		"bcrypt-ts": "^8.0.1",
+		"bcrypt-ts": "^9.0.2",
 		"bits-ui": "^2.19.0",
 		"clsx": "^2.1.1",
 		"daisyui": "^5.7.20",
