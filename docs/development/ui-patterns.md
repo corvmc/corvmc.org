@@ -646,6 +646,44 @@ Prev/next navigation arrows with keyboard shortcuts (← →). Includes `<svelte
 
 When `nextHref` is absent, shows `endLabel` (if provided) or a disabled button.
 
+## Section dashboards
+
+**A section's root page answers "what needs me today". Its children are the tables.**
+
+The default for a staff section root is a filtered table of its main entity, and for most
+sections that is right — the entity _is_ the work. It stops being right as soon as a
+section's work is spread across several tables, because then no page holds it: the
+coordinator's version of "what needs me" lives one row in each of five places, and finding
+it means already knowing where to look.
+
+Two sections do it the other way and should be copied rather than re-derived:
+
+- **`/staff/instructors`** — one query, three cards, and Applications first, with the
+  reason in the source: _"the only rows on this page waiting on staff. Everything below is
+  either settled or waiting on the member."_
+- **`/staff/volunteer`** — the fuller version, and the one
+  [the volunteering friction log](../reports/volunteer-workflow-findings.md) argues for.
+
+The rules, so the next one does not have to re-invent them:
+
+1. **One load-bearing query for the page**, per `custom/no-concurrent-remote-queries`. The
+   cards take props; they do not each own a query. A card that needs its own key — a
+   paginated list, something keyed by a date — is a sign it belongs on a page instead.
+2. **Order by who is being waited on.** Waiting on staff first, waiting on a member second,
+   settled not at all. Not by importance, which nobody agrees on, and not by entity.
+3. **Hide a card when it is empty.** An empty dashboard is the correct rendering of a clear
+   queue, and it is what makes a card on screen mean something. Give the whole page a real
+   empty state so "nothing waiting" and "this page is broken" cannot look the same.
+4. **Put the action on the row**, in an `Action` modal. Navigating away to finish a task is
+   the thing the dashboard exists to remove.
+5. **End every card with a link to the table it summarises.** The dashboard is a summary,
+   never a replacement — the moment it grows a filter bar or pagination it has become the
+   table, and the table is still there.
+
+The nav row keeps its own `href` alongside its children: `Nav.Collapsible` treats the
+parent as clickable and holds the group open while you are on it, so the dashboard is one
+click from anywhere and each table is one click from the dashboard.
+
 ## Sidebar and panel navigation
 
 `AppShell` → `Sidebar` → `<ul class="menu">` → the `Nav.*` primitives from

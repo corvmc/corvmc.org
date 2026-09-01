@@ -16,6 +16,12 @@ let insertError: Error | null = null;
 let rawWriteResult: unknown[] = [{ id: 'signup-new' }];
 /** The conditional write statements, kept so a test can render and inspect one. */
 let rawWrites: SQL[] = [];
+/**
+ * The `where` clause of each builder call, so a test can assert on the predicate rather
+ * than only on the values written. `cancelSignup` and `releaseSignup` are the same UPDATE
+ * with and without an owner clause, and the clause is the whole difference between them.
+ */
+let whereClauses: unknown[] = [];
 
 function chainable(sink?: unknown[]) {
 	const proxy: any = new Proxy(() => proxy, {
@@ -26,6 +32,12 @@ function chainable(sink?: unknown[]) {
 			if (prop === 'set') {
 				return (v: unknown) => {
 					sink?.push(v);
+					return proxy;
+				};
+			}
+			if (prop === 'where') {
+				return (v: unknown) => {
+					whereClauses.push(v);
 					return proxy;
 				};
 			}
@@ -86,6 +98,9 @@ import type { SQL } from 'drizzle-orm';
 import {
 	claimShift,
 	completeFinishedShifts,
+	releaseSignup,
+	cancelSignup,
+	SignupNotFoundError,
 	ShiftFullError,
 	ShiftClosedError,
 	NotClearedError
@@ -117,6 +132,7 @@ beforeEach(() => {
 	selectResultQueue = [];
 	insertedValues = [];
 	updatedSets = [];
+	whereClauses = [];
 	insertError = null;
 	rawWriteResult = [{ id: 'signup-new' }];
 	rawWrites = [];
@@ -257,6 +273,71 @@ describe('claimShift', () => {
 		const row = await claimShift('shift-1', 'user-1');
 
 		expect(row).toMatchObject({ id: 'signup-1' });
+	});
+});
+
+/**
+ * The coordinator's half of the same table.
+ *
+ * Both of these are the staff variant of a member action, and the reason they exist is that
+ * the services always took the parameter while only the remotes were bound to the session —
+ * see docs/reports/volunteer-workflow-findings.md#a1 and #a2.
+ */
+describe('staff acting on somebody else', () => {
+	it('lands an assignment confirmed, not claimed', async () => {
+		selectResultQueue = [[], [{ id: 'signup-new', status: 'confirmed' }]];
+
+		await claimShift('shift-1', 'user-1', { assignedByStaff: true });
+
+		// A coordinator typing the name in IS the look that `claimed` is waiting for.
+		// Left claimed it would file work into their own queue and cost the member the
+		// day-before reminder until they cleared it.
+		const written = render(rawWrites[0]);
+		expect(written).toContain("'confirmed'");
+	});
+
+	it('holds the clearance gate for staff too, and rewords the refusal for them', async () => {
+		missingRequirements.mockResolvedValue([{ id: 'c1', name: 'Sound Desk Cleared' }]);
+
+		await expect(claimShift('shift-1', 'user-1', { assignedByStaff: true })).rejects.toThrow(
+			// Not "talk to staff" — the reader is staff. Same refusal, and it still names
+			// the certification, because that is the actionable half.
+			/Sound Desk Cleared as of this shift's date/
+		);
+	});
+
+	it('releases a signup and records a cancellation, never a no-show', async () => {
+		selectResultQueue = [[{ id: 'signup-1', status: 'cancelled' }]];
+
+		const row = await releaseSignup('signup-1');
+
+		expect(row.status).toBe('cancelled');
+		// A cancellation is notice and a no-show is not, and only one of them is worth
+		// remembering next time. Before this the only staff lever was the wrong one.
+		expect((updatedSets[0] as Record<string, unknown>).status).toBe('cancelled');
+	});
+
+	it('does not scope the release to an owner', async () => {
+		selectResultQueue = [[{ id: 'signup-1', status: 'cancelled' }]];
+
+		await releaseSignup('signup-1');
+
+		expect(render(whereClauses[0] as SQL)).not.toContain('"user_id"');
+	});
+
+	it('still refuses a signup that is not live', async () => {
+		selectResultQueue = [[]];
+		await expect(releaseSignup('signup-1')).rejects.toThrow(SignupNotFoundError);
+	});
+
+	it('leaves the member path scoped to their own signup', async () => {
+		selectResultQueue = [[{ id: 'signup-1', status: 'cancelled' }]];
+
+		await cancelSignup('signup-1', 'user-1');
+
+		// The owner clause is what makes somebody else's signup id a 404 rather than a
+		// cancellation, so it has to survive the refactor that added the staff variant.
+		expect(render(whereClauses[0] as SQL)).toContain('"user_id"');
 	});
 });
 

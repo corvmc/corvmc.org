@@ -5523,7 +5523,16 @@ async function seedVolunteerShifts(users: any[], roles: any[], events: SeedEvent
 				eventId: show?.id ?? null,
 				startsAt,
 				endsAt,
-				capacity: 1 + (i % 3),
+				// One deliberately over-subscribed shift, so the staff dashboard's
+				// short-staffed card has something to show. Every seeded shift used to
+				// fill exactly, which made the card correct and permanently empty — and
+				// an empty card is indistinguishable from a broken one.
+				//
+				// Offset 2 specifically: it is one of the unattached shifts (`i % 3 === 2`),
+				// so its date comes from the offset rather than from whichever show it was
+				// paired with — which is what keeps it inside the dashboard's two-week
+				// horizon rather than wherever the events happen to fall.
+				capacity: offset === 2 ? 4 : 1 + (i % 3),
 				notes: i % 2 === 0 ? 'Meet at the side door 15 minutes early.' : null
 			};
 		}),
@@ -5534,27 +5543,53 @@ async function seedVolunteerShifts(users: any[], roles: any[], events: SeedEvent
 
 	const signupRows: any[] = [];
 	const feedbackRows: any[] = [];
+
+	// The most recent shift that has already finished. Its first claim is left
+	// unconfirmed on purpose — see the note where the status is picked.
+	const strandedShiftId = shiftRows
+		.filter((sh: any) => sh.startsAt < now)
+		.sort((a: any, b: any) => b.startsAt.getTime() - a.startsAt.getTime())[0]?.id;
+
 	for (const shift of shiftRows) {
 		const isPast = shift.startsAt < now;
-		const takers = pickN(users, Math.min(shift.capacity, users.length));
+		// Deliberately one short on the roomiest upcoming shift, so the staff dashboard's
+		// short-staffed card and the `+N unconfirmed` badge both have real data. Every
+		// seeded shift used to fill exactly, which left every "needs attention" surface
+		// permanently empty and therefore untested by eye.
+		const wanted = !isPast && shift.capacity >= 4 ? shift.capacity - 2 : shift.capacity;
+		const takers = pickN(users, Math.min(wanted, users.length));
 		for (const [i, u] of takers.entries()) {
 			const signupId = randomUUID();
 			// Upcoming shifts mix claimed and confirmed; past ones completed, with
 			// the occasional no-show so the detail view shows the whole vocabulary.
-			const status = isPast
-				? i === 0 && Math.random() < 0.2
-					? 'no_show'
-					: 'completed'
-				: i === 0
-					? 'confirmed'
-					: 'claimed';
+			// The last shift to have finished keeps one claim nobody confirmed. That is
+			// the state the close-out card exists for: `complete-shifts` only promotes
+			// confirmed signups, so it never completed, no hour log was ever offered
+			// and no feedback was asked for — and until the dashboard, nothing said so.
+			const strandedClaim = shift.id === strandedShiftId && i === 0;
+			const status = strandedClaim
+				? 'claimed'
+				: isPast
+					? i === 0 && Math.random() < 0.2
+						? 'no_show'
+						: 'completed'
+					: i === 0
+						? 'confirmed'
+						: 'claimed';
 			signupRows.push({
 				id: signupId,
 				shiftId: shift.id,
 				userId: u.id,
 				status,
-				claimedAt: new Date(shift.startsAt.getTime() - 5 * day),
-				confirmedAt: status === 'claimed' ? null : new Date(shift.startsAt.getTime() - 4 * day),
+				// Five days before the shift, but never in the future: a claim is something
+				// somebody already did, and the dashboard renders it as "claimed
+				// <relative day>". Derived straight from the shift date it read "claimed
+				// in 3 weeks" for anything more than five days out.
+				claimedAt: new Date(Math.min(shift.startsAt.getTime() - 5 * day, now.getTime())),
+				confirmedAt:
+					status === 'claimed'
+						? null
+						: new Date(Math.min(shift.startsAt.getTime() - 4 * day, now.getTime())),
 				completedAt: status === 'completed' ? shift.endsAt : null
 			});
 			if (status === 'completed' && Math.random() < 0.7) {

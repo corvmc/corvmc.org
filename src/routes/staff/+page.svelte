@@ -9,7 +9,7 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { getStaffDashboard } from '$lib/remote/users.remote';
 	import { resolve } from '$app/paths';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 
@@ -23,6 +23,42 @@
 		<StatCard title="Active Roles" value={data.stats.totalRoles} />
 		<StatCard title="New This Month" value={data.stats.newUsersThisMonth} />
 	</div>
+
+	{#if data.shortShifts.length > 0}
+		<!--
+			Above Running low, and for the reason that panel's own comment gives: both are
+			asking for an action today, and a show that goes out a person short cannot be
+			restocked next week. Volunteering had nothing on this page at all until now
+			(docs/reports/volunteer-workflow-findings.md#d1).
+		-->
+		<SectionLabel label="Short-staffed this week" />
+		<Table>
+			{#snippet head()}
+				<th class="whitespace-nowrap">When</th>
+				<th>Role</th>
+				<th class="col-support">Event</th>
+				<th class="cell-num whitespace-nowrap">Still need</th>
+			{/snippet}
+			{#each data.shortShifts as shift (shift.id)}
+				<tr
+					class="hover cursor-pointer"
+					use:rowLink={resolve(`/staff/volunteer/shifts/${shift.id}`)}
+				>
+					<td class="whitespace-nowrap">{formatDateShort(shift.startsAt)}</td>
+					<td class="cell-primary">{shift.roleName}</td>
+					<td class="col-support truncate">{shift.eventTitle ?? ''}</td>
+					<td class="cell-num text-warning">{shift.capacity - shift.claimed}</td>
+				</tr>
+			{/each}
+		</Table>
+		<div class="mt-2">
+			<Button variant="ghost" size="sm" href={resolve('/staff/volunteer')}>
+				{data.shortShiftCount > data.shortShifts.length
+					? `See all ${data.shortShiftCount} short shifts`
+					: 'Open the volunteering worklist'}
+			</Button>
+		</div>
+	{/if}
 
 	{#if data.lowStock.length > 0}
 		<!-- Above recent members on purpose: this is the only thing on the

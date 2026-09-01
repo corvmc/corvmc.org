@@ -9,6 +9,7 @@
 	import Table from '$lib/components/ui/Table.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -61,7 +62,7 @@
 	// set fall back to the four hours and one person this form always assumed.
 </script>
 
-<PageHeader title="Shifts" subtitle="Staff" backHref="/staff/volunteer">
+<PageHeader title="Every shift" subtitle="Volunteering" backHref="/staff/volunteer">
 	<NewShiftAction {defaultStart} />
 </PageHeader>
 
@@ -107,7 +108,7 @@
 				{#snippet head()}
 					<th class="whitespace-nowrap">When</th>
 					<th>Role</th>
-					<th class="col-support cell-num">Filled</th>
+					<th class="col-support cell-num">Confirmed</th>
 					<th class="col-extra">Notes</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -135,10 +136,22 @@
 							{/if}
 						</td>
 
-						<td class="col-support cell-num">
-							<span class:text-warning={shift.claimed < shift.capacity}>
-								{shift.claimed}/{shift.capacity}
+						<!--
+							Confirmed against capacity, with anything merely claimed called out
+							beside it. The single `claimed/capacity` this replaced counted both
+							as the same thing, so a shift where nobody had been confirmed read
+							as fully staffed while getting no reminders and never completing
+							(docs/reports/volunteer-workflow-findings.md#a3).
+						-->
+						<td class="col-support cell-num whitespace-nowrap">
+							<span class:text-warning={shift.confirmed < shift.capacity}>
+								{shift.confirmed}/{shift.capacity}
 							</span>
+							{#if shift.claimed > shift.confirmed}
+								<Badge variant="warning" size="xs" class="ml-1">
+									+{shift.claimed - shift.confirmed}
+								</Badge>
+							{/if}
 						</td>
 
 						<td class="col-extra">

@@ -9,7 +9,7 @@ import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
 import { countPortalUnread } from '$lib/server/inbox/portal-service';
 import { countDirectUnread, countPendingRequests } from '$lib/server/inbox/direct-service';
-import { getStatusCounts as getVolunteerStatusCounts } from '$lib/server/volunteer/hour-log-service';
+import { countVolunteerWorkWaiting } from '$lib/server/volunteer/volunteer-signup-service';
 import { countPendingSubmissions } from '$lib/server/event/community-event-service';
 import {
 	countAwaitingModeration,
@@ -116,9 +116,12 @@ export const getStaffLayout = query(async () => {
 		await Promise.all([
 			listForUser(user.id, ['band']).catch(() => []),
 			getUnresolvedCount().catch(() => 0),
-			getVolunteerStatusCounts()
-				.then((c) => c.pending)
-				.catch(() => 0),
+			// Everything waiting on a coordinator, not just the hour logs. The badge used
+			// to count pending hours alone, so under-18 approvals, unconfirmed claims and
+			// shifts that finished without being closed out were all invisible from the
+			// nav (docs/reports/volunteer-workflow-findings.md#d1). The dashboard sums it,
+			// so the number and the rows it stands for cannot disagree.
+			countVolunteerWorkWaiting().catch(() => 0),
 			countPendingSubmissions().catch(() => 0),
 			// Moderation leads the badge: everything in that bucket is invisible to
 			// members while it waits, which is the cost of hiding on a single report.

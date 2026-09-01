@@ -105,7 +105,11 @@ describe('the nav tree', () => {
 	it('keeps the parent in its own childHrefs', () => {
 		const volunteer = staffNavSections.flatMap((s) => s.items).find((i) => i.key === 'volunteer')!;
 		expect(childHrefsFor(volunteer)).toEqual([
+			// The parent's own href leads, which is what holds the group open while you
+			// are on the dashboard — see docs/development/ui-patterns.md#section-dashboards.
 			'/staff/volunteer',
+			'/staff/volunteer/schedule',
+			'/staff/volunteer/hours',
 			'/staff/volunteer/people',
 			'/staff/volunteer/shifts',
 			'/staff/volunteer/roles',

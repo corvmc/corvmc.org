@@ -899,6 +899,88 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- A place on a shift changes hands ---
+	// Three listeners over one payload. The split is audience, not data: staff need to
+	// know a claim is waiting and that a place reopened; the member needs to know they
+	// are actually expected. Before these, a claim produced no signal anywhere — see
+	// docs/reports/volunteer-workflow-findings.md#a3.
+
+	// Claimed (notify staff). In-app only, and fanned out per staffer like the hours
+	// queue, because confirming is queue work with a badge rather than news.
+	domainEvents.on('volunteer.signup_claimed', async ({ data: event }) => {
+		const staff = await listStaffUsers();
+		for (const member of staff) {
+			try {
+				await dispatch({
+					type: 'volunteer_shift_claimed',
+					userId: member.id,
+					userEmail: member.email,
+					title: `${event.userName} claimed ${event.roleName}`,
+					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — needs confirming`,
+					href: '/staff/volunteer'
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.volunteer_shift_claimed',
+					to: member.email
+				});
+			}
+		}
+	});
+
+	// Confirmed (notify member). This is the message that turns a claim into a booking,
+	// and it fires the same way whether they claimed it and staff confirmed, or staff put
+	// them on it directly — from where the member sits those are the same event.
+	domainEvents.on('volunteer.signup_confirmed', async ({ data: event }) => {
+		await dispatch({
+			type: 'volunteer_shift_confirmed',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `You're on for ${event.roleName}`,
+			body: formatShiftWhen(event.startsAt, event.endsAt),
+			href: '/member/volunteer',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `You're on for ${event.roleName}`,
+					heading: "You're on the roster",
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: `You're confirmed for ${event.roleName} on ${formatShiftWhen(event.startsAt, event.endsAt)}. We'll send a reminder the day before.`
+						},
+						{
+							text: "If something comes up, drop the shift from your volunteering page so somebody else can take it — that's much more useful to us than a no-show."
+						}
+					],
+					cta: { url: `${siteUrl}/member/volunteer`, label: 'View my shifts' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// Dropped (notify staff). The useful half is that a place reopened.
+	domainEvents.on('volunteer.signup_cancelled', async ({ data: event }) => {
+		const staff = await listStaffUsers();
+		for (const member of staff) {
+			try {
+				await dispatch({
+					type: 'volunteer_shift_dropped',
+					userId: member.id,
+					userEmail: member.email,
+					title: `${event.userName} dropped ${event.roleName}`,
+					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — a place is open again`,
+					href: '/staff/volunteer'
+				});
+			} catch (err) {
+				captureException(err, {
+					event: 'notification.volunteer_shift_dropped',
+					to: member.email
+				});
+			}
+		}
+	});
+
 	// --- Shift reminder, the day before (notify member) ---
 	// The one notification here that has to reach somebody who isn't looking at
 	// the site: they agreed to work tomorrow and the room is counting on it.

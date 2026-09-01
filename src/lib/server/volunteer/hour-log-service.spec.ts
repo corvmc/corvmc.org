@@ -275,6 +275,61 @@ describe('HourLogService', () => {
 			).rejects.toThrow(HourLogValidationError);
 		});
 
+		/**
+		 * The staff door, and the sentence it exists to make true. Both the help article
+		 * and this service's own backdate error tell a member to "ask staff to add
+		 * anything older" — and until `enteredByUserId` existed, staff could not add
+		 * anything at all (docs/reports/volunteer-workflow-findings.md#b1).
+		 */
+		describe('entered by staff', () => {
+			const STAFF_ID = 'staff-1';
+
+			it('accepts a date well outside the member backdate window', async () => {
+				await expect(
+					submitHours(
+						USER_ID,
+						validSubmission({ workedOn: daysAgo(VOLUNTEER_BACKDATE_LIMIT_DAYS * 2) }),
+						{ enteredByUserId: STAFF_ID }
+					)
+				).resolves.toBeDefined();
+			});
+
+			it('lands approved and attributed to the staffer, not in their own queue', async () => {
+				await submitHours(USER_ID, validSubmission(), { enteredByUserId: STAFF_ID });
+
+				expect(insertValues).toHaveBeenCalledWith(
+					expect.objectContaining({
+						status: 'approved',
+						reviewedByUserId: STAFF_ID
+					})
+				);
+			});
+
+			it('emits nothing — there is no log waiting for anybody to look at', async () => {
+				await submitHours(USER_ID, validSubmission(), { enteredByUserId: STAFF_ID });
+				expect(emit).not.toHaveBeenCalled();
+			});
+
+			it('still refuses a future date, whoever is typing', async () => {
+				const tomorrow = new Date();
+				tomorrow.setDate(tomorrow.getDate() + 1);
+				await expect(
+					submitHours(USER_ID, validSubmission({ workedOn: tomorrow.toISOString().slice(0, 10) }), {
+						enteredByUserId: STAFF_ID
+					})
+				).rejects.toThrow(HourLogValidationError);
+			});
+
+			it('leaves the member path exactly as it was', async () => {
+				await expect(
+					submitHours(
+						USER_ID,
+						validSubmission({ workedOn: daysAgo(VOLUNTEER_BACKDATE_LIMIT_DAYS * 2) })
+					)
+				).rejects.toThrow(HourLogValidationError);
+			});
+		});
+
 		it('rejects a malformed date', async () => {
 			await expect(
 				submitHours(USER_ID, validSubmission({ workedOn: 'last Tuesday' }))
