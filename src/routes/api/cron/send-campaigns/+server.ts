@@ -2,7 +2,6 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { processDueCampaigns } from '$lib/server/marketing/campaign-service';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
 
 /**
  * Cron endpoint for sending scheduled campaigns.
@@ -20,10 +19,6 @@ export const POST: RequestHandler = async ({ request }) => {
 	const auth = request.headers.get('Authorization');
 	if (auth !== `Bearer ${secret}`) {
 		throw error(401, 'Unauthorized');
-	}
-
-	if (!(await isFeatureEnabled('emailMarketing'))) {
-		return json({ skipped: 'feature disabled', processed: 0 });
 	}
 
 	const processed = await processDueCampaigns();

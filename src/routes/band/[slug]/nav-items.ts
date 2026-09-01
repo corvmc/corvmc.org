@@ -55,16 +55,12 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 		{ key: 'members', label: 'Members', href: resolve('/band/[slug]/members', { slug }) }
 	];
 
-	// Every member reads announcements; only owner and admin post, which the page
-	// itself gates. Flagged, because the fan-out behind Publish is not built yet
-	// and a band emailing its roster is not a thing to turn on by accident.
-	if (input.features.announcements) {
-		items.push({
-			key: 'announcements',
-			label: 'Announcements',
-			href: resolve('/band/[slug]/announcements', { slug })
-		});
-	}
+	// Announcements used to sit here behind an `announcements` flag, whose comment
+	// said the fan-out behind Publish was unbuilt. It has been built since —
+	// `announcement.published` has a listener with a latch — but the module is not
+	// launched, so the nav entry is absent and the route answers by direct URL
+	// only. Launching is putting this row back; see
+	// docs/plans/feature-flag-retirement.md.
 
 	// Reservations used to sit behind a `bandReservations` flag, retired on main
 	// in #238's wake — band booking is simply on now.

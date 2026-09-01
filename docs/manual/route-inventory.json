@@ -80,6 +80,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/directory/instructors",
+		"panel": "public"
+	},
+	{
 		"route": "/directory/members/[id]",
 		"panel": "public"
 	},
@@ -133,6 +137,10 @@
 	},
 	{
 		"route": "/member/directory/bands/[slug]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/directory/instructors",
 		"panel": "member"
 	},
 	{

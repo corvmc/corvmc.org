@@ -11,12 +11,6 @@ vi.mock('$lib/server/marketing/subscriber-service', () => ({
 	__esModule: true
 }));
 
-const mockIsFeatureEnabled = vi.fn(async () => true);
-
-vi.mock('$lib/server/feature-flags', () => ({
-	isFeatureEnabled: (..._args: unknown[]) => mockIsFeatureEnabled()
-}));
-
 vi.mock('$env/dynamic/private', () => ({
 	env: { POSTMARK_WEBHOOK_TOKEN: 'hook-secret' }
 }));
@@ -24,7 +18,6 @@ vi.mock('$env/dynamic/private', () => ({
 beforeEach(() => {
 	vi.clearAllMocks();
 	mockSuppressByEmail.mockResolvedValue(true);
-	mockIsFeatureEnabled.mockResolvedValue(true);
 });
 
 // ---------------------------------------------------------------------------
@@ -96,13 +89,5 @@ describe('POST /api/webhooks/postmark/events', () => {
 
 		expect(mockSuppressByEmail).not.toHaveBeenCalled();
 		expect(await res.json()).toMatchObject({ skipped: 'transient' });
-	});
-
-	it('skips when the email marketing feature is disabled', async () => {
-		mockIsFeatureEnabled.mockResolvedValue(false);
-		const res = await POST(req({ RecordType: 'SpamComplaint', Email: 'a@b.com' }));
-
-		expect(mockSuppressByEmail).not.toHaveBeenCalled();
-		expect(await res.json()).toMatchObject({ skipped: 'feature disabled' });
 	});
 });

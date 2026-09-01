@@ -24,6 +24,32 @@
 		onsuccess?: () => void;
 		[key: string]: unknown;
 	} = $props();
+
+	/**
+	 * What the counter counted. Empty until they type, so the box does not open
+	 * pre-filled with the number they are supposed to be checking — a default of
+	 * `onHand` is an invitation to confirm the system rather than the shelf.
+	 *
+	 * Typed as a number, not a string: `bind:value` on an `<input type="number">`
+	 * hands back a number (and `undefined` for an empty box), so treating this as
+	 * text threw `.trim is not a function` on the first keystroke and took the
+	 * whole page down with it.
+	 */
+	let counted = $state<number | undefined>(undefined);
+
+	/**
+	 * The ledger stores the *difference*, and it still does: this is arithmetic
+	 * moved off the operator and into the form.
+	 *
+	 * Counting a shelf produces a total, not a delta. Asking for the delta means
+	 * every count is a subtraction done in the head, in a storage room, a few
+	 * hundred times — and the sign is the easy half to get wrong, which writes a
+	 * correction in exactly the wrong direction and doubles the error it was
+	 * meant to fix.
+	 */
+	const delta = $derived(
+		counted == null || !Number.isFinite(counted) ? null : Math.trunc(counted) - onHand
+	);
 </script>
 
 <Action
@@ -44,11 +70,37 @@
 		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 			<p>The system currently shows <strong>{onHand}</strong> on hand.</p>
 			<p class="mt-1 opacity-70">
-				Enter the difference, not the new total — a negative number if there are fewer than we
-				thought. The correction is recorded as its own entry.
+				Enter what you counted. The difference is recorded as its own entry, so the discrepancy
+				stays on the record rather than the total being quietly overwritten.
 			</p>
 		</div>
-		<Field field={fields.delta} type="number" label="Difference" />
+		<!--
+			Named even though it is not a form field. `correctStock` never sees
+			`counted` — Zod strips the unknown key and the ledger takes the derived
+			delta below — but without a name the input renders `name=""`, and a
+			`FormField` label is a `<legend>` naming the fieldset rather than a
+			`<label for>`, so an unnamed one is reachable by neither name nor label.
+			See the note at `e2e/staff-groups.e2e.ts`.
+		-->
+		<Field
+			name="counted"
+			type="number"
+			label="Counted on the shelf"
+			bind:value={counted}
+			min="0"
+			issues={fields.delta.issues() ?? null}
+		/>
+		{#if delta !== null && delta !== 0}
+			<p class="text-sm" class:text-error={delta < 0}>
+				{delta > 0 ? 'Adding' : 'Removing'}
+				{Math.abs(delta)} — {onHand} on record, {counted} counted.
+			</p>
+		{:else if delta === 0}
+			<p class="text-subtle text-sm">Matches the record. Submitting will change nothing.</p>
+		{/if}
+		<!-- The service takes a delta and keeps taking one; only the question
+		     asked of the operator changed. -->
+		<input {...fields.delta.as('number', delta === null ? '' : String(delta))} type="hidden" />
 		<Field field={fields.notes} type="textarea" label="Why" />
 	{/snippet}
 </Action>

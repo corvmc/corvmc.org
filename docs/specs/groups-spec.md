@@ -1347,7 +1347,7 @@ that seam rather than translating it. Everything else passes the `slug` it alrea
 
 ## Feature flags and rollout
 
-Four flags: `groups`, `groupEvents`, `groupFiles`, `announcements`. The last two cover bands as well as groups, since both capabilities key off group membership and bands are groups.
+**All four flags are retired.** `groups`, `groupEvents` and `announcements` were removed with the rest of the flag system; `groupFiles` was registered for phase 8 and retired unused when phase 8 was deferred. The module was **unlinked rather than launched**: the routes answer unconditionally and the nav entries that reached them — the member panel's "My Groups" group and the band panel's Announcements row — were removed instead. Launching is putting those two entries back. See [the ledger](../plans/feature-flag-retirement.md); Documents gets a feature branch when it is built, not a flag.
 
 A flag must be registered in **three** places: the `FeatureFlag` union and `ALL_FLAGS`, both in `src/lib/server/feature-flags.ts`, and a `feature.`-prefixed entry in `DEFAULTS` in `src/lib/server/site-config/site-config-service.ts`. Missing the third makes `config()` _throw_ `Unknown site config key`, not return false — but `feature-flags.spec.ts` now asserts the set both ways, so a half-registered flag fails CI rather than reaching production. Register all three and the test is silent.
 

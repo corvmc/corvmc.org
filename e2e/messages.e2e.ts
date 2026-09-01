@@ -100,14 +100,14 @@ test.describe('member messaging', () => {
 		// `pressSequentially`, not `fill`: bits-ui's Combobox opens on real key
 		// events, and a programmatic value set leaves it closed with its results
 		// list unrendered.
-		const picker = page.getByPlaceholder('Search members by name');
+		const picker = page.locator('input[role="combobox"]');
 		await picker.click();
 		await picker.pressSequentially('E2E Message Recip');
 		await page.getByRole('option', { name: new RegExp(SEED_MSG_RECIPIENT_NAME) }).click(WAIT);
 		// SearchSelect swaps the input for a badge once the pick commits; waiting for
 		// that is how the test knows the choice reached the form before submitting.
 		await expect(picker).toHaveCount(0, WAIT);
-		await page.getByPlaceholder('Say who you are').fill(body);
+		await page.locator('textarea[name="body"]').fill(body);
 		await page.getByRole('button', { name: 'Send request' }).click();
 
 		await expect(page.getByRole('link', { name: new RegExp(SEED_MSG_RECIPIENT_NAME) })).toBeVisible(

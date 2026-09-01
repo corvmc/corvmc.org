@@ -1,10 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { searchArticles, resolveUserHelpRole } from '$lib/server/help/help-service';
-import { requireFeature } from '$lib/server/feature-flags';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
-	await requireFeature('helpArticles');
 	if (!locals.user) return error(401, 'Not authenticated');
 
 	const q = url.searchParams.get('q')?.trim();

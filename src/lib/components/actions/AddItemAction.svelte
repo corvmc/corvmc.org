@@ -38,7 +38,16 @@
 	 * restock Blues Deluxes to a par level — so the fields appear only when they
 	 * can be acted on rather than sitting greyed out.
 	 */
-	let kind = $state<'serialized' | 'bulk'>('bulk');
+	/**
+	 * Defaulted to `serialized`, and defaulted here rather than in the schema.
+	 *
+	 * A stocktake is overwhelmingly one-record-per-thing — amps, mics, cables on
+	 * a hook — and `bulk` opened the reorder fields, so the common case was the
+	 * one that needed correcting every time. The schema cannot carry this: an
+	 * unchecked box is simply absent from `FormData`, so a schema `.default()`
+	 * would win over anything the operator did and could not be turned off.
+	 */
+	let kind = $state<'serialized' | 'bulk'>('serialized');
 
 	const kindLabels: Record<(typeof itemKinds)[number], string> = {
 		serialized: 'Serialized — one record per physical unit',
@@ -85,10 +94,13 @@
 			/>
 			<Field field={fields.gtin} type="text" label="Barcode (UPC/EAN)" />
 		</div>
+		<!-- Checked by default: most of what CMC owns is there to be borrowed, and
+		     "consumable" is the exception a person opts into. -->
 		<Field
 			field={fields.isLoanable}
 			type="checkbox"
 			label="Members can borrow this"
+			value={true}
 			description="Leave off for something that gets used up — that is what makes an item a consumable."
 		/>
 		{#if kind === 'bulk'}

@@ -69,7 +69,7 @@ test.describe('staff groups', () => {
 		// `pressSequentially`, not `fill`: bits-ui's Combobox opens on real key
 		// events, and a programmatic value set leaves it closed with its results
 		// list unrendered.
-		const picker = page.getByPlaceholder('Search by name or email...');
+		const picker = page.locator('input[role="combobox"]');
 		await picker.click();
 		await picker.pressSequentially(SEED_TARGET_NAME.slice(0, 12));
 		await page

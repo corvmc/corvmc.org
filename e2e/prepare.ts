@@ -56,6 +56,7 @@ import { seedSuggestions } from './fixtures/seed-suggestions';
 import { seedMessaging } from './fixtures/seed-messaging';
 import { seedInboxAwaiting } from './fixtures/seed-inbox-awaiting';
 import { seedDirectoryEntries } from './fixtures/seed-directory-entries';
+import { seedInstructors } from './fixtures/seed-instructors';
 
 // Before the build, the seed, and the five minutes they cost: refuse outright if
 // another suite is already running on this machine. Two of them no longer share
@@ -113,6 +114,19 @@ await seedInboxAwaiting();
 // committee's applicant is its role target.
 await seedGroups();
 await seedFeatureFlags();
+// Before the sweep, not after. It writes its own `directory_entry` rows — one
+// public, one members-only — and the sweep only claims users that have none, as
+// its own note says: "a fixture that needs a public member sets its own entry".
+//
+// Position matters beyond correctness. `checkpointE2eDatabase()` below has to run
+// once every seed's miniflare has exited, and each `withPlatformEnv` call is one
+// more workerd start and dispose. Slotting a new one in as the *last* writer
+// narrowed that window and the preview server then failed to start outright —
+// `SENTRY_DO SQLite failed; database is locked: SQLITE_BUSY_RECOVERY`, taking
+// every test in the suite with it. Keeping the directory sweep last leaves the
+// ordering exactly as it is on main.
+await seedInstructors();
+
 // Last of the data fixtures: sweeps every user and group the ones above created
 // into `directory_entry`, which is what the directory reads.
 await seedDirectoryEntries();

@@ -17,7 +17,7 @@ reports results that are simply wrong.
 | Command                   | Gate                                                       |
 | ------------------------- | ---------------------------------------------------------- |
 | `pnpm check`              | svelte-check — the type gate                               |
-| `pnpm lint:changed`       | prettier + eslint vs `origin/main` (what PR CI runs)       |
+| `pnpm lint:changed`       | prettier + eslint vs `BASE_REF` (default `origin/main`)    |
 | `pnpm lint`               | the whole tree, including markdown — run before committing |
 | `pnpm test:unit -- --run` | vitest, one shot                                           |
 | `pnpm test:e2e`           | playwright — add `--workers=1` locally                     |
@@ -54,6 +54,15 @@ These mirror the CI jobs in `.github/workflows/ci.yml`, so a green local gate is
 Anything that adds schema or spans several files follows the nine phases in
 `docs/development/conventions.md#the-feature-checklist`. A small, single-file change just gets made
 and gated.
+
+**Where the work lands is the first decision, not the last.** A member-facing or public feature that
+needs more than one PR to become usable goes on a long-lived `feature/<slug>` branch: phases are PRs
+into that branch, squash-merged as they pass, and `main` sees the feature once, working.
+`/feature-branch` carries the sequences and
+`docs/development/conventions.md#long-lived-feature-branches` the reasoning — in particular what to
+do about migrations after merging `main`, which is not what you would guess. Staff-only surfaces,
+schema and refactors still go straight to `main`; a half-built admin page is a normal intermediate
+state. This replaced feature flags, which existed only to let half-built work sit on `main`.
 
 The finishing steps that are easiest to skip: extend `scripts/seed-dev.ts` so the feature has
 realistic local data, add its row to the feature catalog (`docs/reports/feature-catalog.md`), and run

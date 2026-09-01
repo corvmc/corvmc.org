@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { BookerType } from '$lib/server/db/schema/reservation';
 	import { untrack } from 'svelte';
 	import {
 		getAvailableDates,
@@ -13,7 +14,8 @@
 	let {
 		isSustaining = false,
 		needsPhone = false,
-		reloadToken = 0
+		reloadToken = 0,
+		bookerType = undefined
 	}: {
 		isSustaining?: boolean;
 		/**
@@ -23,6 +25,12 @@
 		needsPhone?: boolean;
 		/** Bump to force a fresh reload of availability (e.g. after a slot conflict). */
 		reloadToken?: number;
+		/**
+		 * Who is booking, which decides the shortest bookable end time. Left
+		 * undefined the server assumes `'user'`, so every existing caller keeps the
+		 * member floor it had.
+		 */
+		bookerType?: BookerType;
 	} = $props();
 
 	const tz = getLocalTimeZone();
@@ -147,7 +155,7 @@
 		if (st) {
 			endTimeOptions = null;
 			const d = untrack(() => date);
-			getReservationEndTimes({ date: d, startTime: st }).then((opts) => {
+			getReservationEndTimes({ date: d, startTime: st, bookerType }).then((opts) => {
 				if (gen === endGen) endTimeOptions = opts;
 			});
 		} else {

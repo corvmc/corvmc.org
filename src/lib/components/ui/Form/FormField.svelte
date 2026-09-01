@@ -231,6 +231,54 @@
 				<IconPencilOff class="size-5 opacity-20" />
 			</p>
 		{/if}
+		<!--
+		The two `select` branches sit above `children` on purpose, and this order is
+		load-bearing. `children` used to win, so a `type="select"` field that passed
+		`<option>`s as children rendered them with no `<select>` around them: bare
+		text, no control, and nothing submitted. Two call sites shipped that way —
+		the item Category field and `CreateLoanAction`, whose own comment claimed the
+		empty-select bug was already fixed. Custom-input mode is still reachable for
+		a select: children now render *inside* the control, after any `options`.
+	-->
+	{:else if type === 'select' && rest.multiple}
+		<input
+			type="hidden"
+			name={resolvedName}
+			value={JSON.stringify(Array.isArray(value) ? value : [])}
+		/>
+		<select
+			class="select w-full"
+			class:ghost={readonly}
+			multiple
+			disabled={pending || readonly}
+			id={resolvedId}
+			onchange={(e) => {
+				const sel = e.currentTarget;
+				value = Array.from(sel.selectedOptions, (o) => o.value);
+				const hidden = sel.previousElementSibling as HTMLInputElement;
+				hidden.value = JSON.stringify(value);
+			}}
+		>
+			{#each selectOptions as option (option.value)}
+				<option
+					value={option.value}
+					selected={Array.isArray(value) && value.includes(option.value)}
+				>
+					{option.label}
+				</option>
+			{/each}
+			{@render children?.()}
+		</select>
+	{:else if type === 'select'}
+		<Select class="w-full {readonly ? 'ghost' : ''}" {...selectProps} bind:value>
+			{#if rest.placeholder}
+				<option value="">{rest.placeholder}</option>
+			{/if}
+			{#each selectOptions as option (option.value)}
+				<option value={option.value}>{option.label}</option>
+			{/each}
+			{@render children?.()}
+		</Select>
 	{:else if children}
 		{@render children()}
 	{:else if input}
@@ -285,43 +333,6 @@
 			replaceLabel={rest.replaceLabel}
 			disabled={pending || readonly}
 		/>
-	{:else if type === 'select' && rest.multiple}
-		<input
-			type="hidden"
-			name={resolvedName}
-			value={JSON.stringify(Array.isArray(value) ? value : [])}
-		/>
-		<select
-			class="select w-full"
-			class:ghost={readonly}
-			multiple
-			disabled={pending || readonly}
-			id={resolvedId}
-			onchange={(e) => {
-				const sel = e.currentTarget;
-				value = Array.from(sel.selectedOptions, (o) => o.value);
-				const hidden = sel.previousElementSibling as HTMLInputElement;
-				hidden.value = JSON.stringify(value);
-			}}
-		>
-			{#each selectOptions as option (option.value)}
-				<option
-					value={option.value}
-					selected={Array.isArray(value) && value.includes(option.value)}
-				>
-					{option.label}
-				</option>
-			{/each}
-		</select>
-	{:else if type === 'select'}
-		<Select class="w-full {readonly ? 'ghost' : ''}" {...selectProps} bind:value>
-			{#if rest.placeholder}
-				<option value="">{rest.placeholder}</option>
-			{/if}
-			{#each selectOptions as option (option.value)}
-				<option value={option.value}>{option.label}</option>
-			{/each}
-		</Select>
 	{:else if field && fieldAttrs}
 		<input
 			class="input w-full"

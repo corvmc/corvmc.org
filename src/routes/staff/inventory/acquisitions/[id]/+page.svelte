@@ -4,7 +4,7 @@
 	import { getStaffAcquisitionDetail, editAcquisition } from '$lib/remote/inventory.remote';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { Field, MoneyField } from '$lib/components/ui/Form';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -17,8 +17,13 @@
 	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
 	import { RecordForm8283Action, MarkReimbursedAction } from '$lib/components/actions';
 	import { resolve } from '$app/paths';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
-	import { acquisitionKindLabels, stockReasonLabels } from '$lib/config';
+	import { formatCents, formatDateShort, toLocalDate } from '$lib/utils/format';
+	import {
+		acquisitionKinds,
+		acquisitionKindLabels,
+		stockReasonLabels,
+		type AcquisitionKind
+	} from '$lib/config';
 	import { toast } from 'svelte-sonner';
 
 	/**
@@ -38,6 +43,21 @@
 
 	let id = $derived(page.params.id!);
 	const data = $derived(await getStaffAcquisitionDetail(id));
+
+	/**
+	 * The kind currently selected, which drives which disclosure fields show.
+	 * Seeded from the stored value and owned by the select from then on.
+	 */
+	// svelte-ignore state_referenced_locally
+	let kind = $state<AcquisitionKind>(data.kind);
+
+	/**
+	 * Only a gift owes the FASB ASU 2020-07 disclosure. An allow-list rather
+	 * than `!== 'purchase'`, which was correct with three kinds and wrong the
+	 * moment `opening_balance` arrived — it would ask how the fair value of a
+	 * decade-old amp was determined and file the answer as a gift in kind.
+	 */
+	const isGift = $derived(kind === 'donation' || kind === 'grant');
 
 	let paidByUserId = $state('');
 	let paidByName = $state('');
@@ -113,12 +133,37 @@
 		<Form remote={editAcquisition} guard successToast="Acquisition updated">
 			<input {...fields.id.as('hidden', id)} />
 			<InfoCard title="Details">
-				<Field
-					field={fields.sourceName}
-					type="text"
-					label={data.kind === 'purchase' ? 'Supplier' : 'Donor / grantor'}
-					value={data.sourceName ?? ''}
-				/>
+				<!--
+					Kind and date are editable because both are guessed at entry, and a
+					stocktake guesses them a few hundred times. A wrong kind is the
+					costly one: it decides whether the row lands in this year's spend,
+					in the gifts-in-kind report, or in neither, and the only previous
+					fix was to delete the acquisition and re-enter it — which means
+					re-entering every unit that hangs off it.
+				-->
+				<div class="grid grid-cols-2 gap-3">
+					<Field
+						field={fields.kind}
+						type="select"
+						label="How it arrived"
+						bind:value={kind}
+						options={acquisitionKinds.map((k) => ({ value: k, label: acquisitionKindLabels[k] }))}
+					/>
+					<Field
+						field={fields.occurredAt}
+						type="date"
+						label="When it arrived"
+						value={toLocalDate(data.occurredAt)}
+					/>
+				</div>
+				{#if kind !== 'opening_balance'}
+					<Field
+						field={fields.sourceName}
+						type="text"
+						label={kind === 'purchase' ? 'Supplier' : 'Donor / grantor'}
+						value={data.sourceName ?? ''}
+					/>
+				{/if}
 				<Field
 					field={fields.reference}
 					type="text"
@@ -126,12 +171,11 @@
 					value={data.reference ?? ''}
 				/>
 
-				{#if data.kind !== 'purchase'}
-					<Field
+				{#if isGift}
+					<MoneyField
 						field={fields.fairValueCents}
-						type="number"
-						label="Total fair value (cents)"
-						value={data.fairValueCents ?? undefined}
+						label="Total fair value"
+						value={data.fairValueCents}
 					/>
 					<Field
 						field={fields.fairValueBasis}

@@ -83,20 +83,21 @@ test.describe('inbox awaiting reply', () => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/inbox/${SEED_AWAITING_THREAD_ID}`);
 
-		await expect(page.getByText(/Waiting on a reply since/)).toBeVisible();
+		// The pair of buttons is the marker's state: only one is offered at a time.
+		await expect(page.getByRole('button', { name: 'Needs a reply' })).toBeVisible();
 		const before = await navBadgeCount(page);
 
 		await page.getByRole('button', { name: 'Needs a reply' }).click();
 
 		// The thread is back in the queue, and the badge counts it again.
-		await expect(page.getByText(/Waiting on a reply since/)).toHaveCount(0);
+		await expect(page.getByRole('button', { name: 'Needs a reply' })).toHaveCount(0);
 		await expect
 			.poll(() => navBadgeCount(page), { timeout: 10000, message: 'nav badge' })
 			.toBe(before + 1);
 
 		// And back again, which is the manual half of the marker.
 		await page.getByRole('button', { name: 'Awaiting reply' }).click();
-		await expect(page.getByText(/Waiting on a reply since/)).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Needs a reply' })).toBeVisible();
 		await expect
 			.poll(() => navBadgeCount(page), { timeout: 10000, message: 'nav badge' })
 			.toBe(before);

@@ -128,7 +128,9 @@ const {
 	addSubscriber,
 	removeSubscriber,
 	bulkAddMembers,
-	unsubscribe
+	unsubscribe,
+	BuiltInAudienceError,
+	AudienceValidationError
 } = await import('./audience-service');
 
 // ---------------------------------------------------------------------------
@@ -170,19 +172,19 @@ describe('createAudience', () => {
 
 	it('throws when name is too long', async () => {
 		await expect(createAudience({ name: 'x'.repeat(256), slug: 'test' })).rejects.toThrow(
-			'name too long'
+			AudienceValidationError
 		);
 	});
 
 	it('throws when slug is too long', async () => {
 		await expect(createAudience({ name: 'OK', slug: 'x'.repeat(101) })).rejects.toThrow(
-			'slug too long'
+			AudienceValidationError
 		);
 	});
 
 	it('throws when slug has invalid characters', async () => {
 		await expect(createAudience({ name: 'OK', slug: 'Bad Slug!' })).rejects.toThrow(
-			'lowercase alphanumeric'
+			AudienceValidationError
 		);
 	});
 });
@@ -197,7 +199,7 @@ describe('updateAudience', () => {
 
 	it('validates slug format on update', async () => {
 		await expect(updateAudience('aud-1', { slug: 'INVALID!' })).rejects.toThrow(
-			'lowercase alphanumeric'
+			AudienceValidationError
 		);
 	});
 });
@@ -263,32 +265,32 @@ describe('removeSubscriber', () => {
 describe('built-in audience guardrails', () => {
 	it('refuses to delete a built-in audience', async () => {
 		builtInAudience();
-		await expect(deleteAudience('aud-sys')).rejects.toThrow('built-in audience');
+		await expect(deleteAudience('aud-sys')).rejects.toThrow(BuiltInAudienceError);
 		expect(deleteCalled).toBe(false);
 	});
 
 	it('refuses to add a subscriber to a built-in audience', async () => {
 		builtInAudience();
-		await expect(addSubscriber('aud-sys', 'sub-1')).rejects.toThrow('built-in audience');
+		await expect(addSubscriber('aud-sys', 'sub-1')).rejects.toThrow(BuiltInAudienceError);
 		expect(insertedRows).toHaveLength(0);
 	});
 
 	it('refuses to remove a subscriber from a built-in audience', async () => {
 		builtInAudience();
-		await expect(removeSubscriber('aud-sys', 'sub-1')).rejects.toThrow('built-in audience');
+		await expect(removeSubscriber('aud-sys', 'sub-1')).rejects.toThrow(BuiltInAudienceError);
 		expect(deleteCalled).toBe(false);
 	});
 
 	it('refuses to bulk-add members to a built-in audience', async () => {
 		builtInAudience();
-		await expect(bulkAddMembers('aud-sys')).rejects.toThrow('built-in audience');
+		await expect(bulkAddMembers('aud-sys')).rejects.toThrow(BuiltInAudienceError);
 		expect(insertedRows).toHaveLength(0);
 	});
 
 	it('refuses to change a built-in audience slug', async () => {
 		builtInAudience();
 		await expect(updateAudience('aud-sys', { slug: 'renamed' })).rejects.toThrow(
-			'slug of a built-in audience'
+			BuiltInAudienceError
 		);
 		expect(updateData).toHaveLength(0);
 	});
@@ -296,7 +298,7 @@ describe('built-in audience guardrails', () => {
 	it('refuses to open a built-in audience to public opt-in', async () => {
 		builtInAudience();
 		await expect(updateAudience('aud-sys', { allowOptIn: true })).rejects.toThrow(
-			'cannot accept public opt-in'
+			BuiltInAudienceError
 		);
 		expect(updateData).toHaveLength(0);
 	});

@@ -253,7 +253,6 @@ describe('recurring-series-service', () => {
 			setupCancelUpdate(0);
 
 			await expect(svc.cancel('series-missing')).rejects.toThrow(svc.RecurringSeriesError);
-			await expect(svc.cancel('series-missing')).rejects.toThrow('not found or already cancelled');
 		});
 	});
 

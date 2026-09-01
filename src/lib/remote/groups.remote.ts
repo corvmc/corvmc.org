@@ -5,7 +5,6 @@ import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupJoinPolicies } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { requireGroupRole } from '$lib/server/group/group-context';
-import { isFeatureEnabled, requireFeature } from '$lib/server/feature-flags';
 import { directoryVisibilities } from '$lib/server/db/schema/directory';
 import { getMembers, partitionByStatus } from '$lib/server/band/band-service';
 import {
@@ -42,7 +41,6 @@ import {
  */
 
 async function requireGroupsStaff() {
-	await requireFeature('groups');
 	return requireStaff();
 }
 
@@ -189,7 +187,6 @@ export const reactivateGroup = form(z.object({ groupId: z.string().min(1) }), as
  * could join, in a single round trip. See `listMemberGroups`.
  */
 export const getMemberGroups = query(async () => {
-	await requireFeature('groups');
 	const user = requireUser();
 	return listMemberGroups(user.id);
 });
@@ -204,8 +201,6 @@ export const getMemberGroups = query(async () => {
  * phase 4 set out to end.
  */
 export const getMemberGroup = query(z.string(), async (slug) => {
-	await requireFeature('groups');
-
 	// A non-member — including someone whose application is still `'requested'`,
 	// which `requireGroupRole` resolves nothing for — is sent back to the index
 	// rather than shown an empty shell or an error boundary. A 404 still 404s:
@@ -226,19 +221,12 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	// belong here rather than in a query of the tab's own: a club is small by
 	// construction, and a per-tab query fanned out of a section component is
 	// exactly what that checklist exists to stop.
-	//
-	// The flag is resolved here too. A tab whose contents 403 is worse than no
-	// tab, and the page cannot ask the server itself without a second query.
-	const [announcementsEnabled, sessionsEnabled] = await Promise.all([
-		isFeatureEnabled('announcements'),
-		isFeatureEnabled('groupEvents')
-	]);
 	const [roster, announcements, notifyAnnouncements, sessions] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
-		!announcementsEnabled ? [] : canManage ? listForManager(group.id) : listPublished(group.id),
+		canManage ? listForManager(group.id) : listPublished(group.id),
 		// Null for a staff non-member — no roster row, so nothing to mute.
-		announcementsEnabled ? getMuteState(group.id, ctx.user.id) : null,
-		sessionsEnabled ? listGroupSessions(group.id) : []
+		getMuteState(group.id, ctx.user.id),
+		listGroupSessions(group.id)
 	]);
 
 	return {
@@ -254,10 +242,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		},
 		role,
 		canManage,
-		announcementsEnabled,
 		announcements,
 		notifyAnnouncements,
-		sessionsEnabled,
 		sessions: sessions.map((e) => ({
 			id: e.id,
 			title: e.title,
@@ -293,7 +279,6 @@ export const getMemberGroup = query(z.string(), async (slug) => {
  * no role yet.
  */
 export const joinGroupForm = form(z.object({ groupId: z.string().min(1) }), async (data) => {
-	await requireFeature('groups');
 	const user = requireUser();
 	try {
 		const { status } = await joinGroup(data.groupId, user.id);
@@ -305,7 +290,6 @@ export const joinGroupForm = form(z.object({ groupId: z.string().min(1) }), asyn
 
 /** Leave a program, or withdraw an application to one. Your own row, always. */
 export const leaveGroupForm = form(z.object({ groupId: z.string().min(1) }), async (data) => {
-	await requireFeature('groups');
 	const user = requireUser();
 	try {
 		await leaveGroup(data.groupId, user.id);
@@ -321,7 +305,6 @@ const applicationSchema = z.object({
 });
 
 export const approveApplicationForm = form(applicationSchema, async (data) => {
-	await requireFeature('groups');
 	// Admin, and the group comes from the ref rather than from the member id:
 	// the id is the client's, and an admin's authority stops at their own group.
 	const { group } = await requireGroupRole({ slug: data.slug }, 'admin');
@@ -334,7 +317,6 @@ export const approveApplicationForm = form(applicationSchema, async (data) => {
 });
 
 export const declineApplicationForm = form(applicationSchema, async (data) => {
-	await requireFeature('groups');
 	const { group } = await requireGroupRole({ slug: data.slug }, 'admin');
 	try {
 		await declineApplication(data.memberId, group.id);
@@ -357,7 +339,6 @@ export const declineApplicationForm = form(applicationSchema, async (data) => {
  * and a member see the same list.
  */
 export const getPublicGroups = query(async () => {
-	await requireFeature('groups');
 	return listPublicGroups();
 });
 
@@ -371,8 +352,6 @@ export const getPublicGroups = query(async () => {
  * the Join button becomes a sign-in prompt that returns them here.
  */
 export const getPublicGroupPage = query(z.string(), async (slug) => {
-	await requireFeature('groups');
-
 	const group = await getPublicGroup(slug);
 	if (!group) error(404, 'Group not found');
 

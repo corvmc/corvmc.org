@@ -5,7 +5,6 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { requireStaff } from '$lib/server/authorization';
-import { requireFeature } from '$lib/server/feature-flags';
 import {
 	listAudiences,
 	getAudience,
@@ -48,7 +47,6 @@ import { audience } from '$lib/server/db/schema/marketing';
 // ---------------------------------------------------------------------------
 
 export const getPublicAudienceBySlug = query(z.string(), async (slug) => {
-	await requireFeature('emailMarketing');
 	const aud = await getAudienceBySlug(slug);
 	if (!aud || !aud.allowOptIn) throw error(404, 'List not found');
 	return {
@@ -69,7 +67,6 @@ export const subscribeToAudience = form(
 		turnstileToken: z.string().min(1)
 	}),
 	async (data, issue) => {
-		await requireFeature('emailMarketing');
 		const ip = getRequestEvent().request.headers.get('CF-Connecting-IP');
 		if (!(await verifyTurnstile(data.turnstileToken, ip))) {
 			invalid(issue.turnstileToken('Verification failed. Please try again.'));
@@ -97,7 +94,6 @@ export const subscribeToAudience = form(
  * only happens on an explicit POST.
  */
 export const getUnsubscribeInfo = query(z.string(), async (token) => {
-	await requireFeature('emailMarketing');
 	const decoded = verifyUnsubscribeToken(token);
 	if (!decoded) return { valid: false as const, audienceName: null };
 
@@ -119,7 +115,6 @@ export const getUnsubscribeInfo = query(z.string(), async (token) => {
 export const confirmUnsubscribe = form(
 	z.object({ token: z.string().min(1) }),
 	async ({ token }) => {
-		await requireFeature('emailMarketing');
 		const decoded = verifyUnsubscribeToken(token);
 		if (!decoded) return { valid: false as const, audienceName: null };
 
@@ -145,7 +140,6 @@ export const confirmUnsubscribe = form(
 export const confirmUnsubscribeAll = form(
 	z.object({ token: z.string().min(1) }),
 	async ({ token }) => {
-		await requireFeature('emailMarketing');
 		const decoded = verifyUnsubscribeToken(token);
 		if (!decoded) return { valid: false as const };
 
@@ -173,7 +167,6 @@ export const getAudienceOptions = getAudiences;
 
 /** Public: opt-in audiences (no auth required). */
 export const getPublicAudiences = query(z.void(), async () => {
-	await requireFeature('emailMarketing');
 	return getOptInAudiences();
 });
 

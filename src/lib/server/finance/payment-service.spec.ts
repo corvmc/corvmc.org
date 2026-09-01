@@ -102,7 +102,8 @@ vi.mock('drizzle-orm', () => ({
 }));
 
 // Import after mocking
-const { checkout, recordCashPayment, refund, cancel } = await import('./payment-service');
+const { checkout, recordCashPayment, refund, cancel, CheckoutValidationError } =
+	await import('./payment-service');
 
 // ---------------------------------------------------------------------------
 // checkout()
@@ -336,7 +337,7 @@ describe('checkout', () => {
 				...baseOptions,
 				lineItems: []
 			})
-		).rejects.toThrow('Cart must have at least one line item');
+		).rejects.toThrow(CheckoutValidationError);
 	});
 
 	it('throws when subscription mode has no customer', async () => {
@@ -347,7 +348,7 @@ describe('checkout', () => {
 				successUrl: 'https://example.com/success',
 				cancelUrl: 'https://example.com/cancel'
 			})
-		).rejects.toThrow('Subscription checkouts require a Stripe customer');
+		).rejects.toThrow(CheckoutValidationError);
 	});
 
 	it('reverses completed deductions if a subsequent one fails', async () => {
@@ -478,7 +479,7 @@ describe('checkout', () => {
 				mode: 'subscription',
 				eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }]
 			})
-		).rejects.toThrow('Credit discounts are not supported on subscription checkouts');
+		).rejects.toThrow(CheckoutValidationError);
 
 		expect(mockCreditService.deductCredits).not.toHaveBeenCalled();
 		expect(mockStripe.checkout.sessions.create).not.toHaveBeenCalled();

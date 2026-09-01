@@ -3,7 +3,6 @@ import { invalid } from '@sveltejs/kit';
 import { form } from '$app/server';
 import { mapDomainError } from '$lib/server/errors';
 import { requireGroupRole } from '$lib/server/group/group-context';
-import { requireFeature } from '$lib/server/feature-flags';
 import { DEFAULT_TIMEZONE, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import { createGroupEvent } from '$lib/server/event/event-service';
@@ -42,7 +41,6 @@ export const createGroupSession = form(
 		reserveRoom: z.boolean().optional().default(false)
 	}),
 	async (data, issue) => {
-		await requireFeature('groupEvents');
 		// Owner or admin, matching the spec's role table: members read the
 		// calendar, they do not put things on it.
 		const { user, group } = await requireGroupRole({ id: data.groupId }, 'admin');

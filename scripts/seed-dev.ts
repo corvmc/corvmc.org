@@ -56,6 +56,7 @@ import {
 } from '../src/lib/server/db/schema/finance';
 import { notification, notificationPreference } from '../src/lib/server/db/schema/notification';
 import { directoryEntry, directoryTag } from '../src/lib/server/db/schema/directory';
+import { instructor } from '../src/lib/server/db/schema/instructor';
 import { groupMember, groupSlugHistory } from '../src/lib/server/db/schema/group';
 import { groupInvite } from '../src/lib/server/db/schema/group-invite';
 import { announcement } from '../src/lib/server/db/schema/announcement';
@@ -3104,18 +3105,44 @@ async function seedEquipment(users: SeedUser[]) {
 		recordedByUserId: staffId
 	};
 
+	/**
+	 * The stocktake row: gear CMC has owned for years, with no receipt and no
+	 * traceable donor.
+	 *
+	 * This is the shape the whole inventory rework exists to serve, and nothing
+	 * local could produce it before — the only kinds were `purchase`, `donation`
+	 * and `grant`, so recording a decade-old amp meant inventing a purchase and
+	 * inflating the year's spend by the value of the building.
+	 *
+	 * Deliberately missing `sourceName` and `totalCents`, and its lines carry no
+	 * unit values: nobody knows what any of it cost, and a seed that guessed
+	 * would hide the fact that the reports must cope with not knowing. It is
+	 * also the only multi-line arrival in the seed, so `acquisition_line`'s
+	 * one-to-many is exercised rather than merely declared.
+	 */
+	const openingBalance = {
+		id: randomUUID(),
+		kind: 'opening_balance' as const,
+		occurredAt: new Date(now.getTime() - 900 * day),
+		reference: 'Stocktake 2026',
+		notes: 'Entered during the first full inventory. Owned for years; no receipts survive.',
+		recordedByUserId: staffId
+	};
+
 	// Named so the summary counts them rather than restating a literal that goes
 	// stale the moment another arrival is seeded — which it just had.
-	const acquisitionRows = [
+	// Typed as the insert row so the reconciliation below can read `totalCents`
+	// on every member, including the gifts that do not set one.
+	const acquisitionRows: (typeof acquisition.$inferInsert)[] = [
 		purchase,
 		donation,
 		restock,
 		grant,
 		unackedGift,
 		fronted,
-		frontedSettled
+		frontedSettled,
+		openingBalance
 	];
-	await batchInsert(acquisition, acquisitionRows, 4);
 
 	// A helper so a seeded arrival cannot drift from the ledger it implies: one
 	// call writes the line *and* the movement, the way the service does.
@@ -3235,7 +3262,46 @@ async function seedEquipment(users: SeedUser[]) {
 		locationId: locByName['Supply shelf']
 	});
 	received(frontedSettled, '9V Batteries', 2, 1_400, { locationId: locByName['Supply shelf'] });
+	/**
+	 * What the stocktake actually looks like: several kinds of thing on one
+	 * record, no costs, no tags yet, and nothing filed anywhere.
+	 *
+	 * Every other seeded unit arrives tagged and shelved, which made two whole
+	 * states unreachable locally — the `Unassigned` row on the locations page,
+	 * and the "needs tagging" backlog the next phase is built around. A real
+	 * stocktake produces both by the hundred: you carry the gear to the bench
+	 * before the sticker roll arrives, and you file it afterwards.
+	 */
+	received(openingBalance, 'Shure SM58', 2, null, { units: [{}, {}] });
+	received(openingBalance, 'Fender Blues Deluxe', 1, null, {
+		units: [{ serial: 'FBD-091144', condition: 'poor' }]
+	});
+	received(openingBalance, 'XLR Cable (25ft)', 8, null);
+	received(openingBalance, 'Boom Mic Stand', 3, null);
 
+	/**
+	 * A receipt's total and the lines it is made of must agree.
+	 *
+	 * They did not: four of the five seeded receipts disagreed with their own
+	 * lines, the worst by $1,012, and `fronted` claimed $48 owed to a volunteer
+	 * the lines put at $28 — a wrong number on a screen whose whole job is to
+	 * tell somebody what they are owed. Hand-written totals drift the moment a
+	 * line is added, so the total is now derived and cannot.
+	 *
+	 * Gifts keep a null total on purpose: a donation's worth is `fairValueCents`,
+	 * which is a different claim from what it cost, and `opening_balance` has
+	 * neither.
+	 */
+	for (const acq of acquisitionRows) {
+		if (acq.totalCents == null) continue;
+		acq.totalCents = lines
+			.filter((l) => l.acquisitionId === acq.id)
+			.reduce((sum, l) => sum + l.quantity * (l.unitValueCents ?? 0), 0);
+	}
+
+	// Acquisitions first: `acquisition_line` and `inventory_asset` both point at
+	// them. This insert used to sit above, before the lines existed to total.
+	await batchInsert(acquisition, acquisitionRows, 4);
 	await batchInsert(acquisitionLine, lines, 4);
 	await batchInsert(inventoryAsset, assets, 4);
 
@@ -4668,6 +4734,201 @@ async function seedSuggestions(users: any[], adminUser: any) {
  * makes one. They exist locally so the staff acts page, and the "links out, not
  * in" render rule on a public bill, have something real behind them.
  */
+/**
+ * Teachers, across every state the status enum allows.
+ *
+ * The awkward ones are the point. A staff review queue with nothing in it, an
+ * application that has been handed back, a paused grant — those are the screens
+ * that otherwise only ever get looked at empty, and the empty case is the one
+ * that is already obviously right.
+ *
+ * Runs after `seedDirectoryEntries` because an instructor without a listing does
+ * not appear publicly, which is correct behaviour and useless as fixture data.
+ */
+async function seedInstructors(users: any[], reviewer: any) {
+	console.log('Seeding instructors...');
+	if (users.length < 8) return { rows: 0 };
+
+	const now = new Date();
+	const day = 86_400_000;
+
+	// Deterministic slices rather than random picks: a fresh seed should put the
+	// same people in the same states every time, so a screenshot means something.
+	const [gtr, drums, reachable, paused, applicant, returned] = users.slice(2, 8);
+
+	const entries = await db
+		.select({ id: directoryEntry.id, userId: directoryEntry.userId })
+		.from(directoryEntry)
+		.where(
+			inArray(
+				directoryEntry.userId,
+				[gtr, drums, reachable, paused, applicant, returned].map((u) => u.id)
+			)
+		);
+	const entryFor = new Map(entries.map((e) => [e.userId, e.id]));
+
+	// The two live listings need a *public* entry and a public contact, or the
+	// public directory correctly shows nothing — the gate that makes the whole
+	// module safe would make the fixture invisible.
+	for (const u of [gtr, drums]) {
+		await db
+			.update(directoryEntry)
+			.set({
+				visibility: 'public',
+				contact: {
+					email: `teach.${String(u.name).split(' ')[0].toLowerCase()}@example.com`,
+					visibility: 'public'
+				}
+			})
+			.where(eq(directoryEntry.userId, u.id));
+	}
+
+	// One **active** instructor deliberately keeps a members-only contact and sets
+	// no teaching one. The nudge only renders for an active grant, so putting this
+	// on the paused row — as a first pass did — produced a fixture for a screen
+	// that could never show it. They stay listed to members and lose only their
+	// contact publicly, which is the exact case the exposure test pins.
+	await db
+		.update(directoryEntry)
+		.set({ visibility: 'public', contact: { email: 'private@example.com', visibility: 'members' } })
+		.where(eq(directoryEntry.userId, reachable.id));
+
+	// The paused one is publicly contactable — it is paused status, not a missing
+	// contact, that keeps them off the listing.
+	await db
+		.update(directoryEntry)
+		.set({ visibility: 'public', contact: { email: 'piano@example.com', visibility: 'public' } })
+		.where(eq(directoryEntry.userId, paused.id));
+
+	const rows = [
+		{
+			id: randomUUID(),
+			userId: gtr.id,
+			status: 'active' as const,
+			headline: 'Guitar — beginner to intermediate',
+			blurb: 'Electric and acoustic. Mostly rock, blues and whatever you turn up wanting to play.',
+			ratesNote: '$40 per half hour',
+			bookingUrl: 'https://example.com/book-a-lesson',
+			acceptingStudents: true,
+			grantedByUserId: reviewer.id,
+			grantedAt: new Date(now.getTime() - 120 * day),
+			statusChangedAt: new Date(now.getTime() - 120 * day),
+			createdAt: new Date(now.getTime() - 130 * day),
+			updatedAt: now
+		},
+		{
+			id: randomUUID(),
+			userId: drums.id,
+			status: 'active' as const,
+			headline: 'Drums and percussion',
+			blurb: 'Kit from scratch, or rudiments if you already play. Bring sticks.',
+			ratesNote: '$35 / 45 min, or $120 a month',
+			// No booking link: the card has to read properly without one.
+			acceptingStudents: false,
+			grantedByUserId: reviewer.id,
+			grantedAt: new Date(now.getTime() - 60 * day),
+			statusChangedAt: new Date(now.getTime() - 60 * day),
+			createdAt: new Date(now.getTime() - 70 * day),
+			updatedAt: now
+		},
+		{
+			// Active and taking students, but reachable only by members — so the
+			// public card shows no contact and their own profile shows the nudge.
+			id: randomUUID(),
+			userId: reachable.id,
+			status: 'active' as const,
+			headline: 'Voice and songwriting',
+			blurb: 'Finding your range, and finishing the song you started two years ago.',
+			acceptingStudents: true,
+			grantedByUserId: reviewer.id,
+			grantedAt: new Date(now.getTime() - 40 * day),
+			statusChangedAt: new Date(now.getTime() - 40 * day),
+			createdAt: new Date(now.getTime() - 45 * day),
+			updatedAt: now
+		},
+		{
+			id: randomUUID(),
+			userId: paused.id,
+			status: 'paused' as const,
+			headline: 'Piano and theory',
+			acceptingStudents: true,
+			grantedByUserId: reviewer.id,
+			grantedAt: new Date(now.getTime() - 300 * day),
+			statusChangedAt: new Date(now.getTime() - 20 * day),
+			statusNote: 'Off for the summer — back in September.',
+			createdAt: new Date(now.getTime() - 310 * day),
+			updatedAt: now
+		},
+		{
+			// Waiting on staff. Without one of these the review queue only ever
+			// renders its empty state.
+			id: randomUUID(),
+			userId: applicant.id,
+			status: 'requested' as const,
+			headline: 'Fiddle and mandolin',
+			blurb: 'Old-time and bluegrass, all ages.',
+			ratesNote: '$30 an hour, sliding scale',
+			applicationNote:
+				'Taught at a community school in Eugene for six years. Happy to give references.',
+			acceptingStudents: true,
+			createdAt: new Date(now.getTime() - 3 * day),
+			updatedAt: new Date(now.getTime() - 3 * day)
+		},
+		{
+			// Handed back, waiting on the member — the state the return-state
+			// mechanism exists for, and the one nobody would think to click into.
+			id: randomUUID(),
+			userId: returned.id,
+			status: 'rejected' as const,
+			headline: 'Lessons',
+			applicationNote: 'Been playing 20 years.',
+			reviewNotes:
+				'Could you say which instruments and roughly what level? "Lessons" on its own is hard for a parent to act on.',
+			acceptingStudents: true,
+			grantedByUserId: reviewer.id,
+			statusChangedAt: new Date(now.getTime() - day),
+			createdAt: new Date(now.getTime() - 6 * day),
+			updatedAt: new Date(now.getTime() - day)
+		}
+	];
+
+	await batchInsert(instructor, rows, 5);
+
+	// Instruments come from the directory tags, not from the instructor row —
+	// "what I play" and "what I teach" are the same set until someone proves
+	// otherwise. Without these the cards render with no instruments at all.
+	const tags = [
+		[gtr, 'Guitar'],
+		[gtr, 'Bass'],
+		[drums, 'Drums'],
+		[reachable, 'Voice'],
+		[paused, 'Piano']
+	]
+		.map(([u, value]: any) => ({ entryId: entryFor.get(u.id), kind: 'instrument' as const, value }))
+		.filter((t) => t.entryId);
+	if (tags.length) await batchInsert(directoryTag, tags, 10);
+
+	// Teaching bookings, so the member reservation list and the staff calendar
+	// both show a row priced at the teaching rate rather than the drop-in one.
+	const teaching = rows[0];
+	const lessons = [0, 7, 14].map((offset, i) => ({
+		id: randomUUID(),
+		bookerType: 'instructor' as const,
+		bookerId: teaching.id,
+		bookerName: null,
+		createdByUserId: gtr.id,
+		status: 'confirmed' as const,
+		startsAt: new Date(now.getTime() + (offset + 2) * day + 16 * 3_600_000),
+		endsAt: new Date(now.getTime() + (offset + 2) * day + 16.5 * 3_600_000),
+		notes: i === 0 ? 'Weekly lesson block' : null,
+		createdAt: now,
+		updatedAt: now
+	}));
+	await batchInsert(reservation, lessons, 5);
+
+	return { rows: rows.length, lessons: lessons.length };
+}
+
 async function seedExternalActs() {
 	const acts = [
 		{
@@ -4835,6 +5096,7 @@ async function main() {
 	// last of them is `seedGroups` directly above — so it can still read them all
 	// back, which is the property it was placed last for.
 	const directory = await seedDirectoryEntries();
+	const instructors = await seedInstructors(allUsers, adminUser);
 	const externalActs = await seedExternalActs();
 	const groupSessions = await seedGroupSessions(groups);
 	const bandEvents = await seedBandEvents(bands, allUsers);
@@ -4883,6 +5145,10 @@ async function main() {
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
+	console.log(
+		`  ${instructors.rows} instructors (3 active, 1 paused, 1 awaiting review, 1 sent back)` +
+			` with ${instructors.lessons ?? 0} teaching bookings`
+	);
 	console.log(
 		`  ${groupSessions.length} group sessions (${groupSessions.filter((e) => e.reservationId).length} holding the room)`
 	);
