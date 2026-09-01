@@ -39,7 +39,9 @@ pnpm db:reset                   # wipe + migrate + seed the local D1
 pnpm dev                        # http://localhost:5173
 ```
 
-Log in as `admin@corvallismusic.org` / `password` (seeded admin). Full walkthrough,
+Log in as `admin@corvallismusic.org` / `password` (seeded admin); the seed prints four
+more named logins, same password, for the volunteer coordinator and member views. Full
+walkthrough,
 including Stripe test mode and troubleshooting:
 [docs/development/local-dev-quickstart.md](docs/development/local-dev-quickstart.md).
 

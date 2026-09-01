@@ -60,15 +60,25 @@ seed (`scripts/seed-dev.ts`). The seed creates roles, ~dozens of members with re
 names, bands, reservations (past and future, in every status), recurring series, events
 with tickets and RSVPs, credits, equipment, marketing data, and help articles.
 
-**Login:** the seed creates exactly one account with a password:
+**Login:** the seed creates five accounts with a password, all of them `password`:
 
 ```
-admin@corvallismusic.org / password        (admin + staff + member roles)
+admin@corvallismusic.org         admin + staff + member
+coordinator@corvallismusic.org   staff — the volunteer coordinator's view, no admin nav
+volunteer@corvallismusic.org     an active volunteer with hours, shifts and a clearance
+newcomer@corvallismusic.org      a member who has never volunteered
+minor@corvallismusic.org         an under-18 signup waiting on a guardian
 ```
 
-All other seeded users have no credential account — to test as a plain member, sign up
-through the UI (Turnstile passes with the blank/test keys) or use the admin's staff
-console.
+The four named ones exist because volunteering's member surface is gated on onboarding
+stage, and `none` / `blocked` / `active` are mutually exclusive per user — no single
+account can reach all of it. They also make the staff side look like somebody's job
+rather than the admin's. The seed prints them, and the deep links they own, when it
+finishes.
+
+Every other seeded user has no credential account — to test as a different plain member,
+sign up through the UI (Turnstile passes with the blank/test keys) or use the admin's
+staff console.
 
 Re-run `pnpm db:reset` any time the data gets weird; it's the supported path back to a
 known state. To apply _new_ migrations without wiping data, `pnpm db:migrate:local` is

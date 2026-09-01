@@ -37,6 +37,7 @@
 		"db:seed": "tsx scripts/seed-dev.ts",
 		"help:sync": "tsx scripts/sync-help-articles.ts",
 		"volunteer:seed-roles": "tsx scripts/seed-volunteer-roles.ts",
+		"screens:volunteer": "tsx scripts/capture-volunteer-screens.ts",
 		"docs:routes": "node scripts/docs/route-inventory.mjs --write",
 		"docs:check": "node scripts/docs/check-docs-drift.mjs",
 		"class-census": "node scripts/class-census.mjs",

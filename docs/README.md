@@ -216,6 +216,7 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | [sentry-triage.md](reports/sentry-triage.md)                             | ✅     | Production error triage                                                                  |
 | [inventory-workflow-findings.md](reports/inventory-workflow-findings.md) | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign       |
 | [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md) | 📦     | The same pass over volunteering; findings complete, the restructure is separate work     |
+| [volunteer-view-handoff.md](reports/volunteer-view-handoff.md)           | ✅     | Every volunteer screen, shot populated, with its users and stories — the wireframe brief |
 
 ## checklists
 
