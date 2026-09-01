@@ -56,6 +56,7 @@ import { seedSuggestions } from './fixtures/seed-suggestions';
 import { seedMessaging } from './fixtures/seed-messaging';
 import { seedInboxAwaiting } from './fixtures/seed-inbox-awaiting';
 import { seedDirectoryEntries } from './fixtures/seed-directory-entries';
+import { seedInstructors } from './fixtures/seed-instructors';
 
 // Before the build, the seed, and the five minutes they cost: refuse outright if
 // another suite is already running on this machine. Two of them no longer share
@@ -116,6 +117,9 @@ await seedFeatureFlags();
 // Last of the data fixtures: sweeps every user and group the ones above created
 // into `directory_entry`, which is what the directory reads.
 await seedDirectoryEntries();
+// After the directory sweep: it puts every user at `members` visibility, and the
+// public instructor listing gates on that column.
+await seedInstructors();
 
 // Last, once every seed's miniflare has exited: leave the file with no WAL for
 // the preview server to recover. workerd opens D1 on the first *request*, by
