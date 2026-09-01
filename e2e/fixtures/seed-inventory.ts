@@ -73,6 +73,20 @@ export const SEED_CONSUMABLE_RECEIVED = 20;
 export const SEED_CONSUMABLE_REORDER_POINT = 4;
 
 /**
+ * A counted item that exists **only** for the intake test to receive into.
+ *
+ * `inventory.e2e.ts` asserts the other two consumables' on-hand as absolute
+ * numbers — 20 for the well-stocked one, 2 against a reorder point of 5 for the
+ * low one — so an intake test receiving into either changes a number a
+ * neighbouring test treats as fixed. It did, and both of them went red for a
+ * reason that had nothing to do with what they check.
+ *
+ * No reorder point, so it never appears on the restock list either.
+ */
+export const SEED_INTAKE_BULK_ID = 'e2e0a11e-0000-4000-8000-000000000004';
+export const SEED_INTAKE_BULK_NAME = 'E2E Intake Cable';
+
+/**
  * A second consumable, deliberately below its reorder point.
  *
  * Without one, the restock list and the dashboard's low-stock section only ever
@@ -181,7 +195,7 @@ const LOAN_IDS = [
 	SEED_RETURN_LOAN_ID,
 	SEED_CANCEL_LOAN_ID
 ];
-const ITEM_IDS = [SEED_ITEM_ID, SEED_CONSUMABLE_ID, SEED_LOW_ID];
+const ITEM_IDS = [SEED_ITEM_ID, SEED_CONSUMABLE_ID, SEED_LOW_ID, SEED_INTAKE_BULK_ID];
 
 async function ensureCategory(db: DrizzleD1Database) {
 	const [existing] = await db
@@ -255,6 +269,14 @@ export async function seedInventory(): Promise<void> {
 				isLoanable: false,
 				reorderPoint: SEED_CONSUMABLE_REORDER_POINT,
 				reorderQuantity: 12
+			},
+			{
+				id: SEED_INTAKE_BULK_ID,
+				name: SEED_INTAKE_BULK_NAME,
+				categoryId: SEED_CATEGORY_ID,
+				kind: 'bulk',
+				unitOfMeasure: 'each',
+				isLoanable: false
 			},
 			{
 				id: SEED_LOW_ID,

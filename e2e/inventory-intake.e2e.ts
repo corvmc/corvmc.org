@@ -4,7 +4,7 @@ import { expectSuccessToast } from './toast';
 import { readLocalDb } from './fixtures/platform-db';
 import { acquisition, stockMovement } from '../src/lib/server/db/schema/inventory';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
-import { SEED_ITEM_ID, SEED_CONSUMABLE_ID } from './fixtures/seed-inventory';
+import { SEED_ITEM_ID, SEED_INTAKE_BULK_ID } from './fixtures/seed-inventory';
 
 /**
  * Intake and tagging — the two surfaces a stocktake actually lives in.
@@ -16,6 +16,9 @@ import { SEED_ITEM_ID, SEED_CONSUMABLE_ID } from './fixtures/seed-inventory';
  * is exactly the shape of bug an e2e catches and a unit test does not.
  */
 
+/** Marks the unit this file creates, so the tagging test binds that one. */
+const INTAKE_SERIAL = 'E2E-INTAKE-SERIAL-1';
+
 async function loginAsStaff(page: Page) {
 	await page.goto('/login');
 	// FormField renders a <legend>, not a <label for>, so target inputs by name.
@@ -26,7 +29,9 @@ async function loginAsStaff(page: Page) {
 }
 
 test.describe('inventory intake', () => {
-	test('one submit writes a multi-line arrival, its units and its ledger', async ({ page }) => {
+	test('an arrival lands whole, and its untagged unit works through the queue', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/inventory/intake');
 		await expect(page.getByRole('heading', { name: 'Intake' })).toBeVisible();
@@ -41,11 +46,17 @@ test.describe('inventory intake', () => {
 
 		await expect(page.locator('input[name="unitTag_0_0"]')).toBeVisible();
 		await page.locator('input[name="unitTag_0_0"]').fill('E2E-INTAKE-1');
-		// Second unit deliberately left untagged.
+		// Second unit deliberately left untagged, but given a serial — that serial
+		// is how the tagging test below finds *this* unit rather than binding
+		// whatever happens to be first in a queue it shares with the fixtures.
+		await page.locator('input[name="unitSerial_0_1"]').fill(INTAKE_SERIAL);
 
 		// Line 2: a counted item, which must not expand into units.
 		await page.getByRole('button', { name: 'Add a line' }).click();
-		await page.locator('select[name="lineItem_1"]').selectOption(SEED_CONSUMABLE_ID);
+		// Its own fixture item, not a shared consumable: `inventory.e2e.ts` asserts
+		// those on-hand numbers absolutely, so receiving into one turns a
+		// neighbouring test red for a reason unrelated to what it checks.
+		await page.locator('select[name="lineItem_1"]').selectOption(SEED_INTAKE_BULK_ID);
 		await page.locator('input[name="lineQty_1"]').fill('12');
 		await expect(page.locator('input[name="unitTag_1_0"]')).toHaveCount(0);
 
@@ -70,10 +81,13 @@ test.describe('inventory intake', () => {
 			db.select().from(acquisition).where(eq(acquisition.id, acquisitionId))
 		);
 		expect(header.kind).toBe('opening_balance');
-	});
 
-	test('an untagged unit reaches the tagging queue and leaves it once bound', async ({ page }) => {
-		await loginAsStaff(page);
+		// --- and now the unit it left untagged, through the queue ---
+		//
+		// One test rather than two: the untagged unit *is* the output of the
+		// intake above, so a separate test would either depend on this one having
+		// run — the order-dependence `seed-inventory.ts` warns about — or bind
+		// whichever fixture unit sorted first, which another test needs untagged.
 		await page.goto('/staff/inventory/tagging');
 		await expect(page.getByRole('heading', { name: 'Needs tagging' })).toBeVisible();
 
@@ -81,8 +95,17 @@ test.describe('inventory intake', () => {
 		const before = await rows.count();
 		expect(before).toBeGreaterThan(0);
 
-		await rows.first().fill('E2E-TAGGED-1');
-		await page.getByRole('button', { name: 'Bind' }).first().click();
+		// The card for the unit the intake test created, found by its serial —
+		// binding `.first()` would consume whichever fixture unit happens to sort
+		// first, which another test needs untagged.
+		const card = page
+			.locator('div')
+			.filter({ hasText: INTAKE_SERIAL })
+			.filter({ has: page.locator('input[name$="assetTag"]') })
+			.last();
+
+		await card.locator('input[name$="assetTag"]').fill('E2E-TAGGED-1');
+		await card.getByRole('button', { name: 'Bind' }).click();
 		await expectSuccessToast(page);
 
 		// The queue is derived from `asset_tag IS NULL`, so the row it just
