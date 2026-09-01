@@ -173,6 +173,8 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | [reservation-credits-cash-checklist.md](plans/reservation-credits-cash-checklist.md) | ⚠️     | Credit/cash rework — awaiting drizzle-kit migration |
 | [volunteering-checklist.md](plans/volunteering-checklist.md)                         | 📦     | Volunteering Phase 1                                |
 | [volunteering-phase-2-checklist.md](plans/volunteering-phase-2-checklist.md)         | 📦     | Shifts + certifications + feedback (41/42)          |
+| [instructors-checklist.md](plans/instructors-checklist.md)                           | 🔧     | Instructor module — 55 of 59 done                   |
+| [feature-flag-retirement.md](plans/feature-flag-retirement.md)                       | 🔧     | Per-flag ledger; 9 of 11 resolved, 2 held           |
 
 ## architecture
 
@@ -182,8 +184,8 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | [operations-manual.md](architecture/operations-manual.md)                             | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring |
 | [deployment-checklist.md](architecture/deployment-checklist.md)                       | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                              |
 | [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                             | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting  |
-| [d1-migration-proposal.md](architecture/d1-migration-proposal.md)                     | ✅     | Postgres → Cloudflare D1 proposal                                                                    |
-| [universal-data-layer-proposal.md](architecture/universal-data-layer-proposal.md)     | ✅     | API layer for SSR/SPA + kiosk parity (proposal)                                                      |
+| [d1-migration-proposal.md](architecture/d1-migration-proposal.md)                     | 📦     | Postgres → D1: shipped. Kept for the decision — **not** a runbook; the ETL it describes is deleted   |
+| [universal-data-layer-proposal.md](architecture/universal-data-layer-proposal.md)     | 📦     | API layer for SSR/SPA + kiosk parity — **not adopted**; remote functions solved it instead           |
 | [product-config-kv-migration.md](architecture/product-config-kv-migration.md)         | ✅     | product_config → KV; the orphaned table is dropped and the replay spec guards the class              |
 | [postmark-template-migration.md](architecture/postmark-template-migration.md)         | ✅     | Transactional email moved to Postmark-hosted templates; repo source and `pnpm email:push`            |
 | [U-Tec Api.postman_collection.json](architecture/U-Tec%20Api.postman_collection.json) | 📦     | Vendor API collection for the door-lock integration — reference only, not maintained here            |
@@ -212,17 +214,19 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | [staff-user-management-audit.md](reports/staff-user-management-audit.md) | 📦     | The audit behind #164; five follow-up specs, one of them built                           |
 | [revenue-audit.md](reports/revenue-audit.md)                             | 📦     | Revenue workflow audit; its findings closed in #131                                      |
 | [sentry-triage.md](reports/sentry-triage.md)                             | ✅     | Production error triage                                                                  |
+| [inventory-workflow-findings.md](reports/inventory-workflow-findings.md) | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign       |
+| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md) | 📦     | The same pass over volunteering; findings complete, the restructure is separate work     |
 
 ## checklists
 
 Cross-cutting rollouts tracked to completion — broader than one feature, so they live outside
 `plans/`.
 
-| Doc                                                                   | Status | Notes                                                                 |
-| --------------------------------------------------------------------- | ------ | --------------------------------------------------------------------- |
-| [staff-feature-enablement.md](checklists/staff-feature-enablement.md) | 📦     | Making the staff panel work independently of the feature flags        |
-| [standardization-rollout.md](checklists/standardization-rollout.md)   | 🔧     | Working through `reports/standardization-audit.md`                    |
-| [remote-query-fanout.md](checklists/remote-query-fanout.md)           | 🔧     | One load-bearing query per page across the 50 components that fan out |
+| Doc                                                                   | Status | Notes                                                                  |
+| --------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------- |
+| [staff-feature-enablement.md](checklists/staff-feature-enablement.md) | 📦     | Making the staff panel work independently of the feature flags         |
+| [standardization-rollout.md](checklists/standardization-rollout.md)   | 🔧     | Working through `reports/standardization-audit.md`                     |
+| [remote-query-fanout.md](checklists/remote-query-fanout.md)           | 📦     | One load-bearing query per page — all 50 components done, rule widened |
 
 ## manual
 
