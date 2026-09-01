@@ -209,11 +209,16 @@ off-peak spec owns. `commitReservationCredits` keeps its `creditsApply` paramete
       no unapproved applicant, no hidden or members-only entry publicly, no soft-deleted entry or
       user, no instructor without a profile, `applicationNote` never in a returned shape, and the
       contact fallback gated rather than bypassed
-- [ ] **Notifications — deferred to its own PR, and this is a real gap until it lands.** Needs four
-      files: event types in `event-bus.ts`, emits from the service, listeners in
-      `notification-listeners.ts`, and keys in `schema/notification.ts`. Until then a member whose
-      application is sent back **only finds out by revisiting their profile**, which is the failure
-      the return state exists to prevent. The note itself is already shown there prominently.
+- [x] **Notifications.** Four pieces: event types on `event-bus.ts`, emits from the service,
+      listeners in `notification-listeners.ts`, and two keys in `schema/notification.ts`.
+      `instructor.application_submitted` fires on a **resubmit as well as a first submission** — a
+      returned application coming back is exactly when it needs looking at again, and would otherwise
+      sit in the queue unannounced. `instructor.application_reviewed` carries the note, which is the
+      load-bearing half of the return state: the member is not watching their profile, so a note
+      nobody delivers is the failure the whole mechanism exists to prevent. Emits are not awaited —
+      the dispatcher swallows and logs, and an application must not fail because a notification did.
+      Pinned with the events **real** (only the database is substituted), including the negative
+      case: a transition that throws announces nothing.
 
 ## Step 8 — Seed, docs, close out
 
