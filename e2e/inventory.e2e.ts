@@ -175,8 +175,10 @@ test.describe('inventory', () => {
 		expect(afterUse).toBe(before - 3);
 
 		// Put them back with a stocktake correction — the one caller-signed reason.
+		// The modal asks for the counted total now, not the difference; the delta
+		// it derives is what still reaches the ledger.
 		await page.getByRole('button', { name: 'Stocktake' }).click();
-		await page.getByRole('dialog').locator('input[name$="delta"]').fill('3');
+		await page.getByRole('dialog').getByLabel('Counted on the shelf').fill(String(before));
 		await modalSubmit(page, /^Stocktake$/).click();
 		await expect(page.getByText('Correction recorded')).toBeVisible({ timeout: 10000 });
 

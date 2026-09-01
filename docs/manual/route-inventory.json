@@ -324,6 +324,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/instructors",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/inventory",
 		"panel": "staff"
 	},
@@ -353,6 +357,10 @@
 	},
 	{
 		"route": "/staff/inventory/loans/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inventory/locations",
 		"panel": "staff"
 	},
 	{

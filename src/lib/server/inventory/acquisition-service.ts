@@ -286,6 +286,13 @@ export async function listAcquisitions(opts: ListAcquisitionsOptions = {}) {
  */
 export interface UpdateAcquisitionData {
 	occurredAt?: Date;
+	/**
+	 * Correctable because it is guessed at entry, and because it decides which
+	 * report the row lands in: `spendByCategory` counts `purchase`, the FASB
+	 * gifts-in-kind report counts `donation`, and `opening_balance` is in
+	 * neither. A row filed under the wrong one is money in the wrong year.
+	 */
+	kind?: AcquisitionKind;
 	sourceName?: string | null;
 	donorUserId?: string | null;
 	reference?: string | null;
