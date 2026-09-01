@@ -65,6 +65,8 @@ shipped=""
 for dir in $dirs; do
 	# A directory `origin/main` knows has shipped. `git cat-file -e` is the cheapest
 	# existence check that does not need the ref checked out.
+	# Unresolvable `origin/main` fails open: a clone that never fetched it gets no
+	# guard rather than a blanket refusal of every delete.
 	if git -C "$repo_root" cat-file -e "origin/main:$dir/migration.sql" 2>/dev/null; then
 		shipped="$shipped  $dir
 "
