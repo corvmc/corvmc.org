@@ -113,10 +113,6 @@
 		bandPremium: {
 			label: 'Band Premium',
 			description: 'Premium tier with page editor, EPK, and public band sites'
-		},
-		contentFlags: {
-			label: 'Content Flags',
-			description: 'Lets members report profiles and gives staff a moderation queue'
 		}
 	};
 

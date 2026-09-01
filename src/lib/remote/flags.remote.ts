@@ -3,7 +3,6 @@ import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
-import { requireFeature } from '$lib/server/feature-flags';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { getById as getEventById } from '$lib/server/event/event-service';
 import { memberReportableEntityTypes, flagStatuses } from '$lib/server/db/schema/flag';
@@ -92,7 +91,6 @@ const submitSchema = z.object({
 });
 
 export const submitFlag = form(submitSchema, async (data) => {
-	await requireFeature('contentFlags');
 	const reporter = requireUser();
 	try {
 		await createFlag({
@@ -124,8 +122,6 @@ const submitEventReportSchema = z.object({
 });
 
 export const submitEventReport = form(submitEventReportSchema, async (data, issue) => {
-	await requireFeature('contentFlags');
-
 	const { request, locals } = getRequestEvent();
 	const ip = request.headers.get('CF-Connecting-IP');
 	if (!(await verifyTurnstile(data.turnstileToken, ip))) {

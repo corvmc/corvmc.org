@@ -250,7 +250,7 @@ more (`venue`, `production`, `production_slot`, `production_task`, `production_e
 
 ## Feature flags
 
-Three flags, all defaulting to **off**, toggled from Staff Settings → Features — except
+Two flags, both defaulting to **off**, toggled from Staff Settings → Features — except
 `directMessages`, which was never added to that tab and so has never been switchable at all. The
 whole system is being retired in favour of feature branches; see
 [the ledger](../plans/feature-flag-retirement.md).
@@ -268,11 +268,10 @@ administering it if it is switched back off. Member and public remote functions 
 `requireFeature()`, which throws 404 when disabled; staff queries and forms are guarded by
 `requireStaff()` alone.
 
-| Flag             | Feature                                      | What it gates                                                                            |
-| ---------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `bandPremium`    | Premium tier, page editor, EPK, band sites   | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**`                 |
-| `contentFlags`   | Member/public reporting of profiles + events | Report actions on directory profiles and `/events/[id]`                                  |
-| `directMessages` | Member↔member messaging                      | The DM half of `/member/messages` — member↔staff portal chat in the same UI is not gated |
+| Flag             | Feature                                    | What it gates                                                                            |
+| ---------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `bandPremium`    | Premium tier, page editor, EPK, band sites | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**`                 |
+| `directMessages` | Member↔member messaging                    | The DM half of `/member/messages` — member↔staff portal chat in the same UI is not gated |
 
 ### Staff administration of each flagged feature
 

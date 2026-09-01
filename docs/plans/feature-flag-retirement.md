@@ -45,13 +45,27 @@ rather than a build, so a flag flip is a cheaper launch than restoring a nav row
 pending that call. The launch price moved to **$5/mo** (`product-config-service.ts`), which yearly
 derives as $50 — ten months, two free.
 
-### `directMessages` is held
+### `contentFlags` was launched, not unlinked
 
-It is the one case where unlinking **increases** exposure rather than leaving it flat. Today the
-guard 404s every member↔member endpoint. Remove it and the DM lifecycle answers to anyone who
-constructs the URL — while `contentFlags`, which gates reporting a message, may itself still be off.
-That combination is a working messaging system with no reporting path: a moderation decision, not a
-cleanup. It waits for the `contentFlags` value below.
+It was off in production, and the standing posture would have unlinked it — but launching was
+explicitly chosen instead (Sep 1 2026). Reporting a profile, an event or a message is live now:
+`canReport` folds to the predicate that was already beside the flag, and the staff `/staff/flags`
+queue it feeds was never gated in the first place.
+
+### `directMessages` is held, and the reason changed
+
+It was held on `contentFlags` — unlinking DMs while reporting was off would have left a working
+messaging system with no way to report abuse. Launching `contentFlags` settles that.
+
+**A second reason took its place.** Unlinking DMs means removing the "Message a Member" composer,
+which is the only entry point `e2e/messages.e2e.ts` has for its `request, accept, reply, block`
+test — the whole DM lifecycle. Unlike the groups module, whose specs reach their pages by URL, this
+one drives a modal on a page that is not itself gated, so there is nothing to `goto`. Unlinking
+therefore costs real coverage of a built feature rather than merely hiding it.
+
+Worth noting the production behaviour is unchanged either way: the flag is off, so `canMessage` is
+already false and the composer already hidden. The choice is only about what the code and the test
+suite say.
 
 ## Reading production flag values
 
@@ -83,19 +97,19 @@ path in the codebase, so it is provably at its `DEFAULTS` value of `false`.
 
 Counts are non-spec call sites in `src/`, taken at `63e5890`.
 
-| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod                  | Decision                                             | PR   |
-| ---------------- | ---------------- | ------------------ | ------- | --------------------- | ---------------------------------------------------- | ---- |
-| `staffInbox`     | 0                | 0                  | yes     | n/a                   | ✅ Deleted — gated nothing                           | #373 |
-| `groupFiles`     | 0                | 0                  | **no**  | false                 | ✅ Deleted — gated nothing                           | #373 |
-| `groups`         | 9                | 0                  | **no**  | false                 | ✅ **Unlinked** — nav entry removed, routes URL-only | #375 |
-| `groupEvents`    | 1                | 1                  | **no**  | false                 | ✅ **Unlinked**                                      | #375 |
-| `announcements`  | 3                | 1                  | **no**  | false                 | ✅ **Unlinked** — band nav row removed               | #375 |
-| `helpArticles`   | 5                | 0                  | yes     | **false** (probed)    | ✅ **Unlinked** — footer row removed                 | #376 |
-| `emailMarketing` | 6                | 2                  | yes     | **true** (probed)     | ✅ Flag deleted, feature **stays live**              | #376 |
-| `directMessages` | 7                | 0                  | **no**  | false                 | Unlink — **held** on `contentFlags`                  |      |
-| `bandPremium`    | 8                | 1                  | yes     | **false** (confirmed) | Unlink — **held**, launch is imminent                |      |
-| `contentFlags`   | 4                | 1                  | yes     | ?                     | needs the staff page                                 |      |
-| `volunteering`   | 19               | 0                  | yes     | **true** (confirmed)  | ✅ Flag deleted, feature **stays live**              | #380 |
+| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod                  | Decision                                             | PR      |
+| ---------------- | ---------------- | ------------------ | ------- | --------------------- | ---------------------------------------------------- | ------- |
+| `staffInbox`     | 0                | 0                  | yes     | n/a                   | ✅ Deleted — gated nothing                           | #373    |
+| `groupFiles`     | 0                | 0                  | **no**  | false                 | ✅ Deleted — gated nothing                           | #373    |
+| `groups`         | 9                | 0                  | **no**  | false                 | ✅ **Unlinked** — nav entry removed, routes URL-only | #375    |
+| `groupEvents`    | 1                | 1                  | **no**  | false                 | ✅ **Unlinked**                                      | #375    |
+| `announcements`  | 3                | 1                  | **no**  | false                 | ✅ **Unlinked** — band nav row removed               | #375    |
+| `helpArticles`   | 5                | 0                  | yes     | **false** (probed)    | ✅ **Unlinked** — footer row removed                 | #376    |
+| `emailMarketing` | 6                | 2                  | yes     | **true** (probed)     | ✅ Flag deleted, feature **stays live**              | #376    |
+| `directMessages` | 7                | 0                  | **no**  | false                 | Unlink — **held**, costs an e2e lifecycle test       |         |
+| `bandPremium`    | 8                | 1                  | yes     | **false** (confirmed) | Unlink — **held**, launch is imminent                |         |
+| `contentFlags`   | 4                | 1                  | yes     | **false**             | ✅ **Launched** — guards out, reporting live         | this PR |
+| `volunteering`   | 19               | 0                  | yes     | **true** (confirmed)  | ✅ Flag deleted, feature **stays live**              | #380    |
 
 ### The two that gate nothing
 
