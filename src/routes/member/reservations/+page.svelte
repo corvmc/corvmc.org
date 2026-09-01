@@ -17,6 +17,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import CreateModal from './CreateModal.svelte';
+	import TeachingCreateModal from './TeachingCreateModal.svelte';
 	import ReservationCard from './ReservationCard.svelte';
 	import { Tabs } from 'bits-ui';
 	import clsx from 'clsx';
@@ -45,6 +46,12 @@
 	// Staff can't follow up on a booking they can't call about, so the wizard
 	// collects a number inline when the member has none on file.
 	const contact = $derived(await pageData.then((d) => d.contact));
+
+	// Declared alongside the other awaited page fields rather than before them:
+	// declarations after a top-level await are async-gated, and the ordering note
+	// above exists because `async-effect-shape.spec.ts` fails the build if it is
+	// undone.
+	const isInstructor = $derived(await pageData.then((d) => d.isInstructor));
 
 	// Remote queries aren't refreshed by invalidateAll() — only by their own
 	// refresh() method. Mutations (book/cancel/confirm) must call this so the
@@ -81,6 +88,11 @@
 
 <PageHeader title="Reserve Practice Space">
 	<CreateModal {isSustaining} needsPhone={contact.needsPhone} onbooked={refreshReservations} />
+	{#if isInstructor}
+		<!-- A separate button rather than a mode: teaching time has its own rate,
+		     duration floor and advance window, and settles at the door. -->
+		<TeachingCreateModal needsPhone={contact.needsPhone} onbooked={refreshReservations} />
+	{/if}
 </PageHeader>
 <PageContent>
 	<BookingPolicy />
