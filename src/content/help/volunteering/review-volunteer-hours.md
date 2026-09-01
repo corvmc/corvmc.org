@@ -7,11 +7,35 @@ minRole: staff
 sortOrder: 2
 ---
 
-## The queue
+## What needs you today
 
-**Volunteering** in the staff panel opens on the **Pending** tab, which is the
-work: hours members have logged and nobody has looked at yet. The count in the
-sidebar is how many are waiting.
+**Volunteering** in the staff panel opens on a worklist, not a table. Each card is
+something waiting on a person, with the action on the row, and a card you cannot see is a
+card with nothing in it:
+
+- **Needs confirming** — people who claimed an upcoming shift that nobody has confirmed.
+  This is the one to clear first: confirming is what turns a claim into a booking, and until
+  you do it they get no reminder, the shift never completes itself, and no hour log is ever
+  offered. Confirm one at a time or confirm a whole shift at once.
+- **Short-staffed** — shifts in the next fortnight with places nobody has taken. **Add
+  someone** on the row shows who said they would help with that role, when they said they
+  were free, and whether their clearances cover _that shift's date_ — plus a search box for
+  anybody else.
+- **Hours to review** — the top of the approval queue, with the same approve and return
+  buttons. The whole queue is **Volunteering → Hours**.
+- **Waiting on a guardian's sign-off** — under-18 sign-ups.
+- **Close these out** — shifts that have already happened where somebody's claim was never
+  confirmed. Say whether they worked it (which records the hours) or didn't. Leaving it is
+  the third answer, and it loses the work.
+- **Lapses before a shift they're on** — somebody rostered for a date their clearance does
+  not reach. Not the same list as _Who's cleared_: this one has a deadline.
+
+The count in the sidebar is all of that added up.
+
+## The hours queue
+
+**Volunteering → Hours** opens on the **Pending** tab: hours members have logged and nobody
+has looked at yet.
 
 For each log you get the member, the role, the date, the hours, and their
 description of what they did. Approve or return from the row.
@@ -26,15 +50,37 @@ a corrected log; there is no un-approve.
 Filters (member, role, date range) stay in the URL, so a reload or a back button
 keeps your view.
 
+### Logging hours for somebody else
+
+Members have 90 days to log their own hours, and the app tells them to ask staff for
+anything older. **Log hours for someone** on this page is how you do that. It is also how
+you record the volunteer who does not use the app at all — which matters, because the
+report only counts what is in here, and an hour nobody typed in is an hour the board never
+hears about.
+
+There is no date limit and no second review: what you enter lands approved and attributed
+to you. You typing it in is the review.
+
 ## Scheduling shifts
 
-**Volunteering → Shifts** is the roster. Create a shift from a role (times and
-headcount prefill from the role's defaults), and duplicate it forward to make a
-standing weekly slot — there is no recurrence to configure. Members claim from
-their volunteering page; you confirm claimants on the shift's detail page, and
-only confirmed people get the day-before reminder and auto-complete afterwards.
-Mark no-shows there too — a no-show is different from a cancellation, and only
-one of them is worth remembering next time.
+**Volunteering → Schedule** is the next two weeks, grouped by day — the view for "who is on
+tonight". **Volunteering → Shifts** is the whole catalog, past included, for finding one.
+
+Create a shift from a role (times and headcount prefill from the role's defaults), and
+duplicate it forward to make a standing weekly slot — there is no recurrence to configure.
+
+Every list shows **confirmed of capacity**, with anything merely claimed called out beside
+it. Those are different things: only confirmed people get the day-before reminder and
+auto-complete afterwards, so a shift showing three claims and no confirmations is not
+staffed.
+
+**Add someone** puts a member on a shift yourself, for the person who tells you in person
+or by text. They go on confirmed. If their role needs a clearance they do not hold on that
+date, it refuses and names what is missing — grant it from their member page and try again.
+
+**Take off the shift** is for somebody who gave you notice; their place reopens straight
+away. That is not the same as **No-show**, which is for somebody who simply did not turn
+up, and only one of the two is worth remembering next time.
 
 A role can require certifications (**Volunteering → Certifications**) before its
 shifts can be claimed. Requirements are checked against the shift's date, so a
@@ -49,15 +95,17 @@ problem — fix the checklist, not the person.
 
 ## Finding someone to ask
 
-**Volunteering → Interest** is the standing list of who has said they would help
-and with what. Filter by role to answer "who can work the door on Saturday" — the
-count beside each role in the filter tells you how deep the bench is before you
-select it. Each row still shows every role that member picked, so you can see
-at a glance whether you are about to ask the same three people again.
+Usually you do not go looking — **Add someone** on a short shift already shows the people
+who said they would help with that role, what they told us about when they are free, and
+whether they are cleared for that date.
 
-Expressing interest is not a commitment to a date, so treat the list as a place
-to start asking, not a rota. **Copy emails on this page** puts the filtered
-addresses on your clipboard for a quick message.
+**Volunteering → Volunteers** is the full list when you do: everyone who signed up, with
+their roles, their availability note and their phone number if they gave one. Filter by
+role to see how deep the bench is.
+
+Expressing interest is not a commitment to a date, so treat it as a place to start asking,
+not a rota. A role's own page has **Copy emails on this page** if you want to write to
+several people at once.
 
 ## Managing roles
 

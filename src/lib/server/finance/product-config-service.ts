@@ -60,7 +60,13 @@ const DEFAULTS: Record<ProductKey, ProductDefault> = {
 	band_premium: {
 		name: 'Band Premium Page',
 		description: 'Premium band website with block editor, EPK, and a custom domain',
-		unitAmountCents: 1500,
+		// $5/mo. The launch price, deliberately low: this is an upsell to bands who
+		// already have a free directory profile, and it has never been switched on.
+		// Staff Settings → Pricing is the way to change it — and note that
+		// `getProductConfig` persists this default on first read, so an environment
+		// that has already read it keeps its stored value and is unaffected by
+		// editing this line.
+		unitAmountCents: 500,
 		unitLabel: 'per month'
 	}
 };

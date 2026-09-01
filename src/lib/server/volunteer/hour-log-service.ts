@@ -82,7 +82,7 @@ export interface SubmitHoursData {
  * would also work for the Americas, but not for a UTC-ahead zone, where it is
  * the previous UTC day. See the note on `volunteerHourLog.workedOn`.
  */
-function toWorkedOn(dateStr: string): Date {
+function toWorkedOn(dateStr: string, allowOlder = false): Date {
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
 		throw new HourLogValidationError('Date must be a calendar date');
 	}
@@ -102,15 +102,22 @@ function toWorkedOn(dateStr: string): Date {
 		throw new HourLogValidationError('You cannot log hours for a future date');
 	}
 
-	const earliest = formatDateInTz(
-		new Date(now.getTime() - VOLUNTEER_BACKDATE_LIMIT_DAYS * 24 * 60 * 60 * 1000),
-		TZ
-	);
-	if (dateStr < earliest) {
-		throw new HourLogValidationError(
-			`Hours must be logged within ${VOLUNTEER_BACKDATE_LIMIT_DAYS} days. ` +
-				`Ask staff to add anything older.`
+	// The backdate window is a member rule, not a data rule: it exists so the
+	// queue stays about recent work, and its error message tells the member to
+	// "ask staff to add anything older". Staff entering the log on their behalf
+	// ARE that path, so it does not apply to them. The future check does — a date
+	// that has not happened is wrong no matter who types it.
+	if (!allowOlder) {
+		const earliest = formatDateInTz(
+			new Date(now.getTime() - VOLUNTEER_BACKDATE_LIMIT_DAYS * 24 * 60 * 60 * 1000),
+			TZ
 		);
+		if (dateStr < earliest) {
+			throw new HourLogValidationError(
+				`Hours must be logged within ${VOLUNTEER_BACKDATE_LIMIT_DAYS} days. ` +
+					`Ask staff to add anything older.`
+			);
+		}
 	}
 
 	return workedOn;
@@ -167,18 +174,43 @@ async function requireActiveRole(volunteerRoleId: string) {
 // Lifecycle
 // ---------------------------------------------------------------------------
 
+/**
+ * Record hours for `userId`.
+ *
+ * `enteredByUserId` is the staffer typing it in on somebody else's behalf — for the
+ * volunteer who does not use the app, or for work older than the backdate window. It
+ * changes three things and nothing else:
+ *
+ * - the backdate limit does not apply, because "ask staff to add anything older" is the
+ *   sentence this path exists to make true;
+ * - the log lands `approved` rather than `pending`, stamped with the staffer. A staffer
+ *   typing it in IS the review, and filing it into the queue they then clear is a round
+ *   trip with no reader;
+ * - no `hours_submitted` event fires. That event exists to tell staff a log is waiting;
+ *   there is nothing waiting, and notifying the whole staff about their own keystroke is
+ *   noise.
+ *
+ * Everything else is shared deliberately, so a staff-entered log is not a second kind of
+ * row: same active-volunteer check, same active-role check, same future-date rule, same
+ * minute and description limits.
+ */
 export async function submitHours(
 	userId: string,
-	data: SubmitHoursData
+	data: SubmitHoursData,
+	options: { enteredByUserId?: string } = {}
 ): Promise<VolunteerHourLog> {
+	const enteredByStaff = Boolean(options.enteredByUserId);
+
 	// Checked in the service, not just on the route: the remote function is a
 	// directly callable endpoint and the route gate is only a redirect.
 	await requireActiveVolunteer(userId);
 
 	const role = await requireActiveRole(data.volunteerRoleId);
-	const workedOn = toWorkedOn(data.workedOn);
+	const workedOn = toWorkedOn(data.workedOn, enteredByStaff);
 	const minutes = validateMinutes(data.minutes);
 	const description = validateDescription(data.description);
+
+	const reviewedAt = enteredByStaff ? new Date() : null;
 
 	const [log] = await db
 		.insert(volunteerHourLog)
@@ -189,9 +221,13 @@ export async function submitHours(
 			workedOn,
 			minutes,
 			description,
-			status: 'pending'
+			status: enteredByStaff ? 'approved' : 'pending',
+			reviewedByUserId: options.enteredByUserId ?? null,
+			reviewedAt
 		})
 		.returning();
+
+	if (enteredByStaff) return log;
 
 	const [member] = await db
 		.select({ name: user.name, email: user.email })

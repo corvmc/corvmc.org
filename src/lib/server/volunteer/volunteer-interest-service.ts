@@ -178,6 +178,16 @@ export interface InterestedMember {
 	email: string;
 	member: MemberRef;
 	roleNames: string[];
+	/**
+	 * What they said about when they can help, and how to reach them by phone.
+	 *
+	 * This list exists to answer "who do I ask about Saturday", and until now it answered
+	 * it with a name and an email — while the app was collecting the availability note on
+	 * the member's own form and showing it to nobody.
+	 * See docs/reports/volunteer-workflow-findings.md#a6.
+	 */
+	availability: string | null;
+	phone: string | null;
 	since: Date;
 }
 
@@ -232,6 +242,14 @@ export async function listInterestedMembers(
 			// importing this module does no work (the trap hourLogSelect() documents).
 			member: memberRefColumns(),
 			roleNames: sql<string>`group_concat(${volunteerRole.name}, ${ROLE_NAME_SEPARATOR})`,
+			// A scalar subquery rather than a sixth join: the profile is one row per member
+			// and this query already groups by member, so joining it would add nothing but a
+			// chance to get the grouping wrong. Null for a member who ticked a role before
+			// finishing onboarding.
+			availability: sql<string | null>`(
+				select vp."availability" from "volunteer_profile" vp where vp."user_id" = ${user.id}
+			)`,
+			phone: user.phone,
 			since
 		})
 		.from(volunteerRoleInterest)
@@ -257,6 +275,8 @@ export async function listInterestedMembers(
 			email: r.member.email,
 			member: toMemberRef(r.member),
 			roleNames: String(r.roleNames).split(ROLE_NAME_SEPARATOR).sort(),
+			availability: r.availability,
+			phone: r.phone,
 			since: new Date(Number(r.since) * 1000)
 		}))
 	};

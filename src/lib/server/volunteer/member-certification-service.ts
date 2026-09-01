@@ -2,10 +2,13 @@ import { db } from '$lib/server/db';
 import {
 	memberCertification,
 	volunteerCertification,
-	volunteerRoleCertification
+	volunteerRole,
+	volunteerRoleCertification,
+	volunteerShift,
+	volunteerSignup
 } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
@@ -509,4 +512,89 @@ export async function flagUnclearedLogs(
 	}
 
 	return flagged;
+}
+
+// ---------------------------------------------------------------------------
+// The clearance question the schedule actually asks
+// ---------------------------------------------------------------------------
+
+export interface LapsingBeforeShift {
+	userId: string;
+	member: MemberRef;
+	certificationId: string;
+	certificationName: string;
+	expiresAt: Date;
+	shiftId: string;
+	roleName: string;
+	startsAt: Date;
+}
+
+/**
+ * People whose clearance runs out before a shift they are already on.
+ *
+ * The clearances page answers "who expires soon", which is a list nobody is obliged to
+ * act on. This answers the version with a deadline attached: somebody is rostered for
+ * Saturday, the card their role requires lapses on Friday, and the gate — which is
+ * evaluated as of the shift's date — will be right to refuse them while the roster still
+ * says they are booked.
+ *
+ * Deliberately narrow: only live signups on upcoming, uncancelled shifts, and only where
+ * the role genuinely requires that certification. A card expiring next month that gates
+ * nothing anybody is booked for is not this list's business — it is the clearances page's.
+ *
+ * The expiry test runs in SQL rather than through `missingFrom` because the question is
+ * one row per (person, certification, shift) and the answer is a comparison of two
+ * timestamps; pulling every held row into JS to filter it would be the same logic further
+ * from the data. `wasHeldOn`'s other two clauses are here too: a revoked card is already
+ * gone, and one granted after the shift never covered it.
+ */
+export async function listLapsingBeforeRosteredShift(
+	now = new Date()
+): Promise<LapsingBeforeShift[]> {
+	const rows = await db
+		.select({
+			userId: memberCertification.userId,
+			member: memberRefColumns(),
+			certificationId: volunteerCertification.id,
+			certificationName: volunteerCertification.name,
+			expiresAt: memberCertification.expiresAt,
+			shiftId: volunteerShift.id,
+			roleName: volunteerRole.name,
+			startsAt: volunteerShift.startsAt
+		})
+		.from(volunteerSignup)
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.innerJoin(
+			volunteerRoleCertification,
+			eq(volunteerRoleCertification.volunteerRoleId, volunteerShift.volunteerRoleId)
+		)
+		.innerJoin(
+			volunteerCertification,
+			eq(volunteerCertification.id, volunteerRoleCertification.certificationId)
+		)
+		.innerJoin(
+			memberCertification,
+			and(
+				eq(memberCertification.userId, volunteerSignup.userId),
+				eq(memberCertification.certificationId, volunteerRoleCertification.certificationId)
+			)
+		)
+		.innerJoin(user, eq(user.id, volunteerSignup.userId))
+		.where(
+			and(
+				inArray(volunteerSignup.status, ['claimed', 'confirmed']),
+				isNull(volunteerShift.cancelledAt),
+				gte(volunteerShift.startsAt, now),
+				isNull(memberCertification.revokedAt),
+				lte(memberCertification.grantedAt, volunteerShift.startsAt),
+				isNotNull(memberCertification.expiresAt),
+				lt(memberCertification.expiresAt, volunteerShift.startsAt)
+			)
+		)
+		.orderBy(asc(volunteerShift.startsAt));
+
+	return rows
+		.filter((r): r is typeof r & { expiresAt: Date } => r.expiresAt !== null)
+		.map((r) => ({ ...r, member: toMemberRef(r.member) }));
 }

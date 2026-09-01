@@ -1,7 +1,6 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
 	import DataList from '$lib/components/ui/DataList.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
@@ -89,11 +88,11 @@
 	}
 </script>
 
-<PageHeader title="Volunteers" subtitle="Staff">
-	<Button href="/staff/volunteer" variant="ghost" size="sm">Hours</Button>
-	<Button href="/staff/volunteer/shifts" variant="ghost" size="sm">Shifts</Button>
-	<Button href="/staff/volunteer/roles" variant="ghost" size="sm">Roles</Button>
-</PageHeader>
+<!--
+	No hand-rolled sibling links: every page in this section used to build its own row and no
+	two agreed (docs/reports/volunteer-workflow-findings.md#d2). The sidebar carries them.
+-->
+<PageHeader title="Volunteers" subtitle="Volunteering" backHref="/staff/volunteer" />
 
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
@@ -150,6 +149,13 @@
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Volunteer</th>
 					<th class="col-support">Interested in</th>
+					<!--
+						The column this list existed to have and never did. Availability is what
+						the member typed to answer "when can you help", and it was written to the
+						profile and shown to nobody
+						(docs/reports/volunteer-workflow-findings.md#a6).
+					-->
+					<th class="col-support">When they can help</th>
 					<th class="col-support cell-num">Hours</th>
 					<th class="col-extra whitespace-nowrap">Since</th>
 				{/snippet}
@@ -179,6 +185,19 @@
 								<!-- The interests step is skippable, so this is a real answer and
 								     not missing data: they signed up without picking anything. -->
 								<span class="text-subtle">—</span>
+							{/if}
+						</td>
+
+						<td class="col-support">
+							{#if volunteer.availability}
+								<div class="truncate" title={volunteer.availability}>
+									{volunteer.availability}
+								</div>
+							{:else}
+								<span class="text-subtle">—</span>
+							{/if}
+							{#if volunteer.phone}
+								<div class="text-subtle">{volunteer.phone}</div>
 							{/if}
 						</td>
 

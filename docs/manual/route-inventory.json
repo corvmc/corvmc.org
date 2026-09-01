@@ -460,6 +460,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/volunteer/hours",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/volunteer/people",
 		"panel": "staff"
 	},
@@ -473,6 +477,10 @@
 	},
 	{
 		"route": "/staff/volunteer/roles/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/volunteer/schedule",
 		"panel": "staff"
 	},
 	{

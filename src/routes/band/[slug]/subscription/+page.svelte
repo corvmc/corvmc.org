@@ -7,7 +7,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { formatDate } from '$lib/utils/format';
+	import { formatDate, formatCents } from '$lib/utils/format';
 	import {
 		getBandSubscriptionInfo,
 		upgradeToPremium,
@@ -128,7 +128,8 @@
 					<CardBody center>
 						<h3 class="text-lg font-bold">Monthly</h3>
 						<p class="text-3xl font-bold">
-							$15<span class="text-muted font-normal">/mo</span>
+							{formatCents(info.pricing.monthlyCents)}<span class="text-muted font-normal">/mo</span
+							>
 						</p>
 						{#if isOwner}
 							<Form remote={upgradeMonthly} onsuccess={goToCheckout}>
@@ -143,10 +144,12 @@
 				<!-- Yearly -->
 				<Card class="border border-primary">
 					<CardBody center>
-						<Badge variant="primary">2 months free</Badge>
+						<Badge variant="primary">
+							{info.pricing.yearlyMonthsFree} months free
+						</Badge>
 						<h3 class="text-lg font-bold">Yearly</h3>
 						<p class="text-3xl font-bold">
-							$120<span class="text-muted font-normal">/yr</span>
+							{formatCents(info.pricing.yearlyCents)}<span class="text-muted font-normal">/yr</span>
 						</p>
 						{#if isOwner}
 							<Form remote={upgradeYearly} onsuccess={goToCheckout}>
