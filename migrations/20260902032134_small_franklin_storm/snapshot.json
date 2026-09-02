@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "a85bdd51-0dda-43c0-bc9c-160e4813931e",
+  "id": "d1362b5f-74ab-4a4c-a927-3b415c9de7ad",
   "prevIds": [
-    "9c638209-941e-48c1-af6d-5f6ae22d74a5"
+    "8c4d1227-2847-49fb-b4b7-9c51d15ea0e3"
   ],
   "ddl": [
     {
@@ -224,6 +224,10 @@
     },
     {
       "name": "inbox_thread",
+      "entityType": "tables"
+    },
+    {
+      "name": "inbox_thread_tag",
       "entityType": "tables"
     },
     {
@@ -5640,6 +5644,46 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "thread_id",
+      "entityType": "columns",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tag",
+      "entityType": "columns",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "content_flag"
     },
     {
@@ -6948,6 +6992,16 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "cancelled_by_user_id",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "created_by_user_id",
       "entityType": "columns",
       "table": "volunteer_shift"
@@ -7109,6 +7163,16 @@
       "default": null,
       "generated": null,
       "name": "cancelled_at",
+      "entityType": "columns",
+      "table": "volunteer_signup"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notified_at",
       "entityType": "columns",
       "table": "volunteer_signup"
     },
@@ -8709,6 +8773,21 @@
     },
     {
       "columns": [
+        "thread_id"
+      ],
+      "tableTo": "inbox_thread",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_inbox_thread_tag_thread_id_inbox_thread_id_fk",
+      "entityType": "fks",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "columns": [
         "reported_by_user_id"
       ],
       "tableTo": "user",
@@ -9184,6 +9263,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_volunteer_shift_event_id_event_id_fk",
+      "entityType": "fks",
+      "table": "volunteer_shift"
+    },
+    {
+      "columns": [
+        "cancelled_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_cancelled_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "volunteer_shift"
     },
@@ -9815,6 +9909,15 @@
       "nameExplicit": false,
       "name": "inbox_thread_pk",
       "table": "inbox_thread",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "inbox_thread_tag_pk",
+      "table": "inbox_thread_tag",
       "entityType": "pks"
     },
     {
@@ -11643,6 +11746,24 @@
       "name": "idx_inbox_thread_contact_ext",
       "entityType": "indexes",
       "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        {
+          "value": "thread_id",
+          "isExpression": false
+        },
+        {
+          "value": "tag",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_thread_tag_unique",
+      "entityType": "indexes",
+      "table": "inbox_thread_tag"
     },
     {
       "columns": [

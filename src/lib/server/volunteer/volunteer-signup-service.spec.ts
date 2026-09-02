@@ -100,6 +100,9 @@ import {
 	completeFinishedShifts,
 	releaseSignup,
 	cancelSignup,
+	notifySignupsOfCancellation,
+	markSignupNotified,
+	countUnnotified,
 	SignupNotFoundError,
 	ShiftFullError,
 	ShiftClosedError,
@@ -368,5 +371,48 @@ describe('completeFinishedShifts', () => {
 
 		expect(done).toHaveLength(1);
 		expect(updatedSets[0]).toMatchObject({ status: 'completed' });
+	});
+});
+
+describe('the notify list on a called-off shift', () => {
+	it('stamps everybody outstanding and reports how many', async () => {
+		// The select of who is outstanding, then one select per emitted event.
+		selectResultQueue = [[{ id: 'signup-1' }, { id: 'signup-2' }], [], []];
+
+		expect(await notifySignupsOfCancellation('shift-1')).toBe(2);
+		expect(updatedSets[0]).toMatchObject({ notifiedAt: expect.any(Date) });
+	});
+
+	it('writes nothing when everybody has already been told', async () => {
+		selectResultQueue = [[]];
+
+		expect(await notifySignupsOfCancellation('shift-1')).toBe(0);
+		// Pressing "Notify all" twice must not mail the same six people twice, and
+		// the guard is the empty read rather than anything in the UI.
+		expect(updatedSets).toEqual([]);
+	});
+
+	it('skips the cancelled signups — they are not on the shift to be told about', async () => {
+		selectResultQueue = [[]];
+
+		await notifySignupsOfCancellation('shift-1');
+
+		expect(render(whereClauses[0] as SQL)).toContain('"status" <>');
+	});
+
+	it('marks one person by hand without sending them anything', async () => {
+		await markSignupNotified('signup-1');
+
+		expect(updatedSets[0]).toMatchObject({ notifiedAt: expect.any(Date) });
+		// Idempotent: a second press must not move the stamp, so the predicate
+		// carries the null check rather than relying on the button being hidden.
+		expect(render(whereClauses[0] as SQL)).toContain('"notified_at" is null');
+	});
+
+	it('counts only the people still owed a call', async () => {
+		selectResultQueue = [[{ n: 3 }]];
+
+		expect(await countUnnotified('shift-1')).toBe(3);
+		expect(render(whereClauses[0] as SQL)).toContain('"notified_at" is null');
 	});
 });

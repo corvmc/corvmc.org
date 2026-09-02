@@ -253,7 +253,11 @@ export async function cancelSignup(signupId: string, userId: string): Promise<Vo
  * member's name — which is one join here instead of three call sites doing it.
  */
 async function emitSignupEvent(
-	event: 'volunteer.signup_claimed' | 'volunteer.signup_confirmed' | 'volunteer.signup_cancelled',
+	event:
+		| 'volunteer.signup_claimed'
+		| 'volunteer.signup_confirmed'
+		| 'volunteer.signup_cancelled'
+		| 'volunteer.shift_cancelled',
 	signupId: string
 ): Promise<void> {
 	try {
@@ -419,6 +423,8 @@ export interface ShiftClaimant {
 	member: MemberRef;
 	status: VolunteerSignupStatus;
 	claimedAt: Date;
+	/** Only meaningful on a cancelled shift, where the roster is the notify list. */
+	notifiedAt: Date | null;
 }
 
 export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
@@ -428,7 +434,8 @@ export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
 			userId: volunteerSignup.userId,
 			member: memberRefColumns(),
 			status: volunteerSignup.status,
-			claimedAt: volunteerSignup.claimedAt
+			claimedAt: volunteerSignup.claimedAt,
+			notifiedAt: volunteerSignup.notifiedAt
 		})
 		.from(volunteerSignup)
 		.innerJoin(user, eq(user.id, volunteerSignup.userId))
@@ -436,6 +443,82 @@ export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
 		.orderBy(asc(volunteerSignup.claimedAt));
 
 	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));
+}
+
+/**
+ * Tell everybody still on a called-off shift that it is off, and record that
+ * they were told.
+ *
+ * Deliberately **not** run by `cancelShift`. Calling a shift off and telling six
+ * people about it are two decisions: the first is often made in a hurry and
+ * sometimes reversed, and a coordinator who has already rung the sound engineer
+ * does not want the system mailing them anyway. So cancelling leaves a notify
+ * list, and this is the button on it.
+ *
+ * Idempotent by the `notified_at IS NULL` filter: pressing "Notify all" twice
+ * mails nobody twice, and anyone staff already marked by hand is skipped.
+ */
+export async function notifySignupsOfCancellation(shiftId: string): Promise<number> {
+	const pending = await db
+		.select({ id: volunteerSignup.id })
+		.from(volunteerSignup)
+		.where(
+			and(
+				eq(volunteerSignup.shiftId, shiftId),
+				ne(volunteerSignup.status, 'cancelled'),
+				isNull(volunteerSignup.notifiedAt)
+			)
+		);
+
+	if (pending.length === 0) return 0;
+
+	// One statement rather than a batch of identical ones: every row takes the
+	// same stamp, and the predicate is the one the select just used.
+	const now = new Date();
+	await db
+		.update(volunteerSignup)
+		.set({ notifiedAt: now, updatedAt: now })
+		.where(
+			and(
+				eq(volunteerSignup.shiftId, shiftId),
+				ne(volunteerSignup.status, 'cancelled'),
+				isNull(volunteerSignup.notifiedAt)
+			)
+		);
+
+	// After the stamp, for the same reason every other emit here is: a listener
+	// that throws must not leave the roster claiming nobody has been told.
+	for (const { id } of pending) void emitSignupEvent('volunteer.shift_cancelled', id);
+
+	return pending.length;
+}
+
+/**
+ * "I rang them." The escape hatch beside the mail-out — staff who reached
+ * somebody another way mark the row and it drops off the outstanding count.
+ * Sends nothing.
+ */
+export async function markSignupNotified(signupId: string): Promise<void> {
+	const now = new Date();
+	await db
+		.update(volunteerSignup)
+		.set({ notifiedAt: now, updatedAt: now })
+		.where(and(eq(volunteerSignup.id, signupId), isNull(volunteerSignup.notifiedAt)));
+}
+
+/** How many people on a called-off shift still have to be told. */
+export async function countUnnotified(shiftId: string): Promise<number> {
+	const [row] = await db
+		.select({ n: count() })
+		.from(volunteerSignup)
+		.where(
+			and(
+				eq(volunteerSignup.shiftId, shiftId),
+				ne(volunteerSignup.status, 'cancelled'),
+				isNull(volunteerSignup.notifiedAt)
+			)
+		);
+	return Number(row?.n ?? 0);
 }
 
 /** Confirmed signups for shifts starting inside a window — the reminder cron. */

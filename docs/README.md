@@ -118,9 +118,10 @@ the tree and records how this split was made.
 
 ### Volunteering
 
-| Doc                                                        | Status | Lifecycle | Notes                                                                                                                                                       |
-| ---------------------------------------------------------- | ------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [volunteering-spec.md](specs/shipped/volunteering-spec.md) | ✅     | archived  | **Both phases shipped.** Roles, hour logging, approval queue and reporting; plus shifts, sign-up, certifications, clearances and post-shift feedback (#235) |
+| Doc                                                                  | Status | Lifecycle | Notes                                                                                                                                                                                                                                  |
+| -------------------------------------------------------------------- | ------ | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [volunteering-spec.md](specs/shipped/volunteering-spec.md)           | ✅     | archived  | **Both phases shipped.** Roles, hour logging, approval queue and reporting; plus shifts, sign-up, certifications, clearances and post-shift feedback (#235)                                                                            |
+| [volunteering-redesign-spec.md](specs/volunteering-redesign-spec.md) | 🔧     | spec      | Reshapes both applications without changing the model: staff's seven nav rows become Today / Schedule / People / Setup, the member half becomes a next-action stack beside a claim board, and a called-off shift becomes a notify list |
 
 ### Inventory & assets
 

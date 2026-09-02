@@ -234,11 +234,19 @@ export async function updateShift(
 /**
  * Call off a shift. The row and its signups stay: claimants still need
  * notifying, and "we cancelled that one" is worth being able to see.
+ *
+ * `cancelledByUserId` is what lets the cancelled shift say who called it off.
+ * It is optional so the sweep-style callers a cron might grow don't have to
+ * invent a user, but every staff path passes one.
  */
-export async function cancelShift(id: string): Promise<VolunteerShift> {
+export async function cancelShift(id: string, cancelledByUserId?: string): Promise<VolunteerShift> {
 	const [row] = await db
 		.update(volunteerShift)
-		.set({ cancelledAt: new Date(), updatedAt: new Date() })
+		.set({
+			cancelledAt: new Date(),
+			cancelledByUserId: cancelledByUserId ?? null,
+			updatedAt: new Date()
+		})
 		.where(and(eq(volunteerShift.id, id), isNull(volunteerShift.cancelledAt)))
 		.returning();
 
