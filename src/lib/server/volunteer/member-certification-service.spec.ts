@@ -19,6 +19,10 @@ function chainable() {
 	return proxy;
 }
 
+vi.mock('./volunteer-certification-service', () => ({
+	getRequirementsForRoles: vi.fn()
+}));
+
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
@@ -33,7 +37,9 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
+import { getRequirementsForRoles } from './volunteer-certification-service';
 import {
+	auditClearances,
 	wasHeldOn,
 	certificationState,
 	grantCertification,
@@ -352,5 +358,67 @@ describe('listHeldForGateMany', () => {
 		const held = await listHeldForGateMany(['u1', 'u1', 'u1']);
 
 		expect(held.get('u1')).toHaveLength(1);
+	});
+});
+
+describe('auditClearances', () => {
+	const CARD = { id: 'cert-1', name: 'Sound Desk Cleared' };
+
+	function heldRow(over: Record<string, unknown> = {}) {
+		return {
+			certificationId: 'cert-1',
+			grantedAt: new Date('2026-01-01'),
+			expiresAt: null,
+			revokedAt: null,
+			...over
+		};
+	}
+
+	beforeEach(() => {
+		vi.mocked(getRequirementsForRoles).mockResolvedValue(new Map([['role-1', [CARD]]]));
+	});
+
+	/**
+	 * The hole this closes. `claimShift` checks clearance as of the *shift's*
+	 * date, so somebody can commit while current, have the card lapse, and work
+	 * uncleared — and review re-checked nothing, so the hours were approved and
+	 * the record showed a cleared volunteer.
+	 */
+	it('flags a card that lapsed between claiming and working', async () => {
+		selectResultQueue = [[{ userId: 'u1', ...heldRow({ expiresAt: new Date('2026-03-01') }) }]];
+
+		const gaps = await auditClearances([
+			{ id: 'log-1', userId: 'u1', volunteerRoleId: 'role-1', workedOn: new Date('2026-04-10') }
+		]);
+
+		expect(gaps.get('log-1')).toEqual([CARD]);
+	});
+
+	it('says nothing when the card was still in force on the day worked', async () => {
+		selectResultQueue = [[{ userId: 'u1', ...heldRow({ expiresAt: new Date('2026-12-01') }) }]];
+
+		const gaps = await auditClearances([
+			{ id: 'log-1', userId: 'u1', volunteerRoleId: 'role-1', workedOn: new Date('2026-04-10') }
+		]);
+
+		expect(gaps.has('log-1')).toBe(false);
+	});
+
+	it('says nothing when the role requires no clearance at all', async () => {
+		vi.mocked(getRequirementsForRoles).mockResolvedValue(new Map());
+		selectResultQueue = [[]];
+
+		const gaps = await auditClearances([
+			{ id: 'log-1', userId: 'u1', volunteerRoleId: 'role-9', workedOn: new Date('2026-04-10') }
+		]);
+
+		expect(gaps.size).toBe(0);
+	});
+
+	it('does not query at all for an empty list', async () => {
+		const gaps = await auditClearances([]);
+
+		expect(gaps.size).toBe(0);
+		expect(getRequirementsForRoles).not.toHaveBeenCalled();
 	});
 });

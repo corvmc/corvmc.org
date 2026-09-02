@@ -62,7 +62,16 @@ function formatWorkedOn(value: string): string {
 }
 
 /** "Saturday, February 7, 6:00–10:00 PM" — one string for a shift's when. */
-function formatShiftWhen(startsAt: string, endsAt: string): string {
+/**
+ * When a shift is, in one phrase.
+ *
+ * Nullable since work orders landed: an unscheduled one is real work somebody
+ * has taken on, with no window booked for it yet. Every caller drops this into a
+ * sentence, so the fallback is written to read as one — "a time to be arranged"
+ * survives both "on ${when}" and standing alone as a body line.
+ */
+function formatShiftWhen(startsAt: string | null, endsAt: string | null): string {
+	if (!startsAt || !endsAt) return 'a time to be arranged';
 	const start = new Date(startsAt);
 	const end = new Date(endsAt);
 	const time = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -981,6 +990,44 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
+	// --- Shift called off (notify member) ---
+	// Raised per person when staff press "Notify all" on a cancelled shift, not
+	// by the cancel. Email on: this is the one volunteer message whose job is to
+	// stop somebody turning up to a locked building.
+	domainEvents.on('volunteer.shift_cancelled', async ({ data: event }) => {
+		await dispatch({
+			type: 'volunteer_shift_cancelled',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `${event.roleName} is off`,
+			body: formatShiftWhen(event.startsAt, event.endsAt),
+			href: '/member/volunteer',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Called off: ${event.roleName}`,
+					heading: 'That shift is off',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							// `formatShiftWhen` carries the unscheduled case — a work order
+							// that gets called off has no date to name.
+							text: `${event.roleName}, ${formatShiftWhen(event.startsAt, event.endsAt)}, has been called off, so there's nothing to turn up for. Sorry for the change.`
+						},
+						{
+							text: 'Nothing else is needed from you. There are usually other shifts open, and your volunteering page has them.'
+						}
+					],
+					details: [
+						{ label: 'Role', value: event.roleName },
+						{ label: 'Was', value: formatShiftWhen(event.startsAt, event.endsAt) }
+					],
+					cta: { url: `${siteUrl}/member/volunteer`, label: 'See what else is open' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
 	// --- Shift reminder, the day before (notify member) ---
 	// The one notification here that has to reach somebody who isn't looking at
 	// the site: they agreed to work tomorrow and the room is counting on it.
@@ -1045,7 +1092,9 @@ export function registerAllNotificationListeners(): void {
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{
-							text: `Thanks for working ${event.roleName} on ${formatWorkedOn(event.startsAt)}. Two questions, and they genuinely change how we run the next one.`
+							// The date is dropped rather than faked when the work had no
+							// scheduled window — "on null" is worse than no date at all.
+							text: `Thanks for working ${event.roleName}${event.startsAt ? ` on ${formatWorkedOn(event.startsAt)}` : ''}. Two questions, and they genuinely change how we run the next one.`
 						}
 					],
 					cta: {

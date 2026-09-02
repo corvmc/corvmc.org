@@ -25,7 +25,9 @@ When building a new feature, work through these phases in order:
    shapes, enums). If the migration rebuilds a table, read
    [table rebuilds on D1](#table-rebuilds-on-d1) below.
 
-   **Extend `scripts/seed-dev.ts` in the same change.** Every surface built between the
+   **Extend the seed in the same change.** A feature owns one file in `scripts/seed/`,
+   one call in `main()` (`scripts/seed-dev.ts`) placed where its inputs already exist, and
+   one line in the summary block. Every surface built between the
    schema landing and the seed being written is developed and reviewed against _no rows_ —
    a staff queue, an empty state, a listing all render the zero case and nothing else, and
    the browser-preview step cannot verify anything until the end, which is when it is least
@@ -161,15 +163,15 @@ A branch that merges `origin/main` repeatedly hits the same conflicts each time.
 `git config rerere.enabled true` once per clone (it is not committed, and the common `.git` shares
 it across worktrees) and it replays the resolutions.
 
-| File                                | How it conflicts, and what to do                                                                                                                                                                                                 |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/d1-table-order.mjs`        | **Position is semantic** — a table must follow everything it references. Taking both sides produces a file that lints clean and breaks the seed at runtime. Re-derive placement from the foreign-key graph.                      |
-| `scripts/seed-dev.ts`               | 5,000+ lines with two hot spots, `main()` and `deleteAll()`. A feature owns one `seedX()` appended at the end plus one line in `main()`, written in its first phase and extended after — one insertion point, not one per phase. |
-| `src/lib/server/db/schema/index.ts` | Chronological `export *` lines. Append; never reorder. Take both sides.                                                                                                                                                          |
-| `src/routes/*/nav-items.ts`         | Ordered arrays where the order is cosmetic. Take both sides, then run the adjacent `nav-items.spec.ts`, which asserts the list.                                                                                                  |
-| `docs/reports/feature-catalog.md`   | A wide table plus a `Last updated:` line every phase wants to touch. One row per feature, in the landing PR.                                                                                                                     |
-| `pnpm-lock.yaml`                    | Never hand-resolve: `git checkout --theirs pnpm-lock.yaml && pnpm install`.                                                                                                                                                      |
-| `migrations/`                       | Never conflicts, which is the trap. See above.                                                                                                                                                                                   |
+| File                                | How it conflicts, and what to do                                                                                                                                                                            |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/d1-table-order.mjs`        | **Position is semantic** — a table must follow everything it references. Taking both sides produces a file that lints clean and breaks the seed at runtime. Re-derive placement from the foreign-key graph. |
+| `scripts/seed-dev.ts`               | The orchestrator: `main()` and nothing else. It is now the only hot spot, and a feature touches one line of it. Seeders live one-per-file in `scripts/seed/`, so two features no longer conflict at all.    |
+| `src/lib/server/db/schema/index.ts` | Chronological `export *` lines. Append; never reorder. Take both sides.                                                                                                                                     |
+| `src/routes/*/nav-items.ts`         | Ordered arrays where the order is cosmetic. Take both sides, then run the adjacent `nav-items.spec.ts`, which asserts the list.                                                                             |
+| `docs/reports/feature-catalog.md`   | A wide table plus a `Last updated:` line every phase wants to touch. One row per feature, in the landing PR.                                                                                                |
+| `pnpm-lock.yaml`                    | Never hand-resolve: `git checkout --theirs pnpm-lock.yaml && pnpm install`.                                                                                                                                 |
+| `migrations/`                       | Never conflicts, which is the trap. See above.                                                                                                                                                              |
 
 Never rebase a feature branch and never force-push one. Other worktrees hold it, open phase PRs
 would redisplay every merged phase as new commits, and `allow_force_pushes=false` protects `main`

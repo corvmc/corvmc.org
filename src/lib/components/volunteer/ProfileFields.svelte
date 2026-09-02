@@ -60,7 +60,7 @@
 	label="Phone"
 	value={phone}
 	placeholder="(541) 555-0123"
-	description="So a coordinator can reach you about a shift."
+	description="For shift-day contact."
 />
 
 <!--

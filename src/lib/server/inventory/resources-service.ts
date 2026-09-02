@@ -1,15 +1,10 @@
 import { db } from '$lib/server/db';
-import {
-	inventoryAsset,
-	inventoryItem,
-	inventoryItemArticle
-} from '$lib/server/db/schema/inventory';
+import { inventoryItemArticle } from '$lib/server/db/schema/inventory';
 import { helpArticle } from '$lib/server/db/schema/help';
-import { and, asc, eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { listFor } from '$lib/server/media/media-service';
 import { resolveImageUrl } from '$lib/server/storage';
-import { recordMovement } from './stock-service';
-import { AssetNotFoundError } from './asset-service';
+import { raiseFlag } from './asset-flag-service';
 
 /**
  * What is attached to a thing: documentation on the catalog entry, and evidence
@@ -105,80 +100,46 @@ export async function listLinkableArticles(itemId: string) {
 // Damage reports
 // ---------------------------------------------------------------------------
 
-export class AssetNotReportableError extends Error {
-	constructor() {
-		super('This unit is already out of service');
-		this.name = 'AssetNotReportableError';
-	}
-}
-
 export interface ReportDamageInput {
 	assetId: string;
 	note: string;
 	reportedByUserId: string;
 	/** How bad, as judged by whoever found it. */
 	condition?: 'fair' | 'poor';
+	/** Whether the thing is unusable as it stands. */
+	blocksUse?: boolean;
+	/** Set when raised at re-uptake, against the loan it came back from. */
+	loanId?: string | null;
 }
 
 /**
  * Someone found a unit broken.
  *
- * A damage report is **a ledger entry, not a form system**: the asset's
- * condition changes and a `repair_out` movement carries the note and the
- * reporter. There is no separate report table and no queue, because the
- * movement history already is one — every repair a unit has been through is
- * already listed on its page in order.
+ * This used to be the whole system: the report *was* the status change, written
+ * straight to the ledger with no row of its own. That had three costs — a second
+ * reporter got an error, only the first was ever attributable, and an
+ * observation not worth taking the unit out of service had nowhere to go.
  *
- * **It takes the unit out of service immediately**, on a member's say-so. That
- * is deliberate: the cost of a wrong report is a staffer setting it back, while
- * the cost of leaving a broken amp bookable is the next member's session. The
- * movement records `actorId`, so a pattern of bad reports is attributable.
+ * It now records an `asset_flag` and lets that decide. The ledger is unchanged
+ * and still carries the `repair_out` when the unit actually leaves service; what
+ * moved out of it is the part a movement cannot express, because a movement has
+ * to move something.
+ *
+ * Kept as a named entry point rather than inlined at the call site: "a member
+ * reported damage" is the story, and `raiseFlag` is the mechanism.
  */
 export async function reportDamage(input: ReportDamageInput) {
-	const [asset] = await db
-		.select()
-		.from(inventoryAsset)
-		.where(eq(inventoryAsset.id, input.assetId))
-		.limit(1);
-
-	if (!asset) throw new AssetNotFoundError();
-
-	// Already in the shop, retired or lost: nothing useful to record, and the
-	// member should be told rather than shown a form that changes nothing.
-	if (asset.status !== 'in_service' && asset.status !== 'on_loan') {
-		throw new AssetNotReportableError();
-	}
-
-	const now = new Date();
-	await db
-		.update(inventoryAsset)
-		.set({
-			status: 'maintenance',
-			condition: input.condition ?? asset.condition,
-			updatedAt: now
-		})
-		.where(eq(inventoryAsset.id, input.assetId));
-
-	await recordMovement({
-		itemId: asset.itemId,
-		assetId: asset.id,
-		quantity: 1,
-		reason: 'repair_out',
-		locationId: asset.locationId,
-		actorId: input.reportedByUserId,
-		occurredAt: now,
-		notes: input.note
+	const flag = await raiseFlag({
+		assetId: input.assetId,
+		note: input.note,
+		reportedByUserId: input.reportedByUserId,
+		// Absent means the reporter did not say. Treated as blocking, which keeps
+		// the old behaviour for every caller that has not been taught to ask: the
+		// cost of a wrong pull is a staffer clicking it back, and the cost of
+		// leaving a broken amp bookable is the next member's session.
+		blocksUse: input.blocksUse ?? true,
+		condition: input.condition ?? null,
+		loanId: input.loanId ?? null
 	});
-
-	return { assetId: asset.id, itemId: asset.itemId };
-}
-
-/** Units a member reported, still awaiting a staffer. */
-export async function listReportedDamage() {
-	return db
-		.select({ asset: inventoryAsset, item: inventoryItem })
-		.from(inventoryAsset)
-		.innerJoin(inventoryItem, eq(inventoryAsset.itemId, inventoryItem.id))
-		.where(and(eq(inventoryAsset.status, 'maintenance')))
-		.orderBy(asc(inventoryItem.name));
+	return { assetId: flag.assetId, flagId: flag.id };
 }

@@ -48,10 +48,10 @@ describe('activeNavKey', () => {
 		['/staff/users', 'users'],
 		['/staff/users/abc', 'users'],
 		['/staff/volunteer', 'volunteer'],
-		// Not a nav row of its own — it falls back to the section parent.
-		['/staff/volunteer/clearances', 'volunteer'],
 		['/staff/volunteer/people', 'volunteer-people'],
-		['/staff/volunteer/shifts/abc', 'volunteer-shifts'],
+		// Shift detail lost its own row when the catalog folded into Schedule; it
+		// falls back to the section parent like clearances does.
+		['/staff/volunteer/shifts/abc', 'volunteer'],
 		// `/staff/events/[id]` and everything under it is the general view, which
 		// the Calendar row owns — including the production console, which is a
 		// page you navigate to rather than a section of its own.
@@ -65,6 +65,10 @@ describe('activeNavKey', () => {
 		['/staff/inventory/compliance', 'inventory-compliance'],
 		['/staff/inventory/loans', 'equipment-loans'],
 		['/staff/inventory/loans/abc', 'equipment-loans'],
+		['/staff/contractors', 'contractors'],
+		['/staff/contractors/abc', 'contractors'],
+		['/staff/contractors/jobs', 'contractor-jobs'],
+		['/staff/contractors/jobs/abc', 'contractor-jobs'],
 		['/staff/marketing/campaigns/new', 'campaigns'],
 		['/staff/marketing/campaigns/abc/edit', 'campaigns'],
 		['/staff/help/create', 'help'],
@@ -109,11 +113,9 @@ describe('the nav tree', () => {
 			// are on the dashboard — see docs/development/ui-patterns.md#section-dashboards.
 			'/staff/volunteer',
 			'/staff/volunteer/schedule',
-			'/staff/volunteer/hours',
 			'/staff/volunteer/people',
-			'/staff/volunteer/shifts',
-			'/staff/volunteer/roles',
-			'/staff/volunteer/certifications',
+			'/staff/volunteer/setup',
+			'/staff/volunteer/duty-lists',
 			'/staff/volunteer/report'
 		]);
 	});
@@ -141,7 +143,11 @@ describe('route coverage', () => {
 	 * the page that owns it, and each still resolves to a highlighted parent.
 	 */
 	const unlinked = new Set([
-		'/staff/volunteer/clearances', // reached from Certifications; `backHref` points there
+		// The full hour-log queue. Today's "Hours to review" card shows the top five
+		// and links here for the rest; it is not its own nav row because reviewing
+		// hours is something you arrive at from the worklist, not something you go
+		// and browse.
+		'/staff/volunteer/hours',
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Inventory, beside Categories; `backHref` points there

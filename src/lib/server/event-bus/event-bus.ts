@@ -8,9 +8,13 @@ export interface VolunteerShiftEvent {
 	userName: string;
 	userEmail: string;
 	roleName: string;
-	/** ISO strings, like every other date on this bus. */
-	startsAt: string;
-	endsAt: string;
+	/**
+	 * ISO strings, like every other date on this bus — and null when the shift is
+	 * an unscheduled work order, which has no window until somebody books one.
+	 * Copy that reads a date must say so rather than rendering "null".
+	 */
+	startsAt: string | null;
+	endsAt: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -518,6 +522,10 @@ export type DomainEvents = {
 	'volunteer.signup_claimed': VolunteerShiftEvent;
 	'volunteer.signup_confirmed': VolunteerShiftEvent;
 	'volunteer.signup_cancelled': VolunteerShiftEvent;
+	// Raised per person still on a shift that was called off, when staff press
+	// "Notify all" — not by the cancel itself. Calling a shift off and telling
+	// people about it are two decisions, and the roster is the list in between.
+	'volunteer.shift_cancelled': VolunteerShiftEvent;
 	'volunteer.shift_reminder_due': VolunteerShiftEvent;
 	'volunteer.shift_completed': VolunteerShiftEvent;
 	'volunteer.shift_feedback_due': VolunteerShiftEvent;

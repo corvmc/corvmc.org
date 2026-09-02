@@ -199,7 +199,9 @@
 								<div class="text-muted">Shift was cancelled</div>
 							{/if}
 						</td>
-						<td class="col-extra whitespace-nowrap">{formatDateShortYear(s.startsAt)}</td>
+						<td class="col-extra whitespace-nowrap">
+							{s.startsAt ? formatDateShortYear(s.startsAt) : 'Unscheduled'}
+						</td>
 					</tr>
 				{/each}
 			</Table>
