@@ -16,7 +16,7 @@
 	import { IconAlarmSnooze, IconCheck, IconRotate, IconSend, IconUser } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { disposeThread } from '$lib/remote/inbox.remote';
-	import { useShortcut } from '$lib/useShortcut.svelte';
+	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
 	import { dispositionToast, undoLast } from './undo.svelte';
 	import { invalidateQueue } from './queue.svelte';
 	import SnoozeMenu from './SnoozeMenu.svelte';
@@ -55,6 +55,7 @@
 	const size = $derived(variant === 'header' ? 'sm' : 'md');
 
 	let busy = $state(false);
+	let snoozeOpen = $state(false);
 
 	async function dispose(
 		action: 'resolve' | 'snooze' | 'wait' | 'reopen',
@@ -73,38 +74,44 @@
 		}
 	}
 
-	// Single letters, unmodified, exactly as the design labels them. `useShortcut`
-	// listens on the window, so a keystroke while the composer has focus would
-	// otherwise resolve the thread mid-sentence — hence the typing guard.
-	function bind(key: string, run: () => void) {
-		useShortcut(
-			() => key,
-			() => {
-				if (isTyping()) return;
-				run();
-			}
-		);
-	}
-
-	function isTyping() {
-		const el = document.activeElement;
-		if (!(el instanceof HTMLElement)) return false;
-		return el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
-	}
-
-	bind('r', () => onreply?.());
-	bind('a', () => onassign?.());
-	bind('e', () => {
-		if (status !== 'resolved') void dispose('resolve', 'Resolved');
-	});
-	// ⌘Z carries the modifier, so it needs no typing guard of its own — but it
-	// does need to exist on every surface that can dispose of a thread.
+	// Chorded with the platform modifier, the same convention as SubmitButton's
+	// `mod+s`. These are window listeners, and as bare letters they were eaten by
+	// the entire page: a focus guard covered the composer, but every other place
+	// focus lands — a button, a menu item, the body after a click — still ate the
+	// letter, so `E` resolved the thread instead of being typed. A chord needs no
+	// guard, because nothing else on the page claims one.
+	//
+	// The letters are the design's except where the chord itself collides with
+	// something a draft reply needs: `mod+r` is reload and `mod+a` is select-all,
+	// so Reply and Assign take J and G. An action that is not on offer passes
+	// `undefined`, which is how `useShortcut` is told not to listen at all.
+	const replyKeys = useShortcut(
+		() => (onreply ? 'mod+j' : undefined),
+		() => onreply?.()
+	);
+	const assignKeys = useShortcut(
+		() => (onassign ? 'mod+g' : undefined),
+		() => onassign?.()
+	);
+	const snoozeKeys = useShortcut(
+		() => (status === 'snoozed' ? undefined : 'mod+s'),
+		() => (snoozeOpen = true)
+	);
+	const resolveKeys = useShortcut(
+		() => (status === 'resolved' ? undefined : 'mod+e'),
+		() => void dispose('resolve', 'Resolved')
+	);
+	// ⌘Z is the way back from all four, so it has to exist on every surface that
+	// can dispose of a thread.
 	useShortcut(
 		() => 'mod+z',
 		() => undoLast()
 	);
 </script>
 
+<!-- The key replaces the icon while the modifier is held, rather than sitting
+     beside it: a permanent kbd is a label for a shortcut nobody is currently
+     reaching for, and the swap is what SubmitButton already does. -->
 <div class="flex flex-wrap items-center gap-2 {focus ? 'w-full' : ''}">
 	{#if onreply}
 		<Button
@@ -113,8 +120,12 @@
 			class={focus ? 'flex-1' : ''}
 			onclick={onreply}
 		>
-			<IconSend size={16} /> Reply
-			<kbd class="kbd kbd-xs">R</kbd>
+			{#if replyKeys.modHeld && replyKeys.parsed}
+				<kbd class="kbd kbd-xs">{shortcutLabel(replyKeys.parsed)}</kbd>
+			{:else}
+				<IconSend size={16} />
+			{/if}
+			Reply
 		</Button>
 	{/if}
 
@@ -125,13 +136,18 @@
 			class={focus ? 'flex-1' : ''}
 			onclick={onassign}
 		>
-			<IconUser size={16} /> Assign
-			<kbd class="kbd kbd-xs">A</kbd>
+			{#if assignKeys.modHeld && assignKeys.parsed}
+				<kbd class="kbd kbd-xs">{shortcutLabel(assignKeys.parsed)}</kbd>
+			{:else}
+				<IconUser size={16} />
+			{/if}
+			Assign
 		</Button>
 	{/if}
 
 	{#if status !== 'snoozed'}
 		<SnoozeMenu
+			bind:open={snoozeOpen}
 			onpick={(date) => dispose('snooze', 'Snoozed', date)}
 			onwait={() => dispose('wait', 'Waiting on their reply')}
 		>
@@ -143,8 +159,12 @@
 					class={focus ? 'flex-1' : ''}
 					disabled={busy}
 				>
-					<IconAlarmSnooze size={16} /> Snooze
-					<kbd class="kbd kbd-xs">S</kbd>
+					{#if snoozeKeys.modHeld && snoozeKeys.parsed}
+						<kbd class="kbd kbd-xs">{shortcutLabel(snoozeKeys.parsed)}</kbd>
+					{:else}
+						<IconAlarmSnooze size={16} />
+					{/if}
+					Snooze
 				</Button>
 			{/snippet}
 		</SnoozeMenu>
@@ -173,8 +193,12 @@
 			disabled={busy}
 			onclick={() => dispose('resolve', 'Resolved')}
 		>
-			<IconCheck size={16} /> Resolve
-			<kbd class="kbd kbd-xs">E</kbd>
+			{#if resolveKeys.modHeld && resolveKeys.parsed}
+				<kbd class="kbd kbd-xs">{shortcutLabel(resolveKeys.parsed)}</kbd>
+			{:else}
+				<IconCheck size={16} />
+			{/if}
+			Resolve
 		</Button>
 	{/if}
 </div>
