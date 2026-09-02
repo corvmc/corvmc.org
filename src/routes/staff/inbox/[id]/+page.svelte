@@ -46,12 +46,15 @@
 
 	const ChannelIcon = $derived(channelIcon(t.channel));
 
-	// `R` and `A` on the DispositionBar hand control back here, because the
-	// composer and the assignee select are this page's, not the bar's. The
-	// details strip has to open before the assign control inside it can take
-	// focus, so `detailsOpen` is state rather than the <details> element's own.
+	// Assign on the DispositionBar hands control back here, because the assignee
+	// select is this page's, not the bar's. The details strip has to open before
+	// the assign control inside it can take focus, so `detailsOpen` is state
+	// rather than the <details> element's own.
+	//
+	// The bar's Reply is not offered here at all: it exists to put the cursor in
+	// a composer the bar does not own, and on this page that composer is the next
+	// thing down the screen.
 	let detailsOpen = $state(false);
-	let composer = $state<HTMLTextAreaElement>();
 </script>
 
 <div class="flex flex-col gap-4 overflow-y-auto sm:h-full sm:min-h-0 sm:overflow-visible">
@@ -63,17 +66,16 @@
 		{#snippet subtitleIcon()}<ChannelIcon size={14} />{/snippet}
 		{#snippet actions()}
 			<StatusBadge status={threadDisplayStatus(t)} label />
-			<!-- Above `sm` the four exits live in the header, beside the status they
+			<!-- Above `sm` the exits live in the header, beside the status they
 			     change. Below it they move under the composer instead — see the
-			     bottom of this file. Four buttons and a badge on a 375px header
-			     wrap into three ragged lines and put the primary action off the
-			     first screen. -->
+			     bottom of this file. Three buttons and a badge on a 375px header
+			     wrap into ragged lines and put the primary action off the first
+			     screen. -->
 			<div class="hidden sm:contents">
 				<DispositionBar
 					threadId={t.id}
 					status={t.status}
 					awaiting={!!t.awaitingReplySince}
-					onreply={() => composer?.focus()}
 					onassign={() => {
 						detailsOpen = true;
 					}}
@@ -139,13 +141,11 @@
 				{noteForm}
 				{replyBlockedReason}
 				assignees={getAssignableStaff}
-				bind:field={composer}
 				onsent={() => getInboxThread(threadId).refresh()}
 			/>
 
 			<!-- The phone's disposition row: under the composer, above the home
-			     indicator, three equal targets. Reply is omitted here — the
-			     composer it would focus is directly above it. -->
+			     indicator, equal targets. -->
 			<div class="sm:hidden">
 				<DispositionBar
 					threadId={t.id}
