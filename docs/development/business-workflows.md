@@ -941,14 +941,23 @@ were bound to the session.
 
 So:
 
-- **`/staff/volunteer` is a dashboard, not a table.** Cards for the things waiting on a
-  person — claims to confirm, shifts that are short, hours to review, under-18 approvals,
-  shifts that finished without being closed out, clearances lapsing before a shift somebody
-  is already on — each with its action on the row. The hour-log queue it replaced moved to
-  `/staff/volunteer/hours`. See
-  [ui-patterns.md#section-dashboards](./ui-patterns.md#section-dashboards).
-- **`/staff/volunteer/schedule`** is the next two weeks grouped by day. `/staff/volunteer/shifts`
-  remains the whole catalog.
+- **`/staff/volunteer` is Today, a worklist rather than a table.** Cards for the things
+  waiting on a person — claims to confirm, shifts that are short, hours to review, under-18
+  approvals, shifts that finished without being closed out, clearances lapsing before a shift
+  somebody is already on — each with its action on the row, each hidden when its queue is
+  empty. See [ui-patterns.md#section-dashboards](./ui-patterns.md#section-dashboards).
+- **Four screens, not seven.** Today, Schedule, People, Setup, plus a read-only Report.
+  Schedule absorbed the shift catalog (its "Everything" window is what the old Include-past
+  checkbox was); People absorbed the volunteers index, the under-18 queue and the clearances
+  table; Setup absorbed roles and certifications. The retired routes are 308s, and role
+  detail, the full hour queue and the richer report survive as unlisted pages reached from
+  the screens that replaced them. See
+  [specs/shipped/volunteering-redesign-spec.md](../specs/shipped/volunteering-redesign-spec.md).
+- **A called-off shift is a notify list.** `cancelShift` has always left its signups in
+  place; now `notifySignupsOfCancellation` is the button that tells them, and
+  `volunteer_signup.notified_at` records how far down the list staff have got. Cancelling
+  deliberately notifies nobody on its own — calling a shift off and telling six people about
+  it are two decisions, and the first is sometimes reversed.
 - **Staff can assign, release and confirm.** `assignShiftToMember` lands the signup
   `confirmed` — a coordinator typing the name in _is_ the decision, and leaving it `claimed`
   would cost the member their reminder. The clearance gate is **not** relaxed for staff: an
@@ -963,7 +972,14 @@ So:
   never told one had arrived, and confirming — which is what earns the reminder, the
   auto-complete and the hour log — had nothing prompting it.
 - **Every list splits `confirmed` from `claimed`.** One conflated number made a shift with
-  three unconfirmed claims read as fully staffed.
+  three unconfirmed claims read as fully staffed. The member's half now draws the same
+  distinction as a two-step **Claimed → Booked** rail, because a claim nobody confirms earns
+  no reminder and never auto-completes — and the person who made it could not previously tell
+  that from a booking.
+- **"Who to ask" sits beside the shift**, not on the role's page, and is judged as of the
+  shift's own date. Three scopes — interested, has worked it, everybody — and one flag line
+  per candidate, resolved in priority order: missing clearance blocks, a lapsing one warns, a
+  day their availability argues against warns, otherwise what they have done before.
 
 ### Code path
 
