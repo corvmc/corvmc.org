@@ -14,7 +14,8 @@ import {
 	setAwaitingReply,
 	getUnresolvedCount,
 	countThreadsByStatus,
-	listThreadsByContactEmail
+	listThreadsByContactEmail,
+	undoLastDisposition
 } from '$lib/server/inbox/thread-service';
 import type { ListThreadsFilters } from '$lib/server/inbox/thread-service';
 import {
@@ -35,7 +36,7 @@ import {
 } from '$lib/server/inbox/portal-service';
 import { submitContactFormSchema } from '$lib/server/db/schema/inbox';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE, inboxChannels, inboxThreadStatuses, inboxViews } from '$lib/config';
+import { DEFAULT_TIMEZONE, inboxChannels, inboxViews } from '$lib/config';
 import type { InboxView } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -224,58 +225,79 @@ export const assignThread = form(assignSchema, async (data) => {
 	return { success: true };
 });
 
-const statusSchema = z.object({
+/**
+ * The four ways a conversation leaves the queue, as one call.
+ *
+ * A `command` rather than four `form`s. These are raised from a keyboard
+ * shortcut, a dropdown item and a toast as often as from a button, none of
+ * which is a form submission — and the previous shape (two forms, four `.for()`
+ * instances, a modal wrapping a select) took two interactions to do the one
+ * thing anyone does from here. One entry point is also what lets every one of
+ * them capture an undo snapshot without four chances to forget.
+ *
+ * `wait` is not a status. It sets the awaiting-reply marker, which moves the
+ * thread from Open to Awaiting reply — the same state replying applies, reached
+ * deliberately. It is the manual path for an answer given somewhere the inbox
+ * cannot see: a phone call, a hallway, someone's own phone.
+ */
+const disposeSchema = z.object({
 	threadId: z.string().min(1),
-	status: z.enum(inboxThreadStatuses),
-	/** `YYYY-MM-DD` from the snooze calendar; only meaningful when snoozing. */
+	action: z.enum(['resolve', 'snooze', 'wait', 'reopen']),
+	/** `YYYY-MM-DD` from the snooze menu. Only meaningful when snoozing. */
 	snoozedUntil: z
 		.string()
 		.regex(/^\d{4}-\d{2}-\d{2}$/)
 		.optional()
 });
 
-export const updateThreadStatus = form(statusSchema, async (data) => {
+export const disposeThread = command(disposeSchema, async ({ threadId, action, snoozedUntil }) => {
 	await requireStaff();
 
-	// A calendar date means "put this back in the queue that morning", so it
-	// resolves against club time rather than UTC midnight — otherwise snoozing
-	// until tomorrow wakes the thread at 5pm today.
-	const snoozedUntil = data.snoozedUntil
-		? buildDateInTz(data.snoozedUntil, '08:00', DEFAULT_TIMEZONE)
-		: undefined;
+	if (action === 'wait') {
+		await setAwaitingReply(threadId, true);
+	} else if (action === 'reopen') {
+		// Reopening clears the marker as well as the status — `updateStatus` does
+		// that, and it is the point: staff saying this needs an answer now.
+		await updateStatus(threadId, 'open');
+	} else {
+		// A calendar date means "put this back in the queue that morning", so it
+		// resolves against club time rather than UTC midnight — otherwise snoozing
+		// until tomorrow wakes the thread at 5pm today.
+		await updateStatus(
+			threadId,
+			action === 'resolve' ? 'resolved' : 'snoozed',
+			snoozedUntil ? buildDateInTz(snoozedUntil, '08:00', DEFAULT_TIMEZONE) : undefined
+		);
+	}
 
-	await updateStatus(data.threadId, data.status, snoozedUntil);
-	void getInboxThread(data.threadId).refresh();
+	void getInboxThread(threadId).refresh();
 	void getInboxThreadCounts().refresh();
 	void getInboxUnreadCount().refresh();
-	// The staff nav badge counts open threads, so resolving from the detail page
-	// has to refresh the layout too or the sidebar keeps the old number.
+	// The staff nav badge counts open threads, so disposing of one from the
+	// detail page has to refresh the layout too or the sidebar keeps the old
+	// number.
 	void getStaffLayout().refresh();
-	return { success: true };
-});
-
-// No `.transform()` on `awaiting`: a transform in a form() schema breaks the
-// `fields` inference the button's hidden inputs are built from.
-const awaitingSchema = z.object({
-	threadId: z.string().min(1),
-	awaiting: z.enum(['true', 'false'])
 });
 
 /**
- * The manual half of the awaiting-reply marker — replying sets it on its own.
- * Staff reach for this when the answer happened off the platform, or when a
- * conversation they marked needs their attention again after all.
+ * Put the thread back the way the last disposition found it.
+ *
+ * A `command` rather than a `form`: it is raised by a toast button and by ⌘Z,
+ * neither of which is a form submission, and it takes no input beyond the id.
+ * Silent when there is nothing to undo — pressing ⌘Z twice is not an error.
  */
-export const setThreadAwaiting = form(awaitingSchema, async (data) => {
+export const undoThreadDisposition = command(z.string().min(1), async (threadId) => {
 	await requireStaff();
-	await setAwaitingReply(data.threadId, data.awaiting === 'true');
+	const undone = await undoLastDisposition(threadId);
+	if (!undone) return { undone: false };
 
-	void getInboxThread(data.threadId).refresh();
-	// The marker is what the nav badge counts, so both it and the layout that
-	// renders it have to be recounted — same reason as updateThreadStatus.
+	void getInboxThread(threadId).refresh();
+	void getInboxThreadCounts().refresh();
 	void getInboxUnreadCount().refresh();
+	// Same reason as updateThreadStatus: the nav badge lives in the layout and
+	// counts open threads, so restoring one has to recount it.
 	void getStaffLayout().refresh();
-	return { success: true };
+	return { undone: true };
 });
 
 // ---------------------------------------------------------------------------

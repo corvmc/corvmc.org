@@ -28,6 +28,8 @@ vi.mock('$lib/server/db', () => ({
 							calls.groupBySelects++;
 							return Promise.resolve(groupedRows);
 						},
+						// `undoLastDisposition` reads one row by id.
+						limit: () => Promise.resolve(selectRows),
 						then: (resolve: (v: unknown) => unknown) => resolve(selectRows)
 					};
 				},
@@ -50,9 +52,22 @@ vi.mock('$lib/server/db', () => ({
 }));
 vi.mock('$lib/server/db/paginate', () => ({ paginate: vi.fn() }));
 
-const { wakeSnoozedThreads, countThreadsByStatus, updateStatus, getUnresolvedCount } =
-	await import('./thread-service');
+const {
+	wakeSnoozedThreads,
+	countThreadsByStatus,
+	updateStatus,
+	getUnresolvedCount,
+	assignThread,
+	setAwaitingReply,
+	undoLastDisposition
+} = await import('./thread-service');
 const { inboxThread } = await import('$lib/server/db/schema/inbox');
+
+/** Render a captured SET-side fragment — `undoState` is raw SQL, not a value. */
+function renderSet(fragment: SQL): string {
+	const bare = drizzle({} as never);
+	return bare.select().from(inboxThread).where(fragment).toSQL().sql;
+}
 
 /** Render a captured predicate so we can assert on the actual SQL. */
 function renderWhere(where: SQL): string {
@@ -202,5 +217,69 @@ describe('staffVisibleThread (rendered SQL)', () => {
 		await countThreadsByStatus();
 		expect(calls.selectWhere.length).toBe(1);
 		expect(renderWhere(calls.selectWhere[0])).toContain('content_flag');
+	});
+});
+
+describe('undo', () => {
+	// The snapshot is written by the same UPDATE that moves the thread. On D1
+	// there is no transaction to hold a read and a write together, so a separate
+	// SELECT would leave a window where the thread has moved and its way back
+	// has not been recorded.
+	it('every disposition records what it is about to overwrite', async () => {
+		await updateStatus('thread-1', 'resolved');
+		await setAwaitingReply('thread-1', true);
+		await assignThread('thread-1', 'user-9');
+
+		expect(calls.updateSet).toHaveLength(3);
+		for (const set of calls.updateSet) {
+			const rendered = renderSet(set.undoState as SQL).toLowerCase();
+			expect(rendered).toContain('json_object');
+			// All four dispositional fields, or undo restores a partial thread.
+			expect(rendered).toContain('status');
+			expect(rendered).toContain('snoozed_until');
+			expect(rendered).toContain('awaiting_reply_since');
+			expect(rendered).toContain('assigned_to_user_id');
+		}
+	});
+
+	it('restores the snapshot and spends it', async () => {
+		selectRows = [
+			{
+				undoState: {
+					status: 'open',
+					snoozedUntil: null,
+					awaitingReplySince: 1_788_000_000,
+					assignedToUserId: 'user-3'
+				}
+			}
+		];
+
+		expect(await undoLastDisposition('thread-1')).toBe(true);
+		expect(calls.updateSet[0]).toMatchObject({
+			status: 'open',
+			snoozedUntil: null,
+			awaitingReplySince: new Date(1_788_000_000 * 1000),
+			assignedToUserId: 'user-3',
+			// Cleared, so a second ⌘Z is a no-op rather than a replay.
+			undoState: null
+		});
+	});
+
+	// Pressing ⌘Z twice, or on a thread nothing has happened to. Not an error:
+	// the caller stays quiet on false.
+	it('reports nothing to undo rather than writing', async () => {
+		selectRows = [{ undoState: null }];
+
+		expect(await undoLastDisposition('thread-1')).toBe(false);
+		expect(calls.updateSet).toHaveLength(0);
+	});
+
+	// The column is JSON in a text column and nothing stops an older row holding
+	// a shape this code never wrote.
+	it('refuses a snapshot it cannot parse', async () => {
+		selectRows = [{ undoState: { status: 'not-a-status' } }];
+
+		expect(await undoLastDisposition('thread-1')).toBe(false);
+		expect(calls.updateSet).toHaveLength(0);
 	});
 });

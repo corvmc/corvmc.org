@@ -33,6 +33,7 @@
 		noteForm,
 		/** Why replying is impossible, if it is. Set = the Reply tab is disabled. */
 		replyBlockedReason,
+		field = $bindable(),
 		onsent
 	}: {
 		threadId: string;
@@ -40,6 +41,11 @@
 		/** Omitted on member-facing timelines: internal notes are staff-only. */
 		noteForm?: Omit<RemoteForm<{ threadId: string; body: string }, unknown>, 'for'>;
 		replyBlockedReason?: string;
+		/**
+		 * The textarea itself, so a surface that owns a Reply shortcut can put the
+		 * cursor in it. The composer stays the owner of the draft either way.
+		 */
+		field?: HTMLTextAreaElement;
 		onsent?: () => void;
 	} = $props();
 
@@ -102,6 +108,7 @@
 				{#snippet input(id)}
 					<textarea
 						{id}
+						bind:this={field}
 						name="body"
 						class="textarea w-full"
 						rows={isNote ? 2 : 4}

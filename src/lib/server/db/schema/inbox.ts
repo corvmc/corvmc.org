@@ -70,6 +70,21 @@ export const inboxThread = sqliteTable(
 		 * inbound message and by any explicit status change.
 		 */
 		awaitingReplySince: integer('awaiting_reply_since', { mode: 'timestamp' }),
+		/**
+		 * What this thread looked like before the last disposition, so the toast's
+		 * Undo has something to put back.
+		 *
+		 * A column rather than state the client hands back: undo has to survive a
+		 * reload, and a client-supplied "previous state" is an arbitrary state
+		 * write wearing a hat. Written by the same UPDATE that changes the row —
+		 * see `withUndoSnapshot` in thread-service — so there is no window where a
+		 * thread has moved and its undo has not been recorded.
+		 *
+		 * Only ever holds the *dispositional* fields, and only the most recent
+		 * change: undo is a ten-second correction of the action you just took, not
+		 * a history. Cleared once used.
+		 */
+		undoState: text('undo_state', { mode: 'json' }),
 		messageCount: integer('message_count').notNull().default(0),
 		lastMessageAt: integer('last_message_at', { mode: 'timestamp' }),
 		/**

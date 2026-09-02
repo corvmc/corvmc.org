@@ -10,6 +10,7 @@
 	 * from notification emails, the in-app bell and the staff user record.
 	 */
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import { untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import DataList from '$lib/components/ui/DataList.svelte';
@@ -27,6 +28,7 @@
 		threadDisplayStatus,
 		waitingDays
 	} from '$lib/components/inbox/thread-status';
+	import { queueVersion } from '$lib/components/inbox/queue.svelte';
 
 	type StatusView = InboxView;
 
@@ -95,6 +97,15 @@
 	// The component's one query. The three filter controls each own theirs — none of them is
 	// keyed by these filters, and all three have mutations that refresh them by name.
 	const result = $derived(getInboxThreads(filters));
+
+	// Disposing of a thread from the pane beside this one moves it between views,
+	// and no mutation can name this instance to refresh it — see queue.svelte.ts.
+	// `untrack` because the derived above already refetches on a filter change;
+	// reading `filters` here as a dependency would fire a second request for it.
+	$effect(() => {
+		if (queueVersion() === 0) return;
+		untrack(() => void getInboxThreads(filters).refresh());
+	});
 
 	const openId = $derived(page.params.id);
 

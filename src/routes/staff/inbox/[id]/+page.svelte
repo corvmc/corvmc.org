@@ -15,18 +15,17 @@
 	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
 	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';
 	import AssignControl from './AssignControl.svelte';
-	import ThreadStatusActions from '$lib/components/inbox/ThreadStatusActions.svelte';
+	import DispositionBar from '$lib/components/inbox/DispositionBar.svelte';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
 	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
 	import { isAlwaysEnabledChannel } from '$lib/config';
-	import { formatDateTime } from '$lib/utils/format';
+	import { formatDate, formatDateTime } from '$lib/utils/format';
+	import { IconAlarmSnooze, IconSend } from '@tabler/icons-svelte';
 	import {
 		getInboxThread,
 		getInboxEnabledChannels,
 		replyToThread,
 		addThreadNote,
-		updateThreadStatus,
-		setThreadAwaiting,
 		assignThread
 	} from '$lib/remote/inbox.remote';
 
@@ -43,14 +42,15 @@
 	const replyForm = replyToThread.for('reply');
 	const noteForm = addThreadNote.for('note');
 	const assignForm = assignThread.for('assign');
-	// Separate instances so each status button tracks its own pending state. The
-	// snooze modal takes the base form, since `Action` renders its own `<Form>`.
-	const resolveForm = updateThreadStatus.for('resolve');
-	const reopenForm = updateThreadStatus.for('reopen');
-	const snoozeForm = updateThreadStatus;
-	const awaitingForm = setThreadAwaiting.for('awaiting');
 
 	const ChannelIcon = $derived(channelIcon(t.channel));
+
+	// `R` and `A` on the DispositionBar hand control back here, because the
+	// composer and the assignee select are this page's, not the bar's. The
+	// details strip has to open before the assign control inside it can take
+	// focus, so `detailsOpen` is state rather than the <details> element's own.
+	let detailsOpen = $state(false);
+	let composer = $state<HTMLTextAreaElement>();
 </script>
 
 <div class="flex h-full min-h-0 flex-col gap-4">
@@ -62,21 +62,20 @@
 		{#snippet subtitleIcon()}<ChannelIcon size={14} />{/snippet}
 		{#snippet actions()}
 			<StatusBadge status={threadDisplayStatus(t)} label />
-			<ThreadStatusActions
+			<DispositionBar
 				threadId={t.id}
 				status={t.status}
-				snoozedUntil={t.snoozedUntil}
-				awaitingReplySince={t.awaitingReplySince}
-				{resolveForm}
-				{reopenForm}
-				{snoozeForm}
-				{awaitingForm}
+				awaiting={!!t.awaitingReplySince}
+				onreply={() => composer?.focus()}
+				onassign={() => {
+					detailsOpen = true;
+				}}
 			/>
 		{/snippet}
 
 		<!-- Consulted rather than read, so it is closed by default. A plain
 		     <details> keeps it keyboard-operable with no JS. -->
-		<details class="collapse-arrow collapse rounded-box bg-base-200/50">
+		<details class="collapse-arrow collapse rounded-box bg-base-200/50" bind:open={detailsOpen}>
 			<summary class="collapse-title min-h-0 py-2 text-sm font-medium">Details</summary>
 			<div class="collapse-content flex flex-col gap-3 text-sm">
 				<div class="flex flex-wrap gap-x-6 gap-y-1">
@@ -106,6 +105,19 @@
 			</div>
 		</details>
 	</ThreadHeader>
+
+	<!-- The age line. Always present, and always the *reason* the thread is in
+	     front of you: which of the two clocks is running says more than either
+	     date alone. -->
+	{#if t.status === 'snoozed' && t.snoozedUntil}
+		<p class="flex items-center gap-1.5 text-muted text-sm">
+			<IconAlarmSnooze size={14} /> Returns {formatDate(new Date(t.snoozedUntil))}
+		</p>
+	{:else if t.awaitingReplySince}
+		<p class="flex items-center gap-1.5 text-muted text-sm">
+			<IconSend size={14} /> Waiting on a reply since {formatDate(new Date(t.awaitingReplySince))}
+		</p>
+	{/if}
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		<ThreadTimeline messages={t.messages} notes={t.notes} contactName={t.contactName} />
@@ -143,6 +155,7 @@
 				{replyForm}
 				{noteForm}
 				{replyBlockedReason}
+				bind:field={composer}
 				onsent={() => getInboxThread(threadId).refresh()}
 			/>
 		</div>

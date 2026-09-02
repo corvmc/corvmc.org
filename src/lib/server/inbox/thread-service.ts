@@ -26,6 +26,8 @@ import type { SQL } from 'drizzle-orm';
 import type { InboxChannel, InboxThreadStatus } from '$lib/server/db/schema/inbox';
 import type { PaginationInput } from '$lib/server/db/paginate';
 import { paginate } from '$lib/server/db/paginate';
+import { z } from 'zod';
+import { inboxThreadStatuses } from '$lib/config';
 
 /**
  * The one expression that keeps private member↔member conversations out of
@@ -357,10 +359,38 @@ export async function getThread(id: string) {
 	return { ...thread, messages, notes };
 }
 
+/**
+ * The four fields a disposition moves, captured from the row's *current* values
+ * as part of the very UPDATE that changes them.
+ *
+ * SQL rather than a read-then-write pair: on D1 there is no transaction to hold
+ * the two together (`db.transaction()` is broken), so a separate SELECT leaves a
+ * window in which the thread has moved and its undo has not been recorded.
+ * `json_object` reads the pre-update values because SQLite evaluates the whole
+ * SET list against the old row.
+ *
+ * Timestamps go out as unix seconds, which is how they are stored — `undoValue`
+ * turns them back into Dates on the way in.
+ */
+const undoSnapshot = sql`json_object(
+	'status', ${inboxThread.status},
+	'snoozedUntil', ${inboxThread.snoozedUntil},
+	'awaitingReplySince', ${inboxThread.awaitingReplySince},
+	'assignedToUserId', ${inboxThread.assignedToUserId}
+)`;
+
+/** What `undo_state` holds. Validated on read — it is JSON in a text column. */
+const undoStateSchema = z.object({
+	status: z.enum(inboxThreadStatuses),
+	snoozedUntil: z.number().nullable(),
+	awaitingReplySince: z.number().nullable(),
+	assignedToUserId: z.string().nullable()
+});
+
 export async function assignThread(threadId: string, userId: string | null) {
 	await db
 		.update(inboxThread)
-		.set({ assignedToUserId: userId, updatedAt: new Date() })
+		.set({ assignedToUserId: userId, undoState: undoSnapshot, updatedAt: new Date() })
 		.where(eq(inboxThread.id, threadId));
 }
 
@@ -378,6 +408,7 @@ export async function updateStatus(
 			// the wait, snoozing replaces it with a dated one, and reopening is staff
 			// saying this needs an answer now.
 			awaitingReplySince: null,
+			undoState: undoSnapshot,
 			updatedAt: new Date()
 		})
 		.where(eq(inboxThread.id, threadId));
@@ -393,8 +424,46 @@ export async function updateStatus(
 export async function setAwaitingReply(threadId: string, awaiting: boolean) {
 	await db
 		.update(inboxThread)
-		.set({ awaitingReplySince: awaiting ? new Date() : null, updatedAt: new Date() })
+		.set({
+			awaitingReplySince: awaiting ? new Date() : null,
+			undoState: undoSnapshot,
+			updatedAt: new Date()
+		})
 		.where(eq(inboxThread.id, threadId));
+}
+
+/**
+ * Put the thread back the way the last disposition found it.
+ *
+ * Returns false when there is nothing to undo, which is the ordinary outcome of
+ * pressing ⌘Z twice: undo is one step deep by design, and the snapshot is
+ * cleared as it is spent. The restore does *not* leave a new snapshot behind —
+ * undoing an undo is just doing the thing again.
+ */
+export async function undoLastDisposition(threadId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ undoState: inboxThread.undoState })
+		.from(inboxThread)
+		.where(eq(inboxThread.id, threadId))
+		.limit(1);
+
+	const parsed = undoStateSchema.safeParse(row?.undoState);
+	if (!parsed.success) return false;
+
+	const { status, snoozedUntil, awaitingReplySince, assignedToUserId } = parsed.data;
+	await db
+		.update(inboxThread)
+		.set({
+			status,
+			snoozedUntil: snoozedUntil === null ? null : new Date(snoozedUntil * 1000),
+			awaitingReplySince: awaitingReplySince === null ? null : new Date(awaitingReplySince * 1000),
+			assignedToUserId,
+			undoState: null,
+			updatedAt: new Date()
+		})
+		.where(eq(inboxThread.id, threadId));
+
+	return true;
 }
 
 /**
