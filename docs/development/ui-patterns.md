@@ -622,6 +622,26 @@ Tab navigation supporting both URL-driven (links) and client-state (buttons) mod
 
 Tabs with `href` render as `<a>` tags; without, they render as `<button>` tags and call `onchange`.
 
+Two ways to survive a bar that outgrows its space. `collapse` folds the set into a dropdown below
+`md` — for bars that outrun a phone. `dense` shrinks every tab but the active one to its `icon`,
+keeping the counts visible — for bars in a narrow _pane_, where the viewport is wide and `collapse`
+therefore never fires:
+
+```svelte
+<TabBar
+	dense
+	tabs={[
+		{ key: 'open', label: 'Open', badge: 4, icon: IconInbox },
+		{ key: 'resolved', label: 'Resolved', badge: 11, icon: IconInboxOff }
+	]}
+	active={view}
+	onchange={(key) => (view = key)}
+/>
+```
+
+An icon-only tab takes its accessible name from an `aria-label` carrying the label and the count;
+the active tab keeps its word and its own text. A tab with no `icon` is unaffected.
+
 ## CopyableId
 
 Truncated ID display with a clipboard copy button. Useful for Stripe IDs, record IDs, etc.

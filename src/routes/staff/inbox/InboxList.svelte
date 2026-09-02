@@ -1,6 +1,6 @@
 <script lang="ts">
 	import InboxViews from './InboxViews.svelte';
-	import InboxChannelOptions from './InboxChannelOptions.svelte';
+	import InboxChannelFilter from './InboxChannelFilter.svelte';
 	/**
 	 * The staff queue: view tabs, search, and the list of conversations.
 	 *
@@ -20,10 +20,9 @@
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { IconFilter, IconX } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
-	import { relativeDay } from '$lib/utils/format';
+	import { formatDateShort, formatDateTime } from '$lib/utils/format';
 	import { getInboxThreads } from '$lib/remote/inbox.remote';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
 	import {
@@ -95,7 +94,7 @@
 	const formatWait = (days: number) => (days === 0 ? 'today' : `${days}d`);
 </script>
 
-<div class="flex min-h-0 flex-col gap-3">
+<div class="flex min-h-0 flex-col gap-2">
 	<InboxViews
 		bind:view={filters.view}
 		onchange={() => {
@@ -103,8 +102,10 @@
 		}}
 	/>
 
+	<!-- One row in a 20rem pane: the two buttons drop to their icons below `@md`,
+	     which is every width where the conversation sits beside this. -->
 	<div class="flex flex-wrap items-center gap-2">
-		<div class="min-w-40 flex-1">
+		<div class="min-w-32 flex-1">
 			<SearchInput
 				bind:value={searchText}
 				placeholder="Search conversations…"
@@ -117,23 +118,20 @@
 		<!-- The channel filter stays inline: it is the one facet that answers
 		     "where did this come from", which is a different question from the
 		     panel's "what am I working on". -->
-		<Select
-			size="sm"
-			aria-label="Channel"
+		<InboxChannelFilter
 			value={filters.channel}
-			onchange={(e: Event) => {
-				filters.channel = (e.currentTarget as HTMLSelectElement).value;
+			onselect={(channel) => {
+				filters.channel = channel;
 				filters.page = 1;
 			}}
-		>
-			<InboxChannelOptions current={filters.channel} />
-		</Select>
+		/>
 		<Button
 			variant={filterPanel.open ? 'primary' : 'default'}
 			size="sm"
+			aria-label={activeCount() ? `Filters, ${activeCount()} active` : 'Filters'}
 			onclick={() => (filterPanel.open = !filterPanel.open)}
 		>
-			<IconFilter size={16} /> Filters
+			<IconFilter size={16} /> <span class="hidden @md:inline">Filters</span>
 			{#if activeCount()}<Badge class="ml-1">{activeCount()}</Badge>{/if}
 		</Button>
 		{#if activeCount()}
@@ -168,7 +166,7 @@
 						<li>
 							<a
 								{href}
-								class="flex items-start gap-3 rounded-box p-3 hover:bg-base-200 {active
+								class="flex items-start gap-2.5 rounded-box p-2 hover:bg-base-200 {active
 									? 'bg-base-200'
 									: ''}"
 								aria-current={active ? 'page' : undefined}
@@ -192,12 +190,32 @@
 										     nothing. On the Open view that reason is *why* it is open
 										     (never answered, they replied, the snooze ran out); on the
 										     others it is the status itself, which the tab does not
-										     repeat once you have filtered or searched across views. -->
+										     repeat once you have filtered or searched across views.
+
+										     `shrink-0` because it is a phrase: left to shrink it wraps
+										     "Snooze expired" onto two lines and takes the row's height with
+										     it. The name beside it is the part that truncates. -->
 										{#if reason}
-											<StatusBadge status={reason} label />
+											<StatusBadge status={reason} label class="shrink-0" />
 										{:else}
-											<StatusBadge status={threadDisplayStatus(t)} label />
+											<StatusBadge status={threadDisplayStatus(t)} label class="shrink-0" />
 										{/if}
+
+										<!-- The age rides the name line rather than a fourth one. On the
+										     views sorted by wait it *is* the wait: `waitingSince` collapses
+										     to `lastMessageAt` there, so "3 weeks ago · 20d" was the same
+										     fact twice. Elsewhere the exact day beats a relative phrase in a
+										     right-hand column, and the title carries the rest. -->
+										<span
+											class="ml-auto shrink-0 text-subtle text-xs"
+											title={t.lastMessageAt ? formatDateTime(t.lastMessageAt) : undefined}
+										>
+											{#if sortedByWaiting}
+												{formatWait(waitingDays(t))}
+											{:else}
+												{t.lastMessageAt ? formatDateShort(t.lastMessageAt) : '—'}
+											{/if}
+										</span>
 									</span>
 
 									{#if t.subject && who}
@@ -207,11 +225,11 @@
 										<span class="truncate text-muted text-sm">{t.preview}</span>
 									{/if}
 
-									<span class="text-subtle text-xs">
-										{t.lastMessageAt ? relativeDay(t.lastMessageAt) : '—'}
-										{#if sortedByWaiting}· {formatWait(waitingDays(t))}{/if}
-										{#if t.assignedToName}· {t.assignedToName}{/if}
-									</span>
+									<!-- Only when there is one. An unassigned thread has nothing to say
+									     here, and an empty line said it four rows at a time. -->
+									{#if t.assignedToName}
+										<span class="truncate text-subtle text-xs">{t.assignedToName}</span>
+									{/if}
 								</span>
 							</a>
 						</li>

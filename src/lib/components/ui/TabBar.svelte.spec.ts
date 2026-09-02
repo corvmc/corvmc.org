@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { IconInbox } from '@tabler/icons-svelte';
 import TabBarHarness from './TabBar.test.svelte';
 
 /**
@@ -91,6 +92,48 @@ describe('TabBar collapse', () => {
 
 		await expect.element(page.getByRole('tab', { name: /Overview/ })).toBeInTheDocument();
 		expect(document.querySelector('[aria-haspopup="menu"]')).toBeNull();
+	});
+});
+
+/**
+ * `dense` is the other answer to the same problem, for the bars that live in a
+ * narrow *pane* rather than on a narrow screen — the staff inbox queue, where
+ * `collapse` never fires because the viewport is wide even when the pane is
+ * 20rem. Every tab but the active one becomes its glyph, so the set fits
+ * outright instead of scrolling sideways under a clipped shadow.
+ */
+describe('TabBar dense', () => {
+	const ICONED = TABS.map((t) => ({ ...t, icon: IconInbox }));
+
+	it('keeps the active tab’s word and drops the rest', async () => {
+		await render(TabBarHarness, { tabs: ICONED, active: 'space', dense: true });
+
+		await expect.element(page.getByRole('tab', { selected: true })).toHaveTextContent('Space');
+		expect(page.getByRole('tab', { name: 'Bands' }).element().textContent).not.toContain('Bands');
+	});
+
+	/** The glyph carries no name, so the label moves to an attribute — with the
+	    count, since the badge it replaced left the accessible name with it. */
+	it('names an icon-only tab, count and all', async () => {
+		await render(TabBarHarness, { tabs: ICONED, active: 'space', dense: true });
+
+		await expect
+			.element(page.getByRole('tab', { name: 'Overview, 2' }))
+			.toHaveAttribute('title', 'Overview');
+	});
+
+	/** What `inbox-awaiting-reply.e2e.ts` reads the Open count out of. */
+	it('leaves the active tab’s accessible name to its own text', async () => {
+		await render(TabBarHarness, { tabs: ICONED, active: 'overview', dense: true });
+
+		await expect.element(page.getByRole('tab', { name: 'Overview 2' })).toBeInTheDocument();
+	});
+
+	/** A set nobody gave icons to still reads as words. */
+	it('leaves un-iconed tabs alone', async () => {
+		await render(TabBarHarness, { tabs: TABS, active: 'space', dense: true });
+
+		await expect.element(page.getByRole('tab', { name: /Bands/ })).toHaveTextContent('Bands');
 	});
 });
 

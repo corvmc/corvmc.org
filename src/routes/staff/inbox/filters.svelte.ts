@@ -92,8 +92,8 @@ export function toQuery(f: QueueFilters = filters) {
 	return {
 		view: f.view,
 		// Narrowed here rather than validated: the value only ever comes from the
-		// channel <select>, whose options are this list, and the server's Zod
-		// schema is the actual gate.
+		// channel menu, whose items are this list, and the server's Zod schema is
+		// the actual gate.
 		channel: (f.channel || undefined) as InboxChannel | undefined,
 		assigned: f.assigned || undefined,
 		subject: f.subject || undefined,
