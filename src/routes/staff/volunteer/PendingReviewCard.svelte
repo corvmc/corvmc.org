@@ -29,11 +29,11 @@
 	let { rows }: { rows: BlockedVolunteer[] } = $props();
 </script>
 
-<InfoCard title="Waiting on a guardian's sign-off">
+<InfoCard title="Awaiting guardian sign-off">
 	{#snippet header(title)}
 		<div class="flex items-center justify-between gap-2">
 			<CardTitle>{title}</CardTitle>
-			<Button href="/staff/volunteer/people" variant="ghost" size="sm">Volunteers →</Button>
+			<Button href="/staff/volunteer/people?tab=signoff" variant="ghost" size="sm">People →</Button>
 		</div>
 	{/snippet}
 
