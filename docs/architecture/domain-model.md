@@ -125,10 +125,10 @@ legal, being a program whose leader stepped down, which is why every query for a
 LEFT joins. The second copy drifted once: five of sixteen production bands had no usable
 owner row behind it.
 
-## Six models that recur
+## Seven models that recur
 
 Naming these is the point of the document: each is implemented more than once, and
-knowing which is which stops the next implementation being a seventh.
+knowing which is which stops the next implementation being one more.
 
 ### 1. Resource custody `[assets]`
 
@@ -201,6 +201,46 @@ taxonomy.
 The repeated hard part is the per-membership notification preference:
 `group_member.notifyAnnouncements` exists precisely because the global
 `notification_preference` cannot express it, and the next container hits the same wall.
+
+### 7. A staff tool is a group tool with the group hardcoded `[all three verticals]`
+
+**The staff panel is the CMC group's panel.** Most of what lives under `/staff` is not
+privileged by nature — it is a tool scoped to an organization, where the organization
+happens to be the collective and is therefore implicit. Once a tool is genuinely
+group-scoped, a band, a club and a committee can all have one.
+
+This is not speculative; it has already happened twice, and the schema says why:
+
+- **`announcement`** — "One table for bands, clubs and committees alike, because a band
+  posting to its roster and a committee posting to its members are the same act."
+- **`event_group`** — which groups' pages an event appears on, distinct from
+  `event_band`'s credit on the bill.
+- **`project.groupId`** is the next one, and ships in that table's first migration.
+
+**The inbox is the clearest remaining case.** `inbox_thread` has **no owner column at
+all** — `channel` records how a message arrived (contact form, portal, email, SMS,
+Instagram, Messenger), never whose queue it belongs in, so every thread is implicitly
+CMC's. Meanwhile `submitBandContactForm`
+([band-site.remote.ts](../../src/lib/remote/band-site.remote.ts)) already delivers booking
+enquiries "to the band's booking contact, falling back to the band owner" — as email.
+Bands receive this traffic today, into a personal mailbox, unthreaded, with no status, no
+awaiting-reply marker and no record that anyone answered.
+
+One nullable owner column on `inbox_thread` — null meaning CMC, the same shape
+`directory_entry` uses for its two nullable owners — turns one inbox into many.
+
+Three things this pattern has to respect, all of which already have working precedent:
+
+- **Internal notes must not leak.** `/member/messages` is member↔staff on these same
+  tables and internal notes are never exposed there, so the isolation is proven in
+  production rather than hypothetical.
+- **Participants are people.** `inbox_participant.userId` is a user FK, which is how DMs
+  scope. A group cannot be a participant, so ownership and participation are two different
+  questions and need two different columns.
+- **Not every tool generalizes.** Marketing is the counter-example: consent, suppression
+  and unsubscribe are per-`subscriber` and a band's list is not the collective's list, so
+  the compliance question changes rather than scaling. Inventory and volunteering are weak
+  fits for the same reason — they describe things the collective owns.
 
 ## Duplications to leave alone
 

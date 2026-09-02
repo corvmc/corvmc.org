@@ -184,7 +184,7 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | Doc                                                                                   | Status | Notes                                                                                                |
 | ------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
 | [overview.md](architecture/overview.md)                                               | ✅     | **Start here** — how the system is wired (remote functions, auth, event bus, D1, cron, config)       |
-| [domain-model.md](architecture/domain-model.md)                                       | ✅     | What the tables _mean_: three verticals over two horizontals, and the six shapes that recur          |
+| [domain-model.md](architecture/domain-model.md)                                       | ✅     | What the tables _mean_: three verticals over two horizontals, and the shapes that recur              |
 | [operations-manual.md](architecture/operations-manual.md)                             | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring |
 | [deployment-checklist.md](architecture/deployment-checklist.md)                       | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                              |
 | [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                             | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting  |
