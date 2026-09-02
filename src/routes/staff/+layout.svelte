@@ -81,6 +81,7 @@
 		'volunteer-shifts': IconCalendarTime,
 		'volunteer-roles': IconListDetails,
 		'volunteer-certifications': IconCertificate,
+		'volunteer-duty-lists': IconClipboardList,
 		'volunteer-report': IconReportAnalytics,
 		reservations: IconClipboardCheck,
 		recurring: IconRepeat,
