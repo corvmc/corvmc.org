@@ -551,6 +551,39 @@ export async function wakeSnoozedThreads(now: Date = new Date()): Promise<{ woke
 	return { woken: rows.length };
 }
 
+/** How long a thread waits on a contact before it comes back to us anyway. */
+export const AWAITING_NUDGE_DAYS = 7;
+
+/**
+ * Hand back every thread the contact has stopped answering.
+ *
+ * "Send + wait for reply" is only safe because of this. Without it, a thread
+ * whose contact simply never writes back leaves the Open view for good — which
+ * is the same outcome as forgetting about them, reached by a button that
+ * promised the opposite. After a week the marker clears and the conversation is
+ * ours again, still open, at the top of a queue sorted by longest waiting.
+ *
+ * Runs beside `wakeSnoozedThreads` on the same cron, which is the other half of
+ * the same job: putting back what left the queue on a timer.
+ */
+export async function nudgeStaleAwaiting(now: Date = new Date()): Promise<{ nudged: number }> {
+	const cutoff = new Date(now.getTime() - AWAITING_NUDGE_DAYS * 86_400_000);
+	const due = and(
+		eq(inboxThread.status, 'open'),
+		isNotNull(inboxThread.awaitingReplySince),
+		lte(inboxThread.awaitingReplySince, cutoff)
+	);
+
+	const rows = await db.select({ id: inboxThread.id }).from(inboxThread).where(due);
+	if (rows.length === 0) return { nudged: 0 };
+
+	// No undo snapshot: this is not a disposition anybody took, and leaving one
+	// behind would let ⌘Z on an unrelated thread reach back into the cron's work.
+	await db.update(inboxThread).set({ awaitingReplySince: null, updatedAt: now }).where(due);
+
+	return { nudged: rows.length };
+}
+
 /**
  * Threads whose external contact is this email address.
  *

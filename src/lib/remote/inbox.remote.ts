@@ -150,7 +150,17 @@ export const getAssignableStaff = query(z.void(), async () => {
 
 const replySchema = z.object({
 	threadId: z.string().min(1),
-	body: z.string().trim().min(1).max(10000)
+	body: z.string().trim().min(1).max(10000),
+	/**
+	 * Where the thread goes once the reply is away. Carried by the clicked send
+	 * button, so it cannot be left unanswered.
+	 *
+	 * `.optional()` rather than a default in the schema, because a `.transform()`
+	 * or a default here breaks the `fields` inference the composer's hidden
+	 * inputs are built from. Missing means `wait`, which is what
+	 * `addOutboundMessage` does on its own.
+	 */
+	disposition: z.enum(['wait', 'resolve', 'keep_open']).optional()
 });
 
 export const replyToThread = form(replySchema, async (data) => {
@@ -165,7 +175,15 @@ export const replyToThread = form(replySchema, async (data) => {
 		authorName: staff.name
 	});
 
+	// `addOutboundMessage` already leaves the thread waiting on the contact, so
+	// `wait` needs nothing further. The other two overrule it: resolving closes
+	// the conversation outright, and keeping it open is staff saying they expect
+	// to come back to this themselves.
+	if (data.disposition === 'resolve') await updateStatus(data.threadId, 'resolved');
+	else if (data.disposition === 'keep_open') await setAwaitingReply(data.threadId, false);
+
 	void getInboxThread(data.threadId).refresh();
+	void getInboxThreadCounts().refresh();
 	// Replying marks the thread as waiting on the contact, which takes it out of
 	// the nav badge — so the badge has to be recounted here as well.
 	void getInboxUnreadCount().refresh();

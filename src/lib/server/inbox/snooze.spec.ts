@@ -59,7 +59,8 @@ const {
 	getUnresolvedCount,
 	assignThread,
 	setAwaitingReply,
-	undoLastDisposition
+	undoLastDisposition,
+	nudgeStaleAwaiting
 } = await import('./thread-service');
 const { inboxThread } = await import('$lib/server/db/schema/inbox');
 
@@ -280,6 +281,38 @@ describe('undo', () => {
 		selectRows = [{ undoState: { status: 'not-a-status' } }];
 
 		expect(await undoLastDisposition('thread-1')).toBe(false);
+		expect(calls.updateSet).toHaveLength(0);
+	});
+});
+
+describe('nudgeStaleAwaiting', () => {
+	// The safety net under the default send. Only open threads, only ones whose
+	// marker is older than the window — a thread snoozed with a date has its own
+	// return trip and must not be pulled back early.
+	it('targets open threads whose awaiting marker has gone stale', async () => {
+		selectRows = [{ id: 'a' }];
+		await nudgeStaleAwaiting(new Date('2026-09-10T09:00:00Z'));
+
+		const sql = renderWhere(calls.selectWhere[0]).toLowerCase();
+		expect(sql).toContain('"status" = ?');
+		expect(sql).toContain('"awaiting_reply_since" is not null');
+		expect(sql).toContain('"awaiting_reply_since" <= ?');
+	});
+
+	// Not a disposition anybody took, so it leaves no way back — an undo
+	// snapshot here would let ⌘Z on some other thread reach into the cron's work.
+	it('clears the marker without recording an undo', async () => {
+		const now = new Date('2026-09-10T09:00:00Z');
+		selectRows = [{ id: 'a' }, { id: 'b' }];
+
+		expect(await nudgeStaleAwaiting(now)).toEqual({ nudged: 2 });
+		expect(calls.updateSet[0]).toEqual({ awaitingReplySince: null, updatedAt: now });
+	});
+
+	it('does not run an update when nothing is stale', async () => {
+		selectRows = [];
+
+		expect(await nudgeStaleAwaiting(new Date())).toEqual({ nudged: 0 });
 		expect(calls.updateSet).toHaveLength(0);
 	});
 });

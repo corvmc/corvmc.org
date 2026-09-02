@@ -26,6 +26,7 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import SendOption from './SendOption.svelte';
 
 	let {
 		threadId,
@@ -116,12 +117,23 @@
 						bind:value={draft}></textarea>
 				{/snippet}
 			</FormField>
-			<div class="flex justify-end">
+			<div class="flex flex-wrap items-center justify-end gap-2">
+				<!-- Sending always sets a disposition — see SendOption. The two
+				     alternates sit beside the default rather than behind a menu:
+				     they are three answers to one question, and hiding two of them
+				     makes the default look like the only option. A note has no
+				     disposition to set; it is not a turn in the conversation. -->
+				{#if !isNote}
+					<SendOption value="resolve" label="Send + resolve" disabled={!draft.trim()} />
+					<SendOption value="keep_open" label="Send + keep open" disabled={!draft.trim()} />
+				{/if}
 				<SubmitButton
-					label={isNote ? 'Add Note' : 'Send Reply'}
+					label={isNote ? 'Add Note' : 'Send + wait for reply'}
 					successLabel={isNote ? 'Added' : 'Sent'}
 					shortcut="mod+enter"
 					disabled={!draft.trim()}
+					name={isNote ? undefined : 'disposition'}
+					value={isNote ? undefined : 'wait'}
 					class={isNote ? 'btn-neutral' : 'btn-primary'}
 				>
 					{#snippet icon()}
@@ -129,6 +141,12 @@
 					{/snippet}
 				</SubmitButton>
 			</div>
+			{#if !isNote}
+				<p class="text-right text-subtle text-xs">
+					Default. Leaves the queue now and returns the moment they reply — or nudges you in 7 days
+					if nothing comes back.
+				</p>
+			{/if}
 		</Form>
 	</CardBody>
 </div>
