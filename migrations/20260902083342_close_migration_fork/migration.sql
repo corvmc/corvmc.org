@@ -1,0 +1,25 @@
+-- This migration exists for its snapshot, not its SQL.
+--
+-- #398 (event.kind) and #396 (work orders) both branched from #394's snapshot
+-- and both merged, leaving two migration heads that were never joined:
+--
+--   3920b35f ─┬─ f9b63778  20260902080158_colorful_shaman     (event.kind)
+--             └─ b9900e35 ─ 0aaaf390  20260902080804_bumpy_…  (work orders)
+--
+-- `drizzle-kit check` reports that as `Non-commutative migrations detected`, and
+-- it is not cosmetic: with the fork open, `generate` diffs against a base that
+-- merges the two heads *without* `event.kind`, so the next person to run
+-- `pnpm db:generate` gets a spurious `ALTER TABLE event ADD kind` — a statement
+-- that fails with "duplicate column name" on every database that has already run
+-- colorful_shaman, which is all of them, production included.
+--
+-- This migration's snapshot lists both heads as `prevIds` and records the true
+-- union schema, which closes the fork and restores the diff base. There is no
+-- schema change to make: both branches' statements have already been applied, in
+-- filename order, everywhere, and a fresh database replaying the whole directory
+-- passes through both on its way here.
+--
+-- The statement below is a deliberate no-op. The migrator cannot run a file with
+-- no executable statement in it — it fails with "statement has been finalized" —
+-- so the file needs one, and this is the least it can be.
+SELECT 1;
