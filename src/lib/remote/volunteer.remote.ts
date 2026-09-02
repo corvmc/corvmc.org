@@ -395,14 +395,43 @@ const volunteerListFilters = z.object({
 export const getStaffVolunteers = query(volunteerListFilters, async (f) => {
 	await requireStaff();
 
-	return listVolunteers(
-		{
-			roleId: f.volunteerRoleId || undefined,
-			search: f.search || undefined,
-			status: f.status
-		},
-		{ page: f.page ?? 1, pageSize: 50 }
-	);
+	// `listVolunteers` answers "who are our volunteers". The row also has to
+	// answer "and what, if anything, do I do about this one" — a claim of theirs
+	// nobody has confirmed, or a clearance about to lapse. Both already exist as
+	// whole-queue reads for the Today worklist, so this indexes those by member
+	// rather than growing two more correlated subqueries onto a paginated list.
+	//
+	// One action per row, not three: a row offering Confirm, Chase and Log Hours
+	// at once is a row that has not decided what it is for.
+	const [roster, claims, lapsing, minors] = await Promise.all([
+		listVolunteers(
+			{
+				roleId: f.volunteerRoleId || undefined,
+				search: f.search || undefined,
+				status: f.status
+			},
+			{ page: f.page ?? 1, pageSize: 50 }
+		),
+		listOutstandingClaims(),
+		listLapsingBeforeRosteredShift(),
+		// Carried here rather than fetched beside it: the sign-off tab's badge has
+		// to be readable before that tab is open, and a second query declared next
+		// to this one is the fan-out `custom/no-concurrent-remote-queries` refuses.
+		listBlockedVolunteers()
+	]);
+
+	const claimByUser = new Map(claims.map((c) => [c.userId, c]));
+	const lapseByUser = new Map(lapsing.map((l) => [l.userId, l]));
+
+	return {
+		...roster,
+		minorsWaiting: minors.length,
+		rows: roster.rows.map((r) => ({
+			...r,
+			claim: claimByUser.get(r.userId) ?? null,
+			lapse: lapseByUser.get(r.userId) ?? null
+		}))
+	};
 });
 
 /**

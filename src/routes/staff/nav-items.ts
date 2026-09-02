@@ -119,8 +119,11 @@ export const staffNavSections: StaffNavSection[] = [
 					},
 					{ key: 'volunteer-hours', label: 'Hours', href: resolve('/staff/volunteer/hours') },
 					{
+						// "People", not "Volunteers": it now holds the under-18 queue and
+						// the clearances table too, and both are about people who are not
+						// yet volunteering.
 						key: 'volunteer-people',
-						label: 'Volunteers',
+						label: 'People',
 						href: resolve('/staff/volunteer/people')
 					},
 					{ key: 'volunteer-roles', label: 'Roles', href: resolve('/staff/volunteer/roles') },
