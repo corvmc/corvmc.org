@@ -210,18 +210,19 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 
 ## reports
 
-| Doc                                                                        | Status | Notes                                                                                    |
-| -------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------- |
-| [feature-catalog.md](reports/feature-catalog.md)                           | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship         |
-| [spec-audit.md](reports/spec-audit.md)                                     | ✅     | All 32 specs classified against the tree; which are shipped and where their content goes |
-| [standardization-audit.md](reports/standardization-audit.md)               | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                 |
-| [staff-user-management-audit.md](reports/staff-user-management-audit.md)   | 📦     | The audit behind #164; five follow-up specs, one of them built                           |
-| [revenue-audit.md](reports/revenue-audit.md)                               | 📦     | Revenue workflow audit; its findings closed in #131                                      |
-| [sentry-triage.md](reports/sentry-triage.md)                               | ✅     | Production error triage                                                                  |
-| [inventory-workflow-findings.md](reports/inventory-workflow-findings.md)   | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign       |
-| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md)   | 📦     | The same pass over volunteering; findings complete, the restructure is separate work     |
-| [volunteer-view-handoff.md](reports/volunteer-view-handoff.md)             | ✅     | Every volunteer screen, shot populated, with its users and stories — the wireframe brief |
-| [project-management-prior-art.md](reports/project-management-prior-art.md) | ✅     | Prior art behind the `project` entity — CMMS, venue, makerspace and ERP systems surveyed |
+| Doc                                                                        | Status | Notes                                                                                        |
+| -------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
+| [feature-catalog.md](reports/feature-catalog.md)                           | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship             |
+| [spec-audit.md](reports/spec-audit.md)                                     | ✅     | All 32 specs classified against the tree; which are shipped and where their content goes     |
+| [standardization-audit.md](reports/standardization-audit.md)               | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                     |
+| [staff-user-management-audit.md](reports/staff-user-management-audit.md)   | 📦     | The audit behind #164; five follow-up specs, one of them built                               |
+| [revenue-audit.md](reports/revenue-audit.md)                               | 📦     | Revenue workflow audit; its findings closed in #131                                          |
+| [sentry-triage.md](reports/sentry-triage.md)                               | ✅     | Production error triage                                                                      |
+| [inventory-workflow-findings.md](reports/inventory-workflow-findings.md)   | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign           |
+| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md)   | 📦     | The same pass over volunteering; findings complete, the restructure is separate work         |
+| [volunteer-view-handoff.md](reports/volunteer-view-handoff.md)             | ✅     | Every volunteer screen, shot populated, with its users and stories — the wireframe brief     |
+| [project-management-prior-art.md](reports/project-management-prior-art.md) | ✅     | Prior art behind the `project` entity — CMMS, venue, makerspace and ERP systems surveyed     |
+| [social-prior-art.md](reports/social-prior-art.md)                         | ✅     | The social vertical by role, against the products that compete with each — and what to steal |
 
 ## checklists
 

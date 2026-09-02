@@ -65,6 +65,66 @@ two worth knowing:
 - **`asset_flag.workOrderId`** — a work request raises the work that answers it.
 - **`contractor_job.assetId`** — the work is done to a unit. Null means building work.
 
+## Inside the social vertical
+
+The other two verticals are organized by what they act on — resources, work. Social is
+organized by **role**: what a piece of it is _for_. Six of them, and the comparables for
+each are in
+[social-prior-art.md](../reports/social-prior-art.md).
+
+| Role                         | Where it lives                                                     |
+| ---------------------------- | ------------------------------------------------------------------ |
+| Member directory and profile | `directory_entry`, `directory_tag`, the four intent signals        |
+| The organization             | `group`, `group_member`, `group_invite`, ownership as a roster row |
+| Governance                   | Committees, chairs, `by_application` — designed, largely unbuilt   |
+| Self-published presence      | `band_site`, `band_page_config`, custom domains                    |
+| Identity and claiming        | External acts: `directory_entry` with both FKs null                |
+| Member-to-member contact     | DMs as request/accept/decline, `user_block`                        |
+
+### The scope ladder
+
+`directory_entry`, `group` and `band_site` look like three peers and are not. They sit at
+three different widths, and the nullability of each link is what says so.
+
+| Table             | Link                                     | Can exist unowned?                              | Enforced where            |
+| ----------------- | ---------------------------------------- | ----------------------------------------------- | ------------------------- |
+| `directory_entry` | `userId` **or** `groupId`, both nullable | **Yes** — both null is an external act          | Service layer, on purpose |
+| `group`           | it _is_ the owner                        | n/a                                             | —                         |
+| `band_site`       | `groupId` **NOT NULL**                   | **No** — a site cannot exist for a bare listing | The schema                |
+
+They also make opposite calls on _where_ to enforce, each with a stated reason.
+`directory_entry`'s "both set is illegal" stays in the service layer because "violating it
+is odd rather than corrupting, since there is still exactly one name." `band_site`'s
+constraint is in the schema precisely so no service rule is needed.
+
+And `band_site` holds what a band **buys**, not what it **is** — which is why `tier` lives
+there rather than on `group`: every band has the row, so reading a tier needs no fallback.
+The row is never deleted while the band lives, because `band_page_config` and `band_media`
+cascade from it and a lapsed card must not take a band's content with it.
+
+### Two opposite id decisions, one migration
+
+Worth knowing because the reasoning generalizes:
+
+- **`group` deliberately reuses `band.id`.** It is the `band` table renamed, so every
+  foreign key still points at the same row and no band→group id map has to thread through
+  the later phases.
+- **`directory_entry` deliberately refuses to reuse `group.id`.** Seeding from it would
+  make `entry.id == entry.groupId` true for every migrated band and false for every new
+  one, so code passing a group id where an entry id belongs would work against old rows
+  and fail only on records created later — "the worst failure shape available here."
+
+Reuse an id to keep references cheap; refuse to reuse one when the coincidence would make
+a bug invisible on exactly the rows you test with.
+
+### Ownership is a roster row
+
+`group.ownerId` was removed in phase 3c. The `group_member` row with `role = 'owner'` _is_
+the ownership, capped by a partial unique index that permits zero — an ownerless group is
+legal, being a program whose leader stepped down, which is why every query for an owner
+LEFT joins. The second copy drifted once: five of sixteen production bands had no usable
+owner row behind it.
+
 ## Six models that recur
 
 Naming these is the point of the document: each is implemented more than once, and
@@ -178,5 +238,7 @@ The bar for what "worked out" looks like, and the thing to imitate rather than r
 - [project-spec.md](../specs/project-spec.md) — the `project` design
 - [project-management-prior-art.md](../reports/project-management-prior-art.md) — the
   comparable products and why these decisions were made
+- [social-prior-art.md](../reports/social-prior-art.md) — the same, per social role, and
+  what those products do better
 - [committees-and-roles-spec.md](../specs/committees-and-roles-spec.md) — committees as
   the owners of projects
