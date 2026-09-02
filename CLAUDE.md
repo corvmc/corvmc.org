@@ -8,6 +8,8 @@ Stripe, Postmark. Documentation index: `docs/README.md`.
 - `docs/development/conventions.md` — feature checklist, layering rules, custom lint rules, scripts
 - `docs/development/ui-patterns.md` — **before touching any page**; shared components + composition
 - `docs/architecture/overview.md` — how the system is wired
+- `docs/architecture/domain-model.md` — what the tables mean: three verticals, two horizontals,
+  and the shapes that recur
 
 ## Commands
 

@@ -4,6 +4,48 @@ Low-priority cleanup and tech-debt items. Not blocking, but worth doing.
 
 ## Open
 
+- **Site config reads a `list()` and then one `get()` per key.** `getConfigsByPrefix`
+  (`src/lib/server/site-config/site-config-service.ts`) asks KV which keys exist, then fetches them
+  one at a time in a `for` loop — 15 `reservation.*` keys alone. `getJson` in
+  `src/lib/server/kv.ts` sets no `cacheTtl`, so each falls back to the default 60-second per-colo
+  cache, and a `list()` does not edge-cache the way a `get()` does at all. The keys are already
+  enumerable from `DEFAULTS`, so KV is never the right place to ask what exists.
+
+  In order of value: drop the `list()`; collapse to a single blob key; memoize in the isolate on a
+  60s TTL, since isolates serve many requests and that turns this into roughly one KV read per
+  isolate per minute; set an explicit `cacheTtl`. **Not** a proxied endpoint — an HTTP hop to our
+  own Worker costs more than the read it avoids, and a Durable Object would serialize every config
+  read through one location.
+
+  Separately, about nine keys were never runtime values. `org.name`, `org.shortName`,
+  `org.timezone` and the address block never change without someone editing text, and
+  `src/lib/config.ts` already exists for that. What must stay runtime:
+  `integration.utec.refreshToken` is written by the OAuth callback,
+  `integration.utec.clientSecret` is a secret that belongs in `wrangler secret` rather than KV, and
+  the reservation rates and hours are policy the board changes — putting those behind a deploy is a
+  regression in who can operate the org.
+
+  Blocks adding `volunteer.hourValueCents`, which `docs/specs/project-spec.md` wants.
+
+- **Three tables implement one custody machine.** `reservationStatuses`, `loanStatuses` and
+  `contractorJobStatuses` are three spellings of agreed → committed → in custody → returned, plus a
+  cancel: the room, the amp, and the amp at the repair shop. The satellites line up too — `closure`
+  is `assetStatus='maintenance'` for a different resource, `recurring_series` is a standing loan,
+  the lock code is checkout, and all three derive "late" the same way while storing it in none.
+
+  Availability genuinely differs (the room has a calendar, gear has units and a tag) and should not
+  be forced together. The state machine, the settlement against credits, and the late derivation are
+  what could be shared. See `docs/architecture/domain-model.md#1-resource-custody-assets`. No
+  forcing function; do not start this speculatively.
+
+- **`content_flag` and `asset_flag` duplicate a triage surface, not just a table.** They share
+  `flagStatuses` verbatim and six columns (reporter, note, status, resolver, resolution notes,
+  resolved-at). **The tables must stay separate** — the `asset_flag` comment argues it correctly,
+  gear must not queue beside a harassment report. What is duplicated needlessly is everything above
+  them: the triage queue, the detail page, the resolve/dismiss action, and the
+  don't-re-notify-on-repeat-reports rule, none of which is moderation-specific. See
+  `docs/architecture/domain-model.md#2-a-request-raises-work-assets--projects`.
+
 - **A moderation takedown no longer kills the poster's old URL immediately.** `unpublishWithNotice`
   (`src/lib/server/event/event-service.ts`) copies a withheld listing's poster to a fresh key
   precisely to invalidate links already handed out, and used to `deleteObject` the original in the
