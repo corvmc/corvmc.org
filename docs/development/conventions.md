@@ -47,8 +47,13 @@ When building a new feature, work through these phases in order:
 6. **Tests** — write tests that describe **intended behavior**, not the current
    implementation. Service-level mocks where direct DB access isn't practical. A failing
    test that reflects unfinished business logic is acceptable.
-7. **Verify** — `pnpm check` and confirm no new type errors in files you touched
-   (pre-existing errors in unrelated files can be ignored).
+7. **Verify** — the **blast radius** of what you changed, not the files you edited: for anything
+   under `src/lib/server/<domain>/`, run the whole directory
+   (`pnpm vitest --run --project=server src/lib/server/<domain>`), plus `pnpm lint:changed`. That
+   is the floor and the ceiling — the whole-tree gates are CI jobs that run on the PR and again on
+   the queue ref, and `scripts/claude/block-whole-tree-gate.sh` blocks them here. `pnpm check` is
+   still worth running when you have a specific type question; it is a required CI check either
+   way, so it is not a step to perform out of habit.
 8. **Document** — add the feature row to the feature catalog
    (`docs/reports/feature-catalog.md`) — one row per feature, written in the final phase, because
    that table is a recurring merge conflict when every phase edits it; update/add help
@@ -472,8 +477,22 @@ at once on one 8-core machine. ESLint looks per-file but isn't: `parserOptions.p
 builds a program over the whole project on every invocation — ~10s of fixed startup whether you
 lint one file or eight, which `--cache` cannot fix (see the note in `ci.yml`). `pnpm check` is
 worse at ~60s. Both used to run in hooks; both are required CI checks, so the local copies were
-pure duplication that a commit could not bypass anyway. Run `pnpm lint` or `pnpm check` yourself
-when you want them.
+pure duplication that a commit could not bypass anyway.
+
+**The same argument, made to agent sessions.** Git hooks were never where the hour went — a
+session choosing to run the suite before pushing was. `scripts/claude/block-whole-tree-gate.sh` is
+a `PreToolUse` guard that refuses the whole-tree gates (`pnpm test:e2e`, `pnpm test`, `pnpm lint`,
+`pnpm test:unit -- --run`, an unscoped `vitest`/`eslint`) and names the CI job that already covers
+each one. The matcher turns on a single question — does the command name a path? — so a scoped
+run, which is the only local check that finds something CI would find later, always passes:
+`pnpm test:server src/lib/server/bands` runs, `pnpm test:server` does not. It shares its command
+parsing with `block-bare-npm.sh` via `scripts/claude/lib/command-segments.mjs`, which is what keeps
+a heredoc body or a commit message that merely _names_ a gate from tripping either guard.
+
+`CMC_FULL_GATE=1` as a command prefix passes through. It means a human asked for that run in that
+turn — deliberately not keyed to a session's role, because a role-keyed escape becomes the thing
+that role types by reflex. `pnpm check`, `pnpm lint:changed`, `pnpm test:changed` and `pnpm format`
+are not blocked at all; run them yourself when you want them.
 
 ## Style
 
