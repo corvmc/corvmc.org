@@ -6,9 +6,15 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import ButtonGroup from '$lib/components/ui/ButtonGroup.svelte';
 
+	/** Every tabler icon shares one props shape; borrow it from a concrete icon
+	   rather than reaching into the package's un-exported `dist/types`. */
+	type IconComponent = typeof IconChevronDown;
+
 	type Tab = {
 		key: string;
 		label: string;
+		/** The glyph that stands in for the label in `dense` mode. */
+		icon?: IconComponent;
 		/**
 		 * A snippet as well as a value, so a badge whose number needs its own remote query can be
 		 * a component instead of a prop the page has to resolve first. Resolving it on the page
@@ -23,6 +29,7 @@
 		active,
 		onchange,
 		collapse = false,
+		dense = false,
 		class: className = ''
 	}: {
 		tabs: Tab[];
@@ -38,6 +45,16 @@
 		 * tabs past the fold are clipped off the edge with no way to reach them.
 		 */
 		collapse?: boolean;
+		/**
+		 * Shrink every tab but the active one to its `icon` plus its badge, so a
+		 * long bar fits a narrow pane without scrolling sideways. The active tab
+		 * keeps its word: which view you are on is not something to leave to
+		 * colour alone.
+		 *
+		 * A tab with no `icon` is unaffected, so a partly-iconed set degrades to
+		 * words rather than to blanks.
+		 */
+		dense?: boolean;
 		class?: string;
 	} = $props();
 
@@ -57,7 +74,27 @@
 	const activeTab = $derived(tabs.find((t) => t.key === active) ?? tabs[0]);
 
 	function itemClass(key: string) {
-		return `join-item btn btn-sm ${key === active ? 'latched btn-primary depth-0' : 'depth-2'}`;
+		// `px-2` in dense mode: five tabs have to clear a 20rem pane, and the
+		// default inline padding alone spends 120px of it.
+		return `join-item btn btn-sm ${dense ? 'px-2' : ''} ${
+			key === active ? 'latched btn-primary depth-0' : 'depth-2'
+		}`;
+	}
+
+	/**
+	 * An icon-only tab has no text to name it, so it carries an `aria-label` — and
+	 * that label has to carry the count as well, because the badge it stands in
+	 * for leaves the accessible name with it. The active tab is deliberately left
+	 * alone: its name stays content-derived, which is what the Open-count
+	 * assertion in `inbox-awaiting-reply.e2e.ts` reads.
+	 */
+	function iconOnlyProps(tab: Tab): Record<string, string> {
+		if (!dense || !tab.icon || tab.key === active) return {};
+		const name =
+			tab.badge != null && typeof tab.badge !== 'function'
+				? `${tab.label}, ${tab.badge}`
+				: tab.label;
+		return { 'aria-label': name, title: tab.label };
 	}
 
 	function handleValueChange(value: string) {
@@ -70,12 +107,26 @@
 	const groupClass = $derived(`${collapse ? 'hidden md:flex' : ''} ${className}`.trim());
 </script>
 
-{#snippet contents(tab: Tab)}
-	{tab.label}
+<!-- `full` is the dropdown's opt-out: a collapsed menu lists tabs one per line,
+     where there is room for the word and no latched colour to say which is on. -->
+{#snippet contents(tab: Tab, full = false)}
+	{#if dense && tab.icon}
+		{@const Icon = tab.icon}
+		<Icon size={16} />
+	{/if}
+	{#if full || !dense || !tab.icon || tab.key === active}
+		{tab.label}
+	{/if}
 	{#if typeof tab.badge === 'function'}
 		{@render tab.badge()}
 	{:else if tab.badge != null}
-		<Badge class="ml-1">{tab.badge}</Badge>
+		<!-- A pill around every count is ~20px of pane each, and a dense bar has
+		     five of them. The number alone still reads as a count next to a glyph. -->
+		{#if dense && tab.icon && !full}
+			<span class="ml-1 text-xs opacity-80">{tab.badge}</span>
+		{:else}
+			<Badge class="ml-1">{tab.badge}</Badge>
+		{/if}
 	{/if}
 {/snippet}
 
@@ -110,13 +161,13 @@
 										href={tab.href}
 										aria-current={tab.key === active ? 'page' : undefined}
 									>
-										{@render contents(tab)}
+										{@render contents(tab, true)}
 									</a>
 								{/snippet}
 							</DropdownMenu.Item>
 						{:else}
 							<DropdownMenu.Item {...itemProps} onSelect={() => handleValueChange(tab.key)}>
-								{@render contents(tab)}
+								{@render contents(tab, true)}
 							</DropdownMenu.Item>
 						{/if}
 					{/each}
@@ -133,6 +184,7 @@
 				href={tab.href}
 				class={itemClass(tab.key)}
 				aria-current={tab.key === active ? 'page' : undefined}
+				{...iconOnlyProps(tab)}
 			>
 				{@render contents(tab)}
 			</a>
@@ -155,7 +207,12 @@
 		<Tabs.List>
 			<ButtonGroup class={groupClass}>
 				{#each tabs as tab (tab.key)}
-					<Tabs.Trigger id="tab-{tab.key}" value={tab.key} class={itemClass(tab.key)}>
+					<Tabs.Trigger
+						id="tab-{tab.key}"
+						value={tab.key}
+						class={itemClass(tab.key)}
+						{...iconOnlyProps(tab)}
+					>
 						{@render contents(tab)}
 					</Tabs.Trigger>
 				{/each}

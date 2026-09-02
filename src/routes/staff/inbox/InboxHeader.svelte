@@ -1,30 +1,23 @@
 <script lang="ts">
 	/**
-	 * The bar above the queue: what this is, how much of it there is, and the way
-	 * into Daily.
+	 * The bar above the queue: what this is, and the way into Daily.
 	 *
-	 * The counts are the same query the tabs read, so they cost nothing extra —
-	 * this states the two numbers worth seeing without opening a tab (what needs
-	 * you, what you have cleared) while the tabs carry the rest.
+	 * It used to state "Open N · Resolved N" as well. The view strip below is now
+	 * icon tabs carrying their own counts, so both numbers are already on screen
+	 * one line down — and a header that repeats the row under it is a header worth
+	 * half its height. One row at every width for the same reason: the queue is
+	 * what you came to read, and this is the frame around it.
 	 */
 	import { resolve } from '$app/paths';
 	import { IconPlayerPlay } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { doneToday } from './daily/session.svelte';
 
-	let { open, resolved }: { open: number; resolved: number } = $props();
+	let { open }: { open: number } = $props();
 </script>
 
-<!-- Stacked below sm, where the design makes Daily a full-width action rather
-     than a header button: on a phone this is the primary thing you came to do,
-     and a 44px target beats a chip in the corner. -->
-<div
-	class="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
->
-	<div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
-		<h1 class="text-xl font-bold">Inbox</h1>
-		<p class="text-subtle text-sm">Open {open} · Resolved {resolved}</p>
-	</div>
+<div class="flex flex-wrap items-center justify-between gap-2">
+	<h1 class="text-xl font-bold">Inbox</h1>
 
 	<!-- Only offered when there is something to walk through. A "Start Daily · 0"
 	     is an invitation to a session that ends on the frame it starts on. -->
@@ -33,7 +26,7 @@
 			href={resolve('/staff/inbox/daily')}
 			variant={doneToday() ? 'default' : 'primary'}
 			size="sm"
-			class="w-full sm:w-auto"
+			class="shrink-0"
 		>
 			<IconPlayerPlay size={16} />
 			{doneToday() ? 'Daily again' : 'Start Daily'} · {open}
