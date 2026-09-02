@@ -8,7 +8,21 @@ import {
 	volunteerShiftFeedback
 } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, count, desc, eq, gte, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	gte,
+	inArray,
+	isNull,
+	like,
+	lt,
+	ne,
+	or,
+	sql
+} from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
 import { requireActiveVolunteer } from './volunteer-profile-service';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
@@ -299,7 +313,11 @@ export async function cancelSignup(signupId: string, userId: string): Promise<Vo
  * member's name — which is one join here instead of three call sites doing it.
  */
 async function emitSignupEvent(
-	event: 'volunteer.signup_claimed' | 'volunteer.signup_confirmed' | 'volunteer.signup_cancelled',
+	event:
+		| 'volunteer.signup_claimed'
+		| 'volunteer.signup_confirmed'
+		| 'volunteer.signup_cancelled'
+		| 'volunteer.shift_cancelled',
 	signupId: string
 ): Promise<void> {
 	try {
@@ -469,6 +487,8 @@ export interface ShiftClaimant {
 	member: MemberRef;
 	status: VolunteerSignupStatus;
 	claimedAt: Date;
+	/** Only meaningful on a cancelled shift, where the roster is the notify list. */
+	notifiedAt: Date | null;
 }
 
 export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
@@ -478,7 +498,8 @@ export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
 			userId: volunteerSignup.userId,
 			member: memberRefColumns(),
 			status: volunteerSignup.status,
-			claimedAt: volunteerSignup.claimedAt
+			claimedAt: volunteerSignup.claimedAt,
+			notifiedAt: volunteerSignup.notifiedAt
 		})
 		.from(volunteerSignup)
 		.innerJoin(user, eq(user.id, volunteerSignup.userId))
@@ -488,6 +509,82 @@ export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
 	// Deliberately unfiltered by schedule: this is everyone on one named shift,
 	// and an unscheduled work order has claimants like any other row.
 	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));
+}
+
+/**
+ * Tell everybody still on a called-off shift that it is off, and record that
+ * they were told.
+ *
+ * Deliberately **not** run by `cancelShift`. Calling a shift off and telling six
+ * people about it are two decisions: the first is often made in a hurry and
+ * sometimes reversed, and a coordinator who has already rung the sound engineer
+ * does not want the system mailing them anyway. So cancelling leaves a notify
+ * list, and this is the button on it.
+ *
+ * Idempotent by the `notified_at IS NULL` filter: pressing "Notify all" twice
+ * mails nobody twice, and anyone staff already marked by hand is skipped.
+ */
+export async function notifySignupsOfCancellation(shiftId: string): Promise<number> {
+	const pending = await db
+		.select({ id: volunteerSignup.id })
+		.from(volunteerSignup)
+		.where(
+			and(
+				eq(volunteerSignup.shiftId, shiftId),
+				ne(volunteerSignup.status, 'cancelled'),
+				isNull(volunteerSignup.notifiedAt)
+			)
+		);
+
+	if (pending.length === 0) return 0;
+
+	// One statement rather than a batch of identical ones: every row takes the
+	// same stamp, and the predicate is the one the select just used.
+	const now = new Date();
+	await db
+		.update(volunteerSignup)
+		.set({ notifiedAt: now, updatedAt: now })
+		.where(
+			and(
+				eq(volunteerSignup.shiftId, shiftId),
+				ne(volunteerSignup.status, 'cancelled'),
+				isNull(volunteerSignup.notifiedAt)
+			)
+		);
+
+	// After the stamp, for the same reason every other emit here is: a listener
+	// that throws must not leave the roster claiming nobody has been told.
+	for (const { id } of pending) void emitSignupEvent('volunteer.shift_cancelled', id);
+
+	return pending.length;
+}
+
+/**
+ * "I rang them." The escape hatch beside the mail-out — staff who reached
+ * somebody another way mark the row and it drops off the outstanding count.
+ * Sends nothing.
+ */
+export async function markSignupNotified(signupId: string): Promise<void> {
+	const now = new Date();
+	await db
+		.update(volunteerSignup)
+		.set({ notifiedAt: now, updatedAt: now })
+		.where(and(eq(volunteerSignup.id, signupId), isNull(volunteerSignup.notifiedAt)));
+}
+
+/** How many people on a called-off shift still have to be told. */
+export async function countUnnotified(shiftId: string): Promise<number> {
+	const [row] = await db
+		.select({ n: count() })
+		.from(volunteerSignup)
+		.where(
+			and(
+				eq(volunteerSignup.shiftId, shiftId),
+				ne(volunteerSignup.status, 'cancelled'),
+				isNull(volunteerSignup.notifiedAt)
+			)
+		);
+	return Number(row?.n ?? 0);
 }
 
 /** Confirmed signups for shifts starting inside a window — the reminder cron. */
@@ -605,6 +702,9 @@ export interface MemberSignup {
 	endsAt: Date | null;
 	status: VolunteerSignupStatus;
 	shiftCancelledAt: Date | null;
+	/** The briefing. Shown on the member's card once they are booked. */
+	notes: string | null;
+	eventTitle: string | null;
 }
 
 /**
@@ -626,7 +726,12 @@ export async function listSignupsForUser(
 			startsAt: volunteerShift.startsAt,
 			endsAt: volunteerShift.endsAt,
 			status: volunteerSignup.status,
-			shiftCancelledAt: volunteerShift.cancelledAt
+			shiftCancelledAt: volunteerShift.cancelledAt,
+			// The member's own card shows the briefing once they are booked — it is
+			// what they need on the night, and the claim modal quotes it before they
+			// commit. The event is what makes "Front Desk" mean a particular evening.
+			notes: volunteerShift.notes,
+			eventTitle: eventTitleSql
 		})
 		.from(volunteerSignup)
 		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
@@ -813,4 +918,152 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 		Number(blocked[0]?.n ?? 0) +
 		Number(unclosed[0]?.n ?? 0)
 	);
+}
+
+// ---------------------------------------------------------------------------
+// Who to ask
+// ---------------------------------------------------------------------------
+// The candidate list beside a shift's roster. It used to live on the role's own
+// page, one navigation away from the shift you were trying to fill
+// (docs/reports/volunteer-workflow-findings.md#a5), and it could only ever
+// answer "who ticked this role" because it was anchored on the interest table.
+// A coordinator filling a door shift also wants the people who have worked it
+// before and, when neither list turns anybody up, everybody else.
+// ---------------------------------------------------------------------------
+
+export type CandidateScope = 'interested' | 'worked' | 'all';
+
+export interface ShiftCandidate {
+	userId: string;
+	member: MemberRef;
+	/** Free text, as the member wrote it. Null before they finish onboarding. */
+	availability: string | null;
+	/** Lifetime approved minutes, all roles. */
+	approvedMinutes: number;
+	/** Completed signups on this role — "N of these before". */
+	workedThisRole: number;
+}
+
+const WEEKDAY_WORDS: readonly (readonly string[])[] = [
+	['sunday', 'sun'],
+	['monday', 'mon'],
+	['tuesday', 'tue', 'tues'],
+	['wednesday', 'wed'],
+	['thursday', 'thu', 'thur', 'thurs'],
+	['friday', 'fri'],
+	['saturday', 'sat']
+];
+
+/**
+ * Does a member's stated availability argue against this shift's day?
+ *
+ * Deliberately only a flag, never a block. The field is free text — "weekends",
+ * "Tues/Thurs evenings", "whenever you need me" — so this can be wrong, and the
+ * screen says "read their note" rather than pretending to have parsed it.
+ *
+ * Silence is not a conflict: text that names no day at all returns false,
+ * because "I can do evenings" tells you nothing about Saturday and flagging it
+ * would put an amber line on almost everybody.
+ */
+export function availabilityConflictsWithDay(
+	availability: string | null | undefined,
+	shiftDay: number
+): boolean {
+	if (!availability) return false;
+	const text = availability.toLowerCase();
+
+	// The optional plural is load-bearing: people write "Fridays and Saturdays",
+	// and `\bfriday\b` does not match "fridays" — there is no word boundary
+	// before the s. Without it this flag silently never fired.
+	const mentioned = new Set<number>();
+	WEEKDAY_WORDS.forEach((words, day) => {
+		if (words.some((w) => new RegExp(`\\b${w}s?\\b`).test(text))) mentioned.add(day);
+	});
+	if (/\bweekends?\b/.test(text)) [0, 6].forEach((d) => mentioned.add(d));
+	if (/\bweekdays?\b/.test(text)) [1, 2, 3, 4, 5].forEach((d) => mentioned.add(d));
+
+	if (mentioned.size === 0) return false;
+	return !mentioned.has(shiftDay);
+}
+
+/**
+ * Candidates for one shift, by scope, excluding anybody already on it.
+ *
+ * Active profiles only: a blocked minor cannot claim a shift, so offering them
+ * as a one-click add would produce a refusal the coordinator could have been
+ * spared. Clearance is *not* filtered here — a blocked candidate is shown with
+ * what they are missing, because "go and grant this" is the useful next step
+ * and hiding them just makes the list mysteriously short.
+ */
+export async function listShiftCandidates(
+	shiftId: string,
+	roleId: string,
+	scope: CandidateScope,
+	search?: string,
+	limit = 5
+): Promise<ShiftCandidate[]> {
+	const alreadyOn = sql`not exists (
+		select 1 from "volunteer_signup" vs
+		where vs."shift_id" = ${shiftId}
+			and vs."user_id" = ${user.id}
+			and vs."status" <> 'cancelled'
+	)`;
+
+	const isInterested = sql`exists (
+		select 1 from "volunteer_role_interest" vri
+		where vri."user_id" = ${user.id} and vri."volunteer_role_id" = ${roleId}
+	)`;
+
+	const workedThisRoleSql = sql<number>`(
+		select count(*) from "volunteer_signup" vs
+		join "volunteer_shift" vsh on vsh."id" = vs."shift_id"
+		where vs."user_id" = ${user.id}
+			and vs."status" = 'completed'
+			and vsh."volunteer_role_id" = ${roleId}
+	)`;
+
+	const scopeFilter =
+		scope === 'interested'
+			? isInterested
+			: scope === 'worked'
+				? sql`${workedThisRoleSql} > 0`
+				: undefined;
+
+	const rows = await db
+		.select({
+			userId: user.id,
+			member: memberRefColumns(),
+			availability: volunteerProfile.availability,
+			approvedMinutes: sql<number>`(
+				select coalesce(sum(vhl."minutes"), 0) from "volunteer_hour_log" vhl
+				where vhl."user_id" = ${user.id} and vhl."status" = 'approved'
+			)`,
+			workedThisRole: workedThisRoleSql
+		})
+		.from(volunteerProfile)
+		.innerJoin(user, eq(user.id, volunteerProfile.userId))
+		.where(
+			and(
+				eq(volunteerProfile.status, 'active'),
+				isNull(user.deletedAt),
+				alreadyOn,
+				scopeFilter,
+				// The desk case: somebody walks up and offers, and they are not on
+				// any shortlist because they never ticked a box. Without this the
+				// column can only offer the five people it already thought of.
+				search ? or(like(user.name, `%${search}%`), like(user.email, `%${search}%`)) : undefined
+			)
+		)
+		// Most-relevant first within the scope: somebody who has worked this role
+		// before is a better ask than somebody who merely ticked it.
+		.orderBy(desc(workedThisRoleSql), asc(user.name))
+		.limit(limit);
+
+	return rows.map((r) => ({
+		userId: r.userId,
+		member: toMemberRef(r.member),
+		availability: r.availability,
+		approvedMinutes: Number(r.approvedMinutes),
+		workedThisRole: Number(r.workedThisRole)
+	}));
 }

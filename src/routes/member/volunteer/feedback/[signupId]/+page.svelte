@@ -25,6 +25,10 @@
 	let context = $derived(getShiftFeedbackContext(signupId));
 
 	let submitted = $state(false);
+	// The answer comes back from the form rather than being read off the input:
+	// the field belongs to the form, and the server is the thing that knows what
+	// was actually recorded.
+	const setUp = $derived(submitShiftFeedback.result?.wasSetUp ?? null);
 </script>
 
 <PageHeader title="How did it go?" subtitle="Volunteering" backHref="/member/volunteer" />
@@ -40,10 +44,21 @@
 			/>
 		{:else if ctx.alreadySubmitted || submitted}
 			<InfoCard title="Thank you">
+				<!--
+					The confirmation answers what they actually said. Somebody who has
+					just told us they were not set up to succeed should not be thanked
+					in the same words as somebody who was — the first is a complaint,
+					and acknowledging it is the least the form owes them.
+				-->
 				<p class="text-sm">
-					{submitted
-						? 'Got it — thanks for helping us run the next one better.'
-						: 'You already answered for this shift.'}
+					{#if !submitted}
+						You already answered for this shift.
+					{:else if setUp === false}
+						Got it — and sorry we didn't set you up properly. That goes straight into the briefing
+						for this role, which is the part we can actually fix.
+					{:else}
+						Got it — thanks for helping us run the next one better.
+					{/if}
 				</p>
 				<a href={resolve('/member/volunteer')} class="link text-sm">Back to volunteering</a>
 			</InfoCard>
@@ -82,14 +97,14 @@
 						type="checkbox"
 						label="Were you set up to succeed?"
 						checkboxLabel="I knew what to do and had what I needed"
-						description="Answer honestly — a no here fixes the briefing for the next person, not you."
+						description="Used to fix the briefing, not to assess you."
 					/>
 
 					<FormField
 						name="comment"
 						type="textarea"
 						label="Anything we should fix?"
-						description="Optional. Goes to staff without your name attached to the rollup."
+						description="Optional. Sent to staff without your name on it."
 					/>
 
 					<SubmitButton label="Send it" variant="primary" />

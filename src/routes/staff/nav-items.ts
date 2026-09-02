@@ -29,11 +29,8 @@ export type StaffNavKey =
 	| 'groups'
 	| 'volunteer'
 	| 'volunteer-schedule'
-	| 'volunteer-hours'
 	| 'volunteer-people'
-	| 'volunteer-shifts'
-	| 'volunteer-roles'
-	| 'volunteer-certifications'
+	| 'volunteer-setup'
 	| 'volunteer-duty-lists'
 	| 'volunteer-report'
 	| 'reservations'
@@ -121,19 +118,20 @@ export const staffNavSections: StaffNavSection[] = [
 						label: 'Schedule',
 						href: resolve('/staff/volunteer/schedule')
 					},
-					{ key: 'volunteer-hours', label: 'Hours', href: resolve('/staff/volunteer/hours') },
 					{
+						// "People", not "Volunteers": it holds the under-18 queue and the
+						// clearances table too, and both are about people who are not yet
+						// volunteering.
 						key: 'volunteer-people',
-						label: 'Volunteers',
+						label: 'People',
 						href: resolve('/staff/volunteer/people')
 					},
-					{ key: 'volunteer-shifts', label: 'Shifts', href: resolve('/staff/volunteer/shifts') },
-					{ key: 'volunteer-roles', label: 'Roles', href: resolve('/staff/volunteer/roles') },
-					{
-						key: 'volunteer-certifications',
-						label: 'Certifications',
-						href: resolve('/staff/volunteer/certifications')
-					},
+					{ key: 'volunteer-setup', label: 'Setup', href: resolve('/staff/volunteer/setup') },
+					// Its own row rather than folded into Setup. A duty list is arguably
+					// a definition like a role is, but it landed on `main` as a screen of
+					// its own while this branch was in flight, and quietly absorbing
+					// somebody else's new surface into a redesign they did not review is
+					// not a merge resolution.
 					{
 						key: 'volunteer-duty-lists',
 						label: 'Duty Lists',

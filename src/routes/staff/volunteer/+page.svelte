@@ -28,21 +28,40 @@
 	import CloseOutCard from './CloseOutCard.svelte';
 	import LapsingCard from './LapsingCard.svelte';
 	import NewShiftAction from './NewShiftAction.svelte';
+	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
 	import { toLocalDateTime } from '$lib/utils/format';
+	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { getVolunteerWorklist } from '$lib/remote/volunteer.remote';
 
 	const work = $derived(await getVolunteerWorklist());
 
 	// Tomorrow, so the New Shift form opens on a date that hasn't already passed —
-	// the same anchor the shifts page uses.
+	// the same anchor the schedule uses.
 	const defaultStart = toLocalDateTime(new Date(Date.now() + 86_400_000));
+
+	// The day, then the size of the pile. A worklist that does not say which day
+	// it is describing is a list; saying it is what makes it a shift.
+	const today = new Intl.DateTimeFormat('en-US', {
+		weekday: 'long',
+		month: 'short',
+		day: 'numeric',
+		timeZone: DEFAULT_TIMEZONE
+	}).format(new Date());
+
+	const waiting = $derived(work.waitingCount + work.lapsing.length);
 </script>
 
-<PageHeader title="Volunteering" subtitle="Staff">
+<PageHeader title="Today" subtitle="Volunteering">
+	<LogHoursForMemberAction />
 	<NewShiftAction {defaultStart} />
 </PageHeader>
 
-<PageContent>
+<PageContent width="5xl">
+	<p class="text-subtle text-sm">
+		{today} ·
+		{waiting === 0 ? 'nothing waiting' : `${waiting} ${waiting === 1 ? 'item' : 'items'} waiting`}
+	</p>
+
 	{#if work.waitingCount === 0 && work.lapsing.length === 0}
 		<!--
 			The correct rendering of a clear queue, and the reason every card below is
@@ -50,13 +69,13 @@
 		-->
 		<EmptyState
 			title="Nothing waiting"
-			description="Every claim is confirmed, every shift is covered, and the hours queue is clear."
+			description="All claims confirmed, all hours reviewed, no short shifts in the next two weeks."
 		>
 			<p class="font-semibold">Nothing waiting</p>
-			<p>Every claim is confirmed, every shift is covered, and the hours queue is clear.</p>
+			<p>All claims confirmed, all hours reviewed, no short shifts in the next two weeks.</p>
 			<div class="mt-4 flex flex-wrap justify-center gap-2">
 				<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule</Button>
-				<Button href="/staff/volunteer/hours" variant="ghost" size="sm">Hours</Button>
+				<Button href="/staff/volunteer/people" variant="ghost" size="sm">People</Button>
 				<Button href="/staff/volunteer/report" variant="ghost" size="sm">Report</Button>
 			</div>
 		</EmptyState>

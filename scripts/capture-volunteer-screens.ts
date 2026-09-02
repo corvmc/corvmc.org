@@ -65,13 +65,19 @@ const SCREENS: Screen[] = [
 		id: 'member-dashboard',
 		persona: 'volunteer',
 		path: '/member/volunteer',
-		ready: "text=What you're cleared for"
+		ready: 'text=Your shifts'
+	},
+	{
+		id: 'member-hours',
+		persona: 'volunteer',
+		path: '/member/volunteer/hours',
+		ready: "h1:has-text('Your hours')"
 	},
 	{
 		id: 'member-interests',
 		persona: 'volunteer',
 		path: '/member/volunteer/interests',
-		ready: 'text=Pick anything that sounds like you'
+		ready: 'text=Not a commitment'
 	},
 	{
 		id: 'member-feedback',
@@ -84,7 +90,7 @@ const SCREENS: Screen[] = [
 		id: 'member-start',
 		persona: 'newcomer',
 		path: '/member/volunteer/start',
-		ready: 'text=About you',
+		ready: 'text=Asked once',
 		minText: 150
 	},
 	{
@@ -99,42 +105,50 @@ const SCREENS: Screen[] = [
 	{
 		id: 'modal-member-log-hours',
 		persona: 'volunteer',
-		path: '/member/volunteer',
-		ready: "text=What you're cleared for",
+		path: '/member/volunteer/hours',
+		ready: "h1:has-text('Your hours')",
 		act: (p) => p.getByRole('button', { name: 'Log Hours', exact: true }).first().click(),
-		then: `${DIALOG} >> text=Log volunteer hours`
+		then: `${DIALOG} >> text=Log hours`
 	},
 	{
 		id: 'modal-member-log-shift-hours',
 		persona: 'volunteer',
 		path: '/member/volunteer',
-		ready: 'text=Log your shift hours',
+		ready: 'text=Hours to log',
 		act: (p) => p.getByRole('button', { name: 'Log these hours' }).first().click(),
-		then: `${DIALOG} >> text=Log hours for`
+		then: `${DIALOG} >> text=Pre-filled from the shift`
 	},
 	{
 		id: 'modal-member-claim-shift',
 		persona: 'volunteer',
 		path: '/member/volunteer',
-		ready: 'text=Shifts you can pick up',
+		ready: 'text=Open shifts',
 		act: (p) => p.getByRole('button', { name: "I'll do it" }).first().click(),
 		then: `${DIALOG} >> text=Claim this shift?`
 	},
 	{
-		id: 'modal-member-interests',
+		id: 'modal-member-drop-out',
 		persona: 'volunteer',
 		path: '/member/volunteer',
-		ready: "text=What you're cleared for",
-		act: (p) => p.getByRole('button', { name: 'Interests', exact: true }).first().click(),
-		then: `${DIALOG} >> text=What you can help with`
+		ready: 'text=Your shifts',
+		act: (p) => p.getByRole('button', { name: 'Drop out' }).first().click(),
+		then: `${DIALOG} >> text=Drop out of this shift?`
+	},
+	{
+		id: 'modal-member-profile',
+		persona: 'volunteer',
+		path: '/member/volunteer',
+		ready: 'text=Your shifts',
+		act: (p) => p.getByRole('button', { name: 'Profile', exact: true }).first().click(),
+		then: `${DIALOG} >> text=Your volunteer profile`
 	},
 
 	// --- Staff --------------------------------------------------------------
 	{
-		id: 'staff-dashboard',
+		id: 'staff-today',
 		persona: 'coordinator',
 		path: '/staff/volunteer',
-		ready: 'text=Hours to review'
+		ready: 'text=Needs confirming'
 	},
 	{
 		id: 'staff-schedule',
@@ -143,72 +157,74 @@ const SCREENS: Screen[] = [
 		ready: 'h1:has-text("Schedule")'
 	},
 	{
+		id: 'staff-schedule-everything',
+		persona: 'coordinator',
+		path: '/staff/volunteer/schedule?days=all',
+		ready: 'h1:has-text("Schedule")'
+	},
+	{
+		id: 'staff-people',
+		persona: 'coordinator',
+		path: '/staff/volunteer/people',
+		ready: 'h1:has-text("People")'
+	},
+	{
+		id: 'staff-people-signoff',
+		persona: 'coordinator',
+		path: '/staff/volunteer/people?tab=signoff',
+		ready: "text=Can't claim shifts",
+		// Three rows of name and email, and at mobile the table drops its
+		// supporting columns: 337 characters all in.
+		minText: 250
+	},
+	{
+		id: 'staff-people-cleared',
+		persona: 'coordinator',
+		path: '/staff/volunteer/people?tab=cleared',
+		// The footnote, not the filter's placeholder option: FilterBar collapses
+		// behind a button at mobile widths, so anything inside it is absent from
+		// the DOM until somebody presses that.
+		ready: "text=Grants are made on a person's record"
+	},
+	{
+		id: 'staff-setup',
+		persona: 'coordinator',
+		path: '/staff/volunteer/setup',
+		ready: 'text=Sound Engineering'
+	},
+	{
+		id: 'staff-report',
+		persona: 'coordinator',
+		path: '/staff/volunteer/report',
+		ready: 'text=Approved hours'
+	},
+	{
 		id: 'staff-hours',
 		persona: 'coordinator',
 		path: '/staff/volunteer/hours',
 		ready: 'h1:has-text("Hours to review")'
 	},
 	{
-		id: 'staff-people',
-		persona: 'coordinator',
-		path: '/staff/volunteer/people',
-		ready: 'h1:has-text("Volunteers")'
-	},
-	{
-		id: 'staff-shifts',
-		persona: 'coordinator',
-		path: '/staff/volunteer/shifts',
-		ready: 'h1:has-text("Every shift")'
-	},
-	{
 		id: 'staff-shift-detail',
 		persona: 'coordinator',
 		path: '/staff/volunteer/shifts/seed-vol-shift-claimed',
-		ready: 'text=Event Setup',
-		// A shift detail page is a handful of facts and one claimant — measured at
-		// 266 characters, so the default gate would never pass here.
+		ready: 'text=Who to ask',
 		minText: 180
 	},
 	{
 		id: 'staff-shift-cancelled',
 		persona: 'coordinator',
 		path: '/staff/volunteer/shifts/seed-vol-shift-cancelled',
-		ready: 'text=Outreach & Tabling',
+		ready: 'text=Who to tell',
 		minText: 180
-	},
-	{
-		id: 'staff-roles',
-		persona: 'coordinator',
-		path: '/staff/volunteer/roles',
-		ready: 'text=Sound Engineering'
 	},
 	{
 		id: 'staff-role-detail',
 		persona: 'coordinator',
-		path: '/staff/volunteer/roles',
+		path: '/staff/volunteer/setup',
 		ready: 'text=Front Desk',
-		act: (p) => p.getByRole('link', { name: 'Front Desk', exact: true }).first().click(),
+		act: (p) => p.getByRole('link', { name: 'Front Desk', exact: false }).first().click(),
 		then: 'text=Role Info'
-	},
-	{
-		id: 'staff-certifications',
-		persona: 'coordinator',
-		path: '/staff/volunteer/certifications',
-		ready: 'text=Food Handler',
-		// Two certifications in the catalog: 218 characters all in.
-		minText: 150
-	},
-	{
-		id: 'staff-clearances',
-		persona: 'coordinator',
-		path: '/staff/volunteer/clearances',
-		ready: 'h1:has-text("Who\'s Cleared")'
-	},
-	{
-		id: 'staff-report',
-		persona: 'coordinator',
-		path: '/staff/volunteer/report',
-		ready: 'text=Total hours'
 	},
 	{
 		id: 'staff-user-volunteer-tab',
@@ -221,37 +237,46 @@ const SCREENS: Screen[] = [
 	{
 		id: 'modal-staff-new-shift',
 		persona: 'coordinator',
-		path: '/staff/volunteer/shifts',
-		ready: 'h1:has-text("Every shift")',
+		path: '/staff/volunteer/schedule',
+		ready: 'h1:has-text("Schedule")',
 		act: (p) => p.getByRole('button', { name: 'New Shift' }).first().click(),
 		then: `${DIALOG} >> text=Schedule a shift`
-	},
-	{
-		id: 'modal-staff-add-volunteer',
-		persona: 'coordinator',
-		path: '/staff/volunteer/shifts/seed-vol-shift-claimed',
-		ready: 'text=Event Setup',
-		minText: 180, // see staff-shift-detail
-		act: (p) => p.getByRole('button', { name: 'Add someone' }).first().click(),
-		then: `${DIALOG} >> text=Add someone to`
 	},
 	{
 		id: 'modal-staff-confirm-signup',
 		persona: 'coordinator',
 		path: '/staff/volunteer/shifts/seed-vol-shift-claimed',
-		ready: 'text=Event Setup',
-		minText: 180, // see staff-shift-detail
-		act: (p) => p.getByRole('button', { name: 'Confirm', exact: true }).first().click(),
+		ready: 'text=Who to ask',
+		minText: 180,
+		act: (p) => p.locator('button[data-button-root][aria-label="Confirm"]').first().click(),
 		then: `${DIALOG}`
 	},
 	{
 		id: 'modal-staff-edit-shift',
 		persona: 'coordinator',
 		path: '/staff/volunteer/shifts/seed-vol-shift-claimed',
-		ready: 'text=Event Setup',
-		minText: 180, // see staff-shift-detail
+		ready: 'text=Who to ask',
+		minText: 180,
 		act: (p) => p.getByRole('button', { name: 'Edit', exact: true }).first().click(),
 		then: `${DIALOG} >> text=Edit this shift`
+	},
+	{
+		id: 'modal-staff-cancel-shift',
+		persona: 'coordinator',
+		path: '/staff/volunteer/shifts/seed-vol-shift-claimed',
+		ready: 'text=Who to ask',
+		minText: 180,
+		act: (p) => p.getByRole('button', { name: 'Cancel shift' }).first().click(),
+		then: `${DIALOG} >> text=Cancel this shift?`
+	},
+	{
+		id: 'modal-staff-notify-cancelled',
+		persona: 'coordinator',
+		path: '/staff/volunteer/shifts/seed-vol-shift-cancelled',
+		ready: 'text=Who to tell',
+		minText: 180,
+		act: (p) => p.getByRole('button', { name: 'Notify all' }).first().click(),
+		then: `${DIALOG} >> text=Tell everybody this is off?`
 	},
 	{
 		id: 'modal-staff-approve-hours',
@@ -272,18 +297,26 @@ const SCREENS: Screen[] = [
 	{
 		id: 'modal-staff-log-hours-for-member',
 		persona: 'coordinator',
-		path: '/staff/volunteer/hours',
-		ready: 'h1:has-text("Hours to review")',
+		path: '/staff/volunteer/people',
+		ready: 'h1:has-text("People")',
 		act: (p) => p.getByRole('button', { name: 'Log hours for someone' }).first().click(),
 		then: `${DIALOG} >> text=Log hours for a member`
 	},
 	{
 		id: 'modal-staff-new-role',
 		persona: 'coordinator',
-		path: '/staff/volunteer/roles',
+		path: '/staff/volunteer/setup',
 		ready: 'text=Sound Engineering',
 		act: (p) => p.getByRole('button', { name: 'New Role' }).first().click(),
 		then: `${DIALOG} >> text=New volunteer role`
+	},
+	{
+		id: 'modal-staff-new-clearance',
+		persona: 'coordinator',
+		path: '/staff/volunteer/setup',
+		ready: 'text=Sound Engineering',
+		act: (p) => p.getByRole('button', { name: 'New Clearance' }).first().click(),
+		then: `${DIALOG} >> text=New clearance`
 	},
 	{
 		id: 'modal-staff-grant-certification',

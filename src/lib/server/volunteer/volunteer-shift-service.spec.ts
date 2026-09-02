@@ -38,6 +38,7 @@ vi.mock('$lib/server/db', () => ({
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import {
+	cancelShift,
 	countUnfilledByRole,
 	createWorkOrder,
 	listShifts,
@@ -202,6 +203,31 @@ describe('updateShift and the event link', () => {
 		await updateShift('shift-1', { capacity: 3 });
 
 		expect('eventId' in updatedColumns()).toBe(false);
+	});
+});
+
+describe('cancelShift', () => {
+	it('records who called it off and leaves the signups alone', async () => {
+		selectResult = [{ id: 'shift-1', cancelledAt: new Date() }];
+
+		await cancelShift('shift-1', 'staff-1');
+
+		const written = updatedColumns();
+		expect(written).toMatchObject({ cancelledByUserId: 'staff-1' });
+		expect(written.cancelledAt).toBeInstanceOf(Date);
+		// The roster IS the notify list, so nothing here may touch a signup. If a
+		// second write ever appears, the cancelled shift stops knowing who to ring.
+		expect(written).not.toHaveProperty('status');
+	});
+
+	it('only cancels a shift that is not already cancelled', async () => {
+		selectResult = [{ id: 'shift-1' }];
+
+		await cancelShift('shift-1', 'staff-1');
+
+		// Without this a second press would re-stamp the date and overwrite the
+		// name of whoever actually made the call.
+		expect(renderedWhere().sql).toContain('"cancelled_at" is null');
 	});
 });
 

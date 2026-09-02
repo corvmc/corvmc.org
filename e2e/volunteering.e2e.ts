@@ -17,12 +17,10 @@ import {
 	SEED_VOL_ROLE_DEFAULT_CAPACITY,
 	SEED_VOL_GATED_DEFAULT_CAPACITY,
 	SEED_VOL_SHIFT_OPEN_ID,
-	SEED_VOL_SHIFT_OPEN_NOTE,
 	SEED_VOL_SHIFT_ASSIGN_ID,
 	SEED_VOL_SHIFT_RELEASE_ID,
 	SEED_VOL_OTHER_MEMBER_ID,
 	SEED_VOL_MEMBER_ID,
-	SEED_VOL_SHIFT_FULL_NOTE,
 	SEED_VOL_SHIFT_EVENT_ID,
 	SEED_VOL_EVENT_ID,
 	SEED_VOL_EVENT_TITLE,
@@ -88,6 +86,10 @@ async function fillOnboarding(
 ) {
 	await page.locator('input[name="firstName"]').fill(first);
 	await page.locator('input[name="lastName"]').fill(last);
+	// Required at sign-up, optional on the edit form: shift-day contact is the
+	// reason the field exists, so signing up without one leaves a coordinator
+	// with no way to reach somebody who is on tonight.
+	await page.locator('input[name="phone"]').fill('(541) 555-0100');
 	// A select, not a checkbox — an unticked box would be indistinguishable from
 	// an unanswered question, which is the one mistake this field cannot make.
 	await page.locator('select[name="isAdult"]').selectOption(age);
@@ -184,17 +186,22 @@ test.describe('volunteering — staff review queue', () => {
 });
 
 test.describe('volunteering — roles', () => {
-	/** The list is navigation now; role actions live on the detail page. */
+	/** Setup is navigation; role actions live on the detail page. */
 	async function openRole(page: Page, name: string) {
-		await rowFor(page, name).getByRole('link', { name }).click();
+		await page.getByRole('link', { name, exact: false }).first().click();
 		await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+	}
+
+	/** A role on Setup is a card, not a table row. */
+	function cardFor(page: Page, name: string) {
+		return page.locator('li').filter({ hasText: name });
 	}
 
 	test('a role with logged hours cannot be deleted, and says to archive instead', async ({
 		page
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/roles');
+		await page.goto('/staff/volunteer/setup');
 		await openRole(page, SEED_VOL_ROLE_NAME);
 
 		// Delete is offered only for a role nothing was logged against, so the
@@ -205,16 +212,16 @@ test.describe('volunteering — roles', () => {
 
 	test('an archived role stays visible to staff, behind the retired filter', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/roles');
+		await page.goto('/staff/volunteer/setup');
 
 		// Retired roles are off by default — a coordinator filling next week's
 		// shifts reads the live list.
-		await expect(rowFor(page, SEED_VOL_ARCHIVED_ROLE_NAME)).toHaveCount(0);
+		await expect(cardFor(page, SEED_VOL_ARCHIVED_ROLE_NAME)).toHaveCount(0);
 
-		await page.goto('/staff/volunteer/roles?retired=1');
+		await page.goto('/staff/volunteer/setup?retired=1');
 
 		// But retiring a role must never hide the work done under it.
-		await expect(rowFor(page, SEED_VOL_ARCHIVED_ROLE_NAME)).toBeVisible();
+		await expect(cardFor(page, SEED_VOL_ARCHIVED_ROLE_NAME).first()).toBeVisible();
 		await openRole(page, SEED_VOL_ARCHIVED_ROLE_NAME);
 		await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
 	});
@@ -223,7 +230,7 @@ test.describe('volunteering — roles', () => {
 		page
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/roles');
+		await page.goto('/staff/volunteer/setup');
 
 		// Ungated role: the member is simply on the list.
 		await openRole(page, SEED_VOL_ROLE_NAME);
@@ -231,7 +238,7 @@ test.describe('volunteering — roles', () => {
 
 		// Gated role: same member, but holding none of what it requires — the
 		// difference between "interested" and "can actually be rostered".
-		await page.goto('/staff/volunteer/roles');
+		await page.goto('/staff/volunteer/setup');
 		await openRole(page, SEED_VOL_GATED_ROLE_NAME);
 		await expect(page.getByText(SEED_VOL_MEMBER_NAME).first()).toBeVisible({ timeout: 15000 });
 		await expect(page.getByText(`needs ${SEED_VOL_CERT_NAME}`)).toBeVisible();
@@ -245,23 +252,24 @@ test.describe('volunteering — roles', () => {
 
 	test('roles are sectioned by group, with a short-staffed count', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/roles');
+		await page.goto('/staff/volunteer/setup');
 
-		// Group order comes from the enum, so "At shows" heads the first section
-		// and the seeded e2e roles sit under it.
-		await expect(page.getByRole('heading', { name: 'At shows' })).toBeVisible();
-		await expect(rowFor(page, SEED_VOL_ROLE_NAME)).toBeVisible();
+		// Group order comes from the enum, so "At shows" leads. It is a label
+		// rather than a heading on purpose — `getByRole('heading')` is how pages
+		// assert their own title, and a screen full of headings collides with that.
+		await expect(page.getByText('At shows', { exact: true })).toBeVisible();
+		await expect(cardFor(page, SEED_VOL_ROLE_NAME).first()).toBeVisible();
 
-		// The open seeded shift is unclaimed, so its role reads as short. The
-		// column is the reason to land here before anywhere else.
-		const gatedRow = rowFor(page, SEED_VOL_GATED_ROLE_NAME);
-		await expect(gatedRow).toBeVisible();
-		await expect(gatedRow.locator('.badge-warning')).toBeVisible();
+		// The open seeded shift is unclaimed, so its role reads as short. Which
+		// role keeps coming up short is what tells you to go and recruit for it.
+		const gatedCard = cardFor(page, SEED_VOL_GATED_ROLE_NAME).first();
+		await expect(gatedCard).toBeVisible();
+		await expect(gatedCard.locator('.badge-warning')).toBeVisible();
 	});
 
 	test('editing a role from its detail page saves', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/roles');
+		await page.goto('/staff/volunteer/setup');
 		await openRole(page, SEED_VOL_ROLE_NAME);
 
 		// The edit form moved off the list into this page, so the round trip is
@@ -284,7 +292,7 @@ test.describe('volunteering — roles', () => {
 	// survive the round trip as such.
 	test('a shift default can be cleared', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/roles');
+		await page.goto('/staff/volunteer/setup');
 		await openRole(page, SEED_VOL_ROLE_NAME);
 
 		await page.locator('input[name$="defaultCapacity"]').fill('');
@@ -312,7 +320,7 @@ test.describe('volunteering — roles', () => {
 	// them — so the whole path from role row to prefilled form is new.
 	test("a role's shift defaults prefill the New Shift form", async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/roles');
+		await page.goto('/staff/volunteer/setup');
 		await openRole(page, SEED_VOL_ROLE_NAME);
 
 		await page.getByRole('button', { name: 'New shift' }).click();
@@ -322,12 +330,12 @@ test.describe('volunteering — roles', () => {
 		);
 	});
 
-	// On the shifts board the role is chosen inside the modal, so the prefill has
-	// to follow the select. The select is bound, which is also how it could break:
+	// On the schedule the role is chosen inside the modal, so the prefill has to
+	// follow the select. The select is bound, which is also how it could break:
 	// a bound value matching no option posts an empty role.
-	test('the shifts board prefill follows the role picked in the modal', async ({ page }) => {
+	test('the schedule prefill follows the role picked in the modal', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/shifts');
+		await page.goto('/staff/volunteer/schedule');
 
 		await page.getByRole('button', { name: 'New Shift' }).click();
 		const dialog = page.getByRole('dialog');
@@ -352,6 +360,13 @@ test.describe('volunteering — roles', () => {
 		await page.goto('/staff/volunteer/interest');
 
 		await expect(page).toHaveURL(/\/staff\/volunteer\/people$/);
+	});
+
+	test('the retired shift catalog redirects onto the schedule', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/shifts');
+
+		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule$/);
 	});
 
 	/**
@@ -415,14 +430,13 @@ test.describe('volunteering — roles', () => {
 });
 
 test.describe('volunteering — member', () => {
-	test('the interests modal renders a role job description as markdown', async ({ page }) => {
+	test('the interests screen renders a role job description as markdown', async ({ page }) => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
-		await page.goto('/member/volunteer');
+		// Its own screen rather than a modal over the board: it is the same length
+		// as the board it filters, and a dialog that tall is a page in a costume.
+		await page.goto('/member/volunteer/interests');
 
-		// The role picker used to sit open in the page body; it now lives behind
-		// this header button so the body is shifts.
-		await page.getByRole('button', { name: 'Interests' }).click();
-		const modal = page.getByRole('dialog');
+		const modal = page.locator('main');
 		await expect(modal).toBeVisible({ timeout: 15000 });
 
 		await expect(modal.getByText(SEED_VOL_ROLE_NAME).first()).toBeVisible();
@@ -438,20 +452,24 @@ test.describe('volunteering — member', () => {
 		await expect(modal.getByText(SEED_VOL_ARCHIVED_ROLE_NAME)).toHaveCount(0);
 	});
 
-	test('a rejected log shows the member the reason', async ({ page }) => {
+	test('a returned log shows the member the reason', async ({ page }) => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
-		await page.goto('/member/volunteer');
+		// The history moved off the dashboard: a log filed in March is not a next
+		// action, and the one state that is was buried under everything approved.
+		await page.goto('/member/volunteer/hours');
 
 		// Without the reason the member cannot correct and resubmit, which is why
 		// the service refuses a rejection that has none.
-		const row = rowFor(page, SEED_VOL_LOG_REJECTED_DESC);
+		const row = page.locator('li').filter({ hasText: SEED_VOL_LOG_REJECTED_DESC });
 		await expect(row).toBeVisible({ timeout: 15000 });
 		await expect(row).toContainText(SEED_VOL_REJECTED_REASON);
+		// "Returned", never "rejected" — a request for a correction, not a verdict.
+		await expect(row.getByRole('button', { name: 'Fix it' })).toBeVisible();
 	});
 
 	test('a member can log hours and they land as pending', async ({ page }) => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
-		await page.goto('/member/volunteer');
+		await page.goto('/member/volunteer/hours');
 
 		const description = `E2E logged ${Date.now()}`;
 		await page.getByRole('button', { name: 'Log Hours' }).click();
@@ -461,13 +479,13 @@ test.describe('volunteering — member', () => {
 			.selectOption({ label: SEED_VOL_ROLE_NAME });
 		await page.locator('input[name="hours"]').fill('1.5');
 		await page.locator('textarea[name="description"]').fill(description);
-		await page.getByRole('button', { name: 'Submit for review' }).click();
+		await modalSubmit(page, 'File it').click();
 
-		const row = rowFor(page, description);
+		const row = page.locator('li').filter({ hasText: description });
 		await expect(row).toBeVisible({ timeout: 15000 });
 		await expect(row).toContainText('1.5 hrs');
 		// Editable only while pending — the controls are the proof of status.
-		await expect(rowAction(row, 'Withdraw')).toBeVisible();
+		await expect(row.getByRole('button', { name: 'Withdraw' })).toBeVisible();
 	});
 });
 
@@ -483,6 +501,18 @@ test.describe('volunteering — member', () => {
  */
 function shiftCard(page: Page, text: string) {
 	return page.locator('li').filter({ hasText: text });
+}
+
+/**
+ * A card on the claim board.
+ *
+ * The board card no longer carries the shift's briefing — that moved into the
+ * claim modal, where the decision actually gets made — so the two seeded
+ * Front Desk shifts can only be told apart by the state they are in. Which is
+ * also the thing each test is about.
+ */
+function boardCard(page: Page, role: string, state: string) {
+	return page.locator('li').filter({ hasText: role }).filter({ hasText: state });
 }
 
 test.describe('volunteering — onboarding', () => {
@@ -515,15 +545,17 @@ test.describe('volunteering — onboarding', () => {
 		await page.waitForURL(/\/member\/volunteer(\?|$)/, { timeout: 15000 });
 
 		// The body is shifts now — the picker must not be sitting open in it.
-		await expect(page.getByRole('heading', { name: 'Shifts you can pick up' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /open shifts/i })).toBeVisible();
 
-		// Reopening shows the selection survived the replace-all write.
-		await page.getByRole('button', { name: 'Interests' }).click();
-		const modal = page.getByRole('dialog');
-		await expect(modal.getByRole('checkbox', { name: SEED_VOL_ROLE_NAME })).toBeChecked();
-		await expect(modal.locator('textarea[name="availability"]')).toHaveValue(
-			'E2E weekday evenings'
-		);
+		// Reopening shows the selection survived the replace-all write. Interests is
+		// a screen now rather than a modal over the board: it is the same length as
+		// the board it filters, and a dialog that tall is a page in a costume.
+		// `exact` matters: the summary row's "Interests →" link points at the same
+		// page, and a substring match resolves to both.
+		await page.getByRole('link', { name: 'Interests', exact: true }).click();
+		await page.waitForURL(/\/member\/volunteer\/interests/, { timeout: 15000 });
+		await expect(page.getByRole('checkbox', { name: SEED_VOL_ROLE_NAME })).toBeChecked();
+		await expect(page.locator('textarea[name="availability"]')).toHaveValue('E2E weekday evenings');
 	});
 
 	/**
@@ -572,7 +604,7 @@ test.describe('volunteering — onboarding', () => {
 		await page.context().clearCookies();
 		await login(page, SEED_VOL_BLOCKED_MINOR_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
-		await expect(page.getByRole('heading', { name: 'Shifts you can pick up' })).toBeVisible({
+		await expect(page.getByRole('heading', { name: /open shifts/i })).toBeVisible({
 			timeout: 15000
 		});
 	});
@@ -601,25 +633,25 @@ test.describe('volunteering — shifts', () => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
 
-		const card = shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE);
-		await expect(card).toBeVisible({ timeout: 15000 });
+		const open = boardCard(page, SEED_VOL_ROLE_NAME, "I'll do it");
+		await expect(open.first()).toBeVisible({ timeout: 15000 });
 
-		await card.getByRole('button', { name: "I'll do it" }).click();
-		await modalSubmit(page, 'Claim it').click();
+		await open.first().getByRole('button', { name: "I'll do it" }).click();
+		await modalSubmit(page, "I'll do it").click();
 
-		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText('claimed', {
-			timeout: 15000
-		});
+		// A claim crosses the page: the board is what you could take on, and the
+		// left column is what you have. Landing on "Claimed" rather than "Booked"
+		// is the distinction the rail exists to draw.
+		const mine = boardCard(page, SEED_VOL_ROLE_NAME, 'Awaiting staff confirmation');
+		await expect(mine.first()).toBeVisible({ timeout: 15000 });
 		await expect.poll(() => readSignupStatus(SEED_VOL_SHIFT_OPEN_ID), DB_POLL).toBe('claimed');
 
 		// Dropping out has to free the place, not just hide the button — the
 		// capacity count is computed from live signups.
-		await shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)
-			.getByRole('button', { name: 'Drop out' })
-			.click();
+		await mine.first().getByRole('button', { name: 'Drop out' }).click();
 		await modalSubmit(page, 'Drop out').click();
 
-		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText("I'll do it", {
+		await expect(boardCard(page, SEED_VOL_ROLE_NAME, "I'll do it").first()).toBeVisible({
 			timeout: 15000
 		});
 		await expect.poll(() => readSignupStatus(SEED_VOL_SHIFT_OPEN_ID), DB_POLL).toBe('cancelled');
@@ -644,10 +676,9 @@ test.describe('volunteering — shifts', () => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
 
-		const card = shiftCard(page, SEED_VOL_SHIFT_FULL_NOTE);
-		await expect(card).toBeVisible({ timeout: 15000 });
-		await expect(card).toContainText('Full');
-		await expect(card.getByRole('button', { name: "I'll do it" })).toHaveCount(0);
+		const card = boardCard(page, SEED_VOL_ROLE_NAME, 'Full');
+		await expect(card.first()).toBeVisible({ timeout: 15000 });
+		await expect(card.first().getByRole('button', { name: "I'll do it" })).toHaveCount(0);
 	});
 
 	test('staff see the claim and can confirm it', async ({ page }) => {
@@ -656,12 +687,12 @@ test.describe('volunteering — shifts', () => {
 		// existing session does not swap it.
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
-		const card = shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE);
+		const card = boardCard(page, SEED_VOL_ROLE_NAME, "I'll do it").first();
 		await card.getByRole('button', { name: "I'll do it" }).click();
-		await modalSubmit(page, 'Claim it').click();
-		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText('claimed', {
-			timeout: 15000
-		});
+		await modalSubmit(page, "I'll do it").click();
+		await expect(
+			boardCard(page, SEED_VOL_ROLE_NAME, 'Awaiting staff confirmation').first()
+		).toBeVisible({ timeout: 15000 });
 
 		await page.context().clearCookies();
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
@@ -836,15 +867,14 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_ASSIGN_ID}`);
 
-		await page.getByRole('button', { name: 'Add someone', exact: true }).click();
-		const dialog = page.getByRole('dialog');
-		await expect(dialog).toBeVisible({ timeout: 15000 });
-
-		// Through the search box rather than the interest shortlist: the shortlist is a
-		// convenience, and the path that has to work is "somebody walked up to the desk".
-		await dialog.getByPlaceholder(/search by name or email/i).fill(SEED_VOL_MEMBER_NAME);
-		await dialog.getByRole('button', { name: new RegExp(SEED_VOL_MEMBER_NAME) }).click();
-		await modalSubmit(page, 'Add to shift').click();
+		// Through the candidate column's search rather than its shortlist: the
+		// shortlist is a convenience, and the path that has to work is "somebody
+		// walked up to the desk" — a member on nobody's list because they never
+		// ticked a box. Searching widens the scope on its own.
+		await page.getByPlaceholder(/search by name or email/i).fill(SEED_VOL_MEMBER_NAME);
+		const row = page.getByRole('listitem').filter({ hasText: SEED_VOL_MEMBER_NAME });
+		await row.getByRole('button', { name: 'Add', exact: true }).click();
+		await modalSubmit(page, 'Add them').click();
 
 		// Confirmed, not claimed. A coordinator typing the name in IS the decision, and
 		// leaving it claimed would cost the member the day-before reminder.
@@ -857,7 +887,7 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_RELEASE_ID}`);
 
-		await page.locator('button[data-button-root][aria-label="Take off the shift"]').first().click();
+		await page.locator('button[data-button-root][aria-label="Remove"]').first().click();
 		await modalSubmit(page, 'Take them off').click();
 
 		// The distinction is the whole point: a cancellation is notice and a no-show is

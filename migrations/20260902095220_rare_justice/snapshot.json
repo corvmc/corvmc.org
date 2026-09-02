@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "bb872598-e939-4cf8-8143-778467f7346b",
+  "id": "7775f434-faf1-4c21-92e7-7a406e39b746",
   "prevIds": [
-    "f3fabf50-533c-4d1e-8d25-06e216d608ee"
+    "bb872598-e939-4cf8-8143-778467f7346b"
   ],
   "ddl": [
     {
@@ -7411,6 +7411,16 @@
       "table": "volunteer_shift"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_by_user_id",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -7627,6 +7637,16 @@
       "default": null,
       "generated": null,
       "name": "cancelled_at",
+      "entityType": "columns",
+      "table": "volunteer_signup"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notified_at",
       "entityType": "columns",
       "table": "volunteer_signup"
     },
@@ -10232,6 +10252,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_volunteer_shift_duty_list_id_duty_list_id_fk",
+      "entityType": "fks",
+      "table": "volunteer_shift"
+    },
+    {
+      "columns": [
+        "cancelled_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_cancelled_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "volunteer_shift"
     },

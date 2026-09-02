@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { volunteerShift, volunteerSignup, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { event } from '$lib/server/db/schema/event';
+import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -252,11 +253,19 @@ export async function updateShift(
 /**
  * Call off a shift. The row and its signups stay: claimants still need
  * notifying, and "we cancelled that one" is worth being able to see.
+ *
+ * `cancelledByUserId` is what lets the cancelled shift say who called it off.
+ * It is optional so the sweep-style callers a cron might grow don't have to
+ * invent a user, but every staff path passes one.
  */
-export async function cancelShift(id: string): Promise<VolunteerShift> {
+export async function cancelShift(id: string, cancelledByUserId?: string): Promise<VolunteerShift> {
 	const [row] = await db
 		.update(volunteerShift)
-		.set({ cancelledAt: new Date(), updatedAt: new Date() })
+		.set({
+			cancelledAt: new Date(),
+			cancelledByUserId: cancelledByUserId ?? null,
+			updatedAt: new Date()
+		})
 		.where(and(eq(volunteerShift.id, id), isNull(volunteerShift.cancelledAt)))
 		.returning();
 
@@ -308,6 +317,11 @@ export interface ShiftWithCounts extends VolunteerShift {
 	 * say so.
 	 */
 	confirmed: number;
+	/**
+	 * People on a called-off shift who still have to be told. Meaningless while
+	 * `cancelledAt` is null — everybody on a live shift is trivially "unnotified".
+	 */
+	unnotified: number;
 }
 
 function withCounts(
@@ -318,6 +332,7 @@ function withCounts(
 		eventTitle: string | null;
 		claimed: number;
 		confirmed: number;
+		unnotified: number;
 	}[]
 ): ShiftWithCounts[] {
 	return rows.map((r) => ({
@@ -326,7 +341,8 @@ function withCounts(
 		roleGroup: r.roleGroup,
 		eventTitle: r.eventTitle,
 		claimed: Number(r.claimed),
-		confirmed: Number(r.confirmed)
+		confirmed: Number(r.confirmed),
+		unnotified: Number(r.unnotified)
 	}));
 }
 
@@ -396,6 +412,17 @@ function shiftRowsQuery() {
 				select count(*) from "volunteer_signup" vs
 				where vs."shift_id" = ${volunteerShift.id}
 					and vs."status" in ('confirmed', 'completed')
+			)`,
+			// Zero on every live shift, and the whole story on a cancelled one:
+			// there the roster is the list of people to ring, and this is what is
+			// left of it. Computed here rather than in a second query because the
+			// schedule needs it per cancelled row and the detail page needs it for
+			// the banner, which is the same number twice.
+			unnotified: sql<number>`(
+				select count(*) from "volunteer_signup" vs
+				where vs."shift_id" = ${volunteerShift.id}
+					and vs."status" <> 'cancelled'
+					and vs."notified_at" is null
 			)`
 		})
 		.from(volunteerShift)
@@ -597,10 +624,35 @@ export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null
 	return withCounts(rows)[0] ?? null;
 }
 
+/**
+ * Who called a shift off, by name.
+ *
+ * Its own lookup rather than a join on `shiftRowsQuery`, because only one page
+ * asks and only when the shift is actually cancelled — which is a handful of
+ * rows in the table. Putting it on the shared row query would join `user` a
+ * second time on every schedule row to answer a question almost none of them
+ * have.
+ */
+export async function getShiftCancelledByName(shiftId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ name: user.name })
+		.from(volunteerShift)
+		.innerJoin(user, eq(user.id, volunteerShift.cancelledByUserId))
+		.where(eq(volunteerShift.id, shiftId))
+		.limit(1);
+	return row?.name ?? null;
+}
+
 /** An `OpenShift` the `starts_at >= now` filter already narrowed. See `isScheduled`. */
 export type ScheduledOpenShift = OpenShift & { startsAt: Date; endsAt: Date };
 
-export interface OpenShift extends ShiftWithCounts {
+/**
+ * `unnotified` is omitted deliberately: it counts people still owed a call about
+ * a shift that was called off, and this query filters cancelled shifts out
+ * before they can be one. Inheriting it would put a subquery on every row of the
+ * member board to answer a question that is structurally zero there.
+ */
+export interface OpenShift extends Omit<ShiftWithCounts, 'unnotified'> {
 	/** This member's own claim, if they have a live one. */
 	myStatus: string | null;
 	mySignupId: string | null;

@@ -100,6 +100,10 @@ import {
 	completeFinishedShifts,
 	releaseSignup,
 	cancelSignup,
+	notifySignupsOfCancellation,
+	markSignupNotified,
+	countUnnotified,
+	availabilityConflictsWithDay,
 	SignupNotFoundError,
 	ShiftFullError,
 	ShiftClosedError,
@@ -392,5 +396,89 @@ describe('completeFinishedShifts', () => {
 
 		expect(done).toHaveLength(1);
 		expect(updatedSets[0]).toMatchObject({ status: 'completed' });
+	});
+});
+
+describe('the notify list on a called-off shift', () => {
+	it('stamps everybody outstanding and reports how many', async () => {
+		// The select of who is outstanding, then one select per emitted event.
+		selectResultQueue = [[{ id: 'signup-1' }, { id: 'signup-2' }], [], []];
+
+		expect(await notifySignupsOfCancellation('shift-1')).toBe(2);
+		expect(updatedSets[0]).toMatchObject({ notifiedAt: expect.any(Date) });
+	});
+
+	it('writes nothing when everybody has already been told', async () => {
+		selectResultQueue = [[]];
+
+		expect(await notifySignupsOfCancellation('shift-1')).toBe(0);
+		// Pressing "Notify all" twice must not mail the same six people twice, and
+		// the guard is the empty read rather than anything in the UI.
+		expect(updatedSets).toEqual([]);
+	});
+
+	it('skips the cancelled signups — they are not on the shift to be told about', async () => {
+		selectResultQueue = [[]];
+
+		await notifySignupsOfCancellation('shift-1');
+
+		expect(render(whereClauses[0] as SQL)).toContain('"status" <>');
+	});
+
+	it('marks one person by hand without sending them anything', async () => {
+		await markSignupNotified('signup-1');
+
+		expect(updatedSets[0]).toMatchObject({ notifiedAt: expect.any(Date) });
+		// Idempotent: a second press must not move the stamp, so the predicate
+		// carries the null check rather than relying on the button being hidden.
+		expect(render(whereClauses[0] as SQL)).toContain('"notified_at" is null');
+	});
+
+	it('counts only the people still owed a call', async () => {
+		selectResultQueue = [[{ n: 3 }]];
+
+		expect(await countUnnotified('shift-1')).toBe(3);
+		expect(render(whereClauses[0] as SQL)).toContain('"notified_at" is null');
+	});
+});
+
+describe('availabilityConflictsWithDay', () => {
+	// 0 = Sunday … 6 = Saturday.
+	const MON = 1;
+	const SAT = 6;
+
+	it('flags a weekday shift against somebody who wrote a plural weekend', () => {
+		// The bug this was written for: `\bfriday\b` does not match "Fridays",
+		// so the flag silently never fired on the way most people write it.
+		expect(availabilityConflictsWithDay('Fridays and Saturdays, load-out included.', MON)).toBe(
+			true
+		);
+	});
+
+	it('does not flag the day they actually named', () => {
+		expect(availabilityConflictsWithDay('Fridays and Saturdays, load-out included.', SAT)).toBe(
+			false
+		);
+	});
+
+	it('reads abbreviations without reading them inside longer words', () => {
+		expect(availabilityConflictsWithDay('Tues/Thurs evenings', MON)).toBe(true);
+		// "mon" must not be found inside "month".
+		expect(availabilityConflictsWithDay('a couple of times a month', MON)).toBe(false);
+	});
+
+	it('treats silence as no conflict', () => {
+		// "Evenings" says nothing about which day, and flagging it would put an
+		// amber line on nearly everybody.
+		expect(availabilityConflictsWithDay('Evenings, after 6', SAT)).toBe(false);
+		expect(availabilityConflictsWithDay('', SAT)).toBe(false);
+		expect(availabilityConflictsWithDay(null, SAT)).toBe(false);
+	});
+
+	it('expands weekend and weekday, singular or plural', () => {
+		expect(availabilityConflictsWithDay('weekends only', MON)).toBe(true);
+		expect(availabilityConflictsWithDay('weekends only', SAT)).toBe(false);
+		expect(availabilityConflictsWithDay('weekdays', SAT)).toBe(true);
+		expect(availabilityConflictsWithDay('weekday mornings', MON)).toBe(false);
 	});
 });

@@ -272,6 +272,13 @@ export const volunteerShift = sqliteTable(
 		// what was called off survives.
 		cancelledAt: integer('cancelled_at', { mode: 'timestamp' }),
 
+		// Who called it off. The cancelled shift names them ("Called off Sep 1 by
+		// Nia Okafor") because the roster it leaves behind is a list of people
+		// somebody now has to ring, and "somebody" needs a name.
+		cancelledByUserId: text('cancelled_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+
 		// Whether the *work* is finished, which is not whether anyone turned up.
 		// `completeFinishedShifts()` promotes a signup once the clock runs out —
 		// that says the volunteer worked and earns their hours. A session can end
@@ -367,6 +374,12 @@ export const volunteerSignup = sqliteTable(
 		confirmedAt: integer('confirmed_at', { mode: 'timestamp' }),
 		completedAt: integer('completed_at', { mode: 'timestamp' }),
 		cancelledAt: integer('cancelled_at', { mode: 'timestamp' }),
+
+		// Only meaningful once the *shift* is cancelled: the roster becomes the
+		// list of people to tell, and this is how far down it staff have got.
+		// Separate from the notification the cancel itself sends, because staff
+		// ring the ones who need ringing and mark those by hand.
+		notifiedAt: integer('notified_at', { mode: 'timestamp' }),
 
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()

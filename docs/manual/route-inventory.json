@@ -240,6 +240,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/volunteer/hours",
+		"panel": "member"
+	},
+	{
 		"route": "/member/volunteer/interests",
 		"panel": "member"
 	},
@@ -488,11 +492,11 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/volunteer/certifications",
+		"route": "/staff/volunteer/duty-lists",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/volunteer/clearances",
+		"route": "/staff/volunteer/duty-lists/[id]",
 		"panel": "staff"
 	},
 	{
@@ -508,10 +512,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/volunteer/roles",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/volunteer/roles/[id]",
 		"panel": "staff"
 	},
@@ -520,7 +520,7 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/volunteer/shifts",
+		"route": "/staff/volunteer/setup",
 		"panel": "staff"
 	},
 	{

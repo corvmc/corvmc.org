@@ -437,6 +437,8 @@ export async function auditClearances(
 }
 
 export interface ClearanceRow {
+	/** The grant row, so the list can revoke without a second lookup. */
+	id: string;
 	userId: string;
 	member: MemberRef;
 	certificationId: string;
@@ -458,6 +460,7 @@ export async function listClearances(
 ): Promise<ClearanceRow[]> {
 	const rows = await db
 		.select({
+			id: memberCertification.id,
 			userId: memberCertification.userId,
 			member: memberRefColumns(),
 			certificationId: memberCertification.certificationId,
@@ -491,6 +494,7 @@ export async function listClearances(
 
 	const today = atNoon(clubToday());
 	const out = [...newest.values()].map((r) => ({
+		id: r.id,
 		userId: r.userId,
 		member: toMemberRef(r.member),
 		certificationId: r.certificationId,
