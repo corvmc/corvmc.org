@@ -206,6 +206,33 @@ export const inboxParticipant = sqliteTable(
 );
 
 /**
+ * Free-text labels on a conversation.
+ *
+ * Distinct from the inquiry type, which comes from the contact form's fixed
+ * vocabulary and says what someone said they were writing about. A tag is what
+ * *staff* decided this thread is, after reading it — "band", "wednesdays",
+ * "chase in spring". No vocabulary, because the useful ones are not knowable in
+ * advance, and no counts anywhere: these annotate a thread, they do not file it.
+ */
+export const inboxThreadTag = sqliteTable(
+	'inbox_thread_tag',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		threadId: text('thread_id')
+			.notNull()
+			.references(() => inboxThread.id, { onDelete: 'cascade' }),
+		tag: text('tag').notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	// Adding a tag a thread already carries is a no-op, not a second row.
+	(t) => [uniqueIndex('idx_inbox_thread_tag_unique').on(t.threadId, t.tag)]
+);
+
+/**
  * A filter combination somebody wants back tomorrow.
  *
  * Per-user rather than shared: a saved view is how one person works the queue,
@@ -262,3 +289,4 @@ export type InboxMessage = typeof inboxMessage.$inferSelect;
 export type InboxNote = typeof inboxNote.$inferSelect;
 export type InboxParticipant = typeof inboxParticipant.$inferSelect;
 export type InboxSavedView = typeof inboxSavedView.$inferSelect;
+export type InboxThreadTag = typeof inboxThreadTag.$inferSelect;

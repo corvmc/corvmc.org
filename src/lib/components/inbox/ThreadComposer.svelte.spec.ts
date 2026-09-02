@@ -19,6 +19,12 @@ function fakeRemoteForm() {
 				as: (type: string) => ({ type, name: 'body' }),
 				issues: () => null
 			},
+			// The note form's handover field. Present on both fakes because the
+			// component picks one form at a time and only reads this on the note.
+			assignToUserId: {
+				as: (type: string, value?: unknown) => ({ type, name: 'assignToUserId', value }),
+				issues: () => null
+			},
 			allIssues: () => null
 		},
 		result: undefined
@@ -41,7 +47,7 @@ describe('ThreadComposer', () => {
 		await page.getByRole('tab', { name: 'Internal note' }).click();
 
 		await expect.element(textarea).toHaveValue('Following up on the PA question');
-		await expect.element(page.getByRole('button', { name: 'Add Note' })).toBeVisible();
+		await expect.element(page.getByRole('button', { name: 'Add note' })).toBeVisible();
 	});
 
 	it('sends replies by default', async () => {
@@ -51,7 +57,7 @@ describe('ThreadComposer', () => {
 			noteForm: fakeRemoteForm()
 		});
 
-		await expect.element(page.getByRole('button', { name: 'Send Reply' })).toBeVisible();
+		await expect.element(page.getByRole('button', { name: 'Send + wait for reply' })).toBeVisible();
 	});
 
 	// A thread with no contact email has nowhere to send a reply, so the composer
@@ -64,7 +70,7 @@ describe('ThreadComposer', () => {
 			replyBlockedReason: 'No contact email on this conversation.'
 		});
 
-		await expect.element(page.getByRole('button', { name: 'Add Note' })).toBeVisible();
+		await expect.element(page.getByRole('button', { name: 'Add note' })).toBeVisible();
 		await expect.element(page.getByText('No contact email on this conversation.')).toBeVisible();
 	});
 
@@ -78,6 +84,6 @@ describe('ThreadComposer', () => {
 
 		await page.getByRole('tab', { name: 'Reply' }).click();
 
-		await expect.element(page.getByRole('button', { name: 'Add Note' })).toBeVisible();
+		await expect.element(page.getByRole('button', { name: 'Add note' })).toBeVisible();
 	});
 });

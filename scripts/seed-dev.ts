@@ -92,7 +92,8 @@ import {
 	inboxNote,
 	inboxChannelConfig,
 	inboxParticipant,
-	inboxSavedView
+	inboxSavedView,
+	inboxThreadTag
 } from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
 import { userBlock } from '../src/lib/server/db/schema/moderation';
@@ -4583,6 +4584,18 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 			}
 		],
 		1
+	);
+
+	// Tags on the two threads whose details strip is worth opening. Distinct from
+	// the inquiry type: this is what staff decided the thread is, after reading.
+	await batchInsert(
+		inboxThreadTag,
+		[
+			{ id: randomUUID(), threadId: threads[8].id, tag: 'band' },
+			{ id: randomUUID(), threadId: threads[8].id, tag: 'weeknights' },
+			{ id: randomUUID(), threadId: threads[2].id, tag: 'maintenance' }
+		],
+		3
 	);
 
 	// One saved view, so the tab row under the system views is not empty on a

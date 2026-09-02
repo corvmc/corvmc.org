@@ -3,7 +3,8 @@ import {
 	inboxThread,
 	inboxMessage,
 	inboxNote,
-	inboxParticipant
+	inboxParticipant,
+	inboxThreadTag
 } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
 import { alias } from 'drizzle-orm/sqlite-core';
@@ -359,6 +360,7 @@ export async function getThread(id: string) {
 			awaitingReplySince: inboxThread.awaitingReplySince,
 			messageCount: inboxThread.messageCount,
 			lastMessageAt: inboxThread.lastMessageAt,
+			lastOutboundAt: inboxThread.lastOutboundAt,
 			createdAt: inboxThread.createdAt
 		})
 		.from(inboxThread)
@@ -423,6 +425,79 @@ const undoStateSchema = z.object({
 	awaitingReplySince: z.number().nullable(),
 	assignedToUserId: z.string().nullable()
 });
+
+/**
+ * Everything the details strip shows that is not on the thread row itself.
+ *
+ * Its own function rather than more joins in `getThread`, because none of it is
+ * needed to read the conversation: the strip is collapsed by default, and this
+ * is loaded where it is rendered so the thread paints without waiting on four
+ * more tables.
+ */
+export async function getThreadContext(id: string) {
+	const [thread] = await db
+		.select({
+			contactEmail: inboxThread.contactEmail,
+			channel: inboxThread.channel,
+			createdAt: inboxThread.createdAt
+		})
+		.from(inboxThread)
+		.where(and(eq(inboxThread.id, id), staffVisibleThread))
+		.limit(1);
+
+	// Same refusal as getThread: a direct thread has no staff-facing context
+	// because it has no staff-facing anything.
+	if (!thread) return null;
+
+	const [priorRows, firstRows, tags] = await Promise.all([
+		// Other conversations with the same person. Matched on the denormalized
+		// contact address, which is the only link that exists for someone who has
+		// never had an account.
+		thread.contactEmail
+			? db
+					.select({ count: count() })
+					.from(inboxThread)
+					.where(
+						and(
+							eq(inboxThread.contactEmail, thread.contactEmail),
+							ne(inboxThread.id, id),
+							staffVisibleThread
+						)
+					)
+			: Promise.resolve([{ count: 0 }]),
+		thread.contactEmail
+			? db
+					.select({ first: sql<number>`min(${inboxThread.createdAt})` })
+					.from(inboxThread)
+					.where(and(eq(inboxThread.contactEmail, thread.contactEmail), staffVisibleThread))
+			: Promise.resolve([{ first: null }]),
+		db
+			.select({ tag: inboxThreadTag.tag })
+			.from(inboxThreadTag)
+			.where(eq(inboxThreadTag.threadId, id))
+			.orderBy(asc(inboxThreadTag.tag))
+	]);
+
+	const first = firstRows[0]?.first;
+	return {
+		priorConversations: priorRows[0]?.count ?? 0,
+		// The whole correspondence, not this thread: "first contact" means the
+		// first time this person wrote to us at all.
+		firstContactAt: first ? new Date(first * 1000) : thread.createdAt,
+		tags: tags.map((t) => t.tag)
+	};
+}
+
+/** Adding a tag the thread already carries is a no-op — see the unique index. */
+export async function addThreadTag(threadId: string, tag: string) {
+	await db.insert(inboxThreadTag).values({ threadId, tag }).onConflictDoNothing();
+}
+
+export async function removeThreadTag(threadId: string, tag: string) {
+	await db
+		.delete(inboxThreadTag)
+		.where(and(eq(inboxThreadTag.threadId, threadId), eq(inboxThreadTag.tag, tag)));
+}
 
 export async function assignThread(threadId: string, userId: string | null) {
 	await db

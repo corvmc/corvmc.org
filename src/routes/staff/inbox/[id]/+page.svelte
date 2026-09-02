@@ -3,9 +3,9 @@
 	 * One staff conversation — the thread pane of the two-pane inbox.
 	 *
 	 * The details/status/assignment sidebar this page used to carry is now a
-	 * collapsible strip under the header. Three columns (queue │ thread │
-	 * sidebar) do not fit at ordinary widths, and of the three the sidebar is the
-	 * one you consult rather than read.
+	 * collapsible strip under the header — see DetailsPanel. Three columns
+	 * (queue │ thread │ sidebar) do not fit at ordinary widths, and of the three
+	 * the sidebar is the one you consult rather than read.
 	 */
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -14,19 +14,20 @@
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
 	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
 	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';
-	import AssignControl from './AssignControl.svelte';
+	import DetailsPanel from './DetailsPanel.svelte';
 	import DispositionBar from '$lib/components/inbox/DispositionBar.svelte';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
 	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
 	import { isAlwaysEnabledChannel } from '$lib/config';
-	import { formatDate, formatDateTime } from '$lib/utils/format';
+	import { formatDate } from '$lib/utils/format';
 	import { IconAlarmSnooze, IconSend } from '@tabler/icons-svelte';
 	import {
 		getInboxThread,
 		getInboxEnabledChannels,
 		replyToThread,
 		addThreadNote,
-		assignThread
+		assignThread,
+		getAssignableStaff
 	} from '$lib/remote/inbox.remote';
 
 	const threadId = $derived(page.params.id!);
@@ -73,37 +74,7 @@
 			/>
 		{/snippet}
 
-		<!-- Consulted rather than read, so it is closed by default. A plain
-		     <details> keeps it keyboard-operable with no JS. -->
-		<details class="collapse-arrow collapse rounded-box bg-base-200/50" bind:open={detailsOpen}>
-			<summary class="collapse-title min-h-0 py-2 text-sm font-medium">Details</summary>
-			<div class="collapse-content flex flex-col gap-3 text-sm">
-				<div class="flex flex-wrap gap-x-6 gap-y-1">
-					<span><span class="opacity-60">Channel:</span> {channelLabel(t.channel)}</span>
-					<span><span class="opacity-60">Messages:</span> {t.messageCount}</span>
-					{#if t.contactUserId}
-						<span>
-							<span class="opacity-60">Member:</span>
-							<a href={resolve(`/staff/users/${t.contactUserId}`)} class="link link-primary">
-								{t.contactUserName ?? t.contactName}
-							</a>
-						</span>
-					{/if}
-					{#if t.contactEmail}
-						<span>
-							<span class="opacity-60">Email:</span>
-							<a href="mailto:{t.contactEmail}" class="link link-primary">{t.contactEmail}</a>
-						</span>
-					{/if}
-					{#if t.contactPhone}
-						<span><span class="opacity-60">Phone:</span> {t.contactPhone}</span>
-					{/if}
-					<span class="opacity-50">Created {formatDateTime(t.createdAt)}</span>
-				</div>
-
-				<AssignControl action={assignForm} threadId={t.id} assignedToUserId={t.assignedToUserId} />
-			</div>
-		</details>
+		<DetailsPanel thread={t} {assignForm} bind:open={detailsOpen} />
 	</ThreadHeader>
 
 	<!-- The age line. Always present, and always the *reason* the thread is in
@@ -155,6 +126,7 @@
 				{replyForm}
 				{noteForm}
 				{replyBlockedReason}
+				assignees={getAssignableStaff}
 				bind:field={composer}
 				onsent={() => getInboxThread(threadId).refresh()}
 			/>

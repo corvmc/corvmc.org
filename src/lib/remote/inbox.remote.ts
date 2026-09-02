@@ -16,7 +16,10 @@ import {
 	countThreadsByStatus,
 	listThreadsByContactEmail,
 	undoLastDisposition,
-	countThreadFacets
+	countThreadFacets,
+	getThreadContext,
+	addThreadTag,
+	removeThreadTag
 } from '$lib/server/inbox/thread-service';
 import type { ListThreadsFilters } from '$lib/server/inbox/thread-service';
 import {
@@ -246,7 +249,15 @@ export const replyToThread = form(replySchema, async (data) => {
 
 const noteSchema = z.object({
 	threadId: z.string().min(1),
-	body: z.string().trim().min(1).max(5000)
+	body: z.string().trim().min(1).max(5000),
+	/**
+	 * Hand the thread over in the same action as the note explaining why.
+	 *
+	 * "@Miranda can you take this one?" and assigning it to Miranda are one
+	 * decision; making them two is how a thread ends up mentioned at somebody
+	 * who was never actually given it. Empty means the note is just a note.
+	 */
+	assignToUserId: z.string().optional()
 });
 
 export const addThreadNote = form(noteSchema, async (data) => {
@@ -260,8 +271,44 @@ export const addThreadNote = form(noteSchema, async (data) => {
 		body: data.body
 	});
 
+	if (data.assignToUserId) {
+		await assignThreadSvc(data.threadId, data.assignToUserId);
+		if (data.assignToUserId !== staff.id) await notifyAssignee(data.threadId, data.assignToUserId);
+	}
+
 	void getInboxThread(data.threadId).refresh();
 	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Thread tags
+// ---------------------------------------------------------------------------
+// Staff annotations on a conversation, distinct from the inquiry type: the type
+// is what the contact said they were writing about, a tag is what we decided
+// this is after reading it.
+
+export const getInboxThreadContext = query(z.string().min(1), async (id) => {
+	await requireStaff();
+	const context = await getThreadContext(id);
+	if (!context) throw error(404, 'Thread not found');
+	return context;
+});
+
+const tagSchema = z.object({
+	threadId: z.string().min(1),
+	tag: z.string().trim().min(1).max(40)
+});
+
+export const addInboxThreadTag = command(tagSchema, async ({ threadId, tag }) => {
+	await requireStaff();
+	await addThreadTag(threadId, tag);
+	void getInboxThreadContext(threadId).refresh();
+});
+
+export const removeInboxThreadTag = command(tagSchema, async ({ threadId, tag }) => {
+	await requireStaff();
+	await removeThreadTag(threadId, tag);
+	void getInboxThreadContext(threadId).refresh();
 });
 
 const assignSchema = z.object({
@@ -272,25 +319,34 @@ const assignSchema = z.object({
 		.transform((v) => v || null)
 });
 
+/**
+ * Tell someone a conversation is theirs now.
+ *
+ * Shared by the assign control and by an internal note that hands the thread
+ * over in the same action — a mention with no notification is how a thread ends
+ * up assigned to someone who never found out.
+ */
+async function notifyAssignee(threadId: string, userId: string) {
+	const assignee = (await listStaffUsers()).find((u) => u.id === userId);
+	const thread = await getThread(threadId);
+	if (!assignee || !thread) return;
+
+	await dispatch({
+		type: 'inbox_assigned',
+		userId: assignee.id,
+		userEmail: assignee.email,
+		title: 'A conversation was assigned to you',
+		body: thread.subject ?? thread.contactName ?? undefined,
+		href: `/staff/inbox/${threadId}`
+	});
+}
+
 export const assignThread = form(assignSchema, async (data) => {
 	const staff = await requireStaff();
 	await assignThreadSvc(data.threadId, data.userId);
 
 	// Notify the assignee, unless they assigned the thread to themselves.
-	if (data.userId && data.userId !== staff.id) {
-		const assignee = (await listStaffUsers()).find((u) => u.id === data.userId);
-		const thread = await getThread(data.threadId);
-		if (assignee && thread) {
-			await dispatch({
-				type: 'inbox_assigned',
-				userId: assignee.id,
-				userEmail: assignee.email,
-				title: 'A conversation was assigned to you',
-				body: thread.subject ?? thread.contactName ?? undefined,
-				href: `/staff/inbox/${data.threadId}`
-			});
-		}
-	}
+	if (data.userId && data.userId !== staff.id) await notifyAssignee(data.threadId, data.userId);
 
 	void getInboxThread(data.threadId).refresh();
 	return { success: true };

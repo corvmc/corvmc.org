@@ -26,6 +26,7 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import Select from '$lib/components/ui/Form/Select.svelte';
 	import SendOption from './SendOption.svelte';
 
 	let {
@@ -34,14 +35,23 @@
 		noteForm,
 		/** Why replying is impossible, if it is. Set = the Reply tab is disabled. */
 		replyBlockedReason,
+		assignees,
 		field = $bindable(),
 		onsent
 	}: {
 		threadId: string;
 		replyForm: Omit<RemoteForm<{ threadId: string; body: string }, unknown>, 'for'>;
 		/** Omitted on member-facing timelines: internal notes are staff-only. */
-		noteForm?: Omit<RemoteForm<{ threadId: string; body: string }, unknown>, 'for'>;
+		noteForm?: Omit<
+			RemoteForm<{ threadId: string; body: string; assignToUserId?: string }, unknown>,
+			'for'
+		>;
 		replyBlockedReason?: string;
+		/**
+		 * The assignable staff, as a thunk so the composer decides when to fetch
+		 * them. Omitted on the member side, which has neither notes nor assignment.
+		 */
+		assignees?: () => Promise<{ id: string; name: string }[]>;
 		/**
 		 * The textarea itself, so a surface that owns a Reply shortcut can put the
 		 * cursor in it. The composer stays the owner of the draft either way.
@@ -52,6 +62,7 @@
 
 	let requestedMode = $state<'reply' | 'note'>('reply');
 	let draft = $state('');
+	let assignTo = $state('');
 
 	// When replying is impossible the composer is a note box regardless of what
 	// was last picked — a channel can be disabled while the page is open, and the
@@ -97,11 +108,19 @@
 			successToast={isNote ? 'Note added' : 'Reply sent'}
 			onsuccess={() => {
 				draft = '';
+				assignTo = '';
 				onsent?.();
 			}}
 			class="flex flex-col gap-2"
 		>
 			<input {...activeForm.fields.threadId.as('hidden', threadId)} />
+			{#if isNote && noteForm}
+				<!-- Mention and handover are one action. A note reading "@Miranda can
+				     you take this one?" that leaves the thread assigned to whoever
+				     wrote it is how a conversation ends up mentioned at somebody who
+				     was never actually given it. -->
+				<input {...noteForm.fields.assignToUserId.as('hidden', assignTo)} />
+			{/if}
 			<!-- The `input` snippet rather than `type="textarea"`: that branch spreads
 			     only `inputProps`, so `rows` and `placeholder` were silently dropped and
 			     the box has been sized wrong since this was written. -->
@@ -126,10 +145,29 @@
 				{#if !isNote}
 					<SendOption value="resolve" label="Send + resolve" disabled={!draft.trim()} />
 					<SendOption value="keep_open" label="Send + keep open" disabled={!draft.trim()} />
+				{:else if assignees}
+					<!-- Its own data, awaited here: the composer is below the fold and
+					     the staff list is a whole extra round trip. -->
+					{#await assignees() then staffUsers}
+						<label class="flex items-center gap-2 text-sm">
+							<span class="text-subtle">Assign to</span>
+							<Select
+								size="sm"
+								value={assignTo}
+								aria-label="Assign to"
+								onchange={(e: Event) => (assignTo = (e.currentTarget as HTMLSelectElement).value)}
+							>
+								<option value="">Nobody</option>
+								{#each staffUsers as s (s.id)}
+									<option value={s.id}>{s.name}</option>
+								{/each}
+							</Select>
+						</label>
+					{/await}
 				{/if}
 				<SubmitButton
-					label={isNote ? 'Add Note' : 'Send + wait for reply'}
-					successLabel={isNote ? 'Added' : 'Sent'}
+					label={isNote ? (assignTo ? 'Post note + assign' : 'Add note') : 'Send + wait for reply'}
+					successLabel={isNote ? (assignTo ? 'Assigned' : 'Added') : 'Sent'}
 					shortcut="mod+enter"
 					disabled={!draft.trim()}
 					name={isNote ? undefined : 'disposition'}
