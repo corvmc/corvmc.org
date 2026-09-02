@@ -87,20 +87,35 @@ test.describe('contractor jobs', () => {
 		await page.getByRole('button', { name: 'Schedule', exact: true }).click();
 		await modalSubmit(page, /^Schedule$/).click();
 
+		// Poll the MOVEMENT, not the status. `setAssetStatus` writes the status row
+		// and the ledger row as two separate awaits (D1 has no transactions), so
+		// the status flips first and there is a window where it reads
+		// `maintenance` with no `repair_out` behind it yet. Polling the status and
+		// then asserting the movement in the next statement races that window —
+		// it is what dequeued PR #415 while `main` was green. The movement lands
+		// last, so waiting on it means the status is already committed.
 		await expect
-			.poll(async () => (await assetState()).status, { timeout: 15000 })
-			.toBe('maintenance');
-		expect((await assetState()).movements.filter((m) => m.reason === 'repair_out')).toHaveLength(1);
+			.poll(
+				async () => (await assetState()).movements.filter((m) => m.reason === 'repair_out').length,
+				{ timeout: 15000 }
+			)
+			.toBe(1);
+		expect((await assetState()).status).toBe('maintenance');
 
 		// Complete it: back in service, and the ledger nets out.
 		await page.getByRole('button', { name: 'Complete', exact: true }).click();
 		await modalSubmit(page, /^Complete$/).click();
 
+		// Same race on the way back: `repair_in` is written after the status.
 		await expect
-			.poll(async () => (await assetState()).status, { timeout: 15000 })
-			.toBe('in_service');
+			.poll(
+				async () => (await assetState()).movements.filter((m) => m.reason === 'repair_in').length,
+				{ timeout: 15000 }
+			)
+			.toBe(1);
 
 		const after = await assetState();
+		expect(after.status).toBe('in_service');
 		expect(after.movements.filter((m) => m.reason === 'repair_out')).toHaveLength(1);
 		expect(after.movements.filter((m) => m.reason === 'repair_in')).toHaveLength(1);
 		// The two cancel: a unit that went out and came back is neither added to
