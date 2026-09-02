@@ -13,6 +13,7 @@ import { DomainError } from '$lib/server/errors';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { getRequirementsForRoles } from './volunteer-certification-service';
 import { clubToday, CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '$lib/config';
 import type { MemberCertification } from '$lib/server/db/schema/volunteer';
 
@@ -395,6 +396,44 @@ export async function missingRequirements(
 
 	const held = await heldCertificationIds(userId, at);
 	return required.filter((r) => !held.has(r.id));
+}
+
+/**
+ * Whether each member actually held their role's clearances **on the day they
+ * worked** — the audit, as opposed to the gate.
+ *
+ * These are two different questions against two different dates, and only the
+ * first was ever asked. `claimShift` checks as of the shift's date, which stops
+ * somebody committing to work they are not cleared for. But a card can lapse
+ * between claiming and working, and hour-log review re-checked nothing at all:
+ * the hours were approved and the record showed a cleared volunteer.
+ *
+ * `member_certification` is append-only precisely so "was their card current on
+ * the night they worked?" stays answerable. It was answerable and never asked.
+ *
+ * Two queries whatever the row count, matching the shift board's
+ * `getRequirementsForRoles` + `listHeldForGate` + `missingFrom` shape. Keyed by
+ * row id, and a row whose role requires nothing simply has no entry.
+ */
+export async function auditClearances(
+	rows: { id: string; userId: string; volunteerRoleId: string; workedOn: Date }[]
+): Promise<Map<string, { id: string; name: string }[]>> {
+	const gaps = new Map<string, { id: string; name: string }[]>();
+	if (rows.length === 0) return gaps;
+
+	const [requirements, held] = await Promise.all([
+		getRequirementsForRoles([...new Set(rows.map((r) => r.volunteerRoleId))]),
+		listHeldForGateMany([...new Set(rows.map((r) => r.userId))])
+	]);
+
+	for (const row of rows) {
+		const required = requirements.get(row.volunteerRoleId) ?? [];
+		if (required.length === 0) continue;
+		const missing = missingFrom(required, held.get(row.userId) ?? [], row.workedOn);
+		if (missing.length > 0) gaps.set(row.id, missing);
+	}
+
+	return gaps;
 }
 
 export interface ClearanceRow {

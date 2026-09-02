@@ -34,7 +34,8 @@ import {
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
 	VOLUNTEER_ROLE_NAME_MAX,
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
-	VOLUNTEER_SHIFT_NOTES_MAX
+	VOLUNTEER_SHIFT_NOTES_MAX,
+	dutyListAnchors
 } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -829,15 +830,6 @@ export const workTask = sqliteTable(
 // ---------------------------------------------------------------------------
 // Duty lists — a reusable set of work orders
 // ---------------------------------------------------------------------------
-
-/**
- * Which of the event's times an item's offsets are measured from.
- *
- * Adding a value emits zero SQL — drizzle's `text({ enum })` is a TypeScript-only
- * constraint.
- */
-export const dutyListAnchors = ['doors', 'start', 'end'] as const;
-export type DutyListAnchor = (typeof dutyListAnchors)[number];
 
 /**
  * A named set of work orders, stamped onto an event.

@@ -492,6 +492,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/volunteer/duty-lists",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/volunteer/duty-lists/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/volunteer/hours",
 		"panel": "staff"
 	},

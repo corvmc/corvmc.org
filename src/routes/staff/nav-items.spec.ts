@@ -115,6 +115,7 @@ describe('the nav tree', () => {
 			'/staff/volunteer/schedule',
 			'/staff/volunteer/people',
 			'/staff/volunteer/setup',
+			'/staff/volunteer/duty-lists',
 			'/staff/volunteer/report'
 		]);
 	});

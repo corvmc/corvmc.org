@@ -14,7 +14,8 @@ import {
 	VOLUNTEER_SHIFT_MAX_MINUTES,
 	VOLUNTEER_SHIFT_NOTES_MAX
 } from '$lib/config';
-import type { DutyList, DutyListAnchor, DutyListItem } from '$lib/server/db/schema/volunteer';
+import type { DutyListAnchor } from '$lib/config';
+import type { DutyList, DutyListItem } from '$lib/server/db/schema/volunteer';
 
 /**
  * Duty lists: a named set of work orders, stamped onto an event.

@@ -31,6 +31,7 @@ export type StaffNavKey =
 	| 'volunteer-schedule'
 	| 'volunteer-people'
 	| 'volunteer-setup'
+	| 'volunteer-duty-lists'
 	| 'volunteer-report'
 	| 'reservations'
 	| 'recurring'
@@ -126,6 +127,16 @@ export const staffNavSections: StaffNavSection[] = [
 						href: resolve('/staff/volunteer/people')
 					},
 					{ key: 'volunteer-setup', label: 'Setup', href: resolve('/staff/volunteer/setup') },
+					// Its own row rather than folded into Setup. A duty list is arguably
+					// a definition like a role is, but it landed on `main` as a screen of
+					// its own while this branch was in flight, and quietly absorbing
+					// somebody else's new surface into a redesign they did not review is
+					// not a merge resolution.
+					{
+						key: 'volunteer-duty-lists',
+						label: 'Duty Lists',
+						href: resolve('/staff/volunteer/duty-lists')
+					},
 					{ key: 'volunteer-report', label: 'Report', href: resolve('/staff/volunteer/report') }
 				]
 			}
