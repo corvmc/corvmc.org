@@ -87,13 +87,13 @@ test.describe('contractor jobs', () => {
 		await page.getByRole('button', { name: 'Schedule', exact: true }).click();
 		await modalSubmit(page, /^Schedule$/).click();
 
-		// Poll the MOVEMENT, not the status. `setAssetStatus` writes the status row
-		// and the ledger row as two separate awaits (D1 has no transactions), so
-		// the status flips first and there is a window where it reads
-		// `maintenance` with no `repair_out` behind it yet. Polling the status and
-		// then asserting the movement in the next statement races that window —
-		// it is what dequeued PR #415 while `main` was green. The movement lands
-		// last, so waiting on it means the status is already committed.
+		// Poll the movement rather than read it bare. `setAssetStatus` commits the
+		// status row and the ledger row in one `db.batch`, so the window this
+		// polling was written for is closed: there is no longer a moment where the
+		// status reads `maintenance` with no `repair_out` behind it. That gap —
+		// two separate awaits, the status landing first — is what dequeued PR #415
+		// while `main` was green, and the shape is kept because polling the
+		// movement covers the status with it now that the two commit together.
 		await expect
 			.poll(
 				async () => (await assetState()).movements.filter((m) => m.reason === 'repair_out').length,
@@ -106,7 +106,7 @@ test.describe('contractor jobs', () => {
 		await page.getByRole('button', { name: 'Complete', exact: true }).click();
 		await modalSubmit(page, /^Complete$/).click();
 
-		// Same race on the way back: `repair_in` is written after the status.
+		// Same shape on the way back: one batch carries the status and `repair_in`.
 		await expect
 			.poll(
 				async () => (await assetState()).movements.filter((m) => m.reason === 'repair_in').length,

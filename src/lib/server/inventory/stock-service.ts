@@ -102,10 +102,19 @@ export function signedQuantity(reason: StockReason, quantity: number): number {
 	return sign * quantity;
 }
 
-export async function recordMovement(input: RecordMovementInput) {
+/**
+ * The insert a movement *is*, without running it.
+ *
+ * Split out from `recordMovement` so a caller whose movement is only half of
+ * one fact — a status change, a checkout — can hand both halves to a single
+ * `db.batch([...])` and have them land together or not at all. Written as two
+ * awaits, a worker that dies in the gap leaves the other half standing alone,
+ * and because on-hand is the ledger sum there is nothing left to notice it by.
+ */
+export function movementStatement(input: RecordMovementInput) {
 	const quantity = signedQuantity(input.reason, input.quantity);
 
-	const [row] = await db
+	return db
 		.insert(stockMovement)
 		.values({
 			itemId: input.itemId,
@@ -121,7 +130,11 @@ export async function recordMovement(input: RecordMovementInput) {
 			notes: input.notes ?? null
 		})
 		.returning();
+}
 
+/** Write one movement on its own, when nothing else has to land with it. */
+export async function recordMovement(input: RecordMovementInput) {
+	const [row] = await movementStatement(input);
 	return row;
 }
 

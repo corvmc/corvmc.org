@@ -9,7 +9,7 @@ import {
 import { and, asc, eq, isNotNull, isNull, like, notInArray, or } from 'drizzle-orm';
 import { user } from '$lib/server/db/schema/authentication';
 import { form8282Status, needsAttention } from './form-8282';
-import { recordMovement } from './stock-service';
+import { movementStatement, recordMovement } from './stock-service';
 import type { AssetStatus, EquipmentCondition } from '$lib/config';
 
 /**
@@ -201,15 +201,26 @@ export async function setAssetStatus(
 		updates.retiredReason = opts.notes ?? null;
 	}
 
-	const [row] = await db
+	const statusUpdate = db
 		.update(inventoryAsset)
 		.set(updates)
 		.where(eq(inventoryAsset.id, id))
 		.returning();
 
 	const reason = movementReasonForStatus(asset.status, status);
-	if (reason) {
-		await recordMovement({
+	if (!reason) {
+		const [row] = await statusUpdate;
+		return row;
+	}
+
+	// The status and its movement are one fact, so they commit as one write.
+	// As two awaits, a worker that died in between left a unit whose status said
+	// it was in the shop and whose ledger said it was on the shelf — permanently,
+	// and with nothing to detect it by, because on-hand *is* the ledger sum.
+	// db.batch, never db.transaction — the latter is broken on D1.
+	const [[row]] = await db.batch([
+		statusUpdate,
+		movementStatement({
 			itemId: asset.itemId,
 			assetId: id,
 			quantity: 1,
@@ -217,8 +228,8 @@ export async function setAssetStatus(
 			locationId: asset.locationId,
 			actorId: opts.actorId ?? null,
 			notes: opts.notes ?? null
-		});
-	}
+		})
+	]);
 
 	return row;
 }
