@@ -88,7 +88,8 @@ the tree and records how this split was made.
 | [community-calendar-spec.md](specs/shipped/community-calendar-spec.md)     | ✅     | archived  | Phase 1 — `/events` as a unified gig guide across CMC and member bands                                                                                 |
 | [community-events-spec.md](specs/shipped/community-events-spec.md)         | ✅     | archived  | Phase 2 — member-authored `source='community'` listings, event tips, cancelled-not-hidden                                                              |
 | [event-moderation-spec.md](specs/shipped/event-moderation-spec.md)         | ✅     | archived  | `contentFlag` coverage for the gig guide; reactive, no pre-approval queue                                                                              |
-| [production-workflow-spec.md](specs/production-workflow-spec.md)           | 📋     | spec      | CMC-produced shows: booking → run of show → settlement → close-out; venues, external acts. Reconciled with `groups-spec.md`                            |
+| [production-workflow-spec.md](specs/production-workflow-spec.md)           | 📋     | spec      | CMC-produced shows: run of show → settlement → close-out; venues, external acts. **Partly superseded** — see the status banner at its top              |
+| [project-spec.md](specs/project-spec.md)                                   | 📋     | spec      | `project` as a root entity above events: committee ownership, the suggestion pipeline, derived budget burn, the general deal shape                     |
 | [staff-events-split-spec.md](specs/shipped/staff-events-split-spec.md)     | ✅     | archived  | Productions (`/staff/events`, CMC work surface) vs Calendar (`/staff/calendar`, staff view of the public gig guide); why the axis is work-vs-publicity |
 
 ### Members & directory
@@ -183,6 +184,7 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | Doc                                                                                   | Status | Notes                                                                                                |
 | ------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
 | [overview.md](architecture/overview.md)                                               | ✅     | **Start here** — how the system is wired (remote functions, auth, event bus, D1, cron, config)       |
+| [domain-model.md](architecture/domain-model.md)                                       | ✅     | What the tables _mean_: three verticals over two horizontals, and the six shapes that recur          |
 | [operations-manual.md](architecture/operations-manual.md)                             | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring |
 | [deployment-checklist.md](architecture/deployment-checklist.md)                       | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                              |
 | [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                             | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting  |
@@ -208,17 +210,18 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 
 ## reports
 
-| Doc                                                                      | Status | Notes                                                                                    |
-| ------------------------------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------- |
-| [feature-catalog.md](reports/feature-catalog.md)                         | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship         |
-| [spec-audit.md](reports/spec-audit.md)                                   | ✅     | All 32 specs classified against the tree; which are shipped and where their content goes |
-| [standardization-audit.md](reports/standardization-audit.md)             | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                 |
-| [staff-user-management-audit.md](reports/staff-user-management-audit.md) | 📦     | The audit behind #164; five follow-up specs, one of them built                           |
-| [revenue-audit.md](reports/revenue-audit.md)                             | 📦     | Revenue workflow audit; its findings closed in #131                                      |
-| [sentry-triage.md](reports/sentry-triage.md)                             | ✅     | Production error triage                                                                  |
-| [inventory-workflow-findings.md](reports/inventory-workflow-findings.md) | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign       |
-| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md) | 📦     | The same pass over volunteering; findings complete, the restructure is separate work     |
-| [volunteer-view-handoff.md](reports/volunteer-view-handoff.md)           | ✅     | Every volunteer screen, shot populated, with its users and stories — the wireframe brief |
+| Doc                                                                        | Status | Notes                                                                                    |
+| -------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------- |
+| [feature-catalog.md](reports/feature-catalog.md)                           | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship         |
+| [spec-audit.md](reports/spec-audit.md)                                     | ✅     | All 32 specs classified against the tree; which are shipped and where their content goes |
+| [standardization-audit.md](reports/standardization-audit.md)               | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                 |
+| [staff-user-management-audit.md](reports/staff-user-management-audit.md)   | 📦     | The audit behind #164; five follow-up specs, one of them built                           |
+| [revenue-audit.md](reports/revenue-audit.md)                               | 📦     | Revenue workflow audit; its findings closed in #131                                      |
+| [sentry-triage.md](reports/sentry-triage.md)                               | ✅     | Production error triage                                                                  |
+| [inventory-workflow-findings.md](reports/inventory-workflow-findings.md)   | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign       |
+| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md)   | 📦     | The same pass over volunteering; findings complete, the restructure is separate work     |
+| [volunteer-view-handoff.md](reports/volunteer-view-handoff.md)             | ✅     | Every volunteer screen, shot populated, with its users and stories — the wireframe brief |
+| [project-management-prior-art.md](reports/project-management-prior-art.md) | ✅     | Prior art behind the `project` entity — CMMS, venue, makerspace and ERP systems surveyed |
 
 ## checklists
 
