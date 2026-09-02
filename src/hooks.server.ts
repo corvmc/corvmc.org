@@ -7,6 +7,7 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { registerListeners } from '$lib/server/event-bus/register-listeners';
 import { initDb } from '$lib/server/db';
 import { initStorage } from '$lib/server/storage';
+import { initPrivateStorage } from '$lib/server/private-storage';
 import { initKv } from '$lib/server/kv';
 import { resolvePendingInvites } from '$lib/server/group/group-invite-service';
 import { captureException } from '$lib/server/sentry';
@@ -24,6 +25,7 @@ function validateEnv(platform: App.Platform | undefined) {
 	const missing: string[] = [];
 	if (!platform?.env?.DB) missing.push('DB');
 	if (!platform?.env?.R2_BUCKET) missing.push('R2_BUCKET');
+	if (!platform?.env?.R2_PRIVATE) missing.push('R2_PRIVATE');
 	if (!platform?.env?.KV) missing.push('KV');
 	if (missing.length > 0) {
 		console.warn(`Missing platform bindings: ${missing.join(', ')}`);
@@ -36,6 +38,9 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	}
 	if (event.platform?.env?.R2_BUCKET) {
 		initStorage(event.platform.env.R2_BUCKET);
+	}
+	if (event.platform?.env?.R2_PRIVATE) {
+		initPrivateStorage(event.platform.env.R2_PRIVATE);
 	}
 	if (event.platform?.env?.KV) {
 		initKv(event.platform.env.KV);

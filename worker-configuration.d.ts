@@ -4,6 +4,7 @@
 interface __BaseEnv_Env {
 	KV: KVNamespace;
 	R2_BUCKET: R2Bucket;
+	R2_PRIVATE: R2Bucket;
 	corvmc_db: D1Database;
 	DATABASE_URL: string;
 	ORIGIN: string;
