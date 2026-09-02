@@ -5,7 +5,11 @@ vi.mock('$lib/server/user/member-number-service', () => ({
 	getUserByMemberNumber: (...a: unknown[]) => getUserByMemberNumber(...a)
 }));
 
-const isStaff = vi.fn(async () => false);
+// Bare `vi.fn()` rather than one given a concrete signature: the mock factory
+// forwards `...a: unknown[]`, and spreading that into a typed zero-argument
+// function is a type error ("a spread argument must either have a tuple type or
+// be passed to a rest parameter"). This is the shape hooks.server.spec.ts uses.
+const isStaff = vi.fn();
 vi.mock('$lib/server/authorization', () => ({
 	isStaff: (...a: unknown[]) => isStaff(...a)
 }));
