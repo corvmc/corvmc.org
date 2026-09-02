@@ -81,10 +81,44 @@ export class NotClearedError extends DomainError {
  * pass a read-then-write check, and the unique index on (shiftId, userId) cannot
  * arbitrate that because they are different users.
  */
-function hasRoomSql(shiftId: string, capacity: number) {
+function hasRoomSql(
+	shiftId: string,
+	capacity: number,
+	/** The claimant's own window, or the shift's when they did not name one. */
+	effStart: Date | null,
+	effEnd: Date | null
+) {
+	const start = effStart ? Math.floor(effStart.getTime() / 1000) : null;
+	const end = effEnd ? Math.floor(effEnd.getTime() / 1000) : null;
+
+	// Counts only signups whose window *overlaps* the claimant's, so a 6-10 shift
+	// with capacity 1 can hold somebody on 6-8 and somebody else on 8-10 without
+	// the second being told it is full.
+	//
+	// Two degenerate cases, both of which must count rather than skip:
+	//
+	//  - Nobody named a window. Every coalesce lands on the shift's own times, so
+	//    everything overlaps everything and this is exactly the headcount it
+	//    replaced. That equivalence is asserted in the spec.
+	//  - The row is a work order, so there are no times anywhere. A plain overlap
+	//    test would compare against NULL, count zero, and let capacity stop
+	//    binding altogether -- an unbounded piece of work is not disjoint from
+	//    another, it is the same work.
 	return sql`(
-		select count(*) from "volunteer_signup"
-		where "shift_id" = ${shiftId} and "status" in ('claimed', 'confirmed', 'completed')
+		select count(*) from "volunteer_signup" vs
+		join "volunteer_shift" vsh on vsh."id" = vs."shift_id"
+		where vs."shift_id" = ${shiftId}
+			and vs."status" in ('claimed', 'confirmed', 'completed')
+			and (
+				coalesce(vs."scheduled_starts_at", vsh."starts_at") is null
+				or coalesce(vs."scheduled_ends_at", vsh."ends_at") is null
+				or ${start} is null
+				or ${end} is null
+				or (
+					coalesce(vs."scheduled_starts_at", vsh."starts_at") < ${end}
+					and coalesce(vs."scheduled_ends_at", vsh."ends_at") > ${start}
+				)
+			)
 	) < ${capacity}`;
 }
 
@@ -165,7 +199,7 @@ export async function claimShift(
 			set "status" = ${status}, "claimed_at" = ${now},
 				"confirmed_at" = ${assigned ? now : null},
 				"cancelled_at" = null, "updated_at" = ${now}
-			where "id" = ${existing.id} and ${hasRoomSql(shiftId, shift.capacity)}
+			where "id" = ${existing.id} and ${hasRoomSql(shiftId, shift.capacity, shift.startsAt, shift.endsAt)}
 			returning "id"
 		`);
 
@@ -192,7 +226,7 @@ export async function claimShift(
 				 "created_at", "updated_at")
 			select ${id}, ${shiftId}, ${userId}, ${status}, ${now}, ${assigned ? now : null},
 				${now}, ${now}
-			where ${hasRoomSql(shiftId, shift.capacity)}
+			where ${hasRoomSql(shiftId, shift.capacity, shift.startsAt, shift.endsAt)}
 			returning "id"
 		`);
 
