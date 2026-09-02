@@ -157,11 +157,12 @@ alongside it.
 Bandzoogle's player serves one band on one isolated site. They have no cross-band surface
 to put a station on, because their customers are unrelated to each other.
 
-**Ours are not.** The directory already holds member bands with streaming embeds attached
-(`ListenStrip` switches between YouTube, SoundCloud and Spotify), on a shared site. A
-site-wide player — a constant-run station across member bands — is a thing only a
-collective can build, and it answers role 1's real gap with a better mechanic than filter
-chips: **hearing the bands beats faceting them.**
+**Ours are not.** A site-wide player — a constant-run station across member bands — is a
+thing only a collective can build, and it answers role 1's real gap with a better mechanic
+than filter chips: **hearing the bands beats faceting them.** What it plays cannot be the
+streaming embeds `ListenStrip` carries, for licensing reasons set out under
+[the ladder](#the-radio-needs-a-source-and-embeds-cannot-be-it) — it needs files bands
+upload, which is the same thing selling downloads needs.
 
 It also supplies the missing incentive in the completeness ladder below. "Add your music
 links" stops being a nag when the payoff is that other members hear you.
@@ -259,6 +260,71 @@ lists gigs for the gig guide — which they already do, for the community calend
 lineup credits — has a permanently current EPK section it never has to touch. That is the
 hardest item on the checklist, generated for free, and nothing tells the band it happened.
 
+### The radio needs a source, and embeds cannot be it
+
+An earlier draft of this section proposed building the station on the streaming embeds
+`ListenStrip` already carries. **That is wrong on licensing.** A Spotify or YouTube embed
+is a click-to-play player under terms that do not permit sequencing it into a broadcast;
+they are a link to someone else's licensed service, not an audio source we hold.
+
+The source should be **files bands upload to us**, which is also the basis for selling
+digital downloads through the site. One upload, one rights grant, three payoffs: a track
+the band can sell, a track the station can play, and the music section of their EPK.
+
+#### Two rights, always, and covers are the trap
+
+Every recording carries two separate copyrights, and licensing one is not licensing the
+other:
+
+| Right           | Who administers it         | Covered by a direct grant from the band?            |
+| --------------- | -------------------------- | --------------------------------------------------- |
+| Sound recording | SoundExchange, statutorily | **Yes** — direct negotiation is expressly permitted |
+| Composition     | ASCAP, BMI, SESAC          | **Only if the band wrote it**                       |
+
+So an **original** recording of an **original** composition, uploaded with an explicit
+licence to stream and sell, is clean — and because it is directly licensed, whether the
+station is interactive is a term of that grant rather than a statutory question. (The
+statutory route only covers _non_-interactive streaming, and never downloads.)
+
+A **cover** is not clean. The band can grant us the recording and cannot grant the
+composition.
+
+**Decision: covers are excluded — from the station and the store both.** That is one line
+rather than two carve-outs, because the two halves fail differently and would each need
+their own clearance: streaming a cover implicates the performance right (PRO licences),
+while _selling_ one implicates the mechanical right, which is a separate compulsory
+licence. Excluding covers outright means neither has to be priced, and the rule is
+explainable to a band in a sentence.
+
+Two things that still follow from it:
+
+- **The upload flow has to ask** — an attestation that the track is the band's own
+  composition and that they control the master. A band with a label deal, or one member
+  short, may not control what it believes it controls, and the attestation is what makes
+  that their statement rather than our assumption.
+- **A venue's live-performance blanket licences do not extend to webcasting.** They are a
+  different licence category. Nobody should reason from "we already pay ASCAP for shows."
+
+None of this is legal advice, and the attestation wording is worth a lawyer's eye before
+it ships — but originals-only is the configuration that keeps the question small.
+
+#### It is blocked on a bucket, and it is not the only thing
+
+Paid downloads need storage the public cannot address by key. There is **one** R2 bucket
+today (`R2_BUCKET` → `corvmc`), served publicly at `media.corvmc.org`.
+
+`R2_PRIVATE` / `corvmc-private` — "no custom domain and no public access" — is designed in
+[groups-spec.md](../specs/groups-spec.md) and unbuilt. **Three unrelated features wait on
+it:** group documents (that spec), contractor invoices (whose schema comment says outright
+that an invoice with hourly rates "has no business being addressable by key… revisit when a
+private bucket exists"), and now digital sales. That shared dependency raises its priority
+above what any one of them justifies on its own.
+
+Bandcamp is the obvious incumbent for the sales half and its terms should be read before
+designing against it, rather than assumed. The opening is not price — it is that a
+collective can put a member's tracks on a station its other members hear, which a
+storefront has no reason to build.
+
 ### What the ladder needs
 
 - **A completeness model that is a progression, not a boolean.** `isProfileComplete`
@@ -287,12 +353,16 @@ Ranked by value, and only things worth acting on:
    correct for the nudge it backs — and add a second measure beside it.
 3. **Match, do not just filter.** Role 1. The intent data exists and is unused; this is a
    query, not a feature area.
-4. **Build the site-wide player.** Role 4. Inter-band discovery that Bandzoogle
-   structurally cannot copy, and the reward that makes rung 2 something other than a nag.
-5. **Assert the capability matrix in a spec file.** Role 3. The category's own warning is
+4. **Build the private bucket.** `R2_PRIVATE` is designed and unbuilt, and three
+   unrelated features queue behind it — group documents, contractor invoices and digital
+   sales. Cheap on its own terms, and it unblocks more than its own scope.
+5. **Track uploads, then the store, then the player.** Role 4. One upload and one rights
+   grant serve all three, originals only. Inter-band discovery Bandzoogle structurally
+   cannot copy, and the reward that makes rung 2 something other than a nag.
+6. **Assert the capability matrix in a spec file.** Role 3. The category's own warning is
    that permission configuration rots; `feature-flags.spec.ts` is the pattern we already
    use for exactly this failure mode.
-6. **Decide whether the external act needs an explicit discriminator.** Role 5. Narrow,
+7. **Decide whether the external act needs an explicit discriminator.** Role 5. Narrow,
    and the rest of that design is sound.
 
 Note what is _not_ here: out-featuring Bandzoogle on themes, merch or block count. The
@@ -311,5 +381,6 @@ added past that is maintenance and sanitizer surface.
 - [Google Business Profile — request ownership](https://support.google.com/business/answer/4566671?hl=en) · [add or claim](https://support.google.com/business/answer/2911778?hl=en)
 - [MusicBrainz — database structure](https://musicbrainz.org/doc/MusicBrainz_Database)
 - Linktree free-tier limits — [Links.fans, is Linktree free](https://blog.links.fans/is-linktree-free/) · [Bitly, Linktree alternatives](https://bitly.com/blog/linktree-alternatives/) · [Soniare, alternatives for musicians](https://www.soniare.net/blog/best-linktree-alternatives-for-musicians)
+- Music licensing — [SoundExchange, licensing 101](https://www.soundexchange.com/service-provider/licensing-101/) · [SoundExchange FAQ](https://www.soundexchange.com/frequently-asked-questions/) · [Pillsbury, licensing and royalty requirements for webcasters (PDF)](https://www.pillsburylaw.com/a/web/2371/689FBDFD3B40B5495649A2DD84A50374.pdf)
 - EPK checklists — [Bandzoogle, the 8 things every EPK needs](https://bandzoogle.com/blog/the-8-things-that-should-be-in-every-band-s-digital-press-kit) · [DIY Musician EPK checklist](https://diymusician.cdbaby.com/music-marketing/epk-checklist/) · [Cascade Blues EPK checklist (PDF)](https://cascadeblues.org/wp-content/uploads/2025/12/EPK-Electronic-Press-Kit-Checklist.pdf)
 - [ShellBlack — Salesforce leads vs accounts and contacts](https://www.shellblack.com/whiteboard/overview-of-leads-account-and-contacts-the-salesforce-data-model/)
