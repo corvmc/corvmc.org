@@ -1025,9 +1025,12 @@ export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), asy
 // ---------------------------------------------------------------------------
 
 async function refreshMemberViews() {
-	// All three live in the dashboard's one query now — including the unlogged-shift prompt that
-	// logging against a shift clears.
-	await getMemberVolunteerPage().refresh();
+	// Both member pages compose the same constituents, so a mutation has to
+	// refresh both wrappers. Refreshing only the dashboard is what left a log
+	// filed from /member/volunteer/hours invisible on the page that filed it —
+	// the same shape `custom/refresh-the-composed-query` exists to catch, one
+	// wrapper along.
+	await Promise.all([getMemberVolunteerPage().refresh(), getMemberHoursPage().refresh()]);
 }
 
 /**
@@ -1069,6 +1072,8 @@ async function refreshRoleViews(roleId?: string) {
 		// leaves the screen you made the change on showing the old list.
 		getStaffVolunteerSetupPage().refresh(),
 		getMemberVolunteerPage().refresh(),
+		// A renamed role is the label on every log row that used it.
+		getMemberHoursPage().refresh(),
 		getVolunteerInterestsPage().refresh(),
 		...(roleId ? [getStaffVolunteerRolePage(roleId).refresh()] : [])
 	]);
@@ -1803,10 +1808,26 @@ export const getUserHourLogs = query(z.string(), async (userId) => {
  * /member/volunteer/start and a blocked one to /blocked, server-side, and awaiting it here keeps
  * that redirect ahead of everything else rather than racing the other six.
  */
+/**
+ * The member's own shifts — claimed, booked or worked.
+ *
+ * The dashboard used to show a member every shift they could take and none of
+ * the ones they had already taken: their commitments only appeared indirectly,
+ * as an hour log after the fact. A claim that nobody confirms produces nothing
+ * at all, which is precisely the state worth being able to see.
+ */
+export const getMyShifts = query(async () => {
+	const currentUser = requireUser();
+	const rows = await listSignupsForUser(currentUser.id, { limit: 20 });
+	// Cancelled signups are the ones they dropped; a cancelled *shift* still
+	// matters, because they were on it and it is off.
+	return rows.filter((r) => r.status !== 'cancelled');
+});
+
 export const getMemberVolunteerPage = query(z.void(), async () => {
 	const access = await getMyVolunteerAccess();
 
-	const [roles, interests, openShifts, unloggedShifts, logs, summary, certifications] =
+	const [roles, interests, openShifts, unloggedShifts, logs, summary, certifications, myShifts] =
 		await Promise.all([
 			getActiveVolunteerRoles(),
 			getMyVolunteerInterests(),
@@ -1817,7 +1838,8 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 			// `getMyCertifications` was written and then had no caller anywhere, so a member
 			// could be told a shift needs a clearance and had no page saying which ones they
 			// already hold (docs/reports/volunteer-workflow-findings.md#d4).
-			getMyCertifications()
+			getMyCertifications(),
+			getMyShifts()
 		]);
 
 	return {
@@ -1828,8 +1850,32 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 		unloggedShifts,
 		logs,
 		summary,
-		certifications
+		certifications,
+		myShifts
 	};
+});
+
+/**
+ * "Your hours" — its own screen rather than a table at the bottom of the
+ * dashboard.
+ *
+ * The dashboard is a next-action stack: what to do now. A log filed in March is
+ * not a next action, and a returned one — the only kind that *is* — was buried
+ * under everything already approved. Splitting them lets the dashboard carry a
+ * single summary row and this page carry the whole history.
+ */
+export const getMemberHoursPage = query(z.void(), async () => {
+	const access = await getMyVolunteerAccess();
+
+	const [logs, summary, roles] = await Promise.all([
+		getMyVolunteerHours(),
+		getMyVolunteerSummary(),
+		// The log modal's role picker, for a correction or a free entry started
+		// from this page.
+		getActiveVolunteerRoles()
+	]);
+
+	return { access, logs, summary, roles };
 });
 
 /**

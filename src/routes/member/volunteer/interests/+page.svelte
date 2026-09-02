@@ -22,21 +22,31 @@
 	const pageData = $derived(getVolunteerInterestsPage());
 </script>
 
-<PageHeader title="What would you like to help with?" subtitle="Volunteering" />
+<PageHeader
+	title="Select the roles you'd take"
+	subtitle="Volunteering"
+	backHref="/member/volunteer"
+/>
 
 <PageContent width="md">
 	{#await pageData then { step: me, roles: roleOptions, interests: myInterests }}
-		<InfoCard title="Pick anything that sounds like you">
+		{@const onboarding = myInterests.length === 0}
+		<InfoCard title={onboarding ? 'Pick anything that sounds like you' : 'Your roles'}>
 			{#if roleOptions.length === 0}
 				<p class="text-muted">
 					No volunteer roles are open right now. Get in touch and we'll find you something.
 				</p>
 				<a href={resolve('/member/volunteer')} class="link text-sm">Go to volunteering</a>
 			{:else}
+				<!--
+					Onboarding sends them on to the board, because that is the next step
+					of a flow. Editing stays put: somebody who came here to add a role
+					has not asked to leave.
+				-->
 				<Form
 					remote={saveVolunteerInterests}
-					onsuccess={() => goto(resolve('/member/volunteer'))}
-					successToast="Saved — we'll be in touch"
+					onsuccess={onboarding ? () => goto(resolve('/member/volunteer')) : undefined}
+					successToast="Saved. Staff see this when they're looking for people."
 				>
 					<InterestFields
 						fields={saveVolunteerInterests.fields}
@@ -46,10 +56,16 @@
 					/>
 
 					<div class="flex items-center justify-between gap-3">
-						<Button href={resolve('/member/volunteer')} variant="ghost" size="sm"
-							>Skip for now</Button
-						>
-						<SubmitButton label="Finish" variant="primary" />
+						<Button href={resolve('/member/volunteer')} variant="ghost" size="sm">
+							{onboarding ? 'Skip' : 'Back'}
+						</Button>
+						<!-- Disabled until something changes, and it says "Saved" after —
+						     which is what makes a page you can leave open feel settled. -->
+						<SubmitButton
+							label={onboarding ? 'Finish' : 'Save'}
+							successLabel="Saved"
+							variant="primary"
+						/>
 					</div>
 				</Form>
 			{/if}
