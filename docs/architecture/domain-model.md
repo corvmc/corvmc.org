@@ -65,10 +65,70 @@ two worth knowing:
 - **`asset_flag.workOrderId`** — a work request raises the work that answers it.
 - **`contractor_job.assetId`** — the work is done to a unit. Null means building work.
 
-## Six models that recur
+## Inside the social vertical
+
+The other two verticals are organized by what they act on — resources, work. Social is
+organized by **role**: what a piece of it is _for_. Six of them, and the comparables for
+each are in
+[social-prior-art.md](../reports/social-prior-art.md).
+
+| Role                         | Where it lives                                                     |
+| ---------------------------- | ------------------------------------------------------------------ |
+| Member directory and profile | `directory_entry`, `directory_tag`, the four intent signals        |
+| The organization             | `group`, `group_member`, `group_invite`, ownership as a roster row |
+| Governance                   | Committees, chairs, `by_application` — designed, largely unbuilt   |
+| Self-published presence      | `band_site`, `band_page_config`, custom domains                    |
+| Identity and claiming        | External acts: `directory_entry` with both FKs null                |
+| Member-to-member contact     | DMs as request/accept/decline, `user_block`                        |
+
+### The scope ladder
+
+`directory_entry`, `group` and `band_site` look like three peers and are not. They sit at
+three different widths, and the nullability of each link is what says so.
+
+| Table             | Link                                     | Can exist unowned?                              | Enforced where            |
+| ----------------- | ---------------------------------------- | ----------------------------------------------- | ------------------------- |
+| `directory_entry` | `userId` **or** `groupId`, both nullable | **Yes** — both null is an external act          | Service layer, on purpose |
+| `group`           | it _is_ the owner                        | n/a                                             | —                         |
+| `band_site`       | `groupId` **NOT NULL**                   | **No** — a site cannot exist for a bare listing | The schema                |
+
+They also make opposite calls on _where_ to enforce, each with a stated reason.
+`directory_entry`'s "both set is illegal" stays in the service layer because "violating it
+is odd rather than corrupting, since there is still exactly one name." `band_site`'s
+constraint is in the schema precisely so no service rule is needed.
+
+And `band_site` holds what a band **buys**, not what it **is** — which is why `tier` lives
+there rather than on `group`: every band has the row, so reading a tier needs no fallback.
+The row is never deleted while the band lives, because `band_page_config` and `band_media`
+cascade from it and a lapsed card must not take a band's content with it.
+
+### Two opposite id decisions, one migration
+
+Worth knowing because the reasoning generalizes:
+
+- **`group` deliberately reuses `band.id`.** It is the `band` table renamed, so every
+  foreign key still points at the same row and no band→group id map has to thread through
+  the later phases.
+- **`directory_entry` deliberately refuses to reuse `group.id`.** Seeding from it would
+  make `entry.id == entry.groupId` true for every migrated band and false for every new
+  one, so code passing a group id where an entry id belongs would work against old rows
+  and fail only on records created later — "the worst failure shape available here."
+
+Reuse an id to keep references cheap; refuse to reuse one when the coincidence would make
+a bug invisible on exactly the rows you test with.
+
+### Ownership is a roster row
+
+`group.ownerId` was removed in phase 3c. The `group_member` row with `role = 'owner'` _is_
+the ownership, capped by a partial unique index that permits zero — an ownerless group is
+legal, being a program whose leader stepped down, which is why every query for an owner
+LEFT joins. The second copy drifted once: five of sixteen production bands had no usable
+owner row behind it.
+
+## Seven models that recur
 
 Naming these is the point of the document: each is implemented more than once, and
-knowing which is which stops the next implementation being a seventh.
+knowing which is which stops the next implementation being one more.
 
 ### 1. Resource custody `[assets]`
 
@@ -142,6 +202,46 @@ The repeated hard part is the per-membership notification preference:
 `group_member.notifyAnnouncements` exists precisely because the global
 `notification_preference` cannot express it, and the next container hits the same wall.
 
+### 7. A staff tool is a group tool with the group hardcoded `[all three verticals]`
+
+**The staff panel is the CMC group's panel.** Most of what lives under `/staff` is not
+privileged by nature — it is a tool scoped to an organization, where the organization
+happens to be the collective and is therefore implicit. Once a tool is genuinely
+group-scoped, a band, a club and a committee can all have one.
+
+This is not speculative; it has already happened twice, and the schema says why:
+
+- **`announcement`** — "One table for bands, clubs and committees alike, because a band
+  posting to its roster and a committee posting to its members are the same act."
+- **`event_group`** — which groups' pages an event appears on, distinct from
+  `event_band`'s credit on the bill.
+- **`project.groupId`** is the next one, and ships in that table's first migration.
+
+**The inbox is the clearest remaining case.** `inbox_thread` has **no owner column at
+all** — `channel` records how a message arrived (contact form, portal, email, SMS,
+Instagram, Messenger), never whose queue it belongs in, so every thread is implicitly
+CMC's. Meanwhile `submitBandContactForm`
+([band-site.remote.ts](../../src/lib/remote/band-site.remote.ts)) already delivers booking
+enquiries "to the band's booking contact, falling back to the band owner" — as email.
+Bands receive this traffic today, into a personal mailbox, unthreaded, with no status, no
+awaiting-reply marker and no record that anyone answered.
+
+One nullable owner column on `inbox_thread` — null meaning CMC, the same shape
+`directory_entry` uses for its two nullable owners — turns one inbox into many.
+
+Three things this pattern has to respect, all of which already have working precedent:
+
+- **Internal notes must not leak.** `/member/messages` is member↔staff on these same
+  tables and internal notes are never exposed there, so the isolation is proven in
+  production rather than hypothetical.
+- **Participants are people.** `inbox_participant.userId` is a user FK, which is how DMs
+  scope. A group cannot be a participant, so ownership and participation are two different
+  questions and need two different columns.
+- **Not every tool generalizes.** Marketing is the counter-example: consent, suppression
+  and unsubscribe are per-`subscriber` and a band's list is not the collective's list, so
+  the compliance question changes rather than scaling. Inventory and volunteering are weak
+  fits for the same reason — they describe things the collective owns.
+
 ## Duplications to leave alone
 
 A list like the above invites merging everything. These three are deliberate:
@@ -178,5 +278,7 @@ The bar for what "worked out" looks like, and the thing to imitate rather than r
 - [project-spec.md](../specs/project-spec.md) — the `project` design
 - [project-management-prior-art.md](../reports/project-management-prior-art.md) — the
   comparable products and why these decisions were made
+- [social-prior-art.md](../reports/social-prior-art.md) — the same, per social role, and
+  what those products do better
 - [committees-and-roles-spec.md](../specs/committees-and-roles-spec.md) — committees as
   the owners of projects

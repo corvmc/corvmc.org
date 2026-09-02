@@ -12,10 +12,11 @@ import { groupKinds, groupJoinPolicies } from '../../../config';
  * they reference and nothing else, and no band→group id map has to be threaded
  * through the phases that follow.
  *
- * Columns that belong elsewhere are still here and move out later: the listing
- * fields (`tagline`, `hometown`, `links`, `directoryVisibility`, …) go to
- * `directory_entry`, and the premium ones (`tier`, `subscription`, the
- * `customDomain*` set) go to `band_site`. See docs/specs/groups-spec.md.
+ * The columns that belonged elsewhere have moved: the listing fields
+ * (`tagline`, `hometown`, `links`, `directoryVisibility`, …) live on
+ * `directory_entry` and the premium ones (`tier`, `subscription`, the
+ * `customDomain*` set) on `band_site`. What is left is what a group *is* — an
+ * identity, a roster policy, and a slug. See docs/specs/groups-spec.md.
  */
 export const group = sqliteTable(
 	'group',

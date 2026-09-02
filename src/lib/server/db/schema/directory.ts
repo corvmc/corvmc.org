@@ -64,9 +64,10 @@ export type DirectoryTagKind = (typeof directoryTagKinds)[number];
  * work against old rows and fail only on records created later — the worst
  * failure shape available here.
  *
- * Nothing reads this table until the phase-3a port; the listing columns on
- * `user` and `group` stay authoritative until then, and are dropped in 3c. See
- * docs/specs/groups-spec.md.
+ * **This table is authoritative.** The phase-3a port landed and the listing
+ * columns it replaced were dropped from `user` and `group` in 3c, so this is the
+ * only place a member's or a group's public presence lives. See
+ * docs/specs/groups-spec.md, phases 0-4 of which have shipped.
  */
 export const directoryEntry = sqliteTable(
 	'directory_entry',
