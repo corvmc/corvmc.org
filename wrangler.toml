@@ -129,6 +129,15 @@ database_id = "e43655a1-10ca-4c03-965c-d0c3bd77c0ae"
 binding = "R2_BUCKET"
 bucket_name = "corvmc"
 
+# Private counterpart to the bucket above. It has no custom domain and no
+# r2.dev URL, which is the whole of what makes it private — an R2 bucket is
+# unreachable except through a binding until something opens it. Do not attach
+# a domain to this one: the public bucket is public *because* of
+# media.corvmc.org, not because of a setting.
+[[r2_buckets]]
+binding = "R2_PRIVATE"
+bucket_name = "corvmc-private"
+
 [[kv_namespaces]]
 binding = "KV"
 id = "fc85459046fe47f9bbfae4f343012041"
