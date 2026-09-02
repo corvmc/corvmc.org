@@ -81,7 +81,11 @@ sign up through the UI (Turnstile passes with the blank/test keys) or use the ad
 staff console.
 
 Re-run `pnpm db:reset` any time the data gets weird; it's the supported path back to a
-known state. To apply _new_ migrations without wiping data, `pnpm db:migrate:local` is
+known state. Note that it deletes the D1 files outright, so it never exercises the seed's own
+`deleteAll()` — if you have just added a table, the thing to run is `pnpm db:seed` a **second**
+time against an already-seeded database. That is what catches a table missing from
+`scripts/d1-table-order.mjs`, whose only symptom is the second seed dying on a unique
+constraint that names the table and nothing else. To apply _new_ migrations without wiping data, `pnpm db:migrate:local` is
 tracked and incremental — it goes through drizzle's migrator, which records what it
 applied in `__drizzle_migrations`, the same table the remote `db:migrate` uses — so it
 applies only what is pending and is a no-op when the database is current.
