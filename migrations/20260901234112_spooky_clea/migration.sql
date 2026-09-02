@@ -1,0 +1,1 @@
+ALTER TABLE `inbox_thread` ADD `last_outbound_at` integer;

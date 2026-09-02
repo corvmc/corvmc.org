@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "1ee115a4-ca95-488e-8f04-97e0b1470e40",
+  "id": "a85bdd51-0dda-43c0-bc9c-160e4813931e",
   "prevIds": [
-    "17d4aa70-3058-4c2f-8b26-f05e12f94545"
+    "9c638209-941e-48c1-af6d-5f6ae22d74a5"
   ],
   "ddl": [
     {
@@ -216,6 +216,10 @@
     },
     {
       "name": "inbox_participant",
+      "entityType": "tables"
+    },
+    {
+      "name": "inbox_saved_view",
       "entityType": "tables"
     },
     {
@@ -5406,6 +5410,56 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "inbox_saved_view"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "inbox_saved_view"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "inbox_saved_view"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'{}'",
+      "generated": null,
+      "name": "filters",
+      "entityType": "columns",
+      "table": "inbox_saved_view"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "inbox_saved_view"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "inbox_thread"
     },
     {
@@ -5519,6 +5573,16 @@
       "table": "inbox_thread"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "undo_state",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -5535,6 +5599,16 @@
       "default": null,
       "generated": null,
       "name": "last_message_at",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_outbound_at",
       "entityType": "columns",
       "table": "inbox_thread"
     },
@@ -8605,6 +8679,21 @@
     },
     {
       "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_inbox_saved_view_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "inbox_saved_view"
+    },
+    {
+      "columns": [
         "assigned_to_user_id"
       ],
       "tableTo": "user",
@@ -9708,6 +9797,15 @@
       "nameExplicit": false,
       "name": "inbox_participant_pk",
       "table": "inbox_participant",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "inbox_saved_view_pk",
+      "table": "inbox_saved_view",
       "entityType": "pks"
     },
     {
@@ -11411,6 +11509,38 @@
       "name": "idx_inbox_participant_user_accepted",
       "entityType": "indexes",
       "table": "inbox_participant"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_saved_view_user",
+      "entityType": "indexes",
+      "table": "inbox_saved_view"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "name",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_saved_view_user_name",
+      "entityType": "indexes",
+      "table": "inbox_saved_view"
     },
     {
       "columns": [

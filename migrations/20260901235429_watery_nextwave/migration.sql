@@ -1,0 +1,1 @@
+ALTER TABLE `inbox_thread` ADD `undo_state` text;

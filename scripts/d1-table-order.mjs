@@ -89,6 +89,10 @@ export const tableOrder = [
 	'inbox_message',
 	'inbox_note',
 	'inbox_participant',
+	'inbox_thread_tag',
+	// Per-user saved queue filters. After user, like every other row keyed to a
+	// person, and unrelated to inbox_thread — it stores filters, not threads.
+	'inbox_saved_view',
 	'content_flag',
 	// After content_flag as well as user: it carries the report that cost the
 	// member their standing, in whichever scope. One table where there were three

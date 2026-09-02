@@ -160,7 +160,7 @@ test.describe('member messaging', () => {
 
 		// --- staff never see any of it ---
 		await switchUser(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/inbox?status=all');
+		await page.goto('/staff/inbox?view=all');
 		await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible(WAIT);
 		await expect(page.locator('body')).not.toContainText(body);
 		await expect(page.locator('body')).not.toContainText(reply);
@@ -170,7 +170,7 @@ test.describe('member messaging', () => {
 test.describe('staff inbox', () => {
 	test('a filter survives opening a thread, and back returns to it', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/inbox?status=all');
+		await page.goto('/staff/inbox?view=all');
 		await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible(WAIT);
 
 		// A seeded portal thread, so this never quietly skips itself.
@@ -182,9 +182,9 @@ test.describe('staff inbox', () => {
 
 		// The filter mirror runs in the layout, so it is live while the thread is
 		// open. Pinned to the index path it would navigate straight back here.
-		await expect(page).toHaveURL(/\/staff\/inbox\/[^/?]+\?status=all/, WAIT);
+		await expect(page).toHaveURL(/\/staff\/inbox\/[^/?]+\?view=all/, WAIT);
 
 		await page.goBack();
-		await expect(page).toHaveURL(/\/staff\/inbox\?status=all/, WAIT);
+		await expect(page).toHaveURL(/\/staff\/inbox\?view=all/, WAIT);
 	});
 });

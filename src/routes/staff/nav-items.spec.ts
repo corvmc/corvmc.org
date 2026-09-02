@@ -149,7 +149,11 @@ describe('route coverage', () => {
 		// purpose: an external act is the same staff job as a band — who is
 		// playing here — and one of them can turn into the other, so splitting
 		// them in the nav would imply two jobs where there is one.
-		'/staff/bands/acts'
+		'/staff/bands/acts',
+		// Started from the Inbox header, and only worth starting when the queue
+		// has something in it. A nav row would offer a session that is empty most
+		// of the day, from a place that cannot tell you whether it is.
+		'/staff/inbox/daily'
 	]);
 
 	it('leaves no staff page without a highlighted row', () => {

@@ -14,14 +14,27 @@ import {
 	setAwaitingReply,
 	getUnresolvedCount,
 	countThreadsByStatus,
-	listThreadsByContactEmail
+	listThreadsByContactEmail,
+	undoLastDisposition,
+	countThreadFacets,
+	getThreadContext,
+	addThreadTag,
+	removeThreadTag,
+	getDailyScope
 } from '$lib/server/inbox/thread-service';
+import type { ListThreadsFilters } from '$lib/server/inbox/thread-service';
 import {
 	getAllChannelConfigs,
 	getEnabledChannels,
 	updateChannelConfig as updateChannelConfigSvc
 } from '$lib/server/inbox/channel-config-service';
 import { addOutboundMessage, addNote } from '$lib/server/inbox/message-service';
+import {
+	listSavedViews,
+	createSavedView,
+	deleteSavedView
+} from '$lib/server/inbox/saved-view-service';
+import { jsonObjectField } from '$lib/utils/zod-json';
 import {
 	listPortalThreads,
 	countOpenPortalThreads,
@@ -34,7 +47,8 @@ import {
 } from '$lib/server/inbox/portal-service';
 import { submitContactFormSchema } from '$lib/server/db/schema/inbox';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE, inboxChannels, inboxThreadStatuses } from '$lib/config';
+import { DEFAULT_TIMEZONE, inboxChannels, inboxViews } from '$lib/config';
+import type { InboxView } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Public forms
@@ -53,20 +67,65 @@ export const submitContactForm = form(submitContactFormSchema, async (data, issu
 // Staff queries
 // ---------------------------------------------------------------------------
 
+/**
+ * The five tabs, and what each one is in database terms.
+ *
+ * Open and Awaiting reply are both `status = 'open'`; the awaiting marker is
+ * what separates them, and Open is the half that needs a human — the same set
+ * the staff nav badge counts. The two views that nobody is waiting on keep the
+ * old newest-first order.
+ */
+const VIEWS = {
+	open: { status: 'open', awaitingReply: false, sort: 'waiting' },
+	awaiting: { status: 'open', awaitingReply: true, sort: 'waiting' },
+	snoozed: { status: 'snoozed', sort: 'waiting' },
+	resolved: { status: 'resolved', sort: 'recent' },
+	all: { sort: 'recent' }
+} as const satisfies Record<
+	InboxView,
+	Omit<ListThreadsFilters, 'channel' | 'assignedToUserId' | 'search'>
+>;
+
 const threadFiltersSchema = z.object({
-	status: z.enum(inboxThreadStatuses).optional(),
+	view: z.enum(inboxViews).optional(),
 	channel: z.enum(inboxChannels).optional(),
 	/** A staff user id, or the sentinels `mine` / `unassigned`. */
 	assigned: z.string().optional(),
-	/** Who the conversation is waiting on: `yes` them, `no` us. */
+	/** Narrows *within* a view. The view already sets this on Open and Awaiting. */
 	awaiting: z.enum(['yes', 'no']).optional(),
+	/** A `contactSubjects` value, or `other` for everything outside it. */
+	subject: z.string().optional(),
+	/** The range control. 0 means the control is at its floor — no filter. */
+	waitingDays: z.coerce.number().int().min(0).max(90).optional(),
 	search: z.string().optional(),
 	page: z.coerce.number().int().min(1).optional()
 });
 
-export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
-	const staff = await requireStaff();
+type ThreadFilters = z.infer<typeof threadFiltersSchema>;
 
+/**
+ * What a saved view is allowed to remember. The same keys the URL carries, so
+ * saving a view and bookmarking the page are the same act — and a filter added
+ * later is one line here rather than a migration.
+ */
+const savedViewFiltersSchema = z.object({
+	view: z.enum(inboxViews).optional(),
+	channel: z.enum(inboxChannels).optional(),
+	assigned: z.string().max(64).optional(),
+	subject: z.string().max(64).optional(),
+	waitingDays: z.number().int().min(0).max(90).optional(),
+	q: z.string().max(200).optional()
+});
+
+/**
+ * The wire filters as the service understands them.
+ *
+ * Shared by the list and the facet counts so the numbers beside an option and
+ * the rows behind it can never be answering different questions. `staffId`
+ * resolves the `mine` sentinel, which is the one filter whose meaning depends
+ * on who is asking.
+ */
+function toServiceFilters(filters: ThreadFilters, staffId: string): ListThreadsFilters {
 	// `undefined` leaves the filter off entirely; `null` is the IS NULL branch in
 	// listThreads, so the two cannot be collapsed.
 	const assignedToUserId =
@@ -75,19 +134,49 @@ export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
 			: filters.assigned === 'unassigned'
 				? null
 				: filters.assigned === 'mine'
-					? staff.id
+					? staffId
 					: filters.assigned;
 
-	return listThreads(
-		{
-			status: filters.status,
-			channel: filters.channel,
-			assignedToUserId,
-			awaitingReply: filters.awaiting === undefined ? undefined : filters.awaiting === 'yes',
-			search: filters.search
-		},
-		{ page: filters.page ?? 1, pageSize: 25 }
-	);
+	const view = VIEWS[filters.view ?? 'open'];
+
+	return {
+		...view,
+		channel: filters.channel,
+		assignedToUserId,
+		subject: filters.subject,
+		// Zero is the range control resting at its floor, which is not a filter.
+		waitingAtLeastDays: filters.waitingDays ? filters.waitingDays : undefined,
+		// An explicit `awaiting` narrows the view rather than fighting it: on
+		// Open and Awaiting the view has already decided, and the filter panel
+		// only offers this on the views that have not.
+		awaitingReply:
+			filters.awaiting === undefined
+				? 'awaitingReply' in view
+					? view.awaitingReply
+					: undefined
+				: filters.awaiting === 'yes',
+		search: filters.search
+	};
+}
+
+export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
+	const staff = await requireStaff();
+	return listThreads(toServiceFilters(filters, staff.id), {
+		page: filters.page ?? 1,
+		pageSize: 25
+	});
+});
+
+/**
+ * What each filter option would leave on screen.
+ *
+ * The panel's own query, awaited where the panel is rendered rather than in the
+ * page: the queue paints without it, and it is keyed by the same filters the
+ * list is — see `custom/no-concurrent-remote-queries`.
+ */
+export const getInboxFilterCounts = query(threadFiltersSchema, async (filters) => {
+	const staff = await requireStaff();
+	return countThreadFacets(toServiceFilters(filters, staff.id));
 });
 
 export const getInboxThreadCounts = query(z.void(), async () => {
@@ -118,7 +207,17 @@ export const getAssignableStaff = query(z.void(), async () => {
 
 const replySchema = z.object({
 	threadId: z.string().min(1),
-	body: z.string().trim().min(1).max(10000)
+	body: z.string().trim().min(1).max(10000),
+	/**
+	 * Where the thread goes once the reply is away. Carried by the clicked send
+	 * button, so it cannot be left unanswered.
+	 *
+	 * `.optional()` rather than a default in the schema, because a `.transform()`
+	 * or a default here breaks the `fields` inference the composer's hidden
+	 * inputs are built from. Missing means `wait`, which is what
+	 * `addOutboundMessage` does on its own.
+	 */
+	disposition: z.enum(['wait', 'resolve', 'keep_open']).optional()
 });
 
 export const replyToThread = form(replySchema, async (data) => {
@@ -133,7 +232,15 @@ export const replyToThread = form(replySchema, async (data) => {
 		authorName: staff.name
 	});
 
+	// `addOutboundMessage` already leaves the thread waiting on the contact, so
+	// `wait` needs nothing further. The other two overrule it: resolving closes
+	// the conversation outright, and keeping it open is staff saying they expect
+	// to come back to this themselves.
+	if (data.disposition === 'resolve') await updateStatus(data.threadId, 'resolved');
+	else if (data.disposition === 'keep_open') await setAwaitingReply(data.threadId, false);
+
 	void getInboxThread(data.threadId).refresh();
+	void getInboxThreadCounts().refresh();
 	// Replying marks the thread as waiting on the contact, which takes it out of
 	// the nav badge — so the badge has to be recounted here as well.
 	void getInboxUnreadCount().refresh();
@@ -143,7 +250,15 @@ export const replyToThread = form(replySchema, async (data) => {
 
 const noteSchema = z.object({
 	threadId: z.string().min(1),
-	body: z.string().trim().min(1).max(5000)
+	body: z.string().trim().min(1).max(5000),
+	/**
+	 * Hand the thread over in the same action as the note explaining why.
+	 *
+	 * "@Miranda can you take this one?" and assigning it to Miranda are one
+	 * decision; making them two is how a thread ends up mentioned at somebody
+	 * who was never actually given it. Empty means the note is just a note.
+	 */
+	assignToUserId: z.string().optional()
 });
 
 export const addThreadNote = form(noteSchema, async (data) => {
@@ -157,8 +272,44 @@ export const addThreadNote = form(noteSchema, async (data) => {
 		body: data.body
 	});
 
+	if (data.assignToUserId) {
+		await assignThreadSvc(data.threadId, data.assignToUserId);
+		if (data.assignToUserId !== staff.id) await notifyAssignee(data.threadId, data.assignToUserId);
+	}
+
 	void getInboxThread(data.threadId).refresh();
 	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
+// Thread tags
+// ---------------------------------------------------------------------------
+// Staff annotations on a conversation, distinct from the inquiry type: the type
+// is what the contact said they were writing about, a tag is what we decided
+// this is after reading it.
+
+export const getInboxThreadContext = query(z.string().min(1), async (id) => {
+	await requireStaff();
+	const context = await getThreadContext(id);
+	if (!context) throw error(404, 'Thread not found');
+	return context;
+});
+
+const tagSchema = z.object({
+	threadId: z.string().min(1),
+	tag: z.string().trim().min(1).max(40)
+});
+
+export const addInboxThreadTag = command(tagSchema, async ({ threadId, tag }) => {
+	await requireStaff();
+	await addThreadTag(threadId, tag);
+	void getInboxThreadContext(threadId).refresh();
+});
+
+export const removeInboxThreadTag = command(tagSchema, async ({ threadId, tag }) => {
+	await requireStaff();
+	await removeThreadTag(threadId, tag);
+	void getInboxThreadContext(threadId).refresh();
 });
 
 const assignSchema = z.object({
@@ -169,82 +320,159 @@ const assignSchema = z.object({
 		.transform((v) => v || null)
 });
 
+/**
+ * Tell someone a conversation is theirs now.
+ *
+ * Shared by the assign control and by an internal note that hands the thread
+ * over in the same action — a mention with no notification is how a thread ends
+ * up assigned to someone who never found out.
+ */
+async function notifyAssignee(threadId: string, userId: string) {
+	const assignee = (await listStaffUsers()).find((u) => u.id === userId);
+	const thread = await getThread(threadId);
+	if (!assignee || !thread) return;
+
+	await dispatch({
+		type: 'inbox_assigned',
+		userId: assignee.id,
+		userEmail: assignee.email,
+		title: 'A conversation was assigned to you',
+		body: thread.subject ?? thread.contactName ?? undefined,
+		href: `/staff/inbox/${threadId}`
+	});
+}
+
 export const assignThread = form(assignSchema, async (data) => {
 	const staff = await requireStaff();
 	await assignThreadSvc(data.threadId, data.userId);
 
 	// Notify the assignee, unless they assigned the thread to themselves.
-	if (data.userId && data.userId !== staff.id) {
-		const assignee = (await listStaffUsers()).find((u) => u.id === data.userId);
-		const thread = await getThread(data.threadId);
-		if (assignee && thread) {
-			await dispatch({
-				type: 'inbox_assigned',
-				userId: assignee.id,
-				userEmail: assignee.email,
-				title: 'A conversation was assigned to you',
-				body: thread.subject ?? thread.contactName ?? undefined,
-				href: `/staff/inbox/${data.threadId}`
-			});
-		}
-	}
+	if (data.userId && data.userId !== staff.id) await notifyAssignee(data.threadId, data.userId);
 
 	void getInboxThread(data.threadId).refresh();
 	return { success: true };
 });
 
-const statusSchema = z.object({
+/**
+ * The four ways a conversation leaves the queue, as one call.
+ *
+ * A `command` rather than four `form`s. These are raised from a keyboard
+ * shortcut, a dropdown item and a toast as often as from a button, none of
+ * which is a form submission — and the previous shape (two forms, four `.for()`
+ * instances, a modal wrapping a select) took two interactions to do the one
+ * thing anyone does from here. One entry point is also what lets every one of
+ * them capture an undo snapshot without four chances to forget.
+ *
+ * `wait` is not a status. It sets the awaiting-reply marker, which moves the
+ * thread from Open to Awaiting reply — the same state replying applies, reached
+ * deliberately. It is the manual path for an answer given somewhere the inbox
+ * cannot see: a phone call, a hallway, someone's own phone.
+ */
+const disposeSchema = z.object({
 	threadId: z.string().min(1),
-	status: z.enum(inboxThreadStatuses),
-	/** `YYYY-MM-DD` from the snooze calendar; only meaningful when snoozing. */
+	action: z.enum(['resolve', 'snooze', 'wait', 'reopen']),
+	/** `YYYY-MM-DD` from the snooze menu. Only meaningful when snoozing. */
 	snoozedUntil: z
 		.string()
 		.regex(/^\d{4}-\d{2}-\d{2}$/)
 		.optional()
 });
 
-export const updateThreadStatus = form(statusSchema, async (data) => {
+export const disposeThread = command(disposeSchema, async ({ threadId, action, snoozedUntil }) => {
 	await requireStaff();
 
-	// A calendar date means "put this back in the queue that morning", so it
-	// resolves against club time rather than UTC midnight — otherwise snoozing
-	// until tomorrow wakes the thread at 5pm today.
-	const snoozedUntil = data.snoozedUntil
-		? buildDateInTz(data.snoozedUntil, '08:00', DEFAULT_TIMEZONE)
-		: undefined;
+	if (action === 'wait') {
+		await setAwaitingReply(threadId, true);
+	} else if (action === 'reopen') {
+		// Reopening clears the marker as well as the status — `updateStatus` does
+		// that, and it is the point: staff saying this needs an answer now.
+		await updateStatus(threadId, 'open');
+	} else {
+		// A calendar date means "put this back in the queue that morning", so it
+		// resolves against club time rather than UTC midnight — otherwise snoozing
+		// until tomorrow wakes the thread at 5pm today.
+		await updateStatus(
+			threadId,
+			action === 'resolve' ? 'resolved' : 'snoozed',
+			snoozedUntil ? buildDateInTz(snoozedUntil, '08:00', DEFAULT_TIMEZONE) : undefined
+		);
+	}
 
-	await updateStatus(data.threadId, data.status, snoozedUntil);
-	void getInboxThread(data.threadId).refresh();
+	void getInboxThread(threadId).refresh();
 	void getInboxThreadCounts().refresh();
 	void getInboxUnreadCount().refresh();
-	// The staff nav badge counts open threads, so resolving from the detail page
-	// has to refresh the layout too or the sidebar keeps the old number.
+	// The staff nav badge counts open threads, so disposing of one from the
+	// detail page has to refresh the layout too or the sidebar keeps the old
+	// number.
 	void getStaffLayout().refresh();
-	return { success: true };
-});
-
-// No `.transform()` on `awaiting`: a transform in a form() schema breaks the
-// `fields` inference the button's hidden inputs are built from.
-const awaitingSchema = z.object({
-	threadId: z.string().min(1),
-	awaiting: z.enum(['true', 'false'])
 });
 
 /**
- * The manual half of the awaiting-reply marker — replying sets it on its own.
- * Staff reach for this when the answer happened off the platform, or when a
- * conversation they marked needs their attention again after all.
+ * Put the thread back the way the last disposition found it.
+ *
+ * A `command` rather than a `form`: it is raised by a toast button and by ⌘Z,
+ * neither of which is a form submission, and it takes no input beyond the id.
+ * Silent when there is nothing to undo — pressing ⌘Z twice is not an error.
  */
-export const setThreadAwaiting = form(awaitingSchema, async (data) => {
+export const undoThreadDisposition = command(z.string().min(1), async (threadId) => {
 	await requireStaff();
-	await setAwaitingReply(data.threadId, data.awaiting === 'true');
+	const undone = await undoLastDisposition(threadId);
+	if (!undone) return { undone: false };
 
-	void getInboxThread(data.threadId).refresh();
-	// The marker is what the nav badge counts, so both it and the layout that
-	// renders it have to be recounted — same reason as updateThreadStatus.
+	void getInboxThread(threadId).refresh();
+	void getInboxThreadCounts().refresh();
 	void getInboxUnreadCount().refresh();
+	// Same reason as updateThreadStatus: the nav badge lives in the layout and
+	// counts open threads, so restoring one has to recount it.
 	void getStaffLayout().refresh();
+	return { undone: true };
+});
+
+/**
+ * The threads a Daily session would walk, in the order it would walk them.
+ *
+ * One query returning ids rather than whole threads: the session loads each
+ * conversation as it reaches it, so a seven-thread run is seven small reads
+ * spread over the session instead of one large one before it starts.
+ */
+export const getInboxDailyScope = query(z.void(), async () => {
+	await requireStaff();
+	return getDailyScope();
+});
+
+// ---------------------------------------------------------------------------
+// Saved views
+// ---------------------------------------------------------------------------
+// A filter combination somebody wants back tomorrow, rendered as an extra tab.
+// Every one of these is scoped to the caller by the service, which constrains
+// on the owner id rather than trusting the view id to belong to whoever sent it.
+
+export const getInboxSavedViews = query(z.void(), async () => {
+	const staff = await requireStaff();
+	return listSavedViews(staff.id);
+});
+
+const savedViewSchema = z.object({
+	name: z.string().trim().min(1).max(60),
+	/**
+	 * The filters, as the same JSON the URL carries. `jsonObjectField` rather
+	 * than a `.transform()`: a `JSON.parse` throw inside a transform escapes
+	 * validation as a 500, and this arrives from a form field.
+	 */
+	filters: jsonObjectField().pipe(savedViewFiltersSchema)
+});
+
+export const saveInboxView = form(savedViewSchema, async (data) => {
+	const staff = await requireStaff();
+	await createSavedView(staff.id, data.name, data.filters);
+	void getInboxSavedViews().refresh();
 	return { success: true };
+});
+
+export const removeInboxView = command(z.string().min(1), async (id) => {
+	const staff = await requireStaff();
+	await deleteSavedView(staff.id, id);
+	void getInboxSavedViews().refresh();
 });
 
 // ---------------------------------------------------------------------------

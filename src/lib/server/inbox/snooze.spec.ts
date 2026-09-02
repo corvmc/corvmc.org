@@ -28,6 +28,8 @@ vi.mock('$lib/server/db', () => ({
 							calls.groupBySelects++;
 							return Promise.resolve(groupedRows);
 						},
+						// `undoLastDisposition` reads one row by id.
+						limit: () => Promise.resolve(selectRows),
 						then: (resolve: (v: unknown) => unknown) => resolve(selectRows)
 					};
 				},
@@ -50,9 +52,23 @@ vi.mock('$lib/server/db', () => ({
 }));
 vi.mock('$lib/server/db/paginate', () => ({ paginate: vi.fn() }));
 
-const { wakeSnoozedThreads, countThreadsByStatus, updateStatus, getUnresolvedCount } =
-	await import('./thread-service');
+const {
+	wakeSnoozedThreads,
+	countThreadsByStatus,
+	updateStatus,
+	getUnresolvedCount,
+	assignThread,
+	setAwaitingReply,
+	undoLastDisposition,
+	nudgeStaleAwaiting
+} = await import('./thread-service');
 const { inboxThread } = await import('$lib/server/db/schema/inbox');
+
+/** Render a captured SET-side fragment — `undoState` is raw SQL, not a value. */
+function renderSet(fragment: SQL): string {
+	const bare = drizzle({} as never);
+	return bare.select().from(inboxThread).where(fragment).toSQL().sql;
+}
 
 /** Render a captured predicate so we can assert on the actual SQL. */
 function renderWhere(where: SQL): string {
@@ -80,14 +96,18 @@ describe('wakeSnoozedThreads', () => {
 		expect(sql).toContain('"snoozed_until" <= ?');
 	});
 
-	it('reopens due threads and clears the snooze date', async () => {
+	// The date is deliberately left behind. An open thread carrying a snooze date
+	// in the past is how `openReason()` recognises one that came back on its own
+	// — clearing it here would make "Snooze expired" indistinguishable from
+	// "never answered", which are different reasons to be looking at a thread.
+	it('reopens due threads without erasing the snooze date', async () => {
 		const now = new Date('2026-08-03T15:00:00Z');
 		selectRows = [{ id: 'a' }, { id: 'b' }];
 
 		const result = await wakeSnoozedThreads(now);
 
 		expect(result).toEqual({ woken: 2 });
-		expect(calls.updateSet[0]).toEqual({ status: 'open', snoozedUntil: null, updatedAt: now });
+		expect(calls.updateSet[0]).toEqual({ status: 'open', updatedAt: now });
 	});
 
 	// A snooze with no date was set by hand and has no due time; sweeping those
@@ -127,15 +147,41 @@ describe('getUnresolvedCount', () => {
 });
 
 describe('countThreadsByStatus', () => {
-	it('maps grouped rows onto every status and totals them', async () => {
+	it('maps grouped rows onto every view and totals them', async () => {
 		groupedRows = [
-			{ status: 'open', count: 4 },
-			{ status: 'resolved', count: 9 }
+			{ status: 'open', awaiting: 0, count: 4 },
+			{ status: 'resolved', awaiting: 0, count: 9 }
 		];
 
 		const counts = await countThreadsByStatus();
 
-		expect(counts).toEqual({ open: 4, resolved: 9, snoozed: 0, all: 13 });
+		expect(counts).toEqual({ open: 4, awaiting: 0, resolved: 9, snoozed: 0, all: 13 });
+	});
+
+	// The split the whole queue turns on: both halves are `status = 'open'` in
+	// the database, and only the marker tells Open (needs a human) from Awaiting
+	// reply (the ball is with the contact). Folding them together is what the
+	// Open tab used to do, and it is why the tab and the nav badge disagreed.
+	it('splits open rows on the awaiting marker', async () => {
+		groupedRows = [
+			{ status: 'open', awaiting: 0, count: 4 },
+			{ status: 'open', awaiting: 1, count: 6 }
+		];
+
+		const counts = await countThreadsByStatus();
+
+		expect(counts).toMatchObject({ open: 4, awaiting: 6, all: 10 });
+	});
+
+	// A resolved thread can still carry a stale marker — `updateStatus` clears
+	// it, but an older row need not have gone through that path. It must not
+	// land in the awaiting bucket regardless.
+	it('ignores the marker on anything that is not open', async () => {
+		groupedRows = [{ status: 'resolved', awaiting: 1, count: 3 }];
+
+		const counts = await countThreadsByStatus();
+
+		expect(counts).toMatchObject({ resolved: 3, awaiting: 0, all: 3 });
 	});
 
 	it('reports zeroes for an empty inbox', async () => {
@@ -143,7 +189,7 @@ describe('countThreadsByStatus', () => {
 
 		const counts = await countThreadsByStatus();
 
-		expect(counts).toEqual({ open: 0, resolved: 0, snoozed: 0, all: 0 });
+		expect(counts).toEqual({ open: 0, awaiting: 0, resolved: 0, snoozed: 0, all: 0 });
 	});
 });
 
@@ -172,5 +218,101 @@ describe('staffVisibleThread (rendered SQL)', () => {
 		await countThreadsByStatus();
 		expect(calls.selectWhere.length).toBe(1);
 		expect(renderWhere(calls.selectWhere[0])).toContain('content_flag');
+	});
+});
+
+describe('undo', () => {
+	// The snapshot is written by the same UPDATE that moves the thread. On D1
+	// there is no transaction to hold a read and a write together, so a separate
+	// SELECT would leave a window where the thread has moved and its way back
+	// has not been recorded.
+	it('every disposition records what it is about to overwrite', async () => {
+		await updateStatus('thread-1', 'resolved');
+		await setAwaitingReply('thread-1', true);
+		await assignThread('thread-1', 'user-9');
+
+		expect(calls.updateSet).toHaveLength(3);
+		for (const set of calls.updateSet) {
+			const rendered = renderSet(set.undoState as SQL).toLowerCase();
+			expect(rendered).toContain('json_object');
+			// All four dispositional fields, or undo restores a partial thread.
+			expect(rendered).toContain('status');
+			expect(rendered).toContain('snoozed_until');
+			expect(rendered).toContain('awaiting_reply_since');
+			expect(rendered).toContain('assigned_to_user_id');
+		}
+	});
+
+	it('restores the snapshot and spends it', async () => {
+		selectRows = [
+			{
+				undoState: {
+					status: 'open',
+					snoozedUntil: null,
+					awaitingReplySince: 1_788_000_000,
+					assignedToUserId: 'user-3'
+				}
+			}
+		];
+
+		expect(await undoLastDisposition('thread-1')).toBe(true);
+		expect(calls.updateSet[0]).toMatchObject({
+			status: 'open',
+			snoozedUntil: null,
+			awaitingReplySince: new Date(1_788_000_000 * 1000),
+			assignedToUserId: 'user-3',
+			// Cleared, so a second ⌘Z is a no-op rather than a replay.
+			undoState: null
+		});
+	});
+
+	// Pressing ⌘Z twice, or on a thread nothing has happened to. Not an error:
+	// the caller stays quiet on false.
+	it('reports nothing to undo rather than writing', async () => {
+		selectRows = [{ undoState: null }];
+
+		expect(await undoLastDisposition('thread-1')).toBe(false);
+		expect(calls.updateSet).toHaveLength(0);
+	});
+
+	// The column is JSON in a text column and nothing stops an older row holding
+	// a shape this code never wrote.
+	it('refuses a snapshot it cannot parse', async () => {
+		selectRows = [{ undoState: { status: 'not-a-status' } }];
+
+		expect(await undoLastDisposition('thread-1')).toBe(false);
+		expect(calls.updateSet).toHaveLength(0);
+	});
+});
+
+describe('nudgeStaleAwaiting', () => {
+	// The safety net under the default send. Only open threads, only ones whose
+	// marker is older than the window — a thread snoozed with a date has its own
+	// return trip and must not be pulled back early.
+	it('targets open threads whose awaiting marker has gone stale', async () => {
+		selectRows = [{ id: 'a' }];
+		await nudgeStaleAwaiting(new Date('2026-09-10T09:00:00Z'));
+
+		const sql = renderWhere(calls.selectWhere[0]).toLowerCase();
+		expect(sql).toContain('"status" = ?');
+		expect(sql).toContain('"awaiting_reply_since" is not null');
+		expect(sql).toContain('"awaiting_reply_since" <= ?');
+	});
+
+	// Not a disposition anybody took, so it leaves no way back — an undo
+	// snapshot here would let ⌘Z on some other thread reach into the cron's work.
+	it('clears the marker without recording an undo', async () => {
+		const now = new Date('2026-09-10T09:00:00Z');
+		selectRows = [{ id: 'a' }, { id: 'b' }];
+
+		expect(await nudgeStaleAwaiting(now)).toEqual({ nudged: 2 });
+		expect(calls.updateSet[0]).toEqual({ awaitingReplySince: null, updatedAt: now });
+	});
+
+	it('does not run an update when nothing is stale', async () => {
+		selectRows = [];
+
+		expect(await nudgeStaleAwaiting(new Date())).toEqual({ nudged: 0 });
+		expect(calls.updateSet).toHaveLength(0);
 	});
 });

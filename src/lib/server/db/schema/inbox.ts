@@ -70,8 +70,34 @@ export const inboxThread = sqliteTable(
 		 * inbound message and by any explicit status change.
 		 */
 		awaitingReplySince: integer('awaiting_reply_since', { mode: 'timestamp' }),
+		/**
+		 * What this thread looked like before the last disposition, so the toast's
+		 * Undo has something to put back.
+		 *
+		 * A column rather than state the client hands back: undo has to survive a
+		 * reload, and a client-supplied "previous state" is an arbitrary state
+		 * write wearing a hat. Written by the same UPDATE that changes the row —
+		 * see `withUndoSnapshot` in thread-service — so there is no window where a
+		 * thread has moved and its undo has not been recorded.
+		 *
+		 * Only ever holds the *dispositional* fields, and only the most recent
+		 * change: undo is a ten-second correction of the action you just took, not
+		 * a history. Cleared once used.
+		 */
+		undoState: text('undo_state', { mode: 'json' }),
 		messageCount: integer('message_count').notNull().default(0),
 		lastMessageAt: integer('last_message_at', { mode: 'timestamp' }),
+		/**
+		 * When staff last sent anything on this thread. Null means nobody here has
+		 * ever answered it, which is what separates the two reasons an open thread
+		 * is sitting in the queue: *unanswered* (we never replied) from *replied*
+		 * (we did, and they came back). The list says which, so the pair has to be
+		 * distinguishable without counting messages per row.
+		 *
+		 * Distinct from `awaitingReplySince`, which is cleared the moment they
+		 * answer. This one only ever moves forward.
+		 */
+		lastOutboundAt: integer('last_outbound_at', { mode: 'timestamp' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),
@@ -179,6 +205,66 @@ export const inboxParticipant = sqliteTable(
 	]
 );
 
+/**
+ * Free-text labels on a conversation.
+ *
+ * Distinct from the inquiry type, which comes from the contact form's fixed
+ * vocabulary and says what someone said they were writing about. A tag is what
+ * *staff* decided this thread is, after reading it — "band", "wednesdays",
+ * "chase in spring". No vocabulary, because the useful ones are not knowable in
+ * advance, and no counts anywhere: these annotate a thread, they do not file it.
+ */
+export const inboxThreadTag = sqliteTable(
+	'inbox_thread_tag',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		threadId: text('thread_id')
+			.notNull()
+			.references(() => inboxThread.id, { onDelete: 'cascade' }),
+		tag: text('tag').notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	// Adding a tag a thread already carries is a no-op, not a second row.
+	(t) => [uniqueIndex('idx_inbox_thread_tag_unique').on(t.threadId, t.tag)]
+);
+
+/**
+ * A filter combination somebody wants back tomorrow.
+ *
+ * Per-user rather than shared: a saved view is how one person works the queue,
+ * and a shared list of them would fill up with everyone else's. The filters are
+ * stored as the same JSON the URL carries, so saving a view and bookmarking the
+ * page are the same act with different ergonomics — and a filter added later
+ * needs no migration here.
+ */
+export const inboxSavedView = sqliteTable(
+	'inbox_saved_view',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		/** `{ view, channel, assigned, subject, waitingDays, q }` — all optional. */
+		filters: text('filters', { mode: 'json' }).notNull().default('{}'),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('idx_inbox_saved_view_user').on(t.userId),
+		// One name per person: a second "Practice space, unanswered" is a rename,
+		// not a new view, and two tabs with the same label are unusable.
+		uniqueIndex('idx_inbox_saved_view_user_name').on(t.userId, t.name)
+	]
+);
+
 export const inboxChannelConfig = sqliteTable('inbox_channel_config', {
 	id: text('id')
 		.primaryKey()
@@ -202,3 +288,5 @@ export type InboxThread = typeof inboxThread.$inferSelect;
 export type InboxMessage = typeof inboxMessage.$inferSelect;
 export type InboxNote = typeof inboxNote.$inferSelect;
 export type InboxParticipant = typeof inboxParticipant.$inferSelect;
+export type InboxSavedView = typeof inboxSavedView.$inferSelect;
+export type InboxThreadTag = typeof inboxThreadTag.$inferSelect;

@@ -3,19 +3,21 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
 import {
 	SEED_AWAITING_THREAD_ID,
 	SEED_AWAITING_CONTACT,
+	SEED_NEEDS_REPLY_THREAD_ID,
 	SEED_NEEDS_REPLY_CONTACT
 } from './fixtures/seed-inbox-awaiting';
 
 /**
  * The awaiting-reply marker, across the seam no unit test spans: it is written
- * on one layer, read on another, and shown as a status the database never
- * stores. Two rules carry the whole feature and both are asserted here —
+ * on one layer, read on another, and shown as a view the database never stores.
+ * Two rules carry the whole feature and both are asserted here —
  *
- *   - an awaiting thread stays in the Open queue. If it ever starts behaving
- *     like a fourth status, the Open tab quietly loses conversations that are
- *     still live.
- *   - it drops out of the nav badge anyway. That is what makes the badge mean
- *     "waiting on us", and it is the one number staff actually work from.
+ *   - Open holds only what needs a human. A thread we have already answered is
+ *     somebody else's move and belongs under Awaiting reply, which is a
+ *     separate view rather than a fourth status.
+ *   - the nav badge is exactly the Open view. The badge is the one number staff
+ *     work from, and a tab beside it reading a different total is the bug this
+ *     split fixes.
  */
 
 async function loginAsStaff(page: Page) {
@@ -35,16 +37,14 @@ async function navBadgeCount(page: Page): Promise<number> {
 }
 
 /**
- * Reveal the filter controls.
+ * One of the five view tabs.
  *
- * The queue is a ~24rem list pane now, and `FilterBar` collapses everything but
- * search behind a disclosure below its `@lg` container width — search plus three
- * selects does not fit beside an open conversation.
+ * Matched on a prefix because the accessible name carries the count badge —
+ * "Open 3", not "Open" — and the count is exactly what these tests are trying
+ * not to hard-code.
  */
-async function openFilters(page: Page) {
-	// A <label> driving a peer checkbox, not a button — FilterBar uses that
-	// because <details> cannot be forced open by CSS at wide widths.
-	await page.locator('label').filter({ hasText: 'Filters' }).first().click();
+function viewTab(page: Page, label: string) {
+	return page.getByRole('tab', { name: new RegExp(`^${label}\\b`) });
 }
 
 function row(page: Page, contact: string) {
@@ -53,37 +53,56 @@ function row(page: Page, contact: string) {
 }
 
 test.describe('inbox awaiting reply', () => {
-	test('an awaiting thread stays in Open, badged apart from the rest', async ({ page }) => {
+	test('Open holds what needs a reply and nothing else', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/inbox');
 
-		// The default view is Open, and both seeded threads are open.
-		await expect(row(page, SEED_AWAITING_CONTACT)).toContainText('Awaiting reply');
-		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toContainText('Open');
+		// Both threads are `status = 'open'`; only one of them is work.
+		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toBeVisible();
+		await expect(row(page, SEED_AWAITING_CONTACT)).toHaveCount(0);
+
+		// The Open row says *why* it is there — nobody here has ever answered it.
+		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toContainText('Unanswered');
 	});
 
-	test('the waiting-on filter splits the two, and survives a round trip', async ({ page }) => {
+	test('the awaiting view holds the other half, and survives a round trip', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/inbox');
-		await openFilters(page);
 
-		await page.getByLabel('Waiting on').selectOption('yes');
+		await viewTab(page, 'Awaiting reply').click();
 		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
 		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toHaveCount(0);
 
 		// Mirrored into the URL, so opening a thread and coming back holds it.
-		await expect(page).toHaveURL(/waiting=yes/);
+		await expect(page).toHaveURL(/view=awaiting/);
 
-		await page.getByLabel('Waiting on').selectOption('no');
-		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toBeVisible();
-		await expect(row(page, SEED_AWAITING_CONTACT)).toHaveCount(0);
+		// And a reload lands on the same view rather than back on Open.
+		await page.reload();
+		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
 	});
 
-	test('clearing the marker returns the thread to the nav badge', async ({ page }) => {
+	// The claim the split exists to make: the number on the nav item and the
+	// number on the Open tab are the same set counted twice.
+	test('the nav badge and the Open tab agree', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/inbox');
+
+		await expect(viewTab(page, 'Open')).toBeVisible();
+		const badge = await navBadgeCount(page);
+		const tab = Number((await viewTab(page, 'Open').innerText()).replace(/\D+/g, ''));
+
+		expect(tab).toBe(badge);
+	});
+
+	// The marker's two manual directions, and the round trip that proves they are
+	// each other's inverse. Both go through the DispositionBar: clearing it is
+	// the reopen slot ("Needs a reply"), setting it is the snooze menu's
+	// conditional option ("When they reply") — the same state the default send
+	// applies, reached deliberately.
+	test('clearing the marker returns the thread to Open and to the badge', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/inbox/${SEED_AWAITING_THREAD_ID}`);
 
-		// The pair of buttons is the marker's state: only one is offered at a time.
 		await expect(page.getByRole('button', { name: 'Needs a reply' })).toBeVisible();
 		const before = await navBadgeCount(page);
 
@@ -95,11 +114,31 @@ test.describe('inbox awaiting reply', () => {
 			.poll(() => navBadgeCount(page), { timeout: 10000, message: 'nav badge' })
 			.toBe(before + 1);
 
-		// And back again, which is the manual half of the marker.
-		await page.getByRole('button', { name: 'Awaiting reply' }).click();
+		// And back again, from the snooze menu.
+		await page.getByRole('button', { name: /^Snooze/ }).click();
+		await page.getByRole('menuitem', { name: 'When they reply' }).click();
+
 		await expect(page.getByRole('button', { name: 'Needs a reply' })).toBeVisible();
 		await expect
 			.poll(() => navBadgeCount(page), { timeout: 10000, message: 'nav badge' })
 			.toBe(before);
+	});
+
+	// Every disposition is reversible for ten seconds, and the toast is the only
+	// place that offer appears. A disposition that lands with no way back is the
+	// bug this whole surface is built around not having.
+	test('a disposition offers an undo that puts the thread back', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto(`/staff/inbox/${SEED_NEEDS_REPLY_THREAD_ID}`);
+
+		await page.getByRole('button', { name: /^Resolve/ }).click();
+		await expect(page.getByRole('button', { name: 'Reopen' })).toBeVisible();
+
+		await page.getByRole('button', { name: 'Undo' }).click();
+
+		// Back to open: the reopen slot is gone and the four exits are offered
+		// again.
+		await expect(page.getByRole('button', { name: 'Reopen' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: /^Resolve/ })).toBeVisible();
 	});
 });

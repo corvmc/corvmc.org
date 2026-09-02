@@ -91,7 +91,9 @@ import {
 	inboxMessage,
 	inboxNote,
 	inboxChannelConfig,
-	inboxParticipant
+	inboxParticipant,
+	inboxSavedView,
+	inboxThreadTag
 } from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
 import { userBlock } from '../src/lib/server/db/schema/moderation';
@@ -4238,6 +4240,7 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				// drops out of the nav badge. Matches the outbound message below.
 				awaitingReplySince: new Date(now.getTime() - 2 * hour),
 				lastMessageAt: new Date(now.getTime() - 2 * hour),
+				lastOutboundAt: new Date(now.getTime() - 2 * hour),
 				createdAt: new Date(now.getTime() - day),
 				updatedAt: new Date(now.getTime() - 2 * hour)
 			},
@@ -4266,6 +4269,8 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				contactEmail: 'jordan.lee@gmail.com',
 				messageCount: 3,
 				lastMessageAt: new Date(now.getTime() - 12 * hour),
+				// We answered and he came back: openReason() reads "Replied".
+				lastOutboundAt: new Date(now.getTime() - day),
 				createdAt: new Date(now.getTime() - 2 * day),
 				updatedAt: new Date(now.getTime() - 12 * hour)
 			},
@@ -4312,6 +4317,7 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				// /member/messages is what clears it.
 				awaitingReplySince: new Date(now.getTime() - 4 * hour),
 				lastMessageAt: new Date(now.getTime() - 4 * hour),
+				lastOutboundAt: new Date(now.getTime() - 4 * hour),
 				createdAt: new Date(now.getTime() - day),
 				updatedAt: new Date(now.getTime() - 4 * hour)
 			},
@@ -4325,8 +4331,47 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				contactEmail: memberUser.email,
 				messageCount: 2,
 				lastMessageAt: new Date(now.getTime() - 6 * day),
+				lastOutboundAt: new Date(now.getTime() - 6 * day),
 				createdAt: new Date(now.getTime() - 7 * day),
 				updatedAt: new Date(now.getTime() - 6 * day)
+			},
+
+			// The last two open reasons, which nothing above produced. Kept at the
+			// end because the participant rows below index into this array.
+			{
+				// Snoozed, the date came and went, and `wakeSnoozedThreads` flipped
+				// it back to open leaving the date behind — which is the only thing
+				// that makes openReason() say "Snooze expired" rather than
+				// "Unanswered". Nothing has arrived since, or the newer story wins.
+				id: randomUUID(),
+				channel: 'web' as const,
+				status: 'open' as const,
+				subject: 'Practice Space',
+				preview: 'Does the monthly rate include weekend access?',
+				contactName: 'Priya Nadkarni',
+				contactEmail: 'priya.nadkarni@example.com',
+				messageCount: 1,
+				snoozedUntil: new Date(now.getTime() - 2 * day),
+				lastMessageAt: new Date(now.getTime() - 5 * day),
+				createdAt: new Date(now.getTime() - 5 * day),
+				updatedAt: new Date(now.getTime() - 2 * day)
+			},
+			{
+				// The oldest thing in the queue, and the reason the Open view sorts
+				// by longest waiting rather than newest first: at nine days it would
+				// otherwise sit below everything and never be seen again.
+				id: randomUUID(),
+				channel: 'web' as const,
+				status: 'open' as const,
+				subject: 'Practice Space',
+				preview:
+					'Hi Devon, nice to hear from you! I JUST moved to the neighborhood and need somewhere to practice a few evenings a week.',
+				contactName: 'Sarah Mbeki',
+				contactEmail: 'sarah.mbeki@example.com',
+				messageCount: 1,
+				lastMessageAt: new Date(now.getTime() - 9 * day),
+				createdAt: new Date(now.getTime() - 9 * day),
+				updatedAt: new Date(now.getTime() - 9 * day)
 			}
 		],
 		4
@@ -4501,6 +4546,26 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				authorName: adminUser.name,
 				authorUserId: adminUser.id,
 				createdAt: new Date(now.getTime() - 6 * day)
+			},
+
+			// Thread 8: snoozed, woken by the cron, still unanswered.
+			{
+				id: randomUUID(),
+				threadId: threads[7].id,
+				direction: 'inbound' as const,
+				body: 'Does the monthly rate include weekend access? And is there a discount if two of us split a block?',
+				authorName: 'Priya Nadkarni',
+				createdAt: new Date(now.getTime() - 5 * day)
+			},
+
+			// Thread 9: the oldest unanswered thread in the queue.
+			{
+				id: randomUUID(),
+				threadId: threads[8].id,
+				direction: 'inbound' as const,
+				body: 'Hi Devon, nice to hear from you! I JUST moved to the neighborhood and need somewhere to practice a few evenings a week. What does a monthly block run?',
+				authorName: 'Sarah Mbeki',
+				createdAt: new Date(now.getTime() - 9 * day)
 			}
 		],
 		8
@@ -4516,6 +4581,34 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				authorUserId: adminUser.id,
 				body: 'Ordered replacement mic stand from Sweetwater — should arrive Thursday.',
 				createdAt: new Date(now.getTime() - 18 * hour)
+			}
+		],
+		1
+	);
+
+	// Tags on the two threads whose details strip is worth opening. Distinct from
+	// the inquiry type: this is what staff decided the thread is, after reading.
+	await batchInsert(
+		inboxThreadTag,
+		[
+			{ id: randomUUID(), threadId: threads[8].id, tag: 'band' },
+			{ id: randomUUID(), threadId: threads[8].id, tag: 'weeknights' },
+			{ id: randomUUID(), threadId: threads[2].id, tag: 'maintenance' }
+		],
+		3
+	);
+
+	// One saved view, so the tab row under the system views is not empty on a
+	// fresh database and the shape of a stored filter set is visible.
+	await batchInsert(
+		inboxSavedView,
+		[
+			{
+				id: randomUUID(),
+				userId: adminUser.id,
+				name: 'Practice space, unanswered',
+				filters: { view: 'open', subject: 'Practice Space' },
+				createdAt: new Date(now.getTime() - day)
 			}
 		],
 		1

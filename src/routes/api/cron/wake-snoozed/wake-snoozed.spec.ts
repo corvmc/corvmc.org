@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockWake = vi.fn();
+const mockNudge = vi.fn();
 vi.mock('$lib/server/inbox/thread-service', () => ({
-	wakeSnoozedThreads: (...args: unknown[]) => mockWake(...args)
+	wakeSnoozedThreads: (...args: unknown[]) => mockWake(...args),
+	nudgeStaleAwaiting: (...args: unknown[]) => mockNudge(...args)
 }));
 
 vi.mock('$env/dynamic/private', () => ({
@@ -18,6 +20,8 @@ function post(auth?: string) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	mockWake.mockResolvedValue({ woken: 0 });
+	mockNudge.mockResolvedValue({ nudged: 0 });
 });
 
 // ---------------------------------------------------------------------------
@@ -41,12 +45,22 @@ describe('POST /api/cron/wake-snoozed', () => {
 		expect(mockWake).not.toHaveBeenCalled();
 	});
 
-	it('returns the number of threads returned to the queue', async () => {
+	// Two ways out of the queue on a timer, one job. A run that woke snoozes but
+	// skipped the nudge would leave "Send + wait for reply" as a way of losing a
+	// conversation permanently.
+	it('returns the number of threads returned to the queue, from both halves', async () => {
 		mockWake.mockResolvedValue({ woken: 3 });
+		mockNudge.mockResolvedValue({ nudged: 2 });
 
 		const response = await POST({ request: post('Bearer test-secret') } as never);
 
-		expect(await response.json()).toEqual({ woken: 3 });
+		expect(await response.json()).toEqual({ woken: 3, nudged: 2 });
 		expect(mockWake).toHaveBeenCalledTimes(1);
+		expect(mockNudge).toHaveBeenCalledTimes(1);
+	});
+
+	it('rejects an unauthorised request before either half runs', async () => {
+		await expect(POST({ request: post('Bearer nope') } as never)).rejects.toThrow();
+		expect(mockNudge).not.toHaveBeenCalled();
 	});
 });

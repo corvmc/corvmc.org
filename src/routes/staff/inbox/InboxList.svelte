@@ -1,77 +1,67 @@
 <script lang="ts">
-	import InboxStatusTabs from './InboxStatusTabs.svelte';
+	import InboxViews from './InboxViews.svelte';
 	import InboxChannelOptions from './InboxChannelOptions.svelte';
-	import InboxStaffOptions from './InboxStaffOptions.svelte';
 	/**
-	 * The staff queue: status tabs, filters, and the list of conversations.
+	 * The staff queue: view tabs, search, and the list of conversations.
 	 *
 	 * Lifted out of `+page.svelte` into the layout so it survives opening a
 	 * thread. Every `/staff/inbox/[id]` URL still resolves — those are deep-linked
 	 * from notification emails, the in-app bell and the staff user record.
+	 *
+	 * The filters themselves live in `filters.svelte.ts`, shared with the panel
+	 * that edits them: that panel renders in the *other* pane, so the two are
+	 * siblings rather than parent and child.
 	 */
+	import { untrack } from 'svelte';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
+	import { IconFilter, IconX } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
 	import { relativeDay } from '$lib/utils/format';
-	import { inboxChannels } from '$lib/config';
 	import { getInboxThreads } from '$lib/remote/inbox.remote';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
-	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
+	import {
+		openReason,
+		threadDisplayStatus,
+		waitingDays
+	} from '$lib/components/inbox/thread-status';
+	import { queueVersion } from '$lib/components/inbox/queue.svelte';
+	import {
+		filters,
+		filterPanel,
+		seedFromUrl,
+		toSearch,
+		toQuery,
+		activeCount,
+		reset
+	} from './filters.svelte';
 
-	type StatusView = 'open' | 'snoozed' | 'resolved' | 'all';
-	const statusViews: StatusView[] = ['open', 'snoozed', 'resolved', 'all'];
+	// Seeded once, from the URL this component mounted on. Re-seeding on every
+	// navigation would fight the mirror below: opening a thread carries the query
+	// string along, and re-reading it is a no-op at best and a race at worst.
+	seedFromUrl(page.url.searchParams);
 
-	// Filter state is seeded from the query string and mirrored back into it, so
-	// opening a thread and pressing back lands on the same filtered view instead
-	// of page 1 of the default one. The state is local rather than read back out
-	// of `page.url` so a filter change re-renders immediately instead of waiting
-	// on the navigation that mirrors it.
-	//
-	// The mirror replaces the history entry rather than pushing one: tweaking a
-	// filter should not sit between the list and the thread you open from it.
-	const initial = page.url.searchParams;
-	const parseStatus = (raw: string | null): StatusView =>
-		statusViews.includes(raw as StatusView) ? (raw as StatusView) : 'open';
+	let searchText = $state(filters.search);
 
-	let statusView = $state(parseStatus(initial.get('status')));
-	let channelFilter = $state(initial.get('channel') ?? '');
-	let assignedFilter = $state(initial.get('assigned') ?? '');
-	// '' | 'yes' (waiting on them) | 'no' (waiting on us).
-	let waitingFilter = $state(initial.get('waiting') ?? '');
-	// `searchText` (not `search`): FilterBar's always-visible slot is a snippet
-	// named `search`, and a snippet shadows a same-named script binding.
-	let searchText = $state(initial.get('q') ?? '');
-	let searchQuery = $state(initial.get('q') ?? '');
-	let pageNumber = $state(Number(initial.get('page') ?? '1') || 1);
-
-	// Writes the URL, never state — the filters above stay the source of truth.
+	// Writes the URL, never state — the filters stay the source of truth.
 	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
 	// rewrites the address bar, and the router then overwrites that entry with
 	// its own record on the next navigation, so back from a thread landed on the
 	// unfiltered list.
 	//
 	// Mirrored onto the CURRENT pathname, not a hard-coded `/staff/inbox`. This
-	// component now lives in the layout, so it keeps running while a thread is
-	// open — pinned to the index path it would `goto` straight back to the list
-	// the moment you opened anything. Carrying the query onto the thread URL is
-	// also what makes back return to the same filtered view.
+	// component lives in the layout, so it keeps running while a thread is open —
+	// pinned to the index path it would `goto` straight back to the list the
+	// moment you opened anything. Carrying the query onto the thread URL is also
+	// what makes back return to the same filtered view.
 	$effect(() => {
-		// Pairs rather than URLSearchParams: the lint rule bans mutable instances of
-		// it, and defaults are simply left out so a clean view has a clean URL.
-		const pairs: [string, string][] = [];
-		if (statusView !== 'open') pairs.push(['status', statusView]);
-		if (channelFilter) pairs.push(['channel', channelFilter]);
-		if (assignedFilter) pairs.push(['assigned', assignedFilter]);
-		if (waitingFilter) pairs.push(['waiting', waitingFilter]);
-		if (searchQuery) pairs.push(['q', searchQuery]);
-		if (pageNumber > 1) pairs.push(['page', String(pageNumber)]);
-
-		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+		const search = toSearch();
 		const href = `${page.url.pathname}${search ? `?${search}` : ''}`;
 		if (page.url.pathname + page.url.search !== href) {
 			// Already a real pathname off `page.url`, so there is nothing to resolve.
@@ -79,107 +69,93 @@
 		}
 	});
 
-	let filters = $derived({
-		search: searchQuery || undefined,
-		status: statusView === 'all' ? undefined : statusView,
-		channel: (channelFilter || undefined) as (typeof inboxChannels)[number] | undefined,
-		assigned: assignedFilter || undefined,
-		awaiting: (waitingFilter || undefined) as 'yes' | 'no' | undefined,
-		page: pageNumber
-	});
+	// The component's one query. The filter controls each own theirs — none of
+	// them is keyed by these filters, and each has mutations that refresh it by
+	// name.
+	const result = $derived(getInboxThreads(toQuery()));
 
-	// The component's one query. The three filter controls each own theirs — none of them is
-	// keyed by these filters, and all three have mutations that refresh them by name.
-	const result = $derived(getInboxThreads(filters));
+	// Disposing of a thread from the pane beside this one moves it between views,
+	// and no mutation can name this instance to refresh it — see queue.svelte.ts.
+	// `untrack` because the derived above already refetches on a filter change;
+	// reading the filters here as a dependency would fire a second request.
+	$effect(() => {
+		if (queueVersion() === 0) return;
+		untrack(() => void getInboxThreads(toQuery()).refresh());
+	});
 
 	const openId = $derived(page.params.id);
 
-	// The status view is a view, not a filter — it always has a value, so counting
-	// it would leave "Clear" permanently offered.
-	const activeFilterCount = $derived(
-		(searchQuery ? 1 : 0) +
-			(channelFilter ? 1 : 0) +
-			(assignedFilter ? 1 : 0) +
-			(waitingFilter ? 1 : 0)
+	// Mirrors the views listThreads sorts by `waitingSince`. Saying "6 days"
+	// beside a row whose order came from `lastMessageAt` would be two different
+	// clocks in one line.
+	const sortedByWaiting = $derived(
+		filters.view === 'open' || filters.view === 'awaiting' || filters.view === 'snoozed'
 	);
 
-	function clearFilters() {
-		searchText = '';
-		searchQuery = '';
-		channelFilter = '';
-		assignedFilter = '';
-		waitingFilter = '';
-		pageNumber = 1;
-	}
+	const formatWait = (days: number) => (days === 0 ? 'today' : `${days}d`);
 </script>
 
 <div class="flex min-h-0 flex-col gap-3">
-	<h1 class="text-xl font-bold">Inbox</h1>
-
-	<InboxStatusTabs
-		bind:view={statusView}
+	<InboxViews
+		bind:view={filters.view}
 		onchange={() => {
-			pageNumber = 1;
+			filters.page = 1;
 		}}
 	/>
 
-	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
-		{#snippet search()}
+	<div class="flex flex-wrap items-center gap-2">
+		<div class="min-w-40 flex-1">
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search..."
+				placeholder="Search conversations…"
 				onsearch={(q) => {
-					searchQuery = q;
-					pageNumber = 1;
+					filters.search = q;
+					filters.page = 1;
 				}}
 			/>
-		{/snippet}
+		</div>
+		<!-- The channel filter stays inline: it is the one facet that answers
+		     "where did this come from", which is a different question from the
+		     panel's "what am I working on". -->
 		<Select
 			size="sm"
 			aria-label="Channel"
-			value={channelFilter}
+			value={filters.channel}
 			onchange={(e: Event) => {
-				channelFilter = (e.currentTarget as HTMLSelectElement).value;
-				pageNumber = 1;
+				filters.channel = (e.currentTarget as HTMLSelectElement).value;
+				filters.page = 1;
 			}}
 		>
-			<InboxChannelOptions current={channelFilter} />
+			<InboxChannelOptions current={filters.channel} />
 		</Select>
-		<Select
+		<Button
+			variant={filterPanel.open ? 'primary' : 'default'}
 			size="sm"
-			aria-label="Assigned to"
-			value={assignedFilter}
-			onchange={(e: Event) => {
-				assignedFilter = (e.currentTarget as HTMLSelectElement).value;
-				pageNumber = 1;
-			}}
+			onclick={() => (filterPanel.open = !filterPanel.open)}
 		>
-			<InboxStaffOptions />
-		</Select>
-		<!-- Which side the ball is on. Awaiting threads stay in the Open tab, so
-		     this is how staff narrow it down to what they still owe an answer. -->
-		<Select
-			size="sm"
-			aria-label="Waiting on"
-			value={waitingFilter}
-			onchange={(e: Event) => {
-				waitingFilter = (e.currentTarget as HTMLSelectElement).value;
-				pageNumber = 1;
-			}}
-		>
-			<option value="">Waiting on anyone</option>
-			<option value="no">Needs a reply</option>
-			<option value="yes">Awaiting their reply</option>
-		</Select>
-	</FilterBar>
+			<IconFilter size={16} /> Filters
+			{#if activeCount()}<Badge class="ml-1">{activeCount()}</Badge>{/if}
+		</Button>
+		{#if activeCount()}
+			<Button variant="ghost" size="sm" onclick={reset} aria-label="Clear filters">
+				<IconX size={16} />
+			</Button>
+		{/if}
+	</div>
+
+	{#if sortedByWaiting}
+		<!-- The order is not obvious from the rows, and an unexplained order reads
+		     as an arbitrary one. -->
+		<p class="text-subtle text-xs">Sorted by longest waiting</p>
+	{/if}
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		<DataList
 			{result}
-			empty={statusView === 'open'
+			empty={filters.view === 'open'
 				? 'Nothing open — the queue is clear.'
 				: 'No conversations found'}
-			onpage={(p) => (pageNumber = p)}
+			onpage={(p) => (filters.page = p)}
 		>
 			{#snippet children(threads)}
 				<ul class="flex flex-col gap-1">
@@ -188,6 +164,7 @@
 						{@const Icon = channelIcon(t.channel)}
 						{@const active = t.id === openId}
 						{@const who = t.contactName ?? t.contactEmail ?? t.contactPhone ?? null}
+						{@const reason = openReason(t)}
 						<li>
 							<a
 								{href}
@@ -210,9 +187,17 @@
 										<span class="truncate font-medium">
 											{who ?? t.subject ?? channelLabel(t.channel)}
 										</span>
-										<!-- `label`: "Awaiting reply" is the whole point of the marker,
-										     and an icon-only badge would say nothing. -->
-										<StatusBadge status={threadDisplayStatus(t)} label />
+										<!-- `label` throughout: every one of these badges is the reason
+										     the row is in front of you, and an icon-only badge says
+										     nothing. On the Open view that reason is *why* it is open
+										     (never answered, they replied, the snooze ran out); on the
+										     others it is the status itself, which the tab does not
+										     repeat once you have filtered or searched across views. -->
+										{#if reason}
+											<StatusBadge status={reason} label />
+										{:else}
+											<StatusBadge status={threadDisplayStatus(t)} label />
+										{/if}
 									</span>
 
 									{#if t.subject && who}
@@ -224,6 +209,7 @@
 
 									<span class="text-subtle text-xs">
 										{t.lastMessageAt ? relativeDay(t.lastMessageAt) : '—'}
+										{#if sortedByWaiting}· {formatWait(waitingDays(t))}{/if}
 										{#if t.assignedToName}· {t.assignedToName}{/if}
 									</span>
 								</span>

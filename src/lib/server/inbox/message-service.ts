@@ -216,6 +216,9 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 			preview: truncatePreview(params.body),
 			messageCount: sql`${inboxThread.messageCount} + 1`,
 			lastMessageAt: new Date(),
+			// Only ever set here. A thread with this null has never been answered,
+			// which is how the queue tells "unanswered" from "they replied".
+			lastOutboundAt: new Date(),
 			// We have said our piece, so the thread is now waiting on them. Read off
 			// the row already selected above rather than a second query. A reply sent
 			// after resolving leaves no marker — the badge only means something on a
