@@ -15,7 +15,8 @@ import {
 	getUnresolvedCount,
 	countThreadsByStatus,
 	listThreadsByContactEmail,
-	undoLastDisposition
+	undoLastDisposition,
+	countThreadFacets
 } from '$lib/server/inbox/thread-service';
 import type { ListThreadsFilters } from '$lib/server/inbox/thread-service';
 import {
@@ -24,6 +25,12 @@ import {
 	updateChannelConfig as updateChannelConfigSvc
 } from '$lib/server/inbox/channel-config-service';
 import { addOutboundMessage, addNote } from '$lib/server/inbox/message-service';
+import {
+	listSavedViews,
+	createSavedView,
+	deleteSavedView
+} from '$lib/server/inbox/saved-view-service';
+import { jsonObjectField } from '$lib/utils/zod-json';
 import {
 	listPortalThreads,
 	countOpenPortalThreads,
@@ -82,13 +89,39 @@ const threadFiltersSchema = z.object({
 	assigned: z.string().optional(),
 	/** Narrows *within* a view. The view already sets this on Open and Awaiting. */
 	awaiting: z.enum(['yes', 'no']).optional(),
+	/** A `contactSubjects` value, or `other` for everything outside it. */
+	subject: z.string().optional(),
+	/** The range control. 0 means the control is at its floor — no filter. */
+	waitingDays: z.coerce.number().int().min(0).max(90).optional(),
 	search: z.string().optional(),
 	page: z.coerce.number().int().min(1).optional()
 });
 
-export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
-	const staff = await requireStaff();
+type ThreadFilters = z.infer<typeof threadFiltersSchema>;
 
+/**
+ * What a saved view is allowed to remember. The same keys the URL carries, so
+ * saving a view and bookmarking the page are the same act — and a filter added
+ * later is one line here rather than a migration.
+ */
+const savedViewFiltersSchema = z.object({
+	view: z.enum(inboxViews).optional(),
+	channel: z.enum(inboxChannels).optional(),
+	assigned: z.string().max(64).optional(),
+	subject: z.string().max(64).optional(),
+	waitingDays: z.number().int().min(0).max(90).optional(),
+	q: z.string().max(200).optional()
+});
+
+/**
+ * The wire filters as the service understands them.
+ *
+ * Shared by the list and the facet counts so the numbers beside an option and
+ * the rows behind it can never be answering different questions. `staffId`
+ * resolves the `mine` sentinel, which is the one filter whose meaning depends
+ * on who is asking.
+ */
+function toServiceFilters(filters: ThreadFilters, staffId: string): ListThreadsFilters {
 	// `undefined` leaves the filter off entirely; `null` is the IS NULL branch in
 	// listThreads, so the two cannot be collapsed.
 	const assignedToUserId =
@@ -97,29 +130,49 @@ export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
 			: filters.assigned === 'unassigned'
 				? null
 				: filters.assigned === 'mine'
-					? staff.id
+					? staffId
 					: filters.assigned;
 
 	const view = VIEWS[filters.view ?? 'open'];
 
-	return listThreads(
-		{
-			...view,
-			channel: filters.channel,
-			assignedToUserId,
-			// An explicit `awaiting` narrows the view rather than fighting it: on
-			// Open and Awaiting the view has already decided, and the filter panel
-			// only offers this on the views that have not.
-			awaitingReply:
-				filters.awaiting === undefined
-					? 'awaitingReply' in view
-						? view.awaitingReply
-						: undefined
-					: filters.awaiting === 'yes',
-			search: filters.search
-		},
-		{ page: filters.page ?? 1, pageSize: 25 }
-	);
+	return {
+		...view,
+		channel: filters.channel,
+		assignedToUserId,
+		subject: filters.subject,
+		// Zero is the range control resting at its floor, which is not a filter.
+		waitingAtLeastDays: filters.waitingDays ? filters.waitingDays : undefined,
+		// An explicit `awaiting` narrows the view rather than fighting it: on
+		// Open and Awaiting the view has already decided, and the filter panel
+		// only offers this on the views that have not.
+		awaitingReply:
+			filters.awaiting === undefined
+				? 'awaitingReply' in view
+					? view.awaitingReply
+					: undefined
+				: filters.awaiting === 'yes',
+		search: filters.search
+	};
+}
+
+export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
+	const staff = await requireStaff();
+	return listThreads(toServiceFilters(filters, staff.id), {
+		page: filters.page ?? 1,
+		pageSize: 25
+	});
+});
+
+/**
+ * What each filter option would leave on screen.
+ *
+ * The panel's own query, awaited where the panel is rendered rather than in the
+ * page: the queue paints without it, and it is keyed by the same filters the
+ * list is — see `custom/no-concurrent-remote-queries`.
+ */
+export const getInboxFilterCounts = query(threadFiltersSchema, async (filters) => {
+	const staff = await requireStaff();
+	return countThreadFacets(toServiceFilters(filters, staff.id));
 });
 
 export const getInboxThreadCounts = query(z.void(), async () => {
@@ -316,6 +369,41 @@ export const undoThreadDisposition = command(z.string().min(1), async (threadId)
 	// counts open threads, so restoring one has to recount it.
 	void getStaffLayout().refresh();
 	return { undone: true };
+});
+
+// ---------------------------------------------------------------------------
+// Saved views
+// ---------------------------------------------------------------------------
+// A filter combination somebody wants back tomorrow, rendered as an extra tab.
+// Every one of these is scoped to the caller by the service, which constrains
+// on the owner id rather than trusting the view id to belong to whoever sent it.
+
+export const getInboxSavedViews = query(z.void(), async () => {
+	const staff = await requireStaff();
+	return listSavedViews(staff.id);
+});
+
+const savedViewSchema = z.object({
+	name: z.string().trim().min(1).max(60),
+	/**
+	 * The filters, as the same JSON the URL carries. `jsonObjectField` rather
+	 * than a `.transform()`: a `JSON.parse` throw inside a transform escapes
+	 * validation as a 500, and this arrives from a form field.
+	 */
+	filters: jsonObjectField().pipe(savedViewFiltersSchema)
+});
+
+export const saveInboxView = form(savedViewSchema, async (data) => {
+	const staff = await requireStaff();
+	await createSavedView(staff.id, data.name, data.filters);
+	void getInboxSavedViews().refresh();
+	return { success: true };
+});
+
+export const removeInboxView = command(z.string().min(1), async (id) => {
+	const staff = await requireStaff();
+	await deleteSavedView(staff.id, id);
+	void getInboxSavedViews().refresh();
 });
 
 // ---------------------------------------------------------------------------

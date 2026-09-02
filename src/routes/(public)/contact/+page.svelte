@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { pageTitle, EVENT_TIP_SUBJECT } from '$lib/config';
+	import { pageTitle, EVENT_TIP_SUBJECT, contactSubjects } from '$lib/config';
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import { resolve } from '$app/paths';
@@ -26,16 +26,10 @@
 	let submitted = $state(false);
 	let resetTurnstile = $state<() => void>();
 
-	const subjects = [
-		'General Inquiry',
-		'Membership Questions',
-		'Practice Space',
-		'Performance Inquiry',
-		EVENT_TIP_SUBJECT,
-		'Volunteer Opportunities',
-		'Donations'
-	];
-	const subjectOptions = subjects.map((s) => ({ value: s, label: s }));
+	// The list lives in `$lib/config` because the staff inbox filters on it: what
+	// someone picks here is written to `inbox_thread.subject`, and that column is
+	// the queue's inquiry-type facet.
+	const subjectOptions = contactSubjects.map((s) => ({ value: s, label: s }));
 
 	// Anyone can tip us off about a show without an account. The extra fields are
 	// optional and free-text: a tip is a lead for a staffer to chase, not a

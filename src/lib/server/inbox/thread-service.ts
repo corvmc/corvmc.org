@@ -20,6 +20,7 @@ import {
 	isNull,
 	isNotNull,
 	lte,
+	notInArray,
 	sql
 } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
@@ -27,7 +28,7 @@ import type { InboxChannel, InboxThreadStatus } from '$lib/server/db/schema/inbo
 import type { PaginationInput } from '$lib/server/db/paginate';
 import { paginate } from '$lib/server/db/paginate';
 import { z } from 'zod';
-import { inboxThreadStatuses } from '$lib/config';
+import { contactSubjects, inboxThreadStatuses } from '$lib/config';
 
 /**
  * The one expression that keeps private member↔member conversations out of
@@ -188,6 +189,14 @@ export interface ListThreadsFilters {
 	awaitingReply?: boolean;
 	search?: string;
 	/**
+	 * An inquiry type from `contactSubjects`, or the sentinel `other` for a
+	 * thread whose subject is free text or absent — email and SMS threads, which
+	 * never went through the contact form.
+	 */
+	subject?: string;
+	/** Only threads that have been waiting at least this many days. */
+	waitingAtLeastDays?: number;
+	/**
 	 * `waiting` puts whoever has been waiting longest at the top — the order the
 	 * queue is meant to be worked in. `recent` is the old newest-first order,
 	 * which is what Resolved and All want: nobody is waiting on those.
@@ -196,34 +205,54 @@ export interface ListThreadsFilters {
 }
 
 /**
- * The staff queue. Every channel here is the org talking to the outside world,
- * so there is deliberately no ownership filter.
+ * Every filter the queue understands, as one predicate.
  *
  * This is the single enforcement point for thread visibility: if a channel is
  * ever added whose threads are private to their participants (member-to-member
  * messages), its exclusion belongs in `conditions` below, alongside whatever
  * escalates a reported thread back into the queue.
+ *
+ * Shared with `countThreadFacets`, which has to count the same rows the list
+ * shows or the number beside an option is a promise the list does not keep.
+ * `omit` drops one facet so a group can count its own options against
+ * everything *else* that is selected — a status count computed with the status
+ * filter still applied would only ever report the selected one.
  */
-export async function listThreads(filters: ListThreadsFilters, pagination: PaginationInput) {
+function threadConditions(
+	filters: ListThreadsFilters,
+	omit?: 'status' | 'subject' | 'assignee'
+): SQL | undefined {
 	// Unconditional, and first: behind an `if` it would be one refactor away from
 	// only applying when some filter happens to be set.
 	const conditions: (SQL | undefined)[] = [staffVisibleThread];
 
-	if (filters.status) conditions.push(eq(inboxThread.status, filters.status));
+	if (filters.status && omit !== 'status') conditions.push(eq(inboxThread.status, filters.status));
 	if (filters.channel) conditions.push(eq(inboxThread.channel, filters.channel));
-	if (filters.assignedToUserId !== undefined) {
+	if (filters.assignedToUserId !== undefined && omit !== 'assignee') {
 		if (filters.assignedToUserId === null) {
 			conditions.push(sql`${inboxThread.assignedToUserId} IS NULL`);
 		} else {
 			conditions.push(eq(inboxThread.assignedToUserId, filters.assignedToUserId));
 		}
 	}
-	if (filters.awaitingReply !== undefined) {
+	if (filters.awaitingReply !== undefined && omit !== 'status') {
 		conditions.push(
 			filters.awaitingReply
 				? isNotNull(inboxThread.awaitingReplySince)
 				: isNull(inboxThread.awaitingReplySince)
 		);
+	}
+	if (filters.subject && omit !== 'subject') {
+		conditions.push(
+			filters.subject === 'other'
+				? or(isNull(inboxThread.subject), notInArray(inboxThread.subject, [...contactSubjects]))
+				: eq(inboxThread.subject, filters.subject)
+		);
+	}
+	if (filters.waitingAtLeastDays !== undefined) {
+		// Against the same expression the list is ordered by, so "waiting longer
+		// than 3 days" hides exactly the rows below the 3d mark in the chip.
+		conditions.push(lte(waitingSince, sql`unixepoch() - ${filters.waitingAtLeastDays * 86_400}`));
 	}
 	if (filters.search) {
 		const pattern = `%${filters.search}%`;
@@ -237,7 +266,15 @@ export async function listThreads(filters: ListThreadsFilters, pagination: Pagin
 		);
 	}
 
-	const where = and(...conditions);
+	return and(...conditions);
+}
+
+/**
+ * The staff queue. Every channel here is the org talking to the outside world,
+ * so there is deliberately no ownership filter.
+ */
+export async function listThreads(filters: ListThreadsFilters, pagination: PaginationInput) {
+	const where = threadConditions(filters);
 
 	const dataQuery = db
 		.select({
@@ -549,6 +586,70 @@ export async function wakeSnoozedThreads(now: Date = new Date()): Promise<{ woke
 	await db.update(inboxThread).set({ status: 'open', updatedAt: now }).where(due);
 
 	return { woken: rows.length };
+}
+
+/**
+ * What each filter option would leave on screen, counted under everything else
+ * that is currently selected.
+ *
+ * The panel updates live and has no Apply step, so a count here is a promise:
+ * pick this and you will see that many. Each group is therefore counted with
+ * its *own* facet dropped — a status count computed with the status filter
+ * still applied could only ever report the option already chosen.
+ *
+ * Four queries rather than one. They are counts over an indexed table on the
+ * server, and the alternative — a single grouped query — cannot express
+ * "everything else but this facet" for more than one facet at a time.
+ */
+export type ThreadFacetCounts = {
+	/** Rows the current filters leave. */
+	matching: number;
+	/** Rows the *view* holds, ignoring every filter. The "N of M shown" line. */
+	total: number;
+	status: ThreadStatusCounts;
+	/** Keyed by `contactSubjects` value, plus `other`. */
+	subject: Record<string, number>;
+};
+
+export async function countThreadFacets(filters: ListThreadsFilters): Promise<ThreadFacetCounts> {
+	const [matching, total, statusRows, subjectRows] = await Promise.all([
+		db.select({ count: count() }).from(inboxThread).where(threadConditions(filters)),
+		db.select({ count: count() }).from(inboxThread).where(staffVisibleThread),
+		db
+			.select({
+				status: inboxThread.status,
+				awaiting: sql<number>`(${inboxThread.awaitingReplySince} is not null)`,
+				count: count()
+			})
+			.from(inboxThread)
+			.where(threadConditions(filters, 'status'))
+			.groupBy(inboxThread.status, sql`(${inboxThread.awaitingReplySince} is not null)`),
+		db
+			.select({ subject: inboxThread.subject, count: count() })
+			.from(inboxThread)
+			.where(threadConditions(filters, 'subject'))
+			.groupBy(inboxThread.subject)
+	]);
+
+	const status: ThreadStatusCounts = { open: 0, awaiting: 0, snoozed: 0, resolved: 0, all: 0 };
+	for (const row of statusRows) {
+		if (row.status === 'open') status[row.awaiting ? 'awaiting' : 'open'] += row.count;
+		else status[row.status] += row.count;
+		status.all += row.count;
+	}
+
+	// Anything not in the contact form's vocabulary is one bucket. Email and SMS
+	// threads carry a free-text subject or none, and listing each distinct one
+	// would turn a facet into a list of individual conversations.
+	const known = new Set<string>(contactSubjects);
+	const subject: Record<string, number> = { other: 0 };
+	for (const s of contactSubjects) subject[s] = 0;
+	for (const row of subjectRows) {
+		if (row.subject && known.has(row.subject)) subject[row.subject] += row.count;
+		else subject.other += row.count;
+	}
+
+	return { matching: matching[0]?.count ?? 0, total: total[0]?.count ?? 0, status, subject };
 }
 
 /** How long a thread waits on a contact before it comes back to us anyway. */

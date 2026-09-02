@@ -439,6 +439,28 @@ export const inboxChannels = [
  * browser bundle.
  */
 export const EVENT_TIP_SUBJECT = 'Event Tip';
+
+/**
+ * What the contact form lets someone say they are writing about.
+ *
+ * Also the inbox's "inquiry type" filter, which is why it lives here rather
+ * than in the contact page that renders it: a fixed vocabulary written into
+ * `inbox_thread.subject` is a filter facet already, and a second column
+ * duplicating it would only have to be kept in step with this list.
+ *
+ * Threads that arrive by email or SMS carry a free-text subject or none at
+ * all, and fall into the filter's "Other" bucket rather than being forced into
+ * one of these.
+ */
+export const contactSubjects = [
+	'General Inquiry',
+	'Membership Questions',
+	'Practice Space',
+	'Performance Inquiry',
+	EVENT_TIP_SUBJECT,
+	'Volunteer Opportunities',
+	'Donations'
+] as const;
 export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
 /**
  * The five views the staff queue offers, in tab order.

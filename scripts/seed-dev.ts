@@ -91,7 +91,8 @@ import {
 	inboxMessage,
 	inboxNote,
 	inboxChannelConfig,
-	inboxParticipant
+	inboxParticipant,
+	inboxSavedView
 } from '../src/lib/server/db/schema/inbox';
 import { contentFlag } from '../src/lib/server/db/schema/flag';
 import { userBlock } from '../src/lib/server/db/schema/moderation';
@@ -4579,6 +4580,22 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				authorUserId: adminUser.id,
 				body: 'Ordered replacement mic stand from Sweetwater — should arrive Thursday.',
 				createdAt: new Date(now.getTime() - 18 * hour)
+			}
+		],
+		1
+	);
+
+	// One saved view, so the tab row under the system views is not empty on a
+	// fresh database and the shape of a stored filter set is visible.
+	await batchInsert(
+		inboxSavedView,
+		[
+			{
+				id: randomUUID(),
+				userId: adminUser.id,
+				name: 'Practice space, unanswered',
+				filters: { view: 'open', subject: 'Practice Space' },
+				createdAt: new Date(now.getTime() - day)
 			}
 		],
 		1

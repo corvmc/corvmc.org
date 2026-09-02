@@ -205,6 +205,39 @@ export const inboxParticipant = sqliteTable(
 	]
 );
 
+/**
+ * A filter combination somebody wants back tomorrow.
+ *
+ * Per-user rather than shared: a saved view is how one person works the queue,
+ * and a shared list of them would fill up with everyone else's. The filters are
+ * stored as the same JSON the URL carries, so saving a view and bookmarking the
+ * page are the same act with different ergonomics — and a filter added later
+ * needs no migration here.
+ */
+export const inboxSavedView = sqliteTable(
+	'inbox_saved_view',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		/** `{ view, channel, assigned, subject, waitingDays, q }` — all optional. */
+		filters: text('filters', { mode: 'json' }).notNull().default('{}'),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('idx_inbox_saved_view_user').on(t.userId),
+		// One name per person: a second "Practice space, unanswered" is a rename,
+		// not a new view, and two tabs with the same label are unusable.
+		uniqueIndex('idx_inbox_saved_view_user_name').on(t.userId, t.name)
+	]
+);
+
 export const inboxChannelConfig = sqliteTable('inbox_channel_config', {
 	id: text('id')
 		.primaryKey()
@@ -228,3 +261,4 @@ export type InboxThread = typeof inboxThread.$inferSelect;
 export type InboxMessage = typeof inboxMessage.$inferSelect;
 export type InboxNote = typeof inboxNote.$inferSelect;
 export type InboxParticipant = typeof inboxParticipant.$inferSelect;
+export type InboxSavedView = typeof inboxSavedView.$inferSelect;

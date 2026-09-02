@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * The header line and the five view tabs, which share one query.
+	 * The header line, the five view tabs, and whatever the reader has saved.
 	 *
 	 * `getInboxThreadCounts` is unparameterized and the thread mutations refresh
 	 * it by name, so it cannot live in the list's filter-keyed query — see
@@ -11,6 +11,7 @@
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import InboxHeader from './InboxHeader.svelte';
 	import { getInboxThreadCounts } from '$lib/remote/inbox.remote';
+	import SavedViewTabs from './SavedViewTabs.svelte';
 
 	let { view = $bindable('open'), onchange }: { view?: string; onchange?: (key: string) => void } =
 		$props();
@@ -43,3 +44,8 @@
 		}}
 	/>
 </div>
+
+<!-- Below the system tabs rather than beside them: these belong to one person
+     and the five above do not, and a saved view sets the status tab as part of
+     what it restores. Its own query, so the counts above paint without it. -->
+<SavedViewTabs />
