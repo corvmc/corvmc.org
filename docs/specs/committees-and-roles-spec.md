@@ -378,7 +378,9 @@ consequence.
 
 **As Development**, I want to recruit market vendors, run the application and its deadline, set
 table fees, and know who has paid.
-🆕 Nothing models a vendor.
+🆕 Nothing models a market vendor. `contractor` is deliberately not it — that is somebody the
+collective pays to do work, and this is somebody who pays for a table. Same word, opposite
+direction of money, and a different lifecycle.
 
 **As Development**, I want permits, licenses and insurance to tell me before they expire.
 🆕 No renewal calendar. The nearest built thing is certification expiry, which is derived from
@@ -509,10 +511,12 @@ a code are not modeled.
 
 **As Facility**, I want repairs and maintenance tracked from report to resolution, and a
 cleaning schedule somebody is assigned to.
-🆕 `Venue Maintenance Requests` in [IDEAS.md](../../IDEAS.md), unbuilt. Work parties exist as a
-volunteer role and can be scheduled as shifts, so the labor half is served and the queue half
-is not. Outside contractors are the same gap seen from the other side: nothing records who
-services the building or when they were last in.
+🔧 `Venue Maintenance Requests` in [IDEAS.md](../../IDEAS.md), half built. Work parties exist as a
+volunteer role and can be scheduled as shifts, so the unpaid labor half is served and the queue
+half is not. **Outside contractors are now recorded** — `contractor` and `contractor_job` at
+`/staff/contractors` answer who services the building and when they were last in, for both a unit
+sent out to a tech and work on the building itself. See
+[contractor-work-spec.md](contractor-work-spec.md).
 
 **As Facility**, I want equipment other committees ask for acquired, consumables restocked
 before they run out, and storage organized.
@@ -526,8 +530,10 @@ from the loan rather than stored.
 
 **As Facility**, I want a donated instrument triaged on arrival into library, repair queue, or
 disassembly.
-✅ The acquisition and asset condition path covers the triage. 🔧 The repair queue as a queue —
-assigned to an instrument tech, worked, closed — is not modeled.
+✅ The acquisition and asset condition path covers the triage. 🔧 A repair sent to a _paid_ tech is
+now modeled end to end (`contractor_job`, with the unit leaving and re-entering service through
+the stock ledger). The queue as a queue — reported, triaged, assigned to a volunteer, closed — is
+the work-order half and is not.
 
 **As Facility**, I want fire extinguishers, exits, first aid, posted capacity and emergency
 procedures maintained and current.

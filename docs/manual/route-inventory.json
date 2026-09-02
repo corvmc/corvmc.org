@@ -276,6 +276,22 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/contractors",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/contractors/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/contractors/jobs",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/contractors/jobs/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/credits",
 		"panel": "staff"
 	},
