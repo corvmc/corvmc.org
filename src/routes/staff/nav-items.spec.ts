@@ -51,7 +51,9 @@ describe('activeNavKey', () => {
 		// Not a nav row of its own — it falls back to the section parent.
 		['/staff/volunteer/clearances', 'volunteer'],
 		['/staff/volunteer/people', 'volunteer-people'],
-		['/staff/volunteer/shifts/abc', 'volunteer-shifts'],
+		// Shift detail lost its own row when the catalog folded into Schedule; it
+		// falls back to the section parent like clearances does.
+		['/staff/volunteer/shifts/abc', 'volunteer'],
 		// `/staff/events/[id]` and everything under it is the general view, which
 		// the Calendar row owns — including the production console, which is a
 		// page you navigate to rather than a section of its own.
@@ -111,7 +113,6 @@ describe('the nav tree', () => {
 			'/staff/volunteer/schedule',
 			'/staff/volunteer/hours',
 			'/staff/volunteer/people',
-			'/staff/volunteer/shifts',
 			'/staff/volunteer/roles',
 			'/staff/volunteer/certifications',
 			'/staff/volunteer/report'

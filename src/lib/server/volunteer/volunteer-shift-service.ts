@@ -295,6 +295,11 @@ export interface ShiftWithCounts extends VolunteerShift {
 	 * say so.
 	 */
 	confirmed: number;
+	/**
+	 * People on a called-off shift who still have to be told. Meaningless while
+	 * `cancelledAt` is null — everybody on a live shift is trivially "unnotified".
+	 */
+	unnotified: number;
 }
 
 function withCounts(
@@ -305,6 +310,7 @@ function withCounts(
 		eventTitle: string | null;
 		claimed: number;
 		confirmed: number;
+		unnotified: number;
 	}[]
 ): ShiftWithCounts[] {
 	return rows.map((r) => ({
@@ -313,7 +319,8 @@ function withCounts(
 		roleGroup: r.roleGroup,
 		eventTitle: r.eventTitle,
 		claimed: Number(r.claimed),
-		confirmed: Number(r.confirmed)
+		confirmed: Number(r.confirmed),
+		unnotified: Number(r.unnotified)
 	}));
 }
 
@@ -383,6 +390,17 @@ function shiftRowsQuery() {
 				select count(*) from "volunteer_signup" vs
 				where vs."shift_id" = ${volunteerShift.id}
 					and vs."status" in ('confirmed', 'completed')
+			)`,
+			// Zero on every live shift, and the whole story on a cancelled one:
+			// there the roster is the list of people to ring, and this is what is
+			// left of it. Computed here rather than in a second query because the
+			// schedule needs it per cancelled row and the detail page needs it for
+			// the banner, which is the same number twice.
+			unnotified: sql<number>`(
+				select count(*) from "volunteer_signup" vs
+				where vs."shift_id" = ${volunteerShift.id}
+					and vs."status" <> 'cancelled'
+					and vs."notified_at" is null
 			)`
 		})
 		.from(volunteerShift)
@@ -436,7 +454,13 @@ export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null
 	return withCounts(rows)[0] ?? null;
 }
 
-export interface OpenShift extends ShiftWithCounts {
+/**
+ * `unnotified` is omitted deliberately: it counts people still owed a call about
+ * a shift that was called off, and this query filters cancelled shifts out
+ * before they can be one. Inheriting it would put a subquery on every row of the
+ * member board to answer a question that is structurally zero there.
+ */
+export interface OpenShift extends Omit<ShiftWithCounts, 'unnotified'> {
 	/** This member's own claim, if they have a live one. */
 	myStatus: string | null;
 	mySignupId: string | null;

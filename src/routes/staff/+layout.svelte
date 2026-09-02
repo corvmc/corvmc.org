@@ -35,7 +35,6 @@
 		IconReportAnalytics,
 		IconListDetails,
 		IconCertificate,
-		IconCalendarTime,
 		IconCalendarWeek,
 		IconClockHour4,
 		IconCalendarMonth
@@ -76,7 +75,6 @@
 		'volunteer-schedule': IconCalendarWeek,
 		'volunteer-hours': IconClockHour4,
 		'volunteer-people': IconUsersGroup,
-		'volunteer-shifts': IconCalendarTime,
 		'volunteer-roles': IconListDetails,
 		'volunteer-certifications': IconCertificate,
 		'volunteer-report': IconReportAnalytics,
