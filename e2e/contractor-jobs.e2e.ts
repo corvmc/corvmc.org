@@ -87,24 +87,35 @@ test.describe('contractor jobs', () => {
 		await page.getByRole('button', { name: 'Schedule', exact: true }).click();
 		await modalSubmit(page, /^Schedule$/).click();
 
-		// Polling the status and then reading the movement in the next statement is
-		// only sound because `setAssetStatus` commits both in one `db.batch`. It
-		// wrote them as two awaits once, and this pair of lines raced the gap —
-		// green on main, red in the merge queue.
+		// Poll the movement rather than read it bare. `setAssetStatus` commits the
+		// status row and the ledger row in one `db.batch`, so the window this
+		// polling was written for is closed: there is no longer a moment where the
+		// status reads `maintenance` with no `repair_out` behind it. That gap —
+		// two separate awaits, the status landing first — is what dequeued PR #415
+		// while `main` was green, and the shape is kept because polling the
+		// movement covers the status with it now that the two commit together.
 		await expect
-			.poll(async () => (await assetState()).status, { timeout: 15000 })
-			.toBe('maintenance');
-		expect((await assetState()).movements.filter((m) => m.reason === 'repair_out')).toHaveLength(1);
+			.poll(
+				async () => (await assetState()).movements.filter((m) => m.reason === 'repair_out').length,
+				{ timeout: 15000 }
+			)
+			.toBe(1);
+		expect((await assetState()).status).toBe('maintenance');
 
 		// Complete it: back in service, and the ledger nets out.
 		await page.getByRole('button', { name: 'Complete', exact: true }).click();
 		await modalSubmit(page, /^Complete$/).click();
 
+		// Same shape on the way back: one batch carries the status and `repair_in`.
 		await expect
-			.poll(async () => (await assetState()).status, { timeout: 15000 })
-			.toBe('in_service');
+			.poll(
+				async () => (await assetState()).movements.filter((m) => m.reason === 'repair_in').length,
+				{ timeout: 15000 }
+			)
+			.toBe(1);
 
 		const after = await assetState();
+		expect(after.status).toBe('in_service');
 		expect(after.movements.filter((m) => m.reason === 'repair_out')).toHaveLength(1);
 		expect(after.movements.filter((m) => m.reason === 'repair_in')).toHaveLength(1);
 		// The two cancel: a unit that went out and came back is neither added to
