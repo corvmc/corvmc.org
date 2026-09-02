@@ -10,6 +10,7 @@
  *    hostname (see custom-domain-service.ts).
  */
 import { eq, and, isNull } from 'drizzle-orm';
+import type { GroupKind } from '$lib/config';
 import { db } from '$lib/server/db';
 import { group } from '$lib/server/db/schema/group';
 import { bandSite } from '$lib/server/db/schema/band-site';
@@ -21,6 +22,14 @@ const HOST_CACHE_PREFIX = 'band-host:';
 
 export type BandHost = {
 	slug: string;
+	/**
+	 * What kind of group holds the address. Not every subdomain is a band's: the
+	 * lookup matches `group` by slug, and clubs and committees live in that same
+	 * table, so the redirect target has to be chosen per kind
+	 * (`groupPublicPath`). Custom domains are premium and therefore always a
+	 * band, but they report the column too rather than assuming it.
+	 */
+	kind: GroupKind;
 	/** True when this address should render the microsite rather than redirect. */
 	servesSite: boolean;
 };
@@ -37,14 +46,22 @@ export async function resolveBandSubdomain(slug: string): Promise<BandHost | nul
 	// `band_site.group_id`, which is too. A band with no site row reads as free,
 	// which is the same answer this gave before the column moved.
 	const [row] = await db
-		.select({ slug: group.slug, tier: bandSite.tier })
+		.select({ slug: group.slug, kind: group.kind, tier: bandSite.tier })
 		.from(group)
 		.leftJoin(bandSite, eq(bandSite.groupId, group.id))
 		.where(and(eq(group.slug, slug), isNull(group.deletedAt)))
 		.limit(1);
 
 	if (!row) return null;
-	return { slug: row.slug, servesSite: row.tier === 'premium' };
+	// `kind` is one more column on a query that already reads this row, not a
+	// second lookup: the hook needs it to pick between the band directory and
+	// the group page, and only a band has a microsite to serve in the first
+	// place.
+	return {
+		slug: row.slug,
+		kind: row.kind,
+		servesSite: row.kind === 'band' && row.tier === 'premium'
+	};
 }
 
 /**
@@ -71,7 +88,12 @@ export async function resolveCustomDomain(hostname: string): Promise<BandHost | 
 	// host. The KV cache above is what keeps that affordable, so the join cost
 	// lands on cache misses only.
 	const [row] = await db
-		.select({ slug: group.slug, tier: bandSite.tier, status: bandSite.customDomainStatus })
+		.select({
+			slug: group.slug,
+			kind: group.kind,
+			tier: bandSite.tier,
+			status: bandSite.customDomainStatus
+		})
 		.from(bandSite)
 		.innerJoin(group, eq(group.id, bandSite.groupId))
 		.where(and(eq(bandSite.customDomain, host), isNull(group.deletedAt)))
@@ -79,7 +101,7 @@ export async function resolveCustomDomain(hostname: string): Promise<BandHost | 
 
 	const resolved: BandHost | null =
 		row && row.status === 'active' && row.tier === 'premium'
-			? { slug: row.slug, servesSite: true }
+			? { slug: row.slug, kind: row.kind, servesSite: true }
 			: null;
 
 	// Cache misses too — an unrelated host hitting the worker shouldn't cost a

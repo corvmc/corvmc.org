@@ -15,6 +15,42 @@ lineup entry — and later claim its own profile without the show history being 
 
 Everything here is staff-facing and gated behind a `productions` feature flag.
 
+---
+
+> ## Status, 2026-09-02 — read this before building any of it
+>
+> **Two of this spec's four responsibilities have shipped**, under different names, and
+> the text below has not been updated to say so. Building from it unamended would
+> re-implement work that already exists.
+>
+> | Responsibility                   | Now                                                                                   |
+> | -------------------------------- | ------------------------------------------------------------------------------------- |
+> | Advance checklist                | ✅ A due-dated work order whose tasks are the checklist (#403, #405)                  |
+> | Day-of shifts, `production_task` | ✅ `duty_list` → work orders → `work_task`, anchored `doors\|start\|end` (#405, #407) |
+> | Run of show (`production_slot`)  | ❌ Still unbuilt. Per-night, and still belongs here                                   |
+> | Settlement and expenses          | ⚠️ Still unbuilt, but the 70/30 model below is superseded — see below                 |
+>
+> **Three amendments to what remains:**
+>
+> 1. **The container this spec was reaching for is `project`, not `production`.** A
+>    facility improvement has no event, and a festival has several — neither fits a
+>    1:1 child of one event. See [project-spec.md](project-spec.md). `production`
+>    survives as this spec defines it (a 1:1 child record), now justified explicitly by
+>    **sparsity**: the community calendar carries far more listings than productions, so
+>    run-of-show and settlement columns would be NULL on most rows of the gig guide's
+>    hottest query.
+> 2. **The fixed 70/30 deal is superseded by a general deal shape.**
+>    `{ guaranteeCents, percentageBps, versus, againstNet }` on `event_band` subsumes
+>    70/30 as one case, and also expresses a donated performance — which CMC already
+>    asks for and cannot currently record. See
+>    [project-spec.md § The deal shape](project-spec.md#the-deal-shape).
+> 3. **The `venue` table is the first half of serving other venues.** Offering facets of
+>    these systems to sponsor or partner venues is a live direction, and the general deal
+>    shape above is its prerequisite. Multi-tenancy itself stays out of scope.
+>
+> Reasoning and prior art:
+> [project-management-prior-art.md](../reports/project-management-prior-art.md).
+
 > **The band/group boundary is defined by [groups-spec.md](groups-spec.md), not here.** That spec
 > splits today's `band` table into `group` (the managed organization: roster, roles, slug,
 > announcements, documents) and `band_profile` (the musical identity: genres, links, tier, EPK).
@@ -426,6 +462,11 @@ The advance UI surfaces those when they exist so the producer isn't re-collectin
 
 ### Production task
 
+> **Superseded (2026-09-02).** This shipped as `work_task` hanging off a work order,
+> via `duty_list` — see the status banner at the top. There is no `production_task`
+> table and there should not be one: a checklist belongs to the work order somebody
+> is accountable for, not to the production as a whole.
+
 Advance and close-out checklists, one table.
 
 ```
@@ -671,6 +712,13 @@ netCents           = grossRevenueCents - bandPoolCents - totalExpenseCents
 ```
 
 ### The 70/30 deal
+
+> **Superseded (2026-09-02).** 70/30 is one case of a general deal shape,
+> `{ guaranteeCents, percentageBps, versus, againstNet }` on `event_band` — which also
+> expresses a guarantee, a flat fee, and a **donated performance**, the last being
+> something CMC already asks bands for and cannot record anywhere today. The split
+> below stays correct as the default policy; it is no longer the only expressible one.
+> See [project-spec.md § The deal shape](project-spec.md#the-deal-shape).
 
 The Collective's actual arrangement is **70% of gross to the bands, with no expenses taken
 off the top**, and the lead band on the bill divides the band cut among the acts. That is

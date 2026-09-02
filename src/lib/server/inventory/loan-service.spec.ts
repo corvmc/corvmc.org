@@ -25,6 +25,8 @@ let insertResult: unknown[] = [];
 let updateResult: unknown[] = [];
 /** Every `db.update(table).set(values)` in call order, so a test can name the table it meant. */
 let updateSetCalls: { table: unknown; values: Record<string, unknown> }[] = [];
+/** Every `db.batch([...])` in call order, so a test can prove what landed together. */
+let batchCalls: { kind: string }[][] = [];
 
 vi.mock('$lib/server/db', () => ({
 	db: {
@@ -37,13 +39,22 @@ vi.mock('$lib/server/db', () => ({
 		update: vi.fn((table: unknown) => ({
 			set: vi.fn((values: Record<string, unknown>) => {
 				updateSetCalls.push({ table, values });
-				return {
-					where: vi.fn(() => ({
-						returning: vi.fn(() => Promise.resolve(updateResult))
-					}))
+				// A stand-in for a drizzle statement: awaitable on its own, and
+				// recognisable inside a batch. A bare `.where()` is batchable too,
+				// so it carries the same shape.
+				const stmt = {
+					kind: 'update',
+					values,
+					then: (resolve: (v: unknown[]) => void) => resolve(updateResult),
+					returning: () => stmt
 				};
+				return { where: vi.fn(() => stmt) };
 			})
-		}))
+		})),
+		batch: vi.fn(async (stmts: { kind: string }[]) => {
+			batchCalls.push(stmts);
+			return stmts.map((s) => (s.kind === 'movement' ? [{ id: 'mv-1' }] : updateResult));
+		})
 	}
 }));
 
@@ -76,7 +87,8 @@ vi.mock('$lib/server/finance/subscription-service', () => ({
 
 vi.mock('./stock-service', () => ({
 	getAvailableQuantity: vi.fn().mockResolvedValue(5),
-	recordMovement: vi.fn().mockResolvedValue({ id: 'mv-1' })
+	recordMovement: vi.fn().mockResolvedValue({ id: 'mv-1' }),
+	movementStatement: vi.fn((input: unknown) => ({ kind: 'movement', input }))
 }));
 
 vi.mock('./asset-service', () => ({
@@ -101,7 +113,7 @@ import {
 	InsufficientQuantityError,
 	AssetRequiredError
 } from './loan-service';
-import { getAvailableQuantity, recordMovement } from './stock-service';
+import { getAvailableQuantity, movementStatement, recordMovement } from './stock-service';
 import {
 	getBalance,
 	deductCredits,
@@ -173,6 +185,7 @@ describe('LoanService lifecycle', () => {
 		insertResult = [];
 		updateResult = [];
 		updateSetCalls = [];
+		batchCalls = [];
 
 		vi.mocked(getAvailableQuantity).mockResolvedValue(5);
 		vi.mocked(recordMovement).mockResolvedValue({ id: 'mv-1' } as never);
@@ -612,7 +625,7 @@ describe('LoanService lifecycle', () => {
 
 			await checkoutLoan('loan-1', { dueDate: new Date('2025-07-22') });
 
-			expect(recordMovement).toHaveBeenCalledWith(
+			expect(movementStatement).toHaveBeenCalledWith(
 				expect.objectContaining({
 					itemId: 'it-1',
 					quantity: 2,
@@ -620,6 +633,51 @@ describe('LoanService lifecycle', () => {
 					loanId: 'loan-1'
 				})
 			);
+		});
+
+		/**
+		 * The loan row, the unit's custody and the ledger are three records of one
+		 * event. As three awaits, a worker dying part-way through left an amp that
+		 * was out on loan and still counted as stock, with nothing to reconcile the
+		 * two against — on-hand is the ledger sum, so the gap is silent.
+		 */
+		it('hands over the loan, the unit and the ledger in a single write', async () => {
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'scheduled',
+						itemId: 'it-1',
+						quantity: 1,
+						userId: 'user-1'
+					}
+				],
+				[{ name: 'Blues Deluxe', kind: 'serialized', pricingTier: 'major' }],
+				[{ stripeId: null }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'checked_out', assetId: 'as-1' }];
+
+			await checkoutLoan('loan-1', { dueDate: new Date('2025-07-22'), assetId: 'as-1' });
+
+			expect(batchCalls).toHaveLength(1);
+			expect(batchCalls[0]).toHaveLength(3);
+			expect(batchCalls[0][1]).toMatchObject({ values: { status: 'on_loan' } });
+			expect(batchCalls[0][2]).toMatchObject({ kind: 'movement' });
+		});
+
+		/** A bulk loan names no unit, so there is no custody row to carry along. */
+		it('leaves custody out of the write when no unit is named', async () => {
+			selectResultQueue = [
+				[{ id: 'loan-1', status: 'scheduled', itemId: 'it-1', quantity: 2, userId: 'user-1' }],
+				[{ name: 'XLR cable', kind: 'bulk', pricingTier: 'accessory' }],
+				[{ stripeId: null }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'checked_out' }];
+
+			await checkoutLoan('loan-1', { dueDate: new Date('2025-07-22') });
+
+			expect(batchCalls[0]).toHaveLength(2);
+			expect(batchCalls[0][1]).toMatchObject({ kind: 'movement' });
 		});
 
 		it('puts it back on return', async () => {
@@ -687,7 +745,7 @@ describe('LoanService lifecycle', () => {
 			await checkoutLoan('loan-1', { dueDate: new Date() });
 
 			// The unit goes out on the ledger under its own id, not as a bare item.
-			expect(recordMovement).toHaveBeenCalledWith(
+			expect(movementStatement).toHaveBeenCalledWith(
 				expect.objectContaining({ assetId: 'as-1', reason: 'loan_out' })
 			);
 		});
@@ -706,7 +764,7 @@ describe('LoanService lifecycle', () => {
 			});
 
 			expect(result.assetId).toBe('as-1');
-			expect(recordMovement).toHaveBeenCalledWith(
+			expect(movementStatement).toHaveBeenCalledWith(
 				expect.objectContaining({ assetId: 'as-1', reason: 'loan_out' })
 			);
 		});

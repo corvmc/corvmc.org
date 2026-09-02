@@ -20,6 +20,10 @@
 					{
 						"type": "command",
 						"command": "bash scripts/claude/block-shipped-migration-delete.sh"
+					},
+					{
+						"type": "command",
+						"command": "bash scripts/claude/block-whole-tree-gate.sh"
 					}
 				]
 			}

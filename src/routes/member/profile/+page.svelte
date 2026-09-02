@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { env } from '$env/dynamic/public';
 	import { getMemberProfileEditor } from '$lib/remote/directory.remote';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
+	import AddressCard from '$lib/components/ui/AddressCard.svelte';
+	import { canonicalAddress } from '$lib/utils/canonical-address';
 	import ProfileForm from './ProfileForm.svelte';
 	import TeachingCard from './TeachingCard.svelte';
 
@@ -16,11 +19,30 @@
 	// server-side in `getMemberProfileEditor` and arrives with everything else.
 	const { profile, instrumentSuggestions, genreSuggestions, teaching } =
 		await getMemberProfileEditor();
+
+	// Plain const rather than `$derived`: everything after the await above is
+	// already async-gated, and nothing here changes without a refetch.
+	const address = canonicalAddress(
+		{ kind: 'member', memberNumber: profile?.memberNumber },
+		{ siteUrl: env.PUBLIC_SITE_URL }
+	);
 </script>
 
 <PageHeader subtitle="Profile" title="My Profile" />
 <PageContent width="3xl">
-	<ProfileForm {profile} {instrumentSuggestions} {genreSuggestions} />
+	<!-- The address leads, ahead of the form: it is the thing a member has, and
+	     the form is how they fill the page behind it. Absent only for an account
+	     the backfill has not reached — a card advertising nothing is worse than
+	     no card. -->
+	{#if address}
+		<AddressCard url={address} title="Your CMC address">
+			Share this anywhere — it goes to your profile, whoever opens it.
+		</AddressCard>
+	{/if}
+
+	<div class="mt-6">
+		<ProfileForm {profile} {instrumentSuggestions} {genreSuggestions} />
+	</div>
 
 	<div class="mt-8">
 		<TeachingCard

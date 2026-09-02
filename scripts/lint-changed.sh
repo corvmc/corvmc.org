@@ -34,8 +34,13 @@ if [ -n "$CODE" ]; then
 	# introduced. An earlier version of this comment argued for leaving the cap
 	# off because a whole-file lint would fail a PR for warnings it did not add —
 	# true while a backlog existed, moot now that none does.
+	# `--no-warn-ignored` because this list comes from git, not a glob, so it can
+	# name a file `eslint.config.js` deliberately ignores — `worker-configuration.d.ts`
+	# is generated and ignored there. Passing an ignored file explicitly makes
+	# eslint warn rather than skip it, and `--max-warnings 0` turns that warning
+	# into a failed PR for a file it was told not to lint.
 	# shellcheck disable=SC2086
-	eslint --max-warnings 0 $CODE
+	eslint --max-warnings 0 --no-warn-ignored $CODE
 fi
 
 if [ -n "$FORMATTABLE" ]; then

@@ -13,6 +13,7 @@ import { eq, and } from 'drizzle-orm';
 import { userAdditionalFields } from './auth-fields';
 import { captureException } from '$lib/server/sentry';
 import { ensureUserEntry } from '$lib/server/directory/entry-service';
+import { assignMemberNumber } from '$lib/server/user/member-number-service';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
 // ---------------------------------------------------------------------------
@@ -440,6 +441,15 @@ function createAuth() {
 					after: async (created) => {
 						try {
 							await ensureUserEntry(created.id, created.name);
+						} catch (err) {
+							captureException(err);
+						}
+						// Same treatment, for the same reason: a member number is what
+						// makes `/m/{n}` an address they can say out loud, and losing it
+						// costs a tidy URL, not an account. It is issued separately from
+						// the entry above so one failing does not take the other with it.
+						try {
+							await assignMemberNumber(created.id);
 						} catch (err) {
 							captureException(err);
 						}

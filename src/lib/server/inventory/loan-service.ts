@@ -18,7 +18,7 @@ import { getAvailableQuantity } from './stock-service';
 import { setAssetStatus } from './asset-service';
 import { hasBlockingFlag, raiseFlag } from './asset-flag-service';
 import type { EquipmentCondition } from '$lib/config';
-import { recordMovement } from './stock-service';
+import { movementStatement, recordMovement } from './stock-service';
 import { loanDailyRateCents, loanChargeDays, estimateLoanCost } from '$lib/config';
 import { captureException } from '$lib/server/sentry';
 import type { PricingTier, LoanStatus } from '$lib/config';
@@ -380,7 +380,7 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 		.limit(1);
 
 	const now = new Date();
-	const [updated] = await db
+	const loanUpdate = db
 		.update(inventoryLoan)
 		.set({
 			assetId,
@@ -395,14 +395,14 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 
 	// Also keyed on the resolved unit: a pre-bound loan would otherwise leave its
 	// asset reading `in_service` while the ledger said it had gone out.
-	if (assetId) {
-		await db
-			.update(inventoryAsset)
-			.set({ status: 'on_loan', updatedAt: now })
-			.where(eq(inventoryAsset.id, assetId));
-	}
+	const custodyUpdate = assetId
+		? db
+				.update(inventoryAsset)
+				.set({ status: 'on_loan', updatedAt: now })
+				.where(eq(inventoryAsset.id, assetId))
+		: null;
 
-	await recordMovement({
+	const ledgerEntry = movementStatement({
 		itemId: loan.itemId,
 		assetId,
 		quantity: loan.quantity,
@@ -411,6 +411,15 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 		actorId: data.actorId ?? null,
 		occurredAt: now
 	});
+
+	// The loan, the unit's custody and the ledger are three records of the one
+	// event of handing an amp over, so they commit as one write. As three awaits,
+	// a worker dying part-way through left an amp that was out on loan and still
+	// counted as stock, with nothing to reconcile it against.
+	// db.batch, never db.transaction — the latter is broken on D1.
+	const [[updated]] = custodyUpdate
+		? await db.batch([loanUpdate, custodyUpdate, ledgerEntry])
+		: await db.batch([loanUpdate, ledgerEntry]);
 
 	Promise.resolve().then(async () => {
 		try {

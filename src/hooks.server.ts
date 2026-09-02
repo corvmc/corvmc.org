@@ -7,6 +7,7 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { registerListeners } from '$lib/server/event-bus/register-listeners';
 import { initDb } from '$lib/server/db';
 import { initStorage } from '$lib/server/storage';
+import { initPrivateStorage } from '$lib/server/private-storage';
 import { initKv } from '$lib/server/kv';
 import { resolvePendingInvites } from '$lib/server/group/group-invite-service';
 import { captureException } from '$lib/server/sentry';
@@ -14,6 +15,7 @@ import { SENTRY_DSN } from '$lib/sentry-dsn';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
 import { env as publicEnv } from '$env/dynamic/public';
 import { bandSiteUrl, bandSlugFromHost } from '$lib/utils/band-site-url';
+import { groupPublicPath } from '$lib/utils/canonical-address';
 import { resolveBandSubdomain } from '$lib/server/band/band-host-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
@@ -24,6 +26,7 @@ function validateEnv(platform: App.Platform | undefined) {
 	const missing: string[] = [];
 	if (!platform?.env?.DB) missing.push('DB');
 	if (!platform?.env?.R2_BUCKET) missing.push('R2_BUCKET');
+	if (!platform?.env?.R2_PRIVATE) missing.push('R2_PRIVATE');
 	if (!platform?.env?.KV) missing.push('KV');
 	if (missing.length > 0) {
 		console.warn(`Missing platform bindings: ${missing.join(', ')}`);
@@ -36,6 +39,9 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	}
 	if (event.platform?.env?.R2_BUCKET) {
 		initStorage(event.platform.env.R2_BUCKET);
+	}
+	if (event.platform?.env?.R2_PRIVATE) {
+		initPrivateStorage(event.platform.env.R2_PRIVATE);
 	}
 	if (event.platform?.env?.KV) {
 		initKv(event.platform.env.KV);
@@ -73,9 +79,13 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 
 /**
  * Every band has `{slug}.corvmc.org`, but only premium bands have a microsite
- * to serve there. For everyone else the subdomain is an alias for their
- * directory profile, so the address a band hands out always resolves to
- * something about that band — free or not.
+ * to serve there. For everyone else the subdomain is an alias for their public
+ * page, so the address a band hands out always resolves to something about that
+ * band — free or not.
+ *
+ * Clubs and committees share the `group` table and therefore the same slug
+ * namespace, so they hold a subdomain too. They have no microsite, and their
+ * public page is `/groups/{slug}` rather than the band directory.
  *
  * This lives here rather than in `reroute` because the decision needs the
  * database, and `reroute` is a universal hook that also runs in the browser.
@@ -120,12 +130,18 @@ const handleBandSubdomain: Handle = async ({ event, resolve }) => {
 	}
 
 	// Free tier, unknown slug, or the feature switched off — send them to the
-	// profile. Band-site subpaths (/events, /epk) have no directory equivalent,
-	// so everything lands on the profile itself.
+	// public page for whatever holds the address. Band-site subpaths (/events,
+	// /epk) have no directory equivalent, so everything lands on the page itself.
+	//
+	// Routed on `kind` because the slug lookup does not filter by one: clubs and
+	// committees share the `group` table, so a club's subdomain used to be sent
+	// to /directory/bands/{slug}, a lookup that requires kind 'band' and
+	// therefore 404s. An unknown slug has no kind at all and is treated as a
+	// band — a band directory 404 is the closest thing to the truth there.
 	const siteUrl = publicEnv.PUBLIC_SITE_URL || 'https://corvmc.org';
 	return new Response(null, {
 		status: 302,
-		headers: { location: new URL(`/directory/bands/${slug}`, siteUrl).href }
+		headers: { location: new URL(groupPublicPath(host?.kind ?? 'band', slug), siteUrl).href }
 	});
 };
 

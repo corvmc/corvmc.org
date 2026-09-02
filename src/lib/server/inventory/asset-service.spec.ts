@@ -4,6 +4,8 @@ let selectResultQueue: unknown[][] = [];
 let insertResult: unknown[] = [];
 let updateResult: unknown[] = [];
 const updatedValues: Record<string, unknown>[] = [];
+/** Every `db.batch([...])` in call order, so a test can prove what landed together. */
+const batchCalls: { kind: string }[][] = [];
 
 function chainable() {
 	const proxy: any = new Proxy(() => proxy, {
@@ -28,15 +30,27 @@ vi.mock('$lib/server/db', () => ({
 			set: vi.fn((v: Record<string, unknown>) => {
 				updatedValues.push(v);
 				return {
-					where: vi.fn(() => ({ returning: vi.fn(() => Promise.resolve(updateResult)) }))
+					// A stand-in for a drizzle statement: awaitable on its own, and
+					// recognisable inside a batch.
+					where: vi.fn(() => ({
+						returning: vi.fn(() => ({
+							kind: 'update',
+							then: (resolve: (v: unknown[]) => void) => resolve(updateResult)
+						}))
+					}))
 				};
 			})
-		}))
+		})),
+		batch: vi.fn(async (stmts: { kind: string }[]) => {
+			batchCalls.push(stmts);
+			return stmts.map((s) => (s.kind === 'movement' ? [{ id: 'mv-1' }] : updateResult));
+		})
 	}
 }));
 
 vi.mock('./stock-service', () => ({
-	recordMovement: vi.fn().mockResolvedValue({ id: 'mv-1' })
+	recordMovement: vi.fn().mockResolvedValue({ id: 'mv-1' }),
+	movementStatement: vi.fn((input: unknown) => ({ kind: 'movement', input }))
 }));
 
 import {
@@ -47,7 +61,7 @@ import {
 	createAsset,
 	setAssetStatus
 } from './asset-service';
-import { recordMovement } from './stock-service';
+import { movementStatement, recordMovement } from './stock-service';
 
 beforeEach(() => {
 	vi.resetAllMocks();
@@ -55,6 +69,7 @@ beforeEach(() => {
 	insertResult = [{ id: 'as-1' }];
 	updateResult = [{ id: 'as-1' }];
 	updatedValues.length = 0;
+	batchCalls.length = 0;
 	vi.mocked(recordMovement).mockResolvedValue({ id: 'mv-1' } as never);
 });
 
@@ -116,7 +131,7 @@ describe('setAssetStatus', () => {
 		selectResultQueue = [[{ id: 'as-1', itemId: 'it-1', status: 'in_service', locationId: null }]];
 		await setAssetStatus('as-1', 'maintenance', { notes: 'torn grille' });
 
-		expect(recordMovement).toHaveBeenCalledWith(
+		expect(movementStatement).toHaveBeenCalledWith(
 			expect.objectContaining({ reason: 'repair_out', quantity: 1 })
 		);
 	});
@@ -125,9 +140,26 @@ describe('setAssetStatus', () => {
 		selectResultQueue = [[{ id: 'as-1', itemId: 'it-1', status: 'maintenance', locationId: null }]];
 		await setAssetStatus('as-1', 'in_service');
 
-		expect(recordMovement).toHaveBeenCalledWith(
+		expect(movementStatement).toHaveBeenCalledWith(
 			expect.objectContaining({ reason: 'repair_in', quantity: 1 })
 		);
+	});
+
+	/**
+	 * The two are one fact and have to land as one write. Written as two awaits
+	 * the gap was real: a worker dying inside it left a unit whose status said it
+	 * was in the shop and whose ledger still counted it as stock, permanently and
+	 * with nothing to detect it by — on-hand *is* the ledger sum. The same gap was
+	 * observable from a test, which is how it was found.
+	 */
+	it('commits the status and its movement as a single write', async () => {
+		selectResultQueue = [[{ id: 'as-1', itemId: 'it-1', status: 'in_service', locationId: null }]];
+		await setAssetStatus('as-1', 'maintenance');
+
+		expect(batchCalls).toHaveLength(1);
+		expect(batchCalls[0]).toHaveLength(2);
+		expect(batchCalls[0][0]).toMatchObject({ kind: 'update' });
+		expect(batchCalls[0][1]).toMatchObject({ kind: 'movement' });
 	});
 
 	/**
@@ -138,7 +170,7 @@ describe('setAssetStatus', () => {
 		selectResultQueue = [[{ id: 'as-1', itemId: 'it-1', status: 'in_service', locationId: null }]];
 		await setAssetStatus('as-1', 'retired', { notes: 'beyond repair' });
 
-		expect(recordMovement).toHaveBeenCalledWith(expect.objectContaining({ reason: 'retire' }));
+		expect(movementStatement).toHaveBeenCalledWith(expect.objectContaining({ reason: 'retire' }));
 		expect(updatedValues[0]).toMatchObject({ status: 'retired', retiredReason: 'beyond repair' });
 	});
 
@@ -154,13 +186,16 @@ describe('setAssetStatus', () => {
 	it('writes nothing extra when a loan moves the unit', async () => {
 		selectResultQueue = [[{ id: 'as-1', itemId: 'it-1', status: 'in_service', locationId: null }]];
 		await setAssetStatus('as-1', 'on_loan');
-		expect(recordMovement).not.toHaveBeenCalled();
+		expect(movementStatement).not.toHaveBeenCalled();
+		// Nothing to hold together, so the status goes out on its own.
+		expect(batchCalls).toHaveLength(0);
+		expect(updatedValues[0]).toMatchObject({ status: 'on_loan' });
 	});
 
 	it('does nothing at all when the status is already right', async () => {
 		selectResultQueue = [[{ id: 'as-1', itemId: 'it-1', status: 'in_service', locationId: null }]];
 		await setAssetStatus('as-1', 'in_service');
-		expect(recordMovement).not.toHaveBeenCalled();
+		expect(movementStatement).not.toHaveBeenCalled();
 		expect(updatedValues).toHaveLength(0);
 	});
 });
