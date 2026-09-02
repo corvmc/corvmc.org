@@ -11,7 +11,8 @@
 		subtitle,
 		image,
 		pills = [],
-		primaryAction
+		primaryAction,
+		shareUrl = null
 	}: {
 		avatarShape: 'round' | 'square';
 		name: string;
@@ -19,6 +20,13 @@
 		image?: string | null;
 		pills?: ProfilePill[];
 		primaryAction?: { label: string; href: string };
+		/**
+		 * The profile's own address — `{slug}.corvmc.org` for a band,
+		 * `/m/{memberNumber}` for a member — from `canonicalAddress`. Null when
+		 * the page cannot build one, and then the share button copies the current
+		 * URL as it always did.
+		 */
+		shareUrl?: string | null;
 	} = $props();
 </script>
 
@@ -49,7 +57,7 @@
 		{#if primaryAction}
 			<Button href={primaryAction.href} variant="primary" size="sm">{primaryAction.label}</Button>
 		{/if}
-		<ShareButton title="Copy link to this profile" />
+		<ShareButton title="Copy link to this profile" url={shareUrl} />
 	</div>
 </header>
 

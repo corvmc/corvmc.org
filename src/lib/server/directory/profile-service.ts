@@ -133,6 +133,10 @@ export async function getMemberProfileForEdit(userId: string) {
 			// The member's avatar stays `user.image` — better-auth's column, and it
 			// may hold a full OAuth URL rather than an R2 key.
 			image: user.image,
+			// The member's own address is `/m/{memberNumber}`, and this is the one
+			// query behind the page that shows it to them. Their own number, on
+			// their own profile — the public DTO still whitelists it out.
+			memberNumber: user.memberNumber,
 			lookingFor: directoryEntry.lookingFor,
 			availableForHire: directoryEntry.availableForHire,
 			teachesLessons: directoryEntry.teachesLessons,

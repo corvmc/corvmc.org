@@ -10,7 +10,10 @@
 	import { getBandUpcoming } from '$lib/remote/bands.remote';
 	import { getBandLayoutContext } from './layout-context';
 	import { resolve } from '$app/paths';
+	import { env } from '$env/dynamic/public';
 	import StatCard from '$lib/components/ui/StatCard.svelte';
+	import AddressCard from '$lib/components/ui/AddressCard.svelte';
+	import { canonicalAddress } from '$lib/utils/canonical-address';
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
@@ -19,6 +22,12 @@
 
 	const band = $derived(layout.band);
 	const isOwnerOrAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
+
+	// Every band has this, free. Settings was the only place it appeared, framed
+	// as a value to change; here it is the address they hand out.
+	const address = $derived(
+		canonicalAddress({ kind: 'group', slug: band.slug }, { siteUrl: env.PUBLIC_SITE_URL })
+	);
 
 	let upcoming = $derived(getBandUpcoming(band.id));
 </script>
@@ -30,6 +39,12 @@
 			<span class="loading loading-lg loading-spinner"></span>
 		</div>
 	{:then sessions}
+		{#if address}
+			<AddressCard url={address} title="Your band's address">
+				Put this on a flyer or in a bio — it goes to {band.name}'s page.
+			</AddressCard>
+		{/if}
+
 		<!-- Band overview -->
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 			<StatCard title="Members" value={band.memberCount} size="sm" />

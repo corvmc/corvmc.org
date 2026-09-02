@@ -75,6 +75,10 @@
 		>&larr; Back to Directory</a
 	>
 
+	<!-- No `shareUrl`: `toPublicMemberProfile` whitelists the columns it emits and
+	     `memberNumber` is deliberately not one of them, so this page cannot build
+	     `/m/{n}` and the share button copies the current URL. A member sharing
+	     their own address does it from /member/profile, which has the number. -->
 	<ProfileHeader avatarShape="round" name={member.name} {subtitle} image={member.image} {pills} />
 
 	<QuickFacts {facts} />
