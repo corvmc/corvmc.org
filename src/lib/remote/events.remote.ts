@@ -3,6 +3,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
+import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
 import {
 	create,
@@ -947,17 +948,27 @@ export const setStaffEventLineup = form(
 	}
 );
 
+/** Active duty lists that actually have items on them — the apply picker. */
+async function listApplicableDutyLists() {
+	const lists = await listDutyLists();
+	return lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
+}
+
 export const getStaffEventProduction = query(z.string(), async (id) => {
 	await requireStaff();
 
-	const [detail, recurringSeries, shifts, volunteerRoles] = await Promise.all([
+	// Duty lists ride along in the page's one load-bearing query rather than
+	// being fetched beside it: awaited remote queries are serial round trips, and
+	// `custom/no-concurrent-remote-queries` exists to stop a page fanning them out.
+	const [detail, recurringSeries, shifts, volunteerRoles, dutyLists] = await Promise.all([
 		getStaffEventDetail(id),
 		getEventRecurringSeries(id),
 		getShifts({ eventId: id }),
-		getVolunteerRoles()
+		getVolunteerRoles(),
+		listApplicableDutyLists()
 	]);
 
-	return { detail, recurringSeries, shifts, volunteerRoles };
+	return { detail, recurringSeries, shifts, volunteerRoles, dutyLists };
 });
 
 export const getEventRecurringSeries = query(z.string(), async (eventId) => {
