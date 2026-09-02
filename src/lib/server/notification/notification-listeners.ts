@@ -981,6 +981,42 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
+	// --- Shift called off (notify member) ---
+	// Raised per person when staff press "Notify all" on a cancelled shift, not
+	// by the cancel. Email on: this is the one volunteer message whose job is to
+	// stop somebody turning up to a locked building.
+	domainEvents.on('volunteer.shift_cancelled', async ({ data: event }) => {
+		await dispatch({
+			type: 'volunteer_shift_cancelled',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `${event.roleName} is off`,
+			body: formatShiftWhen(event.startsAt, event.endsAt),
+			href: '/member/volunteer',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Called off: ${event.roleName}`,
+					heading: 'That shift is off',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: `${event.roleName} on ${formatWorkedOn(event.startsAt)} has been called off, so there's nothing to turn up for. Sorry for the change.`
+						},
+						{
+							text: 'Nothing else is needed from you. There are usually other shifts open, and your volunteering page has them.'
+						}
+					],
+					details: [
+						{ label: 'Role', value: event.roleName },
+						{ label: 'Was', value: formatShiftWhen(event.startsAt, event.endsAt) }
+					],
+					cta: { url: `${siteUrl}/member/volunteer`, label: 'See what else is open' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
 	// --- Shift reminder, the day before (notify member) ---
 	// The one notification here that has to reach somebody who isn't looking at
 	// the site: they agreed to work tomorrow and the room is counting on it.

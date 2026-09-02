@@ -6184,7 +6184,8 @@ async function seedVolunteerPersonas(
 			...shiftAt(9, 11, 180),
 			capacity: 2,
 			notes: 'Farmers market table — bring the banner from the office.',
-			cancelledAt: ago(2)
+			cancelledAt: ago(2),
+			cancelledByUserId: 'seed-vol-coordinator'
 		}
 	].map((sh) => ({ ...sh, eventId: null, createdByUserId: 'seed-vol-coordinator' }));
 	await batchInsert(volunteerShift, shifts, 8);
@@ -6245,12 +6246,24 @@ async function seedVolunteerPersonas(
 				completedAt: shiftEnd('seed-vol-shift-unlogged')
 			},
 			{
+				// Two people on the called-off shift, one told and one not, because
+				// the cancelled shift's whole job is being a notify list and a list
+				// where every row reads the same proves nothing. Sam is the
+				// outstanding one, so the banner reads "1 to notify".
 				id: 'seed-vol-signup-cancelled',
 				shiftId: 'seed-vol-shift-cancelled',
 				userId: 'seed-vol-active',
 				status: 'confirmed',
 				claimedAt: ago(8),
 				confirmedAt: ago(6)
+			},
+			{
+				id: 'seed-vol-signup-cancelled-notified',
+				shiftId: 'seed-vol-shift-cancelled',
+				userId: 'seed-vol-coordinator',
+				status: 'claimed',
+				claimedAt: ago(7),
+				notifiedAt: ago(2)
 			}
 		],
 		8

@@ -280,6 +280,15 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: false, inApp: true, sms: false }
 	},
 	{
+		key: 'volunteer_shift_cancelled',
+		label: 'A shift you were on was called off',
+		// Email on, and not optional in practice: somebody has arranged their
+		// Saturday around this. It is the one volunteer notification whose whole
+		// job is to stop a person turning up to a locked building.
+		description: 'Notification when a shift you had claimed or were booked on is called off',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'volunteer_shift_reminder',
 		label: 'Volunteer shift reminder',
 		// Email on by default: the whole point is reaching somebody who isn't

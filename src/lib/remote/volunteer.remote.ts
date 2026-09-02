@@ -78,6 +78,8 @@ import {
 	releaseSignup as releaseSignupService,
 	confirmSignup as confirmSignupService,
 	markNoShow as markNoShowService,
+	notifySignupsOfCancellation as notifySignupsOfCancellationService,
+	markSignupNotified as markSignupNotifiedService,
 	listClaimants,
 	listOutstandingClaims,
 	listUnclosedSignups,
@@ -1334,10 +1336,10 @@ export const duplicateShift = form(
 );
 
 export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	const staff = await requireStaff();
 
 	try {
-		await cancelShiftService(data.id);
+		await cancelShiftService(data.id, staff.id);
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -1345,6 +1347,35 @@ export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data
 	void getStaffShiftPage(data.id).refresh();
 	return { success: true };
 });
+
+/**
+ * Tell everybody left on a called-off shift.
+ *
+ * Separate from `cancelShift` on purpose — see `notifySignupsOfCancellation`.
+ * The roster of a cancelled shift is a notify list, and this is the button on
+ * it; the count in the banner is what it clears.
+ */
+export const notifyCancelledShift = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
+	await requireStaff();
+
+	const notified = await notifySignupsOfCancellationService(data.shiftId);
+
+	void getStaffShiftPage(data.shiftId).refresh();
+	return { success: true, notified };
+});
+
+/** "I rang them." Marks one person off the notify list without sending anything. */
+export const markSignupNotified = form(
+	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		await markSignupNotifiedService(data.signupId);
+
+		void getStaffShiftPage(data.shiftId).refresh();
+		return { success: true };
+	}
+);
 
 // ---------------------------------------------------------------------------
 // Signups
