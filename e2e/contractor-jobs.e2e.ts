@@ -87,6 +87,10 @@ test.describe('contractor jobs', () => {
 		await page.getByRole('button', { name: 'Schedule', exact: true }).click();
 		await modalSubmit(page, /^Schedule$/).click();
 
+		// Polling the status and then reading the movement in the next statement is
+		// only sound because `setAssetStatus` commits both in one `db.batch`. It
+		// wrote them as two awaits once, and this pair of lines raced the gap —
+		// green on main, red in the merge queue.
 		await expect
 			.poll(async () => (await assetState()).status, { timeout: 15000 })
 			.toBe('maintenance');
