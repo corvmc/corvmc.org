@@ -504,10 +504,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/volunteer/shifts",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/volunteer/shifts/[id]",
 		"panel": "staff"
 	},
