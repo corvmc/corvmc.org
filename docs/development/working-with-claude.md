@@ -94,14 +94,14 @@ sessions you weren't watching.
 
 Advisory, in order of how hard they push back:
 
-| Layer                          | What it does                                                            | Blocks?       |
-| ------------------------------ | ----------------------------------------------------------------------- | ------------- |
-| `.claude/rules/`, `CLAUDE.md`  | tells the agent the convention                                          | no            |
-| lefthook pre-commit / pre-push | prettier + eslint `--fix` on staged files; `pnpm check`                 | no, by design |
-| `PostToolUse` format hook      | formats every file the agent edits                                      | n/a           |
-| `PreToolUse` hooks             | reject `npm`/`npx`, reject edits to committed migrations                | **yes**       |
-| Custom ESLint rules            | `no-db-transaction`, `no-raw-form-elements`, `no-duplicate-field-names` | at lint time  |
-| CI                             | seven jobs — lint, check, unit, e2e, schema drift, docs                 | **yes**       |
+| Layer                         | What it does                                                            | Blocks?       |
+| ----------------------------- | ----------------------------------------------------------------------- | ------------- |
+| `.claude/rules/`, `CLAUDE.md` | tells the agent the convention                                          | no            |
+| lefthook pre-commit           | prettier `--write` on staged files (no eslint — see git hooks)          | no, by design |
+| `PostToolUse` format hook     | formats every file the agent edits                                      | n/a           |
+| `PreToolUse` hooks            | reject `npm`/`npx`, reject edits to committed migrations                | **yes**       |
+| Custom ESLint rules           | `no-db-transaction`, `no-raw-form-elements`, `no-duplicate-field-names` | at lint time  |
+| CI                            | seven jobs — lint, check, unit, e2e, schema drift, docs                 | **yes**       |
 
 The two `PreToolUse` hooks live in `scripts/claude/`. Each explains itself on stderr, including the
 escape hatch, so a blocked agent can correct course without asking you.
