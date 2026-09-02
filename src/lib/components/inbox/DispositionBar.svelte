@@ -38,7 +38,7 @@
 		 * `header` is the compact row above a conversation; `focus` is the
 		 * full-width keyed row Daily puts under one thread at a time.
 		 */
-		variant?: 'header' | 'focus';
+		variant?: 'header' | 'focus' | 'stacked';
 		/** Put the cursor in the composer. The bar does not own it. */
 		onreply?: () => void;
 		/** Reveal the assignee control. Same reason. */
@@ -47,8 +47,12 @@
 		ondisposed?: (action: 'resolve' | 'snooze' | 'wait' | 'reopen') => void;
 	} = $props();
 
-	const focus = $derived(variant === 'focus');
-	const size = $derived(focus ? 'md' : 'sm');
+	// `focus` and `stacked` share their layout: a full-width row of equal
+	// targets. They differ only in where they sit — Daily puts one under a
+	// single thread, the phone puts one under the composer — and in size, since
+	// the phone row has to clear 44px to be a touch target at all.
+	const focus = $derived(variant !== 'header');
+	const size = $derived(variant === 'header' ? 'sm' : 'md');
 
 	let busy = $state(false);
 

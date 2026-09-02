@@ -19,12 +19,15 @@
 	let {
 		value,
 		label,
-		disabled = false
+		disabled = false,
+		class: className = ''
 	}: {
 		/** The `disposition` this send applies. */
 		value: 'resolve' | 'keep_open';
 		label: string;
 		disabled?: boolean;
+		/** Ordering, for the stacked mobile layout. */
+		class?: string;
 	} = $props();
 
 	const ctx = getFormContext();
@@ -37,6 +40,7 @@
 	{value}
 	variant="default"
 	size="sm"
+	class={className}
 	disabled={disabled || busy}
 >
 	{label}

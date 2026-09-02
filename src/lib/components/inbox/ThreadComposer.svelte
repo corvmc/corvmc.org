@@ -136,15 +136,34 @@
 						bind:value={draft}></textarea>
 				{/snippet}
 			</FormField>
-			<div class="flex flex-wrap items-center justify-end gap-2">
+			<!-- Stacked below sm: three send buttons side by side on a 375px screen
+			     are each too narrow to read and too narrow to hit. The design puts
+			     them in a sheet there; a full-width column is the same three
+			     outcomes in the same order without a second surface to build. -->
+			<div
+				class="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end"
+			>
 				<!-- Sending always sets a disposition — see SendOption. The two
 				     alternates sit beside the default rather than behind a menu:
 				     they are three answers to one question, and hiding two of them
 				     makes the default look like the only option. A note has no
 				     disposition to set; it is not a turn in the conversation. -->
 				{#if !isNote}
-					<SendOption value="resolve" label="Send + resolve" disabled={!draft.trim()} />
-					<SendOption value="keep_open" label="Send + keep open" disabled={!draft.trim()} />
+					<!-- Default first below sm, last above it: on a phone the sheet
+					     the design draws leads with the default, and a column reads
+					     top-down. -->
+					<SendOption
+						value="resolve"
+						label="Send + resolve"
+						disabled={!draft.trim()}
+						class="order-2 sm:order-none"
+					/>
+					<SendOption
+						value="keep_open"
+						label="Send + keep open"
+						disabled={!draft.trim()}
+						class="order-3 sm:order-none"
+					/>
 				{:else if assignees}
 					<!-- Its own data, awaited here: the composer is below the fold and
 					     the staff list is a whole extra round trip. -->
@@ -172,7 +191,7 @@
 					disabled={!draft.trim()}
 					name={isNote ? undefined : 'disposition'}
 					value={isNote ? undefined : 'wait'}
-					class={isNote ? 'btn-neutral' : 'btn-primary'}
+					class="{isNote ? 'btn-neutral' : 'btn-primary'} order-1 w-full sm:order-none sm:w-auto"
 				>
 					{#snippet icon()}
 						{#if isNote}<IconNote size={16} />{:else}<IconSend size={16} />{/if}

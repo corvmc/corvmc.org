@@ -15,7 +15,12 @@
 	let { open, resolved }: { open: number; resolved: number } = $props();
 </script>
 
-<div class="flex flex-wrap items-center justify-between gap-2">
+<!-- Stacked below sm, where the design makes Daily a full-width action rather
+     than a header button: on a phone this is the primary thing you came to do,
+     and a 44px target beats a chip in the corner. -->
+<div
+	class="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+>
 	<div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
 		<h1 class="text-xl font-bold">Inbox</h1>
 		<p class="text-subtle text-sm">Open {open} · Resolved {resolved}</p>
@@ -28,6 +33,7 @@
 			href={resolve('/staff/inbox/daily')}
 			variant={doneToday() ? 'default' : 'primary'}
 			size="sm"
+			class="w-full sm:w-auto"
 		>
 			<IconPlayerPlay size={16} />
 			{doneToday() ? 'Daily again' : 'Start Daily'} · {open}

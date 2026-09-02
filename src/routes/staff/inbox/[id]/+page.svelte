@@ -54,7 +54,7 @@
 	let composer = $state<HTMLTextAreaElement>();
 </script>
 
-<div class="flex h-full min-h-0 flex-col gap-4">
+<div class="flex flex-col gap-4 overflow-y-auto sm:h-full sm:min-h-0 sm:overflow-visible">
 	<ThreadHeader
 		title={t.contactUserName ?? t.contactName ?? t.contactEmail ?? 'Conversation'}
 		subtitle={t.subject ?? channelLabel(t.channel)}
@@ -63,15 +63,22 @@
 		{#snippet subtitleIcon()}<ChannelIcon size={14} />{/snippet}
 		{#snippet actions()}
 			<StatusBadge status={threadDisplayStatus(t)} label />
-			<DispositionBar
-				threadId={t.id}
-				status={t.status}
-				awaiting={!!t.awaitingReplySince}
-				onreply={() => composer?.focus()}
-				onassign={() => {
-					detailsOpen = true;
-				}}
-			/>
+			<!-- Above `sm` the four exits live in the header, beside the status they
+			     change. Below it they move under the composer instead — see the
+			     bottom of this file. Four buttons and a badge on a 375px header
+			     wrap into three ragged lines and put the primary action off the
+			     first screen. -->
+			<div class="hidden sm:contents">
+				<DispositionBar
+					threadId={t.id}
+					status={t.status}
+					awaiting={!!t.awaitingReplySince}
+					onreply={() => composer?.focus()}
+					onassign={() => {
+						detailsOpen = true;
+					}}
+				/>
+			</div>
 		{/snippet}
 
 		<DetailsPanel thread={t} {assignForm} bind:open={detailsOpen} />
@@ -90,7 +97,12 @@
 		</p>
 	{/if}
 
-	<div class="min-h-0 flex-1 overflow-y-auto">
+	<!-- The timeline gets its own scrollbar only from `sm` up, where the pane is
+	     tall enough for one. On a phone the composer and the disposition row take
+	     most of the height, and a flex-1 timeline between them collapses to a
+	     two-line window onto the conversation — so below `sm` the whole thread
+	     pane scrolls as one instead. -->
+	<div class="sm:min-h-0 sm:flex-1 sm:overflow-y-auto">
 		<ThreadTimeline messages={t.messages} notes={t.notes} contactName={t.contactName} />
 	</div>
 
@@ -130,6 +142,21 @@
 				bind:field={composer}
 				onsent={() => getInboxThread(threadId).refresh()}
 			/>
+
+			<!-- The phone's disposition row: under the composer, above the home
+			     indicator, three equal targets. Reply is omitted here — the
+			     composer it would focus is directly above it. -->
+			<div class="sm:hidden">
+				<DispositionBar
+					threadId={t.id}
+					status={t.status}
+					awaiting={!!t.awaitingReplySince}
+					variant="stacked"
+					onassign={() => {
+						detailsOpen = true;
+					}}
+				/>
+			</div>
 		</div>
 	{/await}
 </div>
