@@ -50,14 +50,6 @@ import { reportDamage } from './resources-service';
 import { recordMovement } from './stock-service';
 import { raiseFlag } from './asset-flag-service';
 
-const ASSET = {
-	id: 'as-1',
-	itemId: 'it-1',
-	status: 'in_service',
-	condition: 'good',
-	locationId: 'loc-1'
-};
-
 beforeEach(() => {
 	vi.clearAllMocks();
 	selectResultQueue = [];
