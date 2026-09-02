@@ -23,6 +23,8 @@ function chainable() {
 
 let insertResult: unknown[] = [];
 let updateResult: unknown[] = [];
+/** Every `db.update(table).set(values)` in call order, so a test can name the table it meant. */
+let updateSetCalls: { table: unknown; values: Record<string, unknown> }[] = [];
 
 vi.mock('$lib/server/db', () => ({
 	db: {
@@ -32,12 +34,15 @@ vi.mock('$lib/server/db', () => ({
 				returning: vi.fn(() => Promise.resolve(insertResult))
 			}))
 		})),
-		update: vi.fn(() => ({
-			set: vi.fn(() => ({
-				where: vi.fn(() => ({
-					returning: vi.fn(() => Promise.resolve(updateResult))
-				}))
-			}))
+		update: vi.fn((table: unknown) => ({
+			set: vi.fn((values: Record<string, unknown>) => {
+				updateSetCalls.push({ table, values });
+				return {
+					where: vi.fn(() => ({
+						returning: vi.fn(() => Promise.resolve(updateResult))
+					}))
+				};
+			})
 		}))
 	}
 }));
@@ -95,6 +100,7 @@ import {
 	InsufficientCreditsError
 } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
+import { inventoryAsset } from '$lib/server/db/schema/inventory';
 
 // ---------------------------------------------------------------------------
 // Pure functions
@@ -156,6 +162,7 @@ describe('LoanService lifecycle', () => {
 		selectResultQueue = [];
 		insertResult = [];
 		updateResult = [];
+		updateSetCalls = [];
 
 		vi.mocked(getAvailableQuantity).mockResolvedValue(5);
 		vi.mocked(recordMovement).mockResolvedValue({ id: 'mv-1' } as never);
@@ -306,6 +313,70 @@ describe('LoanService lifecycle', () => {
 			selectResultQueue = [[{ id: 'loan-1', status: 'requested', userId: 'user-1' }]];
 
 			await expect(returnLoan('loan-1')).rejects.toThrow(InvalidLoanTransitionError);
+		});
+
+		/**
+		 * A member may report damage on gear that is still out with them, so a
+		 * unit can be `maintenance` while its loan is still open. Handing it back
+		 * must not return it to the pool: the `loan_return` movement (+1) nets out
+		 * the `repair_out` (-1), so a broken amp would go back on the shelf with a
+		 * balanced ledger and nothing to show for it.
+		 *
+		 * Interim rule -- restore service only from `on_loan`. Superseded once
+		 * `asset_flag` lands and re-uptake decides the status from open blocking
+		 * flags.
+		 */
+		it('does not put a unit flagged mid-loan back into service', async () => {
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'it-1',
+						assetId: 'as-1',
+						quantity: 1,
+						userId: 'user-1',
+						dailyRateCents: 0,
+						checkedOutAt: new Date('2025-07-15')
+					}
+				],
+				[{ name: 'T', email: 't@e.com', stripeId: null }],
+				// the unit, read before its status is touched
+				[{ status: 'maintenance' }],
+				[{ name: 'Bass amp' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'returned' }];
+
+			await returnLoan('loan-1');
+
+			expect(updateSetCalls.filter((c) => c.table === inventoryAsset)).toHaveLength(0);
+		});
+
+		it('restores a cleanly returned unit to service', async () => {
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'it-1',
+						assetId: 'as-1',
+						quantity: 1,
+						userId: 'user-1',
+						dailyRateCents: 0,
+						checkedOutAt: new Date('2025-07-15')
+					}
+				],
+				[{ name: 'T', email: 't@e.com', stripeId: null }],
+				[{ status: 'on_loan' }],
+				[{ name: 'Bass amp' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'returned' }];
+
+			await returnLoan('loan-1');
+
+			const assetUpdates = updateSetCalls.filter((c) => c.table === inventoryAsset);
+			expect(assetUpdates).toHaveLength(1);
+			expect(assetUpdates[0].values).toMatchObject({ status: 'in_service' });
 		});
 
 		it('retries with the fresh balance when a concurrent spend races the deduction', async () => {

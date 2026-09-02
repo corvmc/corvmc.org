@@ -466,10 +466,29 @@ export async function returnLoan(
 		.returning();
 
 	if (loan.assetId) {
-		await db
-			.update(inventoryAsset)
-			.set({ status: 'in_service', updatedAt: now })
-			.where(eq(inventoryAsset.id, loan.assetId));
+		// Restoring service is a transition *out of `on_loan`*, not an assignment.
+		// A member can report damage on gear that is still out with them, so the
+		// unit may already be `maintenance` by the time it comes back -- and the
+		// `loan_return` movement (+1) nets out the `repair_out` (-1), so blindly
+		// setting `in_service` here puts a broken amp back on the shelf with a
+		// ledger that balances and nothing to show for it. `retired` and `lost`
+		// are preserved for the same reason.
+		//
+		// Interim: once `asset_flag` lands, re-uptake decides this from the open
+		// blocking flags on the unit rather than from the status it happens to
+		// find here.
+		const [asset] = await db
+			.select({ status: inventoryAsset.status })
+			.from(inventoryAsset)
+			.where(eq(inventoryAsset.id, loan.assetId))
+			.limit(1);
+
+		if (asset?.status === 'on_loan') {
+			await db
+				.update(inventoryAsset)
+				.set({ status: 'in_service', updatedAt: now })
+				.where(eq(inventoryAsset.id, loan.assetId));
+		}
 	}
 
 	if (loan.itemId) {
