@@ -16,8 +16,11 @@ Two things, both scoped to what you touched:
    mentions the function you changed. The directory run is ~10 files and under 3 seconds.
 2. **`pnpm lint:changed`**, if more than a couple of files moved.
 
-Then commit, push, `gh pr merge --auto`, and end the session. `.claude/rules/testing.md` has the
-rest of what is worth knowing about the suites.
+Then commit, push, open the PR, and arm `gh pr merge --auto` **in that same turn** — opening the PR
+is not the finish line, and queueing is not gated on the user reading it first. If the change
+genuinely needs a human before it merges, open it as a draft and say why; do not open a ready PR
+and quietly decline to queue it. `.claude/rules/testing.md` has the rest of what is worth knowing
+about the suites.
 
 ## What you do not run
 
