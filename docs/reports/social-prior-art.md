@@ -139,11 +139,32 @@ gig list is the same rows the band already maintains for the CMC gig guide. A Ba
 site means keeping that list twice. `events` and `members` are data-driven blocks; nothing
 comparable exists on a generic builder.
 
-**But be honest about what owning it costs.** Seven themes against hundreds. No merch, no
-music player, no one-click PDF. And a block editor with `custom_html` and custom CSS means
-owning a sanitizer — ours shipped as a **no-op** DOMPurify+linkedom setup before `js-xss`
-replaced it, which is to say the feature was silently unsanitized in production. That is
-the real price of building this row, and it is not theme count.
+**One genuine cost, and it is not theme count.** A block editor with `custom_html` and
+custom CSS means owning a sanitizer, and ours shipped as a **no-op** DOMPurify+linkedom
+setup before `js-xss` replaced it — the feature was silently unsanitized in production.
+That is the price of building this row. One-click PDF export is a small real gap
+alongside it.
+
+**What is not a cost, and was miscounted as one:**
+
+- **Merch** is out of scope by decision — it goes through an outside vendor.
+- **Seven curated themes** against Bandzoogle's hundreds is a choice, not a deficiency.
+  A collective with a design system does not want an unbounded theme gallery.
+- **A music player is an opportunity, and a bigger one for us than for them.** See below.
+
+#### The player is a discovery surface, which Bandzoogle structurally cannot build
+
+Bandzoogle's player serves one band on one isolated site. They have no cross-band surface
+to put a station on, because their customers are unrelated to each other.
+
+**Ours are not.** The directory already holds member bands with streaming embeds attached
+(`ListenStrip` switches between YouTube, SoundCloud and Spotify), on a shared site. A
+site-wide player — a constant-run station across member bands — is a thing only a
+collective can build, and it answers role 1's real gap with a better mechanic than filter
+chips: **hearing the bands beats faceting them.**
+
+It also supplies the missing incentive in the completeness ladder below. "Add your music
+links" stops being a nag when the payoff is that other members hear you.
 
 ## Role 5 — Identity and claiming
 
@@ -193,20 +214,90 @@ social cost of saying no, and removes the signal a persistent sender could act o
 two-independent-switches design (a member's own preference never overriding a staff
 restriction, and vice versa) is likewise more careful than the category norm.
 
+## The free tier is a ladder, and nothing says so
+
+A priority that reframes roles 1 and 4 together: **the directory should be a free
+link-in-bio page for members, and filling it in should teach a band its way to a finished
+EPK.** Neither is framed that way today, and most of the first one is already built.
+
+### Against Linktree, the free tier wins on the thing Linktree paywalls
+
+Linktree's free plan keeps you on `linktr.ee/yourname`, puts Linktree branding on your
+page, and takes **12% of digital product sales** through it. A custom domain is paid only;
+Pro went from $9 to $15/month in November 2025.
+
+**Every CMC band already gets `{slug}.corvmc.org` for free** — premium bands serve a
+microsite there and everyone else 302s to `/directory/bands/{slug}`, which renders an
+avatar, bio, switchable streaming embeds, a links ribbon, shows and contact. A real
+subdomain, no branding tax, no revenue cut.
+
+So the free tier is a Linktree-plus that loses only on framing. Linktree's actual product
+is being the obvious answer to "where do I put my one link"; ours is filed under
+"directory profile." That is a naming and affordance problem, not a capability one — and
+the missing affordances are small: a share action, a QR code, and telling members the URL
+exists at all.
+
+### The EPK is the destination, and shows are the part that maintains itself
+
+Standard EPK guidance converges on the same checklist. Mapped against what a free
+directory profile already carries:
+
+| EPK requirement                    | Free directory today    | Gap                                     |
+| ---------------------------------- | ----------------------- | --------------------------------------- |
+| Short bio, 3–4 sentences           | `tagline`               | Close enough, unlabelled                |
+| Long bio, 2–3 paragraphs           | `bio`                   | —                                       |
+| Music — best tracks or lead single | `links` + `ListenStrip` | —                                       |
+| **Upcoming shows**                 | `ShowsBox`              | **— and it is automatic**               |
+| Contact                            | `contact`               | One field, not three roles              |
+| Press quotes, achievements         | —                       | `band_site.epk`, premium only           |
+| Booking / management / PR contacts | —                       | `band_site.epk`, premium only           |
+| Hi-res photos, logo, video         | `avatarKey` only        | Missing; an avatar is not a press photo |
+
+**The standout is shows.** Every EPK guide stresses keeping the schedule current, and it
+is the item bands most reliably let rot. Ours reads from `event-service`, so a band that
+lists gigs for the gig guide — which they already do, for the community calendar and
+lineup credits — has a permanently current EPK section it never has to touch. That is the
+hardest item on the checklist, generated for free, and nothing tells the band it happened.
+
+### What the ladder needs
+
+- **A completeness model that is a progression, not a boolean.** `isProfileComplete`
+  ([directory-service.ts:281](../../src/lib/server/directory/directory-service.ts)) is
+  deliberately the wrong shape for this: the bar is one instrument, because it backs an
+  ambient nudge and "a nudge that survives a genuine effort to answer it is worse than no
+  nudge." That reasoning is right for what it does. The ladder needs a second, richer
+  measure alongside it — not a change to that one.
+- **A named destination.** LinkedIn's profile strength works because the target has a name
+  and the missing pieces are enumerated. "You have 5 of 11 EPK sections" is that, and the
+  last few honestly requiring a band site is a legitimate upsell rather than a dark
+  pattern — especially against Bandzoogle's $6.95/month EPK-only plan.
+- **A reward per rung, not just a bar.** This is where the site-wide player earns its
+  place: filling in music links produces something audible to other members, rather than a
+  progress percentage.
+
 ## What to take
 
 Ranked by value, and only things worth acting on:
 
-1. **Match, do not just filter.** Role 1. The intent data already exists and is unused;
-   this is a query, not a feature area.
-2. **Assert the capability matrix in a spec file.** Role 3. The category's own warning is
+1. **Name the free tier and give it share affordances.** The Linktree-equivalent is
+   built and unlabelled — a share action, a QR code, and telling bands their subdomain
+   exists is most of the work. Cheapest item here by a wide margin.
+2. **Make completeness a progression toward a named destination.** "5 of 11 EPK sections"
+   with the missing ones enumerated. Leave `isProfileComplete` alone — its low bar is
+   correct for the nudge it backs — and add a second measure beside it.
+3. **Match, do not just filter.** Role 1. The intent data exists and is unused; this is a
+   query, not a feature area.
+4. **Build the site-wide player.** Role 4. Inter-band discovery that Bandzoogle
+   structurally cannot copy, and the reward that makes rung 2 something other than a nag.
+5. **Assert the capability matrix in a spec file.** Role 3. The category's own warning is
    that permission configuration rots; `feature-flags.spec.ts` is the pattern we already
    use for exactly this failure mode.
-3. **Decide whether the external act needs an explicit discriminator.** Role 5. Narrow,
+6. **Decide whether the external act needs an explicit discriminator.** Role 5. Narrow,
    and the rest of that design is sound.
-4. **Be deliberate about band-site scope.** Role 4. We will not out-feature Bandzoogle and
-   should not try; the defensible core is data integration, and every block added past
-   that is maintenance and sanitizer surface.
+
+Note what is _not_ here: out-featuring Bandzoogle on themes, merch or block count. The
+defensible core of role 4 is data integration and cross-band surfaces, and every block
+added past that is maintenance and sanitizer surface.
 
 ## Sources
 
@@ -219,4 +310,6 @@ Ranked by value, and only things worth acting on:
 - [Bandzoogle — EPK builder](https://bandzoogle.com/features/epk) · [pricing](https://bandzoogle.com/pricing)
 - [Google Business Profile — request ownership](https://support.google.com/business/answer/4566671?hl=en) · [add or claim](https://support.google.com/business/answer/2911778?hl=en)
 - [MusicBrainz — database structure](https://musicbrainz.org/doc/MusicBrainz_Database)
+- Linktree free-tier limits — [Links.fans, is Linktree free](https://blog.links.fans/is-linktree-free/) · [Bitly, Linktree alternatives](https://bitly.com/blog/linktree-alternatives/) · [Soniare, alternatives for musicians](https://www.soniare.net/blog/best-linktree-alternatives-for-musicians)
+- EPK checklists — [Bandzoogle, the 8 things every EPK needs](https://bandzoogle.com/blog/the-8-things-that-should-be-in-every-band-s-digital-press-kit) · [DIY Musician EPK checklist](https://diymusician.cdbaby.com/music-marketing/epk-checklist/) · [Cascade Blues EPK checklist (PDF)](https://cascadeblues.org/wp-content/uploads/2025/12/EPK-Electronic-Press-Kit-Checklist.pdf)
 - [ShellBlack — Salesforce leads vs accounts and contacts](https://www.shellblack.com/whiteboard/overview-of-leads-account-and-contacts-the-salesforce-data-model/)
