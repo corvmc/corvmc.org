@@ -34,9 +34,7 @@
 		IconUsersGroup,
 		IconReportAnalytics,
 		IconListDetails,
-		IconCertificate,
 		IconCalendarWeek,
-		IconClockHour4,
 		IconCalendarMonth
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
@@ -73,10 +71,8 @@
 		groups: IconUsersGroup,
 		volunteer: IconHeartHandshake,
 		'volunteer-schedule': IconCalendarWeek,
-		'volunteer-hours': IconClockHour4,
 		'volunteer-people': IconUsersGroup,
-		'volunteer-roles': IconListDetails,
-		'volunteer-certifications': IconCertificate,
+		'volunteer-setup': IconListDetails,
 		'volunteer-report': IconReportAnalytics,
 		reservations: IconClipboardCheck,
 		recurring: IconRepeat,

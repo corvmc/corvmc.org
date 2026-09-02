@@ -206,8 +206,17 @@ export const getVolunteerStatusCounts = query(async () => {
  * required certifications, interest count, and count of upcoming shifts still
  * short of capacity, so the table can render them without a query per row.
  */
-export const getVolunteerRoles = query(async () => {
-	await requireStaff();
+/**
+ * The role list with its usage counts, as a plain function.
+ *
+ * Two queries want it — the argless one below, which the role dropdowns read
+ * directly, and Setup's page query. A query calling another query is
+ * composition, and `custom/refresh-the-composed-query` is right to refuse it:
+ * every existing `getVolunteerRoles().refresh()` would then repaint nothing for
+ * whoever reads the wrapper. Sharing the loader instead leaves both queries
+ * independent, so each refreshes on its own terms.
+ */
+async function loadVolunteerRoles() {
 	const roles = await listVolunteerRoles({ includeInactive: true });
 	const [requirements, interestCounts, unfilled] = await Promise.all([
 		getRequirementsForRoles(roles.map((r) => r.id)),
@@ -223,6 +232,11 @@ export const getVolunteerRoles = query(async () => {
 		interested: interested.get(r.id) ?? 0,
 		unfilled: unfilled.get(r.id) ?? 0
 	}));
+}
+
+export const getVolunteerRoles = query(async () => {
+	await requireStaff();
+	return loadVolunteerRoles();
 });
 
 /**
@@ -935,6 +949,7 @@ export const createVolunteerRole = form(roleFormSchema, async (data) => {
 	}
 
 	void getVolunteerRoles().refresh();
+	void getStaffVolunteerSetupPage().refresh();
 	void getMemberVolunteerPage().refresh();
 	void getVolunteerInterestsPage().refresh();
 	return { success: true };
@@ -1050,6 +1065,9 @@ async function refreshStaffQueue() {
 async function refreshRoleViews(roleId?: string) {
 	await Promise.all([
 		getVolunteerRoles().refresh(),
+		// Setup composes `getVolunteerRoles`, so refreshing only the inner query
+		// leaves the screen you made the change on showing the old list.
+		getStaffVolunteerSetupPage().refresh(),
 		getMemberVolunteerPage().refresh(),
 		getVolunteerInterestsPage().refresh(),
 		...(roleId ? [getStaffVolunteerRolePage(roleId).refresh()] : [])
@@ -1214,8 +1232,10 @@ export const setRoleCertifications = form(
 			mapDomainError(err);
 		}
 		void getStaffVolunteerRolePage(data.roleId).refresh();
-		// The roles table renders each role's requirements too.
+		// Setup renders each role's requirements as a "needs X" chip, and reads
+		// them through its own composed query.
 		void getVolunteerRoles().refresh();
+		void getStaffVolunteerSetupPage().refresh();
 		return { success: true };
 	}
 );
@@ -1289,7 +1309,12 @@ export const deleteCertificationGrant = form(
 );
 
 async function refreshCertificationViews() {
-	await Promise.all([getCertifications().refresh(), getActiveCertifications().refresh()]);
+	await Promise.all([
+		getCertifications().refresh(),
+		getActiveCertifications().refresh(),
+		// Same reason as the roles above: Setup reads the composed query.
+		getStaffVolunteerSetupPage().refresh()
+	]);
 }
 
 // ---------------------------------------------------------------------------
@@ -1849,6 +1874,43 @@ export const getStaffShiftPage = query(z.string(), async (id) => {
 });
 
 /**
+ * Setup's one load-bearing query.
+ *
+ * Roles and certifications were two pages that only ever got visited together:
+ * a role requires a clearance, and a clearance exists because some role
+ * requires it. Reading them as one is what lets the screen say "needs Food
+ * Handler" on the left and "required by 1 role" on the right without either
+ * side going and asking again.
+ *
+ * The lapse count rides along for the link line, since it is the one thing on
+ * this screen that is neither a role nor a clearance but a person.
+ */
+export const getStaffVolunteerSetupPage = query(async () => {
+	await requireStaff();
+
+	const [roles, certifications, lapsing] = await Promise.all([
+		loadVolunteerRoles(),
+		listCertifications({ includeInactive: true }),
+		listLapsingBeforeRosteredShift()
+	]);
+
+	// Grouped by certification so each card can say whether *its* holders are the
+	// ones about to be caught short.
+	const lapsingByCert = new Map<string, number>();
+	for (const row of lapsing) {
+		lapsingByCert.set(row.certificationId, (lapsingByCert.get(row.certificationId) ?? 0) + 1);
+	}
+
+	return {
+		roles,
+		certifications: certifications.map((c) => ({
+			...c,
+			lapsingBeforeShift: lapsingByCert.get(c.id) ?? 0
+		}))
+	};
+});
+
+/**
  * The clearances page's one load-bearing query.
  *
  * Two `getClearances` calls with different arguments — the filtered view and the unfiltered set the
@@ -1873,13 +1935,17 @@ export const getClearancesPage = query(
 export const getVolunteerReportPage = query(
 	z.object({ from: z.string().optional(), to: z.string().optional(), page: z.number().optional() }),
 	async ({ from, to, page }) => {
-		const [report, feedbackByRole, byMember] = await Promise.all([
+		const [report, feedbackByRole, byMember, statusCounts] = await Promise.all([
 			getVolunteerReport({ from, to }),
 			getFeedbackByRole(),
-			getVolunteerReportByMember({ from, to, page })
+			getVolunteerReportByMember({ from, to, page }),
+			// The fourth tile. Everything else here is approved-only by design, so
+			// the report cannot say how much is still waiting to become a number —
+			// and "the total is low" and "the queue is long" are different problems.
+			getStatusCounts()
 		]);
 
-		return { report, feedbackByRole, byMember };
+		return { report, feedbackByRole, byMember, stillInReview: statusCounts.pending };
 	}
 );
 

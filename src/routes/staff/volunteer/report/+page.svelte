@@ -44,6 +44,7 @@
 	const report = $derived(pageData.then((d) => d.report));
 	const feedbackByRole = $derived(pageData.then((d) => d.feedbackByRole));
 	const byMember = $derived(pageData.then((d) => d.byMember));
+	const stillInReview = $derived(pageData.then((d) => d.stillInReview));
 
 	// Refresh once on mount. An approval on /staff/volunteer changes these totals,
 	// but it can't refresh them from there — `refresh()` is keyed by argument and
@@ -77,7 +78,7 @@
 	}
 </script>
 
-<PageHeader title="Volunteer Report" subtitle="Staff" backHref="/staff/volunteer" />
+<PageHeader title="Report" subtitle="Volunteering" backHref="/staff/volunteer" />
 
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
@@ -113,45 +114,56 @@
 		<!-- Approved hours only. That is the whole point of the review step: this
 		     is the number that has to hold up to a funder. -->
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-			<StatCard title="Total hours" value={formatVolunteerHours(r.totals.totalMinutes)} />
+			<StatCard title="Approved hours" value={formatVolunteerHours(r.totals.totalMinutes)} />
 			<StatCard title="Volunteers" value={r.totals.volunteerCount} />
 			<StatCard title="Logs" value={r.totals.logCount} />
-			<StatCard
-				title="Average per volunteer"
-				value={r.totals.volunteerCount === 0
-					? '—'
-					: formatVolunteerHours(Math.round(r.totals.totalMinutes / r.totals.volunteerCount))}
-			/>
+			<!--
+				Not an average. Everything else on this page is approved-only by
+				design, so without this the report cannot say how much work is still
+				waiting to become a number — and "the total is low" and "the queue is
+				long" are different problems with different fixes.
+			-->
+			{#await stillInReview then pending}
+				<StatCard title="Still in review" value={pending} />
+			{/await}
 		</div>
 
-		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<InfoCard title="By role">
-				{#if r.byRole.length === 0}
-					<EmptyState description="No approved hours in this range." />
-				{:else}
-					<Table>
-						{#snippet head()}
-							<th>Role</th>
-							<th class="cell-num">Hours</th>
-							<th class="col-support cell-num">Share</th>
-							<th class="col-support cell-num">Logs</th>
-						{/snippet}
-						{#each r.byRole as row (row.volunteerRoleId)}
-							<tr>
-								<td class="cell-primary">
+		<InfoCard title="Hours by role">
+			{#if r.byRole.length === 0}
+				<EmptyState description="No approved hours in this range." />
+			{:else}
+				<!--
+					A bar list rather than a table: the question this answers is "where
+					does the labour actually go", which is a shape, and four columns of
+					digits make you compute it yourself.
+				-->
+				<ul class="flex flex-col gap-3">
+					{#each r.byRole as row (row.volunteerRoleId)}
+						{@const share =
+							r.totals.totalMinutes === 0 ? 0 : (row.minutes / r.totals.totalMinutes) * 100}
+						<li>
+							<div class="mb-1 flex items-baseline justify-between gap-3 text-sm">
+								<span class="truncate">
 									{row.roleName}{#if !row.roleIsActive}<span class="ml-1 text-subtle"
 											>(archived)</span
 										>{/if}
-								</td>
-								<td class="cell-num">{formatVolunteerHours(row.minutes)}</td>
-								<td class="col-support cell-num">{percent(row.minutes, r.totals.totalMinutes)}</td>
-								<td class="col-support cell-num">{row.logCount}</td>
-							</tr>
-						{/each}
-					</Table>
-				{/if}
-			</InfoCard>
+								</span>
+								<span class="whitespace-nowrap">
+									{formatVolunteerHours(row.minutes)}
+									<span class="text-subtle">{percent(row.minutes, r.totals.totalMinutes)}</span>
+								</span>
+							</div>
+							<div class="h-2 w-full rounded-full bg-base-200">
+								<div class="h-2 rounded-full bg-primary" style="width: {share}%"></div>
+							</div>
+						</li>
+					{/each}
+				</ul>
+				<p class="mt-3 text-subtle text-xs">Approved logs only.</p>
+			{/if}
+		</InfoCard>
 
+		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 			<InfoCard title="By month">
 				{#if r.byMonth.length === 0}
 					<EmptyState description="No approved hours in this range." />

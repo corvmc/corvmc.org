@@ -87,7 +87,7 @@ When a shift is called off, its roster stays put — that is who you have to tel
 page turns into a notify list: **Notify all** emails everybody still on it, and **Mark as
 notified** is for the ones you already rang.
 
-A role can require certifications (**Volunteering → Certifications**) before its
+A role can require clearances (**Volunteering → Setup**) before its
 shifts can be claimed. Requirements are checked against the shift's date, so a
 lapsing card is caught before it matters. **People → Cleared** shows who holds
 what and when it runs out, one row per person and clearance. Grant from the
@@ -122,9 +122,12 @@ several people at once.
 
 ## Managing roles
 
-**Volunteering → Roles** is the list members pick from. A role is a name plus a
-job description in markdown — the description is what members read when deciding
-whether to help, so write what the job actually involves rather than a label.
+**Volunteering → Setup** holds both halves of what volunteering is made of: the roles
+members pick from on the left, the clearances that gate some of them on the right. A role
+is a name plus a job description in markdown — the description is what members read when
+deciding whether to help, so write what the job actually involves rather than a label.
+Clicking a role opens its own page, which is where you change it, set what it requires,
+schedule shifts against it and read how they went.
 
 **Group** decides which of the three headings a role appears under — at shows,
 away from shows, or committees. It is presentation only; nothing else depends
