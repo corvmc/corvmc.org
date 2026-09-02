@@ -18,10 +18,16 @@
 	import { formatDate } from '$lib/utils/format';
 
 	let {
+		open = $bindable(false),
 		onpick,
 		onwait,
 		children
 	}: {
+		/**
+		 * Bound so a keyboard shortcut on the trigger's owner can open the menu.
+		 * Clicking the trigger still opens it without anyone binding this.
+		 */
+		open?: boolean;
 		/** A calendar date, `yyyy-MM-dd`. */
 		onpick: (date: string) => void;
 		/** "When they reply" — the conditional option, no date involved. */
@@ -52,7 +58,7 @@
 		'flex w-full cursor-pointer items-center justify-between gap-6 rounded-box px-3 py-2 text-sm data-highlighted:bg-base-200';
 </script>
 
-<DropdownMenu.Root>
+<DropdownMenu.Root bind:open>
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}{@render children({ props })}{/snippet}
 	</DropdownMenu.Trigger>

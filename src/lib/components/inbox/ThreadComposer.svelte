@@ -36,7 +36,6 @@
 		/** Why replying is impossible, if it is. Set = the Reply tab is disabled. */
 		replyBlockedReason,
 		assignees,
-		field = $bindable(),
 		onsent
 	}: {
 		threadId: string;
@@ -52,11 +51,6 @@
 		 * them. Omitted on the member side, which has neither notes nor assignment.
 		 */
 		assignees?: () => Promise<{ id: string; name: string }[]>;
-		/**
-		 * The textarea itself, so a surface that owns a Reply shortcut can put the
-		 * cursor in it. The composer stays the owner of the draft either way.
-		 */
-		field?: HTMLTextAreaElement;
 		onsent?: () => void;
 	} = $props();
 
@@ -135,7 +129,6 @@
 				{#snippet input(id)}
 					<textarea
 						{id}
-						bind:this={field}
 						name="body"
 						class="textarea w-full"
 						rows={isNote ? 2 : 4}
