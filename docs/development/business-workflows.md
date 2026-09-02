@@ -724,6 +724,17 @@ from the band panel), or `community` (authored by any signed-in member for a sho
 another venue). Nothing else about the row changes between layers — the same table, the
 same detail page, the same poster.
 
+`event.kind` answers a different question, and the two are easy to confuse: `source` is
+whose listing it is, `kind` is what the thing _is_ — `show`, `work_party`, `meeting` or
+`class`. Everything on the guide is a listing; only some of it is a show. Work parties and
+monthly deep cleans get listings because they need advertising as much as a gig does, and
+the moment they exist `source = 'cmc'` stops being a usable stand-in for "this is a show".
+So the three surfaces that mean shows rather than listings — `listUpcoming()` behind the
+homepage posters, `getShowTonight()`, and `listPast()` — filter on `kind` as well. The
+public guide deliberately does not, which is what keeps the work party advertised. A
+recurring series inherits `kind` from its prototype, so a monthly deep clean does not
+generate twelve shows.
+
 Who may publish differs by layer, and that is the whole moderation model. CMC events are
 staff work; band events are gated to band admins; community listings publish **directly**,
 with no queue, until a report against that member is upheld — after which their later
