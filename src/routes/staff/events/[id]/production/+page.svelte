@@ -45,6 +45,7 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
 	import { createShift } from '$lib/remote/volunteer.remote';
+	import { applyDutyList } from '$lib/remote/duty-lists.remote';
 
 	let id = $derived(page.params.id!);
 
@@ -73,6 +74,7 @@
 	const recurringSeries = $derived(loaded.recurringSeries);
 	const shifts = $derived(loaded.shifts);
 	const volunteerRoles = $derived(loaded.volunteerRoles);
+	const dutyLists = $derived(loaded.dutyLists);
 
 	const evt = $derived(data.event);
 
@@ -859,34 +861,59 @@
 		{#snippet header(title)}
 			<div class="flex items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>
-				{#if liveVolunteerRoles.length > 0}
-					<Action
-						action={createShift}
-						label="Schedule a shift"
-						variant="ghost"
-						size="sm"
-						modalTitle="Schedule a shift for {evt.title}"
-						submitLabel="Create"
-						successToast="Shift scheduled"
-						onsuccess={() => getStaffEventProduction(id).refresh()}
-					>
-						{#snippet form()}
-							<!--
+				<div class="flex items-center gap-1">
+					{#if dutyLists.length > 0}
+						<Action
+							action={applyDutyList}
+							label="Apply duty list"
+							variant="ghost"
+							size="sm"
+							modalTitle="Apply a duty list to {evt.title}"
+							submitLabel="Apply"
+							successToast="Work orders created"
+							onsuccess={() => getStaffEventProduction(id).refresh()}
+						>
+							{#snippet form()}
+								<input type="hidden" name="eventId" value={evt.id} />
+								<FormField
+									name="dutyListId"
+									label="Duty list"
+									type="select"
+									options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
+									description="Creates every work order the list describes, timed from this event. Applying the same list twice is refused."
+								/>
+							{/snippet}
+						</Action>
+					{/if}
+					{#if liveVolunteerRoles.length > 0}
+						<Action
+							action={createShift}
+							label="Schedule a shift"
+							variant="ghost"
+							size="sm"
+							modalTitle="Schedule a shift for {evt.title}"
+							submitLabel="Create"
+							successToast="Shift scheduled"
+							onsuccess={() => getStaffEventProduction(id).refresh()}
+						>
+							{#snippet form()}
+								<!--
 								The event is the one thing this form already knows, so it is
 								locked rather than offered as a picker.
 							-->
-							<ShiftFormFields
-								form={createShift}
-								roles={liveVolunteerRoles}
-								bind:roleId={shiftRoleId}
-								lockedEvent={{ id: evt.id, title: evt.title }}
-								startsAt={shiftStart}
-								endsAt={shiftEnd}
-								capacity={shiftCapacity}
-							/>
-						{/snippet}
-					</Action>
-				{/if}
+								<ShiftFormFields
+									form={createShift}
+									roles={liveVolunteerRoles}
+									bind:roleId={shiftRoleId}
+									lockedEvent={{ id: evt.id, title: evt.title }}
+									startsAt={shiftStart}
+									endsAt={shiftEnd}
+									capacity={shiftCapacity}
+								/>
+							{/snippet}
+						</Action>
+					{/if}
+				</div>
 			</div>
 		{/snippet}
 

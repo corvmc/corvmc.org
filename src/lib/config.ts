@@ -662,6 +662,21 @@ export const volunteerRoleGroupLabels: Record<(typeof volunteerRoleGroups)[numbe
 };
 
 /**
+ * Which of an event's times a duty list measures its offsets from.
+ *
+ * `doors` falls back to the event's start when no doors time is set, matching
+ * the production page's shift modal — not every show sets one.
+ */
+export const dutyListAnchors = ['doors', 'start', 'end'] as const;
+export type DutyListAnchor = (typeof dutyListAnchors)[number];
+
+export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
+	doors: 'Doors',
+	start: 'Event start',
+	end: 'Event end'
+};
+
+/**
  * A volunteer profile is `active` or it is not. There is exactly one reason to be
  * `blocked` today — an under-18 self-signup — and it always means "a person has to
  * look at this", so `blocked` doubles as the staff review queue.
