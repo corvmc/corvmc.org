@@ -67,6 +67,7 @@ import {
 	updateShift as updateShiftService,
 	cancelShift as cancelShiftService,
 	listShifts,
+	getShiftCancelledByName,
 	countUnfilledByRole,
 	listOpenShiftsForMember,
 	getShiftDetail
@@ -79,6 +80,8 @@ import {
 	markNoShow as markNoShowService,
 	notifySignupsOfCancellation as notifySignupsOfCancellationService,
 	markSignupNotified as markSignupNotifiedService,
+	listShiftCandidates,
+	availabilityConflictsWithDay,
 	listClaimants,
 	listOutstandingClaims,
 	listUnclosedSignups,
@@ -102,6 +105,7 @@ import {
 	listHeldForGate,
 	listHeldForGateMany,
 	missingFrom,
+	wasHeldOn,
 	listLapsingBeforeRosteredShift,
 	flagUnclearedLogs
 } from '$lib/server/volunteer/member-certification-service';
@@ -109,6 +113,8 @@ import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
 	volunteerRoleGroups,
+	DEFAULT_TIMEZONE,
+	CERT_EXPIRY_WARNING_DAYS,
 	CERT_DESCRIPTION_MAX,
 	CERT_NAME_MAX,
 	CERT_NOTES_MAX,
@@ -293,6 +299,82 @@ export const getInterestedVolunteers = query(interestFilters, async (f) => {
 		}))
 	};
 });
+
+const WEEKDAYS: string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/**
+ * "Who to ask" — the candidate column beside a shift's roster.
+ *
+ * The list used to live on the role's own page, one navigation away from the
+ * shift you were filling, and could only answer "who ticked this role" because
+ * it was anchored on the interest table
+ * (docs/reports/volunteer-workflow-findings.md#a5). Three scopes now, and the
+ * flags are resolved here rather than in the component so the priority order is
+ * one thing in one place.
+ *
+ * Every clearance judgement is made **as of the shift's date**, never today.
+ */
+export const getShiftCandidates = query(
+	z.object({
+		shiftId: z.string().min(1),
+		scope: z.enum(['interested', 'worked', 'all']).default('interested'),
+		search: z.string().optional()
+	}),
+	async (f) => {
+		await requireStaff();
+
+		const shift = await getShiftDetail(f.shiftId);
+		if (!shift) return { gated: false, rows: [] };
+
+		const [candidates, required] = await Promise.all([
+			listShiftCandidates(f.shiftId, shift.volunteerRoleId, f.scope, f.search || undefined),
+			getRequirementsForRole(shift.volunteerRoleId)
+		]);
+
+		const held = await listHeldForGateMany(candidates.map((c) => c.userId));
+		const at = shift.startsAt;
+		// The shift's own weekday, in club time — a shift at 10pm Pacific is
+		// already tomorrow in UTC, and asking somebody about the wrong day is
+		// worse than not asking.
+		const shiftDay = WEEKDAYS.indexOf(
+			new Intl.DateTimeFormat('en-US', { timeZone: DEFAULT_TIMEZONE, weekday: 'short' }).format(at)
+		);
+
+		// Valid on the day, but not for much longer after it. A clearance that has
+		// already lapsed by the shift date is not "lapsing" — it is missing, and
+		// the Blocked flag above says so.
+		const lapseCutoff = new Date(at.getTime() + CERT_EXPIRY_WARNING_DAYS * 86_400_000);
+
+		return {
+			gated: required.length > 0,
+			rows: candidates.map((c) => {
+				const rows = held.get(c.userId) ?? [];
+				const missing = missingFrom(required, rows, at);
+
+				const live = required.filter((req) =>
+					rows.some((h) => h.certificationId === req.id && wasHeldOn(h, at))
+				);
+				const lapsing = live.filter((req) =>
+					rows.some(
+						(h) =>
+							h.certificationId === req.id &&
+							wasHeldOn(h, at) &&
+							h.expiresAt !== null &&
+							h.expiresAt <= lapseCutoff
+					)
+				);
+
+				return {
+					...c,
+					missing,
+					lapsing: lapsing.map((r) => r.name),
+					cleared: live.map((r) => r.name),
+					dayMismatch: availabilityConflictsWithDay(c.availability, shiftDay)
+				};
+			})
+		};
+	}
+);
 
 const volunteerListFilters = z.object({
 	search: z.string().optional(),
@@ -1235,8 +1317,13 @@ export const getShift = query(z.string(), async (id) => {
 	await requireStaff();
 	const shift = await getShiftDetail(id);
 	if (!shift) throw error(404, 'Shift not found');
-	const claimants = await listClaimants(id);
-	return { shift, claimants };
+	const [claimants, cancelledByName] = await Promise.all([
+		listClaimants(id),
+		// Only asked when there is something to ask about. A live shift has no
+		// canceller, and the detail page's banner is the only reader.
+		shift.cancelledAt ? getShiftCancelledByName(id) : Promise.resolve(null)
+	]);
+	return { shift: { ...shift, cancelledByName }, claimants };
 });
 
 /**

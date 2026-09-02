@@ -31,9 +31,9 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import NewShiftAction from '../NewShiftAction.svelte';
-	import AddVolunteerAction from '../shifts/[id]/AddVolunteerAction.svelte';
 	import { formatDateShort, relativeDay, toLocalDateTime } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { getShifts, confirmShiftClaims } from '$lib/remote/volunteer.remote';
@@ -295,12 +295,16 @@
 										</Action>
 									{/if}
 									{#if !full}
-										<AddVolunteerAction
-											shiftId={shift.id}
-											volunteerRoleId={shift.volunteerRoleId}
-											roleName={shift.roleName}
-											startsAt={shift.startsAt}
-										/>
+										<!-- Opens the shift, whose candidate column is the list this
+										     used to pop over — and which also shows who is already on
+										     it, which a bare picker never could. -->
+										<Button
+											href={resolve(`/staff/volunteer/shifts/${shift.id}`)}
+											variant={empty ? 'primary' : 'ghost'}
+											size="xs"
+										>
+											Add {shift.capacity - shift.claimed}
+										</Button>
 									{/if}
 								</div>
 							</td>

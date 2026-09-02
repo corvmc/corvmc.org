@@ -843,15 +843,14 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_ASSIGN_ID}`);
 
-		await page.getByRole('button', { name: 'Add someone', exact: true }).click();
-		const dialog = page.getByRole('dialog');
-		await expect(dialog).toBeVisible({ timeout: 15000 });
-
-		// Through the search box rather than the interest shortlist: the shortlist is a
-		// convenience, and the path that has to work is "somebody walked up to the desk".
-		await dialog.getByPlaceholder(/search by name or email/i).fill(SEED_VOL_MEMBER_NAME);
-		await dialog.getByRole('button', { name: new RegExp(SEED_VOL_MEMBER_NAME) }).click();
-		await modalSubmit(page, 'Add to shift').click();
+		// Through the candidate column's search rather than its shortlist: the
+		// shortlist is a convenience, and the path that has to work is "somebody
+		// walked up to the desk" — a member on nobody's list because they never
+		// ticked a box. Searching widens the scope on its own.
+		await page.getByPlaceholder(/search by name or email/i).fill(SEED_VOL_MEMBER_NAME);
+		const row = page.getByRole('listitem').filter({ hasText: SEED_VOL_MEMBER_NAME });
+		await row.getByRole('button', { name: 'Add', exact: true }).click();
+		await modalSubmit(page, 'Add them').click();
 
 		// Confirmed, not claimed. A coordinator typing the name in IS the decision, and
 		// leaving it claimed would cost the member the day-before reminder.
@@ -864,7 +863,7 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_RELEASE_ID}`);
 
-		await page.locator('button[data-button-root][aria-label="Take off the shift"]').first().click();
+		await page.locator('button[data-button-root][aria-label="Remove"]').first().click();
 		await modalSubmit(page, 'Take them off').click();
 
 		// The distinction is the whole point: a cancellation is notice and a no-show is

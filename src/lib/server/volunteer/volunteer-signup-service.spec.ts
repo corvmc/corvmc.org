@@ -103,6 +103,7 @@ import {
 	notifySignupsOfCancellation,
 	markSignupNotified,
 	countUnnotified,
+	availabilityConflictsWithDay,
 	SignupNotFoundError,
 	ShiftFullError,
 	ShiftClosedError,
@@ -414,5 +415,46 @@ describe('the notify list on a called-off shift', () => {
 
 		expect(await countUnnotified('shift-1')).toBe(3);
 		expect(render(whereClauses[0] as SQL)).toContain('"notified_at" is null');
+	});
+});
+
+describe('availabilityConflictsWithDay', () => {
+	// 0 = Sunday … 6 = Saturday.
+	const MON = 1;
+	const SAT = 6;
+
+	it('flags a weekday shift against somebody who wrote a plural weekend', () => {
+		// The bug this was written for: `\bfriday\b` does not match "Fridays",
+		// so the flag silently never fired on the way most people write it.
+		expect(availabilityConflictsWithDay('Fridays and Saturdays, load-out included.', MON)).toBe(
+			true
+		);
+	});
+
+	it('does not flag the day they actually named', () => {
+		expect(availabilityConflictsWithDay('Fridays and Saturdays, load-out included.', SAT)).toBe(
+			false
+		);
+	});
+
+	it('reads abbreviations without reading them inside longer words', () => {
+		expect(availabilityConflictsWithDay('Tues/Thurs evenings', MON)).toBe(true);
+		// "mon" must not be found inside "month".
+		expect(availabilityConflictsWithDay('a couple of times a month', MON)).toBe(false);
+	});
+
+	it('treats silence as no conflict', () => {
+		// "Evenings" says nothing about which day, and flagging it would put an
+		// amber line on nearly everybody.
+		expect(availabilityConflictsWithDay('Evenings, after 6', SAT)).toBe(false);
+		expect(availabilityConflictsWithDay('', SAT)).toBe(false);
+		expect(availabilityConflictsWithDay(null, SAT)).toBe(false);
+	});
+
+	it('expands weekend and weekday, singular or plural', () => {
+		expect(availabilityConflictsWithDay('weekends only', MON)).toBe(true);
+		expect(availabilityConflictsWithDay('weekends only', SAT)).toBe(false);
+		expect(availabilityConflictsWithDay('weekdays', SAT)).toBe(true);
+		expect(availabilityConflictsWithDay('weekday mornings', MON)).toBe(false);
 	});
 });

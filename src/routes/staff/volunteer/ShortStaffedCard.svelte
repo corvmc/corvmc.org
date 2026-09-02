@@ -12,7 +12,6 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import AddVolunteerAction from './shifts/[id]/AddVolunteerAction.svelte';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -83,12 +82,12 @@
 				</td>
 
 				<td class="w-px">
-					<AddVolunteerAction
-						shiftId={shift.id}
-						volunteerRoleId={shift.volunteerRoleId}
-						roleName={shift.roleName}
-						startsAt={shift.startsAt}
-					/>
+					<!-- Goes to the shift rather than opening a picker over this list.
+					     The candidate column is beside the roster now, so the place to
+					     decide who to ask is the place that shows who is already on it. -->
+					<Button href={resolve(`/staff/volunteer/shifts/${shift.id}`)} variant="ghost" size="xs">
+						Add people
+					</Button>
 				</td>
 			</tr>
 		{/each}

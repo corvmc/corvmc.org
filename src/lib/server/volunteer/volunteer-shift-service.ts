@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { volunteerShift, volunteerSignup, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { event } from '$lib/server/db/schema/event';
+import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -460,6 +461,25 @@ export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null
  * before they can be one. Inheriting it would put a subquery on every row of the
  * member board to answer a question that is structurally zero there.
  */
+/**
+ * Who called a shift off, by name.
+ *
+ * Its own lookup rather than a join on `shiftRowsQuery`, because only one page
+ * asks and only when the shift is actually cancelled — which is a handful of
+ * rows in the table. Putting it on the shared row query would join `user` a
+ * second time on every schedule row to answer a question almost none of them
+ * have.
+ */
+export async function getShiftCancelledByName(shiftId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ name: user.name })
+		.from(volunteerShift)
+		.innerJoin(user, eq(user.id, volunteerShift.cancelledByUserId))
+		.where(eq(volunteerShift.id, shiftId))
+		.limit(1);
+	return row?.name ?? null;
+}
+
 export interface OpenShift extends Omit<ShiftWithCounts, 'unnotified'> {
 	/** This member's own claim, if they have a live one. */
 	myStatus: string | null;
