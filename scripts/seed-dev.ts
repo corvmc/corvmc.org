@@ -64,6 +64,7 @@ import {
 	seedVolunteerHours
 } from './seed/volunteer';
 import { seedVolunteerPersonas } from './seed/volunteer-personas';
+import { seedSustainingPersonas } from './seed/sustaining-personas';
 import { seedSuggestions } from './seed/suggestions';
 
 async function main() {
@@ -136,6 +137,9 @@ async function main() {
 	// schedules against the role catalog.
 	const personas = await seedVolunteerPersonas(roles, volunteerRoles, certifications, adminUser);
 	const dutyLists = await seedDutyLists(volunteerRoles, events);
+	// Needs only the role catalog. Kept out of `allUsers` like the volunteer
+	// personas, so nothing that slices or indexes that array shifts under it.
+	const sustainingPersonas = await seedSustainingPersonas(roles);
 	const suggestions = await seedSuggestions(allUsers, adminUser);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
@@ -197,6 +201,7 @@ async function main() {
 		`  ${certifications.certs} certifications (${certifications.held} held), ${volunteerShifts.shifts} shifts, ${volunteerShifts.signups} signups, ${volunteerShifts.feedback} feedback`
 	);
 	console.log(`  ${personas.users} volunteer demo personas`);
+	console.log(`  ${sustainingPersonas.users} sustaining demo personas`);
 	console.log(
 		`  ${suggestions.total} suggestions (${suggestions.votes} votes, ${suggestions.pendingEdits} edit awaiting review)`
 	);
@@ -205,6 +210,11 @@ async function main() {
 	console.log('    volunteer@corvallismusic.org    active volunteer — /member/volunteer');
 	console.log('    newcomer@corvallismusic.org     no profile — /member/volunteer/start');
 	console.log('    minor@corvallismusic.org        blocked — /member/volunteer/blocked');
+	console.log('\n  Sustaining demo logins (all `password`):');
+	console.log('    sustaining@corvallismusic.org   active, mid-cycle — /member/membership');
+	console.log('    cancelling@corvallismusic.org   ending at period end — resume path');
+	console.log('    feecoverer@corvallismusic.org   covering fees — fee schedule');
+	console.log('    lapsed@corvallismusic.org       former member — win-back CTA');
 	console.log('\n  Volunteer deep links:');
 	console.log('    /member/volunteer/feedback/seed-vol-signup-feedback');
 	console.log('    /staff/volunteer/shifts/seed-vol-shift-cancelled');
