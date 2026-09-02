@@ -79,6 +79,14 @@ vi.mock('./stock-service', () => ({
 	recordMovement: vi.fn().mockResolvedValue({ id: 'mv-1' })
 }));
 
+vi.mock('./asset-service', () => ({
+	setAssetStatus: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('./asset-flag-service', () => ({
+	hasBlockingFlag: vi.fn().mockResolvedValue(false)
+}));
+
 import {
 	calculateDailyRate,
 	calculateLoanCharge,
@@ -100,7 +108,8 @@ import {
 	InsufficientCreditsError
 } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
-import { inventoryAsset } from '$lib/server/db/schema/inventory';
+import { setAssetStatus } from './asset-service';
+import { hasBlockingFlag } from './asset-flag-service';
 
 // ---------------------------------------------------------------------------
 // Pure functions
@@ -316,43 +325,15 @@ describe('LoanService lifecycle', () => {
 		});
 
 		/**
-		 * A member may report damage on gear that is still out with them, so a
-		 * unit can be `maintenance` while its loan is still open. Handing it back
-		 * must not return it to the pool: the `loan_return` movement (+1) nets out
-		 * the `repair_out` (-1), so a broken amp would go back on the shelf with a
-		 * balanced ledger and nothing to show for it.
+		 * `maintenance` means "in our possession and not rentable", so a unit
+		 * flagged mid-loan stays `on_loan` until it physically arrives. Custody
+		 * comes back here, which is why this is where availability is decided.
 		 *
-		 * Interim rule -- restore service only from `on_loan`. Superseded once
-		 * `asset_flag` lands and re-uptake decides the status from open blocking
-		 * flags.
+		 * Without this the `loan_return` (+1) would net out the `repair_out` (-1)
+		 * and a broken amp would go back on the shelf with a balanced ledger.
 		 */
-		it('does not put a unit flagged mid-loan back into service', async () => {
-			selectResultQueue = [
-				[
-					{
-						id: 'loan-1',
-						status: 'checked_out',
-						itemId: 'it-1',
-						assetId: 'as-1',
-						quantity: 1,
-						userId: 'user-1',
-						dailyRateCents: 0,
-						checkedOutAt: new Date('2025-07-15')
-					}
-				],
-				[{ name: 'T', email: 't@e.com', stripeId: null }],
-				// the unit, read before its status is touched
-				[{ status: 'maintenance' }],
-				[{ name: 'Bass amp' }]
-			];
-			updateResult = [{ id: 'loan-1', status: 'returned' }];
-
-			await returnLoan('loan-1');
-
-			expect(updateSetCalls.filter((c) => c.table === inventoryAsset)).toHaveLength(0);
-		});
-
-		it('restores a cleanly returned unit to service', async () => {
+		it('sends a unit with an open blocking flag to maintenance, not back to the shelf', async () => {
+			vi.mocked(hasBlockingFlag).mockResolvedValue(true);
 			selectResultQueue = [
 				[
 					{
@@ -374,9 +355,63 @@ describe('LoanService lifecycle', () => {
 
 			await returnLoan('loan-1');
 
-			const assetUpdates = updateSetCalls.filter((c) => c.table === inventoryAsset);
-			expect(assetUpdates).toHaveLength(1);
-			expect(assetUpdates[0].values).toMatchObject({ status: 'in_service' });
+			expect(setAssetStatus).toHaveBeenCalledWith('as-1', 'maintenance', expect.anything());
+		});
+
+		it('restores a cleanly returned unit to service', async () => {
+			vi.mocked(hasBlockingFlag).mockResolvedValue(false);
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'it-1',
+						assetId: 'as-1',
+						quantity: 1,
+						userId: 'user-1',
+						dailyRateCents: 0,
+						checkedOutAt: new Date('2025-07-15')
+					}
+				],
+				[{ name: 'T', email: 't@e.com', stripeId: null }],
+				[{ status: 'on_loan' }],
+				[{ name: 'Bass amp' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'returned' }];
+
+			await returnLoan('loan-1');
+
+			expect(setAssetStatus).toHaveBeenCalledWith('as-1', 'in_service', expect.anything());
+		});
+
+		/**
+		 * `retired` and `lost` are decisions somebody made about the unit while it
+		 * was out. Handing it back does not reverse them.
+		 */
+		it('leaves a terminal status alone', async () => {
+			vi.mocked(hasBlockingFlag).mockResolvedValue(false);
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'it-1',
+						assetId: 'as-1',
+						quantity: 1,
+						userId: 'user-1',
+						dailyRateCents: 0,
+						checkedOutAt: new Date('2025-07-15')
+					}
+				],
+				[{ name: 'T', email: 't@e.com', stripeId: null }],
+				[{ status: 'lost' }],
+				[{ name: 'Bass amp' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'returned' }];
+
+			await returnLoan('loan-1');
+
+			expect(setAssetStatus).not.toHaveBeenCalled();
 		});
 
 		it('retries with the fresh balance when a concurrent spend races the deduction', async () => {
