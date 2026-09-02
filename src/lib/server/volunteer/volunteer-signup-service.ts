@@ -16,6 +16,7 @@ import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
 import { getShiftById } from './volunteer-shift-service';
 import { missingRequirements } from './member-certification-service';
+import { isScheduled } from './scheduled';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { captureException } from '$lib/server/sentry';
 import type { VolunteerSignup } from '$lib/server/db/schema/volunteer';
@@ -126,11 +127,22 @@ export async function claimShift(
 	const shift = await getShiftById(shiftId);
 	if (!shift) throw new SignupNotFoundError();
 	if (shift.cancelledAt) throw new ShiftClosedError('That shift was called off.');
-	if (shift.endsAt < new Date()) throw new ShiftClosedError('That shift has already happened.');
+	if (shift.endsAt && shift.endsAt < new Date())
+		throw new ShiftClosedError('That shift has already happened.');
 
 	// Clearance is checked against the shift's date, not today: a card that
 	// lapses next week doesn't cover a shift the week after.
-	const missing = await missingRequirements(userId, shift.volunteerRoleId, shift.startsAt);
+	//
+	// An unscheduled work order has no date to check against, so the gate falls
+	// back to today. That is a gate, not a record: `scheduleWorkOrder` runs this
+	// again once a window exists, and the audit question -- was the card current
+	// on the night they worked -- is answered at hour-log review against
+	// `workedOn`, which is the only date that reflects reality.
+	const missing = await missingRequirements(
+		userId,
+		shift.volunteerRoleId,
+		shift.startsAt ?? new Date()
+	);
 	if (missing.length > 0) throw new NotClearedError(missing, assigned ? 'staff' : 'member');
 
 	const [existing] = await db
@@ -283,8 +295,8 @@ async function emitSignupEvent(
 			userName: row.userName,
 			userEmail: row.userEmail,
 			roleName: row.roleName,
-			startsAt: row.startsAt.toISOString(),
-			endsAt: row.endsAt.toISOString()
+			startsAt: row.startsAt?.toISOString() ?? null,
+			endsAt: row.endsAt?.toISOString() ?? null
 		});
 	} catch (err) {
 		captureException(err, { event, signupId });
@@ -386,7 +398,11 @@ export async function completeFinishedShifts(now = new Date()): Promise<Complete
 				lt(volunteerShift.endsAt, now),
 				isNull(volunteerShift.cancelledAt)
 			)
-		);
+		)
+		// `ends_at < now` already excludes unscheduled work orders — the cron
+		// cannot complete a row with no clock to run out. Restated so the types
+		// follow the filter.
+		.then((rows) => rows.filter(isScheduled));
 
 	if (due.length === 0) return [];
 
@@ -435,6 +451,8 @@ export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
 		.where(and(eq(volunteerSignup.shiftId, shiftId), ne(volunteerSignup.status, 'cancelled')))
 		.orderBy(asc(volunteerSignup.claimedAt));
 
+	// Deliberately unfiltered by schedule: this is everyone on one named shift,
+	// and an unscheduled work order has claimants like any other row.
 	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));
 }
 
@@ -462,7 +480,8 @@ export async function listSignupsStartingBetween(from: Date, to: Date): Promise<
 				sql`${volunteerShift.startsAt} >= ${Math.floor(from.getTime() / 1000)}`,
 				sql`${volunteerShift.startsAt} < ${Math.floor(to.getTime() / 1000)}`
 			)
-		);
+		)
+		.then((rows) => rows.filter(isScheduled));
 }
 
 /**
@@ -537,15 +556,19 @@ export async function listCompletionsAwaitingFeedback(
 				sql`${volunteerShift.endsAt} >= ${Math.floor(from.getTime() / 1000)}`,
 				sql`${volunteerShift.endsAt} < ${Math.floor(to.getTime() / 1000)}`
 			)
-		);
+		)
+		.then((rows) => rows.filter(isScheduled));
 }
 
 export interface MemberSignup {
 	signupId: string;
 	shiftId: string;
 	roleName: string;
-	startsAt: Date;
-	endsAt: Date;
+	// Null for a work order the member has taken on but nobody has scheduled.
+	// Deliberately not filtered out: this is their record of what they signed up
+	// for, and dropping the undated rows would hide work they are committed to.
+	startsAt: Date | null;
+	endsAt: Date | null;
 	status: VolunteerSignupStatus;
 	shiftCancelledAt: Date | null;
 }
@@ -660,7 +683,7 @@ export async function listOutstandingClaims(
 		)
 		.orderBy(asc(volunteerShift.startsAt), asc(volunteerSignup.claimedAt));
 
-	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));
+	return rows.filter(isScheduled).map((row) => ({ ...row, member: toMemberRef(row.member) }));
 }
 
 /**
@@ -705,7 +728,7 @@ export async function listUnclosedSignups(
 		)
 		.orderBy(desc(volunteerShift.startsAt));
 
-	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));
+	return rows.filter(isScheduled).map((row) => ({ ...row, member: toMemberRef(row.member) }));
 }
 
 /**

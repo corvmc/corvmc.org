@@ -61,7 +61,15 @@
 	}
 
 	/** Shift duration → the hours input, rounded to the quarter-hour step. */
-	function shiftHours(startsAt: Date, endsAt: Date): string {
+	/**
+	 * The pre-filled hours, when the shift had a window to derive them from.
+	 *
+	 * Work orders have none — nobody booked a time — so there is nothing to
+	 * pre-fill and the member types what they actually did. An empty field is the
+	 * honest default; a guess would be a number they might not check.
+	 */
+	function shiftHours(startsAt: Date | null, endsAt: Date | null): string {
+		if (!startsAt || !endsAt) return '';
 		const hours = (endsAt.getTime() - startsAt.getTime()) / 3_600_000;
 		return String(Math.round(hours * 4) / 4);
 	}
@@ -184,7 +192,9 @@
 						<li class="flex flex-wrap items-center justify-between gap-3">
 							<div class="min-w-0">
 								<span class="font-medium">{done.roleName}</span>
-								<span class="text-muted"> — {formatDateShort(done.startsAt)}</span>
+								{#if done.startsAt}
+									<span class="text-muted"> — {formatDateShort(done.startsAt)}</span>
+								{/if}
 							</div>
 							<Action
 								action={submitVolunteerHours.for(done.signupId)}
@@ -202,7 +212,7 @@
 										name="workedOn"
 										label="Date"
 										type="date"
-										value={toDateInput(done.startsAt)}
+										value={done.startsAt ? toDateInput(done.startsAt) : today}
 										max={today}
 									/>
 									<FormField

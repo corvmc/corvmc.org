@@ -8,9 +8,13 @@ export interface VolunteerShiftEvent {
 	userName: string;
 	userEmail: string;
 	roleName: string;
-	/** ISO strings, like every other date on this bus. */
-	startsAt: string;
-	endsAt: string;
+	/**
+	 * ISO strings, like every other date on this bus — and null when the shift is
+	 * an unscheduled work order, which has no window until somebody books one.
+	 * Copy that reads a date must say so rather than rendering "null".
+	 */
+	startsAt: string | null;
+	endsAt: string | null;
 }
 
 // ---------------------------------------------------------------------------

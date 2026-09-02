@@ -11,6 +11,7 @@ import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
 import { event } from './event';
+import { inventoryAsset } from './inventory';
 import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
@@ -232,8 +233,23 @@ export const volunteerShift = sqliteTable(
 		// worked it.
 		eventId: text('event_id').references(() => event.id, { onDelete: 'set null' }),
 
-		startsAt: integer('starts_at', { mode: 'timestamp' }).notNull(),
-		endsAt: integer('ends_at', { mode: 'timestamp' }).notNull(),
+		// Nullable, because an unscheduled row is a **work order**: work that needs
+		// doing with nobody booked to do it yet. Setting a window turns it into an
+		// ordinary claimable shift; the two are the same row in two states.
+		//
+		// Every forward-looking query filters `starts_at >= now` or orders by it,
+		// and `NULL >= x` is NULL in SQLite — so unscheduled work falls out of the
+		// member list, the reminder cron and the feedback cron on its own, with no
+		// query changed. That is load-bearing: assert it rather than trust it.
+		startsAt: integer('starts_at', { mode: 'timestamp' }),
+		endsAt: integer('ends_at', { mode: 'timestamp' }),
+
+		// What the work is about, when it is about a thing. Null for an ordinary
+		// shift — nobody staffs the front desk on behalf of an amp.
+		assetId: text('asset_id').references(() => inventoryAsset.id, { onDelete: 'set null' }),
+
+		/** A deadline, which is not a window: "done by Friday" is not "happens Friday 6-8". */
+		dueAt: integer('due_at', { mode: 'timestamp' }),
 
 		/** How many people are needed. Claims beyond this are refused. */
 		capacity: integer('capacity').notNull().default(1),
@@ -244,6 +260,20 @@ export const volunteerShift = sqliteTable(
 		// Cancelling keeps the row so claimants stay notifiable and the history of
 		// what was called off survives.
 		cancelledAt: integer('cancelled_at', { mode: 'timestamp' }),
+
+		// Whether the *work* is finished, which is not whether anyone turned up.
+		// `completeFinishedShifts()` promotes a signup once the clock runs out —
+		// that says the volunteer worked and earns their hours. A session can end
+		// with the amp still broken, so closure lives here and nowhere else.
+		//
+		// A timestamp rather than a status enum, matching `cancelledAt` here and
+		// `retiredAt` / `deletedAt` / `revokedAt` across the schema. Open work is
+		// `resolved_at IS NULL AND cancelled_at IS NULL`.
+		resolvedAt: integer('resolved_at', { mode: 'timestamp' }),
+		resolvedByUserId: text('resolved_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		resolutionNotes: text('resolution_notes'),
 
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
@@ -264,7 +294,23 @@ export const volunteerShift = sqliteTable(
 			.where(sql`cancelled_at IS NULL`),
 		index('volunteer_shift_role_idx').on(t.volunteerRoleId),
 		index('volunteer_shift_event_idx').on(t.eventId),
-		check('volunteer_shift_ends_after_start', sql`ends_at > starts_at`),
+		index('volunteer_shift_asset_idx').on(t.assetId),
+		// The coordinator's queue: work that needs somebody on it.
+		index('volunteer_shift_unscheduled_idx')
+			.on(t.createdAt)
+			.where(sql`starts_at is null and resolved_at is null and cancelled_at is null`),
+		// Either both ends are set or neither is — a half-scheduled shift is a bug,
+		// not a work order.
+		//
+		// Compare null-ness rather than writing `(a is null and b is null) or
+		// b > a`: that form leaves `starts_at` set and `ends_at` null evaluating to
+		// `false OR NULL` = NULL, and SQLite passes a CHECK that returns NULL. Only
+		// an explicit false rejects. `(x is null)` always yields 0 or 1, so this
+		// cannot leak — same shape as `member_certification_revoked_has_reason`.
+		check(
+			'volunteer_shift_ends_after_start',
+			sql`(starts_at is null) = (ends_at is null) and (ends_at is null or ends_at > starts_at)`
+		),
 		check('volunteer_shift_capacity_positive', sql`capacity > 0`)
 	]
 );
@@ -292,6 +338,17 @@ export const volunteerSignup = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 
 		status: text('status', { enum: volunteerSignupStatuses }).notNull().default('claimed'),
+
+		// When this person says they will be there. Null inherits the shift's
+		// window, which is the common case: doors are at 7, so the desk is staffed
+		// 6-10 regardless of who takes it, and copying that into every signup would
+		// store one fact twice.
+		//
+		// It is a separate fact for task-driven work. A repair has no natural
+		// window — the amp does not care — so "Tuesday evening" is a fact about
+		// Alice, not about the amp. Neither derives from the other.
+		scheduledStartsAt: integer('scheduled_starts_at', { mode: 'timestamp' }),
+		scheduledEndsAt: integer('scheduled_ends_at', { mode: 'timestamp' }),
 
 		claimedAt: integer('claimed_at', { mode: 'timestamp' })
 			.notNull()
@@ -356,6 +413,19 @@ export const volunteerHourLog = sqliteTable(
 		// Integer minutes, never floats. The UI takes quarter-hours and renders
 		// via formatVolunteerHours().
 		minutes: integer('minutes').notNull(),
+
+		// When they were actually there, which is the only tier that knows somebody
+		// stayed until midnight. `workedOn` is a noon-anchored *date* and `minutes`
+		// a bare count, so before these the expected-vs-actual delta had no left
+		// hand side.
+		//
+		// Nullable: hours logged from memory supply `minutes` and nothing else.
+		// When both are given `minutes` is computed from them at write time rather
+		// than derived on read — every report sums it, and two representations that
+		// can disagree eventually do.
+		startedAt: integer('started_at', { mode: 'timestamp' }),
+		endedAt: integer('ended_at', { mode: 'timestamp' }),
+
 		description: text('description').notNull(),
 
 		status: text('status', { enum: volunteerHourStatuses }).notNull().default('pending'),

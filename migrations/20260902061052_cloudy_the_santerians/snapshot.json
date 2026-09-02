@@ -1,10 +1,10 @@
 {
-  "id": "b13b133f-e66f-420a-bd20-858037789c2c",
-  "prevIds": [
-    "b2242035-4ed4-4930-b1a7-0e6da6d265c1"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "3065547f-1742-4968-9dd7-d88faee758bf",
+  "prevIds": [
+    "8c4d1227-2847-49fb-b4b7-9c51d15ea0e3"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -119,6 +119,10 @@
       "entityType": "tables"
     },
     {
+      "name": "asset_flag",
+      "entityType": "tables"
+    },
+    {
       "name": "equipment_category",
       "entityType": "tables"
     },
@@ -219,7 +223,15 @@
       "entityType": "tables"
     },
     {
+      "name": "inbox_saved_view",
+      "entityType": "tables"
+    },
+    {
       "name": "inbox_thread",
+      "entityType": "tables"
+    },
+    {
+      "name": "inbox_thread_tag",
       "entityType": "tables"
     },
     {
@@ -2836,6 +2848,146 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "asset_id",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reported_by_user_id",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "note",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "condition",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "blocks_use",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'pending'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "resolved_by_user_id",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "resolution_notes",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "resolved_at",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "work_order_id",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "loan_id",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "asset_flag"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "equipment_category"
     },
     {
@@ -5406,6 +5558,56 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "inbox_saved_view"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "inbox_saved_view"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "inbox_saved_view"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'{}'",
+      "generated": null,
+      "name": "filters",
+      "entityType": "columns",
+      "table": "inbox_saved_view"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "inbox_saved_view"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "inbox_thread"
     },
     {
@@ -5519,6 +5721,16 @@
       "table": "inbox_thread"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "undo_state",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -5567,6 +5779,46 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "inbox_thread"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "thread_id",
+      "entityType": "columns",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tag",
+      "entityType": "columns",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "inbox_thread_tag"
     },
     {
       "type": "text",
@@ -6459,6 +6711,26 @@
       "table": "volunteer_hour_log"
     },
     {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "started_at",
+      "entityType": "columns",
+      "table": "volunteer_hour_log"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ended_at",
+      "entityType": "columns",
+      "table": "volunteer_hour_log"
+    },
+    {
       "type": "text",
       "notNull": true,
       "autoincrement": false,
@@ -7005,6 +7277,26 @@
       "default": "'claimed'",
       "generated": null,
       "name": "status",
+      "entityType": "columns",
+      "table": "volunteer_signup"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "scheduled_starts_at",
+      "entityType": "columns",
+      "table": "volunteer_signup"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "scheduled_ends_at",
       "entityType": "columns",
       "table": "volunteer_signup"
     },
@@ -8030,6 +8322,66 @@
     },
     {
       "columns": [
+        "asset_id"
+      ],
+      "tableTo": "inventory_asset",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_asset_flag_asset_id_inventory_asset_id_fk",
+      "entityType": "fks",
+      "table": "asset_flag"
+    },
+    {
+      "columns": [
+        "reported_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_asset_flag_reported_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "asset_flag"
+    },
+    {
+      "columns": [
+        "resolved_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_asset_flag_resolved_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "asset_flag"
+    },
+    {
+      "columns": [
+        "loan_id"
+      ],
+      "tableTo": "inventory_loan",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_asset_flag_loan_id_inventory_loan_id_fk",
+      "entityType": "fks",
+      "table": "asset_flag"
+    },
+    {
+      "columns": [
         "item_id"
       ],
       "tableTo": "inventory_item",
@@ -8615,6 +8967,21 @@
     },
     {
       "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_inbox_saved_view_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "inbox_saved_view"
+    },
+    {
+      "columns": [
         "assigned_to_user_id"
       ],
       "tableTo": "user",
@@ -8627,6 +8994,21 @@
       "name": "fk_inbox_thread_assigned_to_user_id_user_id_fk",
       "entityType": "fks",
       "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        "thread_id"
+      ],
+      "tableTo": "inbox_thread",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_inbox_thread_tag_thread_id_inbox_thread_id_fk",
+      "entityType": "fks",
+      "table": "inbox_thread_tag"
     },
     {
       "columns": [
@@ -9509,6 +9891,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "asset_flag_pk",
+      "table": "asset_flag",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "equipment_category_pk",
       "table": "equipment_category",
       "entityType": "pks"
@@ -9725,8 +10116,26 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "inbox_saved_view_pk",
+      "table": "inbox_saved_view",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "inbox_thread_pk",
       "table": "inbox_thread",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "inbox_thread_tag_pk",
+      "table": "inbox_thread_tag",
       "entityType": "pks"
     },
     {
@@ -10605,6 +11014,62 @@
     {
       "columns": [
         {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_asset_flag_status",
+      "entityType": "indexes",
+      "table": "asset_flag"
+    },
+    {
+      "columns": [
+        {
+          "value": "asset_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_asset_flag_asset",
+      "entityType": "indexes",
+      "table": "asset_flag"
+    },
+    {
+      "columns": [
+        {
+          "value": "asset_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "status = 'pending' and blocks_use = 1",
+      "origin": "manual",
+      "name": "idx_asset_flag_open_blocking",
+      "entityType": "indexes",
+      "table": "asset_flag"
+    },
+    {
+      "columns": [
+        {
+          "value": "work_order_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "work_order_id is not null",
+      "origin": "manual",
+      "name": "idx_asset_flag_work_order",
+      "entityType": "indexes",
+      "table": "asset_flag"
+    },
+    {
+      "columns": [
+        {
           "value": "item_id",
           "isExpression": false
         }
@@ -11425,6 +11890,38 @@
     {
       "columns": [
         {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_saved_view_user",
+      "entityType": "indexes",
+      "table": "inbox_saved_view"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "name",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_saved_view_user_name",
+      "entityType": "indexes",
+      "table": "inbox_saved_view"
+    },
+    {
+      "columns": [
+        {
           "value": "status",
           "isExpression": false
         }
@@ -11523,6 +12020,24 @@
       "name": "idx_inbox_thread_contact_ext",
       "entityType": "indexes",
       "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        {
+          "value": "thread_id",
+          "isExpression": false
+        },
+        {
+          "value": "tag",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_thread_tag_unique",
+      "entityType": "indexes",
+      "table": "inbox_thread_tag"
     },
     {
       "columns": [

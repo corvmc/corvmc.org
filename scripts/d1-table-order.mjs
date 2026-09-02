@@ -62,6 +62,10 @@ export const tableOrder = [
 	// References purchase_order and inventory_item, so it clears before neither.
 	'purchase_order_line',
 	'inventory_loan',
+	// References inventory_asset, inventory_loan and user. `work_order_id` points
+	// at volunteer_shift but carries no foreign key -- the two schema modules
+	// would otherwise import each other -- so it imposes no ordering here.
+	'asset_flag',
 	'stock_movement',
 	// References inventory_item and help_article, so it clears before neither.
 	'inventory_item_article',

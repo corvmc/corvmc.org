@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { volunteerShift, volunteerSignup, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { event } from '$lib/server/db/schema/event';
-import { and, asc, count, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
@@ -11,6 +11,9 @@ import {
 	VOLUNTEER_SHIFT_NOTES_MAX
 } from '$lib/config';
 import type { VolunteerShift, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
+
+export { isScheduled } from './scheduled';
+import { isScheduled } from './scheduled';
 
 // ---------------------------------------------------------------------------
 // Shifts
@@ -139,6 +142,13 @@ export async function duplicateShift(
 		throw new ShiftValidationError('Copy it somewhere between tomorrow and a year out.');
 	}
 
+	// Duplication is "same shift, N days later", which needs a date to move. An
+	// unscheduled work order has none — and copying one would produce a second
+	// row for the same broken amp, which is a duplicate report, not a rota.
+	if (!original.startsAt || !original.endsAt) {
+		throw new ShiftValidationError('Give this a date before copying it forward.');
+	}
+
 	// Shift the wall-clock date, not the instant: adding 7 × 86,400,000 ms across
 	// a DST boundary moves a 6pm shift to 5pm or 7pm.
 	const shiftLocalDate = (d: Date) => {
@@ -199,7 +209,15 @@ export async function updateShift(
 
 	const startsAt = data.startsAt ? parseLocal(data.startsAt, 'Start') : existing.startsAt;
 	const endsAt = data.endsAt ? parseLocal(data.endsAt, 'End') : existing.endsAt;
-	validateTimes(startsAt, endsAt);
+
+	// Both or neither, mirroring the table's CHECK. An unscheduled work order can
+	// have its notes or capacity edited without acquiring half a window, and the
+	// half-scheduled case is a bug rather than a state worth representing.
+	if (startsAt && endsAt) {
+		validateTimes(startsAt, endsAt);
+	} else if (startsAt || endsAt) {
+		throw new ShiftValidationError('Give this both a start and an end, or neither.');
+	}
 
 	// Shrinking below what's already claimed would leave people rostered onto a
 	// shift that no longer has room for them.
@@ -270,6 +288,9 @@ export async function countActiveSignups(shiftId: string): Promise<number> {
 		);
 	return Number(row?.n ?? 0);
 }
+
+/** A `ShiftWithCounts` some date filter has already narrowed. See `isScheduled`. */
+export type ScheduledShiftWithCounts = ShiftWithCounts & { startsAt: Date; endsAt: Date };
 
 export interface ShiftWithCounts extends VolunteerShift {
 	roleName: string;
@@ -394,10 +415,16 @@ export async function listShifts(
 		to?: Date;
 		includeCancelled?: boolean;
 	} = {}
-): Promise<ShiftWithCounts[]> {
+): Promise<ScheduledShiftWithCounts[]> {
 	const rows = await shiftRowsQuery()
 		.where(
 			and(
+				// Scheduled rows only. An unscheduled row is a work order — work
+				// nobody has booked a time for — and it belongs in the coordinator's
+				// "needs scheduling" queue, not in a table sorted by date where it
+				// would sit at one end with an empty column. `listWorkOrders` is the
+				// other half of this pair.
+				isNotNull(volunteerShift.startsAt),
 				filters.includeCancelled ? undefined : isNull(volunteerShift.cancelledAt),
 				filters.volunteerRoleId
 					? eq(volunteerShift.volunteerRoleId, filters.volunteerRoleId)
@@ -409,7 +436,7 @@ export async function listShifts(
 		)
 		.orderBy(asc(volunteerShift.startsAt));
 
-	return withCounts(rows);
+	return withCounts(rows).filter(isScheduled);
 }
 
 /**
@@ -427,6 +454,9 @@ export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null
 	const rows = await shiftRowsQuery().where(eq(volunteerShift.id, id)).limit(1);
 	return withCounts(rows)[0] ?? null;
 }
+
+/** An `OpenShift` the `starts_at >= now` filter already narrowed. See `isScheduled`. */
+export type ScheduledOpenShift = OpenShift & { startsAt: Date; endsAt: Date };
 
 export interface OpenShift extends ShiftWithCounts {
 	/** This member's own claim, if they have a live one. */
@@ -447,7 +477,7 @@ export interface OpenShift extends ShiftWithCounts {
 export async function listOpenShiftsForMember(
 	userId: string,
 	opts: { limit?: number } = {}
-): Promise<Omit<OpenShift, 'missingCertifications'>[]> {
+): Promise<Omit<ScheduledOpenShift, 'missingCertifications'>[]> {
 	const now = new Date();
 
 	// Built once and reused in both the select list and the ORDER BY. The
@@ -507,7 +537,7 @@ export async function listOpenShiftsForMember(
 		.orderBy(asc(rankSql), asc(volunteerShift.startsAt))
 		.limit(opts.limit ?? 50);
 
-	return rows.map((r) => ({
+	const open = rows.map((r) => ({
 		...r.shift,
 		roleName: r.roleName,
 		roleGroup: r.roleGroup,
@@ -519,6 +549,11 @@ export async function listOpenShiftsForMember(
 		interested: Number(r.interested) > 0,
 		isFull: Number(r.claimed) >= r.shift.capacity
 	}));
+
+	// `starts_at >= now` already excluded unscheduled work orders. The board a
+	// member browses is dated shifts; work assigned to them individually reaches
+	// them through their own list, not this one.
+	return open.filter(isScheduled);
 }
 
 /**
@@ -531,8 +566,10 @@ export async function listOpenShiftsForMember(
 export async function listShortStaffedShifts(
 	withinDays: number,
 	from = new Date()
-): Promise<ShiftWithCounts[]> {
+): Promise<ScheduledShiftWithCounts[]> {
 	const to = new Date(from.getTime() + withinDays * 24 * 60 * 60 * 1000);
 	const rows = await listShifts({ from, to });
+	// A window was passed, so `listShifts` already dropped the undated rows —
+	// "which nights are short" is a question only a dated shift can answer.
 	return rows.filter((shift) => shift.claimed < shift.capacity);
 }

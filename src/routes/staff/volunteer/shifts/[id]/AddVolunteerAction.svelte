@@ -35,7 +35,12 @@
 		shiftId: string;
 		volunteerRoleId: string;
 		roleName: string;
-		startsAt: Date;
+		/**
+		 * The shift's date, or null for an unscheduled work order. Clearance is
+		 * checked as of the shift when there is one and as of today when there is
+		 * not — the same fallback `claimShift` makes on the server.
+		 */
+		startsAt: Date | null;
 		label?: string;
 		iconOnly?: boolean;
 	} = $props();
@@ -48,7 +53,7 @@
 	const candidates = $derived(
 		getInterestedVolunteers({
 			volunteerRoleId,
-			asOf: startsAt.toISOString(),
+			asOf: (startsAt ?? new Date()).toISOString(),
 			page: 1
 		})
 	);
@@ -72,8 +77,8 @@
 	{#snippet form()}
 		<input type="hidden" name="shiftId" value={shiftId} />
 		<p class="text-sm">
-			{roleName} on {formatDateShort(startsAt)}. They go on confirmed — you putting them there is
-			the decision — so they'll get the reminder the day before.
+			{roleName}{startsAt ? ` on ${formatDateShort(startsAt)}` : ''}. They go on confirmed — you
+			putting them there is the decision — so they'll get the reminder the day before.
 		</p>
 
 		{#await candidates then result}

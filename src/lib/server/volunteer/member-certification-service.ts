@@ -594,7 +594,13 @@ export async function listLapsingBeforeRosteredShift(
 		)
 		.orderBy(asc(volunteerShift.startsAt));
 
-	return rows
-		.filter((r): r is typeof r & { expiresAt: Date } => r.expiresAt !== null)
-		.map((r) => ({ ...r, member: toMemberRef(r.member) }));
+	return (
+		rows
+			.filter((r): r is typeof r & { expiresAt: Date } => r.expiresAt !== null)
+			// A clearance can only lapse *before* a shift that has a date. An
+			// unscheduled work order has nothing to lapse against, and the SQL
+			// comparison against `starts_at` already dropped those.
+			.filter((r): r is typeof r & { startsAt: Date } => r.startsAt !== null)
+			.map((r) => ({ ...r, member: toMemberRef(r.member) }))
+	);
 }

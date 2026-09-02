@@ -71,7 +71,7 @@ import {
 	listOpenShiftsForMember,
 	getShiftDetail
 } from '$lib/server/volunteer/volunteer-shift-service';
-import type { ShiftWithCounts } from '$lib/server/volunteer/volunteer-shift-service';
+import type { ScheduledShiftWithCounts } from '$lib/server/volunteer/volunteer-shift-service';
 import {
 	claimShift as claimShiftService,
 	cancelSignup as cancelSignupService,
@@ -1812,7 +1812,7 @@ export const getShiftsInWindow = query(
 		volunteerRoleId: z.string().optional(),
 		includeCancelled: z.boolean().optional()
 	}),
-	async (f): Promise<ShiftWithCounts[]> => {
+	async (f): Promise<ScheduledShiftWithCounts[]> => {
 		await requireStaff();
 		return listShifts({
 			from: new Date(f.from),

@@ -2,7 +2,12 @@ import { db } from '$lib/server/db';
 import { media, mediaAttachment, attachableTypes } from '$lib/server/db/schema/media';
 import type { AttachableType } from '$lib/server/db/schema/media';
 import { event } from '$lib/server/db/schema/event';
-import { acquisition, inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
+import {
+	acquisition,
+	assetFlag,
+	inventoryAsset,
+	inventoryItem
+} from '$lib/server/db/schema/inventory';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { deleteObject } from '$lib/server/storage';
@@ -31,6 +36,7 @@ const PARENT_TABLES = {
 	// simply never be reaped and the objects would leak.
 	inventory_item: inventoryItem,
 	inventory_asset: inventoryAsset,
+	asset_flag: assetFlag,
 	acquisition
 } as const satisfies Record<AttachableType, unknown>;
 
