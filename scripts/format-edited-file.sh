@@ -23,9 +23,11 @@ FILE=$(printf '%s' "$PAYLOAD" | jq -r '.tool_input.file_path // empty')
 [ -f "$FILE" ] || exit 0
 
 # Only handle the source types prettier is configured for here. The wider set
-# (.md/.json/.css/.yml/…) is covered by lefthook's pre-commit prettier job.
+# (.md/.json/.css/.yml/…) is covered by lefthook's pre-commit prettier job. This
+# list is the code half of scripts/lint-changed.sh's FORMATTABLE — keep them in
+# step, or an extension lands in the repo that no gate is watching.
 case "$FILE" in
-	*.ts | *.js | *.svelte) ;;
+	*.ts | *.js | *.mjs | *.cjs | *.svelte) ;;
 	*) exit 0 ;;
 esac
 
