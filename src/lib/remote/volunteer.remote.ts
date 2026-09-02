@@ -648,6 +648,15 @@ const profileFieldsSchema = z.object({
  * every minor.
  */
 const onboardingSchema = profileFieldsSchema.extend({
+	// Required here and optional on the edit form, deliberately. Shift-day
+	// contact is the reason the field exists, so signing up without one leaves a
+	// coordinator with no way to reach somebody who is on tonight — but making
+	// it required on the *edit* form would lock every existing member out of
+	// their own profile until they supplied one.
+	phone: z
+		.string()
+		.min(1, 'We need a number for shift-day contact')
+		.max(30, 'Keep this under 30 characters'),
 	isAdult: z.enum(['yes', 'no'], { message: 'Let us know whether you are 18 or older' })
 });
 
@@ -1753,7 +1762,10 @@ export const submitShiftFeedback = form(
 		}
 
 		void getShiftFeedbackContext(data.signupId).refresh();
-		return { success: true };
+		// Handed back so the confirmation can answer what they actually said:
+		// somebody who has just reported they were not set up should not be
+		// thanked in the same words as somebody who was.
+		return { success: true, wasSetUp: data.wasSetUp };
 	}
 );
 

@@ -86,6 +86,10 @@ async function fillOnboarding(
 ) {
 	await page.locator('input[name="firstName"]').fill(first);
 	await page.locator('input[name="lastName"]').fill(last);
+	// Required at sign-up, optional on the edit form: shift-day contact is the
+	// reason the field exists, so signing up without one leaves a coordinator
+	// with no way to reach somebody who is on tonight.
+	await page.locator('input[name="phone"]').fill('(541) 555-0100');
 	// A select, not a checkbox — an unticked box would be indistinguishable from
 	// an unanswered question, which is the one mistake this field cannot make.
 	await page.locator('select[name="isAdult"]').selectOption(age);
