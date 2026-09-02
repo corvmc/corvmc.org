@@ -17,7 +17,35 @@ import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { mapDomainError } from '$lib/server/errors';
+import { captureException } from '$lib/server/sentry';
 import { DOLLARS_PER_UNIT } from '$lib/config';
+
+/**
+ * The billing portal link, or null if Stripe cannot produce one.
+ *
+ * It used to sit unguarded in the `Promise.all` below, which made a convenience
+ * link load-bearing for the whole page: a Stripe outage, or a customer deleted
+ * from the Stripe dashboard, took `/member/membership` down for every
+ * sustaining member instead of hiding one button. The subscription, credits and
+ * allocation rendered beside it are the page; this is the button.
+ *
+ * It is also what made sustaining members unseedable. `scripts/seed/users.ts`
+ * writes a placeholder `cus_seed_…` customer, which is not falsy, so the old
+ * short-circuit did not catch it and every seeded sustaining member hit a
+ * customer that does not exist.
+ */
+async function billingPortalUrlOrNull(
+	stripeId: string | null,
+	returnUrl: string
+): Promise<string | null> {
+	if (!stripeId) return null;
+	try {
+		return await createBillingPortalUrl(stripeId, returnUrl);
+	} catch (err) {
+		captureException(err);
+		return null;
+	}
+}
 
 export const getMemberMembership = query(async () => {
 	const user = await requireMember();
@@ -29,9 +57,7 @@ export const getMemberMembership = query(async () => {
 			getAllBalances(user.id),
 			getCommunityStats(),
 			getProductConfig('contribution'),
-			user.stripeId
-				? createBillingPortalUrl(user.stripeId, `${url.origin}/member/membership`)
-				: Promise.resolve(null)
+			billingPortalUrlOrNull(user.stripeId, `${url.origin}/member/membership`)
 		]);
 
 	const subscription = mapDbSubscription(dbSubscription);

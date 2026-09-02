@@ -16,18 +16,20 @@ vi.mock('$lib/server/authorization', () => ({
 
 const getMemberSubscription = vi.fn(async (): Promise<unknown> => null);
 const createCheckoutSession = vi.fn(async () => 'https://checkout.stripe.com/cs_test');
+const createBillingPortalUrl = vi.fn(async (): Promise<string | null> => null);
 vi.mock('$lib/server/finance/subscription-service', () => ({
 	getMemberSubscription: (...args: unknown[]) => getMemberSubscription(...(args as [])),
 	createCheckoutSession: (...args: unknown[]) => createCheckoutSession(...(args as [])),
 	mapDbSubscription: vi.fn(() => null),
 	patchMemberSubscription: vi.fn(async () => undefined),
-	createBillingPortalUrl: vi.fn(async () => null),
+	createBillingPortalUrl: (...args: unknown[]) => createBillingPortalUrl(...(args as [])),
 	updateQuantity: vi.fn(async () => undefined),
 	resume: vi.fn(async () => undefined)
 }));
 
 vi.mock('$lib/server/finance/credit-service', () => ({
-	getAllBalances: vi.fn(async () => ({}))
+	getAllBalances: vi.fn(async () => ({ free_hours: 3 })),
+	getUsageSinceLastAllocation: vi.fn(async () => 1)
 }));
 
 vi.mock('$lib/server/finance/community-stats', () => ({
@@ -82,6 +84,7 @@ const membership = (await import('./membership.remote')) as unknown as Record<
 beforeEach(() => {
 	vi.clearAllMocks();
 	getMemberSubscription.mockResolvedValue(null);
+	createBillingPortalUrl.mockResolvedValue(null);
 });
 
 describe('createSubscription', () => {
@@ -110,5 +113,43 @@ describe('createSubscription', () => {
 		expect(createCheckoutSession).toHaveBeenCalledWith(
 			expect.objectContaining({ userId: 'user-1', quantity: 5, coverFees: false })
 		);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// getMemberMembership
+// ---------------------------------------------------------------------------
+
+/**
+ * Regression: the billing portal URL was fetched inside the same `Promise.all`
+ * as the page's own data, so a Stripe failure took the whole query down rather
+ * than hiding one button. Every sustaining member's `/member/membership` 500s
+ * if Stripe is down, or if their customer was deleted in the Stripe dashboard.
+ *
+ * It is also what made sustaining members unseedable: the dev seed writes a
+ * placeholder `cus_seed_…`, which is not falsy, so `createBillingPortalUrl`
+ * reached for a customer that does not exist and the page never rendered.
+ * The portal link is a convenience; the subscription, credits and allocation
+ * beside it are the page.
+ */
+describe('getMemberMembership', () => {
+	it('still returns the page when the billing portal is unavailable', async () => {
+		createBillingPortalUrl.mockRejectedValue(new Error('No such customer: cus_seed_1a2b3c4d'));
+
+		const data = (await membership.getMemberMembership()) as {
+			billingPortalUrl: string | null;
+			credits: Record<string, number>;
+		};
+
+		expect(data.billingPortalUrl).toBeNull();
+		expect(data.credits).toEqual({ free_hours: 3 });
+	});
+
+	it('passes the portal URL through when Stripe answers', async () => {
+		createBillingPortalUrl.mockResolvedValue('https://billing.stripe.com/session/live');
+
+		const data = (await membership.getMemberMembership()) as { billingPortalUrl: string | null };
+
+		expect(data.billingPortalUrl).toBe('https://billing.stripe.com/session/live');
 	});
 });
