@@ -3,7 +3,7 @@
  * run twice and what `pnpm db:reset` relies on. That guarantee was only as good
  * as a hand-written list inside `scripts/seed-dev.ts`, and the list had drifted:
  * `media` and `media_attachment` were never added to it. Foreign keys are off
- * for the whole seed (`PRAGMA foreign_keys = OFF` at the top of the file), so
+ * for the whole seed (`PRAGMA foreign_keys = OFF` at the top of `main()`), so
  * nothing cascaded in to cover for the omission either — the rows simply
  * survived, and the second seed died on
  *
@@ -15,18 +15,21 @@
  * `scripts/d1-table-order.mjs`, the copy that `scripts/d1-table-order.spec.ts`
  * already holds against the drizzle snapshot. These tests keep it that way:
  * a new table can no longer be added to the schema and missed here.
+ *
+ * `deleteAll()` now lives in `scripts/seed/teardown.ts` — the seed was split
+ * one-file-per-feature and `scripts/seed-dev.ts` kept only `main()`.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 // @ts-expect-error -- plain .mjs helper, no types
 import { deleteOrder } from './d1-table-order.mjs';
 
-const source = readFileSync(new URL('./seed-dev.ts', import.meta.url), 'utf8');
+const source = readFileSync(new URL('./seed/teardown.ts', import.meta.url), 'utf8');
 
 /** The body of `async function deleteAll() { … }`, up to its closing brace. */
 function deleteAllBody(): string {
-	const start = source.indexOf('async function deleteAll()');
-	expect(start, 'seed-dev.ts no longer defines deleteAll()').toBeGreaterThan(-1);
+	const start = source.indexOf('export async function deleteAll()');
+	expect(start, 'seed/teardown.ts no longer defines deleteAll()').toBeGreaterThan(-1);
 	const end = source.indexOf('\n}', start);
 	return source.slice(start, end);
 }
@@ -47,7 +50,7 @@ const schemaTables: string[] = latestSnapshot()
 
 describe('seed-dev wipe', () => {
 	it('derives its table list from d1-table-order, not a second copy', () => {
-		expect(source).toMatch(/import\s*\{[^}]*\bdeleteOrder\b[^}]*\}\s*from\s*'\.\/d1-table-order/);
+		expect(source).toMatch(/import\s*\{[^}]*\bdeleteOrder\b[^}]*\}\s*from\s*'\.\.\/d1-table-order/);
 	});
 
 	it('hand-writes no table names in deleteAll', () => {
