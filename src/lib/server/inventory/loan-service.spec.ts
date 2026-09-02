@@ -84,7 +84,8 @@ vi.mock('./asset-service', () => ({
 }));
 
 vi.mock('./asset-flag-service', () => ({
-	hasBlockingFlag: vi.fn().mockResolvedValue(false)
+	hasBlockingFlag: vi.fn().mockResolvedValue(false),
+	raiseFlag: vi.fn().mockResolvedValue({ id: 'flag-1' })
 }));
 
 import {
@@ -109,7 +110,7 @@ import {
 } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { setAssetStatus } from './asset-service';
-import { hasBlockingFlag } from './asset-flag-service';
+import { hasBlockingFlag, raiseFlag } from './asset-flag-service';
 
 // ---------------------------------------------------------------------------
 // Pure functions
@@ -382,6 +383,77 @@ describe('LoanService lifecycle', () => {
 			await returnLoan('loan-1');
 
 			expect(setAssetStatus).toHaveBeenCalledWith('as-1', 'in_service', expect.anything());
+		});
+
+		/**
+		 * Re-uptake is an inspection, not just a state change. Something noticed on
+		 * the counter has to keep the unit off the shelf, which means the flag is
+		 * raised *before* availability is decided rather than after.
+		 */
+		it('raises what the duty volunteer noticed, against this loan', async () => {
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'it-1',
+						assetId: 'as-1',
+						quantity: 1,
+						userId: 'user-1',
+						dailyRateCents: 0,
+						checkedOutAt: new Date('2025-07-15')
+					}
+				],
+				[{ name: 'T', email: 't@e.com', stripeId: null }],
+				[{ status: 'on_loan' }],
+				[{ name: 'Bass amp' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'returned' }];
+
+			await returnLoan('loan-1', undefined, {
+				actorId: 'staff-1',
+				condition: 'fair',
+				flags: [{ note: 'Grille cloth torn', blocksUse: false }]
+			});
+
+			expect(raiseFlag).toHaveBeenCalledWith(
+				expect.objectContaining({
+					assetId: 'as-1',
+					note: 'Grille cloth torn',
+					blocksUse: false,
+					reportedByUserId: 'staff-1',
+					loanId: 'loan-1'
+				})
+			);
+		});
+
+		it('records the condition it came back in', async () => {
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'it-1',
+						assetId: 'as-1',
+						quantity: 1,
+						userId: 'user-1',
+						dailyRateCents: 0,
+						checkedOutAt: new Date('2025-07-15')
+					}
+				],
+				[{ name: 'T', email: 't@e.com', stripeId: null }],
+				[{ status: 'on_loan' }],
+				[{ name: 'Bass amp' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'returned' }];
+
+			await returnLoan('loan-1', undefined, { actorId: 'staff-1', condition: 'poor' });
+
+			expect(setAssetStatus).toHaveBeenCalledWith(
+				'as-1',
+				expect.anything(),
+				expect.objectContaining({ condition: 'poor' })
+			);
 		});
 
 		/**
