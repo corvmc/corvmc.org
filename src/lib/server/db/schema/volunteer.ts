@@ -251,6 +251,16 @@ export const volunteerShift = sqliteTable(
 		/** A deadline, which is not a window: "done by Friday" is not "happens Friday 6-8". */
 		dueAt: integer('due_at', { mode: 'timestamp' }),
 
+		// Provenance only: which duty list stamped this row out, so a work order can
+		// say "staffed from Standard Show", and so a second apply can be refused
+		// rather than silently doubling the roster.
+		//
+		// Set-null, and never read for cascade or edit propagation. Editing a duty
+		// list must not reach into shifts people have already claimed — the copy is
+		// an ordinary shift, the same bargain `duplicateShift` makes when it says the
+		// copy has "no link back".
+		dutyListId: text('duty_list_id').references(() => dutyList.id, { onDelete: 'set null' }),
+
 		/** How many people are needed. Claims beyond this are refused. */
 		capacity: integer('capacity').notNull().default(1),
 
@@ -740,6 +750,197 @@ export const volunteerRoleCertification = sqliteTable(
 	]
 );
 
+// ---------------------------------------------------------------------------
+// Work tasks — the checklist inside one work order
+// ---------------------------------------------------------------------------
+
+/**
+ * An item on a work order's list, ticked by whoever is on it.
+ *
+ * A volunteer signs up for **Tear Down** and logs one hour entry for it. Nobody
+ * signs up for "take the trash out", and nobody logs four minutes against it.
+ * The tables either side of this one already say so — `volunteer_signup` is
+ * unique per (shift, member) and `volunteer_hour_log.minutes` carries a positive
+ * CHECK — so a checklist cannot be modelled as more work orders. It has to sit a
+ * level below one.
+ *
+ * Which is why this is four columns and stops. `doneByUserId` is attribution —
+ * who says the trash went out — and never credit: hours belong to the work order
+ * and nothing here touches them. A task that wants an assignee or a due date of
+ * its own is not a task, it is a work order with a role.
+ */
+export const workTask = sqliteTable(
+	'work_task',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+
+		// Cascade: a cancelled work order's checklist is noise the moment the work
+		// order is gone, and nothing reads it afterwards.
+		workOrderId: text('work_order_id')
+			.notNull()
+			.references(() => volunteerShift.id, { onDelete: 'cascade' }),
+
+		label: text('label').notNull(),
+		sortOrder: integer('sort_order').notNull().default(0),
+
+		done: integer('done', { mode: 'boolean' }).notNull().default(false),
+		doneAt: integer('done_at', { mode: 'timestamp' }),
+		// Set-null, which is exactly why the CHECK below constrains `done_at` and
+		// not this: deleting an account must not make a ticked task unrepresentable.
+		doneByUserId: text('done_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		// Earns its place here more than on most tables: checkboxes get toggled
+		// constantly, and "when did this list last move" is the useful question.
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('work_task_order_idx').on(t.workOrderId, t.sortOrder),
+		// `done` is NOT NULL, so neither branch can evaluate to NULL and slip
+		// through — SQLite passes a CHECK that returns NULL.
+		check(
+			'work_task_done_has_time',
+			sql`(done = 0 and done_at is null) or (done = 1 and done_at is not null)`
+		)
+	]
+);
+
+// ---------------------------------------------------------------------------
+// Duty lists — a reusable set of work orders
+// ---------------------------------------------------------------------------
+
+/**
+ * Which of the event's times an item's offsets are measured from.
+ *
+ * Adding a value emits zero SQL — drizzle's `text({ enum })` is a TypeScript-only
+ * constraint.
+ */
+export const dutyListAnchors = ['doors', 'start', 'end'] as const;
+export type DutyListAnchor = (typeof dutyListAnchors)[number];
+
+/**
+ * A named set of work orders, stamped onto an event.
+ *
+ * Staffing a show is six shifts, and today that is six passes through the modal
+ * on the production page. This is that, once.
+ *
+ * It is a real table rather than the prototype pattern `recurring_series` uses,
+ * for one reason: a past show's shift set is **not inert**. Point a template at
+ * last month's show and someone cancelling a shift on it silently rewrites the
+ * template. A prototype event survives that because nobody edits an event after
+ * it happens; a roster is edited constantly. It is a table rather than a config
+ * tuple for the adjacent reason — Facility and Programming own their own lists,
+ * and a list you need a deploy to change is not owned by them.
+ */
+export const dutyList = sqliteTable(
+	'duty_list',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		name: text('name').notNull().unique(),
+		description: text('description'),
+		anchor: text('anchor', { enum: dutyListAnchors }).notNull().default('doors'),
+		isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+		createdByUserId: text('created_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [index('duty_list_active_idx').on(t.isActive, t.name)]
+);
+
+/**
+ * One work order the list will produce, described relative to the anchor.
+ *
+ * The time columns **mirror the work order's own nullability**, which is what
+ * lets one row type produce both halves of the show:
+ *
+ * - `offsetMinutes` + `durationMinutes` → a scheduled shift. Door, at doors.
+ * - `dueOffsetMinutes` → an unscheduled work order with a `dueAt`. Booking Lead,
+ *   a week out, whose tasks are the advance checklist.
+ *
+ * So there is no `phase` column and no "advance" concept: which phase a piece of
+ * work belongs to is *which role's work order its tasks are on*, and the offset
+ * says when. That is the difference the production spec was drawing when it
+ * separated advance from day-of — who, and when — and roles plus offsets already
+ * carry both.
+ *
+ * `tasks` is an ordered list of labels and nothing more: no identity, no foreign
+ * keys, never queried across. They become `work_task` rows at apply time, and
+ * until then they are strings — the same call `band_site.blocks` makes.
+ */
+export const dutyListItem = sqliteTable(
+	'duty_list_item',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		dutyListId: text('duty_list_id')
+			.notNull()
+			.references(() => dutyList.id, { onDelete: 'cascade' }),
+		// Restrict, matching `volunteer_shift.volunteerRoleId`: a list that names a
+		// role staff deleted should fail loudly at the delete, not quietly at apply.
+		volunteerRoleId: text('volunteer_role_id')
+			.notNull()
+			.references(() => volunteerRole.id, { onDelete: 'restrict' }),
+
+		/** Signed, and measured from the list's anchor: negative is before it. */
+		offsetMinutes: integer('offset_minutes'),
+		durationMinutes: integer('duration_minutes'),
+		/** Signed likewise. Deadline, not window: "done by Friday" is not "Friday 6-8". */
+		dueOffsetMinutes: integer('due_offset_minutes'),
+
+		capacity: integer('capacity').notNull().default(1),
+		notes: text('notes'),
+		sortOrder: integer('sort_order').notNull().default(0),
+		tasks: text('tasks', { mode: 'json' }).$type<string[]>().notNull().default([]),
+
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('duty_list_item_list_idx').on(t.dutyListId, t.sortOrder),
+		// Compare null-ness rather than writing `(a is null and b is null) or ...`:
+		// that form leaves one-set-one-null evaluating to `false OR NULL` = NULL,
+		// and SQLite passes a CHECK that returns NULL. `(x is null)` always yields
+		// 0 or 1, so this cannot leak. Same shape as
+		// `volunteer_shift_ends_after_start`.
+		check(
+			'duty_list_item_window_paired',
+			sql`(offset_minutes is null) = (duration_minutes is null)`
+		),
+		// Exactly one shape per item — a window or a deadline, never both and never
+		// neither. Both would mean "Door 6-10pm, due Friday", which is not a thing.
+		check(
+			'duty_list_item_one_shape',
+			sql`(offset_minutes is null) != (due_offset_minutes is null)`
+		),
+		check(
+			'duty_list_item_duration_positive',
+			sql`duration_minutes is null or duration_minutes > 0`
+		),
+		check('duty_list_item_capacity_positive', sql`capacity > 0`)
+	]
+);
+
 export type VolunteerRole = typeof volunteerRole.$inferSelect;
 export type VolunteerHourLog = typeof volunteerHourLog.$inferSelect;
 export type VolunteerRoleInterest = typeof volunteerRoleInterest.$inferSelect;
@@ -749,3 +950,6 @@ export type VolunteerSignup = typeof volunteerSignup.$inferSelect;
 export type VolunteerShiftFeedback = typeof volunteerShiftFeedback.$inferSelect;
 export type VolunteerCertification = typeof volunteerCertification.$inferSelect;
 export type MemberCertification = typeof memberCertification.$inferSelect;
+export type WorkTask = typeof workTask.$inferSelect;
+export type DutyList = typeof dutyList.$inferSelect;
+export type DutyListItem = typeof dutyListItem.$inferSelect;

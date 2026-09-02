@@ -1004,11 +1004,42 @@ So:
   side; the staff pages under `/staff/volunteer/` are always on, per the panel-wide rule
   that staff surfaces ignore flags.
 
+### Duty lists
+
+A duty list is a named set of work orders stamped onto an event — staffing a show is six of
+them, and every one used to be entered by hand on the production page.
+
+Two grains, one level of nesting, and **hours are what separate them**. A volunteer signs up
+for Tear Down and logs one entry for it; nobody signs up for "take the trash out" or logs four
+minutes against it. `volunteer_signup` is unique per (shift, member) and
+`volunteer_hour_log.minutes` carries a positive CHECK, so a checklist cannot be more work
+orders — it sits a level below one, as `work_task`. That table is four columns and stops:
+`doneByUserId` is attribution, never credit, and nothing in it touches hours.
+
+`duty_list_item`'s time columns mirror the work order's own nullability, which is what lets one
+row type produce both halves of a show. An item with `offsetMinutes` + `durationMinutes`
+becomes a scheduled shift (Door, at doors); an item with only `dueOffsetMinutes` becomes an
+unscheduled work order with a `dueAt` (Booking Lead, a week out, whose tasks are the advance
+checklist). So there is **no `phase` column and no "advance" concept** — which phase a piece of
+work belongs to is which role's work order its tasks are on, and the offset says when.
+
+Applying is `applyDutyList()` in `volunteer/duty-list-service.ts`. Offsets are plain instant
+arithmetic from a real anchor — `doorsAt ?? startsAt`, `startsAt`, or `endsAt` — so DST needs
+no handling here, unlike `duplicateShift`, which shifts a wall-clock date and does. Writes go
+through `db.batch` with the task insert chunked to stay under D1's 100 bound parameters. A
+second apply to the same event is refused by name rather than deduplicated, because doubling a
+roster looks exactly like the first apply from the outside.
+
+The event is the parent, and there is no separate one. Work parties and monthly deep cleans get
+their own event listings — they need advertising as much as a show does — so every application
+already has a row identifying it, and March's deep clean is a different event from April's.
+
 ### Data touched
 
 `volunteer_role`, `volunteer_role_interest`, `volunteer_profile`, `volunteer_hour_log`,
 `volunteer_shift`, `volunteer_signup`, `volunteer_shift_feedback`,
-`volunteer_certification`, `member_certification`, `volunteer_role_certification`.
+`volunteer_certification`, `member_certification`, `volunteer_role_certification`,
+`duty_list`, `duty_list_item`, `work_task`.
 
 ### Where it breaks
 
