@@ -39,19 +39,16 @@ vi.mock('./stock-service', () => ({
 	recordMovement: vi.fn().mockResolvedValue({ id: 'mv-1' })
 }));
 
+vi.mock('./asset-flag-service', () => ({
+	raiseFlag: vi.fn().mockResolvedValue({ id: 'flag-1', assetId: 'as-1' })
+}));
+
 vi.mock('$lib/server/media/media-service', () => ({ listFor: vi.fn().mockResolvedValue([]) }));
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (k: string) => `https://cdn/${k}` }));
 
-import { AssetNotReportableError, reportDamage } from './resources-service';
+import { reportDamage } from './resources-service';
 import { recordMovement } from './stock-service';
-
-const ASSET = {
-	id: 'as-1',
-	itemId: 'it-1',
-	status: 'in_service',
-	condition: 'good',
-	locationId: 'loc-1'
-};
+import { raiseFlag } from './asset-flag-service';
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -60,68 +57,49 @@ beforeEach(() => {
 	vi.mocked(recordMovement).mockResolvedValue({ id: 'mv-1' } as never);
 });
 
+/**
+ * `reportDamage` is now a thin wrapper over `raiseFlag` — the behaviour it used
+ * to own (the status change, the movement, the refusals) moved to
+ * `asset-flag-service`, and is tested there against the real logic rather than
+ * re-asserted through a delegation.
+ *
+ * What is worth pinning here is the default, because it is the compatibility
+ * seam: every caller that has not been taught to ask "is it still usable?"
+ * must keep the old immediate-pull behaviour.
+ */
 describe('reportDamage', () => {
-	/**
-	 * The report *is* the ledger entry. If the status change lands and the
-	 * movement does not, the unit goes out of service with no record of why and
-	 * the reporter's note is lost — which is exactly what shipped before this
-	 * test existed.
-	 */
-	it('writes the movement that carries the note and the reporter', async () => {
-		selectResultQueue = [[ASSET]];
+	it('defaults to blocking, so an unasked report still pulls the unit', async () => {
+		await reportDamage({ assetId: 'as-1', note: 'x', reportedByUserId: 'u' });
 
+		expect(raiseFlag).toHaveBeenCalledWith(expect.objectContaining({ blocksUse: true }));
+	});
+
+	it('passes through a reporter who said it is still usable', async () => {
+		await reportDamage({
+			assetId: 'as-1',
+			note: 'Tolex torn',
+			reportedByUserId: 'u',
+			blocksUse: false
+		});
+
+		expect(raiseFlag).toHaveBeenCalledWith(expect.objectContaining({ blocksUse: false }));
+	});
+
+	it('carries the note, the reporter and the condition', async () => {
 		await reportDamage({
 			assetId: 'as-1',
 			note: 'Crackling on channel two',
-			reportedByUserId: 'user-9'
-		});
-
-		expect(recordMovement).toHaveBeenCalledWith(
-			expect.objectContaining({
-				itemId: 'it-1',
-				assetId: 'as-1',
-				reason: 'repair_out',
-				actorId: 'user-9',
-				notes: 'Crackling on channel two'
-			})
-		);
-	});
-
-	it('takes the unit out of service', async () => {
-		selectResultQueue = [[ASSET]];
-		await reportDamage({ assetId: 'as-1', note: 'x', reportedByUserId: 'u' });
-		expect(updatedValues[0]).toMatchObject({ status: 'maintenance' });
-	});
-
-	it('records how bad the reporter thought it was', async () => {
-		selectResultQueue = [[ASSET]];
-		await reportDamage({
-			assetId: 'as-1',
-			note: 'x',
-			reportedByUserId: 'u',
+			reportedByUserId: 'user-9',
 			condition: 'poor'
 		});
-		expect(updatedValues[0]).toMatchObject({ condition: 'poor' });
-	});
 
-	it('keeps the existing condition when the reporter did not say', async () => {
-		selectResultQueue = [[ASSET]];
-		await reportDamage({ assetId: 'as-1', note: 'x', reportedByUserId: 'u' });
-		expect(updatedValues[0]).toMatchObject({ condition: 'good' });
-	});
-
-	it('refuses a unit already in the shop rather than recording nothing twice', async () => {
-		selectResultQueue = [[{ ...ASSET, status: 'maintenance' }]];
-		await expect(
-			reportDamage({ assetId: 'as-1', note: 'x', reportedByUserId: 'u' })
-		).rejects.toThrow(AssetNotReportableError);
-		expect(recordMovement).not.toHaveBeenCalled();
-	});
-
-	it('accepts a report on a unit that is out on loan', async () => {
-		selectResultQueue = [[{ ...ASSET, status: 'on_loan' }]];
-		await expect(
-			reportDamage({ assetId: 'as-1', note: 'x', reportedByUserId: 'u' })
-		).resolves.toBeDefined();
+		expect(raiseFlag).toHaveBeenCalledWith(
+			expect.objectContaining({
+				assetId: 'as-1',
+				note: 'Crackling on channel two',
+				reportedByUserId: 'user-9',
+				condition: 'poor'
+			})
+		);
 	});
 });
