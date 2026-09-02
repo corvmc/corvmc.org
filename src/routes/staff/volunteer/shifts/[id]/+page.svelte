@@ -59,8 +59,8 @@
 	{@const unconfirmed = claimants.filter((c) => c.status === 'claimed')}
 	{@const booked = claimants.filter((c) => c.status === 'confirmed' || c.status === 'completed')}
 	<PageHeader
-		title={formatDateShortYear(shift.startsAt)}
-		subtitle="Shift"
+		title={shift.startsAt ? formatDateShortYear(shift.startsAt) : 'Unscheduled'}
+		subtitle={shift.startsAt ? 'Shift' : 'Work order'}
 		backHref="/staff/volunteer/shifts"
 	>
 		{#if !shift.cancelledAt}
@@ -105,8 +105,8 @@
 						initialEvent={shift.eventId && shift.eventTitle
 							? { id: shift.eventId, title: shift.eventTitle }
 							: null}
-						startsAt={toLocalDateTime(shift.startsAt)}
-						endsAt={toLocalDateTime(shift.endsAt)}
+						startsAt={shift.startsAt ? toLocalDateTime(shift.startsAt) : ''}
+						endsAt={shift.endsAt ? toLocalDateTime(shift.endsAt) : ''}
 						capacity={String(shift.capacity)}
 						notes={shift.notes ?? ''}
 					/>
@@ -137,10 +137,15 @@
 	</PageHeader>
 
 	<PageContent width="3xl">
-		<InfoCard title={shift.cancelledAt ? 'Cancelled shift' : 'Shift'}>
+		<InfoCard
+			title={shift.cancelledAt ? 'Cancelled shift' : shift.startsAt ? 'Shift' : 'Work order'}
+		>
 			<DefinitionList>
 				<Fact label="When"
-					>{formatDateShort(shift.startsAt)}, {timeRange(shift.startsAt, shift.endsAt)}</Fact
+					>{#if shift.startsAt && shift.endsAt}{formatDateShort(shift.startsAt)}, {timeRange(
+							shift.startsAt,
+							shift.endsAt
+						)}{:else}Not scheduled yet{/if}</Fact
 				>
 				<Fact label="Role">{shift.roleName}</Fact>
 				<!--

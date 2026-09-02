@@ -62,7 +62,16 @@ function formatWorkedOn(value: string): string {
 }
 
 /** "Saturday, February 7, 6:00–10:00 PM" — one string for a shift's when. */
-function formatShiftWhen(startsAt: string, endsAt: string): string {
+/**
+ * When a shift is, in one phrase.
+ *
+ * Nullable since work orders landed: an unscheduled one is real work somebody
+ * has taken on, with no window booked for it yet. Every caller drops this into a
+ * sentence, so the fallback is written to read as one — "a time to be arranged"
+ * survives both "on ${when}" and standing alone as a body line.
+ */
+function formatShiftWhen(startsAt: string | null, endsAt: string | null): string {
+	if (!startsAt || !endsAt) return 'a time to be arranged';
 	const start = new Date(startsAt);
 	const end = new Date(endsAt);
 	const time = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -1045,7 +1054,9 @@ export function registerAllNotificationListeners(): void {
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{
-							text: `Thanks for working ${event.roleName} on ${formatWorkedOn(event.startsAt)}. Two questions, and they genuinely change how we run the next one.`
+							// The date is dropped rather than faked when the work had no
+							// scheduled window — "on null" is worse than no date at all.
+							text: `Thanks for working ${event.roleName}${event.startsAt ? ` on ${formatWorkedOn(event.startsAt)}` : ''}. Two questions, and they genuinely change how we run the next one.`
 						}
 					],
 					cta: {

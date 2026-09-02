@@ -48,7 +48,9 @@
 				<a href={resolve('/member/volunteer')} class="link text-sm">Back to volunteering</a>
 			</InfoCard>
 		{:else}
-			<InfoCard title="{ctx.roleName} — {formatDateShort(ctx.startsAt)}">
+			<InfoCard
+				title={ctx.startsAt ? `${ctx.roleName} — ${formatDateShort(ctx.startsAt)}` : ctx.roleName}
+			>
 				<Form remote={submitShiftFeedback} onsuccess={() => (submitted = true)}>
 					<input type="hidden" name="signupId" value={ctx.signupId} />
 
