@@ -277,8 +277,11 @@ test.describe('inventory', () => {
 			await page.goto('/staff/inventory/spend');
 
 			await expect(page.getByRole('heading', { name: 'Spend' })).toBeVisible();
-			await expect(page.getByText('Total spend')).toBeVisible();
 			// The fixture's one purchase covers the E2E category, so it has to show.
+			// Asserted on the row rather than on the stat card's label: the page
+			// grew a second source (contractor services) and the card that used to
+			// read "Total spend" is now "Stock", which is a copy change the row
+			// does not care about.
 			await expect(page.getByRole('cell', { name: 'E2E Test Gear' })).toBeVisible();
 		});
 
