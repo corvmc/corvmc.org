@@ -86,4 +86,19 @@ describe('ThreadComposer', () => {
 
 		await expect.element(page.getByRole('button', { name: 'Add note' })).toBeVisible();
 	});
+
+	// The member portal uses this same component with no note form. It must not
+	// offer to dispose of the thread: a member has no queue to move it out of,
+	// and "Send + resolve" there would let them close a conversation staff still
+	// owe an answer on.
+	it('offers a plain send, and no dispositions, with no note form', async () => {
+		await render(ThreadComposer, {
+			threadId: 'thread-1',
+			replyForm: fakeRemoteForm()
+		});
+
+		await expect.element(page.getByRole('button', { name: 'Send Reply' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Send + resolve' }).elements()).toHaveLength(0);
+		await expect(page.getByRole('button', { name: 'Send + keep open' }).elements()).toHaveLength(0);
+	});
 });

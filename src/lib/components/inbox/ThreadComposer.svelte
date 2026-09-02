@@ -72,6 +72,13 @@
 	const isNote = $derived(!!noteForm && (requestedMode === 'note' || !!replyBlockedReason));
 	const mode = $derived(isNote ? 'note' : 'reply');
 	const activeForm = $derived(isNote && noteForm ? noteForm : replyForm);
+
+	// Sending sets a disposition only on the staff side. A member replying in
+	// the portal has no queue to move the thread out of, and offering them
+	// "Send + resolve" would let them close a conversation staff still owe an
+	// answer on. `noteForm` is the same signal that tells the two sides apart
+	// everywhere else in this component.
+	const staffSend = $derived(!!noteForm && !isNote);
 </script>
 
 <div
@@ -148,7 +155,7 @@
 				     they are three answers to one question, and hiding two of them
 				     makes the default look like the only option. A note has no
 				     disposition to set; it is not a turn in the conversation. -->
-				{#if !isNote}
+				{#if staffSend}
 					<!-- Default first below sm, last above it: on a phone the sheet
 					     the design draws leads with the default, and a column reads
 					     top-down. -->
@@ -185,12 +192,18 @@
 					{/await}
 				{/if}
 				<SubmitButton
-					label={isNote ? (assignTo ? 'Post note + assign' : 'Add note') : 'Send + wait for reply'}
+					label={isNote
+						? assignTo
+							? 'Post note + assign'
+							: 'Add note'
+						: staffSend
+							? 'Send + wait for reply'
+							: 'Send Reply'}
 					successLabel={isNote ? (assignTo ? 'Assigned' : 'Added') : 'Sent'}
 					shortcut="mod+enter"
 					disabled={!draft.trim()}
-					name={isNote ? undefined : 'disposition'}
-					value={isNote ? undefined : 'wait'}
+					name={staffSend ? 'disposition' : undefined}
+					value={staffSend ? 'wait' : undefined}
 					class="{isNote ? 'btn-neutral' : 'btn-primary'} order-1 w-full sm:order-none sm:w-auto"
 				>
 					{#snippet icon()}
@@ -198,7 +211,7 @@
 					{/snippet}
 				</SubmitButton>
 			</div>
-			{#if !isNote}
+			{#if staffSend}
 				<p class="text-right text-subtle text-xs">
 					Default. Leaves the queue now and returns the moment they reply — or nudges you in 7 days
 					if nothing comes back.
