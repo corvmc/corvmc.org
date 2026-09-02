@@ -16,18 +16,38 @@ Stripe, Postmark. Documentation index: `docs/README.md`.
 Always through `pnpm`. A global prettier 2.8.8 shadows this project's prettier 3, so `npx prettier`
 reports results that are simply wrong.
 
-| Command                   | Gate                                                       |
-| ------------------------- | ---------------------------------------------------------- |
-| `pnpm check`              | svelte-check — the type gate                               |
-| `pnpm lint:changed`       | prettier + eslint vs `BASE_REF` (default `origin/main`)    |
-| `pnpm lint`               | the whole tree, including markdown — run before committing |
-| `pnpm test:unit -- --run` | vitest, one shot                                           |
-| `pnpm test:e2e`           | playwright — add `--workers=1` locally                     |
-| `pnpm docs:check`         | docs integrity; CI fails the PR on it                      |
-| `pnpm db:generate`        | the only way to create a migration                         |
-| `pnpm db:reset`           | rebuild local D1 (wipe + migrate + seed)                   |
+| Command                   | What it does                                            | CI job that already runs it |
+| ------------------------- | ------------------------------------------------------- | --------------------------- |
+| `pnpm check`              | svelte-check                                            | Svelte Check                |
+| `pnpm lint:changed`       | prettier + eslint vs `BASE_REF` (default `origin/main`) | Lint (changed)              |
+| `pnpm lint`               | the whole tree, including markdown                      | Lint (full)                 |
+| `pnpm test:unit -- --run` | vitest, one shot                                        | Unit tests                  |
+| `pnpm test:e2e`           | playwright — add `--workers=1` locally                  | E2E                         |
+| `pnpm docs:check`         | docs integrity + route drift                            | Docs integrity              |
+| `pnpm db:generate`        | the only way to create a migration                      | Schema drift                |
+| `pnpm db:reset`           | rebuild local D1 (wipe + migrate + seed)                | —                           |
 
-These mirror the CI jobs in `.github/workflows/ci.yml`, so a green local gate is a green PR.
+**Read the third column before running anything in the first.** Every one of those jobs runs on
+your PR and again on the merge-queue ref, so a whole-tree run here proves nothing new — and a
+whole-tree _failure_ here is not evidence of one, because a worktree per agent means several of
+these fire at once on one machine, where a starved ESLint is indistinguishable from a violation
+and an OOM-killed vitest prints `[killed]` and no summary at all. CI answers in one pass what local
+contention cannot answer in several.
+
+`scripts/claude/block-whole-tree-gate.sh` enforces this. Scoped runs stay open, and are the point.
+
+### Before you push
+
+1. **The blast radius of what you changed, not the files you edited.** For anything under
+   `src/lib/server/<domain>/`, that is the whole directory —
+   `pnpm vitest --run --project=server src/lib/server/<domain>` — because specs mock `drizzle-orm`
+   export by export, so one new operator breaks a _sibling_ spec. ~10 files, under 3 seconds.
+2. **`pnpm lint:changed`** if more than a couple of files moved.
+
+Then commit, push, open the PR, and **arm `gh pr merge --auto` in the same turn** — opening the PR
+is not the finish line. Say in the PR that the full suite was deferred to CI; never imply a green
+local run you did not do. Triage of a red or rejected run is the `qc` role's job
+(`.claude/agents/`, `/queue-triage`).
 
 ## Rules
 
@@ -73,6 +93,13 @@ realistic local data, add its row to the feature catalog (`docs/reports/feature-
 **A finished PR is queued, not merged.** `gh pr merge --auto`, and the session ends there. No merge
 method: a queue rejects one outright ("merge method is not valid for merge queue"), and the queue's
 own configuration squashes anyway.
+
+**Arming it is yours to do, in the same turn you open the PR.** It is not gated on the user reading
+the PR first, and there is no class of change — not tooling, not one that alters how sessions
+themselves behave — that earns an exception. Stopping at the PR URL to let a human look leaves the
+branch outside the queue with nothing watching it, and it is the more tempting mistake precisely
+when the change feels consequential. If a PR genuinely should not merge without a human, say so and
+open it as a draft; do not open a ready PR and quietly decline to queue it.
 GitHub rebases each entry onto the queue head and runs CI on that, so a branch never has to be up to
 date to be queued and two sessions finishing at once no longer race for the merge. Do not run
 `gh pr update-branch`, do not wait for the merge to land, and never pass `--admin` — it bypasses the
