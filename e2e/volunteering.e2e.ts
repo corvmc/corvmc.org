@@ -428,14 +428,13 @@ test.describe('volunteering — roles', () => {
 });
 
 test.describe('volunteering — member', () => {
-	test('the interests modal renders a role job description as markdown', async ({ page }) => {
+	test('the interests screen renders a role job description as markdown', async ({ page }) => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
-		await page.goto('/member/volunteer');
+		// Its own screen rather than a modal over the board: it is the same length
+		// as the board it filters, and a dialog that tall is a page in a costume.
+		await page.goto('/member/volunteer/interests');
 
-		// The role picker used to sit open in the page body; it now lives behind
-		// this header button so the body is shifts.
-		await page.getByRole('button', { name: 'Interests' }).click();
-		const modal = page.getByRole('dialog');
+		const modal = page.locator('main');
 		await expect(modal).toBeVisible({ timeout: 15000 });
 
 		await expect(modal.getByText(SEED_VOL_ROLE_NAME).first()).toBeVisible();
@@ -451,20 +450,24 @@ test.describe('volunteering — member', () => {
 		await expect(modal.getByText(SEED_VOL_ARCHIVED_ROLE_NAME)).toHaveCount(0);
 	});
 
-	test('a rejected log shows the member the reason', async ({ page }) => {
+	test('a returned log shows the member the reason', async ({ page }) => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
-		await page.goto('/member/volunteer');
+		// The history moved off the dashboard: a log filed in March is not a next
+		// action, and the one state that is was buried under everything approved.
+		await page.goto('/member/volunteer/hours');
 
 		// Without the reason the member cannot correct and resubmit, which is why
 		// the service refuses a rejection that has none.
-		const row = rowFor(page, SEED_VOL_LOG_REJECTED_DESC);
+		const row = page.locator('li').filter({ hasText: SEED_VOL_LOG_REJECTED_DESC });
 		await expect(row).toBeVisible({ timeout: 15000 });
 		await expect(row).toContainText(SEED_VOL_REJECTED_REASON);
+		// "Returned", never "rejected" — a request for a correction, not a verdict.
+		await expect(row.getByRole('button', { name: 'Fix it' })).toBeVisible();
 	});
 
 	test('a member can log hours and they land as pending', async ({ page }) => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
-		await page.goto('/member/volunteer');
+		await page.goto('/member/volunteer/hours');
 
 		const description = `E2E logged ${Date.now()}`;
 		await page.getByRole('button', { name: 'Log Hours' }).click();
@@ -474,13 +477,13 @@ test.describe('volunteering — member', () => {
 			.selectOption({ label: SEED_VOL_ROLE_NAME });
 		await page.locator('input[name="hours"]').fill('1.5');
 		await page.locator('textarea[name="description"]').fill(description);
-		await page.getByRole('button', { name: 'Submit for review' }).click();
+		await modalSubmit(page, 'File it').click();
 
-		const row = rowFor(page, description);
+		const row = page.locator('li').filter({ hasText: description });
 		await expect(row).toBeVisible({ timeout: 15000 });
 		await expect(row).toContainText('1.5 hrs');
 		// Editable only while pending — the controls are the proof of status.
-		await expect(rowAction(row, 'Withdraw')).toBeVisible();
+		await expect(row.getByRole('button', { name: 'Withdraw' })).toBeVisible();
 	});
 });
 
@@ -528,15 +531,15 @@ test.describe('volunteering — onboarding', () => {
 		await page.waitForURL(/\/member\/volunteer(\?|$)/, { timeout: 15000 });
 
 		// The body is shifts now — the picker must not be sitting open in it.
-		await expect(page.getByRole('heading', { name: 'Shifts you can pick up' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Open shifts/ })).toBeVisible();
 
-		// Reopening shows the selection survived the replace-all write.
-		await page.getByRole('button', { name: 'Interests' }).click();
-		const modal = page.getByRole('dialog');
-		await expect(modal.getByRole('checkbox', { name: SEED_VOL_ROLE_NAME })).toBeChecked();
-		await expect(modal.locator('textarea[name="availability"]')).toHaveValue(
-			'E2E weekday evenings'
-		);
+		// Reopening shows the selection survived the replace-all write. Interests is
+		// a screen now rather than a modal over the board: it is the same length as
+		// the board it filters, and a dialog that tall is a page in a costume.
+		await page.getByRole('link', { name: 'Interests' }).click();
+		await page.waitForURL(/\/member\/volunteer\/interests/, { timeout: 15000 });
+		await expect(page.getByRole('checkbox', { name: SEED_VOL_ROLE_NAME })).toBeChecked();
+		await expect(page.locator('textarea[name="availability"]')).toHaveValue('E2E weekday evenings');
 	});
 
 	/**
@@ -585,7 +588,7 @@ test.describe('volunteering — onboarding', () => {
 		await page.context().clearCookies();
 		await login(page, SEED_VOL_BLOCKED_MINOR_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
-		await expect(page.getByRole('heading', { name: 'Shifts you can pick up' })).toBeVisible({
+		await expect(page.getByRole('heading', { name: /Open shifts/ })).toBeVisible({
 			timeout: 15000
 		});
 	});

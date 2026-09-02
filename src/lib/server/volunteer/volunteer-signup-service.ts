@@ -645,6 +645,9 @@ export interface MemberSignup {
 	endsAt: Date;
 	status: VolunteerSignupStatus;
 	shiftCancelledAt: Date | null;
+	/** The briefing. Shown on the member's card once they are booked. */
+	notes: string | null;
+	eventTitle: string | null;
 }
 
 /**
@@ -666,7 +669,12 @@ export async function listSignupsForUser(
 			startsAt: volunteerShift.startsAt,
 			endsAt: volunteerShift.endsAt,
 			status: volunteerSignup.status,
-			shiftCancelledAt: volunteerShift.cancelledAt
+			shiftCancelledAt: volunteerShift.cancelledAt,
+			// The member's own card shows the briefing once they are booked — it is
+			// what they need on the night, and the claim modal quotes it before they
+			// commit. The event is what makes "Front Desk" mean a particular evening.
+			notes: volunteerShift.notes,
+			eventTitle: eventTitleSql
 		})
 		.from(volunteerSignup)
 		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
