@@ -46,6 +46,23 @@ export const publicEventStatuses = ['published', 'cancelled'] as const;
 export const eventSources = ['cmc', 'band', 'community', 'group'] as const;
 export type EventSource = (typeof eventSources)[number];
 
+/**
+ * What kind of occasion this is, as distinct from who authored it.
+ *
+ * `source` answers whose listing it is; `kind` answers what it is, and both are
+ * load-bearing. The hero posters and "show tonight" want CMC-authored *shows*,
+ * and they got that by filtering on `source` alone — which held only while
+ * every CMC event was a gig. Work parties and monthly deep cleans need
+ * advertising as much as a show does, so they get listings too, and the moment
+ * they do `source = 'cmc'` stops meaning "this is a show".
+ *
+ * Everything that existed before this column was a show, so `'show'` is both
+ * the default and the backfill. Adding a value emits zero SQL — drizzle's
+ * `text({ enum })` is a TypeScript-only constraint.
+ */
+export const eventKinds = ['show', 'work_party', 'meeting', 'class'] as const;
+export type EventKind = (typeof eventKinds)[number];
+
 export const event = sqliteTable(
 	'event',
 	{
@@ -79,6 +96,7 @@ export const event = sqliteTable(
 		// question, and one that can have several answers.
 		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
 		source: text('source', { enum: eventSources }).notNull().default('cmc'),
+		kind: text('kind', { enum: eventKinds }).notNull().default('show'),
 		location: text('location'),
 		externalTicketUrl: text('external_ticket_url'),
 		recurringSeriesId: text('recurring_series_id').references(() => recurringSeries.id, {
@@ -299,6 +317,7 @@ export const createEventSchema = z
 	.object({
 		title: z.string().min(1, 'Title is required'),
 		description: z.string().optional(),
+		kind: z.enum(eventKinds).default('show'),
 		eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
 		eventStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
 		eventEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),

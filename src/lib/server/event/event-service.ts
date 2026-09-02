@@ -6,6 +6,7 @@ import {
 	eventGroup,
 	publicEventStatuses,
 	type EventSource,
+	type EventKind,
 	type EventBandStatus,
 	type LineupEntry
 } from '$lib/server/db/schema/event';
@@ -159,6 +160,8 @@ export interface EventRow {
 	ticketQuantity: number | null;
 	groupId: string | null;
 	source: string;
+	/** What the occasion is, as opposed to whose it is. See `eventKinds`. */
+	kind: EventKind;
 	location: string | null;
 	externalTicketUrl: string | null;
 	/** Staff's reason for turning down or pulling a community listing. */
@@ -179,6 +182,7 @@ export interface CreateEventParams {
 	endsAt: Date;
 	doorsAt?: Date;
 	tags?: string;
+	kind?: EventKind;
 	ticketingEnabled?: boolean;
 	ticketPrice?: number | null;
 	ticketQuantity?: number | null;
@@ -202,6 +206,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		endsAt,
 		doorsAt,
 		tags,
+		kind = 'show',
 		ticketingEnabled = false,
 		ticketPrice,
 		ticketQuantity,
@@ -264,6 +269,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				endsAt,
 				doorsAt: doorsAt ?? null,
 				tags: tags ?? null,
+				kind,
 				ticketingEnabled,
 				ticketPrice: ticketPrice ?? null,
 				// Capacity is only meaningful while we're the ones counting.
@@ -309,6 +315,7 @@ export interface UpdateEventParams {
 	endsAt?: Date;
 	doorsAt?: Date | null;
 	tags?: string | null;
+	kind?: EventKind;
 	location?: string | null;
 	externalTicketUrl?: string | null;
 	ticketingEnabled?: boolean;
@@ -417,6 +424,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	if (params.endsAt !== undefined) updates.endsAt = params.endsAt;
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.tags !== undefined) updates.tags = params.tags;
+	if (params.kind !== undefined) updates.kind = params.kind;
 	if (params.location !== undefined) updates.location = params.location;
 	if (params.externalTicketUrl !== undefined) {
 		updates.externalTicketUrl = params.externalTicketUrl;
@@ -946,13 +954,20 @@ export async function getById(eventId: string): Promise<EventRow | null> {
 	return row ?? null;
 }
 
-/** Published CMC events with startsAt in the future, ordered by date. */
+/** Published CMC shows with startsAt in the future, ordered by date. Feeds the
+ * hero posters, so it is deliberately narrower than the public guide: work
+ * parties and meetings are published and advertised, but they are not shows. */
 export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 	const query = db
 		.select()
 		.from(event)
 		.where(
-			and(eq(event.status, 'published'), eq(event.source, 'cmc'), gt(event.startsAt, new Date()))
+			and(
+				eq(event.status, 'published'),
+				eq(event.source, 'cmc'),
+				eq(event.kind, 'show'),
+				gt(event.startsAt, new Date())
+			)
 		)
 		.orderBy(asc(event.startsAt));
 
@@ -973,6 +988,7 @@ export async function getShowTonight(now = new Date()): Promise<EventRow | null>
 			and(
 				eq(event.status, 'published'),
 				eq(event.source, 'cmc'),
+				eq(event.kind, 'show'),
 				gte(event.startsAt, dayStart),
 				lt(event.startsAt, dayEnd),
 				gt(event.endsAt, now)
@@ -984,13 +1000,18 @@ export async function getShowTonight(now = new Date()): Promise<EventRow | null>
 	return row ?? null;
 }
 
-/** Published events that have already ended, newest first. */
+/** Published CMC shows that have already ended, newest first. */
 export async function listPast(limit?: number): Promise<EventRow[]> {
 	const query = db
 		.select()
 		.from(event)
 		.where(
-			and(eq(event.status, 'published'), eq(event.source, 'cmc'), lte(event.startsAt, new Date()))
+			and(
+				eq(event.status, 'published'),
+				eq(event.source, 'cmc'),
+				eq(event.kind, 'show'),
+				lte(event.startsAt, new Date())
+			)
 		)
 		.orderBy(desc(event.startsAt));
 

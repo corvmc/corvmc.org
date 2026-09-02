@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "a85bdd51-0dda-43c0-bc9c-160e4813931e",
+  "id": "b9f20370-4c78-408f-ab68-c89aa3f33d30",
   "prevIds": [
-    "9c638209-941e-48c1-af6d-5f6ae22d74a5"
+    "8c4d1227-2847-49fb-b4b7-9c51d15ea0e3"
   ],
   "ddl": [
     {
@@ -224,6 +224,10 @@
     },
     {
       "name": "inbox_thread",
+      "entityType": "tables"
+    },
+    {
+      "name": "inbox_thread_tag",
       "entityType": "tables"
     },
     {
@@ -1569,6 +1573,16 @@
       "default": "'cmc'",
       "generated": null,
       "name": "source",
+      "entityType": "columns",
+      "table": "event"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'show'",
+      "generated": null,
+      "name": "kind",
       "entityType": "columns",
       "table": "event"
     },
@@ -5640,6 +5654,46 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "thread_id",
+      "entityType": "columns",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tag",
+      "entityType": "columns",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "content_flag"
     },
     {
@@ -8709,6 +8763,21 @@
     },
     {
       "columns": [
+        "thread_id"
+      ],
+      "tableTo": "inbox_thread",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_inbox_thread_tag_thread_id_inbox_thread_id_fk",
+      "entityType": "fks",
+      "table": "inbox_thread_tag"
+    },
+    {
+      "columns": [
         "reported_by_user_id"
       ],
       "tableTo": "user",
@@ -9815,6 +9884,15 @@
       "nameExplicit": false,
       "name": "inbox_thread_pk",
       "table": "inbox_thread",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "inbox_thread_tag_pk",
+      "table": "inbox_thread_tag",
       "entityType": "pks"
     },
     {
@@ -11643,6 +11721,24 @@
       "name": "idx_inbox_thread_contact_ext",
       "entityType": "indexes",
       "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        {
+          "value": "thread_id",
+          "isExpression": false
+        },
+        {
+          "value": "tag",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_thread_tag_unique",
+      "entityType": "indexes",
+      "table": "inbox_thread_tag"
     },
     {
       "columns": [
