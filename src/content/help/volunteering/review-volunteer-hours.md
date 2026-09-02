@@ -89,9 +89,10 @@ notified** is for the ones you already rang.
 
 A role can require certifications (**Volunteering → Certifications**) before its
 shifts can be claimed. Requirements are checked against the shift's date, so a
-lapsing card is caught before it matters. The clearances view shows who is
-current, expiring soon, or lapsed. Grant and revoke from the member's page —
-revoking keeps the record of the period it covered, which is the point.
+lapsing card is caught before it matters. **People → Cleared** shows who holds
+what and when it runs out, one row per person and clearance. Grant from the
+member's page; revoke from either. Revoking keeps the record of the period it
+covered, which is the point.
 
 The day after a shift, workers get a two-question survey. Responses show on the
 shift detail and roll up per role on the report, anonymously. A role scoring
@@ -106,9 +107,14 @@ are free, and whether they are cleared for that date. Its three filters widen th
 who have worked the role before, and then to everybody; searching it finds anyone at all,
 which is the person who walked up to the desk and is on no list.
 
-**Volunteering → Volunteers** is the full list when you do: everyone who signed up, with
-their roles, their availability note and their phone number if they gave one. Filter by
-role to see how deep the bench is.
+**Volunteering → People** is the full list when you do. Its **Roster** tab is everyone who
+signed up, with their roles and their availability note; each row carries the one thing
+outstanding about that person — a claim of theirs to confirm, a clearance to chase, or
+otherwise a way to log hours on their behalf. Filter by role to see how deep the bench is.
+
+**People → Awaiting sign-off** is the under-18 queue. Approving one confirms a guardian has
+signed off; the record still says they are under 18, which is what changes how a shift is
+staffed.
 
 Expressing interest is not a commitment to a date, so treat it as a place to start asking,
 not a rota. A role's own page has **Copy emails on this page** if you want to write to

@@ -9,7 +9,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import DataList from '$lib/components/ui/DataList.svelte';
-	import LogHoursForMemberAction from './LogHoursForMemberAction.svelte';
+	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';

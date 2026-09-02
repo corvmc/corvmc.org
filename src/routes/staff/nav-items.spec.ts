@@ -48,8 +48,6 @@ describe('activeNavKey', () => {
 		['/staff/users', 'users'],
 		['/staff/users/abc', 'users'],
 		['/staff/volunteer', 'volunteer'],
-		// Not a nav row of its own — it falls back to the section parent.
-		['/staff/volunteer/clearances', 'volunteer'],
 		['/staff/volunteer/people', 'volunteer-people'],
 		// Shift detail lost its own row when the catalog folded into Schedule; it
 		// falls back to the section parent like clearances does.
@@ -142,7 +140,6 @@ describe('route coverage', () => {
 	 * the page that owns it, and each still resolves to a highlighted parent.
 	 */
 	const unlinked = new Set([
-		'/staff/volunteer/clearances', // reached from Certifications; `backHref` points there
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Inventory, beside Categories; `backHref` points there

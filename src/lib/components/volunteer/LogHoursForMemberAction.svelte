@@ -20,6 +20,23 @@
 	import { clubToday, VOLUNTEER_HOUR_STEP } from '$lib/config';
 	import { logHoursForMember } from '$lib/remote/volunteer.remote';
 
+	let {
+		/**
+		 * Pre-fill for a row that already names somebody — People's per-member
+		 * action. The picker is the door for "somebody walked up"; when the row
+		 * already knows who, making staff search for the name they just clicked is
+		 * a step that exists only because the component was written for the other
+		 * case.
+		 */
+		presetUser = null,
+		label = 'Log hours for someone',
+		size = 'sm'
+	}: {
+		presetUser?: { id: string; name: string } | null;
+		label?: string;
+		size?: 'xs' | 'sm' | 'md';
+	} = $props();
+
 	const { fields } = logHoursForMember;
 
 	let userId = $state('');
@@ -28,11 +45,11 @@
 
 <Action
 	action={logHoursForMember}
-	label="Log hours for someone"
+	{label}
 	icon={clockIcon}
 	variant="ghost"
-	size="sm"
-	modalTitle="Log hours for a member"
+	{size}
+	modalTitle={presetUser ? `Log hours for ${presetUser.name}` : 'Log hours for a member'}
 	submitLabel="Record"
 	successToast="Hours recorded"
 	onsuccess={() => {
@@ -41,7 +58,11 @@
 	}}
 >
 	{#snippet form()}
-		<MemberPicker field={fields.userId} bind:value={userId} bind:name={userName} />
+		{#if presetUser}
+			<input type="hidden" name="userId" value={presetUser.id} />
+		{:else}
+			<MemberPicker field={fields.userId} bind:value={userId} bind:name={userName} />
+		{/if}
 
 		<!--
 			A plain `<select>` under the shared wrapper rather than FormField's `options`
@@ -71,8 +92,8 @@
 			description="This is the record — it's what a funder's auditor would read."
 		/>
 		<p class="text-muted">
-			Recorded as approved and attributed to you. There is no second review: you typing it in is the
-			review.
+			No backdate limit. Lands approved, stamped with your name — there is no second review, because
+			you typing it in is the review.
 		</p>
 	{/snippet}
 </Action>
