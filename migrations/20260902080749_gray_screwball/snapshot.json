@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "509b854e-c399-4625-8ff4-915f390c8a89",
+  "id": "b9900e35-974e-4418-9c02-57fdd8066d61",
   "prevIds": [
-    "3065547f-1742-4968-9dd7-d88faee758bf"
+    "3920b35f-a4e6-474c-8d66-feea2d578aa3"
   ],
   "ddl": [
     {
@@ -308,6 +308,14 @@
     },
     {
       "name": "media_attachment",
+      "entityType": "tables"
+    },
+    {
+      "name": "contractor",
+      "entityType": "tables"
+    },
+    {
+      "name": "contractor_job",
       "entityType": "tables"
     },
     {
@@ -7102,7 +7110,7 @@
     },
     {
       "type": "integer",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -7112,31 +7120,11 @@
     },
     {
       "type": "integer",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "ends_at",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "asset_id",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "due_at",
       "entityType": "columns",
       "table": "volunteer_shift"
     },
@@ -7167,36 +7155,6 @@
       "default": null,
       "generated": null,
       "name": "cancelled_at",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "resolved_at",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "resolved_by_user_id",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "resolution_notes",
       "entityType": "columns",
       "table": "volunteer_shift"
     },
@@ -7739,6 +7697,296 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "media_attachment"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "trade",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contact_name",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "phone",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "website",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "license_number",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "insurance_expires_at",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "archived_at",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "contractor"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contractor_id",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'draft'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "summary",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "asset_id",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "scheduled_for",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expected_back_at",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "completed_at",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "quoted_cents",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cost_cents",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invoice_ref",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "paid_at",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "requested_by_user_id",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "contractor_job"
     },
     {
       "columns": [
@@ -9542,36 +9790,6 @@
     },
     {
       "columns": [
-        "asset_id"
-      ],
-      "tableTo": "inventory_asset",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_volunteer_shift_asset_id_inventory_asset_id_fk",
-      "entityType": "fks",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        "resolved_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_volunteer_shift_resolved_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
         "created_by_user_id"
       ],
       "tableTo": "user",
@@ -9689,6 +9907,51 @@
       "name": "fk_media_attachment_media_id_media_id_fk",
       "entityType": "fks",
       "table": "media_attachment"
+    },
+    {
+      "columns": [
+        "contractor_id"
+      ],
+      "tableTo": "contractor",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "nameExplicit": false,
+      "name": "fk_contractor_job_contractor_id_contractor_id_fk",
+      "entityType": "fks",
+      "table": "contractor_job"
+    },
+    {
+      "columns": [
+        "asset_id"
+      ],
+      "tableTo": "inventory_asset",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_contractor_job_asset_id_inventory_asset_id_fk",
+      "entityType": "fks",
+      "table": "contractor_job"
+    },
+    {
+      "columns": [
+        "requested_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_contractor_job_requested_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "contractor_job"
     },
     {
       "columns": [
@@ -10369,6 +10632,24 @@
       "nameExplicit": false,
       "name": "media_attachment_pk",
       "table": "media_attachment",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "contractor_pk",
+      "table": "contractor",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "contractor_job_pk",
+      "table": "contractor_job",
       "entityType": "pks"
     },
     {
@@ -12556,34 +12837,6 @@
     {
       "columns": [
         {
-          "value": "asset_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "volunteer_shift_asset_idx",
-      "entityType": "indexes",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        {
-          "value": "created_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": "starts_at is null and resolved_at is null and cancelled_at is null",
-      "origin": "manual",
-      "name": "volunteer_shift_unscheduled_idx",
-      "entityType": "indexes",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        {
           "value": "submitted_at",
           "isExpression": false
         }
@@ -12698,6 +12951,104 @@
       "name": "idx_media_attachment_media",
       "entityType": "indexes",
       "table": "media_attachment"
+    },
+    {
+      "columns": [
+        {
+          "value": "trade",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contractor_trade",
+      "entityType": "indexes",
+      "table": "contractor"
+    },
+    {
+      "columns": [
+        {
+          "value": "name",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "archived_at is null",
+      "origin": "manual",
+      "name": "idx_contractor_active",
+      "entityType": "indexes",
+      "table": "contractor"
+    },
+    {
+      "columns": [
+        {
+          "value": "insurance_expires_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "archived_at is null",
+      "origin": "manual",
+      "name": "idx_contractor_insurance",
+      "entityType": "indexes",
+      "table": "contractor"
+    },
+    {
+      "columns": [
+        {
+          "value": "contractor_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contractor_job_contractor",
+      "entityType": "indexes",
+      "table": "contractor_job"
+    },
+    {
+      "columns": [
+        {
+          "value": "asset_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contractor_job_asset",
+      "entityType": "indexes",
+      "table": "contractor_job"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contractor_job_status",
+      "entityType": "indexes",
+      "table": "contractor_job"
+    },
+    {
+      "columns": [
+        {
+          "value": "expected_back_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "status = 'scheduled'",
+      "origin": "manual",
+      "name": "idx_contractor_job_overdue",
+      "entityType": "indexes",
+      "table": "contractor_job"
     },
     {
       "columns": [
@@ -13025,7 +13376,7 @@
       "table": "volunteer_hour_log"
     },
     {
-      "value": "(starts_at is null) = (ends_at is null) and (ends_at is null or ends_at > starts_at)",
+      "value": "ends_at > starts_at",
       "name": "volunteer_shift_ends_after_start",
       "entityType": "checks",
       "table": "volunteer_shift"
@@ -13041,6 +13392,12 @@
       "name": "volunteer_shift_feedback_rating_range",
       "entityType": "checks",
       "table": "volunteer_shift_feedback"
+    },
+    {
+      "value": "not (cost_cents < 0) and not (quoted_cents < 0)",
+      "name": "contractor_job_cost_nonneg",
+      "entityType": "checks",
+      "table": "contractor_job"
     }
   ],
   "renames": []
