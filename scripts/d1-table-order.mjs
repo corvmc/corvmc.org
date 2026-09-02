@@ -26,6 +26,11 @@ export const tableOrder = [
 	// existing table is a rebuild in SQLite, which on D1 would take
 	// `acquisition_line` with it — so it imposes no ordering here.
 	'purchase_order',
+	// A root: references nothing. Parent of contractor_job.
+	'contractor',
+	// References contractor, inventory_asset and user, so it clears before none
+	// of them.
+	'contractor_job',
 	'event',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
