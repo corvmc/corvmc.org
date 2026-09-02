@@ -1,8 +1,16 @@
 import { db } from '$lib/server/db';
-import { directoryTag } from '$lib/server/db/schema/directory';
+import {
+	directoryTag,
+	type DirectoryTagKind,
+	type LookingFor
+} from '$lib/server/db/schema/directory';
+import { groupMember } from '$lib/server/db/schema/group';
 import { and, asc, eq, like, sql } from 'drizzle-orm';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
+import { blockExistsBetween } from '$lib/server/moderation/moderation-service';
+import { toBandRef, toMemberRef } from '$lib/server/entity/refs';
+import type { BandRef, MemberRef } from '$lib/types/entity';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,6 +30,13 @@ export type BandFilters = {
 	search?: string;
 	genres?: string[];
 	lookingForMembers?: boolean;
+	/**
+	 * What the band is looking *for*, the mirror of `MemberFilters.instruments`.
+	 * There was never a `band_instrument` among the tables `directory_tag`
+	 * replaced, so until `seeking_instrument` a band could say it wanted members
+	 * without saying what for — and this filter had nothing to aim at.
+	 */
+	seekingInstruments?: string[];
 };
 
 // ---------------------------------------------------------------------------
@@ -40,7 +55,7 @@ export type BandFilters = {
  * Typed on the caller's `where` shape because it is written against whatever
  * table the query is anchored on, and both halves anchor on `directory_entry`.
  */
-function tagCondition<W>(kind: 'genre' | 'instrument', values: string[]): W {
+function tagCondition<W>(kind: DirectoryTagKind, values: string[]): W {
 	return {
 		RAW: (table: { id: unknown }, _ops: unknown) =>
 			sql`EXISTS (SELECT 1 FROM ${directoryTag} WHERE ${directoryTag.entryId} = ${table.id} AND ${directoryTag.kind} = ${kind} AND ${directoryTag.value} IN (${sql.join(
@@ -342,6 +357,10 @@ function bandWhereConditions(visibility: 'members' | 'public', filters?: BandFil
 		conditions.push(tagCondition<BandWhere>('genre', filters.genres));
 	}
 
+	if (filters?.seekingInstruments?.length) {
+		conditions.push(tagCondition<BandWhere>('seeking_instrument', filters.seekingInstruments));
+	}
+
 	if (filters?.lookingForMembers) {
 		conditions.push({ lookingFor: 'members' });
 	}
@@ -424,6 +443,255 @@ export async function listPublicBands(filters?: BandFilters) {
 		columns: bandColumns
 	});
 	return rows.map(mapBandRow);
+}
+
+// ---------------------------------------------------------------------------
+// Matching
+// ---------------------------------------------------------------------------
+
+/**
+ * What the viewer still has to fill in before a match can be made.
+ *
+ * Returned rather than resolved into a message here, because the message is a
+ * page's job — but which field is missing is a fact about the data and belongs
+ * with the query that could not use it.
+ */
+export type MatchGap = 'lookingFor' | 'instruments' | 'seekingInstruments' | 'genres';
+
+/** One suggestion, with the overlap that produced it so the card can show its reasoning. */
+export type DirectoryMatch = {
+	ref: MemberRef | BandRef;
+	sharedInstruments: string[];
+	sharedGenres: string[];
+};
+
+export type DirectoryMatches = {
+	/** The viewer's own `lookingFor`, which is what decides who is being looked for. */
+	direction: LookingFor | null;
+	gaps: MatchGap[];
+	matches: DirectoryMatch[];
+};
+
+/**
+ * How many candidates the database is asked for before ranking happens in JS.
+ *
+ * Ranking cannot be an `ORDER BY` without a second pass over `directory_tag`
+ * per row, and the rows carry their tags anyway — so the cap is what keeps
+ * "sort in memory" honest. It is deliberately far above the page's own limit:
+ * the collective has tens of bands, not thousands, and a cap that could bite
+ * would silently drop the best match rather than the worst.
+ */
+const MATCH_CANDIDATE_LIMIT = 100;
+
+/** How many make it to the card. */
+const MATCH_LIMIT = 6;
+
+/** Instrument and genre overlap, in the order they were tagged. */
+function overlap(
+	tags: { kind: string; value: string }[],
+	kind: DirectoryTagKind,
+	wanted: string[]
+) {
+	const set = new Set(wanted);
+	return tags.filter((t) => t.kind === kind && set.has(t.value)).map((t) => t.value);
+}
+
+/**
+ * Instrument overlap outranks genre overlap, and both together outrank either
+ * alone. Two hits of one kind is not better than one — a band that needs a
+ * bassist and a drummer is not twice the match for somebody who plays both.
+ */
+function matchRank(m: DirectoryMatch) {
+	return (m.sharedInstruments.length > 0 ? 2 : 0) + (m.sharedGenres.length > 0 ? 1 : 0);
+}
+
+function byRankThenName(a: DirectoryMatch, b: DirectoryMatch) {
+	return matchRank(b) - matchRank(a) || a.ref.title.localeCompare(b.ref.title);
+}
+
+/**
+ * "Nobody who has blocked me, and nobody I have blocked."
+ *
+ * The other side is a *column* here rather than an id, which is why
+ * `blockExistsBetween` takes both — a match is a suggestion to open a
+ * conversation, and DMs already refuse to open one across a block. A match
+ * that ignored it would be a way around the block, which is the one failure in
+ * this file that is a trust bug rather than a bad suggestion.
+ */
+function notBlockedCondition<W>(viewerId: string): W {
+	return {
+		RAW: (table: { userId: unknown }, _ops: unknown) =>
+			sql`NOT ${blockExistsBetween(viewerId, table.userId as never)}`
+	} as W;
+}
+
+/**
+ * Who this member should meet, from the answer they already gave.
+ *
+ * `directory_entry.lookingFor` is a two-directional column, and until now the
+ * only thing it drove was a filter chip on a page a member has to think to
+ * visit. This is the same data as a query: **my instruments against their
+ * needs, or my needs against what they play, inside a shared genre.**
+ *
+ * The direction is the viewer's own, never a parameter:
+ *
+ * | `lookingFor` | Looks for                                                     |
+ * | ------------ | ------------------------------------------------------------- |
+ * | `'band'`     | Bands wanting members, whose `seeking_instrument` tags meet the viewer's `instrument` tags |
+ * | `'members'`  | Members wanting a band, whose `instrument` tags meet the viewer's `seeking_instrument` tags |
+ * | unset        | Nothing, and `gaps` says so                                    |
+ *
+ * **Instrument or genre overlap qualifies; both together ranks first.** The
+ * plan states the requirement as "sharing a genre" and the ranking as
+ * "instrument and genre, then instrument alone, then genre alone" — and a hard
+ * AND makes two of those three tiers unreachable. Taken as an OR both readings
+ * survive, genre-only lands last (which is the objection to genre-only
+ * matching, answered by ordering rather than exclusion), and a collective this
+ * size still fills the card.
+ *
+ * Everything a listing already withholds, this withholds: `memberWhereConditions`
+ * and `bandWhereConditions` carry visibility, both soft-delete flags and the
+ * deactivated-account check, and are reused rather than restated. On top of
+ * those it excludes the viewer, the viewer's own bands, and anyone on either
+ * side of a block.
+ */
+export async function findMatchesFor(userId: string): Promise<DirectoryMatches> {
+	const viewer = await db.query.directoryEntry.findFirst({
+		where: { userId },
+		columns: { lookingFor: true },
+		with: { tags: { columns: { kind: true, value: true } } }
+	});
+
+	const direction: LookingFor | null = viewer?.lookingFor ?? null;
+	const tagsOf = (kind: DirectoryTagKind) =>
+		(viewer?.tags ?? []).filter((t) => t.kind === kind).map((t) => t.value);
+
+	const genres = tagsOf('genre');
+	// The viewer's half of the intersection, whichever way they are pointed:
+	// what they play when they want a band, what they need when they want members.
+	const instruments = direction === 'members' ? tagsOf('seeking_instrument') : tagsOf('instrument');
+
+	const gaps: MatchGap[] = [];
+	if (!direction) gaps.push('lookingFor');
+	if (instruments.length === 0) {
+		gaps.push(direction === 'members' ? 'seekingInstruments' : 'instruments');
+	}
+	if (genres.length === 0) gaps.push('genres');
+
+	// No direction is not a thin result, it is no question — and with neither
+	// kind of tag there is nothing to intersect. Both are for `gaps` to explain.
+	if (!direction || (instruments.length === 0 && genres.length === 0)) {
+		return { direction, gaps, matches: [] };
+	}
+
+	const matches =
+		direction === 'band'
+			? await bandMatches(userId, instruments, genres)
+			: await memberMatches(userId, instruments, genres);
+
+	return { direction, gaps, matches: matches.sort(byRankThenName).slice(0, MATCH_LIMIT) };
+}
+
+/** The overlap filter itself: at least one instrument or one genre in common. */
+function overlapCondition<W>(
+	instrumentKind: DirectoryTagKind,
+	instruments: string[],
+	genres: string[]
+): W {
+	const either: W[] = [];
+	if (instruments.length) either.push(tagCondition<W>(instrumentKind, instruments));
+	if (genres.length) either.push(tagCondition<W>('genre', genres));
+	return { OR: either } as W;
+}
+
+/** Bands wanting members, for a member wanting a band. */
+async function bandMatches(
+	userId: string,
+	instruments: string[],
+	genres: string[]
+): Promise<DirectoryMatch[]> {
+	// The viewer's own bands. Being told to go meet the band you are already in
+	// is the loudest possible way for this card to say it does not know you.
+	const own = await db
+		.select({ groupId: groupMember.groupId })
+		.from(groupMember)
+		.where(and(eq(groupMember.userId, userId), eq(groupMember.status, 'active')));
+	const ownIds = own.map((r) => r.groupId);
+
+	const conditions: BandWhere[] = [
+		bandWhereConditions('members', { lookingForMembers: true }),
+		overlapCondition<BandWhere>('seeking_instrument', instruments, genres)
+	];
+	// Only when there is something to exclude: `notIn []` is not a predicate
+	// every dialect renders sensibly.
+	if (ownIds.length) conditions.push({ groupId: { notIn: ownIds } });
+
+	const rows = await db.query.directoryEntry.findMany({
+		where: { AND: conditions },
+		with: { tags: true, group: { columns: { slug: true, avatarKey: true } } },
+		orderBy: { name: 'asc' },
+		limit: MATCH_CANDIDATE_LIMIT,
+		columns: { groupId: true, name: true, tagline: true }
+	});
+
+	return rows.map((row) => ({
+		// The BAND's id, slug and avatar key — nothing downstream means the entry,
+		// and `group.avatarKey` is canonical. Same renames `mapBandRow` does.
+		// `subtitle` is overridden because `toBandRef` has none and a tagline is
+		// the qualifier a directory card wants.
+		ref: {
+			...toBandRef({
+				id: row.groupId,
+				name: row.name,
+				slug: row.group?.slug ?? null,
+				image: row.group?.avatarKey ?? null
+			}),
+			subtitle: row.tagline
+		} satisfies BandRef,
+		sharedInstruments: overlap(row.tags, 'seeking_instrument', instruments),
+		sharedGenres: overlap(row.tags, 'genre', genres)
+	}));
+}
+
+/** Members wanting a band, for a member assembling one. */
+async function memberMatches(
+	userId: string,
+	seeking: string[],
+	genres: string[]
+): Promise<DirectoryMatch[]> {
+	const rows = await db.query.directoryEntry.findMany({
+		where: {
+			AND: [
+				memberWhereConditions('members', { lookingForBand: true }),
+				{ userId: { ne: userId } },
+				notBlockedCondition<MemberWhere>(userId),
+				overlapCondition<MemberWhere>('instrument', seeking, genres)
+			]
+		},
+		with: { tags: true, user: { columns: { image: true, pronouns: true } } },
+		orderBy: { name: 'asc' },
+		limit: MATCH_CANDIDATE_LIMIT,
+		columns: { userId: true, name: true, tagline: true }
+	});
+
+	return rows.map((row) => ({
+		// The USER's id, and `user.image` rather than the entry's avatar key —
+		// better-auth owns that column and it may hold a full OAuth URL. The
+		// subtitle is the tagline rather than `toMemberRef`'s email: the directory
+		// is where two members called Chris are told apart by what they play, and
+		// publishing an address on a suggestion card nobody asked for is worse.
+		ref: {
+			...toMemberRef({
+				id: row.userId,
+				name: row.name,
+				pronouns: row.user?.pronouns ?? null,
+				image: row.user?.image ?? null
+			}),
+			subtitle: row.tagline
+		} satisfies MemberRef,
+		sharedInstruments: overlap(row.tags, 'instrument', seeking),
+		sharedGenres: overlap(row.tags, 'genre', genres)
+	}));
 }
 
 // ---------------------------------------------------------------------------
@@ -510,7 +778,7 @@ export async function getPublicDirectory(filters: PublicDirectoryFilters = {}) {
  * genres briefly disappearing from the suggestion list the moment band writes
  * moved to `directory_tag`.
  */
-async function suggestTags(kind: 'genre' | 'instrument', prefix: string) {
+async function suggestTags(kind: DirectoryTagKind, prefix: string) {
 	const rows = await db
 		.selectDistinct({ tag: directoryTag.value })
 		.from(directoryTag)

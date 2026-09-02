@@ -1,5 +1,9 @@
 import { type DirectoryVisibility, user } from '../../src/lib/server/db/schema/authentication';
-import { directoryEntry, directoryTag } from '../../src/lib/server/db/schema/directory';
+import {
+	directoryEntry,
+	directoryTag,
+	type DirectoryTagKind
+} from '../../src/lib/server/db/schema/directory';
 import { group } from '../../src/lib/server/db/schema/group';
 import { batchInsert, db } from './db';
 import { pendingEntries, pendingTags } from './pending';
@@ -93,7 +97,7 @@ export async function seedDirectoryEntries() {
 	// `directory_tag` has a unique index that the three tables it replaced never
 	// had, so a subject picked the same genre twice would abort the insert.
 	const seen = new Set<string>();
-	const tags: { entryId: string; kind: 'genre' | 'instrument'; value: string }[] = [];
+	const tags: { entryId: string; kind: DirectoryTagKind; value: string }[] = [];
 	for (const { subjectId, kind, value } of pendingTags) {
 		const entryId = byUser.get(subjectId) ?? byGroup.get(subjectId);
 		if (!entryId) continue;

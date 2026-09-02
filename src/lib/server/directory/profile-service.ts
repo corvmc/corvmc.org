@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
-import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
+import { directoryEntry, directoryTag, type LookingFor } from '$lib/server/db/schema/directory';
 import { getOrCreateGroupEntryId, getOrCreateUserEntryId, replaceTags } from './entry-service';
 import { groupMember } from '$lib/server/db/schema/group';
 import { eq, and } from 'drizzle-orm';
@@ -61,8 +61,22 @@ export type MemberProfileData = {
 	tagline?: string;
 	hometown?: string;
 	instruments?: string[];
+	/**
+	 * What a member assembling a band needs somebody else to play — the mirror
+	 * of `instruments`, and only meaningful with `lookingFor: 'members'`. It is
+	 * the same `seeking_instrument` tag a band carries, because a member putting
+	 * a project together and a band with an empty chair are asking one question.
+	 */
+	seekingInstruments?: string[];
 	genres?: string[];
-	lookingForBand?: boolean;
+	/**
+	 * The whole two-directional column rather than the boolean this used to be.
+	 * A member can now point it either way — "I want a band" or "I want members"
+	 * — which is what makes the match symmetric; `null` is not looking. Display
+	 * code downstream still reads the `lookingForBand` boolean, derived from
+	 * this on the way out.
+	 */
+	lookingFor?: LookingFor | null;
 	availableForHire?: boolean;
 	teachesLessons?: boolean;
 	openToCollaboration?: boolean;
@@ -95,7 +109,7 @@ export async function updateMemberProfile(userId: string, data: MemberProfileDat
 				bio: data.bio ? sanitizeBio(data.bio).slice(0, MAX_BIO) || null : null,
 				tagline: data.tagline?.slice(0, MAX_TAGLINE) ?? null,
 				hometown: data.hometown?.slice(0, MAX_TAGLINE) || null,
-				lookingFor: data.lookingForBand ? 'band' : null,
+				lookingFor: data.lookingFor ?? null,
 				availableForHire: data.availableForHire ?? false,
 				teachesLessons: data.teachesLessons ?? false,
 				openToCollaboration: data.openToCollaboration ?? false,
@@ -112,6 +126,12 @@ export async function updateMemberProfile(userId: string, data: MemberProfileDat
 	// their genres — and every assertion that "saving genres works" would pass.
 	if (data.instruments !== undefined) {
 		queries.push(...replaceTags(entryId, 'instrument', validateTags(data.instruments)));
+	}
+
+	if (data.seekingInstruments !== undefined) {
+		queries.push(
+			...replaceTags(entryId, 'seeking_instrument', validateTags(data.seekingInstruments))
+		);
 	}
 
 	if (data.genres !== undefined) {
@@ -156,10 +176,14 @@ export async function getMemberProfileForEdit(userId: string) {
 	const { id: _entryId, lookingFor, visibility, contact, ...rest } = row;
 	return {
 		...rest,
+		// Both: the form edits the column, while the staff account panel and every
+		// directory card still ask the old yes/no question.
+		lookingFor,
 		lookingForBand: lookingFor === 'band',
 		directoryVisibility: visibility,
 		directoryContact: contact,
 		instruments: tags.filter((t) => t.kind === 'instrument').map((t) => t.value),
+		seekingInstruments: tags.filter((t) => t.kind === 'seeking_instrument').map((t) => t.value),
 		genres: tags.filter((t) => t.kind === 'genre').map((t) => t.value)
 	};
 }
@@ -173,6 +197,12 @@ export type BandProfileData = {
 	hometown?: string;
 	foundedYear?: string;
 	genres?: string[];
+	/**
+	 * What the band is short of. Tagged rather than free text so it lands in the
+	 * same vocabulary members tag themselves with — a band asking for a
+	 * "six-string" would match nobody.
+	 */
+	seekingInstruments?: string[];
 	lookingForMembers?: boolean;
 	directoryVisibility?: DirectoryVisibility;
 	directoryContact?: DirectoryContact;
@@ -235,6 +265,12 @@ export async function updateBandProfile(bandId: string, userId: string, data: Ba
 		queries.push(...replaceTags(entryId, 'genre', validateTags(data.genres)));
 	}
 
+	if (data.seekingInstruments !== undefined) {
+		queries.push(
+			...replaceTags(entryId, 'seeking_instrument', validateTags(data.seekingInstruments))
+		);
+	}
+
 	await db.batch(queries as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
 }
 
@@ -292,10 +328,12 @@ export async function getBandProfileForEdit(bandId: string) {
 
 	if (!row) return null;
 
-	const genres = await db
-		.select({ value: directoryTag.value })
+	// Every kind in one read and split below, rather than one query per kind —
+	// the band form now edits two of them.
+	const tags = await db
+		.select({ kind: directoryTag.kind, value: directoryTag.value })
 		.from(directoryTag)
-		.where(and(eq(directoryTag.entryId, row.id), eq(directoryTag.kind, 'genre')));
+		.where(eq(directoryTag.entryId, row.id));
 
 	// Renamed back to the shape the form and its zod schema already use. Phase 3a
 	// is a server-side port; no `.svelte` file learns that the listing moved.
@@ -305,6 +343,7 @@ export async function getBandProfileForEdit(bandId: string) {
 		lookingForMembers: lookingFor === 'members',
 		directoryVisibility: visibility,
 		directoryContact: contact,
-		genres: genres.map((r) => r.value)
+		genres: tags.filter((t) => t.kind === 'genre').map((t) => t.value),
+		seekingInstruments: tags.filter((t) => t.kind === 'seeking_instrument').map((t) => t.value)
 	};
 }
