@@ -19,6 +19,7 @@
 
 	let title = $state('');
 	let description = $state('');
+	let kind = $state('show');
 	let eventDate = $state(new Date().toISOString().split('T')[0]);
 	let eventStartTime = $state('');
 	let eventEndTime = $state('');
@@ -150,6 +151,7 @@
 	function resetForm() {
 		title = '';
 		description = '';
+		kind = 'show';
 		eventDate = new Date().toISOString().split('T')[0];
 		eventStartTime = '';
 		eventEndTime = '';
@@ -186,6 +188,19 @@
 		>
 			<Field name="title" type="text" label="Title" bind:value={title} />
 			<Field name="description" type="textarea" label="Description" bind:value={description} />
+			<Field
+				name="kind"
+				type="select"
+				label="Kind"
+				bind:value={kind}
+				options={[
+					{ value: 'show', label: 'Show' },
+					{ value: 'work_party', label: 'Work party' },
+					{ value: 'meeting', label: 'Meeting' },
+					{ value: 'class', label: 'Class' }
+				]}
+				description="Only shows reach the homepage posters. Anything published still appears on the public calendar."
+			/>
 			<Field name="eventDate" type="date" label="Date" bind:value={eventDate} />
 
 			<div class="grid grid-cols-2 gap-4">

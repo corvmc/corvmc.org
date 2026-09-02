@@ -22,7 +22,7 @@ pnpm install
 The `prepare` script runs automatically and does three things: `svelte-kit sync`
 (generates `.svelte-kit/` types), compiles the MJML email layout
 (`scripts/compile-email-layouts.ts` → `src/lib/server/generated/`), and installs the
-**lefthook** git hooks (auto-format on commit, type-check heads-up on push — see
+**lefthook** git hooks (auto-format on commit; linting and type-checking are CI's job — see
 [conventions](conventions.md#git-hooks)).
 
 ## 2. Environment
@@ -170,7 +170,7 @@ step, and confirm-without-payment flows are fully testable.
 | `no such table: ...`                                       | Migrations not applied to the local DB — `pnpm db:reset`                                                                                          |
 | `db:migrate:local` errors on `CREATE TABLE`                | A database built before migrations were tracked has no `__drizzle_migrations`, so all of them look pending; use `pnpm db:reset`                   |
 | Sign-up rejected with "Verification failed"                | Turnstile keys are set but wrong; blank both keys locally to use the always-pass test mode                                                        |
-| Commit mangled / files reformatted on commit               | That's lefthook's prettier/eslint `--fix` pre-commit hook doing its job                                                                           |
+| Commit mangled / files reformatted on commit               | That's lefthook's prettier `--write` pre-commit hook doing its job                                                                                |
 | Email layout changes not showing                           | The MJML layout compiles at `prepare`/`build` — run `pnpm tsx scripts/compile-email-layouts.ts` or restart after `pnpm install`                   |
 | Port 5173 busy                                             | Another dev server is in the _same_ checkout (worktrees get their own port). Stop it, or `PORT=5174 pnpm dev` (update `ORIGIN` to match)          |
 | Storybook stories fail in vitest                           | The `storybook` vitest project needs the Chromium install: `pnpm exec playwright install chromium`                                                |

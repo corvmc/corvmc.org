@@ -30,21 +30,36 @@
 
 	const pageData = $derived(await getMemberVolunteerPage());
 
-	function toDateInput(date: Date): string {
-		return new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(new Date(date));
+	function toDateInput(date: Date | null): string {
+		// An unscheduled work order has no date of its own, so the log defaults to
+		// today and the member adjusts it — the same thing a free entry does.
+		return new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(
+			date ? new Date(date) : new Date()
+		);
 	}
 
-	/** Shift duration → the hours input, rounded to the quarter-hour step. */
-	function shiftHours(startsAt: Date, endsAt: Date): string {
+	/**
+	 * Shift duration → the hours input, rounded to the quarter-hour step.
+	 *
+	 * Empty for an unscheduled work order: there is no window to infer from, and
+	 * guessing a number the member then has to correct is worse than asking.
+	 */
+	function shiftHours(startsAt: Date | null, endsAt: Date | null): string {
+		if (!startsAt || !endsAt) return '';
 		const hours = (endsAt.getTime() - startsAt.getTime()) / 3_600_000;
 		return String(Math.round(hours * 4) / 4);
 	}
 
 	// Everything they are on that has not been worked yet, plus anything worked
 	// that still owes hours or feedback. A shift from March is history.
+	//
+	// An unscheduled work order has no window at all — it is work somebody needs
+	// to do with no time booked for it — so it is never "old", and stays until it
+	// is resolved or dropped.
 	const liveShifts = $derived(
 		pageData.myShifts.filter(
-			(s) => s.status !== 'completed' || s.endsAt > new Date(Date.now() - 14 * 86_400_000)
+			(s) =>
+				s.status !== 'completed' || !s.endsAt || s.endsAt > new Date(Date.now() - 14 * 86_400_000)
 		)
 	);
 
@@ -102,7 +117,11 @@
 								<div class="min-w-0">
 									<div class="font-medium">{owed.roleName}</div>
 									<div class="text-subtle text-sm">
-										{formatDateShort(owed.startsAt)} · {shiftHours(owed.startsAt, owed.endsAt)} hrs
+										{#if owed.startsAt}
+											{formatDateShort(owed.startsAt)} · {shiftHours(owed.startsAt, owed.endsAt)} hrs
+										{:else}
+											No time was booked for this — say how long it took.
+										{/if}
 									</div>
 									<div class="text-subtle text-xs">Add what you did to file it.</div>
 								</div>

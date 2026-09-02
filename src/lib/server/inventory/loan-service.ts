@@ -15,6 +15,8 @@ import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { isSustainingMember } from '$lib/server/finance/subscription-service';
 import { getAvailableQuantity } from './stock-service';
+import { setAssetStatus } from './asset-service';
+import { hasBlockingFlag } from './asset-flag-service';
 import { recordMovement } from './stock-service';
 import { loanDailyRateCents, loanChargeDays, estimateLoanCost } from '$lib/config';
 import { captureException } from '$lib/server/sentry';
@@ -465,12 +467,13 @@ export async function returnLoan(
 		.where(eq(inventoryLoan.id, loanId))
 		.returning();
 
-	if (loan.assetId) {
-		await db
-			.update(inventoryAsset)
-			.set({ status: 'in_service', updatedAt: now })
-			.where(eq(inventoryAsset.id, loan.assetId));
-	}
+	// Custody comes back here, so this is where availability is decided. The unit
+	// stayed `on_loan` the whole time it was out, even if somebody flagged it
+	// mid-loan -- noticing a crackle does not hand the amp back to the collective.
+	//
+	// The loan movements are written first, below, so the ledger reads in the
+	// order things happened: it came back, and then it went to the shop.
+	const assetNeedsService = loan.assetId ? await hasBlockingFlag(loan.assetId) : false;
 
 	if (loan.itemId) {
 		await recordMovement({
@@ -482,6 +485,27 @@ export async function returnLoan(
 			actorId: opts.actorId ?? null,
 			occurredAt: now
 		});
+	}
+
+	if (loan.assetId) {
+		const [asset] = await db
+			.select({ status: inventoryAsset.status })
+			.from(inventoryAsset)
+			.where(eq(inventoryAsset.id, loan.assetId))
+			.limit(1);
+
+		// Only out of `on_loan`. `retired` and `lost` are decisions somebody made
+		// about the unit while it was out, and handing it back does not reverse
+		// them.
+		if (asset?.status === 'on_loan') {
+			// Through the single writer, so `maintenance` derives its own
+			// `repair_out` and `in_service` derives nothing -- the `loan_return`
+			// above already accounted for the unit coming back.
+			await setAssetStatus(loan.assetId, assetNeedsService ? 'maintenance' : 'in_service', {
+				actorId: opts.actorId,
+				notes: assetNeedsService ? 'Open report on return' : undefined
+			});
+		}
 	}
 
 	let equipmentName = 'Unknown';

@@ -26,6 +26,11 @@ export const tableOrder = [
 	// existing table is a rebuild in SQLite, which on D1 would take
 	// `acquisition_line` with it — so it imposes no ordering here.
 	'purchase_order',
+	// A root: references nothing. Parent of contractor_job.
+	'contractor',
+	// References contractor, inventory_asset and user, so it clears before none
+	// of them.
+	'contractor_job',
 	'event',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
@@ -41,9 +46,16 @@ export const tableOrder = [
 	'permissions',
 	'volunteer_role',
 	'volunteer_certification',
-	// references volunteer_role + event, and is referenced by volunteer_signup
-	// and volunteer_hour_log, so it sits between them.
+	// References user. Ahead of volunteer_shift because the shift now carries
+	// `duty_list_id` — provenance for the list that stamped it out.
+	'duty_list',
+	// References duty_list and volunteer_role.
+	'duty_list_item',
+	// references volunteer_role + event + duty_list, and is referenced by
+	// volunteer_signup, volunteer_hour_log and work_task, so it sits between them.
 	'volunteer_shift',
+	// The checklist inside one work order. References volunteer_shift and user.
+	'work_task',
 	'volunteer_signup',
 	// independents (no FKs)
 	'closure',
@@ -62,6 +74,10 @@ export const tableOrder = [
 	// References purchase_order and inventory_item, so it clears before neither.
 	'purchase_order_line',
 	'inventory_loan',
+	// References inventory_asset, inventory_loan and user. `work_order_id` points
+	// at volunteer_shift but carries no foreign key -- the two schema modules
+	// would otherwise import each other -- so it imposes no ordering here.
+	'asset_flag',
 	'stock_movement',
 	// References inventory_item and help_article, so it clears before neither.
 	'inventory_item_article',

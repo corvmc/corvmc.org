@@ -27,13 +27,20 @@ const MIGRATIONS_FOLDER = join(import.meta.dirname, '..', '..', '..', '..', 'mig
 
 let db: DatabaseSync;
 
+/**
+ * 30s, not the 10s default: this hook replays every committed migration, so it
+ * gets monotonically slower with each one added and was already landing within
+ * a few hundred ms of the default ceiling. Under parallel load it crossed it,
+ * which surfaces as an unexplained hook timeout rather than anything about the
+ * assertions below.
+ */
 beforeAll(() => {
 	// The whole committed migration set, in memory — the same path
 	// `db:migrate:local` takes, so the table here is the table that ships.
 	db = new DatabaseSync(':memory:');
 	migrate(drizzleNode({ client: db }), { migrationsFolder: MIGRATIONS_FOLDER });
 	db.exec(`INSERT INTO "group" (id, name, slug) VALUES ('group-1', 'Test', 'test')`);
-});
+}, 30_000);
 
 afterAll(() => db?.close());
 

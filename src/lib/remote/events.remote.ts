@@ -73,7 +73,13 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
-import { event, createEventSchema, eventSources, lineupSchema } from '$lib/server/db/schema/event';
+import {
+	event,
+	createEventSchema,
+	eventSources,
+	eventKinds,
+	lineupSchema
+} from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
@@ -663,6 +669,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			ticketQuantity: evt.ticketQuantity,
 			posterKey: evt.posterKey,
 			source: evt.source,
+			kind: evt.kind,
 			bandId: evt.groupId,
 			location: evt.location,
 			externalTicketUrl: evt.externalTicketUrl,
@@ -798,6 +805,7 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 		endsAt,
 		doorsAt,
 		tags: data.tags || undefined,
+		kind: data.kind,
 		ticketingEnabled,
 		ticketPrice: ticketingEnabled ? ticketPrice : undefined,
 		ticketQuantity: ticketingEnabled ? ticketQuantity : undefined,
@@ -972,6 +980,7 @@ export const updateEvent = form(
 		title: z.string().optional(),
 		description: z.string().optional(),
 		tags: z.string().optional(),
+		kind: z.enum(eventKinds).optional(),
 		eventDate: z.string().optional(),
 		eventStartTime: z.string().optional(),
 		eventEndTime: z.string().optional(),
@@ -1001,6 +1010,7 @@ export const updateEvent = form(
 		if (data.title !== undefined && data.title !== '') updateParams.title = data.title;
 		if (data.description !== undefined) updateParams.description = data.description || null;
 		if (data.tags !== undefined) updateParams.tags = data.tags || null;
+		if (data.kind !== undefined) updateParams.kind = data.kind;
 		if (data.location !== undefined) updateParams.location = data.location || null;
 		if (data.externalTicketUrl !== undefined) {
 			updateParams.externalTicketUrl = data.externalTicketUrl || null;

@@ -45,6 +45,8 @@ export type StaffNavKey =
 	| 'inventory-orders'
 	| 'inventory-spend'
 	| 'inventory-compliance'
+	| 'contractors'
+	| 'contractor-jobs'
 	| 'productions'
 	| 'calendar'
 	| 'flags'
@@ -178,6 +180,18 @@ export const staffNavSections: StaffNavSection[] = [
 						label: 'Compliance',
 						href: resolve('/staff/inventory/compliance')
 					}
+				]
+			},
+			{
+				// A sibling of Inventory rather than a child of it. Half of what a
+				// contractor does is to the building, which owns no inventory row —
+				// filing the electrician under the gear catalog would make the
+				// building half unfindable.
+				key: 'contractors',
+				label: 'Contractors',
+				href: resolve('/staff/contractors'),
+				children: [
+					{ key: 'contractor-jobs', label: 'Jobs', href: resolve('/staff/contractors/jobs') }
 				]
 			}
 		]

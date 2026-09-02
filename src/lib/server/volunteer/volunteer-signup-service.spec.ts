@@ -193,6 +193,30 @@ describe('claimShift', () => {
 		expect(written).toContain('select count(*) from "volunteer_signup"');
 	});
 
+	/**
+	 * Splitting a shift means two people covering different halves of it, so the
+	 * guard counts only signups whose window *overlaps* the claimant's rather
+	 * than every signup on the row.
+	 *
+	 * The equivalence matters more than the feature: with nobody naming a custom
+	 * window every `coalesce` lands on the shift's own times, everything overlaps
+	 * everything, and this is exactly the headcount it replaced. That is what
+	 * makes the change safe to land before any UI can produce a split.
+	 */
+	it('counts only overlapping signups, and still every signup when no window is named', async () => {
+		selectResultQueue = [[], [{ id: 'signup-new', status: 'claimed' }]];
+
+		await claimShift('shift-1', 'user-1');
+
+		const written = render(rawWrites[0]);
+		expect(written).toContain('coalesce(vs."scheduled_starts_at", vsh."starts_at")');
+		expect(written).toContain('coalesce(vs."scheduled_ends_at", vsh."ends_at")');
+		// The null arms are what keep the degenerate cases counting rather than
+		// silently skipping — an unbounded piece of work is not disjoint from
+		// another, it is the same work.
+		expect(written).toContain('is null');
+	});
+
 	it('refuses when the conditional write finds no room', async () => {
 		selectResultQueue = [[]];
 		// The statement ran but matched nothing: somebody took the last place

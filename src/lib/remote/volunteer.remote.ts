@@ -346,13 +346,25 @@ export const getShiftCandidates = query(
 		]);
 
 		const held = await listHeldForGateMany(candidates.map((c) => c.userId));
-		const at = shift.startsAt;
+
+		// As of the shift when there is one, as of today when there is not — the
+		// same fallback `claimShift` makes on the server. An unscheduled work order
+		// has no window until somebody books one, and a clearance question still
+		// has to have an answer.
+		const at = shift.startsAt ?? new Date();
+
 		// The shift's own weekday, in club time — a shift at 10pm Pacific is
 		// already tomorrow in UTC, and asking somebody about the wrong day is
-		// worse than not asking.
-		const shiftDay = WEEKDAYS.indexOf(
-			new Intl.DateTimeFormat('en-US', { timeZone: DEFAULT_TIMEZONE, weekday: 'short' }).format(at)
-		);
+		// worse than not asking. `-1` for unscheduled work: no day to clash with,
+		// so `availabilityConflictsWithDay` can never flag one.
+		const shiftDay = shift.startsAt
+			? WEEKDAYS.indexOf(
+					new Intl.DateTimeFormat('en-US', {
+						timeZone: DEFAULT_TIMEZONE,
+						weekday: 'short'
+					}).format(shift.startsAt)
+				)
+			: -1;
 
 		// Valid on the day, but not for much longer after it. A clearance that has
 		// already lapsed by the shift date is not "lapsing" — it is missing, and

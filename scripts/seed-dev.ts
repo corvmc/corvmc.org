@@ -84,6 +84,7 @@ import {
 	inventoryLocation,
 	stockMovement
 } from '../src/lib/server/db/schema/inventory';
+import { contractor, contractorJob } from '../src/lib/server/db/schema/contractor';
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
 import { inventoryItemArticle } from '../src/lib/server/db/schema/inventory';
 import {
@@ -109,7 +110,10 @@ import {
 	volunteerRoleCertification,
 	volunteerShift,
 	volunteerSignup,
-	volunteerShiftFeedback
+	volunteerShiftFeedback,
+	dutyList,
+	dutyListItem,
+	workTask
 } from '../src/lib/server/db/schema/volunteer';
 // JSON recurrence format matching the app's rrule-helpers (see scripts/seed-rrule.ts).
 import { buildSeedRRule as seedRRule } from './seed-rrule';
@@ -1147,6 +1151,28 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		})
 		.returning();
 	rows.push(cancelledNoRes);
+
+	// A published CMC event that is deliberately not a show. It belongs on the
+	// public calendar — a work party nobody is told about is a work party nobody
+	// comes to — but not in the homepage posters or "show tonight", which are the
+	// three surfaces `kind` exists to keep honest. Rendering it locally is the
+	// only way that distinction is visible before production.
+	const [workParty] = await db
+		.insert(event)
+		.values({
+			title: 'Work party: practice room deep clean',
+			description:
+				'Bring gloves. We are pulling everything out of the back room, cleaning behind it, and putting it back better than we found it.',
+			startsAt: ptDate(9, 10),
+			endsAt: ptDate(9, 14),
+			status: 'published',
+			publishedAt: new Date(),
+			kind: 'work_party',
+			tags: 'volunteer, all ages',
+			createdByUserId: pick(staffUsers).id
+		})
+		.returning();
+	rows.push(workParty);
 
 	// Recurring CMC event: a weekly open mic. Prototype is a published past
 	// occurrence; future occurrences are materialized as drafts (as the
@@ -3690,6 +3716,230 @@ async function seedEquipment(users: SeedUser[]) {
 }
 
 // ---------------------------------------------------------------------------
+// Contractors
+// ---------------------------------------------------------------------------
+
+/**
+ * The people the collective pays to do work, and the jobs they were paid for.
+ *
+ * Covers every trade and every job status, plus the three states the UI has to
+ * render differently and would otherwise never be seen in: a job that is
+ * overdue, a unit that is at the shop right now, and a contractor whose
+ * insurance has lapsed.
+ *
+ * Assets are looked up by tag rather than threaded through from
+ * `seedEquipment`, the same shortcut `seedItemArticles` takes — one join is not
+ * worth a return value through two unrelated seeders.
+ */
+async function seedContractors(staffId: string) {
+	const now = new Date();
+	const day = 24 * 3600_000;
+
+	const ids = {
+		amps: randomUUID(),
+		electric: randomUUID(),
+		plumb: randomUUID(),
+		hvac: randomUUID(),
+		fire: randomUUID(),
+		lock: randomUUID(),
+		handy: randomUUID(),
+		piano: randomUUID()
+	};
+
+	const contractors = await batchInsert(
+		contractor,
+		[
+			{
+				id: ids.amps,
+				name: 'Corvallis Amp Works',
+				trade: 'instrument_repair' as const,
+				contactName: 'Rita Alvarez',
+				phone: '541-555-0143',
+				email: 'shop@corvallisampworks.example',
+				insuranceExpiresAt: new Date(now.getTime() + 200 * day),
+				notes: 'Tube work and speaker reconing. Two-week turnaround in summer.'
+			},
+			{
+				id: ids.electric,
+				name: 'Benton Electric',
+				trade: 'electrical' as const,
+				contactName: 'Sam Okafor',
+				phone: '541-555-0188',
+				licenseNumber: 'OR-EL-44219',
+				insuranceExpiresAt: new Date(now.getTime() + 21 * day),
+				notes: 'Did the stage subpanel. Knows the building.'
+			},
+			{
+				id: ids.plumb,
+				name: 'Willamette Plumbing',
+				trade: 'plumbing' as const,
+				phone: '541-555-0107',
+				insuranceExpiresAt: new Date(now.getTime() + 120 * day)
+			},
+			{
+				id: ids.hvac,
+				name: 'Mid-Valley Heating & Air',
+				trade: 'hvac' as const,
+				phone: '541-555-0166',
+				// Lapsed a fortnight ago: the one row /staff/contractors must warn on.
+				insuranceExpiresAt: new Date(now.getTime() - 14 * day),
+				notes: 'Certificate of insurance expired — do not schedule until renewed.'
+			},
+			{
+				id: ids.fire,
+				name: 'Cascade Fire Safety',
+				trade: 'fire_safety' as const,
+				phone: '541-555-0121',
+				insuranceExpiresAt: new Date(now.getTime() + 300 * day),
+				notes: 'Annual extinguisher inspection.'
+			},
+			{
+				id: ids.lock,
+				name: 'Alsea Lock & Key',
+				trade: 'locksmith' as const,
+				phone: '541-555-0190'
+				// No certificate on file at all — not the same as lapsed, and the
+				// insurance list must leave it out.
+			},
+			{
+				id: ids.handy,
+				name: 'Dale Prescott',
+				trade: 'general' as const,
+				phone: '541-555-0134',
+				notes: 'Handyman. Drywall, doors, shelving.'
+			},
+			{
+				id: ids.piano,
+				name: 'Marguerite Chen',
+				trade: 'other' as const,
+				phone: '541-555-0175',
+				notes: 'Piano tuner. Twice a year.',
+				// Retired from the pickers, but the tuning history stays.
+				archivedAt: new Date(now.getTime() - 90 * day)
+			}
+		],
+		4
+	);
+
+	// The unit `seedEquipment` left in the shop, and one still in service, so the
+	// asset page has both an open job and a closed one to render.
+	const [inShop] = await db
+		.select({ id: inventoryAsset.id })
+		.from(inventoryAsset)
+		.where(eq(inventoryAsset.status, 'maintenance'))
+		.limit(1);
+	const [inService] = await db
+		.select({ id: inventoryAsset.id })
+		.from(inventoryAsset)
+		.where(eq(inventoryAsset.status, 'in_service'))
+		.limit(1);
+
+	const jobs = await batchInsert(
+		contractorJob,
+		[
+			// At the shop right now, and late — the overdue list's only row.
+			{
+				id: randomUUID(),
+				contractorId: ids.amps,
+				status: 'scheduled' as const,
+				summary: 'Retube and rebias the Bassman',
+				assetId: inShop?.id ?? null,
+				scheduledFor: new Date(now.getTime() - 21 * day),
+				expectedBackAt: new Date(now.getTime() - 5 * day),
+				quotedCents: 22000,
+				requestedByUserId: staffId,
+				notes: 'Dropped off. Rita said two weeks.'
+			},
+			// A finished repair, with an invoice — the asset page's history.
+			{
+				id: randomUUID(),
+				contractorId: ids.amps,
+				status: 'completed' as const,
+				summary: 'Recone the 4x10 cabinet',
+				assetId: inService?.id ?? null,
+				scheduledFor: new Date(now.getTime() - 150 * day),
+				completedAt: new Date(now.getTime() - 132 * day),
+				quotedCents: 16000,
+				costCents: 17500,
+				invoiceRef: 'CAW-4471',
+				paidAt: new Date(now.getTime() - 125 * day),
+				requestedByUserId: staffId
+			},
+			// Building work: no asset, which is the case the module exists for.
+			{
+				id: randomUUID(),
+				contractorId: ids.electric,
+				status: 'completed' as const,
+				summary: 'Add a dedicated circuit for the stage subpanel',
+				scheduledFor: new Date(now.getTime() - 60 * day),
+				completedAt: new Date(now.getTime() - 60 * day),
+				costCents: 94500,
+				invoiceRef: 'BE-2026-118',
+				paidAt: new Date(now.getTime() - 45 * day),
+				requestedByUserId: staffId
+			},
+			{
+				id: randomUUID(),
+				contractorId: ids.fire,
+				status: 'completed' as const,
+				summary: 'Annual extinguisher inspection and recharge',
+				scheduledFor: new Date(now.getTime() - 40 * day),
+				completedAt: new Date(now.getTime() - 40 * day),
+				costCents: 18000,
+				invoiceRef: 'CFS-9903',
+				requestedByUserId: staffId
+			},
+			// Booked, not yet due — the ordinary open job.
+			{
+				id: randomUUID(),
+				contractorId: ids.plumb,
+				status: 'scheduled' as const,
+				summary: 'Green room sink is backing up',
+				scheduledFor: new Date(now.getTime() + 4 * day),
+				expectedBackAt: new Date(now.getTime() + 4 * day),
+				quotedCents: 25000,
+				requestedByUserId: staffId
+			},
+			// Nobody has been called yet.
+			{
+				id: randomUUID(),
+				contractorId: ids.handy,
+				status: 'draft' as const,
+				summary: 'Rehang the practice room door — hinges pulling out of the frame',
+				requestedByUserId: staffId,
+				notes: 'Reported at the last work party.'
+			},
+			// Called off, and deliberately with no completion: the amp it was for
+			// is still in the shop under the job above.
+			{
+				id: randomUUID(),
+				contractorId: ids.hvac,
+				status: 'cancelled' as const,
+				summary: 'Service the rooftop unit before summer',
+				scheduledFor: new Date(now.getTime() - 30 * day),
+				quotedCents: 45000,
+				requestedByUserId: staffId,
+				notes: 'Cancelled — their certificate of insurance had lapsed.'
+			},
+			// Against the archived tuner, proving history survives archiving.
+			{
+				id: randomUUID(),
+				contractorId: ids.piano,
+				status: 'completed' as const,
+				summary: 'Tune the upright',
+				scheduledFor: new Date(now.getTime() - 200 * day),
+				completedAt: new Date(now.getTime() - 200 * day),
+				costCents: 15000,
+				requestedByUserId: staffId
+			}
+		],
+		4
+	);
+
+	return { contractors: contractors.length, jobs: jobs.length };
+}
+
+// ---------------------------------------------------------------------------
 // Help Articles
 // ---------------------------------------------------------------------------
 
@@ -5313,6 +5563,7 @@ async function main() {
 	const eq = await seedEquipment(allUsers);
 	const help = await seedHelp();
 	const itemArticles = await seedItemArticles();
+	const contractors = await seedContractors(adminUser.id);
 	const inbox = await seedInbox(adminUser, users[0]);
 	const directMessages = await seedDirectMessages(users, adminUser);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
@@ -5336,6 +5587,7 @@ async function main() {
 	// Last of the volunteer block — it grants against the certifications above and
 	// schedules against the role catalog.
 	const personas = await seedVolunteerPersonas(roles, volunteerRoles, certifications, adminUser);
+	const dutyLists = await seedDutyLists(volunteerRoles, events);
 	const suggestions = await seedSuggestions(allUsers, adminUser);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
@@ -5350,6 +5602,9 @@ async function main() {
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
+	console.log(
+		`  ${dutyLists.lists} duty list, ${dutyLists.workOrders} work orders applied to a show`
+	);
 	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
 	console.log(
 		`  ${instructors.rows} instructors (3 active, 1 paused, 1 awaiting review, 1 sent back)` +
@@ -5377,6 +5632,9 @@ async function main() {
 	);
 	console.log(
 		`  ${help.categories} help categories, ${help.articles} help articles, ${itemArticles.links} linked to gear`
+	);
+	console.log(
+		`  ${contractors.contractors} contractors, ${contractors.jobs} contractor jobs (1 overdue, 1 unit at the shop, 1 lapsed certificate)`
 	);
 	console.log(`  ${directory.entries} directory entries, ${directory.tags} directory tags`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
@@ -5469,6 +5727,14 @@ const VOLUNTEER_ROLE_SEEDS: Array<{
 		description:
 			'Keep the space working — patch drywall, swap bulbs, restring the loaner guitars, fix the door that sticks.\n\nBring whatever skills you have; there is always something.',
 		displayOrder: 50
+	},
+	{
+		name: 'Booking Lead',
+		group: 'away-from-shows' as const,
+		description:
+			'Advance a show in the week before it: confirm the lineup and set times, collect tech riders, confirm backline, and get the poster out.\n\nDone from home, on your own schedule — the work order says when it is due, not when to do it.',
+		displayOrder: 55,
+		defaultCapacity: 1
 	},
 	{
 		name: 'Outreach & Tabling',
@@ -6414,6 +6680,149 @@ async function seedVolunteerPersonas(
 	);
 
 	return { users: VOLUNTEER_PERSONAS.length };
+}
+
+/**
+ * A duty list, and one show it has been stamped onto.
+ *
+ * Renders the whole shape in one place: a list whose items are described
+ * relative to doors, the work orders an apply produces from it — four with
+ * windows and one with only a deadline — and a checklist on the ones that carry
+ * tasks, partly ticked. Without this the difference between a scheduled shift
+ * and an unscheduled work order is invisible locally, which is the difference
+ * the feature is about.
+ */
+async function seedDutyLists(volunteerRoles: any[], events: any[]) {
+	console.log('Seeding duty lists...');
+	const byName = new Map(volunteerRoles.map((r: any) => [r.name, r]));
+	const bookingLead = byName.get('Booking Lead');
+	const setup = byName.get('Event Setup');
+	const sound = byName.get('Sound Engineering');
+	const desk = byName.get('Front Desk');
+	const teardown = byName.get('Load-Out & Teardown');
+	if (!bookingLead || !setup || !sound || !desk || !teardown) return { lists: 0, workOrders: 0 };
+
+	await batchInsert(dutyList, [
+		{
+			id: 'seed-duty-standard-show',
+			name: 'Standard Show',
+			description:
+				'What it takes to run an ordinary night: someone to advance it, someone to set the room, someone on the desk, someone on the board, and enough hands to put it all away.',
+			anchor: 'doors' as const,
+			createdByUserId: 'seed-vol-coordinator'
+		}
+	]);
+
+	const items = [
+		{
+			id: 'seed-duty-item-booking',
+			volunteerRoleId: bookingLead.id,
+			// A week before doors, and no window: the Booking Lead does this when
+			// they can, not between two times.
+			dueOffsetMinutes: -10_080,
+			capacity: 1,
+			notes: 'Everything that has to be true before the day of.',
+			sortOrder: 10,
+			tasks: [
+				'Confirm the lineup and set times with every act',
+				'Collect tech riders and stage plots',
+				'Confirm backline — what we supply, what they bring',
+				'Send load-in details and the door split',
+				'Poster to social and the mailing list',
+				'Ticket link live and tested'
+			]
+		},
+		{
+			id: 'seed-duty-item-setup',
+			volunteerRoleId: setup.id,
+			offsetMinutes: -180,
+			durationMinutes: 120,
+			capacity: 2,
+			sortOrder: 20,
+			tasks: ['Chairs and tables out', 'Merch table set', 'Bathrooms checked and stocked']
+		},
+		{
+			id: 'seed-duty-item-sound',
+			volunteerRoleId: sound.id,
+			offsetMinutes: -120,
+			durationMinutes: 300,
+			capacity: 1,
+			sortOrder: 30,
+			tasks: ['Line check every input', 'Monitor mixes with each act']
+		},
+		{
+			id: 'seed-duty-item-desk',
+			volunteerRoleId: desk.id,
+			offsetMinutes: 0,
+			durationMinutes: 180,
+			capacity: 2,
+			sortOrder: 40,
+			tasks: ['Float counted before doors', 'Wristbands and stamps out']
+		},
+		{
+			id: 'seed-duty-item-teardown',
+			volunteerRoleId: teardown.id,
+			offsetMinutes: 240,
+			durationMinutes: 90,
+			capacity: 3,
+			sortOrder: 50,
+			tasks: [
+				'Gear back to storage',
+				'Room reset — chairs and tables away',
+				'Trash and recycling out',
+				'Lock up'
+			]
+		}
+	].map((i) => ({ ...i, dutyListId: 'seed-duty-standard-show' }));
+
+	await batchInsert(dutyListItem, items, 6);
+
+	// Apply it to a show that has not happened yet, so its work orders are live.
+	const show = events.find(
+		(e: any) => e.status === 'published' && e.kind === 'show' && e.endsAt && e.startsAt > new Date()
+	);
+	if (!show) return { lists: 1, workOrders: 0 };
+
+	const anchor: Date = show.doorsAt ?? show.startsAt;
+	const at = (minutes: number) => new Date(anchor.getTime() + minutes * 60_000);
+
+	const workOrders = items.map((item, n) => ({
+		id: `seed-duty-wo-${n}`,
+		volunteerRoleId: item.volunteerRoleId,
+		eventId: show.id,
+		startsAt: item.offsetMinutes !== undefined ? at(item.offsetMinutes) : null,
+		endsAt:
+			item.offsetMinutes !== undefined
+				? at(item.offsetMinutes + (item.durationMinutes ?? 0))
+				: null,
+		dueAt: item.dueOffsetMinutes !== undefined ? at(item.dueOffsetMinutes) : null,
+		capacity: item.capacity,
+		notes: item.notes ?? null,
+		dutyListId: 'seed-duty-standard-show',
+		createdByUserId: 'seed-vol-coordinator'
+	}));
+	await batchInsert(volunteerShift, workOrders, 8);
+
+	// Half of the Booking Lead's advance list already done, so the partly-worked
+	// state is rendered rather than only the empty and finished ones.
+	const tasks = items.flatMap((item, n) =>
+		item.tasks.map((label, i) => ({
+			id: `seed-duty-task-${n}-${i}`,
+			workOrderId: `seed-duty-wo-${n}`,
+			label,
+			sortOrder: i,
+			...(n === 0 && i < 3
+				? {
+						done: true,
+						doneAt: new Date(Date.now() - (3 - i) * 86_400_000),
+						doneByUserId: 'seed-vol-coordinator'
+					}
+				: {})
+		}))
+	);
+	await batchInsert(workTask, tasks, 12);
+
+	return { lists: 1, workOrders: workOrders.length };
 }
 
 async function seedContentFlags(users: any[], bands: any[], bandEvents: any[] = []) {

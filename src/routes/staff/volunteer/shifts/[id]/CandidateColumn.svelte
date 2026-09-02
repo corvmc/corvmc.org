@@ -31,7 +31,8 @@
 	}: {
 		shiftId: string;
 		roleName: string;
-		startsAt: Date;
+		/** Null for an unscheduled work order — clearance is judged as of today. */
+		startsAt: Date | null;
 		scope?: 'interested' | 'worked' | 'all';
 	} = $props();
 
@@ -67,7 +68,9 @@
 		if (row.lapsing.length > 0) {
 			return {
 				tone: 'text-warning',
-				text: `${row.lapsing.join(' and ')} lapses soon after ${formatDateShort(startsAt)}`,
+				text: `${row.lapsing.join(' and ')} lapses soon${
+					startsAt ? ` after ${formatDateShort(startsAt)}` : ''
+				}`,
 				blocked: false
 			};
 		}
@@ -77,7 +80,9 @@
 		if (row.cleared.length > 0) {
 			return {
 				tone: 'text-subtle',
-				text: `Cleared for ${row.cleared.join(' and ')} on ${formatDateShort(startsAt)}`,
+				text: `Cleared for ${row.cleared.join(' and ')}${
+					startsAt ? ` on ${formatDateShort(startsAt)}` : ''
+				}`,
 				blocked: false
 			};
 		}
@@ -108,7 +113,9 @@
 			<!-- Says which date the clearances were judged against, because "cleared"
 			     without a date is the bug this column exists to fix: a card valid
 			     today does not cover a shift the week after it lapses. -->
-			<p class="text-subtle text-xs">Cleared as of {formatDateShort(startsAt)}.</p>
+			<p class="text-subtle text-xs">
+				Cleared as of {startsAt ? formatDateShort(startsAt) : 'today'}.
+			</p>
 			<SearchInput bind:value={search} placeholder="Search by name or email" />
 			<div class="flex flex-wrap gap-1" class:opacity-50={!!search}>
 				{#each SCOPES as s (s.key)}

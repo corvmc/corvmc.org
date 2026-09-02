@@ -18,8 +18,14 @@
 	import { BindTagAction, RecordForm8282Action } from '$lib/components/actions';
 	import LocationField from '$lib/components/inventory/LocationField.svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
-	import { equipmentConditions, stockReasonLabels } from '$lib/config';
+	import { formatDateShort, formatCents } from '$lib/utils/format';
+	import {
+		equipmentConditions,
+		stockReasonLabels,
+		contractorJobStatusBadge,
+		contractorJobStatusLabels,
+		type ContractorJobStatus
+	} from '$lib/config';
 
 	const { fields } = editAsset;
 	const statusFields = changeAssetStatus.fields;
@@ -28,6 +34,7 @@
 	const data = $derived(await getStaffAssetDetail(id));
 	const asset = $derived(data.asset);
 	const movements = $derived(data.movements);
+	const serviceHistory = $derived(data.serviceHistory);
 	const form8282 = $derived(data.form8282);
 
 	/**
@@ -186,6 +193,59 @@
 						<td class="whitespace-nowrap">{formatDateShort(movement.occurredAt)}</td>
 						<td class="cell-primary">{stockReasonLabels[movement.reason]}</td>
 						<td class="col-extra">{movement.notes ?? '—'}</td>
+					</tr>
+				{/each}
+			</Table>
+		{/if}
+	</InfoCard>
+
+	<!--
+		Paid work, kept apart from the ledger above. A movement says the unit left
+		and came back; it cannot say who had it, what they charged, or that it is a
+		fortnight late — and those are the questions somebody actually asks of a
+		unit that has been in the shop three times.
+	-->
+	<InfoCard title="Service">
+		{#if serviceHistory.length === 0}
+			<EmptyState description="No contractor has worked on this unit" />
+		{:else}
+			<Table>
+				{#snippet head()}
+					<th class="whitespace-nowrap">When</th>
+					<th>Work</th>
+					<th>Contractor</th>
+					<th class="cell-num">Cost</th>
+				{/snippet}
+				{#each serviceHistory as row (row.job.id)}
+					<tr>
+						<td class="whitespace-nowrap">
+							{#if row.job.completedAt}
+								{formatDateShort(row.job.completedAt)}
+							{:else if row.job.scheduledFor}
+								{formatDateShort(row.job.scheduledFor)}
+							{:else}
+								—
+							{/if}
+						</td>
+						<td class="cell-primary">
+							<a class="link" href={resolve(`/staff/contractors/jobs/${row.job.id}`)}>
+								{row.job.summary}
+							</a>
+							<Badge
+								variant={contractorJobStatusBadge[row.job.status as ContractorJobStatus]}
+								size="sm"
+							>
+								{contractorJobStatusLabels[row.job.status as ContractorJobStatus]}
+							</Badge>
+						</td>
+						<td>
+							<a class="link" href={resolve(`/staff/contractors/${row.contractor.id}`)}>
+								{row.contractor.name}
+							</a>
+						</td>
+						<td class="cell-num">
+							{row.job.costCents != null ? formatCents(row.job.costCents) : '—'}
+						</td>
 					</tr>
 				{/each}
 			</Table>

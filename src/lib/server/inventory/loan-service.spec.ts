@@ -23,6 +23,8 @@ function chainable() {
 
 let insertResult: unknown[] = [];
 let updateResult: unknown[] = [];
+/** Every `db.update(table).set(values)` in call order, so a test can name the table it meant. */
+let updateSetCalls: { table: unknown; values: Record<string, unknown> }[] = [];
 
 vi.mock('$lib/server/db', () => ({
 	db: {
@@ -32,12 +34,15 @@ vi.mock('$lib/server/db', () => ({
 				returning: vi.fn(() => Promise.resolve(insertResult))
 			}))
 		})),
-		update: vi.fn(() => ({
-			set: vi.fn(() => ({
-				where: vi.fn(() => ({
-					returning: vi.fn(() => Promise.resolve(updateResult))
-				}))
-			}))
+		update: vi.fn((table: unknown) => ({
+			set: vi.fn((values: Record<string, unknown>) => {
+				updateSetCalls.push({ table, values });
+				return {
+					where: vi.fn(() => ({
+						returning: vi.fn(() => Promise.resolve(updateResult))
+					}))
+				};
+			})
 		}))
 	}
 }));
@@ -74,6 +79,14 @@ vi.mock('./stock-service', () => ({
 	recordMovement: vi.fn().mockResolvedValue({ id: 'mv-1' })
 }));
 
+vi.mock('./asset-service', () => ({
+	setAssetStatus: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('./asset-flag-service', () => ({
+	hasBlockingFlag: vi.fn().mockResolvedValue(false)
+}));
+
 import {
 	calculateDailyRate,
 	calculateLoanCharge,
@@ -95,6 +108,8 @@ import {
 	InsufficientCreditsError
 } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
+import { setAssetStatus } from './asset-service';
+import { hasBlockingFlag } from './asset-flag-service';
 
 // ---------------------------------------------------------------------------
 // Pure functions
@@ -156,6 +171,7 @@ describe('LoanService lifecycle', () => {
 		selectResultQueue = [];
 		insertResult = [];
 		updateResult = [];
+		updateSetCalls = [];
 
 		vi.mocked(getAvailableQuantity).mockResolvedValue(5);
 		vi.mocked(recordMovement).mockResolvedValue({ id: 'mv-1' } as never);
@@ -306,6 +322,96 @@ describe('LoanService lifecycle', () => {
 			selectResultQueue = [[{ id: 'loan-1', status: 'requested', userId: 'user-1' }]];
 
 			await expect(returnLoan('loan-1')).rejects.toThrow(InvalidLoanTransitionError);
+		});
+
+		/**
+		 * `maintenance` means "in our possession and not rentable", so a unit
+		 * flagged mid-loan stays `on_loan` until it physically arrives. Custody
+		 * comes back here, which is why this is where availability is decided.
+		 *
+		 * Without this the `loan_return` (+1) would net out the `repair_out` (-1)
+		 * and a broken amp would go back on the shelf with a balanced ledger.
+		 */
+		it('sends a unit with an open blocking flag to maintenance, not back to the shelf', async () => {
+			vi.mocked(hasBlockingFlag).mockResolvedValue(true);
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'it-1',
+						assetId: 'as-1',
+						quantity: 1,
+						userId: 'user-1',
+						dailyRateCents: 0,
+						checkedOutAt: new Date('2025-07-15')
+					}
+				],
+				[{ name: 'T', email: 't@e.com', stripeId: null }],
+				[{ status: 'on_loan' }],
+				[{ name: 'Bass amp' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'returned' }];
+
+			await returnLoan('loan-1');
+
+			expect(setAssetStatus).toHaveBeenCalledWith('as-1', 'maintenance', expect.anything());
+		});
+
+		it('restores a cleanly returned unit to service', async () => {
+			vi.mocked(hasBlockingFlag).mockResolvedValue(false);
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'it-1',
+						assetId: 'as-1',
+						quantity: 1,
+						userId: 'user-1',
+						dailyRateCents: 0,
+						checkedOutAt: new Date('2025-07-15')
+					}
+				],
+				[{ name: 'T', email: 't@e.com', stripeId: null }],
+				[{ status: 'on_loan' }],
+				[{ name: 'Bass amp' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'returned' }];
+
+			await returnLoan('loan-1');
+
+			expect(setAssetStatus).toHaveBeenCalledWith('as-1', 'in_service', expect.anything());
+		});
+
+		/**
+		 * `retired` and `lost` are decisions somebody made about the unit while it
+		 * was out. Handing it back does not reverse them.
+		 */
+		it('leaves a terminal status alone', async () => {
+			vi.mocked(hasBlockingFlag).mockResolvedValue(false);
+			selectResultQueue = [
+				[
+					{
+						id: 'loan-1',
+						status: 'checked_out',
+						itemId: 'it-1',
+						assetId: 'as-1',
+						quantity: 1,
+						userId: 'user-1',
+						dailyRateCents: 0,
+						checkedOutAt: new Date('2025-07-15')
+					}
+				],
+				[{ name: 'T', email: 't@e.com', stripeId: null }],
+				[{ status: 'lost' }],
+				[{ name: 'Bass amp' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'returned' }];
+
+			await returnLoan('loan-1');
+
+			expect(setAssetStatus).not.toHaveBeenCalled();
 		});
 
 		it('retries with the fresh balance when a concurrent spend races the deduction', async () => {

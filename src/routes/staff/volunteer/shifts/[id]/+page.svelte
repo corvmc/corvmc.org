@@ -76,8 +76,12 @@
 	{@const toNotify = claimants.filter((c) => !c.notifiedAt).length}
 	{@const editForm = updateShift.for(shift.id)}
 
+	<!-- An unscheduled work order has no date to name, so the title is the role
+	     and the body line says a window is still to be booked. -->
 	<PageHeader
-		title="{shift.roleName} · {formatDateShortYear(shift.startsAt)}"
+		title={shift.startsAt
+			? `${shift.roleName} · ${formatDateShortYear(shift.startsAt)}`
+			: shift.roleName}
 		subtitle="Shift"
 		backHref="/staff/volunteer/schedule"
 	/>
@@ -87,7 +91,9 @@
 		     subtitle is the panel label everywhere else in the app, and one page
 		     redefining it is how a convention stops being one. -->
 		<p class="text-subtle text-sm">
-			{timeRange(shift.startsAt, shift.endsAt)} ·
+			{shift.startsAt && shift.endsAt
+				? timeRange(shift.startsAt, shift.endsAt)
+				: 'a time to be arranged'} ·
 			{#if shift.eventId && shift.eventTitle}
 				<a href={resolve(`/staff/events/${shift.eventId}`)} class="link link-primary">
 					{shift.eventTitle}
@@ -364,8 +370,8 @@
 									initialEvent={shift.eventId && shift.eventTitle
 										? { id: shift.eventId, title: shift.eventTitle }
 										: null}
-									startsAt={toLocalDateTime(shift.startsAt)}
-									endsAt={toLocalDateTime(shift.endsAt)}
+									startsAt={shift.startsAt ? toLocalDateTime(shift.startsAt) : ''}
+									endsAt={shift.endsAt ? toLocalDateTime(shift.endsAt) : ''}
 									capacity={String(shift.capacity)}
 									notes={shift.notes ?? ''}
 								/>

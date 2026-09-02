@@ -21,8 +21,9 @@
 		shift: {
 			signupId: string;
 			roleName: string;
-			startsAt: Date;
-			endsAt: Date;
+			/** Null for an unscheduled work order — work with no window booked yet. */
+			startsAt: Date | null;
+			endsAt: Date | null;
 			status: string;
 			notes: string | null;
 			eventTitle: string | null;
@@ -35,6 +36,7 @@
 	const calledOff = $derived(!!shift.shiftCancelledAt);
 
 	const timeRange = $derived.by(() => {
+		if (!shift.startsAt || !shift.endsAt) return 'a time to be arranged';
 		const fmt = new Intl.DateTimeFormat('en-US', {
 			hour: 'numeric',
 			minute: '2-digit',
@@ -43,7 +45,10 @@
 		return `${fmt.format(shift.startsAt)}–${fmt.format(shift.endsAt)}`;
 	});
 
+	// Null for an unscheduled work order, which the date block reads as "TBD"
+	// rather than inventing a day for.
 	const dayParts = $derived.by(() => {
+		if (!shift.startsAt) return null;
 		const tz = DEFAULT_TIMEZONE;
 		return {
 			month: new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: tz }).format(
@@ -56,8 +61,13 @@
 
 <div class="flex gap-3 rounded-lg border border-base-300 p-3">
 	<div class="text-center leading-tight">
-		<div class="text-subtle text-xs uppercase">{dayParts.month}</div>
-		<div class="text-xl font-bold">{dayParts.day}</div>
+		{#if dayParts}
+			<div class="text-subtle text-xs uppercase">{dayParts.month}</div>
+			<div class="text-xl font-bold">{dayParts.day}</div>
+		{:else}
+			<div class="text-subtle text-xs uppercase">when</div>
+			<div class="text-subtle text-sm font-bold">TBD</div>
+		{/if}
 	</div>
 
 	<div class="min-w-0 flex-1">
@@ -117,7 +127,7 @@
 					{#snippet form()}
 						<input type="hidden" name="signupId" value={shift.signupId} />
 						<p class="text-sm">
-							{shift.roleName} on {formatDateShort(shift.startsAt)}, {timeRange}.
+							{shift.roleName}{shift.startsAt ? ` on ${formatDateShort(shift.startsAt)}` : ''}, {timeRange}.
 						</p>
 						<p class="text-sm">
 							Notice isn't a no-show. The place goes back on the board for someone else, and nothing

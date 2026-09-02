@@ -19,6 +19,12 @@ export const attachableTypes = [
 	'inventory_item',
 	/** One physical unit: photographs of damage to *this* amp. */
 	'inventory_asset',
+	/**
+	 * One report about a unit. Evidence belongs to the *observation*, not the
+	 * amp: three people flag the same crackle and each photographed something
+	 * different, and dismissing one report should not strand its picture.
+	 */
+	'asset_flag',
 	/** How stock arrived: the receipt or the donation paperwork behind it. */
 	'acquisition'
 ] as const;

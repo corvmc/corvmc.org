@@ -66,6 +66,7 @@
 	let editTitle = $state('');
 	let editDescription = $state('');
 	let editTags = $state('');
+	let editKind = $state('show');
 	let editLocation = $state('');
 	let editExternalTicketUrl = $state('');
 	let editDate = $state('');
@@ -78,6 +79,7 @@
 		editTitle = evt.title;
 		editDescription = evt.description ?? '';
 		editTags = evt.tags ?? '';
+		editKind = evt.kind ?? 'show';
 		editLocation = evt.location ?? '';
 		editExternalTicketUrl = evt.externalTicketUrl ?? '';
 		editDate = toLocalDate(evt.startsAt);
@@ -253,6 +255,19 @@
 						bind:value={editExternalTicketUrl}
 					/>
 					<FormField field={fields.tags} label="Tags" bind:value={editTags} />
+					<FormField
+						field={fields.kind}
+						type="select"
+						label="Kind"
+						bind:value={editKind}
+						options={[
+							{ value: 'show', label: 'Show' },
+							{ value: 'work_party', label: 'Work party' },
+							{ value: 'meeting', label: 'Meeting' },
+							{ value: 'class', label: 'Class' }
+						]}
+						description="Only shows reach the homepage posters. Anything published still appears on the public calendar."
+					/>
 				</div>
 				<div class="mt-4 flex gap-2">
 					<SubmitButton label="Save" />

@@ -41,7 +41,8 @@
 			shiftId: string;
 			volunteerRoleId: string;
 			roleName: string;
-			startsAt: Date;
+			/** Null for an unscheduled work order. */
+			startsAt: Date | null;
 			hours: string;
 			workedOn: string;
 		};
