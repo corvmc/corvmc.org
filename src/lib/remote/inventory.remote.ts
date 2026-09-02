@@ -31,6 +31,7 @@ import {
 	updateAsset
 } from '$lib/server/inventory/asset-service';
 import { listLowStock, listMovements } from '$lib/server/inventory/stock-service';
+import { contractorSpend, jobsForAsset } from '$lib/server/contractor/contractor-job-service';
 import {
 	acknowledgeForm8283,
 	adjustStock,
@@ -1257,8 +1258,17 @@ export const getSpendReport = query(spendRange, async (range) => {
 	const from = range.from ? new Date(range.from) : new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
 	const to = range.to ? new Date(range.to) : now;
 
-	const rows = await spendByCategory(from, to);
+	// Two sources, deliberately not one. `spendByCategory` counts acquisition
+	// lines, and an acquisition means goods arrived and entered stock — a labor
+	// invoice arrives as nothing, has no line and belongs to no equipment
+	// category. Two blocks on one page is honest; one source that has quietly
+	// learned to mean two things is not.
+	const [rows, services] = await Promise.all([
+		spendByCategory(from, to),
+		contractorSpend(from, to)
+	]);
 	const totalCents = rows.reduce((sum, r) => sum + Number(r.totalCents), 0);
+	const servicesCents = services.reduce((sum, r) => sum + Number(r.totalCents), 0);
 
 	return {
 		from: from.toISOString().slice(0, 10),
@@ -1271,7 +1281,13 @@ export const getSpendReport = query(spendRange, async (range) => {
 			// Share of the window's spend, so the table reads without arithmetic.
 			share: totalCents > 0 ? Number(r.totalCents) / totalCents : 0
 		})),
-		totalCents
+		totalCents,
+		services: services.map((r) => ({
+			trade: r.trade,
+			jobCount: Number(r.jobCount),
+			totalCents: Number(r.totalCents)
+		})),
+		servicesCents
 	};
 });
 
@@ -1615,7 +1631,15 @@ export const getStaffItemDetail = query(z.string(), async (id) => {
 
 /** The staff asset detail page's one load-bearing query. */
 export const getStaffAssetDetail = query(z.string(), async (id) => {
-	const [asset, movements] = await Promise.all([getAsset(id), getAssetMovements(id)]);
+	// `serviceHistory` rides along rather than being its own query in the
+	// component: what a contractor was paid to do to this unit is part of its
+	// record, and a second awaited query out of the page is a serial round trip
+	// on first paint.
+	const [asset, movements, serviceHistory] = await Promise.all([
+		getAsset(id),
+		getAssetMovements(id),
+		jobsForAsset(id)
+	]);
 
 	// Computed here rather than in the component: the rule is server-side and
 	// depends on the acquisition this unit arrived on, which the asset row only
@@ -1632,7 +1656,7 @@ export const getStaffAssetDetail = query(z.string(), async (id) => {
 		new Date()
 	);
 
-	return { asset, movements, form8282, donor: acq?.donorName ?? null };
+	return { asset, movements, serviceHistory, form8282, donor: acq?.donorName ?? null };
 });
 
 /**

@@ -108,7 +108,7 @@ Guided checklist for new members: orientation scheduling, safety walkthrough sig
 
 Members report broken gear, room issues, or facility problems. Staff track, prioritize, and resolve them. Keeps the space in shape without relying on hallway conversations.
 
-**Progress:** Not built. `docs/specs/committees-and-roles-spec.md` puts it under the Facility committee with two adjacent gaps it does not cover — a cleaning schedule somebody is assigned to, and a register of key, lock and alarm-code holders (distinct from the reservation door-code integration, and the higher-consequence half). The labor is already served: work parties are a volunteer role and schedule as ordinary shifts.
+**Progress:** Half built. The _paid_ half shipped as **contractor work** (`docs/specs/contractor-work-spec.md`) — `contractor` and `contractor_job` at `/staff/contractors`, covering both a unit sent out to a tech and building service that owns no inventory row. What remains is the member-facing report and the staff queue that triages it, which is the work-order branch's territory. Two adjacent gaps are still untouched: a cleaning schedule somebody is assigned to, and a register of key, lock and alarm-code holders (distinct from the reservation door-code integration, and the higher-consequence half). The unpaid labor is already served: work parties are a volunteer role and schedule as ordinary shifts.
 
 ### Incident & Safety Log
 
