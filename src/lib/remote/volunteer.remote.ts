@@ -67,17 +67,21 @@ import {
 	updateShift as updateShiftService,
 	cancelShift as cancelShiftService,
 	listShifts,
+	getShiftCancelledByName,
 	countUnfilledByRole,
 	listOpenShiftsForMember,
 	getShiftDetail
 } from '$lib/server/volunteer/volunteer-shift-service';
-import type { ShiftWithCounts } from '$lib/server/volunteer/volunteer-shift-service';
 import {
 	claimShift as claimShiftService,
 	cancelSignup as cancelSignupService,
 	releaseSignup as releaseSignupService,
 	confirmSignup as confirmSignupService,
 	markNoShow as markNoShowService,
+	notifySignupsOfCancellation as notifySignupsOfCancellationService,
+	markSignupNotified as markSignupNotifiedService,
+	listShiftCandidates,
+	availabilityConflictsWithDay,
 	listClaimants,
 	listOutstandingClaims,
 	listUnclosedSignups,
@@ -101,6 +105,7 @@ import {
 	listHeldForGate,
 	listHeldForGateMany,
 	missingFrom,
+	wasHeldOn,
 	listLapsingBeforeRosteredShift,
 	flagUnclearedLogs
 } from '$lib/server/volunteer/member-certification-service';
@@ -108,6 +113,8 @@ import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
 	volunteerRoleGroups,
+	DEFAULT_TIMEZONE,
+	CERT_EXPIRY_WARNING_DAYS,
 	CERT_DESCRIPTION_MAX,
 	CERT_NAME_MAX,
 	CERT_NOTES_MAX,
@@ -199,8 +206,17 @@ export const getVolunteerStatusCounts = query(async () => {
  * required certifications, interest count, and count of upcoming shifts still
  * short of capacity, so the table can render them without a query per row.
  */
-export const getVolunteerRoles = query(async () => {
-	await requireStaff();
+/**
+ * The role list with its usage counts, as a plain function.
+ *
+ * Two queries want it — the argless one below, which the role dropdowns read
+ * directly, and Setup's page query. A query calling another query is
+ * composition, and `custom/refresh-the-composed-query` is right to refuse it:
+ * every existing `getVolunteerRoles().refresh()` would then repaint nothing for
+ * whoever reads the wrapper. Sharing the loader instead leaves both queries
+ * independent, so each refreshes on its own terms.
+ */
+async function loadVolunteerRoles() {
 	const roles = await listVolunteerRoles({ includeInactive: true });
 	const [requirements, interestCounts, unfilled] = await Promise.all([
 		getRequirementsForRoles(roles.map((r) => r.id)),
@@ -216,6 +232,11 @@ export const getVolunteerRoles = query(async () => {
 		interested: interested.get(r.id) ?? 0,
 		unfilled: unfilled.get(r.id) ?? 0
 	}));
+}
+
+export const getVolunteerRoles = query(async () => {
+	await requireStaff();
+	return loadVolunteerRoles();
 });
 
 /**
@@ -293,6 +314,94 @@ export const getInterestedVolunteers = query(interestFilters, async (f) => {
 	};
 });
 
+const WEEKDAYS: string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/**
+ * "Who to ask" — the candidate column beside a shift's roster.
+ *
+ * The list used to live on the role's own page, one navigation away from the
+ * shift you were filling, and could only answer "who ticked this role" because
+ * it was anchored on the interest table
+ * (docs/reports/volunteer-workflow-findings.md#a5). Three scopes now, and the
+ * flags are resolved here rather than in the component so the priority order is
+ * one thing in one place.
+ *
+ * Every clearance judgement is made **as of the shift's date**, never today.
+ */
+export const getShiftCandidates = query(
+	z.object({
+		shiftId: z.string().min(1),
+		scope: z.enum(['interested', 'worked', 'all']).default('interested'),
+		search: z.string().optional()
+	}),
+	async (f) => {
+		await requireStaff();
+
+		const shift = await getShiftDetail(f.shiftId);
+		if (!shift) return { gated: false, rows: [] };
+
+		const [candidates, required] = await Promise.all([
+			listShiftCandidates(f.shiftId, shift.volunteerRoleId, f.scope, f.search || undefined),
+			getRequirementsForRole(shift.volunteerRoleId)
+		]);
+
+		const held = await listHeldForGateMany(candidates.map((c) => c.userId));
+
+		// As of the shift when there is one, as of today when there is not — the
+		// same fallback `claimShift` makes on the server. An unscheduled work order
+		// has no window until somebody books one, and a clearance question still
+		// has to have an answer.
+		const at = shift.startsAt ?? new Date();
+
+		// The shift's own weekday, in club time — a shift at 10pm Pacific is
+		// already tomorrow in UTC, and asking somebody about the wrong day is
+		// worse than not asking. `-1` for unscheduled work: no day to clash with,
+		// so `availabilityConflictsWithDay` can never flag one.
+		const shiftDay = shift.startsAt
+			? WEEKDAYS.indexOf(
+					new Intl.DateTimeFormat('en-US', {
+						timeZone: DEFAULT_TIMEZONE,
+						weekday: 'short'
+					}).format(shift.startsAt)
+				)
+			: -1;
+
+		// Valid on the day, but not for much longer after it. A clearance that has
+		// already lapsed by the shift date is not "lapsing" — it is missing, and
+		// the Blocked flag above says so.
+		const lapseCutoff = new Date(at.getTime() + CERT_EXPIRY_WARNING_DAYS * 86_400_000);
+
+		return {
+			gated: required.length > 0,
+			rows: candidates.map((c) => {
+				const rows = held.get(c.userId) ?? [];
+				const missing = missingFrom(required, rows, at);
+
+				const live = required.filter((req) =>
+					rows.some((h) => h.certificationId === req.id && wasHeldOn(h, at))
+				);
+				const lapsing = live.filter((req) =>
+					rows.some(
+						(h) =>
+							h.certificationId === req.id &&
+							wasHeldOn(h, at) &&
+							h.expiresAt !== null &&
+							h.expiresAt <= lapseCutoff
+					)
+				);
+
+				return {
+					...c,
+					missing,
+					lapsing: lapsing.map((r) => r.name),
+					cleared: live.map((r) => r.name),
+					dayMismatch: availabilityConflictsWithDay(c.availability, shiftDay)
+				};
+			})
+		};
+	}
+);
+
 const volunteerListFilters = z.object({
 	search: z.string().optional(),
 	volunteerRoleId: z.string().optional(),
@@ -312,14 +421,43 @@ const volunteerListFilters = z.object({
 export const getStaffVolunteers = query(volunteerListFilters, async (f) => {
 	await requireStaff();
 
-	return listVolunteers(
-		{
-			roleId: f.volunteerRoleId || undefined,
-			search: f.search || undefined,
-			status: f.status
-		},
-		{ page: f.page ?? 1, pageSize: 50 }
-	);
+	// `listVolunteers` answers "who are our volunteers". The row also has to
+	// answer "and what, if anything, do I do about this one" — a claim of theirs
+	// nobody has confirmed, or a clearance about to lapse. Both already exist as
+	// whole-queue reads for the Today worklist, so this indexes those by member
+	// rather than growing two more correlated subqueries onto a paginated list.
+	//
+	// One action per row, not three: a row offering Confirm, Chase and Log Hours
+	// at once is a row that has not decided what it is for.
+	const [roster, claims, lapsing, minors] = await Promise.all([
+		listVolunteers(
+			{
+				roleId: f.volunteerRoleId || undefined,
+				search: f.search || undefined,
+				status: f.status
+			},
+			{ page: f.page ?? 1, pageSize: 50 }
+		),
+		listOutstandingClaims(),
+		listLapsingBeforeRosteredShift(),
+		// Carried here rather than fetched beside it: the sign-off tab's badge has
+		// to be readable before that tab is open, and a second query declared next
+		// to this one is the fan-out `custom/no-concurrent-remote-queries` refuses.
+		listBlockedVolunteers()
+	]);
+
+	const claimByUser = new Map(claims.map((c) => [c.userId, c]));
+	const lapseByUser = new Map(lapsing.map((l) => [l.userId, l]));
+
+	return {
+		...roster,
+		minorsWaiting: minors.length,
+		rows: roster.rows.map((r) => ({
+			...r,
+			claim: claimByUser.get(r.userId) ?? null,
+			lapse: lapseByUser.get(r.userId) ?? null
+		}))
+	};
 });
 
 /**
@@ -522,6 +660,15 @@ const profileFieldsSchema = z.object({
  * every minor.
  */
 const onboardingSchema = profileFieldsSchema.extend({
+	// Required here and optional on the edit form, deliberately. Shift-day
+	// contact is the reason the field exists, so signing up without one leaves a
+	// coordinator with no way to reach somebody who is on tonight — but making
+	// it required on the *edit* form would lock every existing member out of
+	// their own profile until they supplied one.
+	phone: z
+		.string()
+		.min(1, 'We need a number for shift-day contact')
+		.max(30, 'Keep this under 30 characters'),
 	isAdult: z.enum(['yes', 'no'], { message: 'Let us know whether you are 18 or older' })
 });
 
@@ -823,6 +970,7 @@ export const createVolunteerRole = form(roleFormSchema, async (data) => {
 	}
 
 	void getVolunteerRoles().refresh();
+	void getStaffVolunteerSetupPage().refresh();
 	void getMemberVolunteerPage().refresh();
 	void getVolunteerInterestsPage().refresh();
 	return { success: true };
@@ -898,9 +1046,12 @@ export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), asy
 // ---------------------------------------------------------------------------
 
 async function refreshMemberViews() {
-	// All three live in the dashboard's one query now — including the unlogged-shift prompt that
-	// logging against a shift clears.
-	await getMemberVolunteerPage().refresh();
+	// Both member pages compose the same constituents, so a mutation has to
+	// refresh both wrappers. Refreshing only the dashboard is what left a log
+	// filed from /member/volunteer/hours invisible on the page that filed it —
+	// the same shape `custom/refresh-the-composed-query` exists to catch, one
+	// wrapper along.
+	await Promise.all([getMemberVolunteerPage().refresh(), getMemberHoursPage().refresh()]);
 }
 
 /**
@@ -938,7 +1089,12 @@ async function refreshStaffQueue() {
 async function refreshRoleViews(roleId?: string) {
 	await Promise.all([
 		getVolunteerRoles().refresh(),
+		// Setup composes `getVolunteerRoles`, so refreshing only the inner query
+		// leaves the screen you made the change on showing the old list.
+		getStaffVolunteerSetupPage().refresh(),
 		getMemberVolunteerPage().refresh(),
+		// A renamed role is the label on every log row that used it.
+		getMemberHoursPage().refresh(),
 		getVolunteerInterestsPage().refresh(),
 		...(roleId ? [getStaffVolunteerRolePage(roleId).refresh()] : [])
 	]);
@@ -1102,8 +1258,10 @@ export const setRoleCertifications = form(
 			mapDomainError(err);
 		}
 		void getStaffVolunteerRolePage(data.roleId).refresh();
-		// The roles table renders each role's requirements too.
+		// Setup renders each role's requirements as a "needs X" chip, and reads
+		// them through its own composed query.
 		void getVolunteerRoles().refresh();
+		void getStaffVolunteerSetupPage().refresh();
 		return { success: true };
 	}
 );
@@ -1177,7 +1335,12 @@ export const deleteCertificationGrant = form(
 );
 
 async function refreshCertificationViews() {
-	await Promise.all([getCertifications().refresh(), getActiveCertifications().refresh()]);
+	await Promise.all([
+		getCertifications().refresh(),
+		getActiveCertifications().refresh(),
+		// Same reason as the roles above: Setup reads the composed query.
+		getStaffVolunteerSetupPage().refresh()
+	]);
 }
 
 // ---------------------------------------------------------------------------
@@ -1211,6 +1374,14 @@ const shiftFilters = z.object({
 	includeCancelled: z.boolean().optional()
 });
 
+/**
+ * Every staff list of shifts, Schedule included.
+ *
+ * Both bounds are optional, which is what lets Schedule's "Everything" window
+ * absorb the old `/staff/volunteer/shifts` catalog — that page's only real
+ * difference was the absence of a date range, and two queries for one question
+ * is how the two pages drifted apart in the first place.
+ */
 export const getShifts = query(shiftFilters, async (f) => {
 	await requireStaff();
 	return listShifts({
@@ -1226,8 +1397,13 @@ export const getShift = query(z.string(), async (id) => {
 	await requireStaff();
 	const shift = await getShiftDetail(id);
 	if (!shift) throw error(404, 'Shift not found');
-	const claimants = await listClaimants(id);
-	return { shift, claimants };
+	const [claimants, cancelledByName] = await Promise.all([
+		listClaimants(id),
+		// Only asked when there is something to ask about. A live shift has no
+		// canceller, and the detail page's banner is the only reader.
+		shift.cancelledAt ? getShiftCancelledByName(id) : Promise.resolve(null)
+	]);
+	return { shift: { ...shift, cancelledByName }, claimants };
 });
 
 /**
@@ -1334,10 +1510,10 @@ export const duplicateShift = form(
 );
 
 export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	const staff = await requireStaff();
 
 	try {
-		await cancelShiftService(data.id);
+		await cancelShiftService(data.id, staff.id);
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -1345,6 +1521,35 @@ export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data
 	void getStaffShiftPage(data.id).refresh();
 	return { success: true };
 });
+
+/**
+ * Tell everybody left on a called-off shift.
+ *
+ * Separate from `cancelShift` on purpose — see `notifySignupsOfCancellation`.
+ * The roster of a cancelled shift is a notify list, and this is the button on
+ * it; the count in the banner is what it clears.
+ */
+export const notifyCancelledShift = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
+	await requireStaff();
+
+	const notified = await notifySignupsOfCancellationService(data.shiftId);
+
+	void getStaffShiftPage(data.shiftId).refresh();
+	return { success: true, notified };
+});
+
+/** "I rang them." Marks one person off the notify list without sending anything. */
+export const markSignupNotified = form(
+	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
+	async (data) => {
+		await requireStaff();
+
+		await markSignupNotifiedService(data.signupId);
+
+		void getStaffShiftPage(data.shiftId).refresh();
+		return { success: true };
+	}
+);
 
 // ---------------------------------------------------------------------------
 // Signups
@@ -1482,6 +1687,35 @@ export const confirmSignups = form(
 	}
 );
 
+/**
+ * Confirm everybody with an outstanding claim on one shift.
+ *
+ * The id-carrying sibling of `confirmSignups`. Today's worklist already holds
+ * the signup ids because it renders a row per person; Schedule holds counts, so
+ * asking it to send ids would mean loading a roster per row to draw a button.
+ * Same service loop, one less thing for the list to know.
+ */
+export const confirmShiftClaims = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
+	await requireStaff();
+
+	const claimants = await listClaimants(data.shiftId);
+	const outstanding = claimants.filter((c) => c.status === 'claimed');
+
+	let confirmed = 0;
+	for (const c of outstanding) {
+		try {
+			await confirmSignupService(c.signupId);
+			confirmed++;
+		} catch (err) {
+			if (err instanceof SignupNotFoundError) continue;
+			mapDomainError(err);
+		}
+	}
+
+	await refreshShiftViews(data.shiftId);
+	return { success: true, confirmed };
+});
+
 export const markSignupNoShow = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
@@ -1540,7 +1774,10 @@ export const submitShiftFeedback = form(
 		}
 
 		void getShiftFeedbackContext(data.signupId).refresh();
-		return { success: true };
+		// Handed back so the confirmation can answer what they actually said:
+		// somebody who has just reported they were not set up should not be
+		// thanked in the same words as somebody who was.
+		return { success: true, wasSetUp: data.wasSetUp };
 	}
 );
 
@@ -1595,10 +1832,26 @@ export const getUserHourLogs = query(z.string(), async (userId) => {
  * /member/volunteer/start and a blocked one to /blocked, server-side, and awaiting it here keeps
  * that redirect ahead of everything else rather than racing the other six.
  */
+/**
+ * The member's own shifts — claimed, booked or worked.
+ *
+ * The dashboard used to show a member every shift they could take and none of
+ * the ones they had already taken: their commitments only appeared indirectly,
+ * as an hour log after the fact. A claim that nobody confirms produces nothing
+ * at all, which is precisely the state worth being able to see.
+ */
+export const getMyShifts = query(async () => {
+	const currentUser = requireUser();
+	const rows = await listSignupsForUser(currentUser.id, { limit: 20 });
+	// Cancelled signups are the ones they dropped; a cancelled *shift* still
+	// matters, because they were on it and it is off.
+	return rows.filter((r) => r.status !== 'cancelled');
+});
+
 export const getMemberVolunteerPage = query(z.void(), async () => {
 	const access = await getMyVolunteerAccess();
 
-	const [roles, interests, openShifts, unloggedShifts, logs, summary, certifications] =
+	const [roles, interests, openShifts, unloggedShifts, logs, summary, certifications, myShifts] =
 		await Promise.all([
 			getActiveVolunteerRoles(),
 			getMyVolunteerInterests(),
@@ -1609,7 +1862,8 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 			// `getMyCertifications` was written and then had no caller anywhere, so a member
 			// could be told a shift needs a clearance and had no page saying which ones they
 			// already hold (docs/reports/volunteer-workflow-findings.md#d4).
-			getMyCertifications()
+			getMyCertifications(),
+			getMyShifts()
 		]);
 
 	return {
@@ -1620,8 +1874,32 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 		unloggedShifts,
 		logs,
 		summary,
-		certifications
+		certifications,
+		myShifts
 	};
+});
+
+/**
+ * "Your hours" — its own screen rather than a table at the bottom of the
+ * dashboard.
+ *
+ * The dashboard is a next-action stack: what to do now. A log filed in March is
+ * not a next action, and a returned one — the only kind that *is* — was buried
+ * under everything already approved. Splitting them lets the dashboard carry a
+ * single summary row and this page carry the whole history.
+ */
+export const getMemberHoursPage = query(z.void(), async () => {
+	const access = await getMyVolunteerAccess();
+
+	const [logs, summary, roles] = await Promise.all([
+		getMyVolunteerHours(),
+		getMyVolunteerSummary(),
+		// The log modal's role picker, for a correction or a free entry started
+		// from this page.
+		getActiveVolunteerRoles()
+	]);
+
+	return { access, logs, summary, roles };
 });
 
 /**
@@ -1666,6 +1944,43 @@ export const getStaffShiftPage = query(z.string(), async (id) => {
 });
 
 /**
+ * Setup's one load-bearing query.
+ *
+ * Roles and certifications were two pages that only ever got visited together:
+ * a role requires a clearance, and a clearance exists because some role
+ * requires it. Reading them as one is what lets the screen say "needs Food
+ * Handler" on the left and "required by 1 role" on the right without either
+ * side going and asking again.
+ *
+ * The lapse count rides along for the link line, since it is the one thing on
+ * this screen that is neither a role nor a clearance but a person.
+ */
+export const getStaffVolunteerSetupPage = query(async () => {
+	await requireStaff();
+
+	const [roles, certifications, lapsing] = await Promise.all([
+		loadVolunteerRoles(),
+		listCertifications({ includeInactive: true }),
+		listLapsingBeforeRosteredShift()
+	]);
+
+	// Grouped by certification so each card can say whether *its* holders are the
+	// ones about to be caught short.
+	const lapsingByCert = new Map<string, number>();
+	for (const row of lapsing) {
+		lapsingByCert.set(row.certificationId, (lapsingByCert.get(row.certificationId) ?? 0) + 1);
+	}
+
+	return {
+		roles,
+		certifications: certifications.map((c) => ({
+			...c,
+			lapsingBeforeShift: lapsingByCert.get(c.id) ?? 0
+		}))
+	};
+});
+
+/**
  * The clearances page's one load-bearing query.
  *
  * Two `getClearances` calls with different arguments — the filtered view and the unfiltered set the
@@ -1690,13 +2005,17 @@ export const getClearancesPage = query(
 export const getVolunteerReportPage = query(
 	z.object({ from: z.string().optional(), to: z.string().optional(), page: z.number().optional() }),
 	async ({ from, to, page }) => {
-		const [report, feedbackByRole, byMember] = await Promise.all([
+		const [report, feedbackByRole, byMember, statusCounts] = await Promise.all([
 			getVolunteerReport({ from, to }),
 			getFeedbackByRole(),
-			getVolunteerReportByMember({ from, to, page })
+			getVolunteerReportByMember({ from, to, page }),
+			// The fourth tile. Everything else here is approved-only by design, so
+			// the report cannot say how much is still waiting to become a number —
+			// and "the total is low" and "the queue is long" are different problems.
+			getStatusCounts()
 		]);
 
-		return { report, feedbackByRole, byMember };
+		return { report, feedbackByRole, byMember, stillInReview: statusCounts.pending };
 	}
 );
 
@@ -1805,20 +2124,3 @@ export const getVolunteerWorklist = query(async () => {
  * scrolling an unbounded list. Dates cross the wire as ISO strings, like every other date
  * on this layer.
  */
-export const getShiftsInWindow = query(
-	z.object({
-		from: z.string().min(1),
-		to: z.string().min(1),
-		volunteerRoleId: z.string().optional(),
-		includeCancelled: z.boolean().optional()
-	}),
-	async (f): Promise<ShiftWithCounts[]> => {
-		await requireStaff();
-		return listShifts({
-			from: new Date(f.from),
-			to: new Date(f.to),
-			volunteerRoleId: f.volunteerRoleId || undefined,
-			includeCancelled: f.includeCancelled
-		});
-	}
-);

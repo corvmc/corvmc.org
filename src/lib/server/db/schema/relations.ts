@@ -147,7 +147,10 @@ export const relations = defineRelations(schema, (t) => ({
 			to: t.inventoryLocation.id
 		}),
 		movements: t.many.stockMovement(),
-		loans: t.many.inventoryLoan()
+		loans: t.many.inventoryLoan(),
+		// Flags hang off the unit, not the catalog entry: "this amp hums" is about
+		// one amp, the way a damage photo is.
+		flags: t.many.assetFlag()
 	},
 	stockMovement: {
 		item: t.one.inventoryItem({ from: t.stockMovement.itemId, to: t.inventoryItem.id }),
@@ -177,7 +180,18 @@ export const relations = defineRelations(schema, (t) => ({
 	inventoryLoan: {
 		item: t.one.inventoryItem({ from: t.inventoryLoan.itemId, to: t.inventoryItem.id }),
 		asset: t.one.inventoryAsset({ from: t.inventoryLoan.assetId, to: t.inventoryAsset.id }),
-		user: t.one.user({ from: t.inventoryLoan.userId, to: t.user.id })
+		user: t.one.user({ from: t.inventoryLoan.userId, to: t.user.id }),
+		// Flags raised when this loan came back.
+		flags: t.many.assetFlag()
+	},
+	assetFlag: {
+		asset: t.one.inventoryAsset({ from: t.assetFlag.assetId, to: t.inventoryAsset.id }),
+		reportedBy: t.one.user({ from: t.assetFlag.reportedByUserId, to: t.user.id }),
+		resolvedBy: t.one.user({ from: t.assetFlag.resolvedByUserId, to: t.user.id }),
+		loan: t.one.inventoryLoan({ from: t.assetFlag.loanId, to: t.inventoryLoan.id })
+		// No `workOrder` relation: `workOrderId` carries no FK, so that the
+		// inventory and volunteer schema modules do not import each other. The
+		// service joins it explicitly.
 	},
 	ticket: {
 		event: t.one.event({ from: t.ticket.eventId, to: t.event.id }),
@@ -315,6 +329,11 @@ export const relations = defineRelations(schema, (t) => ({
 			to: t.volunteerRole.id
 		}),
 		event: t.one.event({ from: t.volunteerShift.eventId, to: t.event.id }),
+		asset: t.one.inventoryAsset({ from: t.volunteerShift.assetId, to: t.inventoryAsset.id }),
+		resolvedBy: t.one.user({
+			from: t.volunteerShift.resolvedByUserId,
+			to: t.user.id
+		}),
 		signups: t.many.volunteerSignup()
 	},
 	volunteerSignup: {

@@ -44,9 +44,12 @@
 	}
 </script>
 
+<!--
+	Framed as information rather than commitment on purpose: the fear this line
+	exists to answer is "am I signing up for something", and the answer is no.
+-->
 <p class="text-sm text-base-content/70">
-	Tick anything that interests you. It isn't a commitment — it just tells us who to ask when
-	something comes up, and we'll show you how to do it.
+	Not a commitment. It tells staff who to ask, and we'll show you how the job is done.
 </p>
 
 {#each groupedRoles(roleOptions) as group (group.key)}
@@ -68,5 +71,5 @@
 	type="textarea"
 	label="When are you usually around?"
 	value={availability}
-	description="Rough is fine — “weekday evenings, some weekends”."
+	description="Rough is fine — “weekday evenings, some weekends”. Staff read this before asking you about a particular date."
 />

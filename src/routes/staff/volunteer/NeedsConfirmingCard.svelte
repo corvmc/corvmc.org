@@ -74,10 +74,7 @@
 		</div>
 	{/snippet}
 
-	<p class="text-muted">
-		Confirming is what turns a claim into a booking. Until you do, they get no reminder and the
-		shift never closes itself out.
-	</p>
+	<p class="text-muted">Unconfirmed claims get no reminder and never auto-complete.</p>
 
 	<ul class="flex flex-col gap-4">
 		{#each byShift as group (group.shift.shiftId)}

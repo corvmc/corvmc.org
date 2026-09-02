@@ -58,7 +58,10 @@ import {
 	listEventsNear,
 	listPublicCalendarEvents,
 	listPublicUpcomingEvents,
-	listStaffCalendar
+	listStaffCalendar,
+	listUpcoming,
+	listPast,
+	getShowTonight
 } from './event-service';
 
 /**
@@ -273,5 +276,49 @@ describe('listEventsNear', () => {
 		await listEventsNear(showAt, { excludeEventId: 'evt-self' });
 		expect(containsParam(capturedWhere, 'community')).toBe(true);
 		expect(containsParam(capturedWhere, 'draft')).toBe(true);
+	});
+});
+
+/**
+ * The homepage posters, "show tonight" and the past-shows strip are the three
+ * surfaces that mean *shows* rather than *listings*. They got that by filtering
+ * `source = 'cmc'`, which held only while every CMC event was a gig — work
+ * parties and monthly deep cleans get listings too, because they need
+ * advertising as much as a show does. `kind` is what carries the distinction
+ * now, and these assert it at every one of the three call sites.
+ *
+ * The public guide is the control: it must keep showing the work party.
+ */
+describe('shows vs listings', () => {
+	it('listUpcoming asks for shows only', async () => {
+		await listUpcoming();
+
+		expect(containsParam(capturedWhere, 'show')).toBe(true);
+		expect(containsParam(capturedWhere, 'cmc')).toBe(true);
+		expect(containsParam(capturedWhere, 'published')).toBe(true);
+	});
+
+	it('listPast asks for shows only', async () => {
+		await listPast();
+
+		expect(containsParam(capturedWhere, 'show')).toBe(true);
+	});
+
+	it('getShowTonight asks for shows only', async () => {
+		await getShowTonight(new Date('2026-08-08T02:00:00Z'));
+
+		expect(containsParam(capturedWhere, 'show')).toBe(true);
+	});
+
+	it('the public calendar does not filter on kind, so a work party still lists', async () => {
+		await listPublicCalendarEvents(windowStart, windowEnd);
+
+		expect(containsParam(capturedWhere, 'show')).toBe(false);
+	});
+
+	it('the public upcoming list does not filter on kind either', async () => {
+		await listPublicUpcomingEvents(windowStart, { limit: 20, offset: 0 });
+
+		expect(containsParam(capturedWhere, 'show')).toBe(false);
 	});
 });

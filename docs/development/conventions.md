@@ -460,11 +460,20 @@ Two consequences worth knowing before you add a rule or a disable:
 
 Installed by `pnpm install` (via `prepare` → `lefthook install`), defined in `lefthook.yml`:
 
-- **pre-commit** — prettier `--write` and eslint `--fix` on staged files, auto-restaged.
-  Warn-only: it fixes what it can and never blocks the commit.
-- **pre-push** — `pnpm check || true`: prints type errors as a heads-up but doesn't block.
+- **pre-commit** — prettier `--write` on staged files, auto-restaged. Warn-only: it formats what
+  it can and never blocks the commit. The glob mirrors `scripts/lint-changed.sh`'s formattable
+  list, so `.md`, `.json`, `.css`, `.html`, `.yml` and `.yaml` are covered too — keep the two in
+  step, or an unformatted file passes the hook and reddens CI.
+- There is no pre-push hook.
 
-The blocking gates are in CI, not the hooks.
+**Local hooks format; CI gates. Nothing local starts a TypeScript program.** That second
+sentence is the operative constraint, because a worktree per agent means eight hooks can fire
+at once on one 8-core machine. ESLint looks per-file but isn't: `parserOptions.projectService`
+builds a program over the whole project on every invocation — ~10s of fixed startup whether you
+lint one file or eight, which `--cache` cannot fix (see the note in `ci.yml`). `pnpm check` is
+worse at ~60s. Both used to run in hooks; both are required CI checks, so the local copies were
+pure duplication that a commit could not bypass anyway. Run `pnpm lint` or `pnpm check` yourself
+when you want them.
 
 ## Style
 

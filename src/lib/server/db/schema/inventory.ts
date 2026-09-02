@@ -2,6 +2,7 @@ import { sqliteTable, text, integer, index, check, unique } from 'drizzle-orm/sq
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
+import { flagStatuses } from './flag';
 import {
 	acquisitionKinds,
 	assetStatuses,
@@ -602,6 +603,96 @@ export const inventoryItemArticle = sqliteTable(
 );
 
 export type InventoryItemArticle = typeof inventoryItemArticle.$inferSelect;
+
+/**
+ * Something a person noticed about one unit.
+ *
+ * Shaped after `content_flag` and sharing its `flagStatuses` verbatim — one
+ * lifecycle, one vocabulary. It is deliberately **not** that table: gear must
+ * not queue beside a harassment report, `reason` there is moderation-shaped,
+ * and neither `blocksUse` nor `workOrderId` means anything to moderation.
+ *
+ * This is the half the ledger cannot carry. `stock_movement` records what
+ * happened *to the asset*, and a movement has to move something — so it can say
+ * "went out for repair" but not "three people noticed" or "noticed, still
+ * usable". Both survive: a flag that takes the unit out of service still writes
+ * its `repair_out`.
+ */
+export const assetFlag = sqliteTable(
+	'asset_flag',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+
+		// The subject is always one unit, so this is a real FK rather than the
+		// polymorphic entityType/entityId `content_flag` needs. Cascade: a flag
+		// about a row that no longer exists is noise, not history — the history
+		// lives in the ledger, which outlives the asset by design.
+		assetId: text('asset_id')
+			.notNull()
+			.references(() => inventoryAsset.id, { onDelete: 'cascade' }),
+
+		// set-null, matching contentFlag.reportedByUserId: a deleted account must
+		// not take the report with it.
+		reportedByUserId: text('reported_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		note: text('note').notNull(),
+
+		/** What the reporter thought, when they were willing to say. "Not sure" is null. */
+		condition: text('condition', { enum: equipmentConditions }),
+
+		/**
+		 * Whether this makes the unit unrentable — the health axis that
+		 * `asset.status` projects at the moment custody comes back.
+		 *
+		 * Set from the reporter's "is it still usable?", and editable at triage,
+		 * because a member may say it is fine and staff may disagree on seeing the
+		 * photo. A torn tolex is worth knowing and does not stop anybody playing.
+		 */
+		blocksUse: integer('blocks_use', { mode: 'boolean' }).notNull().default(false),
+
+		status: text('status', { enum: flagStatuses }).notNull().default('pending'),
+		resolvedByUserId: text('resolved_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		resolutionNotes: text('resolution_notes'),
+		resolvedAt: integer('resolved_at', { mode: 'timestamp' }),
+
+		// The work order answering this flag — N flags collapse onto one. No
+		// `references()`: the target lives in `volunteer.ts`, which already points
+		// here for its `assetId`, and a real FK would make the two schema modules
+		// import each other. Same call as `acquisition.purchaseOrderId` above; the
+		// service validates the target.
+		workOrderId: text('work_order_id'),
+
+		// Set when the flag is raised at re-uptake, so a damage conversation with
+		// the borrower has the link. Set-null: the flag outlives the loan record.
+		loanId: text('loan_id').references(() => inventoryLoan.id, { onDelete: 'set null' }),
+
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('idx_asset_flag_status').on(t.status),
+		index('idx_asset_flag_asset').on(t.assetId),
+		// "May this unit go out?" — asked on every return and every availability
+		// check, and answered without touching the resolved pile.
+		index('idx_asset_flag_open_blocking')
+			.on(t.assetId)
+			.where(sql`status = 'pending' and blocks_use = 1`),
+		index('idx_asset_flag_work_order')
+			.on(t.workOrderId)
+			.where(sql`work_order_id is not null`)
+	]
+);
+
+export type AssetFlag = typeof assetFlag.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Client-safe serialized types

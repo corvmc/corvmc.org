@@ -71,6 +71,14 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		displayOrder: 50
 	},
 	{
+		name: 'Booking Lead',
+		group: 'away-from-shows' as const,
+		description:
+			'Advance a show in the week before it: confirm the lineup and set times, collect tech riders, confirm backline, and get the poster out.\n\nDone from home, on your own schedule — the work order says when it is due, not when to do it.',
+		displayOrder: 55,
+		defaultCapacity: 1
+	},
+	{
 		name: 'Outreach & Tabling',
 		group: 'away-from-shows' as const,
 		description:

@@ -15,6 +15,9 @@ import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { isSustainingMember } from '$lib/server/finance/subscription-service';
 import { getAvailableQuantity } from './stock-service';
+import { setAssetStatus } from './asset-service';
+import { hasBlockingFlag, raiseFlag } from './asset-flag-service';
+import type { EquipmentCondition } from '$lib/config';
 import { recordMovement } from './stock-service';
 import { loanDailyRateCents, loanChargeDays, estimateLoanCost } from '$lib/config';
 import { captureException } from '$lib/server/sentry';
@@ -426,14 +429,41 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 	return updated;
 }
 
+export interface ReturnInspection {
+	/** What the duty volunteer saw when they checked it back in. */
+	condition?: EquipmentCondition;
+	/** Anything they noticed while checking it, raised against this loan. */
+	flags?: { note: string; blocksUse: boolean; condition?: EquipmentCondition | null }[];
+}
+
 export async function returnLoan(
 	loanId: string,
 	staffNotes?: string,
-	opts: { actorId?: string } = {}
+	opts: { actorId?: string } & ReturnInspection = {}
 ) {
 	const loan = await getLoanRaw(loanId);
 	if (!loan) throw new LoanNotFoundError();
 	if (loan.status !== 'checked_out') throw new InvalidLoanTransitionError(loan.status, 'returned');
+
+	// The inspection happens before anything else is decided, because it is the
+	// *input* to the decision. `committees-and-roles-spec.md:522` marks "condition
+	// at both ends" as covered; only the checkout end existed, so a unit could
+	// come back visibly worse and the only record was free text on the loan.
+	//
+	// Flags are raised first so `hasBlockingFlag` below can see them: the whole
+	// point is that something noticed on the counter keeps the unit off the shelf.
+	if (loan.assetId && opts.flags?.length) {
+		for (const f of opts.flags) {
+			await raiseFlag({
+				assetId: loan.assetId,
+				note: f.note,
+				reportedByUserId: opts.actorId ?? loan.userId,
+				blocksUse: f.blocksUse,
+				condition: f.condition ?? null,
+				loanId
+			});
+		}
+	}
 
 	const now = new Date();
 	const totalCharge = calculateLoanCharge(loan.dailyRateCents ?? 0, loan.checkedOutAt!, now);
@@ -465,12 +495,13 @@ export async function returnLoan(
 		.where(eq(inventoryLoan.id, loanId))
 		.returning();
 
-	if (loan.assetId) {
-		await db
-			.update(inventoryAsset)
-			.set({ status: 'in_service', updatedAt: now })
-			.where(eq(inventoryAsset.id, loan.assetId));
-	}
+	// Custody comes back here, so this is where availability is decided. The unit
+	// stayed `on_loan` the whole time it was out, even if somebody flagged it
+	// mid-loan -- noticing a crackle does not hand the amp back to the collective.
+	//
+	// The loan movements are written first, below, so the ledger reads in the
+	// order things happened: it came back, and then it went to the shop.
+	const assetNeedsService = loan.assetId ? await hasBlockingFlag(loan.assetId) : false;
 
 	if (loan.itemId) {
 		await recordMovement({
@@ -482,6 +513,28 @@ export async function returnLoan(
 			actorId: opts.actorId ?? null,
 			occurredAt: now
 		});
+	}
+
+	if (loan.assetId) {
+		const [asset] = await db
+			.select({ status: inventoryAsset.status })
+			.from(inventoryAsset)
+			.where(eq(inventoryAsset.id, loan.assetId))
+			.limit(1);
+
+		// Only out of `on_loan`. `retired` and `lost` are decisions somebody made
+		// about the unit while it was out, and handing it back does not reverse
+		// them.
+		if (asset?.status === 'on_loan') {
+			// Through the single writer, so `maintenance` derives its own
+			// `repair_out` and `in_service` derives nothing -- the `loan_return`
+			// above already accounted for the unit coming back.
+			await setAssetStatus(loan.assetId, assetNeedsService ? 'maintenance' : 'in_service', {
+				actorId: opts.actorId,
+				condition: opts.condition,
+				notes: assetNeedsService ? 'Open report on return' : undefined
+			});
+		}
 	}
 
 	let equipmentName = 'Unknown';

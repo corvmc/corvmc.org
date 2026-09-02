@@ -74,19 +74,25 @@ it. Those are different things: only confirmed people get the day-before reminde
 auto-complete afterwards, so a shift showing three claims and no confirmations is not
 staffed.
 
-**Add someone** puts a member on a shift yourself, for the person who tells you in person
-or by text. They go on confirmed. If their role needs a clearance they do not hold on that
-date, it refuses and names what is missing — grant it from their member page and try again.
+**Add** in a shift's **Who to ask** column puts a member on it yourself, for the person who
+tells you in person or by text. They go on confirmed. If their role needs a clearance they
+do not hold on that date, the button reads **Blocked** and names what is missing — grant it
+from their member page and try again.
 
-**Take off the shift** is for somebody who gave you notice; their place reopens straight
-away. That is not the same as **No-show**, which is for somebody who simply did not turn
-up, and only one of the two is worth remembering next time.
+**Remove** is for somebody who gave you notice; their place reopens straight away. That is
+not the same as **Mark no-show**, which is for somebody who was booked and simply did not
+turn up, and only one of the two is worth remembering next time.
 
-A role can require certifications (**Volunteering → Certifications**) before its
+When a shift is called off, its roster stays put — that is who you have to tell. The shift
+page turns into a notify list: **Notify all** emails everybody still on it, and **Mark as
+notified** is for the ones you already rang.
+
+A role can require clearances (**Volunteering → Setup**) before its
 shifts can be claimed. Requirements are checked against the shift's date, so a
-lapsing card is caught before it matters. The clearances view shows who is
-current, expiring soon, or lapsed. Grant and revoke from the member's page —
-revoking keeps the record of the period it covered, which is the point.
+lapsing card is caught before it matters. **People → Cleared** shows who holds
+what and when it runs out, one row per person and clearance. Grant from the
+member's page; revoke from either. Revoking keeps the record of the period it
+covered, which is the point.
 
 The day after a shift, workers get a two-question survey. Responses show on the
 shift detail and roll up per role on the report, anonymously. A role scoring
@@ -95,13 +101,20 @@ problem — fix the checklist, not the person.
 
 ## Finding someone to ask
 
-Usually you do not go looking — **Add someone** on a short shift already shows the people
-who said they would help with that role, what they told us about when they are free, and
-whether they are cleared for that date.
+Usually you do not go looking — the **Who to ask** column beside a shift's roster already
+shows the people who said they would help with that role, what they told us about when they
+are free, and whether they are cleared for that date. Its three filters widen that to people
+who have worked the role before, and then to everybody; searching it finds anyone at all,
+which is the person who walked up to the desk and is on no list.
 
-**Volunteering → Volunteers** is the full list when you do: everyone who signed up, with
-their roles, their availability note and their phone number if they gave one. Filter by
-role to see how deep the bench is.
+**Volunteering → People** is the full list when you do. Its **Roster** tab is everyone who
+signed up, with their roles and their availability note; each row carries the one thing
+outstanding about that person — a claim of theirs to confirm, a clearance to chase, or
+otherwise a way to log hours on their behalf. Filter by role to see how deep the bench is.
+
+**People → Awaiting sign-off** is the under-18 queue. Approving one confirms a guardian has
+signed off; the record still says they are under 18, which is what changes how a shift is
+staffed.
 
 Expressing interest is not a commitment to a date, so treat it as a place to start asking,
 not a rota. A role's own page has **Copy emails on this page** if you want to write to
@@ -109,9 +122,12 @@ several people at once.
 
 ## Managing roles
 
-**Volunteering → Roles** is the list members pick from. A role is a name plus a
-job description in markdown — the description is what members read when deciding
-whether to help, so write what the job actually involves rather than a label.
+**Volunteering → Setup** holds both halves of what volunteering is made of: the roles
+members pick from on the left, the clearances that gate some of them on the right. A role
+is a name plus a job description in markdown — the description is what members read when
+deciding whether to help, so write what the job actually involves rather than a label.
+Clicking a role opens its own page, which is where you change it, set what it requires,
+schedule shifts against it and read how they went.
 
 **Group** decides which of the three headings a role appears under — at shows,
 away from shows, or committees. It is presentation only; nothing else depends

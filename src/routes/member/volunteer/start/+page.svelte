@@ -25,9 +25,7 @@
 <PageContent width="md">
 	{#await step then me}
 		<InfoCard title="About you">
-			<p class="text-sm text-base-content/70">
-				A few details so we know who's on a shift and how to reach you. This is a one-time thing.
-			</p>
+			<p class="text-sm text-base-content/70">Asked once.</p>
 
 			<Form remote={startVolunteerOnboarding}>
 				<ProfileFields
@@ -53,7 +51,7 @@
 						{ value: 'yes', label: 'Yes, I am 18 or older' },
 						{ value: 'no', label: 'No, I am under 18' }
 					]}
-					description="Under-18 volunteers are welcome — we just need to set things up with you first."
+					description="Under 18 requires a guardian sign-off. You're welcome either way — it just takes a conversation first."
 				/>
 
 				<SubmitButton label="Continue" variant="primary" />

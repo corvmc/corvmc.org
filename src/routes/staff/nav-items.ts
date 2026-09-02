@@ -29,11 +29,9 @@ export type StaffNavKey =
 	| 'groups'
 	| 'volunteer'
 	| 'volunteer-schedule'
-	| 'volunteer-hours'
 	| 'volunteer-people'
-	| 'volunteer-shifts'
-	| 'volunteer-roles'
-	| 'volunteer-certifications'
+	| 'volunteer-setup'
+	| 'volunteer-duty-lists'
 	| 'volunteer-report'
 	| 'reservations'
 	| 'recurring'
@@ -48,6 +46,8 @@ export type StaffNavKey =
 	| 'inventory-orders'
 	| 'inventory-spend'
 	| 'inventory-compliance'
+	| 'contractors'
+	| 'contractor-jobs'
 	| 'productions'
 	| 'calendar'
 	| 'flags'
@@ -118,18 +118,24 @@ export const staffNavSections: StaffNavSection[] = [
 						label: 'Schedule',
 						href: resolve('/staff/volunteer/schedule')
 					},
-					{ key: 'volunteer-hours', label: 'Hours', href: resolve('/staff/volunteer/hours') },
 					{
+						// "People", not "Volunteers": it holds the under-18 queue and the
+						// clearances table too, and both are about people who are not yet
+						// volunteering.
 						key: 'volunteer-people',
-						label: 'Volunteers',
+						label: 'People',
 						href: resolve('/staff/volunteer/people')
 					},
-					{ key: 'volunteer-shifts', label: 'Shifts', href: resolve('/staff/volunteer/shifts') },
-					{ key: 'volunteer-roles', label: 'Roles', href: resolve('/staff/volunteer/roles') },
+					{ key: 'volunteer-setup', label: 'Setup', href: resolve('/staff/volunteer/setup') },
+					// Its own row rather than folded into Setup. A duty list is arguably
+					// a definition like a role is, but it landed on `main` as a screen of
+					// its own while this branch was in flight, and quietly absorbing
+					// somebody else's new surface into a redesign they did not review is
+					// not a merge resolution.
 					{
-						key: 'volunteer-certifications',
-						label: 'Certifications',
-						href: resolve('/staff/volunteer/certifications')
+						key: 'volunteer-duty-lists',
+						label: 'Duty Lists',
+						href: resolve('/staff/volunteer/duty-lists')
 					},
 					{ key: 'volunteer-report', label: 'Report', href: resolve('/staff/volunteer/report') }
 				]
@@ -185,6 +191,18 @@ export const staffNavSections: StaffNavSection[] = [
 						label: 'Compliance',
 						href: resolve('/staff/inventory/compliance')
 					}
+				]
+			},
+			{
+				// A sibling of Inventory rather than a child of it. Half of what a
+				// contractor does is to the building, which owns no inventory row —
+				// filing the electrician under the gear catalog would make the
+				// building half unfindable.
+				key: 'contractors',
+				label: 'Contractors',
+				href: resolve('/staff/contractors'),
+				children: [
+					{ key: 'contractor-jobs', label: 'Jobs', href: resolve('/staff/contractors/jobs') }
 				]
 			}
 		]

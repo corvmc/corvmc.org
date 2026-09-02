@@ -232,6 +232,28 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		.returning();
 	rows.push(cancelledNoRes);
 
+	// A published CMC event that is deliberately not a show. It belongs on the
+	// public calendar — a work party nobody is told about is a work party nobody
+	// comes to — but not in the homepage posters or "show tonight", which are the
+	// three surfaces `kind` exists to keep honest. Rendering it locally is the
+	// only way that distinction is visible before production.
+	const [workParty] = await db
+		.insert(event)
+		.values({
+			title: 'Work party: practice room deep clean',
+			description:
+				'Bring gloves. We are pulling everything out of the back room, cleaning behind it, and putting it back better than we found it.',
+			startsAt: ptDate(9, 10),
+			endsAt: ptDate(9, 14),
+			status: 'published',
+			publishedAt: new Date(),
+			kind: 'work_party',
+			tags: 'volunteer, all ages',
+			createdByUserId: pick(staffUsers).id
+		})
+		.returning();
+	rows.push(workParty);
+
 	// Recurring CMC event: a weekly open mic. Prototype is a published past
 	// occurrence; future occurrences are materialized as drafts (as the
 	// generation job would produce), each with its own space reservation.

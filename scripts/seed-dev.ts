@@ -53,6 +53,8 @@ import { seedHelp } from './seed/help';
 import { seedInbox } from './seed/inbox';
 import { seedDirectMessages } from './seed/direct-messages';
 import { seedContentFlags } from './seed/content-flags';
+import { seedContractors } from './seed/contractors';
+import { seedDutyLists } from './seed/duty-lists';
 import {
 	seedVolunteerRoles,
 	seedVolunteerProfiles,
@@ -109,6 +111,7 @@ async function main() {
 	const eq = await seedEquipment(allUsers);
 	const help = await seedHelp();
 	const itemArticles = await seedItemArticles();
+	const contractors = await seedContractors(adminUser.id);
 	const inbox = await seedInbox(adminUser, users[0]);
 	const directMessages = await seedDirectMessages(users, adminUser);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
@@ -132,6 +135,7 @@ async function main() {
 	// Last of the volunteer block — it grants against the certifications above and
 	// schedules against the role catalog.
 	const personas = await seedVolunteerPersonas(roles, volunteerRoles, certifications, adminUser);
+	const dutyLists = await seedDutyLists(volunteerRoles, events);
 	const suggestions = await seedSuggestions(allUsers, adminUser);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
@@ -146,6 +150,9 @@ async function main() {
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
+	console.log(
+		`  ${dutyLists.lists} duty list, ${dutyLists.workOrders} work orders applied to a show`
+	);
 	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
 	console.log(
 		`  ${instructors.rows} instructors (3 active, 1 paused, 1 awaiting review, 1 sent back)` +
@@ -173,6 +180,9 @@ async function main() {
 	);
 	console.log(
 		`  ${help.categories} help categories, ${help.articles} help articles, ${itemArticles.links} linked to gear`
+	);
+	console.log(
+		`  ${contractors.contractors} contractors, ${contractors.jobs} contractor jobs (1 overdue, 1 unit at the shop, 1 lapsed certificate)`
 	);
 	console.log(`  ${directory.entries} directory entries, ${directory.tags} directory tags`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
@@ -206,7 +216,6 @@ async function main() {
 
 	await dispose();
 }
-
 main().catch((err) => {
 	console.error(err);
 	process.exit(1);

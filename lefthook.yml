@@ -1,20 +1,28 @@
-# Git hooks via lefthook. Warn-only / auto-fix: formats and lint-fixes staged files
-# before commit and re-stages them; never blocks on remaining warnings.
-# Reuses the existing prettier (.prettierrc) and eslint (eslint.config.js) setup.
+# Git hooks via lefthook. Formatting only, and deliberately so.
+#
+# Local hooks format; CI gates. `main` is protected by four required checks
+# (Svelte Check, Lint (changed), Unit tests, E2E) that run on the PR and again on
+# the merge-queue ref, so nothing reaches `main` without passing both layers and a
+# local gate can only make the machine slower.
+#
+# The rule that keeps this file honest: NOTHING HERE MAY START A TYPESCRIPT
+# PROGRAM. ESLint's `parserOptions.projectService` builds one over the whole
+# project (~11.8k files) on every invocation — ~10s of fixed startup whether you
+# lint one file or eight, and `--cache` can't fix it (see the note in ci.yml).
+# With a worktree per agent, eight commits landing together meant eight concurrent
+# TypeScript programs on an 8-core machine. `eslint --fix` used to live here; it
+# is CI's job now, where a runner has the machine to itself.
+#
+# `pnpm lint` and `pnpm check` still exist for running deliberately.
 pre-commit:
-  parallel: true
   jobs:
+    # ~0.5s, single-threaded, allocates nothing — eight at once is not a pileup.
+    # Worth keeping because it covers what the PostToolUse edit hook does not: that
+    # hook only handles .ts/.js/.svelte, while scripts/lint-changed.sh checks
+    # formatting on .md/.json/.css/.html/.yml/.yaml too. Without this, an
+    # unformatted markdown file costs a full CI round trip to discover. The glob
+    # mirrors that script's FORMATTABLE list — keep the two in step.
     - name: prettier
-      glob: '*.{ts,js,svelte,json,md,css,html}'
+      glob: '*.{ts,js,svelte,json,md,css,html,yml,yaml}'
       run: pnpm exec prettier --write {staged_files}
       stage_fixed: true
-    - name: eslint
-      glob: '*.{ts,js,svelte}'
-      run: pnpm exec eslint --fix {staged_files}
-      stage_fixed: true
-
-# Non-blocking heads-up on push. Prints type errors but does not fail the push.
-pre-push:
-  jobs:
-    - name: svelte-check
-      run: pnpm check || true
