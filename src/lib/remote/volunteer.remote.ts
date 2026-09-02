@@ -71,7 +71,6 @@ import {
 	listOpenShiftsForMember,
 	getShiftDetail
 } from '$lib/server/volunteer/volunteer-shift-service';
-import type { ShiftWithCounts } from '$lib/server/volunteer/volunteer-shift-service';
 import {
 	claimShift as claimShiftService,
 	cancelSignup as cancelSignupService,
@@ -1213,6 +1212,14 @@ const shiftFilters = z.object({
 	includeCancelled: z.boolean().optional()
 });
 
+/**
+ * Every staff list of shifts, Schedule included.
+ *
+ * Both bounds are optional, which is what lets Schedule's "Everything" window
+ * absorb the old `/staff/volunteer/shifts` catalog — that page's only real
+ * difference was the absence of a date range, and two queries for one question
+ * is how the two pages drifted apart in the first place.
+ */
 export const getShifts = query(shiftFilters, async (f) => {
 	await requireStaff();
 	return listShifts({
@@ -1512,6 +1519,35 @@ export const confirmSignups = form(
 		return { success: true, confirmed };
 	}
 );
+
+/**
+ * Confirm everybody with an outstanding claim on one shift.
+ *
+ * The id-carrying sibling of `confirmSignups`. Today's worklist already holds
+ * the signup ids because it renders a row per person; Schedule holds counts, so
+ * asking it to send ids would mean loading a roster per row to draw a button.
+ * Same service loop, one less thing for the list to know.
+ */
+export const confirmShiftClaims = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
+	await requireStaff();
+
+	const claimants = await listClaimants(data.shiftId);
+	const outstanding = claimants.filter((c) => c.status === 'claimed');
+
+	let confirmed = 0;
+	for (const c of outstanding) {
+		try {
+			await confirmSignupService(c.signupId);
+			confirmed++;
+		} catch (err) {
+			if (err instanceof SignupNotFoundError) continue;
+			mapDomainError(err);
+		}
+	}
+
+	await refreshShiftViews(data.shiftId);
+	return { success: true, confirmed };
+});
 
 export const markSignupNoShow = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
@@ -1836,20 +1872,3 @@ export const getVolunteerWorklist = query(async () => {
  * scrolling an unbounded list. Dates cross the wire as ISO strings, like every other date
  * on this layer.
  */
-export const getShiftsInWindow = query(
-	z.object({
-		from: z.string().min(1),
-		to: z.string().min(1),
-		volunteerRoleId: z.string().optional(),
-		includeCancelled: z.boolean().optional()
-	}),
-	async (f): Promise<ShiftWithCounts[]> => {
-		await requireStaff();
-		return listShifts({
-			from: new Date(f.from),
-			to: new Date(f.to),
-			volunteerRoleId: f.volunteerRoleId || undefined,
-			includeCancelled: f.includeCancelled
-		});
-	}
-);

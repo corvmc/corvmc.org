@@ -44,7 +44,7 @@ vi.mock('$lib/server/feature-flags', () => ({
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: mockUser({ id: 'staff-1' }) },
-		url: new URL('http://localhost/staff/volunteer/shifts'),
+		url: new URL('http://localhost/staff/volunteer/schedule'),
 		request: { headers: new Headers() }
 	}),
 	form: (_schema: unknown, handler: (...args: any[]) => any) => {

@@ -322,12 +322,12 @@ test.describe('volunteering — roles', () => {
 		);
 	});
 
-	// On the shifts board the role is chosen inside the modal, so the prefill has
-	// to follow the select. The select is bound, which is also how it could break:
+	// On the schedule the role is chosen inside the modal, so the prefill has to
+	// follow the select. The select is bound, which is also how it could break:
 	// a bound value matching no option posts an empty role.
-	test('the shifts board prefill follows the role picked in the modal', async ({ page }) => {
+	test('the schedule prefill follows the role picked in the modal', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/shifts');
+		await page.goto('/staff/volunteer/schedule');
 
 		await page.getByRole('button', { name: 'New Shift' }).click();
 		const dialog = page.getByRole('dialog');
@@ -352,6 +352,13 @@ test.describe('volunteering — roles', () => {
 		await page.goto('/staff/volunteer/interest');
 
 		await expect(page).toHaveURL(/\/staff\/volunteer\/people$/);
+	});
+
+	test('the retired shift catalog redirects onto the schedule', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteer/shifts');
+
+		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule$/);
 	});
 
 	/**

@@ -31,7 +31,6 @@ export type StaffNavKey =
 	| 'volunteer-schedule'
 	| 'volunteer-hours'
 	| 'volunteer-people'
-	| 'volunteer-shifts'
 	| 'volunteer-roles'
 	| 'volunteer-certifications'
 	| 'volunteer-report'
@@ -124,7 +123,6 @@ export const staffNavSections: StaffNavSection[] = [
 						label: 'Volunteers',
 						href: resolve('/staff/volunteer/people')
 					},
-					{ key: 'volunteer-shifts', label: 'Shifts', href: resolve('/staff/volunteer/shifts') },
 					{ key: 'volunteer-roles', label: 'Roles', href: resolve('/staff/volunteer/roles') },
 					{
 						key: 'volunteer-certifications',
