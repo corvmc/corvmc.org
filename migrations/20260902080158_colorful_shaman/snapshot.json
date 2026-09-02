@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "3920b35f-a4e6-474c-8d66-feea2d578aa3",
+  "id": "f9b63778-fb27-4d8a-a1dd-4114dcaed4d4",
   "prevIds": [
-    "8c4d1227-2847-49fb-b4b7-9c51d15ea0e3"
+    "3920b35f-a4e6-474c-8d66-feea2d578aa3"
   ],
   "ddl": [
     {
@@ -1581,6 +1581,16 @@
       "default": "'cmc'",
       "generated": null,
       "name": "source",
+      "entityType": "columns",
+      "table": "event"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'show'",
+      "generated": null,
+      "name": "kind",
       "entityType": "columns",
       "table": "event"
     },
