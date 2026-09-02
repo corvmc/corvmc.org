@@ -3,6 +3,7 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
 import {
 	SEED_AWAITING_THREAD_ID,
 	SEED_AWAITING_CONTACT,
+	SEED_NEEDS_REPLY_THREAD_ID,
 	SEED_NEEDS_REPLY_CONTACT
 } from './fixtures/seed-inbox-awaiting';
 
@@ -93,11 +94,15 @@ test.describe('inbox awaiting reply', () => {
 		expect(tab).toBe(badge);
 	});
 
+	// The marker's two manual directions, and the round trip that proves they are
+	// each other's inverse. Both go through the DispositionBar: clearing it is
+	// the reopen slot ("Needs a reply"), setting it is the snooze menu's
+	// conditional option ("When they reply") — the same state the default send
+	// applies, reached deliberately.
 	test('clearing the marker returns the thread to Open and to the badge', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/inbox/${SEED_AWAITING_THREAD_ID}`);
 
-		// The pair of buttons is the marker's state: only one is offered at a time.
 		await expect(page.getByRole('button', { name: 'Needs a reply' })).toBeVisible();
 		const before = await navBadgeCount(page);
 
@@ -109,11 +114,31 @@ test.describe('inbox awaiting reply', () => {
 			.poll(() => navBadgeCount(page), { timeout: 10000, message: 'nav badge' })
 			.toBe(before + 1);
 
-		// And back again, which is the manual half of the marker.
-		await page.getByRole('button', { name: 'Awaiting reply' }).click();
+		// And back again, from the snooze menu.
+		await page.getByRole('button', { name: /^Snooze/ }).click();
+		await page.getByRole('menuitem', { name: 'When they reply' }).click();
+
 		await expect(page.getByRole('button', { name: 'Needs a reply' })).toBeVisible();
 		await expect
 			.poll(() => navBadgeCount(page), { timeout: 10000, message: 'nav badge' })
 			.toBe(before);
+	});
+
+	// Every disposition is reversible for ten seconds, and the toast is the only
+	// place that offer appears. A disposition that lands with no way back is the
+	// bug this whole surface is built around not having.
+	test('a disposition offers an undo that puts the thread back', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto(`/staff/inbox/${SEED_NEEDS_REPLY_THREAD_ID}`);
+
+		await page.getByRole('button', { name: /^Resolve/ }).click();
+		await expect(page.getByRole('button', { name: 'Reopen' })).toBeVisible();
+
+		await page.getByRole('button', { name: 'Undo' }).click();
+
+		// Back to open: the reopen slot is gone and the four exits are offered
+		// again.
+		await expect(page.getByRole('button', { name: 'Reopen' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: /^Resolve/ })).toBeVisible();
 	});
 });
