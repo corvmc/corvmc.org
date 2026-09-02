@@ -124,9 +124,10 @@ the tree and records how this split was made.
 
 ### Inventory & assets
 
-| Doc                                          | Status | Lifecycle | Notes                                                                                                                                                                                                                                                                                 |
-| -------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [inventory-spec.md](specs/inventory-spec.md) | 🔧     | split     | Phases 1, 2 and 4 shipped — one append-only ledger, serialized units, acquisitions with disclosure and reimbursement, `/a/[tag]` scans, restock list, spend report, manuals and damage reports. Phase 3 shipped bar Schedule M; the in-kind disclosure screen is deliberately unbuilt |
+| Doc                                                      | Status | Lifecycle | Notes                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [inventory-spec.md](specs/inventory-spec.md)             | 🔧     | split     | Phases 1, 2 and 4 shipped — one append-only ledger, serialized units, acquisitions with disclosure and reimbursement, `/a/[tag]` scans, restock list, spend report, manuals and damage reports. Phase 3 shipped bar Schedule M; the in-kind disclosure screen is deliberately unbuilt |
+| [contractor-work-spec.md](specs/contractor-work-spec.md) | 🔧     | spec      | Paid outside work — an instrument tech, an electrician: `contractor` + `contractor_job`. The other of the two places a broken thing gets fixed, and the first service expense the app records                                                                                         |
 
 ### Staff platform
 

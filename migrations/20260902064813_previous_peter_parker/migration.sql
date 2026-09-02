@@ -1,1 +1,0 @@
-ALTER TABLE `event` ADD `kind` text DEFAULT 'show' NOT NULL;

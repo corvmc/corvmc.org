@@ -398,6 +398,65 @@ export const loanStatuses = [
 export type LoanStatus = (typeof loanStatuses)[number];
 
 // ---------------------------------------------------------------------------
+// Contractor work
+// ---------------------------------------------------------------------------
+
+/**
+ * What a contractor does. Broad on purpose: the collective calls a handful of
+ * trades, and a list long enough to need searching would be a list nobody
+ * maintains. `general` is the handyman who does three of these; `other` is the
+ * escape hatch that keeps someone from filing a piano tuner under `electrical`.
+ */
+export const contractorTrades = [
+	'instrument_repair',
+	'electrical',
+	'plumbing',
+	'hvac',
+	'fire_safety',
+	'locksmith',
+	'general',
+	'other'
+] as const;
+export type ContractorTrade = (typeof contractorTrades)[number];
+
+export const contractorTradeLabels: Record<ContractorTrade, string> = {
+	instrument_repair: 'Instrument repair',
+	electrical: 'Electrical',
+	plumbing: 'Plumbing',
+	hvac: 'HVAC',
+	fire_safety: 'Fire safety',
+	locksmith: 'Locksmith',
+	general: 'General',
+	other: 'Other'
+};
+
+/**
+ * A job's lifecycle. Four states, matching `orderStatuses` in shape because the
+ * shape is the same one: something is agreed, then it is committed to, then it
+ * either happens or it does not.
+ *
+ * There is no `overdue`. Late is `scheduled` plus an `expectedBackAt` in the
+ * past — derived on read like `listLateOrders`, because a stored status would
+ * need something to come along and set it.
+ */
+export const contractorJobStatuses = ['draft', 'scheduled', 'completed', 'cancelled'] as const;
+export type ContractorJobStatus = (typeof contractorJobStatuses)[number];
+
+export const contractorJobStatusLabels: Record<ContractorJobStatus, string> = {
+	draft: 'Draft',
+	scheduled: 'Scheduled',
+	completed: 'Completed',
+	cancelled: 'Cancelled'
+};
+
+export const contractorJobStatusBadge = {
+	draft: 'outline',
+	scheduled: 'info',
+	completed: 'success',
+	cancelled: 'ghost'
+} as const satisfies Record<ContractorJobStatus, string>;
+
+// ---------------------------------------------------------------------------
 // Credit transaction sources
 // ---------------------------------------------------------------------------
 
