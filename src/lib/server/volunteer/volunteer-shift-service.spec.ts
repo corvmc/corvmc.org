@@ -37,7 +37,15 @@ vi.mock('$lib/server/db', () => ({
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
-import { countUnfilledByRole, listShifts, updateShift } from './volunteer-shift-service';
+import {
+	countUnfilledByRole,
+	createWorkOrder,
+	listShifts,
+	listWorkOrders,
+	resolveWorkOrder,
+	scheduleWorkOrder,
+	updateShift
+} from './volunteer-shift-service';
 
 /** The rendered WHERE clause of the query that ran. */
 function renderedWhere() {
@@ -194,5 +202,79 @@ describe('updateShift and the event link', () => {
 		await updateShift('shift-1', { capacity: 3 });
 
 		expect('eventId' in updatedColumns()).toBe(false);
+	});
+});
+
+describe('work orders', () => {
+	/**
+	 * The CHECK is both-or-neither, so a work order is the "neither" case. Writing
+	 * one end and not the other is the shape that used to slip through, because
+	 * `false OR NULL` is NULL and SQLite passes a CHECK returning NULL.
+	 */
+	it('creates a row with no window at all', async () => {
+		selectResult = [{ id: 'role-1', isActive: true }];
+
+		await createWorkOrder({
+			volunteerRoleId: 'role-1',
+			assetId: 'as-1',
+			notes: 'Crackling jack',
+			createdByUserId: 'staff-1'
+		});
+
+		const values = chainCalls.find((c) => c.method === 'values')!.args[0] as Record<
+			string,
+			unknown
+		>;
+		expect(values).toMatchObject({ startsAt: null, endsAt: null, assetId: 'as-1' });
+	});
+
+	it('refuses an archived role, like scheduling one does', async () => {
+		selectResult = [{ id: 'role-1', isActive: false }];
+
+		await expect(
+			createWorkOrder({ volunteerRoleId: 'role-1', createdByUserId: 'staff-1' })
+		).rejects.toThrow();
+	});
+
+	it('queues only work that is unscheduled, unresolved and live', async () => {
+		selectResult = [];
+		await listWorkOrders();
+
+		const sql = renderedWhere().sql;
+		expect(sql).toContain('"starts_at" is null');
+		expect(sql).toContain('"resolved_at" is null');
+		expect(sql).toContain('"cancelled_at" is null');
+	});
+
+	/**
+	 * `completeFinishedShifts` keys on `ends_at`, so it can never reach a row that
+	 * never had one. Without this the signups on an unscheduled work order sit at
+	 * `confirmed` forever — including after the work is done.
+	 */
+	it('completes the signups itself, because the clock never will', async () => {
+		selectResult = [shiftRow({ startsAt: null, endsAt: null, resolvedAt: null })];
+
+		await resolveWorkOrder('shift-1', { resolvedByUserId: 'staff-1', notes: 'New jack fitted' });
+
+		const sets = chainCalls.filter((c) => c.method === 'set').map((c) => c.args[0]);
+		expect(sets.some((v: any) => v.status === 'completed')).toBe(true);
+		expect(sets.some((v: any) => v.resolvedAt instanceof Date)).toBe(true);
+	});
+
+	it('refuses to close the same work twice', async () => {
+		selectResult = [shiftRow({ startsAt: null, endsAt: null, resolvedAt: new Date() })];
+
+		await expect(resolveWorkOrder('shift-1', { resolvedByUserId: 'staff-1' })).rejects.toThrow();
+	});
+
+	it('refuses to schedule something that already has a window', async () => {
+		selectResult = [shiftRow()];
+
+		await expect(
+			scheduleWorkOrder('shift-1', {
+				startsAt: '2026-06-02T18:00',
+				endsAt: '2026-06-02T22:00'
+			})
+		).rejects.toThrow();
 	});
 });

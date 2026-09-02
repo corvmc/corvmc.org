@@ -8,6 +8,8 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { getSpendReport } from '$lib/remote/inventory.remote';
 	import { formatCents } from '$lib/utils/format';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import { contractorTradeLabels, type ContractorTrade } from '$lib/config';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -56,8 +58,9 @@
 		<Button variant="default" size="sm" onclick={apply}>Apply</Button>
 	</div>
 
-	<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<StatCard title="Total spend" value={formatCents(data.totalCents)} />
+	<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+		<StatCard title="Stock" value={formatCents(data.totalCents)} />
+		<StatCard title="Services" value={formatCents(data.servicesCents)} />
 		<StatCard title="Window" value={`${data.from} → ${data.to}`} />
 	</div>
 
@@ -87,6 +90,44 @@
 				<td class="col-support cell-num"></td>
 				<td class="cell-num">{formatCents(data.totalCents)}</td>
 				<td class="col-support cell-num"></td>
+			</tr>
+		</Table>
+	{/if}
+
+	<!--
+		Services are a second block rather than more rows in the table above. They
+		come from `contractor_job`, not from the acquisition ledger, because a
+		labor invoice is not stock arriving — it has no line, no unit count and no
+		equipment category to sit under.
+	-->
+	<h2 class="mt-8 mb-3 font-medium">Services</h2>
+	{#if data.services.length === 0}
+		<EmptyState
+			title="No contractor work in this window"
+			description="Work paid out to an instrument tech, an electrician or a service company shows here."
+		/>
+	{:else}
+		<Table>
+			{#snippet head()}
+				<th>Trade</th>
+				<th class="col-support cell-num">Jobs</th>
+				<th class="cell-num">Spend</th>
+			{/snippet}
+			{#each data.services as row (row.trade)}
+				<tr class="hover">
+					<td class="cell-primary">
+						<Badge variant="outline" size="sm">
+							{contractorTradeLabels[row.trade as ContractorTrade]}
+						</Badge>
+					</td>
+					<td class="col-support cell-num">{row.jobCount}</td>
+					<td class="cell-num">{formatCents(row.totalCents)}</td>
+				</tr>
+			{/each}
+			<tr class="font-medium">
+				<td>Total</td>
+				<td class="col-support cell-num"></td>
+				<td class="cell-num">{formatCents(data.servicesCents)}</td>
 			</tr>
 		</Table>
 	{/if}

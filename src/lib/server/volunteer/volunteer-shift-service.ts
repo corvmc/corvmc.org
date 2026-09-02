@@ -407,6 +407,148 @@ function shiftRowsQuery() {
  * The staff list. Counts only the signups that hold a place, so a cancelled
  * claim reopens the slot rather than leaving the shift looking full.
  */
+// ---------------------------------------------------------------------------
+// Work orders
+//
+// A work order is one of these rows with no window on it yet. Everything else
+// about it -- claiming, clearances, hours, no-shows, feedback -- is the shift
+// machinery unchanged, which is the whole reason it is not a table of its own.
+// ---------------------------------------------------------------------------
+
+/**
+ * Work that needs doing, with nobody booked to do it.
+ *
+ * Staff-created, like every shift: a member reporting a broken amp raises an
+ * `asset_flag`, and a coordinator turns some number of those into one of these.
+ * That is what lets "a shift exists -> it is claimable" stay true, and why this
+ * needs no draft state.
+ */
+export async function createWorkOrder(data: {
+	volunteerRoleId: string;
+	assetId?: string | null;
+	notes?: string | null;
+	/** A deadline, not a window. */
+	dueAt?: Date | null;
+	capacity?: number;
+	createdByUserId: string;
+}): Promise<VolunteerShift> {
+	const [role] = await db
+		.select({ id: volunteerRole.id, isActive: volunteerRole.isActive })
+		.from(volunteerRole)
+		.where(eq(volunteerRole.id, data.volunteerRoleId))
+		.limit(1);
+
+	if (!role) throw new ShiftValidationError('That role no longer exists.');
+	if (!role.isActive) {
+		throw new ShiftValidationError('That role is archived — restore it before assigning work.');
+	}
+
+	const [row] = await db
+		.insert(volunteerShift)
+		.values({
+			volunteerRoleId: data.volunteerRoleId,
+			assetId: data.assetId || null,
+			// Both null: the CHECK requires either a whole window or none, and this
+			// is the "none" case by definition.
+			startsAt: null,
+			endsAt: null,
+			dueAt: data.dueAt ?? null,
+			capacity: validateCapacity(data.capacity ?? 1),
+			notes: data.notes ? validateNotes(data.notes) : null,
+			createdByUserId: data.createdByUserId
+		})
+		.returning();
+
+	return row;
+}
+
+/**
+ * Give a work order a window, which turns it into an ordinary claimable shift.
+ *
+ * `updateShift` already enforces both-or-neither and the length rules, so this
+ * is a thin named path rather than a second implementation — "we found a time
+ * for it" is a different story from "somebody edited the shift", and the
+ * coordinator's queue needs the former.
+ */
+export async function scheduleWorkOrder(
+	id: string,
+	times: { startsAt: string; endsAt: string }
+): Promise<VolunteerShift> {
+	const existing = await getShiftById(id);
+	if (!existing) throw new ShiftNotFoundError();
+	if (existing.startsAt) {
+		throw new ShiftValidationError('That is already scheduled — edit it instead.');
+	}
+	return updateShift(id, { startsAt: times.startsAt, endsAt: times.endsAt });
+}
+
+/**
+ * The work is finished, which is not the same as anybody having turned up.
+ *
+ * `completeFinishedShifts` promotes a signup once the clock runs out; that says
+ * the volunteer worked and earns their hours. A session can end with the amp
+ * still broken, so closure lives on the work row. And because that cron keys on
+ * `ends_at`, it can never reach an unscheduled row — so resolving has to
+ * complete the signups itself or they sit at `confirmed` forever.
+ *
+ * Deliberately does not touch the asset or its flags: those are the inventory
+ * domain's, and the remote orchestrates the pair.
+ */
+export async function resolveWorkOrder(
+	id: string,
+	opts: { resolvedByUserId: string; notes?: string | null }
+): Promise<VolunteerShift> {
+	const existing = await getShiftById(id);
+	if (!existing) throw new ShiftNotFoundError();
+	if (existing.resolvedAt) throw new ShiftValidationError('That is already closed.');
+	if (existing.cancelledAt) throw new ShiftValidationError('That was called off.');
+
+	const now = new Date();
+
+	await db
+		.update(volunteerSignup)
+		.set({ status: 'completed', completedAt: now, updatedAt: now })
+		.where(
+			and(
+				eq(volunteerSignup.shiftId, id),
+				inArray(volunteerSignup.status, ['claimed', 'confirmed'])
+			)
+		);
+
+	const [row] = await db
+		.update(volunteerShift)
+		.set({
+			resolvedAt: now,
+			resolvedByUserId: opts.resolvedByUserId,
+			resolutionNotes: opts.notes ?? null,
+			updatedAt: now
+		})
+		.where(eq(volunteerShift.id, id))
+		.returning();
+
+	return row;
+}
+
+/**
+ * The coordinator's queue: work nobody has found a time for.
+ *
+ * Oldest first, like every queue in this app — the thing that has been sitting
+ * a fortnight is the one that has gone wrong.
+ */
+export async function listWorkOrders(): Promise<ShiftWithCounts[]> {
+	const rows = await shiftRowsQuery()
+		.where(
+			and(
+				isNull(volunteerShift.startsAt),
+				isNull(volunteerShift.resolvedAt),
+				isNull(volunteerShift.cancelledAt)
+			)
+		)
+		.orderBy(asc(volunteerShift.createdAt));
+
+	return withCounts(rows);
+}
+
 export async function listShifts(
 	filters: {
 		volunteerRoleId?: string;
