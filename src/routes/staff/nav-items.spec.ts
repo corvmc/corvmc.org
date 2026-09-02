@@ -109,10 +109,8 @@ describe('the nav tree', () => {
 			// are on the dashboard — see docs/development/ui-patterns.md#section-dashboards.
 			'/staff/volunteer',
 			'/staff/volunteer/schedule',
-			'/staff/volunteer/hours',
 			'/staff/volunteer/people',
-			'/staff/volunteer/roles',
-			'/staff/volunteer/certifications',
+			'/staff/volunteer/setup',
 			'/staff/volunteer/report'
 		]);
 	});
@@ -140,6 +138,11 @@ describe('route coverage', () => {
 	 * the page that owns it, and each still resolves to a highlighted parent.
 	 */
 	const unlinked = new Set([
+		// The full hour-log queue. Today's "Hours to review" card shows the top five
+		// and links here for the rest; it is not its own nav row because reviewing
+		// hours is something you arrive at from the worklist, not something you go
+		// and browse.
+		'/staff/volunteer/hours',
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Inventory, beside Categories; `backHref` points there

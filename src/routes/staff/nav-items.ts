@@ -29,10 +29,8 @@ export type StaffNavKey =
 	| 'groups'
 	| 'volunteer'
 	| 'volunteer-schedule'
-	| 'volunteer-hours'
 	| 'volunteer-people'
-	| 'volunteer-roles'
-	| 'volunteer-certifications'
+	| 'volunteer-setup'
 	| 'volunteer-report'
 	| 'reservations'
 	| 'recurring'
@@ -117,21 +115,15 @@ export const staffNavSections: StaffNavSection[] = [
 						label: 'Schedule',
 						href: resolve('/staff/volunteer/schedule')
 					},
-					{ key: 'volunteer-hours', label: 'Hours', href: resolve('/staff/volunteer/hours') },
 					{
-						// "People", not "Volunteers": it now holds the under-18 queue and
-						// the clearances table too, and both are about people who are not
-						// yet volunteering.
+						// "People", not "Volunteers": it holds the under-18 queue and the
+						// clearances table too, and both are about people who are not yet
+						// volunteering.
 						key: 'volunteer-people',
 						label: 'People',
 						href: resolve('/staff/volunteer/people')
 					},
-					{ key: 'volunteer-roles', label: 'Roles', href: resolve('/staff/volunteer/roles') },
-					{
-						key: 'volunteer-certifications',
-						label: 'Certifications',
-						href: resolve('/staff/volunteer/certifications')
-					},
+					{ key: 'volunteer-setup', label: 'Setup', href: resolve('/staff/volunteer/setup') },
 					{ key: 'volunteer-report', label: 'Report', href: resolve('/staff/volunteer/report') }
 				]
 			}
