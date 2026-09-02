@@ -17,12 +17,10 @@ import {
 	SEED_VOL_ROLE_DEFAULT_CAPACITY,
 	SEED_VOL_GATED_DEFAULT_CAPACITY,
 	SEED_VOL_SHIFT_OPEN_ID,
-	SEED_VOL_SHIFT_OPEN_NOTE,
 	SEED_VOL_SHIFT_ASSIGN_ID,
 	SEED_VOL_SHIFT_RELEASE_ID,
 	SEED_VOL_OTHER_MEMBER_ID,
 	SEED_VOL_MEMBER_ID,
-	SEED_VOL_SHIFT_FULL_NOTE,
 	SEED_VOL_SHIFT_EVENT_ID,
 	SEED_VOL_EVENT_ID,
 	SEED_VOL_EVENT_TITLE,
@@ -501,6 +499,18 @@ function shiftCard(page: Page, text: string) {
 	return page.locator('li').filter({ hasText: text });
 }
 
+/**
+ * A card on the claim board.
+ *
+ * The board card no longer carries the shift's briefing — that moved into the
+ * claim modal, where the decision actually gets made — so the two seeded
+ * Front Desk shifts can only be told apart by the state they are in. Which is
+ * also the thing each test is about.
+ */
+function boardCard(page: Page, role: string, state: string) {
+	return page.locator('li').filter({ hasText: role }).filter({ hasText: state });
+}
+
 test.describe('volunteering — onboarding', () => {
 	/**
 	 * The gate. Before this, anybody could walk onto the shift board without the
@@ -531,12 +541,14 @@ test.describe('volunteering — onboarding', () => {
 		await page.waitForURL(/\/member\/volunteer(\?|$)/, { timeout: 15000 });
 
 		// The body is shifts now — the picker must not be sitting open in it.
-		await expect(page.getByRole('heading', { name: /Open shifts/ })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /open shifts/i })).toBeVisible();
 
 		// Reopening shows the selection survived the replace-all write. Interests is
 		// a screen now rather than a modal over the board: it is the same length as
 		// the board it filters, and a dialog that tall is a page in a costume.
-		await page.getByRole('link', { name: 'Interests' }).click();
+		// `exact` matters: the summary row's "Interests →" link points at the same
+		// page, and a substring match resolves to both.
+		await page.getByRole('link', { name: 'Interests', exact: true }).click();
 		await page.waitForURL(/\/member\/volunteer\/interests/, { timeout: 15000 });
 		await expect(page.getByRole('checkbox', { name: SEED_VOL_ROLE_NAME })).toBeChecked();
 		await expect(page.locator('textarea[name="availability"]')).toHaveValue('E2E weekday evenings');
@@ -588,7 +600,7 @@ test.describe('volunteering — onboarding', () => {
 		await page.context().clearCookies();
 		await login(page, SEED_VOL_BLOCKED_MINOR_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
-		await expect(page.getByRole('heading', { name: /Open shifts/ })).toBeVisible({
+		await expect(page.getByRole('heading', { name: /open shifts/i })).toBeVisible({
 			timeout: 15000
 		});
 	});
@@ -617,25 +629,25 @@ test.describe('volunteering — shifts', () => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
 
-		const card = shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE);
-		await expect(card).toBeVisible({ timeout: 15000 });
+		const open = boardCard(page, SEED_VOL_ROLE_NAME, "I'll do it");
+		await expect(open.first()).toBeVisible({ timeout: 15000 });
 
-		await card.getByRole('button', { name: "I'll do it" }).click();
-		await modalSubmit(page, 'Claim it').click();
+		await open.first().getByRole('button', { name: "I'll do it" }).click();
+		await modalSubmit(page, "I'll do it").click();
 
-		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText('claimed', {
-			timeout: 15000
-		});
+		// A claim crosses the page: the board is what you could take on, and the
+		// left column is what you have. Landing on "Claimed" rather than "Booked"
+		// is the distinction the rail exists to draw.
+		const mine = boardCard(page, SEED_VOL_ROLE_NAME, 'Awaiting staff confirmation');
+		await expect(mine.first()).toBeVisible({ timeout: 15000 });
 		await expect.poll(() => readSignupStatus(SEED_VOL_SHIFT_OPEN_ID), DB_POLL).toBe('claimed');
 
 		// Dropping out has to free the place, not just hide the button — the
 		// capacity count is computed from live signups.
-		await shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)
-			.getByRole('button', { name: 'Drop out' })
-			.click();
+		await mine.first().getByRole('button', { name: 'Drop out' }).click();
 		await modalSubmit(page, 'Drop out').click();
 
-		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText("I'll do it", {
+		await expect(boardCard(page, SEED_VOL_ROLE_NAME, "I'll do it").first()).toBeVisible({
 			timeout: 15000
 		});
 		await expect.poll(() => readSignupStatus(SEED_VOL_SHIFT_OPEN_ID), DB_POLL).toBe('cancelled');
@@ -660,10 +672,9 @@ test.describe('volunteering — shifts', () => {
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
 
-		const card = shiftCard(page, SEED_VOL_SHIFT_FULL_NOTE);
-		await expect(card).toBeVisible({ timeout: 15000 });
-		await expect(card).toContainText('Full');
-		await expect(card.getByRole('button', { name: "I'll do it" })).toHaveCount(0);
+		const card = boardCard(page, SEED_VOL_ROLE_NAME, 'Full');
+		await expect(card.first()).toBeVisible({ timeout: 15000 });
+		await expect(card.first().getByRole('button', { name: "I'll do it" })).toHaveCount(0);
 	});
 
 	test('staff see the claim and can confirm it', async ({ page }) => {
@@ -672,12 +683,12 @@ test.describe('volunteering — shifts', () => {
 		// existing session does not swap it.
 		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
 		await page.goto('/member/volunteer');
-		const card = shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE);
+		const card = boardCard(page, SEED_VOL_ROLE_NAME, "I'll do it").first();
 		await card.getByRole('button', { name: "I'll do it" }).click();
-		await modalSubmit(page, 'Claim it').click();
-		await expect(shiftCard(page, SEED_VOL_SHIFT_OPEN_NOTE)).toContainText('claimed', {
-			timeout: 15000
-		});
+		await modalSubmit(page, "I'll do it").click();
+		await expect(
+			boardCard(page, SEED_VOL_ROLE_NAME, 'Awaiting staff confirmation').first()
+		).toBeVisible({ timeout: 15000 });
 
 		await page.context().clearCookies();
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);

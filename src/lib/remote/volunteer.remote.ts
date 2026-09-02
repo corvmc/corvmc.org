@@ -1025,9 +1025,12 @@ export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), asy
 // ---------------------------------------------------------------------------
 
 async function refreshMemberViews() {
-	// All three live in the dashboard's one query now — including the unlogged-shift prompt that
-	// logging against a shift clears.
-	await getMemberVolunteerPage().refresh();
+	// Both member pages compose the same constituents, so a mutation has to
+	// refresh both wrappers. Refreshing only the dashboard is what left a log
+	// filed from /member/volunteer/hours invisible on the page that filed it —
+	// the same shape `custom/refresh-the-composed-query` exists to catch, one
+	// wrapper along.
+	await Promise.all([getMemberVolunteerPage().refresh(), getMemberHoursPage().refresh()]);
 }
 
 /**
@@ -1069,6 +1072,8 @@ async function refreshRoleViews(roleId?: string) {
 		// leaves the screen you made the change on showing the old list.
 		getStaffVolunteerSetupPage().refresh(),
 		getMemberVolunteerPage().refresh(),
+		// A renamed role is the label on every log row that used it.
+		getMemberHoursPage().refresh(),
 		getVolunteerInterestsPage().refresh(),
 		...(roleId ? [getStaffVolunteerRolePage(roleId).refresh()] : [])
 	]);
