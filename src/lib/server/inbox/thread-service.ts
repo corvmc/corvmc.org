@@ -727,6 +727,71 @@ export async function countThreadFacets(filters: ListThreadsFilters): Promise<Th
 	return { matching: matching[0]?.count ?? 0, total: total[0]?.count ?? 0, status, subject };
 }
 
+/**
+ * What a Daily session would cover, and why each thread is in it.
+ *
+ * A scoped set, not the whole queue. Everything here is open and waiting on us
+ * — the Open view — but the breakdown is the point: "4 you never answered, 2
+ * that came back from a snooze, 1 that has been waiting over a week" is a
+ * different proposition from "11 conversations", and it is the one that makes a
+ * session feel finishable.
+ *
+ * The three reasons overlap and are counted in the same precedence
+ * `openReason()` uses, so the numbers sum to the total rather than double
+ * counting a snoozed thread that was also never answered.
+ */
+export type DailyScope = {
+	threadIds: string[];
+	unanswered: number;
+	replied: number;
+	returned: number;
+	/** Overlaps the three above — an age cut across them, not a fourth kind. */
+	longWaiting: number;
+};
+
+export async function getDailyScope(now: Date = new Date()): Promise<DailyScope> {
+	const rows = await db
+		.select({
+			id: inboxThread.id,
+			snoozedUntil: inboxThread.snoozedUntil,
+			lastOutboundAt: inboxThread.lastOutboundAt,
+			lastMessageAt: inboxThread.lastMessageAt,
+			waitingSince
+		})
+		.from(inboxThread)
+		.where(and(needsUsCondition, staffVisibleThread))
+		.orderBy(asc(waitingSince));
+
+	const scope: DailyScope = {
+		threadIds: [],
+		unanswered: 0,
+		replied: 0,
+		returned: 0,
+		longWaiting: 0
+	};
+	const weekAgo = now.getTime() - 7 * 86_400_000;
+
+	for (const row of rows) {
+		scope.threadIds.push(row.id);
+
+		// Same precedence as openReason(): a thread that came back from a snooze
+		// and then got a reply is a replied thread, and the older story stops
+		// being the interesting one.
+		const snoozed = row.snoozedUntil?.getTime() ?? null;
+		const last = row.lastMessageAt?.getTime() ?? null;
+		if (snoozed !== null && (last === null || last <= snoozed)) scope.returned++;
+		else if (!row.lastOutboundAt) scope.unanswered++;
+		// The third kind, and the one the design's breakdown omits: we answered
+		// and they came back. Leaving it out would make the rows sum to less than
+		// the total, which reads as an arithmetic bug rather than a category.
+		else scope.replied++;
+
+		if (row.waitingSince * 1000 <= weekAgo) scope.longWaiting++;
+	}
+
+	return scope;
+}
+
 /** How long a thread waits on a contact before it comes back to us anyway. */
 export const AWAITING_NUDGE_DAYS = 7;
 

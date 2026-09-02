@@ -19,7 +19,8 @@ import {
 	countThreadFacets,
 	getThreadContext,
 	addThreadTag,
-	removeThreadTag
+	removeThreadTag,
+	getDailyScope
 } from '$lib/server/inbox/thread-service';
 import type { ListThreadsFilters } from '$lib/server/inbox/thread-service';
 import {
@@ -425,6 +426,18 @@ export const undoThreadDisposition = command(z.string().min(1), async (threadId)
 	// counts open threads, so restoring one has to recount it.
 	void getStaffLayout().refresh();
 	return { undone: true };
+});
+
+/**
+ * The threads a Daily session would walk, in the order it would walk them.
+ *
+ * One query returning ids rather than whole threads: the session loads each
+ * conversation as it reaches it, so a seven-thread run is seven small reads
+ * spread over the session instead of one large one before it starts.
+ */
+export const getInboxDailyScope = query(z.void(), async () => {
+	await requireStaff();
+	return getDailyScope();
 });
 
 // ---------------------------------------------------------------------------

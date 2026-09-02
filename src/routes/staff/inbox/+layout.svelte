@@ -13,27 +13,35 @@
 	// filtering hides the only feedback the panel gives.
 	const threadOpen = $derived(page.route.id === '/staff/inbox/[id]' || filterPanel.open);
 
+	// Daily is the opposite of a list you scan, so it does not get one beside it.
+	// It stays under this layout for the nav frame and nothing else.
+	const daily = $derived(page.route.id === '/staff/inbox/daily');
+
 	let saving = $state(false);
 </script>
 
-<InboxShell {threadOpen}>
-	{#snippet list()}
-		<InboxList />
-	{/snippet}
-	{#if filterPanel.open}
-		<FilterPanel
-			bind:view={filters.view}
-			bind:assigned={filters.assigned}
-			bind:subject={filters.subject}
-			bind:waitingDays={filters.waitingDays}
-			filters={toQuery()}
-			onreset={reset}
-			onsave={() => (saving = true)}
-			onclose={() => (filterPanel.open = false)}
-		/>
-	{:else}
-		{@render children()}
-	{/if}
-</InboxShell>
+{#if daily}
+	{@render children()}
+{:else}
+	<InboxShell {threadOpen}>
+		{#snippet list()}
+			<InboxList />
+		{/snippet}
+		{#if filterPanel.open}
+			<FilterPanel
+				bind:view={filters.view}
+				bind:assigned={filters.assigned}
+				bind:subject={filters.subject}
+				bind:waitingDays={filters.waitingDays}
+				filters={toQuery()}
+				onreset={reset}
+				onsave={() => (saving = true)}
+				onclose={() => (filterPanel.open = false)}
+			/>
+		{:else}
+			{@render children()}
+		{/if}
+	</InboxShell>
+{/if}
 
 <SaveViewDialog bind:open={saving} />

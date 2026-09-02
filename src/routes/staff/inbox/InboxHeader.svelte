@@ -7,18 +7,12 @@
 	 * this states the two numbers worth seeing without opening a tab (what needs
 	 * you, what you have cleared) while the tabs carry the rest.
 	 */
-	import type { Snippet } from 'svelte';
+	import { resolve } from '$app/paths';
+	import { IconPlayerPlay } from '@tabler/icons-svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { doneToday } from './daily/session.svelte';
 
-	let {
-		open,
-		resolved,
-		action
-	}: {
-		open: number;
-		resolved: number;
-		/** The Start Daily entry point. Absent until there is a session to start. */
-		action?: Snippet;
-	} = $props();
+	let { open, resolved }: { open: number; resolved: number } = $props();
 </script>
 
 <div class="flex flex-wrap items-center justify-between gap-2">
@@ -26,5 +20,17 @@
 		<h1 class="text-xl font-bold">Inbox</h1>
 		<p class="text-subtle text-sm">Open {open} · Resolved {resolved}</p>
 	</div>
-	{#if action}{@render action()}{/if}
+
+	<!-- Only offered when there is something to walk through. A "Start Daily · 0"
+	     is an invitation to a session that ends on the frame it starts on. -->
+	{#if open > 0}
+		<Button
+			href={resolve('/staff/inbox/daily')}
+			variant={doneToday() ? 'default' : 'primary'}
+			size="sm"
+		>
+			<IconPlayerPlay size={16} />
+			{doneToday() ? 'Daily again' : 'Start Daily'} · {open}
+		</Button>
+	{/if}
 </div>

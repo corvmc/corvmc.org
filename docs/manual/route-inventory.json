@@ -332,6 +332,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/inbox/daily",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/instructors",
 		"panel": "staff"
 	},
