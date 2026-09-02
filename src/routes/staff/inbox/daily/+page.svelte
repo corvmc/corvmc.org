@@ -16,6 +16,7 @@
 	import { resolve } from '$app/paths';
 	import { IconArrowDown, IconX } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -53,7 +54,7 @@
 	}
 </script>
 
-<div class="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col gap-4 py-6">
+<PageContent width="3xl" class="py-6">
 	{#if !session.started}
 		{#if scope.threadIds.length === 0}
 			<EmptyState
@@ -147,4 +148,4 @@
 			{/await}
 		{/key}
 	{/if}
-</div>
+</PageContent>
