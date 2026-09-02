@@ -240,6 +240,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/volunteer/hours",
+		"panel": "member"
+	},
+	{
 		"route": "/member/volunteer/interests",
 		"panel": "member"
 	},
