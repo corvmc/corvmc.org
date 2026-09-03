@@ -27,6 +27,30 @@ async function loginAsStaff(page: Page) {
 
 const nav = (page: Page) => page.locator('aside ul.menu').first();
 
+/**
+ * Collapse a group, tolerating the window before hydration.
+ *
+ * The sidebar is server-rendered, so the disclosure button is present and
+ * clickable before Svelte has attached `onclick`. A click in that window is
+ * simply lost, the group stays open, and the `toHaveCount(0)` that follows
+ * waits out its timeout against a total that will never change. This is the
+ * same race `ticket-purchase.e2e.ts` documents at length, and the reason this
+ * test failed intermittently on main rather than every time: whether hydration
+ * wins depends on whether the browser already has the page's modules cached.
+ *
+ * Retrying is only safe because the state is re-read before each attempt —
+ * `toggle()` flips, so a blind second click would re-open the group it just
+ * closed. `aria-expanded` is the same state the assertions below are about to
+ * read, so this cannot pass while the click is still being lost.
+ */
+async function collapseGroup(page: Page, title: string) {
+	const button = nav(page).getByRole('button', { name: title });
+	await expect(async () => {
+		if ((await button.getAttribute('aria-expanded')) === 'true') await button.click();
+		expect(await button.getAttribute('aria-expanded')).toBe('false');
+	}).toPass({ timeout: 15000 });
+}
+
 test.describe('staff sidebar', () => {
 	test('shows every group open on a first visit', async ({ page }) => {
 		await loginAsStaff(page);
@@ -56,7 +80,7 @@ test.describe('staff sidebar', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff');
 
-		await nav(page).getByRole('button', { name: 'Money' }).click();
+		await collapseGroup(page, 'Money');
 		await expect(nav(page).getByRole('link', { name: 'Payments' })).toHaveCount(0);
 
 		await page.reload();
@@ -71,7 +95,7 @@ test.describe('staff sidebar', () => {
 	test('opens a collapsed group when you navigate into it', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff');
-		await nav(page).getByRole('button', { name: 'Money' }).click();
+		await collapseGroup(page, 'Money');
 		await expect(nav(page).getByRole('link', { name: 'Payments' })).toHaveCount(0);
 
 		await page.goto('/staff/payments');
