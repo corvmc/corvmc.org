@@ -467,14 +467,14 @@
 												</label>
 												<p class="text-muted">
 													Contact people render from your EPK.
-													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
+													<a href={resolve(`/band/${band.slug}/press-kit`)} class="link"
 														>Edit EPK data &rarr;</a
 													>
 												</p>
 											{:else if block.type === 'press' || block.type === 'achievements' || block.type === 'tech_rider'}
 												<p class="text-muted">
 													This block renders data from your EPK.
-													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
+													<a href={resolve(`/band/${band.slug}/press-kit`)} class="link"
 														>Edit EPK data &rarr;</a
 													>
 												</p>
@@ -731,11 +731,8 @@
 							Manage your EPK data — contacts, press quotes, achievements, and tech rider.
 						</p>
 					</div>
-					<Button
-						href={resolve(`/band/${band.slug}/page-editor/epk`)}
-						variant="default"
-						size="sm"
-						outline>Edit EPK</Button
+					<Button href={resolve(`/band/${band.slug}/press-kit`)} variant="default" size="sm" outline
+						>Edit EPK</Button
 					>
 				</div>
 			</CardBody>

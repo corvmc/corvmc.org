@@ -97,6 +97,24 @@ describe('bandNavItems', () => {
 		expect(labelsFor({ userRole: 'staff', isStaff: true })).not.toContain('Edit Profile');
 	});
 
+	it('offers Press Kit to owners and admins on every tier, with the flag off', () => {
+		// The whole point of the free press kit: it must survive `bandPremium`
+		// being off, which is its state in production. Asserted for the flag both
+		// ways so a future gate on this row fails here rather than in the wild.
+		expect(labelsFor({ userRole: 'owner' })).toContain('Press Kit');
+		expect(labelsFor({ userRole: 'admin' })).toContain('Press Kit');
+		expect(labelsFor({ userRole: 'admin', features: {} })).toContain('Press Kit');
+		expect(labelsFor({ userRole: 'admin', features: { bandPremium: true } })).toContain(
+			'Press Kit'
+		);
+		expect(labelsFor({ userRole: 'admin', tier: 'premium' })).toContain('Press Kit');
+	});
+
+	it('withholds Press Kit from members and non-member staff', () => {
+		expect(labelsFor({ userRole: 'member' })).not.toContain('Press Kit');
+		expect(labelsFor({ userRole: 'staff', isStaff: true })).not.toContain('Press Kit');
+	});
+
 	it('points Staff tools at the band id, not its slug', () => {
 		const item = bandNavItems({
 			slug: 'the-velvet-underground',
@@ -122,11 +140,13 @@ describe('activeBandNavKey', () => {
 	};
 
 	it('lights the section a detail page belongs to', () => {
-		// Both of these lit nothing at all before — `NavItem` matched exactly.
+		// This lit nothing at all before — `NavItem` matched exactly.
 		expect(activeBandNavKey(input, '/band/the-velvet-underground/events/abc')).toBe('events');
-		expect(activeBandNavKey(input, '/band/the-velvet-underground/page-editor/epk')).toBe(
-			'page-editor'
-		);
+		expect(activeBandNavKey(input, '/band/the-velvet-underground/press-kit')).toBe('press-kit');
+		// The EPK editor used to sit at `/page-editor/epk` and is the reason this
+		// function exists. It now 308s to the press kit, so the old path must not
+		// light the premium row on its way there.
+		expect(activeBandNavKey(input, '/band/the-velvet-underground/page-editor')).toBe('page-editor');
 	});
 
 	it('lights the dashboard only on the band root', () => {
