@@ -87,6 +87,19 @@
 	const DOC_TYPES = `${IMAGE_TYPES},application/pdf`;
 </script>
 
+<InfoCard title="Download your kit">
+	<p class="text-muted">
+		A zip holding a one-page press kit, a plain-text version to paste into an email, your photos at
+		full resolution, and your stage plot and rider. It carries a QR code back to your public page,
+		so the shows list a venue sees stays current after you send it.
+	</p>
+	<div>
+		<Button href="/api/bands/{band.id}/press-kit.zip" variant="primary" size="sm">
+			Download press kit (.zip)
+		</Button>
+	</div>
+</InfoCard>
+
 <InfoCard title="Press photos">
 	<p class="text-muted">
 		A high-resolution shot a venue or a listings editor can print. Shown on your public page and
