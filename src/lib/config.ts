@@ -76,6 +76,22 @@ export function creditValueCents(hourlyRateCents: number): number {
 	return Math.round((hourlyRateCents * MINUTES_PER_CREDIT) / 60);
 }
 
+/**
+ * Cents value of donated time, at a given hourly rate.
+ *
+ * Beside `creditValueCents` but deliberately not merged with it: that one is
+ * what an hour of volunteering *buys* a member, this one is what an hour was
+ * *worth* to the collective. They answer to different rates and different
+ * audiences, and a shared helper would invite reading one number as the other.
+ *
+ * Rounds rather than truncates, and rounds once at the end -- valuing minutes
+ * in SQL would truncate on integer division, which is why the aggregate queries
+ * return minutes and the money is computed here.
+ */
+export function valueOfMinutesCents(minutes: number, hourlyRateCents: number): number {
+	return Math.round((minutes * hourlyRateCents) / 60);
+}
+
 // Equipment credits are denominated in cents (1 credit = 1¢ of equipment-loan
 // charge), granted 1:1 with the member's monthly contribution. The cap bounds
 // rollover hoarding — 25000 = $250 of accrued credit.
