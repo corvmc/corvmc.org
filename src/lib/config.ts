@@ -581,19 +581,24 @@ export const contactSubjects = [
 ] as const;
 export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
 /**
- * The five views the staff queue offers, in tab order.
+ * The four views the staff queue offers, in tab order.
  *
- * Not the same list as the statuses above, and deliberately so: `open` and
- * `awaiting` are both `status = 'open'` in the database, split by the
- * `awaiting_reply_since` marker. Open is what still needs a human — the same
- * set the staff nav badge counts — and Awaiting reply is everything the ball
- * has been passed back on.
+ * Not the same list as the statuses above. Open is `status = 'open'` with
+ * nothing owed from the other end — what still needs a human, the same set the
+ * staff nav badge counts. Snoozed is the rest of the live queue: a conversation
+ * parked on a date, or one waiting on a reply (`awaiting_reply_since`). Those
+ * are one view because they are one proposition — out of the queue, and coming
+ * back on their own — and which of the two a thread is stays on its row badge.
+ *
+ * `awaiting` was a fifth view until Snoozed absorbed it. Old URLs and saved
+ * views still say it and are mapped on read, in `parseView` and in the query's
+ * Zod schema; there is no migration rewriting the stored rows.
  *
  * Here rather than in `inbox.remote.ts` because a `.remote.ts` file may export
  * nothing but remote functions, and the list has to be readable from the URL
  * parser in the list component as well as from the query's Zod schema.
  */
-export const inboxViews = ['open', 'awaiting', 'snoozed', 'resolved', 'all'] as const;
+export const inboxViews = ['open', 'snoozed', 'resolved', 'all'] as const;
 export type InboxView = (typeof inboxViews)[number];
 /**
  * Which way a message went, relative to CorvMC. `inbound` is someone writing to
