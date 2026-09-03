@@ -13,7 +13,7 @@ import {
 } from '$lib/server/site-config/site-config-service';
 import { testConnection } from '$lib/server/lock/ultraloc-client';
 import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '$lib/server/feature-flags';
 import { getInboxChannelConfigs } from './inbox.remote';
 import { syncAllSubscriptions } from '$lib/server/finance/subscription-sync-service';
@@ -68,17 +68,17 @@ export const getFooterInfo = query(async () => {
 // ---------------------------------------------------------------------------
 
 export const getProducts = query(async () => {
-	await requireStaff();
+	await requireCapability('settings.read');
 	return getAllProductConfigs();
 });
 
 export const getReservationSettings = query(async () => {
-	await requireStaff();
+	await requireCapability('settings.read');
 	return getConfigsByPrefix('reservation');
 });
 
 export const getOrgSettings = query(async () => {
-	await requireStaff();
+	await requireCapability('settings.read');
 	return getConfigsByPrefix('org');
 });
 
@@ -88,7 +88,7 @@ export const getOrgSettings = query(async () => {
  * would otherwise drift a year behind the number it describes.
  */
 export const getVolunteerValueSettings = query(async () => {
-	await requireStaff();
+	await requireCapability('settings.read');
 	const raw = await getConfigsByPrefix('volunteer');
 	return {
 		hourValueCents: Number(raw.hourValueCents ?? 0),
@@ -97,7 +97,7 @@ export const getVolunteerValueSettings = query(async () => {
 });
 
 export const getIntegrationSettings = query(async () => {
-	await requireStaff();
+	await requireCapability('settings.read');
 	const raw = await getConfigsByPrefix('integration.utec');
 	return {
 		clientId: raw.clientId ? String(raw.clientId) : '',
@@ -108,19 +108,25 @@ export const getIntegrationSettings = query(async () => {
 });
 
 export const testUtecConnection = query(async () => {
-	await requireStaff();
+	await requireCapability('settings.read');
 	return testConnection();
 });
 
 // Exercise the real st.lockUser command path (create + list) and issue a
 // short-lived test code so staff can physically verify the door.
+//
+// `settings.update` rather than a read: this issues a working door code. It is
+// grouped with the integration settings it verifies, and the Technology
+// Coordinator is the position that holds both — but if lock management ever
+// grows past a self-test, it wants a capability of its own rather than riding
+// on the one that also renames the organisation.
 export const runLockSelfTest = command(async () => {
-	await requireStaff();
+	await requireCapability('settings.update');
 	return issueLockSelfTest();
 });
 
 export const revokeLockTest = command(async () => {
-	await requireStaff();
+	await requireCapability('settings.update');
 	return revokeLockSelfTest();
 });
 
@@ -136,7 +142,7 @@ const updateProductSchema = z.object({
 });
 
 export const updateProduct = form(updateProductSchema, async (raw) => {
-	await requireStaff();
+	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof updateProductSchema>;
 
 	await updateProductConfig(data.key as ProductKey, {
@@ -192,7 +198,7 @@ const reservationSettingsSchema = z
 	});
 
 export const updateReservationSettings = form(reservationSettingsSchema, async (raw) => {
-	await requireStaff();
+	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof reservationSettingsSchema>;
 
 	await updateSiteConfigs([
@@ -241,7 +247,7 @@ const orgSettingsSchema = z.object({
 });
 
 export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
-	await requireStaff();
+	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof orgSettingsSchema>;
 
 	await updateSiteConfigs([
@@ -280,7 +286,7 @@ const volunteerValueSchema = z.object({
 });
 
 export const updateVolunteerValueSettings = form(volunteerValueSchema, async (raw) => {
-	await requireStaff();
+	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof volunteerValueSchema>;
 
 	await updateSiteConfigs([
@@ -309,7 +315,7 @@ const integrationSettingsSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const getFeatureFlags = query(async () => {
-	await requireStaff();
+	await requireCapability('settings.read');
 	return getAllFeatureFlags();
 });
 
@@ -323,7 +329,7 @@ export const updateFeatureFlag = form(
 		enabled: z.enum(['true', 'false']).transform((v) => v === 'true')
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('settings.update');
 		if (!VALID_FLAGS.includes(data.flag as FeatureFlag)) {
 			throw error(400, 'Invalid feature flag');
 		}
@@ -338,17 +344,17 @@ export const updateFeatureFlag = form(
 // ---------------------------------------------------------------------------
 
 export const syncSubscriptions = command(async () => {
-	await requireStaff();
+	await requireCapability('settings.update');
 	return syncAllSubscriptions();
 });
 
 export const refreshCommunityStats = command(async () => {
-	await requireStaff();
+	await requireCapability('settings.update');
 	return refreshStats();
 });
 
 export const updateIntegrationSettings = form(integrationSettingsSchema, async (raw) => {
-	await requireStaff();
+	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof integrationSettingsSchema>;
 
 	await updateSiteConfigs([
@@ -371,7 +377,7 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
  * this wrapper with no argument.
  */
 export const getStaffSettingsPage = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('settings.read');
 
 	const [products, reservation, org, volunteerValue, integration, channelConfigs, featureFlags] =
 		await Promise.all([
