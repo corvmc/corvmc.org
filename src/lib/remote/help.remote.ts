@@ -3,7 +3,7 @@ import { toGenericRef } from '$lib/server/entity/refs';
 import { BLURB_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { generateSlug } from '$lib/server/utils/slug';
 import {
 	listCategories,
@@ -81,7 +81,7 @@ export const getMemberArticlePage = query(z.string(), async (slug) => {
 // ---------------------------------------------------------------------------
 
 export const getStaffArticles = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('help.read');
 	const rows = await listAllArticles();
 	// The published/draft state is the row's status column, so the ref carries
 	// none. `slug` matters: the staff editor is keyed by id but the member-facing
@@ -93,14 +93,14 @@ export const getStaffArticles = query(z.void(), async () => {
 });
 
 export const getStaffCategories = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('help.read');
 	// The authoring view: staff file new articles into every category, including
 	// the ones only staff can read. Top of the ladder, not a role name.
 	return listCategories('staff');
 });
 
 export const getStaffArticle = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('help.read');
 	return getArticleById(id);
 });
 
@@ -119,7 +119,7 @@ const createArticleSchema = z.object({
 });
 
 export const createArticle = form(createArticleSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('help.manage');
 	const article = await createArticleSvc({
 		...data,
 		slug: data.slug || slugify(data.title),
@@ -140,7 +140,7 @@ const updateArticleSchema = z.object({
 });
 
 export const updateArticle = form(updateArticleSchema, async (data) => {
-	await requireStaff();
+	await requireCapability('help.manage');
 	const { id, ...rest } = data;
 	await updateArticleSvc(id, rest);
 	return { success: true };
@@ -157,7 +157,7 @@ export const setArticlesPublishedForm = form(
 		published: z.boolean().optional().default(false)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('help.manage');
 		const count = await setArticlesPublished(data.ids, data.published);
 		// The wrapper, not `getStaffArticles`: `/staff/help` is the only thing that read the list
 		// and it reads it through `getStaffHelpPage` now, so refreshing the constituent would
@@ -168,7 +168,7 @@ export const setArticlesPublishedForm = form(
 );
 
 export const deleteArticle = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('help.manage');
 	await deleteArticleSvc(data.id);
 	return { success: true };
 });
@@ -191,7 +191,7 @@ const createCategorySchema = z.object({
 });
 
 export const createCategory = form(createCategorySchema, async (data) => {
-	await requireStaff();
+	await requireCapability('help.manage');
 	const cat = await createCategorySvc({
 		...data,
 		slug: data.slug || slugify(data.name)
@@ -213,14 +213,14 @@ const updateCategorySchema = z.object({
 });
 
 export const updateCategory = form(updateCategorySchema, async (data) => {
-	await requireStaff();
+	await requireCapability('help.manage');
 	const { id, ...rest } = data;
 	await updateCategorySvc(id, rest);
 	return { success: true };
 });
 
 export const deleteCategory = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('help.manage');
 	await deleteCategorySvc(data.id);
 	return { success: true };
 });

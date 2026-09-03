@@ -73,11 +73,22 @@
 		media: MediaData[];
 	} = $props();
 
-	const blocks = $derived(config?.blocks ?? []);
 	const epk = $derived(config?.epk ?? null);
+
+	// `prepareBlocksForRender` already drops hidden blocks for the public site,
+	// but the page editor's live preview hands us the array it is editing, so the
+	// toggle has to read the same way in both places.
+	const blocks = $derived((config?.blocks ?? []).filter((block) => !block.hidden));
 
 	// If no blocks configured, show a default layout
 	const hasBlocks = $derived(blocks.length > 0);
+
+	// Every premium band now carries the whole block catalogue (see
+	// `$lib/utils/band-site-preset`), so a block with nothing to say must render
+	// nothing at all rather than a bare heading over an empty grid. The hero and
+	// bio blocks fall back to the band's own name and bio instead, which is why
+	// the preset can be a constant that holds no band content.
+	const fallbackBio = $derived(band.bio ? sanitizeBio(band.bio) : '');
 </script>
 
 {#if hasBlocks}
@@ -85,35 +96,41 @@
 	{#each blocks as block (block.id)}
 		<section class="band-site-block {block.cssClass ?? ''}">
 			{#if block.type === 'hero'}
-				<div class="band-site-hero relative h-64 overflow-hidden md:h-96">
-					{#if block.imageKey}
-						{@const heroImg = imageSrc(block.imageKey, 'hero')}
-						<img
-							src={heroImg.src}
-							srcset={heroImg.srcset}
-							sizes={heroImg.sizes}
-							alt=""
-							class="absolute inset-0 h-full w-full object-cover"
-						/>
-					{/if}
-					<div
-						class="absolute inset-0 flex flex-col items-center justify-center bg-black/40 px-4 text-center text-white"
-					>
-						{#if block.headline}
-							<h1 class="text-4xl font-bold md:text-6xl">{block.headline}</h1>
+				{@const headline = block.headline ?? band.name}
+				{#if block.imageKey || headline}
+					<div class="band-site-hero relative h-64 overflow-hidden md:h-96">
+						{#if block.imageKey}
+							{@const heroImg = imageSrc(block.imageKey, 'hero')}
+							<img
+								src={heroImg.src}
+								srcset={heroImg.srcset}
+								sizes={heroImg.sizes}
+								alt=""
+								class="absolute inset-0 h-full w-full object-cover"
+							/>
 						{/if}
-						{#if block.subtitle}
-							<p class="mt-2 text-xl opacity-80">{block.subtitle}</p>
-						{/if}
+						<div
+							class="absolute inset-0 flex flex-col items-center justify-center bg-black/40 px-4 text-center text-white"
+						>
+							{#if headline}
+								<h1 class="text-4xl font-bold md:text-6xl">{headline}</h1>
+							{/if}
+							{#if block.subtitle}
+								<p class="mt-2 text-xl opacity-80">{block.subtitle}</p>
+							{/if}
+						</div>
 					</div>
-				</div>
+				{/if}
 			{:else if block.type === 'bio'}
-				<div class="mx-auto max-w-3xl px-6 py-8">
-					<div class="prose prose-lg">
-						<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized server-side (prepareBlocksForRender) -->
-						{@html block.content}
+				{@const bioHtml = block.content.trim() || fallbackBio}
+				{#if bioHtml}
+					<div class="mx-auto max-w-3xl px-6 py-8">
+						<div class="prose prose-lg">
+							<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized server-side (prepareBlocksForRender) or by sanitizeBio -->
+							{@html bioHtml}
+						</div>
 					</div>
-				</div>
+				{/if}
 			{:else if block.type === 'links'}
 				{#if band.links && band.links.length > 0}
 					<div class="mx-auto max-w-md px-6 py-8">
@@ -138,34 +155,36 @@
 					</div>
 				{/if}
 			{:else if block.type === 'members'}
-				<div class="mx-auto max-w-3xl px-6 py-8">
-					<h2 class="mb-4 text-2xl font-bold">Members</h2>
-					<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
-						{#each members as member (member.id)}
-							<div class="text-center">
-								<div class="placeholder avatar mb-2">
-									<div class="w-16 rounded-full bg-neutral text-neutral-content">
-										{#if member.image}
-											{@const memberImg = imageSrc(member.image, 'avatar-sm')}
-											<img
-												src={memberImg.src}
-												srcset={memberImg.srcset}
-												alt={member.name}
-												class="rounded-full"
-											/>
-										{:else}
-											<span class="text-xl">{member.name.charAt(0)}</span>
-										{/if}
+				{#if members.length > 0}
+					<div class="mx-auto max-w-3xl px-6 py-8">
+						<h2 class="mb-4 text-2xl font-bold">Members</h2>
+						<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
+							{#each members as member (member.id)}
+								<div class="text-center">
+									<div class="placeholder avatar mb-2">
+										<div class="w-16 rounded-full bg-neutral text-neutral-content">
+											{#if member.image}
+												{@const memberImg = imageSrc(member.image, 'avatar-sm')}
+												<img
+													src={memberImg.src}
+													srcset={memberImg.srcset}
+													alt={member.name}
+													class="rounded-full"
+												/>
+											{:else}
+												<span class="text-xl">{member.name.charAt(0)}</span>
+											{/if}
+										</div>
 									</div>
+									<p class="font-medium">{member.name}</p>
+									{#if block.showPositions && member.position}
+										<p class="text-muted">{member.position}</p>
+									{/if}
 								</div>
-								<p class="font-medium">{member.name}</p>
-								{#if block.showPositions && member.position}
-									<p class="text-muted">{member.position}</p>
-								{/if}
-							</div>
-						{/each}
+							{/each}
+						</div>
 					</div>
-				</div>
+				{/if}
 			{:else if block.type === 'events'}
 				{#if events.length > 0}
 					<div class="mx-auto max-w-3xl px-6 py-8">
@@ -225,24 +244,26 @@
 						: media
 								.filter((m) => m.slot === 'gallery')
 								.map((m) => ({ url: m.url, caption: m.caption }))}
-				<div class="mx-auto max-w-4xl px-6 py-8">
-					<div class="grid grid-cols-2 gap-2 md:grid-cols-3">
-						{#each galleryImages as img, i (img.url ?? i)}
-							{#if img.url}
-								{@const galleryImg = imageSrc(img.url, 'gallery')}
-								<div class="aspect-square overflow-hidden rounded-lg">
-									<img
-										src={galleryImg.src}
-										srcset={galleryImg.srcset}
-										sizes={galleryImg.sizes}
-										alt={img.caption ?? ''}
-										class="h-full w-full object-cover"
-									/>
-								</div>
-							{/if}
-						{/each}
+				{#if galleryImages.some((img) => img.url)}
+					<div class="mx-auto max-w-4xl px-6 py-8">
+						<div class="grid grid-cols-2 gap-2 md:grid-cols-3">
+							{#each galleryImages as img, i (img.url ?? i)}
+								{#if img.url}
+									{@const galleryImg = imageSrc(img.url, 'gallery')}
+									<div class="aspect-square overflow-hidden rounded-lg">
+										<img
+											src={galleryImg.src}
+											srcset={galleryImg.srcset}
+											sizes={galleryImg.sizes}
+											alt={img.caption ?? ''}
+											class="h-full w-full object-cover"
+										/>
+									</div>
+								{/if}
+							{/each}
+						</div>
 					</div>
-				</div>
+				{/if}
 			{:else if block.type === 'embed'}
 				{@const embedUrl = getEmbedUrl(block.url)}
 				{#if embedUrl}
@@ -338,39 +359,21 @@
 					</div>
 				{/if}
 			{:else if block.type === 'tech_rider'}
-				<div class="mx-auto max-w-3xl px-6 py-8">
-					<h2 class="mb-4 text-2xl font-bold">Technical Requirements</h2>
-					{#if epk?.stagePlotKey}
-						{@const stageMedia = media.find((m) => m.slot === 'stage_plot')}
+				<!-- Sourced from the `stage_plot` and `rider` media slots, which the tech
+				     rider at /band/[slug]/rider owns. It used to gate on `epk.stagePlotKey`
+				     and `epk.technicalRiderKey`, and render a backline table from
+				     `epk.backline` — all three left the press kit when the EPK became a
+				     booking document rather than a technical one. The files are the same
+				     files; only where the block asks about them changed, so a page already
+				     publishing this block keeps working. -->
+				{@const stageMedia = media.find((m) => m.slot === 'stage_plot')}
+				{@const riderMedia = media.find((m) => m.slot === 'rider')}
+				{#if stageMedia?.url || riderMedia?.url}
+					<div class="mx-auto max-w-3xl px-6 py-8">
+						<h2 class="mb-4 text-2xl font-bold">Technical Requirements</h2>
 						{#if stageMedia?.url}
-							<img src={stageMedia.url} alt="Stage Plot" class="mb-4 max-w-full rounded-lg" />
+							<img src={stageMedia.url} alt="Stage plot" class="mb-4 max-w-full rounded-lg" />
 						{/if}
-					{/if}
-					{#if epk?.backline && epk.backline.length > 0}
-						<h3 class="mb-2 font-semibold">Backline Requirements</h3>
-						<div class="overflow-x-auto">
-							<table class="table table-sm">
-								<thead>
-									<tr>
-										<th>Instrument</th>
-										<th>Details</th>
-										<th>Provided by</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each epk.backline as item (item.instrument)}
-										<tr>
-											<td class="font-medium">{item.instrument}</td>
-											<td>{item.details}</td>
-											<td>{item.provided ? 'Act' : 'Venue'}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-					{#if epk?.technicalRiderKey}
-						{@const riderMedia = media.find((m) => m.slot === 'rider')}
 						{#if riderMedia?.url}
 							<Button
 								href={riderMedia.url}
@@ -378,45 +381,47 @@
 								rel="external noopener"
 								variant="default"
 								size="sm"
-								outline
-								class="mt-4"
 							>
-								Download Full Tech Rider (PDF)
+								Download tech rider
 							</Button>
 						{/if}
-					{/if}
-				</div>
-			{:else if block.type === 'custom_html'}
-				<div class="mx-auto max-w-4xl px-6 py-8">
-					<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized server-side (prepareBlocksForRender) -->
-					{@html block.content}
-				</div>
-			{:else if block.type === 'merch'}
-				<div class="mx-auto max-w-3xl px-6 py-8">
-					<h2 class="mb-4 text-2xl font-bold">Merch</h2>
-					<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
-						{#each block.items as item (item.url)}
-							<a href={item.url} target="_blank" rel="external noopener" class="group block">
-								{#if item.imageKey}
-									{@const merchImg = imageSrc(item.imageKey, 'gallery')}
-									<div class="mb-2 aspect-square overflow-hidden rounded-lg">
-										<img
-											src={merchImg.src}
-											srcset={merchImg.srcset}
-											sizes={merchImg.sizes}
-											alt={item.title}
-											class="h-full w-full object-cover transition-transform group-hover:scale-105"
-										/>
-									</div>
-								{/if}
-								<p class="font-medium transition-colors group-hover:text-primary">{item.title}</p>
-								{#if item.price}
-									<p class="text-muted">{item.price}</p>
-								{/if}
-							</a>
-						{/each}
 					</div>
-				</div>
+				{/if}
+			{:else if block.type === 'custom_html'}
+				{#if block.content.trim()}
+					<div class="mx-auto max-w-4xl px-6 py-8">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized server-side (prepareBlocksForRender) -->
+						{@html block.content}
+					</div>
+				{/if}
+			{:else if block.type === 'merch'}
+				{#if block.items.length > 0}
+					<div class="mx-auto max-w-3xl px-6 py-8">
+						<h2 class="mb-4 text-2xl font-bold">Merch</h2>
+						<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
+							{#each block.items as item (item.url)}
+								<a href={item.url} target="_blank" rel="external noopener" class="group block">
+									{#if item.imageKey}
+										{@const merchImg = imageSrc(item.imageKey, 'gallery')}
+										<div class="mb-2 aspect-square overflow-hidden rounded-lg">
+											<img
+												src={merchImg.src}
+												srcset={merchImg.srcset}
+												sizes={merchImg.sizes}
+												alt={item.title}
+												class="h-full w-full object-cover transition-transform group-hover:scale-105"
+											/>
+										</div>
+									{/if}
+									<p class="font-medium transition-colors group-hover:text-primary">{item.title}</p>
+									{#if item.price}
+										<p class="text-muted">{item.price}</p>
+									{/if}
+								</a>
+							{/each}
+						</div>
+					</div>
+				{/if}
 			{:else if block.type === 'spacer'}
 				<div class={block.height === 'sm' ? 'h-8' : block.height === 'md' ? 'h-16' : 'h-32'}></div>
 			{/if}

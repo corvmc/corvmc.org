@@ -33,6 +33,12 @@ the `userId` FK for "My Tickets" queries.
 get 50% off the ticket price. The discount is applied at Stripe Checkout via
 a one-time coupon — no local discount tracking.
 
+> **Superseded (2026-09-03)** by `ticket-sliding-scale-spec.md`. The member
+> ticket discount is removed: with a sliding scale down to a per-event floor,
+> half off a suggestion is a discount off nothing, and a member who wants to pay
+> less already can. `ticketPrice` is now the suggested price, and the buyer also
+> directs their money between the acts and the collective.
+
 ---
 
 ## Domain model
@@ -94,9 +100,9 @@ cancelled      cancelled
 
 ### Authenticated user
 
-1. User views event page, sees ticket section with price. If the user is a
-   sustaining member, the discounted price (50% off) is shown alongside the
-   base price.
+1. User views event page, sees ticket section with price. _(Superseded: the
+   price shown is a suggestion, the same for every buyer, and the purchase form
+   asks how much they are paying and where it goes.)_
 2. User selects quantity (1–10, capped by remaining capacity).
 3. User optionally checks "cover processing fees."
 4. App generates a `purchaseId` UUID.

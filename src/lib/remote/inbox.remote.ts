@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
-import { requireStaff, requireUser, listStaffUsers } from '$lib/server/authorization';
+import { requireCapability, requireUser, listUsersWithCapability } from '$lib/server/authorization';
+import { getUserContact } from '$lib/server/user/user-service';
 import { dispatch } from '$lib/server/notification/dispatcher';
 import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
 import { getStaffLayout, getMemberLayout } from '$lib/remote/layout.remote';
@@ -68,17 +69,18 @@ export const submitContactForm = form(submitContactFormSchema, async (data, issu
 // ---------------------------------------------------------------------------
 
 /**
- * The five tabs, and what each one is in database terms.
+ * The four tabs, and what each one is in database terms.
  *
- * Open and Awaiting reply are both `status = 'open'`; the awaiting marker is
- * what separates them, and Open is the half that needs a human — the same set
- * the staff nav badge counts. The two views that nobody is waiting on keep the
- * old newest-first order.
+ * Open and Snoozed are the two halves of the live queue, and complementary by
+ * construction — `needsUsCondition` and `parkedCondition` in thread-service,
+ * not a status equality each. Open is what needs a human, the same set the
+ * staff nav badge counts; Snoozed is everything on a timer, whether the timer
+ * is a date or a contact who owes us an answer. The two views nobody is waiting
+ * on keep the old newest-first order.
  */
 const VIEWS = {
-	open: { status: 'open', awaitingReply: false, sort: 'waiting' },
-	awaiting: { status: 'open', awaitingReply: true, sort: 'waiting' },
-	snoozed: { status: 'snoozed', sort: 'waiting' },
+	open: { queue: 'needs-us', sort: 'waiting' },
+	snoozed: { queue: 'parked', sort: 'waiting' },
 	resolved: { status: 'resolved', sort: 'recent' },
 	all: { sort: 'recent' }
 } as const satisfies Record<
@@ -86,13 +88,22 @@ const VIEWS = {
 	Omit<ListThreadsFilters, 'channel' | 'assignedToUserId' | 'search'>
 >;
 
+/**
+ * The `view` param, wherever it is read.
+ *
+ * `awaiting` was a view of its own until Snoozed absorbed it, and is mapped
+ * rather than rejected: a saved view's filters are replayed verbatim out of the
+ * row they were stored in and no migration rewrites them, so a 400 here is a
+ * tab that has stopped working. Same mapping as `parseView` on the client,
+ * which is what tidies the URL up afterwards.
+ */
+const viewParam = z.preprocess((v) => (v === 'awaiting' ? 'snoozed' : v), z.enum(inboxViews));
+
 const threadFiltersSchema = z.object({
-	view: z.enum(inboxViews).optional(),
+	view: viewParam.optional(),
 	channel: z.enum(inboxChannels).optional(),
 	/** A staff user id, or the sentinels `mine` / `unassigned`. */
 	assigned: z.string().optional(),
-	/** Narrows *within* a view. The view already sets this on Open and Awaiting. */
-	awaiting: z.enum(['yes', 'no']).optional(),
 	/** A `contactSubjects` value, or `other` for everything outside it. */
 	subject: z.string().optional(),
 	/** The range control. 0 means the control is at its floor — no filter. */
@@ -109,7 +120,7 @@ type ThreadFilters = z.infer<typeof threadFiltersSchema>;
  * later is one line here rather than a migration.
  */
 const savedViewFiltersSchema = z.object({
-	view: z.enum(inboxViews).optional(),
+	view: viewParam.optional(),
 	channel: z.enum(inboxChannels).optional(),
 	assigned: z.string().max(64).optional(),
 	subject: z.string().max(64).optional(),
@@ -137,30 +148,19 @@ function toServiceFilters(filters: ThreadFilters, staffId: string): ListThreadsF
 					? staffId
 					: filters.assigned;
 
-	const view = VIEWS[filters.view ?? 'open'];
-
 	return {
-		...view,
+		...VIEWS[filters.view ?? 'open'],
 		channel: filters.channel,
 		assignedToUserId,
 		subject: filters.subject,
 		// Zero is the range control resting at its floor, which is not a filter.
 		waitingAtLeastDays: filters.waitingDays ? filters.waitingDays : undefined,
-		// An explicit `awaiting` narrows the view rather than fighting it: on
-		// Open and Awaiting the view has already decided, and the filter panel
-		// only offers this on the views that have not.
-		awaitingReply:
-			filters.awaiting === undefined
-				? 'awaitingReply' in view
-					? view.awaitingReply
-					: undefined
-				: filters.awaiting === 'yes',
 		search: filters.search
 	};
 }
 
 export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.read');
 	return listThreads(toServiceFilters(filters, staff.id), {
 		page: filters.page ?? 1,
 		pageSize: 25
@@ -175,30 +175,39 @@ export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
  * list is — see `custom/no-concurrent-remote-queries`.
  */
 export const getInboxFilterCounts = query(threadFiltersSchema, async (filters) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.read');
 	return countThreadFacets(toServiceFilters(filters, staff.id));
 });
 
 export const getInboxThreadCounts = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	return countThreadsByStatus();
 });
 
 export const getInboxThread = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	const thread = await getThread(id);
 	if (!thread) throw error(404, 'Thread not found');
 	return thread;
 });
 
 export const getInboxUnreadCount = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	return getUnresolvedCount();
 });
 
+/**
+ * Who a thread can be handed to.
+ *
+ * `inbox.reply`, not "is staff": you may only assign a conversation to someone
+ * who is able to answer it.
+ */
 export const getAssignableStaff = query(z.void(), async () => {
-	await requireStaff();
-	return listStaffUsers();
+	// Two different capabilities, and deliberately so: reading the assignable
+	// list is part of working the inbox, but the list itself is whoever can
+	// actually answer a thread.
+	await requireCapability('inbox.read');
+	return listUsersWithCapability('inbox.reply');
 });
 
 // ---------------------------------------------------------------------------
@@ -221,7 +230,7 @@ const replySchema = z.object({
 });
 
 export const replyToThread = form(replySchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.reply');
 	const thread = await getThread(data.threadId);
 	if (!thread) throw error(404, 'Thread not found');
 
@@ -262,7 +271,7 @@ const noteSchema = z.object({
 });
 
 export const addThreadNote = form(noteSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.reply');
 	const thread = await getThread(data.threadId);
 	if (!thread) throw error(404, 'Thread not found');
 
@@ -289,7 +298,7 @@ export const addThreadNote = form(noteSchema, async (data) => {
 // this is after reading it.
 
 export const getInboxThreadContext = query(z.string().min(1), async (id) => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	const context = await getThreadContext(id);
 	if (!context) throw error(404, 'Thread not found');
 	return context;
@@ -301,13 +310,13 @@ const tagSchema = z.object({
 });
 
 export const addInboxThreadTag = command(tagSchema, async ({ threadId, tag }) => {
-	await requireStaff();
+	await requireCapability('inbox.reply');
 	await addThreadTag(threadId, tag);
 	void getInboxThreadContext(threadId).refresh();
 });
 
 export const removeInboxThreadTag = command(tagSchema, async ({ threadId, tag }) => {
-	await requireStaff();
+	await requireCapability('inbox.reply');
 	await removeThreadTag(threadId, tag);
 	void getInboxThreadContext(threadId).refresh();
 });
@@ -328,7 +337,11 @@ const assignSchema = z.object({
  * up assigned to someone who never found out.
  */
 async function notifyAssignee(threadId: string, userId: string) {
-	const assignee = (await listStaffUsers()).find((u) => u.id === userId);
+	// A direct read, not a scan of the assignable list: `assignThread` has
+	// already validated the assignee, so this is a lookup rather than a second
+	// authorization rule, and walking a list to fetch one row was the wrong
+	// shape regardless.
+	const assignee = await getUserContact(userId);
 	const thread = await getThread(threadId);
 	if (!assignee || !thread) return;
 
@@ -343,7 +356,7 @@ async function notifyAssignee(threadId: string, userId: string) {
 }
 
 export const assignThread = form(assignSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.assign');
 	await assignThreadSvc(data.threadId, data.userId);
 
 	// Notify the assignee, unless they assigned the thread to themselves.
@@ -379,7 +392,7 @@ const disposeSchema = z.object({
 });
 
 export const disposeThread = command(disposeSchema, async ({ threadId, action, snoozedUntil }) => {
-	await requireStaff();
+	await requireCapability('inbox.dispose');
 
 	if (action === 'wait') {
 		await setAwaitingReply(threadId, true);
@@ -415,7 +428,7 @@ export const disposeThread = command(disposeSchema, async ({ threadId, action, s
  * Silent when there is nothing to undo — pressing ⌘Z twice is not an error.
  */
 export const undoThreadDisposition = command(z.string().min(1), async (threadId) => {
-	await requireStaff();
+	await requireCapability('inbox.dispose');
 	const undone = await undoLastDisposition(threadId);
 	if (!undone) return { undone: false };
 
@@ -436,7 +449,7 @@ export const undoThreadDisposition = command(z.string().min(1), async (threadId)
  * spread over the session instead of one large one before it starts.
  */
 export const getInboxDailyScope = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	return getDailyScope();
 });
 
@@ -448,7 +461,7 @@ export const getInboxDailyScope = query(z.void(), async () => {
 // on the owner id rather than trusting the view id to belong to whoever sent it.
 
 export const getInboxSavedViews = query(z.void(), async () => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.read');
 	return listSavedViews(staff.id);
 });
 
@@ -463,14 +476,14 @@ const savedViewSchema = z.object({
 });
 
 export const saveInboxView = form(savedViewSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.read');
 	await createSavedView(staff.id, data.name, data.filters);
 	void getInboxSavedViews().refresh();
 	return { success: true };
 });
 
 export const removeInboxView = command(z.string().min(1), async (id) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.read');
 	await deleteSavedView(staff.id, id);
 	void getInboxSavedViews().refresh();
 });
@@ -484,12 +497,12 @@ export const removeInboxView = command(z.string().min(1), async (id) => {
 // the staff panel ignored flags by design — so it was retired rather than wired
 // up.
 export const getInboxChannelConfigs = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	return getAllChannelConfigs();
 });
 
 export const getInboxEnabledChannels = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	return getEnabledChannels();
 });
 
@@ -499,7 +512,7 @@ const channelConfigSchema = z.object({
 });
 
 export const updateInboxChannelConfig = form(channelConfigSchema, async (data) => {
-	await requireStaff();
+	await requireCapability('inbox.manageChannels');
 	await updateChannelConfigSvc(data.channel, data.enabled);
 	void getInboxChannelConfigs().refresh();
 	void getInboxEnabledChannels().refresh();
@@ -607,7 +620,7 @@ export const markConversationRead = command(z.string(), async (id) => {
 export const getUserThreads = query(
 	z.object({ userId: z.string(), email: z.string() }),
 	async ({ userId, email }) => {
-		await requireStaff();
+		await requireCapability('inbox.read');
 		const [portal, open, unread, byEmail] = await Promise.all([
 			listPortalThreads(userId, { page: 1, pageSize: 10 }),
 			countOpenPortalThreads(userId),

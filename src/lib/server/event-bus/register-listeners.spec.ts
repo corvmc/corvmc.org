@@ -47,7 +47,7 @@ vi.mock('$lib/server/notification/dispatcher', () => ({
 
 const mockListStaffUsers = vi.fn().mockResolvedValue([]);
 vi.mock('$lib/server/authorization', () => ({
-	listStaffUsers: (...args: unknown[]) => mockListStaffUsers(...args)
+	listUsersWithCapability: (...args: unknown[]) => mockListStaffUsers(...args)
 }));
 
 vi.mock('$lib/server/reservation/waitlist-service', () => ({
@@ -177,7 +177,7 @@ describe('inbox.message_received — staff fan-out', () => {
 	});
 
 	it('does not even look up the staff list for a direct message', async () => {
-		// Returning early *before* listStaffUsers, not filtering afterwards.
+		// Returning early *before* the capability lookup, not filtering afterwards.
 		await fire(message('direct'));
 		expect(mockListStaffUsers).not.toHaveBeenCalled();
 	});

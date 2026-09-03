@@ -17,12 +17,7 @@
 	import TicketQRModal from '$lib/components/events/TicketQRModal.svelte';
 	import TicketPurchaseFields from '$lib/components/events/TicketPurchaseFields.svelte';
 	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
-	import {
-		ticketingMode,
-		isFreeEvent as isFree,
-		priceDisplay,
-		sustainingMemberPrice
-	} from '$lib/utils/event-ticketing';
+	import { ticketingMode, isFreeEvent as isFree, priceDisplay } from '$lib/utils/event-ticketing';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
@@ -59,9 +54,13 @@
 	const soldOut = $derived(data.remaining === 0);
 	const maxQuantity = $derived(data.remaining !== null ? Math.min(data.remaining, 10) : 10);
 
-	const price = $derived(priceDisplay(evt, { isSustainingMember: data.isSustainingMember }));
-	const memberPrice = $derived(sustainingMemberPrice(evt));
-	const discountedPrice = $derived(data.isSustainingMember ? memberPrice : null);
+	const price = $derived(priceDisplay(evt));
+
+	// Read back out of TicketPurchaseFields: only it knows what the card will be
+	// charged, and the Action modal's own button needs both the number and
+	// whether the amount is one the remote will refuse.
+	let chargeCents = $state(0);
+	let amountBlocked = $state(false);
 
 	// Availability visuals (ticketed, capacity-capped events only)
 	const capacityKnown = $derived(
@@ -74,8 +73,6 @@
 			(data.remaining <= 10 ||
 				(evt.ticketQuantity ? data.remaining / evt.ticketQuantity <= 0.15 : false))
 	);
-	// Show the membership upsell to non-sustaining members on paid, available events.
-	const showUpsell = $derived(memberPrice !== null && !data.isSustainingMember && !soldOut);
 
 	const quantityOptions = $derived(
 		Array.from({ length: maxQuantity }, (_, i) => ({ value: i + 1, label: String(i + 1) }))
@@ -286,10 +283,8 @@
 					</span>
 					<span class="edet__fact-value">
 						{price.label}
-						{#if price.wasLabel}
-							<span style="font-size:11px;opacity:0.5;text-decoration:line-through;margin-left:4px"
-								>{price.wasLabel}</span
-							>
+						{#if price.suggested}
+							<span style="font-size:11px;opacity:0.5;margin-left:4px">suggested</span>
 						{/if}
 					</span>
 				</div>
@@ -360,8 +355,10 @@
 								action={purchaseTickets}
 								label="Get Tickets"
 								modalTitle="Get Tickets"
-								submitLabel="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
-								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
+								submitLabel={chargeCents === 0
+									? `Get ${quantity === 1 ? 'ticket' : `${quantity} tickets`}`
+									: `Pay ${formatCents(chargeCents)}`}
+								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim() && !amountBlocked}
 								variant="primary"
 								size="lg"
 								onsuccess={handlePurchaseSuccess}
@@ -372,14 +369,8 @@
 									<input {...fields.eventId.as('hidden', evt.id)} />
 
 									<div class="flex items-baseline gap-2">
-										{#if data.isSustainingMember && discountedPrice}
-											<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
-											<span class="text-muted line-through">{formatCents(evt.ticketPrice!)}</span>
-											<Badge variant="success">Member 50% off</Badge>
-										{:else}
-											<span class="text-lg font-bold">{formatCents(evt.ticketPrice!)}</span>
-										{/if}
-										<span class="text-muted">per ticket</span>
+										<span class="text-lg font-bold">{formatCents(evt.ticketPrice!)}</span>
+										<span class="text-muted">suggested, per ticket</span>
 									</div>
 
 									<Field
@@ -398,21 +389,21 @@
 										bind:value={attendeeEmail}
 									/>
 									<TicketPurchaseFields
-										fullPrice={evt.ticketPrice ?? 0}
+										suggestedUnitCents={evt.ticketPrice ?? 0}
+										floorCents={evt.ticketPriceFloorCents}
 										{quantity}
-										isSustainingMember={data.isSustainingMember}
+										acts={data.acts}
+										collectiveShareBps={data.collectiveShareBps}
+										{fields}
+										submit={false}
+										onstate={(s) => {
+											chargeCents = s.chargeCents;
+											amountBlocked = s.blocked;
+										}}
 									/>
 								{/snippet}
 							</Action>
 						{/if}
-					{/if}
-
-					{#if showUpsell && memberPrice}
-						<p class="edet__upsell">
-							Sustaining members pay {formatCents(memberPrice)}.
-							<a href={resolve('/member/membership')} class="link link-primary">Become a member →</a
-							>
-						</p>
 					{/if}
 
 					{#if data.remaining !== null && !soldOut}

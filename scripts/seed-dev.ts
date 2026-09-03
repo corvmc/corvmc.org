@@ -43,7 +43,7 @@ import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
 import { seedCmcEventLineups } from './seed/lineups';
 import { seedBandReservations } from './seed/band-reservations';
-import { seedBandSites, seedBandPageConfigs } from './seed/band-sites';
+import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
 import { seedRecurringSeries } from './seed/recurring';
 import { seedPaymentRecords } from './seed/payments';
 import { seedTickets } from './seed/tickets';
@@ -117,6 +117,7 @@ async function main() {
 	const bandReservations = await seedBandReservations(bands);
 	const bandSites = await seedBandSites(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
+	await seedFreePressKits(bands);
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
 	const tickets = await seedTickets(allUsers, events);
@@ -235,7 +236,7 @@ async function main() {
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
 	);
 	console.log(
-		`  ${riders.riders} structured tech rider (${riders.structuredBand ?? '—'}), ${riders.uploaded} upload-only (${riders.uploadBand ?? '—'})`
+		`  ${riders.riders} tech riders — ${riders.structuredBand ?? '—'} (fits the room), ${riders.oversizedBand ?? '—'} (over it); ${riders.uploadBand ?? '—'} uploaded a PDF; ${riders.emptyBand ?? '—'} has nothing`
 	);
 	console.log('\n  Tech rider demo logins (all `password`):');
 	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');

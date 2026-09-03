@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { closure } from '$lib/server/db/schema/reservation';
 import { desc, eq } from 'drizzle-orm';
@@ -11,7 +11,7 @@ import { desc, eq } from 'drizzle-orm';
 // ---------------------------------------------------------------------------
 
 export const getClosures = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	const rows = await db.select().from(closure).orderBy(desc(closure.startsAt));
 
 	return rows.map((c) => ({
@@ -33,7 +33,7 @@ export const createClosure = form(
 		endsAt: z.string()
 	}),
 	async (data, issue) => {
-		await requireStaff();
+		await requireCapability('reservation.manageClosures');
 
 		const startsAt = new Date(data.startsAt as string);
 		const endsAt = new Date(data.endsAt as string);
@@ -57,7 +57,7 @@ export const updateClosure = form(
 		endsAt: z.string()
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('reservation.manageClosures');
 
 		const id = data.id as string;
 		const startsAt = new Date(data.startsAt as string);
@@ -88,7 +88,7 @@ export const deleteClosure = form(
 		id: z.string()
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('reservation.manageClosures');
 
 		const id = data.id as string;
 
