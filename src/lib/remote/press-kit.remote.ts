@@ -9,9 +9,15 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
-import { eq } from 'drizzle-orm';
+import { eq, and, count, isNotNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { bandSite } from '$lib/server/db/schema/band-site';
+import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
+import { groupMember } from '$lib/server/db/schema/group';
+import { isFeatureEnabled } from '$lib/server/feature-flags';
+import { listBandEventsUpcoming } from '$lib/server/event/event-service';
+import { epkProgress } from '$lib/server/band/epk-completeness';
+import type { ProfileLink } from '$lib/server/db/schema/authentication';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { getOrCreateBandSiteId } from '$lib/server/band/band-site-service';
 import { fullPressKit } from '$lib/server/band/press-kit';
@@ -19,6 +25,82 @@ import { listFor as listMediaFor, setDescription } from '$lib/server/media/media
 import { resolveImageUrl } from '$lib/server/storage';
 import { jsonObjectField } from '$lib/utils/zod-json';
 import { photoLimitForTier } from '$lib/server/band/press-kit-limits';
+
+// ---------------------------------------------------------------------------
+// The ladder
+// ---------------------------------------------------------------------------
+
+/**
+ * How far along the act's press kit is.
+ *
+ * One query gathering everything `epkProgress` needs, because the alternative —
+ * a component asking the profile, the roster, the events and the media in turn —
+ * is four round trips for a card. It is deliberately separate from
+ * `getPressKitEditor`: the dashboard wants only this, and the editor page wants
+ * only that, so neither pays for the other.
+ */
+export const getPressKitProgress = query(z.string(), async (slug) => {
+	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+
+	const [[entry], [site], tags, [positions], shows, photos, premiumAvailable] = await Promise.all([
+		db
+			.select({
+				tagline: directoryEntry.tagline,
+				bio: directoryEntry.bio,
+				hometown: directoryEntry.hometown,
+				foundedYear: directoryEntry.foundedYear,
+				links: directoryEntry.links
+			})
+			.from(directoryEntry)
+			.where(eq(directoryEntry.groupId, band.id))
+			.limit(1),
+		db
+			.select({ epk: bandSite.epk, tier: bandSite.tier })
+			.from(bandSite)
+			.where(eq(bandSite.groupId, band.id))
+			.limit(1),
+		db
+			.select({ value: directoryTag.value })
+			.from(directoryTag)
+			.innerJoin(directoryEntry, eq(directoryEntry.id, directoryTag.entryId))
+			.where(and(eq(directoryEntry.groupId, band.id), eq(directoryTag.kind, 'genre'))),
+		db
+			.select({ n: count() })
+			.from(groupMember)
+			.where(
+				and(
+					eq(groupMember.groupId, band.id),
+					eq(groupMember.status, 'active'),
+					isNotNull(groupMember.position)
+				)
+			),
+		// Through the service, not a hand-rolled join. `event_band` points at a
+		// `directory_entry`, not a group — "which CMC band is this" has been one
+		// join away since phase 10a — and `confirmedForBand` is the predicate that
+		// knows it. One row is all this rung needs.
+		listBandEventsUpcoming(band.id, 1),
+		listMediaFor('group', band.id, 'gallery'),
+		isFeatureEnabled('bandPremium')
+	]);
+
+	return epkProgress({
+		slug: band.slug,
+		name: band.name,
+		avatarKey: band.avatarKey,
+		tagline: entry?.tagline,
+		bio: entry?.bio,
+		hometown: entry?.hometown,
+		foundedYear: entry?.foundedYear,
+		genres: tags.map((t) => t.value),
+		links: (entry?.links as ProfileLink[] | null) ?? [],
+		membersWithPosition: positions?.n ?? 0,
+		upcomingShows: shows.length,
+		epk: site?.epk,
+		pressPhotos: photos.length,
+		tier: site?.tier ?? 'free',
+		premiumAvailable
+	});
+});
 
 // ---------------------------------------------------------------------------
 // Read
@@ -36,7 +118,11 @@ import { photoLimitForTier } from '$lib/server/band/press-kit-limits';
 export const getPressKitEditor = query(z.string(), async (slug) => {
 	const { group: band } = await requireGroupRole({ slug }, 'admin');
 
-	const [[site], media] = await Promise.all([
+	// The ladder rides along rather than being a second query the page fans out —
+	// `custom/no-concurrent-remote-queries` forbids that shape, and one guarded
+	// read is cheaper than two anyway. Calling a remote query from another is the
+	// same thing `getBandProfileEditor` does with `getBandProfile`.
+	const [[site], media, progress] = await Promise.all([
 		db
 			.select({ epk: bandSite.epk, tier: bandSite.tier })
 			.from(bandSite)
@@ -45,13 +131,15 @@ export const getPressKitEditor = query(z.string(), async (slug) => {
 		// One statement for all three slots. `avatar` is deliberately absent: the
 		// band's logo is edited on the profile page and served from
 		// `group.avatarKey`, not from here.
-		listMediaFor('group', band.id, ['gallery', 'stage_plot', 'rider'])
+		listMediaFor('group', band.id, ['gallery', 'stage_plot', 'rider']),
+		getPressKitProgress(slug)
 	]);
 
 	const tier = site?.tier ?? 'free';
 
 	return {
 		epk: fullPressKit(site?.epk),
+		progress,
 		tier,
 		/** How many more photos this band may add, so the UI can say so before an upload 403s. */
 		photoLimit: photoLimitForTier(tier),
