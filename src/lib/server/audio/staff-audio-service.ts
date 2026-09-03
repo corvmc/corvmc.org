@@ -203,6 +203,72 @@ export async function salesTotals() {
 	};
 }
 
+/** One sale, as staff need to see it to decide whether to reverse it. */
+export type StaffSaleRow = {
+	purchaseId: string;
+	buyerEmail: string;
+	releaseTitle: string;
+	bandName: string;
+	amountPaidCents: number;
+	platformFeeCents: number;
+	bandNetCents: number;
+	status: string;
+	paidAt: Date | null;
+	refundedAt: Date | null;
+	/** False for a free download, which never reached Stripe. */
+	refundable: boolean;
+};
+
+/**
+ * Recent sales, newest first.
+ *
+ * Capped rather than paged: this list exists to answer "somebody emailed asking
+ * for their money back", which is always about a recent purchase. A staff member
+ * hunting a sale from four months ago is looking at Stripe, which is the ledger.
+ *
+ * `pending` rows are included deliberately — an abandoned checkout that shows up
+ * here is the difference between "the buyer never paid" and "we lost the
+ * webhook", and hiding it would leave staff answering that question blind.
+ */
+export async function recentSales(limit = 50): Promise<StaffSaleRow[]> {
+	const rows = await db
+		.select({
+			purchaseId: releasePurchase.purchaseId,
+			buyerEmail: releasePurchase.buyerEmail,
+			amountPaidCents: releasePurchase.amountPaidCents,
+			platformFeeCents: releasePurchase.platformFeeCents,
+			bandNetCents: releasePurchase.bandNetCents,
+			status: releasePurchase.status,
+			paidAt: releasePurchase.paidAt,
+			refundedAt: releasePurchase.refundedAt,
+			paymentIntentId: releasePurchase.stripePaymentIntentId,
+			releaseTitle: audioRelease.title,
+			bandName: group.name
+		})
+		.from(releasePurchase)
+		.innerJoin(audioRelease, eq(audioRelease.id, releasePurchase.releaseId))
+		.innerJoin(group, eq(group.id, audioRelease.groupId))
+		.orderBy(desc(releasePurchase.createdAt))
+		.limit(limit);
+
+	return rows.map((r) => ({
+		purchaseId: r.purchaseId,
+		buyerEmail: r.buyerEmail,
+		releaseTitle: r.releaseTitle,
+		bandName: r.bandName,
+		amountPaidCents: r.amountPaidCents,
+		platformFeeCents: r.platformFeeCents,
+		bandNetCents: r.bandNetCents,
+		status: r.status,
+		paidAt: r.paidAt,
+		refundedAt: r.refundedAt,
+		// A paid row with no PaymentIntent cannot be reversed through Stripe. That
+		// is every free download, and it would also be a paid one whose webhook
+		// never landed — so the button is hidden rather than failing on click.
+		refundable: r.status === 'paid' && (r.amountPaidCents === 0 || Boolean(r.paymentIntentId))
+	}));
+}
+
 // ---------------------------------------------------------------------------
 // Moderation
 // ---------------------------------------------------------------------------
