@@ -18,7 +18,11 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/complete-shifts',
 		'/api/cron/cancel-unconfirmed',
 		'/api/cron/expire-waitlisted',
-		'/api/cron/wake-snoozed'
+		'/api/cron/wake-snoozed',
+		// Fills the radio timetable 45 minutes ahead — three passes of slack, so
+		// one missed run is inaudible rather than dead air. No-ops while the
+		// `cmcRadio` flag is off.
+		'/api/cron/schedule-radio'
 	],
 	'0 16 * * *': [
 		'/api/cron/generate-recurring-reservations',

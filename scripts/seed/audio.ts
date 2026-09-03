@@ -7,21 +7,28 @@
  * widget — is a player. `getPlatformProxy()` hands the seeder the same
  * `R2_PRIVATE` binding the Worker gets, so this costs one `put` per track.
  *
- * `radio_play` is deliberately NOT seeded here. The scheduler owns that table
- * and materializes it from wall clock; seeding it would mean writing a second,
- * worse copy of the selection rules that then drifts. Phase 3 calls the real
- * scheduler from this seeder instead.
+ * The radio timetable is seeded through the **real** rotation rules, not a
+ * second copy of them. `radio-rotation.ts` imports nothing, which is what lets
+ * this file reach it by relative path — the seed runs under plain tsx with no
+ * `$lib` alias map, so anything that touches `$lib/server/db` is unreachable
+ * from here. One copy of the rules; the I/O differs, the programming does not.
  */
 import { randomUUID } from 'crypto';
 import {
 	audioRelease,
 	audioTrack,
 	bandStripeAccount,
+	radioPlay,
 	releasePurchase
 } from '../../src/lib/server/db/schema/audio';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { calculateProcessingFee, calculateTotalWithFeeCoverage } from '../../src/lib/finance/fees';
-import { AUDIO_PLATFORM_FEE_BPS } from '../../src/lib/config';
+import {
+	AUDIO_PLATFORM_FEE_BPS,
+	RADIO_MIN_TRACK_MS,
+	RADIO_MAX_TRACK_MS
+} from '../../src/lib/config';
+import { buildSchedule } from '../../src/lib/server/audio/radio-rotation';
 import { batchInsert, env } from './db';
 import { synthesizeTrack } from './audio-fixtures';
 import { pick, randomInt } from './util';
@@ -107,7 +114,8 @@ export async function seedAudio(bands: any[], users: any[]) {
 	console.log('Seeding band audio (releases, tracks, sales)...');
 
 	const live = bands.filter((b: any) => !b.deletedAt).slice(0, 6);
-	if (live.length === 0) return { releases: 0, tracks: 0, purchases: 0, bytes: 0, accounts: 0 };
+	if (live.length === 0)
+		return { releases: 0, tracks: 0, purchases: 0, bytes: 0, accounts: 0, radioEntries: 0 };
 
 	const releaseRows: any[] = [];
 	const trackRows: any[] = [];
@@ -321,11 +329,56 @@ export async function seedAudio(bands: any[], users: any[]) {
 		console.warn('  R2_PRIVATE binding unavailable — rows seeded, audio objects skipped.');
 	}
 
+	// -------------------------------------------------------------------------
+	// The radio timetable
+	// -------------------------------------------------------------------------
+
+	const eligible = trackRows
+		.filter((t) => {
+			const release = releaseRows.find((r) => r.id === t.releaseId);
+			return (
+				release?.status === 'published' &&
+				release.radioOptIn &&
+				!release.radioExcludedAt &&
+				!t.radioExcludedAt &&
+				t.durationMs >= RADIO_MIN_TRACK_MS &&
+				t.durationMs <= RADIO_MAX_TRACK_MS
+			);
+		})
+		.map((t) => ({
+			trackId: t.id,
+			durationMs: t.durationMs,
+			groupId: releaseRows.find((r) => r.id === t.releaseId)!.groupId,
+			lastPlayedAt: null
+		}));
+
+	// An hour behind and an hour ahead, so a freshly seeded database has a
+	// "now playing", an "up next" and a "recently played" the moment you open it
+	// — rather than three empty panels until the cron next fires.
+	const now = new Date();
+	const entries = eligible.length
+		? buildSchedule(
+				eligible,
+				new Date(now.getTime() - 60 * 60 * 1000),
+				new Date(now.getTime() + 60 * 60 * 1000)
+			)
+		: [];
+
+	// 4 columns × 20 = 80, under D1's 100 bound parameters.
+	if (entries.length) {
+		await batchInsert(
+			radioPlay,
+			entries.map((e) => ({ id: randomUUID(), ...e, createdAt: now })),
+			20
+		);
+	}
+
 	return {
 		releases: releaseRows.length,
 		tracks: trackRows.length,
 		purchases: purchaseRows.length,
 		accounts: accountRows.length,
-		bytes: bytesWritten
+		bytes: bytesWritten,
+		radioEntries: entries.length
 	};
 }
