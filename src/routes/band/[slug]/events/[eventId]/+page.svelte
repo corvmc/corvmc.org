@@ -95,13 +95,13 @@
 	<PageContent width="2xl">
 		{#if !evt.isOwner}
 			<p class="text-muted text-sm">
-				Your band is credited on this bill{ownerActName ? `, added by ${ownerActName}` : ''}. Only
-				the band that created the listing can change it.
+				Your act is credited on this bill{ownerActName ? `, added by ${ownerActName}` : ''}. Only
+				the act that created the listing can change it.
 			</p>
 		{:else if evt.status === 'cancelled'}
 			<p class="text-muted text-sm">This event is cancelled, so it can no longer be edited.</p>
 		{:else if !isAdmin}
-			<p class="text-muted text-sm">Band admins can edit this event.</p>
+			<p class="text-muted text-sm">Act admins can edit this event.</p>
 		{/if}
 
 		<input {...updateFields.slug.as('hidden', band.slug)} />

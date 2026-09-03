@@ -56,7 +56,7 @@
 		<Card>
 			<CardBody>
 				<div class="flex items-center gap-3">
-					<CardTitle level={2}>Premium Band Page</CardTitle>
+					<CardTitle level={2}>Premium Act Page</CardTitle>
 					<Badge variant="success">Active</Badge>
 				</div>
 				<dl class="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
@@ -115,7 +115,7 @@
 				<CardBody class="text-center">
 					<h2 class="text-2xl font-bold">Upgrade to Premium</h2>
 					<p class="mt-2 opacity-70">
-						Your band already has <strong>{band.slug}.{baseDomain}</strong>, pointing at your
+						Your act already has <strong>{band.slug}.{baseDomain}</strong>, pointing at your
 						directory profile. Premium turns it into a real website — a block editor, custom CSS,
 						genre themes, a full EPK — and lets you serve it from your own domain.
 					</p>
@@ -169,7 +169,7 @@
 					<ul class="mt-2 space-y-2 text-sm">
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>
-							Your own domain (theband.com) — or keep using {band.slug}.{baseDomain}
+							Your own domain — or keep using {band.slug}.{baseDomain}
 						</li>
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>

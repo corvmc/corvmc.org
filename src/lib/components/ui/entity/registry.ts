@@ -102,9 +102,9 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 		// `cmc` is absent on purpose — the collective's own show is the default,
 		// and marking it would mark almost everything.
 		subtypes: {
-			band: { icon: IconMusic, label: "A band's show" },
+			band: { icon: IconMusic, label: "An act's show" },
 			community: { icon: IconBuildingCommunity, label: 'Community listing' },
-			// A club's or committee's session. Distinct from a band's show in the
+			// A club's or committee's session. Distinct from an act's show in the
 			// one way that matters here: it happens in the room, and it holds it.
 			group: { icon: IconUsersGroup, label: "A program's session" }
 		}
@@ -117,7 +117,7 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 		// capacity is not the party — so without a glyph the row could not say
 		// that this booking is teaching rather than rehearsal.
 		subtypes: {
-			group: { icon: IconMusic, label: 'Booked by a band' },
+			group: { icon: IconMusic, label: 'Booked by an act' },
 			event: { icon: IconCalendarEvent, label: 'Held for an event' },
 			instructor: { icon: IconSchool, label: 'Teaching' }
 		}

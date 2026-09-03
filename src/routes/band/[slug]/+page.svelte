@@ -30,7 +30,7 @@
 			<span class="loading loading-lg loading-spinner"></span>
 		</div>
 	{:then sessions}
-		<!-- Band overview -->
+		<!-- Act overview -->
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 			<StatCard title="Members" value={band.memberCount} size="sm" />
 			<StatCard title="Upcoming Sessions" value={sessions.length} size="sm" />
@@ -79,7 +79,7 @@
 			>
 			{#if isOwnerOrAdmin}
 				<Button href="/band/{band.slug}/edit" variant="default" size="sm" outline
-					>Edit Band Profile</Button
+					>Edit Act Profile</Button
 				>
 			{/if}
 		</div>

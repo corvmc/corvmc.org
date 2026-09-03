@@ -242,13 +242,42 @@ external acts, which are the one thing that must never be addressable.
 
 #### Solo acts
 
-The reason to put entries on users, rather than only on groups, is that a solo performer currently
-has no honest representation: they either invent a one-person "band" or accept a member profile that
-cannot appear on a bill. With an entry on the user, `event_band` credits a `directoryEntryId` and a
-lineup can mix bands, solo members, and external acts uniformly — no fake band, and no new slug.
+**A solo act is a group.** One person's act is a `group` with `kind = 'band'` and a roster of one,
+and it gets everything a five-piece gets: a slug, `{slug}.corvmc.org`, a microsite, an EPK, a
+booking inbox, `project` ownership. There is no solo kind and no derived solo/band label — _act_ is
+size-agnostic, so there is nothing to flip when somebody joins.
 
-Their public page stays `/directory/members/{id}`. This spec adds no performer route for members;
-it only makes them creditable.
+This section used to argue the opposite: that a solo performer should be a `directory_entry` on
+their user, because otherwise they "either invent a one-person 'band' or accept a member profile
+that cannot appear on a bill." The bill half of that has shipped — `event_band.directoryEntryId`
+credits an entry, so a member is creditable on a lineup today. The other half never had an answer,
+because everything else an act needs hangs off `group`: `band_site.groupId` is `NOT NULL`, only
+groups resolve a subdomain, and `directory_entry.name` is a denormalized mirror of `user.name`
+maintained on write, so it has nowhere to put a stage name that would not desync the member
+directory from the account.
+
+**Promotion costs nothing.** A second member is one `group_member` insert: same row, same id, same
+slug, same subdomain, same site, same event credits, same history. This is the property that made
+the `band` → `group` rename cheap — `group.id` is `band.id`, so every foreign key still points at
+the same row — applied to the roster instead of the table name.
+
+**Entries on users stay**, for two reasons that have nothing to do with acts:
+
+- the member directory, which lists people rather than acts; and
+- **a guest spot** — a member who sits in on somebody else's set is a person on that bill, not an
+  act, and `event_band` crediting their entry is how that is said. Member entries are not being
+  removed from `event_band`.
+
+A member's public page is still `/directory/members/{id}`; their _act's_ page is
+`/directory/bands/{slug}` like any other. The two coexist, and a solo performer normally has both.
+
+**Only the word changed in the interface.** Member-facing and public copy calls a group of any size
+an **act**, matching _external act_, which this codebase already used as the general noun with
+_external_ as the qualifier. Nothing in the schema or the routes moved: `band_site`, `event_band`,
+`bandSlugFromHost`, `/member/bands` and `/directory/bands/{slug}` keep their names, following the
+precedent set inside `group` itself, whose index names keep their `band` prefix with the reason
+recorded beside them. The trade taken knowingly is that a solo performer's shared address still
+reads `/directory/bands/their-name`.
 
 ### The external act
 

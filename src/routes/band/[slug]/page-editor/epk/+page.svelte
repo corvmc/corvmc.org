@@ -59,7 +59,7 @@
 	{#if !isPremium}
 		<EmptyState>
 			<p class="text-lg font-medium">Premium Feature</p>
-			<p class="mt-2 opacity-70">The EPK editor is available with a premium band subscription.</p>
+			<p class="mt-2 opacity-70">The EPK editor is available with a premium subscription.</p>
 			<Button href="../../../subscription" variant="primary" class="mt-4">Upgrade to Premium</Button
 			>
 		</EmptyState>
@@ -338,7 +338,7 @@
 													};
 												}}
 											>
-												<option value="band">Band</option>
+												<option value="band">Act</option>
 												<option value="venue">Venue</option>
 											</Select>
 										</td>

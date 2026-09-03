@@ -10,7 +10,7 @@ import { expect, test } from '@playwright/test';
  */
 
 const bandsTab = (page: import('@playwright/test').Page) =>
-	page.getByRole('link', { name: /Bands/ });
+	page.getByRole('link', { name: /Acts/ });
 const musiciansTab = (page: import('@playwright/test').Page) =>
 	page.getByRole('link', { name: /Musicians/ });
 

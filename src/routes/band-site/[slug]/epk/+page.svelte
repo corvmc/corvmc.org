@@ -201,7 +201,7 @@
 						<tr class="border-b border-gray-100">
 							<td class="py-1 text-gray-700">{item.instrument}</td>
 							<td class="py-1 text-gray-700">{item.details}</td>
-							<td class="py-1 text-gray-500">{item.provided ? 'Band' : 'Venue'}</td>
+							<td class="py-1 text-gray-500">{item.provided ? 'Act' : 'Venue'}</td>
 						</tr>
 					{/each}
 				</tbody>

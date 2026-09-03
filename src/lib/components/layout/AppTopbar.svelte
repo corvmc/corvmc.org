@@ -71,7 +71,7 @@
 						onclick={() => (bandsOpen = !bandsOpen)}
 					>
 						<IconMusic size={16} />
-						{activeBand?.label ?? 'Bands'}
+						{activeBand?.label ?? 'Acts'}
 						<IconChevronDown size={14} />
 					</Button>
 

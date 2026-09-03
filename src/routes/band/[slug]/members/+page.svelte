@@ -125,7 +125,7 @@
 	function openTransferFromOwnMembership() {
 		const first = others.find((m) => m.role !== 'owner');
 		if (!first) {
-			toast.error('There is nobody else in the band to transfer ownership to.');
+			toast.error('There is nobody else in the act to transfer ownership to.');
 			return;
 		}
 		transferTarget = { userId: first.userId, name: first.member.title };
@@ -162,7 +162,7 @@
 		{#if others.length === 0}
 			<EmptyState
 				title="Nobody else yet"
-				description="Invite the rest of the band so they can book sessions and manage events."
+				description="Invite anyone else in this act so they can book sessions and manage events."
 			/>
 		{:else}
 			<div class="grid grid-cols-1 gap-2">
@@ -386,7 +386,7 @@
 				<input {...inviteEmailFields.bandId.as('hidden', layout.band.id)} />
 				<p class="text-muted">
 					Invite someone who doesn't have a CorvMC account yet. They'll receive an email with a
-					signup link and be automatically added to your band.
+					signup link and be automatically added to your act.
 				</p>
 				<Field
 					name="email"

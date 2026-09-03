@@ -183,7 +183,7 @@ export type GroupKind = (typeof groupKinds)[number];
  * What to call a group in prose written for someone who is not looking at it.
  *
  * An email to an invitee is the case that needs all three: they have no account
- * and no page open, so "you've been invited to join a band" has to be true, and
+ * and no page open, so "you've been invited to join an act" has to be true, and
  * for the Real Book Club it is not.
  */
 /** An announcement's title and markdown body — see docs/specs/groups-spec.md. */
@@ -191,7 +191,10 @@ export const ANNOUNCEMENT_TITLE_MAX = 200;
 export const ANNOUNCEMENT_BODY_MAX = 10000;
 
 export const groupKindLabels: Record<GroupKind, string> = {
-	band: 'band',
+	// "act" rather than "band": member-facing prose calls a musical group of any
+	// size an act, so a one-person act is never told it has joined a band. The
+	// `kind` value itself stays `'band'` — see docs/specs/groups-spec.md § Solo acts.
+	band: 'act',
 	club: 'club',
 	committee: 'committee'
 };
@@ -981,7 +984,7 @@ export type EntityType = (typeof entityTypes)[number];
  */
 export const entityLabels: Record<EntityType, { one: string; many: string }> = {
 	member: { one: 'Member', many: 'Members' },
-	band: { one: 'Band', many: 'Bands' },
+	band: { one: 'Act', many: 'Acts' },
 	event: { one: 'Event', many: 'Events' },
 	reservation: { one: 'Reservation', many: 'Reservations' },
 	suggestion: { one: 'Suggestion', many: 'Suggestions' },

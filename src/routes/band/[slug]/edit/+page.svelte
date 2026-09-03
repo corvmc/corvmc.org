@@ -21,7 +21,7 @@
 	const { profile, genreSuggestions } = await getBandProfileEditor(band.slug);
 </script>
 
-<PageHeader title="Band Profile" subtitle={band.name} />
+<PageHeader title="Act Profile" subtitle={band.name} />
 <PageContent width="3xl">
 	<BandProfileForm {band} {profile} {genreSuggestions} isOwner={layout.userRole === 'owner'} />
 </PageContent>

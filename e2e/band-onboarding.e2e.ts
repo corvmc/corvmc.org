@@ -25,7 +25,7 @@ import {
  * 3. Band detail pages ignored band.directoryVisibility: hidden/members bands
  *    disappeared from directory listings but stayed fully readable at their
  *    public URL, logged-out.
- * 4. The sidebar "Create Band" nav link pointed at /member/bands/create,
+ * 4. The sidebar "Create Act" nav link pointed at /member/bands/create,
  *    which does not exist (404); the create modal lives on /member/bands.
  */
 
@@ -182,14 +182,14 @@ test('renaming a band saves cleanly and leaves its address alone', async ({ page
 	await expect(page.locator('input[name="name"]')).toHaveValue(NEW_NAME, { timeout: 15000 });
 });
 
-test('the sidebar Create Band link opens the create-band modal', async ({ page }) => {
+test('the sidebar Create Act link opens the create-act modal', async ({ page }) => {
 	await login(page);
 
 	// The nav entry pointed at /member/bands/create, a 404; it must point at
 	// the bands page with the create param instead. (There used to be a second,
 	// icon-only copy in the Bands group header; that header now carries an
 	// "All" link to /member/bands instead.)
-	const createLink = page.getByRole('link', { name: 'Create Band' });
+	const createLink = page.getByRole('link', { name: 'Create Act' });
 	await expect(createLink).toHaveAttribute('href', '/member/bands?create=1');
 
 	// Clicking the link (immediately after login, while the layout's async

@@ -58,7 +58,7 @@
 				label="Role"
 				value={role}
 				options={roleOptions}
-				description="Admins can edit the band profile, its events, and its members."
+				description="Admins can edit the act's profile, its events, and its members."
 			/>
 			<FormField
 				field={fields.position}

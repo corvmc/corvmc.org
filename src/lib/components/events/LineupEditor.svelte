@@ -150,7 +150,7 @@
 			<input
 				type="text"
 				class="input w-full"
-				placeholder="Add a band — type any name and press Enter"
+				placeholder="Add an act — type any name and press Enter"
 				bind:value={query}
 				{onkeydown}
 			/>
@@ -169,7 +169,7 @@
 			{/if}
 
 			<p class="mt-1 text-subtle">
-				Anyone can go on the bill. Bands with a CMC account are asked to confirm before the show
+				Anyone can go on the bill. Acts with a CMC account are asked to confirm before the show
 				appears on their own profile — everyone else is listed as plain text.
 			</p>
 		</div>

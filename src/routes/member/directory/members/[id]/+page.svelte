@@ -46,7 +46,7 @@
 		const p: ProfilePill[] = [];
 		if (member.memberNumber != null)
 			p.push({ label: `Member · #${String(member.memberNumber).padStart(4, '0')}` });
-		if (member.lookingForBand) p.push({ label: 'Looking for a band', variant: 'warm' });
+		if (member.lookingForBand) p.push({ label: 'Looking to join an act', variant: 'warm' });
 		if (member.availableForHire) p.push({ label: 'Available for hire' });
 		if (member.teachesLessons) p.push({ label: 'Teaches privately' });
 		if (member.openToCollaboration) p.push({ label: 'Open to collaboration' });
@@ -59,7 +59,7 @@
 					{ label: 'Joined', value: String(new Date(member.createdAt).getFullYear()) },
 					{ label: 'Pronouns', value: member.pronouns },
 					{ label: 'Based in', value: member.hometown },
-					{ label: 'Looking for', value: member.lookingForBand ? 'A band' : null }
+					{ label: 'Looking for', value: member.lookingForBand ? 'An act to join' : null }
 				]
 			: []
 	);
@@ -67,7 +67,7 @@
 	let bandRefs = $derived<CrossRef[]>(
 		(member?.bands ?? []).map((b) => ({
 			name: b.name,
-			sub: b.position ?? (b.role === 'owner' || b.role === 'admin' ? 'Bandleader' : null),
+			sub: b.position ?? (b.role === 'owner' || b.role === 'admin' ? 'Leader' : null),
 			href: `${BANDS_BASE}/${b.slug}`,
 			image: b.avatarUrl,
 			avatarShape: 'square'
@@ -121,7 +121,7 @@
 				/>
 			{/snippet}
 			{#snippet side()}
-				<CrossRefList label="Bands" items={bandRefs} note={`${bandRefs.length} active`} />
+				<CrossRefList label="Acts" items={bandRefs} note={`${bandRefs.length} active`} />
 				<TagCloud label="Plays · Genres" {tags} />
 				<LinksBox {links} />
 				<ContactBox label="Contact" {contact} />

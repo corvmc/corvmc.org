@@ -214,7 +214,7 @@
 		previewClass="h-40 w-32"
 		emptyLabel="Add a poster"
 		replaceLabel="Replace poster"
-		description="Shown on your events list, your band page, and the community calendar."
+		description="Shown on your events list, your act's page, and the community calendar."
 	/>
 {:else if poster}
 	<FormField label="Poster" readonly>

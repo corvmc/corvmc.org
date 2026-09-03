@@ -441,7 +441,7 @@ export const revokeStaffEmailInvite = form(
 
 export const createBand = form(
 	z.object({
-		name: z.string().min(1, 'Band name is required').max(255),
+		name: z.string().min(1, 'Act name is required').max(255),
 		bio: z.string().max(LONG_TEXT_MAX).optional().default('')
 	}),
 	async (data) => {

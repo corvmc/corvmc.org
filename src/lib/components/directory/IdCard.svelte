@@ -48,7 +48,7 @@
 
 	const flags = $derived(
 		[
-			lookingForBand && { icon: IconUserSearch, label: 'Seeking a band' },
+			lookingForBand && { icon: IconUserSearch, label: 'Looking to join an act' },
 			availableForHire && { icon: IconBriefcase, label: 'Available for hire' },
 			teachesLessons && { icon: IconSchool, label: 'Teaches privately' },
 			openToCollaboration && { icon: IconUsersPlus, label: 'Open to collaboration' }

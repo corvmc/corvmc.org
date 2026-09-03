@@ -282,7 +282,7 @@
 			<FormField
 				name="lineup"
 				label="Who's playing"
-				description="Naming a band that's on the site asks them to confirm — they'll appear as a plain credit until they do."
+				description="Naming an act that's on the site asks them to confirm — they'll appear as a plain credit until they do."
 			>
 				<LineupEditor bind:value={lineup} search={searchBandsForListing} />
 			</FormField>

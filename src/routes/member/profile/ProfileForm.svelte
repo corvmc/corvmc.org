@@ -138,7 +138,7 @@
 				field={fields.lookingForBand}
 				type="toggle"
 				value={lookingForBand}
-				checkboxLabel="I'm looking for a band"
+				checkboxLabel="I'm looking to join an act"
 			/>
 			<FormField
 				field={fields.availableForHire}

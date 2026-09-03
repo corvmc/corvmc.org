@@ -31,6 +31,7 @@ import { seedRoles, seedUsers, seedAdminUser, seedUserRoles } from './seed/users
 import { seedReservations, seedClosures } from './seed/reservations';
 import { seedEvents } from './seed/events';
 import { seedBands } from './seed/bands';
+import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
 import { seedDirectoryEntries } from './seed/directory';
 import { seedInstructors } from './seed/instructors';
@@ -86,6 +87,11 @@ async function main() {
 	await seedClosures();
 	const events = await seedEvents(allUsers);
 	const bands = await seedBands(allUsers);
+	// Appended rather than folded into `seedBands`: it brings its own persona and
+	// login, and every downstream band seeder either maps over the whole array —
+	// which should include it — or slices the first few, which should not.
+	const soloAct = await seedSoloAct(roles);
+	if (soloAct) bands.push(soloAct);
 	const groups = await seedGroups(allUsers);
 	// Before anything that writes a lineup credit, because a credit names an
 	// entry. Every user and group the seed creates exists by this point — the
@@ -152,7 +158,7 @@ async function main() {
 	console.log(`  ${roles.length} roles`);
 	console.log(`  ${reservations.length} reservations`);
 	console.log(`  ${events.length} CMC events`);
-	console.log(`  ${bands.length} bands (${premiumBands.length} premium)`);
+	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(
 		`  ${dutyLists.lists} duty list, ${dutyLists.workOrders} work orders applied to a show`
@@ -215,6 +221,10 @@ async function main() {
 	console.log('    cancelling@corvallismusic.org   ending at period end — resume path');
 	console.log('    feecoverer@corvallismusic.org   covering fees — fee schedule');
 	console.log('    lapsed@corvallismusic.org       former member — win-back CTA');
+	console.log('\n  Solo-act demo login (`password`):');
+	console.log(
+		`    ${SOLO_ACT_LOGIN.email}    one-person act — /member/bands, /band/${SOLO_ACT_LOGIN.slug}`
+	);
 	console.log('\n  Volunteer deep links:');
 	console.log('    /member/volunteer/feedback/seed-vol-signup-feedback');
 	console.log('    /staff/volunteer/shifts/seed-vol-shift-cancelled');

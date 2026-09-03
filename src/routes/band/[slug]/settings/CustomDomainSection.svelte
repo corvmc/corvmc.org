@@ -54,7 +54,7 @@
 	{#if !domain.configured}
 		<div class="alert">
 			<p class="text-sm">
-				Custom domains aren't set up on this site yet. Your band site is always available at
+				Custom domains aren't set up on this site yet. Your act's site is always available at
 				<strong>{freeAddress}</strong>.
 			</p>
 		</div>
@@ -149,7 +149,7 @@
 	{:else}
 		<InfoCard title="Use your own domain">
 			<p class="text-sm">
-				Serve your band site from a domain you own. Your free address,
+				Serve your act's site from a domain you own. Your free address,
 				<strong>{freeAddress}</strong>, keeps working either way.
 			</p>
 			<Form
