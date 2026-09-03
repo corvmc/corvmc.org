@@ -12,7 +12,7 @@ import { listShortStaffedShifts } from '$lib/server/volunteer/work-order-service
  * glance at this week's problem; the two-week view lives on /staff/volunteer.
  */
 const DASHBOARD_SHIFT_HORIZON_DAYS = 7;
-import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireCapability, can, isPosition, requireUser } from '$lib/server/authorization';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { directoryEntry } from '$lib/server/db/schema/directory';
@@ -71,7 +71,7 @@ import type { BatchItem } from 'drizzle-orm/batch';
 // ---------------------------------------------------------------------------
 
 export const getStaffDashboard = query(async () => {
-	await requireStaff();
+	await requireCapability('user.list');
 	const startOfMonth = new Date();
 	startOfMonth.setDate(1);
 	startOfMonth.setHours(0, 0, 0, 0);
@@ -130,7 +130,7 @@ const staffUsersFilters = z.object({
 });
 
 export const getStaffUsers = query(staffUsersFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('user.list');
 
 	const search = filters.search?.trim();
 	const searchCondition = search
@@ -196,7 +196,7 @@ const staffPaymentsFilters = z.object({
 });
 
 export const getStaffPayments = query(staffPaymentsFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('finance.read');
 	return listPayments(
 		{
 			search: filters.search || undefined,
@@ -219,7 +219,7 @@ const staffCreditsFilters = z.object({
 });
 
 export const getStaffCredits = query(staffCreditsFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('credit.read');
 	return listTransactions(
 		{
 			search: filters.search || undefined,
@@ -238,7 +238,7 @@ export const getStaffCredits = query(staffCreditsFilters, async (filters) => {
 // ---------------------------------------------------------------------------
 
 export const getUser = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('user.read');
 	const [found] = await db
 		.select({
 			id: user.id,
@@ -284,18 +284,30 @@ export const getUser = query(z.string(), async (id) => {
 	};
 });
 
-export const getAllRoles = query(async () => {
-	await requireStaff();
-	return db.select({ id: role.id, name: role.name }).from(role);
+/**
+ * The role catalogue, plus whether this caller may actually assign one.
+ *
+ * Guarded on `user.update` rather than `user.setRole` so the panel still
+ * renders for someone who may edit a profile but not its roles — throwing 403
+ * here would take the whole Account tab down with it. The boolean is what the
+ * UI hides the picker on; the real guard is in `updateUser`, which rejects a
+ * changed role set from a caller without `user.setRole`. Hiding a control is
+ * not a guard, it just stops someone walking into a 403.
+ */
+export const getRoleCatalog = query(async () => {
+	await requireCapability('user.update');
+	const canSetRole = await can('user.setRole');
+	if (!canSetRole) return { canSetRole, roles: [] as { id: number; name: string }[] };
+	return { canSetRole, roles: await db.select({ id: role.id, name: role.name }).from(role) };
 });
 
 export const getUserPayments = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('finance.read');
 	return listByUser(userId);
 });
 
 export const getUserCredits = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('credit.read');
 	return getAllBalances(userId);
 });
 
@@ -312,45 +324,77 @@ const updateUserSchema = z.object({
 	name: z.string().trim().min(1).max(SHORT_TEXT_MAX),
 	pronouns: z.string().trim().max(50),
 	phone: z.string().trim().max(30),
-	// No `.catch([])` here: silently coercing a malformed roles field to an empty
-	// array would delete every role on the target user.
+	// `.optional()`, not `.default([])`, and still no `.catch([])`. Once the role
+	// picker is hidden from a caller without `user.setRole`, an absent field
+	// means "not submitted" — which is not the same as `[]`, "remove every
+	// role". Conflating them is how a profile edit silently strips somebody's
+	// access, which is the same hazard the missing `.catch` guards against.
 	roles: jsonArrayField(
 		z.string().regex(/^\d+$/, 'Invalid role ID'),
 		'Invalid role selection'
-	).default([])
+	).optional()
 });
 
 export const updateUser = form(updateUserSchema, async (rawData) => {
 	const data = rawData as z.infer<typeof updateUserSchema>;
-	const actor = await requireStaff();
+	// The broad guard stays at the top so a caller who may edit a profile can
+	// edit ANY profile, including an admin's — fixing a phone number is not a
+	// privileged act. Only a change to the role set is, and that is checked
+	// below, once we know whether one was actually submitted.
+	const actor = await requireCapability('user.update');
 	const id = data.id;
-	const roleIds = data.roles.map(Number);
 
-	// Role changes can lock people out of the panel, and nothing else can undo
-	// that from the UI. Two cases are refused outright.
-	const namesById = new Map(
-		(await db.select({ id: role.id, name: role.name }).from(role)).map((r) => [r.id, r.name])
-	);
-	const nextRoleNames = roleIds.map((rid) => namesById.get(rid)).filter(Boolean) as string[];
 	const targetCurrentRoles = await getUserRoles(id);
+	// `undefined` means the form did not carry the field at all — the caller
+	// cannot edit roles, so leave them alone. An empty array is a real request
+	// to remove every role and is handled as one.
+	let roleIds: number[] | null = null;
 
-	// 1. Don't let staff drop their own staff access.
-	if (id === actor.id && !nextRoleNames.some((n) => n === 'admin' || n === 'staff')) {
-		error(400, 'You cannot remove your own staff access.');
-	}
+	if (data.roles !== undefined) {
+		const namesById = new Map(
+			(await db.select({ id: role.id, name: role.name }).from(role)).map((r) => [r.id, r.name])
+		);
+		const submitted = data.roles.map(Number);
+		const nextRoleNames = submitted.map((rid) => namesById.get(rid)).filter(Boolean) as string[];
 
-	// 2. Don't let the last admin be demoted — that leaves nobody able to
-	//    restore the role.
-	if (targetCurrentRoles.includes('admin') && !nextRoleNames.includes('admin')) {
-		const adminRoleId = [...namesById.entries()].find(([, n]) => n === 'admin')?.[0];
-		if (adminRoleId !== undefined) {
-			const [{ value: adminCount }] = await db
-				.select({ value: count() })
-				.from(modelHasRole)
-				.where(and(eq(modelHasRole.roleId, adminRoleId), ne(modelHasRole.userId, id)));
-			if (adminCount === 0) {
-				error(409, 'This is the last admin — assign another admin before removing this role.');
+		const unchanged =
+			nextRoleNames.length === targetCurrentRoles.length &&
+			nextRoleNames.every((n) => targetCurrentRoles.includes(n));
+
+		if (!unchanged) {
+			if (!(await can('user.setRole'))) {
+				error(403, 'You cannot change roles.');
 			}
+
+			// Role changes can lock people out of the panel, and nothing else can
+			// undo that from the UI. Two cases are refused outright.
+
+			// 1. Don't let a caller drop their own elevated access. Tested against
+			//    every position, not just admin/staff: a volunteer coordinator
+			//    editing their own profile would otherwise trip this guard.
+			if (id === actor.id && !nextRoleNames.some((n) => isPosition(n))) {
+				error(400, 'You cannot remove your own staff access.');
+			}
+
+			// 2. Don't let the last admin be demoted — that leaves nobody able to
+			//    restore the role. Load-bearing now in a way it was not before:
+			//    admin is the only holder of user.setRole, user.purge and
+			//    credit.adjust, so this is what stops the app reaching a state only
+			//    `wrangler d1 execute` can leave.
+			if (targetCurrentRoles.includes('admin') && !nextRoleNames.includes('admin')) {
+				const adminRoleId = [...namesById.entries()].find(([, n]) => n === 'admin')?.[0];
+				if (adminRoleId !== undefined) {
+					const [{ value: adminCount }] = await db
+						.select({ value: count() })
+						.from(modelHasRole)
+						.where(and(eq(modelHasRole.roleId, adminRoleId), ne(modelHasRole.userId, id)));
+					if (adminCount === 0) {
+						error(409, 'This is the last admin — assign another admin before removing this role.');
+					}
+				}
+			}
+
+			roleIds = submitted;
 		}
 	}
 
@@ -365,19 +409,19 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 				phone: data.phone || null,
 				updatedAt: new Date()
 			})
-			.where(eq(user.id, id)),
-		db.delete(modelHasRole).where(eq(modelHasRole.userId, id))
+			.where(eq(user.id, id))
 	];
 
-	if (roleIds.length > 0) {
-		ops.push(
-			db.insert(modelHasRole).values(
-				roleIds.map((roleId: number) => ({
-					roleId,
-					userId: id
-				}))
-			)
-		);
+	// Only when the set actually changed. A profile-only edit used to delete and
+	// re-insert every role row on every save, which is churn the audit trail
+	// does not need and a window in which the rows do not exist.
+	if (roleIds !== null) {
+		ops.push(db.delete(modelHasRole).where(eq(modelHasRole.userId, id)));
+		if (roleIds.length > 0) {
+			ops.push(
+				db.insert(modelHasRole).values(roleIds.map((roleId: number) => ({ roleId, userId: id })))
+			);
+		}
 	}
 
 	await db.batch(ops as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
@@ -407,7 +451,7 @@ export const adjustCredits = form(
 		description: z.string().min(1)
 	}),
 	async (data, issue) => {
-		await requireStaff();
+		await requireCapability('credit.adjust');
 
 		const userId = data.userId as string;
 		const type = data.creditType as CreditType;
@@ -454,7 +498,7 @@ export const deactivateUser = form(
 		id: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('user.deactivate');
 		try {
 			await deactivateUserService(data.id);
 		} catch (err) {
@@ -472,7 +516,7 @@ const bulkDeactivateSchema = z.object({
 });
 
 export const bulkDeactivateUsers = form(bulkDeactivateSchema, async (rawData) => {
-	await requireStaff();
+	await requireCapability('user.deactivate');
 	const data = rawData as z.infer<typeof bulkDeactivateSchema>;
 	const me = requireUser();
 	return deactivateUsersService(data.ids, { skipUserId: me.id });
@@ -483,7 +527,7 @@ export const reactivateUser = form(
 		id: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('user.deactivate');
 		try {
 			await reactivateUserService(data.id);
 		} catch (err) {
@@ -499,7 +543,7 @@ export const purgeUser = form(
 		id: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('user.purge');
 		try {
 			await purgeUserService(data.id);
 		} catch (err) {
@@ -647,7 +691,7 @@ export const getMemberDashboard = query(async () => {
 // ---------------------------------------------------------------------------
 
 export const getUserOverview = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('user.read');
 	return getUserOverviewService(userId);
 });
 
@@ -661,7 +705,7 @@ export const getUserOverview = query(z.string(), async (userId) => {
  * local reads. See `custom/no-concurrent-remote-queries`.
  */
 export const getUserPage = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('user.read');
 
 	const [member, overview] = await Promise.all([getUser(id), getUserOverview(id)]);
 
@@ -669,12 +713,12 @@ export const getUserPage = query(z.string(), async (id) => {
 });
 
 export const getUserReservations = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	return listReservationsForMember(userId);
 });
 
 export const getUserMembership = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('user.read');
 
 	const dbSubscription = await getMemberSubscription(userId);
 	const subscription = mapDbSubscription(dbSubscription);
@@ -700,13 +744,13 @@ export const getUserMembership = query(z.string(), async (userId) => {
 export const getUserCreditHistory = query(
 	z.object({ userId: z.string(), page: z.number().int().min(1).default(1) }),
 	async ({ userId, page }) => {
-		await requireStaff();
+		await requireCapability('credit.read');
 		return listTransactions({ userId }, { page, pageSize: 10 });
 	}
 );
 
 export const getUserSessions = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('user.read');
 	const [sessions, lastLoginAt] = await Promise.all([
 		listActiveSessions(userId),
 		getLastLoginAt(userId)

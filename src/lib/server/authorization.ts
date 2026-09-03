@@ -44,7 +44,8 @@ const positionRoles: Record<Position, PositionStatements> = Object.fromEntries(
 	positionOrder.map((p) => [p, ac.newRole(positions[p] as never) as PositionStatements])
 ) as Record<Position, PositionStatements>;
 
-function isPosition(name: string): name is Position {
+/** Is this role name one of the real positions, or a legacy row that grants nothing? */
+export function isPosition(name: string): name is Position {
 	return (positionOrder as readonly string[]).includes(name);
 }
 

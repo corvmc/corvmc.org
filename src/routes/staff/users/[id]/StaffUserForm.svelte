@@ -17,11 +17,14 @@
 		member,
 		roleOptions,
 		initialRoles,
+		canSetRole,
 		id
 	}: {
 		member: Awaited<ReturnType<typeof getUser>>;
 		roleOptions: { id: string; label: string }[];
 		initialRoles: string[];
+		/** Whether this viewer may assign roles at all. */
+		canSetRole: boolean;
 		id: string;
 	} = $props();
 
@@ -79,14 +82,23 @@
 				value={member.phone ?? ''}
 				class="col-span-4 @md:col-span-2 @lg:col-span-2"
 			/>
-			<Field
-				class="col-span-4"
-				name="roles"
-				type="tags"
-				options={roleOptions}
-				multiple={true}
-				value={initialRoles}
-			/>
+			<!--
+				Omitted entirely, not disabled, for a caller without `user.setRole`.
+				A disabled field still submits nothing, and `updateUser` reads an
+				absent `roles` as "not submitted" rather than "remove every role" —
+				which is exactly why its schema is `.optional()` and not
+				`.default([])`.
+			-->
+			{#if canSetRole}
+				<Field
+					class="col-span-4"
+					name="roles"
+					type="tags"
+					options={roleOptions}
+					multiple={true}
+					value={initialRoles}
+				/>
+			{/if}
 		</div>
 	</InfoCard>
 </Form>

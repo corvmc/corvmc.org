@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { LONG_TEXT_MAX } from '$lib/config';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
 import { requireFeature, getAllFeatureFlags } from '$lib/server/feature-flags';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import {
@@ -713,7 +713,7 @@ export const getBandProfileEditor = query(z.string(), async (slug) => {
 // ---------------------------------------------------------------------------
 
 export const getUserDirectoryProfile = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('user.read');
 	const [profile, complete] = await Promise.all([
 		getMemberProfileForEdit(userId),
 		isProfileComplete(userId)

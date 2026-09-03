@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireStaff, requireCapabilityOrOwner } from '$lib/server/authorization';
+import { requireCapability, requireCapabilityOrOwner } from '$lib/server/authorization';
 import {
 	get,
 	getHistory,
@@ -14,14 +14,14 @@ import {
 // ---------------------------------------------------------------------------
 
 export const getSeries = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	const series = await get(id);
 	if (!series) error(404, 'Series not found');
 	return series;
 });
 
 export const getSeriesHistory = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	return getHistory(id);
 });
 
@@ -31,7 +31,7 @@ const staffRecurringFilters = z.object({
 });
 
 export const getStaffRecurring = query(staffRecurringFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	return listAllSeries(
 		{ filter: filters.filter || 'active' },
 		{ page: filters.page ?? 1, pageSize: 50 }
@@ -44,14 +44,14 @@ export const getStaffRecurring = query(staffRecurringFilters, async (filters) =>
 
 /** Cancel from staff list page (takes seriesId in form data) */
 export const cancelStaffSeries = form(z.object({ seriesId: z.string() }), async (data) => {
-	await requireStaff();
+	await requireCapability('reservation.manageRecurring');
 	await cancel(data.seriesId as string);
 	return { success: true };
 });
 
 /** Cancel from detail page (takes seriesId in form data) */
 export const cancelDetailSeries = form(z.object({ seriesId: z.string() }), async (data) => {
-	await requireStaff();
+	await requireCapability('reservation.manageRecurring');
 	const seriesId = data.seriesId as string;
 	await cancel(seriesId);
 	void getStaffSeriesDetail(seriesId).refresh();

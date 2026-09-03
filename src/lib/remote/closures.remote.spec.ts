@@ -11,7 +11,9 @@ const insertValues = vi.fn(async () => undefined);
 const db = { insert: vi.fn(() => ({ values: insertValues })), select: vi.fn() };
 
 vi.mock('$lib/server/db', () => ({ db }));
-vi.mock('$lib/server/authorization', () => ({ requireStaff: vi.fn(async () => ({ id: 's-1' })) }));
+vi.mock('$lib/server/authorization', () => ({
+	requireCapability: vi.fn(async () => ({ id: 's-1' }))
+}));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: null }, request: { headers: new Headers() } }),

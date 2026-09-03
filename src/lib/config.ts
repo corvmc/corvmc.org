@@ -1223,7 +1223,15 @@ export const capabilities = {
 	group: ['read', 'manage'],
 	event: ['read', 'manage', 'publish', 'manageTickets'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
-	volunteer: ['read', 'manageShifts', 'reviewHours', 'manageRoster', 'manageRoles', 'report'],
+	volunteer: [
+		'read',
+		'manageShifts',
+		'reviewHours',
+		'manageRoster',
+		'manageRoles',
+		'manageCertifications',
+		'report'
+	],
 	inventory: [
 		'read',
 		'manageItems',
@@ -1343,7 +1351,15 @@ export const positions: Record<Position, Grants> = {
 		help: ['read', 'manage']
 	},
 	volunteer_coordinator: {
-		volunteer: ['read', 'manageShifts', 'reviewHours', 'manageRoster', 'manageRoles', 'report'],
+		volunteer: [
+			'read',
+			'manageShifts',
+			'reviewHours',
+			'manageRoster',
+			'manageRoles',
+			'manageCertifications',
+			'report'
+		],
 		user: ['list', 'read'],
 		directory: ['readContact'],
 		event: ['read']
