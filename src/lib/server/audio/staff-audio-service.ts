@@ -12,6 +12,7 @@ import { group } from '$lib/server/db/schema/group';
 import { and, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { RADIO_MIN_TRACK_MS, RADIO_MAX_TRACK_MS } from '$lib/config';
+import { releaseAggregates } from './audio-service';
 
 export class StaffReleaseNotFoundError extends DomainError {
 	readonly httpStatus = 404;
@@ -53,8 +54,11 @@ export async function listAllReleases(): Promise<StaffReleaseRow[]> {
 			publishedAt: audioRelease.publishedAt,
 			// Correlated rather than joined: tracks and purchases fan out
 			// independently, and joining both multiplies each by the other.
-			trackCount: sql<number>`(SELECT COUNT(*) FROM ${audioTrack} WHERE ${audioTrack.releaseId} = ${audioRelease.id})`,
-			salesCount: sql<number>`(SELECT COUNT(*) FROM ${releasePurchase} WHERE ${releasePurchase.releaseId} = ${audioRelease.id} AND ${releasePurchase.status} = 'paid')`
+			// The shared, table-qualified fragments. This list happens to join
+			// `group`, so the interpolated form worked here and nowhere else —
+			// which is exactly why it is not worth relying on.
+			trackCount: releaseAggregates.TRACK_COUNT,
+			salesCount: releaseAggregates.PAID_SALES
 		})
 		.from(audioRelease)
 		.innerJoin(group, eq(group.id, audioRelease.groupId))

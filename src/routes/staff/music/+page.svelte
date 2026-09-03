@@ -17,7 +17,7 @@
 		restoreReleaseForm,
 		setRadioExclusionForm
 	} from '$lib/remote/staff-music.remote';
-	import { formatDollars } from '$lib/utils/format';
+	import { formatCents } from '$lib/utils/format';
 	import { resolve } from '$app/paths';
 	import { IconRadio } from '@tabler/icons-svelte';
 
@@ -106,9 +106,9 @@
 			<CardTitle>Sales</CardTitle>
 			<div class="grid gap-3 sm:grid-cols-4">
 				<StatCard title="Sales" value={String(sales.sales)} />
-				<StatCard title="Gross" value={formatDollars(sales.grossCents)} />
-				<StatCard title="To bands" value={formatDollars(sales.toBandsCents)} />
-				<StatCard title="To CMC" value={formatDollars(sales.toCollectiveCents)} />
+				<StatCard title="Gross" value={formatCents(sales.grossCents)} />
+				<StatCard title="To bands" value={formatCents(sales.toBandsCents)} />
+				<StatCard title="To CMC" value={formatCents(sales.toCollectiveCents)} />
 			</div>
 			<!-- The number the refusable-cut decision has to be judged on. It will
 			     not be the suggested 10%, and which way it lands is the open

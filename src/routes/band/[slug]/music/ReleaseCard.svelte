@@ -5,7 +5,7 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { releaseKindLabels, type ReleaseKind } from '$lib/config';
 	import { formatTrackSummary } from '$lib/utils/audio';
-	import { formatDateYear, formatDollars } from '$lib/utils/format';
+	import { formatDateYear, formatCents } from '$lib/utils/format';
 	import { IconDisc, IconRadio } from '@tabler/icons-svelte';
 
 	/**
@@ -94,7 +94,7 @@
 
 			<div class="text-right">
 				<p class="font-medium">
-					{release.priceMinCents === 0 ? 'Free' : formatDollars(release.priceMinCents)}
+					{release.priceMinCents === 0 ? 'Free' : formatCents(release.priceMinCents)}
 					{#if release.priceMinCents > 0 && release.allowPayMore}
 						<span class="text-muted">or more</span>
 					{/if}

@@ -52,6 +52,13 @@
 	const platformCents = $derived(platformOverride ?? suggestedPlatformCents(totalCents));
 
 	const split = $derived(computeSplit({ totalCents, platformCents, coverFees }));
+	/**
+	 * The split as it would be *with* coverage, so the checkbox can quote the
+	 * surcharge before it is ticked. Reading `split.feeCoveredCents` there shows
+	 * $0.00 while unchecked — the number only becomes non-zero once you have
+	 * already agreed to it, which is the wrong way round for a decision.
+	 */
+	const covered = $derived(computeSplit({ totalCents, platformCents, coverFees: true }));
 	const free = $derived(totalCents === 0);
 
 	const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
@@ -123,7 +130,7 @@
 							<!-- Sells far better as "the band keeps the full amount" than as
 							     "cover our processing fees" — same money, different question. -->
 							<span>
-								Add {dollars(split.feeCoveredCents || 0)} so {bandName} keeps the full {dollars(
+								Add {dollars(covered.feeCoveredCents)} so {bandName} keeps the full {dollars(
 									totalCents - platformCents
 								)}
 							</span>
@@ -159,9 +166,10 @@
 			/>
 			<input {...fields.coverFees.as('checkbox', coverFees)} type="hidden" />
 
-			<SubmitButton disabled={totalCents > 0 && totalCents < AUDIO_MIN_PRICE_CENTS}>
-				{free ? 'Download' : `Pay ${dollars(split.chargeCents)}`}
-			</SubmitButton>
+			<SubmitButton
+				label={free ? 'Download' : `Pay ${dollars(split.chargeCents)}`}
+				disabled={totalCents > 0 && totalCents < AUDIO_MIN_PRICE_CENTS}
+			/>
 
 			{#if totalCents > 0 && totalCents < AUDIO_MIN_PRICE_CENTS}
 				<p class="text-warning">

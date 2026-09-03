@@ -2,7 +2,7 @@
 	import ProfileSection from './ProfileSection.svelte';
 	import { releaseKindLabels, type ReleaseKind } from '$lib/config';
 	import { formatTrackSummary } from '$lib/utils/audio';
-	import { formatDateYear, formatDollars } from '$lib/utils/format';
+	import { formatDateYear, formatCents } from '$lib/utils/format';
 	import { resolve } from '$app/paths';
 	import { IconDisc } from '@tabler/icons-svelte';
 
@@ -61,7 +61,7 @@
 							</span>
 						</span>
 						<span class="shrink-0 text-muted">
-							{release.priceMinCents === 0 ? 'Free' : formatDollars(release.priceMinCents)}
+							{release.priceMinCents === 0 ? 'Free' : formatCents(release.priceMinCents)}
 						</span>
 					</a>
 				</li>

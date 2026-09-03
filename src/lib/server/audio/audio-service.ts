@@ -99,6 +99,26 @@ async function coverUrlsFor(releaseIds: string[]): Promise<Map<string, string>> 
 	return map;
 }
 
+/**
+ * Track count and total runtime for the release in the OUTER query.
+ *
+ * The identifiers are spelled out rather than interpolated from the drizzle
+ * table objects, because **drizzle only qualifies column references when the
+ * statement has a join.** In a single-table select `${audioRelease.id}` renders
+ * as a bare `id`, which inside `FROM audio_track` resolves to *that* table's id
+ * — so the correlation became `audio_track.release_id = audio_track.id`, which
+ * is never true, and every release reported 0 tracks.
+ *
+ * It shipped looking correct because the staff list happens to join `group` and
+ * was therefore qualified by accident. Writing the names out removes the
+ * dependence on that heuristic entirely.
+ */
+const TRACK_COUNT = sql<number>`(SELECT COUNT(*) FROM "audio_track" WHERE "audio_track"."release_id" = "audio_release"."id")`;
+const TRACK_RUNTIME = sql<number>`COALESCE((SELECT SUM("audio_track"."duration_ms") FROM "audio_track" WHERE "audio_track"."release_id" = "audio_release"."id"), 0)`;
+const PAID_SALES = sql<number>`(SELECT COUNT(*) FROM "release_purchase" WHERE "release_purchase"."release_id" = "audio_release"."id" AND "release_purchase"."status" = 'paid')`;
+
+export const releaseAggregates = { TRACK_COUNT, TRACK_RUNTIME, PAID_SALES };
+
 export type ReleaseSummary = {
 	id: string;
 	title: string;
@@ -142,9 +162,9 @@ export async function listReleasesForBand(groupId: string): Promise<ReleaseSumma
 			radioExcludedReason: audioRelease.radioExcludedReason,
 			releasedAt: audioRelease.releasedAt,
 			publishedAt: audioRelease.publishedAt,
-			trackCount: sql<number>`(SELECT COUNT(*) FROM ${audioTrack} WHERE ${audioTrack.releaseId} = ${audioRelease.id})`,
-			durationMs: sql<number>`COALESCE((SELECT SUM(${audioTrack.durationMs}) FROM ${audioTrack} WHERE ${audioTrack.releaseId} = ${audioRelease.id}), 0)`,
-			salesCount: sql<number>`(SELECT COUNT(*) FROM ${releasePurchase} WHERE ${releasePurchase.releaseId} = ${audioRelease.id} AND ${releasePurchase.status} = 'paid')`
+			trackCount: TRACK_COUNT,
+			durationMs: TRACK_RUNTIME,
+			salesCount: PAID_SALES
 		})
 		.from(audioRelease)
 		.where(and(eq(audioRelease.groupId, groupId), isNull(audioRelease.deletedAt)))
@@ -560,8 +580,8 @@ export async function listPublishedReleasesForBand(groupId: string) {
 			releasedAt: audioRelease.releasedAt,
 			priceMinCents: audioRelease.priceMinCents,
 			allowPayMore: audioRelease.allowPayMore,
-			trackCount: sql<number>`(SELECT COUNT(*) FROM ${audioTrack} WHERE ${audioTrack.releaseId} = ${audioRelease.id})`,
-			durationMs: sql<number>`COALESCE((SELECT SUM(${audioTrack.durationMs}) FROM ${audioTrack} WHERE ${audioTrack.releaseId} = ${audioRelease.id}), 0)`
+			trackCount: TRACK_COUNT,
+			durationMs: TRACK_RUNTIME
 		})
 		.from(audioRelease)
 		.where(

@@ -5,7 +5,7 @@
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { getMyMusic } from '$lib/remote/music.remote';
-	import { formatDate, formatDollars } from '$lib/utils/format';
+	import { formatDate, formatCents } from '$lib/utils/format';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 
@@ -34,9 +34,7 @@
 								{#if purchase.paidAt}
 									· {formatDate(purchase.paidAt)}
 								{/if}
-								· {purchase.amountPaidCents === 0
-									? 'Free'
-									: formatDollars(purchase.amountPaidCents)}
+								· {purchase.amountPaidCents === 0 ? 'Free' : formatCents(purchase.amountPaidCents)}
 							</p>
 						</div>
 						<Button size="sm" href={resolve(`/music/download/${purchase.downloadToken}`)}>
