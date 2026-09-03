@@ -30,6 +30,7 @@ export const relations = defineRelations(schema, (t) => ({
 		}),
 		directoryEntry: t.one.directoryEntry({ from: t.group.id, to: t.directoryEntry.groupId }),
 		members: t.many.groupMember(),
+		files: t.many.file(),
 		/** Events this band OWNS. Shows it merely played are `lineups`. */
 		events: t.many.event(),
 		// No `lineups` here any more. A credit names a `directory_entry`, so a
@@ -321,6 +322,10 @@ export const relations = defineRelations(schema, (t) => ({
 	announcement: {
 		group: t.one.group({ from: t.announcement.groupId, to: t.group.id }),
 		author: t.one.user({ from: t.announcement.authorId, to: t.user.id })
+	},
+	file: {
+		group: t.one.group({ from: t.file.groupId, to: t.group.id }),
+		uploadedBy: t.one.user({ from: t.file.uploadedById, to: t.user.id })
 	},
 	inboxThread: {
 		messages: t.many.inboxMessage(),

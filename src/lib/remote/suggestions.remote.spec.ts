@@ -49,6 +49,17 @@ const svc = {
 };
 vi.mock('$lib/server/suggestion/suggestion-service', () => svc);
 
+// The suggestion detail pages read the project answering the suggestion, and the
+// staff one also reads the committees for its "start a project" picker. Unmocked,
+// both reach the real `db` and reject with "Database not initialized" — which
+// vitest reports as an unhandled rejection that reddens the run while every test
+// still passes, so it is invisible in the summary.
+const projectSvc = {
+	getProjectForSuggestion: vi.fn(async () => null),
+	listCommittees: vi.fn(async () => [])
+};
+vi.mock('$lib/server/project/project-service', () => projectSvc);
+
 // Standing moved out of the domain services into one shared one. It stays a
 // spy here for the same reason the others are: a guard that runs late would
 // show up as a service call on a rejected request.

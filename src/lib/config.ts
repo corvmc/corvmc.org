@@ -76,6 +76,22 @@ export function creditValueCents(hourlyRateCents: number): number {
 	return Math.round((hourlyRateCents * MINUTES_PER_CREDIT) / 60);
 }
 
+/**
+ * Cents value of donated time, at a given hourly rate.
+ *
+ * Beside `creditValueCents` but deliberately not merged with it: that one is
+ * what an hour of volunteering *buys* a member, this one is what an hour was
+ * *worth* to the collective. They answer to different rates and different
+ * audiences, and a shared helper would invite reading one number as the other.
+ *
+ * Rounds rather than truncates, and rounds once at the end -- valuing minutes
+ * in SQL would truncate on integer division, which is why the aggregate queries
+ * return minutes and the money is computed here.
+ */
+export function valueOfMinutesCents(minutes: number, hourlyRateCents: number): number {
+	return Math.round((minutes * hourlyRateCents) / 60);
+}
+
 // Equipment credits are denominated in cents (1 credit = 1¢ of equipment-loan
 // charge), granted 1:1 with the member's monthly contribution. The cap bounds
 // rollover hoarding — 25000 = $250 of accrued credit.
@@ -110,6 +126,23 @@ export const CONFIRMATION_WINDOW_DAYS = 3;
  * upload is billed for. See docs/specs/shipped/media-spec.md.
  */
 export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * How long a soft-deleted `file` row is left alone before the sweep reaps it and
+ * deletes its private R2 object.
+ *
+ * **Deliberately not `MEDIA_SWEEP_GRACE_MS`.** The two constants sit together
+ * and guard different hazards. Media's day protects the gap between uploading an
+ * object and attaching it, which is a state a member passes through. A
+ * document's row and object are written in one request, so no such gap exists —
+ * what the delay buys instead is an undo window on a destructive click, and a
+ * week is the useful size for "the minutes I deleted on Monday". See
+ * docs/specs/groups-spec.md § Documents and private storage.
+ */
+export const DOCUMENT_SWEEP_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** The longest note that may ride a group document. */
+export const DOCUMENT_DESCRIPTION_MAX = 500;
 
 /** The earliest instant a member may confirm a reservation starting at `startsAt`. */
 export function confirmWindowOpensAt(startsAt: Date): Date {

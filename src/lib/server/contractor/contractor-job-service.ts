@@ -117,6 +117,10 @@ export async function completeJob(
 		notes?: string | null;
 		/** Leave the unit out of service — the repair did not take. */
 		returnToService?: boolean;
+		/** They did the work and did not invoice for it. */
+		isDonated?: boolean;
+		fairValueCents?: number | null;
+		fairValueBasis?: string | null;
 		actorId?: string;
 	} = {}
 ) {
@@ -125,15 +129,32 @@ export async function completeJob(
 		throw new ContractorJobStateError(`This job is already ${job.status}`);
 	}
 
+	const isDonated = opts.isDonated ?? job.isDonated;
+	const costCents = opts.costCents ?? job.costCents;
+
+	// The invariant the schema cannot express: SQLite has no way to add a CHECK
+	// through ALTER TABLE, so "donated implies nothing was paid" is enforced
+	// here. It matters beyond tidiness — `getProjectBurn` reads the flag to keep
+	// a job out of cash spend, so a row that is both would be counted twice, as
+	// money spent and as value contributed.
+	if (isDonated && costCents !== null && costCents > 0) {
+		throw new ContractorJobStateError(
+			'A donated job has no cost. Record the fair value instead, or clear the donated flag.'
+		);
+	}
+
 	const now = new Date();
 	const [row] = await db
 		.update(contractorJob)
 		.set({
 			status: 'completed',
 			completedAt: opts.completedAt ?? now,
-			costCents: opts.costCents ?? job.costCents,
+			costCents: isDonated ? null : costCents,
 			invoiceRef: opts.invoiceRef ?? job.invoiceRef,
 			notes: opts.notes ?? job.notes,
+			isDonated,
+			fairValueCents: isDonated ? (opts.fairValueCents ?? job.fairValueCents) : null,
+			fairValueBasis: isDonated ? (opts.fairValueBasis ?? job.fairValueBasis) : null,
 			updatedAt: now
 		})
 		.where(eq(contractorJob.id, id))
@@ -180,7 +201,16 @@ export async function recordInvoice(
 	id: string,
 	data: { costCents?: number | null; invoiceRef?: string | null; paidAt?: Date | null }
 ) {
-	await getJobById(id);
+	const job = await getJobById(id);
+
+	// Refused rather than silently un-donating it. An invoice arriving on a job
+	// somebody marked donated means one of the two is wrong, and which one is a
+	// question for the staffer rather than for this function.
+	if (job.isDonated && data.costCents !== null && data.costCents !== undefined) {
+		throw new ContractorJobStateError(
+			'This job is marked donated. Clear that first if an invoice arrived after all.'
+		);
+	}
 
 	const [row] = await db
 		.update(contractorJob)

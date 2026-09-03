@@ -1,4 +1,4 @@
-import { getJson, putJson, listKeys } from '$lib/server/kv';
+import { getJson, putJson } from '$lib/server/kv';
 import { DomainError } from '$lib/server/domain-error';
 
 /** The caller asked for a config key that is not in the registry. */
@@ -40,6 +40,24 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'reservation.teachingMaxAdvanceDaysOneoff': 60,
 	'reservation.teachingMaxAdvanceDaysRecurring': 90,
 
+	// What an hour of donated time is worth, for grant applications and impact
+	// reports. This is the *impact* rate and it covers every approved hour;
+	// recognizable contributed services under FASB are a different, narrower
+	// number carried per-role, and the two are never summed.
+	//
+	// Independent Sector republishes every April, so this is runtime config
+	// rather than a constant -- a hardcoded figure is wrong within a year, and
+	// the annual refresh should be a settings edit rather than a deploy. Oregon
+	// rather than the national $36.14, because the state runs above it. Read off
+	// the 2026 report's state table, whose 2025 column is marked preliminary;
+	// note it is NOT the $36.44 a state calculator will quote you, which is that
+	// table's 2024 column.
+	'volunteer.hourValueCents': 3766,
+	// Cited in the report itself. A funder-facing number whose provenance is not
+	// on the page cannot be defended, and the citation has to move with the
+	// figure or it silently starts describing the wrong year.
+	'volunteer.hourValueSource': 'Independent Sector, Oregon, 2025 (2026 report, preliminary)',
+
 	'org.name': 'Corvallis Music Collective',
 	'org.shortName': 'CorvMC',
 	'org.contactEmail': 'staff@corvmc.org',
@@ -72,14 +90,77 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 export type SiteConfigKey = keyof typeof DEFAULTS;
 
 // ---------------------------------------------------------------------------
-// Core access
+// Reads
 // ---------------------------------------------------------------------------
+
+/**
+ * How long a colo may serve a config key from its edge cache.
+ *
+ * Longer than KV's 60-second default because these change on a staff form
+ * submit rather than on a request. Note this stacks on top of the isolate memo
+ * below, so a memoized key's worst-case staleness is the sum of the two, not
+ * the larger — which is why the exempt prefix stays on KV's default (60s is
+ * also the floor; KV rejects less).
+ */
+const KV_CACHE_TTL_SECONDS = 300;
+const KV_CACHE_TTL_EXEMPT_SECONDS = 60;
+
+/**
+ * How long this isolate may serve a config value from memory.
+ *
+ * An isolate handles many requests, so this is what turns a fifteen-key prefix
+ * read into roughly one KV read per key per isolate per minute. The cost is
+ * staleness: a write in one isolate cannot clear another isolate's copy, so a
+ * changed value takes up to this long to reach every colo.
+ */
+const MEMO_TTL_MS = 60_000;
+
+/**
+ * Feature flags are exempt from the memo, and it is staleness that decides it
+ * rather than read cost. Nobody watches a room rate take effect; a staff member
+ * who toggles a flag and sees nothing happen does, and reads it as a bug.
+ *
+ * This does not make a flag instant — KV's own edge cache was always in front
+ * of it. What the exemption buys is that flags keep the ~60s they already had
+ * instead of compounding a second cache on top.
+ */
+const MEMO_EXEMPT_PREFIX = 'feature.';
+
+type ConfigValue = string | number | boolean;
+
+const memo = new Map<string, { value: ConfigValue | null; expiresAt: number }>();
+
+/**
+ * Test-only. The memo is module state, so it outlives a spec's `beforeEach` and
+ * would serve one test's writes to the next.
+ */
+export function clearSiteConfigMemo(): void {
+	memo.clear();
+}
+
+/** The stored override for a key, or null when nothing has been written. */
+async function readStored(key: string): Promise<ConfigValue | null> {
+	const memoizable = !key.startsWith(MEMO_EXEMPT_PREFIX);
+
+	if (memoizable) {
+		const hit = memo.get(key);
+		if (hit && hit.expiresAt > Date.now()) return hit.value;
+	}
+
+	const value = await getJson<ConfigValue>(`${KV_PREFIX}${key}`, {
+		cacheTtl: memoizable ? KV_CACHE_TTL_SECONDS : KV_CACHE_TTL_EXEMPT_SECONDS
+	});
+
+	if (memoizable) memo.set(key, { value, expiresAt: Date.now() + MEMO_TTL_MS });
+
+	return value;
+}
 
 export async function config<T extends string | number | boolean = string | number | boolean>(
 	key: string
 ): Promise<T> {
-	const value = await getJson<T>(`${KV_PREFIX}${key}`);
-	if (value !== null) return value;
+	const value = await readStored(key);
+	if (value !== null) return value as T;
 
 	const fallback = DEFAULTS[key];
 	if (fallback !== undefined) return fallback as T;
@@ -90,25 +171,28 @@ export async function config<T extends string | number | boolean = string | numb
 /** @deprecated Use config() instead */
 export const getSiteConfig = config;
 
+/**
+ * Every key under a prefix, defaults overlaid with whatever KV holds.
+ *
+ * This used to ask KV `list()` which keys existed and then fetch them one at a
+ * time. Both halves were wrong. `DEFAULTS` already enumerates every legal key —
+ * it is what `config()` throws `UnknownSiteConfigKeyError` against — so KV was
+ * being asked a question it is not the authority for, and a `list()` does not
+ * edge-cache the way a `get()` does. The consequence of fixing it: a key stored
+ * in KV but absent from `DEFAULTS` is no longer surfaced here. Nothing writes
+ * one, because `updateSiteConfig` is only ever called with registered keys.
+ */
 export async function getConfigsByPrefix(
 	prefix: string
 ): Promise<Record<string, string | number | boolean>> {
+	const keys = Object.keys(DEFAULTS).filter((key) => key.startsWith(`${prefix}.`));
+	const stored = await Promise.all(keys.map(readStored));
+
 	const result: Record<string, string | number | boolean> = {};
-
-	for (const [key, value] of Object.entries(DEFAULTS)) {
-		if (key.startsWith(`${prefix}.`)) {
-			const shortKey = key.slice(prefix.length + 1);
-			result[shortKey] = value;
-		}
-	}
-
-	const kvKeys = await listKeys(`${KV_PREFIX}${prefix}.`);
-	for (const kvKey of kvKeys) {
-		const configKey = kvKey.slice(KV_PREFIX.length);
-		const shortKey = configKey.slice(prefix.length + 1);
-		const value = await getJson<string | number | boolean>(kvKey);
-		if (value !== null) result[shortKey] = value;
-	}
+	keys.forEach((key, i) => {
+		// `??` rather than `||`: `false` and `0` are legitimate stored values.
+		result[key.slice(prefix.length + 1)] = stored[i] ?? DEFAULTS[key];
+	});
 
 	return result;
 }
@@ -122,12 +206,16 @@ export async function updateSiteConfig(
 	value: string | number | boolean
 ): Promise<void> {
 	await putJson(`${KV_PREFIX}${key}`, value);
+	memo.delete(key);
 }
 
+/**
+ * Concurrent rather than sequential. KV has no batch put, so a partial failure
+ * was always possible and still is — now in nondeterministic order, which is
+ * acceptable for a settings form and would not be for a ledger.
+ */
 export async function updateSiteConfigs(
 	entries: Array<{ key: string; value: string | number }>
 ): Promise<void> {
-	for (const entry of entries) {
-		await updateSiteConfig(entry.key, entry.value);
-	}
+	await Promise.all(entries.map((entry) => updateSiteConfig(entry.key, entry.value)));
 }

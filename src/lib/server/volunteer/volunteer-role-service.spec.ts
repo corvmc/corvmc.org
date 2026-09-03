@@ -8,6 +8,8 @@ let selectResult: unknown[] = [];
 let selectResultQueue: unknown[][] = [];
 let insertResult: unknown[] = [];
 let updateResult: unknown[] = [];
+/** What `.set()` was actually handed, so a write can be asserted rather than inferred. */
+let updateSets: Record<string, unknown>[] = [];
 let deleteResult: unknown[] = [];
 let insertError: Error | null = null;
 
@@ -38,11 +40,14 @@ vi.mock('$lib/server/db', () => ({
 			}))
 		})),
 		update: vi.fn(() => ({
-			set: vi.fn(() => ({
-				where: vi.fn(() => ({
-					returning: vi.fn(() => Promise.resolve(updateResult))
-				}))
-			}))
+			set: vi.fn((values: Record<string, unknown>) => {
+				updateSets.push(values);
+				return {
+					where: vi.fn(() => ({
+						returning: vi.fn(() => Promise.resolve(updateResult))
+					}))
+				};
+			})
 		})),
 		delete: vi.fn(() => ({
 			where: vi.fn(() => ({
@@ -225,5 +230,55 @@ describe('VolunteerRoleService', () => {
 			deleteResult = [];
 			await expect(deleteVolunteerRole('missing')).rejects.toThrow(VolunteerRoleNotFoundError);
 		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The specialized-skill split
+// ---------------------------------------------------------------------------
+
+describe('specialized skill', () => {
+	beforeEach(() => {
+		updateSets = [];
+		updateResult = [ROLE];
+	});
+
+	it('keeps the flag and the rate together on an update', async () => {
+		await updateVolunteerRole(ROLE.id, { isSpecializedSkill: true, marketRateCents: 6500 });
+
+		expect(updateSets.at(-1)).toMatchObject({
+			isSpecializedSkill: true,
+			marketRateCents: 6500
+		});
+	});
+
+	it('allows a specialized role with no rate — that is the gap, not an error', async () => {
+		await updateVolunteerRole(ROLE.id, { isSpecializedSkill: true, marketRateCents: null });
+
+		expect(updateSets.at(-1)).toMatchObject({
+			isSpecializedSkill: true,
+			marketRateCents: null
+		});
+	});
+
+	it('clears the rate when the flag comes off', async () => {
+		// A rate on a role that is not a specialized skill is not a value waiting
+		// to be used — it is a claim nobody is making, and it would reappear the
+		// moment somebody ticked the box again months later.
+		await updateVolunteerRole(ROLE.id, { isSpecializedSkill: false, marketRateCents: 6500 });
+
+		expect(updateSets.at(-1)).toMatchObject({
+			isSpecializedSkill: false,
+			marketRateCents: null
+		});
+	});
+
+	it('refuses a negative or fractional rate', async () => {
+		await expect(updateVolunteerRole(ROLE.id, { marketRateCents: -1 })).rejects.toThrow(
+			VolunteerRoleValidationError
+		);
+		await expect(updateVolunteerRole(ROLE.id, { marketRateCents: 65.5 })).rejects.toThrow(
+			VolunteerRoleValidationError
+		);
 	});
 });

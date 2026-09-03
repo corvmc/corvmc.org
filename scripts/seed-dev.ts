@@ -33,6 +33,7 @@ import { seedEvents } from './seed/events';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
+import { seedGroupDocuments } from './seed/group-documents';
 import { seedDirectoryEntries } from './seed/directory';
 import { seedDirectoryPersonas } from './seed/directory-personas';
 import { seedInstructors } from './seed/instructors';
@@ -109,6 +110,7 @@ async function main() {
 	const instructors = await seedInstructors(allUsers, adminUser);
 	const externalActs = await seedExternalActs();
 	const groupSessions = await seedGroupSessions(groups);
+	const groupDocuments = await seedGroupDocuments(groups, allUsers);
 	const bandEvents = await seedBandEvents(bands, allUsers);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
@@ -185,6 +187,9 @@ async function main() {
 	);
 	console.log(
 		`  ${groupSessions.length} group sessions (${groupSessions.filter((e) => e.reservationId).length} holding the room)`
+	);
+	console.log(
+		`  ${groupDocuments.length} group documents (${groupDocuments.filter((d) => d.deletedAt).length} removed)`
 	);
 	console.log(`  ${bandEvents.length} band events`);
 	console.log(`  ${bandReservations.length} band reservations`);

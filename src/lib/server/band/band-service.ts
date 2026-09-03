@@ -37,6 +37,8 @@ import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { detachSlot } from '$lib/server/media/media-service';
+import { deletePrivateObject } from '$lib/server/private-storage';
+import { DocumentPurgeFailedError, listAllKeys } from '$lib/server/group/file-service';
 import { sanitizeBio } from '$lib/utils/markdown';
 import { captureException } from '$lib/server/sentry';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -313,7 +315,34 @@ export async function deleteBand(bandId: string) {
 	// be reclaimed is the sweep's question. See docs/specs/shipped/media-spec.md.
 	await detachSlot('group', bandId, 'avatar');
 
-	// Delete band (group_member rows cascade)
+	// Private documents, deleted BEFORE the group row. `file.groupId` cascades,
+	// so once the group is gone no record of these keys survives and the sweep
+	// can never see them — this is the one place an object dies from a request
+	// path, and it is the same rule applied where a cascade is about to destroy
+	// the only record: never drop the row that holds a key before the object it
+	// names. Soft-deleted rows are included for exactly that reason.
+	//
+	// A failed delete ABORTS the whole deletion. The rows are then the recovery
+	// record, which is the point — the alternative is swallowing the error and
+	// orphaning storage silently.
+	//
+	// Unconditional across kinds. A band's list is normally empty (documents are
+	// a club and committee feature), but "bands hold no documents" is a policy a
+	// later change could relax, and a purge that skips a kind is how a leak
+	// starts.
+	const keys = await listAllKeys(bandId);
+	let failedDeletes = 0;
+	for (const { key } of keys) {
+		try {
+			await deletePrivateObject(key);
+		} catch (err) {
+			console.error(`[deleteBand] failed to delete ${key}:`, err);
+			failedDeletes++;
+		}
+	}
+	if (failedDeletes > 0) throw new DocumentPurgeFailedError(failedDeletes);
+
+	// Delete band (group_member and file rows cascade)
 	await db.delete(group).where(eq(group.id, bandId));
 }
 

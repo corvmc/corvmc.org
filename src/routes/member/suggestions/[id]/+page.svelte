@@ -27,6 +27,7 @@
 	const s = $derived(data.suggestion);
 	const standing = $derived(data.standing);
 	const editState = $derived(data.editState);
+	const project = $derived(data.project);
 
 	const isMine = $derived(s.authorUserId === standing.viewerUserId);
 	let vote = $derived(toggleSuggestionVote.for(s.id));
@@ -53,6 +54,17 @@
 </PageHeader>
 
 <PageContent width="3xl">
+	<!--
+		What the idea became. Read-only, and deliberately no budget: the member is
+		being told their suggestion turned into work, which is the payoff the board
+		never had, not given a window onto what it costs.
+	-->
+	{#if project}
+		<Alert type="success">
+			Staff started work on this: <span class="font-medium">{project.name}</span>.
+		</Alert>
+	{/if}
+
 	{#if s.mergedIntoId}
 		<Alert type="info" href={resolve(`/member/suggestions/${s.mergedIntoId}`)}>
 			Merged into <span class="font-medium">{s.mergedIntoTitle ?? 'another suggestion'}</span> — the votes

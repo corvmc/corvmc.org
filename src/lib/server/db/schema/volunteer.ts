@@ -200,6 +200,40 @@ export const volunteerRole = sqliteTable('volunteer_role', {
 	// submit form and nowhere else.
 	isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
 
+	/**
+	 * Whether an hour worked under this role is a **specialized skill**, in the
+	 * accounting sense that splits donated time into two numbers that are never
+	 * added together.
+	 *
+	 * Every approved hour counts toward *impact value*, at the Independent
+	 * Sector rate in `volunteer.hourValueCents`. Only a specialized skill — one
+	 * the collective would otherwise have had to buy — counts as a
+	 * *recognizable contributed service* under FASB, and at what that skill
+	 * actually costs rather than at the general rate. A donated audio engineer's
+	 * hour and a door shift are different accounting objects despite being the
+	 * same work-order shape.
+	 *
+	 * This is the sibling of the test the acquisitions register already applies
+	 * to donated *goods*; see `acquisition.fair_value_cents`.
+	 *
+	 * Constant default, so the ADD COLUMN needs no backfill.
+	 */
+	isSpecializedSkill: integer('is_specialized_skill', { mode: 'boolean' }).notNull().default(false),
+
+	/**
+	 * What this skill would cost to buy, per hour.
+	 *
+	 * On the role rather than in site config because "what that skill costs" is
+	 * not one number — a donated audio engineer and a donated bookkeeper differ
+	 * — which is exactly why the impact rate can live in config and this cannot.
+	 *
+	 * **Null on a specialized role means priced-but-unpriced, and contributes
+	 * zero.** It must never fall back to the impact rate: that fallback would
+	 * silently merge the two columns, which is the single error this whole
+	 * split exists to prevent. Reports surface it as a gap instead.
+	 */
+	marketRateCents: integer('market_rate_cents'),
+
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`(unixepoch())`),

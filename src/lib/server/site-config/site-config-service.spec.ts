@@ -2,21 +2,44 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
+//
+// `vi.hoisted` rather than plain module consts: `vi.mock` is hoisted above the
+// imports, so anything its factory closes over has to be hoisted with it.
 // ---------------------------------------------------------------------------
 
-const kvStore = new Map<string, string>();
+const kv = vi.hoisted(() => {
+	const kvStore = new Map<string, string>();
 
-vi.mock('$lib/server/kv', () => ({
-	getJson: vi.fn(async (key: string) => {
+	/** Peak `getJson` calls in flight at once — what proves the fan-out. */
+	const counters = { inFlight: 0, peak: 0 };
+
+	const getJson = vi.fn(async (key: string, _opts?: { cacheTtl?: number }) => {
+		counters.inFlight++;
+		counters.peak = Math.max(counters.peak, counters.inFlight);
+		// Yield, so a sequential caller cannot accidentally look concurrent.
+		await Promise.resolve();
+		counters.inFlight--;
 		const raw = kvStore.get(key);
 		return raw !== undefined ? JSON.parse(raw) : null;
-	}),
-	putJson: vi.fn(async (key: string, value: unknown) => {
+	});
+
+	const putJson = vi.fn(async (key: string, value: unknown) => {
 		kvStore.set(key, JSON.stringify(value));
-	}),
-	listKeys: vi.fn(async (prefix: string) => {
-		return [...kvStore.keys()].filter((k) => k.startsWith(prefix));
-	})
+	});
+
+	const listKeys = vi.fn(async (prefix: string) =>
+		[...kvStore.keys()].filter((k) => k.startsWith(prefix))
+	);
+
+	return { kvStore, counters, getJson, putJson, listKeys };
+});
+
+const { kvStore, counters, getJson, putJson, listKeys } = kv;
+
+vi.mock('$lib/server/kv', () => ({
+	getJson: kv.getJson,
+	putJson: kv.putJson,
+	listKeys: kv.listKeys
 }));
 
 import {
@@ -24,11 +47,21 @@ import {
 	getConfigsByPrefix,
 	updateSiteConfig,
 	updateSiteConfigs,
+	clearSiteConfigMemo,
+	DEFAULTS,
 	UnknownSiteConfigKeyError
 } from './site-config-service';
 
 beforeEach(() => {
 	kvStore.clear();
+	// The memo is module state, so it outlives this hook and would otherwise
+	// serve one test's writes to the next.
+	clearSiteConfigMemo();
+	getJson.mockClear();
+	putJson.mockClear();
+	listKeys.mockClear();
+	counters.inFlight = 0;
+	counters.peak = 0;
 });
 
 // ---------------------------------------------------------------------------
@@ -130,5 +163,137 @@ describe('updateSiteConfigs', () => {
 			{ key: 'reservation.operatingHoursEnd', value: '23:00' }
 		]);
 		expect(kvStore.size).toBe(2);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The read path
+// ---------------------------------------------------------------------------
+
+describe('getConfigsByPrefix read path', () => {
+	const reservationKeyCount = Object.keys(DEFAULTS).filter((k) =>
+		k.startsWith('reservation.')
+	).length;
+
+	it('never asks KV which keys exist', async () => {
+		kvStore.set('site-config:reservation.operatingHoursStart', JSON.stringify('08:00'));
+
+		await getConfigsByPrefix('reservation');
+
+		// DEFAULTS is the registry. A `list()` asks KV a question it is not the
+		// authority for, and unlike `get()` it does not edge-cache at all.
+		expect(listKeys).not.toHaveBeenCalled();
+	});
+
+	it('reads every registered key under the prefix, concurrently', async () => {
+		await getConfigsByPrefix('reservation');
+
+		expect(getJson).toHaveBeenCalledTimes(reservationKeyCount);
+		expect(counters.peak).toBeGreaterThan(1);
+	});
+
+	it('does not surface a stored key that is absent from DEFAULTS', async () => {
+		kvStore.set('site-config:reservation.retiredSetting', JSON.stringify('ghost'));
+
+		const result = await getConfigsByPrefix('reservation');
+
+		expect(result.retiredSetting).toBeUndefined();
+	});
+
+	it('prefers a stored falsy value over a truthy default', async () => {
+		// `??` not `||`. `timeSlotMinutes` defaults to 30, so a stored 0 is the
+		// case that tells the two apart — and `false` and `0` are both values a
+		// staff member can legitimately save.
+		kvStore.set('site-config:reservation.timeSlotMinutes', JSON.stringify(0));
+
+		const result = await getConfigsByPrefix('reservation');
+
+		expect(result.timeSlotMinutes).toBe(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The isolate memo
+// ---------------------------------------------------------------------------
+
+describe('the isolate memo', () => {
+	it('serves a second read without touching KV', async () => {
+		await getSiteConfig('reservation.hourlyRateCents');
+		expect(getJson).toHaveBeenCalledTimes(1);
+
+		await getSiteConfig('reservation.hourlyRateCents');
+		expect(getJson).toHaveBeenCalledTimes(1);
+	});
+
+	it('is busted by a write, so a staff save is visible in this isolate at once', async () => {
+		await getSiteConfig('reservation.hourlyRateCents');
+
+		await updateSiteConfig('reservation.hourlyRateCents', 2000);
+
+		expect(await getSiteConfig('reservation.hourlyRateCents')).toBe(2000);
+	});
+
+	it('exempts feature flags, so a toggle does not compound two caches', async () => {
+		await getSiteConfig('feature.bandPremium');
+		await getSiteConfig('feature.bandPremium');
+
+		// Nobody watches a room rate take effect. A staff member who toggles a
+		// flag does, so flags pay the read rather than adding this cache on top
+		// of the edge cache that was always in front of them.
+		expect(getJson).toHaveBeenCalledTimes(2);
+	});
+
+	it('gives an exempt key a shorter edge cacheTtl than a memoized one', async () => {
+		await getSiteConfig('reservation.hourlyRateCents');
+		await getSiteConfig('feature.bandPremium');
+
+		const [memoized, exempt] = getJson.mock.calls;
+		expect(memoized[1]).toEqual({ cacheTtl: 300 });
+		// A long edge TTL here would defeat the exemption above entirely.
+		expect(exempt[1]).toEqual({ cacheTtl: 60 });
+	});
+});
+
+// ---------------------------------------------------------------------------
+// updateSiteConfigs concurrency
+// ---------------------------------------------------------------------------
+
+describe('updateSiteConfigs', () => {
+	it('writes concurrently', async () => {
+		await updateSiteConfigs([
+			{ key: 'reservation.operatingHoursStart', value: '08:00' },
+			{ key: 'reservation.operatingHoursEnd', value: '23:00' },
+			{ key: 'reservation.timeSlotMinutes', value: 15 }
+		]);
+
+		expect(putJson).toHaveBeenCalledTimes(3);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The volunteer hour value
+// ---------------------------------------------------------------------------
+
+describe('the volunteer hour value defaults', () => {
+	it('carries a rate and the citation that defends it, together', async () => {
+		const result = await getConfigsByPrefix('volunteer');
+
+		// A funder-facing figure whose provenance is missing cannot be defended,
+		// and a citation without a figure describes nothing. Independent Sector
+		// republishes every April, so the pair is edited annually and the two
+		// halves have to move together or the citation silently goes a year
+		// stale against the number it names.
+		expect(result.hourValueCents).toBeGreaterThan(0);
+		expect(Number.isInteger(result.hourValueCents)).toBe(true);
+		expect(String(result.hourValueSource)).not.toBe('');
+	});
+
+	it('is Oregon rather than the national rate', async () => {
+		// Oregon runs above the national figure, and the state number is the one
+		// a local grant reviewer would check. 3766 is the 2026 report's Oregon
+		// 2025 column -- deliberately not the 3644 a state calculator quotes,
+		// which is that same table's 2024 column.
+		expect(DEFAULTS['volunteer.hourValueCents']).toBe(3766);
+		expect(String(DEFAULTS['volunteer.hourValueSource'])).toContain('Oregon');
 	});
 });

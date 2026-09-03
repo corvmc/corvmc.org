@@ -26,6 +26,8 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 	isActive?: boolean;
 	defaultDurationMinutes?: number;
 	defaultCapacity?: number;
+	isSpecializedSkill?: boolean;
+	marketRateCents?: number;
 }> = [
 	{
 		name: 'Sound Engineering',
@@ -34,7 +36,12 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 			'Run the board for a show or open mic. Line check, monitor mixes, and a house mix that respects the room.\n\n**No experience needed** — we will train you on the desk before you fly solo.',
 		displayOrder: 10,
 		defaultDurationMinutes: 300,
-		defaultCapacity: 1
+		defaultCapacity: 1,
+		// The report's canonical specialized skill, and priced: a night of
+		// donated live sound is a contributed service the collective would
+		// otherwise have bought.
+		isSpecializedSkill: true,
+		marketRateCents: 6500
 	},
 	{
 		name: 'Event Setup',
@@ -68,7 +75,12 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		group: 'away-from-shows' as const,
 		description:
 			'Keep the space working — patch drywall, swap bulbs, restring the loaner guitars, fix the door that sticks.\n\nBring whatever skills you have; there is always something.',
-		displayOrder: 50
+		displayOrder: 50,
+		// Specialized with **no** rate on purpose, so the gap state is reachable
+		// on a fresh seed: the work spans swapping a bulb and rewiring a
+		// circuit, so one hourly figure would be a fiction. A report has to show
+		// this as unpriced rather than quietly valuing it at the impact rate.
+		isSpecializedSkill: true
 	},
 	{
 		name: 'Booking Lead',

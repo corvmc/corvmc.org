@@ -180,6 +180,60 @@ describe('completeJob', () => {
 
 		await expect(completeJob(JOB)).rejects.toThrow(ContractorJobStateError);
 	});
+
+	// SQLite cannot add a CHECK through ALTER TABLE, so the "donated implies
+	// nothing was paid" rule lives here. It is not tidiness: `getProjectBurn`
+	// reads the flag to keep a donated job out of cash spend, so a row that
+	// carried both would be counted twice — as money out and as value given.
+	describe('donated work', () => {
+		it('records the fair value and leaves cost null', async () => {
+			jobThenAsset({ id: JOB, status: 'scheduled', assetId: null, summary: 'Rewire' });
+
+			await completeJob(JOB, {
+				isDonated: true,
+				fairValueCents: 42000,
+				fairValueBasis: 'Their rate card, 4 hours'
+			});
+
+			expect(updateValues[0]).toMatchObject({
+				isDonated: true,
+				fairValueCents: 42000,
+				fairValueBasis: 'Their rate card, 4 hours',
+				costCents: null
+			});
+		});
+
+		it('refuses a job that is both donated and invoiced', async () => {
+			jobThenAsset({ id: JOB, status: 'scheduled', assetId: null, summary: 'Rewire' });
+
+			await expect(completeJob(JOB, { isDonated: true, costCents: 42000 })).rejects.toThrow(
+				ContractorJobStateError
+			);
+		});
+
+		it('clears a stale fair value when the flag comes off', async () => {
+			// Otherwise a number nothing reads sits on the row and reappears the
+			// moment somebody ticks the box again.
+			jobThenAsset({
+				id: JOB,
+				status: 'scheduled',
+				assetId: null,
+				summary: 'Rewire',
+				isDonated: true,
+				fairValueCents: 42000,
+				fairValueBasis: 'Their rate card'
+			});
+
+			await completeJob(JOB, { isDonated: false, costCents: 51000 });
+
+			expect(updateValues[0]).toMatchObject({
+				isDonated: false,
+				fairValueCents: null,
+				fairValueBasis: null,
+				costCents: 51000
+			});
+		});
+	});
 });
 
 describe('cancelJob', () => {

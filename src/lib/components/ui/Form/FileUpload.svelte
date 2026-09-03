@@ -166,7 +166,11 @@
 			<p class="text-sm text-error">{uploadError}</p>
 		{:else if uploadStatus === 'success' && !isImage}
 			<p class="text-sm text-success">Uploaded</p>
-		{:else if selectedFile && !isImage}
+		{:else if !deferred && selectedFile && !isImage}
+			<!-- Immediate mode only. Deferred mode names the file above, beside the
+			     picker, and without this guard both branches match a non-image
+			     deferred pick and it is listed twice — invisible while every
+			     deferred caller uploaded images, and plain to see on a PDF. -->
 			<p class="text-muted">{selectedFile.name} ({formatSize(selectedFile.size)})</p>
 		{/if}
 	</div>

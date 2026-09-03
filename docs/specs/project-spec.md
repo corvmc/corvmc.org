@@ -2,16 +2,27 @@
 
 > ## Status
 >
-> **Phase 1 shipped** — the table, the five nullable `project_id` anchors,
-> `project-service.ts` (including derived burn) and the seed. The vocabulary
-> rename it was sequenced behind shipped first, in its own migration.
+> **Phases 1–3 shipped.** The table and its five nullable `project_id` anchors,
+> `project-service.ts` with derived burn, the seed, `/staff/projects` and its
+> detail page, and the suggestion loop: staff start a project from a
+> suggestion, both move to `planned` in one write, the author is told their
+> idea became work, and a committee reads its own projects on
+> `/member/groups/{slug}` through `requireGroupRole`. The vocabulary rename
+> this was sequenced behind shipped first, in its own migration.
 >
-> **Not built yet:** every staff and member surface (`/staff/projects`, the
-> committee tab, "start a project from this suggestion"), the deal shape, the
-> `production` side table, generate-on-close recurring work, and the valued
-> volunteer hour — which stays blocked on the site-config read path in
-> `CHORES.md`. Burn therefore reports volunteer time in **minutes**, and never
-> adds contributed value to cash.
+> **The valued volunteer hour shipped**, and with it the site-config read path
+> it was blocked on. `volunteer.hourValueCents` and its citation are staff-edited
+> config; `volunteer_role` marks a specialized skill and carries its own market
+> rate; `contractor_job` can be donated at a fair value. Burn reports **both
+> valuations and never adds them** — impact value over every approved hour, and
+> recognizable contributed services over specialized hours only. They overlap by
+> construction, so the DTO offers no combined total. A specialized role with no
+> rate counts as zero and is surfaced as a gap, never valued at the impact rate.
+>
+> **Not built yet:** the deal shape, the `production` side table, and
+> generate-on-close recurring work. Committee surfaces are read-only; acting on
+> a project from one waits on the capability work in
+> [admin-vs-staff-spec.md](admin-vs-staff-spec.md).
 
 ## Purpose
 
@@ -186,9 +197,10 @@ This asks two things of adjacent tables:
 
 **Project burn shows both, labelled, and never sums them.**
 
-> **Prerequisite.** `volunteer.hourValueCents` must not be added before the
-> site-config read path is fixed — see `CHORES.md`. `getConfigsByPrefix` issues a KV
-> `list()` then a sequential `get()` per stored key, so a config read is not free.
+> **Shipped.** `volunteer.hourValueCents` waited on the site-config read path,
+> which is now fixed: the KV `list()` is gone, the per-key reads are concurrent
+> and edge-cached, and an isolate memo makes a config read roughly free. Feature
+> flags are exempt from that memo, because a staff toggle must not sit behind it.
 
 ## The deal shape
 

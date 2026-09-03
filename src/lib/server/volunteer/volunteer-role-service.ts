@@ -57,6 +57,10 @@ interface RoleInput {
 	/** What the New Shift form starts with. `null` clears it. Not a limit. */
 	defaultDurationMinutes?: number | null;
 	defaultCapacity?: number | null;
+	/** Whether hours here are recognizable contributed services. */
+	isSpecializedSkill?: boolean;
+	/** What the skill costs to buy, per hour. `null` is "nobody has priced it". */
+	marketRateCents?: number | null;
 }
 
 // A day. Long enough for anything the club actually schedules, short enough
@@ -113,6 +117,28 @@ function normalize(data: RoleInput) {
 		normalized.defaultDurationMinutes = minutes;
 	}
 
+	if (data.isSpecializedSkill !== undefined) {
+		normalized.isSpecializedSkill = data.isSpecializedSkill;
+	}
+
+	if (data.marketRateCents !== undefined) {
+		const rate = data.marketRateCents;
+		if (rate !== null && (!Number.isInteger(rate) || rate < 0)) {
+			throw new VolunteerRoleValidationError(
+				'Market rate must be a whole number of cents, or blank'
+			);
+		}
+		normalized.marketRateCents = rate;
+	}
+
+	// Turning the flag off clears the rate, rather than leaving a number that
+	// nothing reads and that would reappear if the flag were switched back on
+	// months later. A rate on a role that is not a specialized skill is not a
+	// value waiting to be used — it is a claim nobody is making.
+	if (normalized.isSpecializedSkill === false) {
+		normalized.marketRateCents = null;
+	}
+
 	if (data.defaultCapacity !== undefined) {
 		const capacity = data.defaultCapacity;
 		if (capacity !== null && (!Number.isInteger(capacity) || capacity < 1)) {
@@ -163,7 +189,9 @@ export async function createVolunteerRole(
 				displayOrder: values.displayOrder ?? 0,
 				isActive: values.isActive ?? true,
 				defaultDurationMinutes: values.defaultDurationMinutes ?? null,
-				defaultCapacity: values.defaultCapacity ?? null
+				defaultCapacity: values.defaultCapacity ?? null,
+				isSpecializedSkill: values.isSpecializedSkill ?? false,
+				marketRateCents: values.marketRateCents ?? null
 			})
 			.returning();
 		return row;

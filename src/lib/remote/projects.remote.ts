@@ -5,9 +5,8 @@ import { mapDomainError } from '$lib/server/errors';
 import { projectStatuses, DEFAULT_TIMEZONE } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
 import { suggestion } from '$lib/server/db/schema/suggestion';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import {
 	attachToProject,
 	createProject,
@@ -15,8 +14,10 @@ import {
 	getProjectBurn,
 	getProjectById,
 	listProjectAttachments,
+	listCommittees,
 	listProjects,
 	setProjectStatus,
+	startProjectFromSuggestion,
 	updateProject
 } from '$lib/server/project/project-service';
 
@@ -85,15 +86,6 @@ const attachableKinds = z.enum([
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
-
-/** Committees only: nothing else may own a project, so nothing else is offered. */
-async function listCommittees() {
-	return db
-		.select({ id: group.id, name: group.name })
-		.from(group)
-		.where(and(eq(group.kind, 'committee'), isNull(group.deletedAt)))
-		.orderBy(asc(group.name));
-}
 
 /** Suggestions no project answers yet — the pickable half of the board. */
 async function listUnansweredSuggestions() {
@@ -202,6 +194,44 @@ export const setProjectStatusForm = form(
 			void getProjectDetail(id).refresh();
 			void getProjectsPage().refresh();
 			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * Commit to a member's suggestion by starting the project that answers it.
+ *
+ * Lives here rather than in `suggestions.remote.ts` because the write is a
+ * project write; the suggestion moving with it is a consequence the service
+ * owns. Both pages' queries refresh, since the suggestion's own status changed
+ * too and the staff page reads it from the other module.
+ */
+export const startProjectFromSuggestionForm = form(
+	z.object({
+		suggestionId: z.uuid(),
+		name: z.string().min(1).max(200),
+		groupId: optionalId,
+		budgetCents: optionalMoney
+	}),
+	async (raw) => {
+		const user = await requireStaff();
+		const { suggestionId, name, groupId, budgetCents } = raw as {
+			suggestionId: string;
+			name: string;
+			groupId?: string;
+			budgetCents?: number;
+		};
+		try {
+			const row = await startProjectFromSuggestion(suggestionId, {
+				name,
+				groupId: groupId || null,
+				budgetCents: budgetCents ?? null,
+				createdByUserId: user.id
+			});
+			void getProjectsPage().refresh();
+			return { success: true, id: row.id };
 		} catch (err) {
 			mapDomainError(err);
 		}

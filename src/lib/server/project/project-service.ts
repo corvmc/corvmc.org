@@ -2,13 +2,14 @@ import { db } from '$lib/server/db';
 import { project } from '$lib/server/db/schema/project';
 import { group } from '$lib/server/db/schema/group';
 import { suggestion } from '$lib/server/db/schema/suggestion';
-import { workOrder, volunteerHourLog } from '$lib/server/db/schema/volunteer';
+import { workOrder, volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { contractorJob } from '$lib/server/db/schema/contractor';
 import { acquisition, purchaseOrder, purchaseOrderLine } from '$lib/server/db/schema/inventory';
 import { event } from '$lib/server/db/schema/event';
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
-import type { ProjectStatus } from '$lib/config';
+import { valueOfMinutesCents, type ProjectStatus } from '$lib/config';
+import { getHourValueCents } from '$lib/server/volunteer/hour-value';
 
 /**
  * A body of work with a budget and an owner — docs/specs/project-spec.md.
@@ -159,6 +160,22 @@ export async function getProjectById(id: string) {
 	return row;
 }
 
+/**
+ * The committees that may own a project.
+ *
+ * Here rather than in a remote module because two of them need it — the project
+ * pages and the "start a project" action on a suggestion — and because a remote
+ * function that reaches for `db` itself is a service in the wrong layer. It is
+ * also what lets a spec mock this module and get the whole surface.
+ */
+export async function listCommittees() {
+	return db
+		.select({ id: group.id, name: group.name })
+		.from(group)
+		.where(and(eq(group.kind, 'committee'), isNull(group.deletedAt)))
+		.orderBy(asc(group.name));
+}
+
 export async function listProjects(
 	opts: { status?: ProjectStatus; groupId?: string; unowned?: boolean } = {}
 ) {
@@ -173,6 +190,52 @@ export async function listProjects(
 			)
 		)
 		.orderBy(desc(project.createdAt));
+}
+
+/**
+ * The project answering a suggestion, if one does.
+ *
+ * A thin projection rather than the whole row: both callers are a line on
+ * somebody else's page — the member's own suggestion, and the staff view of it
+ * — and neither has any business with a budget.
+ */
+export async function getProjectForSuggestion(suggestionId: string) {
+	const [row] = await db
+		.select({ id: project.id, name: project.name, status: project.status })
+		.from(project)
+		.where(eq(project.suggestionId, suggestionId))
+		.limit(1);
+	return row ?? null;
+}
+
+/**
+ * Commit to a suggestion: create the project that answers it, and move the
+ * suggestion to `planned` in the same breath.
+ *
+ * The two writes are one `db.batch` because they are one fact. A project
+ * created without its suggestion following it leaves the board saying nobody
+ * has decided anything, which is the exact gap this column was added to close
+ * — and D1 has no transaction to fall back on.
+ */
+export async function startProjectFromSuggestion(
+	suggestionId: string,
+	data: Omit<CreateProjectInput, 'suggestionId' | 'status'>
+) {
+	await assertClaimableSuggestion(suggestionId);
+	if (data.groupId) await assertCommittee(data.groupId);
+
+	const id = crypto.randomUUID();
+	const now = new Date();
+
+	await db.batch([
+		db.insert(project).values({ ...data, id, suggestionId, status: 'planned' }),
+		db
+			.update(suggestion)
+			.set({ status: 'planned', updatedAt: now })
+			.where(eq(suggestion.id, suggestionId))
+	]);
+
+	return getProjectById(id);
 }
 
 // ---------------------------------------------------------------------------
@@ -237,9 +300,12 @@ export async function detachFromProject(kind: AttachableKind, rowId: string) {
  * than against a budget. Summing them produces a figure that is wrong for both
  * audiences, which is why this DTO keeps them apart and the UI labels them.
  *
- * Volunteer time is **minutes, not money**: `volunteer.hourValueCents` cannot be
- * added until the site-config read path is fixed (CHORES.md), and inventing a
- * rate here would bake the wrong one into a report.
+ * `contributed` carries **two valuations that are never added together**, and
+ * the minutes behind them. Every approved minute counts toward
+ * `volunteerValueCents` at the site rate; only hours under a specialized role
+ * count toward `recognizableServicesCents`, at that role's own rate. The two
+ * overlap by construction -- a donated audio engineer's hour is in both -- so
+ * there is no combined contributed total here to be misread as one.
  *
  * `stock_movement` is deliberately absent. The prior-art report lists it as a
  * burn source, but the table carries a quantity and no value — consumption
@@ -256,7 +322,22 @@ export interface ProjectBurn {
 	};
 	contributed: {
 		volunteerMinutes: number;
+		specializedVolunteerMinutes: number;
+		/**
+		 * Specialized minutes on a role with no rate set. Zero-valued rather
+		 * than valued at the impact rate, and surfaced so the page can say the
+		 * recognizable figure is incomplete.
+		 */
+		unpricedSpecializedMinutes: number;
+		/** Every approved minute, at `volunteer.hourValueCents`. */
+		volunteerValueCents: number;
+		/** Specialized minutes only, each at its own role's market rate. */
+		recognizableServicesCents: number;
+		/** Work a contractor did and did not invoice for. */
+		donatedServicesCents: number;
 		donatedGoodsCents: number;
+		/** The rate used, so a report built on this can cite itself. */
+		hourValueCents: number;
 	};
 	/** Budget minus cash spend. Null when no budget is set — not zero. */
 	remainingCents: number | null;
@@ -265,8 +346,14 @@ export interface ProjectBurn {
 export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 	const proj = await getProjectById(projectId);
 
+	// Two aggregates from one pass. A donated job has no `cost_cents` today, but
+	// reading the flag rather than relying on that keeps a mis-entered row out of
+	// cash spend instead of quietly inflating it.
 	const [contractorSpend] = await db
-		.select({ cents: sql<number>`coalesce(sum(${contractorJob.costCents}), 0)` })
+		.select({
+			cents: sql<number>`coalesce(sum(case when ${contractorJob.isDonated} then 0 else coalesce(${contractorJob.costCents}, 0) end), 0)`,
+			donatedCents: sql<number>`coalesce(sum(case when ${contractorJob.isDonated} then coalesce(${contractorJob.fairValueCents}, 0) else 0 end), 0)`
+		})
 		.from(contractorJob)
 		.where(eq(contractorJob.projectId, projectId));
 
@@ -295,22 +382,41 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 	// Approved hours only. A pending log is a claim, not a contribution, and a
 	// grant report built on unreviewed time is one nobody can defend.
 	const [labour] = await db
-		.select({ minutes: sql<number>`coalesce(sum(${volunteerHourLog.minutes}), 0)` })
+		.select({
+			minutes: sql<number>`coalesce(sum(${volunteerHourLog.minutes}), 0)`,
+			specializedMinutes: sql<number>`coalesce(sum(case when ${volunteerRole.isSpecializedSkill} then ${volunteerHourLog.minutes} else 0 end), 0)`,
+			unpricedSpecializedMinutes: sql<number>`coalesce(sum(case when ${volunteerRole.isSpecializedSkill} and ${volunteerRole.marketRateCents} is null then ${volunteerHourLog.minutes} else 0 end), 0)`,
+			// Minute-cents; divided by 60 below. SQLite integer division
+			// truncates, and each role carries its own rate, so the weighting
+			// has to happen inside the sum.
+			specializedMinuteCents: sql<number>`coalesce(sum(case when ${volunteerRole.isSpecializedSkill} and ${volunteerRole.marketRateCents} is not null then ${volunteerHourLog.minutes} * ${volunteerRole.marketRateCents} else 0 end), 0)`
+		})
 		.from(volunteerHourLog)
 		.innerJoin(workOrder, eq(volunteerHourLog.shiftId, workOrder.id))
+		.innerJoin(volunteerRole, eq(volunteerHourLog.volunteerRoleId, volunteerRole.id))
 		.where(and(eq(workOrder.projectId, projectId), eq(volunteerHourLog.status, 'approved')));
+
+	const hourValueCents = await getHourValueCents();
 
 	const contractorCents = Number(contractorSpend?.cents ?? 0);
 	const purchaseOrderCents = Number(orders?.cents ?? 0);
 	const acquisitionCents = Number(acquired?.paidCents ?? 0);
 	const totalCents = contractorCents + purchaseOrderCents + acquisitionCents;
 
+	const volunteerMinutes = Number(labour?.minutes ?? 0);
+
 	return {
 		budgetCents: proj.budgetCents,
 		cash: { contractorCents, purchaseOrderCents, acquisitionCents, totalCents },
 		contributed: {
-			volunteerMinutes: Number(labour?.minutes ?? 0),
-			donatedGoodsCents: Number(acquired?.donatedCents ?? 0)
+			volunteerMinutes,
+			specializedVolunteerMinutes: Number(labour?.specializedMinutes ?? 0),
+			unpricedSpecializedMinutes: Number(labour?.unpricedSpecializedMinutes ?? 0),
+			volunteerValueCents: valueOfMinutesCents(volunteerMinutes, hourValueCents),
+			recognizableServicesCents: Math.round(Number(labour?.specializedMinuteCents ?? 0) / 60),
+			donatedServicesCents: Number(contractorSpend?.donatedCents ?? 0),
+			donatedGoodsCents: Number(acquired?.donatedCents ?? 0),
+			hourValueCents
 		},
 		remainingCents: proj.budgetCents === null ? null : proj.budgetCents - totalCents
 	};
