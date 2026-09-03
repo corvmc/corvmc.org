@@ -69,17 +69,18 @@ export const submitContactForm = form(submitContactFormSchema, async (data, issu
 // ---------------------------------------------------------------------------
 
 /**
- * The five tabs, and what each one is in database terms.
+ * The four tabs, and what each one is in database terms.
  *
- * Open and Awaiting reply are both `status = 'open'`; the awaiting marker is
- * what separates them, and Open is the half that needs a human — the same set
- * the staff nav badge counts. The two views that nobody is waiting on keep the
- * old newest-first order.
+ * Open and Snoozed are the two halves of the live queue, and complementary by
+ * construction — `needsUsCondition` and `parkedCondition` in thread-service,
+ * not a status equality each. Open is what needs a human, the same set the
+ * staff nav badge counts; Snoozed is everything on a timer, whether the timer
+ * is a date or a contact who owes us an answer. The two views nobody is waiting
+ * on keep the old newest-first order.
  */
 const VIEWS = {
-	open: { status: 'open', awaitingReply: false, sort: 'waiting' },
-	awaiting: { status: 'open', awaitingReply: true, sort: 'waiting' },
-	snoozed: { status: 'snoozed', sort: 'waiting' },
+	open: { queue: 'needs-us', sort: 'waiting' },
+	snoozed: { queue: 'parked', sort: 'waiting' },
 	resolved: { status: 'resolved', sort: 'recent' },
 	all: { sort: 'recent' }
 } as const satisfies Record<
@@ -87,13 +88,22 @@ const VIEWS = {
 	Omit<ListThreadsFilters, 'channel' | 'assignedToUserId' | 'search'>
 >;
 
+/**
+ * The `view` param, wherever it is read.
+ *
+ * `awaiting` was a view of its own until Snoozed absorbed it, and is mapped
+ * rather than rejected: a saved view's filters are replayed verbatim out of the
+ * row they were stored in and no migration rewrites them, so a 400 here is a
+ * tab that has stopped working. Same mapping as `parseView` on the client,
+ * which is what tidies the URL up afterwards.
+ */
+const viewParam = z.preprocess((v) => (v === 'awaiting' ? 'snoozed' : v), z.enum(inboxViews));
+
 const threadFiltersSchema = z.object({
-	view: z.enum(inboxViews).optional(),
+	view: viewParam.optional(),
 	channel: z.enum(inboxChannels).optional(),
 	/** A staff user id, or the sentinels `mine` / `unassigned`. */
 	assigned: z.string().optional(),
-	/** Narrows *within* a view. The view already sets this on Open and Awaiting. */
-	awaiting: z.enum(['yes', 'no']).optional(),
 	/** A `contactSubjects` value, or `other` for everything outside it. */
 	subject: z.string().optional(),
 	/** The range control. 0 means the control is at its floor — no filter. */
@@ -110,7 +120,7 @@ type ThreadFilters = z.infer<typeof threadFiltersSchema>;
  * later is one line here rather than a migration.
  */
 const savedViewFiltersSchema = z.object({
-	view: z.enum(inboxViews).optional(),
+	view: viewParam.optional(),
 	channel: z.enum(inboxChannels).optional(),
 	assigned: z.string().max(64).optional(),
 	subject: z.string().max(64).optional(),
@@ -138,24 +148,13 @@ function toServiceFilters(filters: ThreadFilters, staffId: string): ListThreadsF
 					? staffId
 					: filters.assigned;
 
-	const view = VIEWS[filters.view ?? 'open'];
-
 	return {
-		...view,
+		...VIEWS[filters.view ?? 'open'],
 		channel: filters.channel,
 		assignedToUserId,
 		subject: filters.subject,
 		// Zero is the range control resting at its floor, which is not a filter.
 		waitingAtLeastDays: filters.waitingDays ? filters.waitingDays : undefined,
-		// An explicit `awaiting` narrows the view rather than fighting it: on
-		// Open and Awaiting the view has already decided, and the filter panel
-		// only offers this on the views that have not.
-		awaitingReply:
-			filters.awaiting === undefined
-				? 'awaitingReply' in view
-					? view.awaitingReply
-					: undefined
-				: filters.awaiting === 'yes',
 		search: filters.search
 	};
 }

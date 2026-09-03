@@ -292,16 +292,24 @@
 		status,
 		size = 20,
 		label: showLabel = false,
+		text,
 		class: className = ''
 	}: {
 		status: string;
 		size?: number;
 		label?: boolean;
+		/**
+		 * Overrides the derived text, for a row carrying a detail the status
+		 * vocabulary cannot ("Snoozed · Mar 4"). The glyph and colour still come
+		 * from `status`, so an override cannot invent a status the maps above do
+		 * not cover.
+		 */
+		text?: string;
 		class?: string;
 	} = $props();
 
 	const variant = $derived(variants[status] ?? fallback);
-	const label = $derived(statusLabel(status));
+	const label = $derived(text ?? statusLabel(status));
 </script>
 
 {#if showLabel}

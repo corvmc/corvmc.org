@@ -155,14 +155,15 @@ describe('countThreadsByStatus', () => {
 
 		const counts = await countThreadsByStatus();
 
-		expect(counts).toEqual({ open: 4, awaiting: 0, resolved: 9, snoozed: 0, all: 13 });
+		expect(counts).toEqual({ open: 4, resolved: 9, snoozed: 0, all: 13 });
 	});
 
 	// The split the whole queue turns on: both halves are `status = 'open'` in
-	// the database, and only the marker tells Open (needs a human) from Awaiting
-	// reply (the ball is with the contact). Folding them together is what the
-	// Open tab used to do, and it is why the tab and the nav badge disagreed.
-	it('splits open rows on the awaiting marker', async () => {
+	// the database, and only the marker tells Open (needs a human) from parked
+	// (the ball is with the contact, so it counts under Snoozed beside the
+	// threads on a date). Folding them together is what the Open tab used to do,
+	// and it is why the tab and the nav badge disagreed.
+	it('counts an awaiting-marked open row under Snoozed', async () => {
 		groupedRows = [
 			{ status: 'open', awaiting: 0, count: 4 },
 			{ status: 'open', awaiting: 1, count: 6 }
@@ -170,18 +171,19 @@ describe('countThreadsByStatus', () => {
 
 		const counts = await countThreadsByStatus();
 
-		expect(counts).toMatchObject({ open: 4, awaiting: 6, all: 10 });
+		expect(counts).toMatchObject({ open: 4, snoozed: 6, all: 10 });
 	});
 
 	// A resolved thread can still carry a stale marker — `updateStatus` clears
-	// it, but an older row need not have gone through that path. It must not
-	// land in the awaiting bucket regardless.
+	// it, but an older row need not have gone through that path, and undo can put
+	// one back. It must not land in the parked bucket regardless, which is the
+	// same rule `parkedCondition` follows below.
 	it('ignores the marker on anything that is not open', async () => {
 		groupedRows = [{ status: 'resolved', awaiting: 1, count: 3 }];
 
 		const counts = await countThreadsByStatus();
 
-		expect(counts).toMatchObject({ resolved: 3, awaiting: 0, all: 3 });
+		expect(counts).toMatchObject({ resolved: 3, snoozed: 0, all: 3 });
 	});
 
 	it('reports zeroes for an empty inbox', async () => {
@@ -189,7 +191,24 @@ describe('countThreadsByStatus', () => {
 
 		const counts = await countThreadsByStatus();
 
-		expect(counts).toEqual({ open: 0, awaiting: 0, resolved: 0, snoozed: 0, all: 0 });
+		expect(counts).toEqual({ open: 0, resolved: 0, snoozed: 0, all: 0 });
+	});
+});
+
+describe('parkedCondition (rendered SQL)', () => {
+	// The Snoozed view, and the one predicate `threadConditions` cannot express
+	// as an AND of the two columns. Rendered rather than shape-checked because
+	// the interesting half is which statuses it names: 'snoozed' and 'open',
+	// never 'resolved' — a resolved row carrying a stale marker stays resolved,
+	// exactly as the count above insists.
+	it('is snoozed, or open and awaiting a reply', async () => {
+		const { parkedCondition } = await import('./thread-service');
+		const bare = drizzle({} as never);
+		const compiled = bare.select().from(inboxThread).where(parkedCondition).toSQL();
+
+		expect(compiled.sql.toLowerCase()).toContain(' or ');
+		expect(compiled.sql.toLowerCase()).toContain('"awaiting_reply_since" is not null');
+		expect(compiled.params).toEqual(['snoozed', 'open']);
 	});
 });
 

@@ -1,16 +1,20 @@
 /**
- * Seed two staff-inbox threads that differ only in who the conversation is
- * waiting on, for the awaiting-reply e2e.
+ * Seed three staff-inbox threads, one per state the queue can put a thread in,
+ * for the awaiting-reply e2e.
  *
  * Why a round trip is needed at all: the marker is written by one layer
  * (`addOutboundMessage` / `setAwaitingReply`), read by another (`listThreads`,
  * `getUnresolvedCount`), and rendered as a *derived* status. The fact that
- * matters — Open holds what needs a human and Awaiting reply holds what does
- * not, and the nav badge is exactly the first of those — is the seam between
- * those layers, and no unit test spans it.
+ * matters — Open holds what needs a human and Snoozed holds everything parked,
+ * on a date or on a reply, and the nav badge is exactly the first of those — is
+ * the seam between those layers, and no unit test spans it.
  *
- * Both threads are `web`, so neither needs a channel enabled or an external
- * service to exist.
+ * The snoozed row is here because Snoozed absorbed the awaiting view, and its
+ * whole premise is that the two are still told apart on the row. Nothing
+ * asserts that without both kinds sitting in the same list.
+ *
+ * All three are `web`, so none needs a channel enabled or an external service
+ * to exist.
  *
  * Idempotent: deletes and recreates its own rows on every run.
  */
@@ -26,7 +30,11 @@ export const SEED_AWAITING_CONTACT = 'E2E Awaiting Contact';
 export const SEED_NEEDS_REPLY_THREAD_ID = 'e2e-inbox-needs-reply';
 export const SEED_NEEDS_REPLY_CONTACT = 'E2E Needs Reply Contact';
 
-const THREAD_IDS = [SEED_AWAITING_THREAD_ID, SEED_NEEDS_REPLY_THREAD_ID];
+/** Parked on a date rather than on a person — the other half of Snoozed. */
+export const SEED_SNOOZED_THREAD_ID = 'e2e-inbox-snoozed';
+export const SEED_SNOOZED_CONTACT = 'E2E Snoozed Contact';
+
+const THREAD_IDS = [SEED_AWAITING_THREAD_ID, SEED_NEEDS_REPLY_THREAD_ID, SEED_SNOOZED_THREAD_ID];
 
 export async function seedInboxAwaiting(): Promise<void> {
 	await withPlatformDb(async (db) => {
@@ -65,6 +73,23 @@ export async function seedInboxAwaiting(): Promise<void> {
 				lastMessageAt: new Date(now.getTime() - 2 * hour),
 				createdAt: new Date(now.getTime() - 2 * hour),
 				updatedAt: new Date(now.getTime() - 2 * hour)
+			},
+			{
+				id: SEED_SNOOZED_THREAD_ID,
+				channel: 'web' as const,
+				status: 'snoozed' as const,
+				subject: 'E2E snoozed subject',
+				preview: 'Circling back after the board meeting.',
+				contactName: SEED_SNOOZED_CONTACT,
+				contactEmail: 'e2e.snoozed@example.com',
+				// Far enough out that `wakeSnoozedThreads` cannot reach it if the
+				// cron happens to run against this database mid-suite.
+				snoozedUntil: new Date(now.getTime() + 3 * 24 * hour),
+				awaitingReplySince: null,
+				messageCount: 1,
+				lastMessageAt: new Date(now.getTime() - 3 * hour),
+				createdAt: new Date(now.getTime() - 3 * hour),
+				updatedAt: new Date(now.getTime() - 3 * hour)
 			}
 		]);
 
@@ -95,6 +120,14 @@ export async function seedInboxAwaiting(): Promise<void> {
 				body: 'Do you rent the space for rehearsals on Sundays?',
 				authorName: SEED_NEEDS_REPLY_CONTACT,
 				createdAt: new Date(now.getTime() - 2 * hour)
+			},
+			{
+				id: 'e2e-inbox-snoozed-in',
+				threadId: SEED_SNOOZED_THREAD_ID,
+				direction: 'inbound' as const,
+				body: 'Circling back after the board meeting.',
+				authorName: SEED_SNOOZED_CONTACT,
+				createdAt: new Date(now.getTime() - 3 * hour)
 			}
 		]);
 	});

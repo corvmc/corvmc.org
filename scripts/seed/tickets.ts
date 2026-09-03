@@ -1,5 +1,4 @@
-import { TICKET_CONTRIBUTION_PRESETS } from '../../src/lib/config';
-import { user } from '../../src/lib/server/db/schema/authentication';
+import { computeTicketSplit, suggestedCollectiveCents } from '../../src/lib/finance/ticket-split';
 import { event } from '../../src/lib/server/db/schema/event';
 import { ticket } from '../../src/lib/server/db/schema/ticket';
 import { db } from './db';
@@ -14,19 +13,14 @@ export async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 	const rows = [];
 
 	const ticketedEvents = await db
-		.select({ id: event.id, startsAt: event.startsAt, ticketPrice: event.ticketPrice })
+		.select({
+			id: event.id,
+			startsAt: event.startsAt,
+			ticketPrice: event.ticketPrice,
+			floorCents: event.ticketPriceFloorCents
+		})
 		.from(event)
 		.where(eq(event.ticketingEnabled, true));
-
-	// Who actually gets the half-price rate. Pricing every seeded buyer as a
-	// member would make the staff ledger look like the discount is automatic for
-	// everyone, which is the one thing it is not.
-	const sustainingIds = new Set(
-		(await db.select({ id: user.id, subscription: user.subscription }).from(user))
-			.filter((u) => u.subscription != null)
-			.map((u) => u.id)
-	);
-	const sustainingBuyers = users.filter((u) => sustainingIds.has(u.id));
 
 	for (const evt of ticketedEvents) {
 		const ticketCount = randomInt(3, 8);
@@ -42,28 +36,49 @@ export async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 			remaining -= qty;
 
 			const purchaseId = isFree ? `rsvp-${randomUUID()}` : randomUUID();
-
-			// Deterministic rather than sampled, and cast by purchase index so every
-			// paid show carries all four money states a staffer might see:
-			//   p=0  a member who took the discount and chipped in anyway
-			//   p=1  a member who declined the discount to support the show
-			//   p≥2  whoever, usually a non-member at full price
-			// Rolling dice for these left the ledger empty often enough that the
-			// feature looked unused locally.
-			const wantsMember = !isFree && p < 2 && sustainingBuyers.length > 0;
-			const buyer = wantsMember ? pick(sustainingBuyers) : pick(users);
+			const buyer = pick(users);
 			const email = `${buyer.name.toLowerCase().replace(' ', '.')}@example.com`;
 
-			const isMember = sustainingIds.has(buyer.id);
-			const contributionCents = !isFree && p === 0 ? pick([...TICKET_CONTRIBUTION_PRESETS]) : 0;
-			const discountWaived = wantsMember && p === 1;
-			// Free shows cost nothing. Otherwise the member rate applies unless the
-			// buyer isn't a member, or is one and declined it.
+			// Deterministic rather than sampled, and cast by purchase index so every
+			// paid show carries the money states a staffer might see. Rolling dice
+			// for these left the ledger empty often enough that the feature looked
+			// unused locally.
+			//   p=0  paid above the suggestion, bar left where it opened
+			//   p=1  paid the suggestion, bar dragged all the way to the acts
+			//   p≥2  paid the floor — as low as the scale goes — and gave the
+			//        collective everything divisible, which is the other end
+			const suggested = evt.ticketPrice ?? 0;
 			const unitPriceCents = isFree
 				? 0
-				: isMember && !discountWaived
-					? Math.round(evt.ticketPrice! / 2)
-					: evt.ticketPrice!;
+				: p === 0
+					? suggested + 500
+					: p === 1
+						? suggested
+						: Math.max(evt.floorCents, Math.min(suggested, 200));
+			const coverFees = !isFree && p === 0;
+
+			// The bar's three positions, through the same module the buyer's
+			// checkout uses — a seed that computed its own arithmetic would put a
+			// second implementation in the tree, which is the bug that module exists
+			// to prevent.
+			const preview = computeTicketSplit({
+				unitPriceCents,
+				quantity: qty,
+				collectiveCents: 0,
+				coverFees,
+				suggestedUnitCents: suggested
+			});
+			const divisible = preview.chargeCents - preview.stripeFeeCents;
+			const collectiveTarget =
+				p === 0 ? suggestedCollectiveCents(divisible) : p === 1 ? 0 : divisible;
+			const split = computeTicketSplit({
+				unitPriceCents,
+				quantity: qty,
+				collectiveCents: collectiveTarget,
+				coverFees,
+				suggestedUnitCents: suggested
+			});
+			const contributionCents = split.contributionCents;
 
 			for (let i = 0; i < qty; i++) {
 				const code = `${TICKET_CODES_PREFIX}-${randomUUID().slice(0, 8).toUpperCase()}`;
@@ -79,10 +94,12 @@ export async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 						attendeeEmail: email,
 						code,
 						status: checkedIn ? 'checked_in' : 'valid',
-						unitPriceCents,
-						// Order-level, so it rides on the purchase's first ticket only.
+						unitPriceCents: split.ticketLineUnitCents,
+						// Order-level, so these ride on the purchase's first ticket only.
 						contributionCents: i === 0 ? contributionCents : 0,
-						discountWaived,
+						actsCents: i === 0 ? split.actsCents : 0,
+						collectiveCents: i === 0 ? split.collectiveCents : 0,
+						feeCoveredCents: i === 0 ? split.feeCoveredCents : 0,
 						checkedInAt: checkedIn ? evt.startsAt : null,
 						checkedInByUserId: checkedIn ? users[0].id : null
 					})

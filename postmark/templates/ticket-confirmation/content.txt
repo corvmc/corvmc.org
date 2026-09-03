@@ -14,6 +14,11 @@ ORDER: {{orderId}}
 {{#contributionMade}}Contribution to the band & venue: {{contribution}}
 {{/contributionMade}}{{#feesCovered}}Processing fees covered: {{fees}}
 {{/feesCovered}}TOTAL PAID: {{total}}
+{{#splitShown}}
+WHERE YOU SENT IT
+To the acts on the bill: {{toActs}}
+To the Collective: {{toCollective}}
+{{/splitShown}}
 
 View your tickets: {{{ticketsUrl}}}
 

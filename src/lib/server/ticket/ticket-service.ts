@@ -4,6 +4,8 @@ import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, inArray, lt, sql, asc, desc } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
+import { emitTicketPurchased } from './purchased-event';
+import { captureException } from '$lib/server/sentry';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -45,8 +47,15 @@ export interface CreateTicketsOptions {
 	unitPriceCents?: number;
 	/** The order's optional gift. Lands on the first ticket only — see the schema. */
 	contributionCents?: number;
-	/** An eligible sustaining member paid full price on purpose. */
+	/** An eligible sustaining member paid full price on purpose. No longer written. */
 	discountWaived?: boolean;
+	/**
+	 * Where the buyer asked their money to go. Order-level, like the gift, so all
+	 * three land on the purchase's first ticket only.
+	 */
+	actsCents?: number;
+	collectiveCents?: number;
+	feeCoveredCents?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +108,10 @@ export async function createTickets(options: CreateTicketsOptions) {
 		status = 'pending',
 		unitPriceCents = 0,
 		contributionCents = 0,
-		discountWaived = false
+		discountWaived = false,
+		actsCents = 0,
+		collectiveCents = 0,
+		feeCoveredCents = 0
 	} = options;
 
 	const codes = await generateUniqueCodes(quantity);
@@ -113,9 +125,13 @@ export async function createTickets(options: CreateTicketsOptions) {
 		code,
 		status,
 		unitPriceCents,
-		// The gift belongs to the order, not to any one pass. Writing it on every
-		// row would multiply it by the quantity the moment anyone sums a purchase.
+		// The gift and the allocation belong to the order, not to any one pass.
+		// Writing them on every row would multiply them by the quantity the moment
+		// anyone sums a purchase.
 		contributionCents: i === 0 ? contributionCents : 0,
+		actsCents: i === 0 ? actsCents : 0,
+		collectiveCents: i === 0 ? collectiveCents : 0,
+		feeCoveredCents: i === 0 ? feeCoveredCents : 0,
 		discountWaived
 	}));
 
@@ -134,7 +150,10 @@ export async function createTickets(options: CreateTicketsOptions) {
  * payment, and no read-modify-write against concurrent webhook deliveries.
  *
  * `stripePaymentRecordId` is omitted for purchases that never touch Stripe —
- * comped tickets (`comp-` prefix) and free RSVPs (`rsvp-` prefix).
+ * comped tickets (`comp-` prefix), free RSVPs (`rsvp-` prefix), and a $0
+ * purchase on a sliding scale that runs to free (`free-` prefix). The last
+ * never reaches this function at all: `issueFreeTickets` writes those rows
+ * `valid` outright, since there is no webhook coming to flip them.
  */
 export async function fulfillPurchase(purchaseId: string, stripePaymentRecordId?: string) {
 	const rows = await db
@@ -264,6 +283,8 @@ export async function getEventTickets(eventId: string, statusFilter?: TicketStat
 			status: ticket.status,
 			unitPriceCents: ticket.unitPriceCents,
 			contributionCents: ticket.contributionCents,
+			actsCents: ticket.actsCents,
+			collectiveCents: ticket.collectiveCents,
 			discountWaived: ticket.discountWaived,
 			checkedInAt: ticket.checkedInAt,
 			checkedInByUserId: ticket.checkedInByUserId,
@@ -274,6 +295,116 @@ export async function getEventTickets(eventId: string, statusFilter?: TicketStat
 		.leftJoin(user, eq(user.id, ticket.checkedInByUserId))
 		.where(and(...conditions))
 		.orderBy(asc(ticket.attendeeName), asc(ticket.code));
+}
+
+/**
+ * Mint tickets that are valid the moment they are written, and send the receipt.
+ *
+ * The one place that does this. A $0 purchase on a scale that runs to free never
+ * touches Stripe, so no webhook is coming to flip anything — and neither does a
+ * free event's claim. Both walked through a form and are owed their codes; a
+ * second copy of this would be the one that forgets the email, which is what
+ * `claimFreeTicket` did on its own for as long as it existed.
+ */
+export async function issueFreeTickets(options: Omit<CreateTicketsOptions, 'status'>) {
+	const tickets = await createTickets({ ...options, status: 'valid' });
+
+	// The receipt is worth a try/catch of its own: the tickets are already valid,
+	// so a failure here costs the buyer their codes by email but not their seats.
+	try {
+		await emitTicketPurchased(options.purchaseId, tickets, {
+			unitPriceCents: 0,
+			subtotalCents: 0,
+			contributionCents: 0,
+			feesCents: 0,
+			totalCents: 0,
+			actsCents: 0,
+			collectiveCents: 0
+		});
+	} catch (err) {
+		captureException(err, { scope: 'ticket.purchased', purchaseId: options.purchaseId });
+	}
+
+	return tickets;
+}
+
+/**
+ * How many live tickets one email already holds for one event, across every
+ * purchase.
+ *
+ * Only meaningful for the free path. A paid ticket has a card behind it, which
+ * is friction enough; a free one has none, and the 1–10 cap on the form is per
+ * submission rather than per person — so without this, ten requests mint a
+ * sold-out show that nobody can get into.
+ */
+export async function countTicketsForEmail(
+	eventId: string,
+	attendeeEmail: string
+): Promise<number> {
+	const [row] = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(ticket)
+		.where(
+			and(
+				eq(ticket.eventId, eventId),
+				eq(ticket.attendeeEmail, attendeeEmail),
+				inArray(ticket.status, ['valid', 'checked_in', 'pending'])
+			)
+		);
+	return row?.count ?? 0;
+}
+
+/** The show's money, as sold. */
+export interface EventTicketMoney {
+	/** Ticket line revenue: the sum of what each pass cost. */
+	ticketsCents: number;
+	/** Gifts above the suggested price, counted once per purchase. */
+	contributionsCents: number;
+	/** What buyers directed to the bill, and to the collective. */
+	actsCents: number;
+	collectiveCents: number;
+	/** Surcharges from buyers who covered card processing. */
+	feeCoveredCents: number;
+	/** How many of the live tickets cost nothing. */
+	freeCount: number;
+	paidCount: number;
+}
+
+/**
+ * What an event's live tickets add up to.
+ *
+ * Summed in SQL, over `valid` and `checked_in` only — a cancelled ticket's money
+ * is not the show's money, and a `pending` one is a checkout nobody finished.
+ * The order-level columns are written on each purchase's first row, so a plain
+ * sum counts them exactly once without de-duplication.
+ *
+ * **"As sold", not "as settled".** The only refund mechanism is a human in the
+ * Stripe dashboard, which nothing here can see, so a partly-refunded purchase
+ * still reports its whole allocation. Settlement reconciles against Stripe.
+ */
+export async function getEventTicketMoney(eventId: string): Promise<EventTicketMoney> {
+	const [row] = await db
+		.select({
+			ticketsCents: sql<number>`coalesce(sum(${ticket.unitPriceCents}), 0)`,
+			contributionsCents: sql<number>`coalesce(sum(${ticket.contributionCents}), 0)`,
+			actsCents: sql<number>`coalesce(sum(${ticket.actsCents}), 0)`,
+			collectiveCents: sql<number>`coalesce(sum(${ticket.collectiveCents}), 0)`,
+			feeCoveredCents: sql<number>`coalesce(sum(${ticket.feeCoveredCents}), 0)`,
+			freeCount: sql<number>`sum(case when coalesce(${ticket.unitPriceCents}, 0) = 0 then 1 else 0 end)`,
+			paidCount: sql<number>`sum(case when coalesce(${ticket.unitPriceCents}, 0) > 0 then 1 else 0 end)`
+		})
+		.from(ticket)
+		.where(and(eq(ticket.eventId, eventId), inArray(ticket.status, ['valid', 'checked_in'])));
+
+	return {
+		ticketsCents: row?.ticketsCents ?? 0,
+		contributionsCents: row?.contributionsCents ?? 0,
+		actsCents: row?.actsCents ?? 0,
+		collectiveCents: row?.collectiveCents ?? 0,
+		feeCoveredCents: row?.feeCoveredCents ?? 0,
+		freeCount: row?.freeCount ?? 0,
+		paidCount: row?.paidCount ?? 0
+	};
 }
 
 export async function getTicketsSold(eventId: string): Promise<number> {
