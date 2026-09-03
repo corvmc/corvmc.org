@@ -48,6 +48,7 @@ export type StaffNavKey =
 	| 'inventory-compliance'
 	| 'contractors'
 	| 'contractor-jobs'
+	| 'projects'
 	| 'productions'
 	| 'calendar'
 	| 'flags'
@@ -204,6 +205,15 @@ export const staffNavSections: StaffNavSection[] = [
 				children: [
 					{ key: 'contractor-jobs', label: 'Jobs', href: resolve('/staff/contractors/jobs') }
 				]
+			},
+			{
+				// Beside Contractors rather than under Events: a project is as
+				// often a facility improvement with no event at all as it is a
+				// festival, and filing it under the calendar would hide the half
+				// this table exists for.
+				key: 'projects',
+				label: 'Projects',
+				href: resolve('/staff/projects')
 			}
 		]
 	},

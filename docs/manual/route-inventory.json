@@ -452,6 +452,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/projects",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/projects/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/recurring",
 		"panel": "staff"
 	},
