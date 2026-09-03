@@ -34,6 +34,9 @@ import { PAST_SHOWS_PAGE_SIZE } from '$lib/types/calendar';
 import { update as updateBandBasics } from '$lib/server/band/band-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { resolveImageUrl } from '$lib/server/storage';
+import { bandSite } from '$lib/server/db/schema/band-site';
+import { listFor as listMediaFor } from '$lib/server/media/media-service';
+import { publicPressKit } from '$lib/server/band/press-kit';
 import { captureException } from '$lib/server/sentry';
 import { getMe } from './layout.remote';
 import {
@@ -48,7 +51,7 @@ import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { profileLinkSchema } from '$lib/server/db/schema/authentication';
-import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
+import type { ProfileLink } from '$lib/server/db/schema/authentication';
 import { jsonArrayField } from '$lib/utils/zod-json';
 import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
 import { publicContactStatus } from '$lib/server/instructor/instructor-directory-service';
@@ -305,7 +308,10 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			foundedYear: directoryEntry.foundedYear,
 			avatarKey: group.avatarKey,
 			lookingFor: directoryEntry.lookingFor,
-			directoryContact: directoryEntry.contact,
+			// `directoryEntry.contact` is deliberately not selected. It is still
+			// written by the profile editor and still used to route an enquiry, but
+			// nothing on a public band page may render it, and the surest way to
+			// keep it off the page is for the page's query never to fetch it.
 			links: directoryEntry.links,
 			// Both soft-delete flags: `deactivate()` sets the pair, but a group
 			// deleted by any other path would otherwise keep a live listing.
@@ -346,10 +352,17 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 		throw error(404, 'Band not found');
 	}
 
-	const genres = await db
-		.select({ value: directoryTag.value })
-		.from(directoryTag)
-		.where(and(eq(directoryTag.entryId, row.entryId), eq(directoryTag.kind, 'genre')));
+	// Genres, press kit and press photos in one round of three, not three rounds
+	// of one. This is the public profile's single load-bearing query and it runs
+	// on every band page there is.
+	const [genres, [site], photos] = await Promise.all([
+		db
+			.select({ value: directoryTag.value })
+			.from(directoryTag)
+			.where(and(eq(directoryTag.entryId, row.entryId), eq(directoryTag.kind, 'genre'))),
+		db.select({ epk: bandSite.epk }).from(bandSite).where(eq(bandSite.groupId, row.id)).limit(1),
+		listMediaFor('group', row.id, 'gallery')
+	]);
 
 	const members = await db
 		.select({
@@ -392,8 +405,22 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			memberCount: row.memberCount,
 			genres: genres.map((r) => r.value),
 			lookingForMembers: row.lookingFor === 'members',
-			directoryContact: row.directoryContact as DirectoryContact | null,
-			links: (row.links as ProfileLink[] | null) ?? []
+			links: (row.links as ProfileLink[] | null) ?? [],
+			// `publicPressKit`, never the raw column. A band's booking, management
+			// and press contacts, its phone numbers, its rider, stage plot and
+			// backline all live in the same JSON and none of them may be published:
+			// a stranger reaches the act through the Turnstile form instead, so the
+			// page carries no address for a scraper to take.
+			//
+			// `directoryContact` used to be returned here and rendered as "Booking".
+			// Removing it is the point of this change, not a side effect of it.
+			pressKit: publicPressKit(site?.epk),
+			photos: photos.map((m) => ({
+				id: m.attachmentId,
+				url: resolveImageUrl(m.key),
+				altText: m.altText,
+				caption: m.caption
+			}))
 		},
 		members: members.map((m) => {
 			// In public, a member who hasn't opted their own profile public is
