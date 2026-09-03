@@ -8,12 +8,21 @@
  * that held eight unrelated rows; as data the grouping is something you can
  * read in one screen and assert against, which `nav-items.spec.ts` does.
  *
- * Nothing here is gated. `getStaffLayout` already redirects anyone without the
- * role, and the staff panel deliberately ignores feature flags so staff can
- * administer a feature before it is switched on for everyone else.
+ * Rows carry a `capability`. `getStaffLayout` still redirects anyone holding no
+ * position at all, but "may open the panel" and "may use this row" stopped being
+ * the same question once guards began naming capabilities — a treasurer offered
+ * a Volunteering row lands on a 403. `filterNav` below drops what the viewer
+ * cannot use.
+ *
+ * Hiding a row is not a guard. The guard is `requireCapability` on the remote
+ * function behind it; this only stops someone walking into a 403.
+ *
+ * The panel still deliberately ignores feature flags, so staff can administer a
+ * feature before it is switched on for everyone else.
  */
 
 import { resolve } from '$app/paths';
+import { hasCapability, type Capability } from '$lib/config';
 import {
 	activeNavKey as resolveActiveNavKey,
 	childHrefsFor as resolveChildHrefs,
@@ -75,6 +84,11 @@ export type StaffNavBadgeKey =
 export interface StaffNavItem extends NavNode<StaffNavKey> {
 	label: string;
 	badgeKey?: StaffNavBadgeKey;
+	/**
+	 * What the viewer must hold for this row to be worth showing. Omitted on
+	 * rows every position can use — the dashboard, and nothing else so far.
+	 */
+	capability?: Capability;
 	/** Present ⇒ the layout renders this row as a `Nav.Collapsible`. */
 	children?: StaffNavItem[];
 }
@@ -89,7 +103,13 @@ export interface StaffNavSection {
 /** Rows above the first section header. */
 export const staffNavTop: StaffNavItem[] = [
 	{ key: 'dashboard', label: 'Dashboard', href: resolve('/staff') },
-	{ key: 'inbox', label: 'Inbox', href: resolve('/staff/inbox'), badgeKey: 'inboxUnread' }
+	{
+		key: 'inbox',
+		capability: 'inbox.read',
+		label: 'Inbox',
+		href: resolve('/staff/inbox'),
+		badgeKey: 'inboxUnread'
+	}
 ];
 
 export const staffNavSections: StaffNavSection[] = [
@@ -97,12 +117,12 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'people',
 		title: 'People',
 		items: [
-			{ key: 'users', label: 'Users', href: resolve('/staff/users') },
-			{ key: 'bands', label: 'Bands', href: resolve('/staff/bands') },
+			{ key: 'users', capability: 'user.list', label: 'Users', href: resolve('/staff/users') },
+			{ key: 'bands', capability: 'band.read', label: 'Bands', href: resolve('/staff/bands') },
 			// Clubs and committees, separate from Bands on purpose: a band is a
 			// member's own project and a program is a sanctioned CMC one, and this
 			// is the only place a program comes into existence.
-			{ key: 'groups', label: 'Groups', href: resolve('/staff/groups') },
+			{ key: 'groups', capability: 'group.read', label: 'Groups', href: resolve('/staff/groups') },
 			{
 				// The parent row is a dashboard, not an index — see
 				// docs/development/ui-patterns.md#section-dashboards. It keeps its own href
@@ -110,12 +130,14 @@ export const staffNavSections: StaffNavSection[] = [
 				// children open while you are on it, so the worklist is one click from
 				// anywhere and each table is one click from the worklist.
 				key: 'volunteer',
+				capability: 'volunteer.read',
 				label: 'Volunteering',
 				href: resolve('/staff/volunteer'),
 				badgeKey: 'volunteerPending',
 				children: [
 					{
 						key: 'volunteer-schedule',
+						capability: 'volunteer.manageShifts',
 						label: 'Schedule',
 						href: resolve('/staff/volunteer/schedule')
 					},
@@ -124,10 +146,16 @@ export const staffNavSections: StaffNavSection[] = [
 						// clearances table too, and both are about people who are not yet
 						// volunteering.
 						key: 'volunteer-people',
+						capability: 'volunteer.read',
 						label: 'People',
 						href: resolve('/staff/volunteer/people')
 					},
-					{ key: 'volunteer-setup', label: 'Setup', href: resolve('/staff/volunteer/setup') },
+					{
+						key: 'volunteer-setup',
+						capability: 'volunteer.manageRoles',
+						label: 'Setup',
+						href: resolve('/staff/volunteer/setup')
+					},
 					// Its own row rather than folded into Setup. A duty list is arguably
 					// a definition like a role is, but it landed on `main` as a screen of
 					// its own while this branch was in flight, and quietly absorbing
@@ -135,10 +163,16 @@ export const staffNavSections: StaffNavSection[] = [
 					// not a merge resolution.
 					{
 						key: 'volunteer-duty-lists',
+						capability: 'event.read',
 						label: 'Duty Lists',
 						href: resolve('/staff/volunteer/duty-lists')
 					},
-					{ key: 'volunteer-report', label: 'Report', href: resolve('/staff/volunteer/report') }
+					{
+						key: 'volunteer-report',
+						capability: 'volunteer.report',
+						label: 'Report',
+						href: resolve('/staff/volunteer/report')
+					}
 				]
 			}
 		]
@@ -149,15 +183,31 @@ export const staffNavSections: StaffNavSection[] = [
 		items: [
 			{
 				key: 'reservations',
+				capability: 'reservation.read',
 				label: 'Reservations',
 				href: resolve('/staff/reservations'),
 				children: [
-					{ key: 'recurring', label: 'Recurring', href: resolve('/staff/recurring') },
-					{ key: 'closures', label: 'Closures', href: resolve('/staff/closures') },
+					{
+						key: 'recurring',
+						capability: 'reservation.read',
+						label: 'Recurring',
+						href: resolve('/staff/recurring')
+					},
+					{
+						key: 'closures',
+						capability: 'reservation.manageClosures',
+						label: 'Closures',
+						href: resolve('/staff/closures')
+					},
 					// Under Reservations rather than beside Users: teaching status is a
 					// right in the room, and what it grants is a rate and a booking
 					// window. Everything about the room is one place.
-					{ key: 'instructors', label: 'Instructors', href: resolve('/staff/instructors') }
+					{
+						key: 'instructors',
+						capability: 'instructor.read',
+						label: 'Instructors',
+						href: resolve('/staff/instructors')
+					}
 				]
 			},
 			{
@@ -169,26 +219,55 @@ export const staffNavSections: StaffNavSection[] = [
 				// covers consumables too, and calling it Equipment would send anyone
 				// looking for the drumstick count somewhere else.
 				key: 'equipment',
+				capability: 'inventory.read',
 				label: 'Inventory',
 				href: resolve('/staff/inventory'),
 				children: [
-					{ key: 'inventory-intake', label: 'Intake', href: resolve('/staff/inventory/intake') },
+					{
+						key: 'inventory-intake',
+						capability: 'inventory.manageStock',
+						label: 'Intake',
+						href: resolve('/staff/inventory/intake')
+					},
 					{
 						key: 'inventory-tagging',
+						capability: 'inventory.manageAssets',
 						label: 'Needs tagging',
 						href: resolve('/staff/inventory/tagging')
 					},
-					{ key: 'equipment-loans', label: 'Loans', href: resolve('/staff/inventory/loans') },
+					{
+						key: 'equipment-loans',
+						capability: 'inventory.manageLoans',
+						label: 'Loans',
+						href: resolve('/staff/inventory/loans')
+					},
 					{
 						key: 'inventory-acquisitions',
+						capability: 'inventory.manageAcquisitions',
 						label: 'Acquisitions',
 						href: resolve('/staff/inventory/acquisitions')
 					},
-					{ key: 'inventory-restock', label: 'Restock', href: resolve('/staff/inventory/restock') },
-					{ key: 'inventory-orders', label: 'Orders', href: resolve('/staff/inventory/orders') },
-					{ key: 'inventory-spend', label: 'Spend', href: resolve('/staff/inventory/spend') },
+					{
+						key: 'inventory-restock',
+						capability: 'inventory.report',
+						label: 'Restock',
+						href: resolve('/staff/inventory/restock')
+					},
+					{
+						key: 'inventory-orders',
+						capability: 'inventory.manageOrders',
+						label: 'Orders',
+						href: resolve('/staff/inventory/orders')
+					},
+					{
+						key: 'inventory-spend',
+						capability: 'inventory.report',
+						label: 'Spend',
+						href: resolve('/staff/inventory/spend')
+					},
 					{
 						key: 'inventory-compliance',
+						capability: 'inventory.manageAcquisitions',
 						label: 'Compliance',
 						href: resolve('/staff/inventory/compliance')
 					}
@@ -200,10 +279,16 @@ export const staffNavSections: StaffNavSection[] = [
 				// filing the electrician under the gear catalog would make the
 				// building half unfindable.
 				key: 'contractors',
+				capability: 'contractor.read',
 				label: 'Contractors',
 				href: resolve('/staff/contractors'),
 				children: [
-					{ key: 'contractor-jobs', label: 'Jobs', href: resolve('/staff/contractors/jobs') }
+					{
+						key: 'contractor-jobs',
+						capability: 'contractor.read',
+						label: 'Jobs',
+						href: resolve('/staff/contractors/jobs')
+					}
 				]
 			},
 			{
@@ -212,6 +297,7 @@ export const staffNavSections: StaffNavSection[] = [
 				// festival, and filing it under the calendar would hide the half
 				// this table exists for.
 				key: 'projects',
+				capability: 'project.read',
 				label: 'Projects',
 				href: resolve('/staff/projects')
 			}
@@ -234,20 +320,32 @@ export const staffNavSections: StaffNavSection[] = [
 			// work surface and sits at its own path, ready to be gated.
 			{
 				key: 'calendar',
+				capability: 'event.read',
 				label: 'Calendar',
 				href: resolve('/staff/events'),
 				badgeKey: 'listingsPending'
 			},
-			{ key: 'productions', label: 'Productions', href: resolve('/staff/productions') }
+			{
+				key: 'productions',
+				capability: 'event.manage',
+				label: 'Productions',
+				href: resolve('/staff/productions')
+			}
 		]
 	},
 	{
 		key: 'moderation',
 		title: 'Moderation',
 		items: [
-			{ key: 'flags', label: 'Content Flags', href: resolve('/staff/flags') },
+			{
+				key: 'flags',
+				capability: 'moderation.reviewFlags',
+				label: 'Content Flags',
+				href: resolve('/staff/flags')
+			},
 			{
 				key: 'suggestions',
+				capability: 'suggestion.read',
 				label: 'Suggestions',
 				href: resolve('/staff/suggestions'),
 				badgeKey: 'suggestionsAwaiting'
@@ -258,23 +356,50 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'outreach',
 		title: 'Outreach',
 		items: [
-			{ key: 'campaigns', label: 'Campaigns', href: resolve('/staff/marketing/campaigns') },
-			{ key: 'audiences', label: 'Audiences', href: resolve('/staff/marketing/audiences') },
-			{ key: 'help', label: 'Help Articles', href: resolve('/staff/help') }
+			{
+				key: 'campaigns',
+				capability: 'marketing.read',
+				label: 'Campaigns',
+				href: resolve('/staff/marketing/campaigns')
+			},
+			{
+				key: 'audiences',
+				capability: 'marketing.manageAudiences',
+				label: 'Audiences',
+				href: resolve('/staff/marketing/audiences')
+			},
+			{ key: 'help', capability: 'help.read', label: 'Help Articles', href: resolve('/staff/help') }
 		]
 	},
 	{
 		key: 'money',
 		title: 'Money',
 		items: [
-			{ key: 'payments', label: 'Payments', href: resolve('/staff/payments') },
-			{ key: 'credits', label: 'Credits', href: resolve('/staff/credits') }
+			{
+				key: 'payments',
+				capability: 'finance.read',
+				label: 'Payments',
+				href: resolve('/staff/payments')
+			},
+			{
+				key: 'credits',
+				capability: 'credit.read',
+				label: 'Credits',
+				href: resolve('/staff/credits')
+			}
 		]
 	},
 	{
 		key: 'system',
 		title: 'System',
-		items: [{ key: 'settings', label: 'Settings', href: resolve('/staff/settings') }]
+		items: [
+			{
+				key: 'settings',
+				capability: 'settings.read',
+				label: 'Settings',
+				href: resolve('/staff/settings')
+			}
+		]
 	}
 ];
 
@@ -305,4 +430,36 @@ export function activeNavKey(pathname: string): StaffNavKey | null {
 		[...staffNavTop, ...staffNavSections.flatMap((s) => s.items)],
 		pathname
 	);
+}
+
+/**
+ * The nav the viewer can actually use.
+ *
+ * A row survives when the viewer holds its `capability`, or when it names none.
+ * A parent whose own capability passes keeps only the children that also pass —
+ * and a parent with no surviving children is dropped, because a Collapsible
+ * that opens onto nothing reads as a broken row rather than an empty one.
+ *
+ * Sections empty themselves out the same way and disappear with their last row.
+ *
+ * This is presentation, not authorization: the guard is `requireCapability` on
+ * the remote function behind each page. Filtering only stops someone being
+ * offered a link that would 403.
+ */
+export function filterNavItems(items: StaffNavItem[], held: readonly string[]): StaffNavItem[] {
+	return items.flatMap((item) => {
+		if (item.capability && !hasCapability(held, item.capability)) return [];
+		if (!item.children) return [item];
+		const children = filterNavItems(item.children, held);
+		return children.length > 0 ? [{ ...item, children }] : [];
+	});
+}
+
+export function filterNavSections(
+	sections: StaffNavSection[],
+	held: readonly string[]
+): StaffNavSection[] {
+	return sections
+		.map((section) => ({ ...section, items: filterNavItems(section.items, held) }))
+		.filter((section) => section.items.length > 0);
 }
