@@ -9,8 +9,13 @@ function getKv(): KVNamespace {
 	return _kv;
 }
 
-export async function getJson<T>(key: string): Promise<T | null> {
-	return getKv().get(key, 'json');
+/**
+ * `cacheTtl` is how long a colo may serve this key from its edge cache. KV
+ * defaults to 60s; pass a longer one for values that change on a staff form
+ * submit rather than on a request.
+ */
+export async function getJson<T>(key: string, opts?: { cacheTtl?: number }): Promise<T | null> {
+	return getKv().get(key, { type: 'json', cacheTtl: opts?.cacheTtl });
 }
 
 export async function putJson<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {

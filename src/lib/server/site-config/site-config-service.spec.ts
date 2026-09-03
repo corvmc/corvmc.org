@@ -2,21 +2,44 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
+//
+// `vi.hoisted` rather than plain module consts: `vi.mock` is hoisted above the
+// imports, so anything its factory closes over has to be hoisted with it.
 // ---------------------------------------------------------------------------
 
-const kvStore = new Map<string, string>();
+const kv = vi.hoisted(() => {
+	const kvStore = new Map<string, string>();
 
-vi.mock('$lib/server/kv', () => ({
-	getJson: vi.fn(async (key: string) => {
+	/** Peak `getJson` calls in flight at once — what proves the fan-out. */
+	const counters = { inFlight: 0, peak: 0 };
+
+	const getJson = vi.fn(async (key: string) => {
+		counters.inFlight++;
+		counters.peak = Math.max(counters.peak, counters.inFlight);
+		// Yield, so a sequential caller cannot accidentally look concurrent.
+		await Promise.resolve();
+		counters.inFlight--;
 		const raw = kvStore.get(key);
 		return raw !== undefined ? JSON.parse(raw) : null;
-	}),
-	putJson: vi.fn(async (key: string, value: unknown) => {
+	});
+
+	const putJson = vi.fn(async (key: string, value: unknown) => {
 		kvStore.set(key, JSON.stringify(value));
-	}),
-	listKeys: vi.fn(async (prefix: string) => {
-		return [...kvStore.keys()].filter((k) => k.startsWith(prefix));
-	})
+	});
+
+	const listKeys = vi.fn(async (prefix: string) =>
+		[...kvStore.keys()].filter((k) => k.startsWith(prefix))
+	);
+
+	return { kvStore, counters, getJson, putJson, listKeys };
+});
+
+const { kvStore, counters, getJson, putJson, listKeys } = kv;
+
+vi.mock('$lib/server/kv', () => ({
+	getJson: kv.getJson,
+	putJson: kv.putJson,
+	listKeys: kv.listKeys
 }));
 
 import {
@@ -24,11 +47,21 @@ import {
 	getConfigsByPrefix,
 	updateSiteConfig,
 	updateSiteConfigs,
+	clearSiteConfigMemo,
+	DEFAULTS,
 	UnknownSiteConfigKeyError
 } from './site-config-service';
 
 beforeEach(() => {
 	kvStore.clear();
+	// The memo is module state, so it outlives this hook and would otherwise
+	// serve one test's writes to the next.
+	clearSiteConfigMemo();
+	getJson.mockClear();
+	putJson.mockClear();
+	listKeys.mockClear();
+	counters.inFlight = 0;
+	counters.peak = 0;
 });
 
 // ---------------------------------------------------------------------------
@@ -130,5 +163,98 @@ describe('updateSiteConfigs', () => {
 			{ key: 'reservation.operatingHoursEnd', value: '23:00' }
 		]);
 		expect(kvStore.size).toBe(2);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The read path
+// ---------------------------------------------------------------------------
+
+describe('getConfigsByPrefix read path', () => {
+	const reservationKeyCount = Object.keys(DEFAULTS).filter((k) =>
+		k.startsWith('reservation.')
+	).length;
+
+	it('never asks KV which keys exist', async () => {
+		kvStore.set('site-config:reservation.operatingHoursStart', JSON.stringify('08:00'));
+
+		await getConfigsByPrefix('reservation');
+
+		// DEFAULTS is the registry. A `list()` asks KV a question it is not the
+		// authority for, and unlike `get()` it does not edge-cache at all.
+		expect(listKeys).not.toHaveBeenCalled();
+	});
+
+	it('reads every registered key under the prefix, concurrently', async () => {
+		await getConfigsByPrefix('reservation');
+
+		expect(getJson).toHaveBeenCalledTimes(reservationKeyCount);
+		expect(counters.peak).toBeGreaterThan(1);
+	});
+
+	it('does not surface a stored key that is absent from DEFAULTS', async () => {
+		kvStore.set('site-config:reservation.retiredSetting', JSON.stringify('ghost'));
+
+		const result = await getConfigsByPrefix('reservation');
+
+		expect(result.retiredSetting).toBeUndefined();
+	});
+
+	it('prefers a stored falsy value over a truthy default', async () => {
+		// `??` not `||`. `timeSlotMinutes` defaults to 30, so a stored 0 is the
+		// case that tells the two apart — and `false` and `0` are both values a
+		// staff member can legitimately save.
+		kvStore.set('site-config:reservation.timeSlotMinutes', JSON.stringify(0));
+
+		const result = await getConfigsByPrefix('reservation');
+
+		expect(result.timeSlotMinutes).toBe(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The isolate memo
+// ---------------------------------------------------------------------------
+
+describe('the isolate memo', () => {
+	it('serves a second read without touching KV', async () => {
+		await getSiteConfig('reservation.hourlyRateCents');
+		expect(getJson).toHaveBeenCalledTimes(1);
+
+		await getSiteConfig('reservation.hourlyRateCents');
+		expect(getJson).toHaveBeenCalledTimes(1);
+	});
+
+	it('is busted by a write, so a staff save is visible in this isolate at once', async () => {
+		await getSiteConfig('reservation.hourlyRateCents');
+
+		await updateSiteConfig('reservation.hourlyRateCents', 2000);
+
+		expect(await getSiteConfig('reservation.hourlyRateCents')).toBe(2000);
+	});
+
+	it('exempts feature flags, which have to take effect immediately', async () => {
+		await getSiteConfig('feature.bandPremium');
+		await getSiteConfig('feature.bandPremium');
+
+		// Nobody watches a room rate take effect. A staff member who toggles a
+		// flag and sees nothing happen reads it as a bug, so flags pay the read.
+		expect(getJson).toHaveBeenCalledTimes(2);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// updateSiteConfigs concurrency
+// ---------------------------------------------------------------------------
+
+describe('updateSiteConfigs', () => {
+	it('writes concurrently', async () => {
+		await updateSiteConfigs([
+			{ key: 'reservation.operatingHoursStart', value: '08:00' },
+			{ key: 'reservation.operatingHoursEnd', value: '23:00' },
+			{ key: 'reservation.timeSlotMinutes', value: 15 }
+		]);
+
+		expect(putJson).toHaveBeenCalledTimes(3);
 	});
 });
