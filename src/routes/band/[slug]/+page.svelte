@@ -45,6 +45,12 @@
 			</AddressCard>
 		{/if}
 
+		{#if isOwnerOrAdmin}
+			<svelte:boundary>
+				<PressKitCard slug={band.slug} />
+			</svelte:boundary>
+		{/if}
+
 		<!-- Act overview -->
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 			<StatCard title="Members" value={band.memberCount} size="sm" />

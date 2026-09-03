@@ -2,6 +2,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { getPressKitEditor } from '$lib/remote/press-kit.remote';
+	import PressKitProgress from '$lib/components/band/PressKitProgress.svelte';
 	import { getBandLayoutContext } from '../layout-context';
 	import PressKitForm from './PressKitForm.svelte';
 	import PressPhotos from './PressPhotos.svelte';
@@ -20,6 +21,13 @@
 
 <PageHeader title="Press Kit" subtitle={band.name} />
 <PageContent width="3xl">
+	<PressKitProgress
+		slug={band.slug}
+		sections={editor.progress.sections}
+		done={editor.progress.done}
+		total={editor.progress.total}
+		next={editor.progress.next}
+	/>
 	<PressKitForm {band} epk={editor.epk} />
 	<PressPhotos {band} media={editor.media} photoLimit={editor.photoLimit} />
 </PageContent>
