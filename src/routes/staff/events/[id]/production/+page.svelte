@@ -141,6 +141,7 @@
 	let editReservationEndTime = $state('');
 	let editTicketingEnabled = $state(false);
 	let editTicketPriceDollars = $state('');
+	let editTicketFloorDollars = $state('');
 	let editTicketQuantity = $state('');
 
 	// Rebook state
@@ -161,6 +162,12 @@
 	// toggle: it's the price attendees pay wherever they buy.
 	const editTicketPriceCents = $derived(
 		editTicketPriceDollars ? String(Math.round(parseFloat(editTicketPriceDollars) * 100)) : ''
+	);
+	// A blank floor posts as an empty string, which the remote reads as zero —
+	// "no minimum" rather than "leave it alone". That is the right reading: an
+	// emptied minimum is a scale opened all the way to free.
+	const editTicketFloorCents = $derived(
+		editTicketFloorDollars ? String(Math.round(parseFloat(editTicketFloorDollars) * 100)) : ''
 	);
 
 	function startEditing() {
@@ -184,6 +191,9 @@
 		// one for the door or an outside seller.
 		editTicketingEnabled = evt.ticketingEnabled;
 		editTicketPriceDollars = evt.ticketPrice ? formatDollars(evt.ticketPrice) : '';
+		editTicketFloorDollars = evt.ticketPriceFloorCents
+			? formatDollars(evt.ticketPriceFloorCents)
+			: '';
 		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
 
 		// Pre-fill reservation times from linked reservation
@@ -385,6 +395,7 @@
 						<!-- Always submitted: the price is the attendee's price whoever sells
 						     the ticket, so it has to survive the ticketing toggle being off. -->
 						<input {...fields.ticketPrice.as('hidden', editTicketPriceCents)} />
+						<input {...fields.ticketPriceFloorCents.as('hidden', editTicketFloorCents)} />
 						{#if (rebookNeeded && rebookConfirmed) || reserveSpace}
 							<input {...fields.rebookReservation.as('hidden', true)} />
 						{/if}
@@ -500,7 +511,7 @@
 							     the link above, or the door — so it lives outside the ticketing
 							     toggle and applies to band gigs too. Only capacity depends on us
 							     doing the selling. -->
-							<FormField label="Ticket price ($)" id="editTicketPrice" issues={[]}>
+							<FormField label="Suggested price ($)" id="editTicketPrice" issues={[]}>
 								<input
 									id="editTicketPrice"
 									type="number"
@@ -511,7 +522,25 @@
 									class="input w-full"
 									required={editTicketingEnabled}
 								/>
-								<span class="label-text-alt mt-1 opacity-60"> Leave blank for a free event. </span>
+								<span class="label-text-alt mt-1 opacity-60">
+									Where the sliding scale opens. Leave blank for a free event.
+								</span>
+							</FormField>
+
+							<FormField label="Minimum price ($)" id="editTicketFloor" issues={[]}>
+								<input
+									id="editTicketFloor"
+									type="number"
+									bind:value={editTicketFloorDollars}
+									min="0"
+									step="0.01"
+									placeholder="0.00"
+									class="input w-full"
+								/>
+								<span class="label-text-alt mt-1 opacity-60">
+									The least someone can pay. $0 lets anyone come for free — no card, no questions.
+									Leave it at $0 unless an act needs a floor.
+								</span>
 							</FormField>
 
 							<div class="form-control">
