@@ -1499,13 +1499,20 @@ export const purchaseTickets = form(
 				ticket_collective_cents: String(split.collectiveCents)
 			},
 			successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
-			cancelUrl: `${url.origin}/events/${evt.id}/tickets`
+			cancelUrl: `${url.origin}/events/${evt.id}/tickets`,
+			// The buyer pays on our own page rather than checkout.stripe.com. The
+			// two URLs above are unchanged — `checkout()` maps them onto the
+			// `return_url` / metadata pair that `elements` mode takes instead.
+			uiMode: 'elements'
 		});
 
 		// Tickets never spend credits — no CreditType applies to them — so this
 		// call always comes back with a URL. Asserting that is honest; the branch
 		// that used to be here handled a `paid: true` that checkout() cannot
-		// return without `eligibleCredits`, which this never passed.
+		// return without `eligibleCredits`, which this never passed. Under
+		// `elements` the URL is the in-app `/checkout/<session>`, so the caller's
+		// `window.location.href` fallback never fires and it stays a client-side
+		// navigation.
 		if (!result.checkoutUrl) throw error(500, 'Checkout could not be started');
 		return { redirectUrl: result.checkoutUrl };
 	}

@@ -487,6 +487,111 @@ describe('checkout', () => {
 });
 
 // ---------------------------------------------------------------------------
+// checkout() — ui_mode
+// ---------------------------------------------------------------------------
+// Stripe rejects success_url/cancel_url outright in `elements` mode and demands
+// return_url instead, so the two shapes are mutually exclusive rather than
+// additive. Both are asserted here because a caller migrating one flow must not
+// be able to change what the other one sends.
+// ---------------------------------------------------------------------------
+describe('checkout ui_mode', () => {
+	const baseOptions = {
+		userId: 'user-1',
+		stripeCustomerId: 'cus_123',
+		mode: 'payment' as const,
+		lineItems: [
+			{ price_data: { currency: 'usd', product: 'prod_x', unit_amount: 2500 }, quantity: 1 }
+		],
+		successUrl: 'https://example.com/success',
+		cancelUrl: 'https://example.com/cancel'
+	};
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('defaults to the hosted page, with success and cancel URLs and no ui_mode', async () => {
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			id: 'cs_hosted',
+			url: 'https://checkout.stripe.com/sess_hosted'
+		});
+
+		const result = await checkout(baseOptions);
+
+		expect(result).toEqual({ paid: false, checkoutUrl: 'https://checkout.stripe.com/sess_hosted' });
+
+		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		expect(params.ui_mode).toBeUndefined();
+		expect(params.success_url).toBe('https://example.com/success');
+		expect(params.cancel_url).toBe('https://example.com/cancel');
+		expect(params.return_url).toBeUndefined();
+		expect(params.metadata.cancel_url).toBeUndefined();
+	});
+
+	it('sends return_url and no success/cancel URL in elements mode', async () => {
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			id: 'cs_elements',
+			client_secret: 'cs_elements_secret_abc'
+		});
+
+		const result = await checkout({ ...baseOptions, uiMode: 'elements' });
+
+		// The in-app page, not checkout.stripe.com — an elements session has no
+		// `url` at all, so a caller that still redirects on `checkoutUrl` keeps
+		// working without knowing which mode it asked for.
+		expect(result).toEqual({
+			paid: false,
+			checkoutUrl: '/checkout/cs_elements',
+			clientSecret: 'cs_elements_secret_abc'
+		});
+
+		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		expect(params.ui_mode).toBe('elements');
+		expect(params.return_url).toBe('https://example.com/success');
+		expect(params.success_url).toBeUndefined();
+		expect(params.cancel_url).toBeUndefined();
+	});
+
+	it('carries the cancel destination in metadata, since the session field is rejected', async () => {
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			id: 'cs_elements',
+			client_secret: 'cs_elements_secret_abc'
+		});
+
+		await checkout({ ...baseOptions, uiMode: 'elements' });
+
+		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		expect(params.metadata.cancel_url).toBe('https://example.com/cancel');
+	});
+
+	it('throws when an elements session comes back without a client secret', async () => {
+		mockStripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_elements' });
+
+		await expect(checkout({ ...baseOptions, uiMode: 'elements' })).rejects.toThrow(
+			'Stripe did not return a checkout client secret'
+		);
+	});
+
+	it('reverses deducted credits when an elements session fails to create', async () => {
+		mockCreditService.getBalance.mockResolvedValue(1);
+		mockCreditService.deductCredits.mockResolvedValue(0);
+		mockStripe.coupons.create.mockResolvedValue({ id: 'coupon_elements' });
+		mockStripe.checkout.sessions.create.mockRejectedValue(new Error('stripe down'));
+
+		await expect(
+			checkout({
+				...baseOptions,
+				uiMode: 'elements',
+				eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }]
+			})
+		).rejects.toThrow('stripe down');
+
+		expect(mockCreditService.addCredits).toHaveBeenCalled();
+		expect(mockStripe.coupons.del).toHaveBeenCalledWith('coupon_elements');
+	});
+});
+
+// ---------------------------------------------------------------------------
 // recordCashPayment()
 // ---------------------------------------------------------------------------
 describe('recordCashPayment', () => {

@@ -106,6 +106,10 @@ INBOX_REPLY_ADDRESS = "reply@replies.corvmc.org"
 # TURNSTILE_SECRET_KEY Worker secret (set via `wrangler secret put`). The value
 # below is Cloudflare's always-pass test key; replace with the real site key.
 PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADkKhGrOdNGAT-pY"
+# Publishable Stripe key for the Payment Element on /checkout/<session>. Non-secret
+# by design — it is in the client bundle. The matching STRIPE_SECRET_KEY is a
+# Worker secret, and PAYMENTS_DRIVER above is what decides whether either is used.
+PUBLIC_STRIPE_PUBLISHABLE_KEY = ""
 # Legacy Laravel app (Forge-hosted, currently served at corvmc.org) — used for
 # bcrypt password verification during the migration window; drops out after cutover.
 LARAVEL_URL = "https://corvmcorg-x68glzpd.on-forge.com"

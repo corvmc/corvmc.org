@@ -108,6 +108,7 @@
 		"@internationalized/date": "^3.12.3",
 		"@sentry/cloudflare": "^10.72.0",
 		"@sentry/sveltekit": "^10",
+		"@stripe/stripe-js": "^9.15.0",
 		"@tabler/icons-svelte": "^3.46.0",
 		"@tiptap/core": "^3.30.5",
 		"@tiptap/pm": "^3.30.5",

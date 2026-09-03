@@ -135,11 +135,16 @@ function discountAmount(discounts: Stripe.Checkout.SessionCreateParams.Discount[
  * Where the fake sends the customer instead of `checkout.stripe.com`. The origin
  * is lifted from whichever return URL the caller supplied, so the fake follows
  * the app around ports and preview hosts without configuration of its own.
+ *
+ * It is the same `/checkout/<session>` route an `elements` session uses: that
+ * page decides from the live driver whether to mount a Payment Element or the
+ * fake's card-number form, so a hosted-mode fake and a real Elements session
+ * land in the same place.
  */
 function fakeCheckoutUrl(params: Stripe.Checkout.SessionCreateParams, sessionId: string): string {
 	const reference = params.success_url ?? params.return_url ?? params.cancel_url;
 	const origin = reference ? new URL(reference).origin : '';
-	return `${origin}/checkout/fake/${sessionId}`;
+	return `${origin}/checkout/${sessionId}`;
 }
 
 // ---------------------------------------------------------------------------

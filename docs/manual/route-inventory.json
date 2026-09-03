@@ -72,6 +72,10 @@
 		"panel": "band"
 	},
 	{
+		"route": "/checkout/[id]",
+		"panel": "public"
+	},
+	{
 		"route": "/contact",
 		"panel": "public"
 	},

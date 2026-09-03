@@ -174,12 +174,13 @@ test('a show with a floor says so, and refuses less', async ({ page }) => {
 });
 
 /**
- * The fake gateway's stand-in for Stripe Checkout. Reached by the same
- * `window.location.href` the real integration uses, so nothing about the app's
- * navigation is special-cased for the test.
+ * The in-app checkout page, on the fake driver. It is the same `/checkout/<session>`
+ * route a real `ui_mode: 'elements'` session lands on — the page asks the server
+ * which gateway is live and renders a card-number form instead of a Payment
+ * Element, so the navigation under test is the production one.
  */
 async function payOnFakeCheckout(page: import('@playwright/test').Page, cardNumber: string) {
-	await expect(page).toHaveURL(/\/checkout\/fake\//);
+	await expect(page).toHaveURL(/\/checkout\//);
 	await expect(page.getByRole('heading', { name: 'Test checkout' })).toBeVisible();
 	await page.locator('input[name$="cardNumber"]').fill(cardNumber);
 	await page.getByRole('button', { name: /^Pay / }).click();
@@ -221,5 +222,5 @@ test('a declined card keeps the buyer on checkout with the real decline copy', a
 	await payOnFakeCheckout(page, '4000000000000002');
 
 	await expect(page.getByText('Your card has been declined.')).toBeVisible();
-	await expect(page).toHaveURL(/\/checkout\/fake\//);
+	await expect(page).toHaveURL(/\/checkout\//);
 });

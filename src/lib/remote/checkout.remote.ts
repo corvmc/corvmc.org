@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { form, query } from '$app/server';
-import { paymentDriver } from '$lib/server/stripe';
+import { paymentDriver, stripe } from '$lib/server/stripe';
 import {
 	FAKE_CARDS,
 	completeFakeCheckout,
@@ -11,10 +11,12 @@ import {
 import { handleCheckoutCompleted } from '$lib/server/finance/webhook-handlers';
 
 /**
- * The local stand-in for `checkout.stripe.com`, reachable only while the fake
- * gateway is the active driver. Production resolves `stripe` and every function
- * here 404s, so the route does not exist as far as a live deployment is
- * concerned.
+ * The in-app checkout page's data, for both drivers.
+ *
+ * Under `stripe` this is an `ui_mode: 'elements'` session and the page mounts a
+ * Payment Element against the client secret. Under `fake` it is an in-memory
+ * session and the page renders a card-number form instead — same route, same
+ * totals, same destination, so nothing above this layer knows which one ran.
  *
  * Deliberately unauthenticated: guest ticket checkout has no session, and the
  * only thing a caller can do is complete a checkout session id it already
@@ -24,24 +26,38 @@ function requireFakeDriver(): void {
 	if (paymentDriver() !== 'fake') error(404, 'Not found');
 }
 
-export const getFakeCheckout = query(z.string().min(1), async (sessionId) => {
-	requireFakeDriver();
+export const getCheckoutSession = query(z.string().min(1), async (sessionId) => {
+	const driver = paymentDriver();
 
-	const session = getFakeSession(sessionId);
+	// The fake keeps its sessions in the isolate rather than behind an API call,
+	// so each driver is read the way it is cheapest to read. Both signal a bad id
+	// as a 404 here — the real one raises rather than returning nothing, and an
+	// unknown session is a wrong URL, not a server fault.
+	const session = await (driver === 'fake'
+		? Promise.resolve(getFakeSession(sessionId))
+		: stripe.checkout.sessions.retrieve(sessionId).catch(() => undefined));
 	if (!session) error(404, 'No such checkout session');
 
 	return {
 		id: session.id,
+		driver,
 		mode: session.mode,
 		status: session.status,
 		amountSubtotal: session.amount_subtotal ?? 0,
 		amountTotal: session.amount_total ?? 0,
 		currency: session.currency ?? 'usd',
 		customerEmail: session.customer_email,
+		/** Only set on an `elements` session; the fake mints one regardless. */
+		clientSecret: driver === 'stripe' ? session.client_secret : null,
 		/** Surfaced so a test can assert on what the app attached without expanding the session. */
 		metadata: session.metadata ?? {},
-		cancelUrl: session.cancel_url,
-		testCards: Object.entries(FAKE_CARDS).map(([number, outcome]) => ({ number, outcome }))
+		// An `elements` session has no `cancel_url` field — Stripe rejects one —
+		// so `checkout()` stashes the destination in metadata instead.
+		cancelUrl: session.cancel_url ?? session.metadata?.cancel_url ?? null,
+		testCards:
+			driver === 'fake'
+				? Object.entries(FAKE_CARDS).map(([number, outcome]) => ({ number, outcome }))
+				: []
 	};
 });
 

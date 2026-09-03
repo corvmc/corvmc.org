@@ -141,7 +141,50 @@ describe('fake gateway behaviour', () => {
 			cancel_url: 'https://example.test/events/1/tickets'
 		});
 
-		expect(session.url).toBe(`https://example.test/checkout/fake/${session.id}`);
+		expect(session.url).toBe(`https://example.test/checkout/${session.id}`);
+	});
+
+	it('mints a client secret for an elements session, keyed to that session', async () => {
+		// `ui_mode: 'elements'` is what `checkout({ uiMode: 'elements' })` sends,
+		// and the client secret is the only thing the Payment Element can be
+		// initialised from. A fake that returned a constant here would let a page
+		// mount against the wrong session and never notice.
+		const first = await gateway.checkout.sessions.create({
+			mode: 'payment',
+			ui_mode: 'elements',
+			line_items: [lineItem(500)],
+			return_url: 'https://example.test/events/1/tickets/success'
+		});
+		const second = await gateway.checkout.sessions.create({
+			mode: 'payment',
+			ui_mode: 'elements',
+			line_items: [lineItem(500)],
+			return_url: 'https://example.test/events/1/tickets/success'
+		});
+
+		expect(first.ui_mode).toBe('elements');
+		expect(first.client_secret).toEqual(expect.any(String));
+		expect(first.client_secret).not.toBe(second.client_secret);
+	});
+
+	it('completes an elements session the same way as a hosted one', async () => {
+		// Fulfillment must not depend on which UI took the money: the checkout
+		// listeners read `metadata` and `payment_intent` off the completed session
+		// and know nothing about ui_mode.
+		const created = await gateway.checkout.sessions.create({
+			mode: 'payment',
+			ui_mode: 'elements',
+			line_items: [lineItem(1500)],
+			metadata: { type: 'ticket', purchase_id: 'pur_1' },
+			return_url: 'https://example.test/events/1/tickets/success'
+		});
+
+		const completed = completeFakeCheckout(created.id);
+
+		expect(completed.status).toBe('complete');
+		expect(completed.payment_status).toBe('paid');
+		expect(completed.metadata).toEqual({ type: 'ticket', purchase_id: 'pur_1' });
+		expect(completed.payment_intent).toEqual(expect.any(String));
 	});
 
 	it('retrieves a session it created, with metadata intact', async () => {
