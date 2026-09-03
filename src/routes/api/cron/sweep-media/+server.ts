@@ -2,6 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { sweepMedia } from '$lib/server/media/media-sweep-service';
+import { sweepGroupFiles } from '$lib/server/group/file-sweep';
 
 /**
  * Cron endpoint for reclaiming R2 objects nothing points at any more.
@@ -24,7 +25,11 @@ export const POST: RequestHandler = async ({ request }) => {
 		throw error(401, 'Unauthorized');
 	}
 
-	const result = await sweepMedia();
+	// Two reapers, one schedule. They share nothing — media's passes feed each
+	// other, group documents' do not — so they run concurrently rather than in
+	// sequence, and the route keeps its name because `wrangler.toml`,
+	// `cron/schedule.ts` and the docs snapshot all name it.
+	const [media, files] = await Promise.all([sweepMedia(), sweepGroupFiles()]);
 
-	return json(result);
+	return json({ ...media, ...files });
 };

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "a9223a94-0473-431b-80db-34b63a08129b",
+  "id": "6a506062-7f9f-4109-9eff-72a73c31729a",
   "prevIds": [
-    "7775f434-faf1-4c21-92e7-7a406e39b746"
+    "d74c1881-017e-457b-b184-876c452fe15c"
   ],
   "ddl": [
     {
@@ -191,6 +191,10 @@
       "entityType": "tables"
     },
     {
+      "name": "file",
+      "entityType": "tables"
+    },
+    {
       "name": "contact",
       "entityType": "tables"
     },
@@ -328,6 +332,10 @@
     },
     {
       "name": "contractor_job",
+      "entityType": "tables"
+    },
+    {
+      "name": "project",
       "entityType": "tables"
     },
     {
@@ -1592,6 +1600,16 @@
     },
     {
       "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "event"
+    },
+    {
+      "type": "text",
       "notNull": true,
       "autoincrement": false,
       "default": "'cmc'",
@@ -2746,6 +2764,16 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "acquisition"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "recorded_by_user_id",
       "entityType": "columns",
       "table": "acquisition"
@@ -3637,6 +3665,16 @@
       "default": null,
       "generated": null,
       "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
       "entityType": "columns",
       "table": "purchase_order"
     },
@@ -4869,6 +4907,116 @@
       "name": "deleted_at",
       "entityType": "columns",
       "table": "announcement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "file"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "file"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "key",
+      "entityType": "columns",
+      "table": "file"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "filename",
+      "entityType": "columns",
+      "table": "file"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "content_type",
+      "entityType": "columns",
+      "table": "file"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "size_bytes",
+      "entityType": "columns",
+      "table": "file"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "description",
+      "entityType": "columns",
+      "table": "file"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "uploaded_by_id",
+      "entityType": "columns",
+      "table": "file"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "file"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "file"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "file"
     },
     {
       "type": "text",
@@ -7551,6 +7699,16 @@
       "table": "work_order"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -8271,6 +8429,16 @@
       "table": "contractor_job"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -8379,6 +8547,126 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "contractor_job"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "description",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'open'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "suggestion_id",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "budget_cents",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "starts_at",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ends_at",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "project"
     },
     {
       "columns": [
@@ -8617,6 +8905,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_event_band_id_band_id_fk",
+      "entityType": "fks",
+      "table": "event"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_event_project_id_project_id_fk",
       "entityType": "fks",
       "table": "event"
     },
@@ -8952,6 +9255,21 @@
     },
     {
       "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_acquisition_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "acquisition"
+    },
+    {
+      "columns": [
         "recorded_by_user_id"
       ],
       "tableTo": "user",
@@ -9127,6 +9445,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_purchase_order_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "purchase_order"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_purchase_order_project_id_project_id_fk",
       "entityType": "fks",
       "table": "purchase_order"
     },
@@ -9474,6 +9807,36 @@
       "name": "fk_announcement_author_id_user_id_fk",
       "entityType": "fks",
       "table": "announcement"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_file_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "file"
+    },
+    {
+      "columns": [
+        "uploaded_by_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_file_uploaded_by_id_user_id_fk",
+      "entityType": "fks",
+      "table": "file"
     },
     {
       "columns": [
@@ -10287,6 +10650,21 @@
     },
     {
       "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_work_order_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
         "duty_list_id"
       ],
       "tableTo": "duty_list",
@@ -10467,6 +10845,21 @@
     },
     {
       "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_contractor_job_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "contractor_job"
+    },
+    {
+      "columns": [
         "requested_by_user_id"
       ],
       "tableTo": "user",
@@ -10479,6 +10872,51 @@
       "name": "fk_contractor_job_requested_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "contractor_job"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_project_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "project"
+    },
+    {
+      "columns": [
+        "suggestion_id"
+      ],
+      "tableTo": "suggestion",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_project_suggestion_id_suggestion_id_fk",
+      "entityType": "fks",
+      "table": "project"
+    },
+    {
+      "columns": [
+        "created_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_project_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "project"
     },
     {
       "columns": [
@@ -10914,6 +11352,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "file_pk",
+      "table": "file",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "contact_pk",
       "table": "contact",
       "entityType": "pks"
@@ -11204,6 +11651,15 @@
       "nameExplicit": false,
       "name": "contractor_job_pk",
       "table": "contractor_job",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "project_pk",
+      "table": "project",
       "entityType": "pks"
     },
     {
@@ -11505,6 +11961,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_event_recurring_series",
+      "entityType": "indexes",
+      "table": "event"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_project",
       "entityType": "indexes",
       "table": "event"
     },
@@ -11887,6 +12357,20 @@
     {
       "columns": [
         {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_acquisition_project",
+      "entityType": "indexes",
+      "table": "acquisition"
+    },
+    {
+      "columns": [
+        {
           "value": "paid_by_user_id",
           "isExpression": false
         }
@@ -12147,6 +12631,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_purchase_order_expected",
+      "entityType": "indexes",
+      "table": "purchase_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_purchase_order_project",
       "entityType": "indexes",
       "table": "purchase_order"
     },
@@ -12599,6 +13097,52 @@
       "name": "idx_announcement_notified",
       "entityType": "indexes",
       "table": "announcement"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "deleted_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_file_group",
+      "entityType": "indexes",
+      "table": "file"
+    },
+    {
+      "columns": [
+        {
+          "value": "key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_file_key",
+      "entityType": "indexes",
+      "table": "file"
+    },
+    {
+      "columns": [
+        {
+          "value": "deleted_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_file_deleted",
+      "entityType": "indexes",
+      "table": "file"
     },
     {
       "columns": [
@@ -13491,6 +14035,20 @@
     {
       "columns": [
         {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "work_order_project_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
           "value": "created_at",
           "isExpression": false
         }
@@ -13661,6 +14219,20 @@
     {
       "columns": [
         {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contractor_job_project",
+      "entityType": "indexes",
+      "table": "contractor_job"
+    },
+    {
+      "columns": [
+        {
           "value": "status",
           "isExpression": false
         }
@@ -13685,6 +14257,48 @@
       "name": "idx_contractor_job_overdue",
       "entityType": "indexes",
       "table": "contractor_job"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_project_group",
+      "entityType": "indexes",
+      "table": "project"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_project_status",
+      "entityType": "indexes",
+      "table": "project"
+    },
+    {
+      "columns": [
+        {
+          "value": "suggestion_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "suggestion_id is not null",
+      "origin": "manual",
+      "name": "uq_project_suggestion",
+      "entityType": "indexes",
+      "table": "project"
     },
     {
       "columns": [
@@ -14073,10 +14687,19 @@
       "name": "contractor_job_cost_nonneg",
       "entityType": "checks",
       "table": "contractor_job"
+    },
+    {
+      "value": "not (budget_cents < 0)",
+      "name": "project_budget_nonneg",
+      "entityType": "checks",
+      "table": "project"
+    },
+    {
+      "value": "starts_at is null or ends_at is null or ends_at > starts_at",
+      "name": "project_ends_after_start",
+      "entityType": "checks",
+      "table": "project"
     }
   ],
-  "renames": [
-    "asset_flag->work_request",
-    "volunteer_shift->work_order"
-  ]
+  "renames": []
 }
