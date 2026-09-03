@@ -232,7 +232,8 @@ async function main() {
 	);
 	console.log(
 		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +
-			`${audio.purchases} sales, ${audio.accounts} band Stripe accounts`
+			`${audio.purchases} sales, ${audio.accounts} band Stripe accounts, ` +
+			`${audio.radioEntries} radio entries`
 	);
 	console.log('\n  Volunteer demo logins (all `password`):');
 	console.log('    coordinator@corvallismusic.org  staff — every /staff/volunteer page');

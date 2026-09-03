@@ -20,7 +20,8 @@ binding = "ASSETS"
 [triggers]
 crons = [
   "*/5 * * * *",  # send-campaigns
-  "*/15 * * * *", # auto-complete, complete-shifts, cancel-unconfirmed, expire-waitlisted, wake-snoozed
+  "*/15 * * * *", # auto-complete, complete-shifts, cancel-unconfirmed, expire-waitlisted,
+                  #   wake-snoozed, schedule-radio
   "0 16 * * *",   # daily batch, 8am PST / 9am PDT, in order:
                   #   generate-recurring-reservations, lock-access,
                   #   confirmation-reminders, reservation-reminders,
