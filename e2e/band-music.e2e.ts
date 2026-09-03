@@ -15,6 +15,8 @@ import {
 	SEED_AUDIO_UNPUBLISHED_TRACK_ID
 } from './fixtures/seed-band-audio';
 import { readLocalDb } from './fixtures/platform-db';
+import { audioRelease, audioTrack } from '../src/lib/server/db/schema/audio';
+import { eq } from 'drizzle-orm';
 
 /**
  * The band music panel and the stream endpoint behind it.
@@ -28,7 +30,11 @@ import { readLocalDb } from './fixtures/platform-db';
  */
 
 const band = `/band/${SEED_PUBLIC_BAND_SLUG}`;
-const DB_POLL = { timeout: 15000 };
+// Check quickly once, then back off hard. `readLocalDb` opens the same file the
+// preview server is writing through workerd, and Playwright's default poll
+// intervals — a dozen reads per 15s window — were enough to push the *next*
+// suite's server into SQLITE_BUSY on CI.
+const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 async function login(page: Page) {
 	await page.goto('/login');
@@ -166,8 +172,11 @@ test.describe('publishing', () => {
 			.poll(
 				() =>
 					readLocalDb((db) =>
-						db.prepare('SELECT status FROM audio_release WHERE id = ?').get(SEED_AUDIO_DRAFT_ID)
-					).then((row) => (row as { status?: string } | undefined)?.status),
+						db
+							.select({ status: audioRelease.status })
+							.from(audioRelease)
+							.where(eq(audioRelease.id, SEED_AUDIO_DRAFT_ID))
+					).then(([row]) => row?.status),
 				DB_POLL
 			)
 			.toBe('published');
@@ -192,21 +201,25 @@ test.describe('deleting', () => {
 				() =>
 					readLocalDb((db) =>
 						db
-							.prepare('SELECT COUNT(*) AS n FROM audio_release WHERE id = ?')
-							.get(SEED_AUDIO_DELETABLE_ID)
-					).then((row) => Number((row as { n: number }).n)),
+							.select({ id: audioRelease.id })
+							.from(audioRelease)
+							.where(eq(audioRelease.id, SEED_AUDIO_DELETABLE_ID))
+					).then((rows) => rows.length),
 				DB_POLL
 			)
 			.toBe(0);
 
 		// The tracks go with it. Nothing shares these objects the way media rows
 		// share a poster, so there is no sweep to leave them to.
+		// Safe as a one-shot read: the poll above has already seen this
+		// transaction's write, so a fresh reader cannot still be behind it.
 		const tracks = await readLocalDb((db) =>
 			db
-				.prepare('SELECT COUNT(*) AS n FROM audio_track WHERE id = ?')
-				.get(SEED_AUDIO_DELETABLE_TRACK_ID)
+				.select({ id: audioTrack.id })
+				.from(audioTrack)
+				.where(eq(audioTrack.id, SEED_AUDIO_DELETABLE_TRACK_ID))
 		);
-		expect(Number((tracks as { n: number }).n)).toBe(0);
+		expect(tracks).toHaveLength(0);
 	});
 });
 
