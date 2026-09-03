@@ -159,6 +159,35 @@ export default defineConfig(
 		rules: { 'custom/no-domain-imports-in-ui': 'error' }
 	},
 	{
+		// config.ts is the shared client/server vocabulary: 206 files import it
+		// and 88 of them are `.svelte`, so anything it pulls in lands in the
+		// browser bundle. The capability matrix lives there; the access
+		// controller that evaluates it (`createAccessControl`) is built in
+		// `src/lib/server/authorization.ts` precisely so better-auth stays out
+		// of the client. A comment alone would not survive the first person who
+		// finds it convenient to build the controller beside the matrix.
+		files: ['src/lib/config.ts'],
+		rules: {
+			'no-restricted-imports': 'off',
+			// The typescript-eslint variant, for `allowTypeImports`: a type-only
+			// import emits nothing, and config.ts already has one
+			// (`import type { CreditType }`) that is perfectly safe.
+			'@typescript-eslint/no-restricted-imports': [
+				'error',
+				{
+					patterns: [
+						{
+							group: ['better-auth', 'better-auth/*', '$lib/server', '$lib/server/*'],
+							allowTypeImports: true,
+							message:
+								'config.ts is client-bundled. Build server-only things (the access controller, db access) in $lib/server instead.'
+						}
+					]
+				}
+			]
+		}
+	},
+	{
 		// The private contact table has one access path. Unlike the rules above,
 		// this one is deliberately NOT scoped to a folder and does NOT exempt
 		// specs: the whole point is that no file anywhere reaches the table except
