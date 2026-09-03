@@ -12,14 +12,23 @@ set -euo pipefail
 BASE_REF=${BASE_REF:-origin/main}
 BASE=$(git merge-base "$BASE_REF" HEAD)
 
-# ESLint only understands the code globs.
-CODE=$(git diff --name-only --diff-filter=ACMR "$BASE"...HEAD -- '*.ts' '*.js' '*.svelte')
+# ESLint only understands the code globs. `.mjs`/`.cjs` are listed explicitly:
+# eslint lints them by default and the repo owns several (`scripts/**/*.mjs`), but
+# a glob of '*.js' does not match them, so every one of them was invisible here.
+CODE=$(git diff --name-only --diff-filter=ACMR "$BASE"...HEAD -- \
+	'*.ts' '*.js' '*.mjs' '*.cjs' '*.svelte')
 
 # Prettier formats far more than that. Checking only the code globs here let an
 # unformatted .md through a green PR and turned `Lint (full)` red on main right
-# after the merge, which is the one place nobody is watching for it.
+# after the merge, which is the one place nobody is watching for it. `.mjs` was
+# the same hole a second time — missing from BOTH lists rather than just this one,
+# so a repo-owned script could break formatting *and* lint on a green PR.
+#
+# Two other lists have to name the same extensions: lefthook.yml's pre-commit
+# prettier glob and the `case` in scripts/format-edited-file.sh. Keep all three
+# in step.
 FORMATTABLE=$(git diff --name-only --diff-filter=ACMR "$BASE"...HEAD -- \
-	'*.ts' '*.js' '*.svelte' '*.md' '*.json' '*.css' '*.html' '*.yml' '*.yaml')
+	'*.ts' '*.js' '*.mjs' '*.cjs' '*.svelte' '*.md' '*.json' '*.css' '*.html' '*.yml' '*.yaml')
 
 if [ -z "$CODE" ] && [ -z "$FORMATTABLE" ]; then
 	echo "No changed files to lint"

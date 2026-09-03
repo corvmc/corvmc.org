@@ -18,11 +18,12 @@ pre-commit:
   jobs:
     # ~0.5s, single-threaded, allocates nothing — eight at once is not a pileup.
     # Worth keeping because it covers what the PostToolUse edit hook does not: that
-    # hook only handles .ts/.js/.svelte, while scripts/lint-changed.sh checks
+    # hook only handles code files, while scripts/lint-changed.sh checks
     # formatting on .md/.json/.css/.html/.yml/.yaml too. Without this, an
     # unformatted markdown file costs a full CI round trip to discover. The glob
-    # mirrors that script's FORMATTABLE list — keep the two in step.
+    # mirrors that script's FORMATTABLE list — keep the two in step, along with the
+    # `case` in scripts/format-edited-file.sh.
     - name: prettier
-      glob: '*.{ts,js,svelte,json,md,css,html,yml,yaml}'
+      glob: '*.{ts,js,mjs,cjs,svelte,json,md,css,html,yml,yaml}'
       run: pnpm exec prettier --write {staged_files}
       stage_fixed: true
