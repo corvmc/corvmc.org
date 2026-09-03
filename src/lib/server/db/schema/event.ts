@@ -85,7 +85,15 @@ export const event = sqliteTable(
 		posterKey: text('poster_key'),
 		tags: text('tags'),
 		ticketingEnabled: integer('ticketing_enabled', { mode: 'boolean' }).notNull().default(false),
+		// The SUGGESTED price. A buyer names their own amount on a sliding scale
+		// and this is where that scale opens — not what they are held to.
 		ticketPrice: integer('ticket_price'),
+		// The least a buyer may pay per ticket, and the bottom of that scale.
+		// 0 — the default — runs it all the way to free, which is what makes
+		// NOTAFLOF operational online rather than a door policy said in copy.
+		// Set equal to `ticketPrice` for a show that is simply a fixed price.
+		// Meaningless when `ticketPrice` is null: the event is free outright.
+		ticketPriceFloorCents: integer('ticket_price_floor_cents').notNull().default(0),
 		ticketQuantity: integer('ticket_quantity'),
 		// The group that OWNS this event — whose panel or page it lives in, and the
 		// only group that may edit, publish or cancel it. Null for CMC-produced

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
-import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { getStanding } from '$lib/server/moderation/standing-service';
 import {
@@ -106,13 +106,13 @@ export const getMyListing = query(z.string(), async (eventId) => {
 export const getPendingSubmissions = query(
 	z.object({ page: z.coerce.number().int().min(1).optional() }).optional(),
 	async (filters) => {
-		await requireStaff();
+		await requireCapability('listing.review');
 		return listPendingSubmissions({ page: filters?.page ?? 1, pageSize: 50 });
 	}
 );
 
 export const getPendingSubmissionCount = query(async () => {
-	await requireStaff();
+	await requireCapability('listing.review');
 	return countPendingSubmissions();
 });
 
@@ -344,7 +344,7 @@ export const findDuplicateListing = query(z.string(), async (eventId) => {
 // ---------------------------------------------------------------------------
 
 export const approveListing = form(z.object({ eventId: z.string().min(1) }), async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('listing.review');
 	try {
 		await approveSubmission(data.eventId, staff.id);
 	} catch (err) {
@@ -363,7 +363,7 @@ export const rejectListing = form(
 		notes: z.string().trim().min(1, 'Give the member a reason').max(1000)
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('listing.review');
 		try {
 			await rejectSubmission(data.eventId, staff.id, data.notes);
 		} catch (err) {
@@ -388,7 +388,7 @@ export const rejectListing = form(
 // ---------------------------------------------------------------------------
 
 export const getUserListings = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('listing.review');
 	const [listings, rejected, publishedCount] = await Promise.all([
 		listCommunityEventsForUser(userId),
 		listRejectedForUser(userId),

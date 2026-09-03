@@ -25,9 +25,10 @@ The tier decision goes in a new `handle` in `src/hooks.server.ts`, which has the
 - Not a band subdomain (base domain, `www`, reserved slug) → pass through.
 - Band is `tier = 'premium'` and `bandPremium` is on → pass through to `/band-site/{slug}`.
 - Anything else — free tier, unknown slug, flag off → `302` to
-  `{PUBLIC_SITE_URL}/directory/bands/{slug}`, preserving nothing else (the band-site
-  subpaths `/events`, `/epk` have no directory equivalent, so they all land on the
-  profile).
+  `{PUBLIC_SITE_URL}/directory/bands/{slug}`, preserving nothing else. The band-site
+  subpaths `/events` and `/epk` land on the profile, and for `/epk` that is now the
+  right answer rather than a fallback: the directory profile _is_ the act's press
+  kit, print stylesheet and all, so there is no second URL to keep in sync.
 
 Deliberate consequences:
 

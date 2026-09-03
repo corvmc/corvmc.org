@@ -55,8 +55,10 @@
 				{counts.open === 0
 					? 'Nothing is left open.'
 					: `${counts.open} conversation${counts.open === 1 ? ' is' : 's are'} still open${session.skipped.length ? ` — ${session.skipped.length} you skipped` : ''}.`}
-				{#if counts.awaiting}
-					{counts.awaiting} are waiting on a reply and will come back on their own.
+				{#if counts.snoozed}
+					{counts.snoozed}
+					{counts.snoozed === 1 ? 'is' : 'are'} snoozed or waiting on a reply, and will come back
+					{counts.snoozed === 1 ? 'on its own' : 'on their own'}.
 				{/if}
 			</p>
 		{/await}

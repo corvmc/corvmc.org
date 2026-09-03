@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { query, form } from '$app/server';
 import { mapDomainError } from '$lib/server/errors';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import {
 	claimExternalAct,
@@ -27,7 +27,7 @@ import {
 export const getStaffExternalActs = query(
 	z.object({ search: z.string().optional() }),
 	async (filters) => {
-		await requireStaff();
+		await requireCapability('event.read');
 		return listExternalActs(filters.search || undefined);
 	}
 );
@@ -45,7 +45,7 @@ export const createStaffExternalAct = form(
 		url: z.string().url('Enter a full URL, or leave it blank').optional().or(z.literal(''))
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.manage');
 
 		const id = await createExternalAct({
 			name: data.name,
@@ -73,7 +73,7 @@ export const claimStaffExternalAct = form(
 		ownerId: z.string().min(1, 'Pick the member who will own the band')
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.manage');
 		try {
 			const { slug } = await claimExternalAct(data.entryId, data.ownerId);
 			return { success: true, slug };

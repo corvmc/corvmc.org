@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {
 		getUser,
-		getAllRoles,
+		getRoleCatalog,
 		getUserPage,
 		getUserSessions,
 		deactivateUser,
@@ -38,16 +38,18 @@
 </script>
 
 <!--
-	getAllRoles is awaited here rather than in +page.svelte so the roles catalog
+	getRoleCatalog is awaited here rather than in +page.svelte so the roles catalog
 	is only fetched when someone actually opens this tab — the same reason every
-	other panel owns its own queries.
+	other panel owns its own queries. It also carries `canSetRole`, which hides
+	the picker from a caller who may edit the profile but not the roles: without
+	that they would submit a role set they cannot change and land on a 403.
 -->
-{#await getAllRoles() then allRoles}
-	{@const roleOptions = (allRoles ?? []).map((r) => ({ id: String(r.id), label: r.name }))}
-	{@const initialRoles = (allRoles ?? [])
+{#await getRoleCatalog() then catalog}
+	{@const roleOptions = catalog.roles.map((r) => ({ id: String(r.id), label: r.name }))}
+	{@const initialRoles = catalog.roles
 		.filter((r) => member.roles.includes(r.name))
 		.map((r) => String(r.id))}
-	<StaffUserForm {member} {roleOptions} {initialRoles} {id} />
+	<StaffUserForm {member} {roleOptions} {initialRoles} {id} canSetRole={catalog.canSetRole} />
 {/await}
 
 <RelatedList title="Directory profile" result={getUserDirectoryProfile(id)}>

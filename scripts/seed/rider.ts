@@ -2,6 +2,8 @@ import { rider, riderElement, riderInput } from '../../src/lib/server/db/schema/
 import { group, groupMember } from '../../src/lib/server/db/schema/group';
 import { bandSite } from '../../src/lib/server/db/schema/band-site';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
+import { event, eventBand } from '../../src/lib/server/db/schema/event';
+import { directoryEntry } from '../../src/lib/server/db/schema/directory';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { batchInsert, db } from './db';
@@ -9,6 +11,7 @@ import { scryptHash } from './hash';
 import { type SeedRole } from './types';
 import { randomUUID } from 'crypto';
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import type { RiderElementKind as RiderElementKindValue } from '../../src/lib/config';
 
 /**
  * Tech riders.
@@ -150,18 +153,41 @@ export async function seedRiders(roles: SeedRole[]) {
 		.from(group)
 		.innerJoin(bandSite, eq(bandSite.groupId, group.id))
 		.leftJoin(groupMember, and(eq(groupMember.groupId, group.id), eq(groupMember.status, 'active')))
-		.where(and(eq(group.kind, 'band'), eq(bandSite.tier, 'free'), isNull(group.deletedAt)))
+		.where(
+			and(
+				eq(group.kind, 'band'),
+				eq(bandSite.tier, 'free'),
+				isNull(group.deletedAt),
+				// **Bands the admin account is not in.** `seedBands` hands ownership
+				// out of `allUsers`, which includes the admin — and on a band they
+				// belong to, the staff *pseudo-role* never applies: they get the
+				// member view. The staff read-only state would then be structurally
+				// unreachable, and a screenshot of it would be a member view wearing
+				// the wrong caption.
+				sql`not exists (
+					select 1 from group_member gm2
+					  join user u2 on u2.id = gm2.user_id
+					 where gm2.group_id = ${group.id} and u2.email = 'admin@corvallismusic.org'
+				)`
+			)
+		)
 		.groupBy(group.id)
 		.orderBy(desc(sql`active_members`), asc(group.slug));
 
-	if (bands.length < 2) return { riders: 0, uploaded: 0 };
+	if (bands.length < 4) return { riders: 0, uploaded: 0 };
 
-	const structured = bands[0];
-	// The runner-up, not the far end: taking the smallest roster lands on the
-	// solo act, which is somebody else's fixture and a band of one — a poor
-	// stand-in for "a working band that would rather hand over the PDF it
-	// already has".
-	const uploadOnly = bands[1];
+	/**
+	 * Four bands, because a rider has four states worth looking at and each one
+	 * is a different answer to "has this act told us anything".
+	 *
+	 * Taken from the top of the roster-size ordering rather than the far end:
+	 * the smallest free band is the solo act, which is somebody else's fixture
+	 * and a roster of one — a poor stand-in for any of these.
+	 */
+	const structured = bands[0]; // filled in, comfortably inside the room
+	const oversized = bands[1]; // filled in, more channels than the desk has
+	const uploadOnly = bands[2]; // a PDF and nothing else
+	const empty = bands[3]; // nothing at all — the state every band starts in
 
 	// ------------------------------------------------------------------ personas
 
@@ -190,14 +216,20 @@ export async function seedRiders(roles: SeedRole[]) {
 		if (memberRoleId) {
 			await db.insert(modelHasRole).values({ roleId: memberRoleId, userId: persona.id });
 		}
-		await db.insert(groupMember).values({
-			groupId: structured.id,
-			userId: persona.id,
-			role: persona.role,
-			position: persona.position,
-			status: 'active',
-			createdAt
-		});
+		// On all four, so every state is reachable from one login rather than
+		// needing a different account per band — and so the *member* view of the
+		// upload-only and empty bands exists at all, which staff-only access
+		// would not show.
+		for (const band of [structured, oversized, uploadOnly, empty]) {
+			await db.insert(groupMember).values({
+				groupId: band.id,
+				userId: persona.id,
+				role: persona.role,
+				position: persona.position,
+				status: 'active',
+				createdAt
+			});
+		}
 	}
 
 	// ---------------------------------------------------------------- structured
@@ -245,7 +277,17 @@ export async function seedRiders(roles: SeedRole[]) {
 	const spotFor = (i: number) =>
 		NAMED_SPOTS[i] ?? { x: 12 + ((i - NAMED_SPOTS.length) % 5) * 19, y: 88 };
 
-	roster.forEach((member, i) => {
+	/**
+	 * Five corners, however many people are on the roster.
+	 *
+	 * `seedBands` hands out one to four members and the two personas join on top,
+	 * so an uncapped loop makes the band's channel count swing between resets —
+	 * and a headline number that moves is one nobody can check by eye or write a
+	 * caption about. Capping also leaves the later members with an **empty**
+	 * corner, which is a state worth having: most bands have somebody who has not
+	 * filled theirs in yet.
+	 */
+	roster.slice(0, 5).forEach((member, i) => {
 		const corner = CORNERS[i % CORNERS.length];
 		const spot = spotFor(i);
 		const elementId = randomUUID();
@@ -318,6 +360,137 @@ export async function seedRiders(roles: SeedRole[]) {
 	await batchInsert(riderElement, elementRows, 8);
 	await batchInsert(riderInput, inputRows, 8);
 
+	// ----------------------------------------------------------------- oversized
+
+	/**
+	 * A band that asks for more than the room has.
+	 *
+	 * The over-capacity notice is the only surface in the feature that cannot be
+	 * reached by filling things in normally — the default desk is 16 channels and
+	 * a seeded five-piece lands at twelve — so without this the warning renders
+	 * nowhere in dev and the copy nobody can see is the copy nobody maintains.
+	 *
+	 * A fully-miked kit and three vocals, which is a real ask rather than a
+	 * padded one: this is exactly the rider a house engineer sub-mixes.
+	 */
+	const [bigHead] = await db
+		.insert(rider)
+		.values({
+			groupId: oversized.groupId ?? oversized.id,
+			monitorFormat: 'iems',
+			notes: 'We can drop the tom mics and the third vocal if the desk is tight.'
+		})
+		.returning();
+
+	const BIG: { kind: RiderElementKindValue; label: string; inputs: string[] }[] = [
+		{
+			kind: 'drum_kit',
+			label: 'Kit (fully miked)',
+			inputs: [
+				'Kick in',
+				'Kick out',
+				'Snare top',
+				'Snare bottom',
+				'Hi-hat',
+				'Rack tom',
+				'Floor tom',
+				'OH L',
+				'OH R'
+			]
+		},
+		{ kind: 'bass_rig', label: 'Bass rig', inputs: ['Bass DI', 'Bass cab'] },
+		{ kind: 'guitar_amp', label: 'Guitar SR', inputs: ['Gtr 1'] },
+		{ kind: 'guitar_amp', label: 'Guitar SL', inputs: ['Gtr 2'] },
+		{ kind: 'keys', label: 'Nord', inputs: ['Keys L', 'Keys R'] },
+		{ kind: 'vocals', label: 'Lead vocal', inputs: ['Lead vox'] },
+		{ kind: 'vocals', label: 'Vocal SR', inputs: ['BV 1'] },
+		{ kind: 'vocals', label: 'Vocal SL', inputs: ['BV 2'] },
+		{ kind: 'playback', label: 'Tracks', inputs: ['Tracks L', 'Tracks R'] }
+	];
+
+	const bigElements: (typeof riderElement.$inferInsert)[] = [];
+	const bigInputs: (typeof riderInput.$inferInsert)[] = [];
+
+	BIG.forEach((entry, i) => {
+		const id = randomUUID();
+		bigElements.push({
+			id,
+			riderId: bigHead.id,
+			// Unowned: this band's rider was filled in by whoever books them, which
+			// is a real way it happens and the state where every row is admin-only.
+			userId: null,
+			kind: entry.kind,
+			label: entry.label,
+			providedBy: 'band',
+			sortOrder: i
+		});
+		entry.inputs.forEach((label, j) => {
+			bigInputs.push({ elementId: id, label, source: 'mic', sortOrder: j });
+		});
+	});
+
+	await batchInsert(riderElement, bigElements, 8);
+	await batchInsert(riderInput, bigInputs, 8);
+
+	// ------------------------------------------------------- put them on a bill
+
+	/**
+	 * Credit the two riders-with-data on CMC's busiest own show.
+	 *
+	 * Without this the advance surface's Tech riders card renders only "not in
+	 * yet" and "not a CMC act" rows: `seedCmcEventLineups` bills premium bands
+	 * and external acts, none of which has a rider, so the card's whole point —
+	 * a channel count, a phantom count, what the band needs from us — is
+	 * unreachable in dev. A card that only ever shows its empty branch is one
+	 * nobody notices is wrong.
+	 */
+	const [bill] = await db
+		.select({ id: event.id })
+		.from(event)
+		.innerJoin(eventBand, eq(eventBand.eventId, event.id))
+		.where(eq(event.source, 'cmc'))
+		.groupBy(event.id)
+		.orderBy(desc(sql`count(${eventBand.id})`))
+		.limit(1);
+
+	if (bill) {
+		const [{ maxOrder }] = await db
+			.select({ maxOrder: sql<number>`coalesce(max(${eventBand.billingOrder}), -1)`.as('m') })
+			.from(eventBand)
+			.where(eq(eventBand.eventId, bill.id));
+
+		// Which acts are already credited, by name. `seedCmcEventLineups` bills some
+		// of these by bare name, and adding a second credit for the same act is a
+		// duplicate on the bill rather than a fixture — the UI survives it now, but
+		// the seed should not be inventing one.
+		const already = new Set(
+			(
+				await db
+					.select({ name: eventBand.name })
+					.from(eventBand)
+					.where(eq(eventBand.eventId, bill.id))
+			).map((r) => r.name.toLowerCase())
+		);
+
+		let order = Number(maxOrder) + 1;
+		for (const band of [structured, oversized]) {
+			if (already.has(band.name.toLowerCase())) continue;
+			const [entry] = await db
+				.select({ id: directoryEntry.id })
+				.from(directoryEntry)
+				.where(eq(directoryEntry.groupId, band.id))
+				.limit(1);
+			if (!entry) continue;
+			await db.insert(eventBand).values({
+				eventId: bill.id,
+				name: band.name,
+				directoryEntryId: entry.id,
+				billingOrder: order++,
+				status: 'confirmed'
+			});
+		}
+	}
+
 	// ---------------------------------------------------------------- upload only
 
 	// The key names no real object, which is exactly why `backfill-media.ts`
@@ -341,5 +514,12 @@ export async function seedRiders(roles: SeedRole[]) {
 		sortOrder: 0
 	});
 
-	return { riders: 1, uploaded: 1, structuredBand: structured.name, uploadBand: uploadOnly.name };
+	return {
+		riders: 2,
+		uploaded: 1,
+		structuredBand: structured.name,
+		oversizedBand: oversized.name,
+		uploadBand: uploadOnly.name,
+		emptyBand: empty.name
+	};
 }

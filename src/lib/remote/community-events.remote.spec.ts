@@ -13,7 +13,7 @@ let currentUser: { id: string; name: string; email: string } | null = null;
 let isStaff = false;
 
 vi.mock('$lib/server/authorization', () => ({
-	requireStaff: async () => {
+	requireCapability: async () => {
 		if (!currentUser) throw new Error('401: Not authenticated');
 		if (!isStaff) throw new Error('403: Staff access required');
 		return currentUser;

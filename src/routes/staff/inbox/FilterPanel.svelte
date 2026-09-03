@@ -46,7 +46,6 @@
 
 	const viewLabels: Record<InboxView, string> = {
 		open: 'Open',
-		awaiting: 'Awaiting reply',
 		snoozed: 'Snoozed',
 		resolved: 'Resolved',
 		all: 'All'
@@ -71,7 +70,7 @@
 			{#each inboxViews as key (key)}
 				<button type="button" class={chip(view === key)} onclick={() => (view = key)}>
 					{viewLabels[key]}
-					<span class="opacity-70">{counts.status[key === 'all' ? 'all' : key]}</span>
+					<span class="opacity-70">{counts.status[key]}</span>
 				</button>
 			{/each}
 		</div>

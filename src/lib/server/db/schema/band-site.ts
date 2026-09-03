@@ -49,15 +49,29 @@ export const customDomainVerificationSchema = z
 export type CustomDomainVerification = z.infer<typeof customDomainVerificationSchema>;
 
 /**
- * The premium microsite: tier, its Stripe subscription, and the custom domain
- * that serves it.
+ * A band's public presence: what it bought, and what it wrote.
  *
- * Separated from `group` because these are the things a band *buys*, not things
- * it is. Two consequences fall out of that. `groupId` is NOT NULL, so a site
- * cannot exist for an external act (phase 10) — no service-layer rule needed.
- * And `user.subscription` (membership) stops sharing a name with a band's
- * premium subscription; after this, nothing else in the schema means
- * "subscription" here.
+ * **Read the column list before concluding this table is premium.** It was
+ * originally all one thing — the things a band *buys* rather than things it is —
+ * and `epk` no longer belongs to that half. Every band has a press kit, free, so
+ * the row now splits two ways:
+ *
+ * | Bought                                                        | Not bought |
+ * | ------------------------------------------------------------- | ---------- |
+ * | `tier`, `subscription`, `customDomain*`, `theme`, `customCss`, `blocks` | `epk` |
+ *
+ * That the free half sits in a table named `band_site` is a naming debt, not a
+ * gate. It stays here rather than moving because the row already has exactly the
+ * property the free half needs — one per band, created with the band, never
+ * deleted while it lives — so a read needs no fallback and a move would buy
+ * nothing but a migration. Which audience each half of `epk` is for is decided
+ * in `$lib/server/band/press-kit.ts`, not here.
+ *
+ * Separated from `group` because of the bought half. Two consequences fall out
+ * of that. `groupId` is NOT NULL, so a site cannot exist for an external act
+ * (phase 10) — no service-layer rule needed. And `user.subscription`
+ * (membership) stops sharing a name with a band's premium subscription; after
+ * this, nothing else in the schema means "subscription" here.
  *
  * **One row per band, created with the band, and never deleted while the band
  * lives.** `band_page_config` and `band_media` cascade from this row, so
@@ -116,6 +130,11 @@ export const bandSite = sqliteTable(
 		theme: text('theme').notNull().default('default'),
 		customCss: text('custom_css'),
 		blocks: text('blocks', { mode: 'json' }).$type<Block[]>().notNull().default([]),
+		// The free half of this row. Two audiences are mixed in here — the
+		// marketing a stranger may read, and the advance material only a venue the
+		// band emailed should see — so nothing reads this column raw:
+		// `publicPressKit()` / `fullPressKit()` in `$lib/server/band/press-kit.ts`
+		// are the only ways out of it.
 		epk: text('epk', { mode: 'json' }).$type<BandEpk>(),
 
 		createdAt: integer('created_at', { mode: 'timestamp' })

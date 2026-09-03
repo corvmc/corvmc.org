@@ -1,12 +1,15 @@
 /**
  * The two things the queue says about a thread that the database does not
- * store: which of the five views it belongs to, and why it is sitting there.
+ * store: which of the four views it belongs to, and why it is sitting there.
  *
  * `inbox_thread.awaiting_reply_since` is orthogonal to `inbox_thread.status`,
  * so an awaiting thread is an *open* row in the database. It is not an open
- * *conversation* in the sense the queue means: the ball is with the contact.
- * Open and Awaiting reply are therefore separate views, and Open is exactly
+ * *conversation* in the sense the queue means: the ball is with the contact,
+ * so it sits under Snoozed with everything else that is parked. Open is exactly
  * what the staff nav badge counts — see `needsUsCondition` in thread-service.
+ *
+ * The two are still told apart on the row, which is what this returns: an
+ * awaiting thread badges as `awaiting_reply`, a snoozed one as `snoozed`.
  *
  * Everything here is derived on read and never stored, the same shape as
  * `displayStatus()` in the suggestion service.

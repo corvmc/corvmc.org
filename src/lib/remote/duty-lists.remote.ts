@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { dutyListAnchors } from '$lib/config';
 import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
@@ -65,20 +65,20 @@ function parseTasks(raw: string | undefined): string[] {
 // ---------------------------------------------------------------------------
 
 export const getDutyLists = query(async () => {
-	await requireStaff();
+	await requireCapability('event.read');
 	return listDutyLists({ includeInactive: true });
 });
 
 /** The picker on the production console: only lists worth applying. */
 export const getActiveDutyLists = query(async () => {
-	await requireStaff();
+	await requireCapability('event.read');
 	const lists = await listDutyLists();
 	return lists.filter((l) => l.itemCount > 0);
 });
 
 /** One load-bearing query for `/staff/volunteer/duty-lists/[id]`. */
 export const getDutyListPage = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('event.read');
 
 	const detail = await getDutyListDetail(id);
 	if (!detail) error(404, 'Duty list not found');
@@ -103,7 +103,7 @@ export const createDutyList = form(
 		anchor: z.enum(dutyListAnchors).default('doors')
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('event.manage');
 		try {
 			const list = await createService({
 				name: data.name,
@@ -131,7 +131,7 @@ export const updateDutyList = form(
 		isActive: z.boolean().optional().default(false)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.manage');
 		try {
 			await updateService(data.id, {
 				name: data.name,
@@ -148,7 +148,7 @@ export const updateDutyList = form(
 );
 
 export const deleteDutyList = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('event.manage');
 	try {
 		await deleteService(data.id);
 		await getDutyLists().refresh();
@@ -210,7 +210,7 @@ function itemInput(data: {
 export const addDutyListItem = form(
 	z.object({ dutyListId: z.string().min(1), ...itemShape }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.manage');
 		try {
 			await addItemService(data.dutyListId, itemInput(data));
 			await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
@@ -224,7 +224,7 @@ export const addDutyListItem = form(
 export const updateDutyListItem = form(
 	z.object({ id: z.string().min(1), dutyListId: z.string().min(1), ...itemShape }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.manage');
 		try {
 			await updateItemService(data.id, itemInput(data));
 			await getDutyListPage(data.dutyListId).refresh();
@@ -238,7 +238,7 @@ export const updateDutyListItem = form(
 export const removeDutyListItem = form(
 	z.object({ id: z.string().min(1), dutyListId: z.string().min(1) }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.manage');
 		try {
 			await removeItemService(data.id);
 			await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
@@ -256,7 +256,7 @@ export const removeDutyListItem = form(
 export const applyDutyList = form(
 	z.object({ dutyListId: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('event.manage');
 		try {
 			const result = await applyService(data.dutyListId, data.eventId, staff.id);
 			return { workOrders: result.workOrderIds.length, tasks: result.taskCount };
@@ -274,7 +274,7 @@ export const setWorkTaskDone = form(
 		done: z.boolean().optional().default(false)
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('event.manage');
 		try {
 			await setTaskService(data.id, data.done, staff.id);
 			return { success: true };

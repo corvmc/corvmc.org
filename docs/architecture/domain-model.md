@@ -97,10 +97,17 @@ They also make opposite calls on _where_ to enforce, each with a stated reason.
 is odd rather than corrupting, since there is still exactly one name." `band_site`'s
 constraint is in the schema precisely so no service rule is needed.
 
-And `band_site` holds what a band **buys**, not what it **is** — which is why `tier` lives
-there rather than on `group`: every band has the row, so reading a tier needs no fallback.
-The row is never deleted while the band lives, because `band_page_config` and `band_media`
-cascade from it and a lapsed card must not take a band's content with it.
+And `band_site` mostly holds what a band **buys**, not what it **is** — which is why `tier`
+lives there rather than on `group`: every band has the row, so reading a tier needs no
+fallback. The row is never deleted while the band lives, because `band_page_config` and
+`band_media` cascade from it and a lapsed card must not take a band's content with it.
+
+**`epk` is the exception, and it is deliberate.** Every band has a press kit, free, so that
+column is not something bought. It sits in this table because the row already has the
+property a free-for-everyone column needs — one per band, created with the band, never
+deleted — and moving it would buy a migration and nothing else. The table's name is a
+naming debt from before that split; it is not a gate. Which half of `epk` a given reader
+may see is decided in `src/lib/server/band/press-kit.ts`, the one module that projects it.
 
 ### Two opposite id decisions, one migration
 
