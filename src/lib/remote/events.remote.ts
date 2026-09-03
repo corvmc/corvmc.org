@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
+import { getEventRiderSummaries } from '$lib/server/band/rider-service';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
@@ -960,15 +961,19 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	// Duty lists ride along in the page's one load-bearing query rather than
 	// being fetched beside it: awaited remote queries are serial round trips, and
 	// `custom/no-concurrent-remote-queries` exists to stop a page fanning them out.
-	const [detail, recurringSeries, shifts, volunteerRoles, dutyLists] = await Promise.all([
+	const [detail, recurringSeries, shifts, volunteerRoles, dutyLists, riders] = await Promise.all([
 		getStaffEventDetail(id),
 		getEventRecurringSeries(id),
 		getShifts({ eventId: id }),
 		getVolunteerRoles(),
-		listApplicableDutyLists()
+		listApplicableDutyLists(),
+		// What each act on the bill says it needs. The advance checklist has always
+		// carried a task reading "Collect tech riders and stage plots"; this is the
+		// answer to it, on the page where that work happens.
+		getEventRiderSummaries(id)
 	]);
 
-	return { detail, recurringSeries, shifts, volunteerRoles, dutyLists };
+	return { detail, recurringSeries, shifts, volunteerRoles, dutyLists, riders };
 });
 
 export const getEventRecurringSeries = query(z.string(), async (eventId) => {

@@ -115,6 +115,7 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 	{ name: 'getReservationSettings', cap: 'settings.read' },
 	{ name: 'getOrgSettings', cap: 'settings.read' },
 	{ name: 'getVolunteerValueSettings', cap: 'settings.read' },
+	{ name: 'getVenueSettings', cap: 'settings.read' },
 	{ name: 'getIntegrationSettings', cap: 'settings.read' },
 	{ name: 'getStaffSettingsPage', cap: 'settings.read' },
 	{ name: 'testUtecConnection', cap: 'settings.read' },
@@ -166,6 +167,7 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 		cap: 'settings.update',
 		args: [{ hourValueCents: 3766, hourValueSource: 'Independent Sector, Oregon, 2025' }]
 	},
+	{ name: 'updateVenueSettings', args: [{ consoleChannels: 16 }] },
 	{
 		name: 'updateIntegrationSettings',
 		cap: 'settings.update',

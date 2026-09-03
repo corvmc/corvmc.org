@@ -23,9 +23,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const requireStaff = vi.fn<() => Promise<unknown>>(async () => {
 	throw new Error('403: Staff access required');
 });
+// This file spans several remote modules, which migrate to capability guards
+// one PR at a time — so both shapes are mocked, and both reject by default,
+// until the last module here names a capability.
+const requireCapability = vi.fn<(cap: string) => Promise<unknown>>(async () => {
+	throw new Error('403: Staff access required');
+});
 
 vi.mock('$lib/server/authorization', () => ({
 	requireStaff: (...a: unknown[]) => requireStaff(...(a as [])),
+	requireCapability: (...a: unknown[]) => requireCapability(...(a as [string])),
+	can: vi.fn(async () => false),
+	isPosition: (n: string) => ['admin', 'staff'].includes(n),
 	requireUser: () => ({ id: 'acting-staff' }),
 	isStaff: vi.fn(async () => false),
 	getUserRoles: vi.fn(async () => ['member']),
@@ -147,6 +156,7 @@ const [
 beforeEach(() => {
 	vi.clearAllMocks();
 	requireStaff.mockRejectedValue(new Error('403: Staff access required'));
+	requireCapability.mockRejectedValue(new Error('403: Staff access required'));
 	currentParams = { id: 'someone-else' };
 });
 
