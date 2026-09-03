@@ -179,7 +179,7 @@ describe('beginPurchase — a free release', () => {
 });
 
 describe('beginPurchase — a paid release', () => {
-	it('sends Stripe the destination and an application fee that includes its own cut', async () => {
+	it('sends Stripe whatever is left of the charge once the band is paid', async () => {
 		queue(publishedRelease());
 		await service.beginPurchase({
 			...BASE,
@@ -190,9 +190,10 @@ describe('beginPurchase — a paid release', () => {
 
 		const [options] = checkout.mock.calls[0] as unknown as [Record<string, unknown>];
 		expect(options.destinationAccountId).toBe('acct_band');
-		// 100 (the buyer's gift) + 59 (Stripe's fee on $10). Without the second
-		// term CMC nets $0.41 rather than $1.00.
-		expect(options.applicationFeeCents).toBe(159);
+		// $10 sale, 10% suggested, 59¢ fee shared in proportion: the band absorbs
+		// 53¢ and is transferred $8.47, so Stripe is told $1.53 — out of which it
+		// takes the 59¢ and CMC keeps 94¢.
+		expect(options.applicationFeeCents).toBe(153);
 	});
 
 	it('never applies CMC credits to a payout-destined sale', async () => {
@@ -241,7 +242,8 @@ describe('beginPurchase — a paid release', () => {
 		});
 		// The row has to exist before the buyer leaves, or the webhook comes back
 		// to nothing.
-		expect(state.inserted[0]).toMatchObject({ status: 'pending', bandNetCents: 841 });
+		// The band's allocation less its proportional share of the card fee.
+		expect(state.inserted[0]).toMatchObject({ status: 'pending', bandNetCents: 847 });
 	});
 
 	it('refuses when the band cannot be paid', async () => {

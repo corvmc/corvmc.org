@@ -60,7 +60,7 @@
 				<Form remote={openPayoutDashboard} onsuccess={goToStripe}>
 					{@const fields = openPayoutDashboard.fields}
 					<input {...fields.slug.as('hidden', slug)} />
-					<SubmitButton variant="ghost">Open Stripe dashboard</SubmitButton>
+					<SubmitButton variant="ghost" label="Open Stripe dashboard" />
 				</Form>
 			{:else}
 				<p class="text-muted">
@@ -80,9 +80,9 @@
 				<Form remote={startPayoutOnboarding} onsuccess={goToStripe}>
 					{@const fields = startPayoutOnboarding.fields}
 					<input {...fields.slug.as('hidden', slug)} />
-					<SubmitButton>
-						{payouts.connected ? 'Finish setting up payouts' : 'Set up payouts'}
-					</SubmitButton>
+					<SubmitButton
+						label={payouts.connected ? 'Finish setting up payouts' : 'Set up payouts'}
+					/>
 				</Form>
 			{/if}
 		</CardBody>

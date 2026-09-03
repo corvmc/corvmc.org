@@ -20,11 +20,27 @@ The collective's 10% is the **default position of a slider**. The buyer names a
 total and divides it between the band and CMC on a Humble-Bundle-style bar, and
 CMC's share can be dragged to zero.
 
-Zero is safe to offer because of an arithmetic property rather than a policy:
-these are Connect **destination charges**, so Stripe bills the _platform_ for
-processing, and `application_fee_amount` is set to `platformShare + stripeFee`.
-At a platform share of zero the application fee is exactly Stripe's fee — the
-collective nets nothing and **loses** nothing.
+**Card processing is shared in proportion to each side's take.** On a $10 sale at
+the suggested 10%, the 59¢ fee splits 53¢/6¢ — the band nets $8.47 and the
+collective $0.94.
+
+Proportional rather than even, and the difference is not cosmetic: it is what
+keeps the zero position safe. A buyer who allocates the collective nothing also
+leaves it no share of the fee, so CMC nets exactly zero rather than paying to
+sell somebody else's record — the cut stays refusable with no floor to enforce.
+An even split would owe the collective half the fee on a sale it took nothing
+from, and would need a floor to prevent it.
+
+Ticking "cover processing" adds the fee on top of the total, and then neither
+side absorbs any of it: both keep their whole allocation. That is the entire
+point of the checkbox, and it is why the coverage surcharge is excluded from the
+proportional apportionment rather than shared like the fee itself.
+
+These are Connect **destination charges**, so Stripe bills the platform and
+transfers the rest. `application_fee_amount` is therefore _whatever is left of
+the charge once the band is paid_ — derived from the band's net rather than
+computed independently, so band + application fee is exactly the charge and no
+cent can fall between them.
 
 The band's protection is the **total**, not a floor on its share of it: a buyer
 must pay at least the asking price, and within that the allocation is free. That
@@ -37,11 +53,7 @@ which is why every unit test passed and a screenshot caught it.
 Rejected: a fixed percentage. Transparency about where money goes reliably
 raises what people pay, and a cut you cannot refuse is a rake. The trade
 accepted knowingly is that the realised take will not be 10%; `/staff/music`
-reports it so the default can be moved on evidence.
-
-The fee term is the easiest thing to get wrong. Without it CMC nets **$0.41** on
-a $10 sale instead of $1.00, and nothing fails — the money is simply wrong.
-`audio-split.spec.ts` pins the table to the cent.
+reports it net of fees so the default can be moved on evidence.
 
 **One module, both sides.** `$lib/finance/audio-split.ts` is client-importable
 because the same arithmetic renders the buyer's bar and produces Stripe's

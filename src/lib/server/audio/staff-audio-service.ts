@@ -13,6 +13,7 @@ import { and, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { RADIO_MIN_TRACK_MS, RADIO_MAX_TRACK_MS } from '$lib/config';
 import { releaseAggregates } from './audio-service';
+import { calculateProcessingFee } from '$lib/finance/fees';
 
 export class StaffReleaseNotFoundError extends DomainError {
 	readonly httpStatus = 404;
@@ -156,21 +157,46 @@ export async function salesTotals() {
 		.where(eq(releasePurchase.status, 'paid'));
 
 	const grossCents = Number(row?.gross ?? 0);
-	const toCollectiveCents = Number(row?.toCollective ?? 0);
+	const toCollectiveGrossCents = Number(row?.toCollective ?? 0);
+
+	/**
+	 * Card processing, summed per sale.
+	 *
+	 * `platform_fee_cents` stores what Stripe was told — the charge less the
+	 * band's transfer — and the whole card fee comes out of that side, because
+	 * the band's own portion was already deducted before the transfer. So the
+	 * collective's net is this figure minus the full fee.
+	 *
+	 * The fee is not a stored column: it is fully determined by the amount
+	 * charged, so it is recomputed rather than migrated for. That costs one extra
+	 * read of the amounts — `ceil(x * 0.029 + 30)`, and SQLite's `ceil` is not
+	 * guaranteed present on D1, so it is summed in JS rather than in the
+	 * aggregate above.
+	 */
+	const amounts = await db
+		.select({ amount: releasePurchase.amountPaidCents })
+		.from(releasePurchase)
+		.where(eq(releasePurchase.status, 'paid'));
+	const feesCents = amounts.reduce((sum, r) => sum + calculateProcessingFee(r.amount), 0);
+	const toCollectiveCents = toCollectiveGrossCents - feesCents;
 
 	return {
 		sales: Number(row?.sales ?? 0),
 		freeSales: Number(row?.free ?? 0),
 		grossCents,
 		toBandsCents: Number(row?.toBands ?? 0),
+		/** After processing — what the collective actually kept. */
 		toCollectiveCents,
+		feesCents,
 		/**
 		 * What the collective actually kept, as a share of what buyers paid.
 		 *
-		 * The number the refusable-cut decision has to be judged on. It will not be
-		 * 10%: buyers who take it to zero pull it down and buyers who give more push
-		 * it up, and which way it lands is the whole open question. Reported so the
-		 * suggested default can be moved on evidence rather than on nerves.
+		 * The number the refusable-cut decision has to be judged on, NET of the
+		 * collective's proportional share of card processing. On a $10 sale at the
+		 * suggested 10% that is 94¢ kept rather than $1.00, so the realised figure
+		 * sits a little under the headline rate — and further under it whenever
+		 * buyers move the split. Reported so the suggested default can be moved on
+		 * evidence rather than on nerves.
 		 */
 		realisedTakeBps: grossCents > 0 ? Math.round((toCollectiveCents / grossCents) * 10000) : 0
 	};

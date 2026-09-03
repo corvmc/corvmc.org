@@ -104,17 +104,21 @@
 	<Card>
 		<CardBody>
 			<CardTitle>Sales</CardTitle>
-			<div class="grid gap-3 sm:grid-cols-4">
+			<div class="grid gap-3 sm:grid-cols-5">
 				<StatCard title="Sales" value={String(sales.sales)} />
 				<StatCard title="Gross" value={formatCents(sales.grossCents)} />
 				<StatCard title="To bands" value={formatCents(sales.toBandsCents)} />
-				<StatCard title="To CMC" value={formatCents(sales.toCollectiveCents)} />
+				<!-- Card processing comes out of the collective's share, so this is
+				     shown beside it rather than folded into a single figure. -->
+				<StatCard title="Card fees" value={formatCents(sales.feesCents)} />
+				<StatCard title="CMC kept" value={formatCents(sales.toCollectiveCents)} />
 			</div>
 			<!-- The number the refusable-cut decision has to be judged on. It will
 			     not be the suggested 10%, and which way it lands is the open
 			     question — so it is reported rather than assumed. -->
 			<p class="text-muted">
-				Realised take: {(sales.realisedTakeBps / 100).toFixed(1)}% of what buyers paid.
+				Realised take: {(sales.realisedTakeBps / 100).toFixed(1)}% of what buyers paid, after card
+				fees.
 				{#if sales.freeSales > 0}
 					{sales.freeSales} of {sales.sales} were free downloads.
 				{/if}

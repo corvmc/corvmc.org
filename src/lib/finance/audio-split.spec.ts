@@ -11,34 +11,32 @@ import { AUDIO_MIN_PRICE_CENTS } from '$lib/config';
  * The table below is the agreed commercial model, to the cent.
  */
 describe('the agreed model, at the default position', () => {
-	it('nets the collective $1.00 on a $10 sale when the buyer declines fees', () => {
+	it('shares the card fee in proportion to each side’s take', () => {
 		const split = defaultSplit(1000, false);
 
 		expect(split.chargeCents).toBe(1000);
 		expect(split.stripeFeeCents).toBe(59); // 2.9% + 30¢
 		expect(split.platformCents).toBe(100);
-		expect(split.bandCents).toBe(841);
-		// Includes Stripe's fee: with destination charges Stripe bills the
-		// platform, so without this term CMC nets $0.41 rather than $1.00.
-		expect(split.applicationFeeCents).toBe(159);
+
+		// 90% of the sale, so 90% of the fee: 53¢ of 59¢.
+		expect(split.bandFeeCents).toBe(53);
+		expect(split.platformFeeShareCents).toBe(6);
+		expect(split.bandCents).toBe(847);
+		expect(split.platformNetCents).toBe(94);
+
+		// Whatever is left of the charge once the band is paid.
+		expect(split.applicationFeeCents).toBe(153);
 	});
 
-	it('nets the collective $1.00 and the band the full $9.00 when the buyer covers fees', () => {
+	it('lets both sides keep their whole allocation when the buyer covers fees', () => {
 		const split = defaultSplit(1000, true);
 
 		expect(split.chargeCents).toBe(1061);
 		expect(split.feeCoveredCents).toBe(61);
-		expect(split.platformCents).toBe(100);
+		// The surcharge has already paid the fee, so neither side absorbs any.
+		expect(split.bandFeeCents).toBe(0);
 		expect(split.bandCents).toBe(900);
-	});
-
-	it('leaves the collective net exactly its share in both modes', () => {
-		// CMC's real position is the application fee minus what Stripe takes from
-		// it. That is the figure the model promises, and it is the same either way.
-		for (const coverFees of [false, true]) {
-			const split = defaultSplit(1000, coverFees);
-			expect(split.applicationFeeCents - split.stripeFeeCents).toBe(100);
-		}
+		expect(split.platformNetCents).toBe(100);
 	});
 });
 
@@ -50,7 +48,12 @@ describe('computeSplit', () => {
 			for (const coverFees of [false, true]) {
 				for (const platformCents of [0, 1, suggestedPlatformCents(totalCents), totalCents]) {
 					const s = computeSplit({ totalCents, platformCents, coverFees });
-					expect(s.bandCents + s.platformCents + s.stripeFeeCents).toBe(s.chargeCents);
+					// Band plus what Stripe is told is exactly the charge.
+					expect(s.bandCents + s.applicationFeeCents).toBe(s.chargeCents);
+					// And the three real destinations account for every cent of it.
+					expect(s.bandCents + s.platformNetCents + s.stripeFeeCents).toBe(s.chargeCents);
+					// The fee is fully apportioned — no half-cent lost to rounding.
+					expect(s.bandFeeCents + s.platformFeeShareCents).toBe(s.stripeFeeCents);
 				}
 			}
 		}
@@ -68,22 +71,41 @@ describe('computeSplit', () => {
 	});
 });
 
-describe('the collective’s share is refusable', () => {
-	it('lets the buyer take it to zero without the collective losing money', () => {
+describe('the collective’s share stays refusable, all the way down', () => {
+	it('costs the collective nothing at an allocation of zero', () => {
 		const split = computeSplit({ totalCents: 1000, platformCents: 0, coverFees: false });
 
-		// At zero the application fee is exactly Stripe's fee, so CMC's net is
-		// zero — nothing gained, nothing lost. That is what makes a refusable cut
-		// safe to offer rather than a liability.
-		expect(split.applicationFeeCents).toBe(split.stripeFeeCents);
-		expect(split.applicationFeeCents - split.stripeFeeCents).toBe(0);
+		// The property proportional splitting buys: no share means no share of the
+		// fee, so CMC nets exactly zero rather than paying to sell the record.
+		// An even split would have owed it half the fee here.
+		expect(split.platformFeeShareCents).toBe(0);
+		expect(split.platformNetCents).toBe(0);
+		expect(split.bandFeeCents).toBe(split.stripeFeeCents);
 		expect(split.bandCents).toBe(1000 - split.stripeFeeCents);
 	});
 
-	it('lets the buyer give more than the default', () => {
+	it('needs no floor, so zero validates', () => {
+		const result = validateSplit({
+			totalCents: 1000,
+			platformCents: 0,
+			coverFees: false,
+			priceMinCents: 1000,
+			allowPayMore: true
+		});
+		expect(result.ok).toBe(true);
+	});
+
+	it('gives the collective the whole fee when the buyer gives it the whole sale', () => {
+		// The mirror of the above, and why the band's floor is a separate rule.
+		const split = computeSplit({ totalCents: 1000, platformCents: 1000, coverFees: false });
+		expect(split.bandFeeCents).toBe(0);
+		expect(split.platformFeeShareCents).toBe(split.stripeFeeCents);
+	});
+
+	it('lets the buyer give the collective more than the default', () => {
 		const split = computeSplit({ totalCents: 1000, platformCents: 250, coverFees: false });
-		expect(split.applicationFeeCents - split.stripeFeeCents).toBe(250);
-		expect(split.bandCents).toBe(1000 - 250 - split.stripeFeeCents);
+		expect(split.platformNetCents).toBeGreaterThan(defaultSplit(1000).platformNetCents);
+		expect(split.bandCents).toBeLessThan(defaultSplit(1000).bandCents);
 	});
 });
 
@@ -106,9 +128,9 @@ describe('validateSplit', () => {
 		expect(result).toMatchObject({ ok: false });
 	});
 
-	it('accepts exactly the floor', () => {
+	it('accepts the band’s asking price exactly', () => {
 		expect(
-			validateSplit({ totalCents: 1000, platformCents: 0, coverFees: false, ...paid }).ok
+			validateSplit({ totalCents: 1000, platformCents: 100, coverFees: false, ...paid }).ok
 		).toBe(true);
 	});
 

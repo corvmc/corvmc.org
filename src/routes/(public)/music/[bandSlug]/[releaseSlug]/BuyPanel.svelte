@@ -116,13 +116,17 @@
 						$8.41 on a $10 minimum, which is below it by design.
 					-->
 					<SplitBar
-						{totalCents}
+						totalCents={split.chargeCents}
 						value={platformCents}
 						onchange={(cents) => (platformOverride = cents)}
+						segments={{ other: split.bandCents, value: split.platformNetCents }}
 						fixedCents={split.stripeFeeCents}
 						fixedLabel="Card processing"
+						fixedCovered={coverFees}
 						valueLabel="CMC"
 						otherLabel={bandName}
+						otherTone="blue"
+						valueTone="orange"
 					/>
 					<div class="flex flex-wrap items-center gap-3">
 						<label class="flex items-center gap-2">
@@ -130,9 +134,8 @@
 							<!-- Sells far better as "the band keeps the full amount" than as
 							     "cover our processing fees" — same money, different question. -->
 							<span>
-								Add {dollars(covered.feeCoveredCents)} so {bandName} keeps the full {dollars(
-									totalCents - platformCents
-								)}
+								Add {dollars(covered.feeCoveredCents)} to cover processing, so {bandName} and the collective
+								both keep their full share
 							</span>
 						</label>
 						{#if platformOverride !== null && platformOverride !== suggestedPlatformCents(totalCents)}

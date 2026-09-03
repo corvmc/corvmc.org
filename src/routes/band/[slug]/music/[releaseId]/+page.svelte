@@ -258,7 +258,7 @@
 						checkboxLabel="Name your price"
 						value={release.allowPayMore}
 					/>
-					<SubmitButton>Save price</SubmitButton>
+					<SubmitButton label="Save price" />
 				</Form>
 			</CardBody>
 		</Card>
@@ -299,7 +299,7 @@
 						{/snippet}
 					</FormField>
 
-					<SubmitButton>Save details</SubmitButton>
+					<SubmitButton label="Save details" />
 				</Form>
 			</CardBody>
 		</Card>

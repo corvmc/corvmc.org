@@ -16,13 +16,19 @@
  * Stripe's fee, so the collective nets nothing and — this is the part that makes
  * it safe to offer — loses nothing.
  *
- * ## Why the application fee includes Stripe's cut
+ * ## Processing comes out of the collective's share
  *
  * These are Connect **destination charges**, so Stripe bills the *platform* for
- * processing. The platform receives `application_fee_amount` and pays the fee
- * out of it. Setting the app fee to CMC's share alone would leave CMC netting
- * $0.41 on a $10 sale instead of $1.00 — the fee has to be added on top, which
- * is what makes the band bear processing when the buyer declines to.
+ * processing. `application_fee_amount` is therefore CMC's share and nothing
+ * more: the band is transferred exactly what the split bar allocates it, and
+ * the card fee is deducted from what reaches CMC.
+ *
+ * That is a deliberate choice about who absorbs a cost neither party controls,
+ * and it has one hard consequence — **CMC's share cannot go below the
+ * processing fee**, or the collective pays for the privilege of selling
+ * somebody else's record. So the floor on that segment is the fee, not zero.
+ * Refusing the collective's cut still means dragging it all the way down; it
+ * just bottoms out at break-even instead of at nothing.
  */
 import { calculateProcessingFee, calculateTotalWithFeeCoverage } from './fees';
 import { AUDIO_PLATFORM_FEE_BPS, AUDIO_MIN_PRICE_CENTS } from '$lib/config';
@@ -41,11 +47,17 @@ export type Split = {
 	chargeCents: number;
 	/** What Stripe takes from the platform. */
 	stripeFeeCents: number;
-	/** The buyer's gift to the collective — CMC's net, after the fee passes through. */
+	/** The buyer's allocation to the collective, before its share of the fee. */
 	platformCents: number;
-	/** `transfer_data` sends this to the band. */
+	/** The band's portion of the card fee. Zero when the buyer covers fees. */
+	bandFeeCents: number;
+	/** The collective's portion of the card fee — the remainder, so nothing is lost. */
+	platformFeeShareCents: number;
+	/** What the collective actually keeps, after its portion of the fee. */
+	platformNetCents: number;
+	/** `transfer_data` sends this to the band: its allocation less its fee share. */
 	bandCents: number;
-	/** What Stripe is told: `platformCents + stripeFeeCents`. */
+	/** What Stripe is told: whatever is left of the charge once the band is paid. */
 	applicationFeeCents: number;
 	/** The surcharge, when the buyer covered fees. Zero otherwise. */
 	feeCoveredCents: number;
@@ -70,6 +82,9 @@ export function computeSplit({ totalCents, platformCents, coverFees }: SplitInpu
 			chargeCents: 0,
 			stripeFeeCents: 0,
 			platformCents: 0,
+			bandFeeCents: 0,
+			platformFeeShareCents: 0,
+			platformNetCents: 0,
 			bandCents: 0,
 			applicationFeeCents: 0,
 			feeCoveredCents: 0
@@ -78,18 +93,37 @@ export function computeSplit({ totalCents, platformCents, coverFees }: SplitInpu
 
 	const chargeCents = coverFees ? calculateTotalWithFeeCoverage(totalCents).totalCents : totalCents;
 	const stripeFeeCents = calculateProcessingFee(chargeCents);
-	const applicationFeeCents = platformCents + stripeFeeCents;
+	const feeCoveredCents = chargeCents - totalCents;
+
+	/** The allocation itself, before either side pays anything toward the fee. */
+	const bandShareCents = totalCents - platformCents;
+
+	/**
+	 * The band's portion of the card fee, in proportion to its share.
+	 *
+	 * Zero when the buyer covers fees — the surcharge has already paid for it, so
+	 * both sides keep their whole allocation, which is the entire point of the
+	 * checkbox. The collective's portion is never computed directly: it falls out
+	 * as the remainder, which is what stops a rounded half-cent going missing.
+	 */
+	const bandFeeCents =
+		coverFees || totalCents === 0 ? 0 : Math.round((stripeFeeCents * bandShareCents) / totalCents);
+
+	const bandCents = bandShareCents - bandFeeCents;
 
 	return {
 		chargeCents,
 		stripeFeeCents,
 		platformCents,
-		// Derived rather than computed independently, so the four figures always
-		// add up to the charge exactly — a separate calculation would leave a cent
-		// unaccounted for on some inputs and nowhere to put it.
-		bandCents: chargeCents - applicationFeeCents,
-		applicationFeeCents,
-		feeCoveredCents: chargeCents - totalCents
+		bandFeeCents,
+		platformFeeShareCents: stripeFeeCents - bandFeeCents,
+		bandCents,
+		// Whatever is left of the charge once the band has been paid. Derived
+		// rather than computed independently, so band + application fee is exactly
+		// the charge and no cent can fall between them.
+		applicationFeeCents: chargeCents - bandCents,
+		platformNetCents: chargeCents - bandCents - stripeFeeCents,
+		feeCoveredCents
 	};
 }
 
@@ -150,15 +184,17 @@ export function validateSplit(input: {
 
 	const split = computeSplit({ totalCents, platformCents, coverFees });
 
-	// The band's floor, restated as the invariant that actually protects it: the
-	// allocation must not push the band below what it asked for. This is the
-	// check that stops a buyer dragging the collective's share up to the whole
-	// sale — the bar's UI prevents it, and the UI is not the guard.
-	if (split.bandCents < 0) {
-		return { ok: false, reason: 'That leaves the band nothing.' };
+	// Processing comes out of the collective's share, so anything below the fee
+	// is CMC paying to sell somebody else's record. The bar clamps to this floor;
+	// the UI is not the guard.
+	if (split.platformNetCents < 0) {
+		return { ok: false, reason: 'That would cost the collective money on the sale.' };
 	}
-	if (platformCents > totalCents) {
-		return { ok: false, reason: 'The collective cannot take more than the total.' };
+	// Stops a buyer dragging the collective's share up to the whole sale. `<= 0`
+	// rather than `< 0`: a paid release that pays the band exactly nothing is not
+	// a sale anybody meant to make.
+	if (split.bandCents <= 0) {
+		return { ok: false, reason: 'That leaves the band nothing.' };
 	}
 
 	return { ok: true, split };
