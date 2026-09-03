@@ -90,9 +90,10 @@ that **a rider is not one person's document**: each member declares their own ge
 owner or admin can edit anyone's, and the band's shared kit has a null owner. Channel numbers are
 derived and ordered by an item's _kind_ — drums, bass, guitars and keys, then vocals — which is what
 lets two members edit their own corners without either renumbering the other. Uploading a rider PDF
-stays a first-class path and is no longer premium-only. Still to come: the consolidated input list
-with its CSV and print view, the channel count checked against what the room can do (the half of the
-Production user story that had no design anywhere), and the stage plot. Note this **revisits**
+stays a first-class path and is no longer premium-only. Phase 2 adds the consolidated input list — a print page numbered
+in banks of eight, a CSV, and a channel count checked against `venue.consoleChannels` (the half of
+the Production user story that had no design anywhere), plus a Tech riders card on the staff
+production page that leads with how many acts have sent nothing. Still to come: the stage plot. Note this **revisits**
 `production-workflow-spec.md`'s deferral of a canvas plot builder, which was decided when the rider
 was an opaque file. Matching against the equipment catalog remains out — nothing in `inventory_item`
 types an item as a mic, a DI or a channel, so the join has nothing to land on.

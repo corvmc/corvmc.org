@@ -75,6 +75,9 @@
 	const shifts = $derived(loaded.shifts);
 	const volunteerRoles = $derived(loaded.volunteerRoles);
 	const dutyLists = $derived(loaded.dutyLists);
+	const riders = $derived(loaded.riders);
+	/** The advance question: who has told us nothing at all. */
+	const ridersMissing = $derived(riders.filter((r) => r.empty).length);
 
 	const evt = $derived(data.event);
 
@@ -849,6 +852,66 @@
 			</p>
 		{/if}
 	</InfoCard>
+
+	<!--
+		What the bill needs on stage. The advance checklist has always carried a
+		task reading "Collect tech riders and stage plots"; this is where the answer
+		shows up, and the number worth reading is how many acts have told us
+		nothing — a channel count is interesting, an unanswered act is work.
+
+		Always rendered once there is a bill, including when every act is empty:
+		hiding it would make "nobody has sent a rider" and "this page doesn't track
+		riders" look identical, which is the mistake the staffing card below
+		documents.
+	-->
+	{#if riders.length > 0}
+		<InfoCard title="Tech riders">
+			{#snippet header(title)}
+				<div class="flex items-center justify-between gap-2">
+					<CardTitle>{title}</CardTitle>
+					{#if ridersMissing > 0}
+						<Badge color="warning">{ridersMissing} not in yet</Badge>
+					{/if}
+				</div>
+			{/snippet}
+			<ul class="divide-y divide-base-300">
+				{#each riders as act (act.name)}
+					<li class="flex flex-wrap items-center gap-2 py-2">
+						<span class="font-medium">{act.name}</span>
+						{#if act.empty}
+							<span class="text-sm text-base-content/60">
+								{act.slug ? 'Nothing sent yet' : 'Not a CMC act — ask them directly'}
+							</span>
+						{:else}
+							{#if act.channelCount > 0}
+								<Badge>{act.channelCount} ch</Badge>
+							{/if}
+							{#if act.phantomCount > 0}
+								<Badge>{act.phantomCount} × +48V</Badge>
+							{/if}
+							{#if act.venueProvidedCount > 0}
+								<Badge color="info">{act.venueProvidedCount} from us</Badge>
+							{/if}
+							{#if act.uploadCount > 0}
+								<Badge color="ghost">{act.uploadCount} file{act.uploadCount === 1 ? '' : 's'}</Badge
+								>
+							{/if}
+						{/if}
+						{#if act.slug}
+							<Button
+								href={resolve('/band/[slug]/rider/list', { slug: act.slug })}
+								variant="ghost"
+								size="sm"
+								class="ml-auto"
+							>
+								Open
+							</Button>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		</InfoCard>
+	{/if}
 
 	<!--
 		Volunteer staffing. Gated the same way, for the same reason: within a

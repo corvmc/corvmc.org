@@ -96,6 +96,16 @@ export const getVolunteerValueSettings = query(async () => {
 	};
 });
 
+/**
+ * What the room can take. One number, and the rider page compares a band's
+ * channel count against it.
+ */
+export const getVenueSettings = query(async () => {
+	await requireStaff();
+	const raw = await getConfigsByPrefix('venue');
+	return { consoleChannels: Number(raw.consoleChannels ?? 0) };
+});
+
 export const getIntegrationSettings = query(async () => {
 	await requireStaff();
 	const raw = await getConfigsByPrefix('integration.utec');
@@ -294,6 +304,25 @@ export const updateVolunteerValueSettings = form(volunteerValueSchema, async (ra
 });
 
 // ---------------------------------------------------------------------------
+// Forms — Venue settings
+// ---------------------------------------------------------------------------
+
+const venueSettingsSchema = z.object({
+	consoleChannels: z.string().regex(/^\d+$/, 'Whole channels, digits only').transform(Number)
+});
+
+export const updateVenueSettings = form(venueSettingsSchema, async (raw) => {
+	await requireStaff();
+	const data = raw as z.infer<typeof venueSettingsSchema>;
+
+	await updateSiteConfigs([{ key: 'venue.consoleChannels', value: data.consoleChannels }]);
+
+	void getStaffSettingsPage().refresh();
+
+	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
 // Forms — Integration settings
 // ---------------------------------------------------------------------------
 
@@ -373,16 +402,34 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
 export const getStaffSettingsPage = query(z.void(), async () => {
 	await requireStaff();
 
-	const [products, reservation, org, volunteerValue, integration, channelConfigs, featureFlags] =
-		await Promise.all([
-			getProducts(),
-			getReservationSettings(),
-			getOrgSettings(),
-			getVolunteerValueSettings(),
-			getIntegrationSettings(),
-			getInboxChannelConfigs(),
-			getFeatureFlags()
-		]);
+	const [
+		products,
+		reservation,
+		org,
+		volunteerValue,
+		venue,
+		integration,
+		channelConfigs,
+		featureFlags
+	] = await Promise.all([
+		getProducts(),
+		getReservationSettings(),
+		getOrgSettings(),
+		getVolunteerValueSettings(),
+		getVenueSettings(),
+		getIntegrationSettings(),
+		getInboxChannelConfigs(),
+		getFeatureFlags()
+	]);
 
-	return { products, reservation, org, volunteerValue, integration, channelConfigs, featureFlags };
+	return {
+		products,
+		reservation,
+		org,
+		volunteerValue,
+		venue,
+		integration,
+		channelConfigs,
+		featureFlags
+	};
 });

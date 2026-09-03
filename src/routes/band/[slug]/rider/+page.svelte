@@ -11,6 +11,8 @@
 	import RiderCorner from '$lib/components/rider/RiderCorner.svelte';
 	import RiderUploads from '$lib/components/rider/RiderUploads.svelte';
 	import { getBandRiderPage, saveRiderDetails } from '$lib/remote/rider.remote';
+	import Button from '$lib/components/ui/Button.svelte';
+	import { resolve } from '$app/paths';
 	import { riderMonitorFormatOptions, RIDER_NOTES_MAX } from '$lib/config';
 	import type { RiderElementRowState } from '$lib/types/rider';
 	import { getBandLayoutContext } from '../layout-context';
@@ -81,6 +83,18 @@
 	 */
 	const stamp = $derived(rider.updatedAt?.getTime() ?? 0);
 
+	/**
+	 * The room's own limit, and whether this rider is over it.
+	 *
+	 * A note rather than a refusal: plenty of rooms sub-mix a kit, and which
+	 * inputs get combined is the house engineer's call. Saying it here is the
+	 * "flag what the room cannot do" half of the Production user story, and the
+	 * point is that it is found on the page rather than at load-in.
+	 */
+	const overCapacity = $derived(
+		data.consoleChannels > 0 && rider.channelCount > data.consoleChannels
+	);
+
 	function refresh() {
 		void getBandRiderPage(layout.band.id).refresh();
 	}
@@ -90,12 +104,28 @@
 	title="Tech rider"
 	subtitle="What {layout.band.name} needs on stage"
 	documentTitle="Tech rider · {layout.band.name}"
-/>
+>
+	<Button
+		href={resolve('/band/[slug]/rider/list', { slug: layout.band.slug })}
+		variant="ghost"
+		size="sm"
+	>
+		Input list
+	</Button>
+</PageHeader>
 
 <PageContent width="3xl">
 	{#if data.isStaffViewer}
 		<Alert type="info" class="mb-4">
 			You're reading this as staff. Only the band's own members can change it.
+		</Alert>
+	{/if}
+
+	{#if overCapacity}
+		<Alert type="warning" class="mb-4">
+			This rider asks for <strong>{rider.channelCount}</strong> channels and the room's desk takes
+			<strong>{data.consoleChannels}</strong>. That is not a problem to solve here — the house
+			engineer will combine or drop inputs — but it is worth agreeing which ones before load-in.
 		</Alert>
 	{/if}
 

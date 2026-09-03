@@ -1,8 +1,11 @@
 import { db } from '$lib/server/db';
 import { rider, riderElement, riderInput } from '$lib/server/db/schema/rider';
-import { groupMember } from '$lib/server/db/schema/group';
+import { group, groupMember } from '$lib/server/db/schema/group';
+import { directoryEntry } from '$lib/server/db/schema/directory';
+import { eventBand } from '$lib/server/db/schema/event';
+import { mediaAttachment } from '$lib/server/db/schema/media';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import {
 	riderElementKinds,
@@ -214,7 +217,13 @@ export async function getRider(groupId: string): Promise<RiderView> {
 		.select({
 			id: riderElement.id,
 			userId: riderElement.userId,
-			ownerName: user.name,
+			// The band's word for who this is: the stage name they set on this
+			// roster, falling back to the account name. `getMembers` makes the same
+			// choice for the same reason, and the two have to agree — the input list
+			// shows an owner beside every channel and a monitor mix beside some, and
+			// one person appearing as "Slim" in one column and "Jordan Murphy" in
+			// the next reads as two people.
+			ownerName: sql<string | null>`coalesce(${groupMember.alias}, ${user.name})`.as('owner_name'),
 			kind: riderElement.kind,
 			label: riderElement.label,
 			providedBy: riderElement.providedBy,
@@ -223,6 +232,10 @@ export async function getRider(groupId: string): Promise<RiderView> {
 		})
 		.from(riderElement)
 		.leftJoin(user, eq(user.id, riderElement.userId))
+		.leftJoin(
+			groupMember,
+			and(eq(groupMember.groupId, groupId), eq(groupMember.userId, riderElement.userId))
+		)
 		.where(eq(riderElement.riderId, head.id))
 		.orderBy(asc(riderElement.sortOrder));
 
@@ -416,4 +429,119 @@ export async function saveRiderSettings(groupId: string, settings: RiderSettings
 
 async function touch(riderId: string) {
 	await db.update(rider).set({ updatedAt: new Date() }).where(eq(rider.id, riderId));
+}
+
+export interface EventRiderSummary {
+	/** The credit as it appears on the bill, which is not always a CMC band. */
+	name: string;
+	/** Null for an external act — there is no rider to link to. */
+	slug: string | null;
+	channelCount: number;
+	phantomCount: number;
+	venueProvidedCount: number;
+	/** How many files the act uploaded instead of, or beside, filling this in. */
+	uploadCount: number;
+	/** Nothing at all: neither structured rows nor a file. Somebody has to ask. */
+	empty: boolean;
+}
+
+/**
+ * What each act on a bill has told us it needs — the advance question, answered
+ * for a whole night at once.
+ *
+ * Hung off `event_band` rather than off `production_slot`, which does not exist:
+ * the credit row already names the act, already distinguishes a linked CMC band
+ * from a bare name, and is already what an advance walks down.
+ *
+ * Counts rather than the rider itself, because this is a card on a page about a
+ * show. `empty` is the one an advance actually acts on — an act with neither
+ * rows nor a file is one somebody has to go and ask.
+ */
+export async function getEventRiderSummaries(eventId: string): Promise<EventRiderSummary[]> {
+	const rows = await db
+		.select({
+			name: eventBand.name,
+			billingOrder: eventBand.billingOrder,
+			groupId: directoryEntry.groupId,
+			slug: group.slug
+		})
+		.from(eventBand)
+		.leftJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
+		.leftJoin(group, eq(group.id, directoryEntry.groupId))
+		.where(eq(eventBand.eventId, eventId))
+		.orderBy(asc(eventBand.billingOrder));
+
+	const groupIds = rows.map((r) => r.groupId).filter((id): id is string => !!id);
+	if (groupIds.length === 0) {
+		return rows.map((r) => ({
+			name: r.name,
+			slug: null,
+			channelCount: 0,
+			phantomCount: 0,
+			venueProvidedCount: 0,
+			uploadCount: 0,
+			empty: true
+		}));
+	}
+
+	// One aggregate over the whole bill rather than `getRider` per act: an advance
+	// reads this for every act at once, and five acts would otherwise be fifteen
+	// round trips.
+	const counts = await db
+		.select({
+			groupId: rider.groupId,
+			channelCount: sql<number>`count(${riderInput.id})`.as('channel_count'),
+			phantomCount: sql<number>`sum(case when ${riderInput.phantom} then 1 else 0 end)`.as(
+				'phantom_count'
+			)
+		})
+		.from(rider)
+		.leftJoin(riderElement, eq(riderElement.riderId, rider.id))
+		.leftJoin(riderInput, eq(riderInput.elementId, riderElement.id))
+		.where(inArray(rider.groupId, groupIds))
+		.groupBy(rider.groupId);
+
+	const venueCounts = await db
+		.select({
+			groupId: rider.groupId,
+			n: sql<number>`count(${riderElement.id})`.as('n')
+		})
+		.from(rider)
+		.innerJoin(riderElement, eq(riderElement.riderId, rider.id))
+		.where(and(inArray(rider.groupId, groupIds), eq(riderElement.providedBy, 'venue')))
+		.groupBy(rider.groupId);
+
+	const uploads = await db
+		.select({
+			groupId: mediaAttachment.attachableId,
+			n: sql<number>`count(*)`.as('n')
+		})
+		.from(mediaAttachment)
+		.where(
+			and(
+				eq(mediaAttachment.attachableType, 'group'),
+				inArray(mediaAttachment.attachableId, groupIds),
+				inArray(mediaAttachment.slot, ['rider', 'stage_plot'])
+			)
+		)
+		.groupBy(mediaAttachment.attachableId);
+
+	const byGroup = new Map(counts.map((c) => [c.groupId, c]));
+	const venueByGroup = new Map(venueCounts.map((c) => [c.groupId, Number(c.n)]));
+	const uploadsByGroup = new Map(uploads.map((c) => [c.groupId, Number(c.n)]));
+
+	return rows.map((row) => {
+		const count = row.groupId ? byGroup.get(row.groupId) : undefined;
+		const channelCount = Number(count?.channelCount ?? 0);
+		const uploadCount = row.groupId ? (uploadsByGroup.get(row.groupId) ?? 0) : 0;
+		return {
+			name: row.name,
+			slug: row.slug ?? null,
+			channelCount,
+			phantomCount: Number(count?.phantomCount ?? 0),
+			venueProvidedCount: row.groupId ? (venueByGroup.get(row.groupId) ?? 0) : 0,
+			uploadCount,
+			empty: channelCount === 0 && uploadCount === 0
+		};
+	});
 }
