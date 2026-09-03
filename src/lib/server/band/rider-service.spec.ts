@@ -62,6 +62,7 @@ vi.mock('$lib/server/db', () => ({
 
 const { riderElement, riderInput } = await import('$lib/server/db/schema/rider');
 const {
+	getEventRiderSummaries,
 	numberChannels,
 	compareElements,
 	getRider,
@@ -433,5 +434,38 @@ describe('clampCoord', () => {
 
 	it('does not let a NaN through as a coordinate', () => {
 		expect(clampCoord(Number.NaN)).toBe(0);
+	});
+});
+
+describe('getEventRiderSummaries', () => {
+	/**
+	 * A bill can legitimately carry the same name twice — an unlinked credit
+	 * beside a linked one, or a band playing two sets — and the advance page keys
+	 * its list on what this returns. Keying on the name threw
+	 * `each_key_duplicate` and took the whole page down, showing "Failed to load"
+	 * where the production was. The id is what makes that impossible.
+	 */
+	it('gives each credit its own id, even when two share a name', async () => {
+		selectResults = [
+			[
+				{ id: 'eb-1', name: 'Paper Wolves', billingOrder: 0, groupId: null, slug: null },
+				{ id: 'eb-2', name: 'Paper Wolves', billingOrder: 1, groupId: null, slug: null }
+			]
+		];
+
+		const rows = await getEventRiderSummaries('evt-1');
+
+		expect(rows.map((r) => r.id)).toEqual(['eb-1', 'eb-2']);
+		expect(new Set(rows.map((r) => r.id)).size).toBe(rows.length);
+	});
+
+	it('marks an act with no CMC group as one to chase directly', async () => {
+		selectResults = [
+			[{ id: 'eb-1', name: 'Sun Kissed', billingOrder: 0, groupId: null, slug: null }]
+		];
+
+		const [row] = await getEventRiderSummaries('evt-1');
+
+		expect(row).toMatchObject({ slug: null, empty: true, channelCount: 0 });
 	});
 });

@@ -472,6 +472,15 @@ async function touch(riderId: string) {
 }
 
 export interface EventRiderSummary {
+	/**
+	 * The `event_band` row id.
+	 *
+	 * Carried because **a name is not unique on a bill**: an unlinked credit and
+	 * a linked one can name the same act, and a band can legitimately play twice.
+	 * Keying a list on the name throws `each_key_duplicate` and takes the whole
+	 * advance page down with it, which is exactly what happened.
+	 */
+	id: string;
 	/** The credit as it appears on the bill, which is not always a CMC band. */
 	name: string;
 	/** Null for an external act — there is no rider to link to. */
@@ -500,6 +509,7 @@ export interface EventRiderSummary {
 export async function getEventRiderSummaries(eventId: string): Promise<EventRiderSummary[]> {
 	const rows = await db
 		.select({
+			id: eventBand.id,
 			name: eventBand.name,
 			billingOrder: eventBand.billingOrder,
 			groupId: directoryEntry.groupId,
@@ -514,6 +524,7 @@ export async function getEventRiderSummaries(eventId: string): Promise<EventRide
 	const groupIds = rows.map((r) => r.groupId).filter((id): id is string => !!id);
 	if (groupIds.length === 0) {
 		return rows.map((r) => ({
+			id: r.id,
 			name: r.name,
 			slug: null,
 			channelCount: 0,
@@ -575,6 +586,7 @@ export async function getEventRiderSummaries(eventId: string): Promise<EventRide
 		const channelCount = Number(count?.channelCount ?? 0);
 		const uploadCount = row.groupId ? (uploadsByGroup.get(row.groupId) ?? 0) : 0;
 		return {
+			id: row.id,
 			name: row.name,
 			slug: row.slug ?? null,
 			channelCount,

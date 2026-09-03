@@ -875,7 +875,7 @@
 				</div>
 			{/snippet}
 			<ul class="divide-y divide-base-300">
-				{#each riders as act (act.name)}
+				{#each riders as act (act.id)}
 					<li class="flex flex-wrap items-center gap-2 py-2">
 						<span class="font-medium">{act.name}</span>
 						{#if act.empty}
