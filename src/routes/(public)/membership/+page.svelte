@@ -19,13 +19,13 @@
 		{
 			amount: '$10',
 			hours: '2 free practice hours',
-			body: 'A great way to start — plus 50% off every show ticket you buy online.',
+			body: 'A great way to start — and the practice time refreshes every month.',
 			featured: false
 		},
 		{
 			amount: '$25',
 			hours: '5 free practice hours',
-			body: 'Free gear accessories, member events, and 50% off show tickets.',
+			body: 'Free gear accessories and invites to member-only events.',
 			featured: true
 		},
 		{
@@ -49,8 +49,8 @@
 		},
 		{
 			icon: IconTicket,
-			title: 'Show Discounts',
-			desc: '50% off show tickets you buy online, plus invites to member-only events.'
+			title: 'Member Events',
+			desc: 'Invites to member-only events. Show tickets are a sliding scale for everyone — no one is turned away for lack of funds.'
 		},
 		{
 			icon: IconDeviceSpeaker,

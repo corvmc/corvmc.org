@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	ticketingMode,
-	isFreeEvent,
-	priceDisplay,
-	sustainingMemberPrice,
-	contributionToCents
-} from './event-ticketing';
+import { ticketingMode, isFreeEvent, priceDisplay, contributionToCents } from './event-ticketing';
 
 // Regression: `ticketPrice` used to be meaningful only when `ticketingEnabled`
 // was on, so every price renderer read "no platform ticketing" as "free" — an
@@ -73,31 +67,13 @@ describe('priceDisplay', () => {
 		expect(priceDisplay(externalNoPrice).label).toBe('See tickets');
 	});
 
-	it('halves the price for sustaining members on tickets we sell', () => {
-		expect(priceDisplay(platform, { isSustainingMember: true })).toEqual({
-			label: '$7.50',
-			wasLabel: '$15.00'
-		});
-	});
-
-	it("does not discount an outside seller's price", () => {
-		expect(priceDisplay(external, { isSustainingMember: true })).toEqual({
-			label: '$15.00',
-			wasLabel: null
-		});
-		expect(priceDisplay(door, { isSustainingMember: true })).toEqual({
-			label: '$10.00',
-			wasLabel: null
-		});
-	});
-});
-
-describe('sustainingMemberPrice', () => {
-	it('applies to platform tickets only', () => {
-		expect(sustainingMemberPrice(platform)).toBe(750);
-		expect(sustainingMemberPrice(external)).toBeNull();
-		expect(sustainingMemberPrice(door)).toBeNull();
-		expect(sustainingMemberPrice(platformFree)).toBeNull();
+	it('marks a price we sell as a suggestion, and nobody else\u2019s', () => {
+		// Only our own checkout has a sliding scale. An off-site seller's price and
+		// a door price are what they are, so calling either a suggestion would be a
+		// claim about somebody else's pricing.
+		expect(priceDisplay(platform)).toEqual({ label: '$15.00', suggested: true });
+		expect(priceDisplay(external)).toEqual({ label: '$15.00', suggested: false });
+		expect(priceDisplay(door)).toEqual({ label: '$10.00', suggested: false });
 	});
 });
 

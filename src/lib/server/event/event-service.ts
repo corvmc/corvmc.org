@@ -54,7 +54,8 @@ import {
 	buildDateInTz,
 	nextDay
 } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE, TICKET_MIN_CHARGE_CENTS } from '$lib/config';
+import { formatCents } from '$lib/utils/format';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -156,7 +157,10 @@ export interface EventRow {
 	posterKey: string | null;
 	tags: string | null;
 	ticketingEnabled: boolean;
+	/** The SUGGESTED price — where the sliding scale opens, not what is charged. */
 	ticketPrice: number | null;
+	/** The bottom of that scale. 0 runs it to free. */
+	ticketPriceFloorCents: number;
 	ticketQuantity: number | null;
 	groupId: string | null;
 	source: string;
@@ -320,6 +324,7 @@ export interface UpdateEventParams {
 	externalTicketUrl?: string | null;
 	ticketingEnabled?: boolean;
 	ticketPrice?: number | null;
+	ticketPriceFloorCents?: number;
 	ticketQuantity?: number | null;
 	posterFile?: {
 		buffer: ArrayBuffer;
@@ -411,6 +416,41 @@ function assertValidTicketPrice(price: number | null | undefined): void {
 	}
 }
 
+/**
+ * The bottom of the sliding scale, checked against the price it sits under.
+ *
+ * SQLite cannot add a CHECK constraint to an existing table, so this is the
+ * only place these three rules hold — and the staff form is the only place a
+ * floor is ever set, which makes that acceptable.
+ *
+ * The unsatisfiable-floor rule is the one worth reading twice. A floor of $1
+ * asks for an amount no buyer can pay: $1 is inside the dead zone below
+ * `TICKET_MIN_CHARGE_CENTS`, and $0 is below the floor. The scale would simply
+ * refuse everything, and it would do it at the buyer's checkout rather than at
+ * the staffer's form.
+ */
+function assertValidTicketFloor(floor: number | null | undefined, price: number | null): void {
+	if (floor == null) return;
+	if (!Number.isInteger(floor) || floor < 0) {
+		throw new EventValidationError(
+			'Minimum price must be zero or a whole amount',
+			'ticketPriceFloorCents'
+		);
+	}
+	if (floor > 0 && floor < TICKET_MIN_CHARGE_CENTS) {
+		throw new EventValidationError(
+			`Minimum price must be $0 or at least ${formatCents(TICKET_MIN_CHARGE_CENTS)} — below that, card fees take almost all of it`,
+			'ticketPriceFloorCents'
+		);
+	}
+	if (price != null && floor > price) {
+		throw new EventValidationError(
+			'Minimum price cannot be more than the suggested price',
+			'ticketPriceFloorCents'
+		);
+	}
+}
+
 export async function update(eventId: string, params: UpdateEventParams): Promise<EventRow> {
 	const existing = await getById(eventId);
 	if (!existing) throw new EventNotFoundError();
@@ -453,6 +493,24 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	if (params.ticketPrice !== undefined) {
 		assertValidTicketPrice(params.ticketPrice);
 		updates.ticketPrice = params.ticketPrice;
+	}
+
+	// Checked against whichever price this update lands on, not the stored one:
+	// lowering the suggested price under a floor already set is the same mistake
+	// as raising the floor above the price, and only one of the two arrives as a
+	// floor edit.
+	{
+		const price = params.ticketPrice === undefined ? existing.ticketPrice : params.ticketPrice;
+		const floor =
+			params.ticketPriceFloorCents === undefined
+				? existing.ticketPriceFloorCents
+				: params.ticketPriceFloorCents;
+		if (params.ticketPrice !== undefined || params.ticketPriceFloorCents !== undefined) {
+			assertValidTicketFloor(floor, price);
+		}
+		if (params.ticketPriceFloorCents !== undefined) {
+			updates.ticketPriceFloorCents = params.ticketPriceFloorCents;
+		}
 	}
 
 	if (params.ticketingEnabled !== undefined) {

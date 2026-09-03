@@ -85,16 +85,24 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		rows.push(e);
 	}
 
-	// Future events, one per ticketing shape: 2 paid ticketed, 2 free-ticketed,
-	// 1 sold off-site with a price, 1 door price, 1 genuinely free.
+	// Future events, one per ticketing shape: 3 paid ticketed across the three
+	// sliding-scale settings, 2 free-ticketed, 1 sold off-site with a price,
+	// 1 door price, 1 genuinely free.
+	//
+	// The three paid shapes are the point of the scale and all three have to be
+	// reachable locally: a scale open all the way to free, a scale with a floor
+	// under it, and a floor equal to the suggested price — which is a fixed
+	// price, and is what every show looked like before the scale existed.
 	const futureConfigs: {
 		ticketingEnabled: boolean;
 		ticketPrice: number | null;
+		ticketPriceFloorCents?: number;
 		ticketQuantity: number | null;
 		externalTicketUrl?: string;
 	}[] = [
-		{ ticketingEnabled: true, ticketPrice: 1500, ticketQuantity: 50 },
-		{ ticketingEnabled: true, ticketPrice: 2000, ticketQuantity: 30 },
+		{ ticketingEnabled: true, ticketPrice: 1500, ticketPriceFloorCents: 0, ticketQuantity: 50 },
+		{ ticketingEnabled: true, ticketPrice: 2000, ticketPriceFloorCents: 500, ticketQuantity: 30 },
+		{ ticketingEnabled: true, ticketPrice: 1500, ticketPriceFloorCents: 1500, ticketQuantity: 60 },
 		{ ticketingEnabled: true, ticketPrice: null, ticketQuantity: 40 },
 		{ ticketingEnabled: true, ticketPrice: null, ticketQuantity: null },
 		{
@@ -149,6 +157,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 				reservationId,
 				ticketingEnabled: config.ticketingEnabled,
 				ticketPrice: config.ticketPrice,
+				ticketPriceFloorCents: config.ticketPriceFloorCents ?? 0,
 				ticketQuantity: config.ticketQuantity,
 				externalTicketUrl: config.externalTicketUrl ?? null,
 				createdByUserId: creator.id

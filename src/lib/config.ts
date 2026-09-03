@@ -186,6 +186,46 @@ export const AUDIO_PLATFORM_FEE_BPS = 1000;
 export const AUDIO_MIN_PRICE_CENTS = 200;
 
 // ---------------------------------------------------------------------------
+// The ticket sliding scale
+// ---------------------------------------------------------------------------
+
+/**
+ * Where the split bar opens on a ticket: the collective's suggested share of
+ * what is actually divisible, in basis points.
+ *
+ * This is the house suggestion, and it is not the deal. CMC's standing
+ * arrangement is 70% of the door to the bands, but a bill with three acts on
+ * three different deals has no single percentage — the deal itself lives on
+ * `event_band` (see `docs/specs/project-spec.md`, the deal shape). Say "we
+ * suggest 70% to the acts" in copy, never "the acts' deal is 70%".
+ */
+export const TICKET_COLLECTIVE_SHARE_BPS = 3000;
+
+/**
+ * A ticket is free, or it costs at least this. Nothing in between: Stripe's own
+ * charge minimum is 50¢ and its 30¢ fixed fee is a third of a $1 sale, so the
+ * amounts this excludes are the ones where almost nothing reaches the acts.
+ *
+ * Load-bearing beyond the copy: `checkout()` skips the fee-coverage line item
+ * entirely below 100¢ (`payment-service.ts`), which would silently charge a
+ * buyer who ticked "cover fees" less than the preview promised. That branch is
+ * unreachable from ticket checkout only because this floor sits above it. Move
+ * it below 100 and the two diverge.
+ */
+export const TICKET_MIN_CHARGE_CENTS = 200;
+
+/**
+ * The most free tickets one email may hold for one show, across every purchase.
+ *
+ * A paid ticket has a card behind it, which is friction enough. A free one has
+ * none, and the 1–10 cap on the purchase form is per submission rather than per
+ * person — so without this, ten requests mint a sold-out show that nobody can
+ * get into. Set at a party rather than a person: someone bringing five friends
+ * is the case this exists to allow, not the case it exists to stop.
+ */
+export const FREE_TICKETS_PER_EMAIL = 6;
+
+// ---------------------------------------------------------------------------
 // Equipment pricing
 // ---------------------------------------------------------------------------
 
