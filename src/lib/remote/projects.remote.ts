@@ -5,9 +5,8 @@ import { mapDomainError } from '$lib/server/errors';
 import { projectStatuses, DEFAULT_TIMEZONE } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
 import { suggestion } from '$lib/server/db/schema/suggestion';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import {
 	attachToProject,
 	createProject,
@@ -15,6 +14,7 @@ import {
 	getProjectBurn,
 	getProjectById,
 	listProjectAttachments,
+	listCommittees,
 	listProjects,
 	setProjectStatus,
 	startProjectFromSuggestion,
@@ -86,15 +86,6 @@ const attachableKinds = z.enum([
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
-
-/** Committees only: nothing else may own a project, so nothing else is offered. */
-async function listCommittees() {
-	return db
-		.select({ id: group.id, name: group.name })
-		.from(group)
-		.where(and(eq(group.kind, 'committee'), isNull(group.deletedAt)))
-		.orderBy(asc(group.name));
-}
 
 /** Suggestions no project answers yet — the pickable half of the board. */
 async function listUnansweredSuggestions() {

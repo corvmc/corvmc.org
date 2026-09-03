@@ -14,6 +14,7 @@ import {
 } from '$lib/server/group/announcement-service';
 import { listGroupSessions } from '$lib/server/event/event-service';
 import { listProjects } from '$lib/server/project/project-service';
+import { list as listFiles, getUsage as getDocumentUsage } from '$lib/server/group/file-service';
 import {
 	STAFF_GROUP_KINDS,
 	assignLeader,
@@ -222,17 +223,23 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	// belong here rather than in a query of the tab's own: a club is small by
 	// construction, and a per-tab query fanned out of a section component is
 	// exactly what that checklist exists to stop.
-	const [roster, announcements, notifyAnnouncements, sessions, projects] = await Promise.all([
-		getMembers(group.id).then(partitionByStatus),
-		canManage ? listForManager(group.id) : listPublished(group.id),
-		// Null for a staff non-member — no roster row, so nothing to mute.
-		getMuteState(group.id, ctx.user.id),
-		listGroupSessions(group.id),
-		// A committee's own work, read through the same guard as everything else
-		// on this page. Only committees own projects, so a club gets an empty
-		// list and never shows the tab.
-		group.kind === 'committee' ? listProjects({ groupId: group.id }) : Promise.resolve([])
-	]);
+	const [roster, announcements, notifyAnnouncements, sessions, files, documentUsage, projects] =
+		await Promise.all([
+			getMembers(group.id).then(partitionByStatus),
+			canManage ? listForManager(group.id) : listPublished(group.id),
+			// Null for a staff non-member — no roster row, so nothing to mute.
+			getMuteState(group.id, ctx.user.id),
+			listGroupSessions(group.id),
+			listFiles(group.id),
+			// Its own statement rather than a sum over `files`: that list is capped,
+			// and it carries the quota constants the meter renders, which a
+			// component cannot import from a server module.
+			getDocumentUsage(group.id),
+			// A committee's own work, read through the same guard as everything else
+			// on this page. Only committees own projects, so a club gets an empty
+			// list and never shows the tab.
+			group.kind === 'committee' ? listProjects({ groupId: group.id }) : Promise.resolve([])
+		]);
 
 	return {
 		group: {
@@ -249,6 +256,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		canManage,
 		announcements,
 		notifyAnnouncements,
+		files,
+		documentUsage,
 		sessions: sessions.map((e) => ({
 			id: e.id,
 			title: e.title,

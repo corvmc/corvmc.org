@@ -111,6 +111,23 @@ export const CONFIRMATION_WINDOW_DAYS = 3;
  */
 export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * How long a soft-deleted `file` row is left alone before the sweep reaps it and
+ * deletes its private R2 object.
+ *
+ * **Deliberately not `MEDIA_SWEEP_GRACE_MS`.** The two constants sit together
+ * and guard different hazards. Media's day protects the gap between uploading an
+ * object and attaching it, which is a state a member passes through. A
+ * document's row and object are written in one request, so no such gap exists —
+ * what the delay buys instead is an undo window on a destructive click, and a
+ * week is the useful size for "the minutes I deleted on Monday". See
+ * docs/specs/groups-spec.md § Documents and private storage.
+ */
+export const DOCUMENT_SWEEP_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** The longest note that may ride a group document. */
+export const DOCUMENT_DESCRIPTION_MAX = 500;
+
 /** The earliest instant a member may confirm a reservation starting at `startsAt`. */
 export function confirmWindowOpensAt(startsAt: Date): Date {
 	return new Date(startsAt.getTime() - CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000);

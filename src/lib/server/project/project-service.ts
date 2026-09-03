@@ -159,6 +159,22 @@ export async function getProjectById(id: string) {
 	return row;
 }
 
+/**
+ * The committees that may own a project.
+ *
+ * Here rather than in a remote module because two of them need it — the project
+ * pages and the "start a project" action on a suggestion — and because a remote
+ * function that reaches for `db` itself is a service in the wrong layer. It is
+ * also what lets a spec mock this module and get the whole surface.
+ */
+export async function listCommittees() {
+	return db
+		.select({ id: group.id, name: group.name })
+		.from(group)
+		.where(and(eq(group.kind, 'committee'), isNull(group.deletedAt)))
+		.orderBy(asc(group.name));
+}
+
 export async function listProjects(
 	opts: { status?: ProjectStatus; groupId?: string; unowned?: boolean } = {}
 ) {

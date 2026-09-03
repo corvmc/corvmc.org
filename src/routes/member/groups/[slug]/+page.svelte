@@ -21,6 +21,7 @@
 		declineApplicationForm
 	} from '$lib/remote/groups.remote';
 	import AnnouncementList from '$lib/components/groups/AnnouncementList.svelte';
+	import DocumentList from '$lib/components/groups/DocumentList.svelte';
 	import MuteAnnouncementsAction from '$lib/components/groups/MuteAnnouncementsAction.svelte';
 	import CreateSessionAction from '$lib/components/groups/CreateSessionAction.svelte';
 
@@ -33,8 +34,8 @@
 	 * on the calendar, and this page is where you come for the archive and the
 	 * roster. See docs/specs/groups-spec.md § Interface.
 	 *
-	 * Announcements, Documents and Sessions are phases 7, 8 and 9. The tabs that
-	 * exist now are the ones with something behind them.
+	 * Announcements, Documents and Sessions are phases 7, 8 and 9, and all three
+	 * are now built.
 	 *
 	 * Above the awaited query: a declaration after a top-level await is
 	 * async-gated, which would compile every `fields.X.as()` below into an async
@@ -44,7 +45,7 @@
 	const approveFields = approveApplicationForm.fields;
 	const declineFields = declineApplicationForm.fields;
 
-	type Tab = 'announcements' | 'overview' | 'sessions' | 'projects' | 'roster';
+	type Tab = 'announcements' | 'documents' | 'overview' | 'projects' | 'sessions' | 'roster';
 
 	let slug = $derived(page.params.slug!);
 	const data = $derived(await getMemberGroup(slug));
@@ -64,6 +65,7 @@
 		if (requested === 'overview') return 'overview';
 		if (requested === 'sessions') return 'sessions';
 		if (requested === 'projects') return 'projects';
+		if (requested === 'documents') return 'documents';
 		if (requested === 'announcements') return 'announcements';
 		return defaultTab;
 	});
@@ -125,7 +127,15 @@
 	     own state. -->
 	<TabBar
 		tabs={[
-			{ key: 'overview', label: 'Overview', href: tabHref('overview') },
+			{ key: 'announcements', label: 'Announcements', href: tabHref('announcements') },
+			{
+				key: 'documents',
+				label: 'Documents',
+				badge: data.files.length,
+				href: tabHref('documents')
+			},
+			// Committee-only, and hidden while empty: a club can never own a project,
+			// so the tab would be a permanent dead end on most of these pages.
 			...(projects.length > 0
 				? [
 						{
@@ -136,7 +146,9 @@
 						}
 					]
 				: []),
-			{ key: 'roster', label: 'Roster', badge: members.active.length, href: tabHref('roster') }
+			{ key: 'sessions', label: 'Sessions', href: tabHref('sessions') },
+			{ key: 'roster', label: 'Roster', badge: members.active.length, href: tabHref('roster') },
+			{ key: 'overview', label: 'Overview', href: tabHref('overview') }
 		]}
 		active={tab}
 	/>
@@ -177,6 +189,13 @@
 				</Table>
 			{/if}
 		</InfoCard>
+	{:else if tab === 'documents'}
+		<DocumentList
+			groupId={group.id}
+			files={data.files}
+			usage={data.documentUsage}
+			canManage={data.canManage}
+		/>
 	{:else if tab === 'sessions'}
 		{#if data.canManage}
 			<div class="flex justify-end">

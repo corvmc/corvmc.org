@@ -35,10 +35,7 @@ import {
 	SuggestionNotFoundError
 } from '$lib/server/suggestion/suggestion-service';
 import { createFlag, FLAG_REASON_MAX, FLAG_DESCRIPTION_MAX } from '$lib/server/flag/flag-service';
-import { getProjectForSuggestion } from '$lib/server/project/project-service';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { getProjectForSuggestion, listCommittees } from '$lib/server/project/project-service';
 
 const BOARD_PAGE_SIZE = 20;
 const STAFF_PAGE_SIZE = 25;
@@ -438,20 +435,6 @@ export const getMemberSuggestionDetailPage = query(z.string(), async (id) => {
  * `MergeCandidateOptions`, which is also what retires this page's JAVASCRIPT-SVELTEKIT-25
  * workaround.
  */
-/**
- * Committees, for the picker on "start a project". Duplicated from
- * `projects.remote.ts` rather than exported across modules: a remote module is
- * an endpoint surface, and importing one from another makes a private helper
- * look like part of that page's contract.
- */
-async function listCommitteeOptions() {
-	return db
-		.select({ id: group.id, name: group.name })
-		.from(group)
-		.where(and(eq(group.kind, 'committee'), isNull(group.deletedAt)))
-		.orderBy(asc(group.name));
-}
-
 export const getStaffSuggestionDetailPage = query(z.string(), async (id) => {
 	// `project` rides along rather than being its own query: it is one line on
 	// this page, and a second awaited remote query in the component is a serial
@@ -460,7 +443,7 @@ export const getStaffSuggestionDetailPage = query(z.string(), async (id) => {
 		getStaffSuggestionDetail(id),
 		getSuggestionPendingEdit(id),
 		getProjectForSuggestion(id),
-		listCommitteeOptions()
+		listCommittees()
 	]);
 	return { suggestion, pendingEdit, project, committees };
 });
