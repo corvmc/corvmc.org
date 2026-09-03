@@ -7,6 +7,7 @@ import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
+import { toContributedValue, type ContributedValue } from './hour-value';
 
 const TZ = DEFAULT_TIMEZONE;
 
@@ -36,6 +37,21 @@ function approvedIn(range: ReportRange): SQL {
 
 const sumMinutes = sql<number>`coalesce(sum(${volunteerHourLog.minutes}), 0)`;
 
+// Minutes worked under a role marked as a specialized skill -- the narrower
+// half of the two valuations.
+const sumSpecializedMinutes = sql<number>`coalesce(sum(case when ${volunteerRole.isSpecializedSkill} then ${volunteerHourLog.minutes} else 0 end), 0)`;
+
+// Specialized minutes on a role nobody has priced. They contribute zero rather
+// than falling back to the site rate, and are reported separately so a funder
+// facing number can say it is incomplete instead of quietly understating.
+const sumUnpricedSpecializedMinutes = sql<number>`coalesce(sum(case when ${volunteerRole.isSpecializedSkill} and ${volunteerRole.marketRateCents} is null then ${volunteerHourLog.minutes} else 0 end), 0)`;
+
+// Minute-cents: sum(minutes x that role's hourly rate), divided by 60 in
+// TypeScript rather than here. SQLite integer division truncates, and each
+// specialized role carries its own rate so there is no single multiplier to
+// apply afterwards -- the weighting has to happen inside the sum.
+const sumSpecializedMinuteCents = sql<number>`coalesce(sum(case when ${volunteerRole.isSpecializedSkill} and ${volunteerRole.marketRateCents} is not null then ${volunteerHourLog.minutes} * ${volunteerRole.marketRateCents} else 0 end), 0)`;
+
 export interface VolunteerTotals {
 	totalMinutes: number;
 	volunteerCount: number;
@@ -57,6 +73,35 @@ export async function getVolunteerTotals(range: ReportRange = {}): Promise<Volun
 		volunteerCount: Number(row?.volunteerCount ?? 0),
 		logCount: Number(row?.logCount ?? 0)
 	};
+}
+
+/**
+ * What donated time in this range was worth, both ways.
+ *
+ * The join is safe: `volunteer_hour_log.volunteer_role_id` is NOT NULL with
+ * `onDelete: 'restrict'`, so every log has a role and an inner join drops
+ * nothing. Archived roles stay in for the same reason `getHoursByRole` keeps
+ * them -- retiring a role does not un-happen the work done under it.
+ */
+export async function getContributedValue(range: ReportRange = {}): Promise<ContributedValue> {
+	const [row] = await db
+		.select({
+			totalMinutes: sumMinutes,
+			specializedMinutes: sumSpecializedMinutes,
+			unpricedSpecializedMinutes: sumUnpricedSpecializedMinutes,
+			specializedMinuteCents: sumSpecializedMinuteCents
+		})
+		.from(volunteerHourLog)
+		.innerJoin(volunteerRole, eq(volunteerHourLog.volunteerRoleId, volunteerRole.id))
+		.where(approvedIn(range));
+
+	return toContributedValue({
+		totalMinutes: Number(row?.totalMinutes ?? 0),
+		specializedMinutes: Number(row?.specializedMinutes ?? 0),
+		unpricedSpecializedMinutes: Number(row?.unpricedSpecializedMinutes ?? 0),
+		// The one division, rounded once at the end rather than per role.
+		specializedValueCents: Math.round(Number(row?.specializedMinuteCents ?? 0) / 60)
+	});
 }
 
 export interface MemberHours {
@@ -116,6 +161,14 @@ export interface RoleHours {
 	roleIsActive: boolean;
 	minutes: number;
 	logCount: number;
+	/** Whether these hours are recognizable contributed services at all. */
+	isSpecializedSkill: boolean;
+	/**
+	 * The role's own hourly rate. Null on a specialized role is the gap a
+	 * report has to show: those hours are worth something and nobody has said
+	 * what, so they count as zero rather than as the impact rate.
+	 */
+	marketRateCents: number | null;
 }
 
 /**
@@ -129,19 +182,29 @@ export async function getHoursByRole(range: ReportRange = {}): Promise<RoleHours
 			volunteerRoleId: volunteerHourLog.volunteerRoleId,
 			roleName: volunteerRole.name,
 			roleIsActive: volunteerRole.isActive,
+			isSpecializedSkill: volunteerRole.isSpecializedSkill,
+			marketRateCents: volunteerRole.marketRateCents,
 			minutes: sumMinutes,
 			logCount: count()
 		})
 		.from(volunteerHourLog)
 		.innerJoin(volunteerRole, eq(volunteerHourLog.volunteerRoleId, volunteerRole.id))
 		.where(approvedIn(range))
-		.groupBy(volunteerHourLog.volunteerRoleId, volunteerRole.name, volunteerRole.isActive)
+		.groupBy(
+			volunteerHourLog.volunteerRoleId,
+			volunteerRole.name,
+			volunteerRole.isActive,
+			volunteerRole.isSpecializedSkill,
+			volunteerRole.marketRateCents
+		)
 		.orderBy(desc(sumMinutes));
 
 	return rows.map((row) => ({
 		volunteerRoleId: row.volunteerRoleId,
 		roleName: row.roleName,
 		roleIsActive: row.roleIsActive,
+		isSpecializedSkill: row.isSpecializedSkill,
+		marketRateCents: row.marketRateCents === null ? null : Number(row.marketRateCents),
 		minutes: Number(row.minutes),
 		logCount: Number(row.logCount)
 	}));

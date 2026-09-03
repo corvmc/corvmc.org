@@ -36,6 +36,13 @@ function chain(queue: () => unknown[]): unknown {
 
 const next = () => (selectResults.length > 0 ? selectResults.shift()! : []);
 
+// The impact rate is site config; pinning it here keeps the arithmetic below
+// legible and independent of whatever Independent Sector publishes next April.
+const HOUR_VALUE_CENTS = 3766;
+vi.mock('$lib/server/volunteer/hour-value', () => ({
+	getHourValueCents: vi.fn(async () => HOUR_VALUE_CENTS)
+}));
+
 vi.mock('$lib/server/db', () => ({
 	db: {
 		select: vi.fn(() => chain(next)),
@@ -180,14 +187,26 @@ describe('attachment', () => {
 });
 
 describe('getProjectBurn', () => {
-	/** The project, then contractor, orders, acquisitions and labour in call order. */
+	/**
+	 * The project, then contractor, orders, acquisitions and labour in call
+	 * order. Positional by necessity — the mock hands back rows in the order the
+	 * service asks for them — so adding a query to `getProjectBurn` means
+	 * adding a row here.
+	 */
 	function ledgers(over: Record<string, unknown> = {}) {
 		selectResults = [
 			PROJECT({ budgetCents: over.budgetCents ?? null }),
-			[{ cents: over.contractor ?? 0 }],
+			[{ cents: over.contractor ?? 0, donatedCents: over.donatedServices ?? 0 }],
 			[{ cents: over.orders ?? 0 }],
 			[{ paidCents: over.paid ?? 0, donatedCents: over.donated ?? 0 }],
-			[{ minutes: over.minutes ?? 0 }]
+			[
+				{
+					minutes: over.minutes ?? 0,
+					specializedMinutes: over.specializedMinutes ?? 0,
+					unpricedSpecializedMinutes: over.unpricedMinutes ?? 0,
+					specializedMinuteCents: over.specializedMinuteCents ?? 0
+				}
+			]
 		];
 	}
 
@@ -203,13 +222,54 @@ describe('getProjectBurn', () => {
 		expect(burn.contributed.volunteerMinutes).toBe(600);
 	});
 
-	it('reports volunteer time in minutes, never as money', async () => {
+	it('values every approved minute at the impact rate, and keeps the minutes', async () => {
 		ledgers({ minutes: 480 });
 
 		const burn = await getProjectBurn('proj-1');
 
 		expect(burn.contributed.volunteerMinutes).toBe(480);
+		expect(burn.contributed.volunteerValueCents).toBe(Math.round((480 * HOUR_VALUE_CENTS) / 60));
+		expect(burn.contributed.hourValueCents).toBe(HOUR_VALUE_CENTS);
+		// Contributed value is not spend. If it ever reaches cash, every budget
+		// in the app overstates.
 		expect(burn.cash.totalCents).toBe(0);
+	});
+
+	it('values specialized hours at their own rate, not the impact rate', async () => {
+		// 120 minutes at $65/hr, carried as minute-cents by the query.
+		ledgers({ minutes: 480, specializedMinutes: 120, specializedMinuteCents: 120 * 6500 });
+
+		const burn = await getProjectBurn('proj-1');
+
+		expect(burn.contributed.specializedVolunteerMinutes).toBe(120);
+		expect(burn.contributed.recognizableServicesCents).toBe(13_000);
+		// The two overlap on purpose: those 120 minutes are in both figures.
+		// Nothing here may add them, which is why there is no combined total.
+		expect(burn.contributed.volunteerMinutes).toBe(480);
+		expect(Object.keys(burn.contributed)).not.toContain('totalCents');
+	});
+
+	it('counts an unpriced specialized role as zero, never at the impact rate', async () => {
+		// Facilities in the seed: specialized, no market rate. Valuing it at the
+		// impact rate is the exact merge of the two columns this split prevents.
+		ledgers({ minutes: 300, specializedMinutes: 300, unpricedMinutes: 300 });
+
+		const burn = await getProjectBurn('proj-1');
+
+		expect(burn.contributed.recognizableServicesCents).toBe(0);
+		expect(burn.contributed.unpricedSpecializedMinutes).toBe(300);
+		// Still counts toward impact value — the hour happened.
+		expect(burn.contributed.volunteerValueCents).toBeGreaterThan(0);
+	});
+
+	it('keeps a donated contractor job out of cash spend', async () => {
+		ledgers({ contractor: 94_500, donatedServices: 42_000 });
+
+		const burn = await getProjectBurn('proj-1');
+
+		expect(burn.cash.contractorCents).toBe(94_500);
+		expect(burn.contributed.donatedServicesCents).toBe(42_000);
+		expect(burn.cash.totalCents).toBe(94_500);
 	});
 
 	it('leaves remaining null when no budget is set, rather than zero', async () => {
@@ -230,6 +290,8 @@ describe('getProjectBurn', () => {
 		const burn = await getProjectBurn('proj-1');
 
 		expect(burn.cash.totalCents).toBe(0);
+		expect(burn.contributed.volunteerValueCents).toBe(0);
+		expect(burn.contributed.recognizableServicesCents).toBe(0);
 		expect(burn.remainingCents).toBe(50_000);
 	});
 });

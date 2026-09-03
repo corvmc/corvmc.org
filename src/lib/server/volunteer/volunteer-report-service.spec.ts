@@ -35,11 +35,21 @@ vi.mock('$lib/server/db', () => ({
 	db: { select: vi.fn(() => chainable()) }
 }));
 
+// The impact rate is site config. Pinned so the arithmetic below stays legible
+// and independent of whatever Independent Sector publishes next April.
+const HOUR_VALUE_CENTS = 3766;
+vi.mock('$lib/server/site-config/site-config-service', () => ({
+	config: vi.fn(async (key: string) =>
+		key === 'volunteer.hourValueCents' ? HOUR_VALUE_CENTS : 'Independent Sector, Oregon, 2025'
+	)
+}));
+
 import {
 	getVolunteerTotals,
 	getHoursByMember,
 	getHoursByRole,
-	getHoursByMonth
+	getHoursByMonth,
+	getContributedValue
 } from './volunteer-report-service';
 
 /**
@@ -170,6 +180,8 @@ describe('VolunteerReportService', () => {
 					volunteerRoleId: 'r1',
 					roleName: 'Zine & Print',
 					roleIsActive: false,
+					isSpecializedSkill: false,
+					marketRateCents: null,
 					minutes: '240',
 					logCount: '2'
 				}
@@ -181,10 +193,30 @@ describe('VolunteerReportService', () => {
 					volunteerRoleId: 'r1',
 					roleName: 'Zine & Print',
 					roleIsActive: false,
+					isSpecializedSkill: false,
+					marketRateCents: null,
 					minutes: 240,
 					logCount: 2
 				}
 			]);
+		});
+
+		it('carries the specialized flag and its rate, so a report can split the two', async () => {
+			selectResult = [
+				{
+					volunteerRoleId: 'r2',
+					roleName: 'Sound Engineering',
+					roleIsActive: true,
+					isSpecializedSkill: true,
+					marketRateCents: '6500',
+					minutes: '300',
+					logCount: '3'
+				}
+			];
+
+			const [row] = await getHoursByRole();
+			expect(row.isSpecializedSkill).toBe(true);
+			expect(row.marketRateCents).toBe(6500);
 		});
 	});
 
@@ -206,5 +238,74 @@ describe('VolunteerReportService', () => {
 			selectResult = [];
 			await expect(getHoursByMonth()).resolves.toEqual([]);
 		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The two valuations
+// ---------------------------------------------------------------------------
+
+describe('getContributedValue', () => {
+	function totals(over: Record<string, unknown> = {}) {
+		selectResult = [
+			{
+				totalMinutes: over.totalMinutes ?? 0,
+				specializedMinutes: over.specializedMinutes ?? 0,
+				unpricedSpecializedMinutes: over.unpricedSpecializedMinutes ?? 0,
+				specializedMinuteCents: over.specializedMinuteCents ?? 0
+			}
+		];
+	}
+
+	it('values every approved minute at the site rate', async () => {
+		totals({ totalMinutes: 600 });
+
+		const value = await getContributedValue();
+
+		expect(value.impactValueCents).toBe(Math.round((600 * HOUR_VALUE_CENTS) / 60));
+		expect(value.rateCents).toBe(HOUR_VALUE_CENTS);
+		expect(value.rateSource).toContain('Oregon');
+	});
+
+	it('values specialized minutes at their own role rates, not the site rate', async () => {
+		// 120 min at $65/hr = $130, which is not 120 min at the site rate.
+		totals({ totalMinutes: 600, specializedMinutes: 120, specializedMinuteCents: 120 * 6500 });
+
+		const value = await getContributedValue();
+
+		expect(value.recognizableServicesCents).toBe(13_000);
+		expect(value.impactValueCents).not.toBe(value.recognizableServicesCents);
+	});
+
+	it('exposes no total, because the two figures overlap and must not be summed', async () => {
+		totals({ totalMinutes: 600, specializedMinutes: 120, specializedMinuteCents: 120 * 6500 });
+
+		const value = await getContributedValue();
+
+		// A donated audio engineer's hour is in both numbers. Adding them
+		// double-counts it and is wrong for the grant reader and the accountant
+		// alike, so the shape offers nothing to add.
+		expect(Object.keys(value)).not.toContain('totalCents');
+		expect(Object.keys(value)).not.toContain('totalValueCents');
+	});
+
+	it('counts an unpriced specialized role as zero rather than at the site rate', async () => {
+		totals({ totalMinutes: 300, specializedMinutes: 300, unpricedSpecializedMinutes: 300 });
+
+		const value = await getContributedValue();
+
+		expect(value.recognizableServicesCents).toBe(0);
+		expect(value.unpricedSpecializedMinutes).toBe(300);
+		// The hour still happened, so it still counts toward impact.
+		expect(value.impactValueCents).toBe(Math.round((300 * HOUR_VALUE_CENTS) / 60));
+	});
+
+	it('filters to approved hours, like every other rollup here', async () => {
+		totals({ totalMinutes: 60 });
+		whereCalls.length = 0;
+
+		await getContributedValue();
+
+		expect(whereCalls).toHaveLength(1);
 	});
 });

@@ -56,6 +56,10 @@
 	const signedCents = (cents: number) =>
 		cents < 0 ? `-${formatCents(Math.abs(cents))}` : formatCents(cents);
 	const volunteerHours = $derived(burn.contributed.volunteerMinutes / 60);
+	const specializedHours = $derived(burn.contributed.specializedVolunteerMinutes / 60);
+	/** Specialized hours nobody has priced. Counted as zero, and said so. */
+	const unpricedHours = $derived(burn.contributed.unpricedSpecializedMinutes / 60);
+	const hrs = (h: number) => `${h.toFixed(h % 1 === 0 ? 0 : 1)} hrs`;
 
 	/** A date input wants `YYYY-MM-DD`, and a `Date` renders as a full timestamp. */
 	const asDateValue = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '');
@@ -213,10 +217,30 @@
 					<th class="cell-num">Value</th>
 				{/snippet}
 				<tr>
-					<td>Volunteer time</td>
-					<td class="cell-num">
-						{volunteerHours.toFixed(volunteerHours % 1 === 0 ? 0 : 1)} hrs
+					<td>
+						Volunteer time — impact value
+						<span class="block text-subtle text-xs">
+							{hrs(volunteerHours)}, every approved hour at {formatCents(
+								burn.contributed.hourValueCents
+							)}/hr
+						</span>
 					</td>
+					<td class="cell-num">{formatCents(burn.contributed.volunteerValueCents)}</td>
+				</tr>
+				<tr>
+					<td>
+						Contributed services — specialized only
+						<span class="block text-subtle text-xs">
+							{hrs(specializedHours)} at each role's own rate{unpricedHours > 0
+								? `, of which ${hrs(unpricedHours)} on roles with no rate set and counted as zero`
+								: ''}
+						</span>
+					</td>
+					<td class="cell-num">{formatCents(burn.contributed.recognizableServicesCents)}</td>
+				</tr>
+				<tr>
+					<td>Donated services</td>
+					<td class="cell-num">{formatCents(burn.contributed.donatedServicesCents)}</td>
 				</tr>
 				<tr>
 					<td>Donated goods</td>
@@ -225,7 +249,8 @@
 			</Table>
 			<p class="mt-2 text-subtle text-sm">
 				Never added to cash: donated time and goods belong in a grant report, not against a budget.
-				Hours carry no dollar value until the collective sets one.
+				The first two rows are also not added to <em>each other</em> — a donated engineer's hour is in
+				both, so they are two answers to two different questions rather than parts of one total.
 			</p>
 		</InfoCard>
 	</div>
