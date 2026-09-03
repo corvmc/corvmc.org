@@ -128,7 +128,16 @@ export const tableOrder = [
 	'volunteer_role_interest',
 	'volunteer_shift_feedback',
 	'member_certification',
-	'volunteer_role_certification'
+	'volunteer_role_certification',
+	// A band's Stripe Connect account. Child of group, parent of nothing.
+	'band_stripe_account',
+	// The audio chain, and it is a chain: release → track → radio_play, each
+	// referencing the one above it, so these four keep their relative order.
+	'audio_release',
+	'audio_track',
+	'radio_play',
+	// References audio_release and user, so it clears before either.
+	'release_purchase'
 ];
 
 /**

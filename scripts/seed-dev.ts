@@ -69,6 +69,7 @@ import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
 import { seedSuggestions } from './seed/suggestions';
 import { seedProjects } from './seed/projects';
+import { seedAudio } from './seed/audio';
 
 async function main() {
 	console.log('\nStarting dev seed...\n');
@@ -157,6 +158,10 @@ async function main() {
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
+	// Needs the bands and somebody to have bought something. Writes real audio
+	// into the local private bucket, so it is the one seeder that does I/O
+	// outside D1 — see its header for why rows alone are not enough.
+	const audio = await seedAudio(bands, allUsers);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -224,6 +229,10 @@ async function main() {
 	);
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
+	);
+	console.log(
+		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +
+			`${audio.purchases} sales, ${audio.accounts} band Stripe accounts`
 	);
 	console.log('\n  Volunteer demo logins (all `password`):');
 	console.log('    coordinator@corvallismusic.org  staff — every /staff/volunteer page');
