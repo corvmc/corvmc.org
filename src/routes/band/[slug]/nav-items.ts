@@ -18,6 +18,7 @@ export type BandNavKey =
 	| 'announcements'
 	| 'reservations'
 	| 'events'
+	| 'music'
 	| 'edit'
 	| 'page-editor'
 	| 'live-site'
@@ -31,7 +32,7 @@ export interface BandNavInput {
 	tier: string;
 	userRole: string;
 	isStaff: boolean;
-	features: { bandPremium?: boolean; announcements?: boolean };
+	features: { bandPremium?: boolean; announcements?: boolean; bandAudio?: boolean };
 }
 
 export interface BandNavItem extends NavNode<BandNavKey> {
@@ -70,6 +71,14 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 		href: resolve('/band/[slug]/reservations', { slug })
 	});
 	items.push({ key: 'events', label: 'Events', href: resolve('/band/[slug]/events', { slug }) });
+
+	// Every member sees the discography; only owner and admin can change it, and
+	// the page decides that from its own `canManage`. Flagged because the
+	// storefront's launch is a Stripe decision rather than a build one — the same
+	// ground `bandPremium` is held on.
+	if (input.features.bandAudio) {
+		items.push({ key: 'music', label: 'Music', href: resolve('/band/[slug]/music', { slug }) });
+	}
 
 	if (isOwnerOrAdmin) {
 		items.push({

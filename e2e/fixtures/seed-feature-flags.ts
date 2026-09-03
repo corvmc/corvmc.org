@@ -24,8 +24,13 @@ import { withPlatformEnv } from './platform-db';
  *
  * Inventory is deliberately absent: its flag was cut in #286, so the member
  * surface and the scan-resolution pages need no enabling here.
+ *
+ * `bandAudio` gates /band/[slug]/music, every audio remote function AND the
+ * stream endpoint — a flag that only hid the nav row would leave the endpoints
+ * live, so `band-music.e2e.ts` needs it on for all three. `cmcRadio` is
+ * deliberately absent: the station has no surfaces yet.
  */
-export const ENABLED_FLAGS = ['bandPremium', 'directMessages'] as const;
+export const ENABLED_FLAGS = ['bandPremium', 'directMessages', 'bandAudio'] as const;
 
 export async function seedFeatureFlags(): Promise<void> {
 	await withPlatformEnv(async ({ env }) => {

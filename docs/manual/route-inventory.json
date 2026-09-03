@@ -44,6 +44,14 @@
 		"panel": "band"
 	},
 	{
+		"route": "/band/[slug]/music",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/music/[releaseId]",
+		"panel": "band"
+	},
+	{
 		"route": "/band/[slug]/page-editor",
 		"panel": "band"
 	},

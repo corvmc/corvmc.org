@@ -47,6 +47,25 @@ describe('bandNavItems', () => {
 		expect(labelsFor({ userRole: 'member' })).not.toContain('Staff tools');
 	});
 
+	// Music is flag-gated, and unlike Settings it is gated on the *flag only* —
+	// every member of the band can see the discography, and the page itself
+	// decides who may change it. The pairing worth pinning is that the flag being
+	// off hides the row from an owner too, since that is the switch staff will
+	// actually use before the storefront launches.
+	it('shows Music to every role once bandAudio is on, and to none while it is off', () => {
+		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
+			const isStaff = userRole === 'staff';
+			expect(labelsFor({ userRole, isStaff, features: { bandAudio: true } })).toContain('Music');
+			expect(labelsFor({ userRole, isStaff })).not.toContain('Music');
+		}
+	});
+
+	it('does not let bandPremium stand in for bandAudio', () => {
+		expect(
+			labelsFor({ userRole: 'owner', tier: 'premium', features: { bandPremium: true } })
+		).not.toContain('Music');
+	});
+
 	// Billing really is owner-only on the server, so this gate stays as it was.
 	// The point of the test is that widening Settings did not widen this.
 	it('keeps Subscription owner-only', () => {
