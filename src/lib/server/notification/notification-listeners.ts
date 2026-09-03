@@ -5,7 +5,7 @@ import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement } from '$lib/server/group/announcement-fanout';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { captureException } from '$lib/server/sentry';
-import { listStaffUsers } from '$lib/server/authorization';
+import { listUsersWithCapability } from '$lib/server/authorization';
 import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
@@ -724,7 +724,7 @@ export function registerAllNotificationListeners(): void {
 
 	// --- Content flagged (notify all staff, in-app) ---
 	domainEvents.on('content.flagged', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('moderation.reviewFlags');
 		for (const member of staff) {
 			try {
 				await dispatch({
@@ -829,7 +829,7 @@ export function registerAllNotificationListeners(): void {
 	// Fans out per-staffer rather than to a single STAFF_CONTACT_EMAIL: this is
 	// queue work, so it needs an in-app badge and each staffer's own preference.
 	domainEvents.on('volunteer.hours_submitted', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('volunteer.reviewHours');
 		for (const member of staff) {
 			try {
 				await dispatch({
@@ -923,7 +923,7 @@ export function registerAllNotificationListeners(): void {
 	// Claimed (notify staff). In-app only, and fanned out per staffer like the hours
 	// queue, because confirming is queue work with a badge rather than news.
 	domainEvents.on('volunteer.signup_claimed', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('volunteer.manageShifts');
 		for (const member of staff) {
 			try {
 				await dispatch({
@@ -976,7 +976,7 @@ export function registerAllNotificationListeners(): void {
 
 	// Dropped (notify staff). The useful half is that a place reopened.
 	domainEvents.on('volunteer.signup_cancelled', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('volunteer.manageShifts');
 		for (const member of staff) {
 			try {
 				await dispatch({
@@ -1113,7 +1113,7 @@ export function registerAllNotificationListeners(): void {
 	});
 	// --- Community listing submitted for review (notify staff) ---
 	domainEvents.on('community_event.submitted', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('listing.review');
 		for (const member of staff) {
 			try {
 				await dispatch({
@@ -1138,7 +1138,7 @@ export function registerAllNotificationListeners(): void {
 	// Fires on a resubmit too: a returned application coming back is exactly when
 	// it needs looking at again, and would otherwise sit in the queue unannounced.
 	domainEvents.on('instructor.application_submitted', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('instructor.review');
 		for (const member of staff) {
 			try {
 				await dispatch({
