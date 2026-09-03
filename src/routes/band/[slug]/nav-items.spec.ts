@@ -60,6 +60,23 @@ describe('bandNavItems', () => {
 		}
 	});
 
+	// Payouts is banking setup, so it is narrower than Music above it: every
+	// member can see the discography, only owner and admin can reach the bank
+	// details Stripe is asking for.
+	it('keeps Payouts to owner and admin, while Music stays open to members', () => {
+		const on = { features: { bandAudio: true } };
+		for (const userRole of ['owner', 'admin']) {
+			expect(labelsFor({ ...on, userRole })).toContain('Payouts');
+		}
+		const member = labelsFor({ ...on, userRole: 'member' });
+		expect(member).toContain('Music');
+		expect(member).not.toContain('Payouts');
+	});
+
+	it('hides Payouts with the flag off, even from an owner', () => {
+		expect(labelsFor({ userRole: 'owner' })).not.toContain('Payouts');
+	});
+
 	it('does not let bandPremium stand in for bandAudio', () => {
 		expect(
 			labelsFor({ userRole: 'owner', tier: 'premium', features: { bandPremium: true } })

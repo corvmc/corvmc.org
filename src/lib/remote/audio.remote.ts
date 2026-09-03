@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
-import { query, form, command } from '$app/server';
+import { query, form, command, getRequestEvent } from '$app/server';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { requireFeature } from '$lib/server/feature-flags';
 import {
@@ -16,7 +16,18 @@ import {
 	unpublishRelease,
 	updateRelease
 } from '$lib/server/audio/audio-service';
-import { releaseKinds, RELEASE_TITLE_MAX, TRACK_TITLE_MAX, LONG_TEXT_MAX } from '$lib/config';
+import {
+	releaseKinds,
+	RELEASE_TITLE_MAX,
+	TRACK_TITLE_MAX,
+	LONG_TEXT_MAX,
+	AUDIO_MIN_PRICE_CENTS
+} from '$lib/config';
+import {
+	createDashboardLink,
+	createOnboardingLink,
+	getPayoutStatus
+} from '$lib/server/audio/connect-service';
 
 // ---------------------------------------------------------------------------
 // Guards
@@ -92,7 +103,19 @@ export const getBandRelease = query(
 				radioExcludedReason: release.radioExcludedReason
 			},
 			tracks: await listTracks(releaseId),
-			canManage: role === 'owner' || role === 'admin' || role === 'staff'
+			canManage: role === 'owner' || role === 'admin' || role === 'staff',
+			/**
+			 * Assembled here rather than fetched by the page as a second query —
+			 * `custom/no-concurrent-remote-queries` errors on that, and past kit
+			 * 2.64 it renders the error boundary instead of the page.
+			 *
+			 * Only the boolean. Everything sensitive on a payout status — the
+			 * account id, and Stripe's list of documents it wants from a named
+			 * person — stays behind `getBandPayouts`, which is admin-only. That a
+			 * band can accept money is already implied by whether its releases are
+			 * purchasable.
+			 */
+			canSell: (await getPayoutStatus(band.id)).chargesEnabled
 		};
 	}
 );
@@ -308,3 +331,113 @@ async function assertTrackInRelease(trackId: string, releaseId: string) {
 	const tracks = await listTracks(releaseId);
 	if (!tracks.some((t) => t.id === trackId)) throw error(404, 'Track not found');
 }
+
+// ---------------------------------------------------------------------------
+// Payouts
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether this band can be paid, and what Stripe still wants if not.
+ *
+ * Owner-or-admin rather than member: this is banking setup, and the
+ * `requirementsDue` list names the documents Stripe is asking a specific person
+ * for. A plain member has no business reading it.
+ */
+export const getBandPayouts = query(z.string(), async (slug) => {
+	await requireFeature('bandAudio');
+	const { group: band } = await requireGroupRole({ slug }, 'admin', { allowStaff: true });
+	const status = await getPayoutStatus(band.id);
+
+	return {
+		...status,
+		/** Paid releases cannot be published without this. Free ones are unaffected. */
+		canSell: status.chargesEnabled
+	};
+});
+
+/**
+ * Begin, or resume, Stripe's onboarding.
+ *
+ * Returns a URL rather than redirecting. A thrown redirect from a remote form is
+ * applied as a client navigation, and account links are single-use and expire in
+ * minutes — so the page sends the browser off itself, immediately, rather than
+ * letting the URL sit in history where a back button would replay a dead link.
+ *
+ * `refreshUrl` is where Stripe sends someone whose link went stale, and it points
+ * back at this same page so the flow restarts rather than erroring.
+ */
+export const startPayoutOnboarding = form(
+	z.object({ slug: z.string().min(1) }),
+	async ({ slug }) => {
+		await requireFeature('bandAudio');
+		const { group: band, user } = await requireGroupRole({ slug }, 'admin');
+
+		const { url: pageUrl } = getRequestEvent();
+		const returnTo = new URL(`/band/${slug}/music/payouts`, pageUrl.origin).toString();
+
+		const url = await createOnboardingLink({
+			groupId: band.id,
+			bandName: band.name,
+			email: user.email,
+			returnUrl: returnTo,
+			refreshUrl: returnTo
+		});
+
+		return { success: true, url };
+	}
+);
+
+/** A link into Stripe's own dashboard — where bank details and payout history live. */
+export const openPayoutDashboard = form(z.object({ slug: z.string().min(1) }), async ({ slug }) => {
+	await requireFeature('bandAudio');
+	const { group: band } = await requireGroupRole({ slug }, 'admin');
+	return { success: true, url: await createDashboardLink(band.id) };
+});
+
+// ---------------------------------------------------------------------------
+// Pricing
+// ---------------------------------------------------------------------------
+
+/**
+ * What a release costs.
+ *
+ * Its own form, like radio consent, and for the same reason: a price folded into
+ * the metadata form takes effect only when somebody remembers to press Save on
+ * a card about titles and descriptions.
+ *
+ * `priceMinCents` is a `MoneyField`, which drops the field entirely when the box
+ * is cleared — so an absent value means "not touched", and free is `0` typed
+ * explicitly. `.optional().default(false)` on the boolean because an unchecked
+ * checkbox posts nothing at all.
+ */
+export const updatePricingForm = form(
+	z.object({
+		slug: z.string().min(1),
+		releaseId: z.string().min(1),
+		priceMinCents: z
+			.number()
+			.int()
+			.min(0)
+			.refine(
+				(cents) => cents === 0 || cents >= AUDIO_MIN_PRICE_CENTS,
+				`Free, or at least $${(AUDIO_MIN_PRICE_CENTS / 100).toFixed(2)} — below that, card fees take almost all of it.`
+			)
+			.optional(),
+		allowPayMore: z.boolean().optional().default(false)
+	}),
+	async ({ slug, releaseId, priceMinCents, allowPayMore }) => {
+		await requireFeature('bandAudio');
+		await requireReleaseAdmin(slug, releaseId);
+
+		await updateRelease(releaseId, {
+			// A cleared box is indistinguishable from an untouched one, so absent
+			// leaves the price alone rather than silently making the record free.
+			...(priceMinCents === undefined ? {} : { priceMinCents }),
+			allowPayMore
+		});
+
+		void getBandRelease({ slug, releaseId }).refresh();
+		void getBandMusicPage(slug).refresh();
+		return { success: true };
+	}
+);

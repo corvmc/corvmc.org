@@ -12,6 +12,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import TrackList from '$lib/components/audio/TrackList.svelte';
 	import TrackUploader from './TrackUploader.svelte';
+	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
 	import {
 		getBandRelease,
 		getBandMusicPage,
@@ -19,6 +20,7 @@
 		setRadioOptInForm,
 		publishReleaseForm,
 		unpublishReleaseForm,
+		updatePricingForm,
 		deleteReleaseForm,
 		renameTrackForm,
 		deleteTrackForm
@@ -44,7 +46,9 @@
 	const slug = $derived(page.params.slug!);
 	const releaseId = $derived(page.params.releaseId!);
 
-	const { release, tracks, canManage } = $derived(await getBandRelease({ slug, releaseId }));
+	const { release, tracks, canManage, canSell } = $derived(
+		await getBandRelease({ slug, releaseId })
+	);
 
 	const kindOptions = releaseKinds.map((kind) => ({
 		value: kind,
@@ -219,6 +223,46 @@
 	{/if}
 
 	{#if canManage}
+		<Card>
+			<CardBody>
+				<CardTitle>Price</CardTitle>
+				<p class="text-muted">
+					Name a minimum. Free is a real answer — it needs no Stripe account, and the record can
+					still go out on CMC Radio.
+				</p>
+
+				{#if release.priceMinCents > 0 && !canSell}
+					<!-- The state that would otherwise fail silently at Publish: a price
+					     is set but nothing can take the money. -->
+					<Alert type="warning">
+						This release has a price, but payouts are not set up yet, so nobody can buy it.
+						<a class="link" href={resolve(`/band/${band.slug}/music/payouts`)}>Set up payouts</a>
+						— or set the price to zero to give it away.
+					</Alert>
+				{/if}
+
+				<Form remote={updatePricingForm.for(releaseId)} successToast="Price saved">
+					{@const fields = updatePricingForm.for(releaseId).fields}
+					<input {...fields.slug.as('hidden', slug)} />
+					<input {...fields.releaseId.as('hidden', releaseId)} />
+					<MoneyField
+						field={fields.priceMinCents}
+						label="Minimum price"
+						value={release.priceMinCents}
+						description="Enter 0 to give it away."
+					/>
+					<FormField
+						field={fields.allowPayMore}
+						type="toggle"
+						label="Let buyers pay more"
+						checkboxLabel="Name your price"
+						value={release.allowPayMore}
+					/>
+					<SubmitButton>Save price</SubmitButton>
+				</Form>
+			</CardBody>
+		</Card>
+
 		<Card>
 			<CardBody>
 				<CardTitle>Details</CardTitle>
