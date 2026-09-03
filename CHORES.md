@@ -4,28 +4,13 @@ Low-priority cleanup and tech-debt items. Not blocking, but worth doing.
 
 ## Open
 
-- **Site config reads a `list()` and then one `get()` per key.** `getConfigsByPrefix`
-  (`src/lib/server/site-config/site-config-service.ts`) asks KV which keys exist, then fetches them
-  one at a time in a `for` loop — 15 `reservation.*` keys alone. `getJson` in
-  `src/lib/server/kv.ts` sets no `cacheTtl`, so each falls back to the default 60-second per-colo
-  cache, and a `list()` does not edge-cache the way a `get()` does at all. The keys are already
-  enumerable from `DEFAULTS`, so KV is never the right place to ask what exists.
-
-  In order of value: drop the `list()`; collapse to a single blob key; memoize in the isolate on a
-  60s TTL, since isolates serve many requests and that turns this into roughly one KV read per
-  isolate per minute; set an explicit `cacheTtl`. **Not** a proxied endpoint — an HTTP hop to our
-  own Worker costs more than the read it avoids, and a Durable Object would serialize every config
-  read through one location.
-
-  Separately, about nine keys were never runtime values. `org.name`, `org.shortName`,
+- **About nine site-config keys were never runtime values.** `org.name`, `org.shortName`,
   `org.timezone` and the address block never change without someone editing text, and
   `src/lib/config.ts` already exists for that. What must stay runtime:
   `integration.utec.refreshToken` is written by the OAuth callback,
   `integration.utec.clientSecret` is a secret that belongs in `wrangler secret` rather than KV, and
   the reservation rates and hours are policy the board changes — putting those behind a deploy is a
-  regression in who can operate the org.
-
-  Blocks adding `volunteer.hourValueCents`, which `docs/specs/project-spec.md` wants.
+  regression in who can operate the org. (Split out of the read-path entry below, which is done.)
 
 - **Three tables implement one custody machine.** `reservationStatuses`, `loanStatuses` and
   `contractorJobStatuses` are three spellings of agreed → committed → in custody → returned, plus a
@@ -169,6 +154,32 @@ Still worth trying: an isolated or non-persisted miniflare state directory for t
   expected and bounded, not a bug.
 
 ## Done
+
+- **Site config read a `list()` and then one `get()` per key.** `getConfigsByPrefix` asked KV which
+  keys existed and then fetched them one at a time in a `for` loop — 15 `reservation.*` keys alone,
+  on every booking path, with the 10 `org.*` keys behind the footer on every public page render.
+  Fixed in four moves, in the order the entry listed them. The `list()` is gone: `DEFAULTS` already
+  enumerates every legal key — it is what `config()` throws `UnknownSiteConfigKeyError` against — so
+  KV was being asked a question it is not the authority for, and unlike a `get()` a `list()` does
+  not edge-cache at all. The remaining per-key reads go out through `Promise.all`, `getJson` takes
+  an explicit `cacheTtl` (300s, since these change on a staff form submit rather than on a request),
+  and an isolate-level memo on a 60s TTL turns the whole thing into roughly one KV read per key per
+  isolate per minute. `updateSiteConfigs` is concurrent too and busts the memo per key.
+
+  **The single-blob-per-prefix step was deliberately not taken.** It trades fifteen reads for one,
+  but it forces read-modify-write on every save — and `integration.utec.refreshToken` is written by
+  the OAuth callback concurrently with a staff settings save, where a lost update silently breaks
+  the lock integration. Per-key writes are the property worth keeping, and once the reads are both
+  parallel and memoized the blob buys very little.
+
+  Two things worth knowing about the result. **Feature flags are exempt from the memo** — the memo
+  is per-isolate, so a write in one isolate cannot clear another's copy, and nobody watches a room
+  rate take effect but a staff member who toggles a flag and sees nothing happen for a minute reads
+  that as a bug. And **a key stored in KV but absent from `DEFAULTS` is no longer surfaced by
+  prefix**; nothing writes one, because `updateSiteConfig` is only ever called with registered keys,
+  and `site-config-service.spec.ts` now asserts it deliberately rather than leaving it to be
+  discovered. This was the prerequisite `docs/specs/project-spec.md` named for
+  `volunteer.hourValueCents`.
 
 - **Two checkouts raced for one port, and overlapping e2e runs produced meaningless failures.** The entry below closed the _state_ half of this and reasoned that what remained "collides on port 4173 first" — a collision being treated as sufficient protection. It is not, for two reasons. A collision is only loud if something is listening at the moment you look: `reuseExistingServer` short-circuits on whatever answers, and `e2e/global-setup.ts` samples `/_app/version.json` exactly once, so a server that dies or is replaced mid-run is never noticed (the symptom is `ERR_CONNECTION_REFUSED` partway through). And a port collision does nothing at all about the failure that actually matters: two suites that _do_ stay out of each other's way still compete for CPU, and these assertions are load-dominated. Measured 2026-08-23 with a sibling worktree's `vite preview` and workerd running alongside: 23 failures in one suite and 33 in the other, failure sets barely intersecting, whole spec files flipping between runs — every one of them environmental, none a regression, and nothing in the output saying so. Split into the two things it actually is. Ports are now per-checkout (`scripts/lib/checkout-ports.ts`): the main checkout keeps :5173/:4173 so the tracked `.claude/launch.json` and the docs stay honest, a worktree gets a stable pair hashed off its path, and vite binds with `strictPort` so a real collision fails loudly instead of bumping onto a neighbour's next port. Both `playwright.config.ts` and `vite.config.ts` derive that number independently, from two spellings of the same directory, so the hash normalises its input — un-normalised they disagree and Playwright polls a port nothing ever binds, which `scripts/lib/checkout-ports.spec.ts` pins. Concurrency is then refused outright rather than isolated: `e2e/lock.ts` takes a machine-wide lock in `prepare.ts`, hands it to `run.ts`, and names the holding checkout if a second run starts — before it spends five minutes building. The handoff is the subtle part, since `pnpm test:e2e` is two processes: `prepare.ts` deliberately does _not_ release on exit, so the lock it leaves has a dead pid that only a `run` from the same checkout may adopt, and anything dead for over a minute is stale.
 
