@@ -38,12 +38,14 @@ vi.mock('$lib/server/feature-flags', () => ({
 	requireFeature: vi.fn(async () => undefined)
 }));
 
-// requireStaff() runs a real role query — one row is all hasAnyRole needs.
+// requireStaff() runs a real role query. It now reads role NAMES and keeps
+// only the ones that name a position, so the row has to carry one — a bare
+// row was enough when the guard only counted them.
 function chainable() {
 	const proxy: any = new Proxy(() => proxy, {
 		get(_, prop) {
 			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => resolve([{ roleId: 'role-staff' }]);
+				return (resolve: (v: unknown[]) => void) => resolve([{ name: 'staff' }]);
 			}
 			return () => proxy;
 		}
