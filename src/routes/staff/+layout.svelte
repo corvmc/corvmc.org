@@ -5,6 +5,7 @@
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import Nav from '$lib/components/layout/Nav';
 	import {
+		IconDisc,
 		IconSchool,
 		IconBulb,
 		IconUsers,
@@ -71,6 +72,7 @@
 		inbox: IconInbox,
 		users: IconUsers,
 		bands: IconMusic,
+		music: IconDisc,
 		groups: IconUsersGroup,
 		volunteer: IconHeartHandshake,
 		'volunteer-schedule': IconCalendarWeek,
