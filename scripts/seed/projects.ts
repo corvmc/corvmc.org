@@ -1,13 +1,17 @@
 import { project } from '../../src/lib/server/db/schema/project';
 import { group } from '../../src/lib/server/db/schema/group';
 import { suggestion } from '../../src/lib/server/db/schema/suggestion';
-import { workOrder, volunteerHourLog } from '../../src/lib/server/db/schema/volunteer';
+import {
+	workOrder,
+	volunteerHourLog,
+	volunteerRole
+} from '../../src/lib/server/db/schema/volunteer';
 import { contractorJob } from '../../src/lib/server/db/schema/contractor';
 import { acquisition, purchaseOrder } from '../../src/lib/server/db/schema/inventory';
 import { event } from '../../src/lib/server/db/schema/event';
 import { batchInsert, db } from './db';
 import { randomUUID } from 'crypto';
-import { and, asc, eq, isNull, sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import type { SeedEvent } from './types';
 
 /**
@@ -121,34 +125,54 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 			.where(eq(contractorJob.id, subpanel.id));
 	}
 
-	// Two work orders, so the labour line has approved hours behind it. Unscheduled
-	// ones by preference — bare work orders are what a project backlog looks like.
-	const shifts = await db
-		.select({ id: workOrder.id })
-		.from(workOrder)
-		.where(isNull(workOrder.cancelledAt))
-		.orderBy(asc(workOrder.createdAt))
-		.limit(2);
-	for (const s of shifts) {
-		await db.update(workOrder).set({ projectId: ids.facility }).where(eq(workOrder.id, s.id));
-	}
+	// The project's own work orders, and its own hour log against one of them.
+	//
+	// Borrowing existing rows looked simpler and was not reproducible: which
+	// shifts carry logged hours, how many minutes each carries, and which are
+	// approved are all randomised upstream in `seedVolunteerHours`, so the labour
+	// line read 3.5 hours on one seed, 7.5 on the next and 0 on a third. Ordering
+	// could not fix that — the variation is in the data, not in the order it comes
+	// back — and every unscheduled work order already carried a log. Writing our
+	// own rows is what makes the seeded burn the same number on every machine.
+	//
+	// Unscheduled deliberately: a bare work order is work that needs doing with
+	// nobody booked to do it, which is what a project backlog looks like.
+	const [facilityRole] = await db
+		.select({ id: volunteerRole.id })
+		.from(volunteerRole)
+		.where(eq(volunteerRole.name, 'Facilities & Maintenance'))
+		.limit(1);
 
-	// Approve one hour log on those shifts, so `getProjectBurn`'s labour line is
-	// non-zero: it counts approved hours only, and the seed's are mostly pending.
-	const shiftIds = shifts.map((s) => s.id);
-	if (shiftIds.length > 0) {
-		const [log] = await db
-			.select({ id: volunteerHourLog.id })
-			.from(volunteerHourLog)
-			.where(sql`${volunteerHourLog.shiftId} in ${shiftIds}`)
-			.orderBy(asc(volunteerHourLog.id))
-			.limit(1);
-		if (log) {
-			await db
-				.update(volunteerHourLog)
-				.set({ status: 'approved' })
-				.where(eq(volunteerHourLog.id, log.id));
-		}
+	if (facilityRole) {
+		const backlog = [
+			{
+				id: randomUUID(),
+				volunteerRoleId: facilityRole.id,
+				projectId: ids.facility,
+				capacity: 2,
+				notes: 'Mask and prime the live room walls.'
+			},
+			{
+				id: randomUUID(),
+				volunteerRoleId: facilityRole.id,
+				projectId: ids.facility,
+				capacity: 1,
+				notes: 'Pull the old cable runs before the electrician comes back.'
+			}
+		];
+		await batchInsert(workOrder, backlog, 10);
+
+		await db.insert(volunteerHourLog).values({
+			userId: staffId,
+			volunteerRoleId: facilityRole.id,
+			shiftId: backlog[0].id,
+			workedOn: new Date(now.getTime() - 14 * day),
+			minutes: 240,
+			description: 'Masking and priming, live room refresh.',
+			// Approved, because `getProjectBurn` counts approved hours only — a
+			// pending log is a claim, not a contribution.
+			status: 'approved' as const
+		});
 	}
 
 	// One placed order and one acquisition, for the parts and materials lines.
@@ -199,7 +223,7 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 	const [{ attached } = { attached: 0 }] = await db
 		.select({ attached: sql<number>`count(*)` })
 		.from(workOrder)
-		.where(and(sql`${workOrder.projectId} is not null`));
+		.where(sql`${workOrder.projectId} is not null`);
 
 	return {
 		projects: rows.length,
