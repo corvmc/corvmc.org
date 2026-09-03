@@ -25,15 +25,13 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '$lib/utils/format';
+	import { helpAudiences, helpAudienceLabels } from '$lib/config';
 
 	const data = $derived(await getStaffHelpPage());
 	const articles = $derived(data.articles);
 	const categories = $derived(data.categories);
 
 	let categoryMap = $derived(Object.fromEntries(categories.map((c) => [c.id, c.name])));
-
-	// Mirrors ROLE_LEVEL in help-service — the tiers an article/category can require.
-	const HELP_ROLES = ['member', 'sustaining', 'staff', 'admin'] as const;
 
 	let catNameValue = $state('');
 
@@ -146,14 +144,14 @@
 												placeholder="tabler-book"
 											/>
 										</FormField>
-										<FormField name="minRole" label="Minimum role">
+										<FormField name="minRole" label="Audience">
 											<Select
 												size="sm"
 												class="w-full"
 												{...editCat.fields.minRole.as('select', cat.minRole)}
 											>
-												{#each HELP_ROLES as role (role)}
-													<option value={role}>{role}</option>
+												{#each helpAudiences as audience (audience)}
+													<option value={audience}>{helpAudienceLabels[audience]}</option>
 												{/each}
 											</Select>
 										</FormField>
@@ -209,10 +207,10 @@
 					<FormField name="icon" label="Icon">
 						<input name="icon" type="text" class="input w-32 input-sm" placeholder="tabler-book" />
 					</FormField>
-					<FormField name="minRole" label="Role">
+					<FormField name="minRole" label="Audience">
 						<Select size="sm" class="w-32" name="minRole">
-							{#each HELP_ROLES as role (role)}
-								<option value={role}>{role}</option>
+							{#each helpAudiences as audience (audience)}
+								<option value={audience}>{helpAudienceLabels[audience]}</option>
 							{/each}
 						</Select>
 					</FormField>
