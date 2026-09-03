@@ -25,7 +25,8 @@ import {
 	formatPaymentBreakdown,
 	reservationPaymentBreakdown,
 	toLocalDate,
-	toLocalTime
+	toLocalTime,
+	formatBytes
 } from './format';
 
 /**
@@ -210,5 +211,25 @@ describe('reservationPaymentBreakdown', () => {
 			cashCents: 1500,
 			credits: 0
 		});
+	});
+});
+
+describe('formatBytes', () => {
+	it('keeps small files in bytes, which is what a chart or an agenda is', () => {
+		expect(formatBytes(0)).toBe('0 B');
+		expect(formatBytes(170)).toBe('170 B');
+		expect(formatBytes(1023)).toBe('1023 B');
+	});
+
+	it('rounds kilobytes, where a decimal buys nothing', () => {
+		expect(formatBytes(1024)).toBe('1 KB');
+		expect(formatBytes(1536)).toBe('2 KB');
+	});
+
+	it('keeps one decimal below 10MB and drops it above, so a column lines up', () => {
+		expect(formatBytes(1024 * 1024)).toBe('1.0 MB');
+		expect(formatBytes(9.5 * 1024 * 1024)).toBe('9.5 MB');
+		expect(formatBytes(25 * 1024 * 1024)).toBe('25 MB');
+		expect(formatBytes(250 * 1024 * 1024)).toBe('250 MB');
 	});
 });
