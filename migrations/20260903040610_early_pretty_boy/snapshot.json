@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "6a506062-7f9f-4109-9eff-72a73c31729a",
+  "id": "802e28e6-a411-4e5c-aec0-b9d2b144504a",
   "prevIds": [
-    "d74c1881-017e-457b-b184-876c452fe15c"
+    "6a506062-7f9f-4109-9eff-72a73c31729a"
   ],
   "ddl": [
     {
@@ -7372,6 +7372,26 @@
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "is_specialized_skill",
+      "entityType": "columns",
+      "table": "volunteer_role"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "market_rate_cents",
+      "entityType": "columns",
+      "table": "volunteer_role"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
       "default": "(unixepoch())",
       "generated": null,
       "name": "created_at",
@@ -8485,6 +8505,36 @@
       "default": null,
       "generated": null,
       "name": "cost_cents",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "is_donated",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "fair_value_cents",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "fair_value_basis",
       "entityType": "columns",
       "table": "contractor_job"
     },
