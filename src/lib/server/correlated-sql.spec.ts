@@ -33,7 +33,7 @@ vi.mock('$lib/server/finance/product-config-service', () => ({
 }));
 
 const { isSustainingMemberSql } = await import('./finance/subscription-service');
-const { primaryRoleFor } = await import('./authorization');
+const { topPositionFor } = await import('./authorization');
 const { isFirstReservationSql } = await import('./reservation/reservation-service');
 const { reservation } = await import('./db/schema/reservation');
 
@@ -54,10 +54,10 @@ describe('isSustainingMemberSql', () => {
 	});
 });
 
-describe('primaryRoleFor', () => {
+describe('topPositionFor', () => {
 	it('correlates to the OUTER user row in a single-table select', () => {
 		const { sql: rendered } = db
-			.select({ id: user.id, role: primaryRoleFor(user.id) })
+			.select({ id: user.id, role: topPositionFor(user.id) })
 			.from(user)
 			.toSQL();
 
@@ -65,6 +65,31 @@ describe('primaryRoleFor', () => {
 		// subquery and the predicate could never match a user id.
 		expect(rendered).toContain('mhr.user_id = "user"."id"');
 		expect(rendered).not.toMatch(/mhr\.user_id = "id"/);
+	});
+
+	it('restricts to real positions, so a legacy role row cannot be returned', () => {
+		const { sql: rendered } = db
+			.select({ id: user.id, role: topPositionFor(user.id) })
+			.from(user)
+			.toSQL();
+
+		// Without the `in (…)` filter a member holding only the legacy 'member'
+		// row comes back with that name, and memberSubtype would badge them.
+		expect(rendered).toContain("r.name in ('admin', 'staff'");
+		expect(rendered).not.toContain("'member'");
+		expect(rendered).not.toContain("'sustaining'");
+	});
+
+	it('generates its display ladder from positionOrder', async () => {
+		const { positionOrder } = await import('$lib/config');
+		const { sql: rendered } = db
+			.select({ id: user.id, role: topPositionFor(user.id) })
+			.from(user)
+			.toSQL();
+
+		// Adding a position to the matrix must not silently leave the badge
+		// behind — every one of them has to appear in the CASE ladder.
+		positionOrder.forEach((p, i) => expect(rendered).toContain(`when '${p}' then ${i}`));
 	});
 });
 

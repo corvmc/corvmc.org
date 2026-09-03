@@ -75,7 +75,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({ primaryRoleFor: vi.fn(() => null) }));
+vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => null) }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';

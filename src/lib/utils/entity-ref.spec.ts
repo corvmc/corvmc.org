@@ -30,3 +30,31 @@ describe('memberSubtype', () => {
 		expect(memberSubtype('sustaining member', true)).toBe('sustaining');
 	});
 });
+
+describe('memberSubtype over positions', () => {
+	it('badges a named position as staff', () => {
+		// The badge means "not an ordinary member". Positions are unranked, so
+		// there is no highest one to render and inventing a glyph per position
+		// would put a ranking in the UI the auth model does not have.
+		expect(memberSubtype('treasurer', false)).toBe('staff');
+		expect(memberSubtype('volunteer_coordinator', false)).toBe('staff');
+		expect(memberSubtype('site_moderator', true)).toBe('staff');
+	});
+
+	it('still singles out admin', () => {
+		expect(memberSubtype('admin', false)).toBe('admin');
+		expect(memberSubtype('staff', false)).toBe('staff');
+	});
+
+	it('ignores a legacy role name that slipped past the SQL filter', () => {
+		expect(memberSubtype('member', false)).toBe(null);
+		expect(memberSubtype('sustaining', true)).toBe('sustaining');
+		expect(memberSubtype('volunteer', false)).toBe(null);
+	});
+
+	it('falls back to the subscription, then to null', () => {
+		expect(memberSubtype(null, true)).toBe('sustaining');
+		expect(memberSubtype(null, false)).toBe(null);
+		expect(memberSubtype(undefined, undefined)).toBe(null);
+	});
+});
