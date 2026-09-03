@@ -35,7 +35,26 @@ export const ticket = sqliteTable(
 		// summing it across a `purchaseId` counts the gift exactly once.
 		contributionCents: integer('contribution_cents').notNull().default(0),
 		// An eligible sustaining member chose to pay full price for this purchase.
+		// No longer written: the member ticket discount is gone, and with a sliding
+		// scale there is no line-item discount left to decline. Kept because it is
+		// still true of the rows that have it.
 		discountWaived: integer('discount_waived', { mode: 'boolean' }).notNull().default(false),
+		// Where the buyer asked their money to go, recorded — not routed. Every
+		// dollar still lands in CMC's single Stripe account; these are what staff
+		// settle from. A touring act is paid the way a contractor is (see
+		// `contractor.ts`), deliberately: no act should need a Stripe Connect
+		// account to get paid for playing a show.
+		//
+		// Order-level, like `contributionCents` above and for the same reason —
+		// stamped on the purchase's first ticket, so summing across a `purchaseId`
+		// counts the allocation exactly once.
+		actsCents: integer('acts_cents').notNull().default(0),
+		collectiveCents: integer('collective_cents').notNull().default(0),
+		// The surcharge, when the buyer covered card processing. Recorded so the
+		// figures reconcile without a Stripe round trip:
+		//   unitPriceCents × qty + contributionCents + feeCoveredCents
+		//     = actsCents + collectiveCents + Stripe's fee
+		feeCoveredCents: integer('fee_covered_cents').notNull().default(0),
 		checkedInAt: integer('checked_in_at', { mode: 'timestamp' }),
 		checkedInByUserId: text('checked_in_by_user_id').references(() => user.id, {
 			onDelete: 'set null'

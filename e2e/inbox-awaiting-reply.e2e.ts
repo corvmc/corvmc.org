@@ -4,7 +4,8 @@ import {
 	SEED_AWAITING_THREAD_ID,
 	SEED_AWAITING_CONTACT,
 	SEED_NEEDS_REPLY_THREAD_ID,
-	SEED_NEEDS_REPLY_CONTACT
+	SEED_NEEDS_REPLY_CONTACT,
+	SEED_SNOOZED_CONTACT
 } from './fixtures/seed-inbox-awaiting';
 
 /**
@@ -13,8 +14,9 @@ import {
  * Two rules carry the whole feature and both are asserted here —
  *
  *   - Open holds only what needs a human. A thread we have already answered is
- *     somebody else's move and belongs under Awaiting reply, which is a
- *     separate view rather than a fourth status.
+ *     somebody else's move and belongs under Snoozed, parked beside the threads
+ *     waiting on a date — one view, because both come back on their own, and
+ *     neither is a fourth status.
  *   - the nav badge is exactly the Open view. The badge is the one number staff
  *     work from, and a tab beside it reading a different total is the bug this
  *     split fixes.
@@ -37,7 +39,7 @@ async function navBadgeCount(page: Page): Promise<number> {
 }
 
 /**
- * One of the five view tabs.
+ * One of the four view tabs.
  *
  * Matched on a prefix because the accessible name carries the count badge —
  * "Open 3", not "Open" — and the count is exactly what these tests are trying
@@ -65,20 +67,37 @@ test.describe('inbox awaiting reply', () => {
 		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toContainText('Unanswered');
 	});
 
-	test('the awaiting view holds the other half, and survives a round trip', async ({ page }) => {
+	test('Snoozed holds the parked half, and survives a round trip', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/inbox');
 
-		await viewTab(page, 'Awaiting reply').click();
+		await viewTab(page, 'Snoozed').click();
 		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
+		await expect(row(page, SEED_SNOOZED_CONTACT)).toBeVisible();
 		await expect(row(page, SEED_NEEDS_REPLY_CONTACT)).toHaveCount(0);
 
+		// One view, two reasons to be in it — and the merge's whole premise is
+		// that a row still says which of the two it is.
+		await expect(row(page, SEED_AWAITING_CONTACT)).toContainText('Awaiting reply');
+		await expect(row(page, SEED_SNOOZED_CONTACT)).toContainText('Snoozed');
+
 		// Mirrored into the URL, so opening a thread and coming back holds it.
-		await expect(page).toHaveURL(/view=awaiting/);
+		await expect(page).toHaveURL(/view=snoozed/);
 
 		// And a reload lands on the same view rather than back on Open.
 		await page.reload();
 		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
+	});
+
+	// The tab Snoozed absorbed. Old bookmarks and saved-view rows still say
+	// `awaiting` and nothing rewrites them, so falling back to Open would land
+	// somebody in a different queue from the one they saved.
+	test('an old ?view=awaiting URL lands on Snoozed', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/inbox?view=awaiting');
+
+		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
+		await expect(page).toHaveURL(/view=snoozed/);
 	});
 
 	// The claim the split exists to make: the number on the nav item and the

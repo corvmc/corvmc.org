@@ -2,11 +2,13 @@ import { test, expect } from '@playwright/test';
 import {
 	SEED_TP_EVENT_ID,
 	SEED_TP_EVENT_TITLE,
+	SEED_TP_FLOOR_EVENT_ID,
+	SEED_TP_FLOOR_CENTS,
 	SEED_TP_PRICE_CENTS
 } from './fixtures/seed-ticket-purchase';
 
 /**
- * Ticket checkout pricing, as a guest sees it.
+ * Ticket checkout on the sliding scale, as a guest sees it.
  *
  * What the unit tests already prove: what the server charges, what the ticket
  * row records, how the receipt splits the charge. What they cannot prove is that
@@ -24,107 +26,151 @@ import {
  */
 
 const PRICE = SEED_TP_PRICE_CENTS / 100;
+const FLOOR = SEED_TP_FLOOR_CENTS / 100;
 const ticketsUrl = `/events/${SEED_TP_EVENT_ID}/tickets`;
+const flooredUrl = `/events/${SEED_TP_FLOOR_EVENT_ID}/tickets`;
 
 /**
  * The page's own totals block. `goto` resolves before an awaited remote query
  * commits, so every assertion waits on real content rather than an empty
  * `<main>` — a negative assertion would otherwise pass against nothing.
  */
-async function openPurchasePage(page: import('@playwright/test').Page) {
-	await page.goto(ticketsUrl);
+async function openPurchasePage(page: import('@playwright/test').Page, url = ticketsUrl) {
+	await page.goto(url);
 	await expect(page.getByRole('heading', { name: SEED_TP_EVENT_TITLE })).toBeVisible();
 	return page.getByText('Total', { exact: true }).locator('..');
 }
 
 /**
- * Click a contribution preset, and be sure the click actually landed.
+ * Type an amount into the scale, and be sure it actually landed.
  *
- * The heading this page waits on is server-rendered, so it is visible before
- * the page's JavaScript has loaded and Svelte has attached its handlers. A
- * click in that window hits a button that is not wired to anything yet and is
- * simply lost — the preset never applies, and the assertion that follows waits
- * out its timeout against a total that will never change. It bit the *first*
- * interactive test in this file and no other, because by the second one the
- * browser has the page's modules cached and hydration wins the race.
+ * The heading this page waits on is server-rendered, so it is visible before the
+ * page's JavaScript has loaded and Svelte has attached its handlers. A fill in
+ * that window sets a value nothing is listening to — the preview never updates,
+ * and the assertion that follows waits out its timeout against a total that will
+ * never change. It bit the *first* interactive test in this file and no other,
+ * because by the second one the browser has the page's modules cached and
+ * hydration wins the race.
  *
- * Retrying is only safe because this re-reads the button before each attempt:
- * the handler toggles, so a blind second click would clear the preset it just
- * set. `btn-primary` is how `Button` renders `variant="primary"`, which the
- * component gives the preset whose value is currently applied — the same state
- * the assertions below are about to read, so it cannot pass while the click is
- * still lost.
+ * **The retry has to clear the box first.** `fill()` on an input that already
+ * holds the target text is a no-op that fires no `input` event — so once a lost
+ * fill has written the value, every retry does nothing and the loop can never
+ * recover. Clearing guarantees a real change on each attempt.
  */
-async function pickContribution(page: import('@playwright/test').Page, label: string) {
-	const button = page.getByRole('button', { name: label });
+async function payPerTicket(page: import('@playwright/test').Page, dollars: string) {
+	const amount = page.locator('#ticketAmount');
 	await expect(async () => {
-		const applied = ((await button.getAttribute('class')) ?? '').includes('btn-primary');
-		if (!applied) await button.click();
-		expect((await button.getAttribute('class')) ?? '').toContain('btn-primary');
+		await amount.fill('');
+		await amount.fill(dollars);
+		await expect(page.locator('input[name$="unitPriceCents"]')).toHaveValue(
+			String(Math.round(Number(dollars) * 100))
+		);
 	}).toPass({ timeout: 15000 });
 }
 
-test('a guest sees the ticket price as the total before adding anything', async ({ page }) => {
+test('the scale opens at the suggested price', async ({ page }) => {
 	const totals = await openPurchasePage(page);
 
 	await expect(totals).toContainText(`$${PRICE.toFixed(2)}`);
+	await expect(page.locator('#ticketAmount')).toHaveValue(PRICE.toFixed(2));
 });
 
-test('a contribution quick-pick lands in the total', async ({ page }) => {
-	const totals = await openPurchasePage(page);
+test('the split bar opens with the collective at its suggested share', async ({ page }) => {
+	// $20, less 88¢ of card processing, leaves $19.12 to divide; 30% of that is
+	// $5.74 and the acts take the rest. The point of the assertion is that the
+	// share is of what is *divisible* — 30% of the gross would read $6.00.
+	await openPurchasePage(page);
 
-	await pickContribution(page, '$10.00');
-
-	await expect(page.getByText('Contribution', { exact: true })).toBeVisible();
-	await expect(totals).toContainText(`$${(PRICE + 10).toFixed(2)}`);
+	// Read off the slider rather than off the page: SplitBar writes each amount
+	// twice — once in the bar, once in the labelled list beneath it — so a bare
+	// getByText is a strict mode violation rather than a missing element.
+	// `aria-valuetext` carries both figures in one place, and is the thing a
+	// screen reader is told, which makes it the better contract anyway.
+	const bar = page.getByRole('slider');
+	await expect(bar).toHaveAttribute('aria-valuenow', '574');
+	await expect(bar).toHaveAttribute('aria-valuetext', /\$5\.74.*\$13\.38/);
+	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('574');
 });
 
-test('a typed contribution lands in the total', async ({ page }) => {
-	const totals = await openPurchasePage(page);
+test('moving the bar moves what the acts get, and what is posted', async ({ page }) => {
+	// Keyboard rather than a drag: the divider is a real slider, and the drag is
+	// the affordance rather than the mechanism.
+	await openPurchasePage(page);
 
-	// FormField wraps its input in a fieldset+legend rather than a `for`-linked
-	// label, so the field is reached through its group, not getByLabel.
-	await page
-		.getByRole('group', { name: /Add a contribution/i })
-		.getByRole('textbox')
-		.fill('7.50');
+	const bar = page.getByRole('slider');
+	await bar.focus();
+	await bar.press('ArrowLeft');
+	await bar.press('ArrowLeft');
 
-	await expect(totals).toContainText(`$${(PRICE + 7.5).toFixed(2)}`);
+	await expect(bar).toHaveAttribute('aria-valuenow', '524');
+	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('524');
 });
 
-test('the fee-coverage offer is priced on the gift as well as the tickets', async ({ page }) => {
-	// Stripe takes its cut of everything it collects, so a preview that fees only
-	// the ticket subtotal would quote a total the card statement disagrees with.
-	// $20 grosses up to a $0.91 fee; $20 + a $25 gift to $1.66.
+test('the fee-coverage offer is priced on everything the card is charged', async ({ page }) => {
+	// Stripe takes its cut of the whole charge, so a preview that fees only the
+	// suggested price would quote a total the card statement disagrees with.
+	// $20 grosses up to a $0.91 fee; $45 to $1.66.
 	await openPurchasePage(page);
 
 	// Scoped to the checkbox by `name` rather than matched on its sentence: the
 	// grossed-up amount is the contract, the wording around it is not.
 	// `name$=`: a remote form prefixes a boolean field's name (`b:coverFees`).
 	const coverFees = page.locator('input[name$="coverFees"]').locator('..');
-
 	await expect(coverFees).toContainText('$0.91');
 
-	await pickContribution(page, '$25.00');
+	await payPerTicket(page, '45');
 
 	await expect(coverFees).toContainText('$1.66');
 });
 
-test('a guest is never offered the member-discount waiver', async ({ page }) => {
-	// The checkbox is meaningless without a discount to decline, and offering it
-	// to a signed-out buyer reads as a way to pay less.
+test('paying above the suggestion shows up as a contribution', async ({ page }) => {
+	const totals = await openPurchasePage(page);
+
+	await payPerTicket(page, '30');
+
+	await expect(page.getByText('Contribution', { exact: true })).toBeVisible();
+	await expect(totals).toContainText('$30.00');
+});
+
+test('a scale that runs to free offers a free ticket, not a $0 charge', async ({ page }) => {
+	await openPurchasePage(page);
+
+	await payPerTicket(page, '0');
+
+	// The split bar goes away with the money, and the button stops asking for a
+	// card.
+	await expect(page.getByRole('slider')).toHaveCount(0);
+	await expect(page.getByRole('button', { name: /Get ticket/i })).toBeEnabled();
+});
+
+test('the dead zone below the charge minimum is refused on the page', async ({ page }) => {
+	await openPurchasePage(page);
+
+	await payPerTicket(page, '0.50');
+
+	// `.first()`: the message sits inside nested elements, and getByText matches
+	// every ancestor whose text contains it.
+	await expect(page.getByText(/at least \$2\.00/).first()).toBeVisible();
+	await expect(page.getByRole('button', { name: /^Pay/ })).toBeDisabled();
+});
+
+test('a guest is never offered a member discount, because there is not one', async ({ page }) => {
 	await openPurchasePage(page);
 
 	await expect(page.locator('input[name$="waiveDiscount"]')).toHaveCount(0);
+	await expect(page.getByText(/50% off/i)).toHaveCount(0);
 });
 
-test('the door policy is stated on the page, since checkout cannot sell a free ticket', async ({
-	page
-}) => {
-	await openPurchasePage(page);
+test('a show with a floor says so, and refuses less', async ({ page }) => {
+	await page.goto(flooredUrl);
+	await expect(page.getByRole('heading', { name: 'E2E Show With A Floor' })).toBeVisible();
 
-	// The policy paragraph is the only thing on the page linking to /contact.
-	await expect(page.locator('main a[href="/contact"]')).toBeVisible();
+	await expect(page.getByText(`$${FLOOR.toFixed(2)} minimum`).first()).toBeVisible();
+
+	await payPerTicket(page, '2');
+
+	await expect(page.getByText(/least you can pay/).first()).toBeVisible();
+	await expect(page.getByRole('button', { name: /^Pay/ })).toBeDisabled();
 });
 
 /**

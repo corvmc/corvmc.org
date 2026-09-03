@@ -45,12 +45,25 @@ async function expectFieldIssue(fn: () => Promise<unknown>, field: string, conta
 // before touching the database, and that updateUser cannot be used to escalate
 // privileges or to lock the panel by demoting yourself / the last admin.
 
-const requireStaff = vi.fn<() => Promise<unknown>>(async () => {
+const requireCapability = vi.fn<(cap: string) => Promise<unknown>>(async () => {
 	throw new Error('403: Staff access required');
 });
+/** Which capabilities the acting caller holds. Empty = holds none. */
+let held = new Set<string>();
+const can = vi.fn(async (cap: string) => held.has(cap));
 const getUserRoles = vi.fn(async () => ['member']);
+const POSITIONS = [
+	'admin',
+	'staff',
+	'technology_coordinator',
+	'volunteer_coordinator',
+	'site_moderator',
+	'treasurer'
+];
 vi.mock('$lib/server/authorization', () => ({
-	requireStaff: (...args: unknown[]) => requireStaff(...(args as [])),
+	requireCapability: (...args: unknown[]) => requireCapability(...(args as [string])),
+	can: (...args: unknown[]) => can(...(args as [string])),
+	isPosition: (n: string) => POSITIONS.includes(n),
 	requireUser: () => ({ id: 'acting-staff', name: 'Acting', email: 'acting@example.com' }),
 	getUserRoles: (...args: unknown[]) => getUserRoles(...(args as []))
 }));
@@ -240,7 +253,20 @@ const users = (await import('./users.remote')) as unknown as Record<
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	requireStaff.mockRejectedValue(new Error('403: Staff access required'));
+	requireCapability.mockRejectedValue(new Error('403: Staff access required'));
+	// The authorized-path tests below hold everything unless they say otherwise.
+	held = new Set([
+		'user.update',
+		'user.setRole',
+		'user.purge',
+		'user.deactivate',
+		'user.read',
+		'user.list',
+		'credit.adjust',
+		'credit.read',
+		'finance.read',
+		'reservation.read'
+	]);
 	getUserRoles.mockResolvedValue(['member']);
 	otherAdminCount = 1;
 	currentParams = { id: 'victim-user' };
@@ -261,7 +287,7 @@ const VALID_UPDATE = {
 
 const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'getUser', args: ['victim-user'] },
-	{ name: 'getAllRoles' },
+	{ name: 'getRoleCatalog' },
 	{ name: 'getUserPayments', args: ['victim-user'] },
 	{ name: 'getUserCredits', args: ['victim-user'] },
 	{ name: 'updateUser', args: [VALID_UPDATE] },
@@ -304,7 +330,7 @@ describe('users.remote staff guards', () => {
 
 	for (const { name, args, spy } of TARGETED_BY_ARGUMENT) {
 		it(`${name} reads the user named in its argument, not params.id`, async () => {
-			requireStaff.mockResolvedValue({ id: 'acting-staff' });
+			requireCapability.mockResolvedValue({ id: 'acting-staff' });
 			currentParams = { id: 'someone-else' };
 			await users[name](...args);
 			expect(spy()).toHaveBeenCalledWith('victim-user', ...[]);
@@ -314,7 +340,7 @@ describe('users.remote staff guards', () => {
 	it('getUserCreditHistory scopes the ledger to the requested member', async () => {
 		// The ledger is global; without the userId filter this card would show
 		// every member's transactions on one member's page.
-		requireStaff.mockResolvedValue({ id: 'acting-staff' });
+		requireCapability.mockResolvedValue({ id: 'acting-staff' });
 		currentParams = { id: 'someone-else' };
 		await users.getUserCreditHistory({ userId: 'victim-user', page: 2 });
 		expect(listTransactions).toHaveBeenCalledWith(
@@ -353,7 +379,7 @@ describe('users.remote staff guards', () => {
 
 	it('updateUser ignores params.id and edits the user named in the payload', async () => {
 		// A stale/forged pathname header must not redirect the write.
-		requireStaff.mockResolvedValue({ id: 'acting-staff' });
+		requireCapability.mockResolvedValue({ id: 'acting-staff' });
 		currentParams = { id: 'some-other-user' };
 		await users.updateUser({ ...VALID_UPDATE, id: 'victim-user', roles: ['3'] });
 		expect(dbBatch).toHaveBeenCalled();
@@ -375,7 +401,7 @@ async function expectHttpError(promise: Promise<unknown>, status: number, contai
 
 describe('users.remote lockout guards', () => {
 	beforeEach(() => {
-		requireStaff.mockResolvedValue({ id: 'acting-staff' });
+		requireCapability.mockResolvedValue({ id: 'acting-staff' });
 	});
 
 	it('refuses to let a staff member drop their own staff access', async () => {
@@ -416,7 +442,7 @@ describe('users.remote lockout guards', () => {
 
 describe('users.remote purge error mapping', () => {
 	beforeEach(() => {
-		requireStaff.mockResolvedValue({ id: 'acting-staff' });
+		requireCapability.mockResolvedValue({ id: 'acting-staff' });
 	});
 
 	/**
@@ -449,7 +475,7 @@ describe('adjustCredits surfaces staff mistakes on the amount field', () => {
 	};
 
 	beforeEach(() => {
-		requireStaff.mockResolvedValue({ id: 'acting-staff' });
+		requireCapability.mockResolvedValue({ id: 'acting-staff' });
 		getBalance.mockResolvedValue(200);
 		deductCredits.mockResolvedValue(undefined);
 	});
@@ -519,5 +545,78 @@ describe('adjustCredits surfaces staff mistakes on the amount field', () => {
 			'amount',
 			'balance is 10'
 		);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// updateUser: the profile / role-set split.
+//
+// One form edits profile fields AND the role set. The broad guard stays at the
+// top so a caller who may edit a profile can edit ANY profile — fixing a phone
+// number on an admin's account is not a privileged act. Only a CHANGE to the
+// role set is, so that is checked separately, and only when one was submitted.
+// ---------------------------------------------------------------------------
+describe('updateUser role-set split', () => {
+	const PROFILE_ONLY = {
+		id: 'victim-user',
+		name: 'Renamed',
+		pronouns: '',
+		phone: '555'
+	};
+
+	beforeEach(() => {
+		requireCapability.mockResolvedValue({ id: 'acting-staff' });
+		getUserRoles.mockResolvedValue(['member']);
+	});
+
+	it('lets a caller without user.setRole edit a profile, writing no role rows', async () => {
+		held = new Set(['user.update']);
+		await users.updateUser(PROFILE_ONLY);
+
+		expect(requireCapability).toHaveBeenCalledWith('user.update');
+		// The whole point: a profile edit must not churn model_has_roles. It used
+		// to delete and re-insert every row on every save.
+		expect(dbDelete).not.toHaveBeenCalled();
+		expect(dbInsert).not.toHaveBeenCalled();
+		expect(dbUpdate).toHaveBeenCalled();
+	});
+
+	it('refuses a changed role set from a caller without user.setRole', async () => {
+		held = new Set(['user.update']);
+		// target currently holds `member` (id 3); submitting `admin` (id 1) is a change.
+		// `error()` throws an HttpError, whose `.message` is undefined — the body
+		// is where the text lives, so match the shape rather than the message.
+		await expect(users.updateUser({ ...PROFILE_ONLY, roles: ['1'] })).rejects.toMatchObject({
+			status: 403,
+			body: { message: expect.stringContaining('cannot change roles') }
+		});
+		expect(dbDelete).not.toHaveBeenCalled();
+		expect(dbInsert).not.toHaveBeenCalled();
+	});
+
+	it('allows an UNCHANGED role set from a caller without user.setRole', async () => {
+		// Resubmitting what is already there is not a change, so it must not 403 —
+		// otherwise a profile edit would fail purely because the form round-tripped
+		// the roles it was rendered with.
+		held = new Set(['user.update']);
+		getUserRoles.mockResolvedValue(['member']);
+		await users.updateUser({ ...PROFILE_ONLY, roles: ['3'] });
+		expect(dbUpdate).toHaveBeenCalled();
+	});
+
+	it('an absent roles field is not a request to remove every role', async () => {
+		// `.optional()`, not `.default([])`. Once the picker is hidden the field
+		// simply is not submitted, and reading that as `[]` would silently strip
+		// the target's access on an ordinary profile save.
+		held = new Set(['user.update', 'user.setRole']);
+		await users.updateUser(PROFILE_ONLY);
+		expect(dbDelete).not.toHaveBeenCalled();
+	});
+
+	it('still writes the roles when a holder of user.setRole changes them', async () => {
+		held = new Set(['user.update', 'user.setRole']);
+		await users.updateUser({ ...PROFILE_ONLY, roles: ['2'] });
+		expect(dbDelete).toHaveBeenCalled();
+		expect(dbInsert).toHaveBeenCalled();
 	});
 });

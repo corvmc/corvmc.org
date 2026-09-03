@@ -64,10 +64,11 @@ export const inboxThread = sqliteTable(
 		 * When staff last sent a reply that nobody has answered yet. Null means the
 		 * ball is in our court.
 		 *
-		 * Deliberately not a fourth `status`: an awaiting thread is still open work
-		 * and stays in the Open queue beside everything else. It only drops out of
-		 * the staff nav badge, which counts what needs a human now. Cleared by any
-		 * inbound message and by any explicit status change.
+		 * Deliberately not a fourth `status`: the row stays `open`, and the marker
+		 * is what moves it out of the Open view and into Snoozed, beside the threads
+		 * parked on a date — both are out of the queue and come back on their own.
+		 * It also drops out of the staff nav badge, which counts what needs a human
+		 * now. Cleared by any inbound message and by any explicit status change.
 		 */
 		awaitingReplySince: integer('awaiting_reply_since', { mode: 'timestamp' }),
 		/**

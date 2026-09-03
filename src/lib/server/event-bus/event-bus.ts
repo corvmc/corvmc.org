@@ -100,6 +100,10 @@ export interface TicketPurchasedEvent {
 	feesCents: number;
 	/** What the card was actually charged. */
 	totalCents: number;
+	/** The buyer's allocation to the bill. Recorded, not routed. */
+	actsCents: number;
+	/** The buyer's allocation to the collective. */
+	collectiveCents: number;
 }
 
 export interface EventCancelledEvent {

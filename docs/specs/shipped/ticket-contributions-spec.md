@@ -35,6 +35,14 @@ site. NOTAFLOF remains a door policy, said plainly on the purchase page, with
 staff comps (`compTickets`) as the mechanism. A member-facing "request a free
 ticket" flow is deferred.
 
+> **Superseded (2026-09-03)** by `ticket-sliding-scale-spec.md`. It does now:
+> `ticketPrice` became a suggestion and a per-event floor defaulting to $0 runs
+> the scale to free. Nobody has to ask, so there is no request flow to build.
+> The member discount described below is gone with it — half off a
+> pay-what-you-can ticket is a discount off nothing — and the contribution is
+> now derived as whatever the buyer paid above the suggestion, which keeps its
+> Stripe line item and its receipt row.
+
 ---
 
 ## Domain model
@@ -132,6 +140,9 @@ the existing staff-guarded event production query.
 - **Contributions on free events.** `claimFreeTicket` never touches Stripe;
   accepting a gift there means routing a free claim through checkout.
 - **A "request a free ticket" flow** — the real online NOTAFLOF path.
+  _(Shipped as the sliding scale itself, with no request in it.)_
 - **A saved account preference** for waiving discounts. Per-purchase only.
+  _(Moot: there is no discount to waive.)_
 - **Directing a gift to the band vs. the venue.** The amounts are recorded, so
   the already-spec'd 70/30 settlement can split them later.
+  _(Shipped as the split bar: the buyer directs it themselves, per purchase.)_

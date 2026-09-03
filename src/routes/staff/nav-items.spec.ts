@@ -5,11 +5,15 @@ import {
 	activeNavKey,
 	allStaffNavItems,
 	childHrefsFor,
+	filterNavItems,
+	filterNavSections,
 	sectionHasKey,
 	staffNavSections,
 	staffNavTop,
+	type StaffNavItem,
 	type StaffNavKey
 } from './nav-items';
+import { capabilities, positions, positionOrder, grantsCapability } from '$lib/config';
 
 /**
  * The staff sidebar's two long-standing defects were both invisible in the
@@ -178,5 +182,110 @@ describe('route coverage', () => {
 	it('keeps the exemption list honest', () => {
 		const routes = new Set(staffPageRoutes());
 		for (const route of unlinked) expect(routes.has(route)).toBe(true);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Capability filtering.
+//
+// Hiding a row is not a guard — `requireCapability` on the remote function is.
+// This only stops someone being offered a link that would 403, which is the
+// difference between a panel that is narrower for a treasurer and one that is
+// visibly broken for them.
+// ---------------------------------------------------------------------------
+
+const everyCapability = Object.entries(capabilities).flatMap(([r, actions]) =>
+	(actions as readonly string[]).map((a) => `${r}.${a}`)
+);
+
+describe('nav capability annotations', () => {
+	it('names a real capability on every gated row', () => {
+		// A typo here is not a type error at the call site — it is a nav row that
+		// is hidden from everyone, forever, silently.
+		for (const item of allStaffNavItems()) {
+			if (!item.capability) continue;
+			expect(everyCapability, `${item.key} names ${item.capability}`).toContain(item.capability);
+		}
+	});
+
+	it('gates every row except the dashboard', () => {
+		const ungated = allStaffNavItems()
+			.filter((i) => !i.capability)
+			.map((i) => i.key);
+		expect(ungated).toEqual(['dashboard']);
+	});
+
+	it('leaves no row unreachable by every position at once', () => {
+		// A row nobody can see is a page nobody can find. Checked against the union
+		// of all positions rather than admin alone, so it still means something
+		// after staff is narrowed.
+		for (const item of allStaffNavItems()) {
+			if (!item.capability) continue;
+			const reachable = positionOrder.some((p) => grantsCapability(positions[p], item.capability!));
+			expect(reachable, `${item.key} is unreachable`).toBe(true);
+		}
+	});
+});
+
+describe('filterNavItems', () => {
+	const tree: StaffNavItem[] = [
+		{ key: 'dashboard' as StaffNavKey, label: 'Dashboard', href: '/staff' },
+		{
+			key: 'equipment' as StaffNavKey,
+			label: 'Inventory',
+			href: '/staff/inventory',
+			capability: 'inventory.read',
+			children: [
+				{
+					key: 'inventory-orders' as StaffNavKey,
+					label: 'Orders',
+					href: '/staff/inventory/orders',
+					capability: 'inventory.manageOrders'
+				}
+			]
+		}
+	];
+
+	it('keeps an ungated row', () => {
+		expect(filterNavItems(tree, []).map((i) => i.key)).toEqual(['dashboard']);
+	});
+
+	it('drops a parent whose children all fail, even when the parent passes', () => {
+		// The case that matters. Keeping the parent would open a Collapsible onto
+		// nothing, which reads as broken rather than as empty.
+		const held = ['inventory.read'];
+		expect(filterNavItems(tree, held).map((i) => i.key)).toEqual(['dashboard']);
+	});
+
+	it('keeps a parent with at least one usable child', () => {
+		const held = ['inventory.read', 'inventory.manageOrders'];
+		const out = filterNavItems(tree, held);
+		expect(out.map((i) => i.key)).toEqual(['dashboard', 'equipment']);
+		expect(out[1].children?.map((c) => c.key)).toEqual(['inventory-orders']);
+	});
+
+	it('does not mutate the source tree', () => {
+		filterNavItems(tree, ['inventory.read', 'inventory.manageOrders']);
+		expect(tree[1].children).toHaveLength(1);
+	});
+});
+
+describe('filterNavSections', () => {
+	it('drops a section once its last row goes', () => {
+		expect(filterNavSections(staffNavSections, [])).toEqual([]);
+	});
+
+	it('gives admin the whole nav back', () => {
+		const held = everyCapability;
+		const kept = filterNavSections(staffNavSections, held);
+		expect(kept.map((s) => s.key)).toEqual(staffNavSections.map((s) => s.key));
+	});
+
+	it('gives a treasurer a narrower panel, with Money in it', () => {
+		const held = everyCapability.filter((c) => grantsCapability(positions.treasurer, c as never));
+		const kept = filterNavSections(staffNavSections, held);
+		const keys = kept.map((s) => s.key);
+		expect(keys).toContain('money');
+		expect(keys.length).toBeLessThan(staffNavSections.length);
 	});
 });

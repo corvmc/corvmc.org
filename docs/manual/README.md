@@ -143,7 +143,7 @@ auto-creates any missing).
 - [x] `[H]` Build your page: add, reorder & configure blocks
 - [x] `[H]` Choose a theme & add custom CSS
 - [x] `[H]` Upload media (gallery, hero, stage plot, tech rider)
-- [x] `[H]` Fill in your Electronic Press Kit (`/band/[slug]/page-editor/epk`)
+- [x] `[H]` Fill in your press kit (`/band/[slug]/press-kit` — free for every act)
 
 ## D. Staff panel → `src/content/help/staff-guide/` (minRole=staff)
 

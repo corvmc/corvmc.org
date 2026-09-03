@@ -9,9 +9,14 @@ vi.mock('$lib/server/user/member-number-service', () => ({
 // forwards `...a: unknown[]`, and spreading that into a typed zero-argument
 // function is a type error ("a spread argument must either have a tuple type or
 // be passed to a rest parameter"). This is the shape hooks.server.spec.ts uses.
-const isStaff = vi.fn();
+// The route resolves the caller's positions now, not a boolean: entityHref
+// decides the staff arm per route, so "is staff" alone cannot say which staff
+// page (if any) this person can reach.
+const positionsFor = vi.fn<() => Promise<string[]>>(async () => []);
 vi.mock('$lib/server/authorization', () => ({
-	isStaff: (...a: unknown[]) => isStaff(...a)
+	positionsFor: (...a: unknown[]) => positionsFor(...(a as [])),
+	capabilitySet: (held: string[]) =>
+		held.length > 0 ? ['user.read', 'user.list', 'band.read', 'event.read', 'reservation.read'] : []
 }));
 
 import { load } from './+page.server';
@@ -42,8 +47,8 @@ async function run(memberNumber: string, user: { id: string } | null = null) {
 
 beforeEach(() => {
 	getUserByMemberNumber.mockReset();
-	isStaff.mockReset();
-	isStaff.mockResolvedValue(false);
+	positionsFor.mockReset();
+	positionsFor.mockResolvedValue([]);
 });
 
 describe('/m/[memberNumber]', () => {
@@ -74,7 +79,7 @@ describe('/m/[memberNumber]', () => {
 
 	it('gives staff the operational record', async () => {
 		getUserByMemberNumber.mockResolvedValue({ id: 'u1', name: 'Jeff' });
-		isStaff.mockResolvedValue(true);
+		positionsFor.mockResolvedValue(['staff']);
 
 		const result = await run('142', { id: 'staff-1' });
 

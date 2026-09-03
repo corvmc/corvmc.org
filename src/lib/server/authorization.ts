@@ -44,7 +44,8 @@ const positionRoles: Record<Position, PositionStatements> = Object.fromEntries(
 	positionOrder.map((p) => [p, ac.newRole(positions[p] as never) as PositionStatements])
 ) as Record<Position, PositionStatements>;
 
-function isPosition(name: string): name is Position {
+/** Is this role name one of the real positions, or a legacy row that grants nothing? */
+export function isPosition(name: string): name is Position {
 	return (positionOrder as readonly string[]).includes(name);
 }
 
@@ -338,57 +339,13 @@ export async function isStaff(userId: string): Promise<boolean> {
 }
 
 /**
- * Require that the caller is either staff or the owner of the resource.
- * Throws 401/403 via SvelteKit error() if neither.
- * Returns the resolved role ('staff' | 'owner') for the caller.
- */
-export async function requireStaffOrOwner(
-	userId: string | undefined,
-	ownerId: string
-): Promise<'staff' | 'owner'> {
-	if (!userId) throw error(401, 'Not authenticated');
-	if (userId === ownerId) return 'owner';
-	const staff = await isStaff(userId);
-	if (staff) return 'staff';
-	throw error(403, 'Not authorized');
-}
-
-/**
- * Require that the caller is staff. For use in API route handlers
- * where locals.user is already available (not command/query context).
- */
-export async function requireStaffRole(userId: string | undefined): Promise<void> {
-	if (!userId) throw error(401, 'Not authenticated');
-	const staff = await isStaff(userId);
-	if (!staff) throw error(403, 'Staff access required');
-}
-
-/**
- * List all users with admin or staff roles.
- */
-export async function listStaffUsers(): Promise<
-	Array<{ id: string; name: string; email: string }>
-> {
-	const rows = await db
-		.select({ id: user.id, name: user.name, email: user.email })
-		.from(user)
-		.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
-		.innerJoin(role, eq(role.id, modelHasRole.roleId))
-		.where(inArray(role.name, ['admin', 'staff']));
-
-	const seen = new Set<string>();
-	return rows.filter((r) => {
-		if (seen.has(r.id)) return false;
-		seen.add(r.id);
-		return true;
-	});
-}
-
-/**
- * Find a staff or admin user by email address, or null.
+ * Find a user holding any position, by email address, or null.
  *
  * Used to tell a staff member's emailed reply apart from a contact's, so the
- * inbox can relay theirs instead of filing it as inbound. Matched
+ * inbox can relay theirs instead of filing it as inbound. Deliberately not a
+ * capability check — the question is "does this person work here", which is
+ * `isElevated` expressed in SQL, and a volunteer coordinator replying to a
+ * thread is still not the contact. Matched
  * case-insensitively: SQLite compares TEXT with `=` case-sensitively, and no
  * mail client normalises the envelope From, so a plain `eq` would silently
  * treat `Ada@corvmc.org` as a stranger.
@@ -404,7 +361,7 @@ export async function findStaffUserByEmail(
 		.from(user)
 		.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
 		.innerJoin(role, eq(role.id, modelHasRole.roleId))
-		.where(and(eq(sql`lower(${user.email})`, normalized), inArray(role.name, ['admin', 'staff'])))
+		.where(and(eq(sql`lower(${user.email})`, normalized), inArray(role.name, positionOrder)))
 		.limit(1);
 
 	return row ?? null;

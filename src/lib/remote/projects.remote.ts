@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { query, form } from '$app/server';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { projectStatuses, DEFAULT_TIMEZONE } from '$lib/config';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
@@ -111,7 +111,7 @@ const projectFilters = z
  * past kit 2.64 that shape stops the page rendering entirely.
  */
 export const getProjectsPage = query(projectFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('project.read');
 
 	const [projects, committees] = await Promise.all([listProjects(filters ?? {}), listCommittees()]);
 
@@ -130,7 +130,7 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 
 /** One project: its burn, everything attached to it, and the pickers to change either. */
 export const getProjectDetail = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('project.read');
 	try {
 		const [project, burn, attachments, committees, suggestions] = await Promise.all([
 			getProjectById(id),
@@ -151,7 +151,7 @@ export const getProjectDetail = query(z.string(), async (id) => {
 
 export const createProjectForm = form(z.object(projectFields), async (raw) => {
 	// `requireStaff` returns the caller, so the guard and the author are one call.
-	const user = await requireStaff();
+	const user = await requireCapability('project.manage');
 	try {
 		const row = await createProject({
 			...toServiceInput(raw as ProjectFields),
@@ -165,7 +165,7 @@ export const createProjectForm = form(z.object(projectFields), async (raw) => {
 });
 
 export const updateProjectForm = form(z.object({ id: z.uuid(), ...projectFields }), async (raw) => {
-	await requireStaff();
+	await requireCapability('project.manage');
 	const { id, ...data } = raw as { id: string } & ProjectFields;
 	try {
 		await updateProject(id, toServiceInput(data));
@@ -187,7 +187,7 @@ export const updateProjectForm = form(z.object({ id: z.uuid(), ...projectFields 
 export const setProjectStatusForm = form(
 	z.object({ id: z.uuid(), status: z.enum(projectStatuses) }),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('project.manage');
 		const { id, status } = raw as { id: string; status: (typeof projectStatuses)[number] };
 		try {
 			await setProjectStatus(id, status);
@@ -216,7 +216,7 @@ export const startProjectFromSuggestionForm = form(
 		budgetCents: optionalMoney
 	}),
 	async (raw) => {
-		const user = await requireStaff();
+		const user = await requireCapability('project.manage');
 		const { suggestionId, name, groupId, budgetCents } = raw as {
 			suggestionId: string;
 			name: string;
@@ -241,7 +241,7 @@ export const startProjectFromSuggestionForm = form(
 export const attachToProjectForm = form(
 	z.object({ projectId: z.uuid(), kind: attachableKinds, rowId: z.string().min(1) }),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('project.manage');
 		const { projectId, kind, rowId } = raw as {
 			projectId: string;
 			kind: z.infer<typeof attachableKinds>;
@@ -261,7 +261,7 @@ export const attachToProjectForm = form(
 export const detachFromProjectForm = form(
 	z.object({ projectId: z.uuid(), kind: attachableKinds, rowId: z.string().min(1) }),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('project.manage');
 		const { projectId, kind, rowId } = raw as {
 			projectId: string;
 			kind: z.infer<typeof attachableKinds>;

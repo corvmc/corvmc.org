@@ -38,7 +38,12 @@ const ownerMember = alias(groupMember, 'owner_member');
 import { event } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
-import { isStaff, requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
+import {
+	isStaff,
+	requireCapability,
+	requireCapabilityOrOwner,
+	requireUser
+} from '$lib/server/authorization';
 import {
 	bandRefColumns,
 	eventRefColumns,
@@ -264,7 +269,7 @@ export const getBandReservations = query(z.string(), async (slug) => {
 });
 
 export const getStaffReservationDetail = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 
 	const rows = await db
 		.select({
@@ -405,7 +410,7 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 
 /** Staff: search members by name or email for the create-reservation modal. */
 export const searchMembers = query(z.string(), async (q) => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	if (!q || q.length < 2) return [];
 
 	const pattern = `%${q}%`;
@@ -420,7 +425,7 @@ export const searchMembers = query(z.string(), async (q) => {
 
 /** Staff: band lookup for booking on a band's behalf. */
 export const searchBands = query(z.string(), async (q) => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	if (!q || q.length < 2) return [];
 
 	const pattern = `%${q}%`;
@@ -452,7 +457,7 @@ export const searchBands = query(z.string(), async (q) => {
 
 /** Staff: available slots + config for a given date. */
 export const getStaffSlots = query(z.string(), async (dateParam) => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
 	const [slots, reservationConfig] = await Promise.all([
 		getAvailableSlots(dateStr),
@@ -694,7 +699,7 @@ export const previewRecurringInstances = query(
 export const checkConflicts = query(
 	z.object({ date: z.string(), startTime: z.string(), endTime: z.string() }),
 	async ({ date, startTime, endTime }) => {
-		await requireStaff();
+		await requireCapability('reservation.read');
 		const startsAt = buildDateInTz(date, startTime, DEFAULT_TIMEZONE);
 		const endsAt = buildDateInTz(date, endTime, DEFAULT_TIMEZONE);
 
@@ -820,7 +825,7 @@ const eventBookerJoin = and(
 
 /** Staff: paginated, filtered reservation list. */
 export const getStaffReservations = query(staffReservationFiltersSchema, async (filters) => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 
 	const now = new Date();
 	const tab = filters.tab ?? 'upcoming';
@@ -927,7 +932,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 
 /** Staff: tab badge counts for reservations. */
 export const getReservationCounts = query(async () => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	const now = new Date();
 
 	const [upcomingCount] = await db
@@ -942,7 +947,7 @@ export const getReservationCounts = query(async () => {
 
 /** Staff: unresolved reservations (past end time, still scheduled). */
 export const getUnresolvedReservations = query(async () => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	const now = new Date();
 
 	const rows = await db
@@ -981,7 +986,7 @@ export const getUnresolvedReservations = query(async () => {
 
 /** Staff: current hourly rate for reservation pricing. */
 export const getHourlyRate = query(async () => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	return config<number>('reservation.hourlyRateCents');
 });
 
@@ -1007,7 +1012,7 @@ const staffCreateSchema = z.object({
 });
 
 export const createReservation = form(staffCreateSchema, async (data, _issue) => {
-	const staffUser = await requireStaff();
+	const staffUser = await requireCapability('reservation.manage');
 	const startsAt = buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE);
 	const endsAt = buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE);
 
@@ -1829,8 +1834,8 @@ export const payReservation = form(
 export const confirmReservation = form(
 	z.object({ id: z.string(), comp: z.enum(['', 'on']).optional() }),
 	async (data, _issue) => {
-		const currentUser = requireUser();
-
+		// No `requireUser()` here: `requireCapabilityOrOwner` below reads the
+		// acting user from the request event itself and 401s without one.
 		const [row] = await db
 			.select({
 				id: reservation.id,
@@ -1849,7 +1854,8 @@ export const confirmReservation = form(
 
 		// Returns which of the two the caller is, which the confirmation-window and
 		// comp rules below both branch on.
-		const staff = (await requireStaffOrOwner(currentUser.id, row.createdByUserId)) === 'staff';
+		const staff =
+			(await requireCapabilityOrOwner('reservation.manage', row.createdByUserId)) === 'staff';
 
 		// Only live reservations can be confirmed. Without this, a cancelled
 		// reservation (credits already reversed, cashDueCents possibly 0) would be
@@ -1917,21 +1923,21 @@ export const cancelReservation = form(
 
 /** Staff: mark a reservation as completed. */
 export const completeReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireStaff();
+	await requireCapability('reservation.manage');
 	await markComplete(data.id);
 	return { success: true };
 });
 
 /** Staff: mark a reservation as no-show. */
 export const noShowReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireStaff();
+	await requireCapability('reservation.manage');
 	await markNoShow(data.id);
 	return { success: true };
 });
 
 /** Staff: record cash payment and complete reservation. */
 export const cashReceivedReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireStaff();
+	await requireCapability('reservation.manage');
 
 	const [row] = await db
 		.select({
@@ -1993,7 +1999,7 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 
 /** Staff: comp a reservation (waive payment and confirm — no credits used). */
 export const compReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireStaff();
+	await requireCapability('reservation.comp');
 	await confirm(data.id);
 	await db
 		.update(reservation)
@@ -2004,7 +2010,7 @@ export const compReservation = form(z.object({ id: z.string() }), async (data, _
 
 /** Staff: refund the payment on a reservation. */
 export const refundReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireStaff();
+	await requireCapability('finance.refund');
 
 	const [row] = await db
 		.select({
@@ -2213,7 +2219,7 @@ export const getRecurringReservations = query(
 // ---------------------------------------------------------------------------
 
 export const getUserRecurringSeries = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 	return listActiveSeries({ forUser: userId });
 });
 
@@ -2249,7 +2255,7 @@ export const getBandReservationsPage = query(z.string(), async (slug) => {
  * every keystroke, which is what `DataList` exists to avoid.
  */
 export const getStaffReservationsPage = query(staffReservationFiltersSchema, async (filters) => {
-	await requireStaff();
+	await requireCapability('reservation.read');
 
 	const [list, counts, unresolved, hourlyRate] = await Promise.all([
 		getStaffReservations(filters),
