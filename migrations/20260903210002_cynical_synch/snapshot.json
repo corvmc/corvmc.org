@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "62de01a9-31a0-4822-9cd4-2e9eeecc731b",
+  "id": "3192093b-927e-45e9-bf10-bae36f8ae950",
   "prevIds": [
-    "6352b2e1-aac6-476a-9e75-a8cd71535216"
+    "eee5e356-9fb6-4415-9346-d5605fce84e7"
   ],
   "ddl": [
     {
@@ -348,6 +348,14 @@
     },
     {
       "name": "rider_input",
+      "entityType": "tables"
+    },
+    {
+      "name": "packing_item",
+      "entityType": "tables"
+    },
+    {
+      "name": "packing_list",
       "entityType": "tables"
     },
     {
@@ -9071,6 +9079,246 @@
       "table": "rider_input"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "list_id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "assigned_user_id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "assigned_at",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "assigned_by_user_id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'other'",
+      "generated": null,
+      "name": "category",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "label",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "1",
+      "generated": null,
+      "name": "quantity",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rider_kind",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "sort_order",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "packed",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "packed_at",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "packed_by_user_id",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "promoted_at",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "packing_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_reset_at",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_reset_by_user_id",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "packing_list"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -11427,6 +11675,111 @@
     },
     {
       "columns": [
+        "list_id"
+      ],
+      "tableTo": "packing_list",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_packing_item_list_id_packing_list_id_fk",
+      "entityType": "fks",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_packing_item_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        "assigned_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_packing_item_assigned_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        "assigned_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_packing_item_assigned_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        "packed_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_packing_item_packed_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_packing_list_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "packing_list"
+    },
+    {
+      "columns": [
+        "last_reset_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_packing_list_last_reset_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "packing_list"
+    },
+    {
+      "columns": [
         "permission_id",
         "user_id"
       ],
@@ -12194,6 +12547,24 @@
       "nameExplicit": false,
       "name": "rider_input_pk",
       "table": "rider_input",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "packing_item_pk",
+      "table": "packing_item",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "packing_list_pk",
+      "table": "packing_list",
       "entityType": "pks"
     },
     {
@@ -14900,6 +15271,88 @@
     },
     {
       "columns": [
+        {
+          "value": "list_id",
+          "isExpression": false
+        },
+        {
+          "value": "sort_order",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_packing_item_list",
+      "entityType": "indexes",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_packing_item_user",
+      "entityType": "indexes",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        {
+          "value": "list_id",
+          "isExpression": false
+        },
+        {
+          "value": "assigned_user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_packing_item_assigned",
+      "entityType": "indexes",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        {
+          "value": "list_id",
+          "isExpression": false
+        },
+        {
+          "value": "packed",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_packing_item_packed",
+      "entityType": "indexes",
+      "table": "packing_item"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_packing_list_group",
+      "entityType": "indexes",
+      "table": "packing_list"
+    },
+    {
+      "columns": [
         "name",
         "guard_name"
       ],
@@ -15309,6 +15762,24 @@
       "name": "rider_input_sort_nonneg",
       "entityType": "checks",
       "table": "rider_input"
+    },
+    {
+      "value": "sort_order >= 0",
+      "name": "packing_item_sort_nonneg",
+      "entityType": "checks",
+      "table": "packing_item"
+    },
+    {
+      "value": "quantity >= 1",
+      "name": "packing_item_quantity_positive",
+      "entityType": "checks",
+      "table": "packing_item"
+    },
+    {
+      "value": "quantity <= 99",
+      "name": "packing_item_quantity_bounded",
+      "entityType": "checks",
+      "table": "packing_item"
     }
   ],
   "renames": []

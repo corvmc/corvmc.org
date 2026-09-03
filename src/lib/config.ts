@@ -1142,6 +1142,81 @@ export const RIDER_MAX_ELEMENTS = 60;
 export const RIDER_MAX_INPUTS_PER_ELEMENT = 24;
 
 // ---------------------------------------------------------------------------
+// Packing lists
+// ---------------------------------------------------------------------------
+
+/**
+ * What kind of thing goes in the van — one value per shelf you would sort a
+ * load-out onto.
+ *
+ * **Declaration order is the order the page groups by**, and it is the order a
+ * van gets packed rather than alphabetical: the heavy backline goes in first
+ * and the thing you carry in your hand goes last. Unlike `riderElementKinds`,
+ * nothing numeric is derived from this order — no channel count depends on it —
+ * so it is a presentation default rather than a load-bearing sequence. What it
+ * *is* load-bearing for is the same thing `kind` is on a rider element: it is
+ * the spine that lets two members save their own rows without either
+ * renumbering the other, because `sortOrder` only ever breaks ties inside one
+ * owner's rows in one category.
+ *
+ * `personal` is here because the answer to "what do you bring to a gig?" from
+ * an actual musician contains earplugs and a spare shirt, and a vocabulary that
+ * refuses those is one people work around in the `other` box.
+ */
+export const packingCategories = [
+	'backline',
+	'instruments',
+	'audio',
+	'cables_power',
+	'merch',
+	'documents',
+	'personal',
+	'other'
+] as const;
+export type PackingCategory = (typeof packingCategories)[number];
+
+export const packingCategoryLabels: Record<PackingCategory, string> = {
+	backline: 'Backline',
+	instruments: 'Instruments',
+	audio: 'Audio & mics',
+	cables_power: 'Cables & power',
+	merch: 'Merch',
+	documents: 'Paperwork',
+	personal: 'Personal',
+	other: 'Other'
+};
+
+export const packingCategoryOptions = packingCategories.map((value) => ({
+	value,
+	label: packingCategoryLabels[value]
+}));
+
+/** "Fender Twin", "Merch tub". The rider's element label, same bound. */
+export const PACKING_LABEL_MAX = 120;
+
+/** Per-row free text: "the one with the broken latch". */
+export const PACKING_ITEM_NOTES_MAX = 500;
+
+/**
+ * Band-level notes. Deliberately shorter than `RIDER_NOTES_MAX` — a rider's
+ * notes are a document a venue reads and a packing list's are a sticky note the
+ * band reads, and the two should not invite the same amount of prose.
+ */
+export const PACKING_NOTES_MAX = 2000;
+
+/**
+ * Ceilings, validated in the service as well as the schema.
+ *
+ * Twice `RIDER_MAX_ELEMENTS` because a packing list is longer than a rider by
+ * nature: every cable, stand, tub and clipboard is a row here and none of them
+ * is an element there.
+ */
+export const PACKING_MAX_ITEMS = 120;
+
+/** Mirrored by the `packing_item_quantity_bounded` check; a client can post anything. */
+export const PACKING_MAX_QUANTITY = 99;
+
+// ---------------------------------------------------------------------------
 // Instructors
 // ---------------------------------------------------------------------------
 

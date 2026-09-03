@@ -32,6 +32,7 @@ export const relations = defineRelations(schema, (t) => ({
 		members: t.many.groupMember(),
 		files: t.many.file(),
 		rider: t.one.rider({ from: t.group.id, to: t.rider.groupId }),
+		packingList: t.one.packingList({ from: t.group.id, to: t.packingList.groupId }),
 		/** Events this band OWNS. Shows it merely played are `lineups`. */
 		events: t.many.event(),
 		// No `lineups` here any more. A credit names a `directory_entry`, so a
@@ -457,6 +458,40 @@ export const relations = defineRelations(schema, (t) => ({
 			from: t.riderInput.monitorMixUserId,
 			to: t.user.id,
 			alias: 'riderInput_monitorMixUser'
+		})
+	},
+	packingList: {
+		group: t.one.group({ from: t.packingList.groupId, to: t.group.id }),
+		lastResetBy: t.one.user({
+			from: t.packingList.lastResetByUserId,
+			to: t.user.id,
+			alias: 'packingList_lastResetBy'
+		}),
+		items: t.many.packingItem()
+	},
+	// Four FKs to user on one row — whose it is, who is bringing it, who put it
+	// on them, and who ticked it — so every one needs an alias saying which it
+	// follows. `user` and `assignedUser` are the pair that must never be
+	// conflated: see the table comment in `packing.ts`.
+	packingItem: {
+		list: t.one.packingList({ from: t.packingItem.listId, to: t.packingList.id }),
+		/** Whose gear this is. Null is the band's own. */
+		user: t.one.user({ from: t.packingItem.userId, to: t.user.id, alias: 'packingItem_user' }),
+		/** Who is carrying it. Null is "nobody has this". */
+		assignedUser: t.one.user({
+			from: t.packingItem.assignedUserId,
+			to: t.user.id,
+			alias: 'packingItem_assignedUser'
+		}),
+		assignedBy: t.one.user({
+			from: t.packingItem.assignedByUserId,
+			to: t.user.id,
+			alias: 'packingItem_assignedBy'
+		}),
+		packedBy: t.one.user({
+			from: t.packingItem.packedByUserId,
+			to: t.user.id,
+			alias: 'packingItem_packedBy'
 		})
 	}
 }));

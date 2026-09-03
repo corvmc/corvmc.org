@@ -110,6 +110,11 @@ export const tableOrder = [
 	'rider',
 	'rider_element',
 	'rider_input',
+
+	// The packing list, two deep: `packing_list` is a child of group and user,
+	// `packing_item` of packing_list and user.
+	'packing_list',
+	'packing_item',
 	// The private half of a party record: child of directory_entry and
 	// subscriber, so it wipes before either.
 	'contact',
