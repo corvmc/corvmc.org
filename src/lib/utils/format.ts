@@ -413,3 +413,18 @@ export function formatSlotTime(time: string): string {
 	const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
 	return `${h12}:${m.toString().padStart(2, '0')} ${suffix}`;
 }
+
+/**
+ * A file size a person can read at a glance.
+ *
+ * Binary units with decimal labels, which is what every desktop file manager
+ * shows and therefore what a member will compare against. One decimal below
+ * 10MB and none above, so a list of documents lines up.
+ */
+export function formatBytes(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`;
+	const kb = bytes / 1024;
+	if (kb < 1024) return `${Math.round(kb)} KB`;
+	const mb = kb / 1024;
+	return mb < 10 ? `${mb.toFixed(1)} MB` : `${Math.round(mb)} MB`;
+}

@@ -147,6 +147,32 @@ export async function seedGroups(users: SeedUser[]) {
 			]);
 		}
 
+		// The admin persona gets a manager seat on the first club, deterministically.
+		// Every other roster row here is a random pick from the bulk users, and
+		// those have no `account` row — so without this, nothing anyone can log in
+		// as can reach the announcement composer or the Documents uploader, and
+		// two manager-only surfaces are unreviewable locally.
+		if (i === 0) {
+			const admin = users.find((u) => u.email === 'admin@corvallismusic.org');
+			if (admin && admin.id !== leader.id) {
+				await db
+					.insert(groupMember)
+					.values({
+						groupId: g.id,
+						userId: admin.id,
+						role: 'admin',
+						position: d.positions[1] ?? null,
+						status: 'active'
+					})
+					.onConflictDoUpdate({
+						// It may already be on the roster as a plain member: `pickN`
+						// above draws from every user, personas included.
+						target: [groupMember.groupId, groupMember.userId],
+						set: { role: 'admin' }
+					});
+			}
+		}
+
 		// `notifiedAt` stays null on every one of these. It is the fan-out latch,
 		// written only by the notification listener — seeding it would claim these
 		// posts were sent, and seeding it *unset* is what leaves the listener a
