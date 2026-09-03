@@ -10,11 +10,15 @@ belong to staff, not to whoever is doing the deletion.
 
 ## Why five flags were never switchable
 
-`updateFeatureFlag` (`src/lib/remote/settings.remote.ts`) is the only write path to
-`site-config:feature.*` in the codebase, and the staff Features tab drives it by iterating
-`featureMeta` (`src/routes/staff/settings/+page.svelte`), which listed six of the eleven — and now
-lists none, `bandPremium` having been the last of the six still standing. The other five never had a
-toggle anywhere. Unless someone wrote the KV key by hand, they sit at their `DEFAULTS`
+`updateFeatureFlag` (`src/lib/remote/settings.remote.ts`) was the only write path to
+`site-config:feature.*` in the codebase, and the staff Features tab drove it by iterating
+`featureMeta` (`src/routes/staff/settings/+page.svelte`), which listed six of the eleven. The other
+five never had a toggle anywhere.
+
+**Both are gone now.** `bandPremium` was the last of the six still standing, so when it launched the
+tab had nothing to render; the tab and `updateFeatureFlag` came out together in #495. Nothing writes
+`feature.*` any more — `directMessages`, the one flag left, is `false` and can only be moved by
+writing the KV key by hand. That is the intended end state, not a gap: the flag is on its way out. Unless someone wrote the KV key by hand, they sit at their `DEFAULTS`
 value of `false` — which means the entire groups module and member↔member DMs have been dark in
 production since they shipped.
 
@@ -89,7 +93,7 @@ scoped API token in the dashboard (Account → Workers KV Storage → Read) and 
 
 Two ways to read a value without any of that:
 
-1. **Staff Settings → Features**, which shows every flag with a `featureMeta` entry.
+1. ~~Staff Settings → Features~~ — the tab is gone (#495). Probing is the only way left.
 2. **Probe production.** `requireFeature` throws `error(404, 'Not found')`, and a handler-thrown
    404 is distinguishable from an unmatched route: the handler returns
    `content-type: application/json` with `{"message":"Not found"}`, while an unmatched route
@@ -170,8 +174,8 @@ specs that mocked it only for that module.
 
 Then one final PR deletes the machinery: `src/lib/server/feature-flags.ts` and its spec,
 `getAllFeatureFlags` and the `features` key from the layout payloads (`layout.remote.ts`,
-`directory.remote.ts`, `settings.remote.ts`), the `nav-items.ts` signatures and their specs,
-`updateFeatureFlag` and the staff Features tab, `e2e/fixtures/seed-feature-flags.ts` and its call in
+`directory.remote.ts`), the `nav-items.ts` signatures and their specs,
+`e2e/fixtures/seed-feature-flags.ts` and its call in
 `e2e/prepare.ts`, the `feature.volunteering` write in `seed-volunteering.ts`, the `feature.*` block
 in `DEFAULTS`, and the docs that describe the system —
 `docs/reports/feature-catalog.md` §Feature flags, `docs/architecture/overview.md`,

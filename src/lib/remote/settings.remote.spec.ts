@@ -51,14 +51,6 @@ vi.mock('$lib/server/lock/lock-service', () => ({
 	revokeLockSelfTest: vi.fn(async () => undefined)
 }));
 
-// `ALL_FLAGS` is the real list on purpose: `VALID_FLAGS` in settings.remote is
-// an alias of it, so mocking it out would stop this suite from catching a flag
-// that the settings page can toggle but the handler rejects.
-vi.mock('$lib/server/feature-flags', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/feature-flags')>()),
-	getAllFeatureFlags: vi.fn(async () => ({}))
-}));
-
 vi.mock('$lib/server/finance/subscription-sync-service', () => ({
 	syncAllSubscriptions: vi.fn(async () => ({ synced: 0 }))
 }));
@@ -117,7 +109,6 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'testUtecConnection' },
 	{ name: 'runLockSelfTest' },
 	{ name: 'revokeLockTest' },
-	{ name: 'getFeatureFlags' },
 	{ name: 'syncSubscriptions' },
 	{ name: 'refreshCommunityStats' },
 	{
@@ -145,10 +136,6 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 		name: 'updateOrgSettings',
 		args: [{ name: 'CMC', shortName: 'CMC', contactEmail: 'a@b.co', timezone: 'UTC' }]
 	},
-	// Guarded all along, but unlisted here until the completeness check below
-	// went looking — so the form that flips any feature flag had no test
-	// pinning that it rejects a non-staff caller.
-	{ name: 'updateFeatureFlag', args: [{ flag: 'directMessages', enabled: true }] },
 	{
 		name: 'updateVolunteerValueSettings',
 		args: [{ hourValueCents: 3766, hourValueSource: 'Independent Sector, Oregon, 2025' }]

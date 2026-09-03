@@ -259,9 +259,10 @@ more (`venue`, `production`, `production_slot`, `production_task`, `production_e
 
 ## Feature flags
 
-Two flags, both defaulting to **off**, toggled from Staff Settings → Features — except
-`directMessages`, which was never added to that tab and so has never been switchable at all. The
-whole system is being retired in favour of feature branches; see
+One flag, defaulting to **off**, and **nothing can switch it**: the Staff Settings → Features tab
+went with `bandPremium`, the last flag that ever had a row on it, and `updateFeatureFlag` — the only
+write path to `feature.*` — went with the tab. `directMessages` was never on that tab anyway, so it
+has never been switchable. The whole system is being retired in favour of feature branches; see
 [the ledger](../plans/feature-flag-retirement.md).
 
 The groups module (`groups`, `groupEvents`, `announcements`) and `groupFiles` were retired without

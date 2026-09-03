@@ -1,20 +1,14 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
 import { query, form, command } from '$app/server';
 import {
 	getAllProductConfigs,
 	updateProductConfig,
 	type ProductKey
 } from '$lib/server/finance/product-config-service';
-import {
-	getConfigsByPrefix,
-	updateSiteConfigs,
-	updateSiteConfig
-} from '$lib/server/site-config/site-config-service';
+import { getConfigsByPrefix, updateSiteConfigs } from '$lib/server/site-config/site-config-service';
 import { testConnection } from '$lib/server/lock/ultraloc-client';
 import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
 import { requireStaff } from '$lib/server/authorization';
-import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '$lib/server/feature-flags';
 import { getInboxChannelConfigs } from './inbox.remote';
 import { syncAllSubscriptions } from '$lib/server/finance/subscription-sync-service';
 import { refreshCommunityStats as refreshStats } from '$lib/server/finance/community-stats';
@@ -334,35 +328,6 @@ const integrationSettingsSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// Feature flags
-// ---------------------------------------------------------------------------
-
-export const getFeatureFlags = query(async () => {
-	await requireStaff();
-	return getAllFeatureFlags();
-});
-
-// Kept as an alias rather than a second hand-maintained list: the two drifted
-// apart and `contentFlags` was missing here, so the settings toggle 400'd.
-const VALID_FLAGS: FeatureFlag[] = ALL_FLAGS;
-
-export const updateFeatureFlag = form(
-	z.object({
-		flag: z.string(),
-		enabled: z.enum(['true', 'false']).transform((v) => v === 'true')
-	}),
-	async (data) => {
-		await requireStaff();
-		if (!VALID_FLAGS.includes(data.flag as FeatureFlag)) {
-			throw error(400, 'Invalid feature flag');
-		}
-		await updateSiteConfig(`feature.${data.flag}`, data.enabled);
-		void getStaffSettingsPage().refresh();
-		return { success: true };
-	}
-);
-
-// ---------------------------------------------------------------------------
 // Subscription status sync
 // ---------------------------------------------------------------------------
 
@@ -402,25 +367,16 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
 export const getStaffSettingsPage = query(z.void(), async () => {
 	await requireStaff();
 
-	const [
-		products,
-		reservation,
-		org,
-		volunteerValue,
-		venue,
-		integration,
-		channelConfigs,
-		featureFlags
-	] = await Promise.all([
-		getProducts(),
-		getReservationSettings(),
-		getOrgSettings(),
-		getVolunteerValueSettings(),
-		getVenueSettings(),
-		getIntegrationSettings(),
-		getInboxChannelConfigs(),
-		getFeatureFlags()
-	]);
+	const [products, reservation, org, volunteerValue, venue, integration, channelConfigs] =
+		await Promise.all([
+			getProducts(),
+			getReservationSettings(),
+			getOrgSettings(),
+			getVolunteerValueSettings(),
+			getVenueSettings(),
+			getIntegrationSettings(),
+			getInboxChannelConfigs()
+		]);
 
 	return {
 		products,
@@ -429,7 +385,6 @@ export const getStaffSettingsPage = query(z.void(), async () => {
 		volunteerValue,
 		venue,
 		integration,
-		channelConfigs,
-		featureFlags
+		channelConfigs
 	};
 });

@@ -15,7 +15,6 @@
 		testUtecConnection,
 		runLockSelfTest,
 		revokeLockTest,
-		updateFeatureFlag,
 		syncSubscriptions,
 		refreshCommunityStats
 	} from '$lib/remote/settings.remote';
@@ -47,9 +46,7 @@
 		IconWorld,
 		IconMessages,
 		IconBrandInstagram,
-		IconBrandFacebook,
-		IconToggleRight,
-		IconToggleLeft
+		IconBrandFacebook
 	} from '@tabler/icons-svelte';
 
 	let activeTab = $state('pricing');
@@ -63,7 +60,6 @@
 	const venue = $derived(settings.venue);
 	const integrationSettings = $derived(settings.integration);
 	const channelConfigs = $derived(settings.channelConfigs);
-	const featureFlags = $derived(settings.featureFlags);
 
 	const { fields: reservationFields } = updateReservationSettings;
 
@@ -107,18 +103,11 @@
 		{ key: 'organization', label: 'Organization' },
 		{ key: 'integrations', label: 'Integrations' },
 		{ key: 'inbox', label: 'Inbox Channels' },
-		{ key: 'features', label: 'Features' },
 		{ key: 'subscriptions', label: 'Subscriptions' }
 	];
 
 	let syncResult = $state<SubscriptionSyncSummary | null>(null);
 	let statsResult = $state<CommunityStats | null>(null);
-
-	// Band Premium was the last flag with a toggle, and it launched — the guards
-	// are gone rather than switched on. `directMessages` is still a flag but has
-	// never had a row here, so there is nothing left for this tab to show until
-	// the flag machinery itself comes out.
-	const featureMeta: Record<string, { label: string; description: string }> = {};
 
 	const channelMeta: Record<
 		string,
@@ -856,60 +845,6 @@
 					</CardBody>
 				</Card>
 			</Form>
-		{:else if activeTab === 'features'}
-			<p class="text-muted">
-				Enable or disable feature modules for members, bands and the public site. Disabled features
-				are hidden from member navigation and return 404 if accessed directly. The staff panel
-				always shows every feature, so you can set one up here before switching it on for everyone.
-			</p>
-
-			{#if Object.keys(featureMeta).length === 0}
-				<Card>
-					<CardBody>
-						<p class="text-muted">
-							Nothing to switch right now. Band Premium was the last feature behind a toggle and it
-							has launched for everyone.
-						</p>
-					</CardBody>
-				</Card>
-			{/if}
-
-			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
-				{@const enabled = featureFlags[flag as keyof typeof featureFlags]}
-				{@const toggleForm = updateFeatureFlag.for(flag)}
-				<Card>
-					<CardBody>
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-3">
-								{#if enabled}
-									<IconToggleRight size={20} class="text-success" />
-								{:else}
-									<IconToggleLeft size={20} class="opacity-40" />
-								{/if}
-								<div>
-									<h3 class="font-semibold">{meta.label}</h3>
-									<p class="text-subtle">{meta.description}</p>
-								</div>
-							</div>
-							<Form
-								remote={toggleForm}
-								onsuccess={() => toast.success(`${meta.label} ${enabled ? 'disabled' : 'enabled'}`)}
-							>
-								<input {...toggleForm.fields.flag.as('hidden', flag)} />
-								<input {...toggleForm.fields.enabled.as('hidden', enabled ? 'false' : 'true')} />
-								<Button
-									type="submit"
-									variant={enabled ? 'error' : 'success'}
-									outline={enabled}
-									size="sm"
-								>
-									{enabled ? 'Disable' : 'Enable'}
-								</Button>
-							</Form>
-						</div>
-					</CardBody>
-				</Card>
-			{/each}
 		{:else if activeTab === 'inbox'}
 			<p class="text-muted">
 				Enable or disable communication channels for the staff inbox. Disabled channels won't
