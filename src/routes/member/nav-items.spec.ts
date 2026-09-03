@@ -18,7 +18,7 @@ import {
  * about a fully-lit nav versus a minimal one.
  */
 
-const ALL_ON: MemberNavInput = { hasLoanableEquipment: true, bandAudio: true };
+const ALL_ON: MemberNavInput = { hasLoanableEquipment: true };
 const ALL_OFF: MemberNavInput = {};
 
 const keysOf = (input: MemberNavInput) => memberNavItems(input).map((i) => i.key);
@@ -222,9 +222,11 @@ describe('route coverage', () => {
 	});
 });
 
-describe('music library', () => {
-	it('appears only with bandAudio on', () => {
-		expect(keysOf(ALL_ON)).toContain('music');
-		expect(keysOf(ALL_OFF)).not.toContain('music');
+describe('purchases', () => {
+	it('is always offered, whatever is switched on', () => {
+		// It lists tickets as well as records, and tickets are not flagged. Gating
+		// the row on the storefront would hide receipts that predate it.
+		expect(keysOf(ALL_ON)).toContain('purchases');
+		expect(keysOf(ALL_OFF)).toContain('purchases');
 	});
 });

@@ -224,11 +224,11 @@
 		"panel": "member"
 	},
 	{
-		"route": "/member/music",
+		"route": "/member/profile",
 		"panel": "member"
 	},
 	{
-		"route": "/member/profile",
+		"route": "/member/purchases",
 		"panel": "member"
 	},
 	{

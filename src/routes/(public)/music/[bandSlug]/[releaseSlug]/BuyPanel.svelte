@@ -177,7 +177,7 @@
 					<input {...fields.email.as('hidden', viewerEmail)} />
 					<p class="text-muted">
 						Buying as <span class="font-medium">{viewerEmail}</span> — it'll be in your
-						<a class="link" href={resolve('/member/music')}>Releases</a> straight away.
+						<a class="link" href={resolve('/member/purchases')}>Purchases</a> straight away.
 					</p>
 				{:else}
 					<FormField
@@ -195,7 +195,7 @@
 						>
 							Sign in
 						</a>
-						and it lands in your Releases too.
+						and it lands in your Purchases too.
 					</p>
 				{/if}
 			</div>

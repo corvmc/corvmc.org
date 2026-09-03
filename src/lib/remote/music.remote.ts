@@ -4,11 +4,7 @@ import { query, form, getRequestEvent } from '$app/server';
 import { requireFeature } from '$lib/server/feature-flags';
 import { requireUser } from '$lib/server/authorization';
 import { getPublishedRelease, listTracks } from '$lib/server/audio/audio-service';
-import {
-	beginPurchase,
-	findPaidPurchaseByToken,
-	listPurchasesForUser
-} from '$lib/server/audio/purchase-service';
+import { beginPurchase, findPaidPurchaseByToken } from '$lib/server/audio/purchase-service';
 import { destinationFor } from '$lib/server/audio/connect-service';
 import { db } from '$lib/server/db';
 import { media, mediaAttachment } from '$lib/server/db/schema/media';
@@ -123,13 +119,6 @@ export const getDownload = query(z.string().min(16), async (token) => {
 	};
 });
 
-/** A signed-in buyer's library. */
-export const getMyMusic = query(async () => {
-	await requireFeature('bandAudio');
-	const user = requireUser();
-	return listPurchasesForUser(user.id);
-});
-
 // ---------------------------------------------------------------------------
 // Buying
 // ---------------------------------------------------------------------------
@@ -171,7 +160,7 @@ export const buyReleaseForm = form(
 			releaseSlug,
 			buyerEmail: email,
 			// Attached when there is a session, so the purchase turns up in
-			// /member/music. Absent is the ordinary case and must stay allowed.
+			// /member/purchases. Absent is the ordinary case and must stay allowed.
 			userId: locals.user?.id ?? null,
 			totalCents,
 			platformCents,

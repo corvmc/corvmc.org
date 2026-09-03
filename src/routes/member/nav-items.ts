@@ -31,7 +31,7 @@ export type MemberNavKey =
 	| 'profile'
 	| 'account'
 	| 'help'
-	| 'music'
+	| 'purchases'
 	| 'membership';
 
 /** Field names on `getMemberLayout()`'s return. */
@@ -53,12 +53,6 @@ export interface MemberNavInput {
 	 * catalogue held nothing, and the row arriving on its own is what ends that.
 	 */
 	hasLoanableEquipment?: boolean;
-	/**
-	 * Whether the music storefront is switched on. A flag, unlike the row above
-	 * it: the library can be legitimately empty and still worth reaching, because
-	 * it is where a buyer goes to find a download link they mislaid.
-	 */
-	bandAudio?: boolean;
 }
 
 /** The rows above the "My Bands" group. */
@@ -83,9 +77,16 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 		{ key: 'directory', label: 'Directory', href: resolve('/member/directory') }
 	];
 
-	if (input.bandAudio) {
-		items.push({ key: 'music', label: 'Releases', href: resolve('/member/music') });
-	}
+	/**
+	 * Unconditional, and no longer behind `bandAudio`.
+	 *
+	 * It was, while it listed only records. Now it lists tickets too, which are
+	 * not flagged and which members have been buying since long before the
+	 * storefront existed — gating the row on the storefront would hide receipts
+	 * that have nothing to do with it. An empty page is the right answer for
+	 * somebody who has bought nothing; a missing one is not.
+	 */
+	items.push({ key: 'purchases', label: 'Purchases', href: resolve('/member/purchases') });
 
 	// Between Directory and Volunteering: it belongs with the things you do in
 	// the space, not with the bottom cluster.

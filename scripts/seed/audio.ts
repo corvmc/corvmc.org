@@ -277,9 +277,26 @@ export async function seedAudio(bands: any[], users: any[]) {
 	const sellable = releaseRows.filter((r) => r.status === 'published');
 	const purchaseRows: any[] = [];
 
+	/**
+	 * The admin buys the first record outright.
+	 *
+	 * Every other buyer here is picked at random from the whole user table, and
+	 * almost none of those have a password — they are directory rows, not logins.
+	 * So `/member/purchases` reliably rendered its empty state for the one account
+	 * a developer can actually sign in as, and the page looked broken rather than
+	 * unused. One guaranteed row for the demo login is what makes the surface
+	 * inspectable at all.
+	 */
+	const demoBuyer = users.find((u: any) => u.email === 'admin@corvallismusic.org') ?? users[0];
+	const guaranteed = new Set<string>();
+	if (demoBuyer && sellable.length > 0) guaranteed.add(sellable[0].id);
+
 	for (const release of sellable) {
-		for (let n = 0; n < randomInt(0, 5); n++) {
-			const buyer = pick(users);
+		const buyers = randomInt(0, 5);
+		for (let n = 0; n < buyers + (guaranteed.has(release.id) ? 1 : 0); n++) {
+			// The guaranteed row goes first, so it is never the abandoned one.
+			const forced = guaranteed.has(release.id) && n === 0;
+			const buyer = forced ? demoBuyer : pick(users);
 			const free = release.priceMinCents === 0;
 
 			// The split bar's whole range, sampled: most buyers leave the suggested
@@ -298,13 +315,13 @@ export async function seedAudio(bands: any[], users: any[]) {
 				: split(paidCents, cmcBps, coverFees);
 
 			// One in eight is abandoned at Stripe — what the stale sweep exists for.
-			const abandoned = !free && Math.random() < 0.125;
+			const abandoned = !forced && !free && Math.random() < 0.125;
 
 			purchaseRows.push({
 				id: randomUUID(),
 				releaseId: release.id,
 				// A third of buyers never logged in. The email is the entitlement.
-				userId: Math.random() < 0.66 ? buyer.id : null,
+				userId: forced || Math.random() < 0.66 ? buyer.id : null,
 				buyerEmail: buyer.email,
 				purchaseId: randomUUID(),
 				...amounts,
