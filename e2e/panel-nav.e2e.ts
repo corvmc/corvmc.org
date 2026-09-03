@@ -51,19 +51,19 @@ test.describe('member sidebar', () => {
 		expect(gap).toBeLessThan(40);
 	});
 
-	test('collapses My Bands and remembers it', async ({ page }) => {
+	test('collapses My Acts and remembers it', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/member');
 
-		const header = nav(page).getByRole('button', { name: 'My Bands' });
+		const header = nav(page).getByRole('button', { name: 'My Acts' });
 		await expect(header).toHaveAttribute('aria-expanded', 'true');
-		await expect(nav(page).getByRole('link', { name: 'Create Band' })).toBeVisible();
+		await expect(nav(page).getByRole('link', { name: 'Create Act' })).toBeVisible();
 
 		await header.click();
-		await expect(nav(page).getByRole('link', { name: 'Create Band' })).toHaveCount(0);
+		await expect(nav(page).getByRole('link', { name: 'Create Act' })).toHaveCount(0);
 
 		await page.reload();
-		await expect(nav(page).getByRole('button', { name: 'My Bands' })).toHaveAttribute(
+		await expect(nav(page).getByRole('button', { name: 'My Acts' })).toHaveAttribute(
 			'aria-expanded',
 			'false'
 		);
@@ -72,7 +72,7 @@ test.describe('member sidebar', () => {
 	test('keeps its collapse record separate from the staff panel', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/member');
-		await nav(page).getByRole('button', { name: 'My Bands' }).click();
+		await nav(page).getByRole('button', { name: 'My Acts' }).click();
 
 		await page.goto('/staff');
 		// Staff's own groups are untouched by a member-panel preference.

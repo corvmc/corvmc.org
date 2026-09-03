@@ -46,7 +46,7 @@
 	type="text"
 	inputmode="decimal"
 	label="Add a contribution (optional)"
-	description="Goes to the band on the bill and to keeping the room open."
+	description="Goes to the acts on the bill and to keeping the room open."
 	bind:value={contribution}
 />
 

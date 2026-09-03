@@ -21,7 +21,7 @@
 		getMemberBands
 	} from '$lib/remote/bands.remote';
 
-	// The sidebar "Create Band" links point here with ?create=1 — open the modal.
+	// The sidebar "Create Act" links point here with ?create=1 — open the modal.
 	//
 	// Two constraints, both svelte experimental-async related (still present in
 	// 5.56.8; covered by the band-onboarding e2e test):
@@ -50,8 +50,8 @@
 	const active = $derived(data.active);
 </script>
 
-<PageHeader title="My Bands" subtitle="Member">
-	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>Create Band</Button>
+<PageHeader title="My Acts" subtitle="Member">
+	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>Create Act</Button>
 </PageHeader>
 <PageContent width="2xl">
 	<!-- Pending invitations -->
@@ -121,12 +121,12 @@
 		</section>
 	{/if}
 
-	<!-- Active bands -->
+	<!-- Active acts -->
 	<section>
 		{#if active.length === 0 && pending.length === 0}
-			<EmptyState message="You're not in any bands yet. Create one to get started." />
+			<EmptyState message="You're not in any acts yet. Create one to get started." />
 		{:else if active.length === 0}
-			<EmptyState message="No active bands yet." />
+			<EmptyState message="No active acts yet." />
 		{:else}
 			<div class="space-y-3">
 				{#each active as b (b.id)}
@@ -151,19 +151,19 @@
 	</section>
 </PageContent>
 
-<!-- Create Band Modal -->
-<Modal title="Create Band" bind:open={showCreateModal} onclose={onCreateModalClose}>
+<!-- Create Act Modal -->
+<Modal title="Create Act" bind:open={showCreateModal} onclose={onCreateModalClose}>
 	<Form
 		remote={createBand}
 		onfailure={(issues) => {
 			// A validation failure already renders under the offending field, so the
 			// toast would only repeat it. Reserve the generic message for genuine
 			// server/network failures, which have no field to point at — previously
-			// both produced the same opaque "Failed to create band".
-			if (!issues?.length) toast.error('Failed to create band');
+			// both produced the same opaque "Failed to create act".
+			if (!issues?.length) toast.error('Failed to create act');
 		}}
 		onsuccess={(result) => {
-			toast.success('Band created');
+			toast.success('Act created');
 			showCreateModal = false;
 			if (result?.slug) goto(resolve(`/band/${result.slug}`));
 		}}
@@ -171,7 +171,7 @@
 		<div class="space-y-4">
 			<FormField
 				field={createBand.fields.name}
-				label="Band name"
+				label="Act name"
 				type="text"
 				placeholder="e.g. The Velvet Underground"
 				required
@@ -182,11 +182,11 @@
 				label="Bio"
 				type="textarea"
 				rows={3}
-				placeholder="Tell people about your band (optional)"
+				placeholder="Tell people about your act (optional)"
 			/>
 
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Create Band" successLabel="Created" variant="primary" />
+				<SubmitButton label="Create Act" successLabel="Created" variant="primary" />
 			</div>
 		</div>
 	</Form>

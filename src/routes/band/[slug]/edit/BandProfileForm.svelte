@@ -93,7 +93,7 @@
 				<FormField
 					field={profileFields.name}
 					type="text"
-					label="Band Name"
+					label="Act Name"
 					value={band.name}
 					required
 				/>
@@ -103,9 +103,9 @@
 				     not move the address. Saying so here — with the address in
 				     front of them — beats letting them rename and then wonder why
 				     the URL didn't follow. -->
-				<FormField label="Band address" readonly display={`${band.slug}.${baseDomain}`}>
+				<FormField label="Act address" readonly display={`${band.slug}.${baseDomain}`}>
 					{#snippet description()}
-						Renaming the band doesn't move its address.{#if isOwner}
+						Renaming the act doesn't move its address.{#if isOwner}
 							<a href={resolve(`/band/${band.slug}/settings`)} class="ml-1 link link-primary">
 								Change it in Settings
 							</a>
@@ -158,7 +158,7 @@
 
 			<FormField field={profileFields.bio} label="Bio">
 				<input {...profileFields.bio.as('hidden', bioHtml)} />
-				<RichTextEditor bind:value={bioHtml} placeholder="Tell people about your band..." />
+				<RichTextEditor bind:value={bioHtml} placeholder="Tell people about your act..." />
 			</FormField>
 
 			<FormField field={profileFields.genres} label="Genres">
@@ -232,7 +232,7 @@
 			<VisibilityField
 				field={profileFields.directoryVisibility}
 				bind:value={directoryVisibility}
-				publicDescription="Anyone can see this band's profile, no login required"
+				publicDescription="Anyone can see this act's profile, no login required"
 			/>
 		</InfoCard>
 	</div>

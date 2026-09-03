@@ -49,7 +49,7 @@
 		{ type: 'hero', label: 'Hero', description: 'Full-width hero image with headline' },
 		{ type: 'bio', label: 'Bio', description: 'Rich text bio section' },
 		{ type: 'links', label: 'Links', description: 'Social and music links' },
-		{ type: 'members', label: 'Members', description: 'Band member roster' },
+		{ type: 'members', label: 'Members', description: 'Member roster' },
 		{ type: 'events', label: 'Events', description: 'Upcoming shows' },
 		{ type: 'gallery', label: 'Gallery', description: 'Photo gallery grid' },
 		{ type: 'embed', label: 'Embed', description: 'YouTube, Spotify, SoundCloud embed' },
@@ -165,8 +165,8 @@
 		<EmptyState>
 			<p class="text-lg font-medium">Premium Feature</p>
 			<p class="mt-2 opacity-70">
-				The page editor is available with a premium band subscription. Build a custom band page with
-				drag-and-drop blocks, genre themes, and custom CSS.
+				The page editor is available with a premium subscription. Build a custom page for your act
+				with drag-and-drop blocks, genre themes, and custom CSS.
 			</p>
 			<Button href="../subscription" variant="primary" class="mt-4">Upgrade to Premium</Button>
 		</EmptyState>
@@ -564,7 +564,7 @@
 				<CardBody>
 					<CardTitle size="lg" level={2}>Custom CSS</CardTitle>
 					<p class="text-muted">
-						Add custom styles to your page. CSS is scoped to your band site container.
+						Add custom styles to your page. CSS is scoped to your site's container.
 					</p>
 					<textarea
 						class="textarea mt-2 w-full font-mono text-sm"

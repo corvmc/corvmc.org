@@ -114,7 +114,7 @@
 	<TabBar
 		tabs={[
 			{ key: 'members', label: 'Members', badge: members.length, href: directoryHref('members') },
-			{ key: 'bands', label: 'Bands', badge: bands.length, href: directoryHref('bands') },
+			{ key: 'bands', label: 'Acts', badge: bands.length, href: directoryHref('bands') },
 			// A sibling route rather than a `?tab=`: different reader, different
 			// columns, and a different truth from the self-declared flag.
 			{ key: 'instructors', label: 'Teachers', href: '/member/directory/instructors' }
@@ -204,7 +204,7 @@
 			</div>
 		{/if}
 	{:else if bands.length === 0}
-		{@render empty('bands')}
+		{@render empty('acts')}
 	{:else}
 		<div class="grid-gallery-tight">
 			{#each bands.slice(0, limit) as b (b.id)}

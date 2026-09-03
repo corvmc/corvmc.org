@@ -20,8 +20,7 @@
 						<path id="arc-bot-cta" d="M 85,50 a 35,35 0 1,1 -70,0" fill="none" />
 					</defs>
 					<text>
-						<textPath href="#arc-top-cta" startOffset="50%" text-anchor="middle">Your Band</textPath
-						>
+						<textPath href="#arc-top-cta" startOffset="50%" text-anchor="middle">Your Act</textPath>
 					</text>
 					<text>
 						<textPath href="#arc-bot-cta" startOffset="50%" text-anchor="middle"
@@ -41,7 +40,7 @@
 		</div>
 	</div>
 	<div class="vinyl-card__caption">
-		<div class="vinyl-card__band">Your band here</div>
+		<div class="vinyl-card__band">Your act here</div>
 		<div class="vinyl-card__meta">Join the collective &rarr;</div>
 	</div>
 </a>

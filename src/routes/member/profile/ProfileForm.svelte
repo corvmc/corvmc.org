@@ -151,7 +151,7 @@
 				label="I'm looking for"
 				bind:value={lookingFor}
 				options={LOOKING_FOR_OPTIONS}
-				description="This is what your dashboard matches on — we'll suggest bands or members to meet."
+				description="This is what your dashboard matches on — we'll suggest acts or members to meet."
 			/>
 		</div>
 

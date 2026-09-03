@@ -18,7 +18,7 @@
 		$props();
 
 	const title = $derived(
-		matches.direction === 'members' ? 'Members looking for a band' : 'Bands looking for members'
+		matches.direction === 'members' ? 'Members looking for a band' : 'Acts looking for members'
 	);
 
 	/**
@@ -48,7 +48,7 @@
 		<EmptyState
 			message={missing.length > 0
 				? `Add ${missingSentence} to your profile and we’ll suggest people to meet.`
-				: 'Nothing to suggest yet. Check back once more members and bands have filled in what they’re after.'}
+				: 'Nothing to suggest yet. Check back once more members and acts have filled in what they’re after.'}
 			actionLabel={missing.length > 0 ? 'Update your profile' : undefined}
 			actionHref={missing.length > 0 ? '/member/profile' : undefined}
 		/>

@@ -20,7 +20,7 @@
 		items,
 		note
 	}: {
-		label: 'Bands' | 'Members';
+		label: 'Acts' | 'Members';
 		items: CrossRef[];
 		note?: string;
 	} = $props();

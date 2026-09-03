@@ -191,6 +191,11 @@ export const ANNOUNCEMENT_TITLE_MAX = 200;
 export const ANNOUNCEMENT_BODY_MAX = 10000;
 
 export const groupKindLabels: Record<GroupKind, string> = {
+	// Stays "band" rather than "act", which member-facing copy otherwise uses for
+	// a musical group of any size: both call sites — the invitation email and the
+	// announcement fan-out — address somebody about a roster they are joining or
+	// already on, and a roster of people is exactly where "band" still reads
+	// better. See docs/specs/groups-spec.md § Solo acts.
 	band: 'band',
 	club: 'club',
 	committee: 'committee'
@@ -981,7 +986,7 @@ export type EntityType = (typeof entityTypes)[number];
  */
 export const entityLabels: Record<EntityType, { one: string; many: string }> = {
 	member: { one: 'Member', many: 'Members' },
-	band: { one: 'Band', many: 'Bands' },
+	band: { one: 'Act', many: 'Acts' },
 	event: { one: 'Event', many: 'Events' },
 	reservation: { one: 'Reservation', many: 'Reservations' },
 	suggestion: { one: 'Suggestion', many: 'Suggestions' },

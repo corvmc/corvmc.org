@@ -60,12 +60,12 @@
 	<title>Events | Corvallis Music Collective</title>
 	<meta
 		name="description"
-		content="Shows at the Collective and gigs from our member bands around the region."
+		content="Shows at the Collective and gigs from our member acts around the region."
 	/>
 	<meta property="og:title" content="Events | Corvallis Music Collective" />
 	<meta
 		property="og:description"
-		content="Shows at the Collective and gigs from our member bands around the region."
+		content="Shows at the Collective and gigs from our member acts around the region."
 	/>
 </svelte:head>
 
@@ -73,7 +73,7 @@
 	<div class="mb-10 text-center">
 		<h1 class="mb-2 text-4xl font-bold tracking-tight text-cmc-navy">Events</h1>
 		<p class="text-base text-fg-2">
-			Shows at the Collective and gigs from our member bands around the region
+			Shows at the Collective and gigs from our member acts around the region
 		</p>
 	</div>
 

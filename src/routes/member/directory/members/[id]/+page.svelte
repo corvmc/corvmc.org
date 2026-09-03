@@ -79,7 +79,7 @@
 	let bandRefs = $derived<CrossRef[]>(
 		(member?.bands ?? []).map((b) => ({
 			name: b.name,
-			sub: b.position ?? (b.role === 'owner' || b.role === 'admin' ? 'Bandleader' : null),
+			sub: b.position ?? (b.role === 'owner' || b.role === 'admin' ? 'Leader' : null),
 			href: `${BANDS_BASE}/${b.slug}`,
 			image: b.avatarUrl,
 			avatarShape: 'square'
@@ -140,7 +140,7 @@
 				/>
 			{/snippet}
 			{#snippet side()}
-				<CrossRefList label="Bands" items={bandRefs} note={`${bandRefs.length} active`} />
+				<CrossRefList label="Acts" items={bandRefs} note={`${bandRefs.length} active`} />
 				<TagCloud label="Plays · Genres" {tags} />
 				<LinksBox {links} />
 				<ContactBox label="Contact" {contact} />

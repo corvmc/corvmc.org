@@ -41,7 +41,7 @@
 	<div class="mb-6 flex justify-center">
 		<TabBar
 			tabs={[
-				{ key: 'bands', label: 'Bands', href: resolve('/member/directory') },
+				{ key: 'bands', label: 'Acts', href: resolve('/member/directory') },
 				{
 					key: 'musicians',
 					label: 'Musicians',

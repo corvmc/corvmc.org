@@ -362,7 +362,7 @@
 										<tr>
 											<td class="font-medium">{item.instrument}</td>
 											<td>{item.details}</td>
-											<td>{item.provided ? 'Band' : 'Venue'}</td>
+											<td>{item.provided ? 'Act' : 'Venue'}</td>
 										</tr>
 									{/each}
 								</tbody>

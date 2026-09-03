@@ -13,7 +13,7 @@ import { SEED_MEMBER_EMAIL, SEED_MEMBER_PASSWORD } from './fixtures/seed-pay-res
  * create-band <Modal> and the header button's onclick were both gated on that
  * continuation. When a client-side navigation reached the page while the
  * member layout's own async work was still settling (e.g. right after login),
- * the Modal's async block never committed — the header "Create Band" button
+ * the Modal's async block never committed — the header "Create Act" button
  * rendered and its handler ran, but no dialog ever mounted. Timing-dependent:
  * reliably reproduced in headless Chromium, usually invisible in headed
  * browsers.
@@ -43,7 +43,7 @@ test('create-band modal opens after an immediate client-side navigation', async 
 	await login(page);
 
 	// Client-side navigation via a same-origin anchor (SvelteKit intercepts the
-	// click). Injected because the sidebar's own "Create Band" links are being
+	// click). Injected because the sidebar's own "Create Act" links are being
 	// repointed at /member/bands on another branch; this test only needs *a*
 	// client-side navigation to the bands page during the post-login window.
 	await page.evaluate(() => {
@@ -57,7 +57,7 @@ test('create-band modal opens after an immediate client-side navigation', async 
 	await page.click('#e2e-spa-nav');
 	await page.waitForURL(/\/member\/bands/, { timeout: 15000 });
 
-	await page.getByRole('button', { name: 'Create Band' }).click();
+	await page.getByRole('button', { name: 'Create Act' }).click();
 	await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
 	await expect(page.getByRole('dialog').locator('input[name="name"]')).toBeVisible();
 
