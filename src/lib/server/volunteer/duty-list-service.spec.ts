@@ -56,7 +56,7 @@ beforeAll(async () => {
 
 /** Fresh fixtures per test — every one of these applies a list and asserts on the rows. */
 beforeEach(() => {
-	for (const t of ['work_task', 'volunteer_shift', 'duty_list_item', 'duty_list', 'event']) {
+	for (const t of ['work_task', 'work_order', 'duty_list_item', 'duty_list', 'event']) {
 		sqlite.exec(`DELETE FROM ${t}`);
 	}
 	sqlite.exec(`DELETE FROM volunteer_role WHERE id LIKE 'role-%'`);
@@ -85,7 +85,7 @@ function shifts() {
 	return sqlite
 		.prepare(
 			`SELECT id, starts_at, ends_at, due_at, capacity, duty_list_id
-			 FROM volunteer_shift ORDER BY coalesce(starts_at, due_at)`
+			 FROM work_order ORDER BY coalesce(starts_at, due_at)`
 		)
 		.all() as {
 		id: string;
@@ -155,7 +155,7 @@ describe('applyDutyList', () => {
 		addItem('i1', 'offset_minutes, duration_minutes', '-180, 120');
 
 		await applyDutyList('dl-1', 'evt-1', 'u1');
-		sqlite.exec(`UPDATE volunteer_shift SET cancelled_at = unixepoch()`);
+		sqlite.exec(`UPDATE work_order SET cancelled_at = unixepoch()`);
 
 		await expect(applyDutyList('dl-1', 'evt-1', 'u1')).resolves.toBeTruthy();
 		expect(shifts()).toHaveLength(2);
@@ -174,7 +174,7 @@ describe('applyDutyList', () => {
 		const rows = sqlite
 			.prepare(
 				`SELECT wt.label, wt.sort_order, vs.due_at IS NULL AS scheduled
-				 FROM work_task wt JOIN volunteer_shift vs ON vs.id = wt.work_order_id
+				 FROM work_task wt JOIN work_order vs ON vs.id = wt.work_order_id
 				 ORDER BY scheduled DESC, wt.sort_order`
 			)
 			.all() as { label: string; sort_order: number; scheduled: number }[];

@@ -28,7 +28,7 @@ import {
 	volunteerCertification,
 	memberCertification,
 	volunteerRoleCertification,
-	volunteerShift,
+	workOrder,
 	volunteerSignup,
 	volunteerShiftFeedback
 } from '../../src/lib/server/db/schema/volunteer';
@@ -212,9 +212,9 @@ export async function seedVolunteering(): Promise<void> {
 		// and the next run failed on the ON DELETE RESTRICT — a red suite that had
 		// nothing to do with the code under test.
 		const staleShifts = await db
-			.select({ id: volunteerShift.id })
-			.from(volunteerShift)
-			.where(inArray(volunteerShift.volunteerRoleId, ALL_ROLE_IDS));
+			.select({ id: workOrder.id })
+			.from(workOrder)
+			.where(inArray(workOrder.volunteerRoleId, ALL_ROLE_IDS));
 		const shiftIds = [...new Set([...SHIFT_IDS, ...staleShifts.map((r) => r.id)])];
 
 		const staleSignups = await db
@@ -231,7 +231,7 @@ export async function seedVolunteering(): Promise<void> {
 			);
 		}
 		await db.delete(volunteerSignup).where(inArray(volunteerSignup.shiftId, shiftIds));
-		await db.delete(volunteerShift).where(inArray(volunteerShift.id, shiftIds));
+		await db.delete(workOrder).where(inArray(workOrder.id, shiftIds));
 		// After the shifts: the FK is ON DELETE SET NULL, so deleting the event
 		// first would silently unlink the very row the linked-shift tests assert on.
 		await db.delete(event).where(eq(event.id, SEED_VOL_EVENT_ID));
@@ -440,7 +440,7 @@ export async function seedVolunteering(): Promise<void> {
 			}
 		]);
 
-		await db.insert(volunteerShift).values([
+		await db.insert(workOrder).values([
 			{
 				id: SEED_VOL_SHIFT_OPEN_ID,
 				volunteerRoleId: SEED_VOL_ROLE_ID,
@@ -510,7 +510,7 @@ export async function seedVolunteering(): Promise<void> {
 			updatedAt: now
 		});
 
-		await db.insert(volunteerShift).values({
+		await db.insert(workOrder).values({
 			id: SEED_VOL_SHIFT_EVENT_ID,
 			volunteerRoleId: SEED_VOL_ROLE_ID,
 			eventId: SEED_VOL_EVENT_ID,
@@ -523,7 +523,7 @@ export async function seedVolunteering(): Promise<void> {
 
 		// Ended yesterday, completed, unreviewed — exactly what the day-after
 		// survey cron would have asked about.
-		await db.insert(volunteerShift).values({
+		await db.insert(workOrder).values({
 			id: SEED_VOL_SHIFT_DONE_ID,
 			volunteerRoleId: SEED_VOL_ROLE_ID,
 			startsAt: workedOnDaysAgo(1),
@@ -682,9 +682,9 @@ export async function readNewestHourLog(userId: string): Promise<{
 export async function readShiftEventId(shiftId: string): Promise<string | null> {
 	return readLocalDb(async (db) => {
 		const [row] = await db
-			.select({ eventId: volunteerShift.eventId })
-			.from(volunteerShift)
-			.where(eq(volunteerShift.id, shiftId))
+			.select({ eventId: workOrder.eventId })
+			.from(workOrder)
+			.where(eq(workOrder.id, shiftId))
 			.limit(1);
 		return row?.eventId ?? null;
 	});

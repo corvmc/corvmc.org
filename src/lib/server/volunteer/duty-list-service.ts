@@ -5,7 +5,7 @@ import {
 	dutyList,
 	dutyListItem,
 	volunteerRole,
-	volunteerShift,
+	workOrder,
 	workTask
 } from '$lib/server/db/schema/volunteer';
 import { event } from '$lib/server/db/schema/event';
@@ -24,7 +24,7 @@ import type { DutyList, DutyListItem } from '$lib/server/db/schema/volunteer';
  * Merch and Tear Down around doors — and every one of them is entered by hand
  * today. This is that, once.
  *
- * Applying a list writes ordinary `volunteer_shift` rows. They carry
+ * Applying a list writes ordinary `work_order` rows. They carry
  * `dutyListId` for provenance and nothing else: editing a list afterwards must
  * not reach into work people have already claimed, which is the same bargain
  * `duplicateShift` makes when it says the copy has "no link back".
@@ -291,7 +291,7 @@ export async function updateDutyList(
 
 /**
  * Deleting a list leaves every work order it ever produced alone —
- * `volunteer_shift.dutyListId` is set-null, and the shifts are the record of
+ * `work_order.dutyListId` is set-null, and the shifts are the record of
  * work that actually happened.
  */
 export async function deleteDutyList(id: string): Promise<void> {
@@ -464,19 +464,19 @@ export async function applyDutyList(
 	// cancelling the lot is how you redo an apply.
 	const [{ existing }] = await db
 		.select({ existing: count() })
-		.from(volunteerShift)
+		.from(workOrder)
 		.where(
 			and(
-				eq(volunteerShift.eventId, eventId),
-				eq(volunteerShift.dutyListId, dutyListId),
-				isNull(volunteerShift.cancelledAt)
+				eq(workOrder.eventId, eventId),
+				eq(workOrder.dutyListId, dutyListId),
+				isNull(workOrder.cancelledAt)
 			)
 		);
 	if (existing > 0) throw new DutyListAlreadyAppliedError(list.name, existing);
 
 	const anchor = resolveAnchor(list.anchor, evt);
 
-	const shiftRows: (typeof volunteerShift.$inferInsert)[] = [];
+	const shiftRows: (typeof workOrder.$inferInsert)[] = [];
 	const taskRows: (typeof workTask.$inferInsert)[] = [];
 
 	for (const item of items) {
@@ -506,7 +506,7 @@ export async function applyDutyList(
 	// Work orders first: a task carries `work_order_id`, so the row it names has
 	// to exist. `db.batch` and not `db.transaction` — the latter is broken on D1.
 	await db.batch(
-		shiftRows.map((row) => db.insert(volunteerShift).values(row)) as unknown as Parameters<
+		shiftRows.map((row) => db.insert(workOrder).values(row)) as unknown as Parameters<
 			typeof db.batch
 		>[0]
 	);

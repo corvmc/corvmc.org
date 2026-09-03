@@ -999,7 +999,7 @@ So:
   so a filtered member still comes back with all their roles).
 - **Onboarding:** `volunteer-profile-service.ts` — the one-time name/phone/over-18 gate on
   `/member/volunteer/start`.
-- **Shifts:** `volunteer-shift-service.ts` + `volunteer-signup-service.ts`. A shift may name
+- **Shifts:** `work-order-service.ts` + `volunteer-signup-service.ts`. A shift may name
   the event it staffs. Only _confirmed_ signups get the reminder and the auto-complete.
   `claimShift(shiftId, userId, { assignedByStaff })` serves both the member's claim and the
   coordinator's assignment; `releaseSignup` is `cancelSignup` without the owner clause.
@@ -1053,7 +1053,7 @@ already has a row identifying it, and March's deep clean is a different event fr
 ### Data touched
 
 `volunteer_role`, `volunteer_role_interest`, `volunteer_profile`, `volunteer_hour_log`,
-`volunteer_shift`, `volunteer_signup`, `volunteer_shift_feedback`,
+`work_order`, `volunteer_signup`, `volunteer_shift_feedback`,
 `volunteer_certification`, `member_certification`, `volunteer_role_certification`,
 `duty_list`, `duty_list_item`, `work_task`.
 

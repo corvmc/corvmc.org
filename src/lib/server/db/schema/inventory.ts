@@ -605,12 +605,15 @@ export const inventoryItemArticle = sqliteTable(
 export type InventoryItemArticle = typeof inventoryItemArticle.$inferSelect;
 
 /**
- * Something a person noticed about one unit.
+ * A **work request**: something a person noticed about one unit, not yet
+ * authorized — the CMMS term (docs/specs/project-spec.md#vocabulary). Triage
+ * turns it into a `work_order`, and N requests may collapse onto one.
  *
  * Shaped after `content_flag` and sharing its `flagStatuses` verbatim — one
- * lifecycle, one vocabulary. It is deliberately **not** that table: gear must
- * not queue beside a harassment report, `reason` there is moderation-shaped,
- * and neither `blocksUse` nor `workOrderId` means anything to moderation.
+ * lifecycle, one vocabulary — but deliberately **not** that table: gear must
+ * not queue beside a harassment report. Renamed from `asset_flag`, which read
+ * as a sibling of `content_flag`; index names keep the old prefix because
+ * SQLite carries them through `RENAME TO` untouched.
  *
  * This is the half the ledger cannot carry. `stock_movement` records what
  * happened *to the asset*, and a movement has to move something — so it can say
@@ -618,8 +621,8 @@ export type InventoryItemArticle = typeof inventoryItemArticle.$inferSelect;
  * usable". Both survive: a flag that takes the unit out of service still writes
  * its `repair_out`.
  */
-export const assetFlag = sqliteTable(
-	'asset_flag',
+export const workRequest = sqliteTable(
+	'work_request',
 	{
 		id: text('id')
 			.primaryKey()
@@ -692,7 +695,7 @@ export const assetFlag = sqliteTable(
 	]
 );
 
-export type AssetFlag = typeof assetFlag.$inferSelect;
+export type WorkRequest = typeof workRequest.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Client-safe serialized types

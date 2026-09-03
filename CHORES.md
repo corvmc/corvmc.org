@@ -38,9 +38,9 @@ Low-priority cleanup and tech-debt items. Not blocking, but worth doing.
   what could be shared. See `docs/architecture/domain-model.md#1-resource-custody-assets`. No
   forcing function; do not start this speculatively.
 
-- **`content_flag` and `asset_flag` duplicate a triage surface, not just a table.** They share
+- **`content_flag` and `work_request` duplicate a triage surface, not just a table.** They share
   `flagStatuses` verbatim and six columns (reporter, note, status, resolver, resolution notes,
-  resolved-at). **The tables must stay separate** — the `asset_flag` comment argues it correctly,
+  resolved-at). **The tables must stay separate** — the `work_request` comment argues it correctly,
   gear must not queue beside a harassment report. What is duplicated needlessly is everything above
   them: the triage queue, the detail page, the resolve/dismiss action, and the
   don't-re-notify-on-repeat-reports rule, none of which is moderation-specific. See

@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import {
 	volunteerShiftFeedback,
 	volunteerSignup,
-	volunteerShift,
+	workOrder,
 	volunteerRole
 } from '$lib/server/db/schema/volunteer';
 import { and, avg, count, desc, eq, sql } from 'drizzle-orm';
@@ -115,15 +115,15 @@ export async function getFeedbackContext(signupId: string, userId: string) {
 			signupId: volunteerSignup.id,
 			status: volunteerSignup.status,
 			roleName: volunteerRole.name,
-			startsAt: volunteerShift.startsAt,
-			endsAt: volunteerShift.endsAt,
+			startsAt: workOrder.startsAt,
+			endsAt: workOrder.endsAt,
 			alreadySubmitted: sql<number>`exists (
 				select 1 from "volunteer_shift_feedback" f where f."signup_id" = ${volunteerSignup.id}
 			)`
 		})
 		.from(volunteerSignup)
-		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.where(and(eq(volunteerSignup.id, signupId), eq(volunteerSignup.userId, userId)))
 		.limit(1);
 
@@ -180,7 +180,7 @@ export interface RoleFeedbackSummary {
 export async function summarizeFeedbackByRole(): Promise<RoleFeedbackSummary[]> {
 	const rows = await db
 		.select({
-			volunteerRoleId: volunteerShift.volunteerRoleId,
+			volunteerRoleId: workOrder.volunteerRoleId,
 			roleName: volunteerRole.name,
 			responses: count(),
 			averageRating: avg(volunteerShiftFeedback.rating),
@@ -190,9 +190,9 @@ export async function summarizeFeedbackByRole(): Promise<RoleFeedbackSummary[]> 
 		})
 		.from(volunteerShiftFeedback)
 		.innerJoin(volunteerSignup, eq(volunteerSignup.id, volunteerShiftFeedback.signupId))
-		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
-		.groupBy(volunteerShift.volunteerRoleId)
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.groupBy(workOrder.volunteerRoleId)
 		.orderBy(desc(count()));
 
 	const summaries: RoleFeedbackSummary[] = [];
@@ -205,10 +205,10 @@ export async function summarizeFeedbackByRole(): Promise<RoleFeedbackSummary[]> 
 			})
 			.from(volunteerShiftFeedback)
 			.innerJoin(volunteerSignup, eq(volunteerSignup.id, volunteerShiftFeedback.signupId))
-			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+			.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
 			.where(
 				and(
-					eq(volunteerShift.volunteerRoleId, row.volunteerRoleId),
+					eq(workOrder.volunteerRoleId, row.volunteerRoleId),
 					sql`${volunteerShiftFeedback.comment} is not null`
 				)
 			)

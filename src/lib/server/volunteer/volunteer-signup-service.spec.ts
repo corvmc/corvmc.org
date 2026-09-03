@@ -73,7 +73,7 @@ vi.mock('$lib/server/db', () => ({
 vi.mock('$lib/server/authorization', () => ({ primaryRoleFor: vi.fn(() => null) }));
 
 const getShiftById = vi.fn();
-vi.mock('./volunteer-shift-service', () => ({
+vi.mock('./work-order-service', () => ({
 	getShiftById: (...a: unknown[]) => getShiftById(...a)
 }));
 

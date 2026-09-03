@@ -243,7 +243,7 @@ are easier to trace.
 - **moderation** — `content_flag`, `member_standing`, `user_block`
 - **suggestions** — `suggestion`, `suggestion_vote`, `suggestion_edit`
 - **volunteering** — `volunteer_role`, `volunteer_hour_log`, `volunteer_role_interest`,
-  `volunteer_profile`, `volunteer_shift`, `volunteer_signup`, `volunteer_shift_feedback`,
+  `volunteer_profile`, `work_order`, `volunteer_signup`, `volunteer_shift_feedback`,
   `volunteer_certification`, `member_certification`, `volunteer_role_certification`
 - **help** — `help_article`, `help_category`
 - **misc** — `group_invite`

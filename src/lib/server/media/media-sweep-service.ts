@@ -4,7 +4,7 @@ import type { AttachableType } from '$lib/server/db/schema/media';
 import { event } from '$lib/server/db/schema/event';
 import {
 	acquisition,
-	assetFlag,
+	workRequest,
 	inventoryAsset,
 	inventoryItem
 } from '$lib/server/db/schema/inventory';
@@ -36,7 +36,7 @@ const PARENT_TABLES = {
 	// simply never be reaped and the objects would leak.
 	inventory_item: inventoryItem,
 	inventory_asset: inventoryAsset,
-	asset_flag: assetFlag,
+	work_request: workRequest,
 	acquisition
 } as const satisfies Record<AttachableType, unknown>;
 

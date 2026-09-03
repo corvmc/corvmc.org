@@ -41,7 +41,7 @@ vi.mock('./asset-service', () => ({
 	}
 }));
 
-import { raiseFlag, AssetNotFlaggableError } from './asset-flag-service';
+import { raiseFlag, AssetNotFlaggableError } from './work-request-service';
 import { setAssetStatus, AssetNotFoundError } from './asset-service';
 
 const ASSET = {

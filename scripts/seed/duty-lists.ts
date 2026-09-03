@@ -1,7 +1,7 @@
 import {
 	dutyList,
 	dutyListItem,
-	volunteerShift,
+	workOrder,
 	workTask
 } from '../../src/lib/server/db/schema/volunteer';
 import { batchInsert } from './db';
@@ -125,7 +125,7 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 		dutyListId: 'seed-duty-standard-show',
 		createdByUserId: 'seed-vol-coordinator'
 	}));
-	await batchInsert(volunteerShift, workOrders, 8);
+	await batchInsert(workOrder, workOrders, 8);
 
 	// Half of the Booking Lead's advance list already done, so the partly-worked
 	// state is rendered rather than only the empty and finished ones.

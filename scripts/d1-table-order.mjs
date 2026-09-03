@@ -46,15 +46,15 @@ export const tableOrder = [
 	'permissions',
 	'volunteer_role',
 	'volunteer_certification',
-	// References user. Ahead of volunteer_shift because the shift now carries
+	// References user. Ahead of work_order because the shift now carries
 	// `duty_list_id` — provenance for the list that stamped it out.
 	'duty_list',
 	// References duty_list and volunteer_role.
 	'duty_list_item',
 	// references volunteer_role + event + duty_list, and is referenced by
 	// volunteer_signup, volunteer_hour_log and work_task, so it sits between them.
-	'volunteer_shift',
-	// The checklist inside one work order. References volunteer_shift and user.
+	'work_order',
+	// The checklist inside one work order. References work_order and user.
 	'work_task',
 	'volunteer_signup',
 	// independents (no FKs)
@@ -75,9 +75,9 @@ export const tableOrder = [
 	'purchase_order_line',
 	'inventory_loan',
 	// References inventory_asset, inventory_loan and user. `work_order_id` points
-	// at volunteer_shift but carries no foreign key -- the two schema modules
+	// at work_order but carries no foreign key -- the two schema modules
 	// would otherwise import each other -- so it imposes no ordering here.
-	'asset_flag',
+	'work_request',
 	'stock_movement',
 	// References inventory_item and help_article, so it clears before neither.
 	'inventory_item_article',

@@ -5,7 +5,7 @@ import {
 	volunteerHourLog,
 	volunteerProfile,
 	volunteerRoleInterest,
-	volunteerShift,
+	workOrder,
 	volunteerShiftFeedback,
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
@@ -88,7 +88,7 @@ export async function seedVolunteerPersonas(
 	const ago = (days: number) => new Date(now.getTime() - days * day);
 	const ahead = (days: number) => new Date(now.getTime() + days * day);
 	// A shift on a given day, 18:00 to 18:00 + duration, in local time — the same
-	// shape `seedVolunteerShifts` uses for its unattached rows.
+	// shape `seedWorkOrders` uses for its unattached rows.
 	const shiftAt = (dayOffset: number, hour: number, minutes: number) => {
 		const startsAt = new Date(now.getTime() + dayOffset * day);
 		startsAt.setHours(hour, 0, 0, 0);
@@ -216,7 +216,7 @@ export async function seedVolunteerPersonas(
 			cancelledByUserId: 'seed-vol-coordinator'
 		}
 	].map((sh) => ({ ...sh, eventId: null, createdByUserId: 'seed-vol-coordinator' }));
-	await batchInsert(volunteerShift, shifts, 8);
+	await batchInsert(workOrder, shifts, 8);
 
 	const byId = new Map(shifts.map((sh) => [sh.id, sh]));
 	const shiftEnd = (id: string) => byId.get(id)!.endsAt;

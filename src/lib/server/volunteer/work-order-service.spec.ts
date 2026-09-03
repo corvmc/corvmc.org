@@ -46,7 +46,7 @@ import {
 	resolveWorkOrder,
 	scheduleWorkOrder,
 	updateShift
-} from './volunteer-shift-service';
+} from './work-order-service';
 
 /** The rendered WHERE clause of the query that ran. */
 function renderedWhere() {

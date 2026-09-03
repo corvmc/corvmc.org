@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import {
-	volunteerShift,
+	workOrder,
 	volunteerSignup,
 	volunteerRole,
 	volunteerProfile,
@@ -28,7 +28,7 @@ import { requireActiveVolunteer } from './volunteer-profile-service';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
-import { getShiftById } from './volunteer-shift-service';
+import { getShiftById } from './work-order-service';
 import { missingRequirements } from './member-certification-service';
 import { isScheduled } from './scheduled';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -120,7 +120,7 @@ function hasRoomSql(
 	//    another, it is the same work.
 	return sql`(
 		select count(*) from "volunteer_signup" vs
-		join "volunteer_shift" vsh on vsh."id" = vs."shift_id"
+		join "work_order" vsh on vsh."id" = vs."shift_id"
 		where vs."shift_id" = ${shiftId}
 			and vs."status" in ('claimed', 'confirmed', 'completed')
 			and (
@@ -323,17 +323,17 @@ async function emitSignupEvent(
 	try {
 		const [row] = await db
 			.select({
-				shiftId: volunteerShift.id,
+				shiftId: workOrder.id,
 				userId: user.id,
 				userName: user.name,
 				userEmail: user.email,
 				roleName: volunteerRole.name,
-				startsAt: volunteerShift.startsAt,
-				endsAt: volunteerShift.endsAt
+				startsAt: workOrder.startsAt,
+				endsAt: workOrder.endsAt
 			})
 			.from(volunteerSignup)
-			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-			.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+			.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 			.innerJoin(user, eq(user.id, volunteerSignup.userId))
 			.where(eq(volunteerSignup.id, signupId))
 			.limit(1);
@@ -435,20 +435,20 @@ export async function completeFinishedShifts(now = new Date()): Promise<Complete
 			userId: volunteerSignup.userId,
 			userName: user.name,
 			userEmail: user.email,
-			shiftId: volunteerShift.id,
+			shiftId: workOrder.id,
 			roleName: volunteerRole.name,
-			startsAt: volunteerShift.startsAt,
-			endsAt: volunteerShift.endsAt
+			startsAt: workOrder.startsAt,
+			endsAt: workOrder.endsAt
 		})
 		.from(volunteerSignup)
-		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.innerJoin(user, eq(user.id, volunteerSignup.userId))
 		.where(
 			and(
 				eq(volunteerSignup.status, 'confirmed'),
-				lt(volunteerShift.endsAt, now),
-				isNull(volunteerShift.cancelledAt)
+				lt(workOrder.endsAt, now),
+				isNull(workOrder.cancelledAt)
 			)
 		)
 		// `ends_at < now` already excludes unscheduled work orders — the cron
@@ -595,21 +595,21 @@ export async function listSignupsStartingBetween(from: Date, to: Date): Promise<
 			userId: volunteerSignup.userId,
 			userName: user.name,
 			userEmail: user.email,
-			shiftId: volunteerShift.id,
+			shiftId: workOrder.id,
 			roleName: volunteerRole.name,
-			startsAt: volunteerShift.startsAt,
-			endsAt: volunteerShift.endsAt
+			startsAt: workOrder.startsAt,
+			endsAt: workOrder.endsAt
 		})
 		.from(volunteerSignup)
-		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.innerJoin(user, eq(user.id, volunteerSignup.userId))
 		.where(
 			and(
 				eq(volunteerSignup.status, 'confirmed'),
-				isNull(volunteerShift.cancelledAt),
-				sql`${volunteerShift.startsAt} >= ${Math.floor(from.getTime() / 1000)}`,
-				sql`${volunteerShift.startsAt} < ${Math.floor(to.getTime() / 1000)}`
+				isNull(workOrder.cancelledAt),
+				sql`${workOrder.startsAt} >= ${Math.floor(from.getTime() / 1000)}`,
+				sql`${workOrder.startsAt} < ${Math.floor(to.getTime() / 1000)}`
 			)
 		)
 		.then((rows) => rows.filter(isScheduled));
@@ -628,27 +628,27 @@ export async function listUnloggedCompletions(userId: string) {
 	return db
 		.select({
 			signupId: volunteerSignup.id,
-			shiftId: volunteerShift.id,
-			volunteerRoleId: volunteerShift.volunteerRoleId,
+			shiftId: workOrder.id,
+			volunteerRoleId: workOrder.volunteerRoleId,
 			roleName: volunteerRole.name,
-			startsAt: volunteerShift.startsAt,
-			endsAt: volunteerShift.endsAt
+			startsAt: workOrder.startsAt,
+			endsAt: workOrder.endsAt
 		})
 		.from(volunteerSignup)
-		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.where(
 			and(
 				eq(volunteerSignup.userId, userId),
 				eq(volunteerSignup.status, 'completed'),
-				gte(volunteerShift.endsAt, earliest),
+				gte(workOrder.endsAt, earliest),
 				sql`not exists (
 					select 1 from "volunteer_hour_log" vhl
-					where vhl."shift_id" = ${volunteerShift.id} and vhl."user_id" = ${userId}
+					where vhl."shift_id" = ${workOrder.id} and vhl."user_id" = ${userId}
 				)`
 			)
 		)
-		.orderBy(asc(volunteerShift.startsAt));
+		.orderBy(asc(workOrder.startsAt));
 }
 
 /**
@@ -670,22 +670,22 @@ export async function listCompletionsAwaitingFeedback(
 			userId: volunteerSignup.userId,
 			userName: user.name,
 			userEmail: user.email,
-			shiftId: volunteerShift.id,
+			shiftId: workOrder.id,
 			roleName: volunteerRole.name,
-			startsAt: volunteerShift.startsAt,
-			endsAt: volunteerShift.endsAt
+			startsAt: workOrder.startsAt,
+			endsAt: workOrder.endsAt
 		})
 		.from(volunteerSignup)
-		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.innerJoin(user, eq(user.id, volunteerSignup.userId))
 		.leftJoin(volunteerShiftFeedback, eq(volunteerShiftFeedback.signupId, volunteerSignup.id))
 		.where(
 			and(
 				eq(volunteerSignup.status, 'completed'),
 				isNull(volunteerShiftFeedback.id),
-				sql`${volunteerShift.endsAt} >= ${Math.floor(from.getTime() / 1000)}`,
-				sql`${volunteerShift.endsAt} < ${Math.floor(to.getTime() / 1000)}`
+				sql`${workOrder.endsAt} >= ${Math.floor(from.getTime() / 1000)}`,
+				sql`${workOrder.endsAt} < ${Math.floor(to.getTime() / 1000)}`
 			)
 		)
 		.then((rows) => rows.filter(isScheduled));
@@ -721,23 +721,23 @@ export async function listSignupsForUser(
 	return db
 		.select({
 			signupId: volunteerSignup.id,
-			shiftId: volunteerShift.id,
+			shiftId: workOrder.id,
 			roleName: volunteerRole.name,
-			startsAt: volunteerShift.startsAt,
-			endsAt: volunteerShift.endsAt,
+			startsAt: workOrder.startsAt,
+			endsAt: workOrder.endsAt,
 			status: volunteerSignup.status,
-			shiftCancelledAt: volunteerShift.cancelledAt,
+			shiftCancelledAt: workOrder.cancelledAt,
 			// The member's own card shows the briefing once they are booked — it is
 			// what they need on the night, and the claim modal quotes it before they
 			// commit. The event is what makes "Front Desk" mean a particular evening.
-			notes: volunteerShift.notes,
+			notes: workOrder.notes,
 			eventTitle: eventTitleSql
 		})
 		.from(volunteerSignup)
-		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.where(eq(volunteerSignup.userId, userId))
-		.orderBy(desc(volunteerShift.startsAt))
+		.orderBy(desc(workOrder.startsAt))
 		.limit(options.limit ?? 20);
 }
 
@@ -752,12 +752,12 @@ export async function listSignupsForUser(
 /**
  * The show a shift staffs, as a correlated subquery rather than a fourth join.
  *
- * `volunteer_shift.event_id` is nullable by design (work parties, repair days), so a join
+ * `work_order.event_id` is nullable by design (work parties, repair days), so a join
  * would have to be a left one, and this file otherwise knows nothing about the event
  * schema. One scalar select keeps it that way.
  */
 const eventTitleSql = sql<string | null>`(
-	select e."title" from "event" e where e."id" = ${volunteerShift.eventId}
+	select e."title" from "event" e where e."id" = ${workOrder.eventId}
 )`;
 
 /**
@@ -800,27 +800,27 @@ export async function listOutstandingClaims(
 			signupId: volunteerSignup.id,
 			userId: volunteerSignup.userId,
 			member: memberRefColumns(),
-			shiftId: volunteerShift.id,
+			shiftId: workOrder.id,
 			volunteerRoleId: volunteerRole.id,
 			roleName: volunteerRole.name,
-			startsAt: volunteerShift.startsAt,
-			endsAt: volunteerShift.endsAt,
+			startsAt: workOrder.startsAt,
+			endsAt: workOrder.endsAt,
 			eventTitle: eventTitleSql,
 			claimedAt: volunteerSignup.claimedAt
 		})
 		.from(volunteerSignup)
-		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.innerJoin(user, eq(user.id, volunteerSignup.userId))
 		.where(
 			and(
 				eq(volunteerSignup.status, 'claimed'),
-				isNull(volunteerShift.cancelledAt),
-				gte(volunteerShift.startsAt, now),
-				before ? lt(volunteerShift.startsAt, before) : undefined
+				isNull(workOrder.cancelledAt),
+				gte(workOrder.startsAt, now),
+				before ? lt(workOrder.startsAt, before) : undefined
 			)
 		)
-		.orderBy(asc(volunteerShift.startsAt), asc(volunteerSignup.claimedAt));
+		.orderBy(asc(workOrder.startsAt), asc(volunteerSignup.claimedAt));
 
 	return rows.filter(isScheduled).map((row) => ({ ...row, member: toMemberRef(row.member) }));
 }
@@ -845,27 +845,27 @@ export async function listUnclosedSignups(
 			signupId: volunteerSignup.id,
 			userId: volunteerSignup.userId,
 			member: memberRefColumns(),
-			shiftId: volunteerShift.id,
+			shiftId: workOrder.id,
 			volunteerRoleId: volunteerRole.id,
 			roleName: volunteerRole.name,
-			startsAt: volunteerShift.startsAt,
-			endsAt: volunteerShift.endsAt,
+			startsAt: workOrder.startsAt,
+			endsAt: workOrder.endsAt,
 			eventTitle: eventTitleSql,
 			claimedAt: volunteerSignup.claimedAt
 		})
 		.from(volunteerSignup)
-		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.innerJoin(user, eq(user.id, volunteerSignup.userId))
 		.where(
 			and(
 				eq(volunteerSignup.status, 'claimed'),
-				isNull(volunteerShift.cancelledAt),
-				lt(volunteerShift.endsAt, now),
-				gte(volunteerShift.endsAt, since)
+				isNull(workOrder.cancelledAt),
+				lt(workOrder.endsAt, now),
+				gte(workOrder.endsAt, since)
 			)
 		)
-		.orderBy(desc(volunteerShift.startsAt));
+		.orderBy(desc(workOrder.startsAt));
 
 	return rows.filter(isScheduled).map((row) => ({ ...row, member: toMemberRef(row.member) }));
 }
@@ -889,25 +889,25 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 		db
 			.select({ n: count() })
 			.from(volunteerSignup)
-			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+			.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
 			.where(
 				and(
 					eq(volunteerSignup.status, 'claimed'),
-					isNull(volunteerShift.cancelledAt),
-					gte(volunteerShift.startsAt, now)
+					isNull(workOrder.cancelledAt),
+					gte(workOrder.startsAt, now)
 				)
 			),
 		db.select({ n: count() }).from(volunteerProfile).where(eq(volunteerProfile.status, 'blocked')),
 		db
 			.select({ n: count() })
 			.from(volunteerSignup)
-			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+			.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
 			.where(
 				and(
 					eq(volunteerSignup.status, 'claimed'),
-					isNull(volunteerShift.cancelledAt),
-					lt(volunteerShift.endsAt, now),
-					gte(volunteerShift.endsAt, lookback)
+					isNull(workOrder.cancelledAt),
+					lt(workOrder.endsAt, now),
+					gte(workOrder.endsAt, lookback)
 				)
 			)
 	]);
@@ -1016,7 +1016,7 @@ export async function listShiftCandidates(
 
 	const workedThisRoleSql = sql<number>`(
 		select count(*) from "volunteer_signup" vs
-		join "volunteer_shift" vsh on vsh."id" = vs."shift_id"
+		join "work_order" vsh on vsh."id" = vs."shift_id"
 		where vs."user_id" = ${user.id}
 			and vs."status" = 'completed'
 			and vsh."volunteer_role_id" = ${roleId}

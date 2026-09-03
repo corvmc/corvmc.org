@@ -4,7 +4,7 @@ import { helpArticle } from '$lib/server/db/schema/help';
 import { asc, eq } from 'drizzle-orm';
 import { listFor } from '$lib/server/media/media-service';
 import { resolveImageUrl } from '$lib/server/storage';
-import { raiseFlag } from './asset-flag-service';
+import { raiseFlag } from './work-request-service';
 
 /**
  * What is attached to a thing: documentation on the catalog entry, and evidence
@@ -120,7 +120,7 @@ export interface ReportDamageInput {
  * reporter got an error, only the first was ever attributable, and an
  * observation not worth taking the unit out of service had nowhere to go.
  *
- * It now records an `asset_flag` and lets that decide. The ledger is unchanged
+ * It now records an `work_request` and lets that decide. The ledger is unchanged
  * and still carries the `repair_out` when the unit actually leaves service; what
  * moved out of it is the part a movement cannot express, because a movement has
  * to move something.

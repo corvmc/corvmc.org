@@ -95,7 +95,7 @@ vi.mock('./asset-service', () => ({
 	setAssetStatus: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('./asset-flag-service', () => ({
+vi.mock('./work-request-service', () => ({
 	hasBlockingFlag: vi.fn().mockResolvedValue(false),
 	raiseFlag: vi.fn().mockResolvedValue({ id: 'flag-1' })
 }));
@@ -122,7 +122,7 @@ import {
 } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { setAssetStatus } from './asset-service';
-import { hasBlockingFlag, raiseFlag } from './asset-flag-service';
+import { hasBlockingFlag, raiseFlag } from './work-request-service';
 
 // ---------------------------------------------------------------------------
 // Pure functions
