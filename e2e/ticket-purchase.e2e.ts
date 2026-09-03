@@ -156,9 +156,14 @@ test('a guest buys a ticket and it comes back valid', async ({ page }) => {
 	// carries — landing here at all proves the redirect survived the round trip.
 	await expect(page).toHaveURL(/\/tickets\/success\?purchase_id=/);
 	await expect(page.getByRole('heading', { name: 'Tickets Confirmed' })).toBeVisible();
-	// A ticket code renders only for a ticket the webhook flipped to `valid`; a
-	// `pending` row would leave this list empty.
-	await expect(page.getByText('e2e-guest@example.test')).toBeVisible();
+	// The `Your Tickets` list renders one row per ticket the query returns, and it
+	// only returns `valid` rows — a still-`pending` ticket leaves it empty. The
+	// code beside the label is what the door scans, so its presence is the real
+	// proof fulfillment ran.
+	// `exact`: the buyer's address also appears in the "a receipt will be sent to
+	// …" sentence above, and a substring match resolves to both.
+	await expect(page.getByText('e2e-guest@example.test', { exact: true })).toBeVisible();
+	await expect(page.getByText('Ticket code')).toBeVisible();
 });
 
 test('a declined card keeps the buyer on checkout with the real decline copy', async ({ page }) => {

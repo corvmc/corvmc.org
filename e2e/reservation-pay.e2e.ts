@@ -64,13 +64,15 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	await checkbox.check();
 	await expect(checkbox).toBeChecked();
 
-	// $15.00 grossed up for 2.9% + 30¢ is $15.75.
 	await page.getByRole('button', { name: /^Pay \$/ }).click();
 
 	// The fake gateway's stand-in for Stripe Checkout, reached by the same 303
 	// the live integration issues.
 	await expect(page).toHaveURL(/\/checkout\/fake\//);
-	await expect(page.getByText('$15.75')).toBeVisible();
+	// $15.00 grossed up for 2.9% + 30¢ — `calculateTotalWithFeeCoverage(1500)` is
+	// `{ totalCents: 1576, feeCents: 76 }`. Asserting the total here is what proves
+	// the fee line reached the checkout session rather than only the preview.
+	await expect(page.getByText('$15.76')).toBeVisible();
 
 	await page.locator('input[name$="cardNumber"]').fill('4242424242424242');
 	await page.getByRole('button', { name: /^Pay / }).click();
