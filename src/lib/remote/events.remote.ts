@@ -667,6 +667,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			reservationId: evt.reservationId,
 			ticketingEnabled: evt.ticketingEnabled,
 			ticketPrice: evt.ticketPrice,
+			ticketPriceFloorCents: evt.ticketPriceFloorCents,
 			ticketQuantity: evt.ticketQuantity,
 			posterKey: evt.posterKey,
 			source: evt.source,
@@ -1002,6 +1003,7 @@ export const updateEvent = form(
 		externalTicketUrl: z.string().max(500).optional(),
 		ticketingEnabled: z.boolean().optional(),
 		ticketPrice: z.string().optional(),
+		ticketPriceFloorCents: z.string().optional(),
 		ticketQuantity: z.string().optional(),
 		rebookReservation: z.boolean().default(false),
 		reservationStartTime: z.string().optional(),
@@ -1029,6 +1031,13 @@ export const updateEvent = form(
 		if (ticketingEnabled !== undefined) updateParams.ticketingEnabled = ticketingEnabled;
 		if (data.ticketPrice !== undefined) {
 			updateParams.ticketPrice = data.ticketPrice ? parseInt(data.ticketPrice, 10) : null;
+		}
+		// A cleared floor is a floor of zero, not an absent one — the column is
+		// NOT NULL, and "no minimum" is the meaningful reading of an empty field.
+		if (data.ticketPriceFloorCents !== undefined) {
+			updateParams.ticketPriceFloorCents = data.ticketPriceFloorCents
+				? parseInt(data.ticketPriceFloorCents, 10)
+				: 0;
 		}
 		if (data.ticketQuantity !== undefined) {
 			updateParams.ticketQuantity = data.ticketQuantity ? parseInt(data.ticketQuantity, 10) : null;

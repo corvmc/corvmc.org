@@ -165,6 +165,35 @@ export const TICKET_CONTRIBUTION_PRESETS = [500, 1000, 2500] as const;
 export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
 
 // ---------------------------------------------------------------------------
+// The ticket sliding scale
+// ---------------------------------------------------------------------------
+
+/**
+ * Where the split bar opens on a ticket: the collective's suggested share of
+ * what is actually divisible, in basis points.
+ *
+ * This is the house suggestion, and it is not the deal. CMC's standing
+ * arrangement is 70% of the door to the bands, but a bill with three acts on
+ * three different deals has no single percentage — the deal itself lives on
+ * `event_band` (see `docs/specs/project-spec.md`, the deal shape). Say "we
+ * suggest 70% to the acts" in copy, never "the acts' deal is 70%".
+ */
+export const TICKET_COLLECTIVE_SHARE_BPS = 3000;
+
+/**
+ * A ticket is free, or it costs at least this. Nothing in between: Stripe's own
+ * charge minimum is 50¢ and its 30¢ fixed fee is a third of a $1 sale, so the
+ * amounts this excludes are the ones where almost nothing reaches the acts.
+ *
+ * Load-bearing beyond the copy: `checkout()` skips the fee-coverage line item
+ * entirely below 100¢ (`payment-service.ts`), which would silently charge a
+ * buyer who ticked "cover fees" less than the preview promised. That branch is
+ * unreachable from ticket checkout only because this floor sits above it. Move
+ * it below 100 and the two diverge.
+ */
+export const TICKET_MIN_CHARGE_CENTS = 200;
+
+// ---------------------------------------------------------------------------
 // Equipment pricing
 // ---------------------------------------------------------------------------
 
