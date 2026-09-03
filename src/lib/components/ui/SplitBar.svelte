@@ -7,7 +7,7 @@
 	 * of whole literals is what makes them survive the build.
 	 */
 	const TONES = {
-		blue: 'bg-info/30',
+		blue: 'bg-info/70',
 		orange: 'bg-primary/30',
 		green: 'bg-success/30',
 		gray: 'bg-base-300',
