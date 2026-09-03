@@ -29,9 +29,7 @@
 
 	// Owner-only and premium-only: the query enforces both, so asking for it as
 	// anyone else would surface an error banner instead of just hiding a section.
-	const showCustomDomain = $derived(
-		layout.features.bandPremium && band.tier === 'premium' && layout.userRole === 'owner'
-	);
+	const showCustomDomain = $derived(band.tier === 'premium' && layout.userRole === 'owner');
 	let customDomain = $derived(showCustomDomain ? await getCustomDomain(band.slug) : null);
 
 	const isOwner = $derived(layout.userRole === 'owner');

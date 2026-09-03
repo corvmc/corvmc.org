@@ -55,6 +55,15 @@ vi.mock('$lib/server/media/media-service', () => ({
 	])
 }));
 
+// The profile also carries a band's releases now, and the flag that gates them
+// reads site config out of KV — which no unit test has. Off is the right
+// default here: this spec is about what the press kit does and does not
+// publish, and a discography would only be noise in it.
+vi.mock('$lib/server/feature-flags', () => ({ isFeatureEnabled: vi.fn(async () => false) }));
+vi.mock('$lib/server/audio/audio-service', () => ({
+	listPublishedReleasesForBand: vi.fn(async () => [])
+}));
+
 import { getPublicBandProfile } from './directory.remote';
 
 const BAND_ROW = {

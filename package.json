@@ -149,7 +149,8 @@
 			"undici@<6.27.0": ">=6.27.0"
 		},
 		"patchedDependencies": {
-			"yargs@17.7.2": "patches/yargs@17.7.2.patch"
+			"yargs@17.7.2": "patches/yargs@17.7.2.patch",
+			"svelte@5.57.0": "patches/svelte@5.57.0.patch"
 		}
 	}
 }

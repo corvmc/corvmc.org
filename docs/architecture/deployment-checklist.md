@@ -156,6 +156,31 @@ To update webhook events later:
 STRIPE_WEBHOOK_ID=we_xxx STRIPE_SECRET_KEY=sk_live_xxx pnpm tsx scripts/sync-webhooks.ts
 ```
 
+### 6a. The Connect endpoint — a second one, with its own secret
+
+Band music sales are Stripe Connect destination charges, so band accounts emit
+`account.updated` on the **connected-account** stream. Stripe delivers those only
+to endpoints created with `connect: true`, and **they are signed with a different
+secret** — verifying one against `STRIPE_WEBHOOK_SECRET` fails every time.
+
+`sync-webhooks.ts` does not manage this endpoint (it models one platform endpoint
+and no `connect` flag), so create it once by hand:
+
+```bash
+stripe webhook_endpoints create \
+  --url https://corvmc.org/api/stripe/connect-webhook \
+  --enabled-events account.updated \
+  --connect
+wrangler secret put STRIPE_CONNECT_WEBHOOK_SECRET
+```
+
+**This failure is silent, which is the reason it is written down.** Nothing
+errors visibly when the secret is wrong or the endpoint is missing: bands
+complete Stripe's onboarding, `band_stripe_account.charges_enabled` never flips
+to true, and every attempt to publish a paid release is refused with a message
+about payouts not being set up. Verify after deploy by completing onboarding on a
+test band and checking the column, not by watching for an error.
+
 ---
 
 ## 7. Custom Domain

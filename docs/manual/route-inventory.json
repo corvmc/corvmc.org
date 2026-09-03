@@ -52,6 +52,18 @@
 		"panel": "band"
 	},
 	{
+		"route": "/band/[slug]/music",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/music/[releaseId]",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/music/payouts",
+		"panel": "band"
+	},
+	{
 		"route": "/band/[slug]/page-editor",
 		"panel": "band"
 	},
@@ -224,6 +236,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/purchases",
+		"panel": "member"
+	},
+	{
 		"route": "/member/reservations",
 		"panel": "member"
 	},
@@ -272,7 +288,19 @@
 		"panel": "member"
 	},
 	{
+		"route": "/music/[bandSlug]/[releaseSlug]",
+		"panel": "public"
+	},
+	{
+		"route": "/music/download/[token]",
+		"panel": "public"
+	},
+	{
 		"route": "/programs",
+		"panel": "public"
+	},
+	{
+		"route": "/radio",
 		"panel": "public"
 	},
 	{
@@ -457,6 +485,10 @@
 	},
 	{
 		"route": "/staff/marketing/campaigns/new",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/music",
 		"panel": "staff"
 	},
 	{

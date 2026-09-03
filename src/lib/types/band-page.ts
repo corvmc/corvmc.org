@@ -17,28 +17,40 @@ export interface MerchItem {
 	price?: string;
 }
 
+/**
+ * What every block carries regardless of type.
+ *
+ * `hidden` is what the page editor's visibility toggle writes. Since the editor
+ * became reorder-and-hide — every premium band starts with the whole catalogue,
+ * see `$lib/utils/band-site-preset` — there is no delete, so a block a band does
+ * not want is one it keeps and stops publishing. Absent means visible.
+ */
+interface BlockBase {
+	id: string;
+	cssClass?: string;
+	hidden?: boolean;
+}
+
 export type Block =
-	| {
-			id: string;
+	| (BlockBase & {
 			type: 'hero';
 			imageKey: string;
 			headline?: string;
 			subtitle?: string;
-			cssClass?: string;
-	  }
-	| { id: string; type: 'bio'; content: string; cssClass?: string }
-	| { id: string; type: 'links'; style: 'buttons' | 'icons' | 'list'; cssClass?: string }
-	| { id: string; type: 'members'; showPositions: boolean; cssClass?: string }
-	| { id: string; type: 'events'; limit?: number; showPast?: boolean; cssClass?: string }
-	| { id: string; type: 'gallery'; imageKeys: string[]; downloadable?: boolean; cssClass?: string }
-	| { id: string; type: 'embed'; platform: string; url: string; cssClass?: string }
-	| { id: string; type: 'press'; cssClass?: string }
-	| { id: string; type: 'achievements'; cssClass?: string }
-	| { id: string; type: 'contact'; showForm?: boolean; cssClass?: string }
-	| { id: string; type: 'tech_rider'; cssClass?: string }
-	| { id: string; type: 'custom_html'; content: string; cssClass?: string }
-	| { id: string; type: 'merch'; items: MerchItem[]; cssClass?: string }
-	| { id: string; type: 'spacer'; height: 'sm' | 'md' | 'lg'; cssClass?: string };
+	  })
+	| (BlockBase & { type: 'bio'; content: string })
+	| (BlockBase & { type: 'links'; style: 'buttons' | 'icons' | 'list' })
+	| (BlockBase & { type: 'members'; showPositions: boolean })
+	| (BlockBase & { type: 'events'; limit?: number; showPast?: boolean })
+	| (BlockBase & { type: 'gallery'; imageKeys: string[]; downloadable?: boolean })
+	| (BlockBase & { type: 'embed'; platform: string; url: string })
+	| (BlockBase & { type: 'press' })
+	| (BlockBase & { type: 'achievements' })
+	| (BlockBase & { type: 'contact'; showForm?: boolean })
+	| (BlockBase & { type: 'tech_rider' })
+	| (BlockBase & { type: 'custom_html'; content: string })
+	| (BlockBase & { type: 'merch'; items: MerchItem[] })
+	| (BlockBase & { type: 'spacer'; height: 'sm' | 'md' | 'lg' });
 
 /**
  * One named human a venue can reach. `phone` is optional throughout and is

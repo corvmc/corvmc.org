@@ -10,6 +10,7 @@ import {
 	PRESS_QUOTES
 } from './pools';
 import { pick, pickN, randomInt } from './util';
+import { presetBlocks } from '../../src/lib/utils/band-site-preset';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 
@@ -54,46 +55,55 @@ export async function seedBandPageConfigs(bands: any[]) {
 		const b = premiumBands[i];
 		const theme = themes[i % themes.length];
 
-		const blocks = [
-			{
-				id: randomUUID(),
-				type: 'hero',
-				imageKey: 'bands/hero-placeholder.jpg',
-				headline: b.name,
-				subtitle: b.tagline || 'Live music from Corvallis, OR'
-			},
-			{
-				id: randomUUID(),
-				type: 'bio',
-				content:
-					b.bio || `${b.name} brings their unique sound to venues across the Pacific Northwest.`
-			},
-			{
-				id: randomUUID(),
-				type: 'embed',
-				platform: 'spotify',
-				url: 'https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb'
-			},
-			{ id: randomUUID(), type: 'events', limit: 5 },
-			{ id: randomUUID(), type: 'members', showPositions: true },
-			{ id: randomUUID(), type: 'links', style: 'buttons' },
-			{ id: randomUUID(), type: 'press' },
-			{ id: randomUUID(), type: 'achievements' },
-			{
-				id: randomUUID(),
-				type: 'gallery',
-				imageKeys: ['bands/gallery-1.jpg', 'bands/gallery-2.jpg', 'bands/gallery-3.jpg'],
-				downloadable: true
-			},
-			{ id: randomUUID(), type: 'contact', showForm: true },
-			{
-				id: randomUUID(),
-				type: 'custom_html',
-				content: `<div style="text-align:center"><em>${b.name} is booking now for summer shows.</em></div>`
-			},
-			{ id: randomUUID(), type: 'tech_rider' },
-			{ id: randomUUID(), type: 'spacer', height: 'md' }
-		];
+		// Every premium band starts from the same preset — the editor reorders and
+		// hides rather than adding, so a hand-written fixture would describe a page
+		// nobody can build. Filling a few blocks in, rotating the order and hiding
+		// one is what a band would actually have done to it.
+		const blocks = presetBlocks().map((block) => {
+			switch (block.type) {
+				case 'hero':
+					return {
+						...block,
+						imageKey: 'bands/hero-placeholder.jpg',
+						subtitle: b.tagline || 'Live music from Corvallis, OR'
+					};
+				case 'bio':
+					return {
+						...block,
+						content:
+							b.bio || `${b.name} brings their unique sound to venues across the Pacific Northwest.`
+					};
+				case 'embed':
+					return {
+						...block,
+						platform: 'spotify',
+						url: 'https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb'
+					};
+				case 'gallery':
+					return {
+						...block,
+						imageKeys: ['bands/gallery-1.jpg', 'bands/gallery-2.jpg', 'bands/gallery-3.jpg'],
+						downloadable: true
+					};
+				case 'custom_html':
+					return {
+						...block,
+						content: `<div style="text-align:center"><em>${b.name} is booking now for summer shows.</em></div>`
+					};
+				// Every third band has hidden its merch shelf, so the toggle has
+				// something to show in dev on both settings.
+				case 'merch':
+					return i % 3 === 0 ? { ...block, hidden: true } : block;
+				default:
+					return block;
+			}
+		});
+
+		// Half the bands have moved their roster above the fold.
+		if (i % 2 === 0) {
+			const from = blocks.findIndex((block) => block.type === 'members');
+			blocks.splice(1, 0, ...blocks.splice(from, 1));
+		}
 
 		const epk = {
 			bookingContact: {

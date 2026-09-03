@@ -5,10 +5,9 @@
  * phone number — so this form is the only route in, and there is nothing on the
  * page for a scraper to take.
  *
- * It was premium once, sitting on the microsite behind two gates. Both are gone:
- * a `requireFeature('bandPremium')` that would keep it dark in production, and a
- * `tier !== 'premium'` 404. Turnstile plus the KV rate limit were always what
- * made it safe to expose, and neither of those is a tier.
+ * It was premium once, sitting on the microsite behind a `tier !== 'premium'`
+ * 404 and a feature flag. Both are gone. Turnstile plus the KV rate limit were
+ * always what made it safe to expose, and neither of those is a tier.
  *
  * **Where it lands changed.** It used to be one email to whichever address the
  * press kit named, and then nothing: no record, no status, no way to tell

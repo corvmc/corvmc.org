@@ -58,7 +58,7 @@ const verifyTurnstile = vi.fn(async () => true);
 vi.mock('$lib/server/turnstile', () => ({
 	verifyTurnstile: (...a: unknown[]) => verifyTurnstile(...(a as []))
 }));
-vi.mock('$lib/server/authorization', () => ({ requireStaff: vi.fn(async () => undefined) }));
+vi.mock('$lib/server/authorization', () => ({ requireCapability: vi.fn(async () => undefined) }));
 vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
 vi.mock('$lib/server/utils/slug', () => ({ generateSlug: vi.fn(), ensureUniqueSlug: vi.fn() }));
 vi.mock('$lib/server/db', () => ({ db: {} }));

@@ -14,6 +14,7 @@
 	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
 	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
 	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
+	import ReleasesBox from '$lib/components/directory/profile/ReleasesBox.svelte';
 	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
@@ -113,6 +114,7 @@
 		{#snippet main()}
 			<ProseBlock label="About" markdown={band.bio} />
 			<ListenStrip links={band.links} />
+			<ReleasesBox releases={band.releases} bandSlug={band.slug} />
 			<ShowsBox
 				upcoming={shows.upcoming}
 				past={shows.past}

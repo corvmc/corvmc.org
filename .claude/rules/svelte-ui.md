@@ -26,6 +26,11 @@ Compose the existing shared primitives rather than inventing new ones.
   finishes. `/login` stays client-mounted for exactly this reason.
 - Declarations after a top-level `await` are async-gated. On Svelte < 5.56.4 their async blocks
   could stay uncommitted after an SPA navigation, producing dead modals.
+- **A `$effect` created inside a pending boundary could be stranded forever** — a separate Svelte
+  scheduler bug with the same symptom (a dead modal, because `bits-ui`'s `Dialog.Portal` mounts
+  from a `$effect`). Fixed in `patches/svelte@5.57.0.patch`; see
+  `docs/development/conventions.md#patched-dependencies`. If dead-UI-after-navigation ever returns,
+  check that the patch still applies before reading page code.
 - **`<svelte:window>` listeners are not gated.** They are attached synchronously during setup, so a
   component that awaits at the top and binds a window handler leaves that handler live — for one
   round trip — while the state it reads is still `undefined`. Reading an absent signal throws
