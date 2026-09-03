@@ -29,7 +29,7 @@ vi.mock('$lib/server/authorization', () => ({
 	requireUser: () => ({ id: 'acting-staff' }),
 	isStaff: vi.fn(async () => false),
 	getUserRoles: vi.fn(async () => ['member']),
-	listStaffUsers: vi.fn(async () => []),
+	listUsersWithCapability: vi.fn(async () => []),
 	topPositionFor: vi.fn(() => null)
 }));
 

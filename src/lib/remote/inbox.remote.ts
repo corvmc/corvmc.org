@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
-import { requireStaff, requireUser, listStaffUsers } from '$lib/server/authorization';
+import { requireStaff, requireUser, listUsersWithCapability } from '$lib/server/authorization';
+import { getUserContact } from '$lib/server/user/user-service';
 import { dispatch } from '$lib/server/notification/dispatcher';
 import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
 import { getStaffLayout, getMemberLayout } from '$lib/remote/layout.remote';
@@ -196,9 +197,15 @@ export const getInboxUnreadCount = query(z.void(), async () => {
 	return getUnresolvedCount();
 });
 
+/**
+ * Who a thread can be handed to.
+ *
+ * `inbox.reply`, not "is staff": you may only assign a conversation to someone
+ * who is able to answer it.
+ */
 export const getAssignableStaff = query(z.void(), async () => {
 	await requireStaff();
-	return listStaffUsers();
+	return listUsersWithCapability('inbox.reply');
 });
 
 // ---------------------------------------------------------------------------
@@ -328,7 +335,11 @@ const assignSchema = z.object({
  * up assigned to someone who never found out.
  */
 async function notifyAssignee(threadId: string, userId: string) {
-	const assignee = (await listStaffUsers()).find((u) => u.id === userId);
+	// A direct read, not a scan of the assignable list: `assignThread` has
+	// already validated the assignee, so this is a lookup rather than a second
+	// authorization rule, and walking a list to fetch one row was the wrong
+	// shape regardless.
+	const assignee = await getUserContact(userId);
 	const thread = await getThread(threadId);
 	if (!assignee || !thread) return;
 
