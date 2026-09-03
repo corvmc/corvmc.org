@@ -88,6 +88,12 @@ vi.mock('$lib/server/db/schema/ticket', () => ({
 		attendeeEmail: 'attendee_email',
 		code: 'code',
 		status: 'status',
+		unitPriceCents: 'unit_price_cents',
+		contributionCents: 'contribution_cents',
+		actsCents: 'acts_cents',
+		collectiveCents: 'collective_cents',
+		feeCoveredCents: 'fee_covered_cents',
+		discountWaived: 'discount_waived',
 		checkedInAt: 'checked_in_at',
 		checkedInByUserId: 'checked_in_by_user_id',
 		createdAt: 'created_at',
@@ -131,6 +137,7 @@ const {
 	getTicketsRemaining,
 	getTicketsByPurchase,
 	getEventTickets,
+	getEventTicketMoney,
 	getUserTickets,
 	TicketNotFoundError,
 	TicketStateError
@@ -509,5 +516,54 @@ describe('getUserTickets', () => {
 		selectResult = [];
 		await getUserTickets('user-1');
 		expect(inArray).toHaveBeenCalledWith('status', ['valid', 'checked_in']);
+	});
+});
+
+describe('getEventTicketMoney', () => {
+	it('counts only the tickets that are actually good for entry', async () => {
+		// A cancelled ticket's money is not the show's money, and a `pending` one
+		// is a checkout nobody finished. The page this feeds used to sum the ledger
+		// it rendered, which has no status filter at all.
+		selectResult = [];
+
+		await getEventTicketMoney('event-1');
+
+		expect(inArray).toHaveBeenCalledWith('status', ['valid', 'checked_in']);
+	});
+
+	it('reports zeros rather than nulls for a show that has sold nothing', async () => {
+		// SQLite `sum()` over no rows is NULL, and a null cent figure rendered into
+		// a staff total reads as a missing number rather than as none.
+		selectResult = [];
+
+		expect(await getEventTicketMoney('event-1')).toEqual({
+			ticketsCents: 0,
+			contributionsCents: 0,
+			actsCents: 0,
+			collectiveCents: 0,
+			feeCoveredCents: 0,
+			freeCount: 0,
+			paidCount: 0
+		});
+	});
+
+	it('passes the summed row straight through', async () => {
+		selectResult = [
+			{
+				ticketsCents: 3000,
+				contributionsCents: 500,
+				actsCents: 2400,
+				collectiveCents: 900,
+				feeCoveredCents: 0,
+				freeCount: 1,
+				paidCount: 2
+			}
+		];
+
+		expect(await getEventTicketMoney('event-1')).toMatchObject({
+			actsCents: 2400,
+			collectiveCents: 900,
+			freeCount: 1
+		});
 	});
 });

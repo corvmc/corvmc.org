@@ -51,6 +51,10 @@ import {
 	getUserTickets,
 	getTicketsByPurchase,
 	createTickets,
+	issueFreeTickets,
+	getEventTicketMoney,
+	type EventTicketMoney,
+	countTicketsForEmail,
 	checkIn,
 	cancelTicket as cancelTicketService
 } from '$lib/server/ticket/ticket-service';
@@ -64,11 +68,9 @@ import { publicEventStatuses, eventStatuses } from '$lib/server/db/schema/event'
 import { getStanding } from '$lib/server/moderation/standing-service';
 import { isSustainingMember as checkSustainingMember } from '$lib/server/finance/subscription-service';
 import { checkout } from '$lib/server/finance/payment-service';
-import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
 import { buildLineItem } from '$lib/server/finance/product-config-service';
-import { contributionToCents } from '$lib/utils/event-ticketing';
-import { formatCents } from '$lib/utils/format';
-import { TICKET_CONTRIBUTION_MAX_CENTS } from '$lib/config';
+import { validateTicketSplit } from '$lib/finance/ticket-split';
+import { FREE_TICKETS_PER_EMAIL, TICKET_COLLECTIVE_SHARE_BPS } from '$lib/config';
 import { resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
@@ -159,8 +161,11 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 	const { locals } = getRequestEvent();
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
-	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
-	const isSustainingMember = locals.user ? await checkSustainingMember(locals.user.id) : false;
+	const [remaining, lineup, isSustainingMember] = await Promise.all([
+		evt.ticketingEnabled ? getTicketsRemaining(id) : Promise.resolve(null),
+		getEventLineup(id),
+		locals.user ? checkSustainingMember(locals.user.id) : Promise.resolve(false)
+	]);
 
 	// Sold is derived from remaining only when the event is both ticketed and capped;
 	// otherwise the capacity bar isn't shown so the count isn't needed.
@@ -203,12 +208,17 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			posterUrl: resolveImageUrl(evt.posterKey),
 			ticketingEnabled: evt.ticketingEnabled,
 			ticketPrice: evt.ticketPrice,
+			ticketPriceFloorCents: evt.ticketPriceFloorCents,
 			ticketQuantity: evt.ticketQuantity,
 			// An externally ticketed event still takes RSVPs here; the page needs
 			// the link to send members to whoever is actually selling.
 			source: evt.source,
 			externalTicketUrl: evt.externalTicketUrl
 		},
+		// Display names only — the split bar labels one side with them, and a
+		// touring act usually has no `directory_entry` to point at.
+		acts: lineup.filter((a) => a.status !== 'declined').map((a) => a.name),
+		collectiveShareBps: TICKET_COLLECTIVE_SHARE_BPS,
 		remaining,
 		sold,
 		isSustainingMember,
@@ -304,6 +314,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			posterUrl: resolveImageUrl(evt.posterKey),
 			ticketingEnabled: evt.ticketingEnabled,
 			ticketPrice: evt.ticketPrice,
+			ticketPriceFloorCents: evt.ticketPriceFloorCents,
 			ticketQuantity: evt.ticketQuantity,
 			source: evt.source,
 			status: evt.status,
@@ -337,6 +348,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		// off the guide, so opening them up only widens the id-probing surface
 		// the moderation spec closed.
 		canReport: evt.status === 'published',
+		collectiveShareBps: TICKET_COLLECTIVE_SHARE_BPS,
 		upcoming
 	};
 });
@@ -354,10 +366,7 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 	// checkout.
 	if (evt.source !== 'cmc') throw error(404, 'Tickets not available for this event');
 
-	const remaining = await getTicketsRemaining(id);
-
-	// DB snapshot is the single membership source (matches the purchase path).
-	const isSustainingMember = locals.user ? await checkSustainingMember(locals.user.id) : false;
+	const [remaining, lineup] = await Promise.all([getTicketsRemaining(id), getEventLineup(id)]);
 
 	const posterUrl = resolveImageUrl(evt.posterKey);
 
@@ -369,11 +378,17 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 			startsAt: evt.startsAt,
 			endsAt: evt.endsAt,
 			doorsAt: evt.doorsAt ?? null,
+			// The SUGGESTED price and the bottom of the scale. Both, always: the
+			// page cannot say what a buyer may pay without the pair.
 			ticketPrice: evt.ticketPrice,
+			ticketPriceFloorCents: evt.ticketPriceFloorCents,
 			ticketQuantity: evt.ticketQuantity
 		},
+		// Display names only, deliberately — a touring act usually has no
+		// `directory_entry` to point at, and the split bar still has to name it.
+		acts: lineup.filter((a) => a.status !== 'declined').map((a) => a.name),
+		collectiveShareBps: TICKET_COLLECTIVE_SHARE_BPS,
 		remaining,
-		isSustainingMember,
 		posterUrl,
 		isAuthenticated: !!locals.user
 	};
@@ -615,6 +630,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 	const posterUrl = resolveImageUrl(evt.posterKey);
 
 	let ticketStats: { sold: number; remaining: number | null } | null = null;
+	let ticketMoney: EventTicketMoney | null = null;
 	let tickets: {
 		id: string;
 		purchaseId: string | null;
@@ -624,18 +640,25 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		status: string;
 		unitPriceCents: number | null;
 		contributionCents: number;
+		actsCents: number;
+		collectiveCents: number;
 		discountWaived: boolean;
 		checkedInAt: Date | null;
 		createdAt: Date;
 	}[] = [];
 
 	if (evt.ticketingEnabled) {
-		const [sold, remaining, allTickets] = await Promise.all([
+		const [sold, remaining, allTickets, money] = await Promise.all([
 			getTicketsSold(evt.id),
 			getTicketsRemaining(evt.id),
-			getEventTickets(evt.id)
+			getEventTickets(evt.id),
+			// Summed in SQL over live tickets only. The page used to add up the
+			// ledger it renders, which has no status filter — so a cancelled
+			// purchase's contribution still counted as the show's.
+			getEventTicketMoney(evt.id)
 		]);
 		ticketStats = { sold, remaining };
+		ticketMoney = money;
 		tickets = allTickets.map((t) => ({
 			id: t.id,
 			purchaseId: t.purchaseId,
@@ -645,6 +668,8 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			status: t.status,
 			unitPriceCents: t.unitPriceCents,
 			contributionCents: t.contributionCents,
+			actsCents: t.actsCents,
+			collectiveCents: t.collectiveCents,
 			discountWaived: t.discountWaived,
 			checkedInAt: t.checkedInAt,
 			createdAt: t.createdAt
@@ -696,6 +721,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		lineup: await getEventLineup(id),
 		linkedReservation,
 		ticketStats,
+		ticketMoney,
 		tickets
 	};
 });
@@ -1283,14 +1309,13 @@ export const claimFreeTicket = form(
 
 		const purchaseId = `rsvp-${randomUUID()}`;
 
-		await createTickets({
+		await issueFreeTickets({
 			eventId: evt.id,
 			purchaseId,
 			quantity: data.quantity,
 			userId: locals.user?.id ?? undefined,
 			attendeeName: attendee.name,
-			attendeeEmail: attendee.email,
-			status: 'valid'
+			attendeeEmail: attendee.email
 		});
 
 		return { redirectUrl: `/events/${evt.id}/tickets/success?purchase_id=${purchaseId}` };
@@ -1343,11 +1368,13 @@ export const purchaseTickets = form(
 		attendeeName: z.string().optional(),
 		attendeeEmail: z.string().optional(),
 		coverFees: z.boolean().default(false),
-		// A dollars string rather than a number: an emptied number field is dropped
-		// from the payload entirely, and `.transform()` in a form() schema breaks
-		// the `fields` inference the <Form> component relies on.
-		contribution: z.string().optional(),
-		waiveDiscount: z.boolean().default(false)
+		// Whole cents, posted from the scale and the split bar. Numbers rather than
+		// the dollars string the contribution field used to be: these come from
+		// hidden fields the component computes, so there is no partially-typed
+		// state to preserve, and `.as('number', …)` keeps the `fields` inference
+		// the <Form> component relies on.
+		unitPriceCents: z.number().int().min(0).optional().default(0),
+		collectiveCents: z.number().int().min(0).optional().default(0)
 	}),
 	async (data, issue) => {
 		const { locals, url } = getRequestEvent();
@@ -1355,15 +1382,6 @@ export const purchaseTickets = form(
 		const issues: FormIssue[] = [];
 		if (isNaN(data.quantity) || data.quantity < 1 || data.quantity > 10) {
 			issues.push(issue.quantity('Quantity must be between 1 and 10'));
-		}
-
-		const contributionCents = contributionToCents(data.contribution);
-		if (contributionCents === undefined) {
-			issues.push(
-				issue.contribution(
-					`Enter a contribution up to ${formatCents(TICKET_CONTRIBUTION_MAX_CENTS)}`
-				)
-			);
 		}
 
 		// Logged-in buyers needn't re-enter their details; fall back to their account.
@@ -1379,6 +1397,23 @@ export const purchaseTickets = form(
 		// money, so it repeats the check rather than trusting the page guard.
 		if (evt.source !== 'cmc') throw error(400, 'Tickets not available');
 
+		// Nothing the client posted is trusted, including the arithmetic — these
+		// numbers become what the acts are owed. The event's own suggested price
+		// and floor are the only two figures here the buyer does not control, and
+		// everything else is checked against them.
+		const validated = validateTicketSplit({
+			unitPriceCents: data.unitPriceCents,
+			quantity: data.quantity,
+			collectiveCents: data.collectiveCents,
+			coverFees: data.coverFees,
+			suggestedUnitCents: evt.ticketPrice,
+			floorCents: evt.ticketPriceFloorCents
+		});
+		// Under the amount field rather than as a toast: the buyer's next move is
+		// to change that number, and a toast does not say which number.
+		if (!validated.ok) invalid(issue.unitPriceCents(validated.reason));
+		const split = validated.split;
+
 		const remaining = await getTicketsRemaining(data.eventId);
 		if (remaining !== null && data.quantity > remaining) {
 			throw error(
@@ -1387,20 +1422,31 @@ export const purchaseTickets = form(
 			);
 		}
 
-		const coverFees = data.coverFees;
-		const purchaseId = randomUUID();
-		const gift = contributionCents ?? 0;
+		// The scale reached zero. Nothing to charge, so Stripe is never involved:
+		// the rows are valid on creation, exactly like a free event's claim.
+		if (split.chargeCents === 0) {
+			const held = await countTicketsForEmail(evt.id, attendee.email);
+			if (held + data.quantity > FREE_TICKETS_PER_EMAIL) {
+				invalid(
+					issue.quantity(
+						`That would be more than ${FREE_TICKETS_PER_EMAIL} free tickets on one email for this show. Get in touch if you need a bigger group.`
+					)
+				);
+			}
 
-		// Member discount keyed off the DB subscription snapshot — the same source
-		// every other flow uses (a live Stripe read can disagree after webhook lag
-		// or past_due, showing one price and charging another).
-		//
-		// Membership and the discount are tracked apart because a member can decline
-		// it for a given show: waiving is only meaningful for someone who had
-		// something to waive.
-		const isMember = locals.user ? await checkSustainingMember(locals.user.id) : false;
-		const discountApplied = isMember && !data.waiveDiscount;
-		const unitPrice = discountApplied ? Math.round(evt.ticketPrice / 2) : evt.ticketPrice;
+			const freeId = `free-${randomUUID()}`;
+			await issueFreeTickets({
+				eventId: evt.id,
+				purchaseId: freeId,
+				quantity: data.quantity,
+				userId: locals.user?.id ?? undefined,
+				attendeeName: attendee.name,
+				attendeeEmail: attendee.email
+			});
+			return { redirectUrl: `/events/${evt.id}/tickets/success?purchase_id=${freeId}` };
+		}
+
+		const purchaseId = randomUUID();
 
 		await createTickets({
 			eventId: evt.id,
@@ -1410,72 +1456,53 @@ export const purchaseTickets = form(
 			attendeeName: attendee.name,
 			attendeeEmail: attendee.email,
 			status: 'pending',
-			unitPriceCents: unitPrice,
-			contributionCents: gift,
-			discountWaived: isMember && !discountApplied
+			unitPriceCents: split.ticketLineUnitCents,
+			contributionCents: split.contributionCents,
+			actsCents: split.actsCents,
+			collectiveCents: split.collectiveCents,
+			feeCoveredCents: split.feeCoveredCents
 		});
 
-		const lineItems = [await buildLineItem('ticket', unitPrice, data.quantity)];
-		// Its own line item under its own product, so a gift never reads as ticket
-		// revenue in Stripe — and so the receipt can name it.
-		if (gift > 0) {
-			lineItems.push(await buildLineItem('ticket_contribution', gift, 1));
+		const lineItems = [await buildLineItem('ticket', split.ticketLineUnitCents, data.quantity)];
+		// Paying above the suggested price is a gift, and it rides as its own line
+		// item under its own product — so it never reads as ticket revenue in
+		// Stripe, and the receipt can name it.
+		if (split.contributionCents > 0) {
+			lineItems.push(await buildLineItem('ticket_contribution', split.contributionCents, 1));
 		}
 
-		// checkout() spends any credits the buyer has before charging the card, and
-		// payment-service reverses every completed deduction if a later one fails.
-		// The only way that surfaces here is a lost race — the balance moved between
-		// this request pricing the cart and the deduction landing. Nothing is
-		// broken and nothing is charged; the buyer just needs to resubmit against
-		// the new balance.
-		//
-		// Reported as a field issue rather than a thrown status because Form routes
-		// a thrown error into onfailure(issues), which carries no message — this
-		// page's onfailure shows a generic "Something went wrong". It also keeps a
-		// routine race out of Sentry, where an unhandled throw lands as a 500.
-		let result;
-		try {
-			result = await checkout({
-				stripeCustomerId: locals.user?.stripeId ?? undefined,
-				customerEmail: locals.user?.email ?? attendee.email,
-				userId: locals.user?.id ?? undefined,
-				mode: 'payment',
-				lineItems,
-				coverFees,
-				metadata: {
-					type: 'ticket',
-					purchase_id: purchaseId,
-					event_id: evt.id,
-					ticket_quantity: String(data.quantity),
-					// The webhook needs these to break the charge into tickets, gift, and
-					// covered fees on the receipt — the session alone can't tell them apart.
-					ticket_unit_price_cents: String(unitPrice),
-					ticket_contribution_cents: String(gift)
-				},
-				successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
-				cancelUrl: `${url.origin}/events/${evt.id}/tickets`
-			});
-		} catch (err) {
-			if (err instanceof InsufficientCreditsError) {
-				invalid(
-					issue.quantity(
-						'Your credit balance changed while this was being processed. Nothing was charged — check the total and try again.'
-					)
-				);
-			}
-			throw err;
-		}
+		const result = await checkout({
+			stripeCustomerId: locals.user?.stripeId ?? undefined,
+			customerEmail: locals.user?.email ?? attendee.email,
+			userId: locals.user?.id ?? undefined,
+			mode: 'payment',
+			lineItems,
+			coverFees: data.coverFees,
+			metadata: {
+				type: 'ticket',
+				purchase_id: purchaseId,
+				event_id: evt.id,
+				ticket_quantity: String(data.quantity),
+				// The webhook needs these to break the charge into tickets, gift, and
+				// covered fees on the receipt — the session alone can't tell them apart.
+				ticket_unit_price_cents: String(split.ticketLineUnitCents),
+				ticket_contribution_cents: String(split.contributionCents),
+				// Not read by the webhook, which takes the allocation off the ticket
+				// rows. These are for settlement, which reconciles against Stripe by
+				// event_id and should be able to see where the buyer sent the money.
+				ticket_acts_cents: String(split.actsCents),
+				ticket_collective_cents: String(split.collectiveCents)
+			},
+			successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
+			cancelUrl: `${url.origin}/events/${evt.id}/tickets`
+		});
 
-		if (result.paid) {
-			const { fulfillPurchase } = await import('$lib/server/ticket/ticket-service');
-			// Credits covered the whole cart — checkout() still records a Stripe
-			// payment record for it, so the tickets store that as their proof of
-			// payment just like a card purchase does.
-			await fulfillPurchase(purchaseId, result.stripePaymentRecordId);
-			return { redirectUrl: `/events/${evt.id}/tickets/success?purchase_id=${purchaseId}` };
-		}
-
-		return { redirectUrl: result.checkoutUrl! };
+		// Tickets never spend credits — no CreditType applies to them — so this
+		// call always comes back with a URL. Asserting that is honest; the branch
+		// that used to be here handled a `paid: true` that checkout() cannot
+		// return without `eligibleCredits`, which this never passed.
+		if (!result.checkoutUrl) throw error(500, 'Checkout could not be started');
+		return { redirectUrl: result.checkoutUrl };
 	}
 );
 
