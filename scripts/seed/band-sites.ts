@@ -117,7 +117,17 @@ export async function seedBandPageConfigs(bands: any[]) {
 			achievements: pickN(ACHIEVEMENTS_POOL, randomInt(3, 5)),
 			backline: pickN(BACKLINE_ITEMS, randomInt(3, 5)),
 			technicalRiderKey: 'bands/rider-placeholder.pdf',
-			stagePlotKey: 'bands/stage-plot-placeholder.png'
+			stagePlotKey: 'bands/stage-plot-placeholder.png',
+			// The premium half of the press kit. Without a seeded row `VideoBox`
+			// never rendered anywhere, so the section a band site is now partly
+			// sold on could not be seen in dev at all. Real YouTube ids, because
+			// the component drops anything `detectPlatform` cannot embed — a
+			// placeholder URL would silently render nothing and look like a bug in
+			// the component rather than in the fixture.
+			videos: [
+				{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', label: 'Live at the Majestic' },
+				{ url: 'https://www.youtube.com/watch?v=9bZkp7q19f0', label: 'Session, take one' }
+			]
 		};
 
 		const customCss =
@@ -191,6 +201,38 @@ export async function seedBandPageConfigs(bands: any[]) {
  * rather than random, because the point is that all three states exist on every
  * reset, not that they are plausibly distributed.
  */
+/**
+ * One fabricated media row, attached to a band.
+ *
+ * The keys name no real object — which is exactly why `backfill-media.ts`
+ * refuses to invent them and the seed may.
+ */
+async function attachSeedImage(
+	b: any,
+	slot: 'gallery' | 'stage_plot' | 'rider' | 'hero',
+	sortOrder: number,
+	caption: string | null
+) {
+	const [mediaRow] = await db
+		.insert(media)
+		.values({
+			key: `bands/${b.slug}/${slot}-${sortOrder}.jpg`,
+			contentType: 'image/jpeg',
+			byteSize: 200_000 + sortOrder * 1000,
+			altText: slot === 'gallery' ? `${b.name} performing live` : null,
+			caption
+		})
+		.returning();
+
+	await db.insert(mediaAttachment).values({
+		mediaId: mediaRow.id,
+		attachableType: 'group',
+		attachableId: b.id,
+		slot,
+		sortOrder
+	});
+}
+
 export async function seedFreePressKits(bands: any[]) {
 	console.log('Seeding free press kits...');
 
@@ -218,6 +260,18 @@ export async function seedFreePressKits(bands: any[]) {
 				phone: `541-555-${randomInt(1000, 9999)}`
 			};
 			epk.backline = pickN(BACKLINE_ITEMS, randomInt(2, 4));
+
+			// Exactly one gallery photo — the free allowance, in full.
+			//
+			// Without this, three states were unreachable in dev and each was
+			// indistinguishable from a surface that is merely quiet: `PressPhoto`
+			// never rendered on a free act's public page, the "Press photo" rung
+			// could never be ticked, and the editor's "1 of 1 · a band site lifts
+			// the limit" state had no way to occur. So `FREE_PRESS_PHOTOS`, the one
+			// new server rule this feature adds, had no fixture exercising it.
+			await attachSeedImage(b, 'gallery', 0, `${b.name} — press photo`);
+			// What the package ships beside the one-pager.
+			await attachSeedImage(b, 'stage_plot', 1, null);
 		}
 
 		await db.update(bandSite).set({ epk, updatedAt: new Date() }).where(eq(bandSite.groupId, b.id));
