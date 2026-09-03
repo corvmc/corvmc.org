@@ -2,6 +2,7 @@ import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-cor
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { inventoryAsset } from './inventory';
+import { project } from './project';
 import { contractorJobStatuses, contractorTrades } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -149,6 +150,13 @@ export const contractorJob = sqliteTable(
 		 */
 		assetId: text('asset_id').references(() => inventoryAsset.id, { onDelete: 'set null' }),
 
+		/**
+		 * The body of work this was part of. This is the column the schema was
+		 * reaching for when `assetId`'s comment said "null is building work": an
+		 * electrician has no asset, and now has a project instead.
+		 */
+		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
+
 		/** When they come, or when the unit went out to them. */
 		scheduledFor: integer('scheduled_for', { mode: 'timestamp' }),
 		/** When it is promised back. Drives the overdue list; nothing else reads it. */
@@ -185,6 +193,7 @@ export const contractorJob = sqliteTable(
 	(t) => [
 		index('idx_contractor_job_contractor').on(t.contractorId),
 		index('idx_contractor_job_asset').on(t.assetId),
+		index('idx_contractor_job_project').on(t.projectId),
 		index('idx_contractor_job_status').on(t.status),
 		// The overdue read: out with somebody, past its date. Partial so the
 		// closed pile — which is most of the table forever — is never scanned.

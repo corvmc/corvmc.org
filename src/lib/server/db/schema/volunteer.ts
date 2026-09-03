@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { user } from './authentication';
 import { event } from './event';
 import { inventoryAsset } from './inventory';
+import { project } from './project';
 import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
@@ -258,6 +259,13 @@ export const workOrder = sqliteTable(
 		// shift — nobody staffs the front desk on behalf of an amp.
 		assetId: text('asset_id').references(() => inventoryAsset.id, { onDelete: 'set null' }),
 
+		// The body of work this belongs to, when it belongs to one. A third
+		// optional anchor beside `eventId` and `assetId`, not a replacement for
+		// either: a work order can be *in* the renovation and *at* Saturday's
+		// doors. Set-null, so deleting a project never deletes the record that
+		// four people worked it.
+		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
+
 		/** A deadline, which is not a window: "done by Friday" is not "happens Friday 6-8". */
 		dueAt: integer('due_at', { mode: 'timestamp' }),
 
@@ -322,6 +330,7 @@ export const workOrder = sqliteTable(
 		index('volunteer_shift_role_idx').on(t.volunteerRoleId),
 		index('volunteer_shift_event_idx').on(t.eventId),
 		index('volunteer_shift_asset_idx').on(t.assetId),
+		index('work_order_project_idx').on(t.projectId),
 		// The coordinator's queue: work that needs somebody on it.
 		index('volunteer_shift_unscheduled_idx')
 			.on(t.createdAt)

@@ -68,6 +68,7 @@ import {
 import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
 import { seedSuggestions } from './seed/suggestions';
+import { seedProjects } from './seed/projects';
 
 async function main() {
 	console.log('\nStarting dev seed...\n');
@@ -153,6 +154,9 @@ async function main() {
 	// personas, so nothing that slices or indexes that array shifts under it.
 	const sustainingPersonas = await seedSustainingPersonas(roles);
 	const suggestions = await seedSuggestions(allUsers, adminUser);
+	// Last: it attaches rows every seeder above it has already written, and reads
+	// the committees, the suggestion it answers and the shows it groups.
+	const projects = await seedProjects(events, adminUser.id);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -217,6 +221,9 @@ async function main() {
 	console.log(`  ${sustainingPersonas.users} sustaining demo personas`);
 	console.log(
 		`  ${suggestions.total} suggestions (${suggestions.votes} votes, ${suggestions.pendingEdits} edit awaiting review)`
+	);
+	console.log(
+		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
 	);
 	console.log('\n  Volunteer demo logins (all `password`):');
 	console.log('    coordinator@corvallismusic.org  staff — every /staff/volunteer page');

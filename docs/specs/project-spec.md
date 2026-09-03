@@ -1,5 +1,18 @@
 # Projects
 
+> ## Status
+>
+> **Phase 1 shipped** — the table, the five nullable `project_id` anchors,
+> `project-service.ts` (including derived burn) and the seed. The vocabulary
+> rename it was sequenced behind shipped first, in its own migration.
+>
+> **Not built yet:** every staff and member surface (`/staff/projects`, the
+> committee tab, "start a project from this suggestion"), the deal shape, the
+> `production` side table, generate-on-close recurring work, and the valued
+> volunteer hour — which stays blocked on the site-config read path in
+> `CHORES.md`. Burn therefore reports volunteer time in **minutes**, and never
+> adds contributed value to cash.
+
 ## Purpose
 
 Work that spans more than one work order has no container. A facility improvement —

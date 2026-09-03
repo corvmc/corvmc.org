@@ -9,6 +9,12 @@ export const tableOrder = [
 	'user',
 	'recurring_series',
 	'group',
+	// Moved up from beside its votes and edits: it references only `user`, and
+	// `project` references it. Position here is semantic, not cosmetic.
+	'suggestion',
+	// References user, group and suggestion. Must precede everything that carries
+	// `project_id`: work_order, contractor_job, purchase_order, acquisition, event.
+	'project',
 	// References user and group; parent of directory_tag.
 	'directory_entry',
 	// References group.
@@ -115,7 +121,6 @@ export const tableOrder = [
 	// (community_event_standing, messaging_standing, suggestion_standing).
 	'member_standing',
 	'user_block',
-	'suggestion',
 	'suggestion_vote',
 	'suggestion_edit',
 	'volunteer_hour_log',
