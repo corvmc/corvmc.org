@@ -9,6 +9,7 @@
 		updateProduct,
 		updateReservationSettings,
 		updateOrgSettings,
+		updateVolunteerValueSettings,
 		updateIntegrationSettings,
 		testUtecConnection,
 		runLockSelfTest,
@@ -57,6 +58,7 @@
 	const products = $derived(settings.products);
 	const reservationSettings = $derived(settings.reservation);
 	const orgSettings = $derived(settings.org);
+	const volunteerValue = $derived(settings.volunteerValue);
 	const integrationSettings = $derived(settings.integration);
 	const channelConfigs = $derived(settings.channelConfigs);
 	const featureFlags = $derived(settings.featureFlags);
@@ -569,6 +571,47 @@
 								type="text"
 								value={String(orgSettings.socialInstagram ?? '')}
 								placeholder="https://instagram.com/..."
+							/>
+						</div>
+					</CardBody>
+				</Card>
+			</Form>
+
+			<Form remote={updateVolunteerValueSettings} guard successToast="Volunteer hour value updated">
+				<Card>
+					<CardBody>
+						<div class="flex items-center justify-between">
+							<CardTitle size="base">Volunteer Hour Value</CardTitle>
+							<SubmitButton
+								label="Save"
+								successLabel="Saved"
+								errorLabel="Error"
+								variant="primary"
+								size="sm"
+							/>
+						</div>
+						<p class="text-subtle">
+							What an hour of donated time is worth in grant applications and impact reports.
+							Independent Sector republishes state rates every April, so this is worth revisiting
+							then. It covers every approved hour — contributed services under FASB are a narrower
+							figure carried per volunteer role, and the two are reported separately rather than
+							added.
+						</p>
+
+						<div class="mt-2 grid gap-4 sm:grid-cols-2">
+							<FormField
+								name="hourValueCents"
+								label="Hourly value (cents)"
+								type="number"
+								value={String(volunteerValue.hourValueCents)}
+								placeholder="3766"
+							/>
+							<FormField
+								name="hourValueSource"
+								label="Source"
+								type="text"
+								value={volunteerValue.hourValueSource}
+								placeholder="Independent Sector, Oregon, 2025"
 							/>
 						</div>
 					</CardBody>

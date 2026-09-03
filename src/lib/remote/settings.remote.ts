@@ -82,6 +82,20 @@ export const getOrgSettings = query(async () => {
 	return getConfigsByPrefix('org');
 });
 
+/**
+ * What an hour of donated volunteer time is worth, and where that figure comes
+ * from. Both, because a grant narrative has to cite its rate and the citation
+ * would otherwise drift a year behind the number it describes.
+ */
+export const getVolunteerValueSettings = query(async () => {
+	await requireStaff();
+	const raw = await getConfigsByPrefix('volunteer');
+	return {
+		hourValueCents: Number(raw.hourValueCents ?? 0),
+		hourValueSource: String(raw.hourValueSource ?? '')
+	};
+});
+
 export const getIntegrationSettings = query(async () => {
 	await requireStaff();
 	const raw = await getConfigsByPrefix('integration.utec');
@@ -253,6 +267,33 @@ export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
 });
 
 // ---------------------------------------------------------------------------
+// Forms — Volunteer hour value
+// ---------------------------------------------------------------------------
+
+/**
+ * Its own form rather than four more fields on `orgSettingsSchema`: one form,
+ * one config prefix, so a save here cannot half-write the org address.
+ */
+const volunteerValueSchema = z.object({
+	hourValueCents: z.string().regex(/^\d+$/, 'Whole cents, digits only').transform(Number),
+	hourValueSource: z.string().trim().min(1, 'Say where the rate came from').max(200)
+});
+
+export const updateVolunteerValueSettings = form(volunteerValueSchema, async (raw) => {
+	await requireStaff();
+	const data = raw as z.infer<typeof volunteerValueSchema>;
+
+	await updateSiteConfigs([
+		{ key: 'volunteer.hourValueCents', value: data.hourValueCents },
+		{ key: 'volunteer.hourValueSource', value: data.hourValueSource }
+	]);
+
+	void getStaffSettingsPage().refresh();
+
+	return { success: true };
+});
+
+// ---------------------------------------------------------------------------
 // Forms — Integration settings
 // ---------------------------------------------------------------------------
 
@@ -332,16 +373,16 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
 export const getStaffSettingsPage = query(z.void(), async () => {
 	await requireStaff();
 
-	const [products, reservation, org, integration, channelConfigs, featureFlags] = await Promise.all(
-		[
+	const [products, reservation, org, volunteerValue, integration, channelConfigs, featureFlags] =
+		await Promise.all([
 			getProducts(),
 			getReservationSettings(),
 			getOrgSettings(),
+			getVolunteerValueSettings(),
 			getIntegrationSettings(),
 			getInboxChannelConfigs(),
 			getFeatureFlags()
-		]
-	);
+		]);
 
-	return { products, reservation, org, integration, channelConfigs, featureFlags };
+	return { products, reservation, org, volunteerValue, integration, channelConfigs, featureFlags };
 });
