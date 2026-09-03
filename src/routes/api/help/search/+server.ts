@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { searchArticles, resolveUserHelpRole } from '$lib/server/help/help-service';
+import { searchArticles, resolveHelpAudience } from '$lib/server/help/help-service';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -8,8 +8,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	const q = url.searchParams.get('q')?.trim();
 	if (!q || q.length < 2) return json({ results: [] });
 
-	const userRole = await resolveUserHelpRole(locals.user.id);
+	const audience = await resolveHelpAudience(locals.user.id);
 
-	const results = await searchArticles(q, userRole);
+	const results = await searchArticles(q, audience);
 	return json({ results });
 };
