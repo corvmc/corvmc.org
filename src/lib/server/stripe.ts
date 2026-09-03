@@ -1,30 +1,50 @@
 import Stripe from 'stripe';
 import { env } from '$env/dynamic/private';
+import { createStripeGateway } from '$lib/server/finance/gateway/stripe-gateway';
+import { createFakeGateway } from '$lib/server/finance/gateway/fake-gateway';
+import type { PaymentDriver, PaymentGateway } from '$lib/server/finance/gateway/types';
 
-let _stripe: Stripe | null = null;
+let _gateway: PaymentGateway | null = null;
 
-export function getStripe(): Stripe {
-	if (!_stripe) {
-		if (!env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not set');
-		/**
-		 * Pinned to the version this SDK's types were generated from.
-		 *
-		 * Unpinned, the client follows the *account's* default, which Stripe rolls
-		 * forward on its own schedule — so the request version could move without a
-		 * commit, while the types the code compiles against would not. They happen
-		 * to agree today, and the `recordCashPayment` fault found alongside this was
-		 * a payload wrong on every version rather than a drift, so this fixes no
-		 * live bug. It closes the gap that would let the next roll be discovered in
-		 * production instead of in CI.
-		 *
-		 * The literal is the SDK's own `ApiVersion`, which is a single-value type.
-		 * Upgrading `stripe` therefore fails `pnpm check` here until the pin is
-		 * updated deliberately — which is the point.
-		 */
-		_stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-08-26.dahlia' });
-	}
-	return _stripe;
+/**
+ * `stripe` unless the environment explicitly asks for it.
+ *
+ * The default is the safe one on purpose. A developer checkout of this project
+ * carries a live restricted key in `.env`, so a driver that defaulted to
+ * `stripe` would let a mistyped QA step move real money. Production opts in
+ * through `wrangler.toml`; everything else — `pnpm dev`, e2e, specs — gets the
+ * in-memory fake.
+ */
+export function paymentDriver(): PaymentDriver {
+	return env.PAYMENTS_DRIVER === 'stripe' ? 'stripe' : 'fake';
 }
+
+function getGateway(): PaymentGateway {
+	if (!_gateway) {
+		_gateway = paymentDriver() === 'stripe' ? createStripeGateway() : createFakeGateway();
+	}
+	return _gateway;
+}
+
+/**
+ * Override the gateway. For specs that want to drive the fake directly; the
+ * running app resolves its own driver and never calls this.
+ */
+export function initStripe(gateway: PaymentGateway | null): void {
+	_gateway = gateway;
+}
+
+/**
+ * Webhook signature verification, always against the real SDK.
+ *
+ * This is the production ingress and a security boundary, so it does not follow
+ * the driver — verifying a signature is a pure function of the payload and the
+ * secret, and `Stripe.webhooks` is a static that needs no API key. The fake
+ * checkout page reaches fulfillment by calling `handleCheckoutCompleted`
+ * directly rather than by forging a signed request, which leaves this path with
+ * exactly one caller in every environment.
+ */
+export const stripeWebhooks = Stripe.webhooks;
 
 /**
  * Crypto provider for webhook signature verification. Cloudflare Workers has no
@@ -33,9 +53,12 @@ export function getStripe(): Stripe {
  */
 export const webhookCryptoProvider = Stripe.createSubtleCryptoProvider();
 
-/** Convenience re-export for existing call sites. */
-export const stripe = new Proxy({} as Stripe, {
+/**
+ * The gateway, as a lazy proxy so importing this module never reads env or
+ * constructs a client at module scope.
+ */
+export const stripe = new Proxy({} as PaymentGateway, {
 	get(_, prop) {
-		return (getStripe() as unknown as Record<string | symbol, unknown>)[prop];
+		return (getGateway() as unknown as Record<string | symbol, unknown>)[prop];
 	}
 });
