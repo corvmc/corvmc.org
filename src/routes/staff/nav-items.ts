@@ -26,6 +26,7 @@ export type StaffNavKey =
 	| 'inbox'
 	| 'users'
 	| 'bands'
+	| 'music'
 	| 'groups'
 	| 'volunteer'
 	| 'volunteer-schedule'
@@ -268,6 +269,11 @@ export const staffNavSections: StaffNavSection[] = [
 		title: 'Money',
 		items: [
 			{ key: 'payments', label: 'Payments', href: resolve('/staff/payments') },
+			// Money rather than Moderation: the page's first job is answering
+			// whether there is enough music to switch the station on, and its
+			// second is the sales the collective takes a share of. The takedown
+			// controls ride along because they act on the same rows.
+			{ key: 'music', label: 'Music', href: resolve('/staff/music') },
 			{ key: 'credits', label: 'Credits', href: resolve('/staff/credits') }
 		]
 	},

@@ -542,3 +542,49 @@ export async function reorderTracks(releaseId: string, orderedIds: string[]): Pr
 		)
 	] as never);
 }
+
+/**
+ * A band's published discography, for its public profile and microsite.
+ *
+ * Separate from `listReleasesForBand` because that one is the band's own panel
+ * view — it carries drafts, sales counts and the staff veto's reason, none of
+ * which belongs on a page anybody can read.
+ */
+export async function listPublishedReleasesForBand(groupId: string) {
+	const rows = await db
+		.select({
+			id: audioRelease.id,
+			title: audioRelease.title,
+			slug: audioRelease.slug,
+			kind: audioRelease.kind,
+			releasedAt: audioRelease.releasedAt,
+			priceMinCents: audioRelease.priceMinCents,
+			allowPayMore: audioRelease.allowPayMore,
+			trackCount: sql<number>`(SELECT COUNT(*) FROM ${audioTrack} WHERE ${audioTrack.releaseId} = ${audioRelease.id})`,
+			durationMs: sql<number>`COALESCE((SELECT SUM(${audioTrack.durationMs}) FROM ${audioTrack} WHERE ${audioTrack.releaseId} = ${audioRelease.id}), 0)`
+		})
+		.from(audioRelease)
+		.where(
+			and(
+				eq(audioRelease.groupId, groupId),
+				eq(audioRelease.status, 'published'),
+				isNull(audioRelease.deletedAt)
+			)
+		)
+		.orderBy(desc(audioRelease.releasedAt), desc(audioRelease.publishedAt));
+
+	const covers = await coverUrlsFor(rows.map((r) => r.id));
+
+	return rows.map((r) => ({
+		id: r.id,
+		title: r.title,
+		slug: r.slug,
+		kind: r.kind,
+		releasedAt: r.releasedAt,
+		priceMinCents: r.priceMinCents,
+		allowPayMore: r.allowPayMore,
+		coverUrl: covers.get(r.id) ?? null,
+		trackCount: Number(r.trackCount),
+		durationMs: Number(r.durationMs)
+	}));
+}

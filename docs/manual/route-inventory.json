@@ -472,6 +472,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/music",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/payments",
 		"panel": "staff"
 	},
