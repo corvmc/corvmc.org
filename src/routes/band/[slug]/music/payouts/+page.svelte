@@ -93,8 +93,9 @@
 			<CardTitle>What the collective takes</CardTitle>
 			<p class="text-muted">
 				{suggested}% is <em>suggested</em>, not fixed. Buyers see the split before they pay and can
-				move it — down to nothing, or up. Card processing comes out of your share unless the buyer
-				chooses to cover it, in which case you keep the full amount.
+				move it — down to nothing, or up. Card processing comes off the top before either of you is
+				paid, so you and the collective fund it in proportion to what you take — unless the buyer
+				chooses to cover it, in which case you both keep the full amount.
 			</p>
 			<p class="text-muted">
 				Free releases skip all of this. A record priced at nothing needs no Stripe account and can

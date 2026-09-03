@@ -108,8 +108,9 @@
 				<StatCard title="Sales" value={String(sales.sales)} />
 				<StatCard title="Gross" value={formatCents(sales.grossCents)} />
 				<StatCard title="To bands" value={formatCents(sales.toBandsCents)} />
-				<!-- Card processing comes out of the collective's share, so this is
-				     shown beside it rather than folded into a single figure. -->
+				<!-- Card processing comes off the top, funded by both sides in
+				     proportion, so it is shown beside them rather than folded into
+				     either figure. -->
 				<StatCard title="Card fees" value={formatCents(sales.feesCents)} />
 				<StatCard title="CMC kept" value={formatCents(sales.toCollectiveCents)} />
 			</div>

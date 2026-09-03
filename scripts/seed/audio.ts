@@ -22,7 +22,7 @@ import {
 	releasePurchase
 } from '../../src/lib/server/db/schema/audio';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
-import { calculateProcessingFee, calculateTotalWithFeeCoverage } from '../../src/lib/finance/fees';
+import { computeSplit, suggestedShareCents } from '../../src/lib/finance/split';
 import {
 	AUDIO_PLATFORM_FEE_BPS,
 	RADIO_MIN_TRACK_MS,
@@ -91,20 +91,32 @@ function slugify(title: string): string {
 }
 
 /**
- * The same arithmetic `audio-split.ts` will own in phase 4, inlined here so the
- * seeded rows are internally consistent — a band reconciling demo data should
- * find it adds up. Deliberately not exported: when the real module lands, this
- * goes and the seeder imports that instead.
+ * The columns one sale writes, from the shared split arithmetic.
+ *
+ * `split.ts` rather than `audio-split.ts` because the Connect adapter imports
+ * `$lib/config`, and a seeder runs under plain tsx with no alias map — the same
+ * constraint that keeps `radio-rotation.ts` import-free. What is lost by
+ * dropping down a layer is only `application_fee_amount`, which is a figure
+ * handed to Stripe rather than a stored column, so nothing here needs it.
+ *
+ * Using the real module is what makes the demo data reconcile: `platform_fee_cents`
+ * holds the collective's NET take, so gross = bands + collective + card fees,
+ * and a band checking the numbers finds they add up.
  */
 function split(baseCents: number, cmcBps: number, coverFees: boolean) {
-	const charge = coverFees ? calculateTotalWithFeeCoverage(baseCents).totalCents : baseCents;
-	const stripeFee = calculateProcessingFee(charge);
-	const platformFeeCents = Math.round((baseCents * cmcBps) / 10000);
+	const s = computeSplit({
+		totalCents: baseCents,
+		shareCents: suggestedShareCents(
+			computeSplit({ totalCents: baseCents, shareCents: 0, coverFees }).remainderCents,
+			cmcBps
+		),
+		coverFees
+	});
 	return {
-		amountPaidCents: charge,
-		platformFeeCents,
-		bandNetCents: charge - platformFeeCents - stripeFee,
-		feeCoveredCents: charge - baseCents
+		amountPaidCents: s.chargeCents,
+		platformFeeCents: s.shareCents,
+		bandNetCents: s.remainderCents,
+		feeCoveredCents: s.feeCoveredCents
 	};
 }
 

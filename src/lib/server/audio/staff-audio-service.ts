@@ -157,15 +157,17 @@ export async function salesTotals() {
 		.where(eq(releasePurchase.status, 'paid'));
 
 	const grossCents = Number(row?.gross ?? 0);
-	const toCollectiveGrossCents = Number(row?.toCollective ?? 0);
+	const toCollectiveCents = Number(row?.toCollective ?? 0);
 
 	/**
 	 * Card processing, summed per sale.
 	 *
-	 * `platform_fee_cents` stores what Stripe was told — the charge less the
-	 * band's transfer — and the whole card fee comes out of that side, because
-	 * the band's own portion was already deducted before the transfer. So the
-	 * collective's net is this figure minus the full fee.
+	 * Reported beside the two takes rather than subtracted from either, because
+	 * `platform_fee_cents` already stores the collective's **net** share — what
+	 * the buyer was shown on the split bar, after processing came off the top.
+	 * The three figures therefore reconcile: bands + collective + fees is the
+	 * gross. Subtracting here as well was charging the fee twice, and the
+	 * assertion below is what now stops that coming back.
 	 *
 	 * The fee is not a stored column: it is fully determined by the amount
 	 * charged, so it is recomputed rather than migrated for. That costs one extra
@@ -178,14 +180,13 @@ export async function salesTotals() {
 		.from(releasePurchase)
 		.where(eq(releasePurchase.status, 'paid'));
 	const feesCents = amounts.reduce((sum, r) => sum + calculateProcessingFee(r.amount), 0);
-	const toCollectiveCents = toCollectiveGrossCents - feesCents;
 
 	return {
 		sales: Number(row?.sales ?? 0),
 		freeSales: Number(row?.free ?? 0),
 		grossCents,
 		toBandsCents: Number(row?.toBands ?? 0),
-		/** After processing — what the collective actually kept. */
+		/** Net of processing already — what the collective actually kept. */
 		toCollectiveCents,
 		feesCents,
 		/**

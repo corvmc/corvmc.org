@@ -186,9 +186,9 @@
 		aria-valuemin={0}
 		aria-valuemax={maxValue}
 		aria-valuenow={clamped}
-		aria-valuetext="{valueLabel} {dollars(clamped)}, {otherLabel} {dollars(otherCents)}, {fixedLabel} {dollars(
-			fixedCents
-		)}"
+		aria-valuetext="{valueLabel} {dollars(clamped)}, {otherLabel} {dollars(
+			otherCents
+		)}, {fixedLabel} {dollars(fixedCents)}"
 		class="sr-only"
 		onkeydown={onKeydown}
 	></div>

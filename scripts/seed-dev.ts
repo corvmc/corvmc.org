@@ -244,6 +244,7 @@ async function main() {
 			`${audio.purchases} sales, ${audio.accounts} band Stripe accounts, ` +
 			`${audio.radioEntries} radio entries`
 	);
+	console.log(
 		`  ${riders.riders} structured tech rider (${riders.structuredBand ?? '—'}), ${riders.uploaded} upload-only (${riders.uploadBand ?? '—'})`
 	);
 	console.log('\n  Tech rider demo logins (all `password`):');
