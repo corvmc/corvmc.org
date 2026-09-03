@@ -8,6 +8,7 @@ import { hasLoanableItems } from '$lib/server/inventory/item-service';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
 import { countPortalUnread } from '$lib/server/inbox/portal-service';
+import { countBandUnread } from '$lib/server/inbox/band-service';
 import { countDirectUnread, countPendingRequests } from '$lib/server/inbox/direct-service';
 import { countVolunteerWorkWaiting } from '$lib/server/volunteer/volunteer-signup-service';
 import { countPendingSubmissions } from '$lib/server/event/community-event-service';
@@ -178,11 +179,16 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		throw error(404, 'Band not found');
 	}
 
-	const [role, isStaff, userBands, features] = await Promise.all([
+	const [role, isStaff, userBands, features, messagesUnread] = await Promise.all([
 		getUserRole(band.id, locals.user.id),
 		hasAnyRole(locals.user.id, ['admin', 'staff']),
 		listForUser(locals.user.id, ['band']).catch(() => []),
-		getAllFeatureFlags()
+		getAllFeatureFlags(),
+		// In the same round trip rather than behind the role check below: one
+		// indexed COUNT is cheaper than the extra await it would take to know
+		// whether to ask. The Messages nav row is owner/admin-only, so the number
+		// simply goes unread for anyone else.
+		countBandUnread(band.id, locals.user.id)
 	]);
 
 	if (!role && !isStaff) {
@@ -195,6 +201,7 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		isStaff,
 		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		user: { id: locals.user.id, name: locals.user.name, email: locals.user.email },
-		features
+		features,
+		messagesUnread
 	};
 });
