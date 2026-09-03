@@ -25,15 +25,24 @@
 		reviewSuggestionEdit
 	} from '$lib/remote/suggestions.remote';
 	import MergeCandidateOptions from './MergeCandidateOptions.svelte';
+	import { startProjectFromSuggestionForm } from '$lib/remote/projects.remote';
+	import { Field, MoneyField } from '$lib/components/ui/Form';
 
 	let id = $derived(page.params.id!);
 
 	// The merge candidates used to live here, declared above the awaits so they would not be
 	// compiled as "blocked" — the JAVASCRIPT-SVELTEKIT-25 shape. They load in
 	// MergeCandidateOptions now, where there is no await to be blocked by.
+	// Above the awaited query, like the fields below it: a declaration after a
+	// top-level await is async-gated, and `fields.X.as()` compiled into an async
+	// derived is the shape `src/async-effect-shape.spec.ts` pins against.
+	const projectFields = startProjectFromSuggestionForm.fields;
+
 	const data = $derived(await getStaffSuggestionDetailPage(id));
 	const s = $derived(data.suggestion);
 	const pendingEdit = $derived(data.pendingEdit);
+	const project = $derived(data.project);
+	const committeeOptions = $derived(data.committees.map((c) => ({ value: c.id, label: c.name })));
 
 	const isMerged = $derived(!!s.mergedIntoId);
 
@@ -64,6 +73,50 @@
 		<Alert type="error">
 			Hidden from the board.{s.visibilityNote ? ` Note: ${s.visibilityNote}` : ''}
 		</Alert>
+	{/if}
+
+	<!--
+		The work this became, or the button that starts it.
+
+		This is the half of the board that was missing: a suggestion reached `done`
+		because a staffer said so, with no link to whatever actually did it. A
+		project here is that link, and the votes above are its mandate.
+	-->
+	{#if project}
+		<Alert type="success" href={resolve(`/staff/projects/${project.id}`)}>
+			Answered by <span class="font-medium">{project.name}</span>. Its status drives this
+			suggestion's from now on.
+		</Alert>
+	{:else if !isMerged && s.status !== 'declined'}
+		<InfoCard title="Start a project" class="bg-base-200 shadow-none">
+			<p class="mb-3 text-muted">
+				Commit to this idea: the project groups the work that answers it, and this suggestion
+				follows its status from now on. Both move to Planned.
+			</p>
+			<Action
+				action={startProjectFromSuggestionForm}
+				label="Start a project"
+				modalTitle="Start a project"
+				submitLabel="Start"
+				successToast="Project started"
+				variant="primary"
+				size="sm"
+				onsuccess={refresh}
+			>
+				{#snippet form()}
+					<input {...projectFields.suggestionId.as('hidden', id)} />
+					<Field field={projectFields.name} type="text" label="Project name" value={s.title} />
+					<Field
+						field={projectFields.groupId}
+						type="select"
+						label="Owning committee"
+						options={committeeOptions}
+						description="Only a committee can own a project. Leave blank to decide later."
+					/>
+					<MoneyField field={projectFields.budgetCents} label="Budget" />
+				{/snippet}
+			</Action>
+		</InfoCard>
 	{/if}
 
 	<InfoCard title="Suggestion">

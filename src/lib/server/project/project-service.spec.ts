@@ -66,6 +66,8 @@ const {
 	attachToProject,
 	detachFromProject,
 	getProjectBurn,
+	getProjectForSuggestion,
+	startProjectFromSuggestion,
 	ProjectNotFoundError,
 	ProjectOwnerError,
 	ProjectStateError
@@ -229,5 +231,56 @@ describe('getProjectBurn', () => {
 
 		expect(burn.cash.totalCents).toBe(0);
 		expect(burn.remainingCents).toBe(50_000);
+	});
+});
+
+describe('the suggestion loop', () => {
+	it('creates the project and moves the suggestion in one batch', async () => {
+		// The suggestion exists, nothing has claimed it, no committee to check,
+		// then the read-back of the new row.
+		selectResults = [[{ id: 's-1' }], [], PROJECT({ status: 'planned', suggestionId: 's-1' })];
+
+		await startProjectFromSuggestion('s-1', { name: 'Soundproofing for room B' });
+
+		// One batch, two writes. Two awaits would let the board keep saying nobody
+		// has decided anything while the project exists — the exact gap
+		// `suggestionId` was added to close — and D1 has no transaction.
+		expect(batchCalls).toHaveLength(1);
+		expect(batchCalls[0]).toHaveLength(2);
+		expect(insertValues.at(-1)).toMatchObject({ suggestionId: 's-1', status: 'planned' });
+		expect(updateValues.at(-1)).toMatchObject({ status: 'planned' });
+	});
+
+	it('refuses a suggestion another project already answers', async () => {
+		selectResults = [[{ id: 's-1' }], [{ id: 'proj-other' }]];
+
+		await expect(startProjectFromSuggestion('s-1', { name: 'Duplicate' })).rejects.toThrow(
+			ProjectStateError
+		);
+		expect(batchCalls).toHaveLength(0);
+	});
+
+	it('refuses an owner that is not a committee, before writing anything', async () => {
+		selectResults = [[{ id: 's-1' }], [], [{ kind: 'band', deletedAt: null }]];
+
+		await expect(
+			startProjectFromSuggestion('s-1', { name: 'Wrong owner', groupId: 'g-1' })
+		).rejects.toThrow(ProjectOwnerError);
+		expect(batchCalls).toHaveLength(0);
+	});
+
+	it('returns null when no project answers the suggestion', async () => {
+		selectResults = [[]];
+		expect(await getProjectForSuggestion('s-2')).toBeNull();
+	});
+
+	it('projects only what the two pages show, never the budget', async () => {
+		selectResults = [[{ id: 'proj-1', name: 'Soundproofing', status: 'planned' }]];
+
+		const row = await getProjectForSuggestion('s-1');
+
+		// A member is told their idea became work; what it costs is a staff
+		// question, so the shape itself withholds it.
+		expect(row).toEqual({ id: 'proj-1', name: 'Soundproofing', status: 'planned' });
 	});
 });

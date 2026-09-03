@@ -13,6 +13,7 @@ import {
 	listPublished
 } from '$lib/server/group/announcement-service';
 import { listGroupSessions } from '$lib/server/event/event-service';
+import { listProjects } from '$lib/server/project/project-service';
 import { list as listFiles, getUsage as getDocumentUsage } from '$lib/server/group/file-service';
 import {
 	STAFF_GROUP_KINDS,
@@ -222,7 +223,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	// belong here rather than in a query of the tab's own: a club is small by
 	// construction, and a per-tab query fanned out of a section component is
 	// exactly what that checklist exists to stop.
-	const [roster, announcements, notifyAnnouncements, sessions, files, documentUsage] =
+	const [roster, announcements, notifyAnnouncements, sessions, files, documentUsage, projects] =
 		await Promise.all([
 			getMembers(group.id).then(partitionByStatus),
 			canManage ? listForManager(group.id) : listPublished(group.id),
@@ -233,7 +234,11 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			// Its own statement rather than a sum over `files`: that list is capped,
 			// and it carries the quota constants the meter renders, which a
 			// component cannot import from a server module.
-			getDocumentUsage(group.id)
+			getDocumentUsage(group.id),
+			// A committee's own work, read through the same guard as everything else
+			// on this page. Only committees own projects, so a club gets an empty
+			// list and never shows the tab.
+			group.kind === 'committee' ? listProjects({ groupId: group.id }) : Promise.resolve([])
 		]);
 
 	return {
@@ -262,6 +267,16 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			// Whether this one holds the room, which is the fact that distinguishes
 			// a program's session from a listing it merely advertises.
 			reservesRoom: !!e.reservationId
+		})),
+		// Name, status and dates only. A committee member reads what their group is
+		// working on; the budget and what it has burned are a staff question, and
+		// `/staff/projects` is where that is answered.
+		projects: projects.map((project) => ({
+			id: project.id,
+			name: project.name,
+			status: project.status,
+			startsAt: project.startsAt,
+			endsAt: project.endsAt
 		})),
 		members: {
 			active: roster.active,

@@ -11,7 +11,7 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { resolve } from '$app/paths';
-	import { formatDateTimeShort } from '$lib/utils/format';
+	import { formatDateTimeShort, formatDateShort } from '$lib/utils/format';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -45,7 +45,7 @@
 	const approveFields = approveApplicationForm.fields;
 	const declineFields = declineApplicationForm.fields;
 
-	type Tab = 'announcements' | 'documents' | 'overview' | 'sessions' | 'roster';
+	type Tab = 'announcements' | 'documents' | 'overview' | 'projects' | 'sessions' | 'roster';
 
 	let slug = $derived(page.params.slug!);
 	const data = $derived(await getMemberGroup(slug));
@@ -64,6 +64,7 @@
 		if (requested === 'roster') return 'roster';
 		if (requested === 'overview') return 'overview';
 		if (requested === 'sessions') return 'sessions';
+		if (requested === 'projects') return 'projects';
 		if (requested === 'documents') return 'documents';
 		if (requested === 'announcements') return 'announcements';
 		return defaultTab;
@@ -75,6 +76,14 @@
 	// Staff read this page without being on the roster, so there is nothing for
 	// them to leave.
 	const isMember = $derived(data.role !== 'staff');
+
+	/**
+	 * A committee's own work, and the answer to giving one a window onto it
+	 * without handing over the whole staff panel — the failure mode
+	 * `admin-vs-staff-spec.md` was written about. Read-only: acting on a project
+	 * from here waits on the capability work that spec designs.
+	 */
+	const projects = $derived(data.projects);
 </script>
 
 <PageHeader title={group.name} subtitle={kindLabel}>
@@ -125,6 +134,18 @@
 				badge: data.files.length,
 				href: tabHref('documents')
 			},
+			// Committee-only, and hidden while empty: a club can never own a project,
+			// so the tab would be a permanent dead end on most of these pages.
+			...(projects.length > 0
+				? [
+						{
+							key: 'projects',
+							label: 'Projects',
+							badge: projects.length,
+							href: tabHref('projects')
+						}
+					]
+				: []),
 			{ key: 'sessions', label: 'Sessions', href: tabHref('sessions') },
 			{ key: 'roster', label: 'Roster', badge: members.active.length, href: tabHref('roster') },
 			{ key: 'overview', label: 'Overview', href: tabHref('overview') }
@@ -138,6 +159,36 @@
 			announcements={data.announcements}
 			canManage={data.canManage}
 		/>
+	{:else if tab === 'projects'}
+		<InfoCard title="Projects">
+			{#if projects.length === 0}
+				<EmptyState description="Nothing on the go right now." />
+			{:else}
+				<Table>
+					{#snippet head()}
+						<th>Project</th>
+						<th>Status</th>
+						<th>Dates</th>
+					{/snippet}
+					{#each projects as project (project.id)}
+						<tr>
+							<td class="cell-primary">{project.name}</td>
+							<td><StatusBadge status={project.status} label /></td>
+							<td>
+								<!-- Dates, not date-times: a project runs for weeks, and a start time
+								     of 6:55 PM is noise pretending to be precision. -->
+								{#if project.startsAt}
+									{formatDateShort(project.startsAt)}
+									{project.endsAt ? ` – ${formatDateShort(project.endsAt)}` : ' onward'}
+								{:else}
+									—
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		</InfoCard>
 	{:else if tab === 'documents'}
 		<DocumentList
 			groupId={group.id}
