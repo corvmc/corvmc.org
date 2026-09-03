@@ -11,7 +11,8 @@ account is ever compromised, there is no way to establish what it touched.
 
 The privilege-escalation hole closed in #162 made this the highest-value
 remaining gap: the panel now refuses unauthorised role grants, but an authorised
-one is still invisible. See `docs/reports/staff-user-management-audit.md`.
+one is still invisible. This is one of three surviving follow-up specs from the #164 staff
+user-management audit (see `docs/README.md` §Staff platform).
 
 ## Decisions
 

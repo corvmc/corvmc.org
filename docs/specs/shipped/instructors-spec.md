@@ -605,7 +605,9 @@ one — and an application queue SLA or auto-expiry.
 
 ## Phases
 
-Tracked in [../plans/instructors-checklist.md](../plans/instructors-checklist.md).
+Shipped across six phases with no feature flag. Its two remaining loose ends — a handful of raw
+`hourlyRateCents` reads that bypass the teaching-rate resolver, and missing instructor coverage in
+`conflict-service.spec.ts` — are tracked in `CHORES.md`.
 
 **There is no feature flag**, which shapes the phasing rather than merely removing a line. A flag is
 what makes it safe to land a member-facing surface before the capability behind it works; without one

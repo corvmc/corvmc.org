@@ -123,5 +123,5 @@ await render(CancelReservationAction, { reservation: { id: 'r1' }, action: fakeF
 
 ## Coverage
 
-Coverage is built up incrementally — see `docs/development/component-testing-checklist.md`
-for the running list of which components have stories/specs.
+Coverage is built up incrementally, component by component, rather than tracked as a
+checklist. `CHORES.md` names the components still missing a story or spec.

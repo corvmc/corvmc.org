@@ -1,6 +1,6 @@
 # Deployment Checklist
 
-First-time production deployment for corvmc-svelte — a rewrite of corvmc-redux (Laravel/Postgres) on Cloudflare Workers + D1.
+First-time production deployment for corvmc-svelte, on Cloudflare Workers + D1.
 
 > This checklist covers **first-time provisioning**. For day-to-day operations (routine
 > deploys, migrations, secrets, integration upkeep, cron, monitoring), see the
@@ -13,8 +13,6 @@ First-time production deployment for corvmc-svelte — a rewrite of corvmc-redux
 - [ ] Cloudflare account with Workers paid plan
 - [ ] Wrangler CLI installed (`pnpm add -g wrangler`) and authenticated (`wrangler login`)
 - [ ] Stripe account with live API keys
-- [ ] `pg_dump -Fc` backup of the production Postgres database
-- [ ] Local Postgres instance for restoring the dump (for the migration script)
 - [ ] Node.js 20+ and pnpm installed
 
 ---

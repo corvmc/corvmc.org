@@ -18,7 +18,7 @@ path-scoped rule costs nothing until someone opens a matching file.
 | Subagents            | on spawn, in their own context            | isolated from the session |
 | Hooks                | on a lifecycle event, outside the model   | zero                      |
 
-That gradient is the whole design. `CLAUDE.md` is ~60 lines because a bloated one doesn't just
+That gradient is the whole design. `CLAUDE.md` stays short because a bloated one doesn't just
 cost tokens — it dilutes the rules that matter until the agent starts ignoring them. The test for
 every line in it is: **would removing this cause a mistake?** If not, cut it.
 

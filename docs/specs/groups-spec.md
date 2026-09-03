@@ -1107,7 +1107,7 @@ cannot do that, so they take it as a prop.
 
 ### Queries
 
-One load-bearing query per page, per `docs/checklists/remote-query-fanout.md`.
+One load-bearing query per page, per the `custom/no-concurrent-remote-queries` rule.
 
 - `getMemberGroup(slug)`, guarded by `requireGroupRole`, returns the group, your role, the roster,
   announcements and files in one round trip. A club is small by construction. Announcement

@@ -8,7 +8,7 @@ export default {
 		},
 		messages: {
 			noRawForm:
-				'Use the <Form> component from $lib/components/ui/Form/ instead of raw <form> elements. See docs/ui-patterns.md.'
+				'Use the <Form> component from $lib/components/ui/Form/ instead of raw <form> elements. See docs/development/ui-patterns.md.'
 		}
 	},
 	create(context) {

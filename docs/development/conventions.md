@@ -69,9 +69,9 @@ When building a new feature, work through these phases in order:
 
 A spec describes what you intend to build. The moment it is built, it describes live
 behavior instead — and a document that describes live behavior with a spec's authority is
-how a doc folder starts lying, because nothing makes anyone update it. `docs/specs/` held
-23 such files before [reports/spec-audit.md](../reports/spec-audit.md) sorted them out, and
-three of them asserted a feature was unbuilt that had shipped months earlier.
+how a doc folder starts lying, because nothing makes anyone update it. `docs/specs/` once held
+23 such files, three of which asserted a feature was unbuilt that had shipped months earlier,
+before an audit sorted them into `docs/specs/shipped/` and this rule got written down.
 
 So when a feature lands, do three things in the same PR:
 
