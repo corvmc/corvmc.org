@@ -1,38 +1,33 @@
 import { db } from '$lib/server/db';
 import { volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, gte, lte, desc, count, sql, type SQL } from 'drizzle-orm';
+import { eq, and, asc, desc, count, sql, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { rangeCondition, type ReportRange } from '$lib/server/report/range';
+import { monthBucket } from '$lib/server/report/bucket';
 import { toContributedValue, type ContributedValue } from './hour-value';
 
-const TZ = DEFAULT_TIMEZONE;
-
-export interface ReportRange {
-	/** YYYY-MM-DD, club time. */
-	from?: string;
-	to?: string;
-}
+// Re-exported because this module was the only definition of it before the kit
+// existed, and every caller already imports it from here.
+export type { ReportRange };
 
 /**
  * Every rollup here filters to approved hours only. That is the entire purpose
  * of the review step: a member can claim anything, and this report has to be
  * defensible to a funder.
+ *
+ * The club-time date handling lives in `$lib/server/report/range` now — it was
+ * this function, generalised, and it is the part worth sharing: a naive
+ * `new Date('2026-07-01')` is the previous evening here and silently moves a
+ * day's work across the boundary of every report that reimplements it.
  */
 function approvedIn(range: ReportRange): SQL {
-	const conditions: SQL[] = [eq(volunteerHourLog.status, 'approved')];
+	const window = rangeCondition(volunteerHourLog.workedOn, range);
+	const approved = eq(volunteerHourLog.status, 'approved');
 
-	if (range.from) {
-		conditions.push(gte(volunteerHourLog.workedOn, buildDateInTz(range.from, '00:00', TZ)));
-	}
-	if (range.to) {
-		conditions.push(lte(volunteerHourLog.workedOn, buildDateInTz(range.to, '23:59', TZ)));
-	}
-
-	return and(...conditions)!;
+	return window ? and(approved, window)! : approved;
 }
 
 const sumMinutes = sql<number>`coalesce(sum(${volunteerHourLog.minutes}), 0)`;
@@ -219,8 +214,9 @@ export interface MonthHours {
 
 export async function getHoursByMonth(range: ReportRange = {}): Promise<MonthHours[]> {
 	// Buckets in UTC. Safe because workedOn is anchored at noon club time, which
-	// lands mid-day UTC at any offset — see the note on volunteerHourLog.workedOn.
-	const month = sql<string>`strftime('%Y-%m', ${volunteerHourLog.workedOn}, 'unixepoch')`;
+	// lands mid-day UTC at any offset — see the note on volunteerHourLog.workedOn
+	// and the same caveat on `monthBucket`.
+	const month = monthBucket(volunteerHourLog.workedOn);
 
 	const rows = await db
 		.select({ month, minutes: sumMinutes, logCount: count() })
@@ -233,5 +229,59 @@ export async function getHoursByMonth(range: ReportRange = {}): Promise<MonthHou
 		month: row.month,
 		minutes: Number(row.minutes),
 		logCount: Number(row.logCount)
+	}));
+}
+
+// ---------------------------------------------------------------------------
+// Export
+// ---------------------------------------------------------------------------
+
+export interface HourLogExportRow {
+	memberName: string;
+	memberEmail: string;
+	roleName: string;
+	isSpecializedSkill: boolean;
+	marketRateCents: number | null;
+	workedOn: Date;
+	minutes: number;
+	description: string | null;
+}
+
+/**
+ * Every approved hour in the range, one row each, for a CSV a grant writer
+ * takes away.
+ *
+ * Rows rather than a rollup on purpose: the aggregates above answer the
+ * questions we thought of, and an export exists for the ones we did not.
+ *
+ * Unpaginated, which is a deliberate difference from `getHoursByMember`. A
+ * partial export is a wrong answer rather than a first page, and the ceiling is
+ * a few thousand rows a year at this collective's scale. If that stops being
+ * true the fix is streaming, not a page size.
+ */
+export async function listApprovedHoursForExport(
+	range: ReportRange = {}
+): Promise<HourLogExportRow[]> {
+	const rows = await db
+		.select({
+			memberName: user.name,
+			memberEmail: user.email,
+			roleName: volunteerRole.name,
+			isSpecializedSkill: volunteerRole.isSpecializedSkill,
+			marketRateCents: volunteerRole.marketRateCents,
+			workedOn: volunteerHourLog.workedOn,
+			minutes: volunteerHourLog.minutes,
+			description: volunteerHourLog.description
+		})
+		.from(volunteerHourLog)
+		.innerJoin(user, eq(volunteerHourLog.userId, user.id))
+		.innerJoin(volunteerRole, eq(volunteerHourLog.volunteerRoleId, volunteerRole.id))
+		.where(approvedIn(range))
+		.orderBy(asc(volunteerHourLog.workedOn), asc(user.name));
+
+	return rows.map((row) => ({
+		...row,
+		marketRateCents: row.marketRateCents === null ? null : Number(row.marketRateCents),
+		minutes: Number(row.minutes)
 	}));
 }
