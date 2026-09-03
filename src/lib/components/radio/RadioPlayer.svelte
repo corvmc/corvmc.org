@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import {
 		IconPlayerPlayFilled,
 		IconPlayerPauseFilled,
@@ -55,7 +55,6 @@
 	let audio = $state<HTMLAudioElement | null>(null);
 	let playing = $state(false);
 	let positionMs = $state(0);
-	let ticker: ReturnType<typeof setInterval> | null = null;
 
 	function serverTime(): number {
 		return Date.now() - clockSkewMs;
@@ -133,14 +132,47 @@
 
 	onMount(() => {
 		widget = readWidgetState();
-		void refresh();
-		// One second is enough to keep the progress bar honest and to notice a
-		// track boundary; the refetch it triggers happens once per track.
-		ticker = setInterval(tick, 1000);
+
+		/**
+		 * Asked for **after** the page has settled, never during its hydration.
+		 *
+		 * This bar is a decoration on every page in the app, and its query is the
+		 * only work the root layout does that no page asked for. Issued from
+		 * `onMount` directly it lands in the same window as the page's own
+		 * hydration and competes with it — on a first interaction that arrives
+		 * immediately after load, that is the difference between a control being
+		 * live and being inert.
+		 *
+		 * `requestIdleCallback` where it exists, a macrotask where it does not
+		 * (Safari). Either way the station is late by a frame or two, which nobody
+		 * can hear, and the page is never late at all.
+		 */
+		const idle =
+			typeof requestIdleCallback === 'function'
+				? requestIdleCallback(() => void refresh(), { timeout: 2000 })
+				: (setTimeout(() => void refresh(), 0) as unknown as number);
+
+		return () => {
+			if (typeof cancelIdleCallback === 'function') cancelIdleCallback(idle);
+			else clearTimeout(idle);
+		};
 	});
 
-	onDestroy(() => {
-		if (ticker) clearInterval(ticker);
+	/**
+	 * The ticker exists only while there is a track to advance.
+	 *
+	 * It used to start unconditionally in `onMount`, which meant every page in the
+	 * app woke up once a second forever to run a function whose first line is
+	 * `if (!current) return` — including every page for every visitor while the
+	 * station is switched off, which is all of them today.
+	 *
+	 * One second is enough to keep the progress bar honest and to notice a track
+	 * boundary; the refetch that boundary triggers happens once per track.
+	 */
+	$effect(() => {
+		if (!enabled || !current) return;
+		const id = setInterval(tick, 1000);
+		return () => clearInterval(id);
 	});
 
 	const progress = $derived(
