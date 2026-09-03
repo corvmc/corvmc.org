@@ -585,6 +585,7 @@ export const inboxChannels = [
 	'web',
 	'portal',
 	'direct',
+	'band',
 	'instagram',
 	'messenger'
 ] as const;
@@ -619,6 +620,16 @@ export const contactSubjects = [
 	'Volunteer Opportunities',
 	'Donations'
 ] as const;
+/**
+ * The subject every band booking enquiry gets.
+ *
+ * The band contact form has no subject field — a stranger writing to an act is
+ * always writing about one thing — so the value is fixed rather than chosen.
+ * Deliberately *not* a member of `contactSubjects`: that list is the staff
+ * queue's inquiry-type facet, and band threads are never in the staff queue.
+ */
+export const BAND_ENQUIRY_SUBJECT = 'Booking enquiry';
+
 export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
 /**
  * The four views the staff queue offers, in tab order.
@@ -660,13 +671,17 @@ export const inboxParticipantRoles = ['member', 'staff'] as const;
 
 /**
  * Channels with no external system behind them: nothing to authenticate, so
- * nothing to turn off. The contact form and the member portal both deliver
- * through the site itself. Lives here rather than in the inbox service so the
- * settings page can ask the same question the server does.
+ * nothing to turn off. The contact form, the member portal and a band's booking
+ * form all deliver through the site itself. `band` is here for the same reason
+ * `web` is: its *outbound* half is email, but that goes out on the transactional
+ * stream we already own, and the `email` toggle governs the inbound support
+ * mailbox rather than our ability to reply. Lives here rather than in the inbox
+ * service so the settings page can ask the same question the server does.
  */
 export const alwaysEnabledInboxChannels: readonly (typeof inboxChannels)[number][] = [
 	'web',
-	'portal'
+	'portal',
+	'band'
 ];
 
 /** How many people may be sitting on an unanswered request from you at once. */

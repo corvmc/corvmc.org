@@ -33,21 +33,23 @@ import { contactSubjects, inboxThreadStatuses } from '$lib/config';
 import type { InboxView } from '$lib/config';
 
 /**
- * The one expression that keeps private member↔member conversations out of
- * every staff view.
+ * The one expression that keeps conversations the collective is not party to out
+ * of every staff view.
  *
- * A `direct` thread is nobody's business but its two participants' — it is not
- * the org talking to the outside world, and staff have no queue role in it. It
- * becomes visible only by being reported, and drops back out when the report is
+ * Two channels qualify. A `direct` thread is nobody's business but its two
+ * participants' — it is not the org talking to the outside world, and staff have
+ * no queue role in it. A `band` thread is a booking negotiation between an act
+ * and whoever wants to hire it; CorvMC hosts it and does not read it. Both
+ * become visible only by being reported, and drop back out when the report is
  * resolved.
  *
  * **If a query in this file reads `inbox_thread` and does not use this, it is a
  * leak.** That includes the aggregates: an unfiltered COUNT puts live DMs in the
  * staff badge, and `listThreads`' search does a LIKE over `preview`, which for a
- * direct thread is a member's private text.
+ * direct or band thread is somebody else's private text.
  */
 export const staffVisibleThread = or(
-	ne(inboxThread.channel, 'direct'),
+	notInArray(inboxThread.channel, ['direct', 'band']),
 	sql`EXISTS (SELECT 1 FROM content_flag cf
 	            WHERE cf.entity_type = 'inbox_thread'
 	              AND cf.entity_id = ${inboxThread.id}
@@ -110,6 +112,8 @@ export function truncatePreview(text: string): string {
 
 export interface FindOrCreateThreadParams {
 	channel: InboxChannel;
+	/** Whose inbox the thread belongs in. Omitted (or null) means CorvMC's. */
+	groupId?: string | null;
 	contactName?: string | null;
 	contactEmail?: string | null;
 	contactPhone?: string | null;
@@ -118,7 +122,8 @@ export interface FindOrCreateThreadParams {
 }
 
 export async function findOrCreateThread(params: FindOrCreateThreadParams) {
-	const { channel, contactName, contactEmail, contactPhone, contactExternalId, subject } = params;
+	const { channel, groupId, contactName, contactEmail, contactPhone, contactExternalId, subject } =
+		params;
 
 	let existing: typeof inboxThread.$inferSelect | undefined;
 
@@ -162,10 +167,16 @@ export async function findOrCreateThread(params: FindOrCreateThreadParams) {
 			.orderBy(desc(inboxThread.lastMessageAt))
 			.limit(1);
 	}
-	// 'web' and 'portal' always create a new thread. Both address a conversation
-	// explicitly — the contact form is one-shot, and a portal member picks a
-	// subject and replies into a thread by id — so folding a second one into an
-	// open thread would silently discard its subject.
+	// 'web', 'portal' and 'band' always create a new thread. All three address a
+	// conversation explicitly — the contact form is one-shot, and a portal member
+	// or a band admin replies into a thread by id — so folding a second one into
+	// an open thread would silently discard its subject. For 'band' it would do
+	// worse than that: a stranger could append to a negotiation the act had
+	// already closed.
+	//
+	// The dedupe branches above are each pinned to their own channel, so no
+	// inbound email, SMS or Meta message can ever land in a band's thread by
+	// matching its contact details.
 
 	if (existing) return existing;
 
@@ -173,6 +184,7 @@ export async function findOrCreateThread(params: FindOrCreateThreadParams) {
 		.insert(inboxThread)
 		.values({
 			channel,
+			groupId: groupId ?? null,
 			contactName: contactName ?? null,
 			contactEmail: contactEmail ?? null,
 			contactPhone: contactPhone ?? null,
@@ -342,14 +354,15 @@ export async function listThreads(filters: ListThreadsFilters, pagination: Pagin
  * The staff detail read: thread, every message, and the staff-only notes.
  *
  * There is no ownership check here and there does not need to be — every other
- * channel is the org's own correspondence. `direct` is the exception, so it is
- * refused outright. That one line is what stops a staff member reading a
- * private conversation by knowing its id, and it covers three endpoints at
- * once: the detail page, the reply box and the note box all go through here.
+ * channel is the org's own correspondence. `direct` and `band` are the
+ * exceptions, so both are refused outright. That one line is what stops a staff
+ * member reading a private conversation by knowing its id, and it covers three
+ * endpoints at once: the detail page, the reply box and the note box all go
+ * through here.
  *
  * A reported conversation is read through `getFlaggedDirectThread`, which is
  * keyed on the flag rather than the thread — so the report is the only handle
- * staff ever have on a DM.
+ * staff ever have on one of these.
  */
 export async function getThread(id: string) {
 	// Refused before any message or note is fetched, not filtered afterwards.
@@ -358,7 +371,7 @@ export async function getThread(id: string) {
 		.from(inboxThread)
 		.where(eq(inboxThread.id, id))
 		.limit(1);
-	if (!visible || visible.channel === 'direct') return null;
+	if (!visible || visible.channel === 'direct' || visible.channel === 'band') return null;
 
 	// The member behind a portal thread, if there is one. Joined live rather than
 	// read off the thread's denormalized contactName, which goes stale the moment

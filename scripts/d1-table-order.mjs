@@ -45,6 +45,8 @@ export const tableOrder = [
 	'media_attachment',
 	'campaign',
 	'audience',
+	// Since band chat it also references `group` (nullable owner, null = CorvMC),
+	// which is already well above this line.
 	'inbox_thread',
 	'help_categories',
 	'subscriber',
@@ -120,6 +122,8 @@ export const tableOrder = [
 	'inbox_message',
 	'inbox_note',
 	'inbox_participant',
+	// The band inbox's per-reader cursor: child of inbox_thread and user.
+	'inbox_group_read',
 	'inbox_thread_tag',
 	// Per-user saved queue filters. After user, like every other row keyed to a
 	// person, and unrelated to inbox_thread — it stores filters, not threads.
