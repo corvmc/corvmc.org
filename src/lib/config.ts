@@ -995,6 +995,226 @@ export const INSTRUCTOR_APPLICATION_NOTE_MAX = 2000;
 export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
 
 // ---------------------------------------------------------------------------
+// Capabilities and positions
+// ---------------------------------------------------------------------------
+//
+// A **capability** is what a guard names. A **position** is what a person
+// holds. The matrix below is the association between them; assignment — who
+// holds which position — stays in `model_has_roles`, because that is the part
+// that genuinely changes at runtime. See docs/specs/admin-vs-staff-spec.md.
+//
+// Guards name capabilities rather than roles so that re-answering "who may do
+// this" is an edit to one file instead of a hunt through several hundred call
+// sites. The indirection that matters is at the call site, not in a table:
+// this repo already ran the roles-as-data experiment — `permissions`,
+// `model_has_permissions` and `role_has_permissions` are spatie's model,
+// carried over by a deleted Postgres ETL, and read by nothing.
+//
+// **Nothing in this file may import better-auth.** config.ts is imported by 88
+// `.svelte` files and is therefore client-bundled; `createAccessControl` is
+// called once, server-side, in `src/lib/server/authorization.ts`. eslint
+// enforces this with a `no-restricted-imports` block scoped to this file.
+
+/**
+ * Every action a guard can name, grouped by the resource it acts on.
+ *
+ * A capability exists when a guard names it. Adding one here without a call
+ * site is how the spatie tables rotted, so `config.spec.ts` fails on a
+ * capability no position grants. Two capabilities the spec's illustrative
+ * matrix listed are deliberately absent: `audit.read` has no audit-log table
+ * and `user.setEmail` has no email-change path, so each would be config
+ * describing a guard that does not exist. Their specs add them when they build
+ * one.
+ */
+export const capabilities = {
+	user: ['list', 'read', 'update', 'setRole', 'deactivate', 'purge'],
+	credit: ['read', 'adjust'],
+	finance: ['read', 'refund'],
+	settings: ['read', 'update'],
+	directory: ['readContact', 'shareContactSheet'],
+	band: ['read', 'manage', 'manageMembers', 'setTier'],
+	group: ['read', 'manage'],
+	event: ['read', 'manage', 'publish', 'manageTickets'],
+	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
+	volunteer: ['read', 'manageShifts', 'reviewHours', 'manageRoster', 'manageRoles', 'report'],
+	inventory: [
+		'read',
+		'manageItems',
+		'manageAssets',
+		'manageLoans',
+		'manageStock',
+		'manageOrders',
+		'manageAcquisitions',
+		'report'
+	],
+	instructor: ['read', 'review'],
+	contractor: ['read', 'manage', 'recordInvoice'],
+	project: ['read', 'manage'],
+	inbox: ['read', 'reply', 'assign', 'dispose', 'manageChannels'],
+	marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send'],
+	moderation: ['reviewFlags', 'setStanding'],
+	suggestion: ['read', 'respond', 'review'],
+	listing: ['review'],
+	help: ['read', 'manage']
+} as const;
+
+export type Capabilities = typeof capabilities;
+export type Resource = keyof Capabilities;
+
+/** `"user.purge"` — the string a guard names and the UI checks. */
+export type Capability = {
+	[R in Resource]: `${R & string}.${Capabilities[R][number]}`;
+}[Resource];
+
+/** A position's grants: a subset of `capabilities`, resource by resource. */
+export type Grants = { readonly [R in Resource]?: readonly Capabilities[R][number][] };
+
+/**
+ * Positions, in display precedence order.
+ *
+ * The order drives the member badge (`topPositionFor`) and nothing else. It is
+ * **not** a hierarchy, and no guard may rank one position against another —
+ * that ranking is exactly what made the help centre's role ladder hide
+ * articles from anyone it had not heard of.
+ *
+ * A position exists when a real person holds that title. That rule is what
+ * keeps this list at six rather than sixty, and its absence is what produced
+ * `staff`. The registry is docs/specs/committees-and-roles-spec.md and the CMC
+ * Committees and Roles proposal.
+ *
+ * A committee is NOT a position. Committee membership is plural, rotating and
+ * domain-scoped, and it already has a table and a lifecycle: a committee is a
+ * `group` row, guarded by `requireGroupRole`. Positions are singular and
+ * cross-cutting — the volunteer coordinator serves every committee, which is
+ * precisely why they cannot be on one.
+ */
+export const positionLabels = {
+	admin: 'Administrator',
+	staff: 'Staff',
+	technology_coordinator: 'Technology Coordinator',
+	volunteer_coordinator: 'Volunteer Coordinator',
+	site_moderator: 'Site Moderator',
+	treasurer: 'Treasurer'
+} as const;
+
+export type Position = keyof typeof positionLabels;
+export const positionOrder = Object.keys(positionLabels) as Position[];
+
+/** Every action of every resource — what `admin` holds. */
+export const allCapabilities = Object.fromEntries(
+	Object.entries(capabilities).map(([resource, actions]) => [resource, [...actions]])
+) as { [R in Resource]: Capabilities[R][number][] };
+
+/**
+ * Actions that belong to no one's job description — the complement of every
+ * named position's domain, and what `staff` gives up once every call site
+ * names a capability.
+ *
+ * `staff` still holds these today; see `positions` below. The list is declared
+ * now so the policy is reviewable and typechecked before the narrowing lands.
+ *
+ * `settings.update` is deliberately NOT here, though the spec's illustrative
+ * table lists it. The spec's own rule is that the admin-only set is the
+ * complement of every position's domain, and the same document gives the
+ * Technology Coordinator `settings: ['read', 'update']` — changing site
+ * settings is that position's job description. The rule beats the table.
+ *
+ * `credit.adjust` IS here for now. Comping practice-room hours is arguably a
+ * front-desk kindness rather than an administrative act, but there is no
+ * front-desk comp workflow to hang it on yet, and when there is, the better
+ * bound is on the amount rather than on the role.
+ */
+export const adminOnlyCapabilities = [
+	'user.setRole',
+	'user.purge',
+	'credit.adjust'
+] as const satisfies readonly Capability[];
+
+/**
+ * The matrix.
+ *
+ * `staff` is transitional and deliberately identical to `admin`: it means
+ * "elevated, function not yet named", so every capability guard is inert for
+ * today's holders and handlers can be narrowed one at a time with no flag day.
+ * Removing `adminOnlyCapabilities` from it is the single behavioural change of
+ * this whole effort and gets its own PR, once every call site names a
+ * capability. `staff` then retires by assignment — each holder moves onto a
+ * named position — which is data, not code, and a half-migrated org chart is a
+ * legal steady state.
+ */
+export const positions: Record<Position, Grants> = {
+	admin: allCapabilities,
+	// Still identical to admin. The narrowing PR replaces this with
+	// allCapabilities minus `adminOnlyCapabilities`, and that one line is the
+	// only place in this whole effort where authority actually moves.
+	staff: allCapabilities,
+
+	technology_coordinator: {
+		settings: ['read', 'update'],
+		user: ['list', 'read'],
+		inbox: ['read', 'manageChannels'],
+		help: ['read', 'manage']
+	},
+	volunteer_coordinator: {
+		volunteer: ['read', 'manageShifts', 'reviewHours', 'manageRoster', 'manageRoles', 'report'],
+		user: ['list', 'read'],
+		directory: ['readContact'],
+		event: ['read']
+	},
+	site_moderator: {
+		moderation: ['reviewFlags', 'setStanding'],
+		suggestion: ['read', 'respond', 'review'],
+		listing: ['review'],
+		inbox: ['read', 'reply', 'assign', 'dispose'],
+		user: ['list', 'read', 'deactivate']
+	},
+	treasurer: {
+		finance: ['read', 'refund'],
+		// Read, not adjust: see `adminOnlyCapabilities`.
+		credit: ['read'],
+		contractor: ['read', 'recordInvoice'],
+		inventory: ['read', 'manageAcquisitions', 'report'],
+		reservation: ['read', 'comp'],
+		user: ['list', 'read']
+	}
+};
+
+/**
+ * Does this grant set contain this capability? Pure, synchronous, client-safe.
+ *
+ * Duplicates what better-auth's `authorize()` decides, on purpose: this side of
+ * the wire cannot import better-auth, and `positionsGranting` needs to *invert*
+ * the matrix rather than evaluate it, which the library has no equivalent for.
+ * `authorization.spec.ts` asserts the two agree for every capability, which is
+ * what stops them drifting.
+ */
+export function grantsCapability(grants: Grants, cap: Capability): boolean {
+	const dot = cap.indexOf('.');
+	const actions = grants[cap.slice(0, dot) as Resource] as readonly string[] | undefined;
+	return actions?.includes(cap.slice(dot + 1)) ?? false;
+}
+
+/**
+ * Which positions grant this capability.
+ *
+ * Backs "notify whoever can do X" — the referent that replaces
+ * `listStaffUsers()` — so the policy inversion stays pure config and the
+ * lookup stays one query.
+ */
+export function positionsGranting(cap: Capability): Position[] {
+	return positionOrder.filter((p) => grantsCapability(positions[p], cap));
+}
+
+/**
+ * UI gating: does the capability list shipped by `layout.remote` contain `cap`?
+ *
+ * Hiding a control is not a guard — it only stops someone walking into a 403.
+ * The guard is `requireCapability` on the remote function.
+ */
+export function hasCapability(held: readonly string[], cap: Capability): boolean {
+	return held.includes(cap);
+}
+// ---------------------------------------------------------------------------
 // Entity vocabulary
 // ---------------------------------------------------------------------------
 

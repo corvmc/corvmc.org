@@ -227,22 +227,38 @@ Unchanged from the first draft, and now with a cleaner definition behind it: **t
 set is the complement of every position's and every committee's domain** — the actions that
 belong to no one's job description.
 
-| Action                     | Capability        |
-| -------------------------- | ----------------- |
-| Grant or remove a position | `user.setRole`    |
-| Purge a user               | `user.purge`      |
-| Change site settings       | `settings.update` |
-| Change a user's email      | `user.setEmail`   |
-| View the global audit log  | `audit.read`      |
+| Action                     | Capability      | Shipped? |
+| -------------------------- | --------------- | -------- |
+| Grant or remove a position | `user.setRole`  | yes      |
+| Purge a user               | `user.purge`    | yes      |
+| Adjust credit              | `credit.adjust` | yes      |
+
+Three entries from the first draft of this table did not survive contact with the matrix:
+
+- **`settings.update` is not admin.** This table and the illustrative matrix above contradicted
+  each other — the matrix gives the Technology Coordinator `settings: ['read', 'update']`, which
+  is that position's actual job description. The rule stated at the top of this section (the
+  admin-only set is the complement of every position's domain) beats the table, so settings
+  leaves it. `config.spec.ts` asserts no named position holds an admin-only capability, which is
+  how the contradiction surfaced.
+- **`audit.read` and `user.setEmail` are not in the vocabulary at all.** There is no audit-log
+  table ([audit-log-spec.md](audit-log-spec.md) is unbuilt) and no email-change path
+  ([staff-email-change-spec.md](staff-email-change-spec.md) is unbuilt), so shipping either
+  would be config describing a guard that does not exist — the exact failure this spec cites the
+  spatie tables for. Each of those specs adds its capability when it builds its guard, and
+  `config.spec.ts` fails on any capability no position grants.
 
 Two judgement calls, one of them changed since the first draft:
 
 - **Deactivation is not admin.** It is the routine front-desk action and it is reversible. Purge
   is not.
-- **Credit adjustment is no longer admin.** The first draft put it here and then argued against
-  itself: comping an hour for a member whose session was interrupted is a front-desk kindness,
-  and routing it through an admin means it does not happen. It is bounded — practice-room credit,
-  not money — and if it needs a ceiling, that is an amount, not a role. See open questions.
+- **Credit adjustment stays admin, for now.** The argument against is real — comping an hour for
+  a member whose session was interrupted is a front-desk kindness, and routing it through an admin
+  means it does not happen. But there is no front-desk comp workflow to hang it on yet, and the
+  right bound when one exists is an amount rather than a role. Until then it sits in
+  `adminOnlyCapabilities` (`src/lib/config.ts`), which is the reversible choice: widening a
+  capability later is a one-line config diff, and open question 2 is where the ceiling gets
+  decided.
 
 ---
 
@@ -252,10 +268,16 @@ Two judgement calls, one of them changed since the first draft:
 becomes "holds any elevated position". Nothing that works stops working. Then handlers narrow
 one at a time.
 
-The surface is smaller than it sounds. `requireStaff()` has **266 call sites in 22 files, 18 of
-them under `src/lib/remote/`** — so the narrowing is roughly one PR per remote module, each
-independently revertible. Around them sit `isStaff(` ×11, `hasAnyRole(` ×11, `listStaffUsers(`
-×7 and `primaryRoleFor(` ×3, which are the ones that need thought rather than a swap.
+The surface is smaller than it sounds. `requireStaff()` has **348 call sites in 32 files, 339 of
+them across 25 modules under `src/lib/remote/`** — so the narrowing is roughly one PR per remote
+module, each independently revertible. Around them sit `isStaff(` ×10, `hasAnyRole(` ×8,
+`listStaffUsers(` ×9, `requireStaffOrOwner(` ×4, `requireStaffRole(` ×2 and `primaryRoleFor(`
+×1, which are the ones that need thought rather than a swap.
+
+(These counts were re-measured when the build started; the first draft's — 266 in 22 files —
+were roughly a third low and are kept nowhere. `primaryRoleFor` in particular has shrunk to a
+single call site, `src/lib/server/entity/refs.ts`, which makes replacing it much cheaper than
+this section originally assumed.)
 
 Defining the matrix and the guard while changing no handler is a complete, shippable step with
 **no behavioral change at all** — which is what makes the rest safe to do slowly.
@@ -284,11 +306,18 @@ nav rows drop out. Hiding a control is not a guard — it just stops someone wal
 
 ### Three costs this creates
 
-- **`help-service.ts` breaks further, and it is already broken.** Six call sites filter
-  `inArray(minRole, roles)` — an exact membership test, not a hierarchy — so an article with
-  `minRole: 'staff'` is **invisible today** to a user holding only `admin`. Add positions and it
-  is invisible to every one of them. This is a live bug independent of this spec, it should ship
-  on its own before any of this, and it is a hard blocker for the rest.
+- **`help-service.ts` breaks the moment a position exists.** _Corrected during implementation:_
+  an earlier version of this bullet said the six `inArray(minRole, roles)` filters were "an exact
+  membership test, not a hierarchy", making a `staff` article invisible to an `admin`. That was
+  wrong — `accessibleRoles('admin')` filtered `l >= 0` and returned all four names, so the set
+  already encoded the hierarchy. The real defect was a **closed vocabulary**: `resolveUserHelpRole`
+  scored any role name absent from its `ROLE_LEVEL` table at `?? 4`, narrower than `member`, so a
+  user holding only `treasurer` resolved to `member` and lost the entire Staff Guide, including
+  articles everybody can read. Latent while only `admin` and `staff` are assigned; certain on the
+  day the first position row is inserted — which makes its hard edge that row, not the narrowing
+  PR. Fixed first and alone by replacing the ranking with an audience ladder (`helpAudiences` in
+  `src/lib/config.ts`) whose elevated test is open-ended **by exclusion**, so an unrecognised role
+  widens access instead of erasing it.
 - **"Primary role" stops being well-defined.** `primaryRoleFor()` is a fixed SQL `CASE` ladder
   rendered as one badge in the users list. Unranked positions have no top one; it becomes a set
   of chips or an explicit display order.
@@ -375,10 +404,12 @@ Timing seals it. Schema mapping is supported (`modelName`, `fields`, `additional
 pointing `member` at `group_member` is mechanically possible — but `group_member` carries
 `status`, `position`, `alias`, `notifyAnnouncements` and a partial unique owner index that
 better-auth's `member` does not, several of them load-bearing in
-[groups-spec.md](groups-spec.md), and **groups is mid-migration at phase 3c of ten**.
-Retargeting those tables onto a plugin's expectations while the `band` → `group` rename is still
-in flight would put group bugs and migration bugs in one diff, which is the hazard that spec
-spends a page warning about for the phases it already has.
+[groups-spec.md](groups-spec.md). _Corrected: that spec's migration is now **complete** — all
+eleven phases shipped, and `requireGroupRole` has existed since phase 4
+(`src/lib/server/group/group-context.ts`). The original objection was that retargeting those
+tables mid-rename would put group bugs and migration bugs in one diff; that particular hazard is
+gone, but the finding above — no per-team permission checks — is what actually decides this, and
+it has not changed._
 
 What is actually being declined is small: the relationship check is _"is this user an active
 member of the group owning this resource, at role ≥ X"_ — one query, already designed as
