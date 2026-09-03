@@ -9,6 +9,11 @@
  * shape — a destination with the missing pieces enumerated, so a band can see
  * what a finished kit looks like and what it still owes.
  *
+ * The rungs are all **booking** items. What an act needs on stage is a separate
+ * document with its own page (`/band/[slug]/rider`), so there is no stage-plot
+ * or backline rung here — a press kit that scored a band on its channel list
+ * would be measuring the wrong thing.
+ *
  * Pure, and takes everything it needs as data. No database, no `slug` lookups,
  * no tier queries: every caller already holds these values, and a function that
  * fetched its own would be a second load-bearing query on a page that has one.
@@ -185,15 +190,6 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			label: 'Who to contact',
 			done: filled(epk?.bookingContact?.email),
 			hint: 'Name a booking contact — it is where your contact form delivers.',
-			where: 'package',
-			route: kit,
-			tier: 'free'
-		},
-		{
-			key: 'tech',
-			label: 'Stage plot and backline',
-			done: (epk?.backline?.length ?? 0) > 0 || filled(epk?.stagePlotKey),
-			hint: 'What you bring and what you need from the room.',
 			where: 'package',
 			route: kit,
 			tier: 'free'

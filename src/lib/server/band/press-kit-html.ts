@@ -32,8 +32,6 @@ export interface PressKitDocument {
 	epk: FullPressKit;
 	/** Paths *within the zip*, not URLs. */
 	photoPaths: string[];
-	riderPath: string | null;
-	stagePlotPath: string | null;
 }
 
 export function escapeHtml(value: string): string {
@@ -113,25 +111,6 @@ export function renderPressKitHtml(doc: PressKitDocument): string {
 	const achievements = epk.achievements
 		.filter((a) => a.trim())
 		.map((a) => `<li>${escapeHtml(a)}</li>`)
-		.join('\n');
-
-	const backline = epk.backline.length
-		? `<table>
-  <thead><tr><th>Instrument</th><th>Details</th><th>Provided by</th></tr></thead>
-  <tbody>${epk.backline
-		.map(
-			(b) =>
-				`<tr><td>${escapeHtml(b.instrument)}</td><td>${escapeHtml(b.details)}</td><td>${b.provided ? 'The act' : 'Venue'}</td></tr>`
-		)
-		.join('')}</tbody>
-</table>`
-		: '';
-
-	const attachments = [
-		doc.stagePlotPath ? `<li>Stage plot — <code>${escapeHtml(doc.stagePlotPath)}</code></li>` : '',
-		doc.riderPath ? `<li>Tech rider — <code>${escapeHtml(doc.riderPath)}</code></li>` : ''
-	]
-		.filter(Boolean)
 		.join('\n');
 
 	const videos = epk.videos
@@ -217,8 +196,6 @@ ${section('Highlights', achievements ? `<ul>${achievements}</ul>` : '')}
 ${section('Upcoming shows', shows ? `<ul>${shows}</ul>` : '')}
 ${section('Listen', links ? `<ul>${links}</ul>` : '')}
 ${section('Watch', videos ? `<ul>${videos}</ul>` : '')}
-${section('Backline', backline)}
-${section('Also in this folder', attachments ? `<ul>${attachments}</ul>` : '')}
 ${section('Contact', contacts ? `<div class="contacts">${contacts}</div>` : '')}
 
 <footer>
@@ -300,12 +277,6 @@ export function renderPressKitText(doc: PressKitDocument): string {
 	block(
 		'Watch',
 		epk.videos.filter((v) => v.url.trim()).map((v) => `- ${v.label || 'Live video'}: ${v.url}`)
-	);
-	block(
-		'Backline',
-		epk.backline.map(
-			(b) => `- ${b.instrument}: ${b.details} (${b.provided ? 'the act' : 'venue'} provides)`
-		)
 	);
 
 	const contacts: string[] = [];

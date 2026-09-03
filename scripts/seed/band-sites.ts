@@ -4,7 +4,6 @@ import { batchInsert, db } from './db';
 import { pendingSites } from './pending';
 import {
 	ACHIEVEMENTS_POOL,
-	BACKLINE_ITEMS,
 	BAND_EVENT_LOCATIONS,
 	FIRST_NAMES,
 	LAST_NAMES,
@@ -115,9 +114,6 @@ export async function seedBandPageConfigs(bands: any[]) {
 					: undefined,
 			pressQuotes: pickN(PRESS_QUOTES, randomInt(2, 4)),
 			achievements: pickN(ACHIEVEMENTS_POOL, randomInt(3, 5)),
-			backline: pickN(BACKLINE_ITEMS, randomInt(3, 5)),
-			technicalRiderKey: 'bands/rider-placeholder.pdf',
-			stagePlotKey: 'bands/stage-plot-placeholder.png',
 			// The premium half of the press kit. Without a seeded row `VideoBox`
 			// never rendered anywhere, so the section a band site is now partly
 			// sold on could not be seen in dev at all. Real YouTube ids, because
@@ -252,15 +248,13 @@ export async function seedFreePressKits(bands: any[]) {
 
 		if (rung === 2) {
 			// The finished kit: someone a venue can ring, and what the act needs on
-			// stage. Both are package-only, so this is also the fixture that proves
-			// they never reach the public page.
+			// Package-only, so this is also the fixture that proves a booking
+			// contact never reaches the public page.
 			epk.bookingContact = {
 				name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
 				email: `booking@${b.slug}.band`,
 				phone: `541-555-${randomInt(1000, 9999)}`
 			};
-			epk.backline = pickN(BACKLINE_ITEMS, randomInt(2, 4));
-
 			// Exactly one gallery photo — the free allowance, in full.
 			//
 			// Without this, three states were unreachable in dev and each was
@@ -270,8 +264,6 @@ export async function seedFreePressKits(bands: any[]) {
 			// the limit" state had no way to occur. So `FREE_PRESS_PHOTOS`, the one
 			// new server rule this feature adds, had no fixture exercising it.
 			await attachSeedImage(b, 'gallery', 0, `${b.name} — press photo`);
-			// What the package ships beside the one-pager.
-			await attachSeedImage(b, 'stage_plot', 1, null);
 		}
 
 		await db.update(bandSite).set({ epk, updatedAt: new Date() }).where(eq(bandSite.groupId, b.id));

@@ -41,12 +41,20 @@ const COMPLETE: EpkCompletenessInput = {
 	pressPhotos: 1,
 	epk: {
 		bookingContact: { name: 'Bea', email: 'bea@example.com' },
-		backline: [{ instrument: 'Bass cab', details: 'Ampeg', provided: false }],
 		pressQuotes: [{ quote: 'Loud and good', publication: 'The Gazette' }]
 	}
 };
 
 describe('epkSections', () => {
+	it('scores only booking items, never technical ones', () => {
+		// An EPK is a booking document. What an act needs on stage is the tech
+		// rider's job, and a rung for it here would score a band on the wrong
+		// thing — as well as duplicating `rider_element`, which models it properly.
+		const keys = epkSections({ ...EMPTY, premiumAvailable: true }).map((s) => s.key);
+		expect(keys).not.toContain('tech');
+		expect(keys.join(' ')).not.toMatch(/backline|stage/i);
+	});
+
 	it('finishes nothing for an act that has written nothing', () => {
 		const done = epkSections(EMPTY).filter((s) => s.done);
 		// The act's *name* always exists, but the identity rung needs a logo too,
@@ -151,9 +159,9 @@ describe('individual rungs', () => {
 describe('epkProgress', () => {
 	it('scores the free rungs only', () => {
 		const p = epkProgress({ ...EMPTY, premiumAvailable: true });
-		expect(p.total).toBe(12);
+		expect(p.total).toBe(11);
 		expect(p.done).toBe(0);
-		expect(p.sections.length).toBe(15);
+		expect(p.sections.length).toBe(14);
 	});
 
 	it('names the first thing left to do', () => {

@@ -27,8 +27,6 @@
 	} = $props();
 
 	const photos = $derived(media.filter((m) => m.slot === 'gallery'));
-	const rider = $derived(media.find((m) => m.slot === 'rider'));
-	const stagePlot = $derived(media.find((m) => m.slot === 'stage_plot'));
 	const atLimit = $derived(photoLimit !== null && photos.length >= photoLimit);
 
 	let busy = $state(false);
@@ -36,12 +34,12 @@
 	// The upload endpoint is multipart, so it stays an API route rather than a
 	// remote form. It is the same one the page editor uses, and it owns the tier
 	// cap — the disabled button below is presentation, not the rule.
-	async function upload(file: File, type: 'image' | 'rider' | 'stage_plot') {
+	async function upload(file: File) {
 		busy = true;
 		try {
 			const fd = new FormData();
 			fd.set('file', file);
-			fd.set('type', type);
+			fd.set('type', 'image');
 			const res = await fetch(`/api/bands/${band.id}/media`, { method: 'POST', body: fd });
 			if (!res.ok) {
 				const body = (await res.json().catch(() => ({}))) as { message?: string };
@@ -72,19 +70,18 @@
 		}
 	}
 
-	function pick(type: 'image' | 'rider' | 'stage_plot', accept: string) {
+	function pick() {
 		const el = document.createElement('input');
 		el.type = 'file';
-		el.accept = accept;
+		el.accept = IMAGE_TYPES;
 		el.onchange = () => {
 			const file = el.files?.[0];
-			if (file) void upload(file, type);
+			if (file) void upload(file);
 		};
 		el.click();
 	}
 
 	const IMAGE_TYPES = 'image/jpeg,image/png,image/webp';
-	const DOC_TYPES = `${IMAGE_TYPES},application/pdf`;
 </script>
 
 <InfoCard title="Download your kit">
@@ -142,7 +139,7 @@
 			outline
 			size="sm"
 			disabled={busy || atLimit}
-			onclick={() => pick('image', IMAGE_TYPES)}
+			onclick={() => pick()}
 		>
 			Add a photo
 		</Button>
@@ -154,48 +151,5 @@
 		{:else}
 			<span class="text-muted text-sm">Unlimited on your plan</span>
 		{/if}
-	</div>
-</InfoCard>
-
-<InfoCard title="Stage plot and tech rider">
-	<p class="text-muted">
-		Package only. A venue gets these by asking, which is also how you find out someone is
-		interested.
-	</p>
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		{#each [{ item: stagePlot, type: 'stage_plot' as const, label: 'Stage plot' }, { item: rider, type: 'rider' as const, label: 'Tech rider' }] as row (row.type)}
-			<div class="space-y-2">
-				<h3 class="text-sm font-semibold">{row.label}</h3>
-				{#if row.item}
-					<p class="text-muted text-sm">{row.item.filename ?? 'Uploaded'}</p>
-					<div class="flex gap-2">
-						{#if row.item.url}
-							<Button href={row.item.url} variant="ghost" size="sm" target="_blank">View</Button>
-						{/if}
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							disabled={busy}
-							onclick={() => remove(row.item!.id)}
-						>
-							Remove
-						</Button>
-					</div>
-				{:else}
-					<Button
-						type="button"
-						variant="default"
-						outline
-						size="sm"
-						disabled={busy}
-						onclick={() => pick(row.type, DOC_TYPES)}
-					>
-						Upload {row.label.toLowerCase()}
-					</Button>
-					<p class="text-muted text-xs">Image or PDF, up to 10MB.</p>
-				{/if}
-			</div>
-		{/each}
 	</div>
 </InfoCard>

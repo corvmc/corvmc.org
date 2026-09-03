@@ -15,9 +15,7 @@ const BARE: PressKitDocument = {
 	shows: [],
 	links: [],
 	epk: fullPressKit(null),
-	photoPaths: [],
-	riderPath: null,
-	stagePlotPath: null
+	photoPaths: []
 };
 
 const FULL: PressKitDocument = {
@@ -33,14 +31,11 @@ const FULL: PressKitDocument = {
 	links: [{ label: 'Bandcamp', url: 'https://act.bandcamp.com/album/foo' }],
 	epk: fullPressKit({
 		bookingContact: { name: 'Bea', email: 'bea@example.com', phone: '555-0100' },
-		backline: [{ instrument: 'Bass cab', details: 'Ampeg 8x10', provided: false }],
 		pressQuotes: [{ quote: 'Loud and good', publication: 'The Gazette' }],
 		achievements: ['Played the big room'],
 		videos: [{ url: 'https://www.youtube.com/watch?v=abc', label: 'Live at the barn' }]
 	}),
-	photoPaths: ['photos/press-1.jpg'],
-	riderPath: 'rider.pdf',
-	stagePlotPath: 'stage-plot.png'
+	photoPaths: ['photos/press-1.jpg']
 };
 
 describe('renderPressKitHtml', () => {
@@ -49,16 +44,24 @@ describe('renderPressKitHtml', () => {
 		// would look broken, so a section with no body is omitted entirely.
 		const html = renderPressKitHtml(BARE);
 		expect(html).toContain('The Velvet Underground');
-		expect(html).not.toContain('<h2>Backline</h2>');
 		expect(html).not.toContain('<h2>Lineup</h2>');
 		expect(html).not.toContain('<h2>Contact</h2>');
 	});
 
 	it('carries the advance half — this file is the private one', () => {
 		const html = renderPressKitHtml(FULL);
-		for (const marker of ['Bea', 'bea@example.com', '555-0100', 'Ampeg 8x10']) {
+		for (const marker of ['Bea', 'bea@example.com', '555-0100']) {
 			expect(html).toContain(marker);
 		}
+	});
+
+	it('carries nothing technical — that is a different document', () => {
+		// An EPK is what a booker reads deciding whether to offer a date. The
+		// channel list lives in the tech rider, which has its own page and export.
+		const html = renderPressKitHtml(FULL);
+		expect(html).not.toMatch(/backline/i);
+		expect(html).not.toMatch(/stage plot/i);
+		expect(html).not.toMatch(/tech(nical)? rider/i);
 	});
 
 	it('references images by their path inside the zip, not by URL', () => {

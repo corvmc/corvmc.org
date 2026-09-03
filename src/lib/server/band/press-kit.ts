@@ -22,8 +22,12 @@ import type { BandEpk, FullPressKit, PublicPressKit } from '$lib/types/band-page
  * The absent fields are the point. There is deliberately **no contact of any
  * kind** here, not even an email: a stranger reaches the band through the
  * Turnstile-backed form, so no address is published for a scraper to collect.
- * Nor is there a rider, stage plot or backline — a venue gets those by asking,
- * which is also how the band finds out somebody is interested.
+ * There is no rider, stage plot or backline here either, and not because they
+ * are private: **an EPK is a booking document, not a technical one.** What an act
+ * needs on stage lives in the tech rider at `/band/[slug]/rider`, which models it
+ * properly — per-member inputs, stands, monitors — and has its own export. A
+ * booker deciding whether to offer a date does not need a channel list, and a
+ * second, weaker copy of one here would only drift from the real thing.
  */
 export function publicPressKit(epk: BandEpk | null | undefined): PublicPressKit {
 	return {
@@ -46,10 +50,7 @@ export function fullPressKit(epk: BandEpk | null | undefined): FullPressKit {
 		...publicPressKit(epk),
 		...(epk?.bookingContact ? { bookingContact: epk.bookingContact } : {}),
 		...(epk?.managementContact ? { managementContact: epk.managementContact } : {}),
-		...(epk?.prContact ? { prContact: epk.prContact } : {}),
-		...(epk?.technicalRiderKey ? { technicalRiderKey: epk.technicalRiderKey } : {}),
-		...(epk?.stagePlotKey ? { stagePlotKey: epk.stagePlotKey } : {}),
-		backline: epk?.backline ?? []
+		...(epk?.prContact ? { prContact: epk.prContact } : {})
 	};
 }
 

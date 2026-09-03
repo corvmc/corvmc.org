@@ -52,10 +52,10 @@ wrong.
 
 Both `password`.
 
-| Account                      | Reaches                                                                                                                                                                          |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `soloact@corvallismusic.org` | Owner of **wren-halloway** — a **free** act with a complete free press kit: 3 quotes, 3 highlights, a booking contact, backline, 1 press photo, a stage plot. Ladder at 9 of 12. |
-| `admin@corvallismusic.org`   | Staff, and owner of **thevoltagethieves** — a **premium** act with videos, 3 gallery photos, a themed microsite and a custom-CSS page.                                           |
+| Account                      | Reaches                                                                                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `soloact@corvallismusic.org` | Owner of **wren-halloway** — a **free** act with a complete free press kit: 3 quotes, 3 highlights, a booking contact and 1 press photo. Ladder at 9 of 11. |
+| `admin@corvallismusic.org`   | Staff, and owner of **thevoltagethieves** — a **premium** act with videos, 3 gallery photos, a themed microsite and a custom-CSS page.                      |
 
 Signed out reaches the public directory and both public profiles.
 
@@ -214,7 +214,7 @@ Where the whole kit is written. Owner or admin, usually in one sitting when an a
 sets up and then rarely again. It is deliberately a separate page from Edit Profile because
 the two have different readers: the profile is what the public sees, this is what a venue is
 sent. The full ladder sits at the top, then public sections (quotes, highlights), then
-package-only sections (contacts, backline), then the download and the files.
+the package-only section (contacts), then the download and the photos.
 
 **User stories**
 
@@ -224,7 +224,7 @@ package-only sections (contacts, backline), then the download and the files.
 - As an admin who is not the owner, I want to keep the kit current without billing access.
 
 **What the fixtures show** — a complete free kit: 3 quotes with publications and dates, 3
-highlights, a booking contact with a phone number, 4 backline rows, an uploaded stage plot.
+highlights, a booking contact with a phone number, one press photo.
 Management and Press contacts are deliberately empty, so the "role nobody filled" state is
 visible.
 
@@ -454,8 +454,7 @@ rendered-text length, and a file under the size floor is rejected.
 
 ### Caveats on what these screenshots show
 
-- **Seeded media keys name no real R2 object.** Photo thumbnails and the stage plot therefore
-  do not render. The layout around them is real; the images are not. Screen 6 shows this
+- **Seeded media keys name no real R2 object.** Photo thumbnails therefore do not render. The layout around them is real; the images are not. Screen 6 shows this
   directly.
 - **`bandPremium` must be on** for screens 9–12. It is **off in production**, so those four
   screens are of a product nobody can currently buy.

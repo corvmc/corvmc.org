@@ -2,9 +2,12 @@
  * The press kit as a file a band can attach to an email.
  *
  * The zip holds a self-contained one-pager, a plain-text version for pasting
- * into a message body, the photos at full resolution, and whatever rider or
- * stage plot the act uploaded. Nothing in it is fetched over the network when
- * it is opened.
+ * into a message body, and the photos at full resolution. Nothing in it is
+ * fetched over the network when it is opened.
+ *
+ * No rider and no stage plot: an EPK is what a booker reads when deciding
+ * whether to offer a date, and the technical half is a different document sent
+ * at a different moment. It lives at `/band/[slug]/rider` and exports itself.
  *
  * Admin-only, and deliberately so: this is the *full* kit, contacts and phone
  * numbers included. The public page publishes none of that.
@@ -76,7 +79,10 @@ export const GET: RequestHandler = async ({ params }) => {
 			.where(and(eq(directoryEntry.groupId, band.id), eq(directoryTag.kind, 'genre'))),
 		getMembers(band.id),
 		listBandEventsUpcoming(band.id, 10),
-		listMediaFor('group', band.id, ['gallery', 'stage_plot', 'rider'])
+		// `gallery` only. The stage plot and rider belong to the tech rider at
+		// `/band/[slug]/rider`, which has its own export — an EPK is a booking
+		// document, and a booker weighing a date has no use for a channel list.
+		listMediaFor('group', band.id, 'gallery')
 	]);
 
 	const files: Record<string, Uint8Array> = {};
@@ -105,11 +111,6 @@ export const GET: RequestHandler = async ({ params }) => {
 			i++;
 		}
 	}
-
-	const stagePlot = media.find((m) => m.slot === 'stage_plot');
-	const rider = media.find((m) => m.slot === 'rider');
-	const stagePlotPath = stagePlot ? await pack(stagePlot.key, 'stage-plot', 'image/png') : null;
-	const riderPath = rider ? await pack(rider.key, 'rider', 'application/pdf') : null;
 
 	if (packBytes >= MAX_PACK_BYTES) {
 		throw error(413, 'Your press kit is too large to package. Remove a few photos and try again.');
@@ -146,9 +147,7 @@ export const GET: RequestHandler = async ({ params }) => {
 			url: l.url
 		})),
 		epk: fullPressKit(site?.epk),
-		photoPaths,
-		riderPath,
-		stagePlotPath
+		photoPaths
 	};
 
 	files['press-kit.html'] = strToU8(renderPressKitHtml(doc));

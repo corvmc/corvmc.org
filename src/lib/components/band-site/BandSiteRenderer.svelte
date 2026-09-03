@@ -338,39 +338,21 @@
 					</div>
 				{/if}
 			{:else if block.type === 'tech_rider'}
-				<div class="mx-auto max-w-3xl px-6 py-8">
-					<h2 class="mb-4 text-2xl font-bold">Technical Requirements</h2>
-					{#if epk?.stagePlotKey}
-						{@const stageMedia = media.find((m) => m.slot === 'stage_plot')}
+				<!-- Sourced from the `stage_plot` and `rider` media slots, which the tech
+				     rider at /band/[slug]/rider owns. It used to gate on `epk.stagePlotKey`
+				     and `epk.technicalRiderKey`, and render a backline table from
+				     `epk.backline` — all three left the press kit when the EPK became a
+				     booking document rather than a technical one. The files are the same
+				     files; only where the block asks about them changed, so a page already
+				     publishing this block keeps working. -->
+				{@const stageMedia = media.find((m) => m.slot === 'stage_plot')}
+				{@const riderMedia = media.find((m) => m.slot === 'rider')}
+				{#if stageMedia?.url || riderMedia?.url}
+					<div class="mx-auto max-w-3xl px-6 py-8">
+						<h2 class="mb-4 text-2xl font-bold">Technical Requirements</h2>
 						{#if stageMedia?.url}
-							<img src={stageMedia.url} alt="Stage Plot" class="mb-4 max-w-full rounded-lg" />
+							<img src={stageMedia.url} alt="Stage plot" class="mb-4 max-w-full rounded-lg" />
 						{/if}
-					{/if}
-					{#if epk?.backline && epk.backline.length > 0}
-						<h3 class="mb-2 font-semibold">Backline Requirements</h3>
-						<div class="overflow-x-auto">
-							<table class="table table-sm">
-								<thead>
-									<tr>
-										<th>Instrument</th>
-										<th>Details</th>
-										<th>Provided by</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each epk.backline as item (item.instrument)}
-										<tr>
-											<td class="font-medium">{item.instrument}</td>
-											<td>{item.details}</td>
-											<td>{item.provided ? 'Act' : 'Venue'}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-					{#if epk?.technicalRiderKey}
-						{@const riderMedia = media.find((m) => m.slot === 'rider')}
 						{#if riderMedia?.url}
 							<Button
 								href={riderMedia.url}
@@ -378,14 +360,12 @@
 								rel="external noopener"
 								variant="default"
 								size="sm"
-								outline
-								class="mt-4"
 							>
-								Download Full Tech Rider (PDF)
+								Download tech rider
 							</Button>
 						{/if}
-					{/if}
-				</div>
+					</div>
+				{/if}
 			{:else if block.type === 'custom_html'}
 				<div class="mx-auto max-w-4xl px-6 py-8">
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized server-side (prepareBlocksForRender) -->

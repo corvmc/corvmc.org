@@ -8,6 +8,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import ContactRoleFields from './ContactRoleFields.svelte';
+	import { resolve } from '$app/paths';
 	import { saveBandEpk } from '$lib/remote/press-kit.remote';
 	import type { getBandLayout } from '$lib/remote/layout.remote';
 	import type { FullPressKit } from '$lib/types/band-page';
@@ -35,6 +36,8 @@
 	// a whole-page 400.
 	const epkJson = $derived(JSON.stringify(epk));
 
+	const riderHref = $derived(resolve('/band/[slug]/rider', { slug: band.slug }));
+
 	function addQuote() {
 		epk.pressQuotes = [...epk.pressQuotes, { quote: '', publication: '' }];
 	}
@@ -44,17 +47,9 @@
 	function addVideo() {
 		epk.videos = [...epk.videos, { url: '' }];
 	}
-	function addBacklineItem() {
-		epk.backline = [...epk.backline, { instrument: '', details: '', provided: true }];
-	}
 	function removeAt<T>(list: T[], i: number): T[] {
 		return list.filter((_, n) => n !== i);
 	}
-
-	const PROVIDED_BY = [
-		{ value: 'band', label: 'We bring it' },
-		{ value: 'venue', label: 'Venue provides' }
-	];
 </script>
 
 <Form
@@ -66,9 +61,12 @@
 	<input {...saveBandEpk.fields.epk.as('hidden', epkJson)} />
 
 	<Alert type="info">
-		Everything on this page is free for every act. Contacts, phone numbers and stage requirements go
-		only in the press kit you download and send — they are never published on your public page,
-		where a booker reaches you through a contact form instead.
+		Everything on this page is free for every act. Contacts and phone numbers go only in the press
+		kit you download and send — they are never published on your public page, where a booker reaches
+		you through a contact form instead. What you need on stage is a separate document: your <a
+			href={riderHref}
+			class="link">tech rider</a
+		>.
 	</Alert>
 
 	<!-- Public: what a stranger reads -->
@@ -190,44 +188,6 @@
 				withPhone={false}
 			/>
 		</div>
-	</InfoCard>
-
-	<InfoCard title="Backline">
-		<p class="text-muted">
-			What you bring and what you need from the room. Package only — a venue gets this by asking.
-		</p>
-		{#if epk.backline.length === 0}
-			<p class="text-muted">Nothing listed yet.</p>
-		{/if}
-		<div class="space-y-4">
-			{#each epk.backline as _, i (i)}
-				<div class="grid grid-cols-1 gap-2 inset p-3 sm:grid-cols-[1fr_1fr_auto]">
-					<FormField type="text" label="Instrument" bind:value={epk.backline[i].instrument} />
-					<FormField type="text" label="Details" bind:value={epk.backline[i].details} />
-					<FormField
-						type="select"
-						label="Provided by"
-						options={PROVIDED_BY}
-						value={epk.backline[i].provided ? 'band' : 'venue'}
-						onchange={(e: Event) => {
-							epk.backline[i].provided = (e.currentTarget as HTMLSelectElement).value === 'band';
-						}}
-					/>
-					<Button
-						type="button"
-						variant="ghost"
-						size="sm"
-						class="sm:col-span-3"
-						onclick={() => (epk.backline = removeAt(epk.backline, i))}
-					>
-						Remove item
-					</Button>
-				</div>
-			{/each}
-		</div>
-		<Button type="button" variant="default" size="sm" outline onclick={addBacklineItem}>
-			Add an item
-		</Button>
 	</InfoCard>
 
 	<div class="flex justify-end">

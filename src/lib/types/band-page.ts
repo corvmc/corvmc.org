@@ -67,9 +67,6 @@ export interface BandEpk {
 	bookingContact?: EpkContact;
 	managementContact?: EpkContact;
 	prContact?: EpkContact;
-	technicalRiderKey?: string;
-	stagePlotKey?: string;
-	backline?: BacklineItem[];
 	pressQuotes?: PressQuote[];
 	achievements?: string[];
 	videos?: BandVideo[];
@@ -119,7 +116,4 @@ export interface FullPressKit extends PublicPressKit {
 	bookingContact?: EpkContact;
 	managementContact?: EpkContact;
 	prContact?: EpkContact;
-	technicalRiderKey?: string;
-	stagePlotKey?: string;
-	backline: BacklineItem[];
 }

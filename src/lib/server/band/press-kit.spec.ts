@@ -12,9 +12,6 @@ const FULL: BandEpk = {
 	bookingContact: { name: 'Booking Bea', email: 'bea@example.com', phone: '555-0100' },
 	managementContact: { name: 'Manager Moe', email: 'moe@example.com', phone: '555-0101' },
 	prContact: { name: 'Press Pat', email: 'pat@example.com' },
-	technicalRiderKey: 'media/rider-secret.pdf',
-	stagePlotKey: 'media/stageplot-secret.png',
-	backline: [{ instrument: 'Bass cab', details: 'Ampeg 8x10', provided: false }],
 	pressQuotes: [{ quote: 'Loud and good', publication: 'The Gazette', date: '2026-01-01' }],
 	achievements: ['Played the big room'],
 	videos: [{ url: 'https://youtube.com/watch?v=abc', label: 'Live at the barn' }]
@@ -29,11 +26,16 @@ const PRIVATE_MARKERS = [
 	'moe@example.com',
 	'555-0101',
 	'Press Pat',
-	'pat@example.com',
-	'rider-secret',
-	'stageplot-secret',
-	'Ampeg 8x10'
+	'pat@example.com'
 ];
+
+/**
+ * Technical detail is not private here — it is *absent*. An EPK is a booking
+ * document; what an act needs on stage lives in the tech rider at
+ * `/band/[slug]/rider`, which models it properly and exports itself. These
+ * markers must appear in neither projection.
+ */
+const NOT_A_PRESS_KIT_CONCERN = ['rider', 'stagePlot', 'backline'];
 
 describe('publicPressKit', () => {
 	it('carries the marketing half', () => {
@@ -77,8 +79,11 @@ describe('fullPressKit', () => {
 	it('omits absent contacts rather than emitting undefined values', () => {
 		const full = fullPressKit({ pressQuotes: [] });
 		expect('bookingContact' in full).toBe(false);
-		expect('technicalRiderKey' in full).toBe(false);
-		expect(full.backline).toEqual([]);
+	});
+
+	it.each(NOT_A_PRESS_KIT_CONCERN)("carries no %s key — that is the rider's job", (key) => {
+		expect(Object.keys(fullPressKit(FULL))).not.toContain(key);
+		expect(Object.keys(publicPressKit(FULL))).not.toContain(key);
 	});
 });
 
