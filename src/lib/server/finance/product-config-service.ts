@@ -20,7 +20,12 @@ const KV_PREFIX = 'product-config:';
 // ---------------------------------------------------------------------------
 
 export type ProductKey =
-	'contribution' | 'fee_coverage' | 'ticket' | 'ticket_contribution' | 'band_premium';
+	| 'contribution'
+	| 'fee_coverage'
+	| 'ticket'
+	| 'ticket_contribution'
+	| 'band_premium'
+	| 'audio_release';
 
 interface ProductDefault {
 	name: string;
@@ -68,6 +73,16 @@ const DEFAULTS: Record<ProductKey, ProductDefault> = {
 		// editing this line.
 		unitAmountCents: 500,
 		unitLabel: 'per month'
+	},
+	audio_release: {
+		name: 'Recorded Music',
+		description: 'A release sold by a band through the Corvallis Music Collective',
+		// Priced per sale by the band, so the amount here is never used — the line
+		// item carries its own `unit_amount`. The product exists to give every
+		// music sale one identity in Stripe's reporting rather than an inline
+		// product per release.
+		unitAmountCents: 0,
+		unitLabel: 'per release'
 	}
 };
 

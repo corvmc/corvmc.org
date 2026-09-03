@@ -31,6 +31,7 @@ export type MemberNavKey =
 	| 'profile'
 	| 'account'
 	| 'help'
+	| 'music'
 	| 'membership';
 
 /** Field names on `getMemberLayout()`'s return. */
@@ -52,6 +53,12 @@ export interface MemberNavInput {
 	 * catalogue held nothing, and the row arriving on its own is what ends that.
 	 */
 	hasLoanableEquipment?: boolean;
+	/**
+	 * Whether the music storefront is switched on. A flag, unlike the row above
+	 * it: the library can be legitimately empty and still worth reaching, because
+	 * it is where a buyer goes to find a download link they mislaid.
+	 */
+	bandAudio?: boolean;
 }
 
 /** The rows above the "My Bands" group. */
@@ -75,6 +82,10 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 		},
 		{ key: 'directory', label: 'Directory', href: resolve('/member/directory') }
 	];
+
+	if (input.bandAudio) {
+		items.push({ key: 'music', label: 'Music', href: resolve('/member/music') });
+	}
 
 	// Between Directory and Volunteering: it belongs with the things you do in
 	// the space, not with the bottom cluster.

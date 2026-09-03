@@ -41,6 +41,7 @@ async function registerCheckoutListeners(): Promise<void> {
 	const { handleReservationCheckout } = await import('$lib/server/reservation/checkout-listener');
 	const { handleTicketCheckout } = await import('$lib/server/ticket/checkout-listener');
 	const { handleBandPremiumCheckout } = await import('$lib/server/band/band-checkout-listener');
+	const { handleAudioCheckout } = await import('$lib/server/audio/checkout-listener');
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleReservationCheckout(event.stripeSession);
@@ -52,6 +53,10 @@ async function registerCheckoutListeners(): Promise<void> {
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleBandPremiumCheckout(event.stripeSession);
+	});
+
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
+		await handleAudioCheckout(event.stripeSession);
 	});
 }
 

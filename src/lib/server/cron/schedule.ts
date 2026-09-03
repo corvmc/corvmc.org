@@ -30,6 +30,9 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/confirmation-reminders',
 		'/api/cron/reservation-reminders',
 		'/api/cron/cancel-stale-tickets',
+		// The same job for music: a row written pending before the buyer left for
+		// Stripe, whose checkout was never completed.
+		'/api/cron/sweep-audio-purchases',
 		// After the reminders: both read confirmed signups, and complete-shifts
 		// has had all night of 15-minute passes before the feedback ask runs.
 		'/api/cron/shift-reminders',
