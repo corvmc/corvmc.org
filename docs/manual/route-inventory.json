@@ -68,6 +68,14 @@
 		"panel": "band"
 	},
 	{
+		"route": "/band/[slug]/rider",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/rider/list",
+		"panel": "band"
+	},
+	{
 		"route": "/band/[slug]/settings",
 		"panel": "band"
 	},

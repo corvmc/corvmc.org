@@ -156,7 +156,10 @@ export async function beginPurchase(input: BeginPurchaseInput): Promise<BeginPur
 			buyerEmail: input.buyerEmail,
 			purchaseId,
 			amountPaidCents: split.chargeCents,
-			platformFeeCents: split.platformCents,
+			// What the collective actually keeps, net of its share of card
+			// processing — the same figure the buyer was shown on the bar, so a
+			// band reconciling a Stripe deposit meets one number, not two.
+			platformFeeCents: split.platformNetCents,
 			bandNetCents: split.bandCents,
 			feeCoveredCents: split.feeCoveredCents,
 			status: 'pending',

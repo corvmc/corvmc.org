@@ -1,3 +1,5 @@
+import { positionOrder } from '$lib/config';
+
 /**
  * Deriving the display fields of an `EntityRef` from domain values.
  *
@@ -9,19 +11,26 @@
 /**
  * Which member glyph applies, or `null` for an ordinary member.
  *
- * An explicit admin/staff role outranks a subscription. Someone can be both,
- * and staff is the one that changes what they can do to the record you are
- * looking at.
+ * A position outranks a subscription. Someone can be both, and the position is
+ * the one that changes what they can do to the record you are looking at.
  *
- * `role` may still carry the legacy 'sustaining member' role name, which is
- * ignored in favour of the subscription-derived flag — the subscription is the
- * source of truth for whether someone is currently sustaining, and the old role
+ * Every named position other than `admin` wears the staff glyph. Positions are
+ * unranked, so there is no "highest" one to render — but "this person is not an
+ * ordinary member" is exactly what the badge has always meant, and inventing a
+ * glyph per position would put a ranking in the UI that the authorization model
+ * deliberately does not have.
+ *
+ * `position` may still carry a legacy role name (`member`, `sustaining`,
+ * `volunteer`); `topPositionFor` filters those out in SQL, and the
+ * `positionOrder` test here is what keeps this total if one slips through. The
+ * subscription is the source of truth for sustaining status — the old role
  * string outlived it.
  */
 export function memberSubtype(
-	role: string | null | undefined,
+	position: string | null | undefined,
 	sustaining: boolean | null | undefined
 ): 'admin' | 'staff' | 'sustaining' | null {
-	if (role === 'admin' || role === 'staff') return role;
+	if (position === 'admin') return 'admin';
+	if (position && (positionOrder as readonly string[]).includes(position)) return 'staff';
 	return sustaining ? 'sustaining' : null;
 }

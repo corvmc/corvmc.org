@@ -10,6 +10,7 @@
 		updateReservationSettings,
 		updateOrgSettings,
 		updateVolunteerValueSettings,
+		updateVenueSettings,
 		updateIntegrationSettings,
 		testUtecConnection,
 		runLockSelfTest,
@@ -59,6 +60,7 @@
 	const reservationSettings = $derived(settings.reservation);
 	const orgSettings = $derived(settings.org);
 	const volunteerValue = $derived(settings.volunteerValue);
+	const venue = $derived(settings.venue);
 	const integrationSettings = $derived(settings.integration);
 	const channelConfigs = $derived(settings.channelConfigs);
 	const featureFlags = $derived(settings.featureFlags);
@@ -621,6 +623,38 @@
 								type="text"
 								value={volunteerValue.hourValueSource}
 								placeholder="Independent Sector, Oregon, 2025"
+							/>
+						</div>
+					</CardBody>
+				</Card>
+			</Form>
+
+			<Form remote={updateVenueSettings} guard successToast="Room settings updated">
+				<Card>
+					<CardBody>
+						<div class="flex items-center justify-between">
+							<CardTitle size="base">The Room</CardTitle>
+							<SubmitButton
+								label="Save"
+								successLabel="Saved"
+								errorLabel="Error"
+								variant="primary"
+								size="sm"
+							/>
+						</div>
+						<p class="text-subtle">
+							How many inputs the desk can take. A band's tech rider counts its channels against
+							this and says so when it asks for more than the room has — which is far better found
+							out on the page than at load-in. Set it to 0 to stop checking.
+						</p>
+
+						<div class="mt-2 grid gap-4 sm:grid-cols-2">
+							<FormField
+								name="consoleChannels"
+								label="Console channels"
+								type="number"
+								value={String(venue.consoleChannels)}
+								placeholder="16"
 							/>
 						</div>
 					</CardBody>

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ec8ee993-8aa2-480b-ba0b-e6151739f971",
+  "id": "f121861c-95b8-4fc9-845a-af782513018d",
   "prevIds": [
-    "802e28e6-a411-4e5c-aec0-b9d2b144504a"
+    "6352b2e1-aac6-476a-9e75-a8cd71535216"
   ],
   "ddl": [
     {
@@ -356,6 +356,18 @@
     },
     {
       "name": "release_purchase",
+      "entityType": "tables"
+    },
+    {
+      "name": "rider",
+      "entityType": "tables"
+    },
+    {
+      "name": "rider_element",
+      "entityType": "tables"
+    },
+    {
+      "name": "rider_input",
       "entityType": "tables"
     },
     {
@@ -9329,6 +9341,306 @@
       "table": "release_purchase"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "rider"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "rider"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tech_contact_user_id",
+      "entityType": "columns",
+      "table": "rider"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "monitor_format",
+      "entityType": "columns",
+      "table": "rider"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "rider"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "confirmed_at",
+      "entityType": "columns",
+      "table": "rider"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "confirmed_by_user_id",
+      "entityType": "columns",
+      "table": "rider"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "rider"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "rider"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rider_id",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "label",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'band'",
+      "generated": null,
+      "name": "provided_by",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "sort_order",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "x",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "y",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "rider_input"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "element_id",
+      "entityType": "columns",
+      "table": "rider_input"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "label",
+      "entityType": "columns",
+      "table": "rider_input"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'mic'",
+      "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "rider_input"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "mic_pref",
+      "entityType": "columns",
+      "table": "rider_input"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "phantom",
+      "entityType": "columns",
+      "table": "rider_input"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'none'",
+      "generated": null,
+      "name": "stand",
+      "entityType": "columns",
+      "table": "rider_input"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "monitor_mix_user_id",
+      "entityType": "columns",
+      "table": "rider_input"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "rider_input"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "sort_order",
+      "entityType": "columns",
+      "table": "rider_input"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -11670,6 +11982,111 @@
     },
     {
       "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_rider_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "rider"
+    },
+    {
+      "columns": [
+        "tech_contact_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_rider_tech_contact_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "rider"
+    },
+    {
+      "columns": [
+        "confirmed_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_rider_confirmed_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "rider"
+    },
+    {
+      "columns": [
+        "rider_id"
+      ],
+      "tableTo": "rider",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_rider_element_rider_id_rider_id_fk",
+      "entityType": "fks",
+      "table": "rider_element"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_rider_element_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "rider_element"
+    },
+    {
+      "columns": [
+        "element_id"
+      ],
+      "tableTo": "rider_element",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_rider_input_element_id_rider_element_id_fk",
+      "entityType": "fks",
+      "table": "rider_input"
+    },
+    {
+      "columns": [
+        "monitor_mix_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_rider_input_monitor_mix_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "rider_input"
+    },
+    {
+      "columns": [
         "permission_id",
         "user_id"
       ],
@@ -12455,6 +12872,33 @@
       "nameExplicit": false,
       "name": "release_purchase_pk",
       "table": "release_purchase",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "rider_pk",
+      "table": "rider",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "rider_element_pk",
+      "table": "rider_element",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "rider_input_pk",
+      "table": "rider_input",
       "entityType": "pks"
     },
     {
@@ -15281,6 +15725,70 @@
     },
     {
       "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_rider_group",
+      "entityType": "indexes",
+      "table": "rider"
+    },
+    {
+      "columns": [
+        {
+          "value": "rider_id",
+          "isExpression": false
+        },
+        {
+          "value": "sort_order",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_rider_element_rider",
+      "entityType": "indexes",
+      "table": "rider_element"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_rider_element_user",
+      "entityType": "indexes",
+      "table": "rider_element"
+    },
+    {
+      "columns": [
+        {
+          "value": "element_id",
+          "isExpression": false
+        },
+        {
+          "value": "sort_order",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_rider_input_element",
+      "entityType": "indexes",
+      "table": "rider_input"
+    },
+    {
+      "columns": [
         "name",
         "guard_name"
       ],
@@ -15678,6 +16186,18 @@
       "name": "project_ends_after_start",
       "entityType": "checks",
       "table": "project"
+    },
+    {
+      "value": "sort_order >= 0",
+      "name": "rider_element_sort_nonneg",
+      "entityType": "checks",
+      "table": "rider_element"
+    },
+    {
+      "value": "sort_order >= 0",
+      "name": "rider_input_sort_nonneg",
+      "entityType": "checks",
+      "table": "rider_input"
     }
   ],
   "renames": []

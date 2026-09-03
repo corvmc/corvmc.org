@@ -1295,8 +1295,15 @@ nothing at all, since they have no panel; their terms travel by email as they do
   productions come first.
 - **Recurring productions.** Weekly open mics could expand through the existing
   `recurring_series` machinery, but the lineup makes each occurrence genuinely different.
-- **Stage-plot drawing.** Uploading a rider image is in scope; a canvas plot builder is
-  not.
+- ~~**Stage-plot drawing.** Uploading a rider image is in scope; a canvas plot builder is
+  not.~~ **Reversed, 2026-09-03.** That call was made when a rider was an opaque file, where a
+  plot builder would have been a drawing tool with nothing behind it. It is not one any more: a
+  `rider_element` is a row with an owner, a kind and a channel count, so a plot is two nullable
+  columns and a drag surface over rows that already exist — and the requirement every input-list
+  guide leads with, that **the numbers on the plot match the numbers on the list**, is only
+  satisfiable when both read the same rows. Built on `feature/band-rider`. Uploading a plot image
+  stays, unchanged and now available to free bands too, and a generated plot never overwrites an
+  uploaded one.
 - **Emailing external acts** and threading those replies into the staff inbox.
 - **Automated payouts.** Recording what was paid is in scope; disbursing through Stripe
   is not — see the door-cash reasoning above for why Connect is the only mechanism Stripe

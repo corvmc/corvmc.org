@@ -100,7 +100,7 @@ vi.mock('$lib/server/feature-flags', () => ({
 }));
 
 // requireStaff() runs a real role query — one row is all hasAnyRole needs.
-let selectResult: unknown[] = [{ roleId: 'role-staff' }];
+let selectResult: unknown[] = [{ name: 'staff' }];
 
 function chainable() {
 	const proxy: any = new Proxy(() => proxy, {
@@ -144,7 +144,7 @@ const { createReservation } = (await import('$lib/remote/reservations.remote')) 
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	selectResult = [{ roleId: 'role-staff' }];
+	selectResult = [{ name: 'staff' }];
 });
 
 // ---------------------------------------------------------------------------

@@ -71,6 +71,7 @@ import { seedSustainingPersonas } from './seed/sustaining-personas';
 import { seedSuggestions } from './seed/suggestions';
 import { seedProjects } from './seed/projects';
 import { seedAudio } from './seed/audio';
+import { seedRiders } from './seed/rider';
 
 async function main() {
 	console.log('\nStarting dev seed...\n');
@@ -164,6 +165,9 @@ async function main() {
 	// into the local private bucket, so it is the one seeder that does I/O
 	// outside D1 — see its header for why rows alone are not enough.
 	const audio = await seedAudio(bands, allUsers);
+	// After the bands and their rosters: a rider is owned corner by corner, so it
+	// reads the roster back rather than being handed one.
+	const riders = await seedRiders(roles);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -240,6 +244,11 @@ async function main() {
 			`${audio.purchases} sales, ${audio.accounts} band Stripe accounts, ` +
 			`${audio.radioEntries} radio entries`
 	);
+		`  ${riders.riders} structured tech rider (${riders.structuredBand ?? '—'}), ${riders.uploaded} upload-only (${riders.uploadBand ?? '—'})`
+	);
+	console.log('\n  Tech rider demo logins (all `password`):');
+	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');
+	console.log('    ridermember@corvallismusic.org  member — own corner only');
 	console.log('\n  Volunteer demo logins (all `password`):');
 	console.log('    coordinator@corvallismusic.org  staff — every /staff/volunteer page');
 	console.log('    volunteer@corvallismusic.org    active volunteer — /member/volunteer');

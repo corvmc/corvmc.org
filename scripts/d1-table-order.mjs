@@ -103,6 +103,13 @@ export const tableOrder = [
 	'announcement',
 	// Group documents: child of group and user, nothing is a child of it.
 	'file',
+	// The tech rider, three deep: `rider` is a child of group and user,
+	// `rider_element` of rider and user, `rider_input` of rider_element and user.
+	// All three clear before `user`, which is why they sit here rather than
+	// beside `band_site` up top.
+	'rider',
+	'rider_element',
+	'rider_input',
 	// The private half of a party record: child of directory_entry and
 	// subscriber, so it wipes before either.
 	'contact',

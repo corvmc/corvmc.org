@@ -184,15 +184,15 @@ describe('beginPurchase — a paid release', () => {
 		await service.beginPurchase({
 			...BASE,
 			totalCents: 1000,
-			platformCents: 100,
+			platformCents: 94,
 			coverFees: false
 		});
 
 		const [options] = checkout.mock.calls[0] as unknown as [Record<string, unknown>];
 		expect(options.destinationAccountId).toBe('acct_band');
-		// $10 sale, 10% suggested, 59¢ fee shared in proportion: the band absorbs
-		// 53¢ and is transferred $8.47, so Stripe is told $1.53 — out of which it
-		// takes the 59¢ and CMC keeps 94¢.
+		// $10 sale. Card processing comes off the top, so the buyer's 10% is 94¢
+		// of the $9.41 that is divisible; the band is transferred $8.47 and
+		// Stripe is told $1.53 — out of which it takes 59¢ and CMC keeps 94¢.
 		expect(options.applicationFeeCents).toBe(153);
 	});
 
@@ -201,7 +201,7 @@ describe('beginPurchase — a paid release', () => {
 		await service.beginPurchase({
 			...BASE,
 			totalCents: 1000,
-			platformCents: 100,
+			platformCents: 94,
 			coverFees: false
 		});
 		const [options] = checkout.mock.calls[0] as unknown as [{ eligibleCredits: unknown[] }];
@@ -215,7 +215,7 @@ describe('beginPurchase — a paid release', () => {
 		await service.beginPurchase({
 			...BASE,
 			totalCents: 1000,
-			platformCents: 100,
+			platformCents: 94,
 			coverFees: true
 		});
 
@@ -237,7 +237,7 @@ describe('beginPurchase — a paid release', () => {
 		await service.beginPurchase({
 			...BASE,
 			totalCents: 1000,
-			platformCents: 100,
+			platformCents: 94,
 			coverFees: false
 		});
 		// The row has to exist before the buyer leaves, or the webhook comes back
@@ -253,7 +253,7 @@ describe('beginPurchase — a paid release', () => {
 		queue(publishedRelease());
 
 		await expect(
-			service.beginPurchase({ ...BASE, totalCents: 1000, platformCents: 100, coverFees: false })
+			service.beginPurchase({ ...BASE, totalCents: 1000, platformCents: 94, coverFees: false })
 		).rejects.toThrow(/payouts/i);
 		expect(checkout).not.toHaveBeenCalled();
 	});
@@ -272,7 +272,7 @@ describe('beginPurchase — a paid release', () => {
 		// publication is checked as part of resolving it rather than after.
 		queue([]);
 		await expect(
-			service.beginPurchase({ ...BASE, totalCents: 1000, platformCents: 100, coverFees: false })
+			service.beginPurchase({ ...BASE, totalCents: 1000, platformCents: 94, coverFees: false })
 		).rejects.toThrow(/not available/i);
 	});
 });
@@ -288,8 +288,8 @@ describe('fulfillPurchase', () => {
 						downloadToken: 't',
 						buyerEmail: 'b@example.com',
 						amountPaidCents: 1000,
-						platformFeeCents: 100,
-						bandNetCents: 841
+						platformFeeCents: 94,
+						bandNetCents: 847
 					},
 					releaseTitle: 'R',
 					releaseSlug: 'r',

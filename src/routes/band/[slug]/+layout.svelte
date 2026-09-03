@@ -11,7 +11,8 @@
 		IconSettings,
 		IconCrown,
 		IconBrush,
-		IconExternalLink
+		IconExternalLink,
+		IconPlug
 	} from '@tabler/icons-svelte';
 	import { env } from '$env/dynamic/public';
 	import { bandSiteUrl } from '$lib/utils/band-site-url';
@@ -60,6 +61,7 @@
 	const icons: Record<BandNavKey, typeof IconLayoutDashboard> = {
 		dashboard: IconLayoutDashboard,
 		members: IconUsersGroup,
+		rider: IconPlug,
 		announcements: IconSpeakerphone,
 		reservations: IconCalendar,
 		events: IconCalendarEvent,

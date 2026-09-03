@@ -7,7 +7,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import SplitBar from '$lib/components/ui/SplitBar.svelte';
 	import { buyReleaseForm } from '$lib/remote/music.remote';
-	import { computeSplit, suggestedPlatformCents } from '$lib/finance/audio-split';
+	import { computeAudioSplit, suggestedPlatformCents } from '$lib/finance/audio-split';
 	import { AUDIO_MIN_PRICE_CENTS } from '$lib/config';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -49,16 +49,17 @@
 	 * the suggestion, or dragging the price would silently undo an allocation they
 	 * made on purpose.
 	 */
-	const platformCents = $derived(platformOverride ?? suggestedPlatformCents(totalCents));
+	const suggested = $derived(suggestedPlatformCents(totalCents, coverFees));
+	const platformCents = $derived(platformOverride ?? suggested);
 
-	const split = $derived(computeSplit({ totalCents, platformCents, coverFees }));
+	const split = $derived(computeAudioSplit({ totalCents, platformCents, coverFees }));
 	/**
 	 * The split as it would be *with* coverage, so the checkbox can quote the
 	 * surcharge before it is ticked. Reading `split.feeCoveredCents` there shows
 	 * $0.00 while unchecked — the number only becomes non-zero once you have
 	 * already agreed to it, which is the wrong way round for a decision.
 	 */
-	const covered = $derived(computeSplit({ totalCents, platformCents, coverFees: true }));
+	const covered = $derived(computeAudioSplit({ totalCents, platformCents, coverFees: true }));
 	const free = $derived(totalCents === 0);
 
 	const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
@@ -113,13 +114,13 @@
 						not a floor on its share of that total. Passing `priceMinCents` here
 						consumed the whole amount and clamped CMC's share to zero, so the
 						suggested 10% never appeared. The agreed model has the band netting
-						$8.41 on a $10 minimum, which is below it by design.
+						$8.47 on a $10 minimum, which is below it by design: card
+						processing comes off the top before either side is paid.
 					-->
 					<SplitBar
 						totalCents={split.chargeCents}
-						value={platformCents}
+						value={split.platformNetCents}
 						onchange={(cents) => (platformOverride = cents)}
-						segments={{ other: split.bandCents, value: split.platformNetCents }}
 						fixedCents={split.stripeFeeCents}
 						fixedLabel="Card processing"
 						fixedCovered={coverFees}
@@ -138,7 +139,7 @@
 								both keep their full share
 							</span>
 						</label>
-						{#if platformOverride !== null && platformOverride !== suggestedPlatformCents(totalCents)}
+						{#if platformOverride !== null && platformOverride !== suggested}
 							<button
 								type="button"
 								class="btn btn-ghost btn-xs"

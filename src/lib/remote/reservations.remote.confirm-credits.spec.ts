@@ -55,7 +55,7 @@ vi.mock('$lib/server/authorization', async () => {
 			if (await isStaffMock()) return 'staff';
 			throw error(403, 'Not authorized');
 		}),
-		primaryRoleFor: vi.fn()
+		topPositionFor: vi.fn()
 	};
 });
 

@@ -15,6 +15,7 @@ import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-na
 export type BandNavKey =
 	| 'dashboard'
 	| 'members'
+	| 'rider'
 	| 'announcements'
 	| 'reservations'
 	| 'events'
@@ -89,6 +90,12 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 			});
 		}
 	}
+	// Every role, staff included. The rider is the one panel page that is not
+	// owner/admin gated: the person who knows what their amp needs is the person
+	// who owns the amp, and a member who cannot reach the page cannot answer for
+	// their own corner of it. Writes are still split — a member's save only ever
+	// touches their own rows.
+	items.push({ key: 'rider', label: 'Tech rider', href: resolve('/band/[slug]/rider', { slug }) });
 
 	if (isOwnerOrAdmin) {
 		items.push({
