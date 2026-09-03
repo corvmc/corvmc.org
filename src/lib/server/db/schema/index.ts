@@ -30,3 +30,4 @@ export * from './media';
 export * from './contractor';
 export * from './project';
 export * from './rider';
+export * from './packing';
