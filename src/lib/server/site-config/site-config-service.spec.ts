@@ -269,3 +269,31 @@ describe('updateSiteConfigs', () => {
 		expect(putJson).toHaveBeenCalledTimes(3);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// The volunteer hour value
+// ---------------------------------------------------------------------------
+
+describe('the volunteer hour value defaults', () => {
+	it('carries a rate and the citation that defends it, together', async () => {
+		const result = await getConfigsByPrefix('volunteer');
+
+		// A funder-facing figure whose provenance is missing cannot be defended,
+		// and a citation without a figure describes nothing. Independent Sector
+		// republishes every April, so the pair is edited annually and the two
+		// halves have to move together or the citation silently goes a year
+		// stale against the number it names.
+		expect(result.hourValueCents).toBeGreaterThan(0);
+		expect(Number.isInteger(result.hourValueCents)).toBe(true);
+		expect(String(result.hourValueSource)).not.toBe('');
+	});
+
+	it('is Oregon rather than the national rate', async () => {
+		// Oregon runs above the national figure, and the state number is the one
+		// a local grant reviewer would check. 3766 is the 2026 report's Oregon
+		// 2025 column -- deliberately not the 3644 a state calculator quotes,
+		// which is that same table's 2024 column.
+		expect(DEFAULTS['volunteer.hourValueCents']).toBe(3766);
+		expect(String(DEFAULTS['volunteer.hourValueSource'])).toContain('Oregon');
+	});
+});

@@ -110,7 +110,9 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'getProducts' },
 	{ name: 'getReservationSettings' },
 	{ name: 'getOrgSettings' },
+	{ name: 'getVolunteerValueSettings' },
 	{ name: 'getIntegrationSettings' },
+	{ name: 'getStaffSettingsPage' },
 	{ name: 'testUtecConnection' },
 	{ name: 'runLockSelfTest' },
 	{ name: 'revokeLockTest' },
@@ -142,11 +144,25 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 		name: 'updateOrgSettings',
 		args: [{ name: 'CMC', shortName: 'CMC', contactEmail: 'a@b.co', timezone: 'UTC' }]
 	},
+	// Guarded all along, but unlisted here until the completeness check below
+	// went looking — so the form that flips any feature flag had no test
+	// pinning that it rejects a non-staff caller.
+	{ name: 'updateFeatureFlag', args: [{ flag: 'bandPremium', enabled: true }] },
+	{
+		name: 'updateVolunteerValueSettings',
+		args: [{ hourValueCents: 3766, hourValueSource: 'Independent Sector, Oregon, 2025' }]
+	},
 	{
 		name: 'updateIntegrationSettings',
 		args: [{ clientId: '', clientSecret: '', deviceId: '', refreshToken: '' }]
 	}
 ];
+
+/**
+ * The three deliberately public queries. Everything the footer and `/contact`
+ * render for a logged-out visitor, and nothing else.
+ */
+const PUBLIC = ['getSocialLinks', 'getOrgAddress', 'getFooterInfo'];
 
 describe('settings.remote staff guards', () => {
 	for (const { name, args = [] } of STAFF_ONLY) {
@@ -188,5 +204,21 @@ describe('settings.remote staff guards', () => {
 
 	it('no arbitrary-key config reader is exported (it could read integration secrets)', () => {
 		expect(settings.config).toBeUndefined();
+	});
+
+	// `STAFF_ONLY` above is hand-maintained, and a hand-maintained list of things
+	// that need a guard is the drift that let `getIntegrationSettings` ship
+	// without one in the first place. This closes it: a new export is either
+	// covered by the loop above or named public on purpose, and adding one
+	// without deciding which turns this red.
+	it('every exported remote function is either guarded above or deliberately public', () => {
+		const covered = new Set([...STAFF_ONLY.map((entry) => entry.name), ...PUBLIC]);
+
+		const remotes = Object.entries(settings)
+			.filter(([, fn]) => typeof fn === 'function' && '__' in fn)
+			.map(([name]) => name);
+
+		expect(remotes.length).toBeGreaterThan(0);
+		expect(remotes.filter((name) => !covered.has(name))).toEqual([]);
 	});
 });

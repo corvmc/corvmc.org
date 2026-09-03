@@ -40,6 +40,24 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'reservation.teachingMaxAdvanceDaysOneoff': 60,
 	'reservation.teachingMaxAdvanceDaysRecurring': 90,
 
+	// What an hour of donated time is worth, for grant applications and impact
+	// reports. This is the *impact* rate and it covers every approved hour;
+	// recognizable contributed services under FASB are a different, narrower
+	// number carried per-role, and the two are never summed.
+	//
+	// Independent Sector republishes every April, so this is runtime config
+	// rather than a constant -- a hardcoded figure is wrong within a year, and
+	// the annual refresh should be a settings edit rather than a deploy. Oregon
+	// rather than the national $36.14, because the state runs above it. Read off
+	// the 2026 report's state table, whose 2025 column is marked preliminary;
+	// note it is NOT the $36.44 a state calculator will quote you, which is that
+	// table's 2024 column.
+	'volunteer.hourValueCents': 3766,
+	// Cited in the report itself. A funder-facing number whose provenance is not
+	// on the page cannot be defended, and the citation has to move with the
+	// figure or it silently starts describing the wrong year.
+	'volunteer.hourValueSource': 'Independent Sector, Oregon, 2025 (2026 report, preliminary)',
+
 	'org.name': 'Corvallis Music Collective',
 	'org.shortName': 'CorvMC',
 	'org.contactEmail': 'staff@corvmc.org',
