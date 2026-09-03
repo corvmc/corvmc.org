@@ -70,7 +70,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({ primaryRoleFor: vi.fn(() => null) }));
+vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => null) }));
 
 const getShiftById = vi.fn();
 vi.mock('./work-order-service', () => ({

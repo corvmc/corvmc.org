@@ -24,7 +24,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { group } from '$lib/server/db/schema/group';
 import { event } from '$lib/server/db/schema/event';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { primaryRoleFor } from '$lib/server/authorization';
+import { topPositionFor } from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { memberSubtype } from '$lib/utils/entity-ref';
@@ -63,7 +63,7 @@ export function memberRefColumns(u: UserTable = user) {
 		email: u.email,
 		pronouns: u.pronouns,
 		image: u.image,
-		role: primaryRoleFor(u.id),
+		role: topPositionFor(u.id),
 		sustaining: isSustainingMemberSql(u.id)
 	};
 }
