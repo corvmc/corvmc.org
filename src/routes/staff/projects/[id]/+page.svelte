@@ -2,6 +2,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -15,7 +16,7 @@
 		attachToProjectForm,
 		detachFromProjectForm
 	} from '$lib/remote/projects.remote';
-	import { projectStatusOptions, projectStatusLabels } from '$lib/config';
+	import { projectStatusOptions } from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -232,7 +233,7 @@
 	<InfoCard title="Attached work">
 		{#snippet header(title)}
 			<div class="flex items-center justify-between gap-2">
-				<h2 class="card-title">{title}</h2>
+				<CardTitle level={2}>{title}</CardTitle>
 				<div class="flex gap-2">
 					<Action
 						action={attachToProjectForm}
