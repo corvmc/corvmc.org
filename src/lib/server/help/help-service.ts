@@ -1,35 +1,72 @@
 import { db } from '$lib/server/db';
 import { helpCategory, helpArticle } from '$lib/server/db/schema/help';
 import { eq, and, like, or, sql, inArray, asc, exists } from 'drizzle-orm';
-import { SEARCH_LIMIT } from '$lib/config';
+import { SEARCH_LIMIT, helpAudiences, type HelpAudience } from '$lib/config';
 import { getUserRoles } from '$lib/server/authorization';
 import { isSustainingMember } from '$lib/server/finance/subscription-service';
 
-const ROLE_LEVEL: Record<string, number> = { admin: 0, staff: 1, sustaining: 2, member: 3 };
+/**
+ * Role names that are *not* an elevated position.
+ *
+ * The elevated test is open-ended by exclusion, and that is deliberate. The
+ * previous implementation ranked role names against a closed `ROLE_LEVEL`
+ * table, so any name it had never heard of scored below `member`: the moment a
+ * position like `treasurer` exists, its holder resolves to `member` and the
+ * whole Staff Guide disappears for them. Naming the three non-elevated rows
+ * instead means a new position widens access by default, which is the failure
+ * direction you want. See docs/specs/admin-vs-staff-spec.md.
+ *
+ * `sustaining` and `volunteer` are legacy seeded rows that grant nothing;
+ * sustaining status comes from the subscription, not the role (below).
+ */
+const NON_ELEVATED_ROLES = new Set(['member', 'sustaining', 'volunteer']);
 
-function accessibleRoles(userRole: string): string[] {
-	const level = ROLE_LEVEL[userRole] ?? 3;
-	return Object.entries(ROLE_LEVEL)
-		.filter(([, l]) => l >= level)
-		.map(([r]) => r);
+/**
+ * Stored `min_role` values that predate the audience ladder.
+ *
+ * `admin` was offered by the article editor, so production rows may carry it.
+ * Mapping it to `staff` keeps those articles readable; without an entry here a
+ * legacy value matches no audience and the article silently vanishes for
+ * everyone. Writes are normalised (`normalizeAudience`) so nothing new lands
+ * outside the ladder.
+ */
+const LEGACY_AUDIENCE: Record<string, HelpAudience> = { admin: 'staff' };
+
+/** Coerce a stored or submitted value onto the ladder. Unknown ⇒ most restrictive. */
+export function normalizeAudience(value: string | null | undefined): HelpAudience {
+	if (value && (helpAudiences as readonly string[]).includes(value)) return value as HelpAudience;
+	return LEGACY_AUDIENCE[value ?? ''] ?? 'staff';
 }
 
 /**
- * Resolve a user's effective help-access tier. Admin/staff role grants win; otherwise an
- * active subscription lifts the member to the `sustaining` tier. The legacy `sustaining
- * member` role is not consulted — `user.subscription` is the source of truth for sustaining
- * status (see subscription-service).
+ * Every audience value a reader at `audience` may see: their own tier, every
+ * tier below it, and any legacy value that maps into those.
+ *
+ * Returned as a flat string list so the six call sites keep their
+ * `inArray(minRole, …)` shape and the `(published, min_role)` index still
+ * applies.
  */
-export async function resolveUserHelpRole(userId: string): Promise<string> {
+function accessibleAudiences(audience: HelpAudience): string[] {
+	const ceiling = helpAudiences.indexOf(audience);
+	const allowed = helpAudiences.slice(0, ceiling + 1) as readonly string[];
+	const legacy = Object.entries(LEGACY_AUDIENCE)
+		.filter(([, tier]) => allowed.includes(tier))
+		.map(([stored]) => stored);
+	return [...allowed, ...legacy];
+}
+
+/**
+ * Which tier of the help centre this person reads at.
+ *
+ * Anyone holding a position reads at `staff`; otherwise an active subscription
+ * lifts them to `sustaining`. The legacy `sustaining` role is not consulted —
+ * `user.subscription` is the source of truth (see subscription-service).
+ */
+export async function resolveHelpAudience(userId: string): Promise<HelpAudience> {
 	const roles = await getUserRoles(userId);
-	let best = 'member';
-	for (const r of roles) {
-		if ((ROLE_LEVEL[r] ?? 4) < (ROLE_LEVEL[best] ?? 4)) best = r;
-	}
-	if ((ROLE_LEVEL[best] ?? 4) > ROLE_LEVEL.sustaining && (await isSustainingMember(userId))) {
-		best = 'sustaining';
-	}
-	return best;
+	if (roles.some((r) => !NON_ELEVATED_ROLES.has(r))) return 'staff';
+	if (await isSustainingMember(userId)) return 'sustaining';
+	return 'member';
 }
 
 // ---------------------------------------------------------------------------
@@ -42,12 +79,12 @@ export async function resolveUserHelpRole(userId: string): Promise<string> {
  * somewhere to file new articles. Reader-facing callers want
  * `listNonEmptyCategories` instead.
  */
-export async function listCategories(userRole: string) {
-	const roles = accessibleRoles(userRole);
+export async function listCategories(audience: HelpAudience) {
+	const audiences = accessibleAudiences(audience);
 	return db
 		.select()
 		.from(helpCategory)
-		.where(inArray(helpCategory.minRole, roles))
+		.where(inArray(helpCategory.minRole, audiences))
 		.orderBy(asc(helpCategory.sortOrder), asc(helpCategory.name));
 }
 
@@ -58,14 +95,14 @@ export async function listCategories(userRole: string) {
  * reading "No articles yet" — which looks broken mid-review, and advertises
  * categories (like Staff Guide) the caller can't read.
  */
-export async function listNonEmptyCategories(userRole: string) {
-	const roles = accessibleRoles(userRole);
+export async function listNonEmptyCategories(audience: HelpAudience) {
+	const audiences = accessibleAudiences(audience);
 	return db
 		.select()
 		.from(helpCategory)
 		.where(
 			and(
-				inArray(helpCategory.minRole, roles),
+				inArray(helpCategory.minRole, audiences),
 				exists(
 					db
 						.select({ one: sql`1` })
@@ -74,7 +111,7 @@ export async function listNonEmptyCategories(userRole: string) {
 							and(
 								eq(helpArticle.categoryId, helpCategory.id),
 								eq(helpArticle.published, true),
-								inArray(helpArticle.minRole, roles)
+								inArray(helpArticle.minRole, audiences)
 							)
 						)
 				)
@@ -92,8 +129,8 @@ export async function getCategoryBySlug(slug: string) {
 // Article Queries
 // ---------------------------------------------------------------------------
 
-export async function listArticlesByCategory(categoryId: string, userRole: string) {
-	const roles = accessibleRoles(userRole);
+export async function listArticlesByCategory(categoryId: string, audience: HelpAudience) {
+	const audiences = accessibleAudiences(audience);
 	return db
 		.select({
 			id: helpArticle.id,
@@ -107,14 +144,14 @@ export async function listArticlesByCategory(categoryId: string, userRole: strin
 			and(
 				eq(helpArticle.categoryId, categoryId),
 				eq(helpArticle.published, true),
-				inArray(helpArticle.minRole, roles)
+				inArray(helpArticle.minRole, audiences)
 			)
 		)
 		.orderBy(asc(helpArticle.sortOrder), asc(helpArticle.title));
 }
 
-export async function getArticleBySlug(slug: string, userRole: string) {
-	const roles = accessibleRoles(userRole);
+export async function getArticleBySlug(slug: string, audience: HelpAudience) {
+	const audiences = accessibleAudiences(audience);
 	const [article] = await db
 		.select()
 		.from(helpArticle)
@@ -122,15 +159,15 @@ export async function getArticleBySlug(slug: string, userRole: string) {
 			and(
 				eq(helpArticle.slug, slug),
 				eq(helpArticle.published, true),
-				inArray(helpArticle.minRole, roles)
+				inArray(helpArticle.minRole, audiences)
 			)
 		)
 		.limit(1);
 	return article ?? null;
 }
 
-export async function searchArticles(query: string, userRole: string) {
-	const roles = accessibleRoles(userRole);
+export async function searchArticles(query: string, audience: HelpAudience) {
+	const audiences = accessibleAudiences(audience);
 	const pattern = `%${query}%`;
 	return db
 		.select({
@@ -144,7 +181,7 @@ export async function searchArticles(query: string, userRole: string) {
 		.where(
 			and(
 				eq(helpArticle.published, true),
-				inArray(helpArticle.minRole, roles),
+				inArray(helpArticle.minRole, audiences),
 				or(
 					like(helpArticle.title, pattern),
 					like(helpArticle.summary, pattern),
@@ -209,7 +246,7 @@ export async function createCategory(data: CreateCategoryData) {
 			description: data.description ?? null,
 			icon: data.icon ?? null,
 			sortOrder: data.sortOrder ?? 0,
-			minRole: data.minRole ?? 'member'
+			minRole: normalizeAudience(data.minRole ?? 'member')
 		})
 		.returning();
 	return cat;
@@ -220,6 +257,9 @@ export async function updateCategory(id: string, data: Partial<CreateCategoryDat
 		.update(helpCategory)
 		.set({
 			...data,
+			// Normalised on the way in so a legacy or hand-posted value can never
+			// land outside the ladder and make the row invisible to everyone.
+			...(data.minRole === undefined ? {} : { minRole: normalizeAudience(data.minRole) }),
 			updatedAt: new Date()
 		})
 		.where(eq(helpCategory.id, id))
@@ -258,7 +298,7 @@ export async function createArticle(data: CreateArticleData) {
 			summary: data.summary ?? null,
 			content: data.content,
 			source: data.source ?? 'dynamic',
-			minRole: data.minRole ?? 'member',
+			minRole: normalizeAudience(data.minRole ?? 'member'),
 			published: data.published ?? false,
 			sortOrder: data.sortOrder ?? 0,
 			createdByUserId: data.createdByUserId ?? null
@@ -272,6 +312,9 @@ export async function updateArticle(id: string, data: Partial<CreateArticleData>
 		.update(helpArticle)
 		.set({
 			...data,
+			// Normalised on the way in so a legacy or hand-posted value can never
+			// land outside the ladder and make the row invisible to everyone.
+			...(data.minRole === undefined ? {} : { minRole: normalizeAudience(data.minRole) }),
 			updatedAt: new Date()
 		})
 		.where(eq(helpArticle.id, id))
