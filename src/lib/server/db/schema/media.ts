@@ -26,7 +26,14 @@ export const attachableTypes = [
 	 */
 	'work_request',
 	/** How stock arrived: the receipt or the donation paperwork behind it. */
-	'acquisition'
+	'acquisition',
+	/**
+	 * A band's record. Its cover art only — the recordings themselves are in the
+	 * private bucket and deliberately outside this table, since everything here
+	 * is one `getPublicUrl()` away from being addressable. See
+	 * `audio_track.objectKey`.
+	 */
+	'audio_release'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 
@@ -48,7 +55,12 @@ export const mediaSlots = [
 	/** Asset-level evidence attached to a damage report. */
 	'damage',
 	/** Proof of what was paid, against the acquisition that records it. */
-	'receipt'
+	'receipt',
+	/**
+	 * A release's cover. Not `poster` or `hero`: it is square, it is the thing a
+	 * radio widget shows at 40px, and a release has exactly one.
+	 */
+	'cover'
 ] as const;
 export type MediaSlot = (typeof mediaSlots)[number];
 

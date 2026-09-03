@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "a9223a94-0473-431b-80db-34b63a08129b",
+  "id": "a74e1c80-353b-4439-a858-bb8d9369afb1",
   "prevIds": [
-    "7775f434-faf1-4c21-92e7-7a406e39b746"
+    "d74c1881-017e-457b-b184-876c452fe15c"
   ],
   "ddl": [
     {
@@ -328,6 +328,30 @@
     },
     {
       "name": "contractor_job",
+      "entityType": "tables"
+    },
+    {
+      "name": "project",
+      "entityType": "tables"
+    },
+    {
+      "name": "audio_release",
+      "entityType": "tables"
+    },
+    {
+      "name": "audio_track",
+      "entityType": "tables"
+    },
+    {
+      "name": "band_stripe_account",
+      "entityType": "tables"
+    },
+    {
+      "name": "radio_play",
+      "entityType": "tables"
+    },
+    {
+      "name": "release_purchase",
       "entityType": "tables"
     },
     {
@@ -1592,6 +1616,16 @@
     },
     {
       "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "event"
+    },
+    {
+      "type": "text",
       "notNull": true,
       "autoincrement": false,
       "default": "'cmc'",
@@ -2746,6 +2780,16 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "acquisition"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "recorded_by_user_id",
       "entityType": "columns",
       "table": "acquisition"
@@ -3637,6 +3681,16 @@
       "default": null,
       "generated": null,
       "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "purchase_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
       "entityType": "columns",
       "table": "purchase_order"
     },
@@ -7551,6 +7605,16 @@
       "table": "work_order"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -8271,6 +8335,16 @@
       "table": "contractor_job"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "contractor_job"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -8379,6 +8453,716 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "contractor_job"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "description",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'open'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "suggestion_id",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "budget_cents",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "starts_at",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ends_at",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "slug",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'single'",
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "description",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "released_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'draft'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "price_min_cents",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "true",
+      "generated": null,
+      "name": "allow_pay_more",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "radio_opt_in",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "radio_excluded_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "radio_excluded_reason",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "published_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "release_id",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "track_number",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "duration_ms",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "object_key",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "content_type",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "byte_size",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "original_filename",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "isrc",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "radio_excluded_at",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stripe_account_id",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "charges_enabled",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "payouts_enabled",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "details_submitted",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "requirements_json",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "radio_play"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "track_id",
+      "entityType": "columns",
+      "table": "radio_play"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "starts_at",
+      "entityType": "columns",
+      "table": "radio_play"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ends_at",
+      "entityType": "columns",
+      "table": "radio_play"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "radio_play"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "release_id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "buyer_email",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "purchase_id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount_paid_cents",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "platform_fee_cents",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "band_net_cents",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "fee_covered_cents",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stripe_payment_intent_id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stripe_payment_record_id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'pending'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "download_token",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "download_count",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "paid_at",
+      "entityType": "columns",
+      "table": "release_purchase"
     },
     {
       "columns": [
@@ -8617,6 +9401,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_event_band_id_band_id_fk",
+      "entityType": "fks",
+      "table": "event"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_event_project_id_project_id_fk",
       "entityType": "fks",
       "table": "event"
     },
@@ -8952,6 +9751,21 @@
     },
     {
       "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_acquisition_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "acquisition"
+    },
+    {
+      "columns": [
         "recorded_by_user_id"
       ],
       "tableTo": "user",
@@ -9127,6 +9941,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_purchase_order_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "purchase_order"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_purchase_order_project_id_project_id_fk",
       "entityType": "fks",
       "table": "purchase_order"
     },
@@ -10287,6 +11116,21 @@
     },
     {
       "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_work_order_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
         "duty_list_id"
       ],
       "tableTo": "duty_list",
@@ -10467,6 +11311,21 @@
     },
     {
       "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_contractor_job_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "contractor_job"
+    },
+    {
+      "columns": [
         "requested_by_user_id"
       ],
       "tableTo": "user",
@@ -10479,6 +11338,141 @@
       "name": "fk_contractor_job_requested_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "contractor_job"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_project_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "project"
+    },
+    {
+      "columns": [
+        "suggestion_id"
+      ],
+      "tableTo": "suggestion",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_project_suggestion_id_suggestion_id_fk",
+      "entityType": "fks",
+      "table": "project"
+    },
+    {
+      "columns": [
+        "created_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_project_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "project"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_audio_release_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "audio_release"
+    },
+    {
+      "columns": [
+        "release_id"
+      ],
+      "tableTo": "audio_release",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_audio_track_release_id_audio_release_id_fk",
+      "entityType": "fks",
+      "table": "audio_track"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_band_stripe_account_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "band_stripe_account"
+    },
+    {
+      "columns": [
+        "track_id"
+      ],
+      "tableTo": "audio_track",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_radio_play_track_id_audio_track_id_fk",
+      "entityType": "fks",
+      "table": "radio_play"
+    },
+    {
+      "columns": [
+        "release_id"
+      ],
+      "tableTo": "audio_release",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_release_purchase_release_id_audio_release_id_fk",
+      "entityType": "fks",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_release_purchase_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "release_purchase"
     },
     {
       "columns": [
@@ -11208,6 +12202,60 @@
     },
     {
       "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "project_pk",
+      "table": "project",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "audio_release_pk",
+      "table": "audio_release",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "audio_track_pk",
+      "table": "audio_track",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "nameExplicit": false,
+      "name": "band_stripe_account_pk",
+      "table": "band_stripe_account",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "radio_play_pk",
+      "table": "radio_play",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "release_purchase_pk",
+      "table": "release_purchase",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
         {
           "value": "member_number",
           "isExpression": false
@@ -11505,6 +12553,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_event_recurring_series",
+      "entityType": "indexes",
+      "table": "event"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_project",
       "entityType": "indexes",
       "table": "event"
     },
@@ -11887,6 +12949,20 @@
     {
       "columns": [
         {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_acquisition_project",
+      "entityType": "indexes",
+      "table": "acquisition"
+    },
+    {
+      "columns": [
+        {
           "value": "paid_by_user_id",
           "isExpression": false
         }
@@ -12147,6 +13223,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_purchase_order_expected",
+      "entityType": "indexes",
+      "table": "purchase_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_purchase_order_project",
       "entityType": "indexes",
       "table": "purchase_order"
     },
@@ -13491,6 +14581,20 @@
     {
       "columns": [
         {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "work_order_project_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
           "value": "created_at",
           "isExpression": false
         }
@@ -13661,6 +14765,20 @@
     {
       "columns": [
         {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contractor_job_project",
+      "entityType": "indexes",
+      "table": "contractor_job"
+    },
+    {
+      "columns": [
+        {
           "value": "status",
           "isExpression": false
         }
@@ -13685,6 +14803,232 @@
       "name": "idx_contractor_job_overdue",
       "entityType": "indexes",
       "table": "contractor_job"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_project_group",
+      "entityType": "indexes",
+      "table": "project"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_project_status",
+      "entityType": "indexes",
+      "table": "project"
+    },
+    {
+      "columns": [
+        {
+          "value": "suggestion_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "suggestion_id is not null",
+      "origin": "manual",
+      "name": "uq_project_suggestion",
+      "entityType": "indexes",
+      "table": "project"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "slug",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_audio_release_group_slug",
+      "entityType": "indexes",
+      "table": "audio_release"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_audio_release_group",
+      "entityType": "indexes",
+      "table": "audio_release"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_audio_release_status",
+      "entityType": "indexes",
+      "table": "audio_release"
+    },
+    {
+      "columns": [
+        {
+          "value": "release_id",
+          "isExpression": false
+        },
+        {
+          "value": "track_number",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_audio_track_release_number",
+      "entityType": "indexes",
+      "table": "audio_track"
+    },
+    {
+      "columns": [
+        {
+          "value": "object_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_audio_track_key",
+      "entityType": "indexes",
+      "table": "audio_track"
+    },
+    {
+      "columns": [
+        {
+          "value": "starts_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_radio_play_starts",
+      "entityType": "indexes",
+      "table": "radio_play"
+    },
+    {
+      "columns": [
+        {
+          "value": "track_id",
+          "isExpression": false
+        },
+        {
+          "value": "starts_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_radio_play_track",
+      "entityType": "indexes",
+      "table": "radio_play"
+    },
+    {
+      "columns": [
+        {
+          "value": "download_token",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_release_purchase_token",
+      "entityType": "indexes",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        {
+          "value": "release_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_release_purchase_release",
+      "entityType": "indexes",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_release_purchase_user",
+      "entityType": "indexes",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        {
+          "value": "buyer_email",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_release_purchase_email",
+      "entityType": "indexes",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "created_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_release_purchase_status",
+      "entityType": "indexes",
+      "table": "release_purchase"
     },
     {
       "columns": [
@@ -14073,10 +15417,19 @@
       "name": "contractor_job_cost_nonneg",
       "entityType": "checks",
       "table": "contractor_job"
+    },
+    {
+      "value": "not (budget_cents < 0)",
+      "name": "project_budget_nonneg",
+      "entityType": "checks",
+      "table": "project"
+    },
+    {
+      "value": "starts_at is null or ends_at is null or ends_at > starts_at",
+      "name": "project_ends_after_start",
+      "entityType": "checks",
+      "table": "project"
     }
   ],
-  "renames": [
-    "asset_flag->work_request",
-    "volunteer_shift->work_order"
-  ]
+  "renames": []
 }
