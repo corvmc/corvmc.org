@@ -44,7 +44,7 @@ vi.mock('$lib/server/authorization', async () => {
 	const isStaffMock = vi.fn(async () => true);
 	return {
 		requireUser: () => staffUser,
-		requireStaff: vi.fn(async () => undefined),
+		requireCapability: vi.fn(async () => undefined),
 		isStaff: isStaffMock,
 		// Mirrors the real helper: owner short-circuits, otherwise defer to
 		// isStaff so the staff/member cases below still drive this the same way

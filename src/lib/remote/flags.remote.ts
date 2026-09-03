@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { getById as getEventById } from '$lib/server/event/event-service';
 import { memberReportableEntityTypes, flagStatuses } from '$lib/server/db/schema/flag';
@@ -26,7 +26,7 @@ const flagFiltersSchema = z.object({
 });
 
 export const getFlagsQueue = query(flagFiltersSchema, async (filters) => {
-	await requireStaff();
+	await requireCapability('moderation.reviewFlags');
 	return listFlags(
 		{ status: filters.status, search: filters.search },
 		{ page: filters.page ?? 1, pageSize: 25 }
@@ -34,7 +34,7 @@ export const getFlagsQueue = query(flagFiltersSchema, async (filters) => {
 });
 
 export const getFlagDetail = query(z.string(), async (flagId) => {
-	await requireStaff();
+	await requireCapability('moderation.reviewFlags');
 	try {
 		return await getFlag(flagId);
 	} catch (err) {
@@ -54,7 +54,7 @@ const resolveSchema = z.object({
 });
 
 export const resolveFlag = form(resolveSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('moderation.reviewFlags');
 	try {
 		await resolveFlagSvc(data.flagId, {
 			resolution: data.resolution,
@@ -156,7 +156,7 @@ export const submitEventReport = form(submitEventReportSchema, async (data, issu
 // ---------------------------------------------------------------------------
 
 export const getFlagsAgainstUser = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('moderation.reviewFlags');
 	const { rows } = await listFlags(
 		{ entityType: 'member_profile', entityId: userId },
 		{ page: 1, pageSize: 10 }
@@ -165,7 +165,7 @@ export const getFlagsAgainstUser = query(z.string(), async (userId) => {
 });
 
 export const getFlagsByUser = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('moderation.reviewFlags');
 	const { rows } = await listFlags({ reportedByUserId: userId }, { page: 1, pageSize: 10 });
 	return rows;
 });
