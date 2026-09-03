@@ -7,7 +7,7 @@ import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc, gt, ne } from 'drizzle-orm';
-import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
 import { listAll, listForUser, partitionByStatus } from '$lib/server/band/band-service';
 import {
 	memberRefColumns,
@@ -57,7 +57,7 @@ const staffBandsFilters = z.object({
 });
 
 export const getStaffBands = query(staffBandsFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('band.read');
 	return listAll(
 		{
 			search: filters.search || undefined,
@@ -73,19 +73,19 @@ export const getStaffBands = query(staffBandsFilters, async (filters) => {
 // ===========================================================================
 
 export const getStaffBand = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('band.read');
 	const band = await getByIdWithDetails(id);
 	if (!band) error(404, 'Band not found');
 	return band;
 });
 
 export const getStaffBandMembers = query(z.string(), async (bandId) => {
-	await requireStaff();
+	await requireCapability('band.read');
 	return getMembers(bandId);
 });
 
 export const getBandReservations = query(z.string(), async (bandId) => {
-	await requireStaff();
+	await requireCapability('band.read');
 	return db
 		.select({
 			id: reservation.id,
@@ -104,7 +104,7 @@ export const getBandReservations = query(z.string(), async (bandId) => {
 });
 
 export const getStaffEmailInvites = query(z.string(), async (bandId) => {
-	await requireStaff();
+	await requireCapability('band.read');
 	return listEmailInvitesForGroup(bandId);
 });
 
@@ -261,7 +261,7 @@ export const updateStaffBand = form(
 		bio: z.string().trim().max(LONG_TEXT_MAX)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('band.manage');
 		const { params } = getRequestEvent();
 		const id = params.id!;
 		await update(id, { name: data.name, bio: data.bio || undefined });
@@ -277,7 +277,7 @@ export const updateMemberRole = form(
 		position: z.string().optional()
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('band.manageMembers');
 		await updateMember(data.memberId, {
 			role: data.role,
 			position: data.position ?? undefined
@@ -299,7 +299,7 @@ export const createBandApi = form(
 		ownerId: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('band.manage');
 		const band = await create(data.ownerId, { name: data.name, bio: data.bio });
 		return { success: true, bandId: band.id };
 	}
@@ -310,7 +310,7 @@ export const deactivateBand = form(
 		id: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('band.manage');
 		await deactivate(data.id);
 		return { success: true };
 	}
@@ -321,7 +321,7 @@ export const reactivateBand = form(
 		id: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('band.manage');
 		await reactivate(data.id);
 		return { success: true };
 	}
@@ -334,7 +334,7 @@ export const setBandTier = form(
 		tier: z.enum(bandTiers)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('band.setTier');
 		try {
 			await setTier(data.id, data.tier);
 		} catch (err) {
@@ -353,7 +353,7 @@ export const addBandMember = form(
 		position: z.string().optional()
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('band.manageMembers');
 		await invite(data.bandId, data.userId, data.role, data.position ?? null, staff.id);
 		return { success: true };
 	}
@@ -364,7 +364,7 @@ export const removeBandMember = form(
 		memberId: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('band.manageMembers');
 		await removeMemberService(data.memberId);
 		return { success: true };
 	}
@@ -375,7 +375,7 @@ export const revokeBandInvite = form(
 		memberId: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('band.manageMembers');
 		await revokeInvitationService(data.memberId);
 		return { success: true };
 	}
@@ -387,7 +387,7 @@ export const transferOwnership = form(
 		newOwnerId: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('band.manageMembers');
 		const band = await getByIdWithDetails(data.bandId);
 		if (!band) throw error(404, 'Band not found');
 		// An ownerless band is legal, and transferring INTO an empty seat is the
@@ -407,7 +407,7 @@ export const inviteByEmailApi = form(
 		position: z.string().optional()
 	}),
 	async (data, issue) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('band.manageMembers');
 		try {
 			const result = await createEmailInviteService(
 				data.email,
@@ -429,7 +429,7 @@ export const revokeStaffEmailInvite = form(
 		inviteId: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('band.manageMembers');
 		await revokeEmailInviteService(data.inviteId);
 		return { success: true };
 	}
@@ -713,7 +713,7 @@ export const revokeEmailInvite = form(
 // ---------------------------------------------------------------------------
 
 export const getUserBands = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('band.read');
 	// Every kind and every status: a staff member looking at one person's record
 	// wants the whole picture, including an invitation that was never accepted
 	// and any club or committee they sit on.
