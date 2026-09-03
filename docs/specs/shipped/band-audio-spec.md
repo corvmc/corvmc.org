@@ -26,6 +26,14 @@ processing, and `application_fee_amount` is set to `platformShare + stripeFee`.
 At a platform share of zero the application fee is exactly Stripe's fee — the
 collective nets nothing and **loses** nothing.
 
+The band's protection is the **total**, not a floor on its share of it: a buyer
+must pay at least the asking price, and within that the allocation is free. That
+distinction is easy to state backwards and was — the first split bar constrained
+the band's _share_ to the minimum price, which consumed the whole amount and
+clamped the collective's share to zero, so the suggested 10% never rendered.
+`validateSplit` was right the whole time; only the component's prop was wrong,
+which is why every unit test passed and a screenshot caught it.
+
 Rejected: a fixed percentage. Transparency about where money goes reliably
 raises what people pay, and a cut you cannot refuse is a rake. The trade
 accepted knowingly is that the realised take will not be 10%; `/staff/music`

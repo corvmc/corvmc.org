@@ -54,9 +54,6 @@
 	const split = $derived(computeSplit({ totalCents, platformCents, coverFees }));
 	const free = $derived(totalCents === 0);
 
-	/** The band's floor, as the split bar's constraint on the movable share. */
-	const bandFloor = $derived(Math.max(0, priceMinCents - split.stripeFeeCents));
-
 	const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 	function afterBuy(result: unknown) {
@@ -103,11 +100,18 @@
 			{#if totalCents > 0}
 				<div class="mt-4 space-y-2">
 					<p class="text-muted">Where your money goes — drag to change it.</p>
+					<!--
+						No `otherFloorCents`. What protects the band is the TOTAL being at
+						least its asking price — enforced server-side in `validateSplit` —
+						not a floor on its share of that total. Passing `priceMinCents` here
+						consumed the whole amount and clamped CMC's share to zero, so the
+						suggested 10% never appeared. The agreed model has the band netting
+						$8.41 on a $10 minimum, which is below it by design.
+					-->
 					<SplitBar
 						{totalCents}
 						value={platformCents}
 						onchange={(cents) => (platformOverride = cents)}
-						otherFloorCents={bandFloor}
 						fixedCents={split.stripeFeeCents}
 						fixedLabel="Card processing"
 						valueLabel="CMC"
