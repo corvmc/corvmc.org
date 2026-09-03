@@ -39,6 +39,16 @@ import {
  * with a flag, because the flag is the thing that gets passed wrong.
  */
 
+/** A placement naming an element that is not on this rider, or not the caller's. */
+export class RiderNotPlaceableError extends DomainError {
+	readonly httpStatus = 422;
+
+	constructor(message: string) {
+		super(message);
+		this.name = 'RiderNotPlaceableError';
+	}
+}
+
 /** More elements or inputs than any real band, and than one payload should carry. */
 export class RiderTooLargeError extends DomainError {
 	readonly httpStatus = 422;
@@ -65,6 +75,9 @@ export interface RiderInputView {
 export interface RiderElementView {
 	id: string;
 	userId: string | null;
+	/** Percent of the stage, or null when nobody has placed it yet. */
+	x: number | null;
+	y: number | null;
 	ownerName: string | null;
 	kind: RiderElementKind;
 	label: string;
@@ -228,7 +241,9 @@ export async function getRider(groupId: string): Promise<RiderView> {
 			label: riderElement.label,
 			providedBy: riderElement.providedBy,
 			notes: riderElement.notes,
-			sortOrder: riderElement.sortOrder
+			sortOrder: riderElement.sortOrder,
+			x: riderElement.x,
+			y: riderElement.y
 		})
 		.from(riderElement)
 		.leftJoin(user, eq(user.id, riderElement.userId))
@@ -307,7 +322,26 @@ async function replaceElementsForOwner(
 
 	// The children go first and by id: `on delete cascade` covers the delete
 	// below, but naming them keeps this readable next to the batch that follows.
-	const doomed = await db.select({ id: riderElement.id }).from(riderElement).where(ownerFilter);
+	// The placements come back with the ids. Delete-and-reinsert mints new ones,
+	// so without this every save from the rider editor would silently unplace
+	// that member's gear from the stage plot — a page they were not even looking
+	// at. Label is the only stable handle a draft carries; a renamed item loses
+	// its spot, which is the right outcome for what reads as a different thing.
+	const doomed = await db
+		.select({
+			id: riderElement.id,
+			label: riderElement.label,
+			x: riderElement.x,
+			y: riderElement.y
+		})
+		.from(riderElement)
+		.where(ownerFilter);
+
+	const placedByLabel = new Map(
+		doomed
+			.filter((d) => d.x !== null && d.y !== null)
+			.map((d) => [d.label, { x: d.x, y: d.y }] as const)
+	);
 
 	if (doomed.length) {
 		await db.delete(riderElement).where(
@@ -320,16 +354,22 @@ async function replaceElementsForOwner(
 
 	if (!elements.length) return;
 
-	const elementRows = elements.map((el, i) => ({
-		id: crypto.randomUUID(),
-		riderId,
-		userId: ownerUserId,
-		kind: el.kind,
-		label: trim(el.label, RIDER_ELEMENT_LABEL_MAX) ?? 'Untitled',
-		providedBy: el.providedBy ?? ('band' as const),
-		notes: trim(el.notes, RIDER_ITEM_NOTES_MAX),
-		sortOrder: i
-	}));
+	const elementRows = elements.map((el, i) => {
+		const label = trim(el.label, RIDER_ELEMENT_LABEL_MAX) ?? 'Untitled';
+		const placed = placedByLabel.get(label);
+		return {
+			id: crypto.randomUUID(),
+			riderId,
+			userId: ownerUserId,
+			kind: el.kind,
+			label,
+			providedBy: el.providedBy ?? ('band' as const),
+			notes: trim(el.notes, RIDER_ITEM_NOTES_MAX),
+			sortOrder: i,
+			x: placed?.x ?? null,
+			y: placed?.y ?? null
+		};
+	});
 
 	const inputRows = elements.flatMap((el, i) =>
 		(el.inputs ?? []).map((input, j) => ({
@@ -544,4 +584,77 @@ export async function getEventRiderSummaries(eventId: string): Promise<EventRide
 			empty: channelCount === 0 && uploadCount === 0
 		};
 	});
+}
+
+/** Percent of the stage. A client can post anything; this is where the bound lives. */
+export function clampCoord(n: number): number {
+	if (!Number.isFinite(n)) return 0;
+	return Math.min(100, Math.max(0, Math.round(n)));
+}
+
+export interface RiderPlacement {
+	elementId: string;
+	/** Null unplaces it — back to the tray, which is a thing people do. */
+	x: number | null;
+	y: number | null;
+}
+
+/**
+ * Move things around the stage.
+ *
+ * **Same ownership rule as the rest of the rider, enforced per element rather
+ * than by the guard alone.** A member may place their own gear — positioning
+ * your amp is part of saying what your amp needs — and an owner or admin may
+ * place anything, including the band's shared kit. The UI only offers what the
+ * caller may move, so a rejection here means a forged payload, and it throws
+ * rather than skipping: silently dropping half a save would leave the plot
+ * disagreeing with the screen it was dragged on.
+ */
+export async function savePlacements(
+	groupId: string,
+	caller: { userId: string; isAdmin: boolean },
+	placements: RiderPlacement[]
+) {
+	if (placements.length === 0) return;
+
+	const head = await findRider(groupId);
+	if (!head) throw new RiderNotPlaceableError('This band has no rider yet.');
+
+	const owned = await db
+		.select({ id: riderElement.id, userId: riderElement.userId })
+		.from(riderElement)
+		.where(
+			and(
+				eq(riderElement.riderId, head.id),
+				inArray(
+					riderElement.id,
+					placements.map((p) => p.elementId)
+				)
+			)
+		);
+
+	const byId = new Map(owned.map((row) => [row.id, row]));
+
+	for (const placement of placements) {
+		const row = byId.get(placement.elementId);
+		if (!row) throw new RiderNotPlaceableError('That item is not on this rider.');
+		if (!caller.isAdmin && row.userId !== caller.userId) {
+			throw new RiderNotPlaceableError('That is not your gear to move.');
+		}
+	}
+
+	// One statement per element — a placement carries two columns, so even a
+	// fully placed stage stays well inside D1's parameter ceiling, and a `case`
+	// expression over sixty elements would be harder to read than the loop.
+	for (const placement of placements) {
+		await db
+			.update(riderElement)
+			.set({
+				x: placement.x === null ? null : clampCoord(placement.x),
+				y: placement.y === null ? null : clampCoord(placement.y)
+			})
+			.where(eq(riderElement.id, placement.elementId));
+	}
+
+	await touch(head.id);
 }

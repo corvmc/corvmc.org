@@ -226,8 +226,28 @@ export async function seedRiders(roles: SeedRole[]) {
 	const elementRows: (typeof riderElement.$inferInsert)[] = [];
 	const inputRows: (typeof riderInput.$inferInsert)[] = [];
 
+	// Where each corner stands, as percent of the stage. A real arrangement
+	// rather than a grid — drums upstage centre, bass and guitar flanking,
+	// vocals downstage, keys off to one side — so the plot renders as something
+	// an engineer would recognise rather than as test data.
+	//
+	// Computed past the fifth rather than cycling the list: `seedBands` hands out
+	// rosters of one to four plus the two personas, so a modulo would drop the
+	// sixth player exactly on top of the first and the seeded plot would ship
+	// with two items nobody could tell apart.
+	const NAMED_SPOTS = [
+		{ x: 50, y: 20 },
+		{ x: 25, y: 45 },
+		{ x: 75, y: 45 },
+		{ x: 50, y: 75 },
+		{ x: 12, y: 62 }
+	];
+	const spotFor = (i: number) =>
+		NAMED_SPOTS[i] ?? { x: 12 + ((i - NAMED_SPOTS.length) % 5) * 19, y: 88 };
+
 	roster.forEach((member, i) => {
 		const corner = CORNERS[i % CORNERS.length];
+		const spot = spotFor(i);
 		const elementId = randomUUID();
 		elementRows.push({
 			id: elementId,
@@ -236,7 +256,9 @@ export async function seedRiders(roles: SeedRole[]) {
 			kind: corner.kind,
 			label: corner.label,
 			providedBy: 'band',
-			sortOrder: 0
+			sortOrder: 0,
+			x: spot.x,
+			y: spot.y
 		});
 		corner.inputs.forEach((input, j) => {
 			inputRows.push({
@@ -263,7 +285,10 @@ export async function seedRiders(roles: SeedRole[]) {
 			kind: 'monitor',
 			label: 'Wedge',
 			providedBy: 'venue',
-			sortOrder: 1
+			sortOrder: 1,
+			// Just downstage of whoever it points at.
+			x: spot.x,
+			y: Math.min(95, spot.y + 12)
 		});
 	});
 
@@ -278,7 +303,12 @@ export async function seedRiders(roles: SeedRole[]) {
 		label: 'Playback laptop',
 		providedBy: 'band',
 		notes: 'Runs the intro tape and two backing tracks.',
-		sortOrder: 0
+		sortOrder: 0,
+		// Left unplaced on purpose: the plot's tray of "not on the stage yet" is a
+		// state with its own affordance, and a seed where everything is already
+		// placed never shows it.
+		x: null,
+		y: null
 	});
 	inputRows.push(
 		{ elementId: playbackId, label: 'Playback L', source: 'di', phantom: true, sortOrder: 0 },

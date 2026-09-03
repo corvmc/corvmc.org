@@ -9,10 +9,11 @@ import {
 	getRider,
 	saveOwnElements,
 	saveElementsFor,
-	saveRiderSettings
+	saveRiderSettings,
+	savePlacements
 } from '$lib/server/band/rider-service';
 import { riderElementsDraftSchema } from '$lib/types/rider';
-import { riderMonitorFormats, RIDER_NOTES_MAX } from '$lib/config';
+import { riderMonitorFormats, RIDER_MAX_ELEMENTS, RIDER_NOTES_MAX } from '$lib/config';
 import { config } from '$lib/server/site-config/site-config-service';
 
 /**
@@ -194,6 +195,59 @@ export const saveRiderDetails = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
+		await getBandRiderPage(band.id).refresh();
+		return { success: true };
+	}
+);
+
+/**
+ * Where things stand.
+ *
+ * Guarded at `member` and then **per element in the service**, because the rule
+ * is not a role: you may move your own gear, an owner or admin may move
+ * anything. A single guard cannot express that, and the plot only offers you
+ * what you may move — so a rejection here is a forged payload, not a user
+ * mistake, and it fails loudly rather than dropping half the save.
+ *
+ * One field of JSON for the whole stage rather than a request per item: a drag
+ * ends in one save, and twelve round trips for one gesture is the round-trip
+ * explosion the editor's hidden-field shape exists to avoid.
+ */
+export const saveRiderPlacements = form(
+	z.object({ bandId: bandIdField, placements: z.string() }),
+	async (data) => {
+		const { user, group: band, role } = await requireGroupRole({ id: data.bandId }, 'member');
+
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(data.placements);
+		} catch {
+			return { success: false, message: 'That layout could not be read.' };
+		}
+
+		const schema = z
+			.array(
+				z.object({
+					elementId: z.string().min(1),
+					x: z.number().nullable(),
+					y: z.number().nullable()
+				})
+			)
+			.max(RIDER_MAX_ELEMENTS);
+
+		const placements = schema.safeParse(parsed);
+		if (!placements.success) return { success: false, message: 'That layout could not be read.' };
+
+		try {
+			await savePlacements(
+				band.id,
+				{ userId: user.id, isAdmin: role === 'owner' || role === 'admin' },
+				placements.data
+			);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
 		await getBandRiderPage(band.id).refresh();
 		return { success: true };
 	}

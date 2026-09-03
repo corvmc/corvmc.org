@@ -93,7 +93,12 @@ lets two members edit their own corners without either renumbering the other. Up
 stays a first-class path and is no longer premium-only. Phase 2 adds the consolidated input list — a print page numbered
 in banks of eight, a CSV, and a channel count checked against `venue.consoleChannels` (the half of
 the Production user story that had no design anywhere), plus a Tech riders card on the staff
-production page that leads with how many acts have sent nothing. Still to come: the stage plot. Note this **revisits**
+production page that leads with how many acts have sent nothing. Phase 3 is the stage plot: `x`/`y`
+percentages on an element, placed by drag, arrow keys or typed numbers, rendered read-only on the
+print page. It **reverses** `production-workflow-spec.md`'s deferral of a canvas plot builder, which
+was decided when a rider was an opaque file — that spec is amended with the reasoning. No plotting
+library: `konva` is listed below for exactly this, but a canvas draws pixels rather than focusable
+controls, so the keyboard path would have to be built beside it anyway. Note this **revisits**
 `production-workflow-spec.md`'s deferral of a canvas plot builder, which was decided when the rider
 was an opaque file. Matching against the equipment catalog remains out — nothing in `inventory_item`
 types an item as a mic, a DI or a channel, so the join has nothing to land on.
@@ -455,10 +460,10 @@ Two things to know before adding either of the above:
 
 ### Stage Plot & Drawing
 
-| Package  | Downloads/wk | Use                                                                       |
-| -------- | ------------ | ------------------------------------------------------------------------- |
-| `konva`  | 1.7M         | 2D canvas with drag-and-drop shapes — stage plot builder                  |
-| `fabric` | 796K         | Canvas with object model + SVG export — heavier but more drawing features |
+| Package  | Downloads/wk | Use                                                                                                                                                                                                                                                                                                                                                                  |
+| -------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `konva`  | 1.7M         | 2D canvas with drag-and-drop shapes. **Considered and not taken** for the band stage plot (Sep 2026): a canvas draws pixels, not focusable controls, so the keyboard and screen-reader path — which `SplitBar` makes non-optional — would have been built beside it. A dozen absolutely-positioned buttons were less code and inherit the theme and print stylesheet |
+| `fabric` | 796K         | Canvas with object model + SVG export — heavier but more drawing features                                                                                                                                                                                                                                                                                            |
 
 ### Inventory & Scanning
 

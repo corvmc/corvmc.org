@@ -10,7 +10,12 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import RiderCorner from '$lib/components/rider/RiderCorner.svelte';
 	import RiderUploads from '$lib/components/rider/RiderUploads.svelte';
-	import { getBandRiderPage, saveRiderDetails } from '$lib/remote/rider.remote';
+	import StagePlot from '$lib/components/rider/StagePlot.svelte';
+	import {
+		getBandRiderPage,
+		saveRiderDetails,
+		saveRiderPlacements
+	} from '$lib/remote/rider.remote';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 	import { riderMonitorFormatOptions, RIDER_NOTES_MAX } from '$lib/config';
@@ -32,6 +37,7 @@
 	 * derived.
 	 */
 	const detailFields = saveRiderDetails.fields;
+	const placementFields = saveRiderPlacements.fields;
 
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
@@ -94,6 +100,25 @@
 	const overCapacity = $derived(
 		data.consoleChannels > 0 && rider.channelCount > data.consoleChannels
 	);
+
+	/**
+	 * The stage, as the plot needs it: every element, plus whether this viewer may
+	 * move each one. Monitors included — a wedge is exactly the sort of thing a
+	 * plot exists to show the position of.
+	 */
+	const plotItems = $derived(
+		rider.elements.map((el) => ({
+			id: el.id,
+			label: el.label,
+			kind: el.kind,
+			ownerName: el.ownerName,
+			x: el.x,
+			y: el.y,
+			movable: data.canManage || (!!el.userId && el.userId === data.viewerId)
+		}))
+	);
+
+	const canPlaceAny = $derived(plotItems.some((i) => i.movable));
 
 	function refresh() {
 		void getBandRiderPage(layout.band.id).refresh();
@@ -188,6 +213,30 @@
 				/>
 			{/if}
 		{/key}
+
+		<Card>
+			<CardBody>
+				<h2 class="mb-1 text-base font-semibold">Stage plot</h2>
+				<p class="mb-3 text-xs text-base-content/60">
+					Where everything stands. Drag it, or use the arrow keys once something is focused — "Place
+					exactly" below types the same numbers. Channel order on the input list is a separate thing
+					and this does not touch it.
+				</p>
+				<Form
+					remote={saveRiderPlacements}
+					guard
+					successToast="Stage plot saved"
+					onsuccess={refresh}
+					class="space-y-3"
+				>
+					<input {...placementFields.bandId.as('hidden', data.bandId)} />
+					<StagePlot items={plotItems} field={placementFields.placements} readonly={!canPlaceAny} />
+					{#if canPlaceAny}
+						<div class="flex justify-end"><SubmitButton label="Save plot" /></div>
+					{/if}
+				</Form>
+			</CardBody>
+		</Card>
 
 		<Card>
 			<CardBody>
