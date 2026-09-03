@@ -38,7 +38,12 @@ const ownerMember = alias(groupMember, 'owner_member');
 import { event } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
-import { isStaff, requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
+import {
+	isStaff,
+	requireStaff,
+	requireCapabilityOrOwner,
+	requireUser
+} from '$lib/server/authorization';
 import {
 	bandRefColumns,
 	eventRefColumns,
@@ -1829,8 +1834,8 @@ export const payReservation = form(
 export const confirmReservation = form(
 	z.object({ id: z.string(), comp: z.enum(['', 'on']).optional() }),
 	async (data, _issue) => {
-		const currentUser = requireUser();
-
+		// No `requireUser()` here: `requireCapabilityOrOwner` below reads the
+		// acting user from the request event itself and 401s without one.
 		const [row] = await db
 			.select({
 				id: reservation.id,
@@ -1849,7 +1854,8 @@ export const confirmReservation = form(
 
 		// Returns which of the two the caller is, which the confirmation-window and
 		// comp rules below both branch on.
-		const staff = (await requireStaffOrOwner(currentUser.id, row.createdByUserId)) === 'staff';
+		const staff =
+			(await requireCapabilityOrOwner('reservation.manage', row.createdByUserId)) === 'staff';
 
 		// Only live reservations can be confirmed. Without this, a cancelled
 		// reservation (credits already reversed, cashDueCents possibly 0) would be
