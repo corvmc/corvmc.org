@@ -10,11 +10,23 @@ export interface ChannelConfigRow {
 	config: Record<string, unknown>;
 }
 
+/**
+ * The one channel that is deliberately absent from the settings page and the
+ * staff queue's channel filter.
+ *
+ * `band` is always enabled — `isChannelEnabled` and `getChannelConfig` both
+ * short-circuit on it, which is what lets the dispatcher send a band's reply —
+ * but there is nothing for staff to configure and nothing for them to filter to:
+ * `staffVisibleThread` excludes every band thread, so the option would only ever
+ * produce an empty list. Listing it would advertise a queue that is not theirs.
+ */
+const STAFF_CONFIGURABLE = inboxChannels.filter((ch) => ch !== 'band');
+
 export async function getAllChannelConfigs(): Promise<ChannelConfigRow[]> {
 	const rows = await db.select().from(inboxChannelConfig);
 	const byChannel = new Map(rows.map((r) => [r.channel, r]));
 
-	return inboxChannels.map((ch) => {
+	return STAFF_CONFIGURABLE.map((ch) => {
 		const row = byChannel.get(ch);
 		return {
 			channel: ch,

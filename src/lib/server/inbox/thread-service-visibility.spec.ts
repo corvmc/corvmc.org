@@ -100,6 +100,7 @@ vi.mock('drizzle-orm', () => ({
 	desc: vi.fn(),
 	count: vi.fn(),
 	inArray: vi.fn(),
+	notInArray: (a: unknown, b: unknown) => ({ op: 'notInArray', a, b }),
 	isNull: vi.fn(),
 	isNotNull: vi.fn(),
 	lte: vi.fn(),
@@ -125,26 +126,40 @@ beforeEach(() => {
 	wheres = [];
 });
 
-/** Walk a nested predicate tree looking for the direct-channel exclusion. */
-function containsDirectExclusion(node: unknown): boolean {
+/** Walk a nested predicate tree looking for the private-channel exclusion. */
+function containsPrivateExclusion(node: unknown): boolean {
 	if (node === staffVisibleThread) return true;
 	if (!node || typeof node !== 'object') return false;
 	const n = node as Record<string, unknown>;
-	if (n.op === 'ne' && n.a === TABLES.inboxThread.channel && n.b === 'direct') return true;
+	if (
+		n.op === 'notInArray' &&
+		n.a === TABLES.inboxThread.channel &&
+		Array.isArray(n.b) &&
+		n.b.includes('direct') &&
+		n.b.includes('band')
+	) {
+		return true;
+	}
 	return Object.values(n).some((v) =>
-		Array.isArray(v) ? v.some(containsDirectExclusion) : containsDirectExclusion(v)
+		Array.isArray(v) ? v.some(containsPrivateExclusion) : containsPrivateExclusion(v)
 	);
 }
 
 describe('staffVisibleThread', () => {
-	it('excludes direct threads unless a pending flag exists', () => {
-		// The predicate is an OR: not-direct, or a pending inbox_thread flag.
-		// Both halves matter — the first is the rule, the second is the only way
-		// back in.
+	it('excludes direct and band threads unless a pending flag exists', () => {
+		// The predicate is an OR: not one of the private channels, or a pending
+		// inbox_thread flag. Both halves matter — the first is the rule, the
+		// second is the only way back in.
+		//
+		// `band` is here for a different reason than `direct` but with the same
+		// force: a booking negotiation belongs to the act, and CorvMC hosting it
+		// is not the same as CorvMC being party to it.
 		const node = staffVisibleThread as unknown as Record<string, unknown>;
 		expect(node.op).toBe('or');
-		const [notDirect, flagged] = node.a as Record<string, unknown>[];
-		expect(notDirect).toMatchObject({ op: 'ne', a: TABLES.inboxThread.channel, b: 'direct' });
+		const [notPrivate, flagged] = node.a as Record<string, unknown>[];
+		expect(notPrivate.op).toBe('notInArray');
+		expect(notPrivate.a).toBe(TABLES.inboxThread.channel);
+		expect(notPrivate.b).toEqual(['direct', 'band']);
 		expect(flagged.op).toBe('sql');
 		expect(flagged.text).toContain('content_flag');
 		expect(flagged.text).toContain("cf.entity_type = 'inbox_thread'");
@@ -158,17 +173,17 @@ describe('listThreads', () => {
 		// `if (filters.…)` branch, where it would only apply on a filtered view.
 		await listThreads({}, { page: 1, pageSize: 20 });
 		expect(wheres.length).toBeGreaterThan(0);
-		expect(wheres.every(containsDirectExclusion)).toBe(true);
+		expect(wheres.every(containsPrivateExclusion)).toBe(true);
 	});
 
 	it('still applies it alongside a search, which LIKEs the private preview', async () => {
 		await listThreads({ search: 'hello' }, { page: 1, pageSize: 20 });
-		expect(wheres.every(containsDirectExclusion)).toBe(true);
+		expect(wheres.every(containsPrivateExclusion)).toBe(true);
 	});
 
 	it('still applies it when filtering by channel', async () => {
 		await listThreads({ channel: 'email' }, { page: 1, pageSize: 20 });
-		expect(wheres.every(containsDirectExclusion)).toBe(true);
+		expect(wheres.every(containsPrivateExclusion)).toBe(true);
 	});
 });
 
@@ -180,7 +195,7 @@ describe('listThreadsByContactEmail', () => {
 		// makes it a rule.
 		await listThreadsByContactEmail('someone@example.com', { page: 1, pageSize: 10 });
 		expect(wheres.length).toBeGreaterThan(0);
-		expect(wheres.every(containsDirectExclusion)).toBe(true);
+		expect(wheres.every(containsPrivateExclusion)).toBe(true);
 	});
 });
 
@@ -188,14 +203,14 @@ describe('the aggregate counts', () => {
 	it('getUnresolvedCount excludes direct threads from the staff badge', async () => {
 		results = [[{ count: 3 }]];
 		await getUnresolvedCount();
-		expect(wheres.every(containsDirectExclusion)).toBe(true);
+		expect(wheres.every(containsPrivateExclusion)).toBe(true);
 	});
 
 	it('countThreadsByStatus excludes them from the status tabs', async () => {
 		results = [[]];
 		await countThreadsByStatus();
 		expect(wheres.length).toBeGreaterThan(0);
-		expect(wheres.every(containsDirectExclusion)).toBe(true);
+		expect(wheres.every(containsPrivateExclusion)).toBe(true);
 	});
 });
 
@@ -205,12 +220,14 @@ describe('getThread', () => {
 	// only the channel probe would make these pass either way — the second query
 	// would come back empty and the function would return null for the wrong
 	// reason.
-	const fullDirectThread = () => [
-		[{ channel: 'direct' }],
-		[{ id: 'thread-1', channel: 'direct', subject: 'private' }],
+	const fullThreadOn = (channel: 'direct' | 'band') => () => [
+		[{ channel }],
+		[{ id: 'thread-1', channel, subject: 'private' }],
 		[{ id: 'm1', body: 'private words' }],
 		[{ id: 'n1', body: 'staff note' }]
 	];
+	const fullDirectThread = fullThreadOn('direct');
+	const fullBandThread = fullThreadOn('band');
 
 	it('returns null for a direct thread even when every row is there to return', async () => {
 		results = fullDirectThread();
@@ -222,6 +239,20 @@ describe('getThread', () => {
 		// inbox_message or inbox_note for a direct thread, the conversation has
 		// already been loaded into memory on a staff request.
 		results = fullDirectThread();
+		await getThread('thread-1');
+		expect(touched).not.toContain('inbox_message');
+		expect(touched).not.toContain('inbox_note');
+	});
+
+	it('returns null for a band thread even when every row is there to return', async () => {
+		// A band's booking conversation reaches staff only through a report, the
+		// same way a DM does. Knowing the thread id is not a way in.
+		results = fullBandThread();
+		expect(await getThread('thread-1')).toBeNull();
+	});
+
+	it('reads no messages or notes for a band thread', async () => {
+		results = fullBandThread();
 		await getThread('thread-1');
 		expect(touched).not.toContain('inbox_message');
 		expect(touched).not.toContain('inbox_note');

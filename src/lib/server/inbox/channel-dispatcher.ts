@@ -4,10 +4,15 @@ import { sendSms } from './twilio-client';
 import { isChannelEnabled } from './channel-config-service';
 import { buildReplyToAddress } from './reply-address';
 import type { InboxChannel } from '$lib/server/db/schema/inbox';
+import { db } from '$lib/server/db';
+import { group } from '$lib/server/db/schema/group';
+import { eq } from 'drizzle-orm';
 
 export interface DispatchReplyParams {
 	channel: InboxChannel;
 	threadId: string;
+	/** Whose thread this is. Null means CorvMC's; set on `band` threads. */
+	groupId?: string | null;
 	body: string;
 	staffName: string;
 	contactName: string | null;
@@ -42,6 +47,12 @@ export async function dispatchReply(params: DispatchReplyParams): Promise<string
 		// listener notifies them.
 		case 'portal':
 			return null;
+		// The act answers on the site; the booker gets it as email, and their
+		// reply comes back through the same signed Reply-To. Neither side is ever
+		// shown the other's address — the booking form publishes none, and this is
+		// what lets that stay true through a whole conversation.
+		case 'band':
+			return dispatchBandReply(params);
 		// Unreachable, and meant to stay that way. Staff never write into a
 		// member↔member conversation — there is no reply path from the inbox to
 		// a direct thread, because direct threads are not in the inbox. Throwing
@@ -100,6 +111,59 @@ async function dispatchEmailReply(params: DispatchReplyParams): Promise<string> 
 	});
 
 	return messageId;
+}
+
+/**
+ * Same transport as `dispatchEmailReply`, different signature on the message.
+ *
+ * `inbox-reply` closes with the Corvallis Music Collective and tells the reader
+ * they are getting it because they contacted us, neither of which is true of a
+ * band answering its own booking form. `band-reply` says the band; the From
+ * address stays ours, because that is where SPF and DKIM are.
+ */
+async function dispatchBandReply(params: DispatchReplyParams): Promise<string> {
+	if (!params.contactEmail) {
+		throw new Error('Cannot send band reply: no contact email on thread');
+	}
+	if (!params.groupId) {
+		throw new Error('Cannot send band reply: thread has no owning band');
+	}
+
+	const [band] = await db
+		.select({ name: group.name })
+		.from(group)
+		.where(eq(group.id, params.groupId))
+		.limit(1);
+	const bandName = band?.name ?? 'the band';
+
+	const subject = params.subject
+		? params.subject.startsWith('Re:')
+			? params.subject
+			: `Re: ${params.subject}`
+		: `Re: Your enquiry to ${bandName}`;
+
+	// No STAFF_CONTACT_EMAIL fallback here, unlike the staff path: that mailbox is
+	// read by staff, and a booker's reply to a band is not theirs to open. Without
+	// an inbound address configured the reply simply carries none, and the footer
+	// still points at the site.
+	const replyTo = buildReplyToAddress(params.threadId);
+
+	return sendInboxReply({
+		to: params.contactEmail,
+		templateAlias: 'band-reply',
+		fromName: `${bandName} via CorvMC`,
+		model: {
+			subject,
+			contactName: params.contactName ?? 'there',
+			staffName: params.staffName,
+			bandName,
+			body: params.body
+		},
+		replyTo,
+		inReplyTo: params.lastInboundMessageId,
+		references: params.references,
+		metadata: { threadId: params.threadId }
+	});
 }
 
 async function dispatchMetaReply(params: DispatchReplyParams): Promise<string> {
