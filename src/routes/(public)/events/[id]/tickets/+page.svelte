@@ -13,8 +13,6 @@
 	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
 	import TicketPurchaseFields from '$lib/components/events/TicketPurchaseFields.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { IconHeartHandshake } from '@tabler/icons-svelte';
 	import { purchaseTickets, claimFreeTicket, getPublicTicketPage } from '$lib/remote/events.remote';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import Alert from '$lib/components/ui/Alert.svelte';

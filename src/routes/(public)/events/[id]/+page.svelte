@@ -8,7 +8,7 @@
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import PosterCard from '$lib/components/events/PosterCard.svelte';
 	import ReportEventAction from '$lib/components/actions/ReportEventAction.svelte';
-	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
+	import { fullDate, formatTime } from '$lib/utils/format';
 	import { ticketingMode, isFreeEvent as isFree, priceDisplay } from '$lib/utils/event-ticketing';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';

@@ -32,8 +32,7 @@
 		 * `chargeCents`/`blocked` instead.
 		 */
 		submit = true,
-		chargeCents = $bindable(0),
-		blocked = $bindable(false)
+		onstate
 	}: {
 		suggestedUnitCents: number;
 		floorCents: number;
@@ -46,10 +45,12 @@
 			collectiveCents: RemoteFormField<RemoteFormFieldValue>;
 		};
 		submit?: boolean;
-		/** What the card will be charged. Read-only to the parent. */
-		chargeCents?: number;
-		/** True while the amount is one the remote will refuse. */
-		blocked?: boolean;
+		/**
+		 * What the card will be charged, and whether the amount is one the remote
+		 * will refuse. A callback rather than `$bindable`, matching `SplitBar`: the
+		 * parent holds these as its own state, and nothing here reads them back.
+		 */
+		onstate?: (state: { chargeCents: number; blocked: boolean }) => void;
 	} = $props();
 
 	// Both are `null` until touched, and read through a `$derived` fallback rather
@@ -119,8 +120,7 @@
 	// allows. De-duplicated, because a floor equal to the suggested price collapses
 	// every one of them onto the same number.
 	$effect(() => {
-		chargeCents = split.chargeCents;
-		blocked = inDeadZone || belowFloor;
+		onstate?.({ chargeCents: split.chargeCents, blocked: inDeadZone || belowFloor });
 	});
 
 	const presets = $derived(

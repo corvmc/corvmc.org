@@ -396,8 +396,10 @@
 										collectiveShareBps={data.collectiveShareBps}
 										{fields}
 										submit={false}
-										bind:chargeCents
-										bind:blocked={amountBlocked}
+										onstate={(s) => {
+											chargeCents = s.chargeCents;
+											amountBlocked = s.blocked;
+										}}
 									/>
 								{/snippet}
 							</Action>
