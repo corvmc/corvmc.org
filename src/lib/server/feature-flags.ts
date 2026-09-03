@@ -1,9 +1,9 @@
 import { error } from '@sveltejs/kit';
 import { config, getConfigsByPrefix } from './site-config/site-config-service';
 
-export type FeatureFlag = 'bandPremium' | 'directMessages' | 'bandAudio' | 'cmcRadio';
+export type FeatureFlag = 'directMessages' | 'bandAudio' | 'cmcRadio';
 
-export const ALL_FLAGS: FeatureFlag[] = ['bandPremium', 'directMessages', 'bandAudio', 'cmcRadio'];
+export const ALL_FLAGS: FeatureFlag[] = ['directMessages', 'bandAudio', 'cmcRadio'];
 
 export async function isFeatureEnabled(flag: FeatureFlag): Promise<boolean> {
 	const value = await config<boolean>(`feature.${flag}`);

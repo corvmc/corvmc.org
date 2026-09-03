@@ -114,11 +114,10 @@
 	let syncResult = $state<SubscriptionSyncSummary | null>(null);
 	let statsResult = $state<CommunityStats | null>(null);
 
+	// `bandPremium` left this tab when it launched — the guards are gone rather
+	// than switched on, so there is nothing to toggle. Band music and CMC Radio
+	// arrived with their own flags and are the reason the tab is still here.
 	const featureMeta: Record<string, { label: string; description: string }> = {
-		bandPremium: {
-			label: 'Band Premium',
-			description: 'Premium tier with page editor, EPK, and public band sites'
-		},
 		bandAudio: {
 			label: 'Band music',
 			description: 'Bands can upload releases and sell them. Uploading is what fills CMC Radio.'
@@ -872,6 +871,17 @@
 				are hidden from member navigation and return 404 if accessed directly. The staff panel
 				always shows every feature, so you can set one up here before switching it on for everyone.
 			</p>
+
+			{#if Object.keys(featureMeta).length === 0}
+				<Card>
+					<CardBody>
+						<p class="text-muted">
+							Nothing to switch right now. Band Premium was the last feature behind a toggle and it
+							has launched for everyone.
+						</p>
+					</CardBody>
+				</Card>
+			{/if}
 
 			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
 				{@const enabled = featureFlags[flag as keyof typeof featureFlags]}

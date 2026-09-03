@@ -2,9 +2,8 @@
  * The press kit a band writes, and the one query the editor loads it with.
  *
  * Separate from `band-page-editor.remote.ts` because the two answer to
- * different gates now. The block editor is premium and lives behind
- * `requireFeature('bandPremium')`; the press kit is free, so it must keep
- * working with that flag off — which is its state in production.
+ * different gates. The block editor is premium and refuses a free band; the
+ * press kit is free for every act and must keep working without a site.
  */
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
@@ -14,7 +13,6 @@ import { db } from '$lib/server/db';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
 import { groupMember } from '$lib/server/db/schema/group';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { listBandEventsUpcoming } from '$lib/server/event/event-service';
 import { epkProgress } from '$lib/server/band/epk-completeness';
 import type { ProfileLink } from '$lib/server/db/schema/authentication';
@@ -42,7 +40,7 @@ import { photoLimitForTier } from '$lib/server/band/press-kit-limits';
 export const getPressKitProgress = query(z.string(), async (slug) => {
 	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
 
-	const [[entry], [site], tags, [positions], shows, photos, premiumAvailable] = await Promise.all([
+	const [[entry], [site], tags, [positions], shows, photos] = await Promise.all([
 		db
 			.select({
 				tagline: directoryEntry.tagline,
@@ -79,8 +77,7 @@ export const getPressKitProgress = query(z.string(), async (slug) => {
 		// join away since phase 10a — and `confirmedForBand` is the predicate that
 		// knows it. One row is all this rung needs.
 		listBandEventsUpcoming(band.id, 1),
-		listMediaFor('group', band.id, 'gallery'),
-		isFeatureEnabled('bandPremium')
+		listMediaFor('group', band.id, 'gallery')
 	]);
 
 	return epkProgress({
@@ -97,8 +94,7 @@ export const getPressKitProgress = query(z.string(), async (slug) => {
 		upcomingShows: shows.length,
 		epk: site?.epk,
 		pressPhotos: photos.length,
-		tier: site?.tier ?? 'free',
-		premiumAvailable
+		tier: site?.tier ?? 'free'
 	});
 });
 
@@ -136,10 +132,9 @@ export const getPressKitEditor = query(z.string(), async (slug) => {
 	]);
 
 	const tier = site?.tier ?? 'free';
-	// Both halves, because either one being false means there is no video section
-	// to offer: an act without a site has not bought it, and with the flag off
-	// nobody has.
-	const premium = tier === 'premium' && (await isFeatureEnabled('bandPremium'));
+	// An act without a site has not bought the video section, so there is nothing
+	// to offer it.
+	const premium = tier === 'premium';
 
 	return {
 		epk: fullPressKit(site?.epk),
@@ -173,7 +168,7 @@ export const saveBandEpk = form(
 	async (data) => {
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
-		// Deliberately no tier check and no `requireFeature('bandPremium')`. A
+		// Deliberately no tier check: the press kit is free for every act. A
 		// press kit is what a band *is*, not what it buys — `band_site` holds
 		// both, and `epk` is the free half of that row. What premium adds is
 		// presentation and volume (video, an unbounded gallery, a themed page on

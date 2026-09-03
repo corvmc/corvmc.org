@@ -67,12 +67,6 @@ export interface EpkCompletenessInput {
 	epk: BandEpk | null | undefined;
 	pressPhotos: number;
 	tier: string;
-	/**
-	 * Whether the premium rungs are worth showing at all. With `bandPremium`
-	 * off — its state in production — there is nothing to sell, so the ladder
-	 * ends at the free rungs rather than dangling three locked ones.
-	 */
-	premiumAvailable: boolean;
 }
 
 function filled(value: string | null | undefined): boolean {
@@ -195,8 +189,6 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			tier: 'free'
 		}
 	];
-
-	if (!input.premiumAvailable) return sections;
 
 	const premium = input.tier === 'premium';
 	sections.push(

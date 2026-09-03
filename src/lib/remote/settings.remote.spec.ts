@@ -160,7 +160,7 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 	{
 		name: 'updateFeatureFlag',
 		cap: 'settings.update',
-		args: [{ flag: 'bandPremium', enabled: true }]
+		args: [{ flag: 'directMessages', enabled: true }]
 	},
 	{
 		name: 'updateVolunteerValueSettings',

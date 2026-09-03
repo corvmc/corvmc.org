@@ -88,7 +88,6 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 
 	// Flags gate the member, band and public surfaces only — the staff panel
 	// always shows every feature — so they all start off.
-	'feature.bandPremium': false,
 	'feature.directMessages': false,
 	'feature.bandAudio': false,
 	'feature.cmcRadio': false
