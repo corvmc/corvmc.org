@@ -14,6 +14,7 @@ function labelsFor(overrides: Partial<BandNavInput> = {}): string[] {
 		tier: 'free',
 		userRole: 'member',
 		isStaff: false,
+		features: {},
 		...overrides
 	}).map((i) => i.label);
 }
@@ -57,6 +58,43 @@ describe('bandNavItems', () => {
 
 	it('offers no staff-tools shortcut to an ordinary member', () => {
 		expect(labelsFor({ userRole: 'member' })).not.toContain('Staff tools');
+	});
+
+	// Music is flag-gated, and unlike Settings it is gated on the *flag only* —
+	// every member of the band can see the discography, and the page itself
+	// decides who may change it. The pairing worth pinning is that the flag being
+	// off hides the row from an owner too, since that is the switch staff will
+	// actually use before the storefront launches.
+	it('shows Music to every role once bandAudio is on, and to none while it is off', () => {
+		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
+			const isStaff = userRole === 'staff';
+			expect(labelsFor({ userRole, isStaff, features: { bandAudio: true } })).toContain('Releases');
+			expect(labelsFor({ userRole, isStaff })).not.toContain('Releases');
+		}
+	});
+
+	// Payouts is banking setup, so it is narrower than Music above it: every
+	// member can see the discography, only owner and admin can reach the bank
+	// details Stripe is asking for.
+	it('keeps Payouts to owner and admin, while Music stays open to members', () => {
+		const on = { features: { bandAudio: true } };
+		for (const userRole of ['owner', 'admin']) {
+			expect(labelsFor({ ...on, userRole })).toContain('Payouts');
+		}
+		const member = labelsFor({ ...on, userRole: 'member' });
+		expect(member).toContain('Releases');
+		expect(member).not.toContain('Payouts');
+	});
+
+	it('hides Payouts with the flag off, even from an owner', () => {
+		expect(labelsFor({ userRole: 'owner' })).not.toContain('Payouts');
+	});
+
+	// Written when `bandPremium` was still a flag, to pin that being premium was
+	// not itself enough to reach Releases. The flag has launched and gone, so the
+	// stand-in is the tier — which must still not open this row on its own.
+	it('does not let the premium tier stand in for bandAudio', () => {
+		expect(labelsFor({ userRole: 'owner', tier: 'premium' })).not.toContain('Releases');
 	});
 
 	// Billing really is owner-only on the server, so this gate stays as it was.
@@ -125,7 +163,8 @@ describe('bandNavItems', () => {
 			bandId: 'band-1',
 			tier: 'free',
 			userRole: 'staff',
-			isStaff: true
+			isStaff: true,
+			features: {}
 		}).find((i) => i.key === 'staff-tools');
 
 		expect(item?.href).toBe('/staff/bands/band-1');
@@ -138,7 +177,8 @@ describe('activeBandNavKey', () => {
 		bandId: 'band-1',
 		tier: 'premium',
 		userRole: 'owner',
-		isStaff: false
+		isStaff: false,
+		features: {}
 	};
 
 	it('lights the section a detail page belongs to', () => {

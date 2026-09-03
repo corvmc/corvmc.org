@@ -163,28 +163,6 @@ export const TICKET_CONTRIBUTION_PRESETS = [500, 1000, 2500] as const;
 
 /** Anything above this is a typo, not a gift. */
 export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
-
-// ---------------------------------------------------------------------------
-// Payment splits
-// ---------------------------------------------------------------------------
-
-/**
- * Where the split bar opens on a music sale: CMC's suggested share, in basis
- * points.
- *
- * A *default*, not a rake — the buyer drags it, and the floor is zero. At zero
- * `application_fee_amount` is exactly Stripe's fee, so the collective nets
- * nothing and loses nothing; that is what makes refusing it safe to offer.
- */
-export const AUDIO_PLATFORM_FEE_BPS = 1000;
-
-/**
- * A release is free, or it costs at least this. Nothing in between: Stripe's
- * own charge minimum is 50¢, and its 30¢ fixed fee is a third of a $1 sale, so
- * the prices this excludes are the ones where almost nothing reaches the band.
- */
-export const AUDIO_MIN_PRICE_CENTS = 200;
-
 // ---------------------------------------------------------------------------
 // The ticket sliding scale
 // ---------------------------------------------------------------------------
@@ -1521,6 +1499,51 @@ export const flagEntityTypeToEntity: Record<string, EntityType> = {
 };
 
 // ---------------------------------------------------------------------------
+// Band audio — releases, pricing, radio
+// ---------------------------------------------------------------------------
+
+/** What a band is putting out. Editorial only — nothing branches on it. */
+export const releaseKinds = ['single', 'ep', 'album', 'live', 'demo'] as const;
+export type ReleaseKind = (typeof releaseKinds)[number];
+
+export const releaseKindLabels: Record<ReleaseKind, string> = {
+	single: 'Single',
+	ep: 'EP',
+	album: 'Album',
+	live: 'Live recording',
+	demo: 'Demo'
+};
+
+export const RELEASE_TITLE_MAX = 200;
+export const TRACK_TITLE_MAX = 200;
+
+/**
+ * Where the split bar opens: CMC's suggested share of a sale, in basis points.
+ *
+ * A *default*, not a rake — the buyer drags it, and the floor is zero. At zero
+ * `application_fee_amount` is exactly Stripe's fee, so the collective nets
+ * nothing and loses nothing; that is what makes refusing it safe to offer.
+ * Staff can move this default from site config without a deploy.
+ */
+export const AUDIO_PLATFORM_FEE_BPS = 1000;
+
+/**
+ * A release is free, or it costs at least this. Nothing in between: Stripe's
+ * own charge minimum is 50¢, and its 30¢ fixed fee is a third of a $1 sale, so
+ * the prices this excludes are the ones where almost nothing reaches the band.
+ */
+export const AUDIO_MIN_PRICE_CENTS = 200;
+
+/** A single upload. Comfortable for MP3 and FLAC, tight for a WAV master. */
+export const AUDIO_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+/**
+ * The station skips anything outside this window. The ceiling is the load-bearing
+ * one: a 40-minute live set would otherwise hold the stream for 40 minutes, and
+ * the rotation reads as broken rather than long.
+ */
+export const RADIO_MIN_TRACK_MS = 30 * 1000;
+export const RADIO_MAX_TRACK_MS = 15 * 60 * 1000;
 // Help audiences
 // ---------------------------------------------------------------------------
 

@@ -114,11 +114,20 @@
 	let syncResult = $state<SubscriptionSyncSummary | null>(null);
 	let statsResult = $state<CommunityStats | null>(null);
 
-	// Band Premium was the last flag with a toggle, and it launched — the guards
-	// are gone rather than switched on. `directMessages` is still a flag but has
-	// never had a row here, so there is nothing left for this tab to show until
-	// the flag machinery itself comes out.
-	const featureMeta: Record<string, { label: string; description: string }> = {};
+	// `bandPremium` left this tab when it launched — the guards are gone rather
+	// than switched on, so there is nothing to toggle. Band music and CMC Radio
+	// arrived with their own flags and are the reason the tab is still here.
+	const featureMeta: Record<string, { label: string; description: string }> = {
+		bandAudio: {
+			label: 'Band music',
+			description: 'Bands can upload releases and sell them. Uploading is what fills CMC Radio.'
+		},
+		cmcRadio: {
+			label: 'CMC Radio',
+			description:
+				'The site-wide station and its player. Leave this off until enough bands have opted in for the rotation to sound like one.'
+		}
+	};
 
 	const channelMeta: Record<
 		string,

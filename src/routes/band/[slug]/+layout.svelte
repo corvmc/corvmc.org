@@ -4,6 +4,8 @@
 		IconUsersGroup,
 		IconSpeakerphone,
 		IconCalendar,
+		IconCoin,
+		IconDisc,
 		IconCalendarEvent,
 		IconPencil,
 		IconFolders,
@@ -50,7 +52,8 @@
 		bandId: layout.band.id,
 		tier: layout.band.tier,
 		userRole: layout.userRole,
-		isStaff: layout.isStaff
+		isStaff: layout.isStaff,
+		features: layout.features
 	});
 
 	const navItems = $derived(bandNavItems(navInput));
@@ -63,6 +66,8 @@
 		announcements: IconSpeakerphone,
 		reservations: IconCalendar,
 		events: IconCalendarEvent,
+		music: IconDisc,
+		payouts: IconCoin,
 		edit: IconPencil,
 		'press-kit': IconFolders,
 		'page-editor': IconBrush,

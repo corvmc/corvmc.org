@@ -10,6 +10,7 @@ import {
 } from '$lib/server/db/schema/inventory';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
+import { audioRelease } from '$lib/server/db/schema/audio';
 import { deleteObject } from '$lib/server/storage';
 import { MEDIA_SWEEP_GRACE_MS } from '$lib/config';
 import { and, eq, lt, sql, notExists, inArray, type SQLWrapper } from 'drizzle-orm';
@@ -37,7 +38,12 @@ const PARENT_TABLES = {
 	inventory_item: inventoryItem,
 	inventory_asset: inventoryAsset,
 	work_request: workRequest,
-	acquisition
+	acquisition,
+	// Cover art only. A release's recordings are in the private bucket and are
+	// not `media` rows, so this pass reaps the cover of a deleted release and
+	// has nothing to say about the audio — which `audio_track` deletes outright,
+	// having no sibling usages to count.
+	audio_release: audioRelease
 } as const satisfies Record<AttachableType, unknown>;
 
 export type SweepResult = {

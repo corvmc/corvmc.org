@@ -12,9 +12,9 @@ belong to staff, not to whoever is doing the deletion.
 
 `updateFeatureFlag` (`src/lib/remote/settings.remote.ts`) is the only write path to
 `site-config:feature.*` in the codebase, and the staff Features tab drives it by iterating
-`featureMeta` (`src/routes/staff/settings/+page.svelte`), which listed six of the eleven — and now
-lists none, `bandPremium` having been the last of the six still standing. The other five never had a
-toggle anywhere. Unless someone wrote the KV key by hand, they sit at their `DEFAULTS`
+`featureMeta` (`src/routes/staff/settings/+page.svelte`), which listed six of the eleven. The other
+five never had a toggle anywhere. `bandPremium` has since left that list by launching, and
+`bandAudio` and `cmcRadio` joined it with the band-audio work. Unless someone wrote the KV key by hand, they sit at their `DEFAULTS`
 value of `false` — which means the entire groups module and member↔member DMs have been dark in
 production since they shipped.
 
@@ -51,9 +51,8 @@ which nothing else read once `announcements` had gone.
 The launch price is **$5/mo** (`product-config-service.ts`), which yearly derives as $50 — ten
 months, two free.
 
-This left `featureMeta` on `/staff/settings` empty: `bandPremium` was the last flag with a toggle,
-and `directMessages` never had one. The tab says so rather than rendering nothing, until the
-machinery PR removes it.
+`featureMeta` on `/staff/settings` loses its `bandPremium` row. The tab stays: `bandAudio` and
+`cmcRadio` arrived with the band-audio work and both need switching on.
 
 ### `contentFlags` was launched, not unlinked
 

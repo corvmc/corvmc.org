@@ -31,6 +31,7 @@ export type MemberNavKey =
 	| 'profile'
 	| 'account'
 	| 'help'
+	| 'purchases'
 	| 'membership';
 
 /** Field names on `getMemberLayout()`'s return. */
@@ -75,6 +76,17 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 		},
 		{ key: 'directory', label: 'Directory', href: resolve('/member/directory') }
 	];
+
+	/**
+	 * Unconditional, and no longer behind `bandAudio`.
+	 *
+	 * It was, while it listed only records. Now it lists tickets too, which are
+	 * not flagged and which members have been buying since long before the
+	 * storefront existed — gating the row on the storefront would hide receipts
+	 * that have nothing to do with it. An empty page is the right answer for
+	 * somebody who has bought nothing; a missing one is not.
+	 */
+	items.push({ key: 'purchases', label: 'Purchases', href: resolve('/member/purchases') });
 
 	// Between Directory and Volunteering: it belongs with the things you do in
 	// the space, not with the bottom cluster.

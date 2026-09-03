@@ -88,7 +88,9 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 
 	// Flags gate the member, band and public surfaces only — the staff panel
 	// always shows every feature — so they all start off.
-	'feature.directMessages': false
+	'feature.directMessages': false,
+	'feature.bandAudio': false,
+	'feature.cmcRadio': false
 	// A flag missing from here makes `config()` *throw* `Unknown site config key`
 	// rather than return false, which is why registering it in both places is one
 	// step and `feature-flags.spec.ts` asserts the set both ways.
