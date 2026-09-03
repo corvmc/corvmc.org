@@ -13,6 +13,7 @@ import {
 } from '$lib/server/band/rider-service';
 import { riderElementsDraftSchema } from '$lib/types/rider';
 import { riderMonitorFormats, RIDER_NOTES_MAX } from '$lib/config';
+import { config } from '$lib/server/site-config/site-config-service';
 
 /**
  * The band tech rider — see `/band/[slug]/rider`.
@@ -71,13 +72,17 @@ export const getBandRiderPage = query(bandIdField, async (bandId) => {
 	});
 	const canManage = role === 'owner' || role === 'admin';
 
-	const [rider, members, uploads] = await Promise.all([
+	const [rider, members, uploads, consoleChannels] = await Promise.all([
 		getRider(band.id),
 		getMembers(band.id),
 		// Both slots in one statement. These are the band's own uploaded rider and
 		// stage plot — the path for a band that would rather hand over the PDF it
 		// already has, which stays first-class beside the structured editor.
-		listFor('group', band.id, ['rider', 'stage_plot'])
+		listFor('group', band.id, ['rider', 'stage_plot']),
+		// What the room can take. The band is told when it asks for more than
+		// that, which is the "flag what the room cannot do" half of the Production
+		// user story — and far better found out here than at load-in.
+		config<number>('venue.consoleChannels')
 	]);
 
 	return {
@@ -90,7 +95,8 @@ export const getBandRiderPage = query(bandIdField, async (bandId) => {
 				userId: m.userId,
 				// `title` is the band's word for who this is — the member's alias when
 				// they set one, their account name otherwise. `getMembers` already made
-				// that choice; re-deriving it here is how the two drift.
+				// that choice, and `getRider` coalesces the same pair for the owner
+				// name it returns; re-deriving it anywhere is how the two drift.
 				name: m.member.title ?? 'Member',
 				role: m.role
 			})),
@@ -108,7 +114,8 @@ export const getBandRiderPage = query(bandIdField, async (bandId) => {
 		})),
 		canManage,
 		viewerId: user.id,
-		isStaffViewer: role === 'staff'
+		isStaffViewer: role === 'staff',
+		consoleChannels: Number(consoleChannels) || 0
 	};
 });
 
