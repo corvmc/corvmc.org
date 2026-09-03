@@ -30,7 +30,13 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  * present and addressed to the right thread is as far as this can honestly go.
  */
 
-const ENQUIRER = 'E2E Booker';
+/**
+ * Per-attempt, because a retry cannot undo the enquiry the attempt before it
+ * filed. Two rows both reading "E2E Booker" is a strict-mode violation on the
+ * list locator, so the identity has to be what separates them.
+ */
+const enquirerFor = (retry: number) => (retry === 0 ? 'E2E Booker' : `E2E Booker ${retry}`);
+const ENQUIRER = enquirerFor(0);
 const ENQUIRER_EMAIL = 'e2e.booker@example.com';
 const MESSAGE = 'Would you play a Thursday in April? Door split, 40 minute set.';
 
@@ -51,14 +57,16 @@ async function navBadgeCount(page: Page, slug: string): Promise<number> {
 }
 
 test.describe.serial('band booking enquiries', () => {
-	test('a stranger’s enquiry reaches the band’s inbox', async ({ page }) => {
+	test('a stranger’s enquiry reaches the band’s inbox', async ({ page }, testInfo) => {
+		const enquirer = enquirerFor(testInfo.retry);
+
 		await page.goto(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`);
 
 		// No address of any kind is published — that is the reason the form exists,
 		// and the reason it is the only thing to assert on here.
 		await expect(page.locator('body')).not.toContainText('@example.com');
 
-		await page.locator('input[name="name"]').fill(ENQUIRER);
+		await page.locator('input[name="name"]').fill(enquirer);
 		await page.locator('input[name="email"]').fill(ENQUIRER_EMAIL);
 		await page.locator('textarea[name="message"]').fill(MESSAGE);
 
@@ -77,7 +85,9 @@ test.describe.serial('band booking enquiries', () => {
 
 		await page.getByRole('button', { name: 'Send' }).click();
 
-		await expect(page.getByText('Sent.')).toBeVisible({ timeout: 15000 });
+		// Generous: this is the run's first write against a cold preview server, and
+		// the round trip opens both a thread and a message.
+		await expect(page.getByText('Sent.')).toBeVisible({ timeout: 30000 });
 
 		// Now the other side of it.
 		await login(page, SEED_OWNER_EMAIL, SEED_OWNER_PASSWORD);
@@ -90,16 +100,30 @@ test.describe.serial('band booking enquiries', () => {
 			.toBeGreaterThan(0);
 
 		await page.goto(`/band/${SEED_PUBLIC_BAND_SLUG}/messages`);
-		const row = page.getByRole('listitem').filter({ hasText: ENQUIRER });
+		const row = page.getByRole('listitem').filter({ hasText: enquirer });
 		await expect(row).toBeVisible({ timeout: 15000 });
+		await expect(row.locator('[title="Unread"]')).toHaveCount(1);
 
 		await row.click();
-		await expect(page.getByText(MESSAGE)).toBeVisible({ timeout: 15000 });
+
+		// The thread header is the enquirer's name; the list pane's own heading is
+		// "Messages", so this resolves to the thread pane and nothing else.
+		await expect(page.getByRole('heading', { name: enquirer })).toBeVisible({ timeout: 15000 });
+
+		// `.last()` because the message reads twice: once truncated into the row's
+		// preview, once in full in the timeline. `InboxShell` renders the list pane
+		// (from the layout) before the thread pane (its children), so the timeline
+		// is the later of the two — and on a retry the earlier rows are the
+		// previous attempts'.
+		await expect(page.getByText(MESSAGE).last()).toBeVisible({ timeout: 15000 });
+
 		// The reply box, addressed at this thread. Sending it is Postmark's job.
 		await expect(page.getByRole('button', { name: 'Send Reply' })).toBeVisible();
 
-		// Opening it is what marks it read.
-		await expect.poll(() => navBadgeCount(page, SEED_PUBLIC_BAND_SLUG), { timeout: 15000 }).toBe(0);
+		// Opening it is what marks it read — for this reader and this thread. The
+		// dot rather than the nav badge, which is an aggregate: on a retry it also
+		// counts the enquiry the previous attempt filed, and would never reach zero.
+		await expect(row.locator('[title="Unread"]')).toHaveCount(0, { timeout: 15000 });
 	});
 
 	test('staff cannot see it, in any view or filter', async ({ page }) => {
@@ -125,8 +149,14 @@ test.describe.serial('band booking enquiries', () => {
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}`);
 		await expect(page.locator(`a[href="/band/${SEED_MEMBERS_BAND_SLUG}/messages"]`)).toHaveCount(0);
 
-		// The nav is decoration; this is the guard.
+		// The nav is decoration; `requireGroupRole` in the remote function is the
+		// guard. The page still has to say so rather than render an empty inbox —
+		// the shell plus "No enquiry selected" reads as a band with no enquiries,
+		// which is a different and untrue thing.
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/messages`);
-		await expect(page.getByText(/Insufficient permissions|403/i)).toBeVisible({ timeout: 15000 });
+		await expect(page.getByText('Booking enquiries are for band admins')).toBeVisible({
+			timeout: 15000
+		});
+		await expect(page.getByRole('heading', { name: 'Messages' })).toHaveCount(0);
 	});
 });
