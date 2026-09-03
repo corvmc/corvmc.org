@@ -75,6 +75,10 @@ R2_PUBLIC_URL = "https://media.corvmc.org"
 # Canonical public site URLs (used for links in emails/notifications) + email
 # sender name. Non-secret config.
 PUBLIC_SITE_URL = "https://corvmc.org"
+# Production is the only environment that talks to Stripe. `$lib/server/stripe`
+# treats every other value (and an unset one) as the in-memory fake, so the
+# opt-in lives here rather than the opt-out living in every dev checkout.
+PAYMENTS_DRIVER = "stripe"
 EMAIL_FROM_NAME = "CorvMC"
 EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
 STAFF_CONTACT_EMAIL = "contact@corvmc.org"

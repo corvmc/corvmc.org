@@ -114,6 +114,12 @@ export default defineConfig({
 			PUBLIC_SITE_URL: process.env.PUBLIC_SITE_URL ?? BASE_URL,
 			BETTER_AUTH_SECRET:
 				process.env.BETTER_AUTH_SECRET ?? 'e2e-local-better-auth-secret-not-for-prod',
+			// The in-memory gateway. Before this, the dummy key below was handed to a
+			// real Stripe client, so anything past `checkout.sessions.create` made an
+			// outbound call and 401'd — which is why the payment specs used to treat
+			// a 303 toward Stripe as a pass. The fake serves /checkout/fake/<session>
+			// instead, so a purchase can be completed and its fulfillment asserted.
+			PAYMENTS_DRIVER: 'fake',
 			STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? 'sk_test_dummy_e2e',
 			STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? 'whsec_dummy_e2e'
 		}

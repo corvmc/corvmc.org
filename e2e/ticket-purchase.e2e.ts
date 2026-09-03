@@ -15,8 +15,12 @@ import {
  * lives in a remote function, and the two agreeing is the whole point of
  * `TicketPurchaseFields`.
  *
- * Nothing here submits. The next step after the button is Stripe Checkout, and
- * a test suite has no business opening one.
+ * The last two cases do submit. They can, now that `PAYMENTS_DRIVER=fake` puts
+ * an in-memory gateway behind checkout (see `playwright.config.ts`): the button
+ * leads to a local page rather than `checkout.stripe.com`, so the round trip
+ * through fulfillment — pending ticket, payment, webhook translation, valid
+ * ticket — is finally assertable. It is the only coverage of that path; the unit
+ * tests hand `handleCheckoutCompleted` a session literal and start from there.
  */
 
 const PRICE = SEED_TP_PRICE_CENTS / 100;
@@ -121,4 +125,50 @@ test('the door policy is stated on the page, since checkout cannot sell a free t
 
 	// The policy paragraph is the only thing on the page linking to /contact.
 	await expect(page.locator('main a[href="/contact"]')).toBeVisible();
+});
+
+/**
+ * The fake gateway's stand-in for Stripe Checkout. Reached by the same
+ * `window.location.href` the real integration uses, so nothing about the app's
+ * navigation is special-cased for the test.
+ */
+async function payOnFakeCheckout(page: import('@playwright/test').Page, cardNumber: string) {
+	await expect(page).toHaveURL(/\/checkout\/fake\//);
+	await expect(page.getByRole('heading', { name: 'Test checkout' })).toBeVisible();
+	await page.locator('input[name$="cardNumber"]').fill(cardNumber);
+	await page.getByRole('button', { name: /^Pay / }).click();
+}
+
+async function fillGuestDetails(page: import('@playwright/test').Page) {
+	await page.locator('input[name$="attendeeName"]').fill('E2E Guest');
+	await page.locator('input[name$="attendeeEmail"]').fill('e2e-guest@example.test');
+}
+
+test('a guest buys a ticket and it comes back valid', async ({ page }) => {
+	await openPurchasePage(page);
+	await fillGuestDetails(page);
+
+	await page.getByRole('button', { name: /Purchase Ticket/i }).click();
+
+	await payOnFakeCheckout(page, '4242424242424242');
+
+	// The success page is keyed on purchase_id, which only the completed session
+	// carries — landing here at all proves the redirect survived the round trip.
+	await expect(page).toHaveURL(/\/tickets\/success\?purchase_id=/);
+	await expect(page.getByRole('heading', { name: 'Tickets Confirmed' })).toBeVisible();
+	// A ticket code renders only for a ticket the webhook flipped to `valid`; a
+	// `pending` row would leave this list empty.
+	await expect(page.getByText('e2e-guest@example.test')).toBeVisible();
+});
+
+test('a declined card keeps the buyer on checkout with the real decline copy', async ({ page }) => {
+	await openPurchasePage(page);
+	await fillGuestDetails(page);
+
+	await page.getByRole('button', { name: /Purchase Ticket/i }).click();
+
+	await payOnFakeCheckout(page, '4000000000000002');
+
+	await expect(page.getByText('Your card has been declined.')).toBeVisible();
+	await expect(page).toHaveURL(/\/checkout\/fake\//);
 });
