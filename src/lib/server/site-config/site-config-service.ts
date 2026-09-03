@@ -58,6 +58,16 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// figure or it silently starts describing the wrong year.
 	'volunteer.hourValueSource': 'Independent Sector, Oregon, 2025 (2026 report, preliminary)',
 
+	// How many inputs the desk in the practice room can actually take.
+	//
+	// Runtime config rather than a constant because it is a fact about a piece of
+	// gear, and the gear gets replaced: a rider that over-specs the room is the
+	// thing Production asked to be able to flag ("what the room cannot do", in
+	// `committees-and-roles-spec.md`), and an answer that needs a deploy to
+	// correct is one that will quietly go wrong the first time the console does.
+	// Zero disables the check rather than failing every rider.
+	'venue.consoleChannels': 16,
+
 	'org.name': 'Corvallis Music Collective',
 	'org.shortName': 'CorvMC',
 	'org.contactEmail': 'staff@corvmc.org',

@@ -95,7 +95,7 @@ vi.mock('./volunteer-profile-service', async (importOriginal) => ({
 }));
 
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/authorization', () => ({ primaryRoleFor: vi.fn(() => 'member') }));
+vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => 'member') }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';

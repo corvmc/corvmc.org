@@ -994,6 +994,149 @@ export const projectStatusLabels = suggestionStatusLabels;
 export const projectStatusOptions = suggestionStatusOptions;
 
 // ---------------------------------------------------------------------------
+// Tech riders
+// ---------------------------------------------------------------------------
+
+/**
+ * What stands on the stage — one value per physical thing a member brings or
+ * asks the room for.
+ *
+ * **Declaration order is the conventional channel order**, and the rider editor
+ * uses it to place a new element rather than dropping it at the end: drums,
+ * then bass, then guitars and keys, then vocals. Every input-list guide
+ * converges on that sequence because a console is laid out in banks of eight
+ * and an engineer reads down the rhythm section first. It is a default a band
+ * can reorder, not a rule — `rider_element.sortOrder` is what the list actually
+ * reads.
+ *
+ * `monitor` is here rather than in a table of its own. A wedge is a thing on
+ * the stage that belongs to somebody, which is exactly what an element is; it
+ * simply has no inputs. That makes the mix count derivable and gives the stage
+ * plot something to draw, both for free.
+ */
+export const riderElementKinds = [
+	'drum_kit',
+	'percussion',
+	'bass_rig',
+	'guitar_amp',
+	'keys',
+	'playback',
+	'vocals',
+	'monitor',
+	'other'
+] as const;
+export type RiderElementKind = (typeof riderElementKinds)[number];
+
+export const riderElementKindLabels: Record<RiderElementKind, string> = {
+	drum_kit: 'Drum kit',
+	percussion: 'Percussion',
+	bass_rig: 'Bass rig',
+	guitar_amp: 'Guitar amp',
+	keys: 'Keys',
+	playback: 'Playback / tracks',
+	vocals: 'Vocals',
+	monitor: 'Monitor',
+	other: 'Other'
+};
+
+export const riderElementKindOptions = riderElementKinds.map((value) => ({
+	value,
+	label: riderElementKindLabels[value]
+}));
+
+/** How a channel gets to the desk. */
+export const riderInputSources = ['mic', 'di', 'line', 'wireless'] as const;
+export type RiderInputSource = (typeof riderInputSources)[number];
+
+export const riderInputSourceLabels: Record<RiderInputSource, string> = {
+	mic: 'Mic',
+	di: 'DI',
+	line: 'Line',
+	wireless: 'Wireless'
+};
+
+export const riderInputSourceOptions = riderInputSources.map((value) => ({
+	value,
+	label: riderInputSourceLabels[value]
+}));
+
+/** What the mic hangs on. `clip` is a drum or horn clip — no stand at all. */
+export const riderStandTypes = ['none', 'short_boom', 'tall_boom', 'clip'] as const;
+export type RiderStandType = (typeof riderStandTypes)[number];
+
+export const riderStandTypeLabels: Record<RiderStandType, string> = {
+	none: 'No stand',
+	short_boom: 'Short boom',
+	tall_boom: 'Tall boom',
+	clip: 'Clip'
+};
+
+export const riderStandTypeOptions = riderStandTypes.map((value) => ({
+	value,
+	label: riderStandTypeLabels[value]
+}));
+
+/**
+ * Who brings it. The domain convention is two lists — "provided by artist" and
+ * "required from venue" — and this is that, as one column: a `venue` element is
+ * a **request**, not a statement of fact, and the staff view filters on exactly
+ * this to answer "what does this band need from us".
+ */
+export const riderProvidedBy = ['band', 'venue'] as const;
+export type RiderProvidedBy = (typeof riderProvidedBy)[number];
+
+export const riderProvidedByLabels: Record<RiderProvidedBy, string> = {
+	band: 'Band brings it',
+	venue: 'Needed from CMC'
+};
+
+export const riderProvidedByOptions = riderProvidedBy.map((value) => ({
+	value,
+	label: riderProvidedByLabels[value]
+}));
+
+/** Wedges, in-ears, or no preference. Band-level, since the room supplies one system. */
+export const riderMonitorFormats = ['wedges', 'iems', 'either'] as const;
+export type RiderMonitorFormat = (typeof riderMonitorFormats)[number];
+
+export const riderMonitorFormatLabels: Record<RiderMonitorFormat, string> = {
+	wedges: 'Wedges',
+	iems: 'In-ear monitors',
+	either: 'Either is fine'
+};
+
+export const riderMonitorFormatOptions = riderMonitorFormats.map((value) => ({
+	value,
+	label: riderMonitorFormatLabels[value]
+}));
+
+/** Power, load-in constraints, anything that is not an element. */
+export const RIDER_NOTES_MAX = 4000;
+
+/** "Sam's Twin Reverb". */
+export const RIDER_ELEMENT_LABEL_MAX = 120;
+
+/** "Kick in". */
+export const RIDER_INPUT_LABEL_MAX = 120;
+
+/**
+ * "SM57 or similar" — a **preference**, never a demand. Every guide says to be
+ * specific and then defer to the house engineer, who may well have a better
+ * answer for their own room.
+ */
+export const RIDER_MIC_PREF_MAX = 120;
+
+/** Per-row free text on an element or an input. */
+export const RIDER_ITEM_NOTES_MAX = 500;
+
+/**
+ * Ceilings, validated in the service as well as the schema. Generous against
+ * any real band and small enough that one submitted payload stays sane.
+ */
+export const RIDER_MAX_ELEMENTS = 60;
+export const RIDER_MAX_INPUTS_PER_ELEMENT = 24;
+
+// ---------------------------------------------------------------------------
 // Instructors
 // ---------------------------------------------------------------------------
 

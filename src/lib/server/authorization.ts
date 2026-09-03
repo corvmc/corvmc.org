@@ -198,28 +198,36 @@ export async function listUsersWithCapability(
 }
 
 /**
- * Correlated subquery returning the highest-priority role name for a given user ID column.
- * Priority: admin > staff > sustaining > member (fallback).
- * Use inside a drizzle `.select()` as a computed column, e.g. `primaryRole: primaryRoleFor(user.id)`.
+ * Correlated subquery returning the highest-precedence *position* a user
+ * holds, or null.
  *
- * The outer reference is qualified manually: drizzle renders an interpolated Column
- * unqualified in single-table select lists, and inside this subquery the bare name
- * would bind to `roles.id`, so the predicate could never match a user id. Mirrors
- * `isSustainingMemberSql`.
+ * "Primary role" was never a ranking of authority — its only consumer is
+ * `memberSubtype`, which maps the result to a badge and already ignored
+ * everything that was not admin/staff. So this is that, generalised: the
+ * elevated glyph, if any. Positions are unranked for authorization; this order
+ * is display precedence and nothing else, and it is generated from
+ * `positionOrder` so adding a position to the matrix cannot leave it behind.
+ *
+ * The `r.name in (…)` filter is what keeps the contract "a position, or null":
+ * without it a member holding only the legacy `member` row comes back with
+ * that name. Interpolating via `sql.raw` is safe because `positionOrder` is a
+ * compile-time literal and never request input.
+ *
+ * The outer reference is qualified manually: drizzle renders an interpolated
+ * Column unqualified in single-table select lists, and inside this subquery the
+ * bare name would bind to `roles.id`, so the predicate could never match a user
+ * id. Mirrors `isSustainingMemberSql`; see correlated-sql.spec.ts for the
+ * production bug this guards.
  */
-export function primaryRoleFor(userIdCol: AnyColumn) {
+export function topPositionFor(userIdCol: AnyColumn) {
 	const outerRef = sql.raw(`"${getTableName(getColumnTable(userIdCol))}"."${userIdCol.name}"`);
-	return sql<string>`(
+	const names = sql.raw(positionOrder.map((p) => `'${p}'`).join(', '));
+	const ladder = sql.raw(positionOrder.map((p, i) => `when '${p}' then ${i}`).join(' '));
+	return sql<string | null>`(
 		select r.name from roles r
 		inner join model_has_roles mhr on mhr.role_id = r.id
-		where mhr.user_id = ${outerRef}
-		order by case r.name
-			when 'admin' then 0
-			when 'staff' then 1
-			when 'sustaining' then 2
-			when 'member' then 3
-			else 4
-		end
+		where mhr.user_id = ${outerRef} and r.name in (${names})
+		order by case r.name ${ladder} else ${sql.raw(String(positionOrder.length))} end
 		limit 1
 	)`;
 }

@@ -1,13 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-<<<<<<<< HEAD:migrations/20260903080752_bright_ulik/snapshot.json
-  "id": "3cbbfc1a-1d7b-4121-8da7-38524acc9f26",
-========
-  "id": "47144111-0c16-4971-9d20-69ff75ab3f3a",
->>>>>>>> origin/main:migrations/20260903053124_harsh_charles_xavier/snapshot.json
+  "id": "6352b2e1-aac6-476a-9e75-a8cd71535216",
   "prevIds": [
-    "802e28e6-a411-4e5c-aec0-b9d2b144504a"
+    "47144111-0c16-4971-9d20-69ff75ab3f3a"
   ],
   "ddl": [
     {
@@ -1596,16 +1592,6 @@
     },
     {
       "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "ticket_price_floor_cents",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "integer",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -1981,36 +1967,6 @@
       "default": "false",
       "generated": null,
       "name": "discount_waived",
-      "entityType": "columns",
-      "table": "ticket"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "acts_cents",
-      "entityType": "columns",
-      "table": "ticket"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "collective_cents",
-      "entityType": "columns",
-      "table": "ticket"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "fee_covered_cents",
       "entityType": "columns",
       "table": "ticket"
     },
@@ -8941,6 +8897,26 @@
       "default": "0",
       "generated": null,
       "name": "sort_order",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "x",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "y",
       "entityType": "columns",
       "table": "rider_element"
     },

@@ -30,7 +30,7 @@ vi.mock('$lib/server/authorization', () => ({
 	isStaff: vi.fn(async () => false),
 	getUserRoles: vi.fn(async () => ['member']),
 	listStaffUsers: vi.fn(async () => []),
-	primaryRoleFor: vi.fn(() => null)
+	topPositionFor: vi.fn(() => null)
 }));
 
 // Any database access on a rejected call is a failure.
