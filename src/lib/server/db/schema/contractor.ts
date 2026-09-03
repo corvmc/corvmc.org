@@ -167,6 +167,33 @@ export const contractorJob = sqliteTable(
 		quotedCents: integer('quoted_cents'),
 		/** What it actually cost. Null until the invoice arrives. */
 		costCents: integer('cost_cents'),
+
+		/**
+		 * The trades half of contributed services: the electrician who comes out
+		 * and does not invoice.
+		 *
+		 * A flag *and* a value rather than a null `cost_cents`, because
+		 * "donated" and "the invoice has not arrived yet" are different states
+		 * and `cost_cents` alone cannot tell them apart. A second value column
+		 * rather than overloading `cost_cents` for the same reason
+		 * `acquisition` keeps `total_cents` and `fair_value_cents` apart: one is
+		 * money that left the account and the other is what a gift was worth,
+		 * and every existing `sum(cost_cents)` would otherwise have to learn
+		 * this flag — where one missed call site overstates cash spend forever.
+		 *
+		 * SQLite cannot add a CHECK through ALTER TABLE, so "donated implies no
+		 * cost" is enforced in the service rather than the schema.
+		 */
+		isDonated: integer('is_donated', { mode: 'boolean' }).notNull().default(false),
+		/** What the work would have cost, when it was donated. */
+		fairValueCents: integer('fair_value_cents'),
+		/**
+		 * How that number was arrived at — a quote from another shop, the
+		 * contractor's own rate card. The substantiation a financial statement
+		 * wants, and the same field `acquisition.fair_value_basis` carries for
+		 * donated goods.
+		 */
+		fairValueBasis: text('fair_value_basis'),
 		/**
 		 * Their invoice number. A string, not a file: the one R2 bucket is served
 		 * publicly at media.corvmc.org, and an invoice with hourly rates on it has

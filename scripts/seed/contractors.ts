@@ -163,6 +163,22 @@ export async function seedContractors(staffId: string) {
 				paidAt: new Date(now.getTime() - 45 * day),
 				requestedByUserId: staffId
 			},
+			// Donated: the trades half of contributed services. No `costCents`,
+			// because nothing left the account -- the value is what the work
+			// would have cost, carried separately so no `sum(cost_cents)` picks
+			// it up as cash spend.
+			{
+				id: randomUUID(),
+				contractorId: ids.electric,
+				status: 'completed' as const,
+				summary: 'Trace and repair the dead outlets along the north wall',
+				scheduledFor: new Date(now.getTime() - 30 * day),
+				completedAt: new Date(now.getTime() - 30 * day),
+				isDonated: true,
+				fairValueCents: 42000,
+				fairValueBasis: "Contractor's standard rate card, 4 hours at $105/hr",
+				requestedByUserId: staffId
+			},
 			{
 				id: randomUUID(),
 				contractorId: ids.fire,
