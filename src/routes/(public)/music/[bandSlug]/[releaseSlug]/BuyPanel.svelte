@@ -11,19 +11,23 @@
 	import { AUDIO_MIN_PRICE_CENTS } from '$lib/config';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 
 	let {
 		bandSlug,
 		bandName,
 		releaseSlug,
 		priceMinCents,
-		allowPayMore
+		allowPayMore,
+		viewerEmail
 	}: {
 		bandSlug: string;
 		bandName: string;
 		releaseSlug: string;
 		priceMinCents: number;
 		allowPayMore: boolean;
+		/** The signed-in buyer's address, or `null` for a visitor. */
+		viewerEmail: string | null;
 	} = $props();
 
 	const fields = buyReleaseForm.fields;
@@ -153,13 +157,48 @@
 				<p class="text-muted">This one's free. Pay something if you'd like to.</p>
 			{/if}
 
-			<FormField
-				field={fields.email}
-				label="Email"
-				type="email"
-				description="Where the download link goes. Keep it — with no account, it's how you get the files back later."
-				required
-			/>
+			<!--
+				Where the download goes, and the one moment it is worth offering an
+				account.
+
+				A signed-in buyer is never asked: the address is already known, the
+				purchase attaches to their session, and re-typing an email you are
+				logged in with reads as though the site forgot you. A visitor gets the
+				field *and* the offer, because this is the exact moment the difference
+				between the two matters — an anonymous buy is recoverable only from the
+				emailed link, and one signed-in buy puts it on a page instead.
+
+				Deliberately an offer, not a wall. Buying without an account stays a
+				first-class path; the whole free-release design depends on a band being
+				able to hand a stranger a record with nothing in the way.
+			-->
+			<div class="mt-4 mb-4 space-y-2">
+				{#if viewerEmail}
+					<input {...fields.email.as('hidden', viewerEmail)} />
+					<p class="text-muted">
+						Buying as <span class="font-medium">{viewerEmail}</span> — it'll be in your
+						<a class="link" href={resolve('/member/music')}>Releases</a> straight away.
+					</p>
+				{:else}
+					<FormField
+						field={fields.email}
+						label="Email"
+						type="email"
+						description="Where the download link goes."
+						required
+					/>
+					<p class="text-muted">
+						Got an account?
+						<a
+							class="link"
+							href="{resolve('/login')}?redirect={encodeURIComponent(page.url.pathname)}"
+						>
+							Sign in
+						</a>
+						and it lands in your Releases too.
+					</p>
+				{/if}
+			</div>
 
 			<!-- The buyer's choices, as the numbers the server re-derives from. -->
 			<input {...fields.totalCents.as('number', totalCents)} type="hidden" />

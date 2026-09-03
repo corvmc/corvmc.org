@@ -13,7 +13,7 @@
 	import { page } from '$app/state';
 	import { IconDisc } from '@tabler/icons-svelte';
 
-	const { release, band, tracks, purchasable } = $derived(
+	const { release, band, tracks, purchasable, viewerEmail } = $derived(
 		await getPublicRelease({
 			bandSlug: page.params.bandSlug!,
 			releaseSlug: page.params.releaseSlug!
@@ -75,6 +75,7 @@
 			releaseSlug={release.slug}
 			priceMinCents={release.priceMinCents}
 			allowPayMore={release.allowPayMore}
+			{viewerEmail}
 		/>
 	{:else}
 		<!-- A priced release whose band has not finished Stripe. Saying so beats

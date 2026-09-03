@@ -44,6 +44,8 @@ export const getPublicRelease = query(
 	async ({ bandSlug, releaseSlug }) => {
 		await requireFeature('bandAudio');
 
+		const { locals } = getRequestEvent();
+
 		const found = await getPublishedRelease(bandSlug, releaseSlug);
 		// Draft, withheld and nonexistent all answer the same way. A takedown that
 		// 403s tells the world there is something to see.
@@ -75,7 +77,17 @@ export const getPublicRelease = query(
 			 * buyable; a priced one needs the band's Stripe account to be live,
 			 * and offering a button that 409s is worse than explaining why.
 			 */
-			purchasable: release.priceMinCents === 0 || destination !== null
+			purchasable: release.priceMinCents === 0 || destination !== null,
+			/**
+			 * The signed-in buyer's address, or `null` for a visitor.
+			 *
+			 * Carried by this query rather than fetched alongside it: a page gets one
+			 * load-bearing query, and `custom/no-concurrent-remote-queries` errors on
+			 * the second. It only decides whether the buy panel asks for an email or
+			 * offers a sign-in, so it costs one field on a request that already has
+			 * the session in hand.
+			 */
+			viewerEmail: locals.user?.email ?? null
 		};
 	}
 );
