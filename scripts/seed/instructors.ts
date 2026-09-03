@@ -192,7 +192,16 @@ export async function seedInstructors(users: any[], reviewer: any) {
 	// a tag is matched by exact value: 'Guitar' seeded here is a *different*
 	// instrument from the 'guitar' every other seeder and every save produces.
 	// That splits the suggestion list in two and silently costs a directory match.
-	const tags = [
+	//
+	// And because they are lowercase they can now COLLIDE. These instructors are
+	// drawn from `allUsers`, whose members already got a random `pickN(INSTRUMENTS)`
+	// from `seedUsers` — written to `directory_tag` by `seedDirectoryEntries`,
+	// which runs before this. `directory_tag` is unique on
+	// (entryId, kind, value), so a `gtr` who happened to roll 'guitar' upstream
+	// aborted the whole seed, and `db:reset` failed for whoever's dice came up
+	// that way. Deduped against what is already stored rather than with
+	// `onConflictDoNothing`, so the row count this returns stays honest.
+	const wanted = [
 		[gtr, 'guitar'],
 		[gtr, 'bass'],
 		[drums, 'drums'],
@@ -201,6 +210,16 @@ export async function seedInstructors(users: any[], reviewer: any) {
 	]
 		.map(([u, value]: any) => ({ entryId: entryFor.get(u.id), kind: 'instrument' as const, value }))
 		.filter((t) => t.entryId);
+
+	const existing = new Set(
+		(
+			await db
+				.select({ entryId: directoryTag.entryId, value: directoryTag.value })
+				.from(directoryTag)
+				.where(eq(directoryTag.kind, 'instrument'))
+		).map((t) => `${t.entryId}:${t.value}`)
+	);
+	const tags = wanted.filter((t) => !existing.has(`${t.entryId}:${t.value}`));
 	if (tags.length) await batchInsert(directoryTag, tags, 10);
 
 	// Teaching bookings, so the member reservation list and the staff calendar
