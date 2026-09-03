@@ -14,6 +14,7 @@
 	import StatCard from '$lib/components/ui/StatCard.svelte';
 	import AddressCard from '$lib/components/ui/AddressCard.svelte';
 	import { canonicalAddress } from '$lib/utils/canonical-address';
+	import PressKitCard from './PressKitCard.svelte';
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.

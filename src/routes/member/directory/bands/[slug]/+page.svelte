@@ -21,6 +21,7 @@
 	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
 	import PressBox from '$lib/components/directory/profile/PressBox.svelte';
 	import PressPhoto from '$lib/components/directory/profile/PressPhoto.svelte';
+	import VideoBox from '$lib/components/directory/profile/VideoBox.svelte';
 	import ContactForm from '$lib/components/directory/profile/ContactForm.svelte';
 	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
 
@@ -113,6 +114,7 @@
 			/>
 			<PressBox quotes={band.pressKit.pressQuotes} achievements={band.pressKit.achievements} />
 			<PressPhoto photos={band.photos} />
+			<VideoBox videos={band.pressKit.videos} />
 		{/snippet}
 		{#snippet side()}
 			<CrossRefList label="Members" items={memberRefs} note={`${band.memberCount} · roles`} />

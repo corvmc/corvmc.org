@@ -35,7 +35,8 @@ const FULL: PressKitDocument = {
 		bookingContact: { name: 'Bea', email: 'bea@example.com', phone: '555-0100' },
 		backline: [{ instrument: 'Bass cab', details: 'Ampeg 8x10', provided: false }],
 		pressQuotes: [{ quote: 'Loud and good', publication: 'The Gazette' }],
-		achievements: ['Played the big room']
+		achievements: ['Played the big room'],
+		videos: [{ url: 'https://www.youtube.com/watch?v=abc', label: 'Live at the barn' }]
 	}),
 	photoPaths: ['photos/press-1.jpg'],
 	riderPath: 'rider.pdf',
@@ -93,6 +94,14 @@ describe('renderPressKitHtml', () => {
 		expect(html).not.toContain('<img onerror');
 		expect(html).not.toContain('<b>Bea</b>');
 		expect(html).toContain('Tom &amp; Jerry&#39;s &quot;band&quot;');
+	});
+
+	it('lists videos as links, never as embeds', () => {
+		// The package must open with no network. An iframe in a file on a laptop
+		// with no connection is a grey rectangle where a video should be.
+		const html = renderPressKitHtml(FULL);
+		expect(html).toContain('Live at the barn');
+		expect(html).not.toContain('<iframe');
 	});
 
 	it('passes the bio through as HTML, because it arrives sanitized', () => {

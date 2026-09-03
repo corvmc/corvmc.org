@@ -134,6 +134,11 @@ export function renderPressKitHtml(doc: PressKitDocument): string {
 		.filter(Boolean)
 		.join('\n');
 
+	const videos = epk.videos
+		.filter((v) => v.url.trim())
+		.map((v) => `<li>${escapeHtml(v.label || 'Live video')} — ${escapeHtml(v.url)}</li>`)
+		.join('\n');
+
 	const links = doc.links
 		.map((l) => `<li>${escapeHtml(l.label || l.url)} — ${escapeHtml(l.url)}</li>`)
 		.join('\n');
@@ -211,6 +216,7 @@ ${section('Press', quotes)}
 ${section('Highlights', achievements ? `<ul>${achievements}</ul>` : '')}
 ${section('Upcoming shows', shows ? `<ul>${shows}</ul>` : '')}
 ${section('Listen', links ? `<ul>${links}</ul>` : '')}
+${section('Watch', videos ? `<ul>${videos}</ul>` : '')}
 ${section('Backline', backline)}
 ${section('Also in this folder', attachments ? `<ul>${attachments}</ul>` : '')}
 ${section('Contact', contacts ? `<div class="contacts">${contacts}</div>` : '')}
@@ -290,6 +296,10 @@ export function renderPressKitText(doc: PressKitDocument): string {
 	block(
 		'Listen',
 		doc.links.map((l) => `- ${l.label || l.url}: ${l.url}`)
+	);
+	block(
+		'Watch',
+		epk.videos.filter((v) => v.url.trim()).map((v) => `- ${v.label || 'Live video'}: ${v.url}`)
 	);
 	block(
 		'Backline',
