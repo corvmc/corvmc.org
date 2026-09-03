@@ -1,6 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import { getUserByMemberNumber } from '$lib/server/user/member-number-service';
-import { isStaff } from '$lib/server/authorization';
+import { capabilitySet, positionsFor } from '$lib/server/authorization';
 import { entityHref } from '$lib/utils/entity-href';
 import type { Panel } from '$lib/types/entity';
 import type { PageServerLoad } from './$types';
@@ -50,11 +50,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const found = await getUserByMemberNumber(memberNumber);
 	if (!found) error(404, 'No member carries that number');
 
-	const staff = locals.user ? await isStaff(locals.user.id) : false;
+	const positions = locals.user ? await positionsFor(locals.user.id) : [];
+	const staff = positions.length > 0;
 	const panel: Panel = staff ? 'staff' : locals.user ? 'member' : 'public';
 	const href = entityHref(
 		{ type: 'member', id: found.id, title: found.name },
-		{ userId: locals.user?.id ?? null, isStaff: staff, bandIds: new Set(), panel }
+		{
+			userId: locals.user?.id ?? null,
+			isStaff: staff,
+			capabilities: new Set(capabilitySet(positions)),
+			bandIds: new Set(),
+			panel
+		}
 	);
 
 	// `entityHref` always has a public arm for a member, so the fallback is
