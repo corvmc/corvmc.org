@@ -879,6 +879,27 @@ export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Projects
+// ---------------------------------------------------------------------------
+
+/**
+ * A project's lifecycle — **the same values as `suggestionStatuses`, reused
+ * rather than copied.**
+ *
+ * `docs/specs/project-spec.md` argues the two are one machine: a member
+ * suggests, staff commit, work orders get it done, and the project's status is
+ * what the suggestion reports back. Two identical lists would drift the first
+ * time either grew a value. If a project ever needs a state a suggestion cannot
+ * have, that is the moment to split them, and the alias is what makes the split
+ * a one-line change.
+ */
+export const projectStatuses = suggestionStatuses;
+export type ProjectStatus = (typeof projectStatuses)[number];
+
+export const projectStatusLabels = suggestionStatusLabels;
+export const projectStatusOptions = suggestionStatusOptions;
+
+// ---------------------------------------------------------------------------
 // Instructors
 // ---------------------------------------------------------------------------
 

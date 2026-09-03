@@ -6,6 +6,7 @@ import { group } from './group';
 import { directoryEntry } from './directory';
 import { reservation } from './reservation';
 import { recurringSeries, RECURRING_FREQUENCIES } from './recurring';
+import { project } from './project';
 
 /**
  * Where a listing sits between "nobody has seen it" and "it is on the guide".
@@ -95,6 +96,10 @@ export const event = sqliteTable(
 		// Which groups *advertise* the event is `event_group` — a different
 		// question, and one that can have several answers.
 		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
+		// The body of work this occasion belongs to: a festival is one project and
+		// five nights, a produced show is one project and one night, and a band
+		// gig is neither. Many-to-one — the project does not point back.
+		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
 		source: text('source', { enum: eventSources }).notNull().default('cmc'),
 		kind: text('kind', { enum: eventKinds }).notNull().default('show'),
 		location: text('location'),
@@ -124,6 +129,7 @@ export const event = sqliteTable(
 		index('idx_event_band').on(t.groupId),
 		index('idx_event_source').on(t.source, t.status, t.startsAt),
 		index('idx_event_recurring_series').on(t.recurringSeriesId),
+		index('idx_event_project').on(t.projectId),
 		uniqueIndex('uq_event_recurring_instance')
 			.on(t.recurringSeriesId, t.startsAt)
 			.where(sql`recurring_series_id IS NOT NULL AND status != 'cancelled'`),

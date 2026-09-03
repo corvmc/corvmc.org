@@ -70,6 +70,7 @@ export const relations = defineRelations(schema, (t) => ({
 		createdBy: t.one.user({ from: t.event.createdByUserId, to: t.user.id }),
 		/** The owning band, not the bill. Who played is `lineup`. */
 		group: t.one.group({ from: t.event.groupId, to: t.group.id }),
+		project: t.one.project({ from: t.event.projectId, to: t.project.id }),
 		lineup: t.many.eventBand(),
 		media: t.many.mediaAttachment({
 			from: t.event.id,
@@ -159,6 +160,7 @@ export const relations = defineRelations(schema, (t) => ({
 	},
 	acquisition: {
 		lines: t.many.acquisitionLine(),
+		project: t.one.project({ from: t.acquisition.projectId, to: t.project.id }),
 		donor: t.one.user({
 			from: t.acquisition.donorUserId,
 			to: t.user.id,
@@ -267,7 +269,35 @@ export const relations = defineRelations(schema, (t) => ({
 		author: t.one.user({ from: t.suggestion.authorUserId, to: t.user.id }),
 		respondedBy: t.one.user({ from: t.suggestion.responseByUserId, to: t.user.id }),
 		votes: t.many.suggestionVote(),
-		edits: t.many.suggestionEdit()
+		edits: t.many.suggestionEdit(),
+		/** The work that answers it, once staff commit. At most one. */
+		project: t.one.project({ from: t.suggestion.id, to: t.project.suggestionId })
+	},
+	contractorJob: {
+		contractor: t.one.contractor({ from: t.contractorJob.contractorId, to: t.contractor.id }),
+		asset: t.one.inventoryAsset({ from: t.contractorJob.assetId, to: t.inventoryAsset.id }),
+		project: t.one.project({ from: t.contractorJob.projectId, to: t.project.id }),
+		requestedBy: t.one.user({ from: t.contractorJob.requestedByUserId, to: t.user.id })
+	},
+	purchaseOrder: {
+		// No `lines` arm: `purchase_order_line` has no block of its own, and adding
+		// one is unrelated to this change. The service joins lines explicitly.
+		project: t.one.project({ from: t.purchaseOrder.projectId, to: t.project.id }),
+		createdBy: t.one.user({ from: t.purchaseOrder.createdByUserId, to: t.user.id })
+	},
+	project: {
+		/** The owning committee — a `group` with `kind = 'committee'`. */
+		group: t.one.group({ from: t.project.groupId, to: t.group.id }),
+		suggestion: t.one.suggestion({ from: t.project.suggestionId, to: t.suggestion.id }),
+		createdBy: t.one.user({ from: t.project.createdByUserId, to: t.user.id }),
+		// The four ledgers burn is summed over, plus the events. No `stockMovement`
+		// arm: consumption reaches a project through the item it moved, not
+		// directly, and `project-service.ts` joins it explicitly.
+		workOrders: t.many.workOrder(),
+		contractorJobs: t.many.contractorJob(),
+		purchaseOrders: t.many.purchaseOrder(),
+		acquisitions: t.many.acquisition(),
+		events: t.many.event()
 	},
 	suggestionVote: {
 		suggestion: t.one.suggestion({ from: t.suggestionVote.suggestionId, to: t.suggestion.id }),
@@ -330,6 +360,7 @@ export const relations = defineRelations(schema, (t) => ({
 		}),
 		event: t.one.event({ from: t.workOrder.eventId, to: t.event.id }),
 		asset: t.one.inventoryAsset({ from: t.workOrder.assetId, to: t.inventoryAsset.id }),
+		project: t.one.project({ from: t.workOrder.projectId, to: t.project.id }),
 		resolvedBy: t.one.user({
 			from: t.workOrder.resolvedByUserId,
 			to: t.user.id

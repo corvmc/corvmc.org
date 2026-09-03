@@ -27,3 +27,4 @@ export * from './volunteer';
 export * from './instructor';
 export * from './media';
 export * from './contractor';
+export * from './project';

@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
 import { flagStatuses } from './flag';
+import { project } from './project';
 import {
 	acquisitionKinds,
 	assetStatuses,
@@ -356,6 +357,8 @@ export const acquisition = sqliteTable(
 		monetized: integer('monetized', { mode: 'boolean' }).notNull().default(false),
 		acknowledgedAt: integer('acknowledged_at', { mode: 'timestamp' }),
 		appraisalRef: text('appraisal_ref'),
+		/** The body of work this arrived for — a grant bought for one project, gear donated to another. */
+		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
 		recordedByUserId: text('recorded_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
@@ -401,6 +404,7 @@ export const acquisition = sqliteTable(
 		index('idx_acquisition_kind').on(t.kind),
 		index('idx_acquisition_occurred').on(t.occurredAt),
 		index('idx_acquisition_donor').on(t.donorUserId),
+		index('idx_acquisition_project').on(t.projectId),
 		index('idx_acquisition_paid_by').on(t.paidByUserId)
 	]
 );
@@ -465,6 +469,8 @@ export const purchaseOrder = sqliteTable(
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
+		/** What this order was bought for, when it was bought for something. */
+		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
 		notes: text('notes'),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
@@ -475,7 +481,8 @@ export const purchaseOrder = sqliteTable(
 	},
 	(t) => [
 		index('idx_purchase_order_status').on(t.status),
-		index('idx_purchase_order_expected').on(t.expectedAt)
+		index('idx_purchase_order_expected').on(t.expectedAt),
+		index('idx_purchase_order_project').on(t.projectId)
 	]
 );
 
