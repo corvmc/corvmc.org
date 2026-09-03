@@ -174,6 +174,11 @@
 	<details>
 		<summary class="cursor-pointer text-muted">Adjust exactly</summary>
 		<div class="mt-2 flex flex-wrap items-end gap-3">
+			<!-- Whole cents, matching the drag: it snaps to the cent, and the share
+			     this opens at is a percentage of an arbitrary total. A coarser `step`
+			     makes positions the bar itself reaches invalid, and an invalid input
+			     inside a closed `<details>` blocks the surrounding form's submit with
+			     nothing focusable and nothing shown. -->
 			<label class="flex flex-col">
 				<span class="text-subtle">{valueLabel} (dollars)</span>
 				<input
@@ -181,7 +186,7 @@
 					class="input w-28 input-sm"
 					min="0"
 					max={(maxValue / 100).toFixed(2)}
-					step="0.25"
+					step="0.01"
 					value={(clamped / 100).toFixed(2)}
 					oninput={(e) => {
 						const next = Math.round(Number(e.currentTarget.value) * 100);
