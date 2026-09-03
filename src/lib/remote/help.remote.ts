@@ -11,7 +11,7 @@ import {
 	listArticlesByCategory,
 	getArticleBySlug,
 	listAllArticles,
-	resolveUserHelpRole,
+	resolveHelpAudience,
 	createArticle as createArticleSvc,
 	updateArticle as updateArticleSvc,
 	deleteArticle as deleteArticleSvc,
@@ -31,11 +31,11 @@ import {
 // slug; the static article sync carries its own slugs in frontmatter.
 const slugify = generateSlug;
 
-async function requireUserWithRole() {
+async function requireUserWithAudience() {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
-	const role = await resolveUserHelpRole(locals.user.id);
-	return { user: locals.user, role };
+	const audience = await resolveHelpAudience(locals.user.id);
+	return { user: locals.user, audience };
 }
 
 // ---------------------------------------------------------------------------
@@ -43,13 +43,13 @@ async function requireUserWithRole() {
 // ---------------------------------------------------------------------------
 
 export const getMemberCategories = query(z.void(), async () => {
-	const { role } = await requireUserWithRole();
-	const categories = await listNonEmptyCategories(role);
+	const { audience } = await requireUserWithAudience();
+	const categories = await listNonEmptyCategories(audience);
 
 	const categoriesWithArticles = await Promise.all(
 		categories.map(async (cat) => ({
 			...cat,
-			articles: await listArticlesByCategory(cat.id, role)
+			articles: await listArticlesByCategory(cat.id, audience)
 		}))
 	);
 
@@ -57,8 +57,8 @@ export const getMemberCategories = query(z.void(), async () => {
 });
 
 export const getMemberArticle = query(z.string(), async (slug) => {
-	const { role } = await requireUserWithRole();
-	const article = await getArticleBySlug(slug, role);
+	const { audience } = await requireUserWithAudience();
+	const article = await getArticleBySlug(slug, audience);
 	if (!article) throw error(404, 'Article not found');
 	return article;
 });
@@ -94,7 +94,9 @@ export const getStaffArticles = query(z.void(), async () => {
 
 export const getStaffCategories = query(z.void(), async () => {
 	await requireStaff();
-	return listCategories('admin');
+	// The authoring view: staff file new articles into every category, including
+	// the ones only staff can read. Top of the ladder, not a role name.
+	return listCategories('staff');
 });
 
 export const getStaffArticle = query(z.string(), async (id) => {
