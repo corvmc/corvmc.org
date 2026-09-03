@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { jsonArrayField } from '$lib/utils/zod-json';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireFeature } from '$lib/server/feature-flags';
@@ -9,7 +10,6 @@ import { db } from '$lib/server/db';
 import { blockSchema, type Block } from '$lib/server/db/schema/band-page';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { eq } from 'drizzle-orm';
-import { jsonArrayField, jsonObjectField } from '$lib/utils/zod-json';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -101,32 +101,6 @@ export const saveBandPageConfig = form(
 		if (blocks !== undefined) updates.blocks = blocks;
 
 		await db.update(bandSite).set(updates).where(eq(bandSite.groupId, band.id));
-
-		return { success: true };
-	}
-);
-
-export const saveBandEpk = form(
-	z.object({
-		slug: z.string().min(1),
-		// JSON-encoded BandEpk. Decoded in the schema so malformed input is a field
-		// issue on `epk` rather than a whole-page 400.
-		epk: jsonObjectField('Invalid EPK data')
-	}),
-	async (data) => {
-		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
-
-		if (band.tier !== 'premium') {
-			throw error(403, 'Premium subscription required');
-		}
-
-		const epk = data.epk;
-
-		// Always an update — see the note on the block save above.
-		await db
-			.update(bandSite)
-			.set({ epk, updatedAt: new Date() })
-			.where(eq(bandSite.groupId, band.id));
 
 		return { success: true };
 	}
