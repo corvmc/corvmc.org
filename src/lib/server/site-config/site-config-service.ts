@@ -74,11 +74,16 @@ export type SiteConfigKey = keyof typeof DEFAULTS;
 // ---------------------------------------------------------------------------
 
 /**
- * How long a colo may serve a config key from its edge cache. Longer than KV's
- * 60-second default because these change on a staff form submit, not on a
- * request.
+ * How long a colo may serve a config key from its edge cache.
+ *
+ * Longer than KV's 60-second default because these change on a staff form
+ * submit rather than on a request. Note this stacks on top of the isolate memo
+ * below, so a memoized key's worst-case staleness is the sum of the two, not
+ * the larger — which is why the exempt prefix stays on KV's default (60s is
+ * also the floor; KV rejects less).
  */
 const KV_CACHE_TTL_SECONDS = 300;
+const KV_CACHE_TTL_EXEMPT_SECONDS = 60;
 
 /**
  * How long this isolate may serve a config value from memory.
@@ -91,10 +96,13 @@ const KV_CACHE_TTL_SECONDS = 300;
 const MEMO_TTL_MS = 60_000;
 
 /**
- * Feature flags are exempt from the memo, and it is the staleness that decides
- * it rather than the read cost. Nobody watches a room rate take effect, but a
- * staff member who toggles a flag and sees nothing happen for a minute reads
- * that as a bug — so flags pay for a KV read every time and stay instant.
+ * Feature flags are exempt from the memo, and it is staleness that decides it
+ * rather than read cost. Nobody watches a room rate take effect; a staff member
+ * who toggles a flag and sees nothing happen does, and reads it as a bug.
+ *
+ * This does not make a flag instant — KV's own edge cache was always in front
+ * of it. What the exemption buys is that flags keep the ~60s they already had
+ * instead of compounding a second cache on top.
  */
 const MEMO_EXEMPT_PREFIX = 'feature.';
 
@@ -120,7 +128,7 @@ async function readStored(key: string): Promise<ConfigValue | null> {
 	}
 
 	const value = await getJson<ConfigValue>(`${KV_PREFIX}${key}`, {
-		cacheTtl: KV_CACHE_TTL_SECONDS
+		cacheTtl: memoizable ? KV_CACHE_TTL_SECONDS : KV_CACHE_TTL_EXEMPT_SECONDS
 	});
 
 	if (memoizable) memo.set(key, { value, expiresAt: Date.now() + MEMO_TTL_MS });

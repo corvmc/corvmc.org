@@ -13,7 +13,7 @@ const kv = vi.hoisted(() => {
 	/** Peak `getJson` calls in flight at once — what proves the fan-out. */
 	const counters = { inFlight: 0, peak: 0 };
 
-	const getJson = vi.fn(async (key: string) => {
+	const getJson = vi.fn(async (key: string, _opts?: { cacheTtl?: number }) => {
 		counters.inFlight++;
 		counters.peak = Math.max(counters.peak, counters.inFlight);
 		// Yield, so a sequential caller cannot accidentally look concurrent.
@@ -233,13 +233,24 @@ describe('the isolate memo', () => {
 		expect(await getSiteConfig('reservation.hourlyRateCents')).toBe(2000);
 	});
 
-	it('exempts feature flags, which have to take effect immediately', async () => {
+	it('exempts feature flags, so a toggle does not compound two caches', async () => {
 		await getSiteConfig('feature.bandPremium');
 		await getSiteConfig('feature.bandPremium');
 
 		// Nobody watches a room rate take effect. A staff member who toggles a
-		// flag and sees nothing happen reads it as a bug, so flags pay the read.
+		// flag does, so flags pay the read rather than adding this cache on top
+		// of the edge cache that was always in front of them.
 		expect(getJson).toHaveBeenCalledTimes(2);
+	});
+
+	it('gives an exempt key a shorter edge cacheTtl than a memoized one', async () => {
+		await getSiteConfig('reservation.hourlyRateCents');
+		await getSiteConfig('feature.bandPremium');
+
+		const [memoized, exempt] = getJson.mock.calls;
+		expect(memoized[1]).toEqual({ cacheTtl: 300 });
+		// A long edge TTL here would defeat the exemption above entirely.
+		expect(exempt[1]).toEqual({ cacheTtl: 60 });
 	});
 });
 
