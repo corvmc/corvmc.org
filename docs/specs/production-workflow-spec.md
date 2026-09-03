@@ -169,6 +169,10 @@ production
   hospitalityNotes    text
   internalNotes       text
   bandSplitPercent    int                       — default 70; the band cut of gross
+                                                  SUPERSEDED TWICE: by the deal
+                                                  shape on `event_band`, and by
+                                                  the buyer's own allocation —
+                                                  see the note under Settlement
   doorCount           int?                      — settlement snapshot below
   compCount           int?
   ticketRevenueCents  int?
@@ -700,6 +704,19 @@ looks obviously correct, and without this note someone will add it back.
 ---
 
 ## Settlement
+
+> **Note (2026-09-03).** The acts' pool is no longer a percentage anyone applies
+> at settlement. Ticket buyers now name it themselves, one purchase at a time:
+> `ticket-sliding-scale-spec.md` shipped a split bar, and `sum(ticket.actsCents)`
+> over an event's live tickets **is** the pool. 70% survives as the bar's opening
+> position — a house suggestion, not the deal — so `bandSplitPercent` is
+> superseded by evidence as well as by the `event_band` deal shape.
+>
+> What is still unbuilt is the payout: dividing that pool across the bill, and
+> recording what actually changed hands. That row hangs off `event_band` and is
+> shaped like `contractor_job`, because an act is paid the way a contractor is —
+> deliberately, so no touring band needs a Stripe Connect account to get paid for
+> playing a show.
 
 Available once the production is `completed`. The worksheet:
 

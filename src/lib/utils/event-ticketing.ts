@@ -6,11 +6,12 @@ import { TICKET_CONTRIBUTION_MAX_CENTS } from '$lib/config';
  *
  * The three ticketing fields on an event are independent:
  *   - `ticketingEnabled` — we sell them through Stripe. Only this mode has a
- *     capacity, a sold count, check-in codes, and the sustaining-member discount.
+ *     capacity, a sold count, check-in codes, and a sliding scale.
  *   - `externalTicketUrl` — somebody else sells them (the venue, Eventbrite…).
- *   - `ticketPrice` — what an attendee pays, in cents. It is a *display* price
- *     and applies to all three modes: platform checkout, an off-site seller, or
- *     cash at the door. A null price means free.
+ *   - `ticketPrice` — the *suggested* price, in cents. A display price in all
+ *     three modes: platform checkout, an off-site seller, or cash at the door.
+ *     Where we do the selling it is where the sliding scale opens, and
+ *     `ticketPriceFloorCents` is the bottom of it. A null price means free.
  *
  * Reading a missing price as "free" is only correct when nobody is selling
  * tickets, which is why every price label goes through here.
@@ -38,29 +39,29 @@ export function isFreeEvent(evt: EventTicketing): boolean {
 export interface PriceDisplay {
 	/** What to show as the price. */
 	label: string;
-	/** Undiscounted price to strike through, or null when there's no discount. */
-	wasLabel: string | null;
+	/** True where the label is a suggestion a buyer may move, not a fixed price. */
+	suggested: boolean;
 }
 
 /**
- * The price to show for an event. Sustaining members get half off, but only on
- * tickets we sell — we don't control an outside seller's pricing.
+ * The price to show for an event.
+ *
+ * There is no `wasLabel` any more, and there is no strikethrough: a struck price
+ * is a claim about a discount, and this number is a suggestion. The
+ * sustaining-member half-price rate is gone with it — half off a
+ * pay-what-you-can ticket was not a coherent benefit, because the scale already
+ * lets a member pay less.
  */
-export function priceDisplay(
-	evt: EventTicketing,
-	opts: { isSustainingMember?: boolean } = {}
-): PriceDisplay {
-	const discounted = opts.isSustainingMember ? sustainingMemberPrice(evt) : null;
-	if (discounted !== null) {
-		return { label: formatCents(discounted), wasLabel: formatCents(evt.ticketPrice!) };
-	}
-
+export function priceDisplay(evt: EventTicketing): PriceDisplay {
 	if (evt.ticketPrice && evt.ticketPrice > 0) {
-		return { label: formatCents(evt.ticketPrice), wasLabel: null };
+		return { label: formatCents(evt.ticketPrice), suggested: ticketingMode(evt) === 'platform' };
 	}
 
 	// No price. Off-site sellers set their own, so we can't claim it's free.
-	return { label: ticketingMode(evt) === 'external' ? 'See tickets' : 'Free', wasLabel: null };
+	return {
+		label: ticketingMode(evt) === 'external' ? 'See tickets' : 'Free',
+		suggested: false
+	};
 }
 
 /**
@@ -92,11 +93,4 @@ export function contributionToCents(input: string | null | undefined): number | 
 	const cents = Math.round(dollars * 100);
 	if (cents > TICKET_CONTRIBUTION_MAX_CENTS) return undefined;
 	return cents;
-}
-
-/** The half-price sustaining-member rate, or null where the discount doesn't apply. */
-export function sustainingMemberPrice(evt: EventTicketing): number | null {
-	if (ticketingMode(evt) !== 'platform') return null;
-	if (!evt.ticketPrice || evt.ticketPrice <= 0) return null;
-	return Math.round(evt.ticketPrice / 2);
 }

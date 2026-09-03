@@ -214,6 +214,17 @@ export const TICKET_COLLECTIVE_SHARE_BPS = 3000;
  */
 export const TICKET_MIN_CHARGE_CENTS = 200;
 
+/**
+ * The most free tickets one email may hold for one show, across every purchase.
+ *
+ * A paid ticket has a card behind it, which is friction enough. A free one has
+ * none, and the 1–10 cap on the purchase form is per submission rather than per
+ * person — so without this, ten requests mint a sold-out show that nobody can
+ * get into. Set at a party rather than a person: someone bringing five friends
+ * is the case this exists to allow, not the case it exists to stop.
+ */
+export const FREE_TICKETS_PER_EMAIL = 6;
+
 // ---------------------------------------------------------------------------
 // Equipment pricing
 // ---------------------------------------------------------------------------

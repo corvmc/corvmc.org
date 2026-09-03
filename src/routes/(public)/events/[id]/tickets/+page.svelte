@@ -29,12 +29,13 @@
 	let attendeeEmail = $state('');
 
 	const evt = $derived(data.event);
+	// A null price is a free event outright — no scale, no split, and it goes
+	// through `claimFreeTicket`. A priced event with a $0 floor is a different
+	// fact: it has a scale that happens to reach zero, and it goes through
+	// `purchaseTickets` like any other. Two doors to free, deliberately.
 	const isFreeEvent = $derived(!evt.ticketPrice || evt.ticketPrice === 0);
 	const unitPrice = $derived(evt.ticketPrice ?? 0);
-	const discountedPrice = $derived(data.isSustainingMember ? Math.round(unitPrice / 2) : unitPrice);
-	const subtotal = $derived(discountedPrice * quantity);
-	const memberSubtotal = $derived(Math.round(unitPrice / 2) * quantity);
-	const memberSavings = $derived(subtotal - memberSubtotal);
+	const scaleReachesFree = $derived(!isFreeEvent && evt.ticketPriceFloorCents === 0);
 	const soldOut = $derived(data.remaining === 0);
 	const maxQuantity = $derived(data.remaining !== null ? Math.min(data.remaining, 10) : 10);
 
@@ -63,24 +64,24 @@
 				· {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 			</p>
 			{#if !isFreeEvent}
+				<!-- A suggestion, so it is never struck through and never called a
+				     discount off anything. -->
 				<div class="mt-2 flex items-baseline gap-2">
-					{#if data.isSustainingMember}
-						<span class="text-lg font-bold">{formatCents(discountedPrice)}</span>
-						<span class="text-muted line-through">{formatCents(unitPrice)}</span>
-						<Badge variant="success">Member 50% off</Badge>
-					{:else}
-						<span class="text-lg font-bold">{formatCents(unitPrice)}</span>
-					{/if}
-					<span class="text-muted">per ticket</span>
+					<span class="text-lg font-bold">{formatCents(unitPrice)}</span>
+					<span class="text-muted">suggested, per ticket</span>
 				</div>
 			{:else}
 				<div class="mt-2">
 					<Badge variant="info">Free event</Badge>
 				</div>
 			{/if}
-			{#if !isFreeEvent}
-				<!-- The purchase form can't sell a $0 ticket, so the policy has to be
-				     said out loud rather than implied by the price field. -->
+			{#if scaleReachesFree}
+				<!-- The scale IS the mechanism now, so the policy points at the form
+				     rather than at the door. -->
+				<p class="mt-3 text-muted text-sm">
+					No one is turned away for lack of funds. Pay what you can — including nothing.
+				</p>
+			{:else if !isFreeEvent}
 				<p class="mt-3 text-muted text-sm">
 					No one is turned away for lack of funds. If the price is a barrier,
 					<a href={resolve('/contact')} class="link">get in touch</a> or just come to the door.
@@ -132,41 +133,6 @@
 			</Card>
 		</Form>
 	{:else}
-		{#if !data.isSustainingMember}
-			<div class="card border border-primary/30 bg-primary/5">
-				<CardBody padding="sm" class="gap-3">
-					<div class="flex items-center gap-2">
-						<IconHeartHandshake size={20} class="text-primary" />
-						<h3 class="font-semibold">Save 50% as a sustaining member</h3>
-					</div>
-					<p class="text-sm opacity-80">
-						Sustaining members pay
-						<span class="font-semibold">{formatCents(memberSubtotal)}</span> for this order — you'd
-						save {formatCents(memberSavings)}. Plus free practice hours, gear discounts, and 50% off
-						every show.
-					</p>
-					{#if data.isAuthenticated}
-						<Button
-							href={resolve('/member/membership')}
-							variant="primary"
-							size="sm"
-							class="self-start"
-						>
-							Become a Sustaining Member
-						</Button>
-					{:else}
-						<Button
-							href="{resolve('/login')}?redirect={encodeURIComponent(page.url.pathname)}"
-							variant="primary"
-							size="sm"
-							class="self-start"
-						>
-							Sign in &amp; save 50%
-						</Button>
-					{/if}
-				</CardBody>
-			</div>
-		{/if}
 		<Form
 			remote={purchaseTickets}
 			onsuccess={handleSuccess}
@@ -189,16 +155,16 @@
 						<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
 					{/if}
 
+					<!-- The amount, the split bar and the submit button all come from
+					     here: only this component knows what the card is charged, and
+					     the button's label is that number. -->
 					<TicketPurchaseFields
-						fullPrice={unitPrice}
+						suggestedUnitCents={unitPrice}
+						floorCents={evt.ticketPriceFloorCents}
 						{quantity}
-						isSustainingMember={data.isSustainingMember}
-					/>
-
-					<SubmitButton
-						label="Purchase {quantity === 1 ? 'Ticket' : `${quantity} Tickets`}"
-						variant="primary"
-						class="w-full"
+						acts={data.acts}
+						collectiveShareBps={data.collectiveShareBps}
+						fields={purchaseFields}
 					/>
 				</CardBody>
 			</Card>
