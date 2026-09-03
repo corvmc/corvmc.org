@@ -168,13 +168,20 @@ Stripe at all.
 
 Each is its own PR.
 
-1. **The kit** — `range.ts`, `bucket.ts`, `csv.ts`; refactor `volunteer-report-service.ts` onto it.
+1. ✅ **The kit** — `range.ts`, `bucket.ts`, `csv.ts`; `volunteer-report-service.ts` refactored onto
+   it. Shipped with the valued volunteer hour, which needed the range helpers anyway.
+   `range.spec.ts` pins both club-time boundaries as instants: a naive `new Date('2026-07-01')` is
+   the previous evening here, and an upper bound spelled as a date drops the final day's work.
 2. **`DateRangeFilter.svelte`** — bits-ui, wired into the volunteer report in place of its
-   hand-rolled inputs.
-3. **First CSV** — a download on `/staff/volunteer/report`, closing the volunteering spec's
-   deferred item and setting the pattern it asked to be set deliberately.
+   hand-rolled inputs. Still open; the report keeps its own date inputs for now.
+3. ✅ **First CSV** — `/staff/volunteer/report/export`, closing the volunteering spec's deferred
+   item. A `+server.ts` rather than a remote function, because a download needs
+   `Content-Disposition` — so `requireStaff()` is the first statement rather than the
+   remote-function boundary doing it. Two decisions worth carrying to the next export: an unpriced
+   figure exports **blank, not zero**, and there is **no footer total** where two columns overlap.
 4. **The annual rollup** — `annual-report-service.ts` and `/staff/reports`, including the revenue
-   decision above. Charts decided here or not at all.
+   decision above. Charts decided here or not at all. `getContributedValue` is the query its
+   volunteer-value line will call; no work needed there.
 
 ## Deferred
 

@@ -279,7 +279,12 @@ export const completeJobForm = form(
 		// Unchecked boxes are not submitted at all, so a required boolean fails
 		// every time it is left off. Default false and invert the meaning: the
 		// staffer ticks the exception, which is the repair that did not take.
-		leaveOutOfService: z.boolean().optional().default(false)
+		leaveOutOfService: z.boolean().optional().default(false),
+		// Same shape, same reason. A donated job is a contributed service: the
+		// value is what it would have cost, and it never reaches cash spend.
+		isDonated: z.boolean().optional().default(false),
+		fairValueCents: optionalMoney,
+		fairValueBasis: optionalText
 	}),
 	async (raw) => {
 		await requireStaff();
@@ -289,13 +294,19 @@ export const completeJobForm = form(
 			costCents?: number;
 			invoiceRef?: string;
 			leaveOutOfService: boolean;
+			isDonated: boolean;
+			fairValueCents?: number;
+			fairValueBasis?: string;
 		};
 		try {
 			const job = await completeJob(data.id, {
 				completedAt: calendarDate(data.completedAt),
 				costCents: data.costCents ?? null,
 				invoiceRef: data.invoiceRef ?? null,
-				returnToService: !data.leaveOutOfService
+				returnToService: !data.leaveOutOfService,
+				isDonated: data.isDonated,
+				fairValueCents: data.fairValueCents ?? null,
+				fairValueBasis: data.fairValueBasis ?? null
 			});
 			void getJobDetail(data.id).refresh();
 			void getJobsPage().refresh();
