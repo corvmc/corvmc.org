@@ -29,6 +29,7 @@ import {
 } from '$lib/server/volunteer/hour-log-service';
 import {
 	getVolunteerTotals,
+	getContributedValue,
 	getHoursByMember,
 	getHoursByRole,
 	getHoursByMonth
@@ -502,13 +503,14 @@ const reportRange = z.object({
 export const getVolunteerReport = query(reportRange, async (range) => {
 	await requireStaff();
 
-	const [totals, byRole, byMonth] = await Promise.all([
+	const [totals, contributed, byRole, byMonth] = await Promise.all([
 		getVolunteerTotals(range),
+		getContributedValue(range),
 		getHoursByRole(range),
 		getHoursByMonth(range)
 	]);
 
-	return { totals, byRole, byMonth };
+	return { totals, contributed, byRole, byMonth };
 });
 
 export const getVolunteerReportByMember = query(
@@ -949,8 +951,23 @@ const roleFormSchema = z.object({
 	isActive: z.string().optional(),
 	// Blank means "no default", not zero. Range-checked in the service.
 	defaultDurationMinutes: optionalNumber,
-	defaultCapacity: optionalNumber
+	defaultCapacity: optionalNumber,
+	// `.optional().default(false)`, never a bare `z.boolean()`: an unchecked box
+	// submits nothing at all, and a *required* boolean fails validation outright
+	// rather than arriving as false.
+	isSpecializedSkill: z.boolean().optional().default(false),
+	// Dollars in the form, cents in the column. Blank is "nobody has priced it",
+	// which is a different claim from zero.
+	marketRate: z.string().optional()
 });
+
+/** Dollars as typed to whole cents, or null for blank. */
+function rateToCents(input: string | undefined): number | null {
+	const trimmed = input?.trim();
+	if (!trimmed) return null;
+	const dollars = Number(trimmed);
+	return Number.isFinite(dollars) ? Math.round(dollars * 100) : null;
+}
 
 export const createVolunteerRole = form(roleFormSchema, async (data) => {
 	await requireStaff();
@@ -963,7 +980,9 @@ export const createVolunteerRole = form(roleFormSchema, async (data) => {
 			displayOrder: optionalCount(data.displayOrder) ?? 0,
 			isActive: data.isActive !== 'false',
 			defaultDurationMinutes: optionalCount(data.defaultDurationMinutes),
-			defaultCapacity: optionalCount(data.defaultCapacity)
+			defaultCapacity: optionalCount(data.defaultCapacity),
+			isSpecializedSkill: data.isSpecializedSkill,
+			marketRateCents: rateToCents(data.marketRate)
 		});
 	} catch (err) {
 		mapDomainError(err);
@@ -991,7 +1010,9 @@ export const updateVolunteerRole = form(
 				displayOrder: optionalCount(data.displayOrder) ?? undefined,
 				isActive: data.isActive !== 'false',
 				defaultDurationMinutes: optionalCount(data.defaultDurationMinutes),
-				defaultCapacity: optionalCount(data.defaultCapacity)
+				defaultCapacity: optionalCount(data.defaultCapacity),
+				isSpecializedSkill: data.isSpecializedSkill,
+				marketRateCents: rateToCents(data.marketRate)
 			});
 		} catch (err) {
 			mapDomainError(err);

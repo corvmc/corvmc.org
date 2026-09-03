@@ -94,6 +94,32 @@
 						description="Tick this if the repair did not take."
 					/>
 				{/if}
+
+				<!--
+					Donated work is a contributed service, not a discount. The value is
+					what it would have cost, kept in its own column so no
+					`sum(cost_cents)` picks it up as money that left the account — the
+					same split `acquisition` makes for donated goods.
+				-->
+				<Field
+					field={completeFields.isDonated}
+					type="checkbox"
+					label="Donated"
+					value={job.isDonated}
+					description="They did the work and did not invoice for it. Leave Cost blank."
+				/>
+				<MoneyField
+					field={completeFields.fairValueCents}
+					label="Fair value"
+					value={job.fairValueCents}
+				/>
+				<Field
+					field={completeFields.fairValueBasis}
+					type="text"
+					label="Basis for that value"
+					value={job.fairValueBasis ?? ''}
+					description="How the figure was arrived at — their rate card, a quote from another shop. Only used when Donated is ticked."
+				/>
 			{/snippet}
 		</Action>
 
@@ -195,7 +221,23 @@
 			</div>
 			<div>
 				<dt class="text-subtle text-xs">Cost</dt>
-				<dd>{job.costCents != null ? formatCents(job.costCents) : '—'}</dd>
+				<dd>
+					{#if job.isDonated}
+						<!--
+							Not "$0". Nothing was paid and something was given, and a
+							zero would report the second as the first — the job would
+							vanish from a grant report while still reading as free.
+						-->
+						Donated{#if job.fairValueCents != null}
+							· worth {formatCents(job.fairValueCents)}{/if}
+					{:else}
+						{job.costCents != null ? formatCents(job.costCents) : '—'}
+					{/if}
+				</dd>
+				{#if job.isDonated && job.fairValueBasis}
+					<dt class="text-subtle text-xs">Basis</dt>
+					<dd>{job.fairValueBasis}</dd>
+				{/if}
 			</div>
 			<div>
 				<dt class="text-subtle text-xs">Invoice</dt>
