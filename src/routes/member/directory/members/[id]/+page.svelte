@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { env } from '$env/dynamic/public';
+	import { canonicalAddress } from '$lib/utils/canonical-address';
 	import { getDirectoryMember, getMemberPastShows } from '$lib/remote/directory.remote';
 	import { ReportContentAction } from '$lib/components/actions';
 	import MessageMemberAction from './MessageMemberAction.svelte';
@@ -38,6 +40,16 @@
 
 	let links = $derived((member?.links as ProfileLink[] | null) ?? []);
 	let contact = $derived((member?.directoryContact ?? {}) as NonNullable<DirectoryContact>);
+
+	// `/m/{memberNumber}` — the member's address, rather than this members-only
+	// path. Null for an account the backfill has not reached, and then the share
+	// button falls back to the current URL.
+	const shareUrl = $derived(
+		canonicalAddress(
+			{ kind: 'member', memberNumber: member?.memberNumber },
+			{ siteUrl: env.PUBLIC_SITE_URL }
+		)
+	);
 
 	let subtitle = $derived(member?.tagline || member?.instruments?.join(' · ') || null);
 
@@ -102,7 +114,14 @@
 			</div>
 		</div>
 
-		<ProfileHeader avatarShape="round" name={member.name} {subtitle} image={member.image} {pills} />
+		<ProfileHeader
+			avatarShape="round"
+			name={member.name}
+			{subtitle}
+			image={member.image}
+			{pills}
+			{shareUrl}
+		/>
 
 		<QuickFacts {facts} />
 

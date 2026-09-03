@@ -119,6 +119,11 @@ export async function seedAdminUser(): Promise<SeedUser> {
 			name: 'Admin',
 			email: 'admin@corvallismusic.org',
 			emailVerified: true,
+			// #0001. The account every local session signs in as, so it is also the
+			// account that has to show a working `/m/{n}` address on /member/profile
+			// — a dev whose own profile has no address card would think the feature
+			// was broken. Nothing else claims a number this low.
+			memberNumber: 1,
 			createdAt: now,
 			updatedAt: now
 		})

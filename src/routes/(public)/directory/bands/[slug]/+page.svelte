@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { env } from '$env/dynamic/public';
+	import { canonicalAddress } from '$lib/utils/canonical-address';
 	import {
 		getPublicBandProfile,
 		getBandShows,
@@ -37,6 +39,12 @@
 
 	const band = $derived(data.band);
 	const contact = $derived(band.directoryContact ?? {});
+
+	// The band's own address, not the URL of the page showing it. Every band has
+	// `{slug}.corvmc.org` free, and that is what the share button should hand out.
+	const shareUrl = $derived(
+		canonicalAddress({ kind: 'group', slug: band.slug }, { siteUrl: env.PUBLIC_SITE_URL })
+	);
 
 	let subtitle = $derived(band.tagline || band.genres.join(' · ') || null);
 
@@ -92,6 +100,7 @@
 		primaryAction={contact.email
 			? { label: 'Email to book', href: `mailto:${contact.email}` }
 			: undefined}
+		{shareUrl}
 	/>
 
 	<QuickFacts {facts} />

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { env } from '$env/dynamic/public';
+	import { canonicalAddress } from '$lib/utils/canonical-address';
 	import { getDirectoryBand, getBandPastShows } from '$lib/remote/directory.remote';
 	import { ReportContentAction } from '$lib/components/actions';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -31,6 +33,12 @@
 	const shows = $derived(data.shows);
 	const canReport = $derived(data.viewer.canReport);
 	const contact = $derived(band.directoryContact ?? {});
+
+	// The band's own address, not this authenticated path — see the public
+	// profile, which shares the same one.
+	const shareUrl = $derived(
+		canonicalAddress({ kind: 'group', slug: band.slug }, { siteUrl: env.PUBLIC_SITE_URL })
+	);
 
 	let subtitle = $derived(band.tagline || band.genres.join(' · ') || null);
 
@@ -78,7 +86,14 @@
 		{/if}
 	</div>
 
-	<ProfileHeader avatarShape="square" name={band.name} {subtitle} image={band.avatarUrl} {pills} />
+	<ProfileHeader
+		avatarShape="square"
+		name={band.name}
+		{subtitle}
+		image={band.avatarUrl}
+		{pills}
+		{shareUrl}
+	/>
 
 	<QuickFacts {facts} />
 

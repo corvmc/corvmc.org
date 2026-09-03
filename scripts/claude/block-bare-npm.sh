@@ -5,50 +5,16 @@
 # `npx prettier` reports formatting results that are simply wrong — and an `npm
 # install` writes a package-lock.json that nothing here consumes.
 #
-# Two traps this has to avoid, both found by the hook firing on itself:
-#   1. "pnpm" ends in "npm", so match the leading token of a command segment,
-#      never a bare substring.
-#   2. A heredoc body is part of the command string. A commit message or a
-#      generated file whose text happens to start a line with "npm run ..." is
-#      documentation, not an invocation — strip heredoc bodies before scanning.
+# The two traps this used to carry inline — "pnpm" ends in "npm", and a heredoc
+# body is documentation rather than an invocation — belong to every guard that
+# scans a command, so they moved to `lib/command-segments.mjs`, which prints one
+# executable segment per line. Matching the start of a segment is what keeps
+# both of them handled.
 set -uo pipefail
 
-payload=$(cat)
-
-offender=$(printf '%s' "$payload" | node -e '
-	let raw = "";
-	process.stdin.on("data", (chunk) => (raw += chunk));
-	process.stdin.on("end", () => {
-		let command = "";
-		try {
-			command = JSON.parse(raw).tool_input?.command ?? "";
-		} catch {
-			process.exit(0);
-		}
-
-		// Drop heredoc bodies: everything between the opener and its terminator
-		// is data the shell never executes.
-		const kept = [];
-		let terminator = null;
-		for (const line of command.split("\n")) {
-			if (terminator !== null) {
-				if (line.trim() === terminator) terminator = null;
-				continue;
-			}
-			kept.push(line);
-			const opener = line.match(/<<-?\s*(["\x27]?)([A-Za-z_][A-Za-z0-9_]*)\1/);
-			if (opener) terminator = opener[2];
-		}
-
-		const hit = kept
-			.join("\n")
-			.split(/[;&|()\n]+/)
-			.map((segment) => segment.trim())
-			.find((segment) => /^(npm|npx)(\s|$)/.test(segment));
-
-		if (hit) process.stdout.write(hit.split(/\s+/)[0]);
-	});
-' 2>/dev/null)
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+offender=$(node "$here/lib/command-segments.mjs" 2>/dev/null |
+	grep -oE '^(npm|npx)([[:space:]]|$)' | head -1 | tr -d '[:space:]')
 
 [ -n "$offender" ] || exit 0
 
