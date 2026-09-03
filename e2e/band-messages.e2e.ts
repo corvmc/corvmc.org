@@ -61,6 +61,20 @@ test.describe.serial('band booking enquiries', () => {
 		await page.locator('input[name="name"]').fill(ENQUIRER);
 		await page.locator('input[name="email"]').fill(ENQUIRER_EMAIL);
 		await page.locator('textarea[name="message"]').fill(MESSAGE);
+
+		// Wait for Cloudflare's widget to write its token before submitting. The
+		// input does not exist until the challenge script has loaded and rendered
+		// — it is created by `window.turnstile.render`, not by the markup — so a
+		// click before then submits without it. That is a real thing a user can do
+		// and the form now says so, but it is not what this test is about.
+		//
+		// The field name is `TURNSTILE_RESPONSE_FIELD` from `src/lib/turnstile.ts`,
+		// spelled out rather than imported: that module reads `$env/dynamic/public`,
+		// which does not resolve outside the SvelteKit build.
+		await expect(page.locator('input[name="turnstileToken"]')).not.toHaveValue('', {
+			timeout: 30000
+		});
+
 		await page.getByRole('button', { name: 'Send' }).click();
 
 		await expect(page.getByText('Sent.')).toBeVisible({ timeout: 15000 });
