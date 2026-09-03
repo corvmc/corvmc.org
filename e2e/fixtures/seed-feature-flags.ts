@@ -11,10 +11,14 @@
 import { withPlatformEnv } from './platform-db';
 
 /**
- * `bandPremium` gates /band/[slug]/subscription, the page editor and
- * /band-site/**. `directMessages` gates every member↔member endpoint and the
- * recipient picker — without it `requireFeature` rejects before any of the
- * messaging lifecycle can be exercised.
+ * `directMessages` gates every member↔member endpoint and the recipient picker —
+ * without it `requireFeature` rejects before any of the messaging lifecycle can
+ * be exercised.
+ *
+ * `bandPremium` is gone from this list because it launched: the subscription
+ * page, the page editor and /band-site/** answer on tier alone now. Those specs
+ * passing with nothing seeded for them is the proof the guard was the only thing
+ * between the route and the user.
  *
  * The groups module needs nothing here any more: `groups`, `groupEvents` and
  * `announcements` were retired with the flag system, so the club page, the
@@ -25,7 +29,7 @@ import { withPlatformEnv } from './platform-db';
  * Inventory is deliberately absent: its flag was cut in #286, so the member
  * surface and the scan-resolution pages need no enabling here.
  */
-export const ENABLED_FLAGS = ['bandPremium', 'directMessages'] as const;
+export const ENABLED_FLAGS = ['directMessages'] as const;
 
 export async function seedFeatureFlags(): Promise<void> {
 	await withPlatformEnv(async ({ env }) => {

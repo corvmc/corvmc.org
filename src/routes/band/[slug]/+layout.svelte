@@ -50,8 +50,7 @@
 		bandId: layout.band.id,
 		tier: layout.band.tier,
 		userRole: layout.userRole,
-		isStaff: layout.isStaff,
-		features: layout.features
+		isStaff: layout.isStaff
 	});
 
 	const navItems = $derived(bandNavItems(navInput));

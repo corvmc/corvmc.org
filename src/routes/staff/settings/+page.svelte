@@ -114,12 +114,11 @@
 	let syncResult = $state<SubscriptionSyncSummary | null>(null);
 	let statsResult = $state<CommunityStats | null>(null);
 
-	const featureMeta: Record<string, { label: string; description: string }> = {
-		bandPremium: {
-			label: 'Band Premium',
-			description: 'Premium tier with page editor, EPK, and public band sites'
-		}
-	};
+	// Band Premium was the last flag with a toggle, and it launched — the guards
+	// are gone rather than switched on. `directMessages` is still a flag but has
+	// never had a row here, so there is nothing left for this tab to show until
+	// the flag machinery itself comes out.
+	const featureMeta: Record<string, { label: string; description: string }> = {};
 
 	const channelMeta: Record<
 		string,
@@ -863,6 +862,17 @@
 				are hidden from member navigation and return 404 if accessed directly. The staff panel
 				always shows every feature, so you can set one up here before switching it on for everyone.
 			</p>
+
+			{#if Object.keys(featureMeta).length === 0}
+				<Card>
+					<CardBody>
+						<p class="text-muted">
+							Nothing to switch right now. Band Premium was the last feature behind a toggle and it
+							has launched for everyone.
+						</p>
+					</CardBody>
+				</Card>
+			{/if}
 
 			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
 				{@const enabled = featureFlags[flag as keyof typeof featureFlags]}

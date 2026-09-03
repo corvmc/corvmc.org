@@ -277,10 +277,9 @@ administering it if it is switched back off. Member and public remote functions 
 `requireFeature()`, which throws 404 when disabled; staff queries and forms are guarded by
 `requireStaff()` alone.
 
-| Flag             | Feature                                                  | What it gates                                                                                                                                                     |
-| ---------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bandPremium`    | Premium tier, page editor, band sites, the video section | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**`. **Not** the press kit, which is free for every act and must keep working with this off. |
-| `directMessages` | Member↔member messaging                                  | The DM half of `/member/messages` — member↔staff portal chat in the same UI is not gated                                                                          |
+| Flag             | Feature                 | What it gates                                                                            |
+| ---------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `directMessages` | Member↔member messaging | The DM half of `/member/messages` — member↔staff portal chat in the same UI is not gated |
 
 ### Staff administration of each flagged feature
 

@@ -390,8 +390,7 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 otherwise the default. **Feature flags** are just `feature.*` config keys, wrapped by
 `src/lib/server/feature-flags.ts` (`isFeatureEnabled`, `getAllFeatureFlags`,
 `requireFeature` — the latter 404s so a disabled feature is indistinguishable from a
-missing page). Current flags: `bandPremium` and `directMessages` — and the whole
-mechanism is being
+missing page). Current flags: `directMessages` alone — and the whole mechanism is being
 retired in favour of feature branches, see
 [the ledger](../plans/feature-flag-retirement.md).
 

@@ -148,7 +148,7 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	// Guarded all along, but unlisted here until the completeness check below
 	// went looking — so the form that flips any feature flag had no test
 	// pinning that it rejects a non-staff caller.
-	{ name: 'updateFeatureFlag', args: [{ flag: 'bandPremium', enabled: true }] },
+	{ name: 'updateFeatureFlag', args: [{ flag: 'directMessages', enabled: true }] },
 	{
 		name: 'updateVolunteerValueSettings',
 		args: [{ hourValueCents: 3766, hourValueSource: 'Independent Sector, Oregon, 2025' }]

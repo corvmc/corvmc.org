@@ -33,7 +33,6 @@ export interface BandNavInput {
 	tier: string;
 	userRole: string;
 	isStaff: boolean;
-	features: { bandPremium?: boolean; announcements?: boolean };
 }
 
 export interface BandNavItem extends NavNode<BandNavKey> {
@@ -50,7 +49,7 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	const slug = input.slug;
 	const isOwner = input.userRole === 'owner';
 	const isOwnerOrAdmin = isOwner || input.userRole === 'admin';
-	const premium = !!input.features.bandPremium && input.tier === 'premium';
+	const premium = input.tier === 'premium';
 
 	const items: BandNavItem[] = [
 		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }) },
@@ -110,7 +109,7 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	if (isOwnerOrAdmin) {
 		// Billing is genuinely owner-only — `upgradeToPremium` and friends are
 		// `requireBandOwner` — so unlike Settings this one stays keyed on owner.
-		if (input.features.bandPremium && isOwner) {
+		if (isOwner) {
 			items.push({
 				key: 'subscription',
 				label: 'Subscription',

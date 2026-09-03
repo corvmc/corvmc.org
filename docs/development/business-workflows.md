@@ -282,8 +282,8 @@ premium subscription that unlocks a public band microsite.
   `band-checkout-listener.ts`; ongoing state syncs from
   `customer.subscription.updated/deleted` webhooks via `syncFromWebhook()` (dispatched by
   `metadata.subscription_type === 'band_premium'`). The public microsite lives under
-  `src/routes/band-site/[slug]/` (feature flag `bandPremium`), with member-editable page
-  config in `bandPageConfig` — custom CSS passes through `css-sanitizer.ts`.
+  `src/routes/band-site/[slug]/`, gated on the band's tier alone since the launch, with
+  member-editable page config in `bandPageConfig` — custom CSS passes through `css-sanitizer.ts`.
 - **Staff moderation:** `staff/bands` pages → the staff forms in `bands.remote.ts`
   (`deactivateBand`, `reactivateBand`, `updateStaffBand`, ...), all `requireStaff()`-guarded.
 
@@ -297,9 +297,9 @@ premium subscription that unlocks a public band microsite.
 - **Invite email never became a membership** → the email on the invite must match the
   login email exactly; check `groupInvite` rows and whether `resolvePendingInvites`
   errored (it's fire-and-forget in hooks with `captureException` — look in Sentry).
-- **Premium page not appearing** → feature flag `bandPremium` off, or subscription state
-  didn't sync — check the `customer.subscription.*` webhook deliveries and
-  `syncFromWebhook`.
+- **Premium page not appearing** → the band's `band_site.tier` is not `premium`, so
+  subscription state didn't sync — check the `customer.subscription.*` webhook deliveries
+  and `syncFromWebhook`.
 
 ---
 

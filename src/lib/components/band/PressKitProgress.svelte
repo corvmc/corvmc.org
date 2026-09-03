@@ -74,9 +74,8 @@
 				{/each}
 			</ul>
 
-			<!-- Shown only when there is something to sell. With `bandPremium` off
-			     these are absent entirely rather than locked, because a teaser for a
-			     product nobody can buy is worse than a ladder that simply ends. -->
+			<!-- The rungs a band site adds. Absent rather than locked when there are
+			     none, because a ladder that simply ends reads better than a teaser. -->
 			{#if premiumSections.length > 0}
 				<div class="mt-3 border-t pt-3">
 					<p class="mb-1 text-muted text-xs">With a band site</p>
