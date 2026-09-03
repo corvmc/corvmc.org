@@ -36,7 +36,7 @@ auto-creates any missing).
 | `suggestions`       | Suggestions          | bulb            | member  | the idea board, voting, statuses                     |
 | `staff-guide`       | Staff Guide          | settings        | staff   | all staff operations                                 |
 
-**Coverage:** ~8 public + ~34 member + ~19 band + ~20 staff ≈ **81 articles**.
+**Coverage:** ~8 public + ~35 member + ~19 band + ~20 staff ≈ **82 articles**.
 
 ---
 
@@ -55,6 +55,7 @@ auto-creates any missing).
 
 ### getting-started
 
+- [x] `[H]` Welcome to CorvMC — an overview of membership and what the panel offers
 - [x] `[P]` Member dashboard tour (`/member` — quick links, this week, credits, invites)
 - [x] `[H]` Set up your account & contact info (`/member/account`)
 - [x] `[H]` Change your password

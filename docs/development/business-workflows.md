@@ -635,9 +635,9 @@ unsubscribe link.
 - **Audiences:** `audience-service.ts` + `subscriber-service.ts`;
   `getRecipientsForCampaign()` resolves and dedupes recipients at send time.
 - **The send:** cron `send-campaigns` (`src/routes/api/cron/send-campaigns/+server.ts`) →
-  `processDueCampaigns()` → `executeSend(campaignId)` — renders per-recipient HTML with the
-  layout compiled from MJML at build time (`scripts/compile-email-layouts.ts` →
-  `src/lib/server/generated/`) and sends via the Postmark client
+  `processDueCampaigns()` → `executeSend(campaignId)` — renders per-recipient HTML into the
+  campaign layout, a hand-maintained TS constant in `marketing/campaign-layout.ts` kept
+  identical to the Postmark-hosted transactional layout, and sends via the Postmark client
   (`notification/email/postmark-client.ts`, broadcast stream).
 - **Unsubscribe:** `/unsubscribe` route under `(public)`, links signed with
   `MARKETING_UNSUBSCRIBE_SECRET` (see `marketing/unsubscribe` service code).
@@ -647,8 +647,8 @@ unsubscribe link.
 - **Scheduled campaign never sent** → the cron isn't running.
   `processDueCampaigns()` picks up anything with `scheduledFor <= now` and
   `sentAt IS NULL`, so a late cron still sends (late).
-- **Broken layout** → the MJML compile happens at build; check the build log and the
-  generated file, not the runtime.
+- **Broken layout** → `marketing/campaign-layout.ts` is a plain source file, not generated;
+  the bug is in that file directly, not in a build step.
 
 ---
 

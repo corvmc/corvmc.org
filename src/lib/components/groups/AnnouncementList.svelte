@@ -23,7 +23,7 @@
 	 * props and fetches nothing. That is what lets it be the band panel's page
 	 * and the club page's tab at once, and it is also what keeps both surfaces
 	 * inside their one load-bearing query — a component reaching for its own
-	 * remote query is the fan-out `docs/checklists/remote-query-fanout.md` bans.
+	 * remote query is the fan-out `custom/no-concurrent-remote-queries` bans.
 	 *
 	 * `canManage` decides what controls render, and the server already decided
 	 * what is *in* `announcements`: a plain member's list has no drafts in it to

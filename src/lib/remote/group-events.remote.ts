@@ -12,7 +12,7 @@ import { createGroupEvent } from '$lib/server/event/event-service';
  *
  * Reads live on `getMemberGroup`, which returns the sessions with the rest of
  * the page in one round trip — a per-tab query fanned out of a section component
- * is what `docs/checklists/remote-query-fanout.md` exists to stop. What is here
+ * is what `custom/no-concurrent-remote-queries` exists to stop. What is here
  * is the write.
  *
  * Flagged on `groupEvents`, separately from `groups`: this is the one path

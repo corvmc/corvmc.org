@@ -54,9 +54,6 @@ treat the spec as intent and the code as reality — reconcile deliberately.
 and rejected — which no manual article carries. Read a shipped spec to find out **why** something is
 the way it is, and the workflow guide to find out **what** it does today.
 
-[reports/spec-audit.md](reports/spec-audit.md) classifies the 32 that existed at `9eb95cb` against
-the tree and records how this split was made.
-
 ### Reservations
 
 | Doc                                                                            | Status | Lifecycle | Notes                                                                                                                                                                                                                                                            |
@@ -139,12 +136,10 @@ the tree and records how this split was made.
 | [reporting-spec.md](specs/reporting-spec.md)                                         | 📋     | spec      | Module-owned reports over a shared kit; which vendor answers which question                                                                                                                               |
 | [audit-log-spec.md](specs/audit-log-spec.md)                                         | 📋     | spec      | Who did what to a member's account. No audit table exists                                                                                                                                                 |
 | [staff-email-change-spec.md](specs/staff-email-change-spec.md)                       | 📋     | spec      | The most common front-desk correction, and the one the panel cannot do                                                                                                                                    |
-| [reactivation-restore-spec.md](specs/reactivation-restore-spec.md)                   | 📋     | spec      | Deactivation cancels reservations and the Stripe subscription; reactivation restores neither                                                                                                              |
 | [admin-vs-staff-spec.md](specs/admin-vs-staff-spec.md)                               | 📋     | spec      | Roles are org positions, not tiers: guards name capabilities, the matrix maps positions to them, assignment stays in `model_has_roles`. Drops the dead spatie tables; break-glass is a documented runbook |
 
-The last four all came out of #164, which closed the follow-ups in
-[reports/staff-user-management-audit.md](reports/staff-user-management-audit.md) by writing a spec
-for each. None has been built since.
+The last three all came out of #164, which closed the follow-ups from a since-retired staff
+user-management audit by writing a spec for each. None has been built since.
 
 ### Platform
 
@@ -161,23 +156,12 @@ URL immediately.
 
 ## plans
 
-Sequenced build plans. Mostly historical now that the features have shipped — kept for context.
+Sequenced build plans, kept only while they track something still in motion. A finished plan's
+content is either shipped (git history is the record) or was folded into `CHORES.md` when retired.
 
-| Doc                                                                                  | Status | Notes                                               |
-| ------------------------------------------------------------------------------------ | ------ | --------------------------------------------------- |
-| [bands-plan.md](plans/bands-plan.md)                                                 | 📦     |                                                     |
-| [tickets-plan.md](plans/tickets-plan.md)                                             | 📦     |                                                     |
-| [recurring-reservations-plan.md](plans/recurring-reservations-plan.md)               | 📦     |                                                     |
-| [reservation-implementation-plan.md](plans/reservation-implementation-plan.md)       | 📦     |                                                     |
-| [email-marketing-plan.md](plans/email-marketing-plan.md)                             | 📦     |                                                     |
-| [member-dashboard-plan.md](plans/member-dashboard-plan.md)                           | 📦     |                                                     |
-| [finance-implementation-plan.md](plans/finance-implementation-plan.md)               | 📦     |                                                     |
-| [events-implementation-plan.md](plans/events-implementation-plan.md)                 | 🔧     | Partial — event CRUD / R2 / ticketing config        |
-| [reservation-credits-cash-checklist.md](plans/reservation-credits-cash-checklist.md) | ⚠️     | Credit/cash rework — awaiting drizzle-kit migration |
-| [volunteering-checklist.md](plans/volunteering-checklist.md)                         | 📦     | Volunteering Phase 1                                |
-| [volunteering-phase-2-checklist.md](plans/volunteering-phase-2-checklist.md)         | 📦     | Shifts + certifications + feedback (41/42)          |
-| [instructors-checklist.md](plans/instructors-checklist.md)                           | 🔧     | Instructor module — 55 of 59 done                   |
-| [feature-flag-retirement.md](plans/feature-flag-retirement.md)                       | 🔧     | Per-flag ledger; 9 of 11 resolved, 2 held           |
+| Doc                                                            | Status | Notes                                     |
+| -------------------------------------------------------------- | ------ | ----------------------------------------- |
+| [feature-flag-retirement.md](plans/feature-flag-retirement.md) | 🔧     | Per-flag ledger; 9 of 11 resolved, 2 held |
 
 ## architecture
 
@@ -188,39 +172,28 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | [operations-manual.md](architecture/operations-manual.md)                             | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring |
 | [deployment-checklist.md](architecture/deployment-checklist.md)                       | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                              |
 | [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                             | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting  |
-| [d1-migration-proposal.md](architecture/d1-migration-proposal.md)                     | 📦     | Postgres → D1: shipped. Kept for the decision — **not** a runbook; the ETL it describes is deleted   |
-| [universal-data-layer-proposal.md](architecture/universal-data-layer-proposal.md)     | 📦     | API layer for SSR/SPA + kiosk parity — **not adopted**; remote functions solved it instead           |
-| [product-config-kv-migration.md](architecture/product-config-kv-migration.md)         | ✅     | product_config → KV; the orphaned table is dropped and the replay spec guards the class              |
-| [postmark-template-migration.md](architecture/postmark-template-migration.md)         | ✅     | Transactional email moved to Postmark-hosted templates; repo source and `pnpm email:push`            |
 | [U-Tec Api.postman_collection.json](architecture/U-Tec%20Api.postman_collection.json) | 📦     | Vendor API collection for the door-lock integration — reference only, not maintained here            |
 
 ## development
 
-| Doc                                                                          | Status | Notes                                                                               |
-| ---------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
-| [local-dev-quickstart.md](development/local-dev-quickstart.md)               | ✅     | Zero to running locally: env, seed data, tests, Stripe test mode                    |
-| [business-workflows.md](development/business-workflows.md)                   | ✅     | The eight core workflows, traced through code, with triage notes                    |
-| [conventions.md](development/conventions.md)                                 | ✅     | Feature checklist, layering rules, custom lint rules, script reference              |
-| [working-with-claude.md](development/working-with-claude.md)                 | ✅     | Agent-instruction surface: CLAUDE.md vs rules vs skills vs hooks, verification loop |
-| [ui-patterns.md](development/ui-patterns.md)                                 | ✅     | **Read before touching any page** — shared components & composition                 |
-| [component-testing.md](development/component-testing.md)                     | ✅     | Stories vs specs, fixtures, mocking the server                                      |
-| [component-testing-checklist.md](development/component-testing-checklist.md) | 🔧     | Incremental coverage tracker — many items open                                      |
-| [component-style-audit.md](development/component-style-audit.md)             | ✅     | Visual audit; the magenta content-token theme bug it found is now fixed             |
-| [template-audit.md](development/template-audit.md)                           | 🔧     | Class-soup census + phased migration to a component-based design system             |
+| Doc                                                            | Status | Notes                                                                               |
+| -------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
+| [local-dev-quickstart.md](development/local-dev-quickstart.md) | ✅     | Zero to running locally: env, seed data, tests, Stripe test mode                    |
+| [business-workflows.md](development/business-workflows.md)     | ✅     | The eight core workflows, traced through code, with triage notes                    |
+| [conventions.md](development/conventions.md)                   | ✅     | Feature checklist, layering rules, custom lint rules, script reference              |
+| [working-with-claude.md](development/working-with-claude.md)   | ✅     | Agent-instruction surface: CLAUDE.md vs rules vs skills vs hooks, verification loop |
+| [ui-patterns.md](development/ui-patterns.md)                   | ✅     | **Read before touching any page** — shared components & composition                 |
+| [component-testing.md](development/component-testing.md)       | ✅     | Stories vs specs, fixtures, mocking the server                                      |
+| [template-audit.md](development/template-audit.md)             | 🔧     | Class-soup census + phased migration to a component-based design system             |
 
 ## reports
 
 | Doc                                                                        | Status | Notes                                                                                        |
 | -------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
 | [feature-catalog.md](reports/feature-catalog.md)                           | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship             |
-| [spec-audit.md](reports/spec-audit.md)                                     | ✅     | All 32 specs classified against the tree; which are shipped and where their content goes     |
 | [standardization-audit.md](reports/standardization-audit.md)               | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                     |
-| [staff-user-management-audit.md](reports/staff-user-management-audit.md)   | 📦     | The audit behind #164; five follow-up specs, one of them built                               |
-| [revenue-audit.md](reports/revenue-audit.md)                               | 📦     | Revenue workflow audit; its findings closed in #131                                          |
-| [sentry-triage.md](reports/sentry-triage.md)                               | ✅     | Production error triage                                                                      |
 | [inventory-workflow-findings.md](reports/inventory-workflow-findings.md)   | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign           |
 | [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md)   | 📦     | The same pass over volunteering; findings complete, the restructure is separate work         |
-| [volunteer-view-handoff.md](reports/volunteer-view-handoff.md)             | ✅     | Every volunteer screen, shot populated, with its users and stories — the wireframe brief     |
 | [project-management-prior-art.md](reports/project-management-prior-art.md) | ✅     | Prior art behind the `project` entity — CMMS, venue, makerspace and ERP systems surveyed     |
 | [social-prior-art.md](reports/social-prior-art.md)                         | ✅     | The social vertical by role, against the products that compete with each — and what to steal |
 
@@ -229,11 +202,9 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 Cross-cutting rollouts tracked to completion — broader than one feature, so they live outside
 `plans/`.
 
-| Doc                                                                   | Status | Notes                                                                  |
-| --------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------- |
-| [staff-feature-enablement.md](checklists/staff-feature-enablement.md) | 📦     | Making the staff panel work independently of the feature flags         |
-| [standardization-rollout.md](checklists/standardization-rollout.md)   | 🔧     | Working through `reports/standardization-audit.md`                     |
-| [remote-query-fanout.md](checklists/remote-query-fanout.md)           | 📦     | One load-bearing query per page — all 50 components done, rule widened |
+| Doc                                                                 | Status | Notes                                              |
+| ------------------------------------------------------------------- | ------ | -------------------------------------------------- |
+| [standardization-rollout.md](checklists/standardization-rollout.md) | 🔧     | Working through `reports/standardization-audit.md` |
 
 ## manual
 
@@ -242,13 +213,12 @@ the in-app Help/KB via `pnpm help:sync`. The manifest tracks coverage across all
 
 | Doc                                  | Status | Notes                                                      |
 | ------------------------------------ | ------ | ---------------------------------------------------------- |
-| [manual/README.md](manual/README.md) | 🔧     | User-manual manifest & checklist (~76 articles)            |
+| [manual/README.md](manual/README.md) | 🔧     | User-manual manifest & checklist (~82 articles)            |
 | [manual/public/](manual/public)      | 🔧     | Public-site how-tos (markdown only — the KB is auth-gated) |
 
 ---
 
 ### Open action items (from the docs above)
 
-- ⚠️ **Credit/cash rework** — awaiting migration in `plans/reservation-credits-cash-checklist.md`.
 - ⚠️ **Door-code timing** — Phase 3 of `specs/reservation-confirmation-window.md`, the only
   half-built thing left in `specs/`.

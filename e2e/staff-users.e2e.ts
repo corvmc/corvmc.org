@@ -11,8 +11,8 @@ import {
  *
  * Until this spec existed, no `/staff` route had any e2e coverage — every
  * fixture seeded a plain member. Two critical defects shipped through that gap
- * (see docs/reports/staff-user-management-audit.md): unguarded remote endpoints,
- * and a FormField bug that made every profile save wipe the user's roles.
+ * (see PR #164): unguarded remote endpoints, and a FormField bug that made
+ * every profile save wipe the user's roles.
  *
  * The role-preservation test below is the end-to-end pin for that second one:
  * `updateUser` replaces `model_has_roles` wholesale, so a Roles field that fails

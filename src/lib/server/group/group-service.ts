@@ -221,7 +221,7 @@ export async function listGroups(
  *
  * One read, not four. Four sections is precisely the shape that tempts a
  * per-section remote query fanned out of a section component, which is what
- * `docs/checklists/remote-query-fanout.md` exists to stop.
+ * `custom/no-concurrent-remote-queries` (`docs/development/conventions.md`) exists to stop.
  *
  * **No bands, in any section.** A band is a group in the data model, but this
  * page exists to answer *what can I be part of* and a band has no answer to

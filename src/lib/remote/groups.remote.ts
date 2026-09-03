@@ -217,7 +217,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 
 	const canManage = role === 'owner' || role === 'admin';
 
-	// One round trip, per docs/checklists/remote-query-fanout.md. Announcements
+	// One round trip, per the custom/no-concurrent-remote-queries rule. Announcements
 	// belong here rather than in a query of the tab's own: a club is small by
 	// construction, and a per-tab query fanned out of a section component is
 	// exactly what that checklist exists to stop.

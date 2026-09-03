@@ -56,7 +56,7 @@ export function reservationPaymentState(r: {
 	// NOTE: infers "refunded" from "cancelled and once had a payment", so a cancel
 	// whose refund failed still displays as refunded. Keying this on `refundedAt`
 	// is the correct fix but needs a data check first — rows cancelled before that
-	// column was populated would flip to "cancelled". See docs/reports/sentry-triage.md.
+	// column was populated would flip to "cancelled". See CHORES.md.
 	if (r.status === 'cancelled') return r.stripePaymentRecordId ? 'refunded' : 'cancelled';
 	if (r.paidAt) return 'paid';
 	if ((r.cashDueCents ?? 0) > 0) return 'cash_due';
