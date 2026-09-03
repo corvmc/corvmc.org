@@ -102,7 +102,7 @@ Still worth trying: an isolated or non-persisted miniflare state directory for t
 
 - **There are two tab systems.** `TabBar` renders `join-item btn` (a button group), while `src/routes/layout.css:373` separately overrides daisyUI's own `.tab` / `.tab-active`. Whichever a page reaches for, the other one's styling is dead weight. Decide which is the app's tab, then delete the other.
 
-- **There is no platform ban, only deactivation.** `deactivateUser` (`src/lib/server/user/user-service.ts:60`) is the only way to remove someone, and it doubles as the member's own self-delete — both write `user.deletedAt`, so nothing distinguishes "they left" from "we removed them". It takes a user id and nothing else: no acting staff id, no reason, so a removal leaves no record of who decided or why (`deactivateUsers` tracks `skipUserId` so staff don't catch themselves in a batch, but still doesn't record the actor). It is simultaneously heavier than a ban should be and lighter than one needs to be: it cancels the user's future personal reservations and their Stripe subscription, and `reactivateUser` (:142) restores neither — while nothing stops the same person registering again the next minute, since there is no email or identity blocklist. Enforcement is sound: `hooks.server.ts:53` re-resolves every request and treats a deactivated user as anonymous, and their sessions are deleted on the way out. What's missing is the record and the gradations, not the kill switch. Direct messages added a standing ladder (`restricted` → `disabled`, now the `messaging` scope of `member_standing` after #224 merged the three per-domain tables) below deactivation, which covers messaging harms; a real ban has to answer re-registration, retention and appeal, and touches reservations, events, directory and billing, so it wants its own spec rather than a column.
+- **There is no platform ban, only deactivation.** `deactivateUser` (`src/lib/server/user/user-service.ts:60`) is the only way to remove someone, and it doubles as the member's own self-delete — both write `user.deletedAt`, so nothing distinguishes "they left" from "we removed them". It takes a user id and nothing else: no acting staff id, no reason, so a removal leaves no record of who decided or why (`deactivateUsers` tracks `skipUserId` so staff don't catch themselves in a batch, but still doesn't record the actor). It is simultaneously heavier than a ban should be and lighter than one needs to be: it cancels the user's future personal reservations and their Stripe subscription, and `reactivateUser` (:142) restores neither — while nothing stops the same person registering again the next minute, since there is no email or identity blocklist. Enforcement is sound: `hooks.server.ts:53` re-resolves every request and treats a deactivated user as anonymous, and their sessions are deleted on the way out. What's missing is the record and the gradations, not the kill switch. Direct messages added a standing ladder (`restricted` → `disabled`, now the `messaging` scope of `member_standing` after #224 merged the three per-domain tables) below deactivation, which covers messaging harms; a real ban has to answer re-registration, retention and appeal, and touches reservations, events, directory and billing, so it wants its own spec rather than a column. (`docs/specs/reactivation-restore-spec.md` designed a fix for the reservations/subscription half of this and was never built; its own open question — whether "suspension" deserves a status distinct from deactivation — was never settled, so it was retired here rather than kept as a stale spec.)
 
 - **Notification email content is built at every call site, not by the email service.** `dispatch` (`src/lib/server/notification/dispatcher.ts`) centralizes the parts that are about _delivery_ — preference lookup, in-app row, SSE push, Postmark send, error capture — and says outright that it "does NOT know about specific notification types". Everything about _content_ is left to the caller: ~23 hand-built `emailTemplate.model` literals across `notification-listeners.ts` and `register-listeners.ts`, each restating its own subject, heading, paragraphs and quote. `NOTIFICATION_TYPES` (`src/lib/server/db/schema/notification.ts`) carried only routing metadata — `defaults`, `mandatory` — so there was nowhere to say "this type never includes member-authored text". Direct messages added one flag (`emailOmitsUserContent`, stripped in `normalizeNotificationModel`) to cover their own case, but that is one rule, not the general fix. The pattern is already in the codebase: `normalize-model.ts` exists precisely so listeners "don't each have to remember" three derived fields. Generalising that — moving per-type content policy onto `NotificationTypeDef` and reducing listeners to data — is the chore. Watch for the two non-generic aliases (`ticket-confirmation`, `inbox-reply`), which bypass `normalizeNotificationModel` entirely and would need their own arm.
 
@@ -121,6 +121,52 @@ Still worth trying: an isolated or non-persisted miniflare state directory for t
 - **Reservation times render in two different timezones.** `$lib/utils/format` pins `DEFAULT_TIMEZONE` on every formatter it builds (`venue()`), so a booking's hour is the club's hour everywhere it is formatted through that module — tables, chips, `toReservationRef` titles. But `ReservationSummary` (`src/lib/components/reservations/`), `member/reservations/ReservationCard.svelte`, `member/reservations/+page.svelte` and `ManageRecurringReservations.svelte` format with `date-fns` `format()`, which has no timezone and uses the reader's. For anyone outside Pacific the two disagree: the row says 5:00 PM and the card, or the confirmation modal over it, says 8:00 PM. `ReservationSummary` is the widest exposure — eight action components use it (`CancelReservationAction`, `CompReservationAction`, `CompleteReservationAction`, `NoShowReservationAction`, `RefundReservationAction`, `CashReceivedAction`, `PayReservationAction`, `ConfirmWaitlistedAction`), which put it in front of staff as well as members, at exactly the moment someone is confirming they have the right booking. The fix is to route those through `$lib/utils/format` rather than `date-fns`; watch for the relative strings (`formatDistanceToNow`, "Due in 3 days") which have no venue-time equivalent yet.
 
 - **Media is one R2 key per entity, with no layer in between.** `event.posterKey`, the band avatar and the rest are each a single column holding a single object key, so nothing can share an image and nothing knows who references one. Three consequences. Recurring-event occurrences cannot reference a shared poster and instead copy the R2 binary per occurrence (`copyObject` in `src/lib/server/reservation/generation-job.ts`) — a series of 52 weekly shows is 52 copies of one JPEG. `event-service.update()` and `cancel()` delete `posterKey` outright with no reference check, which is _why_ the occurrences have to copy rather than share: a shared key would be deleted out from under its siblings. And there is nowhere to put alt text, a caption, or a second image. The fix is a `media` table decoupling uploaded files from the entities that use them, plus either reference counting or a many-to-many link table so deletion can ask whether anything still points at the object; `event.posterKey` and the band media would migrate into it. Note this is the layer _under_ Cloudflare Image Transformations, which already work and are unaffected — see the image-delivery section of `docs/reports/feature-catalog.md`. **Now designed in `docs/specs/shipped/media-spec.md`** — two tables on the ActiveStorage model (`media` for the object, `media_attachment` for each usage), with deletion as detach-plus-sweep rather than cascade. That spec also records a fourth consequence this entry missed: `band_media` cascades its rows away and orphans their R2 objects _unreclaimably_, since the cascade destroys the only record of the key.
+
+- **Four raw reads bypass the teaching-rate resolver.** `termsFor`/`getBookingTerms` is adopted at
+  most call sites in `src/lib/remote/reservations.remote.ts`, but four still read
+  `config<number>('reservation.hourlyRateCents')` directly (lines 129, 166, 402, 985) instead of
+  going through the resolver — so an instructor's booking on those paths is billed at the $15/hr
+  member rate rather than the $5/hr teaching rate `docs/specs/shipped/instructors-spec.md` sets.
+  Found closing out `docs/plans/instructors-checklist.md`. `conflict-service.spec.ts` also has no
+  `instructor` booker-type coverage at all, which is the other half of the same gap.
+
+- **Every authenticated layout fires three queries before the page's own query lands.** The
+  layout's own load-bearing query, plus `NotificationBell` (`getNotifications`) and
+  `AccountDropdown` (`getMe`) inside `AppTopbar`, are all in flight before any page-level code
+  runs. `custom/no-concurrent-remote-queries` cannot see this — neither component fans out on its
+  own — so it is real tree-level concurrency that no page can get below, structurally invisible to
+  the lint rule that would otherwise catch it. Recorded when `docs/checklists/remote-query-fanout.md`
+  (its rollout otherwise complete — all ~50 flagged files converted) was retired.
+
+- **Sentry's code mapping points at the wrong repo.** It still names `DevonCash/corvmc-svelte`, so
+  every "Code Location" link on an issue opens a `worker.js` line in a repository that no longer
+  exists — the repo moved to `corvmc/corvmc.org`. Repoint the GitHub integration's code mapping.
+
+- **No Sentry alert rule fires on `D1_ERROR: no such table`.** That error is the signal that went
+  unnoticed for two hours during the 2026-08-24 outage, and it would catch every version of a
+  broken-deploy failure (reset build command, branch-gate skip, hand-rolled deploy) because it
+  watches the outcome rather than the mechanism. Worth an alert rule keyed on it.
+
+- **Component story/spec coverage has seven named gaps.** A FormField gallery story; stories for
+  `NotificationBell` and `TabBar`; specs for the `actions/*` components `CancelReservationAction`,
+  `AdjustCreditsAction` and `CreateBandAction`; and roughly 15 more `actions/*` components with no
+  coverage at all. Tracked (with the completed ~28) in the now-retired
+  `docs/development/component-testing-checklist.md`.
+
+- **Reservation `refundedAt` isn't populated for rows cancelled before the column existed.**
+  `deriveDisplayStatus` (`src/lib/utils/reservation-actions.ts`) infers "refunded" from "cancelled
+  and once had a payment" rather than keying on `refundedAt` directly, because a data backfill is
+  needed first — those older rows would otherwise flip from "cancelled" to "refunded" incorrectly.
+  Backfill `refundedAt` for pre-existing cancelled-with-payment reservations, then switch the
+  derivation to read the column.
+
+- **Ticket capacity checks are non-atomic, and loan final charges can drift from their estimate.**
+  Two accepted-by-design gaps carried over from the closed revenue audit. The ticket capacity
+  check races under concurrency and can oversell by a small margin — `docs/specs/shipped/tickets-spec.md`
+  explicitly accepts this rather than adding a reservation-hold mechanism for a low-volume venue.
+  An equipment loan's final charge can differ from its estimate when the actual checkout/return
+  times differ from the requested dates; the formula computing both is shared, so the drift is
+  expected and bounded, not a bug.
 
 ## Done
 

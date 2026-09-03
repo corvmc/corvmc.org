@@ -17,7 +17,7 @@
 	 *
 	 * Its own route rather than a section of `/staff/bands`, because that page
 	 * already holds a load-bearing query and a second one fanned out beside it is
-	 * what `docs/checklists/remote-query-fanout.md` exists to stop.
+	 * what `custom/no-concurrent-remote-queries` exists to stop.
 	 *
 	 * Staff-only, and there is no member-facing counterpart anywhere: an external
 	 * act has no page, no slug and no public surface. This list is the whole of

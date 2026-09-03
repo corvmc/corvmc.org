@@ -280,10 +280,9 @@ p {
 
    Colour, not opacity, on purpose. `opacity` dims the whole subtree: a badge,
    an icon, a `link` inside a muted paragraph all fade with it, so a muted
-   wrapper quietly flattens the hierarchy underneath it (see the EmptyState
-   note in docs/development/component-style-audit.md). `color` inherits into
-   text and `currentColor` icons only, and leaves anything with a colour of its
-   own alone.
+   wrapper quietly flattens the hierarchy underneath it — this was found on
+   `EmptyState`. `color` inherits into text and `currentColor` icons only, and
+   leaves anything with a colour of its own alone.
 
    Use `text-muted` for supporting prose, `text-subtle` for captions and
    metadata. Reach for the bare `text-fg-2` / `text-fg-3` only when the size is

@@ -1,11 +1,9 @@
 # Volunteering redesign
 
 > Reshapes the two volunteering applications without changing what volunteering _is_.
-> Companion to [volunteering-spec.md](volunteering-spec.md) (why the model is what it is),
+> Companion to [volunteering-spec.md](volunteering-spec.md) (why the model is what it is) and
 > [../../reports/volunteer-workflow-findings.md](../../reports/volunteer-workflow-findings.md)
-> (what was wrong with the shape) and
-> [../../reports/volunteer-view-handoff.md](../../reports/volunteer-view-handoff.md) (every
-> screen, now as it is after this).
+> (what was wrong with the shape).
 >
 > **Status: shipped.** How the surfaces behave day to day is
 > [business-workflows.md §12](../../development/business-workflows.md#12-volunteering); what

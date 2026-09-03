@@ -209,11 +209,19 @@ Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are 
   **layout template** under `postmark/templates/_layouts/` — unrelated concepts.
 - **Transactional templates** live in the repo under `postmark/templates/` and are synced
   with Postmark's CLI: `pnpm email:push` (repo → Postmark) / `pnpm email:pull`
-  (Postmark → repo), both using `$POSTMARK_SERVER_TOKEN` from your shell. The repo is the
-  source of truth — see `docs/architecture/postmark-template-migration.md`.
-- The **campaign layout** is different: it's MJML, compiled to a TS constant at build time
-  by `scripts/compile-email-layouts.ts` (runs in both `pnpm prepare` and `pnpm build`) into
-  `src/lib/server/generated/`.
+  (Postmark → repo). Both shell out to `postmark-cli`, so they read `$POSTMARK_SERVER_TOKEN`
+  from your shell rather than `.env` — export it first. Run `pnpm email:validate` before a
+  push; it renders every template through real Mustachio without sending. The repo is the
+  source of truth.
+  - **`email:push` must run before `wrangler deploy`** — otherwise transactional sends fail
+    with template-not-found until it does.
+  - **Static assets must deploy before `email:push`** on a from-scratch environment — the
+    layout hardcodes `https://corvmc.org/email/cmc-speaker.png` (Postmark templates can't
+    read env vars), so the logo 404s in every email until `static/email/` is live.
+- The **campaign layout** is different: it's a hand-maintained TS constant,
+  `src/lib/server/marketing/campaign-layout.ts`, deliberately kept identical to
+  `postmark/templates/_layouts/corvmc-transactional` so the two treatments don't drift.
+  There is no build-time compile step — editing one does not update the other.
 - **Inbound email** (support inbox) is a Postmark inbound webhook pointed at
   `/api/inbox/postmark`, authenticated by `POSTMARK_INBOUND_TOKEN`. A separate delivery-
   events webhook posts to `/api/webhooks/postmark`.

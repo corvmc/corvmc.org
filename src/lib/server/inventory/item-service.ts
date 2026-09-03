@@ -376,7 +376,7 @@ export async function listItems(opts: ListItemsOptions = {}, pagination: Paginat
 	const result = await paginate(dataQ, countQ, pagination);
 
 	// One grouped query for the page rather than a sum per row — the fan-out
-	// rule in docs/checklists/remote-query-fanout.md.
+	// custom/no-concurrent-remote-queries rule (docs/development/conventions.md).
 	const onHand = await getOnHandMany(result.rows.map((r) => r.item.id));
 
 	// In-service counts for the serialized rows, again in one query.

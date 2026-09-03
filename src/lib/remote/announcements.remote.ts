@@ -27,7 +27,7 @@ import {
  * There is deliberately **no `getAnnouncements(groupId)` query**. Both surfaces
  * already await a load-bearing page query — `getMemberGroup` for the club,
  * `getBandAnnouncementsPage` below for the panel — and a component fetching its
- * own list would be exactly the fan-out `docs/checklists/remote-query-fanout.md`
+ * own list would be exactly the fan-out `custom/no-concurrent-remote-queries`
  * exists to stop. The components take their posts as a prop, which is also what
  * lets them mount in two frames.
  *

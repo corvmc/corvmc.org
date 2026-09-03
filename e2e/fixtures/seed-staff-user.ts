@@ -5,7 +5,7 @@
  * Every other fixture seeds a plain member, so before this one no route under
  * `/staff` had any e2e coverage at all — including the user-management screens
  * where two critical defects (unguarded remote endpoints, and profile saves
- * wiping roles) shipped undetected. See docs/reports/staff-user-management-audit.md.
+ * wiping roles) shipped undetected. See PR #164.
  *
  * Seeds:
  *  - one operator holding both `staff` and `admin`, with a credential account
