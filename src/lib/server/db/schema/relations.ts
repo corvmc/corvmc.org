@@ -31,6 +31,7 @@ export const relations = defineRelations(schema, (t) => ({
 		directoryEntry: t.one.directoryEntry({ from: t.group.id, to: t.directoryEntry.groupId }),
 		members: t.many.groupMember(),
 		files: t.many.file(),
+		rider: t.one.rider({ from: t.group.id, to: t.rider.groupId }),
 		/** Events this band OWNS. Shows it merely played are `lineups`. */
 		events: t.many.event(),
 		// No `lineups` here any more. A credit names a `directory_entry`, so a
@@ -422,5 +423,40 @@ export const relations = defineRelations(schema, (t) => ({
 	},
 	mediaAttachment: {
 		media: t.one.media({ from: t.mediaAttachment.mediaId, to: t.media.id })
+	},
+	// Three FKs to user across the rider tables — the tech contact, whoever last
+	// confirmed it, and the owner of an element — so each needs an alias saying
+	// which one it follows.
+	rider: {
+		group: t.one.group({ from: t.rider.groupId, to: t.group.id }),
+		techContact: t.one.user({
+			from: t.rider.techContactUserId,
+			to: t.user.id,
+			alias: 'rider_techContact'
+		}),
+		confirmedBy: t.one.user({
+			from: t.rider.confirmedByUserId,
+			to: t.user.id,
+			alias: 'rider_confirmedBy'
+		}),
+		elements: t.many.riderElement()
+	},
+	riderElement: {
+		rider: t.one.rider({ from: t.riderElement.riderId, to: t.rider.id }),
+		/** Whose gear this is. Null is the band's own. */
+		user: t.one.user({
+			from: t.riderElement.userId,
+			to: t.user.id,
+			alias: 'riderElement_user'
+		}),
+		inputs: t.many.riderInput()
+	},
+	riderInput: {
+		element: t.one.riderElement({ from: t.riderInput.elementId, to: t.riderElement.id }),
+		monitorMixUser: t.one.user({
+			from: t.riderInput.monitorMixUserId,
+			to: t.user.id,
+			alias: 'riderInput_monitorMixUser'
+		})
 	}
 }));
