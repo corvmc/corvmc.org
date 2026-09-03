@@ -14,11 +14,17 @@
 
 	let {
 		band,
-		epk: initialEpk
+		epk: initialEpk,
+		premium = false
 	}: {
 		band: Awaited<ReturnType<typeof getBandLayout>>['band'];
 		epk: FullPressKit;
+		/** Whether the video section is available — a band site, and the flag on. */
+		premium?: boolean;
 	} = $props();
+
+	/** Four is a section, not an archive. A booker watches one. */
+	const MAX_VIDEOS = 4;
 
 	// Seeded once. `$state` is deeply reactive, so `bind:value` into a nested
 	// array element is enough — no per-field oninput plumbing.
@@ -34,6 +40,9 @@
 	}
 	function addAchievement() {
 		epk.achievements = [...epk.achievements, ''];
+	}
+	function addVideo() {
+		epk.videos = [...epk.videos, { url: '' }];
 	}
 	function addBacklineItem() {
 		epk.backline = [...epk.backline, { instrument: '', details: '', provided: true }];
@@ -124,6 +133,39 @@
 			Add a highlight
 		</Button>
 	</InfoCard>
+
+	{#if premium}
+		<InfoCard title="Video">
+			<p class="text-muted">
+				Live clips, on your page and in your press kit. Paste a YouTube link.
+			</p>
+			{#if epk.videos.length === 0}
+				<p class="text-muted">No video yet.</p>
+			{/if}
+			<div class="space-y-4">
+				{#each epk.videos as _video, i (i)}
+					<div class="grid grid-cols-1 gap-2 inset p-3 sm:grid-cols-2">
+						<FormField type="text" label="Video URL" bind:value={epk.videos[i].url} />
+						<FormField type="text" label="Label" bind:value={epk.videos[i].label} />
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							class="sm:col-span-2"
+							onclick={() => (epk.videos = removeAt(epk.videos, i))}
+						>
+							Remove video
+						</Button>
+					</div>
+				{/each}
+			</div>
+			{#if epk.videos.length < MAX_VIDEOS}
+				<Button type="button" variant="default" size="sm" outline onclick={addVideo}>
+					Add a video
+				</Button>
+			{/if}
+		</InfoCard>
+	{/if}
 
 	<!-- Package only: what a venue is sent -->
 	<InfoCard title="Who to contact">

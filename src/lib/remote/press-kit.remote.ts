@@ -136,11 +136,16 @@ export const getPressKitEditor = query(z.string(), async (slug) => {
 	]);
 
 	const tier = site?.tier ?? 'free';
+	// Both halves, because either one being false means there is no video section
+	// to offer: an act without a site has not bought it, and with the flag off
+	// nobody has.
+	const premium = tier === 'premium' && (await isFeatureEnabled('bandPremium'));
 
 	return {
 		epk: fullPressKit(site?.epk),
 		progress,
 		tier,
+		premium,
 		/** How many more photos this band may add, so the UI can say so before an upload 403s. */
 		photoLimit: photoLimitForTier(tier),
 		media: media.map((m) => ({
