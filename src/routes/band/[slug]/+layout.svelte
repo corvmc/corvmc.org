@@ -2,6 +2,7 @@
 	import {
 		IconLayoutDashboard,
 		IconUsersGroup,
+		IconMessages,
 		IconSpeakerphone,
 		IconCalendar,
 		IconCalendarEvent,
@@ -23,7 +24,13 @@
 	import { page } from '$app/state';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { setBandLayoutContext } from './layout-context';
-	import { activeBandNavKey, bandNavItems, type BandNavKey } from './nav-items';
+	import {
+		activeBandNavKey,
+		bandNavItems,
+		type BandNavKey,
+		type BandNavBadgeKey,
+		type BandNavItem
+	} from './nav-items';
 
 	let { children } = $props();
 
@@ -59,6 +66,7 @@
 
 	const icons: Record<BandNavKey, typeof IconLayoutDashboard> = {
 		dashboard: IconLayoutDashboard,
+		messages: IconMessages,
 		members: IconUsersGroup,
 		rider: IconPlug,
 		announcements: IconSpeakerphone,
@@ -74,6 +82,14 @@
 	};
 
 	const panels = $derived(panelTabs(layout));
+
+	let badges = $derived({
+		messagesUnread: layout.messagesUnread
+	} satisfies Record<BandNavBadgeKey, number>);
+
+	function badgeFor(item: BandNavItem): number | undefined {
+		return item.badgeKey ? badges[item.badgeKey] : undefined;
+	}
 </script>
 
 <AppShell drawerId="band-drawer" {panels} activePanel={layout.band.slug}>
@@ -87,6 +103,7 @@
 					: undefined}
 				label={item.label}
 				active={activeKey === item.key}
+				badge={badgeFor(item)}
 				target={item.external ? '_blank' : undefined}
 			>
 				{#snippet icon()}<Icon />{/snippet}

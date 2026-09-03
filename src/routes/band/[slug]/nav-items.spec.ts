@@ -50,6 +50,32 @@ describe('bandNavItems', () => {
 		expect(labelsFor({ userRole: 'member' })).not.toContain('Settings');
 	});
 
+	// Answering a booking enquiry commits the act to a date and a price, so it
+	// draws the same line Press Kit and Edit Profile do. A staff non-member is
+	// excluded for the same reason they are excluded from Settings: they are not
+	// the act, and `requireGroupRole(..., 'admin')` refuses them anyway.
+	it('gives Messages to an owner and an admin, but not a member or staff', () => {
+		expect(labelsFor({ userRole: 'owner' })).toContain('Messages');
+		expect(labelsFor({ userRole: 'admin' })).toContain('Messages');
+		expect(labelsFor({ userRole: 'member' })).not.toContain('Messages');
+		expect(labelsFor({ userRole: 'staff', isStaff: true })).not.toContain('Messages');
+	});
+
+	// The badge is what makes an unanswered enquiry visible from anywhere in the
+	// panel; a row that lost its key would go quiet rather than break.
+	it('carries the unread badge key on the Messages row and nowhere else', () => {
+		const items = bandNavItems({
+			slug: 'the-velvet-underground',
+			bandId: 'band-1',
+			tier: 'free',
+			userRole: 'owner',
+			isStaff: false,
+			features: {}
+		});
+		expect(items.find((i) => i.key === 'messages')?.badgeKey).toBe('messagesUnread');
+		expect(items.filter((i) => i.badgeKey).length).toBe(1);
+	});
+
 	it('sends a staff non-member to staff tools instead of Settings', () => {
 		const labels = labelsFor({ userRole: 'staff', isStaff: true });
 		expect(labels).not.toContain('Settings');
