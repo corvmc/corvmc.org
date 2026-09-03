@@ -65,7 +65,10 @@
 							field={fields.cardNumber}
 							description="Stripe's own test numbers, so a card that declines here declines against the real API too."
 						/>
-						<SubmitButton>Pay {money(session.amountTotal, session.currency)}</SubmitButton>
+						<SubmitButton
+							label="Pay {money(session.amountTotal, session.currency)}"
+							successLabel="Paid"
+						/>
 					</Form>
 				</div>
 
