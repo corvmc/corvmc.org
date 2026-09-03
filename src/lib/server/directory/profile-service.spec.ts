@@ -173,6 +173,34 @@ describe('updateMemberProfile', () => {
 		expect(insertedRows[1]).toEqual([{ entryId: 'entry-1', kind: 'genre', value: 'jazz' }]);
 	});
 
+	it('writes whichever direction the member chose, and null for neither', async () => {
+		// The form's boolean became the column itself. Only one direction was ever
+		// reachable from it, so the whole `members` half of matching — a member
+		// assembling a band — had no way to exist.
+		for (const lookingFor of ['band', 'members', null] as const) {
+			selectResults.push([{ id: 'entry-1' }]);
+			await updateMemberProfile('user-1', { lookingFor });
+			expect(updatedData.at(-1)).toMatchObject({ lookingFor });
+		}
+	});
+
+	it('writes the instruments a member needs under a different kind from the ones they play', async () => {
+		selectResults.push([{ id: 'entry-1' }]);
+
+		await updateMemberProfile('user-1', {
+			lookingFor: 'members',
+			instruments: ['guitar'],
+			seekingInstruments: ['drums']
+		});
+
+		// Same table, and confusing the two would match a bandleader on what they
+		// already play rather than on the empty chair.
+		expect(insertedRows[0]).toEqual([{ entryId: 'entry-1', kind: 'instrument', value: 'guitar' }]);
+		expect(insertedRows[1]).toEqual([
+			{ entryId: 'entry-1', kind: 'seeking_instrument', value: 'drums' }
+		]);
+	});
+
 	it('truncates bio to 2000 chars', async () => {
 		selectResults.push([{ id: 'entry-1' }]);
 		const longBio = 'x'.repeat(3000);
@@ -238,7 +266,8 @@ describe('getMemberProfileForEdit', () => {
 		selectResults.push([
 			{ kind: 'instrument', value: 'guitar' },
 			{ kind: 'instrument', value: 'drums' },
-			{ kind: 'genre', value: 'rock' }
+			{ kind: 'genre', value: 'rock' },
+			{ kind: 'seeking_instrument', value: 'bass' }
 		]);
 
 		const result = await getMemberProfileForEdit('user-1');
@@ -246,7 +275,11 @@ describe('getMemberProfileForEdit', () => {
 		expect(result).toMatchObject({
 			bio: 'Hi',
 			tagline: 'Dev',
+			// Both: the form edits the column, the staff account panel and every
+			// directory card still ask the old yes/no question.
+			lookingFor: 'band',
 			lookingForBand: true,
+			seekingInstruments: ['bass'],
 			directoryVisibility: 'public',
 			directoryContact: null,
 			instruments: ['guitar', 'drums'],
@@ -295,6 +328,25 @@ describe('updateBandProfile', () => {
 		expect(insertedRows[0]).toEqual([
 			{ entryId: 'entry-1', kind: 'genre', value: 'punk' },
 			{ entryId: 'entry-1', kind: 'genre', value: 'ska' }
+		]);
+	});
+
+	it('writes what the band is short of under its own kind', async () => {
+		// The half a band could not say before `seeking_instrument`: "we want
+		// members" with nothing attached to it left a match only genre to aim at.
+		// Its own kind is what keeps it out of the instrument suggestions members
+		// tag themselves from — and out of the genre filter.
+		selectResults.push([{ role: 'admin' }]);
+		selectResults.push([{ id: 'entry-1' }]);
+
+		await updateBandProfile('band-1', 'user-1', {
+			genres: ['punk'],
+			seekingInstruments: ['drums']
+		});
+
+		expect(insertedRows).toEqual([
+			[{ entryId: 'entry-1', kind: 'genre', value: 'punk' }],
+			[{ entryId: 'entry-1', kind: 'seeking_instrument', value: 'drums' }]
 		]);
 	});
 
@@ -391,7 +443,12 @@ describe('getBandProfileForEdit', () => {
 				links: null
 			}
 		]);
-		selectResults.push([{ value: 'punk' }, { value: 'rock' }]);
+		// One read for every kind now that the band form edits two of them.
+		selectResults.push([
+			{ kind: 'genre', value: 'punk' },
+			{ kind: 'genre', value: 'rock' },
+			{ kind: 'seeking_instrument', value: 'drums' }
+		]);
 
 		const result = await getBandProfileForEdit('band-1');
 
@@ -403,7 +460,8 @@ describe('getBandProfileForEdit', () => {
 			lookingForMembers: true,
 			directoryVisibility: 'public',
 			directoryContact: null,
-			genres: ['punk', 'rock']
+			genres: ['punk', 'rock'],
+			seekingInstruments: ['drums']
 		});
 		expect(result).not.toHaveProperty('id');
 	});

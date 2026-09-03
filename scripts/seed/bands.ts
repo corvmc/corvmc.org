@@ -3,7 +3,15 @@ import { group, groupMember, groupSlugHistory } from '../../src/lib/server/db/sc
 import { groupInvite } from '../../src/lib/server/db/schema/group-invite';
 import { db } from './db';
 import { pendingEntries, pendingSites, pendingTags } from './pending';
-import { BAND_ALIASES, BAND_NAMES, BAND_POSITIONS, GENRES, HOMETOWNS, SAMPLE_LINKS } from './pools';
+import {
+	BAND_ALIASES,
+	BAND_NAMES,
+	BAND_POSITIONS,
+	GENRES,
+	HOMETOWNS,
+	INSTRUMENTS,
+	SAMPLE_LINKS
+} from './pools';
 import { type SeedUser } from './types';
 import { pick, pickN, randomInt } from './util';
 import { randomUUID } from 'crypto';
@@ -115,12 +123,14 @@ export async function seedBands(users: SeedUser[]) {
 				: {})
 		});
 
+		const lookingForMembers = Math.random() > 0.6;
+
 		// The listing half — these columns are gone from `group`.
 		pendingEntries.set(b.id, {
 			tagline: `${genres[0]} ${pick(['trio', 'quartet', 'duo', 'ensemble', 'collective'])} from Corvallis`,
 			hometown: pick(HOMETOWNS),
 			foundedYear: String(randomInt(2015, 2024)),
-			lookingFor: Math.random() > 0.6 ? 'members' : null,
+			lookingFor: lookingForMembers ? 'members' : null,
 			visibility: bandVisibility as DirectoryVisibility,
 			contact: { email: `booking+${slug}@example.com` },
 			links: bandLinks
@@ -128,6 +138,16 @@ export async function seedBands(users: SeedUser[]) {
 
 		for (const value of genres) {
 			pendingTags.push({ subjectId: b.id, kind: 'genre', value });
+		}
+
+		// A band that wants members says what for. Without this the dashboard match
+		// has only genre to aim at, which is the asymmetry `seeking_instrument`
+		// exists to close — so every seeded band that is looking is looking for
+		// something specific.
+		if (lookingForMembers) {
+			for (const value of pickN(INSTRUMENTS, randomInt(1, 2))) {
+				pendingTags.push({ subjectId: b.id, kind: 'seeking_instrument', value });
+			}
 		}
 
 		const memberCount = randomInt(1, 3);

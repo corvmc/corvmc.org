@@ -29,11 +29,14 @@
 		band,
 		profile,
 		genreSuggestions,
+		instrumentSuggestions,
 		isOwner = false
 	}: {
 		band: Awaited<ReturnType<typeof getBandLayout>>['band'];
 		profile: Awaited<ReturnType<typeof getBandProfile>>;
 		genreSuggestions: string[];
+		/** The same vocabulary members tag themselves with — see `getBandProfileEditor`. */
+		instrumentSuggestions: string[];
 		/** Only the owner can move the address; everyone else just sees it. */
 		isOwner?: boolean;
 	} = $props();
@@ -45,6 +48,7 @@
 	const initial = untrack(() => profile);
 	let bioHtml = $state(untrack(() => band.bio) ?? '');
 	let genres = $state<string[]>(initial?.genres ?? []);
+	let seekingInstruments = $state<string[]>(initial?.seekingInstruments ?? []);
 	let links = $state<ProfileLink[]>((initial?.links as ProfileLink[] | null) ?? []);
 	let lookingForMembers = $state(initial?.lookingForMembers ?? false);
 	let directoryVisibility = $state<string>(initial?.directoryVisibility ?? 'public');
@@ -80,6 +84,7 @@
 >
 	<input {...profileFields.slug.as('hidden', band.slug)} />
 	<input {...profileFields.genres.as('hidden', JSON.stringify(genres))} />
+	<input {...profileFields.seekingInstruments.as('hidden', JSON.stringify(seekingInstruments))} />
 
 	<!-- Basics -->
 	<InfoCard title="Basics">
@@ -167,9 +172,23 @@
 			<FormField
 				field={profileFields.lookingForMembers}
 				type="toggle"
-				value={lookingForMembers}
+				bind:value={lookingForMembers}
 				checkboxLabel="We're looking for members"
 			/>
+
+			<!-- The half a band could never say before: "we want members" had
+			     nothing attached to it, so a match had only genre to aim at. Shown
+			     with the toggle it belongs to, and it is what puts this band on the
+			     dashboard of a member who plays what you are short of. -->
+			{#if lookingForMembers}
+				<FormField field={profileFields.seekingInstruments} label="What we're looking for">
+					<FreeformTagInput
+						bind:value={seekingInstruments}
+						suggestions={instrumentSuggestions}
+						placeholder="e.g. drums, bass, vocals..."
+					/>
+				</FormField>
+			{/if}
 		</div>
 	</InfoCard>
 

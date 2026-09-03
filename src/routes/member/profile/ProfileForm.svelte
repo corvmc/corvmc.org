@@ -34,15 +34,25 @@
 
 	const { fields } = saveMemberProfile;
 
+	/** The nullable two-value column, as three options. `''` saves as null. */
+	const LOOKING_FOR_OPTIONS = [
+		{ value: '', label: 'Nothing right now' },
+		{ value: 'band', label: 'A band to join' },
+		{ value: 'members', label: 'Members for my project' }
+	];
+
 	// Editable copies of the complex fields, seeded once from the loaded profile.
 	// The untracked snapshot makes the seed-once intent explicit: this form edits
 	// a copy, and the parent resolves the queries once so the prop never updates.
 	const initial = untrack(() => profile);
 	let bioHtml = $state(initial?.bio ?? '');
 	let instruments = $state<string[]>(initial?.instruments ?? []);
+	let seekingInstruments = $state<string[]>(initial?.seekingInstruments ?? []);
 	let genres = $state<string[]>(initial?.genres ?? []);
 	let links = $state<ProfileLink[]>((initial?.links as ProfileLink[] | null) ?? []);
-	let lookingForBand = $state(initial?.lookingForBand ?? false);
+	// The column, not the old boolean — 'members' is the direction a member
+	// assembling a band points, and this form had no way to say it.
+	let lookingFor = $state<string>(initial?.lookingFor ?? '');
 	let availableForHire = $state(initial?.availableForHire ?? false);
 	let teachesLessons = $state(initial?.teachesLessons ?? false);
 	let openToCollaboration = $state(initial?.openToCollaboration ?? false);
@@ -74,6 +84,7 @@
 <Form remote={saveMemberProfile} guard onsuccess={() => toast.success('Profile saved')}>
 	<!-- Hidden fields for complex data (links renders its own via LinkListEditor) -->
 	<input {...fields.instruments.as('hidden', JSON.stringify(instruments))} />
+	<input {...fields.seekingInstruments.as('hidden', JSON.stringify(seekingInstruments))} />
 	<input {...fields.genres.as('hidden', JSON.stringify(genres))} />
 
 	<!-- About You: identity, photo, and bio -->
@@ -133,13 +144,32 @@
 			</FormField>
 		</div>
 
-		<div class="mt-4 grid gap-3 sm:grid-cols-2">
+		<div class="mt-4">
 			<FormField
-				field={fields.lookingForBand}
-				type="toggle"
-				value={lookingForBand}
-				checkboxLabel="I'm looking for a band"
+				field={fields.lookingFor}
+				type="select"
+				label="I'm looking for"
+				bind:value={lookingFor}
+				options={LOOKING_FOR_OPTIONS}
+				description="This is what your dashboard matches on — we'll suggest bands or members to meet."
 			/>
+		</div>
+
+		<!-- Only for the direction it belongs to. Asking a member who wants to
+		     join a band what instruments they need is a question with no answer. -->
+		{#if lookingFor === 'members'}
+			<div class="mt-4">
+				<FormField field={fields.seekingInstruments} label="Instruments you need">
+					<FreeformTagInput
+						bind:value={seekingInstruments}
+						suggestions={instrumentSuggestions}
+						placeholder="e.g. drums, bass..."
+					/>
+				</FormField>
+			</div>
+		{/if}
+
+		<div class="mt-4 grid gap-3 sm:grid-cols-2">
 			<FormField
 				field={fields.availableForHire}
 				type="toggle"

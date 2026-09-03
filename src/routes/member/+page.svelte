@@ -11,6 +11,7 @@
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { getMemberDashboard } from '$lib/remote/users.remote';
+	import MatchesCard from './MatchesCard.svelte';
 	import { creditsToHours } from '$lib/config';
 	import { resolve } from '$app/paths';
 	import { imageSrc } from '$lib/utils/images';
@@ -130,6 +131,10 @@
 			{/if}
 		</InfoCard>
 	</div>
+
+	<!-- Who to meet, from `directory_entry.lookingFor` — the question we already
+	     ask every member and, until this card, did nothing with. -->
+	<MatchesCard matches={data.matches} />
 
 	<!-- Upcoming events -->
 	<InfoCard title="Upcoming Events">

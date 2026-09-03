@@ -3,7 +3,7 @@ import { userBlock, type UserBlockSource } from '$lib/server/db/schema/moderatio
 import { user } from '$lib/server/db/schema/authentication';
 import { getStanding } from '$lib/server/moderation/standing-service';
 import { eq, and, or, desc, sql } from 'drizzle-orm';
-import type { SQL } from 'drizzle-orm';
+import type { SQL, SQLWrapper } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Blocks
@@ -16,8 +16,18 @@ import type { SQL } from 'drizzle-orm';
  * into a WHERE clause. A caller that fetches a row and then checks a boolean
  * has a race and a second code path; a caller whose query simply cannot return
  * the row has neither.
+ *
+ * Either side may be a **column** rather than an id: `sql` binds a string as a
+ * parameter and renders a column reference as an identifier, so the same body
+ * serves "are these two blocked" and "is this row's member blocked from me".
+ * The directory match query needs the second, and one definition of what a
+ * block means is the point — a second hand-written EXISTS is how the two
+ * drift.
  */
-export function blockExistsBetween(aUserId: string, bUserId: string): SQL {
+export function blockExistsBetween(
+	aUserId: string | SQLWrapper,
+	bUserId: string | SQLWrapper
+): SQL {
 	return sql`EXISTS (SELECT 1 FROM user_block ub
 	                   WHERE (ub.blocker_user_id = ${aUserId} AND ub.blocked_user_id = ${bUserId})
 	                      OR (ub.blocker_user_id = ${bUserId} AND ub.blocked_user_id = ${aUserId}))`;

@@ -523,8 +523,13 @@ const memberProfileSchema = z.object({
 	bio: z.string().max(LONG_TEXT_MAX).optional().default(''),
 	hometown: z.string().max(150).optional().default(''),
 	instruments: tagsField('Invalid instruments'),
+	seekingInstruments: tagsField('Invalid instruments'),
 	genres: tagsField('Invalid genres'),
-	lookingForBand: z.boolean().default(false),
+	// The column itself, not a boolean: a member can point it either way, and
+	// "putting a band together" is the direction that was previously unreachable
+	// from this form — the whole `members` half of matching depended on it.
+	// `''` is the empty option, and lands as null.
+	lookingFor: z.enum(['', 'members', 'band']).default(''),
 	availableForHire: z.boolean().default(false),
 	teachesLessons: z.boolean().default(false),
 	openToCollaboration: z.boolean().default(false),
@@ -556,8 +561,9 @@ export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 		bio: data.bio || undefined,
 		hometown: data.hometown || undefined,
 		instruments: data.instruments,
+		seekingInstruments: data.seekingInstruments,
 		genres: data.genres,
-		lookingForBand: data.lookingForBand,
+		lookingFor: data.lookingFor || null,
 		availableForHire: data.availableForHire,
 		teachesLessons: data.teachesLessons,
 		openToCollaboration: data.openToCollaboration,
@@ -628,6 +634,7 @@ const bandProfileSchema = z.object({
 	hometown: z.string().max(150).optional().default(''),
 	foundedYear: z.string().max(16).optional().default(''),
 	genres: tagsField('Invalid genres'),
+	seekingInstruments: tagsField('Invalid instruments'),
 	lookingForMembers: z.boolean().default(false),
 	directoryVisibility: z.enum(['hidden', 'members', 'public']).default('public'),
 	contactEmail: z.string().max(255).optional().default(''),
@@ -652,6 +659,7 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 		hometown: data.hometown || undefined,
 		foundedYear: data.foundedYear || undefined,
 		genres: data.genres,
+		seekingInstruments: data.seekingInstruments,
 		lookingForMembers: data.lookingForMembers,
 		directoryVisibility: data.directoryVisibility,
 		directoryContact: Object.keys(contact).length > 0 ? contact : undefined,
@@ -668,11 +676,16 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 
 /** The band profile editor's one load-bearing query. See `getMemberProfileEditor`. */
 export const getBandProfileEditor = query(z.string(), async (slug) => {
-	const [profile, genreSuggestions] = await Promise.all([
+	// The instrument suggestions ride along for the "what we're looking for"
+	// field. Deliberately the same vocabulary members tag themselves with — a
+	// free-text field here would let a band ask for something no member has ever
+	// written, and the match would silently never fire.
+	const [profile, genreSuggestions, instrumentSuggestions] = await Promise.all([
 		getBandProfile(slug),
-		getGenreSuggestions()
+		getGenreSuggestions(),
+		getInstrumentSuggestions()
 	]);
-	return { profile, genreSuggestions };
+	return { profile, genreSuggestions, instrumentSuggestions };
 });
 
 // ---------------------------------------------------------------------------

@@ -32,7 +32,21 @@ export const directoryVisibilities = [
 export const lookingForValues = ['members', 'band'] as const;
 export type LookingFor = (typeof lookingForValues)[number];
 
-export const directoryTagKinds = ['genre', 'instrument'] as const;
+/**
+ * What a tag says about the entry that carries it.
+ *
+ * `seeking_instrument` is the other half of `instrument`, and adding it is what
+ * makes the two directions of `lookingFor` symmetric: a member says what they
+ * *play*, a band (or a member assembling one) says what it *needs*, and the
+ * match is the intersection. There was never a `band_instrument` among the
+ * three tables this one replaced, so before this a band could say it wanted
+ * members but not what for, and genre was all a match had to aim at.
+ *
+ * A drizzle `text({ enum })` is a TypeScript constraint and emits no SQL, so a
+ * new value here costs no migration — verified against `pnpm db:generate`
+ * rather than assumed.
+ */
+export const directoryTagKinds = ['genre', 'instrument', 'seeking_instrument'] as const;
 export type DirectoryTagKind = (typeof directoryTagKinds)[number];
 
 // ---------------------------------------------------------------------------

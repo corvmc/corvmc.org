@@ -187,12 +187,17 @@ export async function seedInstructors(users: any[], reviewer: any) {
 	// Instruments come from the directory tags, not from the instructor row —
 	// "what I play" and "what I teach" are the same set until someone proves
 	// otherwise. Without these the cards render with no instruments at all.
+	//
+	// Lowercase, because `validateTags` lowercases everything the app writes and
+	// a tag is matched by exact value: 'Guitar' seeded here is a *different*
+	// instrument from the 'guitar' every other seeder and every save produces.
+	// That splits the suggestion list in two and silently costs a directory match.
 	const tags = [
-		[gtr, 'Guitar'],
-		[gtr, 'Bass'],
-		[drums, 'Drums'],
-		[reachable, 'Voice'],
-		[paused, 'Piano']
+		[gtr, 'guitar'],
+		[gtr, 'bass'],
+		[drums, 'drums'],
+		[reachable, 'vocals'],
+		[paused, 'piano']
 	]
 		.map(([u, value]: any) => ({ entryId: entryFor.get(u.id), kind: 'instrument' as const, value }))
 		.filter((t) => t.entryId);

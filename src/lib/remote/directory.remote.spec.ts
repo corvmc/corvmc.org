@@ -186,8 +186,10 @@ const VALID_MEMBER = {
 	bio: '',
 	hometown: '',
 	instruments: '["guitar","bass"]',
+	seekingInstruments: '[]',
 	genres: '["rock"]',
-	lookingForBand: false,
+	// The column, not a boolean — the form can now point it either way.
+	lookingFor: '' as const,
 	availableForHire: false,
 	teachesLessons: false,
 	openToCollaboration: false,
@@ -207,6 +209,7 @@ const VALID_BAND = {
 	hometown: '',
 	foundedYear: '',
 	genres: '["punk"]',
+	seekingInstruments: '[]',
 	lookingForMembers: false,
 	directoryVisibility: 'public' as const,
 	contactEmail: '',
@@ -225,7 +228,27 @@ describe('saveMemberProfile', () => {
 		);
 	});
 
-	for (const field of ['instruments', 'genres', 'links'] as const) {
+	it('passes the chosen direction through, and null for neither', async () => {
+		// The `members` direction is new: the form's boolean could only ever say
+		// "a band", so a member assembling one had no way to be matched.
+		await directory.saveMemberProfile({
+			...VALID_MEMBER,
+			lookingFor: 'members',
+			seekingInstruments: '["drums"]'
+		});
+		expect(updateMemberProfile).toHaveBeenCalledWith(
+			'user-1',
+			expect.objectContaining({ lookingFor: 'members', seekingInstruments: ['drums'] })
+		);
+
+		await directory.saveMemberProfile(VALID_MEMBER);
+		expect(updateMemberProfile).toHaveBeenLastCalledWith(
+			'user-1',
+			expect.objectContaining({ lookingFor: null })
+		);
+	});
+
+	for (const field of ['instruments', 'seekingInstruments', 'genres', 'links'] as const) {
 		it(`rejects malformed ${field} instead of silently clearing it`, async () => {
 			await expect(
 				directory.saveMemberProfile({ ...VALID_MEMBER, [field]: 'not-json' })
@@ -256,7 +279,21 @@ describe('saveBandProfile', () => {
 		);
 	});
 
-	for (const field of ['genres', 'links'] as const) {
+	it('saves what the band is looking for alongside its genres', async () => {
+		await directory.saveBandProfile({
+			...VALID_BAND,
+			lookingForMembers: true,
+			seekingInstruments: '["drums","vocals"]'
+		});
+
+		expect(updateBandProfile).toHaveBeenCalledWith(
+			'band-1',
+			'user-1',
+			expect.objectContaining({ seekingInstruments: ['drums', 'vocals'] })
+		);
+	});
+
+	for (const field of ['genres', 'seekingInstruments', 'links'] as const) {
 		it(`rejects malformed ${field} instead of silently clearing it`, async () => {
 			await expect(
 				directory.saveBandProfile({ ...VALID_BAND, [field]: '{oops' })

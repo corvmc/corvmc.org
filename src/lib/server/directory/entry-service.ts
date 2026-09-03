@@ -1,5 +1,9 @@
 import { db } from '$lib/server/db';
-import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
+import {
+	directoryEntry,
+	directoryTag,
+	type DirectoryTagKind
+} from '$lib/server/db/schema/directory';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, desc, eq, isNull, like } from 'drizzle-orm';
@@ -122,12 +126,16 @@ export async function getOrCreateUserEntryId(userId: string): Promise<string> {
  * Replace one kind of tag on an entry, as batch statements.
  *
  * Delete-then-insert scoped to `kind`, which is the part that has to be right:
- * genres and instruments share a table now, so an unscoped delete would clear a
- * member's instruments every time they saved their genres.
+ * genres, instruments and sought instruments share a table now, so an unscoped
+ * delete would clear a member's instruments every time they saved their genres.
+ *
+ * `kind` is the whole vocabulary rather than a hand-listed pair, so a new tag
+ * kind is a value added to `directoryTagKinds` and nothing else — this is the
+ * whole write path for every kind.
  */
 export function replaceTags(
 	entryId: string,
-	kind: 'genre' | 'instrument',
+	kind: DirectoryTagKind,
 	values: string[]
 ): BatchItem<'sqlite'>[] {
 	const statements: BatchItem<'sqlite'>[] = [

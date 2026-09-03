@@ -61,7 +61,7 @@ import {
 	purgeUser as purgeUserService
 } from '$lib/server/user/user-service';
 import { resolveImageUrl } from '$lib/server/storage';
-import { isProfileComplete } from '$lib/server/directory/directory-service';
+import { findMatchesFor, isProfileComplete } from '$lib/server/directory/directory-service';
 import { startOfWeek, endOfWeek } from 'date-fns';
 import type { CreditType } from '$lib/server/db/schema/finance';
 import type { BatchItem } from 'drizzle-orm/batch';
@@ -549,7 +549,8 @@ export const getMemberDashboard = query(async () => {
 		upcomingEvents,
 		credits,
 		dbSubscription,
-		profileComplete
+		profileComplete,
+		matches
 	] = await Promise.all([
 		db
 			.select()
@@ -582,7 +583,11 @@ export const getMemberDashboard = query(async () => {
 		listUpcoming(4),
 		getAllBalances(currentUser.id),
 		getMemberSubscription(currentUser.id),
-		isProfileComplete(currentUser.id)
+		isProfileComplete(currentUser.id),
+		// Into the existing Promise.all rather than a query of its own. The page
+		// is on one load-bearing query (`custom/no-concurrent-remote-queries`),
+		// and a card that fanned out a second one would not render past kit 2.64.
+		findMatchesFor(currentUser.id)
 	]);
 
 	const subscription = mapDbSubscription(dbSubscription);
@@ -622,7 +627,8 @@ export const getMemberDashboard = query(async () => {
 		allocatedThisMonth,
 		usedThisMonth,
 		pendingInviteCount,
-		profileComplete
+		profileComplete,
+		matches
 	};
 });
 
