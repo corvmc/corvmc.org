@@ -12,9 +12,12 @@
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import { formatDateShortYear, formatCents } from '$lib/utils/format';
 	import { formatVolunteerHours } from '$lib/config';
 	import { getVolunteerReportPage } from '$lib/remote/volunteer.remote';
+	import { IconDownload } from '@tabler/icons-svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 
 	// Calendar year to date is what a board packet asks for, so it's the default
 	// rather than "all time" — which would keep drifting as the org ages.
@@ -72,13 +75,40 @@
 		return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 	}
 
+	/**
+	 * The export mirrors whatever range the page is showing.
+	 *
+	 * Built by hand rather than with `URLSearchParams`: both values are already
+	 * `YYYY-MM-DD` off a date input, and the mutable class is what
+	 * `svelte/prefer-svelte-reactivity` objects to inside a `$derived`.
+	 */
+	const exportHref = $derived(
+		[fromDate ? `from=${fromDate}` : '', toDate ? `to=${toDate}` : '']
+			.filter(Boolean)
+			.join('&')
+			.replace(/^(.+)$/, '?$1')
+			.replace(/^/, '/staff/volunteer/report/export')
+	);
+
 	function percent(part: number, whole: number): string {
 		if (whole === 0) return '—';
 		return `${Math.round((part / whole) * 100)}%`;
 	}
 </script>
 
-<PageHeader title="Report" subtitle="Volunteering" backHref="/staff/volunteer" />
+<PageHeader title="Report" subtitle="Volunteering" backHref="/staff/volunteer">
+	<!--
+		A plain anchor rather than an Action: the endpoint returns a file, not a
+		value, so it is a `+server.ts` and the browser has to navigate to it for
+		`Content-Disposition` to mean anything. `rel="external"` keeps the router
+		out of it for the same reason — and is what the navigation lint rule wants
+		for an href it cannot statically resolve.
+	-->
+	<Button href={exportHref} size="sm" rel="external" download>
+		<IconDownload size={18} />
+		Export CSV
+	</Button>
+</PageHeader>
 
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
@@ -128,6 +158,43 @@
 			{/await}
 		</div>
 
+		<!--
+			Two valuations, side by side, never added. They overlap: a donated
+			engineer's hour is in both, so a sum double-counts it and is wrong for
+			the grant reader and the accountant alike. The copy under them says so
+			rather than trusting the layout to.
+		-->
+		<InfoCard title="What that time was worth">
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+				<div>
+					<StatCard title="Impact value" value={formatCents(r.contributed.impactValueCents)} />
+					<p class="mt-1 text-subtle text-xs">
+						Every approved hour, at {formatCents(r.contributed.rateCents)}/hr
+					</p>
+				</div>
+				<div>
+					<StatCard
+						title="Contributed services"
+						value={formatCents(r.contributed.recognizableServicesCents)}
+					/>
+					<p class="mt-1 text-subtle text-xs">Specialized hours only, each at its own rate</p>
+				</div>
+			</div>
+			<p class="mt-3 text-subtle text-sm">
+				These are two answers to two different questions, not parts of one total — the specialized
+				hours are counted in both, so adding them double-counts that work. Impact value is what a
+				grant application asks for; contributed services is the narrower figure a financial
+				statement can recognise. Rate: {r.contributed.rateSource}.
+			</p>
+			{#if r.contributed.unpricedSpecializedMinutes > 0}
+				<p class="mt-2 text-sm text-warning">
+					{formatVolunteerHours(r.contributed.unpricedSpecializedMinutes)} of specialized time sits on
+					a role with no market rate set, and counts as zero above rather than as the impact rate. Set
+					one on the role to include it.
+				</p>
+			{/if}
+		</InfoCard>
+
 		<InfoCard title="Hours by role">
 			{#if r.byRole.length === 0}
 				<EmptyState description="No approved hours in this range." />
@@ -146,6 +213,12 @@
 								<span class="truncate">
 									{row.roleName}{#if !row.roleIsActive}<span class="ml-1 text-subtle"
 											>(archived)</span
+										>{/if}{#if row.isSpecializedSkill}<Badge
+											class="ml-2"
+											variant={row.marketRateCents === null ? 'warning' : 'outline'}
+											>{row.marketRateCents === null
+												? 'specialized · unpriced'
+												: `specialized · ${formatCents(row.marketRateCents)}/hr`}</Badge
 										>{/if}
 								</span>
 								<span class="whitespace-nowrap">

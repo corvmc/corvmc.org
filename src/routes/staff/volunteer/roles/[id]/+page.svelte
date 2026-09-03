@@ -33,6 +33,7 @@
 	// either. The certification catalogue lives in RoleRequirementsCard for the same reason.
 	const pageData = $derived(await getStaffVolunteerRolePage(id));
 	const role = $derived(pageData.role);
+
 	const requirementsList = $derived(pageData.requirements);
 	const feedbackList = $derived(pageData.feedback);
 
@@ -178,6 +179,46 @@
 							min="1"
 							label="People needed"
 							value={role.defaultCapacity === null ? '' : String(role.defaultCapacity)}
+						/>
+					</div>
+				</fieldset>
+
+				<fieldset class="mt-2 rounded-box border border-base-300 p-4">
+					<legend class="px-2 text-sm font-medium">Accounting</legend>
+					<p class="mb-2 text-subtle">
+						Every approved hour counts toward the collective's impact value, at the rate on the
+						settings page. A <em>specialized skill</em> is narrower: work we would otherwise have had
+						to pay for, which a financial statement can recognise as a contributed service — at what that
+						skill costs, not at the impact rate. The two are reported side by side and never added together.
+					</p>
+					<div class="grid gap-3 sm:grid-cols-2">
+						<!--
+							A checkbox registers with a `b:` prefix and submits a real
+							boolean, so the schema takes `.optional().default(false)` and
+							an unchecked box arrives as false rather than failing as a
+							missing required field.
+						-->
+						<Field
+							field={fields.isSpecializedSkill}
+							type="checkbox"
+							label="Specialized skill"
+							value={role.isSpecializedSkill}
+							description="Work the collective would otherwise have paid for."
+						/>
+						<!--
+							Posted by name rather than through `fields.x`, like the shift
+							defaults above: an emptied `n:` number is dropped from the
+							submission, which makes "cleared" arrive identical to
+							"untouched" — and blank is a real answer here.
+						-->
+						<FormField
+							name="marketRate"
+							type="number"
+							min="0"
+							step="0.01"
+							label="Market rate ($/hr)"
+							value={role.marketRateCents === null ? '' : (role.marketRateCents / 100).toFixed(2)}
+							description="Blank counts as zero, never as the impact rate — a report shows it as unpriced."
 						/>
 					</div>
 				</fieldset>
