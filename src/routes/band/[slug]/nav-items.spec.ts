@@ -29,6 +29,19 @@ describe('bandNavItems', () => {
 		}
 	});
 
+	/**
+	 * The rider is deliberately the one panel page with no role gate at all,
+	 * staff included. Its whole premise is that the member who owns the amp is
+	 * the one who can say what it needs, so a nav that hid it from plain members
+	 * would defeat the feature — and this is the assertion that fails first if
+	 * somebody "tidies" it in behind `isOwnerOrAdmin` with the rows above it.
+	 */
+	it('gives the tech rider to every role, including staff', () => {
+		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
+			expect(labelsFor({ userRole, isStaff: userRole === 'staff' })).toContain('Tech rider');
+		}
+	});
+
 	// The reported bug: an admin could not reach the band's address at all,
 	// because the whole Settings entry was gated on owner.
 	it('gives Settings to an owner and an admin, but not a plain member', () => {

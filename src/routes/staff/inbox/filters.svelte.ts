@@ -53,8 +53,19 @@ export const filterPanel = {
 	}
 };
 
-const parseView = (raw: string | null): InboxView =>
-	inboxViews.includes(raw as InboxView) ? (raw as InboxView) : 'open';
+/**
+ * The view from the URL, or Open.
+ *
+ * `awaiting` maps to `snoozed`: it was a tab of its own until Snoozed absorbed
+ * it, and old bookmarks and saved views still carry it. Falling back to Open
+ * would silently land somebody in a different queue from the one they saved.
+ * No migration — `inbox_saved_view.filters` rows keep the old word, and are
+ * mapped here and in the query's Zod schema.
+ */
+const parseView = (raw: string | null): InboxView => {
+	if (raw === 'awaiting') return 'snoozed';
+	return inboxViews.includes(raw as InboxView) ? (raw as InboxView) : 'open';
+};
 
 /** Read the query string into the filters. Safe to call on every navigation. */
 export function seedFromUrl(params: URLSearchParams): void {

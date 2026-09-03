@@ -70,9 +70,9 @@ vi.mock('$lib/server/inventory/loan-service', () => ({
 }));
 
 vi.mock('$lib/server/authorization', () => ({
-	requireStaff: vi.fn(async () => ({ id: 'staff-1' })),
+	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	requireUser: vi.fn(() => ({ id: 'user-1' })),
-	requireStaffOrOwner: vi.fn(async () => 'staff'),
+	requireCapabilityOrOwner: vi.fn(async () => 'staff'),
 	isStaff: vi.fn(async () => true)
 }));
 

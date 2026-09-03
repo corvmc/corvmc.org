@@ -13,7 +13,7 @@
 		marketing: {
 			headline: 'Play More. Pay Less. Keep the Collective Going.',
 			subtext:
-				'Sustaining members chip in monthly and get free practice hours, gear perks, and half-price events. You set the amount — we keep the lights on and the amps warm.'
+				'Sustaining members chip in monthly and get free practice hours and gear perks. You set the amount — we keep the lights on and the amps warm.'
 		},
 		dashboard: {
 			headline: 'You’re Part of What Makes This Work',
@@ -23,7 +23,7 @@
 		cancelled: {
 			headline: 'Play More. Pay Less. Keep the Collective Going.',
 			subtext:
-				'Sustaining members chip in monthly and get free practice hours, gear perks, and half-price events. You set the amount — we keep the lights on and the amps warm.'
+				'Sustaining members chip in monthly and get free practice hours and gear perks. You set the amount — we keep the lights on and the amps warm.'
 		}
 	};
 

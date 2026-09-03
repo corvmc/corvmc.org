@@ -269,7 +269,7 @@ export async function isSustainingMember(userId: string): Promise<boolean> {
 /**
  * SQL fragment that evaluates to a boolean: true when the user has a subscription
  * snapshot. Use inside a drizzle `.select()` to compute the flag inline for list/detail
- * queries, e.g. `sustaining: isSustainingMemberSql(user.id)`. Mirrors `primaryRoleFor`.
+ * queries, e.g. `sustaining: isSustainingMemberSql(user.id)`. Mirrors `topPositionFor`.
  *
  * The outer reference is qualified manually: drizzle renders an interpolated Column
  * unqualified in single-table select lists, and inside this subquery the bare name

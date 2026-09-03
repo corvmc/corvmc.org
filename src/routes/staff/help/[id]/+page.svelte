@@ -11,6 +11,7 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import MarkdownEditor from '$lib/components/help/MarkdownEditor.svelte';
+	import { helpAudiences, helpAudienceLabels } from '$lib/config';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { IconTrash } from '@tabler/icons-svelte';
@@ -67,13 +68,9 @@
 					<FormField
 						name="minRole"
 						type="select"
-						label="Minimum Role"
+						label="Audience"
 						value={article.minRole}
-						options={[
-							{ value: 'member', label: 'Member' },
-							{ value: 'staff', label: 'Staff' },
-							{ value: 'admin', label: 'Admin' }
-						]}
+						options={helpAudiences.map((a) => ({ value: a, label: helpAudienceLabels[a] }))}
 					/>
 					<FormField
 						name="published"

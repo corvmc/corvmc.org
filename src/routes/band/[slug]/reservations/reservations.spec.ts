@@ -92,7 +92,7 @@ vi.mock('$lib/server/authorization', () => ({
 	hasAnyRole: vi.fn(async () => false),
 	// `memberRefColumns()` selects this as a correlated subquery. The value is
 	// never asserted here — only that building the projection doesn't throw.
-	primaryRoleFor: vi.fn(() => sql`null`)
+	topPositionFor: vi.fn(() => sql`null`)
 }));
 
 vi.mock('$lib/server/feature-flags', () => ({
@@ -101,7 +101,7 @@ vi.mock('$lib/server/feature-flags', () => ({
 
 const subscriptionServiceMock = {
 	getSubscription: vi.fn(async () => null as { id: string; status: string } | null),
-	/** Same as `primaryRoleFor`: a SQL fragment `memberRefColumns()` projects. */
+	/** Same as `topPositionFor`: a SQL fragment `memberRefColumns()` projects. */
 	isSustainingMemberSql: vi.fn(() => sql`0`)
 };
 

@@ -169,6 +169,10 @@ production
   hospitalityNotes    text
   internalNotes       text
   bandSplitPercent    int                       — default 70; the band cut of gross
+                                                  SUPERSEDED TWICE: by the deal
+                                                  shape on `event_band`, and by
+                                                  the buyer's own allocation —
+                                                  see the note under Settlement
   doorCount           int?                      — settlement snapshot below
   compCount           int?
   ticketRevenueCents  int?
@@ -700,6 +704,19 @@ looks obviously correct, and without this note someone will add it back.
 ---
 
 ## Settlement
+
+> **Note (2026-09-03).** The acts' pool is no longer a percentage anyone applies
+> at settlement. Ticket buyers now name it themselves, one purchase at a time:
+> `ticket-sliding-scale-spec.md` shipped a split bar, and `sum(ticket.actsCents)`
+> over an event's live tickets **is** the pool. 70% survives as the bar's opening
+> position — a house suggestion, not the deal — so `bandSplitPercent` is
+> superseded by evidence as well as by the `event_band` deal shape.
+>
+> What is still unbuilt is the payout: dividing that pool across the bill, and
+> recording what actually changed hands. That row hangs off `event_band` and is
+> shaped like `contractor_job`, because an act is paid the way a contractor is —
+> deliberately, so no touring band needs a Stripe Connect account to get paid for
+> playing a show.
 
 Available once the production is `completed`. The worksheet:
 
@@ -1295,8 +1312,15 @@ nothing at all, since they have no panel; their terms travel by email as they do
   productions come first.
 - **Recurring productions.** Weekly open mics could expand through the existing
   `recurring_series` machinery, but the lineup makes each occurrence genuinely different.
-- **Stage-plot drawing.** Uploading a rider image is in scope; a canvas plot builder is
-  not.
+- ~~**Stage-plot drawing.** Uploading a rider image is in scope; a canvas plot builder is
+  not.~~ **Reversed, 2026-09-03.** That call was made when a rider was an opaque file, where a
+  plot builder would have been a drawing tool with nothing behind it. It is not one any more: a
+  `rider_element` is a row with an owner, a kind and a channel count, so a plot is two nullable
+  columns and a drag surface over rows that already exist — and the requirement every input-list
+  guide leads with, that **the numbers on the plot match the numbers on the list**, is only
+  satisfiable when both read the same rows. Built on `feature/band-rider`. Uploading a plot image
+  stays, unchanged and now available to free bands too, and a generated plot never overwrites an
+  uploaded one.
 - **Emailing external acts** and threading those replies into the staff inbox.
 - **Automated payouts.** Recording what was paid is in scope; disbursing through Stripe
   is not — see the door-cash reasoning above for why Connect is the only mechanism Stripe

@@ -10,6 +10,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import MarkdownEditor from '$lib/components/help/MarkdownEditor.svelte';
+	import { helpAudiences, helpAudienceLabels } from '$lib/config';
 
 	let categories = $derived(await getStaffCategories());
 
@@ -70,13 +71,9 @@
 				<FormField
 					name="minRole"
 					type="select"
-					label="Minimum Role"
+					label="Audience"
 					value="member"
-					options={[
-						{ value: 'member', label: 'Member' },
-						{ value: 'staff', label: 'Staff' },
-						{ value: 'admin', label: 'Admin' }
-					]}
+					options={helpAudiences.map((a) => ({ value: a, label: helpAudienceLabels[a] }))}
 				/>
 				<FormField name="published" type="toggle" label="Status" checkboxLabel="Published" />
 			</div>

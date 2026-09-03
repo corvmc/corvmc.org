@@ -13,8 +13,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const requireStaff = vi.fn(async () => ({ id: 'staff-1' }));
-const requireStaffOrOwner = vi.fn(async () => 'staff' as const);
-vi.mock('$lib/server/authorization', () => ({ requireStaff, requireStaffOrOwner }));
+const requireCapabilityOrOwner = vi.fn(async () => 'staff' as const);
+vi.mock('$lib/server/authorization', () => ({ requireStaff, requireCapabilityOrOwner }));
 
 const svc = {
 	listForStaff: vi.fn(async () => ({ awaitingReview: [], active: [], resolved: [] })),
@@ -105,10 +105,10 @@ describe('reads', () => {
 	});
 
 	it('lets a member read their own record, not only staff', async () => {
-		// `requireStaffOrOwner`, not `requireStaff`: the member needs this for the
+		// `requireCapabilityOrOwner`, not `requireCapability`: the member needs this for the
 		// profile card, and the guard already expresses exactly that.
 		await remote.getUserInstructor('u-1');
-		expect(requireStaffOrOwner).toHaveBeenCalledWith('staff-1', 'u-1');
+		expect(requireCapabilityOrOwner).toHaveBeenCalledWith('instructor.read', 'u-1');
 		expect(requireStaff).not.toHaveBeenCalled();
 	});
 });

@@ -18,6 +18,7 @@ const mockEventRow = {
 	tags: 'open mic,music',
 	ticketingEnabled: false,
 	ticketPrice: null,
+	ticketPriceFloorCents: 0,
 	ticketQuantity: null,
 	// The column default, and the only source CMC sells tickets for. Left
 	// implicit before the community layer existed, when the ticketing guard
@@ -1277,6 +1278,81 @@ describe('EventService', () => {
 			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 1000 })).rejects.toThrow(
 				EventStateError
 			);
+		});
+	});
+
+	describe('the bottom of the sliding scale', () => {
+		const scaled = (over: Record<string, unknown> = {}) => [
+			{
+				...mockEventRow,
+				status: 'draft',
+				ticketingEnabled: true,
+				ticketPrice: 1500,
+				ticketPriceFloorCents: 0,
+				...over
+			}
+		];
+
+		it('accepts a floor of zero — the scale running all the way to free', () => {
+			selectResult = scaled();
+
+			return update('evt-1', { ticketPriceFloorCents: 0 }).then(() => {
+				expect(lastUpdateSet).toMatchObject({ ticketPriceFloorCents: 0 });
+			});
+		});
+
+		it('accepts a floor equal to the price, which is a fixed price', async () => {
+			selectResult = scaled();
+
+			await update('evt-1', { ticketPriceFloorCents: 1500 });
+
+			expect(lastUpdateSet).toMatchObject({ ticketPriceFloorCents: 1500 });
+		});
+
+		it('refuses a floor above the suggested price', async () => {
+			selectResult = scaled();
+
+			await expect(update('evt-1', { ticketPriceFloorCents: 2000 })).rejects.toThrow(
+				EventValidationError
+			);
+		});
+
+		it('refuses a floor no buyer could satisfy', async () => {
+			// $1 is inside the dead zone below the charge minimum, and $0 is below
+			// the floor — the scale would refuse every amount, at the buyer's
+			// checkout rather than here.
+			selectResult = scaled();
+
+			await expect(update('evt-1', { ticketPriceFloorCents: 100 })).rejects.toThrow(
+				EventValidationError
+			);
+		});
+
+		it('refuses a negative or fractional floor', async () => {
+			selectResult = scaled();
+			await expect(update('evt-1', { ticketPriceFloorCents: -500 })).rejects.toThrow(
+				EventValidationError
+			);
+			selectResult = scaled();
+			await expect(update('evt-1', { ticketPriceFloorCents: 12.5 })).rejects.toThrow(
+				EventValidationError
+			);
+		});
+
+		it('refuses dropping the price below a floor already set', async () => {
+			// The same mistake as raising the floor over the price, arriving from
+			// the other side — and only one of the two is a floor edit at all.
+			selectResult = scaled({ ticketPriceFloorCents: 1000 });
+
+			await expect(update('evt-1', { ticketPrice: 500 })).rejects.toThrow(EventValidationError);
+		});
+
+		it('leaves the floor alone when neither price nor floor is being edited', async () => {
+			selectResult = scaled({ ticketPriceFloorCents: 1000 });
+
+			await update('evt-1', { title: 'Renamed' });
+
+			expect(lastUpdateSet).not.toHaveProperty('ticketPriceFloorCents');
 		});
 	});
 });

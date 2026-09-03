@@ -30,6 +30,7 @@ import type { PaginationInput } from '$lib/server/db/paginate';
 import { paginate } from '$lib/server/db/paginate';
 import { z } from 'zod';
 import { contactSubjects, inboxThreadStatuses } from '$lib/config';
+import type { InboxView } from '$lib/config';
 
 /**
  * The one expression that keeps private member↔member conversations out of
@@ -73,11 +74,31 @@ export const waitingSince = sql<number>`coalesce(${inboxThread.awaitingReplySinc
  * now the same number by construction rather than by coincidence.
  *
  * A thread we have already answered is somebody else's move. It is still open,
- * still live, and still listed — under Awaiting reply, its own view.
+ * still live, and still listed — under Snoozed, with everything else parked.
  */
 export const needsUsCondition = and(
 	eq(inboxThread.status, 'open'),
 	isNull(inboxThread.awaitingReplySince)
+)!;
+
+/**
+ * Parked — out of the queue on a timer, and coming back on its own. A thread
+ * snoozed until Tuesday and one waiting on a contact's reply are the same
+ * proposition to whoever is working the queue, so they are one view.
+ *
+ * The marker is read only on an *open* row, which is the rule the counts follow
+ * too. `addOutboundMessage` leaves one on a snoozed thread — harmless, the
+ * first branch already has it — and `undoLastDisposition` can restore a stale
+ * one onto a resolved thread. Neither may pull a conversation out of the status
+ * it is actually in.
+ *
+ * The exact complement of {@link needsUsCondition} within open and snoozed,
+ * which is what makes Open / Snoozed / Resolved a partition rather than three
+ * overlapping filters.
+ */
+export const parkedCondition = or(
+	eq(inboxThread.status, 'snoozed'),
+	and(eq(inboxThread.status, 'open'), isNotNull(inboxThread.awaitingReplySince))
 )!;
 
 const PREVIEW_LENGTH = 200;
@@ -186,8 +207,15 @@ export interface ListThreadsFilters {
 	status?: InboxThreadStatus;
 	channel?: InboxChannel;
 	assignedToUserId?: string | null;
-	/** True: waiting on the contact. False: waiting on us. Undefined: both. */
-	awaitingReply?: boolean;
+	/**
+	 * Which half of the live queue. `needs-us` is open and unanswered; `parked`
+	 * is snoozed-or-awaiting. Undefined is both, plus resolved.
+	 *
+	 * One field rather than a status equality plus a marker flag, because
+	 * `parked` is not expressible as an AND of those two columns — see
+	 * {@link parkedCondition}.
+	 */
+	queue?: 'needs-us' | 'parked';
 	search?: string;
 	/**
 	 * An inquiry type from `contactSubjects`, or the sentinel `other` for a
@@ -228,6 +256,11 @@ function threadConditions(
 	const conditions: (SQL | undefined)[] = [staffVisibleThread];
 
 	if (filters.status && omit !== 'status') conditions.push(eq(inboxThread.status, filters.status));
+	// The same facet as `status`, so `omit: 'status'` drops both: a status count
+	// computed under the view it belongs to could only ever report itself.
+	if (filters.queue && omit !== 'status') {
+		conditions.push(filters.queue === 'parked' ? parkedCondition : needsUsCondition);
+	}
 	if (filters.channel) conditions.push(eq(inboxThread.channel, filters.channel));
 	if (filters.assignedToUserId !== undefined && omit !== 'assignee') {
 		if (filters.assignedToUserId === null) {
@@ -235,13 +268,6 @@ function threadConditions(
 		} else {
 			conditions.push(eq(inboxThread.assignedToUserId, filters.assignedToUserId));
 		}
-	}
-	if (filters.awaitingReply !== undefined && omit !== 'status') {
-		conditions.push(
-			filters.awaitingReply
-				? isNotNull(inboxThread.awaitingReplySince)
-				: isNull(inboxThread.awaitingReplySince)
-		);
 	}
 	if (filters.subject && omit !== 'subject') {
 		conditions.push(
@@ -595,20 +621,16 @@ export async function getUnresolvedCount(): Promise<number> {
 }
 
 /**
- * The five views the queue offers, as numbers.
+ * The four views the queue offers, as numbers. `Record<InboxView, number>` so a
+ * tab can never exist without a count, nor a count without a tab.
  *
- * `open` and `awaiting` both have status `open` in the database — the split is
- * on the awaiting marker, which is why this groups by the pair rather than by
- * status alone. `open` is now exactly {@link getUnresolvedCount}: the tab and
- * the nav badge are the same claim, so they had better be the same arithmetic.
+ * `snoozed` covers both kinds of parked, which is why this still groups by the
+ * awaiting marker as well as the status: an open row carrying it belongs under
+ * Snoozed, and a resolved row carrying a stale one does not. `open` is exactly
+ * {@link getUnresolvedCount}: the tab and the nav badge are the same claim, so
+ * they had better be the same arithmetic.
  */
-export type ThreadStatusCounts = {
-	open: number;
-	awaiting: number;
-	snoozed: number;
-	resolved: number;
-	all: number;
-};
+export type ThreadStatusCounts = Record<InboxView, number>;
 
 export async function countThreadsByStatus(): Promise<ThreadStatusCounts> {
 	const rows = await db
@@ -623,11 +645,13 @@ export async function countThreadsByStatus(): Promise<ThreadStatusCounts> {
 		.where(staffVisibleThread)
 		.groupBy(inboxThread.status, sql`(${inboxThread.awaitingReplySince} is not null)`);
 
-	const counts: ThreadStatusCounts = { open: 0, awaiting: 0, snoozed: 0, resolved: 0, all: 0 };
+	const counts: ThreadStatusCounts = { open: 0, snoozed: 0, resolved: 0, all: 0 };
 	for (const row of rows) {
-		// The marker only means anything on an open thread; every other status
-		// clears it, and a stale one must not move a resolved thread's count.
-		if (row.status === 'open') counts[row.awaiting ? 'awaiting' : 'open'] += row.count;
+		// The marker only means anything on an open thread, and where it is there
+		// the thread is parked exactly like a snoozed one. Every other status wins
+		// over it — a stale marker must not move a resolved thread's count, and
+		// `parkedCondition` excludes the same row for the same reason.
+		if (row.status === 'open') counts[row.awaiting ? 'snoozed' : 'open'] += row.count;
 		else counts[row.status] += row.count;
 		counts.all += row.count;
 	}
@@ -706,9 +730,9 @@ export async function countThreadFacets(filters: ListThreadsFilters): Promise<Th
 			.groupBy(inboxThread.subject)
 	]);
 
-	const status: ThreadStatusCounts = { open: 0, awaiting: 0, snoozed: 0, resolved: 0, all: 0 };
+	const status: ThreadStatusCounts = { open: 0, snoozed: 0, resolved: 0, all: 0 };
 	for (const row of statusRows) {
-		if (row.status === 'open') status[row.awaiting ? 'awaiting' : 'open'] += row.count;
+		if (row.status === 'open') status[row.awaiting ? 'snoozed' : 'open'] += row.count;
 		else status[row.status] += row.count;
 		status.all += row.count;
 	}

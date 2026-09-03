@@ -32,10 +32,27 @@
 	//   skipped and an initially-open bits-ui dialog never mounts its portal),
 	//   so the sidebar links carry data-sveltekit-reload and arrive as a full
 	//   document load, which initializes deterministically.
-	// A writable derived keeps the wiring passive: closing writes false into the
-	// binding, then onCreateModalClose strips the param so the dependency change
-	// keeps the derived in sync.
-	let showCreateModal = $derived(page.url.searchParams.has('create'));
+	// Deliberately an $effect over $state, NOT a writable $derived. A derived on
+	// `page.url` evaluates against the pre-navigation URL during a fast SPA
+	// navigation and the Modal's `bind:open` pins that stale false: clicking
+	// "Create Act" sets it true, the URL settles, the derived re-runs and pins it
+	// back — a button that does nothing. #149 chose the effect for exactly this
+	// reason and said so; #153 replaced it with the derived and the dead modal
+	// came back, intermittently, in ~17% of CI runs.
+	//
+	// `data-sveltekit-reload` on the sidebar's ?create=1 link makes THAT arrival
+	// a full load, but it does not cover the plain client-side navigations into
+	// this page — `goto('/member/bands')` from band settings and from
+	// YourMembership, and the links on /member and in the member layout. Those
+	// are how a real user hits the dead button.
+	//
+	// The effect only ever opens, never closes, so a user's own click cannot be
+	// undone by a later URL settle.
+	let showCreateModal = $state(false);
+
+	$effect(() => {
+		if (page.url.searchParams.has('create')) showCreateModal = true;
+	});
 
 	// Drop the param on close so the nav link re-triggers and refresh stays clean.
 	function onCreateModalClose() {

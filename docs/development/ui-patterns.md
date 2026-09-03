@@ -215,6 +215,37 @@ for every amount; do not hand-roll the dollars/cents pair.
 
 **A remote form encodes its field names**, so a component's own `name="foo"` prop does not reach it. Take the attributes from the form instead — `<input {...myForm.fields.foo.as('hidden', value)} />` — or the field arrives as `undefined` and fails Zod with nothing on screen to show for it. This bites hardest with `SearchSelect`, whose `name` prop emits a plain attribute: bind its value and render the hidden input from the remote form yourself.
 
+### SplitBar
+
+A total divided between two parties, with a third fixed slice — card processing — taken off
+the top and not draggable. Humble Bundle's slider: showing a buyer where their money goes
+reframes the question from _what do I owe_ to _what do they get_, and a cut you can refuse is
+an ask rather than a rake.
+
+```svelte
+<SplitBar
+	{totalCents}
+	value={split.collectiveCents}
+	onchange={(c) => (override = c)}
+	fixedCents={split.stripeFeeCents}
+	fixedLabel="Card processing"
+	valueLabel="The Collective"
+	otherLabel={actsLabel}
+/>
+```
+
+`value` + `onchange` rather than `$bindable`, because callers hold it as a `$derived` that
+falls back to a suggestion until the user touches it — and a derived cannot be bound to.
+Domain-free by construction, so the arithmetic lives beside it in `$lib/finance/split.ts`
+and its two adapters (`audio-split.ts`, `ticket-split.ts`), which are client-importable on
+purpose: the same module has to render the preview and produce what the server records.
+
+**Do not pass `otherFloorCents` a price floor.** It is the _other party's_ floor within the
+bar, not the sale's minimum — passing the price consumed the whole amount, clamped the
+movable share's maximum to zero, and the suggested position never appeared. The other
+party's real protection is the total the buyer named. `SplitBar.stories.svelte` covers the
+positions worth looking at, including both ends and a zero total.
+
 ### Key props
 
 - `name` — **required inside a Form**. Must match the field name in the remote form's Zod schema. This is how FormField looks up validation issues from the Form context and how the value is submitted.

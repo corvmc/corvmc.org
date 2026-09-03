@@ -2,7 +2,11 @@ import { z } from 'zod';
 import { toGenericRef } from '$lib/server/entity/refs';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
+import {
+	requireCapability,
+	requireCapabilityOrOwner,
+	requireUser
+} from '$lib/server/authorization';
 import {
 	createCategory,
 	createItem as createItemService,
@@ -109,7 +113,7 @@ function calendarDate(value: string | undefined): Date {
 // ---------------------------------------------------------------------------
 
 export const getItem = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	// Staff see deactivated items too — that page is where Reactivate lives.
 	const item = await getItemById(id, { includeDeleted: true });
 	if (!item) error(404, 'Item not found');
@@ -117,51 +121,51 @@ export const getItem = query(z.string(), async (id) => {
 });
 
 export const getEquipmentCategories = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return listCategories();
 });
 
 export const getLocations = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return listLocations();
 });
 
 /** The locations page's one load-bearing query: the tree plus what sits in each. */
 export const getLocationsWithCounts = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return listLocationsWithCounts();
 });
 
 export const getItemLoanHistory = query(z.string(), async (itemId) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return getLoanHistory(itemId);
 });
 
 export const getItemMovements = query(z.string(), async (itemId) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return listMovements({ itemId });
 });
 
 export const getItemAssets = query(z.string(), async (itemId) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return listAssets({ itemId });
 });
 
 export const getLoan = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	const loan = await getLoanById(id);
 	if (!loan) error(404, 'Loan not found');
 	return loan;
 });
 
 export const getAvailableItems = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	const { rows } = await listItems({ loanableOnly: true });
 	return rows;
 });
 
 export const getAvailableAssets = query(z.string(), async (itemId) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return listAvailableAssets(itemId);
 });
 
@@ -174,7 +178,7 @@ const staffItemFilters = z.object({
 });
 
 export const getStaffItemList = query(staffItemFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	const { rows, pagination } = await listItems(
 		{
 			search: filters.search || undefined,
@@ -204,7 +208,7 @@ const staffLoansFilters = z.object({
 });
 
 export const getStaffLoans = query(staffLoansFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return listLoans(
 		{
 			search: filters.search || undefined,
@@ -222,19 +226,19 @@ export const getStaffLoans = query(staffLoansFilters, async (filters) => {
  * page, per `no-concurrent-remote-queries`.
  */
 export const getUntaggedAssets = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return listUntaggedAssets();
 });
 
 export const getAsset = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	const asset = await getAssetById(id);
 	if (!asset) error(404, 'Asset not found');
 	return asset;
 });
 
 export const getAssetMovements = query(z.string(), async (assetId) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return listMovements({ assetId });
 });
 
@@ -355,7 +359,7 @@ const editItemSchema = z.object({
 });
 
 export const editItem = form(editItemSchema.extend({ id: z.string() }), async (raw) => {
-	await requireStaff();
+	await requireCapability('inventory.manageItems');
 	const data = raw as z.infer<typeof editItemSchema> & { id: string };
 	const id = data.id;
 	await updateItem(id, data);
@@ -378,7 +382,7 @@ export const createItem = form(
 		notes: z.string().max(2000).optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageItems');
 		const data = raw as {
 			name: string;
 			description?: string;
@@ -410,14 +414,14 @@ export const createItem = form(
 );
 
 export const deactivateItem = form(z.object({ id: z.string() }), async (data) => {
-	await requireStaff();
+	await requireCapability('inventory.manageItems');
 	await softDeleteItem(data.id as string);
 	void getStaffItemDetail(data.id as string).refresh();
 	return { success: true };
 });
 
 export const reactivateItem = form(z.object({ id: z.string() }), async (data) => {
-	await requireStaff();
+	await requireCapability('inventory.manageItems');
 	await restoreItem(data.id as string);
 	void getStaffItemDetail(data.id as string).refresh();
 	return { success: true };
@@ -437,7 +441,7 @@ export const createAsset = form(
 		notes: z.string().max(2000).optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageAssets');
 		const data = raw as {
 			itemId: string;
 			assetTag?: string;
@@ -468,7 +472,7 @@ export const createAsset = form(
 export const bindTag = form(
 	z.object({ assetId: z.string(), assetTag: z.string().min(1).max(64) }),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageAssets');
 		const data = raw as { assetId: string; assetTag: string };
 		try {
 			await bindAssetTag(data.assetId, data.assetTag);
@@ -492,7 +496,7 @@ export const editAsset = form(
 		notes: z.string().max(2000).optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageAssets');
 		const data = raw as {
 			id: string;
 			serialNumber?: string;
@@ -528,7 +532,7 @@ export const changeAssetStatus = form(
 		notes: z.string().max(2000).optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageAssets');
 		const data = raw as {
 			id: string;
 			status: AssetStatus;
@@ -582,7 +586,7 @@ export const receiveStock = form(
 		notes: z.string().max(2000).optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageStock');
 		const currentUser = requireUser();
 		const data = raw as {
 			itemId: string;
@@ -640,7 +644,7 @@ export const receiveStock = form(
  * stale after somebody adds a location mid-session.
  */
 export const getIntakePage = query(z.object({ orderId: z.string().optional() }), async (input) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	// Unpaginated on purpose: the picker filters in the browser, and a stocktake
 	// jumps between categories constantly — a paged picker would put a round
 	// trip between the operator and every second row they enter.
@@ -728,7 +732,7 @@ export const recordIntake = form(
 		lines: z.string().min(1)
 	}),
 	async (raw, issue) => {
-		await requireStaff();
+		await requireCapability('inventory.manageStock');
 		const currentUser = requireUser();
 		const data = raw as {
 			kind: AcquisitionKind;
@@ -804,12 +808,12 @@ export const recordIntake = form(
 // ---------------------------------------------------------------------------
 
 export const getOrders = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return listOrders();
 });
 
 export const getOrder = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	const order = await getOrderById(id);
 	if (!order) error(404, 'Order not found');
 	return order;
@@ -841,7 +845,7 @@ export const startOrder = form(
 		lines: z.string().min(1)
 	}),
 	async (raw, issue) => {
-		await requireStaff();
+		await requireCapability('inventory.manageOrders');
 		const currentUser = requireUser();
 		const data = raw as {
 			supplierName?: string;
@@ -876,7 +880,7 @@ export const startOrder = form(
 );
 
 export const markOrderPlaced = form(z.object({ id: z.string() }), async (raw) => {
-	await requireStaff();
+	await requireCapability('inventory.manageOrders');
 	const data = raw as { id: string };
 	try {
 		await placeOrder(data.id);
@@ -892,7 +896,7 @@ export const markOrderPlaced = form(z.object({ id: z.string() }), async (raw) =>
 });
 
 export const dropOrder = form(z.object({ id: z.string() }), async (raw) => {
-	await requireStaff();
+	await requireCapability('inventory.manageOrders');
 	const data = raw as { id: string };
 	try {
 		await cancelOrder(data.id);
@@ -907,7 +911,7 @@ export const dropOrder = form(z.object({ id: z.string() }), async (raw) => {
 });
 
 export const closeOrder = form(z.object({ id: z.string() }), async (raw) => {
-	await requireStaff();
+	await requireCapability('inventory.manageOrders');
 	const data = raw as { id: string };
 	try {
 		await closeOrderShort(data.id);
@@ -927,7 +931,7 @@ export const useStock = form(
 		notes: z.string().max(1000).optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageStock');
 		const currentUser = requireUser();
 		const data = raw as { itemId: string; quantity: number; notes?: string };
 		await consumeStock({
@@ -949,7 +953,7 @@ export const correctStock = form(
 		notes: z.string().max(1000).optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageStock');
 		const currentUser = requireUser();
 		const data = raw as { itemId: string; delta: number; notes?: string };
 		if (data.delta === 0) error(400, 'An adjustment of zero changes nothing');
@@ -975,7 +979,7 @@ export const addCategory = form(
 		pricingTier: z.string()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageItems');
 		const data = raw as { name: string; displayOrder?: string; pricingTier: string };
 		const cat = await createCategory({
 			name: data.name,
@@ -995,7 +999,7 @@ export const editCategory = form(
 		pricingTier: z.string().optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageItems');
 		const data = raw as {
 			id: string;
 			name?: string;
@@ -1014,7 +1018,7 @@ export const editCategory = form(
 );
 
 export const removeCategory = form(z.object({ id: z.string() }), async (data) => {
-	await requireStaff();
+	await requireCapability('inventory.manageItems');
 	await deleteCategory(data.id as string);
 	void getEquipmentCategories().refresh();
 	return { success: true };
@@ -1027,7 +1031,7 @@ export const addLocation = form(
 		notes: z.string().max(2000).optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageItems');
 		const data = raw as { name: string; parentId?: string; notes?: string };
 		const loc = await createLocation({
 			name: data.name,
@@ -1045,7 +1049,7 @@ export const addLocation = form(
 // ---------------------------------------------------------------------------
 
 export const scheduleLoanForm = form('unchecked', async (data, issue) => {
-	await requireStaff();
+	await requireCapability('inventory.manageLoans');
 	const result = scheduleLoanSchema.safeParse(data);
 	if (!result.success) {
 		const issues = result.error.issues
@@ -1075,7 +1079,7 @@ export const scheduleLoanForm = form('unchecked', async (data, issue) => {
 });
 
 export const checkoutLoanForm = form('unchecked', async (data, issue) => {
-	await requireStaff();
+	await requireCapability('inventory.manageLoans');
 	const currentUser = requireUser();
 	const result = checkoutLoanSchema.safeParse(data);
 	if (!result.success) {
@@ -1119,7 +1123,7 @@ export const createLoan = form(
 		memberNotes: z.string().max(1000).optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageLoans');
 		const data = raw as {
 			userId: string;
 			itemId?: string;
@@ -1178,7 +1182,7 @@ export const cancelLoan = form(z.object({ id: z.string() }), async (data) => {
 	if (!loan) throw error(404, 'Loan not found');
 
 	// Staff may cancel at any point; the borrower only before pickup.
-	const role = await requireStaffOrOwner(locals.user.id, loan.userId);
+	const role = await requireCapabilityOrOwner('inventory.manageLoans', loan.userId);
 	if (role === 'owner') {
 		if (loan.status !== 'requested' && loan.status !== 'scheduled') {
 			throw error(400, 'Cannot cancel a loan that has been checked out');
@@ -1196,7 +1200,7 @@ export const returnLoan = form(
 		staffNotes: z.string().max(2000).optional()
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('inventory.manageLoans');
 		const currentUser = requireUser();
 		await returnLoanService(data.id as string, (data.staffNotes as string) || undefined, {
 			actorId: currentUser.id
@@ -1214,7 +1218,7 @@ export const returnLoan = form(
 // ---------------------------------------------------------------------------
 
 export const getUserLoans = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	return listUserLoans(userId);
 });
 
@@ -1230,7 +1234,7 @@ export const getUserLoans = query(z.string(), async (userId) => {
  * shopping list.
  */
 export const getRestockList = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inventory.report');
 	const rows = await listLowStock();
 	return {
 		rows,
@@ -1252,7 +1256,7 @@ const spendRange = z.object({
  * budget by exactly what the collective was given.
  */
 export const getSpendReport = query(spendRange, async (range) => {
-	await requireStaff();
+	await requireCapability('inventory.report');
 
 	const now = new Date();
 	const from = range.from ? new Date(range.from) : new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
@@ -1307,7 +1311,7 @@ export const getSpendReport = query(spendRange, async (range) => {
  * (what was claimed, whether the disposal counts) live on paper.
  */
 export const getForm8282Obligations = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inventory.manageAcquisitions');
 	const { obligations, noFormOnRecord } = await listForm8282Obligations();
 	return {
 		noFormOnRecord,
@@ -1332,7 +1336,7 @@ export const getForm8282Obligations = query(z.void(), async () => {
 export const recordForm8282 = form(
 	z.object({ id: z.string(), note: z.string().min(1).max(1000) }),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageAcquisitions');
 		const data = raw as { id: string; note: string };
 		await resolveForm8282(data.id, data.note);
 		void getForm8282Obligations().refresh();
@@ -1361,7 +1365,7 @@ export const getAcquisitions = query(
 		awaitingReimbursement: z.boolean().optional()
 	}),
 	async (opts) => {
-		await requireStaff();
+		await requireCapability('inventory.manageAcquisitions');
 
 		const rows = await listAcquisitions({
 			kind: opts.kind,
@@ -1399,7 +1403,7 @@ export const getAcquisitions = query(
  * than shipping a member list nobody has asked for yet.
  */
 export const getStaffAcquisitionDetail = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 
 	const acq = await getAcquisitionById(id);
 	if (!acq) error(404, 'Acquisition not found');
@@ -1441,7 +1445,7 @@ export const editAcquisition = form(
 		notes: z.string().max(2000).optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageAcquisitions');
 		const data = raw as {
 			id: string;
 			sourceName?: string;
@@ -1495,7 +1499,7 @@ export const recordForm8283 = form(
 		appraisalRef: z.string().max(255).optional()
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageAcquisitions');
 		const data = raw as { id: string; signedOn: string; appraisalRef?: string };
 
 		const signedOn = new Date(data.signedOn);
@@ -1519,7 +1523,7 @@ export const recordForm8283 = form(
 );
 
 export const markAcquisitionReimbursed = form(z.object({ id: z.string() }), async (raw) => {
-	await requireStaff();
+	await requireCapability('inventory.manageAcquisitions');
 	const data = raw as { id: string };
 
 	try {
@@ -1537,7 +1541,7 @@ export const markAcquisitionReimbursed = form(z.object({ id: z.string() }), asyn
 // ---------------------------------------------------------------------------
 
 export const getItemResources = query(z.string(), async (itemId) => {
-	await requireStaff();
+	await requireCapability('inventory.read');
 	const [resources, linkable] = await Promise.all([
 		listItemResources(itemId),
 		listLinkableArticles(itemId)
@@ -1548,7 +1552,7 @@ export const getItemResources = query(z.string(), async (itemId) => {
 export const linkItemArticle = form(
 	z.object({ itemId: z.string(), articleId: z.string() }),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageItems');
 		const data = raw as { itemId: string; articleId: string };
 		await linkArticle(data.itemId, data.articleId);
 		void getItemResources(data.itemId).refresh();
@@ -1559,7 +1563,7 @@ export const linkItemArticle = form(
 export const unlinkItemArticle = form(
 	z.object({ itemId: z.string(), linkId: z.string() }),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('inventory.manageItems');
 		const data = raw as { itemId: string; linkId: string };
 		await unlinkArticle(data.linkId);
 		void getItemResources(data.itemId).refresh();

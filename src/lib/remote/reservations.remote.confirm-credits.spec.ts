@@ -49,13 +49,14 @@ vi.mock('$lib/server/authorization', async () => {
 		// Mirrors the real helper: owner short-circuits, otherwise defer to
 		// isStaff so the staff/member cases below still drive this the same way
 		// they drive every other authorisation check in this file.
-		requireStaffOrOwner: vi.fn(async (userId?: string, ownerUserId?: string) => {
-			if (!userId) throw error(401, 'Not authenticated');
-			if (userId === ownerUserId) return 'owner';
+		requireCapabilityOrOwner: vi.fn(async (_cap: string, ownerUserId?: string) => {
+			// Mirrors the real guard, which now reads the acting user from the
+			// request event rather than taking it as a parameter.
+			if (staffUser.id === ownerUserId) return 'owner';
 			if (await isStaffMock()) return 'staff';
 			throw error(403, 'Not authorized');
 		}),
-		primaryRoleFor: vi.fn()
+		topPositionFor: vi.fn()
 	};
 });
 
@@ -129,7 +130,7 @@ const { confirmReservation, getReservationPricing } =
 	(await import('$lib/remote/reservations.remote')) as any;
 
 beforeEach(() => {
-	// requireStaffOrOwner short-circuits on ownership without consulting isStaff,
+	// requireCapabilityOrOwner short-circuits on ownership without consulting isStaff,
 	// so a `mockResolvedValueOnce(false)` queued by an owner-path test is never
 	// consumed and would otherwise leak into the next test's staff case. Reset to
 	// the suite default rather than letting one-shots accumulate.

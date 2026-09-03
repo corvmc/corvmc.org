@@ -1,12 +1,7 @@
 import type Stripe from 'stripe';
 import { fulfillPurchase } from './ticket-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { db } from '$lib/server/db';
-import { event } from '$lib/server/db/schema/event';
-import { eq } from 'drizzle-orm';
-import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
+import { emitTicketPurchased } from './purchased-event';
 import { captureException } from '$lib/server/sentry';
-import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Ticket checkout listener
@@ -38,12 +33,6 @@ export async function handleTicketCheckout(session: Stripe.Checkout.Session): Pr
 
 	// Emit ticket.purchased for notification dispatch
 	try {
-		const eventId = tickets[0].eventId;
-		const [eventRow] = await db.select().from(event).where(eq(event.id, eventId)).limit(1);
-		if (!eventRow) return;
-
-		const TZ = DEFAULT_TIMEZONE;
-
 		// Receipt amounts. The buyer may have no account, so the confirmation
 		// email is their only record of what they paid — it has to break the
 		// charge down, not just state a total.
@@ -67,21 +56,21 @@ export async function handleTicketCheckout(session: Stripe.Checkout.Session): Pr
 			(session.amount_subtotal ?? totalCents) - subtotalCents - contributionCents
 		);
 
-		await domainEvents.emit('ticket.purchased', {
-			purchaseId,
-			eventId,
-			attendeeName: tickets[0].attendeeName,
-			attendeeEmail: tickets[0].attendeeEmail,
-			eventTitle: eventRow.title,
-			eventDate: formatDateFull(eventRow.startsAt, TZ),
-			eventTime: formatTimeSimple(eventRow.startsAt, TZ),
-			ticketCodes: tickets.map((t) => t.code),
-			quantity: tickets.length,
+		// The allocation is read off the rows rather than the session: it was
+		// written before the buyer ever reached Stripe, and `fulfillPurchase` has
+		// already handed the rows back, so it costs nothing. The session metadata
+		// carries it too, but for settle-time reconciliation against Stripe, not
+		// for this.
+		const order = tickets.find((t) => t.actsCents > 0 || t.collectiveCents > 0) ?? tickets[0];
+
+		await emitTicketPurchased(purchaseId, tickets, {
 			unitPriceCents,
 			subtotalCents,
 			contributionCents,
 			feesCents,
-			totalCents
+			totalCents,
+			actsCents: order.actsCents,
+			collectiveCents: order.collectiveCents
 		});
 	} catch (err) {
 		// The tickets are already valid at this point — a failure here costs the

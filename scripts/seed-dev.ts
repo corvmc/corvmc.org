@@ -70,6 +70,7 @@ import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
 import { seedSuggestions } from './seed/suggestions';
 import { seedProjects } from './seed/projects';
+import { seedRiders } from './seed/rider';
 
 async function main() {
 	console.log('\nStarting dev seed...\n');
@@ -160,6 +161,9 @@ async function main() {
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
+	// After the bands and their rosters: a rider is owned corner by corner, so it
+	// reads the roster back rather than being handed one.
+	const riders = await seedRiders(roles);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -231,6 +235,12 @@ async function main() {
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
 	);
+	console.log(
+		`  ${riders.riders} structured tech rider (${riders.structuredBand ?? '—'}), ${riders.uploaded} upload-only (${riders.uploadBand ?? '—'})`
+	);
+	console.log('\n  Tech rider demo logins (all `password`):');
+	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');
+	console.log('    ridermember@corvallismusic.org  member — own corner only');
 	console.log('\n  Volunteer demo logins (all `password`):');
 	console.log('    coordinator@corvallismusic.org  staff — every /staff/volunteer page');
 	console.log('    volunteer@corvallismusic.org    active volunteer — /member/volunteer');
