@@ -55,6 +55,7 @@ import { seedEquipment, seedItemArticles } from './seed/equipment';
 import { seedHelp } from './seed/help';
 import { seedInbox } from './seed/inbox';
 import { seedDirectMessages } from './seed/direct-messages';
+import { seedBandEnquiries } from './seed/band-enquiries';
 import { seedContentFlags } from './seed/content-flags';
 import { seedContractors } from './seed/contractors';
 import { seedDutyLists } from './seed/duty-lists';
@@ -132,6 +133,7 @@ async function main() {
 	const contractors = await seedContractors(adminUser.id);
 	const inbox = await seedInbox(adminUser, users[0]);
 	const directMessages = await seedDirectMessages(users, adminUser);
+	const bandEnquiries = await seedBandEnquiries(bands, allUsers);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
 	// Profiles first, and everything downstream is seeded against the members who
@@ -217,6 +219,9 @@ async function main() {
 	console.log(`  ${directory.entries} directory entries, ${directory.tags} directory tags`);
 	console.log(`  ${directoryPersonas.users} directory matching demo personas`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
+	console.log(
+		`  ${bandEnquiries.threads} band booking enquiries, ${bandEnquiries.messages} messages`
+	);
 	console.log(
 		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings, 1 member-set messaging preference`
 	);
