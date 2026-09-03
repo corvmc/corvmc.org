@@ -3,6 +3,7 @@ import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireFeature } from '$lib/server/feature-flags';
 import { requireGroupRole } from '$lib/server/group/group-context';
+import { getOrCreateBandSiteId } from '$lib/server/band/band-site-service';
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
 import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
 import { db } from '$lib/server/db';
@@ -116,17 +117,22 @@ export const saveBandEpk = form(
 	async (data) => {
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
-		if (band.tier !== 'premium') {
-			throw error(403, 'Premium subscription required');
-		}
+		// Deliberately no tier check and no `requireFeature('bandPremium')`. A
+		// press kit is what a band *is*, not what it buys — `band_site` holds
+		// both, and `epk` is the free half of that row. What premium adds is
+		// presentation and volume (video, an unbounded gallery, a themed page on
+		// their own domain), never the information a venue needs to book them.
+		//
+		// `getOrCreateBandSiteId` rather than a bare `UPDATE … WHERE group_id`:
+		// against a band whose row is somehow missing, the update matches nothing,
+		// writes nothing, and still returns success — the band would be told its
+		// press kit was saved when it was not.
+		const siteId = await getOrCreateBandSiteId(band.id);
 
-		const epk = data.epk;
-
-		// Always an update — see the note on the block save above.
 		await db
 			.update(bandSite)
-			.set({ epk, updatedAt: new Date() })
-			.where(eq(bandSite.groupId, band.id));
+			.set({ epk: data.epk, updatedAt: new Date() })
+			.where(eq(bandSite.id, siteId));
 
 		return { success: true };
 	}
