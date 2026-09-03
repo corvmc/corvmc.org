@@ -14,6 +14,7 @@ import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
 import { eq, and, notInArray } from 'drizzle-orm';
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
+import { helpAudiences } from '../src/lib/config';
 
 const CONTENT_DIR = join(import.meta.dirname, '../src/content/help');
 
@@ -42,10 +43,21 @@ function parseFrontmatter(content: string): { meta: ArticleFrontmatter; body: st
 	return { meta: meta as unknown as ArticleFrontmatter, body: match[2].trim() };
 }
 
-// Mirrors ROLE_LEVEL in src/lib/server/help/help-service.ts: lower is more
-// privileged, so a higher number means a more permissive audience.
-const ROLE_LEVEL: Record<string, number> = { admin: 0, staff: 1, sustaining: 2, member: 3 };
-const roleLevel = (role: string) => ROLE_LEVEL[role] ?? 3;
+// The audience ladder is `helpAudiences` in src/lib/config.ts, lowest tier
+// first — so a LOWER index is the more permissive audience. Imported rather
+// than mirrored: the copy this replaced was a second closed table of role
+// names, which is the shape that made a new position hide every article.
+// Unknown frontmatter clamps to the most restrictive tier.
+const audienceRank = (a: string) => {
+	const i = (helpAudiences as readonly string[]).indexOf(a);
+	return i === -1 ? helpAudiences.length : i;
+};
+
+/** Frontmatter is hand-written; clamp anything off the ladder to the most restrictive tier. */
+const audienceOf = (a?: string) => {
+	const v = a ?? 'member';
+	return (helpAudiences as readonly string[]).includes(v) ? v : 'staff';
+};
 
 function findMarkdownFiles(dir: string): string[] {
 	const files: string[] = [];
@@ -86,9 +98,9 @@ async function main() {
 	// as an empty card.
 	const categoryMinRole = new Map<string, string>();
 	for (const { meta } of articles) {
-		const role = meta.minRole ?? 'member';
+		const role = audienceOf(meta.minRole);
 		const current = categoryMinRole.get(meta.category);
-		if (current === undefined || roleLevel(role) > roleLevel(current)) {
+		if (current === undefined || audienceRank(role) < audienceRank(current)) {
 			categoryMinRole.set(meta.category, role);
 		}
 	}
@@ -145,7 +157,7 @@ async function main() {
 					categoryId,
 					summary: meta.summary ?? null,
 					content: body,
-					minRole: meta.minRole ?? 'member',
+					minRole: audienceOf(meta.minRole),
 					sortOrder: meta.sortOrder ?? 0,
 					updatedAt: new Date()
 				})
@@ -159,7 +171,7 @@ async function main() {
 				summary: meta.summary ?? null,
 				content: body,
 				source: 'static',
-				minRole: meta.minRole ?? 'member',
+				minRole: audienceOf(meta.minRole),
 				published: false,
 				sortOrder: meta.sortOrder ?? 0
 			});
