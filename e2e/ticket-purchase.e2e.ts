@@ -47,10 +47,16 @@ async function openPurchasePage(page: import('@playwright/test').Page, url = tic
  * never change. It bit the *first* interactive test in this file and no other,
  * because by the second one the browser has the page's modules cached and
  * hydration wins the race.
+ *
+ * **The retry has to clear the box first.** `fill()` on an input that already
+ * holds the target text is a no-op that fires no `input` event — so once a lost
+ * fill has written the value, every retry does nothing and the loop can never
+ * recover. Clearing guarantees a real change on each attempt.
  */
 async function payPerTicket(page: import('@playwright/test').Page, dollars: string) {
 	const amount = page.locator('#ticketAmount');
 	await expect(async () => {
+		await amount.fill('');
 		await amount.fill(dollars);
 		await expect(page.locator('input[name$="unitPriceCents"]')).toHaveValue(
 			String(Math.round(Number(dollars) * 100))
@@ -71,9 +77,15 @@ test('the split bar opens with the collective at its suggested share', async ({ 
 	// share is of what is *divisible* — 30% of the gross would read $6.00.
 	await openPurchasePage(page);
 
+	// Read off the slider rather than off the page: SplitBar writes each amount
+	// twice — once in the bar, once in the labelled list beneath it — so a bare
+	// getByText is a strict mode violation rather than a missing element.
+	// `aria-valuetext` carries both figures in one place, and is the thing a
+	// screen reader is told, which makes it the better contract anyway.
 	const bar = page.getByRole('slider');
 	await expect(bar).toHaveAttribute('aria-valuenow', '574');
-	await expect(page.getByText('$13.38')).toBeVisible();
+	await expect(bar).toHaveAttribute('aria-valuetext', /\$5\.74.*\$13\.38/);
+	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('574');
 });
 
 test('moving the bar moves what the acts get, and what is posted', async ({ page }) => {
@@ -132,7 +144,9 @@ test('the dead zone below the charge minimum is refused on the page', async ({ p
 
 	await payPerTicket(page, '0.50');
 
-	await expect(page.getByText(/at least \$2\.00/)).toBeVisible();
+	// `.first()`: the message sits inside nested elements, and getByText matches
+	// every ancestor whose text contains it.
+	await expect(page.getByText(/at least \$2\.00/).first()).toBeVisible();
 	await expect(page.getByRole('button', { name: /^Pay/ })).toBeDisabled();
 });
 
@@ -147,10 +161,10 @@ test('a show with a floor says so, and refuses less', async ({ page }) => {
 	await page.goto(flooredUrl);
 	await expect(page.getByRole('heading', { name: 'E2E Show With A Floor' })).toBeVisible();
 
-	await expect(page.getByText(`$${FLOOR.toFixed(2)} minimum`)).toBeVisible();
+	await expect(page.getByText(`$${FLOOR.toFixed(2)} minimum`).first()).toBeVisible();
 
 	await payPerTicket(page, '2');
 
-	await expect(page.getByText(/least you can pay/)).toBeVisible();
+	await expect(page.getByText(/least you can pay/).first()).toBeVisible();
 	await expect(page.getByRole('button', { name: /^Pay/ })).toBeDisabled();
 });
