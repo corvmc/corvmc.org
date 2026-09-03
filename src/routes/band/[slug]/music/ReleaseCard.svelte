@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ResolvedPathname } from '$app/types';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -35,7 +36,13 @@
 			radioExcludedReason: string | null;
 			salesCount: number;
 		};
-		href: string;
+		/**
+		 * `ResolvedPathname`, not `string`: `svelte/no-navigation-without-resolve`
+		 * has no way to see that the caller already ran `resolve()`, and a bare
+		 * string prop is exactly the hole that rule exists to close. Same shape
+		 * `EmptyState` uses for its `actionHref`.
+		 */
+		href: ResolvedPathname;
 	} = $props();
 </script>
 
