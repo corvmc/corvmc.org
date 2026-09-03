@@ -165,6 +165,27 @@ export const TICKET_CONTRIBUTION_PRESETS = [500, 1000, 2500] as const;
 export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
 
 // ---------------------------------------------------------------------------
+// Payment splits
+// ---------------------------------------------------------------------------
+
+/**
+ * Where the split bar opens on a music sale: CMC's suggested share, in basis
+ * points.
+ *
+ * A *default*, not a rake — the buyer drags it, and the floor is zero. At zero
+ * `application_fee_amount` is exactly Stripe's fee, so the collective nets
+ * nothing and loses nothing; that is what makes refusing it safe to offer.
+ */
+export const AUDIO_PLATFORM_FEE_BPS = 1000;
+
+/**
+ * A release is free, or it costs at least this. Nothing in between: Stripe's
+ * own charge minimum is 50¢, and its 30¢ fixed fee is a third of a $1 sale, so
+ * the prices this excludes are the ones where almost nothing reaches the band.
+ */
+export const AUDIO_MIN_PRICE_CENTS = 200;
+
+// ---------------------------------------------------------------------------
 // Equipment pricing
 // ---------------------------------------------------------------------------
 
