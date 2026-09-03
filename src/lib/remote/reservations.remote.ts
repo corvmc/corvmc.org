@@ -2111,7 +2111,11 @@ export const getReservations = query(
 		const { locals } = getRequestEvent();
 
 		if (!locals.user) throw error(401, 'Not authenticated');
-		if (forUser && !locals.user.isStaff && forUser !== locals.user.id) {
+		// `locals.user.isStaff` is not a field on the better-auth user — see
+		// auth-fields.ts, which declares no such additionalField — so this read
+		// was always undefined and the guard rejected staff along with everyone
+		// else. Every other staff check in this file already resolves the role.
+		if (forUser && forUser !== locals.user.id && !(await isStaff(locals.user.id))) {
 			throw error(403, "Not authorized to view other users' reservations");
 		}
 
