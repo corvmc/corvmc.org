@@ -10,6 +10,7 @@
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import { toast } from 'svelte-sonner';
+	import BandSiteRenderer from '$lib/components/band-site/BandSiteRenderer.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { env } from '$env/dynamic/public';
@@ -17,6 +18,8 @@
 	import { getBandLayoutContext } from '../layout-context';
 	import { getBandPageEditor, saveBandPageConfig } from '$lib/remote/band-page-editor.remote';
 	import { BAND_THEMES, type Block } from '$lib/types/band-page';
+	import themeSheet from '$lib/themes/band-site/index.css?raw';
+	import { themeStarterCss } from '$lib/utils/theme-starter';
 	import { page } from '$app/state';
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
@@ -40,6 +43,53 @@
 	const initialConfig = $derived(pageData.config);
 	let selectedTheme = $state(initialConfig?.theme ?? 'default');
 	let customCss = $state(initialConfig?.customCss ?? '');
+
+	/** What the theme blocks read. Printed under the CSS box — see the legend. */
+	/**
+	 * What the preview renders as the act. Enough of `BandData` to lay the page
+	 * out — the preview is for judging colour, type and spacing, so it does not
+	 * need the roster or the gig list, and asking for them would put two more
+	 * queries on an editor that has one.
+	 */
+	const previewBand = $derived({
+		name: band.name,
+		bio: band.bio ?? null,
+		tagline: null,
+		avatarUrl: band.avatarUrl ?? null,
+		links: null,
+		genres: []
+	});
+
+	const CSS_VARIABLES = [
+		{ name: '--bs-bg', what: 'page background' },
+		{ name: '--bs-text', what: 'body text' },
+		{ name: '--bs-accent', what: 'links and highlights' },
+		{ name: '--bs-surface', what: 'cards and panels' },
+		{ name: '--bs-muted', what: 'secondary text' }
+	];
+
+	/**
+	 * Copy the selected theme's rules into the band's own CSS.
+	 *
+	 * Confirms before replacing work: the whole feature is a starting point, and
+	 * silently overwriting a page someone spent an evening on is the opposite of
+	 * that.
+	 */
+	function startFromTheme() {
+		const starter = themeStarterCss(themeSheet, selectedTheme);
+		if (!starter) {
+			toast.error('That theme has nothing to copy yet.');
+			return;
+		}
+		if (
+			customCss.trim() &&
+			!confirm('Replace your custom CSS with this theme as a starting point?')
+		) {
+			return;
+		}
+		customCss = starter;
+		toast.success('Copied — edit it below.');
+	}
 	let blocks = $state<Block[]>(structuredClone(initialConfig?.blocks ?? []));
 
 	// Block type picker
@@ -201,6 +251,20 @@
 								{theme}
 							</Button>
 						{/each}
+					</div>
+
+					<!-- A theme is a starting point, not a skin. Copying its rules into
+					     the band's own CSS is what makes it one: they can see what it
+					     does and change any of it, rather than overriding rules they
+					     have no way to read. -->
+					<div class="mt-3 flex flex-wrap items-center gap-3">
+						<Button type="button" variant="default" outline size="sm" onclick={startFromTheme}>
+							Start from this theme
+						</Button>
+						<span class="text-muted text-xs">
+							Copies the <span class="capitalize">{selectedTheme}</span> theme's rules into your own CSS
+							below, so you can edit them.
+						</span>
 					</div>
 				</CardBody>
 			</Card>
@@ -564,8 +628,19 @@
 				<CardBody>
 					<CardTitle size="lg" level={2}>Custom CSS</CardTitle>
 					<p class="text-muted">
-						Add custom styles to your page. CSS is scoped to your site's container.
+						Everything you write is wrapped in <code>.band-site-container</code>, so a bare selector
+						like <code>h1</code> only ever affects your page.
 					</p>
+					<!-- Nobody can guess these, and until they are written down the CSS
+					     box is a place to change colours one hex code at a time. -->
+					<dl class="mt-2 grid grid-cols-1 gap-x-6 text-muted text-xs sm:grid-cols-2">
+						{#each CSS_VARIABLES as item (item.name)}
+							<div class="flex gap-2 py-0.5">
+								<dt><code>{item.name}</code></dt>
+								<dd>{item.what}</dd>
+							</div>
+						{/each}
+					</dl>
 					<textarea
 						class="textarea mt-2 w-full font-mono text-sm"
 						rows="8"
@@ -575,8 +650,38 @@
 							customCss = e.currentTarget.value;
 						}}></textarea>
 					<p class="mt-1 text-xs opacity-40">
-						Max 50KB. External imports and scripts are stripped.
+						Max 50KB. External stylesheets and scripts are stripped; images from your own media
+						library are allowed.
 					</p>
+				</CardBody>
+			</Card>
+
+			<!-- Live preview.
+			     The editor already holds theme, blocks and CSS in local state, so
+			     this needs no route and no save round trip — which is the whole
+			     difference between a CSS box you can tinker in and one you have to
+			     guess at. Before this, seeing a change meant saving and opening the
+			     site in another tab. -->
+			<Card>
+				<CardBody>
+					<div class="flex flex-wrap items-center justify-between gap-2">
+						<CardTitle size="lg" level={2}>Preview</CardTitle>
+						<span class="text-muted text-xs">Updates as you type. Not saved until you save.</span>
+					</div>
+					<div class="preview-frame mt-2">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- the admin's own draft CSS, scoped to the preview container and never persisted unsanitized -->
+						{@html `<style>.band-site-preview { ${customCss} }</style>`}
+						<div class="band-site-preview band-site-container theme-{selectedTheme}">
+							<BandSiteRenderer
+								band={previewBand}
+								config={{ theme: selectedTheme, customCss: null, blocks, epk: null }}
+								members={[]}
+								events={[]}
+								pastEvents={[]}
+								media={[]}
+							/>
+						</div>
+					</div>
 				</CardBody>
 			</Card>
 
@@ -739,3 +844,18 @@
 		</Card>
 	{/if}
 </PageContent>
+
+<style>
+	/* Bounded and scrollable: a band's page is taller than a card, and letting
+	   the preview push the Save button off the screen defeats the point of
+	   having it beside the controls. */
+	.preview-frame {
+		max-height: 32rem;
+		overflow: auto;
+		border: 1px solid var(--surface-border, color-mix(in oklch, currentColor 15%, transparent));
+		border-radius: var(--radius-box, 8px);
+		/* The themes paint their own background, so the frame must not assume the
+		   app's — a dark theme on a light card would look like a bug. */
+		background: #fff;
+	}
+</style>
