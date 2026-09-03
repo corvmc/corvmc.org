@@ -448,8 +448,8 @@ pnpm exec tsx scripts/handoff/capture-press-kit.ts
 ```
 
 `ONLY=press-kit-photos,band-site` reshoots a subset. `BASE_URL` overrides the port. The run
-writes `docs/handoff/press-kit/capture-report.json` and **fails rather than saving a
-misleading image**: every screen has a data-bearing readiness condition and a minimum
+writes `docs/handoff/press-kit/capture-report.json` (gitignored — it is output, not
+source) and **fails rather than saving a misleading image**: every screen has a data-bearing readiness condition and a minimum
 rendered-text length, and a file under the size floor is rejected.
 
 ### Caveats on what these screenshots show
