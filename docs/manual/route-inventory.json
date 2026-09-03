@@ -52,6 +52,10 @@
 		"panel": "band"
 	},
 	{
+		"route": "/band/[slug]/music/payouts",
+		"panel": "band"
+	},
+	{
 		"route": "/band/[slug]/page-editor",
 		"panel": "band"
 	},

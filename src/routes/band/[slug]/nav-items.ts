@@ -19,6 +19,7 @@ export type BandNavKey =
 	| 'reservations'
 	| 'events'
 	| 'music'
+	| 'payouts'
 	| 'edit'
 	| 'page-editor'
 	| 'live-site'
@@ -78,6 +79,15 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	// ground `bandPremium` is held on.
 	if (input.features.bandAudio) {
 		items.push({ key: 'music', label: 'Music', href: resolve('/band/[slug]/music', { slug }) });
+		// Banking setup, so owner-or-admin rather than every member — the same
+		// ground Settings is on, and narrower than Music above it.
+		if (isOwnerOrAdmin) {
+			items.push({
+				key: 'payouts',
+				label: 'Payouts',
+				href: resolve('/band/[slug]/music/payouts', { slug })
+			});
+		}
 	}
 
 	if (isOwnerOrAdmin) {

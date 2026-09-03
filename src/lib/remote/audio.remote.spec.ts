@@ -58,6 +58,22 @@ const svc = {
 };
 vi.mock('$lib/server/audio/audio-service', () => svc);
 
+// Connect is money setup, so its endpoints get the same treatment: a call on a
+// rejected request is itself the failure.
+const connect = {
+	getPayoutStatus: vi.fn(async () => ({
+		connected: true,
+		stripeAccountId: 'acct_1',
+		chargesEnabled: true,
+		payoutsEnabled: true,
+		detailsSubmitted: true,
+		requirementsDue: [] as string[]
+	})),
+	createOnboardingLink: vi.fn(async () => 'https://connect.stripe.test/onboard'),
+	createDashboardLink: vi.fn(async () => 'https://connect.stripe.test/dashboard')
+};
+vi.mock('$lib/server/audio/connect-service', () => connect);
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: { id: 'u-1' } },
@@ -109,7 +125,18 @@ const MUTATIONS: Array<[name: string, payload: Record<string, unknown>]> = [
 	['deleteReleaseForm', { slug: BAND.slug, releaseId: 'rel-1' }],
 	['renameTrackForm', { slug: BAND.slug, releaseId: 'rel-1', trackId: 'track-1', title: 'X' }],
 	['deleteTrackForm', { slug: BAND.slug, releaseId: 'rel-1', trackId: 'track-1' }],
-	['reorderTracksCommand', { slug: BAND.slug, releaseId: 'rel-1', trackIds: ['track-1'] }]
+	['reorderTracksCommand', { slug: BAND.slug, releaseId: 'rel-1', trackIds: ['track-1'] }],
+	['updatePricingForm', { slug: BAND.slug, releaseId: 'rel-1', priceMinCents: 1000 }]
+];
+
+/**
+ * The payout endpoints, kept out of MUTATIONS because they are narrower: no
+ * `allowStaff`, so a staff non-member is refused too. Banking setup belongs to
+ * the band.
+ */
+const PAYOUT_ENDPOINTS: Array<[name: string, payload: Record<string, unknown>]> = [
+	['startPayoutOnboarding', { slug: BAND.slug }],
+	['openPayoutDashboard', { slug: BAND.slug }]
 ];
 
 /**
@@ -141,6 +168,8 @@ function noServiceWrites() {
 	expect(svc.renameTrack).not.toHaveBeenCalled();
 	expect(svc.deleteTrack).not.toHaveBeenCalled();
 	expect(svc.reorderTracks).not.toHaveBeenCalled();
+	expect(connect.createOnboardingLink).not.toHaveBeenCalled();
+	expect(connect.createDashboardLink).not.toHaveBeenCalled();
 }
 
 beforeEach(() => {
@@ -280,5 +309,87 @@ describe('audio remote — release dates', () => {
 		const call = svc.createRelease.mock.calls[0] as unknown as [{ releasedAt: Date }];
 		const { releasedAt } = call[0];
 		expect(releasedAt.toISOString()).toBe('2026-03-14T12:00:00.000Z');
+	});
+});
+
+describe('audio remote — payouts', () => {
+	it('rejects a signed-out caller before touching Stripe', async () => {
+		currentRole = null;
+		for (const [name, payload] of PAYOUT_ENDPOINTS) {
+			await rejectsWith(remote[name](payload), 401, name);
+		}
+		await rejectsWith(remote.getBandPayouts(BAND.slug), 401);
+		expect(connect.getPayoutStatus).not.toHaveBeenCalled();
+		noServiceWrites();
+	});
+
+	it('rejects a plain member — this is the band’s banking setup', async () => {
+		currentRole = 'member';
+		for (const [name, payload] of PAYOUT_ENDPOINTS) {
+			await rejectsWith(remote[name](payload), 403, name);
+		}
+		// Stripe’s `requirementsDue` names documents it is asking a specific person
+		// for; a member has no business reading it either.
+		await rejectsWith(remote.getBandPayouts(BAND.slug), 403);
+		noServiceWrites();
+	});
+
+	it('refuses staff on the write paths even though they can read the status', async () => {
+		currentRole = 'staff';
+		// Reading is `allowStaff` so support can see why a band cannot sell...
+		await expect(remote.getBandPayouts(BAND.slug)).resolves.toBeDefined();
+		// ...but nobody outside the band starts its onboarding or opens its
+		// dashboard, which is a live session into the band's own Stripe account.
+		for (const [name, payload] of PAYOUT_ENDPOINTS) {
+			await rejectsWith(remote[name](payload), 403, name);
+		}
+		expect(connect.createOnboardingLink).not.toHaveBeenCalled();
+		expect(connect.createDashboardLink).not.toHaveBeenCalled();
+	});
+
+	it('404s while bandAudio is off', async () => {
+		featureOn = false;
+		for (const [name, payload] of PAYOUT_ENDPOINTS) {
+			await rejectsWith(remote[name](payload), 404, name);
+		}
+		await rejectsWith(remote.getBandPayouts(BAND.slug), 404);
+	});
+
+	it('reports canSell from Stripe rather than from the app', async () => {
+		connect.getPayoutStatus.mockResolvedValueOnce({
+			connected: true,
+			stripeAccountId: 'acct_1',
+			chargesEnabled: false,
+			payoutsEnabled: false,
+			detailsSubmitted: true,
+			requirementsDue: ['individual.id_number']
+		});
+		const status = (await remote.getBandPayouts(BAND.slug)) as {
+			canSell: boolean;
+			requirementsDue: string[];
+		};
+		expect(status.canSell).toBe(false);
+		// Passed through verbatim: "finish setting up" with no idea what is missing
+		// is why people abandon this.
+		expect(status.requirementsDue).toEqual(['individual.id_number']);
+	});
+});
+
+describe('audio remote — pricing', () => {
+	it('leaves the price alone when the field was not touched', async () => {
+		// A cleared MoneyField is dropped from the payload entirely, which is
+		// indistinguishable from untouched — so absent must not mean free.
+		await remote.updatePricingForm({ slug: BAND.slug, releaseId: 'rel-1' });
+		const [, patch] = svc.updateRelease.mock.calls[0] as unknown as [string, object];
+		expect(patch).not.toHaveProperty('priceMinCents');
+	});
+
+	it('writes an explicit zero, which is how a release is given away', async () => {
+		await remote.updatePricingForm({ slug: BAND.slug, releaseId: 'rel-1', priceMinCents: 0 });
+		const [, patch] = svc.updateRelease.mock.calls[0] as unknown as [
+			string,
+			{ priceMinCents: number }
+		];
+		expect(patch.priceMinCents).toBe(0);
 	});
 });
