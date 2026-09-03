@@ -23,6 +23,10 @@ const ALL_OFF: MemberNavInput = {};
 
 const keysOf = (input: MemberNavInput) => memberNavItems(input).map((i) => i.key);
 
+// The music library is flag-gated, and the flag is the launch switch for the
+// whole storefront — so with it off the row must be absent even though the
+// route still answers.
+
 function concrete(route: string): string {
 	return route.replace(/\[[^\]]+\]/g, 'x');
 }
@@ -215,5 +219,14 @@ describe('route coverage', () => {
 	it('keeps the stranded list honest', () => {
 		const routes = new Set(memberPageRoutes());
 		for (const route of strandedOnDashboard) expect(routes.has(route)).toBe(true);
+	});
+});
+
+describe('purchases', () => {
+	it('is always offered, whatever is switched on', () => {
+		// It lists tickets as well as records, and tickets are not flagged. Gating
+		// the row on the storefront would hide receipts that predate it.
+		expect(keysOf(ALL_ON)).toContain('purchases');
+		expect(keysOf(ALL_OFF)).toContain('purchases');
 	});
 });

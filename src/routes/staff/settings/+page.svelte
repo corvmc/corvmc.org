@@ -118,6 +118,15 @@
 		bandPremium: {
 			label: 'Band Premium',
 			description: 'Premium tier with page editor, EPK, and public band sites'
+		},
+		bandAudio: {
+			label: 'Band music',
+			description: 'Bands can upload releases and sell them. Uploading is what fills CMC Radio.'
+		},
+		cmcRadio: {
+			label: 'CMC Radio',
+			description:
+				'The site-wide station and its player. Leave this off until enough bands have opted in for the rotation to sound like one.'
 		}
 	};
 

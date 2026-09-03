@@ -1,3 +1,28 @@
+<script lang="ts" module>
+	/**
+	 * Segment colours, as **literal** class strings.
+	 *
+	 * A computed class name (`bg-${tone}`) emits no CSS at all — Tailwind scans
+	 * source text and never sees it. Keeping the variants as a lookup table of
+	 * whole literals is what makes them survive the build.
+	 *
+	 * Each fill carries its own `-content` colour rather than an alpha: a tint
+	 * light enough to read black text on is too washed out to tell apart at a
+	 * glance, and `--color-info` in this theme is a 4%-chroma near-neutral that
+	 * never reads as blue at any opacity. `secondary` is the palette's actual
+	 * blue.
+	 */
+	const TONES = {
+		blue: 'bg-secondary text-secondary-content',
+		orange: 'bg-primary text-primary-content',
+		green: 'bg-success text-success-content',
+		gray: 'bg-neutral text-neutral-content',
+		gold: 'bg-warning text-warning-content'
+	} as const;
+
+	export type SplitTone = keyof typeof TONES;
+</script>
+
 <script lang="ts">
 	/**
 	 * A segmented allocation control: one total, divided between two parties, with
@@ -35,8 +60,12 @@
 		/** A fixed, unmovable slice taken off the top (card processing). */
 		fixedCents = 0,
 		fixedLabel = 'Fees',
+		/** Turns the fixed slice gold — somebody else is covering it now. */
+		fixedCovered = false,
 		valueLabel,
 		otherLabel,
+		otherTone = 'blue',
+		valueTone = 'orange',
 		step = 25
 	}: {
 		totalCents: number;
@@ -45,8 +74,11 @@
 		otherFloorCents?: number;
 		fixedCents?: number;
 		fixedLabel?: string;
+		fixedCovered?: boolean;
 		valueLabel: string;
 		otherLabel: string;
+		otherTone?: SplitTone;
+		valueTone?: SplitTone;
 		/** Arrow-key increment, in cents. */
 		step?: number;
 	} = $props();
@@ -125,22 +157,25 @@
 		role="presentation"
 	>
 		<div
-			class="flex items-center justify-center overflow-hidden bg-success/25 whitespace-nowrap"
+			class="flex items-center justify-center overflow-hidden whitespace-nowrap {TONES[otherTone]}"
 			style="width: {pct(otherCents)}%"
 		>
 			{#if pct(otherCents) > 22}<span class="px-2">{otherLabel} {dollars(otherCents)}</span>{/if}
 		</div>
 		<div
-			class="flex items-center justify-center overflow-hidden bg-primary/25 whitespace-nowrap"
+			class="flex items-center justify-center overflow-hidden whitespace-nowrap {TONES[valueTone]}"
 			style="width: {pct(clamped)}%"
 		>
 			{#if pct(clamped) > 22}<span class="px-2">{valueLabel} {dollars(clamped)}</span>{/if}
 		</div>
 		{#if fixedCents > 0}
 			<!-- Locked, and shown rather than hidden: an unexplained missing 59¢
-			     reads worse than a labelled one. -->
+			     reads worse than a labelled one. Gold once somebody else is
+			     covering it — the one segment whose colour carries information. -->
 			<div
-				class="flex items-center justify-center overflow-hidden bg-base-300 text-subtle whitespace-nowrap"
+				class="flex items-center justify-center overflow-hidden whitespace-nowrap {fixedCovered
+					? TONES.gold
+					: TONES.gray}"
 				style="width: {pct(fixedCents)}%"
 				title="{fixedLabel} {dollars(fixedCents)}"
 			>
@@ -157,16 +192,32 @@
 		aria-valuemin={0}
 		aria-valuemax={maxValue}
 		aria-valuenow={clamped}
-		aria-valuetext="{valueLabel} {dollars(clamped)}, {otherLabel} {dollars(otherCents)}"
+		aria-valuetext="{valueLabel} {dollars(clamped)}, {otherLabel} {dollars(
+			otherCents
+		)}, {fixedLabel} {dollars(fixedCents)}"
 		class="sr-only"
 		onkeydown={onKeydown}
 	></div>
 
+	<!-- A legend, because a colour nobody can name carries nothing. -->
 	<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-		<span><span class="font-medium">{otherLabel}</span> {dollars(otherCents)}</span>
-		<span class="text-muted">{valueLabel} {dollars(clamped)}</span>
+		<span class="flex items-center gap-1.5">
+			<span class="size-3 rounded-sm {TONES[otherTone]}" aria-hidden="true"></span>
+			<span class="font-medium">{otherLabel}</span>
+			{dollars(otherCents)}
+		</span>
+		<span class="flex items-center gap-1.5 text-muted">
+			<span class="size-3 rounded-sm {TONES[valueTone]}" aria-hidden="true"></span>
+			{valueLabel}
+			{dollars(clamped)}
+		</span>
 		{#if fixedCents > 0}
-			<span class="text-subtle">{fixedLabel} {dollars(fixedCents)}</span>
+			<span class="flex items-center gap-1.5 text-subtle">
+				<span class="size-3 rounded-sm {fixedCovered ? TONES.gold : TONES.gray}" aria-hidden="true"
+				></span>
+				{fixedLabel}
+				{dollars(fixedCents)}
+			</span>
 		{/if}
 	</div>
 
