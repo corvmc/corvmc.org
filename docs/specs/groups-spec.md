@@ -1136,18 +1136,18 @@ A non-member reaching `/member/groups/{slug}` — including someone whose applic
 
 Unchanged root, now resolving a **group** slug. Nav splits into two sections so the presentational and managerial halves stop competing for one flat list:
 
-| Section         | Route                          | Page                                          | Access       |
-| --------------- | ------------------------------ | --------------------------------------------- | ------------ |
-| —               | `/band/{slug}`                 | Dashboard                                     | all members  |
-| **Public face** | `/band/{slug}/edit`            | Directory entry — tagline, genres, links, bio | owner, admin |
-| **Public face** | `/band/{slug}/page-editor`     | Premium microsite blocks & theme              | owner, admin |
-| **Public face** | `/band/{slug}/page-editor/epk` | EPK                                           | owner, admin |
-| **Public face** | `/band/{slug}/subscription`    | Premium tier                                  | owner        |
-| **Manage**      | `/band/{slug}/members`         | Roster, invitations, roles                    | all members  |
-| **Manage**      | `/band/{slug}/announcements`   | Announcement list & composer                  | all members  |
-| **Manage**      | `/band/{slug}/events`          | Band events                                   | all members  |
-| **Manage**      | `/band/{slug}/reservations`    | Practice bookings                             | all members  |
-| **Manage**      | `/band/{slug}/settings`        | Delete band, danger zone                      | owner        |
+| Section         | Route                        | Page                                          | Access       |
+| --------------- | ---------------------------- | --------------------------------------------- | ------------ |
+| —               | `/band/{slug}`               | Dashboard                                     | all members  |
+| **Public face** | `/band/{slug}/edit`          | Directory entry — tagline, genres, links, bio | owner, admin |
+| **Public face** | `/band/{slug}/page-editor`   | Premium microsite blocks & theme              | owner, admin |
+| **Public face** | `/band/{slug}/press-kit`     | Press kit — free, not premium                 | owner, admin |
+| **Public face** | `/band/{slug}/subscription`  | Premium tier                                  | owner        |
+| **Manage**      | `/band/{slug}/members`       | Roster, invitations, roles                    | all members  |
+| **Manage**      | `/band/{slug}/announcements` | Announcement list & composer                  | all members  |
+| **Manage**      | `/band/{slug}/events`        | Band events                                   | all members  |
+| **Manage**      | `/band/{slug}/reservations`  | Practice bookings                             | all members  |
+| **Manage**      | `/band/{slug}/settings`      | Delete band, danger zone                      | owner        |
 
 ### Clubs and committees (member panel)
 

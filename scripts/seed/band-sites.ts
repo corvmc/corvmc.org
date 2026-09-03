@@ -177,3 +177,53 @@ export async function seedBandPageConfigs(bands: any[]) {
 
 	return configs;
 }
+
+/**
+ * Press kits for the acts that never bought anything.
+ *
+ * The press kit stopped being premium, so seeding it only for premium bands
+ * left every free surface it feeds rendering empty in dev — the public profile's
+ * press section, the ladder card, the downloadable package. Worse, it left the
+ * *interesting* states unreachable: the ladder is a progression, and you cannot
+ * see whether "3 of 12" reads right without a band sitting at 3.
+ *
+ * So free bands are dealt round-robin into three rungs. Deterministic by index
+ * rather than random, because the point is that all three states exist on every
+ * reset, not that they are plausibly distributed.
+ */
+export async function seedFreePressKits(bands: any[]) {
+	console.log('Seeding free press kits...');
+
+	const freeBands = bands.filter((b) => pendingSites.get(b.id)?.tier !== 'premium' && !b.deletedAt);
+
+	let filled = 0;
+	for (let i = 0; i < freeBands.length; i++) {
+		const b = freeBands[i];
+		// 0 = bare, 1 = part-way, 2 = a finished free kit.
+		const rung = i % 3;
+		if (rung === 0) continue;
+
+		const epk: Record<string, unknown> = {
+			pressQuotes: pickN(PRESS_QUOTES, rung === 1 ? 1 : 3),
+			achievements: pickN(ACHIEVEMENTS_POOL, rung === 1 ? 1 : 3)
+		};
+
+		if (rung === 2) {
+			// The finished kit: someone a venue can ring, and what the act needs on
+			// stage. Both are package-only, so this is also the fixture that proves
+			// they never reach the public page.
+			epk.bookingContact = {
+				name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+				email: `booking@${b.slug}.band`,
+				phone: `541-555-${randomInt(1000, 9999)}`
+			};
+			epk.backline = pickN(BACKLINE_ITEMS, randomInt(2, 4));
+		}
+
+		await db.update(bandSite).set({ epk, updatedAt: new Date() }).where(eq(bandSite.groupId, b.id));
+		filled++;
+	}
+
+	console.log(`  ${filled} free press kits (of ${freeBands.length} free acts)`);
+	return filled;
+}
