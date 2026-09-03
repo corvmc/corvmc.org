@@ -12,6 +12,7 @@ import {
 	SEED_AUDIO_DRAFT_ID,
 	SEED_AUDIO_DRAFT_TITLE,
 	SEED_AUDIO_DELETABLE_ID,
+	SEED_AUDIO_DELETABLE_TRACK_ID,
 	SEED_AUDIO_UNPUBLISHED_TRACK_ID
 } from './fixtures/seed-band-audio';
 import { readLocalDb } from './fixtures/platform-db';
