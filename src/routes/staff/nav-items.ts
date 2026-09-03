@@ -273,7 +273,7 @@ export const staffNavSections: StaffNavSection[] = [
 			// whether there is enough music to switch the station on, and its
 			// second is the sales the collective takes a share of. The takedown
 			// controls ride along because they act on the same rows.
-			{ key: 'music', label: 'Music', href: resolve('/staff/music') },
+			{ key: 'music', label: 'Releases', href: resolve('/staff/music') },
 			{ key: 'credits', label: 'Credits', href: resolve('/staff/credits') }
 		]
 	},

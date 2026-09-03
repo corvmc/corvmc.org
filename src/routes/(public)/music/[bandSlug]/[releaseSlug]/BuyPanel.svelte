@@ -132,12 +132,11 @@
 					<div class="flex flex-wrap items-center gap-3">
 						<label class="flex items-center gap-2">
 							<input type="checkbox" class="checkbox checkbox-sm" bind:checked={coverFees} />
-							<!-- Sells far better as "the band keeps the full amount" than as
-							     "cover our processing fees" — same money, different question. -->
-							<span>
-								Add {dollars(covered.feeCoveredCents)} to cover processing, so {bandName} and the collective
-								both keep their full share
-							</span>
+							<!-- The bar already shows where the money lands, and turns the fee
+							     segment gold the moment this is ticked, so the sentence
+							     explaining the consequence was saying twice what the control
+							     shows once. -->
+							<span>Add {dollars(covered.feeCoveredCents)} to cover processing</span>
 						</label>
 						{#if platformOverride !== null && platformOverride !== suggested}
 							<button

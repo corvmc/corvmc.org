@@ -12,7 +12,7 @@
 	const purchases = $derived(await getMyMusic());
 </script>
 
-<PageHeader title="Music" subtitle="What you've bought" />
+<PageHeader title="Releases" subtitle="What you've bought" />
 
 <PageContent width="2xl">
 	{#if purchases.length === 0}

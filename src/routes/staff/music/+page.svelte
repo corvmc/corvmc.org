@@ -39,7 +39,7 @@
 	);
 </script>
 
-<PageHeader title="Music" subtitle="Staff" />
+<PageHeader title="Releases" subtitle="Staff" />
 
 <PageContent width="full">
 	{#if !audioEnabled}

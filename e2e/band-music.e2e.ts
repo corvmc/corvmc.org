@@ -73,7 +73,7 @@ test.describe('band music panel', () => {
 		await expect(page.getByText('0:32').first()).toBeVisible();
 	});
 
-	test('lights the Music row in the band sidebar', async ({ page }) => {
+	test('lights the Releases row in the band sidebar', async ({ page }) => {
 		await login(page);
 		await page.goto(`${band}/music`);
 
@@ -231,6 +231,6 @@ test.describe('the feature flag', () => {
 		// whole run, so this asserts the positive half only.
 		await login(page);
 		await page.goto(`${band}/music`);
-		await expect(page.getByRole('heading', { name: 'Music' })).toBeVisible({ timeout: 15000 });
+		await expect(page.getByRole('heading', { name: 'Releases' })).toBeVisible({ timeout: 15000 });
 	});
 });

@@ -2,16 +2,22 @@
 	/**
 	 * Segment colours, as **literal** class strings.
 	 *
-	 * A computed class name (`bg-${tone}/30`) emits no CSS at all — Tailwind
-	 * scans source text and never sees it. Keeping the variants as a lookup table
-	 * of whole literals is what makes them survive the build.
+	 * A computed class name (`bg-${tone}`) emits no CSS at all — Tailwind scans
+	 * source text and never sees it. Keeping the variants as a lookup table of
+	 * whole literals is what makes them survive the build.
+	 *
+	 * Each fill carries its own `-content` colour rather than an alpha: a tint
+	 * light enough to read black text on is too washed out to tell apart at a
+	 * glance, and `--color-info` in this theme is a 4%-chroma near-neutral that
+	 * never reads as blue at any opacity. `secondary` is the palette's actual
+	 * blue.
 	 */
 	const TONES = {
-		blue: 'bg-info/70',
-		orange: 'bg-primary/30',
-		green: 'bg-success/30',
-		gray: 'bg-base-300',
-		gold: 'bg-warning/50'
+		blue: 'bg-secondary text-secondary-content',
+		orange: 'bg-primary text-primary-content',
+		green: 'bg-success text-success-content',
+		gray: 'bg-neutral text-neutral-content',
+		gold: 'bg-warning text-warning-content'
 	} as const;
 
 	export type SplitTone = keyof typeof TONES;
@@ -167,7 +173,7 @@
 			     reads worse than a labelled one. Gold once somebody else is
 			     covering it — the one segment whose colour carries information. -->
 			<div
-				class="flex items-center justify-center overflow-hidden text-subtle whitespace-nowrap {fixedCovered
+				class="flex items-center justify-center overflow-hidden whitespace-nowrap {fixedCovered
 					? TONES.gold
 					: TONES.gray}"
 				style="width: {pct(fixedCents)}%"

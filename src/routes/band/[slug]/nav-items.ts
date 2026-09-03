@@ -79,7 +79,7 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	// storefront's launch is a Stripe decision rather than a build one — the same
 	// ground `bandPremium` is held on.
 	if (input.features.bandAudio) {
-		items.push({ key: 'music', label: 'Music', href: resolve('/band/[slug]/music', { slug }) });
+		items.push({ key: 'music', label: 'Releases', href: resolve('/band/[slug]/music', { slug }) });
 		// Banking setup, so owner-or-admin rather than every member — the same
 		// ground Settings is on, and narrower than Music above it.
 		if (isOwnerOrAdmin) {

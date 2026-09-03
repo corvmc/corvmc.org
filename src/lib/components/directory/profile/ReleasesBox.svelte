@@ -33,10 +33,10 @@
 	} = $props();
 </script>
 
-<!-- Nothing at all when there is nothing: an empty "Music" heading on a profile
+<!-- Nothing at all when there is nothing: an empty "Releases" heading on a profile
      reads as something broken rather than as something absent. -->
 {#if releases.length > 0}
-	<ProfileSection title="Music" note={`${releases.length} on CMC`}>
+	<ProfileSection title="Releases" note={`${releases.length} on CMC`}>
 		<ul class="space-y-3">
 			{#each releases as release (release.id)}
 				<li>

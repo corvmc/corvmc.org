@@ -84,7 +84,7 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 	];
 
 	if (input.bandAudio) {
-		items.push({ key: 'music', label: 'Music', href: resolve('/member/music') });
+		items.push({ key: 'music', label: 'Releases', href: resolve('/member/music') });
 	}
 
 	// Between Directory and Volunteering: it belongs with the things you do in

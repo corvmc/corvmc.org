@@ -68,8 +68,8 @@ describe('bandNavItems', () => {
 	it('shows Music to every role once bandAudio is on, and to none while it is off', () => {
 		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
 			const isStaff = userRole === 'staff';
-			expect(labelsFor({ userRole, isStaff, features: { bandAudio: true } })).toContain('Music');
-			expect(labelsFor({ userRole, isStaff })).not.toContain('Music');
+			expect(labelsFor({ userRole, isStaff, features: { bandAudio: true } })).toContain('Releases');
+			expect(labelsFor({ userRole, isStaff })).not.toContain('Releases');
 		}
 	});
 
@@ -82,7 +82,7 @@ describe('bandNavItems', () => {
 			expect(labelsFor({ ...on, userRole })).toContain('Payouts');
 		}
 		const member = labelsFor({ ...on, userRole: 'member' });
-		expect(member).toContain('Music');
+		expect(member).toContain('Releases');
 		expect(member).not.toContain('Payouts');
 	});
 
@@ -93,7 +93,7 @@ describe('bandNavItems', () => {
 	it('does not let bandPremium stand in for bandAudio', () => {
 		expect(
 			labelsFor({ userRole: 'owner', tier: 'premium', features: { bandPremium: true } })
-		).not.toContain('Music');
+		).not.toContain('Releases');
 	});
 
 	// Billing really is owner-only on the server, so this gate stays as it was.
