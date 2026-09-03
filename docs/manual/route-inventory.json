@@ -216,6 +216,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/music",
+		"panel": "member"
+	},
+	{
 		"route": "/member/profile",
 		"panel": "member"
 	},
@@ -266,6 +270,14 @@
 	{
 		"route": "/membership",
 		"panel": "member"
+	},
+	{
+		"route": "/music/[bandSlug]/[releaseSlug]",
+		"panel": "public"
+	},
+	{
+		"route": "/music/download/[token]",
+		"panel": "public"
 	},
 	{
 		"route": "/programs",

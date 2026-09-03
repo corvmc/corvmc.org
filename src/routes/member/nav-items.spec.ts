@@ -18,10 +18,14 @@ import {
  * about a fully-lit nav versus a minimal one.
  */
 
-const ALL_ON: MemberNavInput = { hasLoanableEquipment: true };
+const ALL_ON: MemberNavInput = { hasLoanableEquipment: true, bandAudio: true };
 const ALL_OFF: MemberNavInput = {};
 
 const keysOf = (input: MemberNavInput) => memberNavItems(input).map((i) => i.key);
+
+// The music library is flag-gated, and the flag is the launch switch for the
+// whole storefront — so with it off the row must be absent even though the
+// route still answers.
 
 function concrete(route: string): string {
 	return route.replace(/\[[^\]]+\]/g, 'x');
@@ -215,5 +219,12 @@ describe('route coverage', () => {
 	it('keeps the stranded list honest', () => {
 		const routes = new Set(memberPageRoutes());
 		for (const route of strandedOnDashboard) expect(routes.has(route)).toBe(true);
+	});
+});
+
+describe('music library', () => {
+	it('appears only with bandAudio on', () => {
+		expect(keysOf(ALL_ON)).toContain('music');
+		expect(keysOf(ALL_OFF)).not.toContain('music');
 	});
 });

@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
+		IconDisc,
 		IconLayoutDashboard,
 		IconStar,
 		IconCalendarEvent,
@@ -57,6 +58,7 @@
 		events: IconCalendarEvent,
 		'events-submit': IconPlus,
 		directory: IconAddressBook,
+		music: IconDisc,
 		// Matches the staff panel's Inventory glyph, so the same thing looks the
 		// same on both sides.
 		equipment: IconTool,
@@ -72,7 +74,8 @@
 	// No `features` any more: every flag the member nav consulted is retired.
 	// `layout.features` still exists for the surfaces that read it directly.
 	let navInput = $derived({
-		hasLoanableEquipment: layout.hasLoanableEquipment
+		hasLoanableEquipment: layout.hasLoanableEquipment,
+		bandAudio: layout.features.bandAudio
 	});
 	let mainItems = $derived(memberNavMain(navInput));
 	let footerItems = $derived(memberNavFooter(navInput));

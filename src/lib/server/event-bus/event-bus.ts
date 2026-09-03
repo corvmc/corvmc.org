@@ -80,6 +80,26 @@ export interface ConfirmationReminderDueEvent {
 	endTime: string;
 }
 
+/**
+ * A record was bought — free or paid, both arrive here.
+ *
+ * Carries the download token because the buyer's receipt is the ONLY copy an
+ * anonymous purchaser has: there is no account to log back into, so an email
+ * that omitted it would leave them owning something they cannot reach.
+ */
+export interface AudioPurchasedEvent {
+	purchaseId: string;
+	downloadToken: string;
+	buyerEmail: string;
+	releaseTitle: string;
+	releaseSlug: string;
+	bandName: string;
+	bandSlug: string;
+	amountPaidCents: number;
+	platformFeeCents: number;
+	bandNetCents: number;
+}
+
 export interface TicketPurchasedEvent {
 	purchaseId: string;
 	eventId: string;
@@ -482,6 +502,7 @@ export type DomainEvents = {
 	'reservation.reminder_due': ReservationReminderDueEvent;
 	'reservation.confirmation_reminder_due': ConfirmationReminderDueEvent;
 	'ticket.purchased': TicketPurchasedEvent;
+	'audio.purchased': AudioPurchasedEvent;
 	'event.cancelled': EventCancelledEvent;
 	'event.recurring_reservation_skipped': EventRecurringReservationSkippedEvent;
 	'band.invitation_sent': BandInvitationSentEvent;

@@ -19,7 +19,8 @@ const ALL_ENDPOINTS = [
 	'/api/cron/shift-reminders',
 	'/api/cron/shift-feedback',
 	'/api/cron/sweep-media',
-	'/api/cron/schedule-radio'
+	'/api/cron/schedule-radio',
+	'/api/cron/sweep-audio-purchases'
 ];
 
 function okFetcher() {
@@ -41,6 +42,7 @@ describe('CRON_SCHEDULE', () => {
 			'/api/cron/confirmation-reminders',
 			'/api/cron/reservation-reminders',
 			'/api/cron/cancel-stale-tickets',
+			'/api/cron/sweep-audio-purchases',
 			// Shift reminders after the reservation ones, and the feedback ask last:
 			// it reads signups that complete-shifts has been marking all night.
 			'/api/cron/shift-reminders',
