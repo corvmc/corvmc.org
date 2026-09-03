@@ -117,7 +117,7 @@ Counts are non-spec call sites in `src/`, taken at `63e5890`.
 | `helpArticles`   | 5                | 0                  | yes     | **false** (probed)    | ✅ **Unlinked** — footer row removed                 | #376 |
 | `emailMarketing` | 6                | 2                  | yes     | **true** (probed)     | ✅ Flag deleted, feature **stays live**              | #376 |
 | `directMessages` | 7                | 0                  | **no**  | false                 | Unlink — **held**, costs an e2e lifecycle test       |      |
-| `bandPremium`    | 8                | 1                  | yes     | **false** (confirmed) | ✅ **Launched** — guards out, band sites live        | #489 |
+| `bandPremium`    | 8                | 1                  | yes     | **false** (confirmed) | ✅ **Launched** — guards out, band sites live        | #494 |
 | `contentFlags`   | 4                | 1                  | yes     | **false**             | ✅ **Launched** — guards out, reporting live         | #381 |
 | `volunteering`   | 19               | 0                  | yes     | **true** (confirmed)  | ✅ Flag deleted, feature **stays live**              | #380 |
 
@@ -184,4 +184,4 @@ Afterwards, delete the orphaned `site-config:feature.*` keys from production KV.
 **The e2e suite is the proof.** `ENABLED_FLAGS` is down to `directMessages`; every route a removed
 flag used to gate must still render with nothing seeded for it, which is what demonstrates the guard
 was the only thing between the route and the user. The band-site and subscription specs passing
-after #489 is that proof for `bandPremium`.
+after #494 is that proof for `bandPremium`.
