@@ -1101,7 +1101,7 @@ trusting anything from the request, which is what makes three doors no riskier t
 What survives from "roles and membership behave identically across all three kinds" is the
 **implementation**, not the container. Announcements, documents and the roster are built as
 components under `src/lib/components/groups/`, mount-agnostic, because phases 7 and 8 mount the same
-three as _pages_ in the band panel (`/band/{slug}/announcements`, `/band/{slug}/documents`) and as
+three as _pages_ in the band panel (`/band/{slug}/announcements`) and as
 _tabs_ on the club page. A component that reaches for its group id from a panel layout context
 cannot do that, so they take it as a prop.
 
@@ -1145,7 +1145,6 @@ Unchanged root, now resolving a **group** slug. Nav splits into two sections so 
 | **Public face** | `/band/{slug}/subscription`    | Premium tier                                  | owner        |
 | **Manage**      | `/band/{slug}/members`         | Roster, invitations, roles                    | all members  |
 | **Manage**      | `/band/{slug}/announcements`   | Announcement list & composer                  | all members  |
-| **Manage**      | `/band/{slug}/documents`       | Shared files                                  | all members  |
 | **Manage**      | `/band/{slug}/events`          | Band events                                   | all members  |
 | **Manage**      | `/band/{slug}/reservations`    | Practice bookings                             | all members  |
 | **Manage**      | `/band/{slug}/settings`        | Delete band, danger zone                      | owner        |
@@ -1287,6 +1286,25 @@ No new Postmark template is needed — the generic `notification` template is mo
 
 **Documents is a file store, not a document tool.** Members upload files produced elsewhere — charts as PDFs, committee minutes from whatever word processor the committee already uses — and download them again. There is no in-app authoring, no rich-text editor, no versioning, and no structured minutes or agenda format. That boundary is what keeps this a small feature, and it is a decision rather than an omission.
 
+**Three things landed differently from what is written below.** They are corrections to this
+section, not additions to it, and they are recorded here so the next reader does not re-litigate
+them:
+
+1. **Clubs and committees only. Bands get no general file storage** (decided 2026-09-02). This
+   section originally built the same surface on both, and the band half is gone: there is no
+   `/band/{slug}/documents`, no nav row, and no band seed data. What a band actually holds is a
+   rider and a stage plot, and both already have `media` slots served through
+   `/api/bands/[id]/media`. The exclusion is enforced in `file-service.upload()` rather than only at
+   the surface, so a staff tool or a backfill cannot route around it.
+2. **No `DELETE` verb on `/api/files/[id]`.** The routes table listed one only because the `GET` was
+   already there. Upload and delete are remote `form()`s in `src/lib/remote/files.remote.ts` — a
+   `form()` does carry a `File` (`band-events.remote.ts` has shipped one for months), and the repo's
+   own rule is that forms use `$lib/components/ui/Form/` rather than a hand-built `fetch`. The
+   download stays an API route because it returns a stream, not JSON.
+3. **The hard-delete purge lives in `deleteBand`**, not in a new `deleteGroup`. `deleteBand` is
+   already the hard delete for a row in the `group` table whatever its kind, so it is the
+   club and committee path too.
+
 ### This requires a second bucket
 
 `media.corvmc.org` is an **R2 bucket custom domain**. There is no prefix scoping and no per-object ACL: attaching a custom domain makes the entire keyspace publicly readable, and existing keys are guessable (`bands/avatars/{bandId}.jpg`). A private document placed in the `corvmc` bucket would be one guessed URL away from public, and nothing in the app would report it.
@@ -1408,7 +1426,7 @@ file, so running 10 first would mean resolving that collision twice.
 | 5   | ✅ #326 #327 #328 #329      | `/staff/groups` + `/member/groups` and the club page + public group page; all three `joinPolicy` values, self-join and applications. **Four PRs**: the vocabulary values and the reads that would have lost them, the staff panel, the member surfaces, then the public directory                                                                                                                                                              |
 | 6   | ✅ #332                     | `group_invite` replaces `platform_invite`                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 7   | ✅ #333 #334 #335           | Announcements — bands and groups simultaneously, since it is the same code                                                                                                                                                                                                                                                                                                                                                                     |
-| 8   | ⏸️ deferred                 | Documents — bucket and binding deployed and verified **first**, then the table and route                                                                                                                                                                                                                                                                                                                                                       |
+| 8   | ✅ #431 #432                | Documents — bucket and binding deployed and verified **first** (#420), then the table and route. **Clubs and committees only**; bands were dropped — see below                                                                                                                                                                                                                                                                                 |
 | 9   | ✅ #336 #337 #338           | Group events + `event_group` + `createGroupEvent()`; fix the recurring generator                                                                                                                                                                                                                                                                                                                                                               |
 | 10  | ✅ #341 #351 #354 #359 #361 | External acts: unowned entries, `contact`, `directory_entry_link` + `/act/{token}`, and `event_band` re-keyed to `directoryEntryId`                                                                                                                                                                                                                                                                                                            |
 
