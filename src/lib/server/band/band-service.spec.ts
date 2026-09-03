@@ -135,6 +135,23 @@ vi.mock('$lib/server/media/media-service', () => ({
 	detachSlot: vi.fn().mockResolvedValue(undefined)
 }));
 
+vi.mock('$lib/server/private-storage', () => ({
+	deletePrivateObject: vi.fn().mockResolvedValue(undefined)
+}));
+
+/** Keys `deleteBand` finds for the group it is about to cascade away. */
+let documentKeys: { id: string; key: string }[] = [];
+
+vi.mock('$lib/server/group/file-service', async () => {
+	const actual = await vi.importActual<typeof import('$lib/server/group/file-service')>(
+		'$lib/server/group/file-service'
+	);
+	return {
+		DocumentPurgeFailedError: actual.DocumentPurgeFailedError,
+		listAllKeys: vi.fn(async () => documentKeys)
+	};
+});
+
 import {
 	create,
 	update,
@@ -166,6 +183,8 @@ import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { deleteObject } from '$lib/server/storage';
 import { detachSlot } from '$lib/server/media/media-service';
+import { deletePrivateObject } from '$lib/server/private-storage';
+import { DocumentPurgeFailedError } from '$lib/server/group/file-service';
 
 // Walk a drizzle SQL condition (real `and`/`eq` operators — only `db` is
 // mocked) and collect the column names it references, so tests can assert a
@@ -191,6 +210,7 @@ describe('BandService', () => {
 		insertError = null;
 		writes = [];
 		whereClauses = [];
+		documentKeys = [];
 	});
 
 	// -----------------------------------------------------------------------
@@ -468,6 +488,43 @@ describe('BandService', () => {
 			selectResult = [];
 
 			await expect(deleteBand('band-999')).rejects.toThrow(BandNotFoundError);
+		});
+
+		/**
+		 * The one place an R2 object dies from a request path, and the exception
+		 * to "the sweep reclaims". `file.groupId` cascades, so once the group row
+		 * is gone no record of these keys survives for the sweep to act on.
+		 */
+		it('deletes every private document object before the group row', async () => {
+			selectResultQueue = [[{ ...mockBand }], []];
+			documentKeys = [
+				{ id: 'f1', key: 'groups/band-1/documents/f1.pdf' },
+				// Soft-deleted rows are in the list too: they are exactly the ones
+				// the sweep would have handled, and it never gets the chance.
+				{ id: 'f2', key: 'groups/band-1/documents/f2.csv' }
+			];
+
+			await deleteBand('band-1');
+
+			expect(deletePrivateObject).toHaveBeenCalledWith('groups/band-1/documents/f1.pdf');
+			expect(deletePrivateObject).toHaveBeenCalledWith('groups/band-1/documents/f2.csv');
+			expect(vi.mocked(db.delete)).toHaveBeenCalled();
+			// The purge ran first; the cascade could not have taken the keys with it.
+			const purgeOrder = vi.mocked(deletePrivateObject).mock.invocationCallOrder[0];
+			const deleteOrder = vi.mocked(db.delete).mock.invocationCallOrder.at(-1)!;
+			expect(purgeOrder).toBeLessThan(deleteOrder);
+		});
+
+		it('aborts the whole deletion when an object cannot be deleted', async () => {
+			selectResultQueue = [[{ ...mockBand }], []];
+			documentKeys = [{ id: 'f1', key: 'k1' }];
+			vi.mocked(deletePrivateObject).mockRejectedValueOnce(new Error('R2 down'));
+			vi.spyOn(console, 'error').mockImplementation(() => {});
+
+			await expect(deleteBand('band-1')).rejects.toThrow(DocumentPurgeFailedError);
+
+			// The rows survive as the recovery record, which is the point.
+			expect(vi.mocked(db.delete)).not.toHaveBeenCalled();
 		});
 	});
 
