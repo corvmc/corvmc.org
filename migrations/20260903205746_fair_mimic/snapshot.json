@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "f121861c-95b8-4fc9-845a-af782513018d",
+  "id": "ed9340c5-7c20-4501-abd2-d3c7c8149912",
   "prevIds": [
-    "6352b2e1-aac6-476a-9e75-a8cd71535216"
+    "eee5e356-9fb6-4415-9346-d5605fce84e7"
   ],
   "ddl": [
     {
@@ -1612,6 +1612,16 @@
     },
     {
       "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "ticket_price_floor_cents",
+      "entityType": "columns",
+      "table": "event"
+    },
+    {
+      "type": "integer",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -1987,6 +1997,36 @@
       "default": "false",
       "generated": null,
       "name": "discount_waived",
+      "entityType": "columns",
+      "table": "ticket"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "acts_cents",
+      "entityType": "columns",
+      "table": "ticket"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "collective_cents",
+      "entityType": "columns",
+      "table": "ticket"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "fee_covered_cents",
       "entityType": "columns",
       "table": "ticket"
     },

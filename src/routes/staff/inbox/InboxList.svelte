@@ -87,9 +87,7 @@
 	// Mirrors the views listThreads sorts by `waitingSince`. Saying "6 days"
 	// beside a row whose order came from `lastMessageAt` would be two different
 	// clocks in one line.
-	const sortedByWaiting = $derived(
-		filters.view === 'open' || filters.view === 'awaiting' || filters.view === 'snoozed'
-	);
+	const sortedByWaiting = $derived(filters.view === 'open' || filters.view === 'snoozed');
 
 	const formatWait = (days: number) => (days === 0 ? 'today' : `${days}d`);
 </script>
@@ -152,7 +150,9 @@
 			{result}
 			empty={filters.view === 'open'
 				? 'Nothing open — the queue is clear.'
-				: 'No conversations found'}
+				: filters.view === 'snoozed'
+					? 'Nothing is waiting on a date or a reply.'
+					: 'No conversations found'}
 			onpage={(p) => (filters.page = p)}
 		>
 			{#snippet children(threads)}
@@ -189,8 +189,10 @@
 										     the row is in front of you, and an icon-only badge says
 										     nothing. On the Open view that reason is *why* it is open
 										     (never answered, they replied, the snooze ran out); on the
-										     others it is the status itself, which the tab does not
-										     repeat once you have filtered or searched across views.
+										     others it is the status itself, which the tab no longer
+										     repeats — Snoozed holds both kinds of parked, so the badge
+										     is the only thing saying which one a row is, and when a
+										     snoozed one is due back.
 
 										     `shrink-0` because it is a phrase: left to shrink it wraps
 										     "Snooze expired" onto two lines and takes the row's height with
@@ -198,7 +200,15 @@
 										{#if reason}
 											<StatusBadge status={reason} label class="shrink-0" />
 										{:else}
-											<StatusBadge status={threadDisplayStatus(t)} label class="shrink-0" />
+											{@const display = threadDisplayStatus(t)}
+											<StatusBadge
+												status={display}
+												label
+												class="shrink-0"
+												text={display === 'snoozed' && t.snoozedUntil
+													? `Snoozed · ${formatDateShort(t.snoozedUntil)}`
+													: undefined}
+											/>
 										{/if}
 
 										<!-- The age rides the name line rather than a fourth one. On the

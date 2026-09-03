@@ -234,6 +234,12 @@ export function registerAllNotificationListeners(): void {
 				feesCovered: event.feesCents > 0,
 				fees: formatCents(event.feesCents),
 				total: formatCents(event.totalCents),
+				// Where the buyer sent it. Shown only when they were asked — a comp
+				// and a free claim allocate nothing, and "$0.00 to the acts" on a
+				// ticket nobody paid for reads as a mistake.
+				splitShown: event.actsCents > 0 || event.collectiveCents > 0,
+				toActs: formatCents(event.actsCents),
+				toCollective: formatCents(event.collectiveCents),
 				ticketsUrl: `${siteUrl}/events/${event.eventId}/tickets/success?purchase_id=${event.purchaseId}`
 			}
 		});

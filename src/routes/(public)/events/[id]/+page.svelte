@@ -8,13 +8,8 @@
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import PosterCard from '$lib/components/events/PosterCard.svelte';
 	import ReportEventAction from '$lib/components/actions/ReportEventAction.svelte';
-	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
-	import {
-		ticketingMode,
-		isFreeEvent as isFree,
-		priceDisplay,
-		sustainingMemberPrice
-	} from '$lib/utils/event-ticketing';
+	import { fullDate, formatTime } from '$lib/utils/format';
+	import { ticketingMode, isFreeEvent as isFree, priceDisplay } from '$lib/utils/event-ticketing';
 	import { sanitizeHtml } from '$lib/utils/markdown';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
@@ -32,8 +27,7 @@
 	const isFreeEvent = $derived(isFree(evt));
 	const soldOut = $derived(data.remaining === 0);
 
-	const price = $derived(priceDisplay(evt, { isSustainingMember: data.isSustainingMember }));
-	const memberPrice = $derived(sustainingMemberPrice(evt));
+	const price = $derived(priceDisplay(evt));
 
 	const capacityKnown = $derived(
 		evt.ticketingEnabled && evt.ticketQuantity != null && data.sold != null
@@ -45,10 +39,6 @@
 			(data.remaining <= 10 ||
 				(evt.ticketQuantity ? data.remaining / evt.ticketQuantity <= 0.15 : false))
 	);
-	const showUpsell = $derived(
-		memberPrice !== null && !data.isSustainingMember && !soldOut && !data.isPast
-	);
-
 	const calendarEvt = $derived({
 		title: evt.title,
 		description: evt.description,
@@ -291,11 +281,8 @@
 						</span>
 						<span class="edet__fact-value">
 							{price.label}
-							{#if price.wasLabel}
-								<span
-									style="font-size:11px;opacity:0.5;text-decoration:line-through;margin-left:4px"
-									>{price.wasLabel}</span
-								>
+							{#if price.suggested}
+								<span style="font-size:11px;opacity:0.5;margin-left:4px">suggested</span>
 							{/if}
 						</span>
 					</div>
@@ -341,17 +328,6 @@
 									>{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span
 								>
 							{/if}
-						{/if}
-
-						{#if showUpsell && memberPrice}
-							<p class="edet__upsell">
-								Sustaining members pay {formatCents(memberPrice)}.
-								<a href={resolve('/contribute')} class="link link-primary">Become a member →</a>
-							</p>
-						{:else if data.isSustainingMember && evt.ticketPrice}
-							<p class="edet__upsell">
-								Sustaining members get 50% off — thanks for your contribution!
-							</p>
 						{/if}
 					{:else}
 						<!-- Sold off-site, at the door, or not at all. Tickets (when there's a
