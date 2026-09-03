@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireStaff, requireStaffOrOwner } from '$lib/server/authorization';
+import { requireStaff, requireCapabilityOrOwner } from '$lib/server/authorization';
 import {
 	get,
 	getHistory,
@@ -67,7 +67,7 @@ export const cancelRecurringSeries = form(z.object({ id: z.string() }), async (d
 	const series = await get(id);
 	if (!series) throw error(404, 'Series not found');
 
-	await requireStaffOrOwner(locals.user.id, series.prototypeCreatedByUserId);
+	await requireCapabilityOrOwner('reservation.manageRecurring', series.prototypeCreatedByUserId);
 
 	await cancel(id);
 	return { success: true };

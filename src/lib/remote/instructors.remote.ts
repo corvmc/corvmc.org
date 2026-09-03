@@ -1,7 +1,6 @@
 import { query, form } from '$app/server';
 import { z } from 'zod';
-import { getRequestEvent } from '$app/server';
-import { requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
+import { requireStaff, requireCapabilityOrOwner, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import * as instructorService from '$lib/server/instructor/instructor-service';
 import {
@@ -41,12 +40,12 @@ export const getStaffInstructors = query(async () => {
  * One member's instructor record, for the staff user page. Returns null when
  * they have none, which is the ordinary case and not an error.
  *
- * `requireStaffOrOwner` rather than `requireStaff`: a member may read their own
- * record — they will need to, once the profile card lands — and the guard
- * already expresses exactly that.
+ * `requireCapabilityOrOwner` rather than `requireCapability`: a member may read
+ * their own record — they will need to, once the profile card lands — and the
+ * guard already expresses exactly that.
  */
 export const getUserInstructor = query(z.string().min(1), async (userId) => {
-	await requireStaffOrOwner(getRequestEvent().locals.user?.id, userId);
+	await requireCapabilityOrOwner('instructor.read', userId);
 	return instructorService.getByUserId(userId);
 });
 

@@ -338,32 +338,6 @@ export async function isStaff(userId: string): Promise<boolean> {
 }
 
 /**
- * Require that the caller is either staff or the owner of the resource.
- * Throws 401/403 via SvelteKit error() if neither.
- * Returns the resolved role ('staff' | 'owner') for the caller.
- */
-export async function requireStaffOrOwner(
-	userId: string | undefined,
-	ownerId: string
-): Promise<'staff' | 'owner'> {
-	if (!userId) throw error(401, 'Not authenticated');
-	if (userId === ownerId) return 'owner';
-	const staff = await isStaff(userId);
-	if (staff) return 'staff';
-	throw error(403, 'Not authorized');
-}
-
-/**
- * Require that the caller is staff. For use in API route handlers
- * where locals.user is already available (not command/query context).
- */
-export async function requireStaffRole(userId: string | undefined): Promise<void> {
-	if (!userId) throw error(401, 'Not authenticated');
-	const staff = await isStaff(userId);
-	if (!staff) throw error(403, 'Staff access required');
-}
-
-/**
  * List all users with admin or staff roles.
  */
 export async function listStaffUsers(): Promise<

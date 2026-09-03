@@ -2,7 +2,11 @@ import { z } from 'zod';
 import { toGenericRef } from '$lib/server/entity/refs';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
-import { requireCapability, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
+import {
+	requireCapability,
+	requireCapabilityOrOwner,
+	requireUser
+} from '$lib/server/authorization';
 import {
 	createCategory,
 	createItem as createItemService,
@@ -1178,7 +1182,7 @@ export const cancelLoan = form(z.object({ id: z.string() }), async (data) => {
 	if (!loan) throw error(404, 'Loan not found');
 
 	// Staff may cancel at any point; the borrower only before pickup.
-	const role = await requireStaffOrOwner(locals.user.id, loan.userId);
+	const role = await requireCapabilityOrOwner('inventory.manageLoans', loan.userId);
 	if (role === 'owner') {
 		if (loan.status !== 'requested' && loan.status !== 'scheduled') {
 			throw error(400, 'Cannot cancel a loan that has been checked out');
