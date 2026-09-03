@@ -29,7 +29,7 @@
 <PageContent>
 	{#if pendingInvites > 0}
 		<Alert type="info" href="/member/bands" class="shadow-sm">
-			You have {pendingInvites} pending act invitation{pendingInvites === 1 ? '' : 's'}.
+			You have {pendingInvites} pending band invitation{pendingInvites === 1 ? '' : 's'}.
 		</Alert>
 	{/if}
 

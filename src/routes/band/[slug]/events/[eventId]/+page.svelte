@@ -101,7 +101,7 @@
 		{:else if evt.status === 'cancelled'}
 			<p class="text-muted text-sm">This event is cancelled, so it can no longer be edited.</p>
 		{:else if !isAdmin}
-			<p class="text-muted text-sm">Act admins can edit this event.</p>
+			<p class="text-muted text-sm">Band admins can edit this event.</p>
 		{/if}
 
 		<input {...updateFields.slug.as('hidden', band.slug)} />

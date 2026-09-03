@@ -28,7 +28,7 @@
 
 	let pills = $derived.by<ProfilePill[]>(() => {
 		const p: ProfilePill[] = [];
-		if (member.lookingForBand) p.push({ label: 'Looking to join an act', variant: 'warm' });
+		if (member.lookingForBand) p.push({ label: 'Looking for a band', variant: 'warm' });
 		if (member.availableForHire) p.push({ label: 'Available for hire' });
 		if (member.teachesLessons) p.push({ label: 'Teaches privately' });
 		if (member.openToCollaboration) p.push({ label: 'Open to collaboration' });
@@ -38,7 +38,7 @@
 	let facts = $derived([
 		{ label: 'Pronouns', value: member.pronouns },
 		{ label: 'Based in', value: member.hometown },
-		{ label: 'Looking for', value: member.lookingForBand ? 'An act to join' : null }
+		{ label: 'Looking for', value: member.lookingForBand ? 'A band' : null }
 	]);
 
 	let bandRefs = $derived<CrossRef[]>(

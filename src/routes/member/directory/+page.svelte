@@ -136,7 +136,7 @@
 			{#if tab === 'members'}
 				<label class="directory-filters__toggle">
 					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForBand} />
-					<span>Looking to join an act</span>
+					<span>Looking for band</span>
 				</label>
 				<label class="directory-filters__toggle">
 					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={availableForHire} />

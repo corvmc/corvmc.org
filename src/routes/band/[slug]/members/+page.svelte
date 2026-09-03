@@ -386,7 +386,7 @@
 				<input {...inviteEmailFields.bandId.as('hidden', layout.band.id)} />
 				<p class="text-muted">
 					Invite someone who doesn't have a CorvMC account yet. They'll receive an email with a
-					signup link and be automatically added to your act.
+					signup link and be automatically added to your band.
 				</p>
 				<Field
 					name="email"

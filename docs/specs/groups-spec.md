@@ -271,13 +271,20 @@ the same row — applied to the roster instead of the table name.
 A member's public page is still `/directory/members/{id}`; their _act's_ page is
 `/directory/bands/{slug}` like any other. The two coexist, and a solo performer normally has both.
 
-**Only the word changed in the interface.** Member-facing and public copy calls a group of any size
-an **act**, matching _external act_, which this codebase already used as the general noun with
-_external_ as the qualifier. Nothing in the schema or the routes moved: `band_site`, `event_band`,
-`bandSlugFromHost`, `/member/bands` and `/directory/bands/{slug}` keep their names, following the
-precedent set inside `group` itself, whose index names keep their `band` prefix with the reason
-recorded beside them. The trade taken knowingly is that a solo performer's shared address still
-reads `/directory/bands/their-name`.
+**Only the word changed in the interface**, and only where it had to. **Act** is the general noun
+for a performing party of any size, matching _external act_, which this codebase already used with
+_external_ as the qualifier: an act has a profile, an address, a site, a subscription, and a row in
+the directory. **Band stays wherever the copy is about a roster of people** — "Invite band members",
+"Leave band", "What you play in this band", "you've been invited to join the band X". Those strings
+are only reachable, or only meaningful, once there is more than one person, so nothing a solo
+performer reads calls them a band, and nothing a four-piece reads is stilted for the sake of it.
+The dividing question is whether the sentence names the party or its people.
+
+Nothing in the schema or the routes moved: `band_site`, `event_band`, `bandSlugFromHost`,
+`/member/bands` and `/directory/bands/{slug}` keep their names, following the precedent set inside
+`group` itself, whose index names keep their `band` prefix with the reason recorded beside them. The
+trade taken knowingly is that a solo performer's shared address still reads
+`/directory/bands/their-name`.
 
 ### The external act
 

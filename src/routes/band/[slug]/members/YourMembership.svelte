@@ -78,7 +78,7 @@
 						value={me.alias ?? ''}
 						maxlength="100"
 						placeholder={me.member.title}
-						description="How you're credited on this act's roster and site. Leave blank to use your account name."
+						description="How you're credited on this band's roster and site. Leave blank to use your account name."
 					/>
 					<FormField
 						field={fields.position}
@@ -87,7 +87,7 @@
 						value={me.position ?? ''}
 						maxlength="100"
 						placeholder="e.g. Bass"
-						description="What you play in this act. Admins can change this too."
+						description="What you play in this band. Admins can change this too."
 					/>
 				</div>
 				<div class="flex justify-end">
@@ -97,7 +97,7 @@
 
 			<div class="border-t pt-4">
 				{#if isOwner}
-					<!-- An owner can't leave while they own the act. Saying so, with the
+					<!-- An owner can't leave while they own the band. Saying so, with the
 					     way out, beats the old behaviour of hiding the button entirely
 					     and leaving them to guess. -->
 					<Alert type="info">
@@ -113,14 +113,14 @@
 					     leaves can ride the submission without losing the prompt. -->
 					<Action
 						action={leave}
-						label="Leave act"
+						label="Leave band"
 						variant="error"
 						size="sm"
 						outline
-						modalTitle="Leave act"
-						submitLabel="Leave act"
+						modalTitle="Leave band"
+						submitLabel="Leave band"
 						confirm="Leave {bandName}? You'll need to be re-invited to rejoin."
-						successToast="You have left the act"
+						successToast="You have left the band"
 						onsuccess={() => goto(resolve('/member/bands'))}
 						onfailure={() => toast.error('Failed to leave')}
 					>
