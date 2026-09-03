@@ -84,7 +84,18 @@ External bands and promoters submit booking inquiries through a public form. Sta
 
 Bands submit stage plots and backline requirements ahead of events. Staff match against available gear and flag gaps before load-in. Cuts down day-of surprises.
 
-**Progress:** Designed as the advance stage of `docs/specs/production-workflow-spec.md` — per-slot `techNotes`/`backlineNeeds`, an advance checklist, and reuse of the rider/stage-plot/backline fields already on `BandEpk` and `band_media` for premium member bands. Matching against the equipment catalog is not in that spec.
+**Progress:** Phase 1 built, on `feature/band-rider` — `/band/{slug}/rider`, free for every band and
+on the nav for every role. Three tables (`rider`, `rider_element`, `rider_input`) whose premise is
+that **a rider is not one person's document**: each member declares their own gear and channels, an
+owner or admin can edit anyone's, and the band's shared kit has a null owner. Channel numbers are
+derived and ordered by an item's _kind_ — drums, bass, guitars and keys, then vocals — which is what
+lets two members edit their own corners without either renumbering the other. Uploading a rider PDF
+stays a first-class path and is no longer premium-only. Still to come: the consolidated input list
+with its CSV and print view, the channel count checked against what the room can do (the half of the
+Production user story that had no design anywhere), and the stage plot. Note this **revisits**
+`production-workflow-spec.md`'s deferral of a canvas plot builder, which was decided when the rider
+was an opaque file. Matching against the equipment catalog remains out — nothing in `inventory_item`
+types an item as a mic, a DI or a channel, so the join has nothing to land on.
 
 ### Annual Report Generator
 

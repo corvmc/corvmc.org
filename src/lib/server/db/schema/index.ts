@@ -29,3 +29,4 @@ export * from './instructor';
 export * from './media';
 export * from './contractor';
 export * from './project';
+export * from './rider';
