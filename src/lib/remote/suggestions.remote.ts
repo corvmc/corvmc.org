@@ -35,6 +35,10 @@ import {
 	SuggestionNotFoundError
 } from '$lib/server/suggestion/suggestion-service';
 import { createFlag, FLAG_REASON_MAX, FLAG_DESCRIPTION_MAX } from '$lib/server/flag/flag-service';
+import { getProjectForSuggestion } from '$lib/server/project/project-service';
+import { db } from '$lib/server/db';
+import { group } from '$lib/server/db/schema/group';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 const BOARD_PAGE_SIZE = 20;
 const STAFF_PAGE_SIZE = 25;
@@ -416,12 +420,15 @@ export const reviewSuggestionEdit = form(
  * its own, so folding it in costs nothing.
  */
 export const getMemberSuggestionDetailPage = query(z.string(), async (id) => {
-	const [suggestion, standing, editState] = await Promise.all([
+	// The author sees the work their idea became — the payoff the board never had
+	// — and nothing more: a name and a status, never a budget.
+	const [suggestion, standing, editState, project] = await Promise.all([
 		getSuggestionDetail(id),
 		getMySuggestionStanding(),
-		getSuggestionEditState(id)
+		getSuggestionEditState(id),
+		getProjectForSuggestion(id)
 	]);
-	return { suggestion, standing, editState };
+	return { suggestion, standing, editState, project };
 });
 
 /**
@@ -431,12 +438,31 @@ export const getMemberSuggestionDetailPage = query(z.string(), async (id) => {
  * `MergeCandidateOptions`, which is also what retires this page's JAVASCRIPT-SVELTEKIT-25
  * workaround.
  */
+/**
+ * Committees, for the picker on "start a project". Duplicated from
+ * `projects.remote.ts` rather than exported across modules: a remote module is
+ * an endpoint surface, and importing one from another makes a private helper
+ * look like part of that page's contract.
+ */
+async function listCommitteeOptions() {
+	return db
+		.select({ id: group.id, name: group.name })
+		.from(group)
+		.where(and(eq(group.kind, 'committee'), isNull(group.deletedAt)))
+		.orderBy(asc(group.name));
+}
+
 export const getStaffSuggestionDetailPage = query(z.string(), async (id) => {
-	const [suggestion, pendingEdit] = await Promise.all([
+	// `project` rides along rather than being its own query: it is one line on
+	// this page, and a second awaited remote query in the component is a serial
+	// round trip that also stops the page rendering past kit 2.64.
+	const [suggestion, pendingEdit, project, committees] = await Promise.all([
 		getStaffSuggestionDetail(id),
-		getSuggestionPendingEdit(id)
+		getSuggestionPendingEdit(id),
+		getProjectForSuggestion(id),
+		listCommitteeOptions()
 	]);
-	return { suggestion, pendingEdit };
+	return { suggestion, pendingEdit, project, committees };
 });
 
 /**

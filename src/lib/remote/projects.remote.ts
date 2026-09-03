@@ -17,6 +17,7 @@ import {
 	listProjectAttachments,
 	listProjects,
 	setProjectStatus,
+	startProjectFromSuggestion,
 	updateProject
 } from '$lib/server/project/project-service';
 
@@ -202,6 +203,44 @@ export const setProjectStatusForm = form(
 			void getProjectDetail(id).refresh();
 			void getProjectsPage().refresh();
 			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * Commit to a member's suggestion by starting the project that answers it.
+ *
+ * Lives here rather than in `suggestions.remote.ts` because the write is a
+ * project write; the suggestion moving with it is a consequence the service
+ * owns. Both pages' queries refresh, since the suggestion's own status changed
+ * too and the staff page reads it from the other module.
+ */
+export const startProjectFromSuggestionForm = form(
+	z.object({
+		suggestionId: z.uuid(),
+		name: z.string().min(1).max(200),
+		groupId: optionalId,
+		budgetCents: optionalMoney
+	}),
+	async (raw) => {
+		const user = await requireStaff();
+		const { suggestionId, name, groupId, budgetCents } = raw as {
+			suggestionId: string;
+			name: string;
+			groupId?: string;
+			budgetCents?: number;
+		};
+		try {
+			const row = await startProjectFromSuggestion(suggestionId, {
+				name,
+				groupId: groupId || null,
+				budgetCents: budgetCents ?? null,
+				createdByUserId: user.id
+			});
+			void getProjectsPage().refresh();
+			return { success: true, id: row.id };
 		} catch (err) {
 			mapDomainError(err);
 		}

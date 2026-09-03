@@ -175,6 +175,52 @@ export async function listProjects(
 		.orderBy(desc(project.createdAt));
 }
 
+/**
+ * The project answering a suggestion, if one does.
+ *
+ * A thin projection rather than the whole row: both callers are a line on
+ * somebody else's page — the member's own suggestion, and the staff view of it
+ * — and neither has any business with a budget.
+ */
+export async function getProjectForSuggestion(suggestionId: string) {
+	const [row] = await db
+		.select({ id: project.id, name: project.name, status: project.status })
+		.from(project)
+		.where(eq(project.suggestionId, suggestionId))
+		.limit(1);
+	return row ?? null;
+}
+
+/**
+ * Commit to a suggestion: create the project that answers it, and move the
+ * suggestion to `planned` in the same breath.
+ *
+ * The two writes are one `db.batch` because they are one fact. A project
+ * created without its suggestion following it leaves the board saying nobody
+ * has decided anything, which is the exact gap this column was added to close
+ * — and D1 has no transaction to fall back on.
+ */
+export async function startProjectFromSuggestion(
+	suggestionId: string,
+	data: Omit<CreateProjectInput, 'suggestionId' | 'status'>
+) {
+	await assertClaimableSuggestion(suggestionId);
+	if (data.groupId) await assertCommittee(data.groupId);
+
+	const id = crypto.randomUUID();
+	const now = new Date();
+
+	await db.batch([
+		db.insert(project).values({ ...data, id, suggestionId, status: 'planned' }),
+		db
+			.update(suggestion)
+			.set({ status: 'planned', updatedAt: now })
+			.where(eq(suggestion.id, suggestionId))
+	]);
+
+	return getProjectById(id);
+}
+
 // ---------------------------------------------------------------------------
 // Attachment
 // ---------------------------------------------------------------------------

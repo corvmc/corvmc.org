@@ -2,16 +2,20 @@
 
 > ## Status
 >
-> **Phase 1 shipped** — the table, the five nullable `project_id` anchors,
-> `project-service.ts` (including derived burn) and the seed. The vocabulary
-> rename it was sequenced behind shipped first, in its own migration.
+> **Phases 1–3 shipped.** The table and its five nullable `project_id` anchors,
+> `project-service.ts` with derived burn, the seed, `/staff/projects` and its
+> detail page, and the suggestion loop: staff start a project from a
+> suggestion, both move to `planned` in one write, the author is told their
+> idea became work, and a committee reads its own projects on
+> `/member/groups/{slug}` through `requireGroupRole`. The vocabulary rename
+> this was sequenced behind shipped first, in its own migration.
 >
-> **Not built yet:** every staff and member surface (`/staff/projects`, the
-> committee tab, "start a project from this suggestion"), the deal shape, the
-> `production` side table, generate-on-close recurring work, and the valued
-> volunteer hour — which stays blocked on the site-config read path in
-> `CHORES.md`. Burn therefore reports volunteer time in **minutes**, and never
-> adds contributed value to cash.
+> **Not built yet:** the deal shape, the `production` side table,
+> generate-on-close recurring work, and the valued volunteer hour — which stays
+> blocked on the site-config read path in `CHORES.md`. Burn therefore reports
+> volunteer time in **minutes**, and never adds contributed value to cash.
+> Committee surfaces are read-only; acting on a project from one waits on the
+> capability work in [admin-vs-staff-spec.md](admin-vs-staff-spec.md).
 
 ## Purpose
 
