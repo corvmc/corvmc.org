@@ -9,6 +9,7 @@ import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
 import { db } from '$lib/server/db';
 import { blockSchema, type Block } from '$lib/server/db/schema/band-page';
 import { bandSite } from '$lib/server/db/schema/band-site';
+import { reconcileBlocks } from '$lib/utils/band-site-preset';
 import { eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -31,12 +32,16 @@ export const getBandPageEditor = query(z.string(), async (slug) => {
 	// exists, so there is nothing to create here.
 	const [config] = await db.select().from(bandSite).where(eq(bandSite.groupId, band.id)).limit(1);
 
+	// The editor opens on the full catalogue rather than an empty canvas. The
+	// preset is projected here rather than written at upgrade time — see
+	// `$lib/utils/band-site-preset` for why — so the column only gains it when
+	// the band saves.
 	return {
 		config: config
 			? {
 					theme: config.theme,
 					customCss: config.customCss,
-					blocks: config.blocks as Block[],
+					blocks: reconcileBlocks(config.blocks as Block[]),
 					epk: config.epk
 				}
 			: null
@@ -72,6 +77,7 @@ export const saveBandPageConfig = form(
 		blocks: blocksField
 	}),
 	async (data) => {
+		await requireFeature('bandPremium');
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
 		if (band.tier !== 'premium') {

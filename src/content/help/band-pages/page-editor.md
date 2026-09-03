@@ -2,18 +2,19 @@
 title: The Page Editor
 slug: page-editor
 category: band-pages
-summary: An overview of the block-based editor and the 14 block types.
+summary: An overview of the block-based editor and the blocks a page comes with.
 minRole: member
 sortOrder: 2
 ---
 
 ## The page editor
 
-Premium bands get a block-based editor for building a custom public page. Open it
-from the band's **Page Editor**. You assemble the page from blocks, each
-configurable on its own.
+Premium bands get a block-based editor for their custom public page. Open it from
+the band's **Page Editor**. The page comes with every block already on it, in a
+sensible order — you arrange them, configure each one, and hide the ones you have
+nothing for.
 
-## The 14 block types
+## The blocks
 
 - **Hero** — Banner with your name and key art.
 - **Bio** — Your story.
@@ -27,12 +28,11 @@ configurable on its own.
 - **Contact** — How to reach you.
 - **Tech Rider** — Technical requirements.
 - **Merch** — Items for sale.
-- **Spacer** — Layout spacing.
 - **Custom HTML** — Your own markup.
 
 ## Building and styling
 
-- [Add, reorder & configure blocks](/member/help/build-your-page)
+- [Reorder, hide & configure blocks](/member/help/build-your-page)
 - [Choose a theme & add custom CSS](/member/help/page-theme-css)
 - [Upload media](/member/help/page-media)
 - [Fill in your press kit](/member/help/electronic-press-kit)
