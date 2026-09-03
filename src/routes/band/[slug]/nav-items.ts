@@ -22,6 +22,7 @@ export type BandNavKey =
 	| 'music'
 	| 'payouts'
 	| 'edit'
+	| 'press-kit'
 	| 'page-editor'
 	| 'live-site'
 	| 'subscription'
@@ -102,6 +103,16 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 			key: 'edit',
 			label: 'Edit Profile',
 			href: resolve('/band/[slug]/edit', { slug })
+		});
+		// Deliberately not premium-gated, and deliberately not folded into Edit
+		// Profile. A press kit is free for every act, and its two halves answer
+		// to different readers: the profile is what the public sees, this is what
+		// a venue is sent. One page per audience is what keeps a phone number
+		// from drifting onto the wrong one.
+		items.push({
+			key: 'press-kit',
+			label: 'Press Kit',
+			href: resolve('/band/[slug]/press-kit', { slug })
 		});
 	}
 

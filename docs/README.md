@@ -197,6 +197,7 @@ content is either shipped (git history is the record) or was folded into `CHORES
 | [inventory-workflow-findings.md](reports/inventory-workflow-findings.md)   | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign           |
 | [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md)   | 📦     | The same pass over volunteering; findings complete, the restructure is separate work         |
 | [project-management-prior-art.md](reports/project-management-prior-art.md) | ✅     | Prior art behind the `project` entity — CMMS, venue, makerspace and ERP systems surveyed     |
+| [handoff/press-kit.md](handoff/press-kit.md)                               | ✅     | Screen handoff for the press-kit area — 12 screens at two viewports, with who/what/why each  |
 | [social-prior-art.md](reports/social-prior-art.md)                         | ✅     | The social vertical by role, against the products that compete with each — and what to steal |
 
 ## checklists

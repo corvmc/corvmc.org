@@ -60,7 +60,7 @@
 		"panel": "band"
 	},
 	{
-		"route": "/band/[slug]/page-editor/epk",
+		"route": "/band/[slug]/press-kit",
 		"panel": "band"
 	},
 	{

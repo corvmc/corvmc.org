@@ -183,17 +183,17 @@
 							<span class="text-success">&#10003;</span>
 							Full custom CSS
 						</li>
+						<!-- The EPK, the embedded player and one press photo are free for
+						     every act now, so selling them here would be selling something
+						     the band already has. What premium adds is presentation and
+						     volume. -->
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>
-							Electronic Press Kit (EPK) with tech rider &amp; stage plot
+							A video section — live clips on your page and in your press kit
 						</li>
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>
-							Photo gallery with downloadable press images
-						</li>
-						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							Embedded music players (Spotify, SoundCloud, YouTube)
+							Unlimited press photos, instead of one
 						</li>
 					</ul>
 				</CardBody>
