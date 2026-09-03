@@ -170,6 +170,7 @@
 			panel="member"
 			userId={layout.user.id}
 			isStaff={layout.isStaff}
+			capabilities={layout.capabilities}
 			bands={layout.userBands}
 		>
 			{@render children()}

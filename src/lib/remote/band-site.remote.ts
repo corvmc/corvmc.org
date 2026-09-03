@@ -19,6 +19,7 @@ import { resolveImageUrl } from '$lib/server/storage';
 import { prepareBlocksForRender } from '$lib/server/band/band-site-blocks';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { bandSiteUrl } from '$lib/utils/band-site-url';
+import { reconcileBlocks } from '$lib/utils/band-site-preset';
 import type { Block } from '$lib/server/db/schema/band-page';
 
 // ---------------------------------------------------------------------------
@@ -125,7 +126,9 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 			? {
 					theme: config.theme,
 					customCss: config.customCss,
-					blocks: prepareBlocksForRender(config.blocks as Block[]),
+					// Reconciled first, so a premium band that has never opened the
+					// editor still publishes the preset layout rather than the fallback.
+					blocks: prepareBlocksForRender(reconcileBlocks(config.blocks as Block[])),
 					epk: config.epk
 				}
 			: null,

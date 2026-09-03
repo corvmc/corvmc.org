@@ -1,6 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import { getAssetByTag } from '$lib/server/inventory/asset-service';
-import { isStaff } from '$lib/server/authorization';
+import { capabilitySet, positionsFor } from '$lib/server/authorization';
 import { entityHref } from '$lib/utils/entity-href';
 import type { PageServerLoad } from './$types';
 
@@ -39,10 +39,19 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const asset = await getAssetByTag(tag);
 	if (!asset) error(404, 'No gear carries that tag');
 
-	const staff = await isStaff(locals.user.id);
+	// The real capability set, not just `isStaff`: entityHref decides the staff
+	// arm per route now, so a coarse boolean would send someone who holds the
+	// panel but not inventory to a page that 403s.
+	const positions = await positionsFor(locals.user.id);
 	const href = entityHref(
 		{ type: 'asset', id: asset.id, title: asset.item.name },
-		{ userId: locals.user.id, isStaff: staff, bandIds: new Set(), panel: 'public' }
+		{
+			userId: locals.user.id,
+			isStaff: positions.length > 0,
+			capabilities: new Set(capabilitySet(positions)),
+			bandIds: new Set(),
+			panel: 'public'
+		}
 	);
 
 	redirect(302, href ?? '/member/equipment');
