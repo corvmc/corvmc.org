@@ -25,8 +25,9 @@ import { ptDate, randomInt } from './util';
  * Deliberately kept out of `allUsers`, for the same reason the volunteer and
  * sustaining personas are: `seedUserRoles` indexes into that array and
  * `seedVolunteerProfiles` slices it, so appending would silently reassign both.
- * The member number comes from the free 80–89 block — 80–83 are the sustaining
- * personas, 90–93 the volunteer ones, 100–119 the bulk members.
+ * The member number comes from the free 80–89 block — 70–72 are the directory
+ * matching personas, 80–83 the sustaining ones, 90–93 the volunteer ones, and
+ * 100–119 the bulk members.
  */
 const PERSONA = {
 	id: 'seed-solo-act-owner',

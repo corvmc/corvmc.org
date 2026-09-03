@@ -4,6 +4,7 @@ import {
 	type ProfileLink
 } from '../../src/lib/server/db/schema/authentication';
 import { bandSite } from '../../src/lib/server/db/schema/band-site';
+import { type DirectoryTagKind } from '../../src/lib/server/db/schema/directory';
 
 /**
  * Tags collected while users and bands are seeded, keyed by the SUBJECT id.
@@ -14,7 +15,7 @@ import { bandSite } from '../../src/lib/server/db/schema/band-site';
  * ordering constraint in one place instead of making each seed function know
  * about entries.
  */
-export const pendingTags: { subjectId: string; kind: 'genre' | 'instrument'; value: string }[] = [];
+export const pendingTags: { subjectId: string; kind: DirectoryTagKind; value: string }[] = [];
 
 /**
  * Listing fields collected while users and bands are seeded, keyed by SUBJECT id.

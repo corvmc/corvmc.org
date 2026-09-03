@@ -34,6 +34,7 @@ import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
 import { seedDirectoryEntries } from './seed/directory';
+import { seedDirectoryPersonas } from './seed/directory-personas';
 import { seedInstructors } from './seed/instructors';
 import { seedExternalActs } from './seed/external-acts';
 import { seedGroupSessions } from './seed/group-sessions';
@@ -93,10 +94,15 @@ async function main() {
 	const soloAct = await seedSoloAct(roles);
 	if (soloAct) bands.push(soloAct);
 	const groups = await seedGroups(allUsers);
+	// After the bands and before the entries, which is the only window that works:
+	// it reads `pendingTags` to point each persona at data the bulk seed actually
+	// produced, and `seedDirectoryEntries` is what gives these accounts a listing
+	// at all.
+	const directoryPersonas = await seedDirectoryPersonas(roles);
 	// Before anything that writes a lineup credit, because a credit names an
 	// entry. Every user and group the seed creates exists by this point — the
-	// last of them is `seedGroups` directly above — so it can still read them all
-	// back, which is the property it was placed last for.
+	// last of them is `seedGroups` above — so it can still read them all back,
+	// which is the property it was placed last for.
 	const directory = await seedDirectoryEntries();
 	const instructors = await seedInstructors(allUsers, adminUser);
 	const externalActs = await seedExternalActs();
@@ -195,6 +201,7 @@ async function main() {
 		`  ${contractors.contractors} contractors, ${contractors.jobs} contractor jobs (1 overdue, 1 unit at the shop, 1 lapsed certificate)`
 	);
 	console.log(`  ${directory.entries} directory entries, ${directory.tags} directory tags`);
+	console.log(`  ${directoryPersonas.users} directory matching demo personas`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(
 		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings, 1 member-set messaging preference`
@@ -221,6 +228,11 @@ async function main() {
 	console.log('    cancelling@corvallismusic.org   ending at period end — resume path');
 	console.log('    feecoverer@corvallismusic.org   covering fees — fee schedule');
 	console.log('    lapsed@corvallismusic.org       former member — win-back CTA');
+	console.log('\n  Directory matching demo logins (all `password`):');
+	console.log('    seeker@corvallismusic.org       wants a band — matched bands on /member');
+	console.log('    bandleader@corvallismusic.org   wants members — matched members on /member');
+	console.log('    undecided@corvallismusic.org    no lookingFor — the empty state');
+
 	console.log('\n  Solo-act demo login (`password`):');
 	console.log(
 		`    ${SOLO_ACT_LOGIN.email}    one-person act — /member/bands, /band/${SOLO_ACT_LOGIN.slug}`
