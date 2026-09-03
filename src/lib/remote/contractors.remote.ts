@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { query, form } from '$app/server';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { getStaffAssetDetail } from './inventory.remote';
 import { contractorTrades, contractorJobStatuses, DEFAULT_TIMEZONE } from '$lib/config';
@@ -94,7 +94,7 @@ const contractorFilters = z
 	.optional();
 
 export const getContractors = query(contractorFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('contractor.read');
 	return listContractors(filters ?? {});
 });
 
@@ -106,7 +106,7 @@ const jobFilters = z
 	.optional();
 
 export const getJobs = query(jobFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('contractor.read');
 	return listJobs(filters ?? {});
 });
 
@@ -121,7 +121,7 @@ export const getJobs = query(jobFilters, async (filters) => {
  * are also the shape that stops the page rendering.
  */
 export const getContractorsPage = query(contractorFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('contractor.read');
 	const [contractors, lapsing, overdue] = await Promise.all([
 		listContractors(filters ?? {}),
 		listLapsingInsurance(),
@@ -132,7 +132,7 @@ export const getContractorsPage = query(contractorFilters, async (filters) => {
 
 /** One contractor, with everything they have ever done for us. */
 export const getContractorDetail = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('contractor.read');
 	try {
 		const [record, jobs] = await Promise.all([
 			getContractorById(id),
@@ -146,7 +146,7 @@ export const getContractorDetail = query(z.string(), async (id) => {
 
 /** The job queue: everything open, with the late ones named separately. */
 export const getJobsPage = query(jobFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('contractor.read');
 	const [jobs, overdue, contractors] = await Promise.all([
 		listJobs(filters ?? {}),
 		listOverdueJobs(),
@@ -156,7 +156,7 @@ export const getJobsPage = query(jobFilters, async (filters) => {
 });
 
 export const getJobDetail = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('contractor.read');
 	try {
 		const [job, contractors] = await Promise.all([getJobById(id), listContractors()]);
 		return { job, contractors };
@@ -170,7 +170,7 @@ export const getJobDetail = query(z.string(), async (id) => {
 // ---------------------------------------------------------------------------
 
 export const createContractorForm = form(z.object(contractorFields), async (raw) => {
-	await requireStaff();
+	await requireCapability('contractor.manage');
 	const data = raw as z.infer<z.ZodObject<typeof contractorFields>>;
 	try {
 		const record = await createContractor({
@@ -188,7 +188,7 @@ export const createContractorForm = form(z.object(contractorFields), async (raw)
 export const updateContractorForm = form(
 	z.object({ id: z.uuid(), ...contractorFields }),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('contractor.manage');
 		const { id, ...data } = raw as { id: string } & z.infer<z.ZodObject<typeof contractorFields>>;
 		try {
 			await updateContractor(id, {
@@ -208,7 +208,7 @@ export const updateContractorForm = form(
 export const archiveContractorForm = form(
 	z.object({ id: z.uuid(), archived: z.boolean().optional().default(false) }),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('contractor.manage');
 		const { id, archived } = raw as { id: string; archived: boolean };
 		try {
 			await archiveContractor(id, archived);
@@ -226,7 +226,7 @@ export const archiveContractorForm = form(
 // ---------------------------------------------------------------------------
 
 export const createJobForm = form(z.object(jobFields), async (raw) => {
-	await requireStaff();
+	await requireCapability('contractor.manage');
 	const data = raw as z.infer<z.ZodObject<typeof jobFields>>;
 	try {
 		const job = await createJob({
@@ -253,7 +253,7 @@ export const scheduleJobForm = form(
 		expectedBackAt: optionalDate
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('contractor.manage');
 		const data = raw as { id: string; scheduledFor?: string; expectedBackAt?: string };
 		try {
 			const job = await scheduleJob(data.id, {
@@ -287,7 +287,7 @@ export const completeJobForm = form(
 		fairValueBasis: optionalText
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('contractor.manage');
 		const data = raw as {
 			id: string;
 			completedAt?: string;
@@ -319,7 +319,7 @@ export const completeJobForm = form(
 );
 
 export const cancelJobForm = form(z.object({ id: z.uuid() }), async (raw) => {
-	await requireStaff();
+	await requireCapability('contractor.manage');
 	const { id } = raw as { id: string };
 	try {
 		const job = await cancelJob(id);
@@ -340,7 +340,7 @@ export const recordInvoiceForm = form(
 		paidAt: optionalDate
 	}),
 	async (raw) => {
-		await requireStaff();
+		await requireCapability('contractor.recordInvoice');
 		const data = raw as { id: string; costCents?: number; invoiceRef?: string; paidAt?: string };
 		try {
 			await recordInvoice(data.id, {

@@ -40,15 +40,36 @@ export type Block =
 	| { id: string; type: 'merch'; items: MerchItem[]; cssClass?: string }
 	| { id: string; type: 'spacer'; height: 'sm' | 'md' | 'lg'; cssClass?: string };
 
+/**
+ * One named human a venue can reach. `phone` is optional throughout and is
+ * package-only wherever it appears — see `PublicPressKit`.
+ */
+export interface EpkContact {
+	name: string;
+	email: string;
+	phone?: string;
+}
+
+/** A live video, premium-authored. Public once it exists. */
+export interface BandVideo {
+	url: string;
+	label?: string;
+}
+
+/**
+ * Everything a band writes into its press kit, both audiences mixed together.
+ *
+ * Nothing should read this shape directly. `publicPressKit()` and
+ * `fullPressKit()` in `$lib/server/band/press-kit.ts` are the two ways out of
+ * it, and which one a caller picks is the whole of the privacy boundary.
+ */
 export interface BandEpk {
-	bookingContact?: { name: string; email: string; phone?: string };
-	managementContact?: { name: string; email: string; phone?: string };
-	prContact?: { name: string; email: string };
-	technicalRiderKey?: string;
-	stagePlotKey?: string;
-	backline?: BacklineItem[];
+	bookingContact?: EpkContact;
+	managementContact?: EpkContact;
+	prContact?: EpkContact;
 	pressQuotes?: PressQuote[];
 	achievements?: string[];
+	videos?: BandVideo[];
 }
 
 export interface BacklineItem {
@@ -62,4 +83,37 @@ export interface PressQuote {
 	publication: string;
 	date?: string;
 	url?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Press kit projections
+// ---------------------------------------------------------------------------
+// `BandEpk` mixes two audiences. Everything a stranger may read is in
+// `PublicPressKit`; everything else reaches only whoever the band sends the
+// package to. The projections themselves live in
+// `$lib/server/band/press-kit.ts` — the types are here so components can name
+// what they are handed without importing from `$lib/server/`.
+// ---------------------------------------------------------------------------
+
+/**
+ * The marketing half: what `/directory/bands/{slug}` renders.
+ *
+ * Deliberately holds no contact of any kind. A band is reached through the
+ * Turnstile-backed form, so no address is ever published for a scraper to take.
+ */
+export interface PublicPressKit {
+	pressQuotes: PressQuote[];
+	achievements: string[];
+	/** Premium-authored, but public once it exists. */
+	videos: BandVideo[];
+}
+
+/**
+ * The advance half, plus the marketing half: what goes in the downloadable
+ * package and what a premium microsite may render behind its own gate.
+ */
+export interface FullPressKit extends PublicPressKit {
+	bookingContact?: EpkContact;
+	managementContact?: EpkContact;
+	prContact?: EpkContact;
 }

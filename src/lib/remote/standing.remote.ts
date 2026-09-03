@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { query, form } from '$app/server';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import {
 	getStandings,
 	setStanding,
@@ -18,7 +18,7 @@ import { standingScopes, standingStatuses, STANDING_REASON_MAX } from '$lib/conf
 
 /** Every scope for one member, for the staff user detail page. One query, not three. */
 export const getMemberStandings = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('moderation.setStanding');
 	return getStandings(userId);
 });
 
@@ -32,7 +32,7 @@ export const getMemberStandings = query(z.string(), async (userId) => {
 export const restoreMemberStanding = form(
 	z.object({ userId: z.string().min(1), scope: z.enum(standingScopes) }),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('moderation.setStanding');
 		await restoreStanding({ userId: data.userId, scope: data.scope, staffId: staff.id });
 		void getMemberStandings(data.userId).refresh();
 		return { success: true };
@@ -55,7 +55,7 @@ export const setMemberStanding = form(
 		reason: z.string().trim().max(STANDING_REASON_MAX).optional()
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('moderation.setStanding');
 		await setStanding({
 			userId: data.userId,
 			scope: data.scope,

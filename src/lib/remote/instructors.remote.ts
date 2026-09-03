@@ -1,6 +1,10 @@
 import { query, form } from '$app/server';
 import { z } from 'zod';
-import { requireStaff, requireCapabilityOrOwner, requireUser } from '$lib/server/authorization';
+import {
+	requireCapability,
+	requireCapabilityOrOwner,
+	requireUser
+} from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import * as instructorService from '$lib/server/instructor/instructor-service';
 import {
@@ -24,7 +28,7 @@ import {
  * The staff half of the instructor module — reviewing applications and granting,
  * pausing or ending teaching status.
  *
- * Every export guards with `requireStaff()` first. There is no member half here
+ * Every export guards with an `instructor.*` capability first. There is no member half here
  * yet: applying, editing a listing and withdrawing arrive with the public
  * listing, because a member-facing surface must not land before the thing it
  * advertises works. Until then the module runs staff-curated, which is a real
@@ -32,7 +36,7 @@ import {
  */
 
 export const getStaffInstructors = query(async () => {
-	await requireStaff();
+	await requireCapability('instructor.read');
 	return instructorService.listForStaff();
 });
 
@@ -62,7 +66,7 @@ const noteSchema = idSchema.extend({
 });
 
 export const approveInstructor = form(idSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('instructor.review');
 	try {
 		await instructorService.approve(data.id, staff.id);
 		return { success: true };
@@ -72,7 +76,7 @@ export const approveInstructor = form(idSchema, async (data) => {
 });
 
 export const sendBackInstructor = form(noteSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('instructor.review');
 	try {
 		await instructorService.sendBack(data.id, staff.id, data.note);
 		return { success: true };
@@ -89,7 +93,7 @@ export const sendBackInstructor = form(noteSchema, async (data) => {
 export const grantInstructor = form(
 	z.object({ userId: z.string().min(1, 'Pick a member') }),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('instructor.review');
 		try {
 			await instructorService.grant(data.userId, staff.id);
 			return { success: true };
@@ -100,7 +104,7 @@ export const grantInstructor = form(
 );
 
 export const pauseInstructor = form(noteSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('instructor.review');
 	try {
 		await instructorService.pause(data.id, staff.id, data.note);
 		return { success: true };
@@ -110,7 +114,7 @@ export const pauseInstructor = form(noteSchema, async (data) => {
 });
 
 export const retireInstructor = form(noteSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('instructor.review');
 	try {
 		await instructorService.retire(data.id, staff.id, data.note);
 		return { success: true };

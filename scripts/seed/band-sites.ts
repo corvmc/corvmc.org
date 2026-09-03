@@ -4,7 +4,6 @@ import { batchInsert, db } from './db';
 import { pendingSites } from './pending';
 import {
 	ACHIEVEMENTS_POOL,
-	BACKLINE_ITEMS,
 	BAND_EVENT_LOCATIONS,
 	FIRST_NAMES,
 	LAST_NAMES,
@@ -115,9 +114,16 @@ export async function seedBandPageConfigs(bands: any[]) {
 					: undefined,
 			pressQuotes: pickN(PRESS_QUOTES, randomInt(2, 4)),
 			achievements: pickN(ACHIEVEMENTS_POOL, randomInt(3, 5)),
-			backline: pickN(BACKLINE_ITEMS, randomInt(3, 5)),
-			technicalRiderKey: 'bands/rider-placeholder.pdf',
-			stagePlotKey: 'bands/stage-plot-placeholder.png'
+			// The premium half of the press kit. Without a seeded row `VideoBox`
+			// never rendered anywhere, so the section a band site is now partly
+			// sold on could not be seen in dev at all. Real YouTube ids, because
+			// the component drops anything `detectPlatform` cannot embed — a
+			// placeholder URL would silently render nothing and look like a bug in
+			// the component rather than in the fixture.
+			videos: [
+				{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', label: 'Live at the Majestic' },
+				{ url: 'https://www.youtube.com/watch?v=9bZkp7q19f0', label: 'Session, take one' }
+			]
 		};
 
 		const customCss =
@@ -176,4 +182,94 @@ export async function seedBandPageConfigs(bands: any[]) {
 	}
 
 	return configs;
+}
+
+/**
+ * Press kits for the acts that never bought anything.
+ *
+ * The press kit stopped being premium, so seeding it only for premium bands
+ * left every free surface it feeds rendering empty in dev — the public profile's
+ * press section, the ladder card, the downloadable package. Worse, it left the
+ * *interesting* states unreachable: the ladder is a progression, and you cannot
+ * see whether "3 of 12" reads right without a band sitting at 3.
+ *
+ * So free bands are dealt round-robin into three rungs. Deterministic by index
+ * rather than random, because the point is that all three states exist on every
+ * reset, not that they are plausibly distributed.
+ */
+/**
+ * One fabricated media row, attached to a band.
+ *
+ * The keys name no real object — which is exactly why `backfill-media.ts`
+ * refuses to invent them and the seed may.
+ */
+async function attachSeedImage(
+	b: any,
+	slot: 'gallery' | 'stage_plot' | 'rider' | 'hero',
+	sortOrder: number,
+	caption: string | null
+) {
+	const [mediaRow] = await db
+		.insert(media)
+		.values({
+			key: `bands/${b.slug}/${slot}-${sortOrder}.jpg`,
+			contentType: 'image/jpeg',
+			byteSize: 200_000 + sortOrder * 1000,
+			altText: slot === 'gallery' ? `${b.name} performing live` : null,
+			caption
+		})
+		.returning();
+
+	await db.insert(mediaAttachment).values({
+		mediaId: mediaRow.id,
+		attachableType: 'group',
+		attachableId: b.id,
+		slot,
+		sortOrder
+	});
+}
+
+export async function seedFreePressKits(bands: any[]) {
+	console.log('Seeding free press kits...');
+
+	const freeBands = bands.filter((b) => pendingSites.get(b.id)?.tier !== 'premium' && !b.deletedAt);
+
+	let filled = 0;
+	for (let i = 0; i < freeBands.length; i++) {
+		const b = freeBands[i];
+		// 0 = bare, 1 = part-way, 2 = a finished free kit.
+		const rung = i % 3;
+		if (rung === 0) continue;
+
+		const epk: Record<string, unknown> = {
+			pressQuotes: pickN(PRESS_QUOTES, rung === 1 ? 1 : 3),
+			achievements: pickN(ACHIEVEMENTS_POOL, rung === 1 ? 1 : 3)
+		};
+
+		if (rung === 2) {
+			// The finished kit: someone a venue can ring, and what the act needs on
+			// Package-only, so this is also the fixture that proves a booking
+			// contact never reaches the public page.
+			epk.bookingContact = {
+				name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+				email: `booking@${b.slug}.band`,
+				phone: `541-555-${randomInt(1000, 9999)}`
+			};
+			// Exactly one gallery photo — the free allowance, in full.
+			//
+			// Without this, three states were unreachable in dev and each was
+			// indistinguishable from a surface that is merely quiet: `PressPhoto`
+			// never rendered on a free act's public page, the "Press photo" rung
+			// could never be ticked, and the editor's "1 of 1 · a band site lifts
+			// the limit" state had no way to occur. So `FREE_PRESS_PHOTOS`, the one
+			// new server rule this feature adds, had no fixture exercising it.
+			await attachSeedImage(b, 'gallery', 0, `${b.name} — press photo`);
+		}
+
+		await db.update(bandSite).set({ epk, updatedAt: new Date() }).where(eq(bandSite.groupId, b.id));
+		filled++;
+	}
+
+	console.log(`  ${filled} free press kits (of ${freeBands.length} free acts)`);
+	return filled;
 }

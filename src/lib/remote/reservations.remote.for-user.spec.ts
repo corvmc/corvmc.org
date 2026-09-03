@@ -35,7 +35,7 @@ vi.mock('$lib/server/db', () => ({
 
 vi.mock('$lib/server/authorization', () => ({
 	isStaff: vi.fn(async () => false),
-	requireStaff: vi.fn(async () => actingUser),
+	requireCapability: vi.fn(async () => actingUser),
 	requireUser: () => actingUser,
 	requireCapabilityOrOwner: vi.fn(),
 	primaryRoleFor: vi.fn()

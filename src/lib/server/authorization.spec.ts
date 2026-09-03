@@ -164,10 +164,15 @@ describe('findStaffUserByEmail', () => {
 		expect(renderWhere(0)).toContain('lower(');
 	});
 
-	it('only ever matches admin and staff roles', async () => {
+	it('only ever matches a role that names a position', async () => {
+		// Derived from positionOrder rather than a hardcoded pair, so a new
+		// position is recognised as staff mail without touching this query — and
+		// a legacy `member` row never is.
+		const { positionOrder } = await import('$lib/config');
 		await findStaffUserByEmail('ada@corvmc.org');
 
-		expect(renderWhere(0)).toContain('"roles"."name" in (?, ?)');
+		const placeholders = positionOrder.map(() => '?').join(', ');
+		expect(renderWhere(0)).toContain(`"roles"."name" in (${placeholders})`);
 	});
 
 	it('skips the query entirely for a blank address', async () => {

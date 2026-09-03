@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { toGenericRef, toMemberRef } from '$lib/server/entity/refs';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
-import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { getStanding } from '$lib/server/moderation/standing-service';
 import { allowRateLimited } from '$lib/server/rate-limit';
@@ -134,7 +134,7 @@ const staffFiltersSchema = boardFiltersSchema.extend({
 });
 
 export const getSuggestionsQueue = query(staffFiltersSchema, async (filters) => {
-	await requireStaff();
+	await requireCapability('suggestion.read');
 	const { rows, pagination } = await listSuggestions(filters, {
 		page: filters.page ?? 1,
 		pageSize: STAFF_PAGE_SIZE
@@ -157,17 +157,17 @@ export const getSuggestionsQueue = query(staffFiltersSchema, async (filters) => 
 });
 
 export const getStaffSuggestionDetail = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('suggestion.read');
 	return getSuggestion(id).catch(mapDomainError);
 });
 
 export const getMergeCandidates = query(z.string(), async (excludeId) => {
-	await requireStaff();
+	await requireCapability('suggestion.read');
 	return listMergeCandidates(excludeId);
 });
 
 export const getPendingSuggestionEdits = query(async () => {
-	await requireStaff();
+	await requireCapability('suggestion.read');
 	const rows = await listPendingEdits();
 	return rows.map((e) => ({
 		...e,
@@ -181,7 +181,7 @@ export const getPendingSuggestionEdits = query(async () => {
 });
 
 export const getSuggestionPendingEdit = query(z.string(), async (suggestionId) => {
-	await requireStaff();
+	await requireCapability('suggestion.read');
 	return getPendingEditFor(suggestionId);
 });
 
@@ -311,7 +311,7 @@ export const respondToSuggestion = form(
 		response: z.string().trim().max(SUGGESTION_RESPONSE_MAX).optional()
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('suggestion.respond');
 		try {
 			await respondToSuggestionSvc(data.suggestionId, {
 				status: data.status,
@@ -333,7 +333,7 @@ export const reviewSuggestion = form(
 		note: z.string().trim().max(SUGGESTION_NOTE_MAX).optional()
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('suggestion.review');
 		try {
 			await reviewSuggestionSvc(data.suggestionId, {
 				decision: data.decision,
@@ -355,7 +355,7 @@ export const setSuggestionVisibility = form(
 		note: z.string().trim().max(SUGGESTION_NOTE_MAX).optional()
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('suggestion.review');
 		try {
 			await setVisibility(data.suggestionId, {
 				visibility: data.visibility,
@@ -373,7 +373,7 @@ export const setSuggestionVisibility = form(
 export const mergeSuggestion = form(
 	z.object({ sourceId: z.string().min(1), targetId: z.string().min(1) }),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('suggestion.review');
 		try {
 			await mergeSuggestions({ ...data, staffId: staff.id });
 		} catch (err) {
@@ -393,7 +393,7 @@ export const reviewSuggestionEdit = form(
 		notes: z.string().trim().max(SUGGESTION_NOTE_MAX).optional()
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('suggestion.review');
 		try {
 			await reviewEdit(data.editId, {
 				decision: data.decision,
@@ -462,7 +462,7 @@ export const getStaffSuggestionDetailPage = query(z.string(), async (id) => {
  * exists to avoid exactly that.
  */
 export const getStaffSuggestionsQueues = query(staffFiltersSchema, async (filters) => {
-	await requireStaff();
+	await requireCapability('suggestion.read');
 
 	const primaryVisibility =
 		filters.visibility === 'visible' || filters.visibility === 'hidden'
