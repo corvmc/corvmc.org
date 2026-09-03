@@ -130,9 +130,16 @@ describe('RadioPlayer', () => {
 		await page.getByRole('button', { name: 'Play CMC Radio' }).click();
 
 		expect(play).toHaveBeenCalled();
-		// The local clock is years off from SERVER_NOW. Anything that reached for
-		// `Date.now()` would land in the millions here; the answer is 30.
-		expect(seeks.at(-1)).toBeCloseTo(30, 0);
+
+		// A range, not `toBeCloseTo`. The station keeps moving between mount and
+		// the click, so the offset is 30 plus however long the runner took to get
+		// here — correct behaviour, and on a loaded CI box that was 0.66s, outside
+		// `toBeCloseTo(30, 0)`'s half-second window. The bound that matters is the
+		// upper one: the local clock is *years* off SERVER_NOW, so anything
+		// reaching for `Date.now()` lands around 2e8 rather than in this window.
+		const seek = seeks.at(-1)!;
+		expect(seek).toBeGreaterThanOrEqual(30);
+		expect(seek).toBeLessThan(40);
 	});
 
 	it('points the element at the stream for the track that is on', async () => {
