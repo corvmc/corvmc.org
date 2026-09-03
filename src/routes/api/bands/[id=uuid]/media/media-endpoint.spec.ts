@@ -5,28 +5,40 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 /**
- * The single `db.select()` each handler issues — POST's sortOrder high-water
- * mark, or DELETE's attachment lookup. One variable rather than switching on
+ * The `db.select()` calls the handlers issue — POST's slot stats, or DELETE's
+ * attachment lookup. One variable rather than switching on
  * call order: both handlers select exactly once, so an index-based mock hands
  * DELETE the row POST was asking for and its 404 path never runs.
  */
 let selectResult: unknown[] = [];
 let lastSelectWhere: unknown;
+/**
+ * What the tier lookup answers with. Kept apart from `selectResult` because a
+ * gallery upload now selects twice — the slot's count and high-water mark from
+ * `media_attachment`, then the band's tier from `band_site` — and one shared
+ * result would hand the tier query a row of sort orders. Which table a chain is
+ * reading is decided by the argument to `from`, so the two never cross.
+ */
+let tierResult: unknown[] = [{ tier: 'free' }];
 
 function selectChain() {
 	const chain: Record<string, unknown> = {};
+	let table: unknown;
 	const step = (fn?: (a: unknown) => void) => (a: unknown) => {
 		fn?.(a);
 		return chain;
 	};
 	Object.assign(chain, {
-		from: step(),
+		from: step((t) => (table = t)),
 		where: step((w) => (lastSelectWhere = w)),
 		limit: step(),
-		then: (resolve: (v: unknown[]) => void) => resolve(selectResult)
+		then: (resolve: (v: unknown[]) => void) =>
+			resolve(table === bandSite ? tierResult : selectResult)
 	});
 	return chain;
 }
+
+import { bandSite } from '$lib/server/db/schema/band-site';
 
 vi.mock('$lib/server/db', () => ({
 	db: { select: vi.fn(() => selectChain()) }
@@ -101,7 +113,8 @@ function del(mediaId?: string) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	selectResult = [{ maxOrder: null }];
+	selectResult = [{ maxOrder: null, used: 0 }];
+	tierResult = [{ tier: 'free' }];
 	lastSelectWhere = undefined;
 	record.mockResolvedValue({ id: 'media-1' });
 	attach.mockResolvedValue({ id: 'attachment-1' });
@@ -188,9 +201,68 @@ describe('POST', () => {
 	});
 
 	it('numbers a multi-file upload from the existing high-water mark', async () => {
-		selectResult = [{ maxOrder: 4 }];
+		// Premium, because two photos at once is past the free allowance — see the
+		// cap tests below.
+		tierResult = [{ tier: 'premium' }];
+		selectResult = [{ maxOrder: 4, used: 5 }];
 		await POST(upload('image', [jpeg('a.jpg'), jpeg('b.jpg')]));
 		expect(attach.mock.calls.map((c) => c[0].sortOrder)).toEqual([5, 6]);
+	});
+
+	describe('the press-photo allowance', () => {
+		it('lets a free act add its first photo', async () => {
+			tierResult = [{ tier: 'free' }];
+			selectResult = [{ maxOrder: null, used: 0 }];
+			const res = await POST(upload('image', [jpeg()]));
+			expect(res.status).toBe(200);
+		});
+
+		it('refuses a free act a second one, and says what lifts it', async () => {
+			tierResult = [{ tier: 'free' }];
+			selectResult = [{ maxOrder: 0, used: 1 }];
+			await expect(POST(upload('image', [jpeg()]))).rejects.toMatchObject({ status: 403 });
+			expect(attach).not.toHaveBeenCalled();
+		});
+
+		it('counts the whole batch, not one file at a time', async () => {
+			// Two files against an empty gallery is still over a limit of one, and
+			// checking per-file would let the first through and strand a half-done
+			// upload.
+			tierResult = [{ tier: 'free' }];
+			selectResult = [{ maxOrder: null, used: 0 }];
+			await expect(POST(upload('image', [jpeg('a.jpg'), jpeg('b.jpg')]))).rejects.toMatchObject({
+				status: 403
+			});
+		});
+
+		it('does not cap a premium act', async () => {
+			tierResult = [{ tier: 'premium' }];
+			selectResult = [{ maxOrder: 40, used: 41 }];
+			const res = await POST(upload('image', [jpeg()]));
+			expect(res.status).toBe(200);
+		});
+
+		it('treats a band with no site row as free rather than erroring', async () => {
+			// The only way to reach this is a band created before its `band_site`
+			// row was. The honest answer is the free allowance, not a 500 on a
+			// photo upload.
+			tierResult = [];
+			selectResult = [{ maxOrder: null, used: 0 }];
+			const res = await POST(upload('image', [jpeg()]));
+			expect(res.status).toBe(200);
+		});
+
+		it('never caps a rider or a stage plot — a venue asks for those', async () => {
+			tierResult = [{ tier: 'free' }];
+			selectResult = [{ maxOrder: 0, used: 1 }];
+			for (const type of ['rider', 'stage_plot']) {
+				vi.clearAllMocks();
+				record.mockResolvedValue({ id: 'media-1' });
+				attach.mockResolvedValue({ id: 'attachment-1' });
+				const res = await POST(upload(type, [jpeg()]));
+				expect(res.status).toBe(200);
+			}
+		});
 	});
 
 	it('never deletes an R2 object', async () => {
