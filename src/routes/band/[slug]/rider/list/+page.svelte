@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
 	import { getBandRiderPage } from '$lib/remote/rider.remote';
+	import StagePlot from '$lib/components/rider/StagePlot.svelte';
 	import {
 		riderElementKindLabels,
 		riderInputSourceLabels,
@@ -55,6 +56,20 @@
 	);
 
 	const monitors = $derived(rider.elements.filter((el) => el.kind === 'monitor'));
+
+	/** Read-only, and only if somebody has actually placed something. */
+	const plotItems = $derived(
+		rider.elements.map((el) => ({
+			id: el.id,
+			label: el.label,
+			kind: el.kind,
+			ownerName: el.ownerName,
+			x: el.x,
+			y: el.y,
+			movable: false
+		}))
+	);
+	const hasPlot = $derived(plotItems.some((i) => i.x !== null && i.y !== null));
 	const fromVenue = $derived(rider.elements.filter((el) => el.providedBy === 'venue'));
 	const contactName = $derived(
 		data.roster.find((m) => m.userId === rider.techContactUserId)?.name ?? null
@@ -198,6 +213,13 @@
 		</section>
 	{/each}
 
+	{#if hasPlot}
+		<section class="plot-section mb-6">
+			<h2 class="section-label">Stage plot</h2>
+			<StagePlot items={plotItems} readonly />
+		</section>
+	{/if}
+
 	{#if monitors.length}
 		<section class="mb-6">
 			<h2 class="section-label">Monitors</h2>
@@ -276,6 +298,12 @@
 		font-size: 0.75rem;
 		text-transform: uppercase;
 		color: #6b7280;
+	}
+
+	/* The plot is a picture, and a picture split down the middle by a page break
+	   is worse than one pushed to the next page. */
+	.plot-section {
+		break-inside: avoid;
 	}
 
 	.over-capacity {

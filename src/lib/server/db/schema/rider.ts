@@ -141,6 +141,27 @@ export const riderElement = sqliteTable(
 		/** Tie-break within a kind. Dense, re-derived from array position on save. */
 		sortOrder: integer('sort_order').notNull().default(0),
 
+		/**
+		 * Where it stands, as percentages of the stage — `0,0` is upstage left and
+		 * `100,100` downstage right.
+		 *
+		 * Percentages rather than feet because a stage plot is read as a picture of
+		 * relative positions, and CMC's room is not the only room these acts play.
+		 * Both null means "not placed yet", which the plot renders as a tray of
+		 * unplaced items rather than a pile in the corner at 0,0.
+		 *
+		 * **Unrelated to `sortOrder`.** Channel order is an engineer's reading
+		 * order — drums, bass, guitars, vocals — and stage position is where the
+		 * player physically stands. A kit at stage left is still channels one
+		 * through six.
+		 *
+		 * No `rotation` column. A wedge that points somewhere is a real want and an
+		 * additive nullable column when somebody asks for it; adding one now would
+		 * be a column nothing writes, on speculation.
+		 */
+		x: integer('x'),
+		y: integer('y'),
+
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`)
@@ -149,6 +170,11 @@ export const riderElement = sqliteTable(
 		index('idx_rider_element_rider').on(t.riderId, t.sortOrder),
 		index('idx_rider_element_user').on(t.userId),
 		check('rider_element_sort_nonneg', sql`sort_order >= 0`)
+		// **No range CHECK on `x`/`y`.** Adding one turns two plain ADD COLUMNs
+		// into a table rebuild that takes `rider_input` with it through the FK
+		// cascade — a lot of migration for a bound the service has to enforce
+		// anyway, since a client can post any number it likes. `clampCoord` is
+		// where the 0–100 range actually lives.
 	]
 );
 

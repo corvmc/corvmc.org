@@ -67,7 +67,10 @@ const {
 	getRider,
 	saveOwnElements,
 	saveElementsFor,
-	RiderTooLargeError
+	savePlacements,
+	clampCoord,
+	RiderTooLargeError,
+	RiderNotPlaceableError
 } = await import('./rider-service');
 const { RIDER_MAX_ELEMENTS, RIDER_MAX_INPUTS_PER_ELEMENT } = await import('$lib/config');
 
@@ -77,6 +80,8 @@ const el = (over: Partial<Element> = {}): Element => ({
 	id: 'e-1',
 	userId: null,
 	ownerName: null,
+	x: null,
+	y: null,
 	kind: 'vocals',
 	label: 'Vocal',
 	providedBy: 'band',
@@ -340,5 +345,93 @@ describe('saveElementsFor', () => {
 			userId: string | null;
 		}[];
 		expect(rows[0].userId).toBeNull();
+	});
+});
+
+describe('savePlacements', () => {
+	/**
+	 * The placement writes only. Every save also bumps `rider.updatedAt`, which
+	 * is a third `update` call and not what any of these are about — counting raw
+	 * updates would make these tests fail the day something else touches the row.
+	 */
+	const placementWrites = () => updates.filter((u) => 'x' in u);
+
+	it('lets a member move their own gear', async () => {
+		selectResults = [[{ id: 'rider-1', groupId: 'band-1' }], [{ id: 'e-1', userId: 'u-1' }]];
+
+		await savePlacements('band-1', { userId: 'u-1', isAdmin: false }, [
+			{ elementId: 'e-1', x: 20, y: 80 }
+		]);
+
+		expect(placementWrites()[0]).toMatchObject({ x: 20, y: 80 });
+	});
+
+	/**
+	 * The one that matters. The plot only offers you your own items to drag, so
+	 * reaching this means a hand-written payload — and the guard on the remote
+	 * function alone would not catch it, because a plain member is allowed to
+	 * call this at all.
+	 */
+	it('refuses a member moving somebody else’s', async () => {
+		selectResults = [
+			[{ id: 'rider-1', groupId: 'band-1' }],
+			[{ id: 'e-1', userId: 'someone-else' }]
+		];
+
+		await expect(
+			savePlacements('band-1', { userId: 'u-1', isAdmin: false }, [
+				{ elementId: 'e-1', x: 10, y: 10 }
+			])
+		).rejects.toThrow(RiderNotPlaceableError);
+		expect(placementWrites()).toHaveLength(0);
+	});
+
+	it('lets an admin move anything, including the band’s shared kit', async () => {
+		selectResults = [
+			[{ id: 'rider-1', groupId: 'band-1' }],
+			[
+				{ id: 'e-1', userId: 'someone-else' },
+				{ id: 'e-2', userId: null }
+			]
+		];
+
+		await savePlacements('band-1', { userId: 'admin-1', isAdmin: true }, [
+			{ elementId: 'e-1', x: 10, y: 10 },
+			{ elementId: 'e-2', x: 90, y: 90 }
+		]);
+
+		expect(placementWrites()).toHaveLength(2);
+	});
+
+	it('refuses an element that is not on this rider at all', async () => {
+		selectResults = [[{ id: 'rider-1', groupId: 'band-1' }], []];
+
+		await expect(
+			savePlacements('band-1', { userId: 'u-1', isAdmin: true }, [
+				{ elementId: 'from-another-band', x: 0, y: 0 }
+			])
+		).rejects.toThrow(RiderNotPlaceableError);
+	});
+
+	it('unplaces on null rather than dropping the item at the origin', async () => {
+		selectResults = [[{ id: 'rider-1', groupId: 'band-1' }], [{ id: 'e-1', userId: 'u-1' }]];
+
+		await savePlacements('band-1', { userId: 'u-1', isAdmin: false }, [
+			{ elementId: 'e-1', x: null, y: null }
+		]);
+
+		expect(placementWrites()[0]).toMatchObject({ x: null, y: null });
+	});
+});
+
+describe('clampCoord', () => {
+	it('holds the 0–100 bound a client could otherwise post past', () => {
+		expect(clampCoord(-40)).toBe(0);
+		expect(clampCoord(1e6)).toBe(100);
+		expect(clampCoord(33.6)).toBe(34);
+	});
+
+	it('does not let a NaN through as a coordinate', () => {
+		expect(clampCoord(Number.NaN)).toBe(0);
 	});
 });
