@@ -36,7 +36,7 @@ work backlog and five nights, and there is no way to say that today.
 
 ### What a project is not
 
-- **Not the container work orders belong to.** `volunteer_shift.eventId` is nullable
+- **Not the container work orders belong to.** `work_order.eventId` is nullable
   and set-null, alongside `assetId` — a work order hangs off an event, an asset, a
   project, or nothing. It gains `projectId` as one more optional anchor, and keeps the
   others. A work order can be _in_ the renovation project and _at_ Saturday's doors.
@@ -83,7 +83,7 @@ pointing at `event.id`. No polymorphism is introduced.
 
 ### Nullable `projectId`, added to
 
-- `volunteer_shift` — work orders
+- `work_order` — work orders
 - `contractor_job` — the electrician, finally attached to something
 - `purchase_order` and `acquisition` — what the project spent
 - `event` — many-to-one; a band gig has none
@@ -224,15 +224,21 @@ window-materializer like `recurring_series` can.
 
 Adopted from CMMS, where these terms have forty years of settled meaning:
 
-| Term             | Here                                               |
-| ---------------- | -------------------------------------------------- |
-| **Work request** | `asset_flag` — someone noticed, not yet authorized |
-| **Work order**   | `volunteer_shift` — triaged, scoped, assigned      |
-| **Project**      | This document                                      |
-| **PM schedule**  | Generate-on-close recurring work, above            |
+| Term             | Here                                                 |
+| ---------------- | ---------------------------------------------------- |
+| **Work request** | `work_request` — someone noticed, not yet authorized |
+| **Work order**   | `work_order` — triaged, scoped, assigned             |
+| **Project**      | This document                                        |
+| **PM schedule**  | Generate-on-close recurring work, above              |
 
-Renaming the tables to match is separate work, sequenced before any `projectId`
-migration so the two do not share a lineage. `duty_list` keeps its name — real venue
+The tables were renamed to match (`volunteer_shift` → `work_order`, `asset_flag` →
+`work_request`) as their own migration, sequenced before any `projectId` migration so
+the two do not share a lineage. Child foreign-key columns (`volunteer_signup.shift_id`,
+`volunteer_hour_log.shift_id`), index and check names, the `volunteer_shift_feedback`
+table (feedback on a _signup_, not on the work) and the `volunteer_shift_*` notification
+kinds were deliberately left as they were: SQLite carries them through `RENAME TO` for
+free, and renaming them would turn two ALTERs into table rebuilds. "Shift" stays the
+member-facing word for a scheduled work order. `duty_list` keeps its name — real venue
 and theatre vocabulary, and better here than CMMS's "PM schedule."
 
 ## Open questions

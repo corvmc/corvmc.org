@@ -8,11 +8,11 @@ event bus, cron; this document is about what the tables _mean_ and which shapes 
 
 **Verticals** — a thing the collective does, with its own screens and its own lifecycle:
 
-| Vertical               | What it is                                         | Modules                                                                                                                                                                                               |
-| ---------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`                          |
-| **Project management** | Work that has to get done, by someone, by a time   | `project`, `volunteer_shift` (the work order), `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event` (CMC-produced), `ticket` |
-| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event` (band and community listings)                                 |
+| Vertical               | What it is                                         | Modules                                                                                                                                                                         |
+| ---------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`    |
+| **Project management** | Work that has to get done, by someone, by a time   | `project`, `work_order`, `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event` (CMC-produced), `ticket` |
+| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event` (band and community listings)           |
 
 **Horizontals** — services every vertical emits into:
 
@@ -62,7 +62,7 @@ See [project-spec.md](../specs/project-spec.md).
 Asset management and project management join at exactly two columns, and they are the
 two worth knowing:
 
-- **`asset_flag.workOrderId`** — a work request raises the work that answers it.
+- **`work_request.workOrderId`** — a work request raises the work that answers it.
 - **`contractor_job.assetId`** — the work is done to a unit. Null means building work.
 
 ## Inside the social vertical
@@ -152,11 +152,11 @@ Availability genuinely differs. The state machine and the settlement do not.
 ### 2. A request raises work `[assets → projects]`
 
 Someone notices, staff triage, work is raised, the work closes the request. This is the
-industry-standard **work request → work order** pattern; `asset_flag` is the request and
-`volunteer_shift` is the order.
+industry-standard **work request → work order** pattern; `work_request` is the request and
+`work_order` is the order.
 
 `content_flag` is the same lifecycle in social, where the "work" is a moderation decision
-rather than a repair — which is why `asset_flag` shares `flagStatuses` verbatim and
+rather than a repair — which is why `work_request` shares `flagStatuses` verbatim and
 copies six columns. **They stay separate tables** (see below); the triage queue, detail
 page, resolve/dismiss action and don't-re-notify-on-repeat rule are what could be shared.
 
@@ -246,11 +246,11 @@ Three things this pattern has to respect, all of which already have working prec
 
 A list like the above invites merging everything. These three are deliberate:
 
-- **`content_flag` vs `asset_flag` as tables.** Argued in the schema, and the argument
+- **`content_flag` vs `work_request` as tables.** Argued in the schema, and the argument
   holds: gear must not queue beside a harassment report, `reason` there is
   moderation-shaped, and neither `blocksUse` nor `workOrderId` means anything to
   moderation.
-- **`volunteer_shift` vs `contractor_job`.** Same shape, opposite economics: volunteer
+- **`work_order` vs `contractor_job`.** Same shape, opposite economics: volunteer
   labour is claimed and credited in hours, contractor labour is commissioned and paid in
   cents.
 - **The four ledgers.** A shared table would put credits, gear and hours in one row type

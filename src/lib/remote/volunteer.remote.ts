@@ -71,7 +71,7 @@ import {
 	countUnfilledByRole,
 	listOpenShiftsForMember,
 	getShiftDetail
-} from '$lib/server/volunteer/volunteer-shift-service';
+} from '$lib/server/volunteer/work-order-service';
 import {
 	claimShift as claimShiftService,
 	cancelSignup as cancelSignupService,

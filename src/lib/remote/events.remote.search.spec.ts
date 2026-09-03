@@ -8,7 +8,7 @@ import { mockUser } from '$lib/server/db/test-factory';
 // of them is a one-line change away from silently reverting.
 //
 // No database: the chain is recorded and its predicate rendered to SQL, the
-// same technique volunteer-shift-service.spec.ts uses.
+// same technique work-order-service.spec.ts uses.
 // ---------------------------------------------------------------------------
 
 let selectResult: unknown[] = [];

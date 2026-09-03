@@ -150,7 +150,7 @@ export const relations = defineRelations(schema, (t) => ({
 		loans: t.many.inventoryLoan(),
 		// Flags hang off the unit, not the catalog entry: "this amp hums" is about
 		// one amp, the way a damage photo is.
-		flags: t.many.assetFlag()
+		flags: t.many.workRequest()
 	},
 	stockMovement: {
 		item: t.one.inventoryItem({ from: t.stockMovement.itemId, to: t.inventoryItem.id }),
@@ -182,13 +182,13 @@ export const relations = defineRelations(schema, (t) => ({
 		asset: t.one.inventoryAsset({ from: t.inventoryLoan.assetId, to: t.inventoryAsset.id }),
 		user: t.one.user({ from: t.inventoryLoan.userId, to: t.user.id }),
 		// Flags raised when this loan came back.
-		flags: t.many.assetFlag()
+		flags: t.many.workRequest()
 	},
-	assetFlag: {
-		asset: t.one.inventoryAsset({ from: t.assetFlag.assetId, to: t.inventoryAsset.id }),
-		reportedBy: t.one.user({ from: t.assetFlag.reportedByUserId, to: t.user.id }),
-		resolvedBy: t.one.user({ from: t.assetFlag.resolvedByUserId, to: t.user.id }),
-		loan: t.one.inventoryLoan({ from: t.assetFlag.loanId, to: t.inventoryLoan.id })
+	workRequest: {
+		asset: t.one.inventoryAsset({ from: t.workRequest.assetId, to: t.inventoryAsset.id }),
+		reportedBy: t.one.user({ from: t.workRequest.reportedByUserId, to: t.user.id }),
+		resolvedBy: t.one.user({ from: t.workRequest.resolvedByUserId, to: t.user.id }),
+		loan: t.one.inventoryLoan({ from: t.workRequest.loanId, to: t.inventoryLoan.id })
 		// No `workOrder` relation: `workOrderId` carries no FK, so that the
 		// inventory and volunteer schema modules do not import each other. The
 		// service joins it explicitly.
@@ -313,7 +313,7 @@ export const relations = defineRelations(schema, (t) => ({
 	volunteerRole: {
 		hourLogs: t.many.volunteerHourLog(),
 		interests: t.many.volunteerRoleInterest(),
-		shifts: t.many.volunteerShift(),
+		shifts: t.many.workOrder(),
 		requiredCertifications: t.many.volunteerRoleCertification()
 	},
 	volunteerRoleInterest: {
@@ -323,21 +323,21 @@ export const relations = defineRelations(schema, (t) => ({
 			to: t.volunteerRole.id
 		})
 	},
-	volunteerShift: {
+	workOrder: {
 		role: t.one.volunteerRole({
-			from: t.volunteerShift.volunteerRoleId,
+			from: t.workOrder.volunteerRoleId,
 			to: t.volunteerRole.id
 		}),
-		event: t.one.event({ from: t.volunteerShift.eventId, to: t.event.id }),
-		asset: t.one.inventoryAsset({ from: t.volunteerShift.assetId, to: t.inventoryAsset.id }),
+		event: t.one.event({ from: t.workOrder.eventId, to: t.event.id }),
+		asset: t.one.inventoryAsset({ from: t.workOrder.assetId, to: t.inventoryAsset.id }),
 		resolvedBy: t.one.user({
-			from: t.volunteerShift.resolvedByUserId,
+			from: t.workOrder.resolvedByUserId,
 			to: t.user.id
 		}),
 		signups: t.many.volunteerSignup()
 	},
 	volunteerSignup: {
-		shift: t.one.volunteerShift({ from: t.volunteerSignup.shiftId, to: t.volunteerShift.id }),
+		shift: t.one.workOrder({ from: t.volunteerSignup.shiftId, to: t.workOrder.id }),
 		user: t.one.user({ from: t.volunteerSignup.userId, to: t.user.id }),
 		feedback: t.one.volunteerShiftFeedback({
 			from: t.volunteerSignup.id,

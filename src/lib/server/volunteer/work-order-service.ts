@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { volunteerShift, volunteerSignup, volunteerRole } from '$lib/server/db/schema/volunteer';
+import { workOrder, volunteerSignup, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { event } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
@@ -11,7 +11,7 @@ import {
 	VOLUNTEER_SHIFT_MAX_MINUTES,
 	VOLUNTEER_SHIFT_NOTES_MAX
 } from '$lib/config';
-import type { VolunteerShift, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
+import type { WorkOrder, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
 
 export { isScheduled } from './scheduled';
 import { isScheduled } from './scheduled';
@@ -96,7 +96,7 @@ export async function createShift(data: {
 	capacity: number;
 	notes?: string | null;
 	createdByUserId: string;
-}): Promise<VolunteerShift> {
+}): Promise<WorkOrder> {
 	const [role] = await db
 		.select({ id: volunteerRole.id, isActive: volunteerRole.isActive })
 		.from(volunteerRole)
@@ -111,7 +111,7 @@ export async function createShift(data: {
 	const times = validateTimes(parseLocal(data.startsAt, 'Start'), parseLocal(data.endsAt, 'End'));
 
 	const [row] = await db
-		.insert(volunteerShift)
+		.insert(workOrder)
 		.values({
 			volunteerRoleId: data.volunteerRoleId,
 			eventId: data.eventId || null,
@@ -135,7 +135,7 @@ export async function duplicateShift(
 	id: string,
 	offsetDays: number,
 	createdByUserId: string
-): Promise<VolunteerShift> {
+): Promise<WorkOrder> {
 	const original = await getShiftById(id);
 	if (!original) throw new ShiftNotFoundError();
 
@@ -178,7 +178,7 @@ export async function duplicateShift(
 	}
 
 	const [row] = await db
-		.insert(volunteerShift)
+		.insert(workOrder)
 		.values({
 			volunteerRoleId: original.volunteerRoleId,
 			// Deliberately not copied: the new date is not that event's date.
@@ -204,7 +204,7 @@ export async function updateShift(
 		capacity?: number;
 		notes?: string | null;
 	}
-): Promise<VolunteerShift> {
+): Promise<WorkOrder> {
 	const existing = await getShiftById(id);
 	if (!existing) throw new ShiftNotFoundError();
 
@@ -234,7 +234,7 @@ export async function updateShift(
 	}
 
 	const [row] = await db
-		.update(volunteerShift)
+		.update(workOrder)
 		.set({
 			...(data.volunteerRoleId ? { volunteerRoleId: data.volunteerRoleId } : {}),
 			...(data.eventId !== undefined ? { eventId: data.eventId || null } : {}),
@@ -244,7 +244,7 @@ export async function updateShift(
 			...(data.notes !== undefined ? { notes: validateNotes(data.notes) } : {}),
 			updatedAt: new Date()
 		})
-		.where(eq(volunteerShift.id, id))
+		.where(eq(workOrder.id, id))
 		.returning();
 
 	return row;
@@ -258,15 +258,15 @@ export async function updateShift(
  * It is optional so the sweep-style callers a cron might grow don't have to
  * invent a user, but every staff path passes one.
  */
-export async function cancelShift(id: string, cancelledByUserId?: string): Promise<VolunteerShift> {
+export async function cancelShift(id: string, cancelledByUserId?: string): Promise<WorkOrder> {
 	const [row] = await db
-		.update(volunteerShift)
+		.update(workOrder)
 		.set({
 			cancelledAt: new Date(),
 			cancelledByUserId: cancelledByUserId ?? null,
 			updatedAt: new Date()
 		})
-		.where(and(eq(volunteerShift.id, id), isNull(volunteerShift.cancelledAt)))
+		.where(and(eq(workOrder.id, id), isNull(workOrder.cancelledAt)))
 		.returning();
 
 	if (!row) throw new ShiftNotFoundError();
@@ -277,8 +277,8 @@ export async function cancelShift(id: string, cancelledByUserId?: string): Promi
 // Queries
 // ---------------------------------------------------------------------------
 
-export async function getShiftById(id: string): Promise<VolunteerShift | null> {
-	const [row] = await db.select().from(volunteerShift).where(eq(volunteerShift.id, id)).limit(1);
+export async function getShiftById(id: string): Promise<WorkOrder | null> {
+	const [row] = await db.select().from(workOrder).where(eq(workOrder.id, id)).limit(1);
 	return row ?? null;
 }
 
@@ -301,7 +301,7 @@ export async function countActiveSignups(shiftId: string): Promise<number> {
 /** A `ShiftWithCounts` some date filter has already narrowed. See `isScheduled`. */
 export type ScheduledShiftWithCounts = ShiftWithCounts & { startsAt: Date; endsAt: Date };
 
-export interface ShiftWithCounts extends VolunteerShift {
+export interface ShiftWithCounts extends WorkOrder {
 	roleName: string;
 	roleGroup: VolunteerRoleGroup;
 	eventTitle: string | null;
@@ -326,7 +326,7 @@ export interface ShiftWithCounts extends VolunteerShift {
 
 function withCounts(
 	rows: {
-		shift: VolunteerShift;
+		shift: WorkOrder;
 		roleName: string;
 		roleGroup: VolunteerRoleGroup;
 		eventTitle: string | null;
@@ -363,24 +363,24 @@ export async function countUnfilledByRole(from = new Date()): Promise<Map<string
 	);
 	const claimed = sql<number>`(
 		select count(*) from "volunteer_signup" vs
-		where vs."shift_id" = ${volunteerShift.id}
+		where vs."shift_id" = ${workOrder.id}
 			and vs."status" in (${holdsAPlace})
 	)`;
 
 	const rows = await db
 		.select({
-			volunteerRoleId: volunteerShift.volunteerRoleId,
+			volunteerRoleId: workOrder.volunteerRoleId,
 			unfilled: count()
 		})
-		.from(volunteerShift)
+		.from(workOrder)
 		.where(
 			and(
-				isNull(volunteerShift.cancelledAt),
-				gte(volunteerShift.startsAt, from),
-				sql`${claimed} < ${volunteerShift.capacity}`
+				isNull(workOrder.cancelledAt),
+				gte(workOrder.startsAt, from),
+				sql`${claimed} < ${workOrder.capacity}`
 			)
 		)
-		.groupBy(volunteerShift.volunteerRoleId);
+		.groupBy(workOrder.volunteerRoleId);
 
 	return new Map(rows.map((r) => [r.volunteerRoleId, Number(r.unfilled)]));
 }
@@ -396,13 +396,13 @@ export async function countUnfilledByRole(from = new Date()): Promise<Map<string
 function shiftRowsQuery() {
 	return db
 		.select({
-			shift: volunteerShift,
+			shift: workOrder,
 			roleName: volunteerRole.name,
 			roleGroup: volunteerRole.group,
 			eventTitle: event.title,
 			claimed: sql<number>`(
 				select count(*) from "volunteer_signup" vs
-				where vs."shift_id" = ${volunteerShift.id}
+				where vs."shift_id" = ${workOrder.id}
 					and vs."status" in ('claimed', 'confirmed', 'completed')
 			)`,
 			// `completed` counts as confirmed: the completion sweep only ever promotes a
@@ -410,7 +410,7 @@ function shiftRowsQuery() {
 			// every past shift read as unconfirmed forever.
 			confirmed: sql<number>`(
 				select count(*) from "volunteer_signup" vs
-				where vs."shift_id" = ${volunteerShift.id}
+				where vs."shift_id" = ${workOrder.id}
 					and vs."status" in ('confirmed', 'completed')
 			)`,
 			// Zero on every live shift, and the whole story on a cancelled one:
@@ -420,14 +420,14 @@ function shiftRowsQuery() {
 			// the banner, which is the same number twice.
 			unnotified: sql<number>`(
 				select count(*) from "volunteer_signup" vs
-				where vs."shift_id" = ${volunteerShift.id}
+				where vs."shift_id" = ${workOrder.id}
 					and vs."status" <> 'cancelled'
 					and vs."notified_at" is null
 			)`
 		})
-		.from(volunteerShift)
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
-		.leftJoin(event, eq(event.id, volunteerShift.eventId));
+		.from(workOrder)
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.leftJoin(event, eq(event.id, workOrder.eventId));
 }
 
 /**
@@ -446,7 +446,7 @@ function shiftRowsQuery() {
  * Work that needs doing, with nobody booked to do it.
  *
  * Staff-created, like every shift: a member reporting a broken amp raises an
- * `asset_flag`, and a coordinator turns some number of those into one of these.
+ * `work_request`, and a coordinator turns some number of those into one of these.
  * That is what lets "a shift exists -> it is claimable" stay true, and why this
  * needs no draft state.
  */
@@ -458,7 +458,7 @@ export async function createWorkOrder(data: {
 	dueAt?: Date | null;
 	capacity?: number;
 	createdByUserId: string;
-}): Promise<VolunteerShift> {
+}): Promise<WorkOrder> {
 	const [role] = await db
 		.select({ id: volunteerRole.id, isActive: volunteerRole.isActive })
 		.from(volunteerRole)
@@ -471,7 +471,7 @@ export async function createWorkOrder(data: {
 	}
 
 	const [row] = await db
-		.insert(volunteerShift)
+		.insert(workOrder)
 		.values({
 			volunteerRoleId: data.volunteerRoleId,
 			assetId: data.assetId || null,
@@ -500,7 +500,7 @@ export async function createWorkOrder(data: {
 export async function scheduleWorkOrder(
 	id: string,
 	times: { startsAt: string; endsAt: string }
-): Promise<VolunteerShift> {
+): Promise<WorkOrder> {
 	const existing = await getShiftById(id);
 	if (!existing) throw new ShiftNotFoundError();
 	if (existing.startsAt) {
@@ -524,7 +524,7 @@ export async function scheduleWorkOrder(
 export async function resolveWorkOrder(
 	id: string,
 	opts: { resolvedByUserId: string; notes?: string | null }
-): Promise<VolunteerShift> {
+): Promise<WorkOrder> {
 	const existing = await getShiftById(id);
 	if (!existing) throw new ShiftNotFoundError();
 	if (existing.resolvedAt) throw new ShiftValidationError('That is already closed.');
@@ -543,14 +543,14 @@ export async function resolveWorkOrder(
 		);
 
 	const [row] = await db
-		.update(volunteerShift)
+		.update(workOrder)
 		.set({
 			resolvedAt: now,
 			resolvedByUserId: opts.resolvedByUserId,
 			resolutionNotes: opts.notes ?? null,
 			updatedAt: now
 		})
-		.where(eq(volunteerShift.id, id))
+		.where(eq(workOrder.id, id))
 		.returning();
 
 	return row;
@@ -565,13 +565,9 @@ export async function resolveWorkOrder(
 export async function listWorkOrders(): Promise<ShiftWithCounts[]> {
 	const rows = await shiftRowsQuery()
 		.where(
-			and(
-				isNull(volunteerShift.startsAt),
-				isNull(volunteerShift.resolvedAt),
-				isNull(volunteerShift.cancelledAt)
-			)
+			and(isNull(workOrder.startsAt), isNull(workOrder.resolvedAt), isNull(workOrder.cancelledAt))
 		)
-		.orderBy(asc(volunteerShift.createdAt));
+		.orderBy(asc(workOrder.createdAt));
 
 	return withCounts(rows);
 }
@@ -593,17 +589,17 @@ export async function listShifts(
 				// "needs scheduling" queue, not in a table sorted by date where it
 				// would sit at one end with an empty column. `listWorkOrders` is the
 				// other half of this pair.
-				isNotNull(volunteerShift.startsAt),
-				filters.includeCancelled ? undefined : isNull(volunteerShift.cancelledAt),
+				isNotNull(workOrder.startsAt),
+				filters.includeCancelled ? undefined : isNull(workOrder.cancelledAt),
 				filters.volunteerRoleId
-					? eq(volunteerShift.volunteerRoleId, filters.volunteerRoleId)
+					? eq(workOrder.volunteerRoleId, filters.volunteerRoleId)
 					: undefined,
-				filters.eventId ? eq(volunteerShift.eventId, filters.eventId) : undefined,
-				filters.from ? gte(volunteerShift.startsAt, filters.from) : undefined,
-				filters.to ? lte(volunteerShift.startsAt, filters.to) : undefined
+				filters.eventId ? eq(workOrder.eventId, filters.eventId) : undefined,
+				filters.from ? gte(workOrder.startsAt, filters.from) : undefined,
+				filters.to ? lte(workOrder.startsAt, filters.to) : undefined
 			)
 		)
-		.orderBy(asc(volunteerShift.startsAt));
+		.orderBy(asc(workOrder.startsAt));
 
 	return withCounts(rows).filter(isScheduled);
 }
@@ -620,7 +616,7 @@ export async function listShifts(
  * find out what was called off.
  */
 export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null> {
-	const rows = await shiftRowsQuery().where(eq(volunteerShift.id, id)).limit(1);
+	const rows = await shiftRowsQuery().where(eq(workOrder.id, id)).limit(1);
 	return withCounts(rows)[0] ?? null;
 }
 
@@ -636,9 +632,9 @@ export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null
 export async function getShiftCancelledByName(shiftId: string): Promise<string | null> {
 	const [row] = await db
 		.select({ name: user.name })
-		.from(volunteerShift)
-		.innerJoin(user, eq(user.id, volunteerShift.cancelledByUserId))
-		.where(eq(volunteerShift.id, shiftId))
+		.from(workOrder)
+		.innerJoin(user, eq(user.id, workOrder.cancelledByUserId))
+		.where(eq(workOrder.id, shiftId))
 		.limit(1);
 	return row?.name ?? null;
 }
@@ -680,17 +676,17 @@ export async function listOpenShiftsForMember(
 	// more than `limit` shifts are scheduled ahead of it.
 	const myStatusSql = sql<string | null>`(
 		select vs."status" from "volunteer_signup" vs
-		where vs."shift_id" = ${volunteerShift.id} and vs."user_id" = ${userId}
+		where vs."shift_id" = ${workOrder.id} and vs."user_id" = ${userId}
 			and vs."status" != 'cancelled'
 	)`;
 	const mySignupIdSql = sql<string | null>`(
 		select vs."id" from "volunteer_signup" vs
-		where vs."shift_id" = ${volunteerShift.id} and vs."user_id" = ${userId}
+		where vs."shift_id" = ${workOrder.id} and vs."user_id" = ${userId}
 			and vs."status" != 'cancelled'
 	)`;
 	const interestedSql = sql<number>`(
 		select count(*) from "volunteer_role_interest" vri
-		where vri."volunteer_role_id" = ${volunteerShift.volunteerRoleId}
+		where vri."volunteer_role_id" = ${workOrder.volunteerRoleId}
 			and vri."user_id" = ${userId}
 	)`;
 
@@ -704,18 +700,18 @@ export async function listOpenShiftsForMember(
 
 	const rows = await db
 		.select({
-			shift: volunteerShift,
+			shift: workOrder,
 			roleName: volunteerRole.name,
 			roleGroup: volunteerRole.group,
 			eventTitle: event.title,
 			claimed: sql<number>`(
 				select count(*) from "volunteer_signup" vs
-				where vs."shift_id" = ${volunteerShift.id}
+				where vs."shift_id" = ${workOrder.id}
 					and vs."status" in ('claimed', 'confirmed', 'completed')
 			)`,
 			confirmed: sql<number>`(
 				select count(*) from "volunteer_signup" vs
-				where vs."shift_id" = ${volunteerShift.id}
+				where vs."shift_id" = ${workOrder.id}
 					and vs."status" in ('confirmed', 'completed')
 			)`,
 			myStatus: myStatusSql,
@@ -724,11 +720,11 @@ export async function listOpenShiftsForMember(
 			mySignupId: mySignupIdSql,
 			interested: interestedSql
 		})
-		.from(volunteerShift)
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
-		.leftJoin(event, eq(event.id, volunteerShift.eventId))
-		.where(and(isNull(volunteerShift.cancelledAt), gte(volunteerShift.startsAt, now)))
-		.orderBy(asc(rankSql), asc(volunteerShift.startsAt))
+		.from(workOrder)
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.leftJoin(event, eq(event.id, workOrder.eventId))
+		.where(and(isNull(workOrder.cancelledAt), gte(workOrder.startsAt, now)))
+		.orderBy(asc(rankSql), asc(workOrder.startsAt))
 		.limit(opts.limit ?? 50);
 
 	const open = rows.map((r) => ({

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "7775f434-faf1-4c21-92e7-7a406e39b746",
+  "id": "a9223a94-0473-431b-80db-34b63a08129b",
   "prevIds": [
-    "bb872598-e939-4cf8-8143-778467f7346b"
+    "7775f434-faf1-4c21-92e7-7a406e39b746"
   ],
   "ddl": [
     {
@@ -119,10 +119,6 @@
       "entityType": "tables"
     },
     {
-      "name": "asset_flag",
-      "entityType": "tables"
-    },
-    {
       "name": "equipment_category",
       "entityType": "tables"
     },
@@ -156,6 +152,10 @@
     },
     {
       "name": "stock_movement",
+      "entityType": "tables"
+    },
+    {
+      "name": "work_request",
       "entityType": "tables"
     },
     {
@@ -295,15 +295,15 @@
       "entityType": "tables"
     },
     {
-      "name": "volunteer_shift",
-      "entityType": "tables"
-    },
-    {
       "name": "volunteer_shift_feedback",
       "entityType": "tables"
     },
     {
       "name": "volunteer_signup",
+      "entityType": "tables"
+    },
+    {
+      "name": "work_order",
       "entityType": "tables"
     },
     {
@@ -2878,146 +2878,6 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "asset_id",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "reported_by_user_id",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "note",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "condition",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "blocks_use",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'pending'",
-      "generated": null,
-      "name": "status",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "resolved_by_user_id",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "resolution_notes",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "resolved_at",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "work_order_id",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "loan_id",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "asset_flag"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
       "table": "equipment_category"
     },
     {
@@ -4009,6 +3869,146 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "stock_movement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "asset_id",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reported_by_user_id",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "note",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "condition",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "blocks_use",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'pending'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "resolved_by_user_id",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "resolution_notes",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "resolved_at",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "work_order_id",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "loan_id",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "work_request"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "work_request"
     },
     {
       "type": "text",
@@ -7308,186 +7308,6 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "volunteer_role_id",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "event_id",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "starts_at",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "ends_at",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "asset_id",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "due_at",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "duty_list_id",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "1",
-      "generated": null,
-      "name": "capacity",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notes",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "cancelled_at",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "cancelled_by_user_id",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "resolved_at",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "resolved_by_user_id",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "resolution_notes",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "created_by_user_id",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "volunteer_shift"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
       "table": "volunteer_shift_feedback"
     },
     {
@@ -7669,6 +7489,186 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "volunteer_signup"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "volunteer_role_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "starts_at",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ends_at",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "asset_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "due_at",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "duty_list_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "1",
+      "generated": null,
+      "name": "capacity",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_at",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_by_user_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "resolved_at",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "resolved_by_user_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "resolution_notes",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "work_order"
     },
     {
       "type": "text",
@@ -9012,66 +9012,6 @@
     },
     {
       "columns": [
-        "asset_id"
-      ],
-      "tableTo": "inventory_asset",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_asset_flag_asset_id_inventory_asset_id_fk",
-      "entityType": "fks",
-      "table": "asset_flag"
-    },
-    {
-      "columns": [
-        "reported_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_asset_flag_reported_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "asset_flag"
-    },
-    {
-      "columns": [
-        "resolved_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_asset_flag_resolved_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "asset_flag"
-    },
-    {
-      "columns": [
-        "loan_id"
-      ],
-      "tableTo": "inventory_loan",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_asset_flag_loan_id_inventory_loan_id_fk",
-      "entityType": "fks",
-      "table": "asset_flag"
-    },
-    {
-      "columns": [
         "item_id"
       ],
       "tableTo": "inventory_item",
@@ -9294,6 +9234,66 @@
       "name": "fk_stock_movement_actor_id_user_id_fk",
       "entityType": "fks",
       "table": "stock_movement"
+    },
+    {
+      "columns": [
+        "asset_id"
+      ],
+      "tableTo": "inventory_asset",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_asset_flag_asset_id_inventory_asset_id_fk",
+      "entityType": "fks",
+      "table": "work_request"
+    },
+    {
+      "columns": [
+        "reported_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_asset_flag_reported_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "work_request"
+    },
+    {
+      "columns": [
+        "resolved_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_asset_flag_resolved_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "work_request"
+    },
+    {
+      "columns": [
+        "loan_id"
+      ],
+      "tableTo": "inventory_loan",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_asset_flag_loan_id_inventory_loan_id_fk",
+      "entityType": "fks",
+      "table": "work_request"
     },
     {
       "columns": [
@@ -10079,7 +10079,7 @@
       "columns": [
         "shift_id"
       ],
-      "tableTo": "volunteer_shift",
+      "tableTo": "work_order",
       "columnsTo": [
         "id"
       ],
@@ -10197,111 +10197,6 @@
     },
     {
       "columns": [
-        "volunteer_role_id"
-      ],
-      "tableTo": "volunteer_role",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "RESTRICT",
-      "nameExplicit": false,
-      "name": "fk_volunteer_shift_volunteer_role_id_volunteer_role_id_fk",
-      "entityType": "fks",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        "event_id"
-      ],
-      "tableTo": "event",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_volunteer_shift_event_id_event_id_fk",
-      "entityType": "fks",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        "asset_id"
-      ],
-      "tableTo": "inventory_asset",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_volunteer_shift_asset_id_inventory_asset_id_fk",
-      "entityType": "fks",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        "duty_list_id"
-      ],
-      "tableTo": "duty_list",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_volunteer_shift_duty_list_id_duty_list_id_fk",
-      "entityType": "fks",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        "cancelled_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_volunteer_shift_cancelled_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        "resolved_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_volunteer_shift_resolved_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        "created_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_volunteer_shift_created_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
         "signup_id"
       ],
       "tableTo": "volunteer_signup",
@@ -10319,7 +10214,7 @@
       "columns": [
         "shift_id"
       ],
-      "tableTo": "volunteer_shift",
+      "tableTo": "work_order",
       "columnsTo": [
         "id"
       ],
@@ -10347,9 +10242,114 @@
     },
     {
       "columns": [
+        "volunteer_role_id"
+      ],
+      "tableTo": "volunteer_role",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_volunteer_role_id_volunteer_role_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        "event_id"
+      ],
+      "tableTo": "event",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_event_id_event_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        "asset_id"
+      ],
+      "tableTo": "inventory_asset",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_asset_id_inventory_asset_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        "duty_list_id"
+      ],
+      "tableTo": "duty_list",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_duty_list_id_duty_list_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        "cancelled_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_cancelled_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        "resolved_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_resolved_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        "created_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
         "work_order_id"
       ],
-      "tableTo": "volunteer_shift",
+      "tableTo": "work_order",
       "columnsTo": [
         "id"
       ],
@@ -10761,15 +10761,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "asset_flag_pk",
-      "table": "asset_flag",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "equipment_category_pk",
       "table": "equipment_category",
       "entityType": "pks"
@@ -10844,6 +10835,15 @@
       "nameExplicit": false,
       "name": "stock_movement_pk",
       "table": "stock_movement",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "asset_flag_pk",
+      "table": "work_request",
       "entityType": "pks"
     },
     {
@@ -11130,15 +11130,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "volunteer_shift_pk",
-      "table": "volunteer_shift",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "volunteer_shift_feedback_pk",
       "table": "volunteer_shift_feedback",
       "entityType": "pks"
@@ -11150,6 +11141,15 @@
       "nameExplicit": false,
       "name": "volunteer_signup_pk",
       "table": "volunteer_signup",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "volunteer_shift_pk",
+      "table": "work_order",
       "entityType": "pks"
     },
     {
@@ -11929,62 +11929,6 @@
     {
       "columns": [
         {
-          "value": "status",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_asset_flag_status",
-      "entityType": "indexes",
-      "table": "asset_flag"
-    },
-    {
-      "columns": [
-        {
-          "value": "asset_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_asset_flag_asset",
-      "entityType": "indexes",
-      "table": "asset_flag"
-    },
-    {
-      "columns": [
-        {
-          "value": "asset_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": "status = 'pending' and blocks_use = 1",
-      "origin": "manual",
-      "name": "idx_asset_flag_open_blocking",
-      "entityType": "indexes",
-      "table": "asset_flag"
-    },
-    {
-      "columns": [
-        {
-          "value": "work_order_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": "work_order_id is not null",
-      "origin": "manual",
-      "name": "idx_asset_flag_work_order",
-      "entityType": "indexes",
-      "table": "asset_flag"
-    },
-    {
-      "columns": [
-        {
           "value": "item_id",
           "isExpression": false
         }
@@ -12317,6 +12261,62 @@
       "name": "idx_movement_acquisition",
       "entityType": "indexes",
       "table": "stock_movement"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_asset_flag_status",
+      "entityType": "indexes",
+      "table": "work_request"
+    },
+    {
+      "columns": [
+        {
+          "value": "asset_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_asset_flag_asset",
+      "entityType": "indexes",
+      "table": "work_request"
+    },
+    {
+      "columns": [
+        {
+          "value": "asset_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "status = 'pending' and blocks_use = 1",
+      "origin": "manual",
+      "name": "idx_asset_flag_open_blocking",
+      "entityType": "indexes",
+      "table": "work_request"
+    },
+    {
+      "columns": [
+        {
+          "value": "work_order_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "work_order_id is not null",
+      "origin": "manual",
+      "name": "idx_asset_flag_work_order",
+      "entityType": "indexes",
+      "table": "work_request"
     },
     {
       "columns": [
@@ -13385,76 +13385,6 @@
     {
       "columns": [
         {
-          "value": "starts_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": "cancelled_at IS NULL",
-      "origin": "manual",
-      "name": "volunteer_shift_upcoming_idx",
-      "entityType": "indexes",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        {
-          "value": "volunteer_role_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "volunteer_shift_role_idx",
-      "entityType": "indexes",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        {
-          "value": "event_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "volunteer_shift_event_idx",
-      "entityType": "indexes",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        {
-          "value": "asset_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "volunteer_shift_asset_idx",
-      "entityType": "indexes",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        {
-          "value": "created_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": "starts_at is null and resolved_at is null and cancelled_at is null",
-      "origin": "manual",
-      "name": "volunteer_shift_unscheduled_idx",
-      "entityType": "indexes",
-      "table": "volunteer_shift"
-    },
-    {
-      "columns": [
-        {
           "value": "submitted_at",
           "isExpression": false
         }
@@ -13501,6 +13431,76 @@
       "name": "volunteer_signup_user_idx",
       "entityType": "indexes",
       "table": "volunteer_signup"
+    },
+    {
+      "columns": [
+        {
+          "value": "starts_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "cancelled_at IS NULL",
+      "origin": "manual",
+      "name": "volunteer_shift_upcoming_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "volunteer_role_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "volunteer_shift_role_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "volunteer_shift_event_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "asset_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "volunteer_shift_asset_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "created_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "starts_at is null and resolved_at is null and cancelled_at is null",
+      "origin": "manual",
+      "name": "volunteer_shift_unscheduled_idx",
+      "entityType": "indexes",
+      "table": "work_order"
     },
     {
       "columns": [
@@ -14045,22 +14045,22 @@
       "table": "volunteer_hour_log"
     },
     {
+      "value": "rating >= 1 AND rating <= 5",
+      "name": "volunteer_shift_feedback_rating_range",
+      "entityType": "checks",
+      "table": "volunteer_shift_feedback"
+    },
+    {
       "value": "(starts_at is null) = (ends_at is null) and (ends_at is null or ends_at > starts_at)",
       "name": "volunteer_shift_ends_after_start",
       "entityType": "checks",
-      "table": "volunteer_shift"
+      "table": "work_order"
     },
     {
       "value": "capacity > 0",
       "name": "volunteer_shift_capacity_positive",
       "entityType": "checks",
-      "table": "volunteer_shift"
-    },
-    {
-      "value": "rating >= 1 AND rating <= 5",
-      "name": "volunteer_shift_feedback_rating_range",
-      "entityType": "checks",
-      "table": "volunteer_shift_feedback"
+      "table": "work_order"
     },
     {
       "value": "(done = 0 and done_at is null) or (done = 1 and done_at is not null)",
@@ -14075,5 +14075,8 @@
       "table": "contractor_job"
     }
   ],
-  "renames": []
+  "renames": [
+    "asset_flag->work_request",
+    "volunteer_shift->work_order"
+  ]
 }

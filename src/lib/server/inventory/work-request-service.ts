@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { assetFlag, inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
+import { workRequest, inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { AssetNotFoundError, setAssetStatus } from './asset-service';
@@ -86,7 +86,7 @@ export async function raiseFlag(input: RaiseFlagInput) {
 
 	const now = new Date();
 	const [flag] = await db
-		.insert(assetFlag)
+		.insert(workRequest)
 		.values({
 			assetId: asset.id,
 			note: input.note,
@@ -116,12 +116,12 @@ export async function raiseFlag(input: RaiseFlagInput) {
 export async function hasBlockingFlag(assetId: string): Promise<boolean> {
 	const [row] = await db
 		.select({ n: count() })
-		.from(assetFlag)
+		.from(workRequest)
 		.where(
 			and(
-				eq(assetFlag.assetId, assetId),
-				eq(assetFlag.status, 'pending'),
-				eq(assetFlag.blocksUse, true)
+				eq(workRequest.assetId, assetId),
+				eq(workRequest.status, 'pending'),
+				eq(workRequest.blocksUse, true)
 			)
 		);
 	return Number(row?.n ?? 0) > 0;
@@ -136,32 +136,32 @@ export async function hasBlockingFlag(assetId: string): Promise<boolean> {
 export async function listPendingFlags() {
 	return db
 		.select({
-			flag: assetFlag,
+			flag: workRequest,
 			asset: inventoryAsset,
 			item: inventoryItem,
 			reporterName: user.name
 		})
-		.from(assetFlag)
-		.innerJoin(inventoryAsset, eq(inventoryAsset.id, assetFlag.assetId))
+		.from(workRequest)
+		.innerJoin(inventoryAsset, eq(inventoryAsset.id, workRequest.assetId))
 		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
-		.leftJoin(user, eq(user.id, assetFlag.reportedByUserId))
-		.where(and(eq(assetFlag.status, 'pending'), isNull(assetFlag.workOrderId)))
-		.orderBy(asc(assetFlag.createdAt));
+		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
+		.where(and(eq(workRequest.status, 'pending'), isNull(workRequest.workOrderId)))
+		.orderBy(asc(workRequest.createdAt));
 }
 
 /** Everything ever raised against one unit, newest first — the unit's own page. */
 export async function listFlagsForAsset(assetId: string) {
 	return db
-		.select({ flag: assetFlag, reporterName: user.name })
-		.from(assetFlag)
-		.leftJoin(user, eq(user.id, assetFlag.reportedByUserId))
-		.where(eq(assetFlag.assetId, assetId))
-		.orderBy(desc(assetFlag.createdAt));
+		.select({ flag: workRequest, reporterName: user.name })
+		.from(workRequest)
+		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
+		.where(eq(workRequest.assetId, assetId))
+		.orderBy(desc(workRequest.createdAt));
 }
 
 /** Flags answered by one work order, so resolving it can close them together. */
 export async function listFlagsForWorkOrder(workOrderId: string) {
-	return db.select().from(assetFlag).where(eq(assetFlag.workOrderId, workOrderId));
+	return db.select().from(workRequest).where(eq(workRequest.workOrderId, workOrderId));
 }
 
 /**
@@ -171,16 +171,16 @@ export async function listFlagsForWorkOrder(workOrderId: string) {
 export async function attachFlagsToWorkOrder(flagIds: string[], workOrderId: string) {
 	if (flagIds.length === 0) return;
 	await db
-		.update(assetFlag)
+		.update(workRequest)
 		.set({ workOrderId, updatedAt: new Date() })
-		.where(inArray(assetFlag.id, flagIds));
+		.where(inArray(workRequest.id, flagIds));
 }
 
 /** Nothing to do here — wrong, already fixed, or not actually a problem. */
 export async function dismissFlag(id: string, staffUserId: string, notes?: string) {
 	const now = new Date();
 	const [row] = await db
-		.update(assetFlag)
+		.update(workRequest)
 		.set({
 			status: 'dismissed',
 			resolvedByUserId: staffUserId,
@@ -188,7 +188,7 @@ export async function dismissFlag(id: string, staffUserId: string, notes?: strin
 			resolvedAt: now,
 			updatedAt: now
 		})
-		.where(and(eq(assetFlag.id, id), eq(assetFlag.status, 'pending')))
+		.where(and(eq(workRequest.id, id), eq(workRequest.status, 'pending')))
 		.returning();
 	if (!row) throw new FlagNotFoundError();
 	return row;
@@ -208,7 +208,7 @@ export async function resolveFlagsForWorkOrder(
 ): Promise<string[]> {
 	const now = new Date();
 	const rows = await db
-		.update(assetFlag)
+		.update(workRequest)
 		.set({
 			status: 'resolved',
 			resolvedByUserId: staffUserId,
@@ -216,7 +216,7 @@ export async function resolveFlagsForWorkOrder(
 			resolvedAt: now,
 			updatedAt: now
 		})
-		.where(and(eq(assetFlag.workOrderId, workOrderId), eq(assetFlag.status, 'pending')))
+		.where(and(eq(workRequest.workOrderId, workOrderId), eq(workRequest.status, 'pending')))
 		.returning();
 
 	return [

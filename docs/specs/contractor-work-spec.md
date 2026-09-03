@@ -3,7 +3,7 @@
 **Status:** 🔧 In progress — schema, services and seed shipped; staff surfaces to follow.
 
 A damaged asset gets repaired in one of two places, and until now the app modelled neither. The
-**work order** (`docs/specs/` — the `volunteer_shift` extension) covers the first: work somebody at
+**work order** (`docs/specs/` — the `work_order` extension) covers the first: work somebody at
 CMC does, claimed by a member and paid in volunteer hours. This covers the other — work done by
 somebody you pay — and the building service that has never had anywhere to live at all.
 
@@ -20,7 +20,7 @@ Two gaps close, both named in `committees-and-roles-spec.md`:
 Three tables already look like the right home, and each was rejected for the same reason: its
 `NOT NULL` columns encode an assumption contractor work violates.
 
-**Not `volunteer_shift`.** Its `volunteerRoleId` (restrict) and `capacity` are required and
+**Not `work_order`.** Its `volunteerRoleId` (restrict) and `capacity` are required and
 meaningless here — an electrician holds no volunteer role, and "how many people are needed, claims
 beyond this are refused" is a fact about members claiming. The decisive objection is subtler. That
 design's safety property is that unscheduled work has `startsAt IS NULL`, and `NULL >= x` is NULL in
@@ -137,7 +137,7 @@ a cancelled job and a quote nobody accepted contribute nothing.
 
 ## Open
 
-`asset_flag.contractorJobId`, once work orders land. The flag is the queue — the row that says this
+`work_request.contractorJobId`, once work orders land. The flag is the queue — the row that says this
 unit has an unresolved problem — and a work order and a contractor job are two ways to discharge
 one. It sits beside the existing `workOrderId` as a second nullable bare-`text` column rather than a
 discriminator, matching `directory_entry`'s reasoning and `acquisition.purchaseOrderId`'s precedent.

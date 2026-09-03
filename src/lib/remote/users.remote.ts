@@ -5,7 +5,7 @@ import { mapDomainError } from '$lib/server/errors';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { listLowStock } from '$lib/server/inventory/stock-service';
-import { listShortStaffedShifts } from '$lib/server/volunteer/volunteer-shift-service';
+import { listShortStaffedShifts } from '$lib/server/volunteer/work-order-service';
 
 /**
  * How far ahead the dashboard's volunteering panel looks. A week, because the panel is a

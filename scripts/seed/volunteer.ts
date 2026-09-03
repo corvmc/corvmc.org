@@ -6,7 +6,7 @@ import {
 	volunteerRole,
 	volunteerRoleCertification,
 	volunteerRoleInterest,
-	volunteerShift,
+	workOrder,
 	volunteerShiftFeedback,
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
@@ -328,7 +328,7 @@ export async function seedCertifications(users: any[], roles: any[]) {
  * feedback, today's confirmed, upcoming ones part-claimed so the staff list
  * shows real needed-vs-claimed numbers and the member board has things to take.
  */
-export async function seedVolunteerShifts(users: any[], roles: any[], events: SeedEvent[]) {
+export async function seedWorkOrders(users: any[], roles: any[], events: SeedEvent[]) {
 	console.log('Seeding volunteer shifts...');
 	const liveRoles = roles.filter((r: any) => r.isActive !== false);
 	if (liveRoles.length === 0 || users.length === 0) return { shifts: 0, signups: 0, feedback: 0 };
@@ -354,7 +354,7 @@ export async function seedVolunteerShifts(users: any[], roles: any[], events: Se
 	const futureShows = published.filter((e) => e.startsAt >= now);
 
 	const shiftRows = await batchInsert(
-		volunteerShift,
+		workOrder,
 		[-10, -7, -4, -2, 1, 2, 4, 6, 8, 11].map((offset, i) => {
 			// Every third shift is deliberately left unattached.
 			const pool = offset < 0 ? pastShows : futureShows;

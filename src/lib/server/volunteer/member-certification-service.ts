@@ -4,7 +4,7 @@ import {
 	volunteerCertification,
 	volunteerRole,
 	volunteerRoleCertification,
-	volunteerShift,
+	workOrder,
 	volunteerSignup
 } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
@@ -601,16 +601,16 @@ export async function listLapsingBeforeRosteredShift(
 			certificationId: volunteerCertification.id,
 			certificationName: volunteerCertification.name,
 			expiresAt: memberCertification.expiresAt,
-			shiftId: volunteerShift.id,
+			shiftId: workOrder.id,
 			roleName: volunteerRole.name,
-			startsAt: volunteerShift.startsAt
+			startsAt: workOrder.startsAt
 		})
 		.from(volunteerSignup)
-		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, volunteerShift.volunteerRoleId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.innerJoin(
 			volunteerRoleCertification,
-			eq(volunteerRoleCertification.volunteerRoleId, volunteerShift.volunteerRoleId)
+			eq(volunteerRoleCertification.volunteerRoleId, workOrder.volunteerRoleId)
 		)
 		.innerJoin(
 			volunteerCertification,
@@ -627,15 +627,15 @@ export async function listLapsingBeforeRosteredShift(
 		.where(
 			and(
 				inArray(volunteerSignup.status, ['claimed', 'confirmed']),
-				isNull(volunteerShift.cancelledAt),
-				gte(volunteerShift.startsAt, now),
+				isNull(workOrder.cancelledAt),
+				gte(workOrder.startsAt, now),
 				isNull(memberCertification.revokedAt),
-				lte(memberCertification.grantedAt, volunteerShift.startsAt),
+				lte(memberCertification.grantedAt, workOrder.startsAt),
 				isNotNull(memberCertification.expiresAt),
-				lt(memberCertification.expiresAt, volunteerShift.startsAt)
+				lt(memberCertification.expiresAt, workOrder.startsAt)
 			)
 		)
-		.orderBy(asc(volunteerShift.startsAt));
+		.orderBy(asc(workOrder.startsAt));
 
 	return (
 		rows

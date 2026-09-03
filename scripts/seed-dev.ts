@@ -62,7 +62,7 @@ import {
 	seedVolunteerProfiles,
 	seedVolunteerInterests,
 	seedCertifications,
-	seedVolunteerShifts,
+	seedWorkOrders,
 	seedVolunteerHours
 } from './seed/volunteer';
 import { seedVolunteerPersonas } from './seed/volunteer-personas';
@@ -137,13 +137,13 @@ async function main() {
 	const activeVolunteers = volunteerProfiles.active;
 	const volunteerInterests = await seedVolunteerInterests(activeVolunteers, volunteerRoles);
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
-	const volunteerShifts = await seedVolunteerShifts(activeVolunteers, volunteerRoles, events);
+	const workOrders = await seedWorkOrders(activeVolunteers, volunteerRoles, events);
 	// After the shifts, which is new: half the completed signups get an hour log
 	// pointing back at the shift that earned them.
 	const volunteerHours = await seedVolunteerHours(
 		activeVolunteers,
 		volunteerRoles,
-		volunteerShifts.completions
+		workOrders.completions
 	);
 	// Last of the volunteer block — it grants against the certifications above and
 	// schedules against the role catalog.
@@ -211,7 +211,7 @@ async function main() {
 		`  ${volunteerRoles.length} volunteer roles, ${volunteerProfiles.rows.length} volunteer profiles (${volunteerProfiles.blocked} awaiting review), ${volunteerHours.length} volunteer hour logs, ${volunteerInterests.length} role interests`
 	);
 	console.log(
-		`  ${certifications.certs} certifications (${certifications.held} held), ${volunteerShifts.shifts} shifts, ${volunteerShifts.signups} signups, ${volunteerShifts.feedback} feedback`
+		`  ${certifications.certs} certifications (${certifications.held} held), ${workOrders.shifts} shifts, ${workOrders.signups} signups, ${workOrders.feedback} feedback`
 	);
 	console.log(`  ${personas.users} volunteer demo personas`);
 	console.log(`  ${sustainingPersonas.users} sustaining demo personas`);

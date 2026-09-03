@@ -208,15 +208,24 @@ export const volunteerRole = sqliteTable('volunteer_role', {
 });
 
 /**
- * A dated, time-bounded need for a role — "two Front Desk, Saturday 6–10pm".
+ * A **work order**: a triaged, scoped piece of work for a role — "two Front
+ * Desk, Saturday 6–10pm", or "re-cone the bass cab, whenever".
  *
- * Where an interest says someone *would* do a job, a shift is the job on a
- * particular evening. Staff create them; members claim them. There is no
- * recurrence: a standing weekly slot is made by duplicating last week's, which
- * keeps the table free of series bookkeeping until something actually needs it.
+ * The CMMS term, adopted deliberately (docs/specs/project-spec.md#vocabulary): a
+ * `work_request` is what someone noticed, a work order is what staff have
+ * decided to do about it — or work nobody requested at all. Its scheduled
+ * state is a **shift**: where an interest says someone *would* do a job, a
+ * shift is the job on a particular evening, and member-facing copy keeps that
+ * word. Staff create them; members claim them. There is no recurrence: a
+ * standing weekly slot is made by duplicating last week's, which keeps the
+ * table free of series bookkeeping until something actually needs it.
+ *
+ * Renamed from `volunteer_shift`. Index and check names keep the old prefix:
+ * SQLite carries them through `RENAME TO` for free, and renaming them would
+ * turn a one-line ALTER into a table rebuild for no gain.
  */
-export const volunteerShift = sqliteTable(
-	'volunteer_shift',
+export const workOrder = sqliteTable(
+	'work_order',
 	{
 		id: text()
 			.primaryKey()
@@ -234,9 +243,9 @@ export const volunteerShift = sqliteTable(
 		// worked it.
 		eventId: text('event_id').references(() => event.id, { onDelete: 'set null' }),
 
-		// Nullable, because an unscheduled row is a **work order**: work that needs
-		// doing with nobody booked to do it yet. Setting a window turns it into an
-		// ordinary claimable shift; the two are the same row in two states.
+		// Nullable, because an unscheduled row is a bare work order: work that
+		// needs doing with nobody booked to do it yet. Setting a window turns it
+		// into an ordinary claimable shift; the two are the same row in two states.
 		//
 		// Every forward-looking query filters `starts_at >= now` or orders by it,
 		// and `NULL >= x` is NULL in SQLite — so unscheduled work falls out of the
@@ -349,7 +358,7 @@ export const volunteerSignup = sqliteTable(
 
 		shiftId: text('shift_id')
 			.notNull()
-			.references(() => volunteerShift.id, { onDelete: 'cascade' }),
+			.references(() => workOrder.id, { onDelete: 'cascade' }),
 
 		userId: text('user_id')
 			.notNull()
@@ -420,7 +429,7 @@ export const volunteerHourLog = sqliteTable(
 		// logged from memory. Staff can approve one of these with less scrutiny —
 		// they already knew the person was rostered. Set-null, not cascade:
 		// deleting a shift must not delete the hours somebody actually worked.
-		shiftId: text('shift_id').references(() => volunteerShift.id, { onDelete: 'set null' }),
+		shiftId: text('shift_id').references(() => workOrder.id, { onDelete: 'set null' }),
 
 		// A calendar date, but this schema has no text-date columns, so it's a
 		// timestamp anchored at NOON club time.
@@ -794,7 +803,7 @@ export const workTask = sqliteTable(
 		// order is gone, and nothing reads it afterwards.
 		workOrderId: text('work_order_id')
 			.notNull()
-			.references(() => volunteerShift.id, { onDelete: 'cascade' }),
+			.references(() => workOrder.id, { onDelete: 'cascade' }),
 
 		label: text('label').notNull(),
 		sortOrder: integer('sort_order').notNull().default(0),
@@ -897,7 +906,7 @@ export const dutyListItem = sqliteTable(
 		dutyListId: text('duty_list_id')
 			.notNull()
 			.references(() => dutyList.id, { onDelete: 'cascade' }),
-		// Restrict, matching `volunteer_shift.volunteerRoleId`: a list that names a
+		// Restrict, matching `work_order.volunteerRoleId`: a list that names a
 		// role staff deleted should fail loudly at the delete, not quietly at apply.
 		volunteerRoleId: text('volunteer_role_id')
 			.notNull()
@@ -950,7 +959,7 @@ export type VolunteerRole = typeof volunteerRole.$inferSelect;
 export type VolunteerHourLog = typeof volunteerHourLog.$inferSelect;
 export type VolunteerRoleInterest = typeof volunteerRoleInterest.$inferSelect;
 export type VolunteerProfile = typeof volunteerProfile.$inferSelect;
-export type VolunteerShift = typeof volunteerShift.$inferSelect;
+export type WorkOrder = typeof workOrder.$inferSelect;
 export type VolunteerSignup = typeof volunteerSignup.$inferSelect;
 export type VolunteerShiftFeedback = typeof volunteerShiftFeedback.$inferSelect;
 export type VolunteerCertification = typeof volunteerCertification.$inferSelect;

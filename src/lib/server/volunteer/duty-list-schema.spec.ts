@@ -86,7 +86,7 @@ describe('duty_list_item shape constraints', () => {
 
 describe('work_task', () => {
 	beforeAll(() => {
-		db.exec(`INSERT INTO volunteer_shift (id, volunteer_role_id, capacity)
+		db.exec(`INSERT INTO work_order (id, volunteer_role_id, capacity)
 		         VALUES ('wo-1', 'role-1', 1)`);
 	});
 
@@ -135,7 +135,7 @@ describe('work_task', () => {
 
 	it('deletes its tasks when the work order goes', () => {
 		db.exec(`PRAGMA foreign_keys = ON`);
-		db.exec(`DELETE FROM volunteer_shift WHERE id = 'wo-1'`);
+		db.exec(`DELETE FROM work_order WHERE id = 'wo-1'`);
 
 		const rows = db.prepare(`SELECT id FROM work_task WHERE work_order_id = 'wo-1'`).all();
 		expect(rows).toHaveLength(0);

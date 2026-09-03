@@ -24,7 +24,7 @@ export const attachableTypes = [
 	 * amp: three people flag the same crackle and each photographed something
 	 * different, and dismissing one report should not strand its picture.
 	 */
-	'asset_flag',
+	'work_request',
 	/** How stock arrived: the receipt or the donation paperwork behind it. */
 	'acquisition'
 ] as const;

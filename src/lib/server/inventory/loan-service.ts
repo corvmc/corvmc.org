@@ -16,7 +16,7 @@ import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { isSustainingMember } from '$lib/server/finance/subscription-service';
 import { getAvailableQuantity } from './stock-service';
 import { setAssetStatus } from './asset-service';
-import { hasBlockingFlag, raiseFlag } from './asset-flag-service';
+import { hasBlockingFlag, raiseFlag } from './work-request-service';
 import type { EquipmentCondition } from '$lib/config';
 import { movementStatement, recordMovement } from './stock-service';
 import { loanDailyRateCents, loanChargeDays, estimateLoanCost } from '$lib/config';

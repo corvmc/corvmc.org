@@ -8,12 +8,12 @@ import { contractorJobStatuses, contractorTrades } from '../../../config';
 // Contractor work
 //
 // The second of the two places a broken thing gets fixed. The first is a work
-// order — `volunteer_shift` with no start time, claimed by a member and paid in
+// order — `work_order` with no start time, claimed by a member and paid in
 // volunteer hours. This is the other: work done by somebody you pay.
 //
 // It is deliberately **not** folded into either of the tables it resembles:
 //
-// - Not `volunteer_shift`. Its `volunteer_role_id` and `capacity` are NOT NULL
+// - Not `work_order`. Its `volunteer_role_id` and `capacity` are NOT NULL
 //   and mean nothing here, and the design rests on unscheduled work having a
 //   null `starts_at` so it falls out of every member-facing query for free. A
 //   contractor's central fact is an appointment, and writing one into

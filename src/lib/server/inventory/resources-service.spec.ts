@@ -39,7 +39,7 @@ vi.mock('./stock-service', () => ({
 	recordMovement: vi.fn().mockResolvedValue({ id: 'mv-1' })
 }));
 
-vi.mock('./asset-flag-service', () => ({
+vi.mock('./work-request-service', () => ({
 	raiseFlag: vi.fn().mockResolvedValue({ id: 'flag-1', assetId: 'as-1' })
 }));
 
@@ -48,7 +48,7 @@ vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (k: string) => `https:/
 
 import { reportDamage } from './resources-service';
 import { recordMovement } from './stock-service';
-import { raiseFlag } from './asset-flag-service';
+import { raiseFlag } from './work-request-service';
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -60,7 +60,7 @@ beforeEach(() => {
 /**
  * `reportDamage` is now a thin wrapper over `raiseFlag` — the behaviour it used
  * to own (the status change, the movement, the refusals) moved to
- * `asset-flag-service`, and is tested there against the real logic rather than
+ * `work-request-service`, and is tested there against the real logic rather than
  * re-asserted through a delegation.
  *
  * What is worth pinning here is the default, because it is the compatibility

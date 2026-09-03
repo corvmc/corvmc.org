@@ -1302,7 +1302,7 @@ nothing at all, since they have no panel; their terms travel by email as they do
   is not — see the door-cash reasoning above for why Connect is the only mechanism Stripe
   offers and why it doesn't fit.
 - **Volunteer and staffing assignment** per production. The volunteering module now has
-  `volunteer_shift` (optionally attached to an `event`), so the primitive exists —
+  `work_order` (optionally attached to an `event`), so the primitive exists —
   per-production staffing waits only on Productions itself.
 - **ASCAP/BMI setlist reporting**, which would need per-song data below the slot level.
 

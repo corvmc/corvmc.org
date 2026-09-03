@@ -156,7 +156,7 @@ The staff panel is filed by entity: Users, Bands, Reservations, Events, Inventor
 Credits. That is the shape of the database, and it was the right shape to build first — every
 row has to be reachable before anything can be made pleasant. It is not the shape of anybody's
 job. No committee's work is "the event table"; Programming's booking runs across `event`,
-`production_slot`, `directory_entry`, `reservation` and `volunteer_shift`, and there is no page
+`production_slot`, `directory_entry`, `reservation` and `work_order`, and there is no page
 in the panel called booking.
 
 So "what is a committee's domain?" is not first a question about which tables it may write. It
@@ -170,7 +170,7 @@ visible in two stories that are both marked served:
 
 - Assigning an engineer to a show **is** a workflow. The Volunteer Shifts card sits on the event,
   knows the event, and prefills the times from doors — you are staffing a show, not creating a
-  `volunteer_shift` row.
+  `work_order` row.
 - Acquiring equipment another committee asked for is **CRUD**. The inventory catalog holds
   everything needed and there is no requisition in it: no request, no requester, no decision, no
   "this is what Production asked for in March".
@@ -277,7 +277,7 @@ it.
 
 **As Production**, I want an engineer assigned to every event, and to see which upcoming events
 have nobody on them.
-✅ `volunteer_shift` attaches to an `event`; `/staff/events/[id]/production` carries a Volunteer
+✅ `work_order` attaches to an `event`; `/staff/events/[id]/production` carries a Volunteer
 Shifts card showing needed-vs-claimed with the event locked in and times prefilled from doors,
 and `/staff/volunteer/roles` badges unfilled shift counts per role.
 
