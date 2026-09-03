@@ -94,7 +94,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-const putPrivateObject = vi.fn(async (key: string) => {
+const putPrivateObject = vi.fn(async (key: string, _body: ArrayBuffer, _type: string) => {
 	journal.push('put');
 	return key;
 });
