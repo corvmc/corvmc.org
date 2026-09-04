@@ -273,6 +273,41 @@ describe('work orders', () => {
 	});
 
 	/**
+	 * The advance half of a duty list lands here — an item with only a
+	 * `dueOffsetMinutes` becomes an unscheduled work order carrying the event it
+	 * is for. Without a filter there is no way to ask "what advance work is open
+	 * on this show?", so the production page cannot show it and it is invisible
+	 * everywhere: `listShifts` excludes it by `starts_at`, and this queue is
+	 * unscoped.
+	 */
+	it('narrows the queue to one event, so a show can be asked what it is waiting on', async () => {
+		selectResult = [];
+		await listWorkOrders({ eventId: 'event-1' });
+
+		const rendered = renderedWhere();
+		expect(rendered.sql).toContain('"event_id" =');
+		expect(rendered.params).toContain('event-1');
+	});
+
+	it('narrows the queue to one project, so a festival can be asked the same', async () => {
+		selectResult = [];
+		await listWorkOrders({ projectId: 'proj-1' });
+
+		const rendered = renderedWhere();
+		expect(rendered.sql).toContain('"project_id" =');
+		expect(rendered.params).toContain('proj-1');
+	});
+
+	it('still queues everything when asked for nothing in particular', async () => {
+		selectResult = [];
+		await listWorkOrders();
+
+		const rendered = renderedWhere();
+		expect(rendered.sql).not.toContain('"event_id" =');
+		expect(rendered.sql).not.toContain('"project_id" =');
+	});
+
+	/**
 	 * `completeFinishedShifts` keys on `ends_at`, so it can never reach a row that
 	 * never had one. Without this the signups on an unscheduled work order sit at
 	 * `confirmed` forever — including after the work is done.

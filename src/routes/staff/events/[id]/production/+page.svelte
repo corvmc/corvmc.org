@@ -75,6 +75,11 @@
 	const shifts = $derived(loaded.shifts);
 	const volunteerRoles = $derived(loaded.volunteerRoles);
 	const dutyLists = $derived(loaded.dutyLists);
+	// Work orders with no window — the advance half of an applied duty list. They
+	// are a separate list rather than rows in the table below because they have no
+	// time to sort by and no confirmed/capacity story worth printing: what a
+	// producer wants from them is what is still open and by when.
+	const advance = $derived(loaded.advance);
 	const riders = $derived(loaded.riders);
 	/** The advance question: who has told us nothing at all. */
 	const ridersMissing = $derived(riders.filter((r) => r.empty).length);
@@ -1061,12 +1066,34 @@
 			</div>
 		{/snippet}
 
-		{#if shifts.length === 0}
+		{#if advance.length > 0}
+			<div class="mb-4">
+				<h3 class="mb-2 text-sm font-semibold">Advance</h3>
+				<ul class="flex flex-col gap-1 text-sm">
+					{#each advance as order (order.id)}
+						<li class="flex flex-wrap items-baseline justify-between gap-2">
+							<a href={resolve(`/staff/volunteer/shifts/${order.id}`)} class="link font-medium">
+								{order.roleName}
+							</a>
+							<span class="text-subtle whitespace-nowrap">
+								{#if order.dueAt}
+									due {formatDateShort(order.dueAt)}
+								{:else}
+									no deadline
+								{/if}
+							</span>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
+
+		{#if shifts.length === 0 && advance.length === 0}
 			<EmptyState
 				title="No volunteer shifts"
 				description="Nobody is scheduled to work this show yet."
 			/>
-		{:else}
+		{:else if shifts.length > 0}
 			<Table>
 				{#snippet head()}
 					<th>Role</th>

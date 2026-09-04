@@ -23,6 +23,7 @@
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import Action from '$lib/components/ui/Action.svelte';
 	import ShiftRoleFields from '$lib/components/volunteer/ShiftRoleFields.svelte';
+	import ShiftChecklist from './ShiftChecklist.svelte';
 	import CandidateColumn from './CandidateColumn.svelte';
 	import { formatDateShort, formatDateShortYear, toLocalDateTime } from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -46,6 +47,7 @@
 	const pageData = $derived(getStaffShiftPage(id));
 	const data = $derived(pageData.then((d) => d.shift));
 	const feedback = $derived(pageData.then((d) => d.feedback));
+	const tasks = $derived(pageData.then((d) => d.tasks));
 
 	function timeRange(start: Date, end: Date): string {
 		const fmt = new Intl.DateTimeFormat('en-US', {
@@ -91,9 +93,14 @@
 		     subtitle is the panel label everywhere else in the app, and one page
 		     redefining it is how a convention stops being one. -->
 		<p class="text-subtle text-sm">
-			{shift.startsAt && shift.endsAt
-				? timeRange(shift.startsAt, shift.endsAt)
-				: 'a time to be arranged'} ·
+			{#if shift.startsAt && shift.endsAt}
+				{timeRange(shift.startsAt, shift.endsAt)}
+			{:else if shift.dueAt}
+				<!-- A deadline is not a window: "done by Friday" is not "happens Friday 6-8". -->
+				due {formatDateShortYear(shift.dueAt)}
+			{:else}
+				a time to be arranged
+			{/if} ·
 			{#if shift.eventId && shift.eventTitle}
 				<a href={resolve(`/staff/events/${shift.eventId}`)} class="link link-primary">
 					{shift.eventTitle}
@@ -328,6 +335,12 @@
 						</ul>
 					{/if}
 				</InfoCard>
+
+				{#await tasks then rows}
+					{#if rows.length > 0}
+						<ShiftChecklist tasks={rows} shiftId={shift.id} />
+					{/if}
+				{/await}
 
 				<InfoCard title="Briefing">
 					{#if shift.notes}
