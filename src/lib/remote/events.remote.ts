@@ -5,6 +5,7 @@ import { getEventRiderSummaries } from '$lib/server/band/rider-service';
 import { requireCapability, requireUser } from '$lib/server/authorization';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
+import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venue-service';
 import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
 import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
 import {
@@ -76,6 +77,7 @@ import { FREE_TICKETS_PER_EMAIL, TICKET_COLLECTIVE_SHARE_BPS } from '$lib/config
 import { resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
+import { venue } from '$lib/server/db/schema/venue';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
 import {
@@ -614,6 +616,23 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		if (row) bookingBand = { id: row.id, name: row.name, slug: row.slug };
 	}
 
+	// The one thing the venue row is for: does a show here hold the room? A blank
+	// venue means the room, which is what every event created before the column
+	// meant and still means.
+	let venueName: string | null = null;
+	let venueIsPrimary = true;
+	if (evt.venueId) {
+		const [row] = await db
+			.select({ name: venue.name, isPrimary: venue.isPrimary })
+			.from(venue)
+			.where(eq(venue.id, evt.venueId))
+			.limit(1);
+		if (row) {
+			venueName = row.name;
+			venueIsPrimary = row.isPrimary;
+		}
+	}
+
 	let linkedReservation: { id: string; status: string; startsAt: Date; endsAt: Date } | null = null;
 	if (evt.reservationId) {
 		const [res] = await db
@@ -701,6 +720,10 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			kind: evt.kind,
 			bandId: evt.groupId,
 			location: evt.location,
+			venueId: evt.venueId,
+			venueName,
+			/** True with no venue set at all: that is what an event has always meant. */
+			venueIsPrimary,
 			externalTicketUrl: evt.externalTicketUrl,
 			// What staff already told the member, so a second reviewer does not
 			// repeat a note the first one wrote.
@@ -815,6 +838,16 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 	// All-or-nothing, because buildTimeRangeInTz reads an end before the start as
 	// an overnight range: pairing a supplied 23:00 start with a defaulted 22:00
 	// end would roll the end onto the next day and hold the room for 23 hours.
+	// A show somewhere else cannot hold the practice room. Refused rather than
+	// silently ignored: staff who ticked the box asked for something, and the
+	// useful answer is why it is not going to happen — not an event that quietly
+	// came out different from the form.
+	if (reserveSpace && !(await holdsSpace(data.venueId || null))) {
+		invalid(
+			issue.reserveSpace('That venue is not the practice room, so there is no space here to hold.')
+		);
+	}
+
 	const customWindow = !!(data.reservationStartTime && data.reservationEndTime);
 	const reservation = reserveSpace
 		? {
@@ -839,6 +872,8 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 		ticketingEnabled,
 		ticketPrice: ticketingEnabled ? ticketPrice : undefined,
 		ticketQuantity: ticketingEnabled ? ticketQuantity : undefined,
+		venueId: data.venueId || null,
+		location: data.location || null,
 		createdByUserId: staff.id,
 		reservation
 	});
@@ -919,10 +954,14 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 	await requireCapability('event.read');
 
 	const detail = await getStaffEventDetail(id);
-	const nearby = await listEventsNear(detail.event.startsAt, { excludeEventId: id });
+	const [nearby, venues] = await Promise.all([
+		listEventsNear(detail.event.startsAt, { excludeEventId: id }),
+		venuePickerOptions()
+	]);
 
 	return {
 		detail,
+		venues,
 		nearby: nearby.map((e) => ({
 			id: e.id,
 			startsAt: e.startsAt,
@@ -977,6 +1016,12 @@ export const setStaffEventLineup = form(
 	}
 );
 
+/** Live venues, shaped for the venue picker on the two staff edit forms. */
+async function venuePickerOptions() {
+	const rows = await listLiveVenues();
+	return rows.map((v) => ({ id: v.id, name: v.name, isPrimary: v.isPrimary }));
+}
+
 /** Active duty lists that actually have items on them — the apply picker. */
 async function listApplicableDutyLists() {
 	const lists = await listDutyLists();
@@ -989,7 +1034,7 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	// Duty lists ride along in the page's one load-bearing query rather than
 	// being fetched beside it: awaited remote queries are serial round trips, and
 	// `custom/no-concurrent-remote-queries` exists to stop a page fanning them out.
-	const [detail, recurringSeries, shifts, advance, volunteerRoles, dutyLists, riders] =
+	const [detail, recurringSeries, shifts, advance, volunteerRoles, dutyLists, venues, riders] =
 		await Promise.all([
 			getStaffEventDetail(id),
 			getEventRecurringSeries(id),
@@ -1001,13 +1046,14 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 			listOpenWorkOrders({ eventId: id }),
 			getVolunteerRoles(),
 			listApplicableDutyLists(),
+			venuePickerOptions(),
 			// What each act on the bill says it needs. The advance checklist has always
 			// carried a task reading "Collect tech riders and stage plots"; this is the
 			// answer to it, on the page where that work happens.
 			getEventRiderSummaries(id)
 		]);
 
-	return { detail, recurringSeries, shifts, advance, volunteerRoles, dutyLists, riders };
+	return { detail, recurringSeries, shifts, advance, volunteerRoles, dutyLists, venues, riders };
 });
 
 export const getEventRecurringSeries = query(z.string(), async (eventId) => {
@@ -1038,6 +1084,7 @@ export const updateEvent = form(
 		// Band gigs live off these two — without them staff can see a wrong venue
 		// or a dead ticket link on the guide and have no way to fix it.
 		location: z.string().max(SHORT_TEXT_MAX).optional(),
+		venueId: z.string().optional(),
 		externalTicketUrl: z.string().max(500).optional(),
 		ticketingEnabled: z.boolean().optional(),
 		ticketPrice: z.string().optional(),
@@ -1063,6 +1110,10 @@ export const updateEvent = form(
 		if (data.tags !== undefined) updateParams.tags = data.tags || null;
 		if (data.kind !== undefined) updateParams.kind = data.kind;
 		if (data.location !== undefined) updateParams.location = data.location || null;
+		// An empty string detaches, an absent field leaves it alone — the same
+		// distinction `updateShift` draws for its own event link, and for the same
+		// reason: a form that omits the field must not silently clear it.
+		if (data.venueId !== undefined) updateParams.venueId = data.venueId || null;
 		if (data.externalTicketUrl !== undefined) {
 			updateParams.externalTicketUrl = data.externalTicketUrl || null;
 		}
