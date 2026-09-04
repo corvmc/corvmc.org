@@ -166,7 +166,12 @@ one is offered the slot with a 24-hour window to confirm.
   `reservations.remote.ts` — checks the offer hasn't expired, re-checks the slot is free,
   flips to `scheduled`, then re-checks again and backs out if a competing booking raced in.
 - **Expiry:** cron `expire-waitlisted` → `expireWaitlisted()` in `waitlist-service.ts` —
-  cancels offers past their 24h window and promotes the next in line.
+  cancels offers past their 24h window and promotes the next in line. It emits both
+  `reservation.waitlist_expired` (the member's own notification) and
+  `reservation.cancelled` carrying `cause: 'waitlist_expired'` — the row really was
+  cancelled, and listeners on that event need to know. The two listeners that path
+  already handles — the cancellation email and the promotion cascade — stand down on
+  that `cause`; every other listener treats it as an ordinary cancellation.
 
 ### Data touched
 

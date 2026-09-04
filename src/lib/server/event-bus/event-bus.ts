@@ -58,6 +58,16 @@ export interface ReservationCancelledEvent {
 	startTime: string;
 	endTime: string;
 	cancelledBy: 'member' | 'staff' | 'system';
+	/**
+	 * Why the cancellation happened, on the paths where the member has already
+	 * been told about it by a more specific event. Today only the waitlist
+	 * expiry sets it: that path emits `reservation.waitlist_expired` too, and
+	 * promotes the next member inline so it can count the promotion. The two
+	 * listeners that would otherwise repeat that work stand down on this field;
+	 * every other listener — the orientation cascade, and whatever comes next —
+	 * sees an ordinary cancellation, which is what it is.
+	 */
+	cause?: 'waitlist_expired';
 }
 
 export interface ReservationReminderDueEvent {
