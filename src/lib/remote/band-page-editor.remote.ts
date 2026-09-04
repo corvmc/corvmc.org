@@ -9,6 +9,7 @@ import { db } from '$lib/server/db';
 import { blockSchema, type Block } from '$lib/server/db/schema/band-page';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { reconcileBlocks } from '$lib/utils/band-site-preset';
+import { loadBandSiteContent, blockImageUrls } from '$lib/server/band/band-site-content';
 import { eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -34,15 +35,31 @@ export const getBandPageEditor = query(z.string(), async (slug) => {
 	// preset is projected here rather than written at upgrade time — see
 	// `$lib/utils/band-site-preset` for why — so the column only gains it when
 	// the band saves.
+	const blocks = reconcileBlocks((config?.blocks ?? []) as Block[]);
+
+	// The editor renders the real page now, not a swatch of it, so it loads what
+	// the public page loads. Without this every derived block reports itself
+	// empty and a band with a full gig list is told to go add a show.
+	const content = await loadBandSiteContent(band);
+
 	return {
 		config: config
 			? {
 					theme: config.theme,
 					customCss: config.customCss,
-					blocks: reconcileBlocks(config.blocks as Block[]),
+					blocks,
 					epk: config.epk
 				}
-			: null
+			: null,
+		// Blocks stay raw here — they are what gets saved, and writing a resolved
+		// URL back into `imageKey` would corrupt the row. The client substitutes
+		// at render time from this map.
+		imageUrls: blockImageUrls(blocks),
+		band: content.band,
+		members: content.members,
+		events: content.events,
+		pastEvents: content.pastEvents,
+		media: content.media
 	};
 });
 

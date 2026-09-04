@@ -17,6 +17,7 @@ import {
 	updateDutyList as updateService,
 	updateDutyListItem as updateItemService
 } from '$lib/server/volunteer/duty-list-service';
+import { getStaffShiftPage, getVolunteerWorklist } from './volunteer.remote';
 
 /**
  * Staff-only throughout. Duty lists are a coordinator's tool — members meet them
@@ -65,20 +66,20 @@ function parseTasks(raw: string | undefined): string[] {
 // ---------------------------------------------------------------------------
 
 export const getDutyLists = query(async () => {
-	await requireCapability('event.read');
+	await requireCapability('volunteer.read');
 	return listDutyLists({ includeInactive: true });
 });
 
 /** The picker on the production console: only lists worth applying. */
 export const getActiveDutyLists = query(async () => {
-	await requireCapability('event.read');
+	await requireCapability('volunteer.read');
 	const lists = await listDutyLists();
 	return lists.filter((l) => l.itemCount > 0);
 });
 
 /** One load-bearing query for `/staff/volunteer/duty-lists/[id]`. */
 export const getDutyListPage = query(z.string(), async (id) => {
-	await requireCapability('event.read');
+	await requireCapability('volunteer.read');
 
 	const detail = await getDutyListDetail(id);
 	if (!detail) error(404, 'Duty list not found');
@@ -103,7 +104,7 @@ export const createDutyList = form(
 		anchor: z.enum(dutyListAnchors).default('doors')
 	}),
 	async (data) => {
-		const staff = await requireCapability('event.manage');
+		const staff = await requireCapability('volunteer.manageRoles');
 		try {
 			const list = await createService({
 				name: data.name,
@@ -131,7 +132,7 @@ export const updateDutyList = form(
 		isActive: z.boolean().optional().default(false)
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireCapability('volunteer.manageRoles');
 		try {
 			await updateService(data.id, {
 				name: data.name,
@@ -148,7 +149,7 @@ export const updateDutyList = form(
 );
 
 export const deleteDutyList = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('event.manage');
+	await requireCapability('volunteer.manageRoles');
 	try {
 		await deleteService(data.id);
 		await getDutyLists().refresh();
@@ -210,7 +211,7 @@ function itemInput(data: {
 export const addDutyListItem = form(
 	z.object({ dutyListId: z.string().min(1), ...itemShape }),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireCapability('volunteer.manageRoles');
 		try {
 			await addItemService(data.dutyListId, itemInput(data));
 			await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
@@ -224,7 +225,7 @@ export const addDutyListItem = form(
 export const updateDutyListItem = form(
 	z.object({ id: z.string().min(1), dutyListId: z.string().min(1), ...itemShape }),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireCapability('volunteer.manageRoles');
 		try {
 			await updateItemService(data.id, itemInput(data));
 			await getDutyListPage(data.dutyListId).refresh();
@@ -238,7 +239,7 @@ export const updateDutyListItem = form(
 export const removeDutyListItem = form(
 	z.object({ id: z.string().min(1), dutyListId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireCapability('volunteer.manageRoles');
 		try {
 			await removeItemService(data.id);
 			await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
@@ -256,9 +257,13 @@ export const removeDutyListItem = form(
 export const applyDutyList = form(
 	z.object({ dutyListId: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
-		const staff = await requireCapability('event.manage');
+		const staff = await requireCapability('volunteer.manageShifts');
 		try {
 			const result = await applyService(data.dutyListId, data.eventId, staff.id);
+			// The advance items land unscheduled, which is the coordinator's queue on
+			// Today. Without this the card the apply just filled stays empty until
+			// somebody navigates.
+			await getVolunteerWorklist().refresh();
 			return { workOrders: result.workOrderIds.length, tasks: result.taskCount };
 		} catch (err) {
 			mapDomainError(err);
@@ -269,14 +274,17 @@ export const applyDutyList = form(
 export const setWorkTaskDone = form(
 	z.object({
 		id: z.string().min(1),
+		/** Which work order's page to put back in sync. Not read by the service. */
+		shiftId: z.string().min(1),
 		// Unchecked boxes are not submitted, so this has to tolerate absence and
 		// read it as false rather than as a missing required field.
 		done: z.boolean().optional().default(false)
 	}),
 	async (data) => {
-		const staff = await requireCapability('event.manage');
+		const staff = await requireCapability('volunteer.manageShifts');
 		try {
 			await setTaskService(data.id, data.done, staff.id);
+			await getStaffShiftPage(data.shiftId).refresh();
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
