@@ -191,11 +191,30 @@ async function fillGuestDetails(page: import('@playwright/test').Page) {
 	await page.locator('input[name$="attendeeEmail"]').fill('e2e-guest@example.test');
 }
 
+/**
+ * Commit the purchase.
+ *
+ * The button is labelled with the amount — `TicketPurchaseFields` owns it,
+ * because only that component knows what the card is charged — so there is no
+ * fixed string to match and matching the amount is the better assertion anyway:
+ * the number on the button is the number the server is about to charge.
+ *
+ * `payPerTicket` first, to set that amount explicitly rather than trusting the
+ * default, and because it doubles as the hydration proof this file's other
+ * interactive tests rely on (see its own note): it retries until the hidden
+ * field has actually changed, which cannot happen before Svelte has attached.
+ * Submitting a remote form before hydration would post it as a plain GET.
+ */
+async function submitPurchase(page: import('@playwright/test').Page) {
+	await payPerTicket(page, PRICE.toFixed(2));
+	await page.getByRole('button', { name: `Pay $${PRICE.toFixed(2)}`, exact: true }).click();
+}
+
 test('a guest buys a ticket and it comes back valid', async ({ page }) => {
 	await openPurchasePage(page);
 	await fillGuestDetails(page);
 
-	await page.getByRole('button', { name: /Purchase Ticket/i }).click();
+	await submitPurchase(page);
 
 	await payOnFakeCheckout(page, '4242424242424242');
 
@@ -217,7 +236,7 @@ test('a declined card keeps the buyer on checkout with the real decline copy', a
 	await openPurchasePage(page);
 	await fillGuestDetails(page);
 
-	await page.getByRole('button', { name: /Purchase Ticket/i }).click();
+	await submitPurchase(page);
 
 	await payOnFakeCheckout(page, '4000000000000002');
 

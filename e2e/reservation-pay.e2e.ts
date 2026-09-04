@@ -74,7 +74,11 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	// $15.00 grossed up for 2.9% + 30¢ — `calculateTotalWithFeeCoverage(1500)` is
 	// `{ totalCents: 1576, feeCents: 76 }`. Asserting the total here is what proves
 	// the fee line reached the checkout session rather than only the preview.
-	await expect(page.getByText('$15.76')).toBeVisible();
+	//
+	// `exact`: the submit button beside it is labelled "Pay $15.76", so a
+	// substring match resolves to both and fails on strict mode. It passed at all
+	// only while the button had yet to render its label — a race, not a pass.
+	await expect(page.getByText('$15.76', { exact: true })).toBeVisible();
 
 	await page.locator('input[name$="cardNumber"]').fill('4242424242424242');
 	await page.getByRole('button', { name: /^Pay / }).click();
