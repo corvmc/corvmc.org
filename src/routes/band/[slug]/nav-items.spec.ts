@@ -140,15 +140,15 @@ describe('bandNavItems', () => {
 	});
 
 	/**
-	 * Announcements had a nav row gated on an `announcements` flag. The flag is
-	 * retired and the module is unlinked rather than launched, so no role gets the
-	 * row and the route answers by direct URL only. Relaunching means putting the
-	 * row back — and this assertion is what will fail first when someone does,
-	 * which is the point of keeping it.
+	 * Every member reads announcements; only owner and admin post, and the page
+	 * gates that rather than the nav — a member who cannot see the entry cannot
+	 * read what the band told them, which is backwards. The `announcements` flag
+	 * that used to gate this row is retired and the module is launched, so the
+	 * row is unconditional.
 	 */
-	it('shows Announcements to nobody while the module is unlinked', () => {
+	it('shows Announcements to every role', () => {
 		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
-			expect(labelsFor({ userRole, isStaff: userRole === 'staff' })).not.toContain('Announcements');
+			expect(labelsFor({ userRole, isStaff: userRole === 'staff' })).toContain('Announcements');
 		}
 	});
 

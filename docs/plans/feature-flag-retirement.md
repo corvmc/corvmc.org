@@ -34,6 +34,20 @@ was on in production, so removing its guards is pure cleanup: the `/subscribe` s
 cron and the Postmark webhook keep working exactly as they did, and nothing is unlinked. Unlinking a
 live feature would be a regression, not a deferral.
 
+### The groups module was unlinked first, then launched
+
+Unlinking is a deferral, not a decision, and this is the case that proves the shape works. #375
+removed the three flags and the entry points together; the module sat complete and URL-only for two
+days, and relaunching it was exactly what this section predicted — a small PR putting the nav
+entries back, with two tests that had been left asserting the absence flipping over to assert the
+presence.
+
+Three entry points went back, one more than the groups spec named: the member panel's "My Groups"
+nav group, the band panel's Announcements row, and a public link to `/groups` that had never
+existed. The public link is gated on `getPublicGroups()` returning rows rather than rendered
+unconditionally, because production has no clubs or committees yet and a "see all" onto an empty
+directory is worse than no link.
+
 ### `bandPremium` was launched, not unlinked
 
 Held through Sep 1 2026 as the one flag where unlinking looked wrong: nothing about it was
@@ -106,19 +120,19 @@ path in the codebase, so it is provably at its `DEFAULTS` value of `false`.
 
 Counts are non-spec call sites in `src/`, taken at `63e5890`.
 
-| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod                  | Decision                                             | PR   |
-| ---------------- | ---------------- | ------------------ | ------- | --------------------- | ---------------------------------------------------- | ---- |
-| `staffInbox`     | 0                | 0                  | yes     | n/a                   | ✅ Deleted — gated nothing                           | #373 |
-| `groupFiles`     | 0                | 0                  | **no**  | false                 | ✅ Deleted — gated nothing                           | #373 |
-| `groups`         | 9                | 0                  | **no**  | false                 | ✅ **Unlinked** — nav entry removed, routes URL-only | #375 |
-| `groupEvents`    | 1                | 1                  | **no**  | false                 | ✅ **Unlinked**                                      | #375 |
-| `announcements`  | 3                | 1                  | **no**  | false                 | ✅ **Unlinked** — band nav row removed               | #375 |
-| `helpArticles`   | 5                | 0                  | yes     | **false** (probed)    | ✅ **Unlinked** — footer row removed                 | #376 |
-| `emailMarketing` | 6                | 2                  | yes     | **true** (probed)     | ✅ Flag deleted, feature **stays live**              | #376 |
-| `directMessages` | 7                | 0                  | **no**  | false                 | Unlink — **held**, costs an e2e lifecycle test       |      |
-| `bandPremium`    | 8                | 1                  | yes     | **false** (confirmed) | ✅ **Launched** — guards out, band sites live        | #494 |
-| `contentFlags`   | 4                | 1                  | yes     | **false**             | ✅ **Launched** — guards out, reporting live         | #381 |
-| `volunteering`   | 19               | 0                  | yes     | **true** (confirmed)  | ✅ Flag deleted, feature **stays live**              | #380 |
+| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod                  | Decision                                       | PR   |
+| ---------------- | ---------------- | ------------------ | ------- | --------------------- | ---------------------------------------------- | ---- |
+| `staffInbox`     | 0                | 0                  | yes     | n/a                   | ✅ Deleted — gated nothing                     | #373 |
+| `groupFiles`     | 0                | 0                  | **no**  | false                 | ✅ Deleted — gated nothing                     | #373 |
+| `groups`         | 9                | 0                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
+| `groupEvents`    | 1                | 1                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
+| `announcements`  | 3                | 1                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
+| `helpArticles`   | 5                | 0                  | yes     | **false** (probed)    | ✅ **Unlinked** — footer row removed           | #376 |
+| `emailMarketing` | 6                | 2                  | yes     | **true** (probed)     | ✅ Flag deleted, feature **stays live**        | #376 |
+| `directMessages` | 7                | 0                  | **no**  | false                 | Unlink — **held**, costs an e2e lifecycle test |      |
+| `bandPremium`    | 8                | 1                  | yes     | **false** (confirmed) | ✅ **Launched** — guards out, band sites live  | #494 |
+| `contentFlags`   | 4                | 1                  | yes     | **false**             | ✅ **Launched** — guards out, reporting live   | #381 |
+| `volunteering`   | 19               | 0                  | yes     | **true** (confirmed)  | ✅ Flag deleted, feature **stays live**        | #380 |
 
 ### The two that gate nothing
 
