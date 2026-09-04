@@ -9,7 +9,10 @@
  */
 import { describe, it, expect } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { clearAllTables, journalDisagreesWithSchema } from './reset-db';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { clearAllTables, journalDisagreesWithSchema, sqliteFilesUnder } from './reset-db';
 
 /** Two real tables from `tableOrder`, in a real parent → child relationship. */
 function seededDb(): DatabaseSync {
@@ -129,5 +132,70 @@ describe('journalDisagreesWithSchema', () => {
 		// miniflare keeps its own bookkeeping in the same file. Only a table
 		// `tableOrder` names counts as "the schema is already here".
 		expect(check('CREATE TABLE "not_in_the_order" (id TEXT PRIMARY KEY);')).toBe(false);
+	});
+});
+
+/**
+ * The checkpoint's file discovery.
+ *
+ * miniflare keeps one SQLite per storage kind, so a build leaves a WAL beside
+ * each — six of them in a seeded state directory. Checkpointing only D1 left
+ * five windows open, and the failure that closed them named `SENTRY_DO` rather
+ * than D1, so no amount of work on the D1 file would ever have reached it.
+ * What has to hold is that the walk finds every database and nothing else.
+ */
+describe('sqliteFilesUnder', () => {
+	/** miniflare's real layout: `<kind>/miniflare-<Kind>Object/<name>.sqlite`. */
+	function persistDir(): string {
+		const root = mkdtempSync(join(tmpdir(), 'e2e-persist-'));
+		for (const [kind, object] of [
+			['d1', 'miniflare-D1DatabaseObject'],
+			['kv', 'miniflare-KVNamespaceObject'],
+			['r2', 'miniflare-R2BucketObject'],
+			['cache', 'miniflare-CacheObject']
+		]) {
+			const dir = join(root, kind, object);
+			mkdirSync(dir, { recursive: true });
+			writeFileSync(join(dir, 'metadata.sqlite'), '');
+			// The hashed per-binding database, and the WAL/SHM siblings that are
+			// part of it rather than databases of their own.
+			writeFileSync(join(dir, 'deadbeef.sqlite'), '');
+			writeFileSync(join(dir, 'deadbeef.sqlite-wal'), '');
+			writeFileSync(join(dir, 'deadbeef.sqlite-shm'), '');
+		}
+		return root;
+	}
+
+	it('finds every database, across all four storage kinds', () => {
+		const found = sqliteFilesUnder(persistDir());
+
+		expect(found).toHaveLength(8);
+		for (const kind of ['d1', 'kv', 'r2', 'cache']) {
+			expect(found.filter((f) => f.includes(`/${kind}/`))).toHaveLength(2);
+		}
+	});
+
+	// `-wal` and `-shm` are siblings of a database, not databases. Opening one
+	// as though it were is how a checkpoint corrupts what it meant to protect.
+	it('takes only .sqlite, never its -wal or -shm siblings', () => {
+		const found = sqliteFilesUnder(persistDir());
+
+		expect(found.every((f) => f.endsWith('.sqlite'))).toBe(true);
+		expect(found.some((f) => f.endsWith('-wal') || f.endsWith('-shm'))).toBe(false);
+	});
+
+	// The layout is miniflare's, and a new binding adds a directory nobody would
+	// remember to add to a hand-written list. Recursion is what makes that safe.
+	it('reaches a database nested deeper than the known layout', () => {
+		const root = persistDir();
+		const deep = join(root, 'do', 'miniflare-DurableObject', 'nested');
+		mkdirSync(deep, { recursive: true });
+		writeFileSync(join(deep, 'sentry.sqlite'), '');
+
+		expect(sqliteFilesUnder(root).some((f) => f.endsWith('sentry.sqlite'))).toBe(true);
+	});
+
+	it('returns nothing for an empty directory rather than throwing', () => {
+		expect(sqliteFilesUnder(mkdtempSync(join(tmpdir(), 'e2e-empty-')))).toEqual([]);
 	});
 });
