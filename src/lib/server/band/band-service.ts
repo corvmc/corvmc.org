@@ -481,6 +481,32 @@ export function partitionByStatus<T extends { status: GroupMemberStatus }>(
 	return buckets;
 }
 
+/**
+ * The people who can act for a band: its owner and its admins, active only.
+ *
+ * Pulled out of `acceptInvitation`'s inline query, which built exactly this and
+ * was the only place that knew how. Band chat needs the same list twice — to
+ * notify a roster that an enquiry arrived, and to decide whether the press
+ * kit's booking address already belongs to someone here.
+ */
+export async function listBandAdmins(
+	bandId: string
+): Promise<Array<{ userId: string; userName: string; userEmail: string }>> {
+	const rows = await db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.where(
+			and(
+				eq(groupMember.groupId, bandId),
+				inArray(groupMember.role, ['owner', 'admin']),
+				eq(groupMember.status, 'active')
+			)
+		);
+
+	return rows.map((r) => ({ userId: r.id, userName: r.name, userEmail: r.email }));
+}
+
 export async function getMembers(bandId: string) {
 	const rows = await db
 		.select({

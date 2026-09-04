@@ -29,11 +29,24 @@ vi.mock('$env/dynamic/private', () => ({
 	env: { STAFF_CONTACT_EMAIL: 'contact@test.com' }
 }));
 
+// The band branch resolves the act's name, which is the whole reason it is a
+// separate branch: it is what signs the message.
+const mockBandRows = vi.fn((): unknown[] => [{ name: 'Wren Halloway' }]);
+vi.mock('$lib/server/db', () => {
+	const chain: Record<string, unknown> = {};
+	for (const m of ['from', 'where', 'limit']) chain[m] = () => chain;
+	chain.then = (resolve: (v: unknown) => unknown) => resolve(mockBandRows());
+	return { db: { select: () => chain } };
+});
+vi.mock('$lib/server/db/schema/group', () => ({ group: { id: 'group.id', name: 'group.name' } }));
+vi.mock('drizzle-orm', () => ({ eq: (a: unknown, b: unknown) => ({ op: 'eq', a, b }) }));
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	mockIsChannelEnabled.mockResolvedValue(true);
 	mockSendInboxReply.mockResolvedValue('pm-message-id');
 	mockBuildReplyToAddress.mockReturnValue('reply+thread-1.sig@replies.test');
+	mockBandRows.mockReturnValue([{ name: 'Wren Halloway' }]);
 });
 
 // ---------------------------------------------------------------------------
@@ -159,5 +172,45 @@ describe('dispatchReply — portal channel', () => {
 		mockIsChannelEnabled.mockResolvedValue(true);
 
 		await expect(dispatchReply(params({ channel: 'portal' }))).resolves.toBeNull();
+	});
+});
+
+describe('dispatchReply — band channel', () => {
+	function bandParams(overrides: Partial<DispatchReplyParams> = {}) {
+		return params({ channel: 'band', groupId: 'band-1', subject: 'Booking enquiry', ...overrides });
+	}
+
+	it('sends on the band-reply template, signed with the act rather than CorvMC', async () => {
+		// `inbox-reply` closes "Corvallis Music Collective" and tells the reader
+		// they contacted us. Neither is true of a band answering its own form.
+		await dispatchReply(bandParams());
+
+		const sent = mockSendInboxReply.mock.calls[0][0];
+		expect(sent.templateAlias).toBe('band-reply');
+		expect(sent.fromName).toBe('Wren Halloway via CorvMC');
+		expect((sent.model as Record<string, unknown>).bandName).toBe('Wren Halloway');
+	});
+
+	it('carries the signed per-thread Reply-To, so the booker can answer', async () => {
+		await dispatchReply(bandParams());
+
+		expect(mockBuildReplyToAddress).toHaveBeenCalledWith('thread-1');
+		expect(mockSendInboxReply.mock.calls[0][0].replyTo).toBe('reply+thread-1.sig@replies.test');
+	});
+
+	it('never falls back to the staff mailbox when no reply address is configured', async () => {
+		// The email path does, deliberately, so a response still reaches a human.
+		// Here that human would be staff reading a booking negotiation they are not
+		// party to, so the reply simply carries no Reply-To.
+		mockBuildReplyToAddress.mockReturnValue(null);
+
+		await dispatchReply(bandParams());
+
+		expect(mockSendInboxReply.mock.calls[0][0].replyTo).toBeNull();
+	});
+
+	it('refuses a band thread with no owning band', async () => {
+		await expect(dispatchReply(bandParams({ groupId: null }))).rejects.toThrow('no owning band');
+		expect(mockSendInboxReply).not.toHaveBeenCalled();
 	});
 });

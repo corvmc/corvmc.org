@@ -224,19 +224,24 @@ This is not speculative; it has already happened twice, and the schema says why:
   `event_band`'s credit on the bill.
 - **`project.groupId`** is the next one, and ships in that table's first migration.
 
-**The inbox is the clearest remaining case.** `inbox_thread` has **no owner column at
-all** — `channel` records how a message arrived (contact form, portal, email, SMS,
-Instagram, Messenger), never whose queue it belongs in, so every thread is implicitly
-CMC's. Meanwhile `submitBandContactForm`
-([band-site.remote.ts](../../src/lib/remote/band-site.remote.ts)) already delivers booking
-enquiries "to the band's booking contact, falling back to the band owner" — as email.
-Bands receive this traffic today, into a personal mailbox, unthreaded, with no status, no
-awaiting-reply marker and no record that anyone answered.
+**The inbox was the clearest remaining case, and it has now happened.** `inbox_thread` had
+**no owner column at all** — `channel` records how a message arrived (contact form, portal,
+email, SMS, Instagram, Messenger), never whose queue it belongs in, so every thread was
+implicitly CMC's. Meanwhile `submitBandContactForm`
+([band-contact.remote.ts](../../src/lib/remote/band-contact.remote.ts)) delivered booking
+enquiries "to the band's booking contact, falling back to the band owner" — as email. Bands
+received that traffic into a personal mailbox, unthreaded, with no status, no awaiting-reply
+marker and no record that anyone answered.
 
-One nullable owner column on `inbox_thread` — null meaning CMC, the same shape
-`directory_entry` uses for its two nullable owners — turns one inbox into many.
+`inbox_thread.group_id` is that column: nullable, null meaning CMC, the same shape
+`directory_entry` uses for its two nullable owners. It turned one inbox into many, and
+`docs/specs/shipped/band-chat-spec.md` is what it turned into — including the answer to the
+question groups-spec left open about whether group membership is snapshotted at send time or
+resolved live. It is resolved live, which is why the per-reader cursor moved off
+`inbox_participant` into `inbox_group_read`.
 
-Three things this pattern has to respect, all of which already have working precedent:
+Three things this pattern has to respect, all of which already had working precedent, and all
+three of which band chat now demonstrates rather than promises:
 
 - **Internal notes must not leak.** `/member/messages` is member↔staff on these same
   tables and internal notes are never exposed there, so the isolation is proven in
