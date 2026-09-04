@@ -70,11 +70,6 @@ function emit(event: string, payload: unknown): Promise<unknown> {
 	return Promise.all((handlers[event] ?? []).map((h) => h({ data: payload })));
 }
 
-/** One handler when a test means a specific one of several on an event. */
-function emitTo(event: string, index: number, payload: unknown): Promise<unknown> {
-	return handlers[event][index]({ data: payload });
-}
-
 function paragraphText(model: { paragraphs?: { text: string }[] }): string {
 	return (model.paragraphs ?? []).map((p) => p.text).join('\n');
 }
