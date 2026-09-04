@@ -18,6 +18,12 @@ const WAITLIST_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
  * When a time slot is freed (reservation cancelled), find the oldest
  * waitlisted reservation overlapping that slot and notify the member.
  * Only promotes one reservation at a time — first-come-first-served.
+ *
+ * "Promote" is an offer, not a transition: the row stays `waitlisted` and only
+ * gains the 24h window, so `expireWaitlisted()` below can still cancel it —
+ * without a `reservation.cancelled` for anything downstream to clean up after.
+ * That is why nothing here emits `reservation.created`; the member's own
+ * confirmation does, through `announceWaitlistConfirmed()`.
  */
 export async function promoteNextWaitlisted(
 	startsAt: Date,

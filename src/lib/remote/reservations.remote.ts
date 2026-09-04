@@ -70,6 +70,7 @@ import {
 	recordCashAndComplete,
 	isFirstReservationSql,
 	priorBookingCount,
+	announceWaitlistConfirmed,
 	ReservationConflictError,
 	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
@@ -2100,6 +2101,12 @@ export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data,
 			.where(eq(reservation.id, data.id));
 		throw error(409, 'Slot is no longer available');
 	}
+
+	// After the race check, never before — the same ordering `create()` keeps.
+	// This is the booking's first announcement: `createWaitlisted()` stayed quiet
+	// while it was only a queue position, so a first-time member who came off the
+	// waitlist gets their orientation shift here.
+	await announceWaitlistConfirmed(data.id);
 
 	return { success: true };
 });
