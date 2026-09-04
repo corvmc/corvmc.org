@@ -8,11 +8,11 @@ event bus, cron; this document is about what the tables _mean_ and which shapes 
 
 **Verticals** — a thing the collective does, with its own screens and its own lifecycle:
 
-| Vertical               | What it is                                         | Modules                                                                                                                                                                         |
-| ---------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`    |
-| **Project management** | Work that has to get done, by someone, by a time   | `project`, `work_order`, `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event` (CMC-produced), `ticket` |
-| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event` (band and community listings)           |
+| Vertical               | What it is                                         | Modules                                                                                                                                                                                 |
+| ---------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`            |
+| **Project management** | Work that has to get done, by someone, by a time   | `project`, `work_order`, `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event_listing` (CMC-produced), `ticket` |
+| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event_listing` (band and community)                    |
 
 **Horizontals** — services every vertical emits into:
 
@@ -30,30 +30,39 @@ membership (social). No vertical owns it.
 room, the amp, and the amp at the repair shop are the same flow over different
 resources, which is why they are one vertical rather than "space" and "gear."
 
-**A show is a project.** `duty_list` stamps work orders onto an event anchored at
+**A show is a project.** `duty_list` stamps work orders onto a listing anchored at
 `doors|start|end`; `work_task` is the checklist; `volunteer_signup` is who claimed it.
 `eventKinds` includes `work_party`, which is a project outright. Volunteering is not a
 separate vertical — it is how a work order gets answered.
 
-## Where `event` sits
+## Where `event_listing` sits
 
-`event` appears in two verticals, and this is deliberate rather than an inconsistency.
-The app already splits the _surfaces_: `/staff/productions` is `source='cmc'` at every
-status including draft, where a show is built; `/staff/events` is the public gig guide
-staff moderate.
+**`event_listing` is the advertisement.** One row is one entry on the calendar — the
+thing a member, band or staffer puts on the gig guide. That is the whole of what the
+table is for, and it is why the table is named for it.
 
-**But the split does not partition the rows.** From `eventKinds`' own comment: _"Work
+The name settles a question the old name `event` kept reopening. A CMC show is a
+listing, _and_ it is a body of work, _and_ it has a back-of-house; the row you are
+looking at is only ever the first of those. From `eventKinds`' own comment: _"Work
 parties and monthly deep cleans need advertising as much as a show does, so they get
-listings too."_ Every CMC event is both a listing and a project. Only
-`source='band'|'community'` rows are listing-only.
+listings too."_ A work party gets a row here for exactly the reason a gig does — it
+needs advertising — not because the table models occasions in general.
+
+The surfaces already read it that way: `/staff/productions` is `source='cmc'` at every
+status including draft, where a show is built; `/staff/events` is the public gig guide
+staff moderate. Both read the same table, at different layers.
 
 Three layers, not two:
 
-| Layer        | What it is                                                                        | Cardinality               |
-| ------------ | --------------------------------------------------------------------------------- | ------------------------- |
-| `project`    | A body of work with a budget and an owner                                         | 0, 1 or many events       |
-| `event`      | The occasion and its public listing                                               | The common case           |
-| `production` | A show's back-of-house — the room hold, doors, ticketing, run of show, settlement | Only `source='cmc'` shows |
+| Layer           | What it is                                                                        | Cardinality               |
+| --------------- | --------------------------------------------------------------------------------- | ------------------------- |
+| `project`       | A body of work with a budget and an owner                                         | 0, 1 or many listings     |
+| `event_listing` | The public advertisement: one entry on the calendar                               | The common case           |
+| `production`    | A show's back-of-house — the room hold, doors, ticketing, run of show, settlement | Only `source='cmc'` shows |
+
+Three of the app's columns store this table's _name_ as data, and so they read
+`'event_listing'` too: `reservation.booker_type`, `media_attachment.attachable_type`
+and `recurring_series.prototype_type`.
 
 See [project-spec.md](../specs/project-spec.md).
 

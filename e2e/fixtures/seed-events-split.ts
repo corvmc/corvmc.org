@@ -18,7 +18,7 @@
 import { inArray } from 'drizzle-orm';
 import { withPlatformDb } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { scryptHash } from './seed-pay-reservation';
 
 export const SEED_SPLIT_PASSWORD = 'e2e-password-123';
@@ -84,7 +84,7 @@ function hoursAfter(base: Date, hours: number): Date {
 
 export async function seedEventsSplit(): Promise<void> {
 	await withPlatformDb(async (db) => {
-		await db.delete(event).where(inArray(event.id, EVENT_IDS));
+		await db.delete(eventListing).where(inArray(eventListing.id, EVENT_IDS));
 		await db.delete(account).where(inArray(account.userId, [SEED_SPLIT_MEMBER_ID]));
 		await db.delete(user).where(inArray(user.id, [SEED_SPLIT_MEMBER_ID]));
 
@@ -174,7 +174,7 @@ export async function seedEventsSplit(): Promise<void> {
 				publishedAt: now
 			}
 		]) {
-			await db.insert(event).values({
+			await db.insert(eventListing).values({
 				...row,
 				location: 'E2E Split Venue',
 				createdByUserId: SEED_SPLIT_MEMBER_ID,

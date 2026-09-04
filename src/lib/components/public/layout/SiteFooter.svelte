@@ -18,6 +18,10 @@
 		{ href: resolve('/programs'), label: 'Programs' },
 		{ href: resolve('/events'), label: 'Events' },
 		{ href: resolve('/directory'), label: 'Directory' },
+		// Static, like every row here. The list cannot ask whether any group is
+		// published — a second remote query in this component crashes past kit
+		// 2.64 — so /groups carries its own empty state instead.
+		{ href: resolve('/groups'), label: 'Groups' },
 		// Also the way back from a dismissed radio bar: /radio clears that
 		// preference, so this is the only route to a widget somebody closed.
 		{ href: resolve('/radio'), label: 'CMC Radio' },

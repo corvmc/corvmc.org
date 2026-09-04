@@ -1,5 +1,6 @@
 import Emittery from 'emittery';
 import type { GroupKind } from '$lib/config';
+import type { BookerType } from '$lib/server/db/schema/reservation';
 
 export interface VolunteerShiftEvent {
 	signupId: string;
@@ -59,8 +60,10 @@ export interface ReservationConfirmedEvent {
  *
  * `bookerType` rides along because it is the first thing every listener has to
  * check: a band's rehearsal hold or a staff-created event hold is not somebody's
- * first visit. `startsAt`/`endsAt` are ISO alongside the formatted trio so a
- * listener that needs to do arithmetic does not have to re-read the row.
+ * first visit. Its type is imported rather than spelled out here — an inline
+ * union went stale the first time the vocabulary was renamed, and the compiler
+ * had nothing to catch it with. `startsAt`/`endsAt` are ISO alongside the
+ * formatted trio so a listener that needs arithmetic need not re-read the row.
  */
 export interface ReservationCreatedEvent {
 	reservationId: string;
@@ -71,7 +74,7 @@ export interface ReservationCreatedEvent {
 	date: string;
 	startTime: string;
 	endTime: string;
-	bookerType: 'user' | 'group' | 'event' | 'instructor';
+	bookerType: BookerType;
 	startsAt: string;
 	endsAt: string;
 	createdByStaffId: string | null;

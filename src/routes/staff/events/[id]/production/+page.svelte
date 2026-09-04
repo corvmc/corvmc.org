@@ -75,6 +75,12 @@
 	const shifts = $derived(loaded.shifts);
 	const volunteerRoles = $derived(loaded.volunteerRoles);
 	const dutyLists = $derived(loaded.dutyLists);
+	const venues = $derived(loaded.venues);
+	// Work orders with no window — the advance half of an applied duty list. They
+	// are a separate list rather than rows in the table below because they have no
+	// time to sort by and no confirmed/capacity story worth printing: what a
+	// producer wants from them is what is still open and by when.
+	const advance = $derived(loaded.advance);
 	const riders = $derived(loaded.riders);
 	/** The advance question: who has told us nothing at all. */
 	const ridersMissing = $derived(riders.filter((r) => r.empty).length);
@@ -145,6 +151,7 @@
 	let editDescription = $state('');
 	let editTags = $state('');
 	let editLocation = $state('');
+	let editVenueId = $state('');
 	let editExternalTicketUrl = $state('');
 	let editDate = $state('');
 	let editStartTime = $state('');
@@ -188,6 +195,7 @@
 		editDescription = evt.description ?? '';
 		editTags = evt.tags ?? '';
 		editLocation = evt.location ?? '';
+		editVenueId = evt.venueId ?? '';
 		editExternalTicketUrl = evt.externalTicketUrl ?? '';
 
 		// Parse existing dates into form values
@@ -496,9 +504,29 @@
 								/>
 							</FormField>
 
-							<!-- Venue and ticket link: what a band gig is made of. CMC shows
-							     happen at the space and sell through us, so both stay optional. -->
-							<FormField label="Location" id="editLocation" issues={[]}>
+							<!--
+								Venue and ticket link. A CMC show is usually at the space and sells
+								through us, so both stay optional — but "usually" is the whole
+								point of the picker: `venueId` is what decides whether this show
+								holds the room, and `location` stays the free-text line the guide
+								prints.
+							-->
+							{#if venues.length > 0}
+								<FormField
+									field={fields.venueId}
+									type="select"
+									label="Venue"
+									bind:value={editVenueId}
+									options={[
+										{ value: '', label: 'The practice room' },
+										...venues
+											.filter((v) => !v.isPrimary)
+											.map((v) => ({ value: v.id, label: v.name }))
+									]}
+								/>
+							{/if}
+
+							<FormField label="Address line" id="editLocation" issues={[]}>
 								<input
 									id="editLocation"
 									name="location"
@@ -904,13 +932,19 @@
 		none. A band gig or a community listing is at someone else's venue, so the
 		card had no question to answer there.
 
-		Note this deliberately gets one case wrong: a CMC show at an outside venue
-		still asks for a room that will never be held. Nothing on the record says
-		where a show is — `location` is free text — and the other failure is the
-		one that already happened.
+		This used to get one case wrong on purpose — a CMC show at an outside venue
+		asked forever for a room it would never hold, because nothing on the record
+		said where a show was. `event.venueId` now does, so the card answers the
+		question instead of nagging. A blank venue still means the room, which is
+		what every event created before the column meant, so the nag survives
+		exactly where it was earning its keep.
 	-->
 	<InfoCard title="Space Reservation">
-		{#if data.linkedReservation}
+		{#if evt.venueName && !evt.venueIsPrimary}
+			<p class="text-muted">
+				Off-site — {evt.venueName}. The practice space stays bookable while this runs.
+			</p>
+		{:else if data.linkedReservation}
 			<div class="flex items-center gap-3">
 				<StatusBadge status={data.linkedReservation.status} />
 				<span
@@ -1061,12 +1095,34 @@
 			</div>
 		{/snippet}
 
-		{#if shifts.length === 0}
+		{#if advance.length > 0}
+			<div class="mb-4">
+				<h3 class="mb-2 text-sm font-semibold">Advance</h3>
+				<ul class="flex flex-col gap-1 text-sm">
+					{#each advance as order (order.id)}
+						<li class="flex flex-wrap items-baseline justify-between gap-2">
+							<a href={resolve(`/staff/volunteer/shifts/${order.id}`)} class="link font-medium">
+								{order.roleName}
+							</a>
+							<span class="text-subtle whitespace-nowrap">
+								{#if order.dueAt}
+									due {formatDateShort(order.dueAt)}
+								{:else}
+									no deadline
+								{/if}
+							</span>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
+
+		{#if shifts.length === 0 && advance.length === 0}
 			<EmptyState
 				title="No volunteer shifts"
 				description="Nobody is scheduled to work this show yet."
 			/>
-		{:else}
+		{:else if shifts.length > 0}
 			<Table>
 				{#snippet head()}
 					<th>Role</th>

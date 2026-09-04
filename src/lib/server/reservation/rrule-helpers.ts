@@ -158,7 +158,7 @@ export function getOccurrences(rruleString: string, after: Date, before: Date): 
  * than a member one, and that is not a courtesy — it is what stops a teacher
  * losing the slot they teach in every week.
  *
- * `checkEventAndClosureConflict` treats only `bookerType: 'event'` as a hard
+ * `checkEventAndClosureConflict` treats only `bookerType: 'event_listing'` as a hard
  * block, so a teaching series is Tier 2 and *can* be waitlisted behind a
  * member's one-off booking. The mitigation needs no new machinery: a teaching
  * horizon longer than any member can book into means the series already exists

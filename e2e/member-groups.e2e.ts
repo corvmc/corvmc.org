@@ -80,20 +80,24 @@ test.describe('member groups index', () => {
 		await page.getByRole('button', { name: `Join ${SEED_JOINABLE_NAME}` }).click();
 		await page.getByRole('dialog').getByRole('button', { name: 'Join' }).click();
 
-		// No approval step, and two things say so. The group moves into "Your
-		// programs" on this page, and the roster row itself reads `'active'`.
+		// No approval step, and three things say so. The group moves into "Your
+		// programs" on this page, the roster row itself reads `'active'`, and the
+		// "My Groups" sidebar picks it up.
 		//
-		// That second assertion used to be the "My Groups" sidebar, which listed
-		// active rows only. The groups module is unlinked from navigation now, so
-		// the row is read directly — a stricter claim than the sidebar was, since
-		// it distinguishes `'pending'` from `'requested'` rather than just
-		// excluding both.
+		// The row read is the strictest of the three — it distinguishes
+		// `'pending'` from `'requested'` rather than just excluding both — and the
+		// sidebar is kept beside it because it is the launched surface: it lists
+		// active rows only, so its absence would mean the join landed in a waiting
+		// state even though the page said otherwise.
 		await expect(
 			page.getByRole('main').getByRole('link', { name: SEED_JOINABLE_NAME, exact: true })
 		).toBeVisible({ timeout: 15000 });
 		await expect
 			.poll(() => readMemberStatus(SEED_JOINABLE_SLUG, SEED_BANDMATE_ID), DB_POLL)
 			.toBe('active');
+		await expect(
+			page.locator('aside').getByRole('link', { name: new RegExp(SEED_JOINABLE_NAME) })
+		).toBeVisible({ timeout: 15000 });
 
 		await page.goto(`/member/groups/${SEED_JOINABLE_SLUG}`);
 		await expect(page.getByRole('heading', { name: SEED_JOINABLE_NAME })).toBeVisible();

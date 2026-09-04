@@ -17,7 +17,7 @@
 import { and, eq, inArray, like } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { withPlatformDb } from './platform-db';
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { buildTimeRangeInTz } from '../../src/lib/server/reservation/timezone';
 import { SEED_STAFF_ID } from './seed-staff-user';
@@ -112,16 +112,16 @@ export async function seedStaffEvent() {
 /** Drop the event (and held space) the previous run created through the UI. */
 async function clearStaleEvents(db: DrizzleD1Database) {
 	const stale = await db
-		.select({ id: event.id, reservationId: event.reservationId })
-		.from(event)
-		.where(like(event.title, `${SEED_EVENT_TITLE_PREFIX}%`));
+		.select({ id: eventListing.id, reservationId: eventListing.reservationId })
+		.from(eventListing)
+		.where(like(eventListing.title, `${SEED_EVENT_TITLE_PREFIX}%`));
 
 	if (stale.length === 0) return;
 	const ids = stale.map((e) => e.id);
 
 	// Events first: `event.reservation_id` is a foreign key into reservation, so
 	// the held rows can only go once nothing points at them.
-	await db.delete(event).where(inArray(event.id, ids));
+	await db.delete(eventListing).where(inArray(eventListing.id, ids));
 
 	const reservationIds = stale.map((e) => e.reservationId).filter((id): id is string => !!id);
 	if (reservationIds.length > 0) {
@@ -132,7 +132,7 @@ async function clearStaleEvents(db: DrizzleD1Database) {
 	// sweep by booker as well.
 	await db
 		.delete(reservation)
-		.where(and(eq(reservation.bookerType, 'event'), inArray(reservation.bookerId, ids)));
+		.where(and(eq(reservation.bookerType, 'event_listing'), inArray(reservation.bookerId, ids)));
 }
 
 /** Hold SEED_CONFLICT_DATE so the modal's conflict warning has to fire. */

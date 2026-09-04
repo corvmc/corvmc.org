@@ -651,7 +651,7 @@ describe('ReservationService', () => {
 
 			const { sql: rendered, params } = dialect.sqlToQuery(sweepWhere.mock.calls[0][0] as SQL);
 			expect(rendered).toContain('"booker_type" <>');
-			expect(params).toContain('event');
+			expect(params).toContain('event_listing');
 		});
 	});
 

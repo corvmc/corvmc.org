@@ -22,6 +22,9 @@ export const tableOrder = [
 	// References user twice (subject + granter). No children.
 	'instructor',
 	'reservation',
+	// References nothing; `event.venue_id` references it, so it must precede
+	// `event`. Sits with the other rootless tables rather than beside it.
+	'venue',
 	'equipment_category',
 	'inventory_location',
 	'inventory_item',
@@ -37,7 +40,7 @@ export const tableOrder = [
 	// References contractor, inventory_asset and user, so it clears before none
 	// of them.
 	'contractor_job',
-	'event',
+	'event_listing',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
 	// (docs/specs/shipped/media-spec.md), so it constrains nothing else in this order.

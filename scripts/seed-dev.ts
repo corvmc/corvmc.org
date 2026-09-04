@@ -30,6 +30,7 @@ import { pendingSites } from './seed/pending';
 import { seedRoles, seedUsers, seedAdminUser, seedUserRoles } from './seed/users';
 import { seedReservations, seedClosures } from './seed/reservations';
 import { seedEvents } from './seed/events';
+import { seedVenues } from './seed/venues';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
@@ -93,6 +94,9 @@ async function main() {
 	const reservations = await seedReservations(allUsers);
 	await seedClosures();
 	const events = await seedEvents(allUsers);
+	// After the events, because it backfills every one of them into the room —
+	// which is where they all were, there being nowhere else until this table.
+	const venues = await seedVenues(events);
 	const bands = await seedBands(allUsers);
 	// Appended rather than folded into `seedBands`: it brings its own persona and
 	// login, and every downstream band seeder either maps over the whole array —
@@ -186,6 +190,7 @@ async function main() {
 	console.log(`  ${roles.length} roles`);
 	console.log(`  ${reservations.length} reservations`);
 	console.log(`  ${events.length} CMC events`);
+	console.log(`  ${venues.venues} venues, one of them ours`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(

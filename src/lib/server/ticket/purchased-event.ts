@@ -9,7 +9,7 @@
  * first the moment either receipt changed.
  */
 import { db } from '$lib/server/db';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { ticket } from '$lib/server/db/schema/ticket';
 import { eq } from 'drizzle-orm';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -37,7 +37,11 @@ export async function emitTicketPurchased(
 	if (tickets.length === 0) return;
 
 	const eventId = tickets[0].eventId;
-	const [eventRow] = await db.select().from(event).where(eq(event.id, eventId)).limit(1);
+	const [eventRow] = await db
+		.select()
+		.from(eventListing)
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
 	if (!eventRow) return;
 
 	const TZ = DEFAULT_TIMEZONE;

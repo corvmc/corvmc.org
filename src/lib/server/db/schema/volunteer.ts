@@ -11,7 +11,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
-import { event } from './event';
+import { eventListing } from './event';
 import { inventoryAsset } from './inventory';
 import { project } from './project';
 import { reservation } from './reservation';
@@ -282,7 +282,7 @@ export const workOrder = sqliteTable(
 		// days don't, so this can't be required. Set-null rather than cascade —
 		// deleting an event must not silently delete the record that four people
 		// worked it.
-		eventId: text('event_id').references(() => event.id, { onDelete: 'set null' }),
+		eventId: text('event_id').references(() => eventListing.id, { onDelete: 'set null' }),
 
 		// Nullable, because an unscheduled row is a bare work order: work that
 		// needs doing with nobody booked to do it yet. Setting a window turns it

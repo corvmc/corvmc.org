@@ -43,7 +43,7 @@
 	let searchText = $state('');
 	let dateFrom = $state('');
 	let dateTo = $state('');
-	let bookerType = $state<'user' | 'group' | 'event' | ''>('');
+	let bookerType = $state<'user' | 'group' | 'event_listing' | ''>('');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
@@ -210,7 +210,7 @@
 			<option value="">Anyone</option>
 			<option value="user">Members</option>
 			<option value="group">Bands</option>
-			<option value="event">Events</option>
+			<option value="event_listing">Events</option>
 		</Select>
 	</FilterBar>
 
@@ -308,7 +308,7 @@
 
 						<td class="col-support cell-num">
 							{#await hourlyRate then rate}
-								{#if r.bookerType === 'event'}
+								{#if r.bookerType === 'event_listing'}
 									<span class="opacity-40">—</span>
 								{:else}
 									{@const state = reservationPaymentState(r)}

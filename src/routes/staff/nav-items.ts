@@ -60,6 +60,7 @@ export type StaffNavKey =
 	| 'contractor-jobs'
 	| 'projects'
 	| 'productions'
+	| 'venues'
 	| 'calendar'
 	| 'flags'
 	| 'suggestions'
@@ -162,9 +163,14 @@ export const staffNavSections: StaffNavSection[] = [
 					// its own while this branch was in flight, and quietly absorbing
 					// somebody else's new surface into a redesign they did not review is
 					// not a merge resolution.
+					//
+					// Gated on `volunteer.read` rather than `event.read`: a duty list
+					// produces work orders, and a coordinator holding no `event.manage`
+					// could previously see this row, open the page, and have every write
+					// refused.
 					{
 						key: 'volunteer-duty-lists',
-						capability: 'event.read',
+						capability: 'volunteer.read',
 						label: 'Duty Lists',
 						href: resolve('/staff/volunteer/duty-lists')
 					},
@@ -331,6 +337,15 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'event.manage',
 				label: 'Productions',
 				href: resolve('/staff/productions')
+			},
+			// Reference rather than a queue, so it sits last. Guarded as an event
+			// because that is what a venue is a fact about — there is no job here
+			// that curates rooms without producing in them.
+			{
+				key: 'venues',
+				capability: 'event.read',
+				label: 'Venues',
+				href: resolve('/staff/venues')
 			}
 		]
 	},

@@ -63,7 +63,7 @@ beforeEach(() => {
 		'work_order',
 		'duty_list_item',
 		'duty_list',
-		'event',
+		'event_listing',
 		'reservation'
 	]) {
 		sqlite.exec(`DELETE FROM ${t}`);
@@ -77,7 +77,7 @@ beforeEach(() => {
 	sqlite.exec(`INSERT INTO volunteer_role (id, name) VALUES ('role-1','Front Desk')`);
 	sqlite.exec(`INSERT INTO volunteer_role (id, name) VALUES ('role-2','Booking Lead')`);
 	sqlite.exec(
-		`INSERT INTO event (id, title, starts_at, ends_at, doors_at, created_by_user_id)
+		`INSERT INTO event_listing (id, title, starts_at, ends_at, doors_at, created_by_user_id)
 		 VALUES ('evt-1','Show', ${STARTS}, ${ENDS}, ${DOORS}, 'u1')`
 	);
 	sqlite.exec(
@@ -144,7 +144,7 @@ describe('applyDutyList', () => {
 	});
 
 	it('falls back to the start time when the event has no doors', async () => {
-		sqlite.exec(`UPDATE event SET doors_at = NULL WHERE id = 'evt-1'`);
+		sqlite.exec(`UPDATE event_listing SET doors_at = NULL WHERE id = 'evt-1'`);
 		addItem('i1', 'offset_minutes, duration_minutes', '0, 60');
 
 		await applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1');
@@ -156,7 +156,7 @@ describe('applyDutyList', () => {
 		sqlite.exec(`UPDATE duty_list SET anchor = 'end' WHERE id = 'dl-1'`);
 		// `event_cmc_needs_end` forbids a CMC event without an end, so the only
 		// events that can reach this branch are the ones somebody else authored.
-		sqlite.exec(`UPDATE event SET ends_at = NULL, source = 'band' WHERE id = 'evt-1'`);
+		sqlite.exec(`UPDATE event_listing SET ends_at = NULL, source = 'band' WHERE id = 'evt-1'`);
 		addItem('i1', 'offset_minutes, duration_minutes', '0, 60');
 
 		await expect(applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1')).rejects.toThrow(

@@ -8,7 +8,7 @@ import {
 	workOrder,
 	workTask
 } from '$lib/server/db/schema/volunteer';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { reservation } from '$lib/server/db/schema/reservation';
 import {
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
@@ -478,13 +478,13 @@ async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
 	if (subject.kind === 'event') {
 		const [row] = await db
 			.select({
-				id: event.id,
-				startsAt: event.startsAt,
-				endsAt: event.endsAt,
-				doorsAt: event.doorsAt
+				id: eventListing.id,
+				startsAt: eventListing.startsAt,
+				endsAt: eventListing.endsAt,
+				doorsAt: eventListing.doorsAt
 			})
-			.from(event)
-			.where(eq(event.id, subject.id))
+			.from(eventListing)
+			.where(eq(eventListing.id, subject.id))
 			.limit(1);
 		return row ? { kind: 'event', ...row } : null;
 	}

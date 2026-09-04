@@ -16,6 +16,6 @@
 	<IconUser {size} class={extraClass} />
 {:else if type === 'band'}
 	<IconMusic {size} class={extraClass} />
-{:else if type === 'event'}
+{:else if type === 'event_listing'}
 	<IconCalendarEvent {size} class={extraClass} />
 {/if}

@@ -19,7 +19,7 @@
 import { db } from '$lib/server/db';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { ticket } from '$lib/server/db/schema/ticket';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { listPurchasesForUser as listReleasePurchases } from '$lib/server/audio/purchase-service';
 
@@ -89,19 +89,19 @@ async function ticketPurchases(userId: string): Promise<TicketPurchase[]> {
 	const rows = await db
 		.select({
 			purchaseId: ticket.purchaseId,
-			eventId: event.id,
-			eventTitle: event.title,
-			eventStartsAt: event.startsAt,
+			eventId: eventListing.id,
+			eventTitle: eventListing.title,
+			eventStartsAt: eventListing.startsAt,
 			quantity: sql<number>`COUNT(*)`,
 			amountCents: sql<number>`COALESCE(SUM(${ticket.unitPriceCents}), 0) + COALESCE(SUM(${ticket.contributionCents}), 0)`,
 			purchasedAt: sql<number>`MIN(${ticket.createdAt})`
 		})
 		.from(ticket)
-		.innerJoin(event, eq(event.id, ticket.eventId))
+		.innerJoin(eventListing, eq(eventListing.id, ticket.eventId))
 		.where(
 			and(eq(ticket.userId, userId), inArray(ticket.status, ['pending', 'valid', 'checked_in']))
 		)
-		.groupBy(ticket.purchaseId, event.id, event.title, event.startsAt);
+		.groupBy(ticket.purchaseId, eventListing.id, eventListing.title, eventListing.startsAt);
 
 	return rows.map((r) => ({
 		kind: 'ticket' as const,

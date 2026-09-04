@@ -251,7 +251,7 @@ describe('generationWindowEnd', () => {
 		// Positively matched, so a booker type added later inherits the member
 		// horizon rather than silently acquiring the teaching one.
 		const from = new Date('2026-05-12T00:00:00.000Z');
-		for (const t of ['user', 'group', 'event'] as const) {
+		for (const t of ['user', 'group', 'event_listing'] as const) {
 			expect((await generationWindowEnd(from, t)).getTime()).toBe(
 				from.getTime() + 17.5 * 24 * 60 * 60 * 1000
 			);

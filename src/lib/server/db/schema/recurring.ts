@@ -12,7 +12,7 @@ export type RecurringFrequency = (typeof RECURRING_FREQUENCIES)[number];
 // `'lesson'` was removed alongside `bookerTypes`'. A lesson series could only
 // ever have had a lesson reservation as its prototype, and production holds
 // none of those. Removing it emits no SQL — this is a TypeScript-only enum.
-export const prototypeTypes = ['event', 'reservation'] as const;
+export const prototypeTypes = ['event_listing', 'reservation'] as const;
 export type PrototypeType = (typeof prototypeTypes)[number];
 
 // ---------------------------------------------------------------------------
