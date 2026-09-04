@@ -85,14 +85,21 @@ describe('DispositionBar', () => {
 
 		await press('s', true);
 
-		// An explicit timeout, unlike its siblings: the shortcut only flips
-		// `snoozeOpen`, and what has to appear is `SnoozeMenu`'s bits-ui content,
-		// which mounts through a portal from a `$effect`. That is a Svelte
-		// scheduler tick plus a portal mount rather than a synchronous render, and
-		// on a loaded runner it does not reliably land inside the one-second
-		// default — this failed intermittently on `main` and on unrelated branches
-		// while passing every time locally. The assertion is about which key opens
-		// the menu, not about how fast it opens.
-		await expect.element(page.getByText('Tomorrow'), { timeout: 5000 }).toBeVisible();
+		// The trigger's `aria-expanded`, not the menu's contents.
+		//
+		// This asserted `getByText('Tomorrow')` and failed on every CI run while
+		// passing locally both headed and headless — a longer timeout did not help,
+		// so the portal is not slow on CI, it does not open at all. bits-ui mounts
+		// `DropdownMenu.Content` through a portal with focus management, and a
+		// headless Linux page that never holds focus is the difference between the
+		// two environments.
+		//
+		// `aria-expanded` is the accessible expression of the thing the shortcut is
+		// responsible for, and bits-ui sets it on the trigger synchronously with
+		// `open`. What is *inside* the menu is SnoozeMenu's business, and
+		// `inbox-awaiting-reply.e2e.ts` clicks a real date in a real browser.
+		await expect
+			.element(page.getByRole('button', { name: /^Snooze/ }))
+			.toHaveAttribute('aria-expanded', 'true');
 	});
 });
