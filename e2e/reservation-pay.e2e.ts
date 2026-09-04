@@ -67,8 +67,9 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	await page.getByRole('button', { name: /^Pay \$/ }).click();
 
 	// The in-app checkout page, reached by the same 303 the live integration
-	// issues. Reservations still create a `hosted_page` session, so the fake's
-	// stand-in URL is what lands here — the route is shared with `elements`.
+	// issues. Reservations create an `elements` session now, so `checkout()`
+	// returns this route directly rather than the fake standing in for a
+	// checkout.stripe.com URL — the page is the same either way.
 	await expect(page).toHaveURL(/\/checkout\//);
 	// $15.00 grossed up for 2.9% + 30¢ — `calculateTotalWithFeeCoverage(1500)` is
 	// `{ totalCents: 1576, feeCents: 76 }`. Asserting the total here is what proves
@@ -78,7 +79,11 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	await page.locator('input[name$="cardNumber"]').fill('4242424242424242');
 	await page.getByRole('button', { name: /^Pay / }).click();
 
-	await page.waitForURL(/\/member\/reservations\/?$/, { timeout: 15000 });
+	// `?paid=` is the session's `return_url`, which only `elements` mode sets —
+	// landing on it proves `checkout()` mapped `successUrl` rather than dropping
+	// it, and it is what the page polls on while the webhook is in flight.
+	await page.waitForURL(/\/member\/reservations\?paid=/, { timeout: 15000 });
+	expect(new URL(page.url()).searchParams.get('paid')).toBe(SEED_RESERVATION_ID);
 
 	const readReservation = async () => {
 		const [row] = await readLocalDb((db) =>

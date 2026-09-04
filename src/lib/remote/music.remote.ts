@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireFeature } from '$lib/server/feature-flags';
 import { getPublishedRelease, listTracks } from '$lib/server/audio/audio-service';
-import { beginPurchase, findPaidPurchaseByToken } from '$lib/server/audio/purchase-service';
+import { beginPurchase, findPurchaseByToken } from '$lib/server/audio/purchase-service';
 import { destinationFor } from '$lib/server/audio/connect-service';
 import { db } from '$lib/server/db';
 import { media, mediaAttachment } from '$lib/server/db/schema/media';
@@ -97,12 +97,23 @@ export const getPublicRelease = query(
 export const getDownload = query(z.string().min(16), async (token) => {
 	await requireFeature('bandAudio');
 
-	const purchase = await findPaidPurchaseByToken(token);
-	// A pending purchase answers exactly like a nonexistent one.
+	const purchase = await findPurchaseByToken(token);
 	if (!purchase) throw error(404, 'Not found');
+
+	// A purchase that exists but has not been fulfilled yet is `pending`, not a
+	// 404. It used to be indistinguishable from a nonexistent token, and could
+	// afford to be: paying on checkout.stripe.com, the redirect back took long
+	// enough that `checkout.session.completed` had all but always landed first.
+	// Paying on our own page, the buyer arrives in the same second they confirm,
+	// so the honest answer is "not yet" and the page waits for it. The token is a
+	// 128-bit random it takes an email to receive, so telling its holder that
+	// much discloses nothing to anyone who does not already have it — and the
+	// track endpoint still hands over nothing until the purchase is paid.
+	if (purchase.purchase.status !== 'paid') return { status: 'pending' as const };
 
 	const tracks = await listTracks(purchase.releaseId);
 	return {
+		status: 'ready' as const,
 		releaseTitle: purchase.releaseTitle,
 		bandName: purchase.bandName,
 		amountPaidCents: purchase.purchase.amountPaidCents,

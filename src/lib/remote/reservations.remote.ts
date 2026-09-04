@@ -1280,7 +1280,11 @@ async function payReservationRemainder(opts: {
 		coverFees: opts.coverFees,
 		metadata: { reservation_id: opts.row.id },
 		successUrl: opts.successUrl,
-		cancelUrl: opts.cancelUrl
+		cancelUrl: opts.cancelUrl,
+		// Paid on our own page rather than checkout.stripe.com. The two URLs
+		// above are unchanged — `checkout()` maps them onto the `return_url` /
+		// metadata pair that `elements` mode takes instead.
+		uiMode: 'elements'
 	});
 
 	if (result.paid) {
@@ -1470,8 +1474,9 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 		eligibleCredits: [],
 		coverFees: data.coverFees,
 		metadata: { reservation_id: res.id },
-		successUrl: `${url.origin}/member/reservations`,
-		cancelUrl: `${url.origin}/member/reservations`
+		successUrl: `${url.origin}/member/reservations?paid=${res.id}`,
+		cancelUrl: `${url.origin}/member/reservations`,
+		uiMode: 'elements'
 	});
 
 	if (result.paid) {
@@ -1769,7 +1774,7 @@ export const payForReservation = form(
 			email: currentUser.email,
 			name: currentUser.name,
 			coverFees: data.coverFees,
-			successUrl: `${url.origin}/member/reservations`,
+			successUrl: `${url.origin}/member/reservations?paid=${row.id}`,
 			cancelUrl: `${url.origin}/member/reservations`
 		});
 
@@ -1815,7 +1820,7 @@ export const payReservation = form(
 			email: currentUser.email,
 			name: currentUser.name,
 			coverFees: data.coverFees,
-			successUrl: `${url.origin}/member/reservations`,
+			successUrl: `${url.origin}/member/reservations?paid=${row.id}`,
 			cancelUrl: `${url.origin}/member/reservations/${row.id}/pay`
 		});
 

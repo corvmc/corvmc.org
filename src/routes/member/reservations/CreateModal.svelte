@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { bookAndPayReservation } from '$lib/remote/reservations.remote';
+	import { goToCheckout } from '$lib/utils/checkout-navigation';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
 	import DateTimeStep from '$lib/components/reservations/booking/DateTimeStep.svelte';
@@ -42,7 +43,7 @@
 			redirectUrl?: string;
 		};
 		if (r?.redirectUrl) {
-			window.location.href = r.redirectUrl;
+			await goToCheckout(r.redirectUrl);
 		} else {
 			if (r?.waitlisted) {
 				toast.info('The first instance is waitlisted because the slot is currently booked.');
