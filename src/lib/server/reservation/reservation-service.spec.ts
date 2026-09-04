@@ -41,6 +41,7 @@ import {
 	cancelUnconfirmedReservations,
 	staffCreate,
 	createWaitlisted,
+	announceWaitlistConfirmed,
 	confirm,
 	markComplete,
 	markNoShow,
@@ -413,6 +414,33 @@ describe('ReservationService', () => {
 			insertReturns({ ...row, status: 'waitlisted' });
 
 			await createWaitlisted(params);
+
+			expect(emit).not.toHaveBeenCalled();
+		});
+
+		it('announces a queued booking once the member confirms the slot', async () => {
+			// Two `.limit(1)` reads in a row: the row this function re-checks, then
+			// the owner lookup `emitCreated` does.
+			const where = vi
+				.fn()
+				.mockReturnValueOnce(whereResult([], [{ ...row, status: 'scheduled' }]))
+				.mockReturnValueOnce(whereResult([], [{ name: 'Ada', email: 'a@x.test' }]));
+			txSelect.mockReturnValue({ from: () => ({ where }) });
+
+			await announceWaitlistConfirmed('res-1');
+
+			expect(emit).toHaveBeenCalledWith(
+				'reservation.created',
+				expect.objectContaining({ reservationId: 'res-1', userId: 'user-1' })
+			);
+		});
+
+		it('stays quiet when the race check put the booking back in the queue', async () => {
+			// The status filter finds nothing, which is what a rolled-back
+			// confirmation looks like from here.
+			txSelect.mockReturnValue({ from: () => ({ where: () => whereResult([], []) }) });
+
+			await announceWaitlistConfirmed('res-1');
 
 			expect(emit).not.toHaveBeenCalled();
 		});

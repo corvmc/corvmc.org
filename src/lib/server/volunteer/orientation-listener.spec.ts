@@ -62,11 +62,13 @@ const STARTS = Math.floor(new Date('2026-10-10T03:00:00Z').getTime() / 1000);
 const ENDS = Math.floor(new Date('2026-10-10T05:00:00Z').getTime() / 1000);
 
 let getOrientation: typeof import('./orientation-service').getOrientation;
+let applyDutyList: typeof import('./duty-list-service').applyDutyList;
 
 beforeAll(async () => {
 	migrate(base, { migrationsFolder: MIGRATIONS_FOLDER });
 	const { registerOrientationListeners } = await import('./orientation-listener');
 	({ getOrientation } = await import('./orientation-service'));
+	({ applyDutyList } = await import('./duty-list-service'));
 	registerOrientationListeners();
 }, 30_000);
 
@@ -213,6 +215,75 @@ describe('reservation.created', () => {
 		await fire('reservation.created', createdEvent());
 
 		expect(shifts()).toHaveLength(0);
+	});
+});
+
+/**
+ * A booking that came off the waitlist announces itself at the moment it stops
+ * being a queue position — `announceWaitlistConfirmed()`, from the member's own
+ * confirmation, not from `promoteNextWaitlisted()`, which only offers the slot.
+ * By the time the event lands the row is `scheduled`, so from here it is an
+ * ordinary `reservation.created` — and that is the point. What these cover is
+ * what the *rest of the queue* does to the first-booking rule, which is where
+ * `priorBookingCount` excluding `waitlisted` rows starts to matter.
+ */
+describe('a booking confirmed off the waitlist', () => {
+	it('raises an orientation even though the member has been queueing for weeks', async () => {
+		seedList();
+		// Still in the queue, and earlier: excluded from `priorBookingCount`, so it
+		// must not make the booking they actually got look like a second visit.
+		sqlite.exec(
+			`INSERT INTO reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)
+			 VALUES ('res-q','user','u-member','u-member','waitlisted', ${STARTS - 86400}, ${ENDS - 86400})`
+		);
+
+		await fire('reservation.created', createdEvent());
+
+		const rows = shifts();
+		expect(rows).toHaveLength(1);
+		expect(rows[0].reservation_id).toBe('res-1');
+		expect((await getOrientation('u-member', new Date(STARTS * 1000 - 86_400_000)))?.state).toBe(
+			'scheduled'
+		);
+	});
+
+	it('gives the second confirmation nothing, because the first is now history', async () => {
+		seedList();
+		// Two queued bookings, and the earlier one comes off the waitlist first.
+		sqlite.exec(
+			`INSERT INTO reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)
+			 VALUES ('res-q','user','u-member','u-member','waitlisted', ${STARTS - 86400}, ${ENDS - 86400})`
+		);
+		sqlite.exec(`UPDATE reservation SET status = 'scheduled' WHERE id = 'res-q'`);
+
+		await fire(
+			'reservation.created',
+			createdEvent({
+				reservationId: 'res-q',
+				startsAt: new Date((STARTS - 86400) * 1000).toISOString(),
+				endsAt: new Date((ENDS - 86400) * 1000).toISOString()
+			})
+		);
+
+		// That transition is what makes `res-q` visible to `priorBookingCount` at
+		// all — while it sat in the queue it counted for nothing.
+		await fire('reservation.created', createdEvent());
+
+		const rows = shifts();
+		expect(rows).toHaveLength(1);
+		expect(rows[0].reservation_id).toBe('res-q');
+	});
+
+	it('does not add a second shift to a booking staff already stamped by hand', async () => {
+		seedList();
+		// The workaround for the gap this closes: a coordinator applied the
+		// orientation list to the queued booking themselves. The confirmation must
+		// land on the re-apply guard, not double the roster.
+		await applyDutyList('dl-orient', { kind: 'reservation', id: 'res-1' }, null);
+
+		await fire('reservation.created', createdEvent());
+
+		expect(shifts()).toHaveLength(1);
 	});
 });
 
