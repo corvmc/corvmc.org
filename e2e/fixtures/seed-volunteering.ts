@@ -173,6 +173,16 @@ export const SEED_VOL_SHIFT_EVENT_ID = 'e2e-vol-shift-event';
  */
 export const SEED_VOL_DUTY_LIST_ID = 'e2e-vol-duty-list';
 export const SEED_VOL_DUTY_LIST_NAME = 'E2E Standard Show';
+export const SEED_VOL_ADVANCE_ROLE_ID = 'e2e-vol-role-advance';
+/**
+ * Its own role, not the door's.
+ *
+ * A real advance list uses one — nobody books the front desk a week out — and
+ * sharing `SEED_VOL_ROLE_ID` put a second link with the same name inside the
+ * production console's Volunteer Shifts card, which tripped strict mode in the
+ * unrelated assertion that clicks through from it.
+ */
+export const SEED_VOL_ADVANCE_ROLE_NAME = 'E2E Booking Lead';
 export const SEED_VOL_ADVANCE_ID = 'e2e-vol-advance-order';
 export const SEED_VOL_ADVANCE_TASK_OPEN = 'E2E send load-in details';
 export const SEED_VOL_ADVANCE_TASK_DONE = 'E2E confirm the lineup';
@@ -205,7 +215,7 @@ const LOG_IDS = [
 const ROLE_IDS = [SEED_VOL_ROLE_ID, SEED_VOL_ARCHIVED_ROLE_ID];
 
 /** Every role this fixture owns — what a shift left behind by the UI hangs off. */
-const ALL_ROLE_IDS = [...ROLE_IDS, SEED_VOL_GATED_ROLE_ID];
+const ALL_ROLE_IDS = [...ROLE_IDS, SEED_VOL_GATED_ROLE_ID, SEED_VOL_ADVANCE_ROLE_ID];
 
 /** Members added by this fixture on top of SEED_VOL_MEMBER_ID. */
 const EXTRA_MEMBER_IDS = [SEED_VOL_NEW_MEMBER_ID, SEED_VOL_MINOR_ID, SEED_VOL_BLOCKED_MINOR_ID];
@@ -325,6 +335,15 @@ export async function seedVolunteering(): Promise<void> {
 				description: 'On hiatus.',
 				displayOrder: 1,
 				isActive: false,
+				createdAt: now,
+				updatedAt: now
+			},
+			{
+				id: SEED_VOL_ADVANCE_ROLE_ID,
+				name: SEED_VOL_ADVANCE_ROLE_NAME,
+				description: 'Everything that has to be true before the day of.',
+				displayOrder: 2,
+				isActive: true,
 				createdAt: now,
 				updatedAt: now
 			}
@@ -555,7 +574,7 @@ export async function seedVolunteering(): Promise<void> {
 
 		await db.insert(workOrder).values({
 			id: SEED_VOL_ADVANCE_ID,
-			volunteerRoleId: SEED_VOL_ROLE_ID,
+			volunteerRoleId: SEED_VOL_ADVANCE_ROLE_ID,
 			eventId: SEED_VOL_EVENT_ID,
 			startsAt: null,
 			endsAt: null,

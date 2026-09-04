@@ -4,8 +4,8 @@ import {
 	SEED_VOL_ADVANCE_ID,
 	SEED_VOL_ADVANCE_TASK_DONE,
 	SEED_VOL_ADVANCE_TASK_OPEN,
-	SEED_VOL_EVENT_ID,
-	SEED_VOL_ROLE_NAME
+	SEED_VOL_ADVANCE_ROLE_NAME,
+	SEED_VOL_EVENT_ID
 } from './fixtures/seed-volunteering';
 
 /**
@@ -39,7 +39,7 @@ test.describe('duty lists — the unscheduled half', () => {
 		await page.goto('/staff/volunteer');
 
 		const card = page.locator('section, div').filter({ hasText: 'Needs scheduling' }).last();
-		await expect(card.getByRole('link', { name: SEED_VOL_ROLE_NAME })).toBeVisible();
+		await expect(card.getByRole('link', { name: SEED_VOL_ADVANCE_ROLE_NAME })).toBeVisible();
 	});
 
 	test('and the show it is for says so, beside the timed shifts', async ({ page }) => {
@@ -47,7 +47,9 @@ test.describe('duty lists — the unscheduled half', () => {
 		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production`);
 
 		await expect(page.getByRole('heading', { name: 'Advance' })).toBeVisible();
-		await expect(page.getByRole('link', { name: SEED_VOL_ROLE_NAME }).first()).toBeVisible();
+		await expect(
+			page.getByRole('link', { name: SEED_VOL_ADVANCE_ROLE_NAME }).first()
+		).toBeVisible();
 	});
 
 	/**
