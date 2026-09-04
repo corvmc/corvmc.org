@@ -69,6 +69,7 @@ import {
 	markNoShow,
 	recordCashAndComplete,
 	isFirstReservationSql,
+	priorBookingCount,
 	ReservationConflictError,
 	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
@@ -371,23 +372,12 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		.orderBy(asc(reservation.startsAt))
 		.limit(1);
 
-	// The rule the list renders, restated here so the two pages cannot disagree
-	// about what a first visit is — see `isFirstReservationSql`. Counting only
-	// `completed` rows, which is what this did before, called a member's third
-	// booking their first whenever the earlier two were still `confirmed`.
-	const [priorCount] = await db
-		.select({ count: count() })
-		.from(reservation)
-		.where(
-			and(
-				eq(reservation.createdByUserId, row.createdByUserId),
-				ne(reservation.status, 'cancelled'),
-				or(
-					lt(reservation.startsAt, row.startsAt),
-					and(eq(reservation.startsAt, row.startsAt), lt(reservation.id, id))
-				)
-			)
-		);
+	// The rule the list renders, from the one place that states it — see
+	// `isFirstReservationSql` and its imperative twin. This used to be a third
+	// hand-written copy of the predicate, which is how it came to count only
+	// `completed` rows and call a member's third booking their first whenever the
+	// earlier two were still `confirmed`.
+	const priorCount = await priorBookingCount(row.createdByUserId, row.startsAt, id);
 
 	return {
 		reservation: row,
@@ -403,7 +393,10 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		prevId: prevRow?.id ?? null,
 		nextId: nextRow?.id ?? null,
 		isFirstReservation:
-			row.bookerType === 'user' && row.status !== 'cancelled' && priorCount.count === 0,
+			row.bookerType === 'user' &&
+			row.status !== 'cancelled' &&
+			row.status !== 'waitlisted' &&
+			priorCount === 0,
 		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
 	};
 });

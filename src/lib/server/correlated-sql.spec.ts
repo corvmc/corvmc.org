@@ -107,13 +107,16 @@ describe('isFirstReservationSql', () => {
 		expect(rendered()).toContain('r0.id < "reservation"."id"');
 	});
 
-	it('counts only member bookings, and never a cancelled one', () => {
+	it('counts only member bookings, and neither a cancelled nor a waitlisted one', () => {
 		const sql = rendered();
 		// The flag is for a member walking in for the first time — not a band's
 		// hold, and not a booking nobody will show up to.
 		expect(sql).toContain(`"reservation"."booker_type" = 'user'`);
-		expect(sql).toContain(`"reservation"."status" <> 'cancelled'`);
-		// A cancelled booking is not a visit, so it is not prior history either.
-		expect(sql).toContain(`r0.status <> 'cancelled'`);
+		expect(sql).toContain(`"reservation"."status" not in ('cancelled', 'waitlisted')`);
+		// Neither a cancelled booking nor a queue position is a visit, so neither
+		// is prior history. The waitlisted half was missing while this only drove
+		// a badge; sharing the rule with the orientation listener made a stale
+		// waitlisted row able to suppress somebody's orientation outright.
+		expect(sql).toContain(`r0.status not in ('cancelled', 'waitlisted')`);
 	});
 });

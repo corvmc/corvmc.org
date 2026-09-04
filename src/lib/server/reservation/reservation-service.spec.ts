@@ -4,10 +4,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock dependencies before importing the module under test
 // ---------------------------------------------------------------------------
 
-const { txSelect, txInsert } = vi.hoisted(() => ({
+const { txSelect, txInsert, emit } = vi.hoisted(() => ({
 	txSelect: vi.fn(),
-	txInsert: vi.fn()
+	txInsert: vi.fn(),
+	emit: vi.fn()
 }));
+
+vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit, on: vi.fn() } }));
 
 vi.mock('$lib/server/db', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('$lib/server/db')>();
@@ -16,7 +19,9 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 		db: {
 			select: txSelect,
 			insert: txInsert,
-			update: vi.fn()
+			update: vi.fn(),
+			// The compensating delete the post-insert race check makes.
+			delete: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) })
 		}
 	};
 });
@@ -35,6 +40,7 @@ import {
 	cancel,
 	cancelUnconfirmedReservations,
 	staffCreate,
+	createWaitlisted,
 	confirm,
 	markComplete,
 	markNoShow,
@@ -56,6 +62,20 @@ import type { SQL } from 'drizzle-orm';
 // rendered to actual SQL and asserted on rather than taken on faith.
 const dialect = new SQLiteSyncDialect();
 
+/**
+ * One `.where(...)` result that answers both shapes the service uses.
+ *
+ * A conflict scan awaits the `where` directly; the owner lookup `emitCreated`
+ * does chains `.limit(1)` off it first. A thenable with a `limit` method is both,
+ * which keeps these tests from having to count select calls in order.
+ */
+function whereResult(rows: unknown[], limited: unknown[] = [{ name: 'Ada', email: 'a@x.test' }]) {
+	return {
+		then: (resolve: (v: unknown) => unknown) => resolve(rows),
+		limit: vi.fn().mockResolvedValue(limited)
+	};
+}
+
 describe('ReservationService', () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
@@ -74,8 +94,9 @@ describe('ReservationService', () => {
 		it('creates a reservation when validation passes and no conflict', async () => {
 			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
 
-			// tx.select for conflict check — no conflicts
-			const txWhere = vi.fn().mockResolvedValue([]);
+			// tx.select for the conflict check and the post-insert race re-check —
+			// no conflicts — and for the owner lookup the created event needs.
+			const txWhere = vi.fn().mockReturnValue(whereResult([]));
 			const txFrom = vi.fn().mockReturnValue({ where: txWhere });
 			txSelect.mockReturnValue({ from: txFrom });
 
@@ -264,10 +285,28 @@ describe('ReservationService', () => {
 			const returning = vi.fn().mockResolvedValue([row]);
 			const values = vi.fn().mockReturnValue({ returning });
 			vi.mocked(db.insert).mockReturnValue({ values } as any);
+
+			// A desk booking announces itself too, and that costs an owner lookup.
+			const from = vi.fn().mockReturnValue({ where: () => whereResult([]) });
+			txSelect.mockReturnValue({ from });
 		}
 
+		// The row `.returning()` hands back is what the created event is built from,
+		// so it has to carry the columns that event reads — a bare {id, status}
+		// stub passes the assertion and then explodes formatting a null date.
+		const returnedRow = {
+			id: 'res-1',
+			status: 'confirmed',
+			bookerType: 'user',
+			createdByUserId: 'user-1',
+			createdByStaffId: 'staff-1',
+			recurringSeriesId: null,
+			startsAt: new Date('2025-07-15T17:00:00Z'),
+			endsAt: new Date('2025-07-15T19:00:00Z')
+		};
+
 		it('creates a reservation without validation or conflict check', async () => {
-			const mockRow = { id: 'res-1', status: 'confirmed' };
+			const mockRow = { ...returnedRow };
 			setupInsertMock(mockRow);
 
 			const result = await staffCreate({
@@ -283,7 +322,7 @@ describe('ReservationService', () => {
 		});
 
 		it('uses provided status', async () => {
-			const mockRow = { id: 'res-2', status: 'scheduled' };
+			const mockRow = { ...returnedRow, id: 'res-2', status: 'scheduled' };
 			setupInsertMock(mockRow);
 
 			const result = await staffCreate({
@@ -296,6 +335,103 @@ describe('ReservationService', () => {
 			});
 
 			expect(result.status).toBe('scheduled');
+		});
+	});
+
+	/**
+	 * `reservation.created` is what raises a first-timer's orientation shift, so
+	 * which calls emit it — and when — is behaviour, not plumbing.
+	 */
+	describe('reservation.created', () => {
+		const params = {
+			userId: 'user-1',
+			bookerType: 'user' as const,
+			bookerId: 'user-1',
+			startsAt: new Date('2025-07-15T17:00:00Z'),
+			endsAt: new Date('2025-07-15T19:00:00Z'),
+			notes: null
+		};
+
+		const row = {
+			id: 'res-1',
+			status: 'scheduled',
+			bookerType: 'user',
+			createdByUserId: 'user-1',
+			createdByStaffId: null,
+			recurringSeriesId: null,
+			startsAt: params.startsAt,
+			endsAt: params.endsAt
+		};
+
+		function insertReturns(r: Record<string, unknown>) {
+			const returning = vi.fn().mockResolvedValue([r]);
+			txInsert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning }) });
+		}
+
+		it('announces a booking that survived the race check', async () => {
+			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
+			txSelect.mockReturnValue({
+				from: () => ({ where: () => whereResult([]) })
+			});
+			insertReturns(row);
+
+			await create(params);
+
+			expect(emit).toHaveBeenCalledWith(
+				'reservation.created',
+				expect.objectContaining({
+					reservationId: 'res-1',
+					userId: 'user-1',
+					bookerType: 'user',
+					startsAt: params.startsAt.toISOString(),
+					endsAt: params.endsAt.toISOString(),
+					createdByStaffId: null
+				})
+			);
+		});
+
+		it('stays quiet about a booking the race check compensated away', async () => {
+			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
+			// Empty on the conflict scan, occupied on the re-check: the shape two
+			// concurrent bookings produce, where this one deletes itself.
+			const where = vi
+				.fn()
+				.mockReturnValueOnce(whereResult([]))
+				.mockReturnValueOnce(whereResult([{ id: 'other' }]));
+			txSelect.mockReturnValue({ from: () => ({ where }) });
+			vi.mocked(db.delete).mockReturnValue({
+				where: vi.fn().mockResolvedValue(undefined)
+			} as never);
+			insertReturns(row);
+
+			await expect(create(params)).rejects.toThrow(ReservationConflictError);
+			expect(emit).not.toHaveBeenCalled();
+		});
+
+		it('says nothing for a waitlisted booking, which is a queue position not a visit', async () => {
+			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
+			txSelect.mockReturnValue({ from: () => ({ where: () => whereResult([]) }) });
+			insertReturns({ ...row, status: 'waitlisted' });
+
+			await createWaitlisted(params);
+
+			expect(emit).not.toHaveBeenCalled();
+		});
+
+		it('announces a desk booking, because it is still that member’s first visit', async () => {
+			const returning = vi
+				.fn()
+				.mockResolvedValue([{ ...row, status: 'confirmed', createdByStaffId: 'staff-1' }]);
+			txInsert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning }) });
+			txSelect.mockReturnValue({ from: () => ({ where: () => whereResult([]) }) });
+
+			await staffCreate({ ...params, staffUserId: 'staff-1' });
+
+			expect(emit).toHaveBeenCalledWith(
+				'reservation.created',
+				// The owning member, not the staffer who typed it.
+				expect.objectContaining({ userId: 'user-1', createdByStaffId: 'staff-1' })
+			);
 		});
 	});
 

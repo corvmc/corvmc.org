@@ -28,6 +28,21 @@ export function registerListeners(): void {
 
 	// --- Waitlist promotion on cancellation ---
 	registerWaitlistListeners();
+
+	// --- A member's first booking raises an orientation shift ---
+	registerOrientationGroup();
+}
+
+/**
+ * Orientation lives in its own module rather than inline here, because both of
+ * its listeners are the same feature seen from two ends — a booking raises the
+ * shift, a cancellation stands it down — and splitting them across files is how
+ * the second one gets forgotten.
+ */
+async function registerOrientationGroup(): Promise<void> {
+	const { registerOrientationListeners } =
+		await import('$lib/server/volunteer/orientation-listener');
+	registerOrientationListeners();
 }
 
 // ---------------------------------------------------------------------------

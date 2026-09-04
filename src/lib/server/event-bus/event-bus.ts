@@ -49,6 +49,35 @@ export interface ReservationConfirmedEvent {
 	spaceName?: string;
 }
 
+/**
+ * A booking was made and survived the post-insert race check.
+ *
+ * Emitted from the service rather than the remotes because there are five ways
+ * to book — member, member-and-pay, instructor, band, and staff-on-behalf — and
+ * a sixth would be forgotten. The remote is the security boundary; this is a
+ * side effect, and side effects belong on the bus.
+ *
+ * `bookerType` rides along because it is the first thing every listener has to
+ * check: a band's rehearsal hold or a staff-created event hold is not somebody's
+ * first visit. `startsAt`/`endsAt` are ISO alongside the formatted trio so a
+ * listener that needs to do arithmetic does not have to re-read the row.
+ */
+export interface ReservationCreatedEvent {
+	reservationId: string;
+	/** The owning member — `created_by_user_id`, even when staff typed it in. */
+	userId: string;
+	userName: string;
+	userEmail: string;
+	date: string;
+	startTime: string;
+	endTime: string;
+	bookerType: 'user' | 'group' | 'event' | 'instructor';
+	startsAt: string;
+	endsAt: string;
+	createdByStaffId: string | null;
+	recurringSeriesId: string | null;
+}
+
 export interface ReservationCancelledEvent {
 	reservationId: string;
 	userId: string;
@@ -501,6 +530,7 @@ export interface VolunteerHoursReviewedEvent {
 
 export type DomainEvents = {
 	'checkout.completed': CheckoutCompletedEvent;
+	'reservation.created': ReservationCreatedEvent;
 	'reservation.confirmed': ReservationConfirmedEvent;
 	'reservation.cancelled': ReservationCancelledEvent;
 	'reservation.reminder_due': ReservationReminderDueEvent;

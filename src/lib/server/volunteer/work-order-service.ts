@@ -553,6 +553,17 @@ export async function resolveWorkOrder(
 		.where(eq(workOrder.id, id))
 		.returning();
 
+	// Staff closing an orientation by hand is the other way one gets finished.
+	// The cron path emits `volunteer.shift_completed` per signup and a listener
+	// picks it up there; this path emits nothing, because the shift's clock may
+	// never have run out. `completeOrientation` is `where completed_at is null`,
+	// so the two racing is a no-op rather than a rewrite of who ran it.
+	const { completeOrientation, orientationOwnerOf } = await import('./orientation-service');
+	const member = await orientationOwnerOf(id);
+	if (member) {
+		await completeOrientation(member, { completedByUserId: opts.resolvedByUserId });
+	}
+
 	return row;
 }
 
