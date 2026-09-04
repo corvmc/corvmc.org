@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ed9340c5-7c20-4501-abd2-d3c7c8149912",
+  "id": "cff62cca-96b4-45f6-8d1c-859d5b698d3c",
   "prevIds": [
-    "eee5e356-9fb6-4415-9346-d5605fce84e7"
+    "ed9340c5-7c20-4501-abd2-d3c7c8149912"
   ],
   "ddl": [
     {
@@ -212,6 +212,10 @@
     },
     {
       "name": "inbox_channel_config",
+      "entityType": "tables"
+    },
+    {
+      "name": "inbox_group_read",
       "entityType": "tables"
     },
     {
@@ -5588,6 +5592,56 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "inbox_group_read"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "thread_id",
+      "entityType": "columns",
+      "table": "inbox_group_read"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "inbox_group_read"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_read_at",
+      "entityType": "columns",
+      "table": "inbox_group_read"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "inbox_group_read"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "inbox_message"
     },
     {
@@ -5867,6 +5921,16 @@
       "default": null,
       "generated": null,
       "name": "channel",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
       "entityType": "columns",
       "table": "inbox_thread"
     },
@@ -10951,6 +11015,36 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_inbox_group_read_thread_id_inbox_thread_id_fk",
+      "entityType": "fks",
+      "table": "inbox_group_read"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_inbox_group_read_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "inbox_group_read"
+    },
+    {
+      "columns": [
+        "thread_id"
+      ],
+      "tableTo": "inbox_thread",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_inbox_message_thread_id_inbox_thread_id_fk",
       "entityType": "fks",
       "table": "inbox_message"
@@ -11044,6 +11138,21 @@
       "name": "fk_inbox_saved_view_user_id_user_id_fk",
       "entityType": "fks",
       "table": "inbox_saved_view"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_inbox_thread_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "inbox_thread"
     },
     {
       "columns": [
@@ -12606,6 +12715,15 @@
       "nameExplicit": false,
       "name": "inbox_channel_config_pk",
       "table": "inbox_channel_config",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "inbox_group_read_pk",
+      "table": "inbox_group_read",
       "entityType": "pks"
     },
     {
@@ -14532,6 +14650,38 @@
           "isExpression": false
         },
         {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_group_read_thread_user",
+      "entityType": "indexes",
+      "table": "inbox_group_read"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_group_read_user",
+      "entityType": "indexes",
+      "table": "inbox_group_read"
+    },
+    {
+      "columns": [
+        {
+          "value": "thread_id",
+          "isExpression": false
+        },
+        {
           "value": "created_at",
           "isExpression": false
         }
@@ -14756,6 +14906,28 @@
       "where": null,
       "origin": "manual",
       "name": "idx_inbox_thread_contact_ext",
+      "entityType": "indexes",
+      "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "last_message_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_thread_group",
       "entityType": "indexes",
       "table": "inbox_thread"
     },

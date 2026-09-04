@@ -5,7 +5,11 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { submitBandContactForm } from '$lib/remote/band-contact.remote';
-	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
+	import {
+		TURNSTILE_SITE_KEY,
+		TURNSTILE_RESPONSE_FIELD,
+		turnstileFailureMessage
+	} from '$lib/turnstile';
 
 	/**
 	 * The only route to an act from its public page.
@@ -21,6 +25,7 @@
 	let { slug, bandName }: { slug: string; bandName: string } = $props();
 
 	let submitted = $state(false);
+	let failure = $state<string | null>(null);
 	let resetTurnstile = $state<() => void>();
 
 	const rf = $derived(submitBandContactForm.for(slug));
@@ -34,7 +39,14 @@
 		<Form
 			remote={rf}
 			onsuccess={() => (submitted = true)}
-			onfailure={() => resetTurnstile?.()}
+			onfailure={(issues) => {
+				resetTurnstile?.();
+				// Passing `onfailure` at all suppresses Form's fallback toast, and
+				// the field that usually fails here — the Turnstile token — has no
+				// visible input to hang an error on. Without this line, Send does
+				// nothing whatsoever while the challenge is still loading.
+				failure = turnstileFailureMessage(issues);
+			}}
 			class="contact__form"
 		>
 			<input {...fields.slug.as('hidden', slug)} />
@@ -47,6 +59,9 @@
 				theme="auto"
 				bind:reset={resetTurnstile}
 			/>
+			{#if failure}
+				<p class="contact__error" role="alert">{failure}</p>
+			{/if}
 			<SubmitButton label="Send" />
 		</Form>
 	{/if}
@@ -56,6 +71,11 @@
 	.contact__done {
 		margin: 0;
 		font-size: 14px;
+	}
+	.contact__error {
+		margin: 0;
+		font-size: 14px;
+		color: var(--color-error, #b3261e);
 	}
 	:global(.contact__form) {
 		display: flex;

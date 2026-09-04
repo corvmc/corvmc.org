@@ -21,6 +21,7 @@ import { getStripeProductId } from '$lib/server/finance/product-config-service';
 import { destinationFor } from './connect-service';
 import { validateSplit } from '$lib/finance/audio-split';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { stripe } from '$lib/server/stripe';
 
 export class ReleaseNotForSaleError extends DomainError {
 	readonly httpStatus = 404;
@@ -33,6 +34,20 @@ export class BandCannotBePaidError extends DomainError {
 	readonly httpStatus = 409;
 	constructor() {
 		super('This band has not finished setting up payouts, so it cannot sell yet.');
+	}
+}
+
+export class PurchaseNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+	constructor() {
+		super('Purchase not found.');
+	}
+}
+
+export class PurchaseNotRefundableError extends DomainError {
+	readonly httpStatus = 400;
+	constructor(reason: string) {
+		super(reason);
 	}
 }
 
@@ -278,6 +293,80 @@ async function emitPurchased(rowId: string): Promise<void> {
 		platformFeeCents: row.purchase.platformFeeCents,
 		bandNetCents: row.purchase.bandNetCents
 	});
+}
+
+// ---------------------------------------------------------------------------
+// Refunds
+// ---------------------------------------------------------------------------
+
+/**
+ * Give the money back, on a Connect charge.
+ *
+ * **Not the `refund()` the rest of the finance module uses.** That one reports a
+ * refund against a Payment Record, which is the right shape when CMC keeps the
+ * money. Here it does not: the band was paid by a transfer out of the platform's
+ * balance at the moment of sale, so undoing the sale means undoing three things
+ * rather than one.
+ *
+ * - `reverse_transfer` claws the band's share back out of its connected account.
+ * - `refund_application_fee` returns the collective's cut, which is what makes
+ *   this a refund rather than CMC keeping its 10% of a sale that did not happen.
+ * - Without either flag the collective refunds a buyer **out of its own pocket**
+ *   while the band keeps its share — a silent, one-directional loss that nothing
+ *   would have reported.
+ *
+ * That is also why `stripe_payment_intent_id` is stored alongside the Payment
+ * Record id: reversing a transfer is an operation on the charge, not on the
+ * record that describes it.
+ *
+ * If the connected account has already paid out and its balance is short, Stripe
+ * makes it negative and recovers from the band's next sale. That is Stripe's
+ * behaviour and deliberately not worked around here — the alternative is CMC
+ * fronting the money and inventing a debt nothing tracks.
+ *
+ * Idempotent on status, so a double-click cannot refund twice. The download dies
+ * on its own: every read of a token is gated on `status = 'paid'`.
+ */
+export async function refundPurchase(purchaseId: string): Promise<void> {
+	const [row] = await db
+		.select({
+			id: releasePurchase.id,
+			status: releasePurchase.status,
+			amountPaidCents: releasePurchase.amountPaidCents,
+			paymentIntentId: releasePurchase.stripePaymentIntentId
+		})
+		.from(releasePurchase)
+		.where(eq(releasePurchase.purchaseId, purchaseId))
+		.limit(1);
+
+	if (!row) throw new PurchaseNotFoundError();
+	// Not an error. Two staff on the same row, or a retried request, should land
+	// on the same state rather than on a Stripe call that fails confusingly.
+	if (row.status === 'refunded') return;
+	if (row.status !== 'paid') {
+		throw new PurchaseNotRefundableError('Only a completed purchase can be refunded.');
+	}
+
+	// A free download never reached Stripe, so there is nothing to reverse — but
+	// revoking it is still meaningful, and the status flip below does that.
+	if (row.amountPaidCents > 0) {
+		if (!row.paymentIntentId) {
+			throw new PurchaseNotRefundableError(
+				'This purchase has no Stripe payment on file, so it cannot be refunded automatically.'
+			);
+		}
+
+		await stripe.refunds.create({
+			payment_intent: row.paymentIntentId,
+			refund_application_fee: true,
+			reverse_transfer: true
+		});
+	}
+
+	await db
+		.update(releasePurchase)
+		.set({ status: 'refunded', refundedAt: new Date() })
+		.where(eq(releasePurchase.id, row.id));
 }
 
 // ---------------------------------------------------------------------------

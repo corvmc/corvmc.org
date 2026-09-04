@@ -178,7 +178,9 @@ for you.
 6. **Buy it again with fee coverage ticked** and confirm the band receives the full amount.
 7. **Buy a free release** and confirm it never touches Stripe — no PaymentIntent, a `paid`
    row at $0, and a working download link.
-8. **Refund the paid purchase by hand** (see below) and confirm the transfer reverses.
+8. **Refund the paid purchase** from _Recent sales_ on `/staff/music` and confirm the
+   transfer reverses — the connected account's balance falls by the band's share, the
+   platform's by its cut, and the buyer's download link stops working.
 
 Only then turn `bandAudio` on. `cmcRadio` is a separate decision with a separate
 prerequisite — enough uploaded music for a rotation to sound like a station, which
@@ -186,32 +188,47 @@ prerequisite — enough uploaded music for a rotation to sound like a station, w
 
 ## 6. Refunds
 
-**Refunds are unbuilt.** There is no staff surface. Until there is, a refund is a
-hand-run Stripe call, and a Connect refund is not the Payment Records `report_refund` the
-rest of the app uses:
+There is a **Refund** button on each row of _Recent sales_ on `/staff/music`. It is
+staff-only and deliberately not self-serve: a refund moves money out of a _band's_
+account as well as the collective's, so somebody has to have read the request.
 
-```bash
-stripe refunds create \
-  --payment-intent pi_… \
-  --refund-application-fee \
-  --reverse-transfer
+What it does, in one Stripe call:
+
+```
+stripe.refunds.create({
+  payment_intent: pi_…,
+  reverse_transfer: true,        // claw the band's share back
+  refund_application_fee: true   // return the collective's cut
+})
 ```
 
-Both flags matter. `--reverse-transfer` claws the band's share back out of the connected
-account; `--refund-application-fee` returns CMC's cut. Without them the collective refunds
-a buyer out of its own pocket while the band keeps its share.
+**Both flags matter.** Without them the collective refunds a buyer out of its own
+pocket while the band keeps its share — a silent, one-directional loss that nothing
+would have reported. This is why `release_purchase.stripe_payment_intent_id` is stored
+alongside the Payment Record id: reversing a transfer is an operation on the charge, not
+on the record that describes it. It is also why this is **not** the `refund()` the rest of
+the finance module uses, which reports against a Payment Record and would leave the
+transfer standing.
 
-`release_purchase.stripe_payment_intent_id` is stored **alongside** the Payment Record id
-for exactly this reason — the PaymentIntent is what the command above needs. After
-refunding, set the row's status by hand:
+Things worth knowing before you press it:
 
-```bash
-wrangler d1 execute corvmc --remote --command \
-  "UPDATE release_purchase SET status = 'refunded' WHERE purchase_id = '…'"
-```
+- **The download stops working.** Every read of a download token is gated on
+  `status = 'paid'`, so the flip revokes access with no extra step. Files the buyer
+  already downloaded are theirs — that is not recoverable and never will be.
+- **A band that has already been paid out goes negative.** Stripe takes the reversal out
+  of the connected account's balance and, if it is short, recovers from the band's next
+  sale. That is Stripe's behaviour and is deliberately not worked around: the alternative
+  is CMC fronting the money and inventing a debt nothing tracks.
+- **It is idempotent.** A second press is a no-op, not a second refund.
+- **A free download can be revoked too.** Nothing was paid, so no money moves; the link
+  simply stops working. The confirmation says so.
+- **A paid row with no PaymentIntent is refused rather than revoked.** That combination is
+  a lost webhook, not a free download, and flipping the status would take the buyer's
+  files away while leaving their money with Stripe. Fix the webhook, then refund.
 
-Nothing revokes the download token. That is a deliberate limit of the current state, not an
-oversight to work around: a buyer who has already downloaded the files has them.
+Partial refunds are not offered. Nothing in the buying flow can produce a partial sale,
+and adding an amount field would mean reconciling three figures the split bar already
+settled. For one, use the Stripe dashboard and set the row's status by hand.
 
 ## 7. Triage
 

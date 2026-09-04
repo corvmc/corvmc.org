@@ -14,9 +14,10 @@ export async function getAllChannelConfigs(): Promise<ChannelConfigRow[]> {
 	const rows = await db.select().from(inboxChannelConfig);
 	const byChannel = new Map(rows.map((r) => [r.channel, r]));
 
-	// `staffInboxChannels`, not `inboxChannels`: `direct` is member↔member and has
-	// nothing staff can configure. Synthesising a row for it put a channel the
-	// settings page has no metadata for into this list.
+	// `staffInboxChannels`, not `inboxChannels`: `direct` is member↔member and
+	// `band` is an act's own booking queue. Neither has anything staff can
+	// configure, and synthesising a row for one puts a channel the settings page
+	// has no metadata for into this list.
 	return staffInboxChannels.map((ch) => {
 		const row = byChannel.get(ch);
 		return {

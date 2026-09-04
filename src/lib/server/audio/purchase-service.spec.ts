@@ -84,6 +84,9 @@ vi.mock('./connect-service', () => ({ destinationFor }));
 const emit = vi.fn(async () => {});
 vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit } }));
 
+const refundsCreate = vi.fn(async () => ({ id: 're_1' }));
+vi.mock('$lib/server/stripe', () => ({ stripe: { refunds: { create: refundsCreate } } }));
+
 const service = await import('./purchase-service');
 
 /** A published, $10, name-your-price release owned by a band with Stripe live. */
@@ -323,5 +326,86 @@ describe('sweepAbandonedPurchases', () => {
 	it('reports what it removed', async () => {
 		queue([{ id: 'a' }, { id: 'b' }]);
 		expect(await service.sweepAbandonedPurchases()).toBe(2);
+	});
+});
+
+describe('refundPurchase', () => {
+	/** A completed $10 sale: $8.47 transferred to the band, 94¢ kept. */
+	function paidSale(overrides: Row = {}) {
+		return [
+			{
+				id: 'row-1',
+				status: 'paid',
+				amountPaidCents: 1000,
+				paymentIntentId: 'pi_live',
+				...overrides
+			}
+		];
+	}
+
+	it('reverses the transfer and the application fee, not just the charge', async () => {
+		queue(paidSale());
+
+		await service.refundPurchase('p1');
+
+		// The whole point. Without `reverse_transfer` the band keeps its share and
+		// the collective refunds the buyer out of its own pocket; without
+		// `refund_application_fee` CMC keeps its cut of a sale that did not happen.
+		expect(refundsCreate).toHaveBeenCalledWith({
+			payment_intent: 'pi_live',
+			refund_application_fee: true,
+			reverse_transfer: true
+		});
+	});
+
+	it('marks the row refunded, which is what kills the download', async () => {
+		queue(paidSale());
+
+		await service.refundPurchase('p1');
+
+		expect(state.updates[0]).toMatchObject({ status: 'refunded' });
+		expect(state.updates[0].refundedAt).toBeInstanceOf(Date);
+	});
+
+	it('is idempotent, so a double-click cannot refund twice', async () => {
+		queue([{ id: 'row-1', status: 'refunded', amountPaidCents: 1000, paymentIntentId: 'pi_live' }]);
+
+		await service.refundPurchase('p1');
+
+		expect(refundsCreate).not.toHaveBeenCalled();
+		expect(state.updates).toHaveLength(0);
+	});
+
+	it('revokes a free download without calling Stripe', async () => {
+		// A $0 purchase never reached Stripe, so there is no charge to reverse —
+		// but revoking the link is still a thing staff need to be able to do.
+		queue(paidSale({ amountPaidCents: 0, paymentIntentId: null }));
+
+		await service.refundPurchase('p1');
+
+		expect(refundsCreate).not.toHaveBeenCalled();
+		expect(state.updates[0]).toMatchObject({ status: 'refunded' });
+	});
+
+	it('refuses a paid row with no PaymentIntent rather than silently revoking it', async () => {
+		// This is a lost webhook, not a free download. Flipping the status would
+		// take the buyer's files away while leaving their money with Stripe.
+		queue(paidSale({ paymentIntentId: null }));
+
+		await expect(service.refundPurchase('p1')).rejects.toThrow(/cannot be refunded automatically/);
+		expect(state.updates).toHaveLength(0);
+	});
+
+	it('refuses a pending purchase', async () => {
+		queue(paidSale({ status: 'pending' }));
+
+		await expect(service.refundPurchase('p1')).rejects.toThrow(/completed purchase/);
+		expect(refundsCreate).not.toHaveBeenCalled();
+	});
+
+	it('refuses a purchase that does not exist', async () => {
+		queue([]);
+
+		await expect(service.refundPurchase('nope')).rejects.toThrow(/not found/i);
 	});
 });
