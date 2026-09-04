@@ -134,8 +134,17 @@ test.describe('inbox awaiting reply', () => {
 			.toBe(before + 1);
 
 		// And back again, from the snooze menu.
+		//
+		// Asserting the menu opened before reaching into it, so that a menu which
+		// does not mount fails naming the menu rather than as a 60s
+		// `locator.click` timeout on an item inside it. That is how #507's
+		// `each_key_duplicate` surfaced here, and this test fails *destructively* —
+		// the marker is already cleared by this point, so its retries start from
+		// state the fixture never described and fail somewhere else entirely.
 		await page.getByRole('button', { name: /^Snooze/ }).click();
-		await page.getByRole('menuitem', { name: 'When they reply' }).click();
+		const whenTheyReply = page.getByRole('menuitem', { name: 'When they reply' });
+		await expect(whenTheyReply).toBeVisible();
+		await whenTheyReply.click();
 
 		await expect(page.getByRole('button', { name: 'Needs a reply' })).toBeVisible();
 		await expect

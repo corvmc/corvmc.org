@@ -14,6 +14,7 @@ import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-na
 
 export type BandNavKey =
 	| 'dashboard'
+	| 'messages'
 	| 'members'
 	| 'rider'
 	| 'announcements'
@@ -38,8 +39,12 @@ export interface BandNavInput {
 	features: { announcements?: boolean; bandAudio?: boolean };
 }
 
+/** Field names on `getBandLayout()`'s return. */
+export type BandNavBadgeKey = 'messagesUnread';
+
 export interface BandNavItem extends NavNode<BandNavKey> {
 	label: string;
+	badgeKey?: BandNavBadgeKey;
 	/**
 	 * Absolute, inside the panel. An `external` row's href leaves the origin and
 	 * is filled in by the layout, which is the only place that knows the band's
@@ -55,9 +60,24 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	const premium = input.tier === 'premium';
 
 	const items: BandNavItem[] = [
-		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }) },
-		{ key: 'members', label: 'Members', href: resolve('/band/[slug]/members', { slug }) }
+		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }) }
 	];
+
+	// Second, above Members, because it is the only row that can be waiting on
+	// somebody. Owner/admin like Press Kit and Edit Profile: answering an enquiry
+	// commits the act to a date and a price. A member who is not an admin sees no
+	// row, and `getBandConversations` refuses them anyway — the nav is not the
+	// guard, `requireGroupRole` is.
+	if (isOwnerOrAdmin) {
+		items.push({
+			key: 'messages',
+			label: 'Messages',
+			href: resolve('/band/[slug]/messages', { slug }),
+			badgeKey: 'messagesUnread'
+		});
+	}
+
+	items.push({ key: 'members', label: 'Members', href: resolve('/band/[slug]/members', { slug }) });
 
 	// Announcements used to sit here behind an `announcements` flag, whose comment
 	// said the fan-out behind Publish was unbuilt. It has been built since —

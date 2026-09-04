@@ -2,6 +2,7 @@ import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqli
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
+import { group } from './group';
 import {
 	inboxChannels,
 	inboxThreadStatuses,
@@ -49,6 +50,27 @@ export const inboxThread = sqliteTable(
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
 		channel: text('channel', { enum: inboxChannels }).notNull(),
+		/**
+		 * Whose inbox this thread belongs in. **Null means CorvMC**, which is every
+		 * thread that existed before band chat and every thread on every channel
+		 * the collective itself corresponds on.
+		 *
+		 * `channel` records how a message arrived; it never said whose queue the
+		 * conversation was in, because until now there was only one queue. This is
+		 * the owner column `docs/architecture/domain-model.md` argued for, in the
+		 * same nullable-owner shape `directory_entry` uses.
+		 *
+		 * Ownership and *participation* are two different questions and this is not
+		 * the answer to the second one — `inbox_participant.userId` is a user FK and
+		 * a group cannot be a participant. A band thread carries zero participant
+		 * rows, exactly like the outward channels, which is what keeps every query
+		 * in `direct-service.ts` and `portal-service.ts` correct without touching
+		 * them: who may read a band thread is resolved live from the roster by
+		 * `requireGroupRole`, so a new admin inherits the back catalogue and a
+		 * departing one loses it. The per-reader cursor that would otherwise have
+		 * lived on the participant row is `inbox_group_read` below.
+		 */
+		groupId: text('group_id').references(() => group.id, { onDelete: 'cascade' }),
 		status: text('status', { enum: inboxThreadStatuses }).notNull().default('open'),
 		subject: text('subject'),
 		preview: text('preview'),
@@ -113,7 +135,9 @@ export const inboxThread = sqliteTable(
 		index('idx_inbox_thread_last_message').on(t.lastMessageAt),
 		index('idx_inbox_thread_contact_email').on(t.contactEmail),
 		index('idx_inbox_thread_contact_phone').on(t.contactPhone),
-		index('idx_inbox_thread_contact_ext').on(t.channel, t.contactExternalId)
+		index('idx_inbox_thread_contact_ext').on(t.channel, t.contactExternalId),
+		// The band inbox's only list query: one group's threads, newest activity first.
+		index('idx_inbox_thread_group').on(t.groupId, t.status, t.lastMessageAt)
 	]
 );
 
@@ -207,6 +231,45 @@ export const inboxParticipant = sqliteTable(
 );
 
 /**
+ * How far one person has read a group-owned thread.
+ *
+ * The read cursor for `portal` and `direct` lives on `inbox_participant`, and
+ * for a band thread it cannot: participation there is the roster, resolved live,
+ * so there is no participant row to hang it on. Writing one anyway would be
+ * worse than a missing column — every member-side query in `direct-service.ts`
+ * and `portal-service.ts` finds its threads by joining `inbox_participant`, so a
+ * band thread with participant rows would surface in `/member/messages` for
+ * every admin who had ever opened it.
+ *
+ * Written lazily, on first open. Unread means `thread.lastMessageAt` is newer
+ * than `last_read_at`, or that there is no row at all — a thread nobody has
+ * opened is unread for everybody, which is the answer a LEFT JOIN gives for
+ * free.
+ */
+export const inboxGroupRead = sqliteTable(
+	'inbox_group_read',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		threadId: text('thread_id')
+			.notNull()
+			.references(() => inboxThread.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		lastReadAt: integer('last_read_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		uniqueIndex('idx_inbox_group_read_thread_user').on(t.threadId, t.userId),
+		index('idx_inbox_group_read_user').on(t.userId)
+	]
+);
+
+/**
  * Free-text labels on a conversation.
  *
  * Distinct from the inquiry type, which comes from the contact form's fixed
@@ -289,5 +352,6 @@ export type InboxThread = typeof inboxThread.$inferSelect;
 export type InboxMessage = typeof inboxMessage.$inferSelect;
 export type InboxNote = typeof inboxNote.$inferSelect;
 export type InboxParticipant = typeof inboxParticipant.$inferSelect;
+export type InboxGroupRead = typeof inboxGroupRead.$inferSelect;
 export type InboxSavedView = typeof inboxSavedView.$inferSelect;
 export type InboxThreadTag = typeof inboxThreadTag.$inferSelect;
