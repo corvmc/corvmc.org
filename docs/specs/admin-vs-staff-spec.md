@@ -355,6 +355,13 @@ occasional one. It requires infrastructure access, which is already a smaller ci
 it leaves a trail; and it needs no application code. The first draft left this open and said it
 needed an answer before shipping. This is the answer.
 
+**Written**: [operations-manual.md §2, "Break-glass: acting when no admin is
+reachable"](../architecture/operations-manual.md#break-glass-acting-when-no-admin-is-reachable)
+— granting and revoking a position by SQL, plus the two things that bite: the database is
+`corvmc-db` (querying `corvmc` returns `no such table` and reads like a finding about
+production), and the SQL path bypasses the last-admin guard that `updateUser` enforces, so
+count the remaining admins before deleting a row.
+
 ---
 
 ## Rejected alternatives
