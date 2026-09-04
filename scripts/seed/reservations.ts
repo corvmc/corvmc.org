@@ -73,7 +73,15 @@ export async function seedReservations(users: SeedUser[]): SeedReservation[] {
 					// rather than "Paid".
 					// A booking settled by credits or comped away was never *paid* —
 					// leaving `paidAt` null is what distinguishes those states.
-					paidAt: status === 'completed' && cashDueCents !== 0 ? startsAt : null
+					paidAt: status === 'completed' && cashDueCents !== 0 ? startsAt : null,
+					// Only `reservation/checkout-listener.ts` writes this in the running
+					// app, off the webhook — so without seeding it, no "paid online"
+					// reservation exists locally and every surface that keys on it
+					// renders as if nobody has ever paid for a room.
+					stripePaymentRecordId:
+						status === 'completed' && cashDueCents !== 0
+							? `pr_seed_${randomUUID().replace(/-/g, '').slice(0, 16)}`
+							: null
 				})
 				.returning();
 			rows.push(r);

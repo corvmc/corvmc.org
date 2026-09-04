@@ -169,9 +169,10 @@ For unpaid/abandoned items (e.g., checkout session expired before payment).
 1. Member clicks "Pay Ahead" on a reservation.
 2. The reservation module commits the member's free-hour credits (`commitReservationCredits`): e.g. 2 hours of credits against a 3-hour, $45 booking leaves a $15 remainder stored in `cashDueCents`.
 3. It calls `paymentService.checkout()` with a single "Practice Room Rental" line item for the $15 remainder and `eligibleCredits: []` (credits already committed).
-4. Member is redirected to Stripe Checkout, pays $15.
+4. Member lands on `/checkout/<session>` — **this app's own page** — and pays $15 on a Stripe Payment Element mounted there. `checkout()` was called with `uiMode: 'elements'`, so the session carries `return_url` rather than `success_url`/`cancel_url` and comes back with a `client_secret` instead of a `checkout.stripe.com` URL. Stripe still owns the line items, the discount, the currency and the payment methods; the card fields stay inside its iframe, so the PCI posture is unchanged (SAQ A).
 5. Stripe fires `checkout.session.completed`; the webhook emits `checkout.completed` on the domain bus.
 6. The reservation listener reads `reservation_id` from session metadata, sets `stripe_payment_record_id`/`paidAt`, and confirms the reservation.
+7. **The landing page may get there first.** Paying on Stripe's page, the redirect back took long enough that step 6 had all but always run; paying on ours, the member arrives in the same second they confirm. Each landing page therefore polls its own query on a bounded retry (ten attempts, two seconds apart) keyed on the domain fact the webhook writes — `paidAt` here, ticket `status` for tickets, the subscription snapshot for membership, `tier` for band premium.
 
 ### Fully covered by credits
 
@@ -298,12 +299,72 @@ Each product is tagged `metadata.corvmc_key` so the service reuses it instead of
 
 ---
 
+## Testing
+
+This spec had no testing section at all for the first year of its life, and the gap was not
+cosmetic. Every card payment ended in a redirect to `checkout.stripe.com`, which no test can
+follow, so `e2e/reservation-pay.e2e.ts` treated _"a non-JSON 303 toward Stripe"_ as a pass and
+`e2e/ticket-purchase.e2e.ts` stopped at the button with the comment "the next step is Stripe
+Checkout". **Nothing anywhere tested a completed payment round trip.**
+
+### The driver seam
+
+`src/lib/server/finance/gateway/` holds a narrow `PaymentGateway` port, `Pick`ed member by member
+off Stripe's own resource types, with two implementations: `stripe-gateway.ts` (a real client, which
+satisfies the port structurally) and `fake-gateway.ts` (in-memory, state living for the life of the
+worker isolate). `PAYMENTS_DRIVER` picks between them and defaults to **`fake`** — production opts
+in through `wrangler.toml`. That default is also a safety property: a developer `.env` in this
+project has historically carried a live `rk_live` key.
+
+A fake is the vendor-recommended approach here, not a compromise.
+[Stripe's own guidance](https://docs.stripe.com/automated-testing) is that the Payment Element and
+Checkout "have security measures in place that prevent automated testing", and recommends returning
+simulated objects rather than calling Stripe.js and the API from a suite. `stripe-mock` does not
+help: it is stateless by design, so a session created on one request is not there to be retrieved
+on the next, which is what every flow here needs.
+
+### What runs where
+
+| Layer       | File                                                                                                                           | What it proves                                                                                                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract    | `gateway/gateway.contract.spec.ts`                                                                                             | One suite run against **both** implementations. The structural sweep walks every resource the port declares; the behavioural cases pin the invariants `payment-service` and the checkout listeners depend on. The compiler covers the signatures. |
+| Service     | `payment-service.spec.ts`, `subscription-service.spec.ts`, `billing-service.spec.ts`, `band/band-subscription-service.spec.ts` | Exact session params both ways round — that `elements` sends `return_url` and no `success_url`/`cancel_url`, that a destination charge survives it, that credits and coupons are reversed when session creation fails.                            |
+| Fulfillment | `webhook.spec.ts`, the three `checkout-listener.spec.ts`                                                                       | The translation from a Stripe session into domain events, driven with hand-built session literals.                                                                                                                                                |
+| End to end  | `e2e/ticket-purchase.e2e.ts`, `e2e/reservation-pay.e2e.ts`, `e2e/membership-billing.e2e.ts`                                    | Cart → credits → coupon → session → payment → webhook → ticket `valid` / reservation `confirmed`, and the card-on-file round trip. With no network.                                                                                               |
+
+E2E read-backs go through `readLocalDb` (read-only) in `e2e/fixtures/platform-db.ts`. A test must
+never write to the database directly — the row it would write is the thing under test.
+
+### What the fake cannot reach, and what to do about it
+
+- **`confirmSetup` and `confirm` in the browser.** Under `fake` the checkout page and the add-card
+  modal render a card-number form and complete server-side; Stripe.js never loads. The real branch
+  needs a **sandbox** key (`stripe sandbox create`) and a manual pass.
+- **Wallets.** Apple Pay, Google Pay and Link come from the Payment Element by default. Link is
+  reachable in a browser; Apple and Google Pay need a real device and a registered domain.
+- **The success-page polling.** The fake fulfils synchronously, so the "confirming your payment…"
+  branch on the four landing pages is reviewed rather than tested.
+- **Behavioural drift from a Stripe API-version bump.** `apiVersion` is pinned in
+  `stripe-gateway.ts` to the version the SDK's types were generated from, and the committed
+  fixtures are typed, so _shape_ drift turns `pnpm check` red. Behavioural drift is uncovered, by
+  decision — no scheduled job exercises the real Stripe path. Revisit if a Stripe-side surprise
+  ever reaches production.
+
+### Seeded data
+
+`scripts/seed/*` writes placeholder `cus_seed_…` customer ids, and the fake gateway materialises a
+card and six months of invoices for that prefix — otherwise every billing surface renders empty for
+a seeded member. A spec that means to start from nothing chooses a customer id outside the prefix,
+which `e2e/fixtures/seed-membership-billing.ts` does and says so.
+
+---
+
 ## Deferred
 
 - **Caching Stripe Product/Price data locally.** Currently fetched from the API each checkout. Add webhook-driven cache if latency or API rate limits become an issue.
 - **Promo codes / one-off discounts.** Stripe has native promotion codes. Could layer these on top of credit coupons, but not needed for launch.
 - **Multi-item checkout.** Current design is one purchasable per Checkout Session. Bundling multiple items (e.g., reservation + equipment loan) into one session would need a way to split the Payment Record across purchasables. Deferred because the use case is uncommon.
-- **Detailed receipt customization.** Stripe Checkout generates receipts automatically. Custom receipt templates can be added later via Stripe's receipt settings or a custom email.
+- **Detailed receipt customization.** Tickets and record sales get a Postmark receipt; reservations and membership rely on Stripe's automatic ones. Bringing checkout in-house was the moment to decide whether Postmark takes over all of them, and the decision was to leave Stripe's on — so this stays deferred, now deliberately rather than by omission.
 
 ---
 

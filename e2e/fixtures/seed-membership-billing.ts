@@ -20,7 +20,11 @@ import { scryptHash } from './seed-pay-reservation';
 export const SEED_BILLING_EMAIL = 'e2e.billing@example.com';
 export const SEED_BILLING_PASSWORD = 'e2e-password-123';
 export const SEED_BILLING_USER_ID = 'e2e-billing-user';
-export const SEED_BILLING_CUSTOMER_ID = 'cus_seed_e2ebilling';
+// Deliberately NOT `cus_seed_…`: the fake gateway materialises a card and six
+// months of invoices for that prefix so the dev seed's members have something
+// to look at. This spec is about the round trip that puts the first card there,
+// so it needs a customer with nothing on it.
+export const SEED_BILLING_CUSTOMER_ID = 'cus_e2e_billing';
 
 export async function seedMembershipBilling(): Promise<void> {
 	await withPlatformDb(async (db) => {
