@@ -13,9 +13,8 @@
 	 * this again — and the answer is sometimes a condition rather than a day.
 	 */
 	import { DropdownMenu } from 'bits-ui';
-	import { addDays, format, nextMonday } from 'date-fns';
 	import { IconAlarmSnooze, IconCalendar, IconSend } from '@tabler/icons-svelte';
-	import { formatDate } from '$lib/utils/format';
+	import { snoozePresets } from './snooze-presets';
 
 	let {
 		open = $bindable(false),
@@ -36,19 +35,7 @@
 		children: import('svelte').Snippet<[{ props: Record<string, unknown> }]>;
 	} = $props();
 
-	const presets = $derived.by(() => {
-		const now = new Date();
-		return [
-			{ label: 'Tomorrow', date: addDays(now, 1) },
-			{ label: 'Later this week', date: addDays(now, 3) },
-			{ label: 'Next week', date: nextMonday(now) },
-			{ label: 'In two weeks', date: addDays(now, 14) }
-		].map(({ label, date }) => ({
-			label,
-			when: formatDate(date),
-			value: format(date, 'yyyy-MM-dd')
-		}));
-	});
+	const presets = $derived.by(() => snoozePresets(new Date()));
 
 	// The custom date lives in the menu rather than behind a second modal: it is
 	// one more option in the same list, and pushing it into a dialog made the
@@ -70,7 +57,7 @@
 		>
 			<p class="px-3 pt-1 pb-2 text-subtle text-xs">Snooze until</p>
 
-			{#each presets as preset (preset.value)}
+			{#each presets as preset (preset.label)}
 				<DropdownMenu.Item class={itemClass} onSelect={() => onpick(preset.value)}>
 					<span class="flex items-center gap-2"><IconAlarmSnooze size={15} />{preset.label}</span>
 					<span class="text-subtle text-xs">{preset.when}</span>

@@ -34,6 +34,8 @@ import { PAST_SHOWS_PAGE_SIZE } from '$lib/types/calendar';
 import { update as updateBandBasics } from '$lib/server/band/band-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { resolveImageUrl } from '$lib/server/storage';
+import { isFeatureEnabled } from '$lib/server/feature-flags';
+import { listPublishedReleasesForBand } from '$lib/server/audio/audio-service';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { listFor as listMediaFor } from '$lib/server/media/media-service';
 import { publicPressKit } from '$lib/server/band/press-kit';
@@ -392,6 +394,20 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			user.name
 		);
 
+	/**
+	 * The band's published records, folded into this query rather than fetched
+	 * separately: the page already chains one follow-up for shows, and
+	 * `custom/no-concurrent-remote-queries` is there because past kit 2.64 a
+	 * second await beside the first renders the error boundary instead of the
+	 * page.
+	 *
+	 * `isFeatureEnabled` rather than `requireFeature` — a switched-off storefront
+	 * must leave the profile rendering, just without a discography.
+	 */
+	const releases = (await isFeatureEnabled('bandAudio'))
+		? await listPublishedReleasesForBand(row.id)
+		: [];
+
 	return {
 		band: {
 			id: row.id,
@@ -405,6 +421,7 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			memberCount: row.memberCount,
 			genres: genres.map((r) => r.value),
 			lookingForMembers: row.lookingFor === 'members',
+			releases,
 			links: (row.links as ProfileLink[] | null) ?? [],
 			// `publicPressKit`, never the raw column. A band's booking, management
 			// and press contacts, its phone numbers, its rider, stage plot and

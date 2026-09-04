@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
+		IconReceipt,
 		IconLayoutDashboard,
 		IconStar,
 		IconCalendarEvent,
@@ -57,6 +58,7 @@
 		events: IconCalendarEvent,
 		'events-submit': IconPlus,
 		directory: IconAddressBook,
+		purchases: IconReceipt,
 		// Matches the staff panel's Inventory glyph, so the same thing looks the
 		// same on both sides.
 		equipment: IconTool,
@@ -168,6 +170,7 @@
 			panel="member"
 			userId={layout.user.id}
 			isStaff={layout.isStaff}
+			capabilities={layout.capabilities}
 			bands={layout.userBands}
 		>
 			{@render children()}

@@ -572,6 +572,30 @@ minimize _maintained_ code, not just initial build effort. Lean on Stripe, Postm
 Cloudflare primitives rather than re-creating vendor features in app code. When adding a
 dependency, note it in `IDEAS.md`'s library table if it's broadly useful.
 
+### Patched dependencies
+
+`pnpm.patchedDependencies` in `package.json`, sources in `patches/`. Two of them:
+
+- **`yargs@17.7.2`** — drops `"type": "module"` so its CJS entry resolves.
+- **`svelte@5.57.0`** — a two-line fix in `Boundary#resolve`
+  (`src/internal/client/dom/blocks/boundary.js`). Under `experimental.async`, a
+  `<svelte:boundary>` with a `pending` snippet parks `$effect`s created while it is pending, then
+  hands them back to the `Batch` that `increment_pending()` captured when the awaited work
+  started. If that batch was merged into another and discarded in the meantime, the effects land
+  in an unlinked batch — and `Batch#decrement` refuses to flush one, so they never run again. The
+  patch transfers them to a live batch instead.
+
+  Observed as the create-band modal dying after a client-side navigation into `/member/bands`
+  during the turbulent post-login window: `bits-ui`'s `Dialog.Portal` mounts itself from a
+  `$effect`, so a stranded effect means no dialog in the DOM at all, permanently — the button is
+  dead for the life of the page, and a second click does nothing either. ~10% of runs, in CI and
+  locally. `e2e/create-band-modal.e2e.ts` is the regression test; it went from 2/20 failures to
+  40/40 clean with the patch. Nothing in page code triggers or avoids it, so the fix has to be
+  here.
+
+  A `pnpm install` after a Svelte bump will fail loudly if the patch stops applying. When it does,
+  check whether upstream has fixed it before re-rolling the patch.
+
 ### Analytics and reporting tools
 
 Which vendor owns which question, so this is not re-litigated per feature. The governing rule

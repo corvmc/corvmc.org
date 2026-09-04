@@ -45,6 +45,8 @@ export const tableOrder = [
 	'media_attachment',
 	'campaign',
 	'audience',
+	// Since band chat it also references `group` (nullable owner, null = CorvMC),
+	// which is already well above this line.
 	'inbox_thread',
 	'help_categories',
 	'subscriber',
@@ -117,6 +119,8 @@ export const tableOrder = [
 	'inbox_message',
 	'inbox_note',
 	'inbox_participant',
+	// The band inbox's per-reader cursor: child of inbox_thread and user.
+	'inbox_group_read',
 	'inbox_thread_tag',
 	// Per-user saved queue filters. After user, like every other row keyed to a
 	// person, and unrelated to inbox_thread — it stores filters, not threads.
@@ -134,7 +138,16 @@ export const tableOrder = [
 	'volunteer_role_interest',
 	'volunteer_shift_feedback',
 	'member_certification',
-	'volunteer_role_certification'
+	'volunteer_role_certification',
+	// A band's Stripe Connect account. Child of group, parent of nothing.
+	'band_stripe_account',
+	// The audio chain, and it is a chain: release → track → radio_play, each
+	// referencing the one above it, so these four keep their relative order.
+	'audio_release',
+	'audio_track',
+	'radio_play',
+	// References audio_release and user, so it clears before either.
+	'release_purchase'
 ];
 
 /**

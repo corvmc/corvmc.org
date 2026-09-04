@@ -16,71 +16,57 @@ import { BAND_THEMES } from '../../../types/band-page';
 // Zod schemas for validation
 // ---------------------------------------------------------------------------
 
+/**
+ * What every block carries regardless of type — the mirror of `BlockBase` in
+ * `$lib/types/band-page`. `hidden` is the page editor's visibility toggle;
+ * absent means visible.
+ */
+const blockBase = {
+	id: z.string(),
+	cssClass: z.string().optional(),
+	hidden: z.boolean().optional()
+};
+
 export const blockSchema = z.discriminatedUnion('type', [
 	z.object({
-		id: z.string(),
+		...blockBase,
 		type: z.literal('hero'),
 		imageKey: z.string(),
 		headline: z.string().optional(),
-		subtitle: z.string().optional(),
-		cssClass: z.string().optional()
+		subtitle: z.string().optional()
 	}),
+	z.object({ ...blockBase, type: z.literal('bio'), content: z.string().max(10000) }),
 	z.object({
-		id: z.string(),
-		type: z.literal('bio'),
-		content: z.string().max(10000),
-		cssClass: z.string().optional()
-	}),
-	z.object({
-		id: z.string(),
+		...blockBase,
 		type: z.literal('links'),
-		style: z.enum(['buttons', 'icons', 'list']),
-		cssClass: z.string().optional()
+		style: z.enum(['buttons', 'icons', 'list'])
 	}),
+	z.object({ ...blockBase, type: z.literal('members'), showPositions: z.boolean() }),
 	z.object({
-		id: z.string(),
-		type: z.literal('members'),
-		showPositions: z.boolean(),
-		cssClass: z.string().optional()
-	}),
-	z.object({
-		id: z.string(),
+		...blockBase,
 		type: z.literal('events'),
 		limit: z.number().optional(),
-		showPast: z.boolean().optional(),
-		cssClass: z.string().optional()
+		showPast: z.boolean().optional()
 	}),
 	z.object({
-		id: z.string(),
+		...blockBase,
 		type: z.literal('gallery'),
 		imageKeys: z.array(z.string()),
-		downloadable: z.boolean().optional(),
-		cssClass: z.string().optional()
+		downloadable: z.boolean().optional()
 	}),
 	z.object({
-		id: z.string(),
+		...blockBase,
 		type: z.literal('embed'),
 		platform: z.string(),
-		url: z.string().url(),
-		cssClass: z.string().optional()
+		url: z.string().url()
 	}),
-	z.object({ id: z.string(), type: z.literal('press'), cssClass: z.string().optional() }),
-	z.object({ id: z.string(), type: z.literal('achievements'), cssClass: z.string().optional() }),
+	z.object({ ...blockBase, type: z.literal('press') }),
+	z.object({ ...blockBase, type: z.literal('achievements') }),
+	z.object({ ...blockBase, type: z.literal('contact'), showForm: z.boolean().optional() }),
+	z.object({ ...blockBase, type: z.literal('tech_rider') }),
+	z.object({ ...blockBase, type: z.literal('custom_html'), content: z.string().max(50000) }),
 	z.object({
-		id: z.string(),
-		type: z.literal('contact'),
-		showForm: z.boolean().optional(),
-		cssClass: z.string().optional()
-	}),
-	z.object({ id: z.string(), type: z.literal('tech_rider'), cssClass: z.string().optional() }),
-	z.object({
-		id: z.string(),
-		type: z.literal('custom_html'),
-		content: z.string().max(50000),
-		cssClass: z.string().optional()
-	}),
-	z.object({
-		id: z.string(),
+		...blockBase,
 		type: z.literal('merch'),
 		items: z
 			.array(
@@ -91,15 +77,9 @@ export const blockSchema = z.discriminatedUnion('type', [
 					price: z.string().optional()
 				})
 			)
-			.max(50),
-		cssClass: z.string().optional()
+			.max(50)
 	}),
-	z.object({
-		id: z.string(),
-		type: z.literal('spacer'),
-		height: z.enum(['sm', 'md', 'lg']),
-		cssClass: z.string().optional()
-	})
+	z.object({ ...blockBase, type: z.literal('spacer'), height: z.enum(['sm', 'md', 'lg']) })
 ]);
 
 export const bandPageConfigSchema = z.object({

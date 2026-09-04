@@ -173,7 +173,7 @@
 						</li>
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>
-							Block editor with drag-and-drop page building
+							A page that arrives already built — reorder its blocks and hide what you don't need
 						</li>
 						<li class="flex items-start gap-2">
 							<span class="text-success">&#10003;</span>

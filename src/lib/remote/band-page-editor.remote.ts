@@ -2,13 +2,13 @@ import { z } from 'zod';
 import { jsonArrayField } from '$lib/utils/zod-json';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
-import { requireFeature } from '$lib/server/feature-flags';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
 import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
 import { db } from '$lib/server/db';
 import { blockSchema, type Block } from '$lib/server/db/schema/band-page';
 import { bandSite } from '$lib/server/db/schema/band-site';
+import { reconcileBlocks } from '$lib/utils/band-site-preset';
 import { eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -16,7 +16,6 @@ import { eq } from 'drizzle-orm';
 // ---------------------------------------------------------------------------
 
 export const getBandPageEditor = query(z.string(), async (slug) => {
-	await requireFeature('bandPremium');
 	// `requireUser()` alone served any premium band's theme, custom CSS, blocks
 	// and — the part that actually matters — its `epk`, the band's private press
 	// kit, to any signed-in account that knew a slug. The blocks are semi-public
@@ -31,12 +30,16 @@ export const getBandPageEditor = query(z.string(), async (slug) => {
 	// exists, so there is nothing to create here.
 	const [config] = await db.select().from(bandSite).where(eq(bandSite.groupId, band.id)).limit(1);
 
+	// The editor opens on the full catalogue rather than an empty canvas. The
+	// preset is projected here rather than written at upgrade time — see
+	// `$lib/utils/band-site-preset` for why — so the column only gains it when
+	// the band saves.
 	return {
 		config: config
 			? {
 					theme: config.theme,
 					customCss: config.customCss,
-					blocks: config.blocks as Block[],
+					blocks: reconcileBlocks(config.blocks as Block[]),
 					epk: config.epk
 				}
 			: null

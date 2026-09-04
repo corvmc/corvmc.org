@@ -6,13 +6,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // client secret and refresh token — shipped without a requireStaff() guard.
 // These tests pin that every staff-only query/form/command in settings.remote
 // rejects before touching config or Stripe/lock services when the caller is
-// not staff, and that the two genuinely public queries stay public.
+// not permitted, and that the three genuinely public queries stay public.
+//
+// Now that guards name a capability, each entry also pins WHICH one — a
+// stronger assertion than "is guarded", and the one that catches a read
+// handler silently acquiring write authority.
 
-const requireStaff = vi.fn<() => Promise<unknown>>(async () => {
+const requireCapability = vi.fn<(cap: string) => Promise<unknown>>(async () => {
 	throw new Error('403: Staff access required');
 });
 vi.mock('$lib/server/authorization', () => ({
-	requireStaff: (...args: unknown[]) => requireStaff(...(args as []))
+	requireCapability: (...args: unknown[]) => requireCapability(...(args as [string]))
 }));
 
 const getConfigsByPrefix = vi.fn(async (prefix: string) => {
@@ -99,33 +103,37 @@ const settings = (await import('./settings.remote')) as unknown as Record<
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	requireStaff.mockRejectedValue(new Error('403: Staff access required'));
+	requireCapability.mockRejectedValue(new Error('403: Staff access required'));
 	// query results carry a .refresh() used by the forms after a successful write
 	for (const fn of Object.values(settings)) {
 		if (typeof fn === 'function') fn.refresh = () => undefined;
 	}
 });
 
-const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
-	{ name: 'getProducts' },
-	{ name: 'getReservationSettings' },
-	{ name: 'getOrgSettings' },
-	{ name: 'getVolunteerValueSettings' },
-	{ name: 'getVenueSettings' },
-	{ name: 'getIntegrationSettings' },
-	{ name: 'getStaffSettingsPage' },
-	{ name: 'testUtecConnection' },
-	{ name: 'runLockSelfTest' },
-	{ name: 'revokeLockTest' },
-	{ name: 'getFeatureFlags' },
-	{ name: 'syncSubscriptions' },
-	{ name: 'refreshCommunityStats' },
+const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
+	{ name: 'getProducts', cap: 'settings.read' },
+	{ name: 'getReservationSettings', cap: 'settings.read' },
+	{ name: 'getOrgSettings', cap: 'settings.read' },
+	{ name: 'getVolunteerValueSettings', cap: 'settings.read' },
+	{ name: 'getVenueSettings', cap: 'settings.read' },
+	{ name: 'getIntegrationSettings', cap: 'settings.read' },
+	{ name: 'getStaffSettingsPage', cap: 'settings.read' },
+	{ name: 'testUtecConnection', cap: 'settings.read' },
+	// Not reads: each has a real-world effect. runLockSelfTest issues a working
+	// door code, revokeLockTest withdraws one, and the other two reach Stripe.
+	{ name: 'runLockSelfTest', cap: 'settings.update' },
+	{ name: 'revokeLockTest', cap: 'settings.update' },
+	{ name: 'getFeatureFlags', cap: 'settings.read' },
+	{ name: 'syncSubscriptions', cap: 'settings.update' },
+	{ name: 'refreshCommunityStats', cap: 'settings.update' },
 	{
 		name: 'updateProduct',
+		cap: 'settings.update',
 		args: [{ key: 'contribution', name: 'x', description: '', unitAmountCents: '100' }]
 	},
 	{
 		name: 'updateReservationSettings',
+		cap: 'settings.update',
 		args: [
 			{
 				operatingHoursStart: '09:00',
@@ -143,19 +151,26 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	},
 	{
 		name: 'updateOrgSettings',
+		cap: 'settings.update',
 		args: [{ name: 'CMC', shortName: 'CMC', contactEmail: 'a@b.co', timezone: 'UTC' }]
 	},
 	// Guarded all along, but unlisted here until the completeness check below
 	// went looking — so the form that flips any feature flag had no test
 	// pinning that it rejects a non-staff caller.
-	{ name: 'updateFeatureFlag', args: [{ flag: 'bandPremium', enabled: true }] },
+	{
+		name: 'updateFeatureFlag',
+		cap: 'settings.update',
+		args: [{ flag: 'directMessages', enabled: true }]
+	},
 	{
 		name: 'updateVolunteerValueSettings',
+		cap: 'settings.update',
 		args: [{ hourValueCents: 3766, hourValueSource: 'Independent Sector, Oregon, 2025' }]
 	},
-	{ name: 'updateVenueSettings', args: [{ consoleChannels: 16 }] },
+	{ name: 'updateVenueSettings', cap: 'settings.update', args: [{ consoleChannels: 16 }] },
 	{
 		name: 'updateIntegrationSettings',
+		cap: 'settings.update',
 		args: [{ clientId: '', clientSecret: '', deviceId: '', refreshToken: '' }]
 	}
 ];
@@ -167,9 +182,13 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 const PUBLIC = ['getSocialLinks', 'getOrgAddress', 'getFooterInfo'];
 
 describe('settings.remote staff guards', () => {
-	for (const { name, args = [] } of STAFF_ONLY) {
-		it(`${name} rejects non-staff callers before doing any work`, async () => {
+	for (const { name, cap, args = [] } of STAFF_ONLY) {
+		it(`${name} requires ${cap} before doing any work`, async () => {
 			await expect(settings[name](...args)).rejects.toThrow('Staff access required');
+			// The capability it names, not merely that it named one: a read
+			// handler asking for settings.update would hand every reader write
+			// authority the day staff is narrowed.
+			expect(requireCapability).toHaveBeenCalledWith(cap);
 			// Nothing sensitive was read or written on the failed call.
 			expect(getConfigsByPrefix).not.toHaveBeenCalled();
 			expect(updateSiteConfigs).not.toHaveBeenCalled();
@@ -178,10 +197,10 @@ describe('settings.remote staff guards', () => {
 		});
 	}
 
-	it('getIntegrationSettings returns lock credentials only once staff', async () => {
-		requireStaff.mockResolvedValue(undefined);
+	it('getIntegrationSettings returns lock credentials only once permitted', async () => {
+		requireCapability.mockResolvedValue(undefined);
 		const result = await settings.getIntegrationSettings();
-		expect(requireStaff).toHaveBeenCalled();
+		expect(requireCapability).toHaveBeenCalledWith('settings.read');
 		expect(result).toEqual({
 			clientId: 'utec-client',
 			clientSecret: 'utec-secret',
@@ -194,7 +213,7 @@ describe('settings.remote staff guards', () => {
 		await settings.getSocialLinks();
 		await settings.getOrgAddress();
 		await settings.getFooterInfo();
-		expect(requireStaff).not.toHaveBeenCalled();
+		expect(requireCapability).not.toHaveBeenCalled();
 	});
 
 	it('getFooterInfo reads the org config once and shapes both halves', async () => {

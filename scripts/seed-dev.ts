@@ -55,6 +55,7 @@ import { seedEquipment, seedItemArticles } from './seed/equipment';
 import { seedHelp } from './seed/help';
 import { seedInbox } from './seed/inbox';
 import { seedDirectMessages } from './seed/direct-messages';
+import { seedBandEnquiries } from './seed/band-enquiries';
 import { seedContentFlags } from './seed/content-flags';
 import { seedContractors } from './seed/contractors';
 import { seedDutyLists } from './seed/duty-lists';
@@ -70,6 +71,7 @@ import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
 import { seedSuggestions } from './seed/suggestions';
 import { seedProjects } from './seed/projects';
+import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
 
 async function main() {
@@ -132,6 +134,7 @@ async function main() {
 	const contractors = await seedContractors(adminUser.id);
 	const inbox = await seedInbox(adminUser, users[0]);
 	const directMessages = await seedDirectMessages(users, adminUser);
+	const bandEnquiries = await seedBandEnquiries(bands, allUsers);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
 	// Profiles first, and everything downstream is seeded against the members who
@@ -161,6 +164,10 @@ async function main() {
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
+	// Needs the bands and somebody to have bought something. Writes real audio
+	// into the local private bucket, so it is the one seeder that does I/O
+	// outside D1 — see its header for why rows alone are not enough.
+	const audio = await seedAudio(bands, allUsers);
 	// After the bands and their rosters: a rider is owned corner by corner, so it
 	// reads the roster back rather than being handed one.
 	const riders = await seedRiders(roles);
@@ -218,6 +225,9 @@ async function main() {
 	console.log(`  ${directoryPersonas.users} directory matching demo personas`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(
+		`  ${bandEnquiries.threads} band booking enquiries, ${bandEnquiries.messages} messages`
+	);
+	console.log(
 		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings, 1 member-set messaging preference`
 	);
 	console.log(`  ${flags.length} content flags`);
@@ -234,6 +244,11 @@ async function main() {
 	);
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
+	);
+	console.log(
+		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +
+			`${audio.purchases} sales, ${audio.accounts} band Stripe accounts, ` +
+			`${audio.radioEntries} radio entries`
 	);
 	console.log(
 		`  ${riders.riders} tech riders — ${riders.structuredBand ?? '—'} (fits the room), ${riders.oversizedBand ?? '—'} (over it); ${riders.uploadBand ?? '—'} uploaded a PDF; ${riders.emptyBand ?? '—'} has nothing`

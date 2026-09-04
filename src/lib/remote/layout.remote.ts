@@ -3,11 +3,12 @@ import { error, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
-import { hasAnyRole } from '$lib/server/authorization';
+import { capabilitySet, isElevated, positionsFor } from '$lib/server/authorization';
 import { hasLoanableItems } from '$lib/server/inventory/item-service';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
 import { countPortalUnread } from '$lib/server/inbox/portal-service';
+import { countBandUnread } from '$lib/server/inbox/band-service';
 import { countDirectUnread, countPendingRequests } from '$lib/server/inbox/direct-service';
 import { countVolunteerWorkWaiting } from '$lib/server/volunteer/volunteer-signup-service';
 import { countPendingSubmissions } from '$lib/server/event/community-event-service';
@@ -54,7 +55,7 @@ export const getMemberLayout = query(async () => {
 
 	const [
 		userBands,
-		isStaff,
+		positions,
 		features,
 		portalUnread,
 		directUnread,
@@ -66,7 +67,7 @@ export const getMemberLayout = query(async () => {
 		// group. The groups module is built but not launched, so the nav entry and
 		// this round trip both went with it — relaunching restores both together.
 		// See docs/plans/feature-flag-retirement.md.
-		hasAnyRole(user.id, ['admin', 'staff']),
+		positionsFor(user.id),
 		getAllFeatureFlags(),
 		countPortalUnread(user.id).catch(() => 0),
 		countDirectUnread(user.id).catch(() => 0),
@@ -93,7 +94,11 @@ export const getMemberLayout = query(async () => {
 			avatarUrl: resolveImageUrl(b.avatarKey),
 			role: b.role
 		})),
-		isStaff,
+		// The viewer's capabilities, not a boolean. `isStaff` is derived from it
+		// (holding any position at all), so the panel switcher keeps working while
+		// entity links and nav rows can ask the sharper question.
+		capabilities: capabilitySet(positions),
+		isStaff: positions.length > 0,
 		features,
 		hasLoanableEquipment,
 		messagesUnread,
@@ -105,8 +110,11 @@ export const getStaffLayout = query(async () => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw redirect(302, '/login');
 
-	const allowed = await hasAnyRole(locals.user.id, ['admin', 'staff']);
-	if (!allowed) throw redirect(302, '/');
+	// "May you open the panel at all" is not a capability — it is holding any
+	// position — so this stays a position check. The capability set below is what
+	// decides which rows you are offered once you are inside.
+	const positions = await positionsFor(locals.user.id);
+	if (positions.length === 0) throw redirect(302, '/');
 
 	// The staff panel deliberately ignores feature flags — flags gate the
 	// member/band/public surfaces only, so staff can administer a feature
@@ -132,6 +140,9 @@ export const getStaffLayout = query(async () => {
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
+		// Which rows this viewer is offered. The redirect above only settled that
+		// they may open the panel at all.
+		capabilities: capabilitySet(positions),
 		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		inboxUnread,
 		volunteerPending,
@@ -178,11 +189,16 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		throw error(404, 'Band not found');
 	}
 
-	const [role, isStaff, userBands, features] = await Promise.all([
+	const [role, isStaff, userBands, features, messagesUnread] = await Promise.all([
 		getUserRole(band.id, locals.user.id),
-		hasAnyRole(locals.user.id, ['admin', 'staff']),
+		isElevated(locals.user.id),
 		listForUser(locals.user.id, ['band']).catch(() => []),
-		getAllFeatureFlags()
+		getAllFeatureFlags(),
+		// In the same round trip rather than behind the role check below: one
+		// indexed COUNT is cheaper than the extra await it would take to know
+		// whether to ask. The Messages nav row is owner/admin-only, so the number
+		// simply goes unread for anyone else.
+		countBandUnread(band.id, locals.user.id)
 	]);
 
 	if (!role && !isStaff) {
@@ -195,6 +211,7 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		isStaff,
 		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		user: { id: locals.user.id, name: locals.user.name, email: locals.user.email },
-		features
+		features,
+		messagesUnread
 	};
 });
