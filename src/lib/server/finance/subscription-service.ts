@@ -101,7 +101,12 @@ export async function createCheckoutSession(options: CreateSubscriptionOptions):
 			subscription_type: 'contribution'
 		},
 		successUrl,
-		cancelUrl
+		cancelUrl,
+		// Contributions are paid on our own page. Not an option on
+		// `CreateSubscriptionOptions`: `checkout()` carries `uiMode` so products
+		// could migrate one at a time, and this one has. A knob no caller turns is
+		// worse than none.
+		uiMode: 'elements'
 	});
 
 	if (!result.checkoutUrl) {
