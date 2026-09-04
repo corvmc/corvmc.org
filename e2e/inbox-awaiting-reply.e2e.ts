@@ -5,7 +5,9 @@ import {
 	SEED_AWAITING_CONTACT,
 	SEED_NEEDS_REPLY_THREAD_ID,
 	SEED_NEEDS_REPLY_CONTACT,
-	SEED_SNOOZED_CONTACT
+	SEED_SNOOZED_CONTACT,
+	SEED_META_STALE_THREAD_ID,
+	SEED_META_STALE_CONTACT
 } from './fixtures/seed-inbox-awaiting';
 
 /**
@@ -168,5 +170,43 @@ test.describe('inbox awaiting reply', () => {
 		// again.
 		await expect(page.getByRole('button', { name: 'Reopen' })).toHaveCount(0);
 		await expect(page.getByRole('button', { name: /^Resolve/ })).toBeVisible();
+	});
+});
+
+/**
+ * Meta's reply window, which is the one composer state that cannot be reached
+ * by clicking: it turns on the *age* of the newest inbound message, decided
+ * page-side from the thread's own rows, and no unit test spans that seam.
+ *
+ * Instagram and Messenger refuse a message sent more than seven days after the
+ * contact last wrote. Left unhandled, a staffer finds that out by typing a
+ * reply, pressing send, and watching a Graph error come back — which is exactly
+ * the failure the block exists to move earlier.
+ */
+test.describe('Meta reply window', () => {
+	test('a thread past the window offers a note instead of a reply', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto(`/staff/inbox/${SEED_META_STALE_THREAD_ID}`);
+
+		// The thread itself renders — this is a block on replying, not on reading.
+		await expect(page.getByText(SEED_META_STALE_CONTACT).first()).toBeVisible();
+
+		await expect(page.getByText(/window has closed/i)).toBeVisible();
+
+		// The composer falls back to a note: staff-only, and never dispatched.
+		await expect(page.getByText('Staff only — the contact never sees this')).toBeVisible();
+		await expect(page.getByPlaceholder('Add an internal note…')).toBeVisible();
+		await expect(page.getByPlaceholder('Type your reply…')).toHaveCount(0);
+	});
+
+	// The same page, on a thread inside the window, must still offer a reply —
+	// otherwise a block that fired on every Meta thread would pass the test above
+	// and take the channel out of service.
+	test('a thread inside the window still offers a reply', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto(`/staff/inbox/${SEED_NEEDS_REPLY_THREAD_ID}`);
+
+		await expect(page.getByPlaceholder('Type your reply…')).toBeVisible();
+		await expect(page.getByText(/window has closed/i)).toHaveCount(0);
 	});
 });

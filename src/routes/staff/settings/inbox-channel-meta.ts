@@ -29,12 +29,17 @@ export const inboxChannelMeta: Record<StaffInboxChannel, { description: string; 
 			description: 'Members message staff from their member portal',
 			envHint: 'Always enabled'
 		},
+		// The window is named here because it is the first surprise anyone hits:
+		// Meta refuses a reply sent past it, and a staffer who does not know that
+		// finds out by watching a send fail. The composer enforces the same rule.
 		instagram: {
-			description: 'Receive and reply to Instagram direct messages',
+			description:
+				'Receive and reply to Instagram direct messages. Meta only accepts a reply within 7 days of the contact’s last message.',
 			envHint: 'META_APP_SECRET, META_VERIFY_TOKEN, META_PAGE_ACCESS_TOKEN'
 		},
 		messenger: {
-			description: 'Receive and reply to Facebook Messenger messages',
+			description:
+				'Receive and reply to Facebook Messenger messages. Meta only accepts a reply within 7 days of the contact’s last message.',
 			envHint: 'META_APP_SECRET, META_VERIFY_TOKEN, META_PAGE_ACCESS_TOKEN'
 		}
 	};

@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { sendInboxReply } from '$lib/server/notification/email/postmark-client';
 import { sendSms } from './twilio-client';
+import { sendMetaMessage } from './meta-client';
 import { isChannelEnabled } from './channel-config-service';
 import { buildReplyToAddress } from './reply-address';
 import type { InboxChannel } from '$lib/server/db/schema/inbox';
@@ -22,6 +23,11 @@ export interface DispatchReplyParams {
 	subject: string | null;
 	/** Last inbound channelMessageId for email threading */
 	lastInboundMessageId: string | null;
+	/**
+	 * When the contact last wrote. Email and SMS ignore it; the Meta channels
+	 * cannot send at all outside a window measured from exactly this.
+	 */
+	lastInboundAt: Date | null;
 	/** Accumulated References chain */
 	references: string | null;
 }
@@ -171,29 +177,9 @@ async function dispatchMetaReply(params: DispatchReplyParams): Promise<string> {
 		throw new Error('Cannot send Meta reply: no contact external ID on thread');
 	}
 
-	const pageToken = env.META_PAGE_ACCESS_TOKEN;
-	if (!pageToken) {
-		throw new Error('META_PAGE_ACCESS_TOKEN is not configured');
-	}
-
-	const response = await fetch('https://graph.facebook.com/v21.0/me/messages', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${pageToken}`
-		},
-		body: JSON.stringify({
-			recipient: { id: params.contactExternalId },
-			message: { text: params.body },
-			messaging_type: 'RESPONSE'
-		})
+	return sendMetaMessage({
+		recipientId: params.contactExternalId,
+		body: params.body,
+		lastInboundAt: params.lastInboundAt
 	});
-
-	if (!response.ok) {
-		const err = await response.text();
-		throw new Error(`Meta API error (${response.status}): ${err}`);
-	}
-
-	const result = (await response.json()) as { message_id?: string };
-	return result.message_id ?? '';
 }

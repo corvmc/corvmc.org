@@ -19,7 +19,7 @@
 		syncSubscriptions,
 		refreshCommunityStats
 	} from '$lib/remote/settings.remote';
-	import { updateInboxChannelConfig } from '$lib/remote/inbox.remote';
+	import { updateInboxChannelConfig, testMetaConnection } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
 	import { inboxChannelMeta } from './inbox-channel-meta';
@@ -65,6 +65,14 @@
 
 	let connectionTestResult = $state<{ ok: boolean; error?: string } | null>(null);
 	let connectionTesting = $state(false);
+
+	// Keyed by channel: Instagram and Messenger share one token, but each has its
+	// own card, and a result printed under the card the staffer did not press
+	// reads as the wrong answer.
+	let metaTestResult = $state<Record<string, { ok: boolean; pageName?: string; error?: string }>>(
+		{}
+	);
+	let metaTesting = $state<string | null>(null);
 
 	let selfTestResult = $state<Awaited<ReturnType<typeof runLockSelfTest>> | null>(null);
 	let selfTesting = $state(false);
@@ -132,6 +140,20 @@
 			connectionTestResult = await testUtecConnection();
 		} finally {
 			connectionTesting = false;
+		}
+	}
+
+	async function handleMetaTest(channel: string) {
+		metaTesting = channel;
+		try {
+			metaTestResult = { ...metaTestResult, [channel]: await testMetaConnection() };
+		} catch (err) {
+			metaTestResult = {
+				...metaTestResult,
+				[channel]: { ok: false, error: (err as Error).message }
+			};
+		} finally {
+			metaTesting = null;
 		}
 	}
 
@@ -886,6 +908,8 @@
 				{@const isAlwaysOn = isAlwaysEnabledChannel(cfg.channel)}
 				{@const ChannelIcon = channelIcon(cfg.channel)}
 				{@const toggleForm = updateInboxChannelConfig.for(cfg.channel)}
+				{@const isMeta = cfg.channel === 'instagram' || cfg.channel === 'messenger'}
+				{@const metaResult = metaTestResult[cfg.channel]}
 				<Card>
 					<CardBody>
 						<div class="flex items-center justify-between">
@@ -920,9 +944,45 @@
 							{/if}
 						</div>
 						{#if !isAlwaysOn}
-							<div class="mt-2 text-xs opacity-40">
-								Env: {meta.envHint}
+							<div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+								<div class="text-xs opacity-40">
+									Env: {meta.envHint}
+								</div>
+								<!--
+									The page token has no refresh path, so an expired one does not
+									announce itself — replies just start failing on a channel nobody is
+									watching. This is what makes that visible, and the reason the token
+									can stay an env secret rather than growing an OAuth flow.
+								-->
+								{#if isMeta}
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										onclick={() => handleMetaTest(cfg.channel)}
+										disabled={metaTesting === cfg.channel}
+									>
+										{#if metaTesting === cfg.channel}
+											<span class="loading loading-xs loading-spinner"></span>
+										{:else}
+											<IconPlugConnected class="size-4" />
+										{/if}
+										Test connection
+									</Button>
+								{/if}
 							</div>
+
+							{#if metaResult}
+								<div
+									class="alert {metaResult.ok ? 'alert-success' : 'alert-error'} mt-2 py-2 text-sm"
+								>
+									{#if metaResult.ok}
+										Connected to {metaResult.pageName}.
+									{:else}
+										{metaResult.error}
+									{/if}
+								</div>
+							{/if}
 						{/if}
 					</CardBody>
 				</Card>

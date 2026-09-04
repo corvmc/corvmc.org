@@ -691,6 +691,20 @@ export const alwaysEnabledInboxChannels: readonly (typeof inboxChannels)[number]
 	'band'
 ];
 
+/**
+ * How long Meta lets us answer an Instagram or Messenger contact.
+ *
+ * Their platforms accept a plain reply for 24 hours after the contact's last
+ * message and a HUMAN_AGENT-tagged one for seven days; past that nothing is
+ * delivered at all. Here rather than beside the Graph client because the
+ * composer has to grey itself out on the same rule the dispatcher sends on, and
+ * anything under `$lib/server/**` is barred from the browser bundle. Two copies
+ * of this number drift, and the drift shows up as a reply that looked sendable
+ * and was not.
+ */
+export const META_STANDARD_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const META_HUMAN_AGENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 /** How many people may be sitting on an unanswered request from you at once. */
 export const MAX_PENDING_SENT_REQUESTS = 5;
 
