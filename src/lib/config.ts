@@ -568,6 +568,28 @@ export const inboxChannels = [
 ] as const;
 
 /**
+ * The channels the staff inbox is a party to — every channel except `direct`.
+ *
+ * `direct` is member↔member. Staff have no queue role in it: `staffVisibleThread`
+ * keeps direct threads out of every staff read, `dispatchReply` throws rather
+ * than write into one, and there is no external system behind it to authenticate.
+ * So it has nothing to configure, and the staff settings page must not be handed
+ * it — `channelMeta` there is keyed by this list, not by `inboxChannels`.
+ *
+ * `inboxChannels` stays the `inbox_thread.channel` vocabulary; this is the
+ * subset staff administer.
+ */
+export const staffInboxChannels = [
+	'email',
+	'sms',
+	'web',
+	'portal',
+	'instagram',
+	'messenger'
+] as const;
+export type StaffInboxChannel = (typeof staffInboxChannels)[number];
+
+/**
  * The contact-form subject that reveals the event-tip fields.
  *
  * Here rather than beside the schema it validates: the public contact page has
@@ -672,6 +694,17 @@ export const DIRECT_MESSAGE_BODY_MAX = 5000;
 
 export function isAlwaysEnabledChannel(channel: string): boolean {
 	return (alwaysEnabledInboxChannels as readonly string[]).includes(channel);
+}
+
+/**
+ * Whether a thread's channel is one staff administer and can reply on.
+ *
+ * `direct` is the only one that is not, and a direct thread does reach staff
+ * surfaces: reporting one makes it staff-visible. This is what tells the
+ * composer there is no channel behind it to enable.
+ */
+export function isStaffInboxChannel(channel: string): channel is StaffInboxChannel {
+	return (staffInboxChannels as readonly string[]).includes(channel);
 }
 
 // ---------------------------------------------------------------------------

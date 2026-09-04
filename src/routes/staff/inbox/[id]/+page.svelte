@@ -22,7 +22,7 @@
 		isMetaReplyWindowClosed
 	} from '$lib/components/inbox/channels';
 	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
-	import { isAlwaysEnabledChannel } from '$lib/config';
+	import { isAlwaysEnabledChannel, isStaffInboxChannel } from '$lib/config';
 	import { formatDate } from '$lib/utils/format';
 	import { IconAlarmSnooze, IconSend } from '@tabler/icons-svelte';
 	import {
@@ -129,7 +129,8 @@
 	-->
 	{#await getInboxEnabledChannels() then enabledChannels}
 		{@const channelDisabled =
-			!isAlwaysEnabledChannel(t.channel) && !enabledChannels.includes(t.channel)}
+			!isAlwaysEnabledChannel(t.channel) &&
+			(!isStaffInboxChannel(t.channel) || !enabledChannels.includes(t.channel))}
 		{@const replyBlockedReason =
 			(t.channel === 'web' || t.channel === 'email') && !t.contactEmail
 				? 'This conversation has no contact email, so there is nowhere to send a reply. Leave an internal note instead.'

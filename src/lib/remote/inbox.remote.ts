@@ -49,7 +49,7 @@ import {
 } from '$lib/server/inbox/portal-service';
 import { submitContactFormSchema } from '$lib/server/db/schema/inbox';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE, inboxChannels, inboxViews } from '$lib/config';
+import { DEFAULT_TIMEZONE, inboxChannels, inboxViews, staffInboxChannels } from '$lib/config';
 import type { InboxView } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -508,7 +508,9 @@ export const getInboxEnabledChannels = query(z.void(), async () => {
 });
 
 const channelConfigSchema = z.object({
-	channel: z.enum(inboxChannels),
+	// `staffInboxChannels`, not `inboxChannels`: `direct` has no toggle, and a
+	// request naming it should be rejected here rather than no-op in the service.
+	channel: z.enum(staffInboxChannels),
 	enabled: z.enum(['true', 'false']).transform((v) => v === 'true')
 });
 

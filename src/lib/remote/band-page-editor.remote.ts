@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { jsonArrayField } from '$lib/utils/zod-json';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
-import { requireFeature } from '$lib/server/feature-flags';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
 import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
@@ -17,7 +16,6 @@ import { eq } from 'drizzle-orm';
 // ---------------------------------------------------------------------------
 
 export const getBandPageEditor = query(z.string(), async (slug) => {
-	await requireFeature('bandPremium');
 	// `requireUser()` alone served any premium band's theme, custom CSS, blocks
 	// and — the part that actually matters — its `epk`, the band's private press
 	// kit, to any signed-in account that knew a slug. The blocks are semi-public
@@ -77,7 +75,6 @@ export const saveBandPageConfig = form(
 		blocks: blocksField
 	}),
 	async (data) => {
-		await requireFeature('bandPremium');
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
 		if (band.tier !== 'premium') {

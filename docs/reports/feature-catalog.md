@@ -263,8 +263,10 @@ more (`venue`, `production`, `production_slot`, `production_task`, `production_e
 
 ## Feature flags
 
-Four flags, all defaulting to **off**, toggled from Staff Settings → Features — except
+Three flags, all defaulting to **off**, toggled from Staff Settings → Features — except
 `directMessages`, which was never added to that tab and so has never been switchable at all.
+`bandPremium` was the fourth until it **launched**: the guards came out rather than being switched
+on, so band sites answer on `band_site.tier` alone.
 `bandAudio` gates the music storefront and `cmcRadio` the station; both were added with toggles, and
 `cmcRadio` exists specifically so the radio can wait for enough bands to opt in. `/staff/music` is
 deliberately **not** behind either, because the question the toggle gates on cannot be answered from
@@ -285,10 +287,11 @@ administering it if it is switched back off. Member and public remote functions 
 `requireFeature()`, which throws 404 when disabled; staff queries and forms are guarded by
 `requireStaff()` alone.
 
-| Flag             | Feature                                                  | What it gates                                                                                                                                                     |
-| ---------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bandPremium`    | Premium tier, page editor, band sites, the video section | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**`. **Not** the press kit, which is free for every act and must keep working with this off. |
-| `directMessages` | Member↔member messaging                                  | The DM half of `/member/messages` — member↔staff portal chat in the same UI is not gated                                                                          |
+| Flag             | Feature                 | What it gates                                                                            |
+| ---------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `directMessages` | Member↔member messaging | The DM half of `/member/messages` — member↔staff portal chat in the same UI is not gated |
+| `bandAudio`      | Releases and storefront | `/band/[slug]/music`, `/music/**`, and the Releases nav row                              |
+| `cmcRadio`       | The station and player  | `/radio` and the site-wide player                                                        |
 
 ### Staff administration of each flagged feature
 
