@@ -7,6 +7,7 @@ import { directoryEntry } from './directory';
 import { reservation } from './reservation';
 import { recurringSeries, RECURRING_FREQUENCIES } from './recurring';
 import { project } from './project';
+import { venue } from './venue';
 
 /**
  * Where a listing sits between "nobody has seen it" and "it is on the guide".
@@ -111,6 +112,18 @@ export const event = sqliteTable(
 		source: text('source', { enum: eventSources }).notNull().default('cmc'),
 		kind: text('kind', { enum: eventKinds }).notNull().default('show'),
 		location: text('location'),
+		/**
+		 * The structured half of `location`, which stays exactly as it is.
+		 *
+		 * Set-null rather than cascade: an event that happened somewhere keeps its
+		 * own record when the venue row goes, and `location` is still there to say
+		 * where. Nullable because most rows have none — a band listing types a name
+		 * and always will.
+		 *
+		 * What reads it is the reservation question: only a show at the primary
+		 * venue holds the practice space.
+		 */
+		venueId: text('venue_id').references(() => venue.id, { onDelete: 'set null' }),
 		externalTicketUrl: text('external_ticket_url'),
 		recurringSeriesId: text('recurring_series_id').references(() => recurringSeries.id, {
 			onDelete: 'set null'
@@ -138,6 +151,7 @@ export const event = sqliteTable(
 		index('idx_event_source').on(t.source, t.status, t.startsAt),
 		index('idx_event_recurring_series').on(t.recurringSeriesId),
 		index('idx_event_project').on(t.projectId),
+		index('idx_event_venue').on(t.venueId),
 		uniqueIndex('uq_event_recurring_instance')
 			.on(t.recurringSeriesId, t.startsAt)
 			.where(sql`recurring_series_id IS NOT NULL AND status != 'cancelled'`),
@@ -340,6 +354,12 @@ export const createEventSchema = z
 		ticketingEnabled: z.boolean().default(false),
 		ticketPrice: z.string().optional(),
 		ticketQuantity: z.string().optional(),
+		/**
+		 * Where it is. Blank means the practice room, which is what every event
+		 * created before the `venue` table meant and still means.
+		 */
+		venueId: z.string().optional(),
+		location: z.string().max(200).optional(),
 		reserveSpace: z.boolean().default(false),
 		reservationStartTime: z.string().optional(),
 		reservationEndTime: z.string().optional(),

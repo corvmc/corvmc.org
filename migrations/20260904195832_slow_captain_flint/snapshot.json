@@ -1,9 +1,10 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "21b4d8b8-f127-4597-86f7-a8fc80c97c06",
+  "id": "87dec7b3-1f87-45e2-a25f-e6d4b307f306",
   "prevIds": [
-    "8781d838-53d2-4213-a930-6ade2c20ade8"
+    "c8d93831-21cc-4d11-b678-5b35500af736",
+    "21b4d8b8-f127-4597-86f7-a8fc80c97c06"
   ],
   "ddl": [
     {
@@ -44,6 +45,10 @@
     },
     {
       "name": "reservation",
+      "entityType": "tables"
+    },
+    {
+      "name": "venue",
       "entityType": "tables"
     },
     {
@@ -1390,6 +1395,176 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "slug",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "is_primary",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "address1",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "city",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "state",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "postal_code",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "capacity",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contact_name",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contact_email",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contact_phone",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "load_in_notes",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "event"
     },
     {
@@ -1579,6 +1754,16 @@
       "default": null,
       "generated": null,
       "name": "location",
+      "entityType": "columns",
+      "table": "event"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "venue_id",
       "entityType": "columns",
       "table": "event"
     },
@@ -9849,6 +10034,21 @@
     },
     {
       "columns": [
+        "venue_id"
+      ],
+      "tableTo": "venue",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_event_venue_id_venue_id_fk",
+      "entityType": "fks",
+      "table": "event"
+    },
+    {
+      "columns": [
         "recurring_series_id"
       ],
       "tableTo": "recurring_series",
@@ -12208,6 +12408,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "venue_pk",
+      "table": "venue",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "event_pk",
       "table": "event",
       "entityType": "pks"
@@ -13087,6 +13296,48 @@
     {
       "columns": [
         {
+          "value": "slug",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "venue_slug_idx",
+      "entityType": "indexes",
+      "table": "venue"
+    },
+    {
+      "columns": [
+        {
+          "value": "name",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "venue_name_idx",
+      "entityType": "indexes",
+      "table": "venue"
+    },
+    {
+      "columns": [
+        {
+          "value": "is_primary",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "is_primary = 1",
+      "origin": "manual",
+      "name": "venue_one_primary_idx",
+      "entityType": "indexes",
+      "table": "venue"
+    },
+    {
+      "columns": [
+        {
           "value": "status",
           "isExpression": false
         },
@@ -13177,6 +13428,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_event_project",
+      "entityType": "indexes",
+      "table": "event"
+    },
+    {
+      "columns": [
+        {
+          "value": "venue_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_venue",
       "entityType": "indexes",
       "table": "event"
     },
@@ -16067,6 +16332,12 @@
       "name": "reservation_time_order",
       "entityType": "checks",
       "table": "reservation"
+    },
+    {
+      "value": "capacity is null or capacity > 0",
+      "name": "venue_capacity_positive",
+      "entityType": "checks",
+      "table": "venue"
     },
     {
       "value": "ends_at > starts_at",

@@ -60,6 +60,7 @@ export type StaffNavKey =
 	| 'contractor-jobs'
 	| 'projects'
 	| 'productions'
+	| 'venues'
 	| 'calendar'
 	| 'flags'
 	| 'suggestions'
@@ -331,6 +332,15 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'event.manage',
 				label: 'Productions',
 				href: resolve('/staff/productions')
+			},
+			// Reference rather than a queue, so it sits last. Guarded as an event
+			// because that is what a venue is a fact about — there is no job here
+			// that curates rooms without producing in them.
+			{
+				key: 'venues',
+				capability: 'event.read',
+				label: 'Venues',
+				href: resolve('/staff/venues')
 			}
 		]
 	},
