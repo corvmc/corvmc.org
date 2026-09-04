@@ -1392,12 +1392,30 @@ export const adminOnlyCapabilities = [
  * named position — which is data, not code, and a half-migrated org chart is a
  * legal steady state.
  */
+/**
+ * Everything except the admin-only complement — what `staff` holds from here.
+ *
+ * Derived rather than written out, so adding a capability grants it to `staff`
+ * automatically and the ONLY way to withhold one is to name it in
+ * `adminOnlyCapabilities`. A hand-maintained list would drift silently in the
+ * dangerous direction: a new capability forgotten there is one `staff` quietly
+ * gains.
+ */
+const staffCapabilities = Object.fromEntries(
+	Object.entries(allCapabilities).map(([resource, actions]) => [
+		resource,
+		(actions as string[]).filter(
+			(action) => !(adminOnlyCapabilities as readonly string[]).includes(`${resource}.${action}`)
+		)
+	])
+) as Grants;
+
 export const positions: Record<Position, Grants> = {
 	admin: allCapabilities,
-	// Still identical to admin. The narrowing PR replaces this with
-	// allCapabilities minus `adminOnlyCapabilities`, and that one line is the
-	// only place in this whole effort where authority actually moves.
-	staff: allCapabilities,
+	// This is it — the one line in the whole migration where authority moves.
+	// A `staff` holder can no longer grant themselves `admin`, purge an account,
+	// or move credit. Everything else they could do, they still can.
+	staff: staffCapabilities,
 
 	technology_coordinator: {
 		settings: ['read', 'update'],

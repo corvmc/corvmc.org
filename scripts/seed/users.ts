@@ -25,7 +25,22 @@ import { eq } from 'drizzle-orm';
 
 export async function seedRoles(): SeedRole[] {
 	console.log('Seeding roles...');
-	const roles = ['admin', 'staff', 'member', 'volunteer', 'sustaining'];
+	// The named positions are seeded alongside the legacy rows so local dev has
+	// somebody to sign in as for each one. Without them the matrix is only ever
+	// exercised by `staff`, which holds nearly everything, and a narrowed
+	// position is something you can only read about. See positionLabels in
+	// src/lib/config.ts.
+	const roles = [
+		'admin',
+		'staff',
+		'technology_coordinator',
+		'volunteer_coordinator',
+		'site_moderator',
+		'treasurer',
+		'member',
+		'volunteer',
+		'sustaining'
+	];
 	const inserted: SeedRole[] = [];
 	for (const name of roles) {
 		const [r] = await db.insert(role).values({ name, guardName: 'web' }).returning();
@@ -165,6 +180,27 @@ export async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, role
 
 	for (let i = 2; i < 5; i++) {
 		await db.insert(modelHasRole).values({ roleId: staffRole.id, userId: users[i].id });
+	}
+
+	// One persona per named position, so every row of the matrix can be signed
+	// in as. This is the only way anyone reviews the narrowing against a real
+	// screen rather than against a table: a treasurer should reach /staff/payments
+	// and not /staff/settings, a volunteer coordinator should reach the hour
+	// queue and not the role picker on a user.
+	const positionSeeds: Array<[string, number]> = [
+		['technology_coordinator', 5],
+		['volunteer_coordinator', 6],
+		['site_moderator', 7],
+		['treasurer', 8]
+	];
+	for (const [name, index] of positionSeeds) {
+		const positionRole = roles.find((r) => r.name === name);
+		if (!positionRole || !users[index]) continue;
+		await db
+			.insert(modelHasRole)
+			.values({ roleId: positionRole.id, userId: users[index].id })
+			.onConflictDoNothing();
+		console.log(`  ${name}: ${users[index].email}`);
 	}
 
 	for (const u of users) {
