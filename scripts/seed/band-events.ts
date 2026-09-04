@@ -1,4 +1,4 @@
-import { event, eventGroup } from '../../src/lib/server/db/schema/event';
+import { eventListing, eventGroup } from '../../src/lib/server/db/schema/event';
 import { db } from './db';
 import { seedLineup } from './lineups';
 import {
@@ -23,7 +23,7 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 			const hour = randomInt(19, 21);
 			const startsAt = ptDate(day, hour);
 			const [e] = await db
-				.insert(event)
+				.insert(eventListing)
 				.values({
 					title: pick(BAND_EVENT_TITLES),
 					description: `${veteran.name} live! An old favourite from the archives.`,
@@ -66,7 +66,7 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 			const isPast = day < 0;
 
 			const [e] = await db
-				.insert(event)
+				.insert(eventListing)
 				.values({
 					title: pick(BAND_EVENT_TITLES),
 					description: `${b.name} live! Join us for a night of original music and good vibes. All ages welcome.`,

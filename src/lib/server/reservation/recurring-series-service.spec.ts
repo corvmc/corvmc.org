@@ -30,7 +30,7 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/event', () => ({
-	event: { id: 'event.id' }
+	eventListing: { id: 'event.id' }
 }));
 
 vi.mock('$lib/server/db/schema/authentication', () => ({
@@ -211,7 +211,7 @@ describe('recurring-series-service', () => {
 			);
 			expect(lastInsert.valuesSpy).toHaveBeenCalledWith(
 				expect.objectContaining({
-					prototypeType: 'event',
+					prototypeType: 'event_listing',
 					prototypeId: 'evt-1',
 					rrule: 'FREQ=WEEKLY;BYDAY=MO'
 				})

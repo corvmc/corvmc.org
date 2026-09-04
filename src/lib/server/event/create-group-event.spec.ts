@@ -47,7 +47,7 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 					const chain = {
 						onConflictDoNothing: () => chain,
 						returning: () =>
-							name === 'event' && eventInsertThrows
+							name === 'event_listing' && eventInsertThrows
 								? Promise.reject(new Error('insert failed'))
 								: Promise.resolve(rows.map((r) => ({ id: (r.id as string) ?? 'row-1', ...r }))),
 						then: (resolve: (v: unknown) => void) => resolve(undefined)
@@ -123,7 +123,7 @@ describe('without a room booking', () => {
 	it('creates a group-sourced event owned by the group', async () => {
 		await createGroupEvent(params());
 
-		const [evt] = rowsFor('event');
+		const [evt] = rowsFor('event_listing');
 		expect(evt).toMatchObject({ groupId: 'club-1', source: 'group', reservationId: null });
 		expect(staffCreate).not.toHaveBeenCalled();
 	});
@@ -153,10 +153,10 @@ describe('holding the room', () => {
 		const [call] = staffCreate.mock.calls as unknown as [Record<string, unknown>][];
 		// `'event'`, never `'group'`: booking as the group would imply the group
 		// has a balance, which is exactly what a sanctioned program does not need.
-		expect(call[0]).toMatchObject({ bookerType: 'event', status: 'confirmed' });
+		expect(call[0]).toMatchObject({ bookerType: 'event_listing', status: 'confirmed' });
 		// The reservation points at the event, and the event links back.
-		expect(call[0].bookerId).toBe(rowsFor('event')[0].id);
-		expect(rowsFor('event')[0].reservationId).toBe('res-1');
+		expect(call[0].bookerId).toBe(rowsFor('event_listing')[0].id);
+		expect(rowsFor('event_listing')[0].reservationId).toBe('res-1');
 	});
 
 	it('refuses a slot that is already taken', async () => {
@@ -169,7 +169,7 @@ describe('holding the room', () => {
 		).rejects.toBeInstanceOf(ReservationConflictError);
 
 		// Nothing written — the conflict check runs before any insert.
-		expect(rowsFor('event')).toHaveLength(0);
+		expect(rowsFor('event_listing')).toHaveLength(0);
 		expect(staffCreate).not.toHaveBeenCalled();
 	});
 

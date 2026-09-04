@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { media, mediaAttachment, attachableTypes } from '$lib/server/db/schema/media';
 import type { AttachableType } from '$lib/server/db/schema/media';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import {
 	acquisition,
 	workRequest,
@@ -28,7 +28,7 @@ import { and, eq, lt, sql, notExists, inArray, type SQLWrapper } from 'drizzle-o
 
 /** The parent table each `attachableType` points at. */
 const PARENT_TABLES = {
-	event,
+	event_listing: eventListing,
 	group,
 	user,
 	// `satisfies Record<AttachableType, …>` is what makes this exhaustive: adding

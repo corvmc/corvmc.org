@@ -1,5 +1,5 @@
 import { computeTicketSplit, suggestedCollectiveCents } from '../../src/lib/finance/ticket-split';
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { ticket } from '../../src/lib/server/db/schema/ticket';
 import { db } from './db';
 import { TICKET_CODES_PREFIX } from './pools';
@@ -14,13 +14,13 @@ export async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 
 	const ticketedEvents = await db
 		.select({
-			id: event.id,
-			startsAt: event.startsAt,
-			ticketPrice: event.ticketPrice,
-			floorCents: event.ticketPriceFloorCents
+			id: eventListing.id,
+			startsAt: eventListing.startsAt,
+			ticketPrice: eventListing.ticketPrice,
+			floorCents: eventListing.ticketPriceFloorCents
 		})
-		.from(event)
-		.where(eq(event.ticketingEnabled, true));
+		.from(eventListing)
+		.where(eq(eventListing.ticketingEnabled, true));
 
 	for (const evt of ticketedEvents) {
 		const ticketCount = randomInt(3, 8);

@@ -41,7 +41,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/db/schema/event', () => ({ event: {} }));
+vi.mock('$lib/server/db/schema/event', () => ({ eventListing: {} }));
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -119,7 +119,11 @@ describe('POST /api/events/[id]/poster', () => {
 		// sweep reclaims it. Deleting inline would take the image from every other
 		// occurrence of a recurring series.
 		expect(mockReplaceSlot).toHaveBeenCalledWith(
-			expect.objectContaining({ attachableType: 'event', attachableId: 'evt-1', slot: 'poster' })
+			expect.objectContaining({
+				attachableType: 'event_listing',
+				attachableId: 'evt-1',
+				slot: 'poster'
+			})
 		);
 		expect(mockDeleteObject).not.toHaveBeenCalled();
 		expect(mockUploadFile).toHaveBeenCalledOnce();

@@ -8,7 +8,7 @@ import {
 	workOrder,
 	workTask
 } from '$lib/server/db/schema/volunteer';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import {
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_MAX_MINUTES,
@@ -450,13 +450,13 @@ export async function applyDutyList(
 
 	const [evt] = await db
 		.select({
-			id: event.id,
-			startsAt: event.startsAt,
-			endsAt: event.endsAt,
-			doorsAt: event.doorsAt
+			id: eventListing.id,
+			startsAt: eventListing.startsAt,
+			endsAt: eventListing.endsAt,
+			doorsAt: eventListing.doorsAt
 		})
-		.from(event)
-		.where(eq(event.id, eventId))
+		.from(eventListing)
+		.where(eq(eventListing.id, eventId))
 		.limit(1);
 	if (!evt) throw new DutyListValidationError('That event no longer exists.', 'eventId');
 

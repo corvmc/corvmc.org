@@ -32,7 +32,7 @@ import {
 	volunteerSignup,
 	volunteerShiftFeedback
 } from '../../src/lib/server/db/schema/volunteer';
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { scryptHash } from './seed-pay-reservation';
 
 export const SEED_VOL_MEMBER_ID = 'e2e-vol-member';
@@ -234,7 +234,7 @@ export async function seedVolunteering(): Promise<void> {
 		await db.delete(workOrder).where(inArray(workOrder.id, shiftIds));
 		// After the shifts: the FK is ON DELETE SET NULL, so deleting the event
 		// first would silently unlink the very row the linked-shift tests assert on.
-		await db.delete(event).where(eq(event.id, SEED_VOL_EVENT_ID));
+		await db.delete(eventListing).where(eq(eventListing.id, SEED_VOL_EVENT_ID));
 		await db
 			.delete(volunteerRoleCertification)
 			.where(eq(volunteerRoleCertification.certificationId, SEED_VOL_CERT_ID));
@@ -495,7 +495,7 @@ export async function seedVolunteering(): Promise<void> {
 
 		// A published show with one shift on it. Both the staff event page's
 		// Volunteer Shifts card and the shift detail page's Event fact read this.
-		await db.insert(event).values({
+		await db.insert(eventListing).values({
 			id: SEED_VOL_EVENT_ID,
 			title: SEED_VOL_EVENT_TITLE,
 			description: 'E2E fixture show.',

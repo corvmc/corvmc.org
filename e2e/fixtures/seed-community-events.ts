@@ -24,7 +24,7 @@
 import { eq, inArray } from 'drizzle-orm';
 import { readLocalDb, withPlatformDb } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { memberStanding } from '../../src/lib/server/db/schema/standing';
 import { ticket } from '../../src/lib/server/db/schema/ticket';
 import { scryptHash } from './seed-pay-reservation';
@@ -99,8 +99,8 @@ export async function seedCommunityEvents(): Promise<void> {
 		// Standing before user: it points at both.
 		await db.delete(memberStanding).where(inArray(memberStanding.userId, MEMBER_IDS));
 		await db.delete(ticket).where(inArray(ticket.eventId, EVENT_IDS));
-		await db.delete(event).where(inArray(event.id, EVENT_IDS));
-		await db.delete(event).where(inArray(event.createdByUserId, MEMBER_IDS));
+		await db.delete(eventListing).where(inArray(eventListing.id, EVENT_IDS));
+		await db.delete(eventListing).where(inArray(eventListing.createdByUserId, MEMBER_IDS));
 		await db.delete(account).where(inArray(account.userId, MEMBER_IDS));
 		await db.delete(user).where(inArray(user.id, MEMBER_IDS));
 
@@ -138,7 +138,7 @@ export async function seedCommunityEvents(): Promise<void> {
 			updatedAt: now
 		});
 
-		await db.insert(event).values([
+		await db.insert(eventListing).values([
 			{
 				id: SEED_CE_DRAFT_ID,
 				title: SEED_CE_DRAFT_TITLE,
@@ -248,9 +248,9 @@ export async function seedCommunityEvents(): Promise<void> {
 export async function eventExists(eventId: string): Promise<boolean> {
 	return readLocalDb(async (db) => {
 		const [row] = await db
-			.select({ id: event.id })
-			.from(event)
-			.where(eq(event.id, eventId))
+			.select({ id: eventListing.id })
+			.from(eventListing)
+			.where(eq(eventListing.id, eventId))
 			.limit(1);
 		return !!row;
 	});
@@ -263,9 +263,9 @@ export async function readListingState(eventId: string): Promise<{
 }> {
 	return readLocalDb(async (db) => {
 		const [row] = await db
-			.select({ status: event.status, reviewNotes: event.reviewNotes })
-			.from(event)
-			.where(eq(event.id, eventId))
+			.select({ status: eventListing.status, reviewNotes: eventListing.reviewNotes })
+			.from(eventListing)
+			.where(eq(eventListing.id, eventId))
 			.limit(1);
 		return { status: row?.status ?? null, reviewNotes: row?.reviewNotes ?? null };
 	});

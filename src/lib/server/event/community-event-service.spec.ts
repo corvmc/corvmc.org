@@ -373,7 +373,7 @@ describe('withdraw / unpublish / delete', () => {
 
 		// The object is detached, not deleted — this path cannot tell whether
 		// another event still points at it. See docs/specs/shipped/media-spec.md.
-		expect(detachSlot).toHaveBeenCalledWith('event', 'evt-1', 'poster');
+		expect(detachSlot).toHaveBeenCalledWith('event_listing', 'evt-1', 'poster');
 		expect(deleteObject).not.toHaveBeenCalled();
 		expect(deleteCalled).toHaveBeenCalled();
 	});
@@ -445,9 +445,9 @@ describe('listPendingSubmissions', () => {
 		// Assert on the SQL drizzle actually produced rather than on the mock's
 		// call shape, which the chainable proxy erases.
 		const { eq } = await import('drizzle-orm');
-		const { event } = await import('$lib/server/db/schema/event');
+		const { eventListing } = await import('$lib/server/db/schema/event');
 		const { sql: rendered, params } = new SQLiteSyncDialect().sqlToQuery(
-			eq(event.status, 'pending_review')
+			eq(eventListing.status, 'pending_review')
 		);
 		expect(rendered).toContain('"status"');
 		expect(params).toEqual(['pending_review']);

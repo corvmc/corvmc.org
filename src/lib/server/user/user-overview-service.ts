@@ -112,7 +112,7 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 					and(eq(reservation.bookerType, 'group'), inArray(reservation.bookerId, activeBandIds))
 				)!
 			: mine,
-		ne(reservation.bookerType, 'event')
+		ne(reservation.bookerType, 'event_listing')
 	)!;
 
 	const scalar = async (q: Promise<{ count: number }[]>) => (await q)[0]?.count ?? 0;

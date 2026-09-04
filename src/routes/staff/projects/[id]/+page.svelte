@@ -69,7 +69,7 @@
 		{ value: 'contractor_job', label: 'Contractor job' },
 		{ value: 'purchase_order', label: 'Purchase order' },
 		{ value: 'acquisition', label: 'Acquisition' },
-		{ value: 'event', label: 'Event' }
+		{ value: 'event_listing', label: 'Event' }
 	];
 </script>
 

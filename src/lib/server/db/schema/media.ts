@@ -12,7 +12,7 @@ import { user } from './authentication';
  * which is the property that makes adding `production` or `venue` later free.
  */
 export const attachableTypes = [
-	'event',
+	'event_listing',
 	'group',
 	'user',
 	/** A catalog entry: manuals and spec sheets, the same for every unit of it. */

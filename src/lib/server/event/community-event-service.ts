@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { event, type LineupEntry } from '$lib/server/db/schema/event';
+import { eventListing, type LineupEntry } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, getTableColumns, gte, inArray, like, ne } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
@@ -87,30 +87,30 @@ export type { EventRow } from './event-service';
 export async function listCommunityEventsForUser(userId: string): Promise<EventRow[]> {
 	return db
 		.select()
-		.from(event)
+		.from(eventListing)
 		.where(
 			and(
-				eq(event.source, 'community'),
-				eq(event.createdByUserId, userId),
-				ne(event.status, 'rejected')
+				eq(eventListing.source, 'community'),
+				eq(eventListing.createdByUserId, userId),
+				ne(eventListing.status, 'rejected')
 			)
 		)
-		.orderBy(asc(event.startsAt));
+		.orderBy(asc(eventListing.startsAt));
 }
 
 /** Rejected listings, split out so the UI can lead with "these need your attention". */
 export async function listRejectedForUser(userId: string): Promise<EventRow[]> {
 	return db
 		.select()
-		.from(event)
+		.from(eventListing)
 		.where(
 			and(
-				eq(event.source, 'community'),
-				eq(event.createdByUserId, userId),
-				eq(event.status, 'rejected')
+				eq(eventListing.source, 'community'),
+				eq(eventListing.createdByUserId, userId),
+				eq(eventListing.status, 'rejected')
 			)
 		)
-		.orderBy(asc(event.startsAt));
+		.orderBy(asc(eventListing.startsAt));
 }
 
 /**
@@ -122,28 +122,28 @@ export async function listRejectedForUser(userId: string): Promise<EventRow[]> {
  * queue later without reshaping it.
  */
 export async function listPendingSubmissions(pagination: PaginationInput = {}) {
-	const where = eq(event.status, 'pending_review');
+	const where = eq(eventListing.status, 'pending_review');
 
 	const dataQ = db
 		.select({
-			...getTableColumns(event),
+			...getTableColumns(eventListing),
 			submitterName: user.name,
 			submitterId: user.id
 		})
-		.from(event)
-		.innerJoin(user, eq(user.id, event.createdByUserId))
+		.from(eventListing)
+		.innerJoin(user, eq(user.id, eventListing.createdByUserId))
 		.where(where)
-		.orderBy(asc(event.startsAt))
+		.orderBy(asc(eventListing.startsAt))
 		.$dynamic();
-	const countQ = db.select({ count: count() }).from(event).where(where);
+	const countQ = db.select({ count: count() }).from(eventListing).where(where);
 	return paginate(dataQ, countQ, pagination);
 }
 
 export async function countPendingSubmissions(): Promise<number> {
 	const [row] = await db
 		.select({ value: count() })
-		.from(event)
-		.where(eq(event.status, 'pending_review'));
+		.from(eventListing)
+		.where(eq(eventListing.status, 'pending_review'));
 	return row?.value ?? 0;
 }
 
@@ -177,13 +177,13 @@ export async function checkForDuplicate(params: {
 	if (stem.length < 3) return null;
 
 	const rows = await db
-		.select({ id: event.id, title: event.title, startsAt: event.startsAt })
-		.from(event)
+		.select({ id: eventListing.id, title: eventListing.title, startsAt: eventListing.startsAt })
+		.from(eventListing)
 		.where(
 			and(
-				eq(event.status, 'published'),
-				gte(event.startsAt, dayStart),
-				like(event.title, `%${stem}%`)
+				eq(eventListing.status, 'published'),
+				gte(eventListing.startsAt, dayStart),
+				like(eventListing.title, `%${stem}%`)
 			)
 		)
 		.limit(5);
@@ -226,7 +226,7 @@ export async function createCommunityEvent(params: CreateCommunityEventParams): 
 	assertValidTicketPrice(params.ticketPrice);
 
 	const [row] = await db
-		.insert(event)
+		.insert(eventListing)
 		.values({
 			title: params.title,
 			description: params.description ?? null,
@@ -325,7 +325,11 @@ export async function updateCommunityEvent(
 		updates.posterKey = await uploadPosterKey(eventId, params.posterFile);
 	}
 
-	const [updated] = await db.update(event).set(updates).where(eq(event.id, eventId)).returning();
+	const [updated] = await db
+		.update(eventListing)
+		.set(updates)
+		.where(eq(eventListing.id, eventId))
+		.returning();
 	// The row was read a moment ago, so this only happens if it vanished in
 	// between. Fail as not-found rather than dereferencing undefined.
 	if (!updated) throw new ListingNotFoundError();
@@ -372,14 +376,14 @@ export async function publishCommunityEvent(
 		// The member has edited since; the previous reason is stale, and leaving it
 		// on screen would tell them to fix something they just fixed.
 		await db
-			.update(event)
+			.update(eventListing)
 			.set({
 				status: 'pending_review',
 				publishedAt: null,
 				reviewNotes: null,
 				updatedAt: new Date()
 			})
-			.where(eq(event.id, eventId));
+			.where(eq(eventListing.id, eventId));
 		await emitSubmitted(existing, userId);
 		return { status: 'pending_review' };
 	}
@@ -389,9 +393,9 @@ export async function publishCommunityEvent(
 	// fresh attempt, not a re-run of the one staff turned down.
 	if (existing.status === 'rejected') {
 		await db
-			.update(event)
+			.update(eventListing)
 			.set({ status: 'draft', updatedAt: new Date() })
-			.where(eq(event.id, eventId));
+			.where(eq(eventListing.id, eventId));
 	}
 
 	await publishEvent(eventId);
@@ -420,9 +424,9 @@ export async function withdrawCommunityEvent(eventId: string, userId: string): P
 		throw new ListingStatusError('Only a published listing can be cancelled');
 	}
 	await db
-		.update(event)
+		.update(eventListing)
 		.set({ status: 'cancelled', updatedAt: new Date() })
-		.where(eq(event.id, eventId));
+		.where(eq(eventListing.id, eventId));
 }
 
 /**
@@ -439,8 +443,8 @@ export async function deleteCommunityEventDraft(eventId: string, userId: string)
 			'Only a draft can be deleted — cancel a published listing instead'
 		);
 	}
-	await detachSlot('event', eventId, 'poster');
-	await db.delete(event).where(eq(event.id, eventId));
+	await detachSlot('event_listing', eventId, 'poster');
+	await db.delete(eventListing).where(eq(eventListing.id, eventId));
 }
 
 // ---------------------------------------------------------------------------
@@ -455,7 +459,7 @@ export async function approveSubmission(eventId: string, staffId: string): Promi
 	}
 	await publishEvent(eventId);
 	// A live listing carries no outstanding complaint.
-	await db.update(event).set({ reviewNotes: null }).where(eq(event.id, eventId));
+	await db.update(eventListing).set({ reviewNotes: null }).where(eq(eventListing.id, eventId));
 	await emitReviewed({
 		eventId,
 		eventTitle: existing.title,
@@ -489,14 +493,14 @@ export async function rejectSubmission(
 	}
 
 	await db
-		.update(event)
+		.update(eventListing)
 		.set({
 			status: 'rejected',
 			publishedAt: null,
 			reviewNotes: trimmed,
 			updatedAt: new Date()
 		})
-		.where(eq(event.id, eventId));
+		.where(eq(eventListing.id, eventId));
 
 	await emitReviewed({
 		eventId,
@@ -512,12 +516,12 @@ export async function rejectSubmission(
 export async function countPublishedListingsBy(userId: string): Promise<number> {
 	const [row] = await db
 		.select({ value: count() })
-		.from(event)
+		.from(eventListing)
 		.where(
 			and(
-				eq(event.source, 'community'),
-				eq(event.createdByUserId, userId),
-				inArray(event.status, ['published', 'cancelled'])
+				eq(eventListing.source, 'community'),
+				eq(eventListing.createdByUserId, userId),
+				inArray(eventListing.status, ['published', 'cancelled'])
 			)
 		);
 	return row?.value ?? 0;
@@ -565,7 +569,7 @@ async function uploadPosterKey(
 	const key = mediaKey('events/posters', eventId, file.contentType);
 	await uploadFile(file.buffer, key, file.contentType);
 	await replaceSlot({
-		attachableType: 'event',
+		attachableType: 'event_listing',
 		attachableId: eventId,
 		slot: 'poster',
 		key,
@@ -581,9 +585,9 @@ async function storePoster(
 ): Promise<string> {
 	const key = await uploadPosterKey(eventId, file);
 	await db
-		.update(event)
+		.update(eventListing)
 		.set({ posterKey: key, updatedAt: new Date() })
-		.where(eq(event.id, eventId));
+		.where(eq(eventListing.id, eventId));
 	return key;
 }
 

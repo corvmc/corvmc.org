@@ -78,7 +78,7 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
 import {
-	event,
+	eventListing,
 	createEventSchema,
 	eventSources,
 	eventKinds,
@@ -132,9 +132,14 @@ export const getMemberTickets = query(async () => {
 
 	if (eventIds.length > 0) {
 		const events = await db
-			.select({ id: event.id, title: event.title, startsAt: event.startsAt, endsAt: event.endsAt })
-			.from(event)
-			.where(inArray(event.id, eventIds));
+			.select({
+				id: eventListing.id,
+				title: eventListing.title,
+				startsAt: eventListing.startsAt,
+				endsAt: eventListing.endsAt
+			})
+			.from(eventListing)
+			.where(inArray(eventListing.id, eventIds));
 
 		eventMap = Object.fromEntries(
 			events
@@ -571,16 +576,16 @@ export const searchEvents = query(z.string(), async (q) => {
 
 	const pattern = `%${q}%`;
 	const rows = await db
-		.select({ id: event.id, title: event.title, startsAt: event.startsAt })
-		.from(event)
+		.select({ id: eventListing.id, title: eventListing.title, startsAt: eventListing.startsAt })
+		.from(eventListing)
 		.where(
 			and(
-				like(event.title, pattern),
-				notInArray(event.status, ['cancelled', 'rejected']),
-				not(and(eq(event.source, 'community'), eq(event.status, 'draft'))!)
+				like(eventListing.title, pattern),
+				notInArray(eventListing.status, ['cancelled', 'rejected']),
+				not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
 			)
 		)
-		.orderBy(sql`abs(${event.startsAt} - unixepoch())`)
+		.orderBy(sql`abs(${eventListing.startsAt} - unixepoch())`)
 		.limit(SEARCH_LIMIT);
 
 	// The date arrives as a string because SearchSelect renders its description

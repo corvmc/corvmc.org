@@ -1,9 +1,10 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "21b4d8b8-f127-4597-86f7-a8fc80c97c06",
+  "id": "f8e09f41-fd24-4503-ae94-be0ce6f6709f",
   "prevIds": [
-    "8781d838-53d2-4213-a930-6ade2c20ade8"
+    "c8d93831-21cc-4d11-b678-5b35500af736",
+    "21b4d8b8-f127-4597-86f7-a8fc80c97c06"
   ],
   "ddl": [
     {
@@ -47,15 +48,15 @@
       "entityType": "tables"
     },
     {
-      "name": "event",
-      "entityType": "tables"
-    },
-    {
       "name": "event_band",
       "entityType": "tables"
     },
     {
       "name": "event_group",
+      "entityType": "tables"
+    },
+    {
+      "name": "event_listing",
       "entityType": "tables"
     },
     {
@@ -1390,266 +1391,6 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "title",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "description",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "starts_at",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "ends_at",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "doors_at",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'draft'",
-      "generated": null,
-      "name": "status",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "published_at",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "reservation_id",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "poster_key",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "tags",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "ticketing_enabled",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "ticket_price",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "ticket_price_floor_cents",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "ticket_quantity",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "group_id",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "project_id",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'cmc'",
-      "generated": null,
-      "name": "source",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'show'",
-      "generated": null,
-      "name": "kind",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "location",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "external_ticket_url",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "recurring_series_id",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "review_notes",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "created_by_user_id",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "event"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
       "table": "event_band"
     },
     {
@@ -1781,6 +1522,266 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "event_group"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "description",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "starts_at",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ends_at",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "doors_at",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'draft'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "published_at",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reservation_id",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "poster_key",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tags",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "ticketing_enabled",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ticket_price",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "ticket_price_floor_cents",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ticket_quantity",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'cmc'",
+      "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'show'",
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "location",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_ticket_url",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recurring_series_id",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "review_notes",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "event_listing"
     },
     {
       "type": "text",
@@ -9804,84 +9805,9 @@
     },
     {
       "columns": [
-        "reservation_id"
-      ],
-      "tableTo": "reservation",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "nameExplicit": false,
-      "name": "fk_event_reservation_id_reservation_id_fk",
-      "entityType": "fks",
-      "table": "event"
-    },
-    {
-      "columns": [
-        "group_id"
-      ],
-      "tableTo": "group",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_event_band_id_band_id_fk",
-      "entityType": "fks",
-      "table": "event"
-    },
-    {
-      "columns": [
-        "project_id"
-      ],
-      "tableTo": "project",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_event_project_id_project_id_fk",
-      "entityType": "fks",
-      "table": "event"
-    },
-    {
-      "columns": [
-        "recurring_series_id"
-      ],
-      "tableTo": "recurring_series",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_event_recurring_series_id_recurring_series_id_fk",
-      "entityType": "fks",
-      "table": "event"
-    },
-    {
-      "columns": [
-        "created_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_event_created_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "event"
-    },
-    {
-      "columns": [
         "event_id"
       ],
-      "tableTo": "event",
+      "tableTo": "event_listing",
       "columnsTo": [
         "id"
       ],
@@ -9926,7 +9852,7 @@
       "columns": [
         "event_id"
       ],
-      "tableTo": "event",
+      "tableTo": "event_listing",
       "columnsTo": [
         "id"
       ],
@@ -9954,9 +9880,84 @@
     },
     {
       "columns": [
+        "reservation_id"
+      ],
+      "tableTo": "reservation",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_event_reservation_id_reservation_id_fk",
+      "entityType": "fks",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_event_band_id_band_id_fk",
+      "entityType": "fks",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_event_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        "recurring_series_id"
+      ],
+      "tableTo": "recurring_series",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_event_recurring_series_id_recurring_series_id_fk",
+      "entityType": "fks",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        "created_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_event_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
         "event_id"
       ],
-      "tableTo": "event",
+      "tableTo": "event_listing",
       "columnsTo": [
         "id"
       ],
@@ -10001,7 +10002,7 @@
       "columns": [
         "event_id"
       ],
-      "tableTo": "event",
+      "tableTo": "event_listing",
       "columnsTo": [
         "id"
       ],
@@ -11591,7 +11592,7 @@
       "columns": [
         "event_id"
       ],
-      "tableTo": "event",
+      "tableTo": "event_listing",
       "columnsTo": [
         "id"
       ],
@@ -12208,15 +12209,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "event_pk",
-      "table": "event",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "event_band_pk",
       "table": "event_band",
       "entityType": "pks"
@@ -12228,6 +12220,15 @@
       "nameExplicit": false,
       "name": "event_group_pk",
       "table": "event_group",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "event_pk",
+      "table": "event_listing",
       "entityType": "pks"
     },
     {
@@ -13087,120 +13088,6 @@
     {
       "columns": [
         {
-          "value": "status",
-          "isExpression": false
-        },
-        {
-          "value": "starts_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_event_status_starts",
-      "entityType": "indexes",
-      "table": "event"
-    },
-    {
-      "columns": [
-        {
-          "value": "reservation_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_event_reservation",
-      "entityType": "indexes",
-      "table": "event"
-    },
-    {
-      "columns": [
-        {
-          "value": "group_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_event_band",
-      "entityType": "indexes",
-      "table": "event"
-    },
-    {
-      "columns": [
-        {
-          "value": "source",
-          "isExpression": false
-        },
-        {
-          "value": "status",
-          "isExpression": false
-        },
-        {
-          "value": "starts_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_event_source",
-      "entityType": "indexes",
-      "table": "event"
-    },
-    {
-      "columns": [
-        {
-          "value": "recurring_series_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_event_recurring_series",
-      "entityType": "indexes",
-      "table": "event"
-    },
-    {
-      "columns": [
-        {
-          "value": "project_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_event_project",
-      "entityType": "indexes",
-      "table": "event"
-    },
-    {
-      "columns": [
-        {
-          "value": "recurring_series_id",
-          "isExpression": false
-        },
-        {
-          "value": "starts_at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": true,
-      "where": "recurring_series_id IS NOT NULL AND status != 'cancelled'",
-      "origin": "manual",
-      "name": "uq_event_recurring_instance",
-      "entityType": "indexes",
-      "table": "event"
-    },
-    {
-      "columns": [
-        {
           "value": "event_id",
           "isExpression": false
         },
@@ -13287,6 +13174,120 @@
       "name": "idx_event_group_group",
       "entityType": "indexes",
       "table": "event_group"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "starts_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_status_starts",
+      "entityType": "indexes",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "reservation_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_reservation",
+      "entityType": "indexes",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_band",
+      "entityType": "indexes",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "source",
+          "isExpression": false
+        },
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "starts_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_source",
+      "entityType": "indexes",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "recurring_series_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_recurring_series",
+      "entityType": "indexes",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_project",
+      "entityType": "indexes",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "recurring_series_id",
+          "isExpression": false
+        },
+        {
+          "value": "starts_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "recurring_series_id IS NOT NULL AND status != 'cancelled'",
+      "origin": "manual",
+      "name": "uq_event_recurring_instance",
+      "entityType": "indexes",
+      "table": "event_listing"
     },
     {
       "columns": [
@@ -16072,13 +16073,13 @@
       "value": "ends_at > starts_at",
       "name": "event_time_order",
       "entityType": "checks",
-      "table": "event"
+      "table": "event_listing"
     },
     {
       "value": "source != 'cmc' OR ends_at IS NOT NULL",
       "name": "event_cmc_needs_end",
       "entityType": "checks",
-      "table": "event"
+      "table": "event_listing"
     },
     {
       "value": "quantity > 0",
@@ -16207,5 +16208,7 @@
       "table": "rider_input"
     }
   ],
-  "renames": []
+  "renames": [
+    "event->event_listing"
+  ]
 }

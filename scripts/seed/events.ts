@@ -1,4 +1,4 @@
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { recurringSeries } from '../../src/lib/server/db/schema/recurring';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { buildSeedRRule as seedRRule } from '../seed-rrule';
@@ -26,9 +26,9 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const [r] = await db
 			.insert(reservation)
 			.values({
-				bookerType: 'event',
+				bookerType: 'event_listing',
 				// The real polymorphic pointer, as event-service writes it. A literal
-				// 'event' here left every seeded hold unattached to its show.
+				// 'event_listing' here left every seeded hold unattached to its show.
 				bookerId: eventId,
 				createdByUserId,
 				status: reservationStatus,
@@ -67,7 +67,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		}
 
 		const [e] = await db
-			.insert(event)
+			.insert(eventListing)
 			.values({
 				id: eventId,
 				title: pick(EVENT_TITLES),
@@ -139,7 +139,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		}
 
 		const [e] = await db
-			.insert(event)
+			.insert(eventListing)
 			.values({
 				id: eventId,
 				title: pick(EVENT_TITLES),
@@ -185,7 +185,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		}
 
 		const [e] = await db
-			.insert(event)
+			.insert(eventListing)
 			.values({
 				id: eventId,
 				title: pick(EVENT_TITLES),
@@ -212,7 +212,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		'cancelled'
 	);
 	const [cancelled] = await db
-		.insert(event)
+		.insert(eventListing)
 		.values({
 			id: cancelledEventId,
 			title: 'Cancelled: Outdoor Festival',
@@ -228,7 +228,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 	rows.push(cancelled);
 
 	const [cancelledNoRes] = await db
-		.insert(event)
+		.insert(eventListing)
 		.values({
 			title: 'Cancelled: Benefit Concert',
 			description: 'Cancelled — performer unavailable.',
@@ -247,7 +247,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 	// three surfaces `kind` exists to keep honest. Rendering it locally is the
 	// only way that distinction is visible before production.
 	const [workParty] = await db
-		.insert(event)
+		.insert(eventListing)
 		.values({
 			title: 'Work party: practice room deep clean',
 			description:
@@ -284,7 +284,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		);
 
 		const [proto] = await db
-			.insert(event)
+			.insert(eventListing)
 			.values({
 				id: protoEventId,
 				title: 'Weekly Open Mic',
@@ -305,14 +305,16 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const [series] = await db
 			.insert(recurringSeries)
 			.values({
-				prototypeType: 'event',
+				prototypeType: 'event_listing',
 				prototypeId: proto.id,
 				rrule,
 				createdBy: creator.id
 			})
 			.returning();
 
-		await db.run(sql`UPDATE event SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`);
+		await db.run(
+			sql`UPDATE event_listing SET recurring_series_id = ${series.id} WHERE id = ${proto.id}`
+		);
 
 		for (let w = 1; w <= 2; w++) {
 			const instDay = protoDay + w * 7;
@@ -326,7 +328,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 				'scheduled'
 			);
 			const [inst] = await db
-				.insert(event)
+				.insert(eventListing)
 				.values({
 					id: instEventId,
 					title: proto.title,
@@ -355,9 +357,9 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 	// staff reservations list reports the whole lot as "Unknown event".
 	await db.run(sql`
 		update reservation
-		set booker_id = (select id from event where event.reservation_id = reservation.id)
-		where booker_type = 'event'
-			and exists (select 1 from event where event.reservation_id = reservation.id)
+		set booker_id = (select id from event_listing where event_listing.reservation_id = reservation.id)
+		where booker_type = 'event_listing'
+			and exists (select 1 from event_listing where event_listing.reservation_id = reservation.id)
 	`);
 
 	return rows;

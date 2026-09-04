@@ -64,8 +64,8 @@ export type EventSource = (typeof eventSources)[number];
 export const eventKinds = ['show', 'work_party', 'meeting', 'class'] as const;
 export type EventKind = (typeof eventKinds)[number];
 
-export const event = sqliteTable(
-	'event',
+export const eventListing = sqliteTable(
+	'event_listing',
 	{
 		id: text('id')
 			.primaryKey()
@@ -200,7 +200,7 @@ export const eventBand = sqliteTable(
 			.$defaultFn(() => crypto.randomUUID()),
 		eventId: text('event_id')
 			.notNull()
-			.references(() => event.id, { onDelete: 'cascade' }),
+			.references(() => eventListing.id, { onDelete: 'cascade' }),
 		/** Display credit. Always set, even when the entry link is. */
 		name: text('name').notNull(),
 		/**
@@ -288,7 +288,7 @@ export const eventGroup = sqliteTable(
 			.$defaultFn(() => crypto.randomUUID()),
 		eventId: text('event_id')
 			.notNull()
-			.references(() => event.id, { onDelete: 'cascade' }),
+			.references(() => eventListing.id, { onDelete: 'cascade' }),
 		groupId: text('group_id')
 			.notNull()
 			.references(() => group.id, { onDelete: 'cascade' }),
@@ -417,4 +417,4 @@ export type CommunityEventInput = z.infer<typeof communityEventSchema>;
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
 
-export type Event = typeof event.$inferSelect;
+export type Event = typeof eventListing.$inferSelect;

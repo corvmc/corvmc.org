@@ -1,7 +1,7 @@
 import { db, getRowCount } from '$lib/server/db';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { group } from '$lib/server/db/schema/group';
 
@@ -12,8 +12,8 @@ import { group } from '$lib/server/db/schema/group';
  */
 const bandBookerJoin = and(eq(reservation.bookerType, 'group'), eq(group.id, reservation.bookerId));
 const eventBookerJoin = and(
-	eq(reservation.bookerType, 'event'),
-	eq(event.id, reservation.bookerId)
+	eq(reservation.bookerType, 'event_listing'),
+	eq(eventListing.id, reservation.bookerId)
 );
 import { eq, and, isNull, sql, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
@@ -154,9 +154,9 @@ export async function createEventSeries(params: CreateEventSeriesParams): Promis
 	const { prototypeEventId, frequency, prototypeStartsAt, endsAt } = params;
 
 	const [proto] = await db
-		.select({ createdByUserId: event.createdByUserId })
-		.from(event)
-		.where(eq(event.id, prototypeEventId))
+		.select({ createdByUserId: eventListing.createdByUserId })
+		.from(eventListing)
+		.where(eq(eventListing.id, prototypeEventId))
 		.limit(1);
 	if (!proto) throw new RecurringSeriesError('Prototype event not found');
 
@@ -167,16 +167,16 @@ export async function createEventSeries(params: CreateEventSeriesParams): Promis
 	await db.batch([
 		db.insert(recurringSeries).values({
 			id: seriesId,
-			prototypeType: 'event',
+			prototypeType: 'event_listing',
 			prototypeId: prototypeEventId,
 			rrule: rruleString,
 			createdBy: proto.createdByUserId,
 			endsAt: endsAt ?? null
 		}),
 		db
-			.update(event)
+			.update(eventListing)
 			.set({ recurringSeriesId: seriesId, updatedAt: new Date() })
-			.where(eq(event.id, prototypeEventId))
+			.where(eq(eventListing.id, prototypeEventId))
 	]);
 
 	const [series] = await db.select().from(recurringSeries).where(eq(recurringSeries.id, seriesId));
@@ -317,8 +317,8 @@ export async function getByEvent(eventId: string): Promise<SeriesRow | null> {
 			cancelledAt: recurringSeries.cancelledAt
 		})
 		.from(recurringSeries)
-		.innerJoin(event, eq(event.recurringSeriesId, recurringSeries.id))
-		.where(eq(event.id, eventId))
+		.innerJoin(eventListing, eq(eventListing.recurringSeriesId, recurringSeries.id))
+		.where(eq(eventListing.id, eventId))
 		.limit(1);
 
 	return rows[0] ?? null;
@@ -348,13 +348,13 @@ export async function getEventSeries(seriesId: string): Promise<EventSeriesWithP
 			createdAt: recurringSeries.createdAt,
 			endsAt: recurringSeries.endsAt,
 			cancelledAt: recurringSeries.cancelledAt,
-			prototypeEventId: event.id,
-			prototypeTitle: event.title,
-			prototypeStartsAt: event.startsAt,
-			prototypeCreatedByUserId: event.createdByUserId
+			prototypeEventId: eventListing.id,
+			prototypeTitle: eventListing.title,
+			prototypeStartsAt: eventListing.startsAt,
+			prototypeCreatedByUserId: eventListing.createdByUserId
 		})
 		.from(recurringSeries)
-		.innerJoin(event, eq(recurringSeries.prototypeId, event.id))
+		.innerJoin(eventListing, eq(recurringSeries.prototypeId, eventListing.id))
 		.where(eq(recurringSeries.id, seriesId))
 		.limit(1);
 
@@ -402,7 +402,7 @@ export async function listActive(opts?: { forUser?: string }): Promise<SeriesLis
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(group, bandBookerJoin)
-		.leftJoin(event, eventBookerJoin)
+		.leftJoin(eventListing, eventBookerJoin)
 		.where(and(...conditions));
 
 	return rows.map(({ member, band: bandRow, event: eventRow, ...r }) => ({
@@ -450,7 +450,7 @@ export async function listAll(opts?: { filter?: string }, pagination: Pagination
 		.innerJoin(reservation, eq(recurringSeries.prototypeId, reservation.id))
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(group, bandBookerJoin)
-		.leftJoin(event, eventBookerJoin)
+		.leftJoin(eventListing, eventBookerJoin)
 		.where(where)
 		.$dynamic();
 

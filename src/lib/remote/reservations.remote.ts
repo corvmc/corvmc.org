@@ -35,7 +35,7 @@ import { alias } from 'drizzle-orm/sqlite-core';
 
 /** The roster row that defines ownership — see `band-service.ts`. */
 const ownerMember = alias(groupMember, 'owner_member');
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
 import {
@@ -279,13 +279,13 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			bandId: group.id,
 			bandName: group.name,
 			bandSlug: group.slug,
-			eventId: event.id,
-			eventTitle: event.title
+			eventId: eventListing.id,
+			eventTitle: eventListing.title
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(group, bandBookerJoin)
-		.leftJoin(event, eventBookerJoin)
+		.leftJoin(eventListing, eventBookerJoin)
 		.where(eq(reservation.id, id))
 		.limit(1);
 
@@ -819,8 +819,8 @@ const bandBookerJoin = and(eq(reservation.bookerType, 'group'), eq(group.id, res
 
 /** The same shape for the other polymorphic booker: an event holding the room. */
 const eventBookerJoin = and(
-	eq(reservation.bookerType, 'event'),
-	eq(event.id, reservation.bookerId)
+	eq(reservation.bookerType, 'event_listing'),
+	eq(eventListing.id, reservation.bookerId)
 );
 
 /** Staff: paginated, filtered reservation list. */
@@ -868,7 +868,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 				like(user.name, pattern),
 				like(user.email, pattern),
 				like(group.name, pattern),
-				like(event.title, pattern)
+				like(eventListing.title, pattern)
 			)
 		);
 	}
@@ -901,7 +901,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(group, bandBookerJoin)
-		.leftJoin(event, eventBookerJoin)
+		.leftJoin(eventListing, eventBookerJoin)
 		.where(where)
 		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
 		.$dynamic();
@@ -911,7 +911,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(group, bandBookerJoin)
-		.leftJoin(event, eventBookerJoin)
+		.leftJoin(eventListing, eventBookerJoin)
 		.where(where);
 
 	const { rows, pagination } = await paginate(dataQ, countQ, {
@@ -2130,7 +2130,7 @@ export const getReservations = query(
 			// Space a staff member booked for an event is the venue's, not theirs —
 			// it has no member confirm/pay flow, so listing it here offered actions
 			// that don't apply.
-			ne(reservation.bookerType, 'event'),
+			ne(reservation.bookerType, 'event_listing'),
 			after && gt(reservation.endsAt, after),
 			!includeTerminal && inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
 		];

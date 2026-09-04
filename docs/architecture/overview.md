@@ -145,7 +145,7 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 - **Remote files** (`src/lib/remote/`) hold the auth guard, the Zod input schema, and thin
   orchestration. They may do simple reads inline, but anything with rules lives in a service.
 - **Services** (`src/lib/server/<domain>/`) hold business logic. Domains: `reservation`,
-  `finance`, `band`, `event`, `ticket`, `equipment`, `marketing`, `notification`, `inbox`,
+  `finance`, `band`, `event_listing`, `ticket`, `equipment`, `marketing`, `notification`, `inbox`,
   `lock`, `directory`, `user`, `help`, `flag`, `site-config`.
 - Services throw typed domain errors (e.g. `ReservationConflictError`); remotes translate
   them to HTTP responses via `mapDomainError()` in `src/lib/server/errors.ts`.
