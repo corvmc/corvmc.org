@@ -85,6 +85,15 @@ describe('DispositionBar', () => {
 
 		await press('s', true);
 
-		await expect.element(page.getByText('Tomorrow')).toBeVisible();
+		// The generous budget is the portal's, not the shortcut's. `expect.element`
+		// polls for one second by default, and the menu content is rendered through
+		// `DropdownMenu.Portal` — a mount plus floating-ui's measuring pass, none of
+		// which is on the path the shortcut itself takes. On a quiet machine it is
+		// there in 0ms; the CI run that failed took 15s over these five tests
+		// against 0.2s locally, with all three vitest projects on one runner, and a
+		// snapshot at one second showed `aria-expanded="true"` on the trigger and
+		// the portal not yet in `<body>`. Same reason and same number as the wait in
+		// `SearchInput.svelte.spec.ts`.
+		await expect.element(page.getByText('Tomorrow')).toBeVisible({ timeout: 5000 });
 	});
 });
