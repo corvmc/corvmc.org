@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { globSync } from 'node:fs';
 
 /**
@@ -78,9 +78,16 @@ function isComment(line: string): boolean {
 	return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('--');
 }
 
+/**
+ * `isFile` is not paranoia: a failing browser test writes its screenshot to a
+ * *directory* named after the spec — `__screenshots__/Foo.svelte.spec.ts/` —
+ * which `src/**` matches and `readFileSync` answers with EISDIR. That turned
+ * one red client test into ten red gate failures naming tables nobody had
+ * touched, which is the opposite of what a gate is for.
+ */
 const files = GLOBS.flatMap((g) => globSync(g))
 	.map((f) => f.replaceAll('\\', '/'))
-	.filter((f) => !ALLOWED.has(f))
+	.filter((f) => !ALLOWED.has(f) && statSync(f).isFile())
 	.sort();
 
 describe('no folded tag tables', () => {
