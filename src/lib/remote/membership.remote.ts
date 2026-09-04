@@ -17,12 +17,10 @@ import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 import { getProductConfig } from '$lib/server/finance/product-config-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { mapDomainError } from '$lib/server/errors';
-import { captureException } from '$lib/server/sentry';
 import { DOLLARS_PER_UNIT } from '$lib/config';
 
 export const getMemberMembership = query(async () => {
 	const user = await requireMember();
-	const { url } = getRequestEvent();
 
 	// No Stripe call here any more. The billing portal link used to sit in this
 	// list, which made a convenience button load-bearing for the whole page: a
