@@ -6,7 +6,7 @@ import { sql } from 'drizzle-orm';
 //
 // Where a show is, as a row rather than as a sentence.
 //
-// `event.location` has carried this since the gig guide shipped, and it stays
+// `event_listing.location` has carried this since the gig guide shipped, and it stays
 // exactly as it is: a band typing "Bombs Away Cafe" into its own listing needs
 // no record of the room, and the guide's venue line keeps working unchanged.
 // What free text cannot do is answer a question — is this show in our room? —

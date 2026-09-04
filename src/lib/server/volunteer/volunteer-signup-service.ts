@@ -757,7 +757,7 @@ export async function listSignupsForUser(
  * schema. One scalar select keeps it that way.
  */
 const eventTitleSql = sql<string | null>`(
-	select e."title" from "event" e where e."id" = ${workOrder.eventId}
+	select e."title" from "event_listing" e where e."id" = ${workOrder.eventId}
 )`;
 
 /**

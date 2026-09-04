@@ -14,7 +14,7 @@
  */
 import { inArray } from 'drizzle-orm';
 import { withPlatformDb } from './platform-db';
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { ticket } from '../../src/lib/server/db/schema/ticket';
 import { SEED_STAFF_ID } from './seed-staff-user';
 
@@ -50,12 +50,12 @@ export async function seedTicketPurchase(): Promise<void> {
 	await withPlatformDb(async (db) => {
 		const ids = [SEED_TP_EVENT_ID, SEED_TP_FLOOR_EVENT_ID];
 		await db.delete(ticket).where(inArray(ticket.eventId, ids));
-		await db.delete(event).where(inArray(event.id, ids));
+		await db.delete(eventListing).where(inArray(eventListing.id, ids));
 
 		const startsAt = daysFromNow(21);
 		const endsAt = new Date(startsAt.getTime() + 3 * 60 * 60 * 1000);
 
-		await db.insert(event).values({
+		await db.insert(eventListing).values({
 			id: SEED_TP_EVENT_ID,
 			title: SEED_TP_EVENT_TITLE,
 			description: 'Seeded for the ticket contribution e2e.',
@@ -72,7 +72,7 @@ export async function seedTicketPurchase(): Promise<void> {
 			createdByUserId: SEED_STAFF_ID
 		});
 
-		await db.insert(event).values({
+		await db.insert(eventListing).values({
 			id: SEED_TP_FLOOR_EVENT_ID,
 			title: 'E2E Show With A Floor',
 			description: 'Seeded for the ticket sliding-scale e2e.',

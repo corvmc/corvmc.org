@@ -118,7 +118,7 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 		// that this booking is teaching rather than rehearsal.
 		subtypes: {
 			group: { icon: IconMusic, label: 'Booked by an act' },
-			event: { icon: IconCalendarEvent, label: 'Held for an event' },
+			event_listing: { icon: IconCalendarEvent, label: 'Held for an event' },
 			instructor: { icon: IconSchool, label: 'Teaching' }
 		}
 	},

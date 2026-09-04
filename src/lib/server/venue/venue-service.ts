@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { venue } from '$lib/server/db/schema/venue';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { asc, count, eq, isNull } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
@@ -139,7 +139,10 @@ export async function deleteVenue(id: string): Promise<void> {
 		throw new PrimaryVenueError('The practice room cannot be deleted.');
 	}
 
-	const [used] = await db.select({ n: count() }).from(event).where(eq(event.venueId, id));
+	const [used] = await db
+		.select({ n: count() })
+		.from(eventListing)
+		.where(eq(eventListing.venueId, id));
 	const n = Number(used?.n ?? 0);
 	if (n > 0) throw new VenueInUseError(n);
 
@@ -174,10 +177,10 @@ export async function listVenues({
 	const rows = await db
 		.select({
 			v: venue,
-			eventCount: count(event.id)
+			eventCount: count(eventListing.id)
 		})
 		.from(venue)
-		.leftJoin(event, eq(event.venueId, venue.id))
+		.leftJoin(eventListing, eq(eventListing.venueId, venue.id))
 		.where(includeArchived ? undefined : isNull(venue.deletedAt))
 		.groupBy(venue.id)
 		// The room first, then alphabetically. A list whose first row is the place

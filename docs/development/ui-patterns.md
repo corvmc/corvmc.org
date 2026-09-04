@@ -895,7 +895,7 @@ Horizontal bar showing a day's reservations from 9am–10pm. Highlights one "cur
 			id: 'def',
 			startsAt: '...',
 			endsAt: '...',
-			bookerType: 'event',
+			bookerType: 'event_listing',
 			label: 'Band Practice',
 			href: '/staff/reservations/def'
 		}

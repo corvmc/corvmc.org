@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { media, mediaAttachment } from '$lib/server/db/schema/media';
 import type { Media } from '$lib/server/db/schema/media';
 import type { AttachableType, MediaSlot } from '$lib/server/db/schema/media';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
@@ -288,8 +288,8 @@ export async function countAttachments(mediaId: string): Promise<number> {
  */
 export function liveAttachmentCondition(): SQL {
 	return sql`(
-		(${mediaAttachment.attachableType} = 'event'
-			AND EXISTS (SELECT 1 FROM ${event} WHERE ${event.id} = ${mediaAttachment.attachableId}))
+		(${mediaAttachment.attachableType} = 'event_listing'
+			AND EXISTS (SELECT 1 FROM ${eventListing} WHERE ${eventListing.id} = ${mediaAttachment.attachableId}))
 		OR (${mediaAttachment.attachableType} = 'group'
 			AND EXISTS (SELECT 1 FROM ${group} WHERE ${group.id} = ${mediaAttachment.attachableId}))
 		OR (${mediaAttachment.attachableType} = 'user'

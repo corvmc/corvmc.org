@@ -391,7 +391,7 @@ export async function cancelUnconfirmedReservations(
 			and(
 				eq(reservation.status, 'scheduled'),
 				lt(reservation.startsAt, now),
-				ne(reservation.bookerType, 'event')
+				ne(reservation.bookerType, 'event_listing')
 			)
 		);
 
@@ -576,7 +576,7 @@ export async function listForMember(
 		bandIds.length > 0
 			? or(mine, and(eq(reservation.bookerType, 'group'), inArray(reservation.bookerId, bandIds)))!
 			: mine;
-	const scope = and(theirs, ne(reservation.bookerType, 'event'))!;
+	const scope = and(theirs, ne(reservation.bookerType, 'event_listing'))!;
 
 	const columns = {
 		id: reservation.id,

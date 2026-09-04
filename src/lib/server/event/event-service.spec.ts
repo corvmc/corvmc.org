@@ -222,7 +222,7 @@ describe('EventService', () => {
 			// then the event is inserted already linked to it.
 			expect(staffCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
-					bookerType: 'event',
+					bookerType: 'event_listing',
 					bookerId: lastInsertedValues!.id,
 					status: 'confirmed'
 				})
@@ -435,7 +435,7 @@ describe('EventService', () => {
 
 			await cancel('evt-1', 'staff-1');
 
-			expect(detachSlot).toHaveBeenCalledWith('event', 'evt-1', 'poster');
+			expect(detachSlot).toHaveBeenCalledWith('event_listing', 'evt-1', 'poster');
 			expect(deleteObject).not.toHaveBeenCalled();
 		});
 
@@ -618,7 +618,7 @@ describe('EventService', () => {
 			);
 			expect(staffCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
-					bookerType: 'event',
+					bookerType: 'event_listing',
 					bookerId: 'evt-1',
 					status: 'confirmed' // event-booked space is staff-held, never member-confirmed
 				})
@@ -696,7 +696,7 @@ describe('EventService', () => {
 			expect(cancelReservation).not.toHaveBeenCalled();
 			expect(staffCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
-					bookerType: 'event',
+					bookerType: 'event_listing',
 					bookerId: 'evt-1',
 					status: 'confirmed'
 				})
@@ -876,7 +876,11 @@ describe('EventService', () => {
 			// whether another event still points at that object. The takedown now
 			// depends on the sweep for the old key's removal.
 			expect(replaceSlot).toHaveBeenCalledWith(
-				expect.objectContaining({ attachableType: 'event', attachableId: 'evt-1', slot: 'poster' })
+				expect.objectContaining({
+					attachableType: 'event_listing',
+					attachableId: 'evt-1',
+					slot: 'poster'
+				})
 			);
 			expect(deleteObject).not.toHaveBeenCalled();
 			expect(lastUpdateSet).toMatchObject({
@@ -1015,7 +1019,7 @@ describe('EventService', () => {
 			// This used to delete the object outright, which is what forced every
 			// recurring occurrence to carry its own copy. Detaching is what lets
 			// them share one, and the sweep reclaims it when the last one goes.
-			expect(detachSlot).toHaveBeenCalledWith('event', 'evt-1', 'poster');
+			expect(detachSlot).toHaveBeenCalledWith('event_listing', 'evt-1', 'poster');
 			expect(deleteObject).not.toHaveBeenCalled();
 		});
 
@@ -1071,9 +1075,9 @@ describe('EventService', () => {
 			// The chainable proxy erases the call shape, so assert on the SQL the
 			// filter renders to instead.
 			const { inArray } = await import('drizzle-orm');
-			const { event, publicEventStatuses } = await import('$lib/server/db/schema/event');
+			const { eventListing, publicEventStatuses } = await import('$lib/server/db/schema/event');
 			const { params } = new SQLiteSyncDialect().sqlToQuery(
-				inArray(event.status, [...publicEventStatuses])
+				inArray(eventListing.status, [...publicEventStatuses])
 			);
 			expect(params).toEqual(['published', 'cancelled']);
 		});

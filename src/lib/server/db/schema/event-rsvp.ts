@@ -1,7 +1,7 @@
 import { sqliteTable, text, index, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
-import { event } from './event';
+import { eventListing } from './event';
 
 // Lightweight RSVP for non-ticketed events: a join row recording that a member is
 // attending. Unlike `ticket`, there is no code, no check-in, and no capacity — it's a
@@ -15,7 +15,7 @@ export const eventRsvp = sqliteTable(
 			.$defaultFn(() => crypto.randomUUID()),
 		eventId: text('event_id')
 			.notNull()
-			.references(() => event.id, { onDelete: 'cascade' }),
+			.references(() => eventListing.id, { onDelete: 'cascade' }),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),

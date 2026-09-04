@@ -1,3 +1,12 @@
+/**
+ * `Listing` in this module means a **community** listing specifically — a show a
+ * member submitted, `source = 'community'`, held off-site.
+ *
+ * The table is `event_listing` because every row of it is a calendar listing;
+ * these functions are the member-submitted subset of it, and the narrower sense
+ * predates the table's name. `instructor_directory`'s `InstructorListing` is a
+ * third, unrelated use of the word.
+ */
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';

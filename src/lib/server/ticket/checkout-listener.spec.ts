@@ -28,7 +28,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/event', () => ({
-	event: {}
+	eventListing: {}
 }));
 
 vi.mock('drizzle-orm', () => ({

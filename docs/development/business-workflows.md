@@ -101,7 +101,7 @@ surface via `getUnresolvedReservations` in `reservations.remote.ts`; staff resol
   listener failed. Check Stripe dashboard → webhook delivery attempts, and Sentry for
   `stage: 'handler'` captures from the webhook route.
 - **"Time slot is not available" that looks wrong** → check the `waitlisted`/`cancelled`
-  exclusions in the conflict query, and whether a `bookerType: 'event'` reservation
+  exclusions in the conflict query, and whether a `bookerType: 'event_listing'` reservation
   (created by an event) is holding the slot.
 - **Confirm button rejected with the window message** → expected outside 3 days before
   start; only a Stripe charge (or staff) commits earlier.
@@ -340,7 +340,7 @@ events use RSVP instead.
 - **Create/publish:** `staff/events` UI → `createEvent` / `publishEvent` / `updateEvent`
   forms in `src/lib/remote/events.remote.ts` → `create()` / `publish()` / `update()` in
   `src/lib/server/event/event-service.ts`. Events that reserve practice space create a
-  linked `bookerType: 'event'` reservation; `checkRebookNeeded()` handles time changes.
+  linked `bookerType: 'event_listing'` reservation; `checkRebookNeeded()` handles time changes.
   Recurring events expand nightly via the same generation job as reservations (workflow 2).
 - **Purchase:** public event page → `purchaseTickets` form in `events.remote.ts` — creates
   `pending` tickets via `createTickets()` in `ticket/ticket-service.ts` under a fresh
@@ -374,7 +374,7 @@ events use RSVP instead.
 
 ### Data touched
 
-`event`, `ticket` (status: `pending → valid → checked_in`, or `cancelled`; plus the money the
+`event_listing`, `ticket` (status: `pending → valid → checked_in`, or `cancelled`; plus the money the
 purchase settled at — `unitPriceCents`, `contributionCents` on the purchase's first row only, and
 `discountWaived`), `eventRsvp`, linked `reservation` rows for space-holding events.
 
@@ -774,7 +774,7 @@ on a bill and have it appear on that band's own profile without their say-so.
 
 ### Data touched
 
-`event` (`source`, `status`, `startsAt`, `bandId`, `submittedByUserId`), `event_band`,
+`event_listing` (`source`, `status`, `startsAt`, `bandId`, `submittedByUserId`), `event_band`,
 `content_flag`, `member_standing` (scope `community_event`).
 
 ### Where it breaks

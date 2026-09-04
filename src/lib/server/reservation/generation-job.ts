@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { recurringSeries } from '$lib/server/db/schema/recurring';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { closure } from '$lib/server/db/schema/reservation';
-import { event, eventBand } from '$lib/server/db/schema/event';
+import { eventListing, eventBand } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { linkManagingGroup } from '$lib/server/event/event-service';
@@ -84,7 +84,7 @@ export async function generateRecurringReservations(): Promise<GenerationResult>
 
 /**
  * Expand all active recurring series. Events are processed BEFORE reservations:
- * recurring events book `bookerType: 'event'` reservations that the reservation
+ * recurring events book `bookerType: 'event_listing'` reservations that the reservation
  * pass treats as hard blocks, so generating events first lets the reservation
  * pass step aside instead of grabbing a slot a recurring event needs.
  */
@@ -270,7 +270,7 @@ async function checkEventAndClosureConflict(
 		.from(reservation)
 		.where(
 			and(
-				eq(reservation.bookerType, 'event'),
+				eq(reservation.bookerType, 'event_listing'),
 				notInArray(reservation.status, ['cancelled', 'waitlisted']),
 				lt(reservation.startsAt, endsAt),
 				gt(reservation.endsAt, startsAt)
@@ -326,7 +326,7 @@ async function checkReservationConflict(
 // ---------------------------------------------------------------------------
 
 /**
- * Processes all active series with prototype_type = 'event'. Each occurrence is
+ * Processes all active series with prototype_type = 'event_listing'. Each occurrence is
  * materialized as an independent draft event copying the prototype's details. If
  * the prototype reserved space, each occurrence books and links its own
  * reservation; when that slot conflicts the draft event is still created without
@@ -354,7 +354,7 @@ export async function generateRecurringEvents(): Promise<GenerationResult> {
 		.from(recurringSeries)
 		.where(
 			and(
-				eq(recurringSeries.prototypeType, 'event'),
+				eq(recurringSeries.prototypeType, 'event_listing'),
 				isNull(recurringSeries.cancelledAt),
 				isNull(recurringSeries.supersededBy),
 				or(isNull(recurringSeries.endsAt), gt(recurringSeries.endsAt, sql`(current_timestamp)`))
@@ -382,8 +382,8 @@ async function processEventSeries(
 	// Load the prototype event
 	const [prototype] = await db
 		.select()
-		.from(event)
-		.where(eq(event.id, series.prototypeId))
+		.from(eventListing)
+		.where(eq(eventListing.id, series.prototypeId))
 		.limit(1);
 
 	if (!prototype) {
@@ -432,9 +432,9 @@ async function processEventSeries(
 
 	// Generate occurrences within the window
 	const now = new Date();
-	// Event series hold the room outright; `'event'` is the only booker type a
+	// Event series hold the room outright; `'event_listing'` is the only booker type a
 	// CMC event ever books as.
-	let windowEnd = await generationWindowEnd(now, 'event');
+	let windowEnd = await generationWindowEnd(now, 'event_listing');
 	if (series.endsAt && series.endsAt < windowEnd) {
 		windowEnd = series.endsAt;
 	}
@@ -444,13 +444,13 @@ async function processEventSeries(
 	const existingInstances =
 		occurrences.length > 0
 			? await db
-					.select({ startsAt: event.startsAt })
-					.from(event)
+					.select({ startsAt: eventListing.startsAt })
+					.from(eventListing)
 					.where(
 						and(
-							eq(event.recurringSeriesId, series.id),
-							gte(event.startsAt, occurrences[0]),
-							lte(event.startsAt, occurrences[occurrences.length - 1])
+							eq(eventListing.recurringSeriesId, series.id),
+							gte(eventListing.startsAt, occurrences[0]),
+							lte(eventListing.startsAt, occurrences[occurrences.length - 1])
 						)
 					)
 			: [];
@@ -512,7 +512,7 @@ async function processEventSeries(
 
 		// Insert the draft event first (no reservation), so a failed space booking
 		// never leaves an orphan reservation.
-		await db.insert(event).values({
+		await db.insert(eventListing).values({
 			id: newEventId,
 			title: prototype.title,
 			description: prototype.description,
@@ -574,7 +574,12 @@ async function processEventSeries(
 		// holds one JPEG instead of 52. See docs/specs/shipped/media-spec.md.
 		if (prototype.posterKey) {
 			try {
-				const attached = await attachExisting('event', newEventId, 'poster', prototype.posterKey);
+				const attached = await attachExisting(
+					'event_listing',
+					newEventId,
+					'poster',
+					prototype.posterKey
+				);
 
 				// No `media` row for the prototype's key means something wrote a poster
 				// without recording it — the backfill covered every key that existed,
@@ -589,9 +594,9 @@ async function processEventSeries(
 				}
 
 				await db
-					.update(event)
+					.update(eventListing)
 					.set({ posterKey: prototype.posterKey, updatedAt: new Date() })
-					.where(eq(event.id, newEventId));
+					.where(eq(eventListing.id, newEventId));
 			} catch (err) {
 				// Best-effort: the draft event remains; staff can add a poster manually.
 				captureException(err, { event: 'event.recurring.poster', eventId: newEventId });
@@ -624,7 +629,7 @@ async function processEventSeries(
 				} else {
 					const res = await staffCreate({
 						userId: prototype.createdByUserId,
-						bookerType: 'event',
+						bookerType: 'event_listing',
 						bookerId: newEventId,
 						startsAt: occResStart,
 						endsAt: occResEnd,
@@ -634,9 +639,9 @@ async function processEventSeries(
 						status: 'confirmed'
 					});
 					await db
-						.update(event)
+						.update(eventListing)
 						.set({ reservationId: res.id, updatedAt: new Date() })
-						.where(eq(event.id, newEventId));
+						.where(eq(eventListing.id, newEventId));
 				}
 			} catch (err) {
 				// Best-effort: the draft event remains; staff can book space manually.

@@ -65,8 +65,8 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 // `drizzle:Name` symbol, but these stand-ins are plain objects, so the
 // discriminator has to be one they actually have.
 vi.mock('$lib/server/db/schema/event', () => ({
-	event: {
-		__table: 'event',
+	eventListing: {
+		__table: 'event_listing',
 		id: 'id',
 		title: 'title',
 		description: 'description',
@@ -607,7 +607,7 @@ describe('generateRecurringEvents', () => {
 		expect(mockHasConflict).toHaveBeenCalledOnce();
 		expect(mockStaffCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
-				bookerType: 'event',
+				bookerType: 'event_listing',
 				// Matches the one-off path: event-booked space is staff-held, so it
 				// must not look like an uncommitted member booking.
 				status: 'confirmed',
@@ -708,7 +708,7 @@ describe('generateRecurringEvents', () => {
 		expect(mockCopyObject).not.toHaveBeenCalled();
 		// One more attachment on the same object, in the occurrence's poster slot.
 		expect(mockAttachExisting).toHaveBeenCalledWith(
-			'event',
+			'event_listing',
 			expect.any(String),
 			'poster',
 			'events/posters/eproto-1.webp'
@@ -767,7 +767,7 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 
 		await generateRecurringEvents();
 
-		expect(insertsFor('event')[0]).toMatchObject({
+		expect(insertsFor('event_listing')[0]).toMatchObject({
 			source: 'group',
 			groupId: 'club-1',
 			location: 'Practice Room'
@@ -787,7 +787,7 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 
 		await generateRecurringEvents();
 
-		const [occurrence] = insertsFor('event') as Record<string, unknown>[];
+		const [occurrence] = insertsFor('event_listing') as Record<string, unknown>[];
 		expect(occurrence.status).toBe('published');
 		expect(occurrence.publishedAt).toBeInstanceOf(Date);
 	});
@@ -800,7 +800,7 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 
 		await generateRecurringEvents();
 
-		const [occurrence] = insertsFor('event') as Record<string, unknown>[];
+		const [occurrence] = insertsFor('event_listing') as Record<string, unknown>[];
 		expect(occurrence.status).toBe('draft');
 		expect(occurrence.publishedAt).toBeNull();
 	});

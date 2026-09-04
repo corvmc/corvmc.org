@@ -1,5 +1,5 @@
 import { venue } from '../../src/lib/server/db/schema/venue';
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { eq, isNull } from 'drizzle-orm';
 import { batchInsert, db } from './db';
 
@@ -57,7 +57,10 @@ export async function seedVenues(events: any[]) {
 
 	// Backfill: every existing CMC show was in the room, because until this table
 	// there was nowhere else it could have been.
-	await db.update(event).set({ venueId: 'seed-venue-room' }).where(isNull(event.venueId));
+	await db
+		.update(eventListing)
+		.set({ venueId: 'seed-venue-room' })
+		.where(isNull(eventListing.venueId));
 
 	// One published show moved off-site, so the console's off-site branch and the
 	// "no room held" copy are both reachable without editing anything by hand.
@@ -66,9 +69,9 @@ export async function seedVenues(events: any[]) {
 	);
 	if (offSite) {
 		await db
-			.update(event)
+			.update(eventListing)
 			.set({ venueId: 'seed-venue-hall', location: 'Whiteside Theatre, 361 SW Madison Ave' })
-			.where(eq(event.id, offSite.id));
+			.where(eq(eventListing.id, offSite.id));
 	}
 
 	return { venues: 3, offSiteEventId: offSite?.id ?? null };
