@@ -5,16 +5,22 @@ import type { PostmarkInboundPayload } from './inbound-handlers';
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockFindOrCreateThread = vi.fn(async () => ({ id: 'new-thread', channel: 'email' }));
+const mockFindOrCreateThread = vi.fn(async (): Promise<Record<string, unknown>> => ({
+	id: 'new-thread',
+	channel: 'email'
+}));
 const mockFindThreadById = vi.fn(
 	async (): Promise<Record<string, unknown> | undefined> => undefined
 );
 const mockReopenThread = vi.fn(async () => undefined);
 
+const mockSetThreadContactName = vi.fn(async () => undefined);
+
 vi.mock('./thread-service', () => ({
 	findOrCreateThread: (...args: unknown[]) => mockFindOrCreateThread(...(args as [])),
 	findThreadById: (...args: unknown[]) => mockFindThreadById(...(args as [])),
-	reopenThread: (...args: unknown[]) => mockReopenThread(...(args as []))
+	reopenThread: (...args: unknown[]) => mockReopenThread(...(args as [])),
+	setThreadContactName: (...args: unknown[]) => mockSetThreadContactName(...(args as []))
 }));
 
 interface InboundMessageArgs {
@@ -29,10 +35,25 @@ const mockAddOutboundMessage = vi.fn(async (_params: Record<string, unknown>) =>
 	id: 'out-1'
 }));
 const mockAddNote = vi.fn(async (_params: Record<string, unknown>) => ({ id: 'note-1' }));
+const mockFindMessageByChannelId = vi.fn(
+	async (_id: string): Promise<Record<string, unknown> | undefined> => undefined
+);
+const mockRecordOutboundMessage = vi.fn(async (_params: Record<string, unknown>) => ({
+	id: 'echo-1'
+}));
 vi.mock('./message-service', () => ({
 	addInboundMessage: (params: InboundMessageArgs) => mockAddInboundMessage(params),
 	addOutboundMessage: (params: Record<string, unknown>) => mockAddOutboundMessage(params),
-	addNote: (params: Record<string, unknown>) => mockAddNote(params)
+	addNote: (params: Record<string, unknown>) => mockAddNote(params),
+	findMessageByChannelId: (id: string) => mockFindMessageByChannelId(id),
+	recordOutboundMessage: (params: Record<string, unknown>) => mockRecordOutboundMessage(params)
+}));
+
+const mockFetchMetaProfile = vi.fn(
+	async (_id: string): Promise<{ name: string | null; username: string | null } | null> => null
+);
+vi.mock('./meta-client', () => ({
+	fetchMetaProfile: (id: string) => mockFetchMetaProfile(id)
 }));
 
 const mockFindStaffUserByEmail = vi.fn(
@@ -69,6 +90,10 @@ beforeEach(() => {
 	mockFindStaffUserByEmail.mockResolvedValue(null);
 	mockParseReplyMailboxHash.mockReturnValue(null);
 	mockIsChannelEnabled.mockResolvedValue(true);
+	mockFindMessageByChannelId.mockResolvedValue(undefined);
+	mockRecordOutboundMessage.mockResolvedValue({ id: 'echo-1' });
+	mockFetchMetaProfile.mockResolvedValue(null);
+	mockSetThreadContactName.mockResolvedValue(undefined);
 });
 
 // ---------------------------------------------------------------------------
@@ -102,7 +127,8 @@ function payload(overrides: Partial<PostmarkInboundPayload> = {}): PostmarkInbou
 // sits at module scope so the cold Vite transform of the whole module graph is
 // paid once, during file evaluation — not inside a test or hook, where it would
 // race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
-const { handlePostmarkInbound, handleContactForm } = await import('./inbound-handlers');
+const { handlePostmarkInbound, handleContactForm, handleMetaInbound, handleMetaEcho } =
+	await import('./inbound-handlers');
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -418,5 +444,189 @@ describe('handleContactForm', () => {
 			subject: 'General Inquiry',
 			message: 'Hello!'
 		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Meta: Instagram and Messenger
+// ---------------------------------------------------------------------------
+
+function metaInbound(overrides: Record<string, unknown> = {}) {
+	return {
+		channel: 'instagram' as const,
+		senderId: 'ig-1',
+		messageId: 'mid-1',
+		body: 'Do you rent hourly?',
+		timestamp: 1700000000,
+		...overrides
+	};
+}
+
+describe('handleMetaInbound', () => {
+	beforeEach(() => {
+		mockFindOrCreateThread.mockResolvedValue({
+			id: 'meta-thread',
+			channel: 'instagram',
+			contactName: null
+		});
+	});
+
+	it('threads on the sender id and files the message', async () => {
+		await handleMetaInbound(metaInbound());
+
+		expect(mockFindOrCreateThread).toHaveBeenCalledWith({
+			channel: 'instagram',
+			contactExternalId: 'ig-1'
+		});
+		expect(mockAddInboundMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ threadId: 'meta-thread', channelMessageId: 'mid-1' })
+		);
+	});
+
+	// Meta redelivers a batch for up to 36 hours after any non-200, and this
+	// route answers 200 only after the write. Without the guard a retry doubles
+	// the thread's message count.
+	it('files nothing when the mid has already been seen', async () => {
+		mockFindMessageByChannelId.mockResolvedValue({ id: 'existing' });
+
+		const result = await handleMetaInbound(metaInbound());
+
+		expect(result.duplicate).toBe(true);
+		expect(mockAddInboundMessage).not.toHaveBeenCalled();
+		expect(mockFindOrCreateThread).not.toHaveBeenCalled();
+	});
+
+	it('names the thread from the profile on first contact', async () => {
+		mockFetchMetaProfile.mockResolvedValue({ name: 'Ada Lovelace', username: 'ada' });
+
+		await handleMetaInbound(metaInbound());
+
+		expect(mockSetThreadContactName).toHaveBeenCalledWith('meta-thread', 'Ada Lovelace');
+		expect(mockAddInboundMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ authorName: 'Ada Lovelace' })
+		);
+	});
+
+	it('falls back to the username when the profile has no name', async () => {
+		mockFetchMetaProfile.mockResolvedValue({ name: null, username: 'ada' });
+
+		await handleMetaInbound(metaInbound());
+
+		expect(mockSetThreadContactName).toHaveBeenCalledWith('meta-thread', '@ada');
+	});
+
+	// The lookup is a Graph round trip inside a webhook Meta expects answered in
+	// 20 seconds, and a name does not change between messages.
+	it('does not look up a profile for a thread that already has a name', async () => {
+		mockFindOrCreateThread.mockResolvedValue({
+			id: 'meta-thread',
+			channel: 'instagram',
+			contactName: 'Ada Lovelace'
+		});
+
+		await handleMetaInbound(metaInbound());
+
+		expect(mockFetchMetaProfile).not.toHaveBeenCalled();
+	});
+
+	// Losing the message because a display name could not be fetched would be the
+	// worse trade: the lookup needs its own permission and can fail on a contact
+	// who has never messaged the Page.
+	it('files the message under the raw id when the lookup fails', async () => {
+		mockFetchMetaProfile.mockResolvedValue(null);
+
+		await handleMetaInbound(metaInbound());
+
+		expect(mockSetThreadContactName).not.toHaveBeenCalled();
+		expect(mockAddInboundMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ authorName: 'ig-1' })
+		);
+	});
+
+	it('keeps the attachment payload on the message for whoever needs the URL', async () => {
+		await handleMetaInbound(
+			metaInbound({
+				body: '[Photo]',
+				attachments: [{ type: 'image', payload: { url: 'https://cdn.example/1.jpg' } }],
+				replyTo: { story: { id: 's-1' } }
+			})
+		);
+
+		expect(mockAddInboundMessage).toHaveBeenCalledWith(
+			expect.objectContaining({
+				body: '[Photo]',
+				channelMetadata: {
+					timestamp: 1700000000,
+					attachments: [{ type: 'image', payload: { url: 'https://cdn.example/1.jpg' } }],
+					replyTo: { story: { id: 's-1' } }
+				}
+			})
+		);
+	});
+});
+
+describe('handleMetaEcho', () => {
+	beforeEach(() => {
+		mockFindOrCreateThread.mockResolvedValue({
+			id: 'meta-thread',
+			channel: 'instagram',
+			contactName: 'Ada Lovelace'
+		});
+	});
+
+	// A reply staff sent from their phone. Filed as outbound so the thread stops
+	// reading as unanswered — and through recordOutboundMessage, because Meta has
+	// already delivered it and dispatching would send it twice.
+	it('files a page-sent message as outbound without dispatching it', async () => {
+		await handleMetaEcho({
+			channel: 'instagram',
+			contactId: 'ig-1',
+			messageId: 'mid-out-1',
+			body: 'Yes, $15/hr.',
+			timestamp: 1700000001
+		});
+
+		expect(mockAddOutboundMessage).not.toHaveBeenCalled();
+		expect(mockRecordOutboundMessage).toHaveBeenCalledWith(
+			expect.objectContaining({
+				threadId: 'meta-thread',
+				body: 'Yes, $15/hr.',
+				authorUserId: null,
+				authorName: 'Sent from Instagram',
+				channelMessageId: 'mid-out-1'
+			})
+		);
+	});
+
+	it('threads an echo on the recipient, who is the contact', async () => {
+		await handleMetaEcho({
+			channel: 'messenger',
+			contactId: 'fb-9',
+			messageId: 'mid-out-2',
+			body: 'On our way',
+			timestamp: 1
+		});
+
+		expect(mockFindOrCreateThread).toHaveBeenCalledWith({
+			channel: 'messenger',
+			contactExternalId: 'fb-9'
+		});
+	});
+
+	// Our own dispatched reply comes back as an echo carrying the very mid that
+	// dispatch stored on the message row.
+	it('files nothing for the echo of a reply we sent from here', async () => {
+		mockFindMessageByChannelId.mockResolvedValue({ id: 'already-sent' });
+
+		const result = await handleMetaEcho({
+			channel: 'instagram',
+			contactId: 'ig-1',
+			messageId: 'mid-out-1',
+			body: 'Yes, $15/hr.',
+			timestamp: 1
+		});
+
+		expect(result.duplicate).toBe(true);
+		expect(mockRecordOutboundMessage).not.toHaveBeenCalled();
 	});
 });

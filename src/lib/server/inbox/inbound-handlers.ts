@@ -1,5 +1,17 @@
-import { findOrCreateThread, findThreadById, reopenThread } from './thread-service';
-import { addInboundMessage, addOutboundMessage, addNote } from './message-service';
+import {
+	findOrCreateThread,
+	findThreadById,
+	reopenThread,
+	setThreadContactName
+} from './thread-service';
+import {
+	addInboundMessage,
+	addOutboundMessage,
+	addNote,
+	findMessageByChannelId,
+	recordOutboundMessage
+} from './message-service';
+import { fetchMetaProfile, type MetaAttachment, type MetaMessage } from './meta-client';
 import { parseReplyMailboxHash } from './reply-address';
 import { isChannelEnabled } from './channel-config-service';
 import { findStaffUserByEmail } from '$lib/server/authorization';
@@ -281,30 +293,116 @@ export async function handleTwilioInbound(params: TwilioInboundParams) {
 export interface MetaInboundParams {
 	channel: 'instagram' | 'messenger';
 	senderId: string;
-	senderName?: string;
 	messageId: string;
-	text: string;
+	/** Already rendered by `metaMessageBody` — placeholder text for a message
+	 *  that carried only a photo, a shared reel or a story reply. */
+	body: string;
 	timestamp: number;
+	attachments?: MetaAttachment[] | null;
+	replyTo?: MetaMessage['reply_to'] | null;
 }
 
+/**
+ * A message from a contact on Instagram or Messenger.
+ *
+ * The dedupe is not optional here the way it would be for Postmark: Meta
+ * redelivers a webhook for up to 36 hours after any non-200, and this route
+ * answers 200 only after the write. A retry that raced the first write would
+ * otherwise double the thread's message count and re-preview it.
+ */
 export async function handleMetaInbound(params: MetaInboundParams) {
+	const existingMessage = await findMessageByChannelId(params.messageId);
+	if (existingMessage) {
+		return { thread: null, message: null, duplicate: true as const };
+	}
+
 	const thread = await findOrCreateThread({
 		channel: params.channel,
-		contactExternalId: params.senderId,
-		contactName: params.senderName ?? null
+		contactExternalId: params.senderId
 	});
+
+	// Only on first contact. The lookup costs a Graph round trip inside a webhook
+	// Meta expects answered in 20 seconds, and the answer does not change.
+	let contactName = thread.contactName;
+	if (!contactName) {
+		const profile = await fetchMetaProfile(params.senderId);
+		const resolved = profile?.name ?? (profile?.username ? `@${profile.username}` : null);
+		if (resolved) {
+			await setThreadContactName(thread.id, resolved);
+			contactName = resolved;
+		}
+	}
 
 	const message = await addInboundMessage({
 		threadId: thread.id,
-		body: params.text,
-		authorName: params.senderName ?? params.senderId,
+		body: params.body,
+		// Falls back to the raw id: a thread named by number is worse than one
+		// named by a person, and better than a message attributed to nobody.
+		authorName: contactName ?? params.senderId,
 		channelMessageId: params.messageId,
 		channelMetadata: {
-			timestamp: params.timestamp
+			timestamp: params.timestamp,
+			// The placeholder body says *that* a photo arrived; this is where the
+			// URL to it lives. Meta's CDN links expire, so it is a lead to follow
+			// now rather than an archive.
+			...(params.attachments ? { attachments: params.attachments } : {}),
+			...(params.replyTo ? { replyTo: params.replyTo } : {})
 		}
 	});
 
-	return { thread, message };
+	return { thread, message, duplicate: false as const };
+}
+
+export interface MetaEchoParams {
+	channel: 'instagram' | 'messenger';
+	/** The contact. On an echo Meta puts the Page in `sender` and the person in
+	 *  `recipient`, which is the inversion that makes an unfiltered echo look
+	 *  like the contact writing to us in our own words. */
+	contactId: string;
+	messageId: string;
+	body: string;
+	timestamp: number;
+}
+
+/**
+ * A message the Page sent that we did not send from here.
+ *
+ * Staff answer DMs from their phones, and a thread that does not know about it
+ * keeps reading as unanswered and keeps nagging the queue. Filed as outbound
+ * through `recordOutboundMessage` rather than `addOutboundMessage`, because
+ * Meta has already delivered it — dispatching would send it twice.
+ *
+ * The dedupe is also what catches the echo of our *own* reply, which arrives
+ * carrying the `mid` that dispatch already stored on the message row.
+ *
+ * Creates a thread when there is none: a staff member opening a conversation
+ * from the Instagram app is a real conversation, and the alternative is losing
+ * it. Such a thread has an outbound message and no inbound one, which reads
+ * correctly — answered, waiting on them.
+ */
+export async function handleMetaEcho(params: MetaEchoParams) {
+	const existingMessage = await findMessageByChannelId(params.messageId);
+	if (existingMessage) {
+		return { thread: null, message: null, duplicate: true as const };
+	}
+
+	const thread = await findOrCreateThread({
+		channel: params.channel,
+		contactExternalId: params.contactId
+	});
+
+	const message = await recordOutboundMessage({
+		threadId: thread.id,
+		body: params.body,
+		// No CMC account is behind this — Meta does not say which admin sent it —
+		// so the timeline says where it came from instead of guessing at a person.
+		authorUserId: null,
+		authorName: params.channel === 'instagram' ? 'Sent from Instagram' : 'Sent from Messenger',
+		channelMessageId: params.messageId,
+		thread
+	});
+
+	return { thread, message, duplicate: false as const };
 }
 
 /**

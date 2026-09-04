@@ -20,6 +20,11 @@ vi.mock('./twilio-client', () => ({
 	sendSms: (...args: unknown[]) => mockSendSms(...(args as []))
 }));
 
+const mockSendMetaMessage = vi.fn(async (_params: Record<string, unknown>) => 'mid-out-1');
+vi.mock('./meta-client', () => ({
+	sendMetaMessage: (params: Record<string, unknown>) => mockSendMetaMessage(params)
+}));
+
 const mockBuildReplyToAddress = vi.fn((): string | null => 'reply+thread-1.sig@replies.test');
 vi.mock('./reply-address', () => ({
 	buildReplyToAddress: (...args: unknown[]) => mockBuildReplyToAddress(...(args as []))
@@ -34,6 +39,7 @@ beforeEach(() => {
 	mockIsChannelEnabled.mockResolvedValue(true);
 	mockSendInboxReply.mockResolvedValue('pm-message-id');
 	mockBuildReplyToAddress.mockReturnValue('reply+thread-1.sig@replies.test');
+	mockSendMetaMessage.mockResolvedValue('mid-out-1');
 });
 
 // ---------------------------------------------------------------------------
@@ -52,6 +58,7 @@ function params(overrides: Partial<DispatchReplyParams> = {}): DispatchReplyPara
 		contactExternalId: null,
 		subject: 'General Inquiry',
 		lastInboundMessageId: null,
+		lastInboundAt: null,
 		references: null,
 		...overrides
 	};
@@ -159,5 +166,62 @@ describe('dispatchReply — portal channel', () => {
 		mockIsChannelEnabled.mockResolvedValue(true);
 
 		await expect(dispatchReply(params({ channel: 'portal' }))).resolves.toBeNull();
+	});
+});
+
+describe('dispatchReply — Instagram and Messenger', () => {
+	it.each(['instagram', 'messenger'] as const)(
+		'sends a %s reply to the contact id',
+		async (channel) => {
+			const lastInboundAt = new Date(Date.now() - 60 * 60 * 1000);
+
+			const id = await dispatchReply(
+				params({ channel, contactExternalId: 'ig-1', contactEmail: null, lastInboundAt })
+			);
+
+			expect(id).toBe('mid-out-1');
+			expect(mockSendMetaMessage).toHaveBeenCalledWith({
+				recipientId: 'ig-1',
+				body: 'Thanks for reaching out!',
+				lastInboundAt
+			});
+		}
+	);
+
+	// The window is measured from the contact's last message, so the timestamp
+	// has to reach the client — a dispatcher that dropped it would silently send
+	// every reply untagged and get the late ones refused.
+	it('passes the last inbound timestamp through so the window can be judged', async () => {
+		const lastInboundAt = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
+		await dispatchReply(params({ channel: 'instagram', contactExternalId: 'ig-1', lastInboundAt }));
+
+		expect(mockSendMetaMessage).toHaveBeenCalledWith(expect.objectContaining({ lastInboundAt }));
+	});
+
+	it('refuses a thread with no external id rather than sending nowhere', async () => {
+		await expect(
+			dispatchReply(params({ channel: 'messenger', contactExternalId: null }))
+		).rejects.toThrow('no contact external ID');
+		expect(mockSendMetaMessage).not.toHaveBeenCalled();
+	});
+
+	it('does not send when the channel is switched off', async () => {
+		mockIsChannelEnabled.mockResolvedValue(false);
+
+		await expect(
+			dispatchReply(params({ channel: 'instagram', contactExternalId: 'ig-1' }))
+		).rejects.toThrow('is not enabled');
+		expect(mockSendMetaMessage).not.toHaveBeenCalled();
+	});
+
+	// The message the composer shows comes straight from here, so a Graph failure
+	// has to arrive as a sentence rather than be swallowed into a generic one.
+	it('propagates the client’s explanation of a refusal', async () => {
+		mockSendMetaMessage.mockRejectedValue(new Error('the messaging window has closed'));
+
+		await expect(
+			dispatchReply(params({ channel: 'instagram', contactExternalId: 'ig-1' }))
+		).rejects.toThrow('the messaging window has closed');
 	});
 });

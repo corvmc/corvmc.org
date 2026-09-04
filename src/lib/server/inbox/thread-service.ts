@@ -184,6 +184,22 @@ export async function findOrCreateThread(params: FindOrCreateThreadParams) {
 	return thread;
 }
 
+/**
+ * Name a thread whose contact arrived as an opaque id.
+ *
+ * The Meta channels identify a contact by PSID/IGSID, so a thread starts life
+ * titled with a seventeen-digit number and only gets a name once the profile
+ * lookup comes back. Deliberately does nothing when the name is already set:
+ * the lookup runs on first contact, and a later one overwriting a name staff
+ * may have corrected by hand is a worse outcome than a stale one.
+ */
+export async function setThreadContactName(threadId: string, contactName: string) {
+	await db
+		.update(inboxThread)
+		.set({ contactName, updatedAt: new Date() })
+		.where(and(eq(inboxThread.id, threadId), isNull(inboxThread.contactName)));
+}
+
 /** Bare thread row by id — used by inbound routing, which needs the thread's
  *  channel/status/contact fields but not its messages or notes. */
 export async function findThreadById(id: string) {
