@@ -68,6 +68,7 @@
 	let editTags = $state('');
 	let editKind = $state('show');
 	let editLocation = $state('');
+	let editVenueId = $state('');
 	let editExternalTicketUrl = $state('');
 	let editDate = $state('');
 	let editStartTime = $state('');
@@ -81,6 +82,7 @@
 		editTags = evt.tags ?? '';
 		editKind = evt.kind ?? 'show';
 		editLocation = evt.location ?? '';
+		editVenueId = evt.venueId ?? '';
 		editExternalTicketUrl = evt.externalTicketUrl ?? '';
 		editDate = toLocalDate(evt.startsAt);
 		editStartTime = toLocalTime(evt.startsAt);
@@ -248,7 +250,27 @@
 							bind:value={editEndTime}
 						/>
 					</div>
-					<FormField field={fields.location} label="Venue" bind:value={editLocation} />
+					<!--
+						Two fields, not one, and both keep working. `venueId` is what the
+						reservation question reads — a show anywhere but our room holds no
+						space — while `location` stays the free-text line the gig guide has
+						always printed, and the only thing a band listing ever has.
+					-->
+					{#if data.venues.length > 0}
+						<FormField
+							field={fields.venueId}
+							type="select"
+							label="Venue"
+							bind:value={editVenueId}
+							options={[
+								{ value: '', label: 'The practice room' },
+								...data.venues
+									.filter((v) => !v.isPrimary)
+									.map((v) => ({ value: v.id, label: v.name }))
+							]}
+						/>
+					{/if}
+					<FormField field={fields.location} label="Address line" bind:value={editLocation} />
 					<FormField
 						field={fields.externalTicketUrl}
 						label="Ticket link"

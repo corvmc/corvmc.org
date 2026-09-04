@@ -562,10 +562,29 @@ export async function resolveWorkOrder(
  * Oldest first, like every queue in this app — the thing that has been sitting
  * a fortnight is the one that has gone wrong.
  */
-export async function listWorkOrders(): Promise<ShiftWithCounts[]> {
+export async function listWorkOrders(
+	filters: {
+		volunteerRoleId?: string;
+		eventId?: string;
+		projectId?: string;
+	} = {}
+): Promise<ShiftWithCounts[]> {
 	const rows = await shiftRowsQuery()
 		.where(
-			and(isNull(workOrder.startsAt), isNull(workOrder.resolvedAt), isNull(workOrder.cancelledAt))
+			and(
+				isNull(workOrder.startsAt),
+				isNull(workOrder.resolvedAt),
+				isNull(workOrder.cancelledAt),
+				// The same optional anchors `listShifts` takes, for the same reason:
+				// the advance half of a duty list lands here carrying the event it is
+				// for, and a show that cannot be asked what it is waiting on shows
+				// nothing at all.
+				filters.volunteerRoleId
+					? eq(workOrder.volunteerRoleId, filters.volunteerRoleId)
+					: undefined,
+				filters.eventId ? eq(workOrder.eventId, filters.eventId) : undefined,
+				filters.projectId ? eq(workOrder.projectId, filters.projectId) : undefined
+			)
 		)
 		.orderBy(asc(workOrder.createdAt));
 

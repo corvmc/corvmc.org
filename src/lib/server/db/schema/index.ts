@@ -2,6 +2,7 @@ export * from './authentication';
 export * from './authorization';
 export * from './finance';
 export * from './reservation';
+export * from './venue';
 export * from './event';
 export * from './ticket';
 export * from './event-rsvp';

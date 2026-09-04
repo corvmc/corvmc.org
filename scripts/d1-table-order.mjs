@@ -22,6 +22,9 @@ export const tableOrder = [
 	// References user twice (subject + granter). No children.
 	'instructor',
 	'reservation',
+	// References nothing; `event.venue_id` references it, so it must precede
+	// `event`. Sits with the other rootless tables rather than beside it.
+	'venue',
 	'equipment_category',
 	'inventory_location',
 	'inventory_item',

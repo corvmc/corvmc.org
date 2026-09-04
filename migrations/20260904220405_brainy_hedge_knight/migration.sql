@@ -12,10 +12,13 @@
 -- before commit; the snapshot records `renames: ["event->event_listing"]`.
 --
 -- Index and check names keep their `event_` prefixes (idx_event_status_starts,
--- event_time_order, event_cmc_needs_end, ...). SQLite carries them through
--- RENAME TO untouched, and renaming them would turn a free ALTER into a table
--- rebuild. Child tables (event_band, event_group, event_rsvp) and every
--- `event_id` column stay as they are, for the same reason.
+-- idx_event_venue, event_time_order, event_cmc_needs_end, ...). SQLite carries
+-- them through RENAME TO untouched, and renaming them would turn a free ALTER
+-- into a table rebuild. Child tables (event_band, event_group, event_rsvp) and
+-- every `event_id` column stay as they are, for the same reason.
+--
+-- Sequenced after `slow_captain_flint`, which added `event.venue_id`: that ALTER
+-- names the table before this one renames it, so the order is load-bearing.
 ALTER TABLE `event` RENAME TO `event_listing`;--> statement-breakpoint
 -- The three columns that store the parent table's NAME as data. Drizzle's text
 -- enums emit no CHECK, so nothing here fails loudly if it is missed — a

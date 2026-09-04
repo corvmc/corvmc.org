@@ -167,6 +167,8 @@ export interface EventRow {
 	/** What the occasion is, as opposed to whose it is. See `eventKinds`. */
 	kind: EventKind;
 	location: string | null;
+	/** The structured half of `location`. Null means the practice room. */
+	venueId: string | null;
 	externalTicketUrl: string | null;
 	/** Staff's reason for turning down or pulling a community listing. */
 	reviewNotes: string | null;
@@ -190,6 +192,9 @@ export interface CreateEventParams {
 	ticketingEnabled?: boolean;
 	ticketPrice?: number | null;
 	ticketQuantity?: number | null;
+	/** Where it is. Null means the practice room, which is what every event meant before the column. */
+	venueId?: string | null;
+	location?: string | null;
 	createdByUserId: string;
 	reservation?: {
 		startsAt: Date;
@@ -214,6 +219,8 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		ticketingEnabled = false,
 		ticketPrice,
 		ticketQuantity,
+		venueId,
+		location,
 		createdByUserId,
 		reservation: reservationParams,
 		posterFile
@@ -278,6 +285,8 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				ticketPrice: ticketPrice ?? null,
 				// Capacity is only meaningful while we're the ones counting.
 				ticketQuantity: ticketingEnabled ? (ticketQuantity ?? null) : null,
+				venueId: venueId ?? null,
+				location: location ?? null,
 				reservationId,
 				createdByUserId
 			})
@@ -321,6 +330,7 @@ export interface UpdateEventParams {
 	tags?: string | null;
 	kind?: EventKind;
 	location?: string | null;
+	venueId?: string | null;
 	externalTicketUrl?: string | null;
 	ticketingEnabled?: boolean;
 	ticketPrice?: number | null;
@@ -466,6 +476,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.kind !== undefined) updates.kind = params.kind;
 	if (params.location !== undefined) updates.location = params.location;
+	if (params.venueId !== undefined) updates.venueId = params.venueId;
 	if (params.externalTicketUrl !== undefined) {
 		updates.externalTicketUrl = params.externalTicketUrl;
 	}
