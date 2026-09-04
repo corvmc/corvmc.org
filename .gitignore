@@ -36,6 +36,13 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Playwright
 test-results
+# Vitest browser-mode failure screenshots. Configured into `test-results/` in
+# vite.config.ts; this catches whatever an older checkout already wrote, because
+# the path is a directory named like a source file and the `scripts/` grep gates
+# read every path their globs return.
+__screenshots__/
+# Attachments the browser reporter writes beside a failure screenshot.
+.vitest-attachments/
 
 *storybook.log
 storybook-static
