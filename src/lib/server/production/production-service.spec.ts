@@ -173,8 +173,15 @@ describe('transitionProduction', () => {
 
 	it('names the actual status when the transition is illegal', async () => {
 		updateRowCount = 0;
-		selectQueue = [[{ status: 'completed' }]];
+		// Two entries: the assertion below calls through twice, once for the class
+		// and once for the message, and each call re-reads the row.
+		selectQueue = [[{ status: 'completed' }], [{ status: 'completed' }]];
 
+		await expect(transitionProduction('prod-1', 'confirmed')).rejects.toThrow(
+			InvalidProductionTransitionError
+		);
+		// The message names the status it actually found, not the one the caller
+		// assumed — that difference is the whole diagnostic value of re-reading.
 		await expect(transitionProduction('prod-1', 'confirmed')).rejects.toThrow(
 			/from "completed" to "confirmed"/
 		);
