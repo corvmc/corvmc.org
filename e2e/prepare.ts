@@ -36,6 +36,7 @@ import { migrateLocal } from '../scripts/db/migrate-local';
 import { acquireE2eLock } from './lock';
 import {
 	checkpointE2eDatabase,
+	checkpointSummary,
 	clearE2eStateDir,
 	e2eStateIsStale,
 	resetE2eDatabase
@@ -138,8 +139,9 @@ await seedInstructors();
 // into `directory_entry`, which is what the directory reads.
 await seedDirectoryEntries();
 
-// Last, once every seed's miniflare has exited: leave the file with no WAL for
-// the preview server to recover. workerd opens D1 on the first *request*, by
-// which time Playwright's workers are already reading it, and a recovery that
-// collides with those readers kills the server outright. See `reset-db.ts`.
-checkpointE2eDatabase();
+// Last, once every seed's miniflare has exited: leave no file with a WAL for the
+// preview server to recover. workerd opens its SQLite on the first *request*, by
+// which time Playwright's workers are already reading, and a recovery that
+// collides with those readers kills the server outright. Reported rather than
+// assumed — a checkpoint that could not take the lock says so. See `reset-db.ts`.
+console.log(checkpointSummary(checkpointE2eDatabase()));

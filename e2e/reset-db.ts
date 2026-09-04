@@ -241,34 +241,95 @@ export function clearE2eStateDir(): boolean {
  * a failed run — the caller is `prepare.ts` and `checkpoint.ts`, neither of which
  * has anything better to do about it than carry on.
  *
- * @returns false when there is no state directory yet.
+ * @returns which files ended up with no WAL, and which did not.
  */
-export function checkpointE2eDatabase(): boolean {
-	if (!existsSync(E2E_PERSIST_PATH)) return false;
+export function checkpointE2eDatabase(): SqliteCheckpoint {
+	if (!existsSync(E2E_PERSIST_PATH)) return { checkpointed: [], busy: [], failed: [] };
 
-	const files = sqliteFilesUnder(E2E_PERSIST_PATH);
-	if (files.length === 0) return false;
+	// Same guard as `resetE2eDatabase`: only ever touch this suite's own state. A
+	// stray absolute path here would checkpoint `.wrangler/state`, which `pnpm dev`
+	// may be holding.
+	return checkpointSqliteFiles(
+		sqliteFilesUnder(E2E_PERSIST_PATH).filter((file) => file.startsWith(E2E_PERSIST_PATH))
+	);
+}
+
+/** What a sweep did, file by file. */
+export interface SqliteCheckpoint {
+	/** Files whose WAL is now gone — nothing left for workerd to recover. */
+	checkpointed: string[];
+	/** Files something else still held. Their WAL survives. */
+	busy: string[];
+	/** Files that could not be opened at all. */
+	failed: string[];
+}
+
+/**
+ * TRUNCATE-checkpoint each file, and say which ones actually ended up without a WAL.
+ *
+ * **Reading the result row is the point.** `PRAGMA wal_checkpoint(TRUNCATE)` does
+ * not throw when it cannot take the exclusive lock — it answers `busy: 1` and
+ * leaves the WAL exactly as it was. `db.exec` discards that row, so the sweep could
+ * truncate nothing and still report success, which is how `e2e/checkpoint.ts` came
+ * to print "Checkpointed the e2e database after the build." into the one CI log
+ * somebody reads when the suite has died on a server that never came up. A
+ * surviving WAL is the entire failure mode, so whether one survived is the only
+ * output worth having.
+ *
+ * Nothing here throws or retries, keeping #509's contract: a database workerd
+ * already holds is not one this can help with, and failing the run over it would
+ * turn a missed optimisation into a red suite. The caller reports; it does not act.
+ *
+ * Takes the files rather than finding them so the outcomes above can be exercised
+ * against a scratch database — `checkpointE2eDatabase` is what binds it to the run.
+ */
+export function checkpointSqliteFiles(
+	files: string[],
+	{ timeoutMs = 5_000 } = {}
+): SqliteCheckpoint {
+	const swept: SqliteCheckpoint = { checkpointed: [], busy: [], failed: [] };
 
 	for (const file of files) {
-		// Same guard as `resetE2eDatabase`: only ever touch this suite's own state.
-		// A stray absolute path here would checkpoint `.wrangler/state`, which
-		// `pnpm dev` may be holding.
-		if (!file.startsWith(E2E_PERSIST_PATH)) continue;
-
 		try {
-			const db = new DatabaseSync(file, { timeout: 5_000 });
+			const db = new DatabaseSync(file, { timeout: timeoutMs });
 			try {
-				db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+				const row = db.prepare('PRAGMA wal_checkpoint(TRUNCATE)').get() as
+					{ busy?: number } | undefined;
+				(row?.busy ? swept.busy : swept.checkpointed).push(file);
 			} finally {
 				db.close();
 			}
 		} catch {
-			// Locked, or not a database miniflare owns any more. Neither is worth
-			// failing the run over.
+			swept.failed.push(file);
 		}
 	}
 
-	return true;
+	return swept;
+}
+
+/**
+ * One line for a log, saying plainly whether anything was left behind.
+ *
+ * The failure this exists to prevent presents as "the diff broke everything" — a
+ * suite where nothing came up and no test output was produced — so the log has to
+ * be readable by somebody who does not yet know that is what they are looking at.
+ */
+export function checkpointSummary(swept: SqliteCheckpoint): string {
+	const stuck = [...swept.busy, ...swept.failed];
+
+	if (stuck.length === 0) {
+		return swept.checkpointed.length === 0
+			? 'No e2e database to checkpoint — nothing to do.'
+			: `Checkpointed ${swept.checkpointed.length} e2e database(s); no WAL left behind.`;
+	}
+
+	return (
+		`WARNING: ${stuck.length} of ${swept.checkpointed.length + stuck.length} e2e database(s) ` +
+		`still hold a WAL: ${stuck.map((file) => basename(file)).join(', ')}.\n` +
+		'workerd recovers a WAL lazily, on the first request, by which time ' +
+		"Playwright's readers already hold the file — and it does not retry.\n" +
+		'A suite that dies next with SQLITE_BUSY_RECOVERY and no test output died of this.'
+	);
 }
 
 /**
