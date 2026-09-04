@@ -85,6 +85,14 @@ describe('DispositionBar', () => {
 
 		await press('s', true);
 
-		await expect.element(page.getByText('Tomorrow')).toBeVisible();
+		// An explicit timeout, unlike its siblings: the shortcut only flips
+		// `snoozeOpen`, and what has to appear is `SnoozeMenu`'s bits-ui content,
+		// which mounts through a portal from a `$effect`. That is a Svelte
+		// scheduler tick plus a portal mount rather than a synchronous render, and
+		// on a loaded runner it does not reliably land inside the one-second
+		// default — this failed intermittently on `main` and on unrelated branches
+		// while passing every time locally. The assertion is about which key opens
+		// the menu, not about how fast it opens.
+		await expect.element(page.getByText('Tomorrow')).toBeVisible({ timeout: 5000 });
 	});
 });
