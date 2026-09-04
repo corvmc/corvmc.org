@@ -1,0 +1,38 @@
+-- This migration exists for its snapshot, not its SQL.
+--
+-- The fork #501 and #502 left open was fixed twice, in parallel, by two sessions
+-- that could not see each other's work. #508 landed
+-- `20260904021533_greedy_madelyne_pryor`, re-linearising the chain onto #501.
+-- #510 then landed `20260904032851_close_migration_fork_501_502`, whose snapshot
+-- names *both* original heads as parents. Both are children of cff62cca, so main
+-- forked again on exactly the failure the two of them were fixing:
+--
+--   cff62cca ─┬─ 8781d838  20260904021533_greedy_madelyne_pryor        (#508)
+--             └─ c8d93831  20260904032851_close_migration_fork_501_502 (#510)
+--
+-- #510 was the redundant one. It was opened before #508 existed, queued while
+-- #508 was still in flight, and the merge queue rebased it onto a main that had
+-- already been fixed — which is precisely the shape of collision that made the
+-- original fork, one level up. Neither PR is at fault for the other; the gap is
+-- that a no-op reconciliation carries no SQL for CI to disagree about, so nothing
+-- downstream of `drizzle-kit check` could notice the second one had become
+-- unnecessary.
+--
+-- This closes the fork the same way both of its parents did, and for the same
+-- reason: `prevIds` names both heads and the DDL records the union schema, which
+-- restores `generate`'s diff base. There is no schema change to make. Both
+-- branches were already no-ops — #502's `release_purchase.refunded_at` and #501's
+-- `inbox_group_read` / `inbox_thread.group_id` were applied by the original
+-- migrations, in filename order, everywhere.
+--
+-- `generate --custom` is the right tool here, where it was the wrong one for the
+-- first fork. Its snapshot copies the merged-heads base rather than the schema
+-- files, which reproduced a *lossy* base last time, when one head predated
+-- `refunded_at`. Both heads now carry the full union schema, so the merged base
+-- is already correct — verified: this snapshot has `release_purchase.refunded_at`
+-- and `inbox_thread.group_id` in it.
+--
+-- The statement below is a deliberate no-op. The migrator cannot run a file with
+-- no executable statement in it — it fails with "statement has been finalized" —
+-- so the file needs one, and this is the least it can be.
+SELECT 1;
