@@ -563,9 +563,39 @@ export const inboxChannels = [
 	'web',
 	'portal',
 	'direct',
+	'band',
 	'instagram',
 	'messenger'
 ] as const;
+
+/**
+ * The channels the staff inbox is a party to — every channel except `direct`
+ * and `band`.
+ *
+ * `direct` is member↔member. Staff have no queue role in it: `staffVisibleThread`
+ * keeps direct threads out of every staff read, `dispatchReply` throws rather
+ * than write into one, and there is no external system behind it to authenticate.
+ * So it has nothing to configure, and the staff settings page must not be handed
+ * it — `channelMeta` there is keyed by this list, not by `inboxChannels`.
+ *
+ * `band` is out for the same reason with a different owner: a booking enquiry
+ * belongs to the act, `staffVisibleThread` excludes it too, and the act answers
+ * it from `/band/{slug}/messages`. It is *always enabled* — that is what lets
+ * `dispatchReply` send a band's reply — so its absence here is about who
+ * administers it, not about whether it is on.
+ *
+ * `inboxChannels` stays the `inbox_thread.channel` vocabulary; this is the
+ * subset staff administer.
+ */
+export const staffInboxChannels = [
+	'email',
+	'sms',
+	'web',
+	'portal',
+	'instagram',
+	'messenger'
+] as const;
+export type StaffInboxChannel = (typeof staffInboxChannels)[number];
 
 /**
  * The contact-form subject that reveals the event-tip fields.
@@ -597,6 +627,16 @@ export const contactSubjects = [
 	'Volunteer Opportunities',
 	'Donations'
 ] as const;
+/**
+ * The subject every band booking enquiry gets.
+ *
+ * The band contact form has no subject field — a stranger writing to an act is
+ * always writing about one thing — so the value is fixed rather than chosen.
+ * Deliberately *not* a member of `contactSubjects`: that list is the staff
+ * queue's inquiry-type facet, and band threads are never in the staff queue.
+ */
+export const BAND_ENQUIRY_SUBJECT = 'Booking enquiry';
+
 export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
 /**
  * The four views the staff queue offers, in tab order.
@@ -638,13 +678,17 @@ export const inboxParticipantRoles = ['member', 'staff'] as const;
 
 /**
  * Channels with no external system behind them: nothing to authenticate, so
- * nothing to turn off. The contact form and the member portal both deliver
- * through the site itself. Lives here rather than in the inbox service so the
- * settings page can ask the same question the server does.
+ * nothing to turn off. The contact form, the member portal and a band's booking
+ * form all deliver through the site itself. `band` is here for the same reason
+ * `web` is: its *outbound* half is email, but that goes out on the transactional
+ * stream we already own, and the `email` toggle governs the inbound support
+ * mailbox rather than our ability to reply. Lives here rather than in the inbox
+ * service so the settings page can ask the same question the server does.
  */
 export const alwaysEnabledInboxChannels: readonly (typeof inboxChannels)[number][] = [
 	'web',
-	'portal'
+	'portal',
+	'band'
 ];
 
 /** How many people may be sitting on an unanswered request from you at once. */
@@ -658,6 +702,17 @@ export const DIRECT_MESSAGE_BODY_MAX = 5000;
 
 export function isAlwaysEnabledChannel(channel: string): boolean {
 	return (alwaysEnabledInboxChannels as readonly string[]).includes(channel);
+}
+
+/**
+ * Whether a thread's channel is one staff administer and can reply on.
+ *
+ * `direct` is the only one that is not, and a direct thread does reach staff
+ * surfaces: reporting one makes it staff-visible. This is what tells the
+ * composer there is no channel behind it to enable.
+ */
+export function isStaffInboxChannel(channel: string): channel is StaffInboxChannel {
+	return (staffInboxChannels as readonly string[]).includes(channel);
 }
 
 // ---------------------------------------------------------------------------

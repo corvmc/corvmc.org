@@ -44,6 +44,14 @@
 		"panel": "band"
 	},
 	{
+		"route": "/band/[slug]/messages",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/messages/[id]",
+		"panel": "band"
+	},
+	{
 		"route": "/band/[slug]/music",
 		"panel": "band"
 	},

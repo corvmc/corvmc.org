@@ -191,9 +191,16 @@ export async function handlePostmarkInbound(payload: PostmarkInboundPayload) {
 			// behaviour — that covers a contact forwarding our reply to a colleague
 			// who answers. Note the signed address now circulates in staff mailboxes,
 			// so anyone an alert is forwarded to can write into the thread.
-			const staffSender = sameAddress(fromEmail, thread.contactEmail)
-				? null
-				: await findStaffUserByEmail(fromEmail);
+			//
+			// Never on a band thread. The relay writes an *outbound* message, which
+			// on this channel goes out over the band's name — so a staffer who was
+			// forwarded a band's reply and answered it would be writing to a booker
+			// as the act. A band thread is not the org's correspondence, and the
+			// only people who may write into it are on its roster.
+			const staffSender =
+				thread.channel === 'band' || sameAddress(fromEmail, thread.contactEmail)
+					? null
+					: await findStaffUserByEmail(fromEmail);
 
 			if (staffSender && !isAutoResponse(payload.Headers)) {
 				return relayStaffReply({

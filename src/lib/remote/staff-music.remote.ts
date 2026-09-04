@@ -5,12 +5,14 @@ import { isFeatureEnabled } from '$lib/server/feature-flags';
 import {
 	listAllReleases,
 	radioPoolStats,
+	recentSales,
 	restoreRelease,
 	salesTotals,
 	setRadioExclusion,
 	withholdRelease
 } from '$lib/server/audio/staff-audio-service';
 import { getRadioNow, getRecentlyPlayed } from '$lib/server/audio/radio-service';
+import { refundPurchase } from '$lib/server/audio/purchase-service';
 import { LONG_TEXT_MAX } from '$lib/config';
 
 /**
@@ -28,17 +30,19 @@ import { LONG_TEXT_MAX } from '$lib/config';
 export const getStaffMusicPage = query(async () => {
 	await requireStaff();
 
-	const [releases, pool, sales, radioEnabled, audioEnabled, now, recent] = await Promise.all([
-		listAllReleases(),
-		radioPoolStats(),
-		salesTotals(),
-		isFeatureEnabled('cmcRadio'),
-		isFeatureEnabled('bandAudio'),
-		getRadioNow(),
-		getRecentlyPlayed(15)
-	]);
+	const [releases, pool, sales, purchases, radioEnabled, audioEnabled, now, recent] =
+		await Promise.all([
+			listAllReleases(),
+			radioPoolStats(),
+			salesTotals(),
+			recentSales(),
+			isFeatureEnabled('cmcRadio'),
+			isFeatureEnabled('bandAudio'),
+			getRadioNow(),
+			getRecentlyPlayed(15)
+		]);
 
-	return { releases, pool, sales, radioEnabled, audioEnabled, now, recent };
+	return { releases, pool, sales, purchases, radioEnabled, audioEnabled, now, recent };
 });
 
 /**
@@ -88,6 +92,27 @@ export const setRadioExclusionForm = form(
 	async ({ releaseId, excluded, reason }) => {
 		await requireStaff();
 		await setRadioExclusion(releaseId, excluded, reason);
+		void getStaffMusicPage().refresh();
+		return { success: true };
+	}
+);
+
+/**
+ * Reverse a sale.
+ *
+ * Staff-run rather than self-serve: a refund moves money out of a band's account
+ * as well as the collective's, and there is no automated case where that is the
+ * right call without somebody having read the request.
+ *
+ * The confirmation lives in the UI. This is the guard and the audit point — the
+ * service is idempotent, so a second submission is a no-op rather than a second
+ * refund.
+ */
+export const refundPurchaseForm = form(
+	z.object({ purchaseId: z.string().min(1) }),
+	async ({ purchaseId }) => {
+		await requireStaff();
+		await refundPurchase(purchaseId);
 		void getStaffMusicPage().refresh();
 		return { success: true };
 	}

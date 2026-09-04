@@ -316,6 +316,11 @@ export async function seedAudio(bands: any[], users: any[]) {
 
 			// One in eight is abandoned at Stripe — what the stale sweep exists for.
 			const abandoned = !forced && !free && Math.random() < 0.125;
+			// And one in twelve of the rest was refunded, so /staff/music has a
+			// reversed row to render and the Refund button has something to be
+			// absent from. Never the guaranteed demo purchase — that one exists so
+			// a developer can open a working download.
+			const refunded = !forced && !free && !abandoned && Math.random() < 0.083;
 
 			purchaseRows.push({
 				id: randomUUID(),
@@ -327,16 +332,20 @@ export async function seedAudio(bands: any[], users: any[]) {
 				...amounts,
 				stripePaymentIntentId: abandoned || free ? null : `pi_seed${randomUUID().slice(0, 14)}`,
 				stripePaymentRecordId: abandoned || free ? null : `payrec_seed${randomUUID().slice(0, 12)}`,
-				status: abandoned ? 'pending' : 'paid',
+				status: abandoned ? 'pending' : refunded ? 'refunded' : 'paid',
 				downloadToken: randomUUID().replace(/-/g, ''),
 				downloadCount: abandoned ? 0 : randomInt(0, 4),
 				createdAt: new Date(Date.now() - randomInt(1, 120) * 86400000),
-				paidAt: abandoned ? null : new Date(Date.now() - randomInt(1, 120) * 86400000)
+				paidAt: abandoned ? null : new Date(Date.now() - randomInt(1, 120) * 86400000),
+				refundedAt: refunded ? new Date(Date.now() - randomInt(1, 30) * 86400000) : null
 			});
 		}
 	}
-	// 16 × 6 = 96.
-	if (purchaseRows.length) await batchInsert(releasePurchase, purchaseRows, 6);
+	// D1 caps a statement at 100 bound parameters. 17 columns × 5 rows = 85; the
+	// chunk was 6 until `refunded_at` made that 102 and the seed died on
+	// "too many SQL variables", which names the limit but not the column that
+	// crossed it. Recount this when the table gains one.
+	if (purchaseRows.length) await batchInsert(releasePurchase, purchaseRows, 5);
 
 	// -------------------------------------------------------------------------
 	// The objects themselves
