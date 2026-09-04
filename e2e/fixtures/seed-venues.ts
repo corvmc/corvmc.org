@@ -14,7 +14,7 @@
 import { inArray, isNull } from 'drizzle-orm';
 import { withPlatformEnv } from './platform-db';
 import { venue } from '../../src/lib/server/db/schema/venue';
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 
 export const SEED_VENUE_ROOM_ID = 'e2e-venue-room';
 export const SEED_VENUE_ROOM_NAME = 'E2E Practice Room';
@@ -30,7 +30,7 @@ const VENUE_IDS = [SEED_VENUE_ROOM_ID, SEED_VENUE_OFFSITE_ID, SEED_VENUE_ARCHIVE
 
 export async function seedVenues(): Promise<void> {
 	await withPlatformEnv(async ({ db }) => {
-		// `event.venue_id` is ON DELETE SET NULL, so events survive this and are
+		// `event_listing.venue_id` is ON DELETE SET NULL, so events survive this and are
 		// re-pointed below.
 		await db.delete(venue).where(inArray(venue.id, VENUE_IDS));
 
@@ -75,6 +75,9 @@ export async function seedVenues(): Promise<void> {
 		// table there was nowhere else it could have been. Leaving them null would
 		// still read as the room, but only by the fallback — pointing them at it
 		// makes the fixture say so.
-		await db.update(event).set({ venueId: SEED_VENUE_ROOM_ID }).where(isNull(event.venueId));
+		await db
+			.update(eventListing)
+			.set({ venueId: SEED_VENUE_ROOM_ID })
+			.where(isNull(eventListing.venueId));
 	});
 }
