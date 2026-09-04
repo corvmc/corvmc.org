@@ -292,7 +292,15 @@ export const releasePurchase = sqliteTable(
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),
-		paidAt: integer('paid_at', { mode: 'timestamp' })
+		paidAt: integer('paid_at', { mode: 'timestamp' }),
+		/**
+		 * When the money went back. Nullable rather than defaulted: SQLite cannot
+		 * add a column with a non-constant default to a table that already has
+		 * rows, and `status` already says *whether* a refund happened — this says
+		 * when, which a band reconciling a Stripe statement needs and the enum
+		 * cannot carry.
+		 */
+		refundedAt: integer('refunded_at', { mode: 'timestamp' })
 	},
 	(t) => [
 		uniqueIndex('idx_release_purchase_token').on(t.downloadToken),

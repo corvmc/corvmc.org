@@ -15,13 +15,14 @@
 		getStaffMusicPage,
 		withholdReleaseForm,
 		restoreReleaseForm,
-		setRadioExclusionForm
+		setRadioExclusionForm,
+		refundPurchaseForm
 	} from '$lib/remote/staff-music.remote';
-	import { formatCents } from '$lib/utils/format';
+	import { formatCents, formatDate } from '$lib/utils/format';
 	import { resolve } from '$app/paths';
 	import { IconRadio } from '@tabler/icons-svelte';
 
-	const { releases, pool, sales, radioEnabled, audioEnabled, now, recent } = $derived(
+	const { releases, pool, sales, purchases, radioEnabled, audioEnabled, now, recent } = $derived(
 		await getStaffMusicPage()
 	);
 
@@ -248,6 +249,111 @@
 														Take <strong>{release.title}</strong> off the air without unpublishing it.
 													</p>
 													<FormField field={fields.reason} label="Reason (shown to the band)" />
+												{/if}
+											</div>
+										{/snippet}
+									</Action>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		</CardBody>
+	</Card>
+
+	<!--
+		Sales, one row at a time.
+
+		The totals above answer "is the cut working"; this answers "somebody
+		emailed asking for their money back", which is the only question that ends
+		in an action. Capped at the recent ones deliberately — a refund request is
+		always about a recent purchase, and anything older is a Stripe dashboard
+		job.
+	-->
+	<Card>
+		<CardBody>
+			<CardTitle>Recent sales</CardTitle>
+			{#if purchases.length === 0}
+				<EmptyState title="No sales yet" description="Purchases show up here as they happen." />
+			{:else}
+				<Table>
+					{#snippet head()}
+						<th>Release</th>
+						<th class="col-support">Buyer</th>
+						<th class="col-support">When</th>
+						<th>Paid</th>
+						<th class="col-extra">To band</th>
+						<th>Status</th>
+						<th></th>
+					{/snippet}
+
+					{#each purchases as purchase (purchase.purchaseId)}
+						<tr>
+							<td>
+								<span class="font-medium">{purchase.releaseTitle}</span>
+								<span class="text-muted">— {purchase.bandName}</span>
+							</td>
+							<td class="col-support">{purchase.buyerEmail}</td>
+							<td class="col-support">
+								{purchase.paidAt ? formatDate(purchase.paidAt) : '—'}
+							</td>
+							<td>
+								{purchase.amountPaidCents === 0 ? 'Free' : formatCents(purchase.amountPaidCents)}
+							</td>
+							<td class="col-extra">{formatCents(purchase.bandNetCents)}</td>
+							<td>
+								{#if purchase.status === 'refunded'}
+									<Badge variant="warning">
+										Refunded{purchase.refundedAt ? ` ${formatDate(purchase.refundedAt)}` : ''}
+									</Badge>
+								{:else if purchase.status === 'pending'}
+									<!-- Shown rather than hidden: an abandoned checkout and a lost
+									     webhook look identical from the outside, and staff
+									     answering "did my payment go through" need to see both. -->
+									<Badge variant="ghost">Pending</Badge>
+								{:else}
+									<Badge variant="success">Paid</Badge>
+								{/if}
+							</td>
+							<td class="text-right">
+								{#if purchase.refundable}
+									<Action
+										action={refundPurchaseForm.for(purchase.purchaseId)}
+										label="Refund"
+										variant="ghost"
+										size="sm"
+										submitVariant="error"
+										modalTitle="Refund this purchase"
+										submitLabel="Refund"
+										successToast="Refunded"
+									>
+										{#snippet form()}
+											{@const fields = refundPurchaseForm.for(purchase.purchaseId).fields}
+											<div class="space-y-3">
+												<input {...fields.purchaseId.as('hidden', purchase.purchaseId)} />
+												{#if purchase.amountPaidCents === 0}
+													<p>
+														Revoke <strong>{purchase.buyerEmail}</strong>'s download of
+														<strong>{purchase.releaseTitle}</strong>. Nothing was paid, so no money
+														moves — the link simply stops working.
+													</p>
+												{:else}
+													<p>
+														Return <strong>{formatCents(purchase.amountPaidCents)}</strong> to
+														<strong>{purchase.buyerEmail}</strong>
+														for <strong>{purchase.releaseTitle}</strong>.
+													</p>
+													<!-- The part that is not obvious from the button: this
+													     takes money back out of the band's account, not just
+													     the collective's. -->
+													<p class="text-muted">
+														{formatCents(purchase.bandNetCents)} comes back out of {purchase.bandName}'s
+														Stripe account and {formatCents(purchase.platformFeeCents)} out of the collective's.
+														If the band has already been paid out, Stripe recovers it from their next
+														sale.
+													</p>
+													<p class="text-muted">Their download link stops working either way.</p>
 												{/if}
 											</div>
 										{/snippet}
