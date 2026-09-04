@@ -37,7 +37,7 @@
  * `dm-request`, `dm-send`), and reaching the rest means writing against
  * miniflare's internal KV layout, which is fragile for no observed problem.
  */
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
@@ -228,18 +228,68 @@ export function clearE2eStateDir(): boolean {
  * TRUNCATE rather than PASSIVE: it resets the WAL to zero length, so there is
  * nothing left for workerd to recover.
  *
- * @returns false when there is no database yet.
+ * **Every SQLite under the persist path, not only D1.** miniflare keeps one
+ * database per storage kind, and `getPlatformProxy` opens all of them — so a
+ * build leaves a WAL beside each. A freshly seeded state directory here has six:
+ * two for D1 (the database and its metadata), two for R2, one for KV and one for
+ * the cache. Checkpointing only D1 closed one of six windows, which is why the
+ * race survived #360: the failure that started this names `SENTRY_DO`, not D1,
+ * and no amount of checkpointing D1 was ever going to reach it.
+ *
+ * Failures are swallowed per file. A database workerd already holds open is one
+ * this cannot help with, and throwing here would turn a missed optimisation into
+ * a failed run — the caller is `prepare.ts` and `checkpoint.ts`, neither of which
+ * has anything better to do about it than carry on.
+ *
+ * @returns false when there is no state directory yet.
  */
 export function checkpointE2eDatabase(): boolean {
-	if (!existsSync(join(E2E_PERSIST_PATH, 'd1'))) return false;
+	if (!existsSync(E2E_PERSIST_PATH)) return false;
 
-	const db = new DatabaseSync(e2eD1File(), { timeout: 5_000 });
-	try {
-		db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
-	} finally {
-		db.close();
+	const files = sqliteFilesUnder(E2E_PERSIST_PATH);
+	if (files.length === 0) return false;
+
+	for (const file of files) {
+		// Same guard as `resetE2eDatabase`: only ever touch this suite's own state.
+		// A stray absolute path here would checkpoint `.wrangler/state`, which
+		// `pnpm dev` may be holding.
+		if (!file.startsWith(E2E_PERSIST_PATH)) continue;
+
+		try {
+			const db = new DatabaseSync(file, { timeout: 5_000 });
+			try {
+				db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+			} finally {
+				db.close();
+			}
+		} catch {
+			// Locked, or not a database miniflare owns any more. Neither is worth
+			// failing the run over.
+		}
 	}
+
 	return true;
+}
+
+/**
+ * Every `*.sqlite` under a miniflare persist directory.
+ *
+ * Walked rather than named: the layout is miniflare's
+ * (`<kind>/miniflare-<Kind>Object/<hash|metadata>.sqlite`), the hashed filenames
+ * are derived from binding names, and a new binding adds a directory nobody here
+ * would remember to list. `-wal` and `-shm` are siblings of these, not separate
+ * databases, so matching the `.sqlite` suffix alone is right.
+ */
+export function sqliteFilesUnder(dir: string): string[] {
+	const out: string[] = [];
+
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		const full = join(dir, entry.name);
+		if (entry.isDirectory()) out.push(...sqliteFilesUnder(full));
+		else if (entry.isFile() && entry.name.endsWith('.sqlite')) out.push(full);
+	}
+
+	return out;
 }
 
 // `tsx e2e/reset-db.ts` — clear the database by hand, e.g. after a failing run
