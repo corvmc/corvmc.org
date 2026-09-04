@@ -437,18 +437,91 @@ position count triples or per-resource sharing becomes a real feature.
 
 ## Open questions
 
-1. **Do board offices become positions?** Treasurer receives every event's signed count and
-   presents financials; Youth Safety and Complaints are both squarely app-touching. All three
-   pass the singular-and-cross-cutting test. Part 3 of the proposal was scoped out of
-   [committees-and-roles-spec.md](committees-and-roles-spec.md), so this is the first thing to
-   pull back in — and it is the difference between a five-position list and an eleven-position
-   one.
-2. **Is `credit.adjust` bounded by an amount?** The decision above moves it out of admin. If
-   that is too loose, the bound is a ceiling — "up to N hours without escalation" — which is the
-   same threshold model the committee spending limit needs. Neither exists, and building one
-   mechanism for both is the cheap version.
-3. **Does `requireCapability` compose with committee scope, or sit beside it?** A capability
-   like `event.publish` is unqualified; a committee member holds it _for their own domain_. The
-   likely answer is that committee-scoped guards take the resource and resolve the committee
-   from it, and the two guards stay separate rather than merging into one call that has to know
-   both. Worth settling before the first committee surface, not after.
+1. **Do board offices become positions?** ~~Treasurer receives every event's signed count and
+   presents financials; Youth Safety and Complaints are both squarely app-touching.~~
+   **Settled: no.** Treasurer is a position because the app has finance and credit surfaces for
+   it to hold. Youth Safety and Complaints do not get one — their work is not something the
+   software mediates, and a position that grants nothing is a name in a table pretending to be
+   authority. The list stays at four named positions plus `admin` and the transitional `staff`.
+   Revisit if a surface appears that one of those offices would actually operate.
+2. **Is `credit.adjust` bounded by an amount?** **Settled: not for now.** It stays admin-only
+   (shipped in #489), which is the conservative choice and reverses this document's earlier
+   prose — comping an interrupted practice session currently routes through an admin. The
+   ceiling idea is recorded in [IDEAS.md](../../IDEAS.md#spending-ceilings-on-capabilities)
+   rather than dropped, because the committee spending limit wants the same mechanism and
+   building one for both is the cheap version. Widening `credit.adjust` later is a one-line
+   config diff.
+3. **Does `requireCapability` compose with committee scope, or sit beside it?** Still open, and
+   the one to settle before the first committee surface. Both options are gamed out below.
+
+---
+
+## Committee scope: the two shapes
+
+A capability like `event.publish` is unqualified. A committee member holds it _for their own
+domain_ — Programming may publish the shows Programming owns, and not the rest. Something has
+to carry that qualification. There are two places to put it.
+
+### Option A — beside: two guards, composed at the call site
+
+`requireCapability` stays unqualified and answers "may this person ever do this". A separate
+`requireCommitteeRole(ref, capability)` answers "and is this thing theirs". A handler that
+needs both says so:
+
+```ts
+export const publishEvent = form(schema, async (data) => {
+	// Staff hold event.publish outright; a committee member holds it for their own shows.
+	await requireCommitteeCapability({ eventId: data.id }, 'event.publish');
+	…
+});
+```
+
+where that helper resolves the owning committee from the resource, admits anyone holding the
+capability globally, and otherwise checks `group_member` on the resolved group.
+
+**What it costs.** Every committee-scoped handler picks the right guard, and picking the
+unqualified one by mistake is a silent widening — the same failure mode `requireStaff()` had,
+which is what this whole document exists to remove. Mitigable with a lint rule over the
+handlers that touch committee-owned resources, but that is a list somebody maintains.
+
+**What it buys.** The two questions stay separately answerable and separately testable.
+`requireGroupRole` already works exactly this way, ships today, and its `allowStaff` arm is
+already `isElevated`. The capability matrix stays a pure function of position, with no
+resource in it. Nothing in the migration that just landed has to move.
+
+### Option B — composed: one guard that knows both
+
+`requireCapability` takes an optional resource and resolves scope itself:
+
+```ts
+await requireCapability('event.publish', { eventId: data.id });
+```
+
+Unqualified calls behave as they do now; a call with a resource additionally admits a
+committee member of the owning group.
+
+**What it costs.** The guard now needs a resource→committee resolver for every capability
+that can be scoped, which means the authorization layer imports the group service and,
+transitively, most domain services. `can()` stops being answerable from position alone, so
+`capabilitySet()` — which the UI ships to the client to gate nav rows — either becomes
+resource-dependent or quietly diverges from what the guard would decide. That divergence is
+the expensive kind: the nav says yes, the handler says 403.
+
+The per-request position memo also stops being sufficient; scope resolution is a second read,
+keyed by resource rather than by user.
+
+**What it buys.** One guard to reach for, and no way to pick the unqualified one by accident.
+
+### Recommendation
+
+**Option A**, with one addition the spec should commit to: the composed helper lives in
+`src/lib/server/group/` rather than in `authorization.ts`, so the dependency runs
+group → authorization and never back. That keeps `authorization.ts` free of domain imports,
+keeps `capabilitySet()` a pure function of position, and leaves the client-side capability
+list honest — it answers "could this person ever", which is exactly what a nav row needs,
+while the handler answers "and is this one theirs".
+
+The thing to verify before building it: whether any surface needs a nav row gated on
+_committee membership_ rather than on capability. If one does, that is a third question — what
+the client is told about scope — and it is better answered by shipping the committee's own
+panel than by widening the capability list the layout returns.
