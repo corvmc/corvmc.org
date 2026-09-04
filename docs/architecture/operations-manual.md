@@ -128,6 +128,58 @@ Notes:
 - `db.transaction()` doesn't exist on D1; multi-statement writes use `db.batch()`. See the
   [overview](overview.md#database).
 
+### Break-glass: acting when no admin is reachable
+
+`admin` is now the only position holding `user.setRole`, `user.purge` and `credit.adjust`
+(see [admin-vs-staff-spec.md](../specs/admin-vs-staff-spec.md) and the matrix in
+`src/lib/config.ts`). Two people hold it. If both are unavailable and a role genuinely has
+to change, this is the way in — **not** a second shared admin account.
+
+A standing shared credential is a permanent risk to defend; a documented procedure is an
+occasional one. This needs infrastructure access, which is already a smaller circle than
+staff, and it leaves a trail in the Cloudflare audit log.
+
+**Grant somebody a position.** Positions live in `roles`, assignment in `model_has_roles`.
+Both are plain rows; nothing is cached beyond the request.
+
+```bash
+# 1. Confirm the position exists and note its id.
+wrangler d1 execute corvmc-db --remote \
+  --command "SELECT id, name FROM roles WHERE name = 'admin'"
+
+# 2. Find the user.
+wrangler d1 execute corvmc-db --remote \
+  --command "SELECT id, name, email FROM user WHERE lower(email) = lower('them@example.org')"
+
+# 3. Grant it. The primary key is (role_id, user_id), so re-running is harmless.
+wrangler d1 execute corvmc-db --remote \
+  --command "INSERT OR IGNORE INTO model_has_roles (role_id, user_id) VALUES (<role_id>, '<user_id>')"
+```
+
+The change takes effect on that person's **next request** — positions are read fresh from
+`model_has_roles` every time and are deliberately kept out of better-auth's session cookie
+cache, so there is no 60-second window to wait out.
+
+**Afterwards, undo it.** Break-glass access is temporary by definition:
+
+```bash
+wrangler d1 execute corvmc-db --remote \
+  --command "DELETE FROM model_has_roles WHERE role_id = <role_id> AND user_id = '<user_id>'"
+```
+
+Two things worth knowing before you type any of the above:
+
+- **The database is `corvmc-db`.** Using `corvmc` resolves to an empty database and returns
+  `no such table` — which reads like a finding about production and is not one.
+- **The app's own guard refuses to leave you with no admin.** `updateUser` blocks demoting
+  the last one (409) and blocks removing your own elevated access (400). Doing it in SQL
+  bypasses both. Count the remaining admins before deleting a row:
+
+```bash
+wrangler d1 execute corvmc-db --remote --command \
+  "SELECT COUNT(*) FROM model_has_roles mhr JOIN roles r ON r.id = mhr.role_id WHERE r.name = 'admin'"
+```
+
 ## 3. Secrets and configuration
 
 Three places hold configuration; know which is which before changing anything:
