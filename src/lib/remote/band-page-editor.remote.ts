@@ -75,7 +75,6 @@ export const saveBandPageConfig = form(
 		blocks: blocksField
 	}),
 	async (data) => {
-		await requireFeature('bandPremium');
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
 
 		if (band.tier !== 'premium') {
