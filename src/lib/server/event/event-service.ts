@@ -18,6 +18,9 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
 import { eventRsvp } from '$lib/server/db/schema/event-rsvp';
 import { contentFlag } from '$lib/server/db/schema/flag';
+import { venue } from '$lib/server/db/schema/venue';
+import { production } from '$lib/server/db/schema/production';
+import { cancelProductionsForEvent } from '$lib/server/production/production-service';
 import {
 	eq,
 	and,
@@ -964,6 +967,13 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 		}
 	}
 
+	// The ops record follows the listing. Without this the productions index
+	// would show a `confirmed` production against a cancelled show — the status
+	// column lying on the day it shipped. Only pre-completed rows move: a
+	// production that already happened is history, and cancelling the
+	// advertisement afterwards does not un-happen it.
+	await cancelProductionsForEvent(eventId);
+
 	await detachSlot('event_listing', eventId, 'poster');
 
 	// Capture ticket holders before voiding their tickets (the query below
@@ -1106,20 +1116,42 @@ export async function listPast(limit?: number): Promise<EventRow[]> {
  * asks staff for something, `published` is already public.
  */
 export async function listAll(
-	opts: { source?: EventSource; status?: EventStatus } = {},
+	opts: {
+		source?: EventSource;
+		status?: EventStatus;
+		venueId?: string;
+		from?: Date;
+		to?: Date;
+	} = {},
 	pagination: PaginationInput = {}
 ) {
 	const filters = [
 		opts.source ? eq(eventListing.source, opts.source) : undefined,
 		opts.status ? eq(eventListing.status, opts.status) : undefined,
+		opts.venueId ? eq(eventListing.venueId, opts.venueId) : undefined,
+		opts.from ? gte(eventListing.startsAt, opts.from) : undefined,
+		opts.to ? lte(eventListing.startsAt, opts.to) : undefined,
 		not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
 	].filter(Boolean);
 	const where = and(...filters);
 
+	// Both joins are 1:1 — `venue` by the FK, `production` by
+	// `uq_production_event` — so neither fans the row set out and `countQ` stays
+	// a single-table count over the same predicate.
 	const dataQ = db
-		.select({ ...getTableColumns(eventListing), bandName: group.name, bandSlug: group.slug })
+		.select({
+			...getTableColumns(eventListing),
+			bandName: group.name,
+			bandSlug: group.slug,
+			venueName: venue.name,
+			venueIsPrimary: venue.isPrimary,
+			productionId: production.id,
+			productionStatus: production.status
+		})
 		.from(eventListing)
 		.leftJoin(group, eq(group.id, eventListing.groupId))
+		.leftJoin(venue, eq(venue.id, eventListing.venueId))
+		.leftJoin(production, eq(production.eventId, eventListing.id))
 		.where(where)
 		.orderBy(desc(eventListing.startsAt))
 		.$dynamic();

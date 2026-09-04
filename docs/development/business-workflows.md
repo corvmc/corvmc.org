@@ -1,6 +1,6 @@
 # Business Workflows, Traced Through Code
 
-This guide walks through the twelve core workflows of the app in plain language, with the
+This guide walks through the core workflows of the app in plain language, with the
 actual code path for each. Read the [architecture overview](../architecture/overview.md)
 first — it explains the building blocks these workflows are made of (remote functions,
 guards, the event bus, `db.batch`, site config).
@@ -1132,6 +1132,72 @@ seeks to `serverNow − startsAt`.
   Surfaced on the band's release page and counted on `/staff/music`.
 - **An abandoned checkout** leaves a `pending` row; `/api/cron/sweep-audio-purchases`
   clears it after 24h.
+
+## 14. Producing a show: the production record
+
+Design spec: [production-workflow-spec.md](../specs/production-workflow-spec.md) —
+**read its 2026-09-04 amendment first**; most of the body is superseded.
+
+### The story
+
+A listing on the gig guide says a show is happening. A **production** is the other
+half: load-in at four, soundcheck at half five, doors at seven, curfew at eleven,
+and somebody's name against all of it. Most listings never become one — a band's own
+gig and a member's community post never do — which is why it is a separate row
+rather than ten columns that would be NULL on the guide's hottest query.
+
+A staffer opens one from the event page, works on it in the console, and walks it
+forward as the night gets more real: **draft** (somebody is thinking about it) →
+**offered** (the offer is out, waiting on an act) → **confirmed** (it is happening) →
+**completed** (it happened). `settled` and `closed` are in the vocabulary but have no
+button yet; the settlement worksheet and the close-out are later phases.
+
+### Code path
+
+1. `/staff/events/[id]` → **Add production** → `createProduction`
+   (`lib/remote/productions.remote.ts`, guard `event.manage`) →
+   `production-service.createProduction()`. The 1:1 is held by `uq_production_event`,
+   so this inserts and reads the violation rather than selecting first — a
+   select-then-insert is a race.
+2. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
+   adds one entry to its existing `Promise.all` rather than a second remote query.
+3. **Overview** tab → `updateProduction` (times and notes) and
+   `setProductionProducer` (who is running it — `'me'` resolves server-side, so the
+   client never names a user id).
+4. `ProductionStatusAction` → `advanceProduction` →
+   `production-service.transitionProduction()`. Every move is
+   `UPDATE … WHERE id = ? AND status IN (…)` plus a `getRowCount` check: D1 has no
+   interactive transactions, so this is the house pattern. A zero row count re-reads
+   to tell "no such production" from "wrong status".
+5. `event-service.cancel()` → `cancelProductionsForEvent()`. One conditional update
+   over the three pre-completed statuses; a production that already `completed`
+   describes a night that happened, and cancelling the advertisement does not
+   un-happen it.
+6. `/staff/productions` reads everything through the one `getStaffEvents` query:
+   `listAll()` left-joins `venue` and `production` (both 1:1, so no fan-out), and
+   `getEventLineups()` — the batched helper — supplies the headliner and the count.
+
+### Data touched
+
+- `production` — the record. Cascades from `event_listing`; `producerUserId` and
+  `createdByUserId` are both set-null, because purging a staff account must not
+  delete the collective's production records.
+- `event_listing.venueId` — where the show is, and therefore whether it holds the
+  practice room. Deliberately **not** duplicated onto `production`.
+- `event_band` — the bill, which the index summarises and the production never
+  re-declares.
+
+### Where it breaks
+
+- **The index shows a production against a cancelled show.** The cascade in
+  `cancel()` did not run — it is the only thing keeping the status column honest.
+- **"Add production" is missing on a CMC show that has none.** `getStaffEventPage`
+  stopped returning `production`; the button is gated on it being null.
+- **A transition button does nothing.** The row moved underneath the page. The
+  conditional update matched zero rows and the error names the status it actually
+  found — read it rather than retrying.
+- **`settled` or `closed` appears with no way to reach it.** That is correct today.
+  Do not add a button for either until the work it names exists.
 
 ## Cross-cutting patterns worth internalizing
 

@@ -6,6 +6,7 @@ import { requireCapability, requireUser } from '$lib/server/authorization';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venue-service';
+import { getProductionByEvent } from '$lib/server/production/production-service';
 import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
 import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
 import {
@@ -24,6 +25,7 @@ import {
 	listUpcoming,
 	listPast,
 	getEventLineup,
+	getEventLineups,
 	setEventLineup,
 	listMemberUpcomingShows,
 	listMemberPastShows,
@@ -473,25 +475,61 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 const staffEventsFilters = z.object({
 	source: z.enum(eventSources).optional(),
 	status: z.enum(eventStatuses).optional(),
+	venueId: z.string().optional(),
+	// Day strings, not timestamps: the picker hands over 'YYYY-MM-DD' and the
+	// bounds are anchored to the app timezone below.
+	dateFrom: z.string().optional(),
+	dateTo: z.string().optional(),
 	page: z.number().optional()
 });
 
+/**
+ * The staff index of CMC work — the Productions page.
+ *
+ * Three SQL statements, one remote round trip. The venue and the production
+ * ride along on `listAll`'s own joins, both 1:1; the lineup summary comes from
+ * `getEventLineups`, the batched helper that exists precisely so a list page
+ * does not fire one query per row. The venue options come back with the rows so
+ * the filter has something to render without a second query — the same trick
+ * `getStaffEventPage` uses for its picker.
+ */
 export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 	await requireCapability('event.read');
 	const { rows, pagination } = await listAllEvents(
-		{ source: filters.source, status: filters.status },
+		{
+			source: filters.source,
+			status: filters.status,
+			venueId: filters.venueId,
+			from: filters.dateFrom
+				? buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE)
+				: undefined,
+			to: filters.dateTo ? buildDateInTz(filters.dateTo, '23:59', DEFAULT_TIMEZONE) : undefined
+		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);
+
+	const [lineups, venues] = await Promise.all([
+		getEventLineups(rows.map((e) => e.id)),
+		listLiveVenues()
+	]);
+
 	return {
-		rows: rows.map((e) => ({
-			...e,
-			// The listing's own status is the row's and keeps its column, so the
-			// ref carries none — two marks for one fact reads as two facts.
-			ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
-			// `event.groupId` is who manages the listing; the left join is already
-			// here for the byline.
-			band: toBandRef({ id: e.groupId, name: e.bandName, slug: e.bandSlug })
-		})),
+		rows: rows.map((e) => {
+			const bill = lineups.get(e.id) ?? [];
+			return {
+				...e,
+				// The listing's own status is the row's and keeps its column, so the
+				// ref carries none — two marks for one fact reads as two facts.
+				ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
+				// `event.groupId` is who manages the listing; the left join is already
+				// here for the byline.
+				band: toBandRef({ id: e.groupId, name: e.bandName, slug: e.bandSlug }),
+				// Headliner plus a count, not the whole bill: the column is one line
+				// wide and the console is one click away.
+				lineup: { headliner: bill[0]?.name ?? null, count: bill.length }
+			};
+		}),
+		venues: venues.map((v) => ({ id: v.id, name: v.name })),
 		pagination
 	};
 });
@@ -959,14 +997,18 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 	await requireCapability('event.read');
 
 	const detail = await getStaffEventDetail(id);
-	const [nearby, venues] = await Promise.all([
+	const [nearby, venues, production] = await Promise.all([
 		listEventsNear(detail.event.startsAt, { excludeEventId: id }),
-		venuePickerOptions()
+		venuePickerOptions(),
+		// Only so the header knows whether to offer "Add production". The record
+		// itself is worked on in the console.
+		getProductionByEvent(id)
 	]);
 
 	return {
 		detail,
 		venues,
+		production,
 		nearby: nearby.map((e) => ({
 			id: e.id,
 			startsAt: e.startsAt,
@@ -1039,26 +1081,48 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	// Duty lists ride along in the page's one load-bearing query rather than
 	// being fetched beside it: awaited remote queries are serial round trips, and
 	// `custom/no-concurrent-remote-queries` exists to stop a page fanning them out.
-	const [detail, recurringSeries, shifts, advance, volunteerRoles, dutyLists, venues, riders] =
-		await Promise.all([
-			getStaffEventDetail(id),
-			getEventRecurringSeries(id),
-			getShifts({ eventId: id }),
-			// `listShifts` filters `starts_at IS NOT NULL`, so the advance half of an
-			// applied duty list — a `dueOffsetMinutes` item, which is where the
-			// booking work lives — never reached this page. The card said a show was
-			// unstaffed while carrying six open tasks.
-			listOpenWorkOrders({ eventId: id }),
-			getVolunteerRoles(),
-			listApplicableDutyLists(),
-			venuePickerOptions(),
-			// What each act on the bill says it needs. The advance checklist has always
-			// carried a task reading "Collect tech riders and stage plots"; this is the
-			// answer to it, on the page where that work happens.
-			getEventRiderSummaries(id)
-		]);
+	const [
+		detail,
+		recurringSeries,
+		shifts,
+		advance,
+		volunteerRoles,
+		dutyLists,
+		venues,
+		riders,
+		production
+	] = await Promise.all([
+		getStaffEventDetail(id),
+		getEventRecurringSeries(id),
+		getShifts({ eventId: id }),
+		// `listShifts` filters `starts_at IS NOT NULL`, so the advance half of an
+		// applied duty list — a `dueOffsetMinutes` item, which is where the
+		// booking work lives — never reached this page. The card said a show was
+		// unstaffed while carrying six open tasks.
+		listOpenWorkOrders({ eventId: id }),
+		getVolunteerRoles(),
+		listApplicableDutyLists(),
+		venuePickerOptions(),
+		// What each act on the bill says it needs. The advance checklist has always
+		// carried a task reading "Collect tech riders and stage plots"; this is the
+		// answer to it, on the page where that work happens.
+		getEventRiderSummaries(id),
+		// The ops record: load-in through load-out, the producer, the notes.
+		// Null until someone opens one from the event page.
+		getProductionByEvent(id)
+	]);
 
-	return { detail, recurringSeries, shifts, advance, volunteerRoles, dutyLists, venues, riders };
+	return {
+		detail,
+		recurringSeries,
+		shifts,
+		advance,
+		volunteerRoles,
+		dutyLists,
+		venues,
+		riders,
+		production
+	};
 });
 
 export const getEventRecurringSeries = query(z.string(), async (eventId) => {
