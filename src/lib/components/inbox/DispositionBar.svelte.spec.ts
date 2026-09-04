@@ -93,6 +93,6 @@ describe('DispositionBar', () => {
 		// default — this failed intermittently on `main` and on unrelated branches
 		// while passing every time locally. The assertion is about which key opens
 		// the menu, not about how fast it opens.
-		await expect.element(page.getByText('Tomorrow')).toBeVisible({ timeout: 5000 });
+		await expect.element(page.getByText('Tomorrow'), { timeout: 5000 }).toBeVisible();
 	});
 });
