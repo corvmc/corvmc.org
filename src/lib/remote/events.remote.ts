@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { getEventRiderSummaries } from '$lib/server/band/rider-service';
-import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
@@ -430,7 +430,7 @@ export const getTicketPurchaseSuccess = query(
 );
 
 export const getStaffCheckIn = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
 	if (!evt.ticketingEnabled) throw error(400, 'Ticketing not enabled for this event');
@@ -469,7 +469,7 @@ const staffEventsFilters = z.object({
 });
 
 export const getStaffEvents = query(staffEventsFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	const { rows, pagination } = await listAllEvents(
 		{ source: filters.source, status: filters.status },
 		{ page: filters.page ?? 1, pageSize: 50 }
@@ -513,7 +513,7 @@ export const getStaffCalendar = query(
 		page: z.number().optional()
 	}),
 	async (filters) => {
-		await requireStaff();
+		await requireCapability('event.read');
 		// Midnight tonight in venue time, not UTC — the same anchor the public gig
 		// guide uses, so the two agree about which day a late show belongs to.
 		const from = buildDateInTz(
@@ -566,7 +566,7 @@ export const getStaffCalendar = query(
  * events has no business reading it.
  */
 export const searchEvents = query(z.string(), async (q) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	if (!q || q.length < 2) return [];
 
 	const pattern = `%${q}%`;
@@ -590,7 +590,7 @@ export const searchEvents = query(z.string(), async (q) => {
 });
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('event.read');
 
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
@@ -735,7 +735,7 @@ export const checkConflicts = query(
 		excludeReservationId: z.string().optional()
 	}),
 	async ({ date, startTime, endTime, excludeReservationId }) => {
-		await requireStaff();
+		await requireCapability('event.read');
 		const { startsAt, endsAt } = buildTimeRangeInTz(date, startTime, endTime, DEFAULT_TIMEZONE);
 
 		const conflicts = await getConflictDetails(startsAt, endsAt);
@@ -762,7 +762,7 @@ export const checkRebook = query(
 		newEndsAt: z.string()
 	}),
 	async ({ eventId, newStartsAt, newEndsAt }) => {
-		await requireStaff();
+		await requireCapability('event.read');
 		const result = await checkRebookNeeded(eventId, new Date(newStartsAt), new Date(newEndsAt));
 		return {
 			needed: result.needed,
@@ -783,7 +783,7 @@ export const checkRebook = query(
 // ---------------------------------------------------------------------------
 
 export const createEvent = form(createEventSchema, async (data, issue) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('event.manage');
 
 	const ticketingEnabled = data.ticketingEnabled;
 	const reserveSpace = data.reserveSpace;
@@ -891,7 +891,7 @@ export const previewRecurringEvents = query(
  * but on the server where they are a local D1 hop rather than a network one,
  * and the client holds a single query instance with nothing to race.
  *
- * Each callee re-guards; `requireStaff()` here is the boundary for this
+ * Each callee re-guards; the capability check here is the boundary for this
  * function itself, not a substitute for theirs.
  */
 /** The lineup editor posts JSON in a hidden field; a malformed one is ignored. */
@@ -915,7 +915,7 @@ function parseStaffLineupField(raw: string | undefined) {
  * `[id]/production` is the specialisation, and has its own query below.
  */
 export const getStaffEventPage = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('event.read');
 
 	const detail = await getStaffEventDetail(id);
 	const nearby = await listEventsNear(detail.event.startsAt, { excludeEventId: id });
@@ -962,7 +962,7 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 export const setStaffEventLineup = form(
 	z.object({ eventId: z.string().min(1), lineup: z.string().optional() }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.manage');
 		const evt = await getById(data.eventId);
 		if (!evt) error(404, 'Event not found');
 
@@ -983,7 +983,7 @@ async function listApplicableDutyLists() {
 }
 
 export const getStaffEventProduction = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('event.read');
 
 	// Duty lists ride along in the page's one load-bearing query rather than
 	// being fetched beside it: awaited remote queries are serial round trips, and
@@ -1004,7 +1004,7 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 });
 
 export const getEventRecurringSeries = query(z.string(), async (eventId) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	const series = await getByEvent(eventId);
 	if (!series) return null;
 	return getEventSeries(series.id);
@@ -1012,7 +1012,7 @@ export const getEventRecurringSeries = query(z.string(), async (eventId) => {
 
 /** Stop a recurring event series; existing occurrences remain (staff). */
 export const cancelEventSeries = form(z.object({ seriesId: z.string() }), async (data) => {
-	await requireStaff();
+	await requireCapability('event.manage');
 	await cancelSeries(data.seriesId);
 	return { success: true };
 });
@@ -1042,7 +1042,7 @@ export const updateEvent = form(
 		overrideConflicts: z.boolean().default(false)
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('event.manage');
 		const tz = DEFAULT_TIMEZONE;
 
 		const ticketingEnabled = data.ticketingEnabled;
@@ -1123,7 +1123,7 @@ export const updateEvent = form(
 );
 
 export const publishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('event.publish');
 	await publish(data.id);
 	return { success: true };
 });
@@ -1141,7 +1141,7 @@ export const unpublishEvent = form(
 		notes: z.string().trim().max(1000).optional()
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.publish');
 		// Band-sourced events notify the band's admins — pulling a gig silently is
 		// the one unpublish that needs a word back to whoever posted it.
 		await unpublishWithNotice(data.id, { notes: data.notes });
@@ -1150,7 +1150,7 @@ export const unpublishEvent = form(
 );
 
 export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('event.manage');
 	await cancel(data.id, staff.id);
 	return { success: true };
 });
@@ -1160,12 +1160,12 @@ export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data
  * tell a mistake from a real event before it is gone.
  */
 export const getEventDeletionImpact = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	return getDeletionImpact(id);
 });
 
 export const deleteEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('event.manage');
 	try {
 		await removeEvent(data.id, staff.id);
 	} catch (err) {
@@ -1187,7 +1187,7 @@ export const compTickets = form(
 		quantity: z.string().transform(Number)
 	}),
 	async (data, issue) => {
-		await requireStaff();
+		await requireCapability('event.manageTickets');
 
 		const issues: Parameters<typeof invalid> = [];
 		if (!data.attendeeName) {
@@ -1224,14 +1224,14 @@ export const cancelTicket = form(
 		ticketId: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.manageTickets');
 		await cancelTicketService(data.ticketId);
 		return { success: true };
 	}
 );
 
 export const checkInTicket = form(z.object({ ticketId: z.string().min(1) }), async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('event.manageTickets');
 	await checkIn(data.ticketId, staff.id);
 	return { success: true };
 });
@@ -1526,7 +1526,7 @@ export const purchaseTickets = form(
 // ---------------------------------------------------------------------------
 
 export const getUserShows = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	const [upcoming, past, pastCount] = await Promise.all([
 		listMemberUpcomingShows(userId),
 		listMemberPastShows(userId, { limit: 5, offset: 0 }),
@@ -1548,7 +1548,7 @@ function toShowRow(show: MemberShowRow) {
 }
 
 export const getUserTicketsAndRsvps = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	const [tickets, rsvps] = await Promise.all([getUserTickets(userId), listRsvpsForUser(userId)]);
 	// The row's own status is the ticket's or the RSVP's, which is not the
 	// event's — so the event ref carries no status here and the page keeps its

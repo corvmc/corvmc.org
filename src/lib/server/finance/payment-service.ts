@@ -78,6 +78,20 @@ export interface CheckoutOptions {
 	coverFees?: boolean;
 	/** Opaque metadata passed through to the Stripe session. */
 	metadata?: Record<string, string>;
+	/**
+	 * A connected account this charge pays out to — a Connect **destination
+	 * charge**. CMC stays merchant of record and on the receipt; Stripe moves
+	 * `charge − applicationFeeCents` to the account and pays it out on its own
+	 * schedule, so nothing has to be disbursed by hand.
+	 */
+	destinationAccountId?: string;
+	/**
+	 * What the platform keeps, in cents. **Must already include Stripe's
+	 * processing fee**, because with destination charges Stripe bills the
+	 * platform — see `computeSplit` in `$lib/finance/audio-split`, which is the
+	 * only thing that should be producing this number.
+	 */
+	applicationFeeCents?: number;
 	successUrl: string;
 	cancelUrl: string;
 	/**
@@ -135,6 +149,8 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 		eligibleCredits = [],
 		coverFees = false,
 		metadata = {},
+		destinationAccountId,
+		applicationFeeCents,
 		successUrl,
 		cancelUrl,
 		uiMode = 'hosted_page'
@@ -152,6 +168,22 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 		throw new CheckoutValidationError(
 			'Credit discounts are not supported on subscription checkouts'
 		);
+	}
+
+	// A destination charge splits the money before it reaches CMC, so a CMC
+	// credit applied to one would be the collective discounting a sale out of
+	// the *band's* share — the coupon comes off the charge, the application fee
+	// does not move, and the band silently absorbs it.
+	if (destinationAccountId && eligibleCredits.length > 0) {
+		throw new CheckoutValidationError('Credits cannot be applied to a payout-destined checkout');
+	}
+	// Recurring transfers to a connected account are a different Stripe shape
+	// entirely; nothing asks for one, and failing loudly beats guessing.
+	if (destinationAccountId && mode !== 'payment') {
+		throw new CheckoutValidationError('Payout-destined checkouts must be one-time payments');
+	}
+	if (applicationFeeCents !== undefined && !destinationAccountId) {
+		throw new CheckoutValidationError('An application fee needs a destination account');
 	}
 
 	// 1. Calculate cart total by resolving each line item's amount.
@@ -299,7 +331,19 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 			? { ui_mode: 'elements' as const, return_url: successUrl }
 			: { success_url: successUrl, cancel_url: cancelUrl }),
 		metadata: sessionMetadata,
-		...(mode === 'payment' && { payment_intent_data: { metadata: sessionMetadata } })
+		...(mode === 'payment' && {
+			payment_intent_data: {
+				metadata: sessionMetadata,
+				// Destination charge: the platform is merchant of record, keeps
+				// `application_fee_amount`, and Stripe transfers the rest.
+				...(destinationAccountId && {
+					transfer_data: { destination: destinationAccountId },
+					...(applicationFeeCents !== undefined && {
+						application_fee_amount: applicationFeeCents
+					})
+				})
+			}
+		})
 	};
 
 	if (stripeCustomerId) {

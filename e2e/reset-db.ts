@@ -37,7 +37,7 @@
  * `dm-request`, `dm-send`), and reaching the rest means writing against
  * miniflare's internal KV layout, which is fragile for no observed problem.
  */
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
@@ -228,18 +228,129 @@ export function clearE2eStateDir(): boolean {
  * TRUNCATE rather than PASSIVE: it resets the WAL to zero length, so there is
  * nothing left for workerd to recover.
  *
- * @returns false when there is no database yet.
+ * **Every SQLite under the persist path, not only D1.** miniflare keeps one
+ * database per storage kind, and `getPlatformProxy` opens all of them — so a
+ * build leaves a WAL beside each. A freshly seeded state directory here has six:
+ * two for D1 (the database and its metadata), two for R2, one for KV and one for
+ * the cache. Checkpointing only D1 closed one of six windows, which is why the
+ * race survived #360: the failure that started this names `SENTRY_DO`, not D1,
+ * and no amount of checkpointing D1 was ever going to reach it.
+ *
+ * Failures are swallowed per file. A database workerd already holds open is one
+ * this cannot help with, and throwing here would turn a missed optimisation into
+ * a failed run — the caller is `prepare.ts` and `checkpoint.ts`, neither of which
+ * has anything better to do about it than carry on.
+ *
+ * @returns which files ended up with no WAL, and which did not.
  */
-export function checkpointE2eDatabase(): boolean {
-	if (!existsSync(join(E2E_PERSIST_PATH, 'd1'))) return false;
+export function checkpointE2eDatabase(): SqliteCheckpoint {
+	if (!existsSync(E2E_PERSIST_PATH)) return { checkpointed: [], busy: [], failed: [] };
 
-	const db = new DatabaseSync(e2eD1File(), { timeout: 5_000 });
-	try {
-		db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
-	} finally {
-		db.close();
+	// Same guard as `resetE2eDatabase`: only ever touch this suite's own state. A
+	// stray absolute path here would checkpoint `.wrangler/state`, which `pnpm dev`
+	// may be holding.
+	return checkpointSqliteFiles(
+		sqliteFilesUnder(E2E_PERSIST_PATH).filter((file) => file.startsWith(E2E_PERSIST_PATH))
+	);
+}
+
+/** What a sweep did, file by file. */
+export interface SqliteCheckpoint {
+	/** Files whose WAL is now gone — nothing left for workerd to recover. */
+	checkpointed: string[];
+	/** Files something else still held. Their WAL survives. */
+	busy: string[];
+	/** Files that could not be opened at all. */
+	failed: string[];
+}
+
+/**
+ * TRUNCATE-checkpoint each file, and say which ones actually ended up without a WAL.
+ *
+ * **Reading the result row is the point.** `PRAGMA wal_checkpoint(TRUNCATE)` does
+ * not throw when it cannot take the exclusive lock — it answers `busy: 1` and
+ * leaves the WAL exactly as it was. `db.exec` discards that row, so the sweep could
+ * truncate nothing and still report success, which is how `e2e/checkpoint.ts` came
+ * to print "Checkpointed the e2e database after the build." into the one CI log
+ * somebody reads when the suite has died on a server that never came up. A
+ * surviving WAL is the entire failure mode, so whether one survived is the only
+ * output worth having.
+ *
+ * Nothing here throws or retries, keeping #509's contract: a database workerd
+ * already holds is not one this can help with, and failing the run over it would
+ * turn a missed optimisation into a red suite. The caller reports; it does not act.
+ *
+ * Takes the files rather than finding them so the outcomes above can be exercised
+ * against a scratch database — `checkpointE2eDatabase` is what binds it to the run.
+ */
+export function checkpointSqliteFiles(
+	files: string[],
+	{ timeoutMs = 5_000 } = {}
+): SqliteCheckpoint {
+	const swept: SqliteCheckpoint = { checkpointed: [], busy: [], failed: [] };
+
+	for (const file of files) {
+		try {
+			const db = new DatabaseSync(file, { timeout: timeoutMs });
+			try {
+				const row = db.prepare('PRAGMA wal_checkpoint(TRUNCATE)').get() as
+					{ busy?: number } | undefined;
+				(row?.busy ? swept.busy : swept.checkpointed).push(file);
+			} finally {
+				db.close();
+			}
+		} catch {
+			swept.failed.push(file);
+		}
 	}
-	return true;
+
+	return swept;
+}
+
+/**
+ * One line for a log, saying plainly whether anything was left behind.
+ *
+ * The failure this exists to prevent presents as "the diff broke everything" — a
+ * suite where nothing came up and no test output was produced — so the log has to
+ * be readable by somebody who does not yet know that is what they are looking at.
+ */
+export function checkpointSummary(swept: SqliteCheckpoint): string {
+	const stuck = [...swept.busy, ...swept.failed];
+
+	if (stuck.length === 0) {
+		return swept.checkpointed.length === 0
+			? 'No e2e database to checkpoint — nothing to do.'
+			: `Checkpointed ${swept.checkpointed.length} e2e database(s); no WAL left behind.`;
+	}
+
+	return (
+		`WARNING: ${stuck.length} of ${swept.checkpointed.length + stuck.length} e2e database(s) ` +
+		`still hold a WAL: ${stuck.map((file) => basename(file)).join(', ')}.\n` +
+		'workerd recovers a WAL lazily, on the first request, by which time ' +
+		"Playwright's readers already hold the file — and it does not retry.\n" +
+		'A suite that dies next with SQLITE_BUSY_RECOVERY and no test output died of this.'
+	);
+}
+
+/**
+ * Every `*.sqlite` under a miniflare persist directory.
+ *
+ * Walked rather than named: the layout is miniflare's
+ * (`<kind>/miniflare-<Kind>Object/<hash|metadata>.sqlite`), the hashed filenames
+ * are derived from binding names, and a new binding adds a directory nobody here
+ * would remember to list. `-wal` and `-shm` are siblings of these, not separate
+ * databases, so matching the `.sqlite` suffix alone is right.
+ */
+export function sqliteFilesUnder(dir: string): string[] {
+	const out: string[] = [];
+
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		const full = join(dir, entry.name);
+		if (entry.isDirectory()) out.push(...sqliteFilesUnder(full));
+		else if (entry.isFile() && entry.name.endsWith('.sqlite')) out.push(full);
+	}
+
+	return out;
 }
 
 // `tsx e2e/reset-db.ts` — clear the database by hand, e.g. after a failing run

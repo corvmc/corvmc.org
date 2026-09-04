@@ -1,7 +1,6 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
 import { bandSiteUrl } from '$lib/utils/band-site-url';
-import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
 import { group } from '$lib/server/db/schema/group';
 import { bandSite } from '$lib/server/db/schema/band-site';
@@ -9,8 +8,6 @@ import { eq, and, isNull } from 'drizzle-orm';
 
 // Served on band subdomains: {slug}.corvmc.org/robots.txt reroutes here.
 export const GET: RequestHandler = async ({ params }) => {
-	await requireFeature('bandPremium');
-
 	const [row] = await db
 		.select({
 			tier: bandSite.tier,

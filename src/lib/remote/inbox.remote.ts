@@ -30,6 +30,7 @@ import {
 	updateChannelConfig as updateChannelConfigSvc
 } from '$lib/server/inbox/channel-config-service';
 import { addOutboundMessage, addNote } from '$lib/server/inbox/message-service';
+import { testMetaConnection as testMetaConnectionSvc } from '$lib/server/inbox/meta-client';
 import {
 	listSavedViews,
 	createSavedView,
@@ -48,7 +49,7 @@ import {
 } from '$lib/server/inbox/portal-service';
 import { submitContactFormSchema } from '$lib/server/db/schema/inbox';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE, inboxChannels, inboxViews } from '$lib/config';
+import { DEFAULT_TIMEZONE, inboxChannels, inboxViews, staffInboxChannels } from '$lib/config';
 import type { InboxView } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -507,7 +508,9 @@ export const getInboxEnabledChannels = query(z.void(), async () => {
 });
 
 const channelConfigSchema = z.object({
-	channel: z.enum(inboxChannels),
+	// `staffInboxChannels`, not `inboxChannels`: `direct` has no toggle, and a
+	// request naming it should be rejected here rather than no-op in the service.
+	channel: z.enum(staffInboxChannels),
 	enabled: z.enum(['true', 'false']).transform((v) => v === 'true')
 });
 
@@ -517,6 +520,23 @@ export const updateInboxChannelConfig = form(channelConfigSchema, async (data) =
 	void getInboxChannelConfigs().refresh();
 	void getInboxEnabledChannels().refresh();
 	return { success: true };
+});
+
+/**
+ * Ask Meta whether the page access token still works.
+ *
+ * `META_PAGE_ACCESS_TOKEN` is a Worker secret with no refresh path, so an
+ * expired one does not announce itself: replies simply start failing, one
+ * staffer at a time, on a channel nobody is watching. This is the button that
+ * makes that visible, and the reason the token can stay an env secret rather
+ * than growing an OAuth flow.
+ *
+ * A `command` rather than a `query`: it calls a third party, so it must run
+ * when a staff member asks rather than on render.
+ */
+export const testMetaConnection = command(z.void(), async () => {
+	await requireCapability('inbox.manageChannels');
+	return testMetaConnectionSvc();
 });
 
 // ---------------------------------------------------------------------------

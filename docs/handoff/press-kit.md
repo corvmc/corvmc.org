@@ -61,26 +61,26 @@ Signed out reaches the public directory and both public profiles.
 
 ## Route map
 
-| Route                               | File                                           | Guard                                              |
-| ----------------------------------- | ---------------------------------------------- | -------------------------------------------------- |
-| `/directory`                        | `(public)/directory/+page.svelte`              | none                                               |
-| `/directory/bands/[slug]`           | `(public)/directory/bands/[slug]/+page.svelte` | none; 404s unless `visibility = 'public'`          |
-| `/member/directory/bands/[slug]`    | `member/directory/bands/[slug]/+page.svelte`   | `requireUser`                                      |
-| `/band/[slug]`                      | `band/[slug]/+page.svelte`                     | `requireGroupRole('member', { allowStaff })`       |
-| `/band/[slug]/edit`                 | `band/[slug]/edit/+page.svelte`                | `requireGroupRole('admin')`                        |
-| `/band/[slug]/press-kit`            | `band/[slug]/press-kit/+page.svelte`           | `requireGroupRole('admin')` — **not** flag-gated   |
-| `/band/[slug]/subscription`         | `band/[slug]/subscription/+page.svelte`        | owner + `requireFeature('bandPremium')`            |
-| `/band/[slug]/page-editor`          | `band/[slug]/page-editor/+page.svelte`         | admin + `tier = 'premium'` + flag                  |
-| `/band-site/[slug]`                 | `band-site/[slug]/+page.svelte`                | flag + `tier = 'premium'`; served at the subdomain |
-| `/band-site/[slug]/epk`             | `band-site/[slug]/epk/+page.svelte`            | same                                               |
-| `GET /api/bands/[id]/press-kit.zip` | `api/bands/[id=uuid]/press-kit.zip/+server.ts` | `requireGroupRole('admin')`                        |
+| Route                               | File                                           | Guard                                            |
+| ----------------------------------- | ---------------------------------------------- | ------------------------------------------------ |
+| `/directory`                        | `(public)/directory/+page.svelte`              | none                                             |
+| `/directory/bands/[slug]`           | `(public)/directory/bands/[slug]/+page.svelte` | none; 404s unless `visibility = 'public'`        |
+| `/member/directory/bands/[slug]`    | `member/directory/bands/[slug]/+page.svelte`   | `requireUser`                                    |
+| `/band/[slug]`                      | `band/[slug]/+page.svelte`                     | `requireGroupRole('member', { allowStaff })`     |
+| `/band/[slug]/edit`                 | `band/[slug]/edit/+page.svelte`                | `requireGroupRole('admin')`                      |
+| `/band/[slug]/press-kit`            | `band/[slug]/press-kit/+page.svelte`           | `requireGroupRole('admin')` — free for every act |
+| `/band/[slug]/subscription`         | `band/[slug]/subscription/+page.svelte`        | owner                                            |
+| `/band/[slug]/page-editor`          | `band/[slug]/page-editor/+page.svelte`         | admin + `tier = 'premium'`                       |
+| `/band-site/[slug]`                 | `band-site/[slug]/+page.svelte`                | `tier = 'premium'`; served at the subdomain      |
+| `/band-site/[slug]/epk`             | `band-site/[slug]/epk/+page.svelte`            | same                                             |
+| `GET /api/bands/[id]/press-kit.zip` | `api/bands/[id=uuid]/press-kit.zip/+server.ts` | `requireGroupRole('admin')`                      |
 
 `/band/[slug]/page-editor/epk` **308s** to `/band/[slug]/press-kit`. It is in the help
 articles and in the history of every band that opened it.
 
-**`bandPremium` is off in production.** Everything premium below is dark today. Every free
-surface must keep working with the flag off — that is a constraint on any redesign, not a
-detail.
+**Band Premium launched.** The `bandPremium` flag is gone and every premium surface below
+answers on the band's tier alone. Every free surface must keep working for a free act — that
+is a constraint on any redesign, not a detail.
 
 ---
 
@@ -293,7 +293,7 @@ the one page about identity cannot change the most identifying thing.
 ![desktop](press-kit/images/subscription-upsell-desktop.png)
 ![mobile](press-kit/images/subscription-upsell-mobile.png)
 
-**Route** `/band/wren-halloway/subscription` · **Guard** owner + `requireFeature('bandPremium')`.
+**Route** `/band/wren-halloway/subscription` · **Guard** owner.
 
 What a band site costs and what it adds. Owner-only, because it is billing.
 
@@ -440,8 +440,7 @@ running it while workerd holds the D1 files poisons the stub and every later req
 pnpm db:reset
 ```
 
-Then start the dev server (it must bind the port in `ORIGIN`, or better-auth 404s), enable
-`bandPremium` at `/staff/settings` → **Features** as `admin@corvallismusic.org`, and:
+Then start the dev server (it must bind the port in `ORIGIN`, or better-auth 404s) and:
 
 ```bash
 pnpm exec tsx scripts/handoff/capture-press-kit.ts
@@ -456,8 +455,8 @@ rendered-text length, and a file under the size floor is rejected.
 
 - **Seeded media keys name no real R2 object.** Photo thumbnails therefore do not render. The layout around them is real; the images are not. Screen 6 shows this
   directly.
-- **`bandPremium` must be on** for screens 9–12. It is **off in production**, so those four
-  screens are of a product nobody can currently buy.
+- **Screens 9–12 need a premium band.** They are gated on `band_site.tier` alone now that
+  Band Premium has launched; the dev seed marks three bands premium.
 - **`minText` thresholds are ~65% of measured length**, not guesses. Measured at desktop:
   directory 1534, public profile (free) 1221, (premium) 1429, dashboard 511, press-kit editor
   2753, premium editor 2914, profile editor 1065, subscription 780, page editor 2021, band

@@ -18,7 +18,6 @@ import { bandSiteUrl, bandSlugFromHost } from '$lib/utils/band-site-url';
 import { groupPublicPath } from '$lib/utils/canonical-address';
 import { resolveBandSubdomain } from '$lib/server/band/band-host-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
 
 const resolvedSessions = new Set<string>();
 
@@ -104,12 +103,9 @@ const handleBandSubdomain: Handle = async ({ event, resolve }) => {
 	const slug = bandSlugFromHost(event.url.hostname, publicEnv.PUBLIC_SITE_URL);
 	if (!slug) return resolve(event);
 
-	const [host, premiumEnabled] = await Promise.all([
-		resolveBandSubdomain(slug),
-		isFeatureEnabled('bandPremium')
-	]);
+	const host = await resolveBandSubdomain(slug);
 
-	if (host?.servesSite && premiumEnabled) return resolve(event);
+	if (host?.servesSite) return resolve(event);
 
 	// No band holds this subdomain — it may be an address one of them released.
 	// The history lookup only runs on this miss, so the hot path is untouched.

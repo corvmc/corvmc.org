@@ -36,12 +36,14 @@ import { migrateLocal } from '../scripts/db/migrate-local';
 import { acquireE2eLock } from './lock';
 import {
 	checkpointE2eDatabase,
+	checkpointSummary,
 	clearE2eStateDir,
 	e2eStateIsStale,
 	resetE2eDatabase
 } from './reset-db';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
+import { seedBandAudio } from './fixtures/seed-band-audio';
 import { seedStaffUser } from './fixtures/seed-staff-user';
 import { seedInventory } from './fixtures/seed-inventory';
 import { seedStaffEvent } from './fixtures/seed-staff-event';
@@ -97,6 +99,8 @@ resetE2eDatabase();
 
 await seedPayReservation();
 await seedBandOnboarding();
+// After the bands: its releases hang off the public band's id.
+await seedBandAudio();
 await seedStaffUser();
 await seedInventory();
 // After the inventory fixture: it reuses that fixture's category, and seeds
@@ -135,8 +139,9 @@ await seedInstructors();
 // into `directory_entry`, which is what the directory reads.
 await seedDirectoryEntries();
 
-// Last, once every seed's miniflare has exited: leave the file with no WAL for
-// the preview server to recover. workerd opens D1 on the first *request*, by
-// which time Playwright's workers are already reading it, and a recovery that
-// collides with those readers kills the server outright. See `reset-db.ts`.
-checkpointE2eDatabase();
+// Last, once every seed's miniflare has exited: leave no file with a WAL for the
+// preview server to recover. workerd opens its SQLite on the first *request*, by
+// which time Playwright's workers are already reading, and a recovery that
+// collides with those readers kills the server outright. Reported rather than
+// assumed — a checkpoint that could not take the lock says so. See `reset-db.ts`.
+console.log(checkpointSummary(checkpointE2eDatabase()));

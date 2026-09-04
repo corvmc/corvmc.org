@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { env as publicEnv } from '$env/dynamic/public';
 import { query } from '$app/server';
-import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
 import { group, groupMember } from '$lib/server/db/schema/group';
 import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
@@ -42,8 +41,6 @@ function toSiteEvent(e: EventRow) {
 }
 
 export const getBandSiteData = query(z.string(), async (slug) => {
-	await requireFeature('bandPremium');
-
 	// LEFT join, unlike the directory's. There, no entry means no listing and a
 	// 404 is the right answer; here the page is granted by `tier`, and a premium
 	// band whose entry went missing should lose its bio, not its site.

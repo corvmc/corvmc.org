@@ -24,9 +24,9 @@
 		"lint": "prettier --cache --check . && eslint . --max-warnings 0",
 		"lint:changed": "bash scripts/lint-changed.sh",
 		"format": "prettier --write .",
-		"db:generate": "drizzle-kit generate && node scripts/db/d1-safe-rebuild.mjs --write && node scripts/db/prune-snapshots.mjs",
+		"db:generate": "drizzle-kit generate && node scripts/db/d1-safe-rebuild.mjs --write && node scripts/db/quote-reserved-refs.mjs --write && node scripts/db/prune-snapshots.mjs",
 		"db:fix-migrations": "node scripts/db/d1-safe-rebuild.mjs --write",
-		"db:check-migrations": "node scripts/db/d1-safe-rebuild.mjs --check",
+		"db:check-migrations": "node scripts/db/d1-safe-rebuild.mjs --check && node scripts/db/quote-reserved-refs.mjs --check",
 		"db:prune-snapshots": "node scripts/db/prune-snapshots.mjs",
 		"db:migrate": "drizzle-kit migrate",
 		"ci:migrate": "node scripts/ci-migrate.mjs",
@@ -150,7 +150,8 @@
 			"undici@<6.27.0": ">=6.27.0"
 		},
 		"patchedDependencies": {
-			"yargs@17.7.2": "patches/yargs@17.7.2.patch"
+			"yargs@17.7.2": "patches/yargs@17.7.2.patch",
+			"svelte@5.57.0": "patches/svelte@5.57.0.patch"
 		}
 	}
 }

@@ -20,6 +20,11 @@ vi.mock('./twilio-client', () => ({
 	sendSms: (...args: unknown[]) => mockSendSms(...(args as []))
 }));
 
+const mockSendMetaMessage = vi.fn(async (_params: Record<string, unknown>) => 'mid-out-1');
+vi.mock('./meta-client', () => ({
+	sendMetaMessage: (params: Record<string, unknown>) => mockSendMetaMessage(params)
+}));
+
 const mockBuildReplyToAddress = vi.fn((): string | null => 'reply+thread-1.sig@replies.test');
 vi.mock('./reply-address', () => ({
 	buildReplyToAddress: (...args: unknown[]) => mockBuildReplyToAddress(...(args as []))
@@ -29,11 +34,25 @@ vi.mock('$env/dynamic/private', () => ({
 	env: { STAFF_CONTACT_EMAIL: 'contact@test.com' }
 }));
 
+// The band branch resolves the act's name, which is the whole reason it is a
+// separate branch: it is what signs the message.
+const mockBandRows = vi.fn((): unknown[] => [{ name: 'Wren Halloway' }]);
+vi.mock('$lib/server/db', () => {
+	const chain: Record<string, unknown> = {};
+	for (const m of ['from', 'where', 'limit']) chain[m] = () => chain;
+	chain.then = (resolve: (v: unknown) => unknown) => resolve(mockBandRows());
+	return { db: { select: () => chain } };
+});
+vi.mock('$lib/server/db/schema/group', () => ({ group: { id: 'group.id', name: 'group.name' } }));
+vi.mock('drizzle-orm', () => ({ eq: (a: unknown, b: unknown) => ({ op: 'eq', a, b }) }));
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	mockIsChannelEnabled.mockResolvedValue(true);
 	mockSendInboxReply.mockResolvedValue('pm-message-id');
 	mockBuildReplyToAddress.mockReturnValue('reply+thread-1.sig@replies.test');
+	mockSendMetaMessage.mockResolvedValue('mid-out-1');
+	mockBandRows.mockReturnValue([{ name: 'Wren Halloway' }]);
 });
 
 // ---------------------------------------------------------------------------
@@ -52,6 +71,7 @@ function params(overrides: Partial<DispatchReplyParams> = {}): DispatchReplyPara
 		contactExternalId: null,
 		subject: 'General Inquiry',
 		lastInboundMessageId: null,
+		lastInboundAt: null,
 		references: null,
 		...overrides
 	};
@@ -159,5 +179,102 @@ describe('dispatchReply — portal channel', () => {
 		mockIsChannelEnabled.mockResolvedValue(true);
 
 		await expect(dispatchReply(params({ channel: 'portal' }))).resolves.toBeNull();
+	});
+});
+
+describe('dispatchReply — Instagram and Messenger', () => {
+	it.each(['instagram', 'messenger'] as const)(
+		'sends a %s reply to the contact id',
+		async (channel) => {
+			const lastInboundAt = new Date(Date.now() - 60 * 60 * 1000);
+
+			const id = await dispatchReply(
+				params({ channel, contactExternalId: 'ig-1', contactEmail: null, lastInboundAt })
+			);
+
+			expect(id).toBe('mid-out-1');
+			expect(mockSendMetaMessage).toHaveBeenCalledWith({
+				recipientId: 'ig-1',
+				body: 'Thanks for reaching out!',
+				lastInboundAt
+			});
+		}
+	);
+
+	// The window is measured from the contact's last message, so the timestamp
+	// has to reach the client — a dispatcher that dropped it would silently send
+	// every reply untagged and get the late ones refused.
+	it('passes the last inbound timestamp through so the window can be judged', async () => {
+		const lastInboundAt = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
+		await dispatchReply(params({ channel: 'instagram', contactExternalId: 'ig-1', lastInboundAt }));
+
+		expect(mockSendMetaMessage).toHaveBeenCalledWith(expect.objectContaining({ lastInboundAt }));
+	});
+
+	it('refuses a thread with no external id rather than sending nowhere', async () => {
+		await expect(
+			dispatchReply(params({ channel: 'messenger', contactExternalId: null }))
+		).rejects.toThrow('no contact external ID');
+		expect(mockSendMetaMessage).not.toHaveBeenCalled();
+	});
+
+	it('does not send when the channel is switched off', async () => {
+		mockIsChannelEnabled.mockResolvedValue(false);
+
+		await expect(
+			dispatchReply(params({ channel: 'instagram', contactExternalId: 'ig-1' }))
+		).rejects.toThrow('is not enabled');
+		expect(mockSendMetaMessage).not.toHaveBeenCalled();
+	});
+
+	// The message the composer shows comes straight from here, so a Graph failure
+	// has to arrive as a sentence rather than be swallowed into a generic one.
+	it('propagates the client’s explanation of a refusal', async () => {
+		mockSendMetaMessage.mockRejectedValue(new Error('the messaging window has closed'));
+
+		await expect(
+			dispatchReply(params({ channel: 'instagram', contactExternalId: 'ig-1' }))
+		).rejects.toThrow('the messaging window has closed');
+	});
+});
+
+describe('dispatchReply — band channel', () => {
+	function bandParams(overrides: Partial<DispatchReplyParams> = {}) {
+		return params({ channel: 'band', groupId: 'band-1', subject: 'Booking enquiry', ...overrides });
+	}
+
+	it('sends on the band-reply template, signed with the act rather than CorvMC', async () => {
+		// `inbox-reply` closes "Corvallis Music Collective" and tells the reader
+		// they contacted us. Neither is true of a band answering its own form.
+		await dispatchReply(bandParams());
+
+		const sent = mockSendInboxReply.mock.calls[0][0];
+		expect(sent.templateAlias).toBe('band-reply');
+		expect(sent.fromName).toBe('Wren Halloway via CorvMC');
+		expect((sent.model as Record<string, unknown>).bandName).toBe('Wren Halloway');
+	});
+
+	it('carries the signed per-thread Reply-To, so the booker can answer', async () => {
+		await dispatchReply(bandParams());
+
+		expect(mockBuildReplyToAddress).toHaveBeenCalledWith('thread-1');
+		expect(mockSendInboxReply.mock.calls[0][0].replyTo).toBe('reply+thread-1.sig@replies.test');
+	});
+
+	it('never falls back to the staff mailbox when no reply address is configured', async () => {
+		// The email path does, deliberately, so a response still reaches a human.
+		// Here that human would be staff reading a booking negotiation they are not
+		// party to, so the reply simply carries no Reply-To.
+		mockBuildReplyToAddress.mockReturnValue(null);
+
+		await dispatchReply(bandParams());
+
+		expect(mockSendInboxReply.mock.calls[0][0].replyTo).toBeNull();
+	});
+
+	it('refuses a band thread with no owning band', async () => {
+		await expect(dispatchReply(bandParams({ groupId: null }))).rejects.toThrow('no owning band');
+		expect(mockSendInboxReply).not.toHaveBeenCalled();
 	});
 });

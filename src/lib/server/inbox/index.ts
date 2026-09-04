@@ -8,15 +8,23 @@ export {
 	updateStatus,
 	getUnresolvedCount,
 	countThreadsByStatus,
-	wakeSnoozedThreads
+	wakeSnoozedThreads,
+	setThreadContactName
 } from './thread-service';
 export { buildReplyToAddress, parseReplyMailboxHash } from './reply-address';
-export { addInboundMessage, addOutboundMessage, addNote } from './message-service';
+export {
+	addInboundMessage,
+	addOutboundMessage,
+	addNote,
+	findMessageByChannelId,
+	recordOutboundMessage
+} from './message-service';
 export {
 	handleContactForm,
 	handlePostmarkInbound,
 	handleTwilioInbound,
-	handleMetaInbound
+	handleMetaInbound,
+	handleMetaEcho
 } from './inbound-handlers';
 export { dispatchReply } from './channel-dispatcher';
 export {

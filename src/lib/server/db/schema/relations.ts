@@ -220,24 +220,11 @@ export const relations = defineRelations(schema, (t) => ({
 		user: t.one.user({ from: t.notificationPreference.userId, to: t.user.id })
 	},
 	role: {
-		users: t.many.modelHasRole(),
-		permissions: t.many.roleHasPermission()
-	},
-	permission: {
-		users: t.many.modelHasPermission(),
-		roles: t.many.roleHasPermission()
+		users: t.many.modelHasRole()
 	},
 	modelHasRole: {
 		role: t.one.role({ from: t.modelHasRole.roleId, to: t.role.id }),
 		user: t.one.user({ from: t.modelHasRole.userId, to: t.user.id })
-	},
-	modelHasPermission: {
-		permission: t.one.permission({ from: t.modelHasPermission.permissionId, to: t.permission.id }),
-		user: t.one.user({ from: t.modelHasPermission.userId, to: t.user.id })
-	},
-	roleHasPermission: {
-		permission: t.one.permission({ from: t.roleHasPermission.permissionId, to: t.permission.id }),
-		role: t.one.role({ from: t.roleHasPermission.roleId, to: t.role.id })
 	},
 	subscriber: {
 		user: t.one.user({ from: t.subscriber.userId, to: t.user.id }),
