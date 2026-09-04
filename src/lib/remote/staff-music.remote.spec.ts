@@ -45,7 +45,8 @@ const svc = {
 	})),
 	withholdRelease: vi.fn(async () => ({ id: 'rel-1' })),
 	restoreRelease: vi.fn(async () => ({ id: 'rel-1' })),
-	setRadioExclusion: vi.fn(async () => ({ id: 'rel-1' }))
+	setRadioExclusion: vi.fn(async () => ({ id: 'rel-1' })),
+	recentSales: vi.fn(async () => [])
 };
 vi.mock('$lib/server/audio/staff-audio-service', () => svc);
 
@@ -54,6 +55,9 @@ const radio = {
 	getRecentlyPlayed: vi.fn(async () => [])
 };
 vi.mock('$lib/server/audio/radio-service', () => radio);
+
+const purchases = { refundPurchase: vi.fn(async () => undefined) };
+vi.mock('$lib/server/audio/purchase-service', () => purchases);
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: currentUser }, params: {}, url: new URL('http://x/') }),
@@ -85,13 +89,16 @@ const remote = (await import('./staff-music.remote')) as unknown as Record<
 const MUTATIONS: Array<[string, Record<string, unknown>]> = [
 	['withholdReleaseForm', { releaseId: 'rel-1', reason: 'Uncleared sample' }],
 	['restoreReleaseForm', { releaseId: 'rel-1' }],
-	['setRadioExclusionForm', { releaseId: 'rel-1', excluded: true }]
+	['setRadioExclusionForm', { releaseId: 'rel-1', excluded: true }],
+	// The one that moves money, and out of a band's account as well as CMC's.
+	['refundPurchaseForm', { purchaseId: 'p-1' }]
 ];
 
 function noWrites() {
 	expect(svc.withholdRelease).not.toHaveBeenCalled();
 	expect(svc.restoreRelease).not.toHaveBeenCalled();
 	expect(svc.setRadioExclusion).not.toHaveBeenCalled();
+	expect(purchases.refundPurchase).not.toHaveBeenCalled();
 }
 
 beforeEach(() => {
@@ -176,5 +183,20 @@ describe('staff music — moderation', () => {
 		// be measuring the stub. `kit_form_boolean_check` is the reason the field
 		// is written that way; a required boolean rejects the whole submission
 		// with an error naming a field the user cannot see.
+	});
+});
+
+describe('staff music — refunds', () => {
+	it('passes the purchase through to the service', async () => {
+		await remote.refundPurchaseForm({ purchaseId: 'p-1' });
+		expect(purchases.refundPurchase).toHaveBeenCalledWith('p-1');
+	});
+
+	it('refunds while the flag is off', async () => {
+		// A refund request does not wait for a launch decision — and staff reach
+		// this page precisely when the storefront is not switched on.
+		isFeatureEnabled.mockResolvedValue(false);
+		await remote.refundPurchaseForm({ purchaseId: 'p-1' });
+		expect(purchases.refundPurchase).toHaveBeenCalledWith('p-1');
 	});
 });

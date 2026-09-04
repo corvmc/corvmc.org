@@ -42,12 +42,34 @@ describe('staffInboxChannels', () => {
 		expect(staffInboxChannels as readonly string[]).not.toContain('direct');
 	});
 
-	it('covers every channel except direct', () => {
-		expect([...staffInboxChannels]).toEqual(inboxChannels.filter((ch) => ch !== 'direct'));
+	it('excludes band — a booking enquiry belongs to the act, not to us', () => {
+		expect(staffInboxChannels as readonly string[]).not.toContain('band');
 	});
 
-	it('includes the always-enabled channels, which the tab renders as Always On', () => {
-		for (const ch of alwaysEnabledInboxChannels) {
+	it('covers every channel except the two staff are not party to', () => {
+		expect([...staffInboxChannels]).toEqual(
+			inboxChannels.filter((ch) => ch !== 'direct' && ch !== 'band')
+		);
+	});
+
+	/**
+	 * `band` is the one channel that is always enabled *and* deliberately absent
+	 * from the tab, which reads as a contradiction and is not: always-enabled is
+	 * about whether `dispatchReply` may send on it (it must, or a band's reply
+	 * never reaches the booker), and this list is about who administers it.
+	 *
+	 * Pinned so that nobody reconciles the two by adding `band` here — which
+	 * would put an act's booking queue in Staff Settings — or by taking it out of
+	 * `alwaysEnabledInboxChannels`, which would stop band replies from sending.
+	 */
+	it('leaves band always-enabled but unadministered', () => {
+		expect(alwaysEnabledInboxChannels as readonly string[]).toContain('band');
+		expect(staffInboxChannels as readonly string[]).not.toContain('band');
+	});
+
+	it('includes the always-enabled channels it does administer, rendered as Always On', () => {
+		const administered = alwaysEnabledInboxChannels.filter((ch) => ch !== 'band');
+		for (const ch of administered) {
 			expect(staffInboxChannels as readonly string[]).toContain(ch);
 		}
 	});

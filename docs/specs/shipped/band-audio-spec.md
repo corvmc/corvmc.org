@@ -160,6 +160,7 @@ withdrew in the meantime.
   bottom of every page and turning it on across the suite would put it over
   controls other specs click. Covered by service and component specs instead; a
   real e2e wants a harness change.
-- **Refunds are unbuilt.** A Connect refund needs `reverse_transfer` and
-  `refund_application_fee`, which is why `stripePaymentIntentId` is stored
-  alongside the Payment Record id — the plumbing is there, the surface is not.
+- **Refunds are staff-only and whole-sale.** `/staff/music` reverses a purchase with
+  `reverse_transfer` + `refund_application_fee`, which is why `stripePaymentIntentId` is
+  stored alongside the Payment Record id. There is no partial refund and no member-facing
+  request — a buyer emails, and somebody reads it.

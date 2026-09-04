@@ -256,6 +256,64 @@ describe('handlePostmarkInbound — direct threads are never writable by email',
 	});
 });
 
+describe('handlePostmarkInbound — band threads route in, but only for the booker', () => {
+	// The opposite of the direct case above, and for the opposite reason. A band
+	// thread *must* accept inbound email: the signed Reply-To on the act's reply
+	// is the booker's only way to answer, and the whole two-way conversation
+	// depends on it. What must not happen is the staff-relay branch firing, which
+	// writes an *outbound* message — on this channel that goes out over the band's
+	// name, so a staffer who was forwarded the act's reply would be writing to a
+	// booker as the act.
+	beforeEach(() => {
+		mockParseReplyMailboxHash.mockReturnValue('band-thread');
+		mockFindThreadById.mockResolvedValue({
+			id: 'band-thread',
+			channel: 'band',
+			status: 'open',
+			contactEmail: 'booker@venue.example'
+		});
+	});
+
+	it('files the booker’s reply into the band’s thread', async () => {
+		await handlePostmarkInbound(payload());
+
+		expect(mockAddInboundMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ threadId: 'band-thread' })
+		);
+		expect(mockFindOrCreateThread).not.toHaveBeenCalled();
+	});
+
+	it('reopens the thread when the booker writes back after the band resolved it', async () => {
+		mockFindThreadById.mockResolvedValue({
+			id: 'band-thread',
+			channel: 'band',
+			status: 'resolved',
+			contactEmail: 'booker@venue.example'
+		});
+
+		await handlePostmarkInbound(payload());
+
+		expect(mockReopenThread).toHaveBeenCalledWith('band-thread');
+	});
+
+	it('never relays a staff reply into it, however the address reached them', async () => {
+		mockFindStaffUserByEmail.mockResolvedValue({
+			id: 'staff-1',
+			name: 'Ada',
+			email: 'ada@corvmc.org'
+		});
+
+		await handlePostmarkInbound(
+			payload({ From: 'ada@corvmc.org', FromFull: { Email: 'ada@corvmc.org', Name: 'Ada' } })
+		);
+
+		expect(mockAddOutboundMessage).not.toHaveBeenCalled();
+		// It is still recorded — the words exist and the band should see them —
+		// just as somebody writing in, not as the band writing out.
+		expect(mockAddInboundMessage).toHaveBeenCalled();
+	});
+});
+
 describe('handlePostmarkInbound — staff reply relay', () => {
 	const STAFF = { id: 'staff-1', name: 'Ada', email: 'ada@corvmc.org' };
 

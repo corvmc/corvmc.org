@@ -1,0 +1,7 @@
+{
+  "Name": "Band Reply",
+  "Alias": "band-reply",
+  "Subject": "{{subject}}",
+  "TemplateType": "Standard",
+  "LayoutTemplate": null
+}

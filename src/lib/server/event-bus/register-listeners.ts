@@ -86,10 +86,20 @@ async function registerInboxListeners(): Promise<void> {
 	const { listUsersWithCapability } = await import('$lib/server/authorization');
 
 	domainEvents.on('inbox.message_received', async ({ data: event }) => {
+		// A band's booking enquiry goes to the act, not to us. Same handler because
+		// it is the same signal — and this is the one path that covers both ways a
+		// message arrives, the form and the booker's reply routed back in by
+		// Postmark.
+		if (event.channel === 'band') {
+			await notifyBandOfEnquiry(event);
+			return;
+		}
+
 		// Member↔member conversations are not staff's business, and this event
 		// carries `preview` — the first 200 characters of the message. Without
 		// this line, every private message would put its opening words in every
-		// staff member's notification bell.
+		// staff member's notification bell. The same is true of a band thread
+		// above, for the same reason and a different owner.
 		if (event.channel === 'direct') return;
 
 		// Whoever can read the inbox — the people for whom a new message is work.
@@ -111,6 +121,68 @@ async function registerInboxListeners(): Promise<void> {
 			}
 		}
 	});
+
+	/**
+	 * Tell a band's owner and admins that somebody wrote to them.
+	 *
+	 * The enquiry itself is *not* delivered by email any more — it lives on the
+	 * thread, and the notification is a pointer to it. That is what makes a
+	 * reply possible at all: an emailed enquiry could only ever be answered from
+	 * a personal mailbox, off the record and with the act's own address on it.
+	 *
+	 * `preview` is carried here, unlike on the direct channel, because these
+	 * recipients are the intended readers rather than an audience the message was
+	 * never addressed to.
+	 */
+	async function notifyBandOfEnquiry(event: {
+		threadId: string;
+		contactName: string | null;
+		preview: string;
+	}): Promise<void> {
+		const { bandOfThread } = await import('$lib/server/inbox/band-service');
+		const { getById, listBandAdmins } = await import('$lib/server/band/band-service');
+		const { env } = await import('$env/dynamic/private');
+
+		const groupId = await bandOfThread(event.threadId);
+		if (!groupId) return;
+
+		const [band, admins] = await Promise.all([getById(groupId), listBandAdmins(groupId)]);
+		if (!band || admins.length === 0) return;
+
+		const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
+		const href = `/band/${band.slug}/messages/${event.threadId}`;
+		const from = event.contactName ?? 'Someone';
+
+		for (const admin of admins) {
+			try {
+				await dispatch({
+					type: 'band_enquiry_received',
+					userId: admin.userId,
+					userEmail: admin.userEmail,
+					title: `${from} contacted ${band.name}`,
+					body: event.preview,
+					href,
+					emailTemplate: {
+						alias: 'notification',
+						model: {
+							subject: `New booking enquiry — ${band.name}`,
+							heading: 'New enquiry',
+							greeting: `Hi ${admin.userName},`,
+							paragraphs: [
+								{ text: `${from} used the booking form on ${band.name}'s public page.` }
+							],
+							quote: event.preview,
+							cta: { url: `${siteUrl}${href}`, label: 'Read and reply' },
+							footnote:
+								'Reply on the site — it reaches them by email, and neither of you sees the other’s address.'
+						}
+					}
+				});
+			} catch (err) {
+				console.error(`[inbox] Failed to notify band admin ${admin.userEmail}:`, err);
+			}
+		}
+	}
 
 	domainEvents.on('inbox.message_sent', async ({ data: event }) => {
 		if (event.channel !== 'portal') return;

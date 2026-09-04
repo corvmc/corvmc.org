@@ -289,6 +289,7 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 			(await dispatchReply({
 				channel: thread.channel,
 				threadId: thread.id,
+				groupId: thread.groupId,
 				body: params.body,
 				staffName: params.authorName,
 				contactName: thread.contactName,
