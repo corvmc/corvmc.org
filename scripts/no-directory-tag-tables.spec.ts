@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { globSync } from 'node:fs';
+import { sourceFiles } from './lib/source-files';
 
 /**
  * Guards the phase-3a fold in `docs/specs/groups-spec.md`: `band_genre`,
@@ -78,10 +78,7 @@ function isComment(line: string): boolean {
 	return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('--');
 }
 
-const files = GLOBS.flatMap((g) => globSync(g))
-	.map((f) => f.replaceAll('\\', '/'))
-	.filter((f) => !ALLOWED.has(f))
-	.sort();
+const files = sourceFiles(GLOBS, ALLOWED);
 
 describe('no folded tag tables', () => {
 	it('finds source files to check', () => {
