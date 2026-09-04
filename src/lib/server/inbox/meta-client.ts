@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { env } from '$env/dynamic/private';
+import { META_STANDARD_WINDOW_MS } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Meta Graph API client — Instagram DMs and Facebook Messenger
@@ -18,16 +19,6 @@ import { env } from '$env/dynamic/private';
 
 const GRAPH_VERSION = 'v21.0';
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
-
-/**
- * How long after the contact's last message Meta still accepts a plain reply.
- * Past it a message needs a tag, and past {@link HUMAN_AGENT_WINDOW_MS} nothing
- * gets through at all.
- */
-export const STANDARD_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-/** What the HUMAN_AGENT tag buys: seven days, on both platforms. */
-export const HUMAN_AGENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type MetaChannel = 'instagram' | 'messenger';
 
@@ -279,7 +270,7 @@ export async function sendMetaMessage(params: SendMetaMessageParams): Promise<st
 	const token = getPageToken();
 
 	const age = params.lastInboundAt ? Date.now() - params.lastInboundAt.getTime() : Infinity;
-	const needsTag = age > STANDARD_WINDOW_MS;
+	const needsTag = age > META_STANDARD_WINDOW_MS;
 
 	const response = await fetch(`${GRAPH_BASE}/me/messages`, {
 		method: 'POST',
