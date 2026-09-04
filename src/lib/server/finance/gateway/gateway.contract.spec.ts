@@ -267,7 +267,7 @@ describe('fake gateway behaviour', () => {
 	it('completes a subscription session into a subscription and a paid invoice', async () => {
 		const created = await gateway.checkout.sessions.create({
 			mode: 'subscription',
-			customer: 'cus_seed_1',
+			customer: 'cus_fake_1',
 			line_items: [lineItem(1000)],
 			success_url: 'https://example.test/member/membership',
 			cancel_url: 'https://example.test/member/membership'
@@ -279,8 +279,38 @@ describe('fake gateway behaviour', () => {
 		const subscription = await gateway.subscriptions.retrieve(completed.subscription as string);
 		expect(subscription.status).toBe('active');
 
-		const invoices = await gateway.invoices.list({ customer: 'cus_seed_1' });
+		const invoices = await gateway.invoices.list({ customer: 'cus_fake_1' });
 		expect(invoices.data).toHaveLength(1);
+	});
+
+	it('gives a seeded customer a card and a billing history it never created', async () => {
+		// The dev seed writes `cus_seed_…` onto its sustaining-member personas, and
+		// everything Stripe holds about them lives in Stripe rather than in D1 — so
+		// without this the surfaces that replaced the billing portal render empty
+		// for every seeded member.
+		const cards = await gateway.paymentMethods.list({ customer: 'cus_seed_persona' });
+		expect(cards.data).toHaveLength(1);
+		expect(cards.data[0].card?.last4).toBe('4242');
+
+		const invoices = await gateway.invoices.list({ customer: 'cus_seed_persona' });
+		expect(invoices.data).toHaveLength(6);
+
+		// Materialised, not synthesized on the way out: the rest of the flow has to
+		// work on it for real.
+		const detached = await gateway.paymentMethods.detach(cards.data[0].id);
+		expect(detached.customer).toBeNull();
+		expect((await gateway.paymentMethods.list({ customer: 'cus_seed_persona' })).data).toHaveLength(
+			0
+		);
+	});
+
+	it('leaves a customer the fake minted itself alone', async () => {
+		// `fakeId` spells its customers `cus_fake_…`, so nothing created through
+		// the gateway picks up the seed's history by accident.
+		const customer = await gateway.customers.create({ email: 'someone@example.test' });
+
+		expect(customer.id).toMatch(/^cus_fake_/);
+		expect((await gateway.paymentMethods.list({ customer: customer.id })).data).toHaveLength(0);
 	});
 
 	it('finds a session by its payment_intent, which is how refunds recover the breakdown', async () => {
@@ -357,7 +387,7 @@ describe('fake gateway behaviour', () => {
 		await gateway.customers.create({ email: 'a@example.test' });
 		const first = await gateway.checkout.sessions.create({
 			mode: 'subscription',
-			customer: 'cus_seed_2',
+			customer: 'cus_fake_2',
 			line_items: [lineItem(1000)],
 			success_url: 'https://example.test/done',
 			cancel_url: 'https://example.test/back'

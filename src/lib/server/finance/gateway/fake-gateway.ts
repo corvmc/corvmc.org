@@ -113,9 +113,13 @@ const store: FakeStore = {
 	setupIntents: new Map()
 };
 
+/** Customers whose seeded card and history have already been materialised. */
+const seeded = new Set<string>();
+
 /** Drop all state. For specs — an e2e run relies on state surviving between requests. */
 export function resetFakeGateway(): void {
 	for (const map of Object.values(store)) map.clear();
+	seeded.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +157,80 @@ function fakeCheckoutUrl(params: Stripe.Checkout.SessionCreateParams, sessionId:
 	const reference = params.success_url ?? params.return_url ?? params.cancel_url;
 	const origin = reference ? new URL(reference).origin : '';
 	return `${origin}/checkout/${sessionId}`;
+}
+
+// ---------------------------------------------------------------------------
+// Seeded customers
+// ---------------------------------------------------------------------------
+
+/**
+ * A `cus_seed_…` customer has a card and a billing history; it just does not
+ * exist in Stripe.
+ *
+ * The dev seed writes those ids onto its sustaining-member personas
+ * (`scripts/seed/sustaining-personas.ts`). Everything Stripe holds about them —
+ * the card on file, the invoices — lives in Stripe rather than in D1, so
+ * without this the surfaces that replaced the billing portal render empty for
+ * every seeded member and nobody can look at the feature they just built.
+ *
+ * Materialised into the store on first read rather than returned from a
+ * synthesizer, so the rest of the flow works on it for real: the card can be
+ * detached, the subscription can be pointed at another one.
+ *
+ * Deliberately keyed on the seed's own `cus_seed_` prefix, and deliberately not
+ * on anything an e2e fixture uses — a spec that means to start with no card
+ * says so by choosing a customer id outside this prefix.
+ */
+function materialiseSeedCustomer(customerId: string | undefined): void {
+	if (!customerId?.startsWith('cus_seed')) return;
+	if (seeded.has(customerId)) return;
+	seeded.add(customerId);
+
+	const card = fakePaymentMethod({
+		id: `pm_seed_${customerId.slice(-8)}`,
+		customer: customerId,
+		card: {
+			brand: 'visa',
+			last4: '4242',
+			exp_month: 8,
+			exp_year: new Date().getUTCFullYear() + 3
+		} as Stripe.PaymentMethod.Card
+	});
+	store.paymentMethods.set(card.id, card);
+
+	const subscriptionId = `sub_seed_${customerId.slice(-8)}`;
+	if (!store.subscriptions.has(subscriptionId)) {
+		store.subscriptions.set(
+			subscriptionId,
+			fakeSubscription({
+				id: subscriptionId,
+				customer: customerId,
+				default_payment_method: card.id
+			})
+		);
+	}
+
+	// Six months back, on the same day each month, at a steady $25 — the shape a
+	// contribution actually has, so the history reads like one rather than like
+	// six rows of noise.
+	const month = 30 * 24 * 60 * 60;
+	for (let ago = 0; ago < 6; ago++) {
+		const id = `in_seed_${customerId.slice(-8)}_${ago}`;
+		store.invoices.set(
+			id,
+			fakeInvoice({
+				id,
+				customer: customerId,
+				subscription: subscriptionId,
+				created: nowSeconds() - ago * month,
+				amount_paid: 2500,
+				total: 2500,
+				status: 'paid',
+				hosted_invoice_url: `https://invoice.fake.test/${id}`,
+				invoice_pdf: `https://invoice.fake.test/${id}.pdf`
+			} as Partial<Stripe.Invoice>)
+		);
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -287,6 +365,7 @@ export function createFakeGateway(): PaymentGateway {
 
 		invoices: {
 			list: (params) => {
+				materialiseSeedCustomer(params?.customer as string | undefined);
 				const matched = [...store.invoices.values()].filter(
 					(invoice) =>
 						(!params?.customer || invoice.customer === params.customer) &&
@@ -304,14 +383,16 @@ export function createFakeGateway(): PaymentGateway {
 		},
 
 		paymentMethods: {
-			list: (params) =>
-				listOf(
+			list: (params) => {
+				materialiseSeedCustomer(params?.customer);
+				return listOf(
 					[...store.paymentMethods.values()].filter(
 						(pm) =>
 							(!params?.customer || pm.customer === params.customer) &&
 							(!params?.type || pm.type === params.type)
 					)
-				),
+				);
+			},
 			detach: (async (id: string) => {
 				const method = store.paymentMethods.get(id);
 				if (!method) notFound('payment method', id);
@@ -428,6 +509,7 @@ export function createFakeGateway(): PaymentGateway {
 
 		subscriptions: {
 			list: (params) => {
+				materialiseSeedCustomer(params?.customer);
 				const matched = [...store.subscriptions.values()].filter(
 					(subscription) =>
 						(!params?.customer || subscription.customer === params.customer) &&
