@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "8781d838-53d2-4213-a930-6ade2c20ade8",
+  "id": "21b4d8b8-f127-4597-86f7-a8fc80c97c06",
   "prevIds": [
-    "cff62cca-96b4-45f6-8d1c-859d5b698d3c"
+    "8781d838-53d2-4213-a930-6ade2c20ade8"
   ],
   "ddl": [
     {
@@ -23,23 +23,11 @@
       "entityType": "tables"
     },
     {
-      "name": "model_has_permissions",
-      "entityType": "tables"
-    },
-    {
       "name": "model_has_roles",
       "entityType": "tables"
     },
     {
-      "name": "permissions",
-      "entityType": "tables"
-    },
-    {
       "name": "roles",
-      "entityType": "tables"
-    },
-    {
-      "name": "role_has_permissions",
       "entityType": "tables"
     },
     {
@@ -850,26 +838,6 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "permission_id",
-      "entityType": "columns",
-      "table": "model_has_permissions"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "user_id",
-      "entityType": "columns",
-      "table": "model_has_permissions"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
       "name": "role_id",
       "entityType": "columns",
       "table": "model_has_roles"
@@ -883,56 +851,6 @@
       "name": "user_id",
       "entityType": "columns",
       "table": "model_has_roles"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": true,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "permissions"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "name",
-      "entityType": "columns",
-      "table": "permissions"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'web'",
-      "generated": null,
-      "name": "guard_name",
-      "entityType": "columns",
-      "table": "permissions"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "permissions"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "permissions"
     },
     {
       "type": "integer",
@@ -983,26 +901,6 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "roles"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "permission_id",
-      "entityType": "columns",
-      "table": "role_has_permissions"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "role_id",
-      "entityType": "columns",
-      "table": "role_has_permissions"
     },
     {
       "type": "integer",
@@ -9786,36 +9684,6 @@
     },
     {
       "columns": [
-        "permission_id"
-      ],
-      "tableTo": "permissions",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_model_has_permissions_permission_id_permissions_id_fk",
-      "entityType": "fks",
-      "table": "model_has_permissions"
-    },
-    {
-      "columns": [
-        "user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_model_has_permissions_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "model_has_permissions"
-    },
-    {
-      "columns": [
         "role_id"
       ],
       "tableTo": "roles",
@@ -9843,36 +9711,6 @@
       "name": "fk_model_has_roles_user_id_user_id_fk",
       "entityType": "fks",
       "table": "model_has_roles"
-    },
-    {
-      "columns": [
-        "permission_id"
-      ],
-      "tableTo": "permissions",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_role_has_permissions_permission_id_permissions_id_fk",
-      "entityType": "fks",
-      "table": "role_has_permissions"
-    },
-    {
-      "columns": [
-        "role_id"
-      ],
-      "tableTo": "roles",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_role_has_permissions_role_id_roles_id_fk",
-      "entityType": "fks",
-      "table": "role_has_permissions"
     },
     {
       "columns": [
@@ -12246,16 +12084,6 @@
     },
     {
       "columns": [
-        "permission_id",
-        "user_id"
-      ],
-      "nameExplicit": false,
-      "name": "model_has_permissions_pk",
-      "entityType": "pks",
-      "table": "model_has_permissions"
-    },
-    {
-      "columns": [
         "role_id",
         "user_id"
       ],
@@ -12263,16 +12091,6 @@
       "name": "model_has_roles_pk",
       "entityType": "pks",
       "table": "model_has_roles"
-    },
-    {
-      "columns": [
-        "permission_id",
-        "role_id"
-      ],
-      "nameExplicit": false,
-      "name": "role_has_permissions_pk",
-      "entityType": "pks",
-      "table": "role_has_permissions"
     },
     {
       "columns": [
@@ -12338,15 +12156,6 @@
       "nameExplicit": false,
       "name": "verification_pk",
       "table": "verification",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "permissions_pk",
-      "table": "permissions",
       "entityType": "pks"
     },
     {
@@ -13082,20 +12891,6 @@
       "name": "user_member_number_unique",
       "entityType": "indexes",
       "table": "user"
-    },
-    {
-      "columns": [
-        {
-          "value": "user_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "model_has_permissions_user_idx",
-      "entityType": "indexes",
-      "table": "model_has_permissions"
     },
     {
       "columns": [
@@ -16008,16 +15803,6 @@
       "name": "idx_rider_input_element",
       "entityType": "indexes",
       "table": "rider_input"
-    },
-    {
-      "columns": [
-        "name",
-        "guard_name"
-      ],
-      "nameExplicit": true,
-      "name": "permissions_name_guard_unique",
-      "entityType": "uniques",
-      "table": "permissions"
     },
     {
       "columns": [

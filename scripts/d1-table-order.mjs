@@ -51,7 +51,6 @@ export const tableOrder = [
 	'help_categories',
 	'subscriber',
 	'roles',
-	'permissions',
 	'volunteer_role',
 	'volunteer_certification',
 	// References user. Ahead of work_order because the shift now carries
@@ -70,9 +69,7 @@ export const tableOrder = [
 	'inbox_channel_config',
 	'verification',
 	// leaves
-	'model_has_permissions',
 	'model_has_roles',
-	'role_has_permissions',
 	'directory_tag',
 	'group_slug_history',
 	'campaign_audience',
