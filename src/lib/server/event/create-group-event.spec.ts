@@ -151,7 +151,7 @@ describe('holding the room', () => {
 		);
 
 		const [call] = staffCreate.mock.calls as unknown as [Record<string, unknown>][];
-		// `'event'`, never `'group'`: booking as the group would imply the group
+		// `'event_listing'`, never `'group'`: booking as the group would imply the group
 		// has a balance, which is exactly what a sanctioned program does not need.
 		expect(call[0]).toMatchObject({ bookerType: 'event_listing', status: 'confirmed' });
 		// The reservation points at the event, and the event links back.

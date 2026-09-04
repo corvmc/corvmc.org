@@ -199,7 +199,7 @@ describe('recurring-series-service', () => {
 			prototypeStartsAt: new Date('2026-06-01T19:00:00Z')
 		};
 
-		it('builds the rule and inserts a series with prototypeType "event"', async () => {
+		it('builds the rule and inserts a series with prototypeType "event_listing"', async () => {
 			setupBatchMock();
 
 			await svc.createEventSeries(params);

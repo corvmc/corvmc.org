@@ -210,7 +210,7 @@
 			<option value="">Anyone</option>
 			<option value="user">Members</option>
 			<option value="group">Bands</option>
-			<option value="event">Events</option>
+			<option value="event_listing">Events</option>
 		</Select>
 	</FilterBar>
 
