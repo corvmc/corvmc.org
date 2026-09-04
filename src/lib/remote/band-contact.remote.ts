@@ -3,27 +3,35 @@
  *
  * Public pages publish no address of any kind — not the booking email, not a
  * phone number — so this form is the only route in, and there is nothing on the
- * page for a scraper to take. Where the message actually lands is the band's
- * own booking contact, which lives in the press kit and is never rendered.
+ * page for a scraper to take.
  *
- * It was premium once, sitting on the microsite behind two gates. Both are gone:
- * a `requireFeature('bandPremium')` that would keep it dark in production, and a
- * `tier !== 'premium'` 404. Turnstile plus the KV rate limit were always what
- * made it safe to expose, and neither of those is a tier.
+ * It was premium once, sitting on the microsite behind a `tier !== 'premium'`
+ * 404 and a feature flag. Both are gone. Turnstile plus the KV rate limit were
+ * always what made it safe to expose, and neither of those is a tier.
+ *
+ * **Where it lands changed.** It used to be one email to whichever address the
+ * press kit named, and then nothing: no record, no status, no way to tell
+ * whether anyone had answered, and no way to answer that did not put the act's
+ * own address in a stranger's inbox. Now it opens a thread the band reads and
+ * replies to at `/band/{slug}/messages`, and the band's admins are notified.
+ *
+ * The old email survives in exactly one case, below: a booking address that
+ * belongs to nobody on the roster. That is a manager or an agent outside CorvMC,
+ * and switching to an on-site inbox would otherwise cut them off silently.
  */
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { form, getRequestEvent } from '$app/server';
 import { eq, and, isNull } from 'drizzle-orm';
-import { alias } from 'drizzle-orm/sqlite-core';
 import { db } from '$lib/server/db';
-import { group, groupMember } from '$lib/server/db/schema/group';
+import { group } from '$lib/server/db/schema/group';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { directoryEntry } from '$lib/server/db/schema/directory';
-import { user } from '$lib/server/db/schema/authentication';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { allowRateLimited } from '$lib/server/rate-limit';
 import { dispatchEmailOnly } from '$lib/server/notification/dispatcher';
+import { handleBandEnquiry } from '$lib/server/inbox/band-service';
+import { listBandAdmins } from '$lib/server/band/band-service';
 import type { NotificationEmailModel } from '$lib/types/notification-email';
 import type { BandEpk } from '$lib/types/band-page';
 
@@ -32,9 +40,6 @@ function profileEmail(contact: unknown): string | undefined {
 	const email = (contact as { email?: unknown } | null)?.email;
 	return typeof email === 'string' && email ? email : undefined;
 }
-
-/** The roster row that defines ownership — see `band-service.ts`. */
-const ownerMember = alias(groupMember, 'owner_member');
 
 // ---------------------------------------------------------------------------
 // Band Site Contact Form — public, delivers to the band's booking contact
@@ -58,21 +63,10 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 		.select({
 			id: group.id,
 			name: group.name,
-			// The owner is the roster row since phase 3c, and the seat can be
-			// empty — the fallback below already handles a missing address.
-			ownerId: ownerMember.userId,
 			contact: directoryEntry.contact
 		})
 		.from(group)
 		.leftJoin(directoryEntry, eq(directoryEntry.groupId, group.id))
-		.leftJoin(
-			ownerMember,
-			and(
-				eq(ownerMember.groupId, group.id),
-				eq(ownerMember.role, 'owner'),
-				eq(ownerMember.status, 'active')
-			)
-		)
 		.where(and(eq(group.slug, data.slug), isNull(group.deletedAt)))
 		.limit(1);
 
@@ -83,7 +77,32 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 		throw error(429, 'Too many messages — please try again later');
 	}
 
-	// Deliver to the EPK booking contact, falling back to the band owner
+	// The enquiry itself. `addInboundMessage` emits `inbox.message_received`, and
+	// the band branch of that listener is what notifies the roster — so the act
+	// finds out through the same path whether this is a first enquiry or the
+	// booker's third reply.
+	await handleBandEnquiry({
+		groupId: bandRow.id,
+		name: data.name,
+		email: data.email,
+		message: data.message
+	});
+
+	// ---------------------------------------------------------------------
+	// The off-platform booking contact
+	// ---------------------------------------------------------------------
+	// Everything above this line is the feature. What follows is the one case
+	// the thread does not cover: a booking address the band chose that belongs
+	// to nobody on its roster — a manager, an agent, a shared band mailbox.
+	//
+	// Those people have no account, so no notification reaches them, and silently
+	// dropping them would break booking for exactly the acts organised enough to
+	// have named someone. They keep the email they have always had, unchanged,
+	// with the sender's own address as the Reply-To.
+	//
+	// An address that *does* belong to an owner or admin gets nothing extra: they
+	// are already being notified, and sending both would deliver every enquiry
+	// twice.
 	const [config] = await db
 		.select({ epk: bandSite.epk })
 		.from(bandSite)
@@ -91,21 +110,19 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 		.limit(1);
 	const epk = config?.epk as BandEpk | null | undefined;
 
-	// Three places, in order of how deliberately the band chose them: the press
-	// kit's booking contact, the address on their profile, then whoever owns the
-	// act. The middle one exists because that field used to be *published* as the
-	// band's booking address — a band that filled it in and never opened the press
-	// kit still gets its enquiries.
-	let toEmail = epk?.bookingContact?.email || profileEmail(bandRow.contact);
-	if (!toEmail && bandRow.ownerId) {
-		const [owner] = await db
-			.select({ email: user.email })
-			.from(user)
-			.where(eq(user.id, bandRow.ownerId))
-			.limit(1);
-		toEmail = owner?.email;
-	}
-	if (!toEmail) throw error(500, 'This band has no contact email configured');
+	// Two places, in the order the band chose them: the press kit's booking
+	// contact, then the address on their profile. The second exists because that
+	// field used to be *published* as the band's booking address — a band that
+	// filled it in and never opened the press kit still gets its enquiries. The
+	// owner is no longer a fallback: they are on the roster, so they are notified.
+	const bookingEmail = epk?.bookingContact?.email || profileEmail(bandRow.contact);
+	if (!bookingEmail) return { success: true };
+
+	const admins = await listBandAdmins(bandRow.id);
+	const onRoster = admins.some(
+		(a) => a.userEmail.trim().toLowerCase() === bookingEmail.trim().toLowerCase()
+	);
+	if (onRoster) return { success: true };
 
 	const model: NotificationEmailModel = {
 		subject: `New booking enquiry — ${bandRow.name}`,
@@ -123,7 +140,7 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 
 	await dispatchEmailOnly({
 		type: 'band_site_contact',
-		toEmail,
+		toEmail: bookingEmail,
 		templateAlias: 'notification',
 		model: model as unknown as Record<string, unknown>
 	});

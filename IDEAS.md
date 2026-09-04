@@ -54,6 +54,33 @@ state where staff hand it back with a note and the author edits. Not yet specced
 Account deactivation is deliberately out until there is a real ban to appeal against — see the
 CHORES entry on there being no platform ban, only deactivation.
 
+### Spending Ceilings on Capabilities
+
+A capability is currently all-or-nothing: you hold `credit.adjust` or you do not. Some
+authority is better expressed as an amount — "up to N hours without escalation" — so the
+routine case needs no approval and only the unusual one does.
+
+Two places want the same mechanism:
+
+- **`credit.adjust`.** Today it is admin-only, so comping an hour for a member whose
+  practice session was interrupted routes through one of two people. That is the outcome
+  `docs/specs/admin-vs-staff-spec.md` argued against — a front-desk kindness that does not
+  happen because the front desk cannot do it. A ceiling would let staff comp small amounts
+  and escalate the rest, which is the shape the spec preferred and the reason it left the
+  question open rather than settling it.
+- **Committee spending limits.** `docs/specs/committees-and-roles-spec.md` describes
+  committees empowered to spend within a bound. Same threshold model, different resource.
+
+Neither exists, and building one mechanism for both is the cheap version. The shape is
+probably a per-capability numeric bound in the matrix plus a second capability for the
+escalated case — `credit.adjust` and `credit.adjustLarge` — rather than a general policy
+engine, which is more than eight positions and one relationship type warrant.
+
+**Progress:** Not built, and deliberately so. Recorded here when the capability migration
+shipped `credit.adjust` as admin-only (#489) — that is the conservative choice, and
+widening it later is a one-line config diff. See open question 2 in
+`docs/specs/admin-vs-staff-spec.md`.
+
 ### Merch Consignment
 
 Let bands list merch for sale at the venue. Track inventory, sales splits, and payouts. Ties into the existing band and payments systems.

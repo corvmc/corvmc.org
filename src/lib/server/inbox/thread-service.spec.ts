@@ -21,6 +21,7 @@ vi.mock('drizzle-orm', () => ({
 	like: vi.fn(),
 	or: vi.fn(),
 	inArray: vi.fn(),
+	notInArray: vi.fn(),
 	isNull: vi.fn(),
 	isNotNull: vi.fn(),
 	lte: vi.fn(),

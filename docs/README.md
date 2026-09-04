@@ -71,6 +71,7 @@ the way it is, and the workflow guide to find out **what** it does today.
 | [bands-spec.md](specs/shipped/bands-spec.md)                       | ✅     | archived  | Band entity, membership, ownership, invitations — superseded in part by `groups-spec.md`                                                                                                                                                             |
 | [staff-bands-spec.md](specs/shipped/staff-bands-spec.md)           | ✅     | archived  | Staff band management & moderation; impersonation deliberately deferred                                                                                                                                                                              |
 | [band-domains-spec.md](specs/shipped/band-domains-spec.md)         | ✅     | archived  | `{slug}.corvmc.org` for every band; custom domains as the premium tier                                                                                                                                                                               |
+| [band-audio-spec.md](specs/shipped/band-audio-spec.md)             | ✅     | archived  | Band releases, the private-bucket storefront, the refusable split, and CMC Radio's materialized timetable                                                                                                                                            |
 | [band-sites-launch.md](specs/shipped/band-sites-launch.md)         | 📦     | archived  | Shipped, then superseded outright by `band-domains-spec.md`                                                                                                                                                                                          |
 | [groups-spec.md](specs/groups-spec.md)                             | 🔧     | spec      | Bands/clubs/committees: `group` + `directory_entry` + `band_site`, roster, announcements, documents. **Phases 0–4 shipped** — the table split, the listing table and `requireGroupRole`. Clubs and committees themselves start at phase 5            |
 | [committees-and-roles-spec.md](specs/committees-and-roles-spec.md) | 📋     | spec      | The six committees and the event roles as user stories, each marked with what serves it today. A requirements map rather than one feature's design; names committee-scoped authority as the prerequisite `admin-vs-staff-spec.md` does not yet cover |
@@ -106,6 +107,7 @@ the way it is, and the workflow guide to find out **what** it does today.
 | [email-marketing-spec.md](specs/shipped/email-marketing-spec.md)       | ✅     | archived  | Audiences, campaigns, scheduled sends                                          |
 | [member-portal-chat-spec.md](specs/shipped/member-portal-chat-spec.md) | ✅     | archived  | Member↔staff conversations as an inbox channel (`portal`); `inbox_participant` |
 | [direct-messages-spec.md](specs/shipped/direct-messages-spec.md)       | ✅     | archived  | Member↔member DMs: request/accept consent, silent drops, blocks, reporting     |
+| [band-chat-spec.md](specs/shipped/band-chat-spec.md)                   | ✅     | archived  | Booking enquiries as band-owned threads (`band`); `inbox_thread.group_id`      |
 
 ### Moderation
 
@@ -166,14 +168,16 @@ content is either shipped (git history is the record) or was folded into `CHORES
 
 ## architecture
 
-| Doc                                                                                   | Status | Notes                                                                                                |
-| ------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
-| [overview.md](architecture/overview.md)                                               | ✅     | **Start here** — how the system is wired (remote functions, auth, event bus, D1, cron, config)       |
-| [domain-model.md](architecture/domain-model.md)                                       | ✅     | What the tables _mean_: three verticals over two horizontals, and the shapes that recur              |
-| [operations-manual.md](architecture/operations-manual.md)                             | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring |
-| [deployment-checklist.md](architecture/deployment-checklist.md)                       | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                              |
-| [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                             | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting  |
-| [U-Tec Api.postman_collection.json](architecture/U-Tec%20Api.postman_collection.json) | 📦     | Vendor API collection for the door-lock integration — reference only, not maintained here            |
+| Doc                                                                                   | Status | Notes                                                                                                                     |
+| ------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------- |
+| [overview.md](architecture/overview.md)                                               | ✅     | **Start here** — how the system is wired (remote functions, auth, event bus, D1, cron, config)                            |
+| [domain-model.md](architecture/domain-model.md)                                       | ✅     | What the tables _mean_: three verticals over two horizontals, and the shapes that recur                                   |
+| [operations-manual.md](architecture/operations-manual.md)                             | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring                      |
+| [deployment-checklist.md](architecture/deployment-checklist.md)                       | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                                                   |
+| [stripe-connect-manual.md](architecture/stripe-connect-manual.md)                     | ✅     | Band payouts: what being a Stripe platform costs, the second webhook, refunds by hand, triage                             |
+| [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                             | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting                       |
+| [meta-inbox-setup.md](architecture/meta-inbox-setup.md)                               | ✅     | Instagram DMs + Messenger as inbox channels: Meta app, permissions, Page subscription, secrets, rollback, troubleshooting |
+| [U-Tec Api.postman_collection.json](architecture/U-Tec%20Api.postman_collection.json) | 📦     | Vendor API collection for the door-lock integration — reference only, not maintained here                                 |
 
 ## development
 

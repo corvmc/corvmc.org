@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "62de01a9-31a0-4822-9cd4-2e9eeecc731b",
+  "id": "21b4d8b8-f127-4597-86f7-a8fc80c97c06",
   "prevIds": [
-    "6352b2e1-aac6-476a-9e75-a8cd71535216"
+    "8781d838-53d2-4213-a930-6ade2c20ade8"
   ],
   "ddl": [
     {
@@ -23,23 +23,11 @@
       "entityType": "tables"
     },
     {
-      "name": "model_has_permissions",
-      "entityType": "tables"
-    },
-    {
       "name": "model_has_roles",
       "entityType": "tables"
     },
     {
-      "name": "permissions",
-      "entityType": "tables"
-    },
-    {
       "name": "roles",
-      "entityType": "tables"
-    },
-    {
-      "name": "role_has_permissions",
       "entityType": "tables"
     },
     {
@@ -215,6 +203,10 @@
       "entityType": "tables"
     },
     {
+      "name": "inbox_group_read",
+      "entityType": "tables"
+    },
+    {
       "name": "inbox_message",
       "entityType": "tables"
     },
@@ -336,6 +328,26 @@
     },
     {
       "name": "project",
+      "entityType": "tables"
+    },
+    {
+      "name": "audio_release",
+      "entityType": "tables"
+    },
+    {
+      "name": "audio_track",
+      "entityType": "tables"
+    },
+    {
+      "name": "band_stripe_account",
+      "entityType": "tables"
+    },
+    {
+      "name": "radio_play",
+      "entityType": "tables"
+    },
+    {
+      "name": "release_purchase",
       "entityType": "tables"
     },
     {
@@ -826,26 +838,6 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "permission_id",
-      "entityType": "columns",
-      "table": "model_has_permissions"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "user_id",
-      "entityType": "columns",
-      "table": "model_has_permissions"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
       "name": "role_id",
       "entityType": "columns",
       "table": "model_has_roles"
@@ -859,56 +851,6 @@
       "name": "user_id",
       "entityType": "columns",
       "table": "model_has_roles"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": true,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "permissions"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "name",
-      "entityType": "columns",
-      "table": "permissions"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'web'",
-      "generated": null,
-      "name": "guard_name",
-      "entityType": "columns",
-      "table": "permissions"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "permissions"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "permissions"
     },
     {
       "type": "integer",
@@ -959,26 +901,6 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "roles"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "permission_id",
-      "entityType": "columns",
-      "table": "role_has_permissions"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "role_id",
-      "entityType": "columns",
-      "table": "role_has_permissions"
     },
     {
       "type": "integer",
@@ -5568,6 +5490,56 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "inbox_group_read"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "thread_id",
+      "entityType": "columns",
+      "table": "inbox_group_read"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "inbox_group_read"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_read_at",
+      "entityType": "columns",
+      "table": "inbox_group_read"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "inbox_group_read"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "inbox_message"
     },
     {
@@ -5847,6 +5819,16 @@
       "default": null,
       "generated": null,
       "name": "channel",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
       "entityType": "columns",
       "table": "inbox_thread"
     },
@@ -8778,6 +8760,606 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "slug",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'single'",
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "description",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "released_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'draft'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "price_min_cents",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "true",
+      "generated": null,
+      "name": "allow_pay_more",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "radio_opt_in",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "radio_excluded_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "radio_excluded_reason",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "published_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "audio_release"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "release_id",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "track_number",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "duration_ms",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "object_key",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "content_type",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "byte_size",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "original_filename",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "isrc",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "radio_excluded_at",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "audio_track"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stripe_account_id",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "charges_enabled",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "payouts_enabled",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "details_submitted",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "requirements_json",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "band_stripe_account"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "radio_play"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "track_id",
+      "entityType": "columns",
+      "table": "radio_play"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "starts_at",
+      "entityType": "columns",
+      "table": "radio_play"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ends_at",
+      "entityType": "columns",
+      "table": "radio_play"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "radio_play"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "release_id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "buyer_email",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "purchase_id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount_paid_cents",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "platform_fee_cents",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "band_net_cents",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "fee_covered_cents",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stripe_payment_intent_id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stripe_payment_record_id",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'pending'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "download_token",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "download_count",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "paid_at",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "refunded_at",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "rider"
     },
     {
@@ -9102,36 +9684,6 @@
     },
     {
       "columns": [
-        "permission_id"
-      ],
-      "tableTo": "permissions",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_model_has_permissions_permission_id_permissions_id_fk",
-      "entityType": "fks",
-      "table": "model_has_permissions"
-    },
-    {
-      "columns": [
-        "user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_model_has_permissions_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "model_has_permissions"
-    },
-    {
-      "columns": [
         "role_id"
       ],
       "tableTo": "roles",
@@ -9159,36 +9711,6 @@
       "name": "fk_model_has_roles_user_id_user_id_fk",
       "entityType": "fks",
       "table": "model_has_roles"
-    },
-    {
-      "columns": [
-        "permission_id"
-      ],
-      "tableTo": "permissions",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_role_has_permissions_permission_id_permissions_id_fk",
-      "entityType": "fks",
-      "table": "role_has_permissions"
-    },
-    {
-      "columns": [
-        "role_id"
-      ],
-      "tableTo": "roles",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_role_has_permissions_role_id_roles_id_fk",
-      "entityType": "fks",
-      "table": "role_has_permissions"
     },
     {
       "columns": [
@@ -10341,6 +10863,36 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_inbox_group_read_thread_id_inbox_thread_id_fk",
+      "entityType": "fks",
+      "table": "inbox_group_read"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_inbox_group_read_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "inbox_group_read"
+    },
+    {
+      "columns": [
+        "thread_id"
+      ],
+      "tableTo": "inbox_thread",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_inbox_message_thread_id_inbox_thread_id_fk",
       "entityType": "fks",
       "table": "inbox_message"
@@ -10434,6 +10986,21 @@
       "name": "fk_inbox_saved_view_user_id_user_id_fk",
       "entityType": "fks",
       "table": "inbox_saved_view"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_inbox_thread_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "inbox_thread"
     },
     {
       "columns": [
@@ -11331,6 +11898,96 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_audio_release_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "audio_release"
+    },
+    {
+      "columns": [
+        "release_id"
+      ],
+      "tableTo": "audio_release",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_audio_track_release_id_audio_release_id_fk",
+      "entityType": "fks",
+      "table": "audio_track"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_band_stripe_account_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "band_stripe_account"
+    },
+    {
+      "columns": [
+        "track_id"
+      ],
+      "tableTo": "audio_track",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_radio_play_track_id_audio_track_id_fk",
+      "entityType": "fks",
+      "table": "radio_play"
+    },
+    {
+      "columns": [
+        "release_id"
+      ],
+      "tableTo": "audio_release",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_release_purchase_release_id_audio_release_id_fk",
+      "entityType": "fks",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_release_purchase_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_rider_group_id_group_id_fk",
       "entityType": "fks",
       "table": "rider"
@@ -11427,16 +12084,6 @@
     },
     {
       "columns": [
-        "permission_id",
-        "user_id"
-      ],
-      "nameExplicit": false,
-      "name": "model_has_permissions_pk",
-      "entityType": "pks",
-      "table": "model_has_permissions"
-    },
-    {
-      "columns": [
         "role_id",
         "user_id"
       ],
@@ -11444,16 +12091,6 @@
       "name": "model_has_roles_pk",
       "entityType": "pks",
       "table": "model_has_roles"
-    },
-    {
-      "columns": [
-        "permission_id",
-        "role_id"
-      ],
-      "nameExplicit": false,
-      "name": "role_has_permissions_pk",
-      "entityType": "pks",
-      "table": "role_has_permissions"
     },
     {
       "columns": [
@@ -11519,15 +12156,6 @@
       "nameExplicit": false,
       "name": "verification_pk",
       "table": "verification",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "permissions_pk",
-      "table": "permissions",
       "entityType": "pks"
     },
     {
@@ -11913,6 +12541,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "inbox_group_read_pk",
+      "table": "inbox_group_read",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "inbox_message_pk",
       "table": "inbox_message",
       "entityType": "pks"
@@ -12174,6 +12811,51 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "audio_release_pk",
+      "table": "audio_release",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "audio_track_pk",
+      "table": "audio_track",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "nameExplicit": false,
+      "name": "band_stripe_account_pk",
+      "table": "band_stripe_account",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "radio_play_pk",
+      "table": "radio_play",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "release_purchase_pk",
+      "table": "release_purchase",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "rider_pk",
       "table": "rider",
       "entityType": "pks"
@@ -12209,20 +12891,6 @@
       "name": "user_member_number_unique",
       "entityType": "indexes",
       "table": "user"
-    },
-    {
-      "columns": [
-        {
-          "value": "user_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "model_has_permissions_user_idx",
-      "entityType": "indexes",
-      "table": "model_has_permissions"
     },
     {
       "columns": [
@@ -13787,6 +14455,38 @@
           "isExpression": false
         },
         {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_group_read_thread_user",
+      "entityType": "indexes",
+      "table": "inbox_group_read"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_group_read_user",
+      "entityType": "indexes",
+      "table": "inbox_group_read"
+    },
+    {
+      "columns": [
+        {
+          "value": "thread_id",
+          "isExpression": false
+        },
+        {
           "value": "created_at",
           "isExpression": false
         }
@@ -14011,6 +14711,28 @@
       "where": null,
       "origin": "manual",
       "name": "idx_inbox_thread_contact_ext",
+      "entityType": "indexes",
+      "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "last_message_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_inbox_thread_group",
       "entityType": "indexes",
       "table": "inbox_thread"
     },
@@ -14839,6 +15561,190 @@
         {
           "value": "group_id",
           "isExpression": false
+        },
+        {
+          "value": "slug",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_audio_release_group_slug",
+      "entityType": "indexes",
+      "table": "audio_release"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_audio_release_group",
+      "entityType": "indexes",
+      "table": "audio_release"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_audio_release_status",
+      "entityType": "indexes",
+      "table": "audio_release"
+    },
+    {
+      "columns": [
+        {
+          "value": "release_id",
+          "isExpression": false
+        },
+        {
+          "value": "track_number",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_audio_track_release_number",
+      "entityType": "indexes",
+      "table": "audio_track"
+    },
+    {
+      "columns": [
+        {
+          "value": "object_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_audio_track_key",
+      "entityType": "indexes",
+      "table": "audio_track"
+    },
+    {
+      "columns": [
+        {
+          "value": "starts_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_radio_play_starts",
+      "entityType": "indexes",
+      "table": "radio_play"
+    },
+    {
+      "columns": [
+        {
+          "value": "track_id",
+          "isExpression": false
+        },
+        {
+          "value": "starts_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_radio_play_track",
+      "entityType": "indexes",
+      "table": "radio_play"
+    },
+    {
+      "columns": [
+        {
+          "value": "download_token",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_release_purchase_token",
+      "entityType": "indexes",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        {
+          "value": "release_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_release_purchase_release",
+      "entityType": "indexes",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_release_purchase_user",
+      "entityType": "indexes",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        {
+          "value": "buyer_email",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_release_purchase_email",
+      "entityType": "indexes",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "created_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_release_purchase_status",
+      "entityType": "indexes",
+      "table": "release_purchase"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
         }
       ],
       "isUnique": true,
@@ -14897,16 +15803,6 @@
       "name": "idx_rider_input_element",
       "entityType": "indexes",
       "table": "rider_input"
-    },
-    {
-      "columns": [
-        "name",
-        "guard_name"
-      ],
-      "nameExplicit": true,
-      "name": "permissions_name_guard_unique",
-      "entityType": "uniques",
-      "table": "permissions"
     },
     {
       "columns": [

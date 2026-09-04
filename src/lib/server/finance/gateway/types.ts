@@ -12,9 +12,18 @@ import type Stripe from 'stripe';
  *
  * `webhooks` is absent on purpose: signature verification is a pure function of
  * the payload and the secret, so it stays on the real SDK regardless of driver
- * (see `webhookCryptoProvider` in `$lib/server/stripe`).
+ * (see `stripeWebhooks` and `webhookCryptoProvider` in `$lib/server/stripe`).
  */
 export interface PaymentGateway {
+	/**
+	 * Stripe Connect, for band payouts on record sales. A destination charge
+	 * pays a connected account directly, so CMC never holds a band's banking
+	 * details — which is also why there is no fake worth writing for the
+	 * onboarding half: an Express account link is a URL into Stripe's own
+	 * hosted flow, and there is nothing on this side to stand in for it.
+	 */
+	readonly accounts: Pick<Stripe['accounts'], 'create' | 'retrieve' | 'createLoginLink'>;
+	readonly accountLinks: Pick<Stripe['accountLinks'], 'create'>;
 	readonly billingPortal: {
 		sessions: Pick<Stripe['billingPortal']['sessions'], 'create'>;
 	};

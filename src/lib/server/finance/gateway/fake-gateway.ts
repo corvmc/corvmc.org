@@ -90,6 +90,7 @@ interface FakeStore {
 	products: Map<string, Stripe.Product>;
 	prices: Map<string, Stripe.Price>;
 	coupons: Map<string, Stripe.Coupon>;
+	accounts: Map<string, Stripe.Account>;
 }
 
 const store: FakeStore = {
@@ -102,7 +103,8 @@ const store: FakeStore = {
 	customers: new Map(),
 	products: new Map(),
 	prices: new Map(),
-	coupons: new Map()
+	coupons: new Map(),
+	accounts: new Map()
 };
 
 /** Drop all state. For specs — an e2e run relies on state surviving between requests. */
@@ -153,6 +155,56 @@ function fakeCheckoutUrl(params: Stripe.Checkout.SessionCreateParams, sessionId:
 
 export function createFakeGateway(): PaymentGateway {
 	return {
+		/**
+		 * Connect, standing in far enough for a band to be "onboarded" locally.
+		 *
+		 * `charges_enabled` and `payouts_enabled` come back true immediately,
+		 * because the thing they gate — whether a record can be sold — is what the
+		 * seed and the e2e suite need to be able to reach. The real Express flow
+		 * takes a human through Stripe's hosted onboarding and can sit
+		 * `restricted` for days; nothing on this side can stand in for that, so
+		 * the onboarding link is a URL that goes nowhere and is never followed.
+		 */
+		accounts: {
+			create: async (params) => {
+				const account = {
+					id: fakeId('acct'),
+					object: 'account',
+					created: nowSeconds(),
+					type: params?.type ?? 'express',
+					business_type: params?.business_type ?? null,
+					charges_enabled: true,
+					payouts_enabled: true,
+					details_submitted: true,
+					email: params?.email ?? null,
+					metadata: (params?.metadata as Record<string, string>) ?? {}
+				} as Stripe.Account;
+				store.accounts.set(account.id, account);
+				return respond(account);
+			},
+			retrieve: (async (id?: string) => {
+				const account = typeof id === 'string' ? store.accounts.get(id) : undefined;
+				if (!account) throw new Error(`No such account: ${id}`);
+				return respond(account);
+			}) as PaymentGateway['accounts']['retrieve'],
+			createLoginLink: (async (id: string) =>
+				respond({
+					object: 'login_link',
+					created: nowSeconds(),
+					url: `https://connect.fake.test/express/${id}`
+				} as Stripe.LoginLink)) as PaymentGateway['accounts']['createLoginLink']
+		},
+
+		accountLinks: {
+			create: async (params) =>
+				respond({
+					object: 'account_link',
+					created: nowSeconds(),
+					expires_at: nowSeconds() + 300,
+					url: params?.refresh_url ?? 'https://connect.fake.test/onboarding'
+				} as Stripe.AccountLink)
+		},
+
 		billingPortal: {
 			sessions: {
 				create: async (params) =>

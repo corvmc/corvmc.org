@@ -35,6 +35,17 @@ export interface NotificationTypeDef {
 
 export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
+		key: 'audio_purchase_receipt',
+		label: 'Music purchase receipt',
+		description: 'Your download link and receipt after buying a release',
+		defaults: { email: true, inApp: true, sms: false },
+		// Mandatory, and not merely as a policy preference: for a buyer with no
+		// account this email carries the ONLY copy of their download link. Letting
+		// it be switched off would let somebody opt out of receiving the thing
+		// they bought.
+		mandatory: true
+	},
+	{
 		key: 'ticket_confirmation',
 		label: 'Ticket purchase confirmation',
 		description: 'Confirmation email with your ticket codes after purchase',
@@ -76,6 +87,12 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		key: 'band_invitation_accepted',
 		label: 'Band invitation accepted',
 		description: 'Notification when someone accepts your band invitation',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'band_enquiry_received',
+		label: 'Booking enquiry',
+		description: 'Notification when someone contacts one of your bands through its booking form',
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{

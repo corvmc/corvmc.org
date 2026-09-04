@@ -163,28 +163,6 @@ export const TICKET_CONTRIBUTION_PRESETS = [500, 1000, 2500] as const;
 
 /** Anything above this is a typo, not a gift. */
 export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
-
-// ---------------------------------------------------------------------------
-// Payment splits
-// ---------------------------------------------------------------------------
-
-/**
- * Where the split bar opens on a music sale: CMC's suggested share, in basis
- * points.
- *
- * A *default*, not a rake — the buyer drags it, and the floor is zero. At zero
- * `application_fee_amount` is exactly Stripe's fee, so the collective nets
- * nothing and loses nothing; that is what makes refusing it safe to offer.
- */
-export const AUDIO_PLATFORM_FEE_BPS = 1000;
-
-/**
- * A release is free, or it costs at least this. Nothing in between: Stripe's
- * own charge minimum is 50¢, and its 30¢ fixed fee is a third of a $1 sale, so
- * the prices this excludes are the ones where almost nothing reaches the band.
- */
-export const AUDIO_MIN_PRICE_CENTS = 200;
-
 // ---------------------------------------------------------------------------
 // The ticket sliding scale
 // ---------------------------------------------------------------------------
@@ -585,9 +563,39 @@ export const inboxChannels = [
 	'web',
 	'portal',
 	'direct',
+	'band',
 	'instagram',
 	'messenger'
 ] as const;
+
+/**
+ * The channels the staff inbox is a party to — every channel except `direct`
+ * and `band`.
+ *
+ * `direct` is member↔member. Staff have no queue role in it: `staffVisibleThread`
+ * keeps direct threads out of every staff read, `dispatchReply` throws rather
+ * than write into one, and there is no external system behind it to authenticate.
+ * So it has nothing to configure, and the staff settings page must not be handed
+ * it — `channelMeta` there is keyed by this list, not by `inboxChannels`.
+ *
+ * `band` is out for the same reason with a different owner: a booking enquiry
+ * belongs to the act, `staffVisibleThread` excludes it too, and the act answers
+ * it from `/band/{slug}/messages`. It is *always enabled* — that is what lets
+ * `dispatchReply` send a band's reply — so its absence here is about who
+ * administers it, not about whether it is on.
+ *
+ * `inboxChannels` stays the `inbox_thread.channel` vocabulary; this is the
+ * subset staff administer.
+ */
+export const staffInboxChannels = [
+	'email',
+	'sms',
+	'web',
+	'portal',
+	'instagram',
+	'messenger'
+] as const;
+export type StaffInboxChannel = (typeof staffInboxChannels)[number];
 
 /**
  * The contact-form subject that reveals the event-tip fields.
@@ -619,6 +627,16 @@ export const contactSubjects = [
 	'Volunteer Opportunities',
 	'Donations'
 ] as const;
+/**
+ * The subject every band booking enquiry gets.
+ *
+ * The band contact form has no subject field — a stranger writing to an act is
+ * always writing about one thing — so the value is fixed rather than chosen.
+ * Deliberately *not* a member of `contactSubjects`: that list is the staff
+ * queue's inquiry-type facet, and band threads are never in the staff queue.
+ */
+export const BAND_ENQUIRY_SUBJECT = 'Booking enquiry';
+
 export const inboxThreadStatuses = ['open', 'resolved', 'snoozed'] as const;
 /**
  * The four views the staff queue offers, in tab order.
@@ -660,14 +678,32 @@ export const inboxParticipantRoles = ['member', 'staff'] as const;
 
 /**
  * Channels with no external system behind them: nothing to authenticate, so
- * nothing to turn off. The contact form and the member portal both deliver
- * through the site itself. Lives here rather than in the inbox service so the
- * settings page can ask the same question the server does.
+ * nothing to turn off. The contact form, the member portal and a band's booking
+ * form all deliver through the site itself. `band` is here for the same reason
+ * `web` is: its *outbound* half is email, but that goes out on the transactional
+ * stream we already own, and the `email` toggle governs the inbound support
+ * mailbox rather than our ability to reply. Lives here rather than in the inbox
+ * service so the settings page can ask the same question the server does.
  */
 export const alwaysEnabledInboxChannels: readonly (typeof inboxChannels)[number][] = [
 	'web',
-	'portal'
+	'portal',
+	'band'
 ];
+
+/**
+ * How long Meta lets us answer an Instagram or Messenger contact.
+ *
+ * Their platforms accept a plain reply for 24 hours after the contact's last
+ * message and a HUMAN_AGENT-tagged one for seven days; past that nothing is
+ * delivered at all. Here rather than beside the Graph client because the
+ * composer has to grey itself out on the same rule the dispatcher sends on, and
+ * anything under `$lib/server/**` is barred from the browser bundle. Two copies
+ * of this number drift, and the drift shows up as a reply that looked sendable
+ * and was not.
+ */
+export const META_STANDARD_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const META_HUMAN_AGENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** How many people may be sitting on an unanswered request from you at once. */
 export const MAX_PENDING_SENT_REQUESTS = 5;
@@ -680,6 +716,17 @@ export const DIRECT_MESSAGE_BODY_MAX = 5000;
 
 export function isAlwaysEnabledChannel(channel: string): boolean {
 	return (alwaysEnabledInboxChannels as readonly string[]).includes(channel);
+}
+
+/**
+ * Whether a thread's channel is one staff administer and can reply on.
+ *
+ * `direct` is the only one that is not, and a direct thread does reach staff
+ * surfaces: reporting one makes it staff-visible. This is what tells the
+ * composer there is no channel behind it to enable.
+ */
+export function isStaffInboxChannel(channel: string): channel is StaffInboxChannel {
+	return (staffInboxChannels as readonly string[]).includes(channel);
 }
 
 // ---------------------------------------------------------------------------
@@ -1359,12 +1406,30 @@ export const adminOnlyCapabilities = [
  * named position — which is data, not code, and a half-migrated org chart is a
  * legal steady state.
  */
+/**
+ * Everything except the admin-only complement — what `staff` holds from here.
+ *
+ * Derived rather than written out, so adding a capability grants it to `staff`
+ * automatically and the ONLY way to withhold one is to name it in
+ * `adminOnlyCapabilities`. A hand-maintained list would drift silently in the
+ * dangerous direction: a new capability forgotten there is one `staff` quietly
+ * gains.
+ */
+const staffCapabilities = Object.fromEntries(
+	Object.entries(allCapabilities).map(([resource, actions]) => [
+		resource,
+		(actions as string[]).filter(
+			(action) => !(adminOnlyCapabilities as readonly string[]).includes(`${resource}.${action}`)
+		)
+	])
+) as Grants;
+
 export const positions: Record<Position, Grants> = {
 	admin: allCapabilities,
-	// Still identical to admin. The narrowing PR replaces this with
-	// allCapabilities minus `adminOnlyCapabilities`, and that one line is the
-	// only place in this whole effort where authority actually moves.
-	staff: allCapabilities,
+	// This is it — the one line in the whole migration where authority moves.
+	// A `staff` holder can no longer grant themselves `admin`, purge an account,
+	// or move credit. Everything else they could do, they still can.
+	staff: staffCapabilities,
 
 	technology_coordinator: {
 		settings: ['read', 'update'],
@@ -1521,6 +1586,51 @@ export const flagEntityTypeToEntity: Record<string, EntityType> = {
 };
 
 // ---------------------------------------------------------------------------
+// Band audio — releases, pricing, radio
+// ---------------------------------------------------------------------------
+
+/** What a band is putting out. Editorial only — nothing branches on it. */
+export const releaseKinds = ['single', 'ep', 'album', 'live', 'demo'] as const;
+export type ReleaseKind = (typeof releaseKinds)[number];
+
+export const releaseKindLabels: Record<ReleaseKind, string> = {
+	single: 'Single',
+	ep: 'EP',
+	album: 'Album',
+	live: 'Live recording',
+	demo: 'Demo'
+};
+
+export const RELEASE_TITLE_MAX = 200;
+export const TRACK_TITLE_MAX = 200;
+
+/**
+ * Where the split bar opens: CMC's suggested share of a sale, in basis points.
+ *
+ * A *default*, not a rake — the buyer drags it, and the floor is zero. At zero
+ * `application_fee_amount` is exactly Stripe's fee, so the collective nets
+ * nothing and loses nothing; that is what makes refusing it safe to offer.
+ * Staff can move this default from site config without a deploy.
+ */
+export const AUDIO_PLATFORM_FEE_BPS = 1000;
+
+/**
+ * A release is free, or it costs at least this. Nothing in between: Stripe's
+ * own charge minimum is 50¢, and its 30¢ fixed fee is a third of a $1 sale, so
+ * the prices this excludes are the ones where almost nothing reaches the band.
+ */
+export const AUDIO_MIN_PRICE_CENTS = 200;
+
+/** A single upload. Comfortable for MP3 and FLAC, tight for a WAV master. */
+export const AUDIO_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+/**
+ * The station skips anything outside this window. The ceiling is the load-bearing
+ * one: a 40-minute live set would otherwise hold the stream for 40 minutes, and
+ * the rotation reads as broken rather than long.
+ */
+export const RADIO_MIN_TRACK_MS = 30 * 1000;
+export const RADIO_MAX_TRACK_MS = 15 * 60 * 1000;
 // Help audiences
 // ---------------------------------------------------------------------------
 

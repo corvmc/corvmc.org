@@ -18,6 +18,9 @@
 		{ href: resolve('/programs'), label: 'Programs' },
 		{ href: resolve('/events'), label: 'Events' },
 		{ href: resolve('/directory'), label: 'Directory' },
+		// Also the way back from a dismissed radio bar: /radio clears that
+		// preference, so this is the only route to a widget somebody closed.
+		{ href: resolve('/radio'), label: 'CMC Radio' },
 		{ href: resolve('/local-resources'), label: 'Local Resources' },
 		{ href: resolve('/contribute'), label: 'Contribute' },
 		{ href: resolve('/about/bylaws'), label: 'Bylaws' },

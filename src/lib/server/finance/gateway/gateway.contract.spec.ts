@@ -24,6 +24,8 @@ const { createStripeGateway } = await import('./stripe-gateway');
 
 /** Flat resources the port declares. Nested ones are covered by NESTED_SURFACE below. */
 const PORT_SURFACE: ReadonlyArray<readonly [keyof PaymentGateway, readonly string[]]> = [
+	['accountLinks', ['create']],
+	['accounts', ['create', 'retrieve', 'createLoginLink']],
 	['coupons', ['create', 'del']],
 	['customers', ['create']],
 	['invoices', ['list']],
@@ -87,6 +89,31 @@ describe('fake gateway behaviour', () => {
 			unit_amount: unitAmount
 		},
 		quantity
+	});
+
+	it('onboards a connected account as ready to take charges', async () => {
+		const account = await gateway.accounts.create({ type: 'express' });
+
+		// The fake reports an account that can already sell, because the whole
+		// point of a local Connect account is to reach the record-sale flow the
+		// real Express onboarding gates behind a human and a hosted form.
+		expect(account.id).toMatch(/^acct_/);
+		expect(account.charges_enabled).toBe(true);
+		expect(account.payouts_enabled).toBe(true);
+
+		const retrieved = await gateway.accounts.retrieve(account.id);
+		expect(retrieved.id).toBe(account.id);
+	});
+
+	it('mints an onboarding link that returns to where the caller asked', async () => {
+		const link = await gateway.accountLinks.create({
+			account: 'acct_fake',
+			refresh_url: 'https://example.com/refresh',
+			return_url: 'https://example.com/return',
+			type: 'account_onboarding'
+		});
+
+		expect(link.url).toBe('https://example.com/refresh');
 	});
 
 	it('totals inline price_data the way Checkout does', async () => {

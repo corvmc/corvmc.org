@@ -23,8 +23,8 @@ runs on the client too).
 The tier decision goes in a new `handle` in `src/hooks.server.ts`, which has the DB:
 
 - Not a band subdomain (base domain, `www`, reserved slug) → pass through.
-- Band is `tier = 'premium'` and `bandPremium` is on → pass through to `/band-site/{slug}`.
-- Anything else — free tier, unknown slug, flag off → `302` to
+- Band is `tier = 'premium'` → pass through to `/band-site/{slug}`.
+- Anything else — free tier, unknown slug → `302` to
   `{PUBLIC_SITE_URL}/directory/bands/{slug}`, preserving nothing else. The band-site
   subpaths `/events` and `/epk` land on the profile, and for `/epk` that is now the
   right answer rather than a fallback: the directory profile _is_ the act's press
@@ -94,7 +94,7 @@ Site" link and the sitemap all point at the custom domain once it is active.
   claimed by another band, and any band that is not premium.
 - `src/lib/remote/band-custom-domain.remote.ts` — `getCustomDomain` query,
   `setCustomDomain` / `refreshCustomDomain` / `removeCustomDomain` forms. Every one
-  guards `requireFeature('bandPremium')` + owner role + premium tier in the handler
+  guards owner role + premium tier in the handler
   (remote functions are the only guard — route params are attacker-controlled).
 - UI on `/band/[slug]/settings` under a "Custom Domain" section: input, the two TXT
   rows with copy buttons, a status badge, a "Check status" button, and remove.

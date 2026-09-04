@@ -95,7 +95,7 @@ vi.mock('$lib/server/event/event-service', () => ({
 }));
 
 vi.mock('$lib/server/authorization', () => ({
-	requireStaff: vi.fn(async () => ({ id: 'staff-1' })),
+	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	requireUser: vi.fn(async () => ({ id: 'user-1' }))
 }));
 

@@ -128,6 +128,58 @@ Notes:
 - `db.transaction()` doesn't exist on D1; multi-statement writes use `db.batch()`. See the
   [overview](overview.md#database).
 
+### Break-glass: acting when no admin is reachable
+
+`admin` is now the only position holding `user.setRole`, `user.purge` and `credit.adjust`
+(see [admin-vs-staff-spec.md](../specs/admin-vs-staff-spec.md) and the matrix in
+`src/lib/config.ts`). Two people hold it. If both are unavailable and a role genuinely has
+to change, this is the way in — **not** a second shared admin account.
+
+A standing shared credential is a permanent risk to defend; a documented procedure is an
+occasional one. This needs infrastructure access, which is already a smaller circle than
+staff, and it leaves a trail in the Cloudflare audit log.
+
+**Grant somebody a position.** Positions live in `roles`, assignment in `model_has_roles`.
+Both are plain rows; nothing is cached beyond the request.
+
+```bash
+# 1. Confirm the position exists and note its id.
+wrangler d1 execute corvmc-db --remote \
+  --command "SELECT id, name FROM roles WHERE name = 'admin'"
+
+# 2. Find the user.
+wrangler d1 execute corvmc-db --remote \
+  --command "SELECT id, name, email FROM user WHERE lower(email) = lower('them@example.org')"
+
+# 3. Grant it. The primary key is (role_id, user_id), so re-running is harmless.
+wrangler d1 execute corvmc-db --remote \
+  --command "INSERT OR IGNORE INTO model_has_roles (role_id, user_id) VALUES (<role_id>, '<user_id>')"
+```
+
+The change takes effect on that person's **next request** — positions are read fresh from
+`model_has_roles` every time and are deliberately kept out of better-auth's session cookie
+cache, so there is no 60-second window to wait out.
+
+**Afterwards, undo it.** Break-glass access is temporary by definition:
+
+```bash
+wrangler d1 execute corvmc-db --remote \
+  --command "DELETE FROM model_has_roles WHERE role_id = <role_id> AND user_id = '<user_id>'"
+```
+
+Two things worth knowing before you type any of the above:
+
+- **The database is `corvmc-db`.** Using `corvmc` resolves to an empty database and returns
+  `no such table` — which reads like a finding about production and is not one.
+- **The app's own guard refuses to leave you with no admin.** `updateUser` blocks demoting
+  the last one (409) and blocks removing your own elevated access (400). Doing it in SQL
+  bypasses both. Count the remaining admins before deleting a row:
+
+```bash
+wrangler d1 execute corvmc-db --remote --command \
+  "SELECT COUNT(*) FROM model_has_roles mhr JOIN roles r ON r.id = mhr.role_id WHERE r.name = 'admin'"
+```
+
 ## 3. Secrets and configuration
 
 Three places hold configuration; know which is which before changing anything:
@@ -158,7 +210,7 @@ Bulk secret upload: copy `secrets.template.json` → `.secrets.json` (gitignored
 | `POSTMARK_INBOUND_TOKEN`                                                  | Authenticates Postmark's inbound webhook (`src/routes/api/inbox/postmark/+server.ts`) — sent as the HTTP Basic _password_ in the hook URL                               |
 | `INBOX_REPLY_SECRET`                                                      | Signs the thread id in inbox reply addresses (`src/lib/server/inbox/reply-address.ts`). Optional — falls back to `POSTMARK_SERVER_TOKEN`                                |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN`                                | SMS send/receive (`src/lib/server/inbox/twilio-client.ts`)                                                                                                              |
-| `META_APP_SECRET` / `META_PAGE_ACCESS_TOKEN` / `META_VERIFY_TOKEN`        | Messenger inbox channel (`src/routes/api/inbox/meta/+server.ts`) — provisioned but dormant                                                                              |
+| `META_APP_SECRET` / `META_PAGE_ACCESS_TOKEN` / `META_VERIFY_TOKEN`        | Instagram + Messenger inbox channels (`src/routes/api/inbox/meta/+server.ts`) — built and tested, not yet provisioned; see [meta-inbox-setup](meta-inbox-setup.md)      |
 | `ULTRALOC_CLIENT_ID` / `_CLIENT_SECRET` / `_REFRESH_TOKEN` / `_DEVICE_ID` | U-Tec smart-lock API (`src/lib/server/lock/ultraloc-client.ts`)                                                                                                         |
 | `TURNSTILE_SECRET_KEY`                                                    | Server-side Turnstile verification (`src/lib/server/turnstile.ts`)                                                                                                      |
 
@@ -286,8 +338,25 @@ is the always-pass test key.
 
 ### Meta / Messenger
 
-Secrets exist (`META_*`) and an inbound route exists (`/api/inbox/meta`), but the channel
-is not actively provisioned. Treat as dormant.
+Instagram DMs and Facebook Messenger, both as staff-inbox channels. The code path is
+complete and covered: `/api/inbox/meta` verifies `x-hub-signature-256`, classifies each
+event (inbound / echo / skip), dedupes on Meta's `mid`, and files non-text messages with a
+placeholder body; `meta-client.ts` holds the Graph calls and the outbound window logic.
+
+**Not provisioned.** Both channels are toggled off, in production and in the dev seed, and
+nothing is subscribed on Meta's side — so nothing is delivered and nothing is lost. Turning
+them on is [meta-inbox-setup](meta-inbox-setup.md); the long pole there is Meta's app
+review for Advanced Access, measured in days to weeks.
+
+Two things worth knowing before touching it:
+
+- **One Page token serves both channels**, which works only because Instagram is reached
+  through `graph.facebook.com/…/me/messages` with the account linked to the Page under
+  Facebook Login for Business. The Instagram Login flavour needs `graph.instagram.com` and a
+  token of its own, and connecting it that way fails silently.
+- **The token has no refresh path.** Staff → Settings → Inbox Channels carries a Test
+  connection button for each Meta channel, which is the only thing that makes an expired
+  token visible before replies start failing.
 
 ## 5. Cron
 

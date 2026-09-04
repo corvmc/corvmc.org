@@ -1,0 +1,32 @@
+-- This migration exists for its snapshot, not its SQL.
+--
+-- #502 (refund a record sale) and #501 (band chat) both branched from the same
+-- snapshot and both merged, leaving two migration heads that were never joined:
+--
+--   ed9340c5 ─┬─ e04d7ca4  20260903233434_handy_calypso   (#502, release_purchase.refunded_at)
+--             └─ cff62cca  20260903234845_narrow_vampiro  (#501, inbox group chat)
+--
+-- `drizzle-kit check` reports that as `Non-commutative migrations detected`, and
+-- with the fork open `generate` refuses outright — nobody can add a migration.
+--
+-- It is not only a block, it is also a wrong diff base. `generate` picks the
+-- newest snapshot by path, narrow_vampiro, which never saw #502's column, so
+-- `--ignore-conflicts` emits `ALTER TABLE release_purchase ADD refunded_at` —
+-- verified by running it. That statement fails with "duplicate column name" on
+-- every database that has already run handy_calypso, production included.
+--
+-- This migration's snapshot lists both heads as `prevIds` and records the true
+-- union schema, which closes the fork and restores the diff base. There is no
+-- schema change to make: both branches' statements have already been applied, in
+-- filename order, everywhere, and a fresh database replaying the whole directory
+-- passes through both on its way here.
+--
+-- `generate --custom` cannot do this job. Its snapshot copies the merged-heads
+-- base rather than the schema files, so it reproduces the corrupt base verbatim,
+-- release_purchase.refunded_at still missing. The snapshot beside this file is a
+-- real `generate`; only the SQL body was replaced.
+--
+-- The statement below is a deliberate no-op. The migrator cannot run a file with
+-- no executable statement in it — it fails with "statement has been finalized" —
+-- so the file needs one, and this is the least it can be.
+SELECT 1;

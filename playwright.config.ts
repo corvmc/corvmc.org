@@ -75,6 +75,26 @@ export default defineConfig({
 	 * failure for a fast useless one.
 	 */
 	timeout: 60_000,
+	/**
+	 * What a failure leaves behind.
+	 *
+	 * Playwright already writes an `error-context.md` per failure and the log
+	 * names its path, but the CI job uploaded nothing, so every path it named led
+	 * nowhere and triage of a red E2E was guesswork against a green laptop. A
+	 * hydration race that reproduces only on a runner is exactly the failure that
+	 * cannot be diagnosed any other way.
+	 *
+	 * `on-first-retry`, not `on`: a trace records the whole run, and this suite is
+	 * already CPU-bound on a runner with a fraction of a laptop's cores. Recording
+	 * one for every passing test would slow every green run to pay for the rare
+	 * red one. On the first retry it costs nothing until something has already
+	 * failed — and since `retries: 2`, a genuine failure always produces one.
+	 * Screenshots are cheap enough to keep unconditional on failure.
+	 */
+	use: {
+		trace: 'on-first-retry',
+		screenshot: 'only-on-failure'
+	},
 	webServer: {
 		// `pnpm`, not `npm`: this repo is pnpm-only and a global prettier 2.8.8
 		// shadows its prettier 3, which is why `npm`/`npx` are blocked everywhere

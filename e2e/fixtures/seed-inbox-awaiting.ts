@@ -13,14 +13,19 @@
  * whole premise is that the two are still told apart on the row. Nothing
  * asserts that without both kinds sitting in the same list.
  *
- * All three are `web`, so none needs a channel enabled or an external service
- * to exist.
+ * Three of the four are `web`, so none needs a channel enabled or an external
+ * service to exist. The fourth is Instagram, and does need the channel switched
+ * on — see {@link SEED_META_STALE_THREAD_ID}.
  *
  * Idempotent: deletes and recreates its own rows on every run.
  */
-import { inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { withPlatformDb } from './platform-db';
-import { inboxThread, inboxMessage } from '../../src/lib/server/db/schema/inbox';
+import {
+	inboxThread,
+	inboxMessage,
+	inboxChannelConfig
+} from '../../src/lib/server/db/schema/inbox';
 
 /** Staff replied and nobody has written back. */
 export const SEED_AWAITING_THREAD_ID = 'e2e-inbox-awaiting';
@@ -34,7 +39,24 @@ export const SEED_NEEDS_REPLY_CONTACT = 'E2E Needs Reply Contact';
 export const SEED_SNOOZED_THREAD_ID = 'e2e-inbox-snoozed';
 export const SEED_SNOOZED_CONTACT = 'E2E Snoozed Contact';
 
-const THREAD_IDS = [SEED_AWAITING_THREAD_ID, SEED_NEEDS_REPLY_THREAD_ID, SEED_SNOOZED_THREAD_ID];
+/**
+ * An Instagram thread whose last inbound message is older than Meta's 7-day
+ * reply window.
+ *
+ * The one composer state nobody can reach by clicking: it depends on the age of
+ * a row, so it cannot be produced from the UI, and it is decided page-side from
+ * the thread's messages — a seam no unit test spans. Left blocked, a staffer
+ * finds out by writing a reply and watching Meta refuse it.
+ */
+export const SEED_META_STALE_THREAD_ID = 'e2e-inbox-meta-stale';
+export const SEED_META_STALE_CONTACT = 'E2E Instagram Contact';
+
+const THREAD_IDS = [
+	SEED_AWAITING_THREAD_ID,
+	SEED_NEEDS_REPLY_THREAD_ID,
+	SEED_SNOOZED_THREAD_ID,
+	SEED_META_STALE_THREAD_ID
+];
 
 export async function seedInboxAwaiting(): Promise<void> {
 	await withPlatformDb(async (db) => {
@@ -90,6 +112,19 @@ export async function seedInboxAwaiting(): Promise<void> {
 				lastMessageAt: new Date(now.getTime() - 3 * hour),
 				createdAt: new Date(now.getTime() - 3 * hour),
 				updatedAt: new Date(now.getTime() - 3 * hour)
+			},
+			{
+				id: SEED_META_STALE_THREAD_ID,
+				channel: 'instagram' as const,
+				status: 'open' as const,
+				preview: 'is the open mic still on for thursday?',
+				contactName: SEED_META_STALE_CONTACT,
+				contactExternalId: 'e2e-igsid-1',
+				awaitingReplySince: null,
+				messageCount: 1,
+				lastMessageAt: new Date(now.getTime() - 9 * 24 * hour),
+				createdAt: new Date(now.getTime() - 9 * 24 * hour),
+				updatedAt: new Date(now.getTime() - 9 * 24 * hour)
 			}
 		]);
 
@@ -128,7 +163,38 @@ export async function seedInboxAwaiting(): Promise<void> {
 				body: 'Circling back after the board meeting.',
 				authorName: SEED_SNOOZED_CONTACT,
 				createdAt: new Date(now.getTime() - 3 * hour)
+			},
+			{
+				// Nine days old, which is what puts the thread past the window.
+				id: 'e2e-inbox-meta-stale-in',
+				threadId: SEED_META_STALE_THREAD_ID,
+				direction: 'inbound' as const,
+				body: 'is the open mic still on for thursday?',
+				authorName: SEED_META_STALE_CONTACT,
+				channelMessageId: 'e2e-mid-1',
+				createdAt: new Date(now.getTime() - 9 * 24 * hour)
 			}
 		]);
+
+		// The window message only shows once the channel is on: the composer
+		// reports a disabled channel first, and rightly so — that is the more
+		// basic reason a reply cannot be sent. Nothing is ever dispatched here, so
+		// enabling it costs nothing.
+		const [existing] = await db
+			.select()
+			.from(inboxChannelConfig)
+			.where(eq(inboxChannelConfig.channel, 'instagram'))
+			.limit(1);
+
+		if (existing) {
+			await db
+				.update(inboxChannelConfig)
+				.set({ enabled: true })
+				.where(eq(inboxChannelConfig.channel, 'instagram'));
+		} else {
+			await db
+				.insert(inboxChannelConfig)
+				.values({ id: 'e2e-inbox-channel-instagram', channel: 'instagram', enabled: true });
+		}
 	});
 }

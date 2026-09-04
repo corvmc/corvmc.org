@@ -564,6 +564,29 @@ describe('checkout ui_mode', () => {
 		expect(params.metadata.cancel_url).toBe('https://example.com/cancel');
 	});
 
+	it('keeps the destination charge intact in elements mode', async () => {
+		mockStripe.checkout.sessions.create.mockResolvedValue({
+			id: 'cs_elements',
+			client_secret: 'cs_elements_secret_abc'
+		});
+
+		await checkout({
+			...baseOptions,
+			uiMode: 'elements',
+			destinationAccountId: 'acct_band',
+			applicationFeeCents: 150
+		});
+
+		// `elements` restricts exactly three params — `success_url`, `cancel_url`
+		// and `branding_settings` — and `payment_intent_data` is not among them.
+		// Record sales pay the band through a destination charge, so this asserts
+		// the split survives the migration rather than being quietly dropped.
+		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+		expect(params.ui_mode).toBe('elements');
+		expect(params.payment_intent_data.transfer_data).toEqual({ destination: 'acct_band' });
+		expect(params.payment_intent_data.application_fee_amount).toBe(150);
+	});
+
 	it('throws when an elements session comes back without a client secret', async () => {
 		mockStripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_elements' });
 
