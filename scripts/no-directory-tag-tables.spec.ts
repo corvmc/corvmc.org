@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { globSync } from 'node:fs';
 
 /**
@@ -78,7 +78,25 @@ function isComment(line: string): boolean {
 	return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('--');
 }
 
+/**
+ * `globSync` can hand back directories, not just files.
+ *
+ * These two gates are the only globs in the repo that brace-expand an extension
+ * list (`*.{ts,js,svelte}`); every other one names a literal filename, and none
+ * of them broke. On 2026-09-04 the runner's Node 22 started returning a
+ * directory from these patterns, and `readFileSync` on it throws `EISDIR` —
+ * which failed both specs, on `main` itself and on every branch built from it,
+ * with an error naming nothing about what they check.
+ *
+ * The same commit had passed its merge-queue run an hour earlier, so this is the
+ * runner image moving underneath us rather than anything in the tree; it does
+ * not reproduce on Node 24 locally. Filtering to regular files is correct on
+ * every version — a directory has no contents for a source scan to read — and
+ * the `finds source files to check` assertion below is what stops this from
+ * quietly emptying the list instead.
+ */
 const files = GLOBS.flatMap((g) => globSync(g))
+	.filter((f) => statSync(f).isFile())
 	.map((f) => f.replaceAll('\\', '/'))
 	.filter((f) => !ALLOWED.has(f))
 	.sort();
