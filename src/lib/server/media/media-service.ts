@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db';
 import { media, mediaAttachment } from '$lib/server/db/schema/media';
 import type { Media } from '$lib/server/db/schema/media';
-import type { AttachableType, MediaSlot } from '$lib/server/db/schema/media';
+import type { MediaSlot } from '$lib/server/db/schema/media';
+import type { AttachableType } from '$lib/config';
 import { eventListing } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';

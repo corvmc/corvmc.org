@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
-import { media, mediaAttachment, attachableTypes } from '$lib/server/db/schema/media';
-import type { AttachableType } from '$lib/server/db/schema/media';
+import { media, mediaAttachment } from '$lib/server/db/schema/media';
+import { attachableTypes, type AttachableType } from '$lib/config';
 import { eventListing } from '$lib/server/db/schema/event';
 import {
 	acquisition,

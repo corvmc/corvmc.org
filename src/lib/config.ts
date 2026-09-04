@@ -1505,8 +1505,131 @@ export function hasCapability(held: readonly string[], cap: Capability): boolean
 	return held.includes(cap);
 }
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Table-name discriminators
+// ---------------------------------------------------------------------------
+
+/**
+ * Polymorphic pointers: a `*_type` tag naming which table an id points into,
+ * because SQLite cannot express "this FK targets one of four tables".
+ *
+ * **These values are stored data, not schema.** Every one of them happens to
+ * equal a table name today, and that coincidence is the trap: a table rename
+ * silently makes every stored tag wrong. Drizzle's `text({ enum })` emits no
+ * CHECK, so the database keeps holding the old word and simply stops resolving
+ * — no error, no failing query, just a booking whose booker has vanished from
+ * the panel. Renaming `event` to `event_listing` (#527) had to carry three
+ * `UPDATE` statements for exactly this reason.
+ *
+ * So they live here, next to `entityTypes`, rather than beside the tables they
+ * name. Two reasons, and the second is the load-bearing one:
+ *
+ *  1. `$lib/components/ui/**` cannot import `$lib/server` (a lint rule), which
+ *     is why `entityKinds.subtypes` was typed `Record<string, …>` and let a
+ *     stale key through. From here the union is importable and the map is typed.
+ *  2. Someone renaming a table works in `src/lib/server/db/schema/`. Anything
+ *     they find there looks like part of the rename. These are not, and putting
+ *     a file boundary between the two is the cheapest way to say so.
+ *
+ * **If you are renaming a table, do not touch these to match.** Change them only
+ * with a migration that rewrites the stored rows — see the `event_listing`
+ * migration for the shape.
+ */
+
+/**
+ * Which table `reservation.bookerId` points into — a table discriminator, never
+ * a category. `'instructor'` earns its place because `instructor` is a real
+ * table with real ids; it is the capacity a person is booking in, not a label
+ * on the booking.
+ *
+ * A `'lesson'` value sat here unwritten from the reservation system's first day,
+ * reserved for a module that had not been designed. It was removed once
+ * production confirmed **zero rows carried it** — so nothing was renamed and
+ * nothing was backfilled, which is what a rename would have required and what
+ * would have minted staff grants out of historical data.
+ */
+export const bookerTypes = ['user', 'group', 'event_listing', 'instructor'] as const;
+export type BookerType = (typeof bookerTypes)[number];
+
+export function isBookerType(value: string): value is BookerType {
+	return bookerTypes.includes(value as BookerType);
+}
+
+/**
+ * What a `media_attachment` can hang off. Extending this emits **zero SQL** —
+ * drizzle's SQLite dialect treats a text enum as a TypeScript-only constraint —
+ * which is the property that makes adding `production` later free.
+ */
+export const attachableTypes = [
+	'event_listing',
+	'group',
+	'user',
+	/** A catalog entry: manuals and spec sheets, the same for every unit of it. */
+	'inventory_item',
+	/** One physical unit: photographs of damage to *this* amp. */
+	'inventory_asset',
+	/**
+	 * One report about a unit. Evidence belongs to the *observation*, not the
+	 * amp: three people flag the same crackle and each photographed something
+	 * different, and dismissing one report should not strand its picture.
+	 */
+	'work_request',
+	/** How stock arrived: the receipt or the donation paperwork behind it. */
+	'acquisition',
+	/**
+	 * A band's record. Its cover art only — the recordings themselves are in the
+	 * private bucket and deliberately outside this table, since everything here
+	 * is one `getPublicUrl()` away from being addressable. See
+	 * `audio_track.objectKey`.
+	 */
+	'audio_release'
+] as const;
+export type AttachableType = (typeof attachableTypes)[number];
+
+/**
+ * Which table `recurring_series.prototypeId` points into.
+ *
+ * `'lesson'` was removed alongside `bookerTypes`'. A lesson series could only
+ * ever have had a lesson reservation as its prototype, and production holds
+ * none of those. Removing it emits no SQL — this is a TypeScript-only enum.
+ */
+export const prototypeTypes = ['event_listing', 'reservation'] as const;
+export type PrototypeType = (typeof prototypeTypes)[number];
+
+// ---------------------------------------------------------------------------
 // Entity vocabulary
 // ---------------------------------------------------------------------------
+/**
+ * Who authored an event listing, and therefore which surface it belongs to.
+ *
+ * Not a table discriminator — `cmc` and `community` name no table — but it lives
+ * here because `entityKinds` keys a subtype map by it and `$lib/components/ui/**`
+ * cannot import `$lib/server`.
+ *
+ * `group` is a club's or committee's session — a CMC program, held in the room,
+ * and unlike a band gig it reserves that room. It is a separate value from
+ * `band` rather than a reuse of it because the two differ in exactly that: a
+ * band event is an off-site listing with a `location`, a group event holds the
+ * space. Adding a value emits zero SQL — drizzle's `text({ enum })` is a
+ * TypeScript-only constraint.
+ */
+export const eventSources = ['cmc', 'band', 'community', 'group'] as const;
+export type EventSource = (typeof eventSources)[number];
+
+/** The member kinds `memberSubtype()` can report. */
+export const memberSubtypes = ['admin', 'staff', 'sustaining'] as const;
+export type MemberSubtype = (typeof memberSubtypes)[number];
+
+/**
+ * Every key `entityKinds[type].subtypes` may carry, across all types.
+ *
+ * A union rather than a per-type map: it is what makes the subtype maps typed at
+ * all from inside `ui/`, and it is enough to catch a key belonging to no
+ * vocabulary — which is how a stale `event` key survived the #527 rename.
+ * `registry.spec.ts` does the tighter per-type check against the right
+ * vocabulary.
+ */
+export type EntitySubtypeKey = MemberSubtype | EventSource | BookerType;
 
 /**
  * Every record type the app renders a reference to — a chip, a list row, a

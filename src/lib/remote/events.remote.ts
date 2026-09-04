@@ -83,11 +83,11 @@ import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
 import {
 	eventListing,
 	createEventSchema,
-	eventSources,
 	eventKinds,
 	lineupSchema
 } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
+import { eventSources } from '$lib/config';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';

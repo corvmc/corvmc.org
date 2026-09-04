@@ -7,6 +7,7 @@ import { directoryEntry } from './directory';
 import { reservation } from './reservation';
 import { recurringSeries, RECURRING_FREQUENCIES } from './recurring';
 import { project } from './project';
+import { eventSources } from '../../../config';
 import { venue } from './venue';
 
 /**
@@ -34,19 +35,6 @@ export type EventStatus = (typeof eventStatuses)[number];
 
 /** Statuses the public gig guide and event detail pages will render. */
 export const publicEventStatuses = ['published', 'cancelled'] as const;
-
-/**
- * Who authored an event, and therefore which surface it belongs to.
- *
- * `group` is a club's or committee's session — a CMC program, held in the room,
- * and unlike a band gig it reserves that room. It is a separate value from
- * `band` rather than a reuse of it because the two differ in exactly that: a
- * band event is an off-site listing with a `location`, a group event holds the
- * space. Adding the value emits zero SQL — drizzle's `text({ enum })` is a
- * TypeScript-only constraint.
- */
-export const eventSources = ['cmc', 'band', 'community', 'group'] as const;
-export type EventSource = (typeof eventSources)[number];
 
 /**
  * What kind of occasion this is, as distinct from who authored it.
