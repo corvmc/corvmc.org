@@ -1,9 +1,10 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "cff62cca-96b4-45f6-8d1c-859d5b698d3c",
+  "id": "c8d93831-21cc-4d11-b678-5b35500af736",
   "prevIds": [
-    "ed9340c5-7c20-4501-abd2-d3c7c8149912"
+    "cff62cca-96b4-45f6-8d1c-859d5b698d3c",
+    "e04d7ca4-70ad-4998-a6b5-b1358ec0f8f9"
   ],
   "ddl": [
     {
@@ -9441,6 +9442,16 @@
       "default": null,
       "generated": null,
       "name": "paid_at",
+      "entityType": "columns",
+      "table": "release_purchase"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "refunded_at",
       "entityType": "columns",
       "table": "release_purchase"
     },
