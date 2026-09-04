@@ -35,7 +35,7 @@
 		children: import('svelte').Snippet<[{ props: Record<string, unknown> }]>;
 	} = $props();
 
-	const presets = $derived(snoozePresets(new Date()));
+	const presets = $derived.by(() => snoozePresets(new Date()));
 
 	// The custom date lives in the menu rather than behind a second modal: it is
 	// one more option in the same list, and pushing it into a dialog made the
@@ -57,7 +57,7 @@
 		>
 			<p class="px-3 pt-1 pb-2 text-subtle text-xs">Snooze until</p>
 
-			{#each presets as preset (preset.value)}
+			{#each presets as preset (preset.label)}
 				<DropdownMenu.Item class={itemClass} onSelect={() => onpick(preset.value)}>
 					<span class="flex items-center gap-2"><IconAlarmSnooze size={15} />{preset.label}</span>
 					<span class="text-subtle text-xs">{preset.when}</span>

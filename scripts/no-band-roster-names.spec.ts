@@ -62,6 +62,13 @@ const ALLOWED = new Set([
 	'scripts/no-band-roster-names.spec.ts'
 ]);
 
+/**
+ * `sourceFiles` filters out directories before reading. That is not paranoia: a
+ * failing browser test used to write its screenshot to a *directory* named after
+ * the spec — `__screenshots__/Foo.svelte.spec.ts/` — which `src/**` matches and
+ * `readFileSync` answers with EISDIR, turning one red client test into ten red
+ * gate failures naming tables nobody had touched.
+ */
 const files = sourceFiles(GLOBS, ALLOWED);
 
 describe('no band roster names', () => {

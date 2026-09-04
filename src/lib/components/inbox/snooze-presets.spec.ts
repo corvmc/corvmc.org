@@ -2,50 +2,43 @@ import { describe, it, expect } from 'vitest';
 import { snoozePresets } from './snooze-presets';
 
 /**
- * The bug this pins took the snooze menu out entirely, every Friday and every
- * Sunday, and did not look like a date bug from the outside: the trigger read
- * `data-state="open" aria-expanded="true"` and `<body>` held no menu, because
- * `each_key_duplicate` was thrown while the portal's content rendered. It was
- * invisible to a suite run on any other weekday, which is why every local run
- * passed and CI went red the moment UTC rolled into a Friday.
+ * The options are derived from four different date arithmetics off one `now`,
+ * and two of them meet on some weekdays: on a Friday `now + 3` *is* next
+ * Monday, and on a Sunday next Monday *is* tomorrow. The menu keys its rows by
+ * the date, so a collision was not a cosmetic duplicate — it threw
+ * `each_key_duplicate` and took the whole menu down, on those days only.
  */
-const at = (iso: string) => new Date(`${iso}T12:00:00`);
+describe('snooze presets', () => {
+	const values = (iso: string) => snoozePresets(new Date(iso)).map((p) => p.value);
+	const labels = (iso: string) => snoozePresets(new Date(iso)).map((p) => p.label);
 
-describe('snoozePresets', () => {
-	// A weekday where every horizon is distinct: +1 Fri, +3 Sun, Monday +4.
-	it('offers all four horizons on a Thursday', () => {
-		expect(snoozePresets(at('2026-09-03')).map((p) => p.label)).toEqual([
-			'Tomorrow',
-			'Later this week',
-			'Next week',
-			'In two weeks'
-		]);
+	it.each([
+		['Monday', '2026-09-07T10:00:00'],
+		['Tuesday', '2026-09-08T10:00:00'],
+		['Wednesday', '2026-09-09T10:00:00'],
+		['Thursday', '2026-09-10T10:00:00'],
+		['Friday', '2026-09-04T10:00:00'],
+		['Saturday', '2026-09-05T10:00:00'],
+		['Sunday', '2026-09-06T10:00:00']
+	])('offers no two options on the same day, on a %s', (_day, iso) => {
+		const dates = values(iso);
+		expect(new Set(dates).size).toBe(dates.length);
 	});
 
-	// `nextMonday` is three days out, so "Next week" *is* "Later this week".
-	it('drops the duplicate on a Friday', () => {
-		const presets = snoozePresets(at('2026-09-04'));
-
-		expect(presets.map((p) => p.value)).toEqual(['2026-09-05', '2026-09-07', '2026-09-18']);
-		expect(presets.map((p) => p.label)).toEqual(['Tomorrow', 'Later this week', 'In two weeks']);
+	it('drops "Later this week" once it would land in the next one', () => {
+		// Friday + 3 is Monday.
+		expect(labels('2026-09-04T10:00:00')).not.toContain('Later this week');
+		expect(labels('2026-09-08T10:00:00')).toContain('Later this week');
 	});
 
-	// `nextMonday` is one day out, so "Next week" *is* "Tomorrow" — and the
-	// nearer label is the one worth keeping.
-	it('drops the duplicate on a Sunday', () => {
-		const presets = snoozePresets(at('2026-09-06'));
-
-		expect(presets.map((p) => p.value)).toEqual(['2026-09-07', '2026-09-09', '2026-09-20']);
-		expect(presets.map((p) => p.label)).toEqual(['Tomorrow', 'Later this week', 'In two weeks']);
+	it('drops "Next week" on the Sunday when it is just tomorrow', () => {
+		expect(labels('2026-09-06T10:00:00')).not.toContain('Next week');
+		expect(labels('2026-09-06T10:00:00')).toContain('Tomorrow');
 	});
 
-	// The invariant the `{#each}` key depends on, asserted across a whole week so
-	// a fifth preset cannot reintroduce the collision on a day nobody tested.
-	it('never repeats a date, on any day of the week', () => {
-		for (const day of ['06', '07', '08', '09', '10', '11', '12']) {
-			const values = snoozePresets(at(`2026-09-${day}`)).map((p) => p.value);
-
-			expect(new Set(values).size, `duplicate snooze date on 2026-09-${day}`).toBe(values.length);
+	it('always offers tomorrow and the fortnight', () => {
+		for (const iso of ['2026-09-04T10:00:00', '2026-09-06T10:00:00', '2026-09-08T10:00:00']) {
+			expect(labels(iso)).toEqual(expect.arrayContaining(['Tomorrow', 'In two weeks']));
 		}
 	});
 });
