@@ -328,6 +328,17 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'orientation_confirmed',
+		label: 'Someone is meeting you at the space',
+		// Email on, and deliberately not sent when the shift is *created*: "we
+		// hope somebody will meet you" is not information. "Sam is meeting you at
+		// 6:45 on Thursday" is, and it is the only message a first-time member
+		// gets between booking and turning up.
+		description:
+			'Notification when a volunteer is confirmed to show you around on your first booking',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'community_event_submitted',
 		label: 'Community listing needs review (staff)',
 		// In-app only, for the same reason as the volunteer queue above. Fires

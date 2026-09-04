@@ -561,7 +561,7 @@ export async function resolveWorkOrder(
 	const { completeOrientation, orientationOwnerOf } = await import('./orientation-service');
 	const member = await orientationOwnerOf(id);
 	if (member) {
-		await completeOrientation(member, { completedByUserId: opts.resolvedByUserId });
+		await completeOrientation(member.userId, { completedByUserId: opts.resolvedByUserId });
 	}
 
 	return row;

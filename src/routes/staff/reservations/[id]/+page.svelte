@@ -101,6 +101,14 @@
 								<IconUserPlus size={14} />
 								First reservation
 							</Badge>
+							<!-- And the question that raises. An orientation shift with nobody
+							     on it is the state worth seeing from here; the coordinator's
+							     own queue is where it gets filled. -->
+							{#if data.orientation && data.orientation.claimed === 0}
+								<Badge variant="warning">Orientation unclaimed</Badge>
+							{:else if data.orientation}
+								<Badge variant="info">Orientation covered</Badge>
+							{/if}
 						{/if}
 					</p>
 					<p class="opacity-70">

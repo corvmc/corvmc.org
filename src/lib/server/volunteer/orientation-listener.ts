@@ -91,7 +91,7 @@ export function registerOrientationListeners(): void {
 
 			// The member is the one who was shown around; `event.userId` is the
 			// volunteer who did the showing.
-			await completeOrientation(member, { completedByUserId: event.userId });
+			await completeOrientation(member.userId, { completedByUserId: event.userId });
 		} catch (err) {
 			console.error('[orientation] failed to record a completed orientation', err);
 		}

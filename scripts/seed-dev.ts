@@ -59,6 +59,7 @@ import { seedBandEnquiries } from './seed/band-enquiries';
 import { seedContentFlags } from './seed/content-flags';
 import { seedContractors } from './seed/contractors';
 import { seedDutyLists } from './seed/duty-lists';
+import { seedOrientation } from './seed/orientation';
 import {
 	seedVolunteerRoles,
 	seedVolunteerProfiles,
@@ -157,6 +158,9 @@ async function main() {
 	// schedules against the role catalog.
 	const personas = await seedVolunteerPersonas(roles, volunteerRoles, certifications, adminUser);
 	const dutyLists = await seedDutyLists(volunteerRoles, events);
+	// After the duty lists and the reservations both: it seeds a list of its own
+	// and hangs work orders off bookings that already exist.
+	const orientation = await seedOrientation(volunteerRoles, allUsers);
 	// Needs only the role catalog. Kept out of `allUsers` like the volunteer
 	// personas, so nothing that slices or indexes that array shifts under it.
 	const sustainingPersonas = await seedSustainingPersonas(roles);
@@ -186,6 +190,9 @@ async function main() {
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(
 		`  ${dutyLists.lists} duty list, ${dutyLists.workOrders} work orders applied to a show`
+	);
+	console.log(
+		`  ${orientation.lists} orientation list, ${orientation.workOrders} orientation shifts, ${orientation.orientations} member orientations`
 	);
 	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
 	console.log(

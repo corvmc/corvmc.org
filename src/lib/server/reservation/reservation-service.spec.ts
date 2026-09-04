@@ -348,8 +348,7 @@ describe('ReservationService', () => {
 			bookerType: 'user' as const,
 			bookerId: 'user-1',
 			startsAt: new Date('2025-07-15T17:00:00Z'),
-			endsAt: new Date('2025-07-15T19:00:00Z'),
-			notes: null
+			endsAt: new Date('2025-07-15T19:00:00Z')
 		};
 
 		const row = {

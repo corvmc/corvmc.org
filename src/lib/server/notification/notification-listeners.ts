@@ -1020,6 +1020,44 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// An orientation shift being confirmed is the member's news, not the
+	// volunteer's — they are the one who now knows somebody will be at the door.
+	// Deliberately not sent when the shift is created: "we hope somebody will
+	// meet you" is not information.
+	domainEvents.on('volunteer.signup_confirmed', async ({ data: event }) => {
+		const { orientationOwnerOf } = await import('$lib/server/volunteer/orientation-service');
+		const member = await orientationOwnerOf(event.shiftId);
+		if (!member) return;
+
+		const when = formatShiftWhen(event.startsAt, event.endsAt);
+
+		await dispatch({
+			type: 'orientation_confirmed',
+			userId: member.userId,
+			userEmail: member.email,
+			title: `${event.userName} is meeting you at the space`,
+			body: when,
+			href: '/member/reservations',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Someone is meeting you at the space',
+					heading: 'See you there',
+					greeting: `Hi ${member.name},`,
+					paragraphs: [
+						{
+							text: `${event.userName} is meeting you at the space for your first booking, ${when}. They'll show you round — where the gear lives, how the door works, and who to tell when something breaks.`
+						},
+						{
+							text: 'Turn up a few minutes early if you can. Nothing to bring, and no need to reply.'
+						}
+					],
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my booking' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
 	// Dropped (notify staff). The useful half is that a place reopened.
 	domainEvents.on('volunteer.signup_cancelled', async ({ data: event }) => {
 		const staff = await listUsersWithCapability('volunteer.manageShifts');

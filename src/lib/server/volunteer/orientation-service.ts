@@ -2,9 +2,10 @@ import { db } from '$lib/server/db';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { dutyList, memberOrientation, workOrder } from '$lib/server/db/schema/volunteer';
 import { reservation } from '$lib/server/db/schema/reservation';
+import { user } from '$lib/server/db/schema/authentication';
 import type { MemberOrientation } from '$lib/server/db/schema/volunteer';
 import type { MemberOrientationState } from '$lib/config';
-import { cancelShift } from './work-order-service';
+import { cancelShift, countActiveSignups } from './work-order-service';
 
 /**
  * Whether a member has been shown around the space, and when.
@@ -159,6 +160,12 @@ export async function waiveOrientation(
 		});
 }
 
+export interface OrientationOwner {
+	userId: string;
+	name: string;
+	email: string;
+}
+
 /**
  * Whose orientation is this work order, if it is one at all?
  *
@@ -167,18 +174,61 @@ export async function waiveOrientation(
  * says this row came from the orientation list rather than from some other list
  * a coordinator applied to the same booking.
  *
- * Returns the *member who booked*, not whoever worked the shift.
+ * Returns the *member who booked*, not whoever worked the shift — and their
+ * name and address with it, because both callers need to write to them and
+ * neither should be running its own query to find out who they are.
  */
-export async function orientationOwnerOf(workOrderId: string): Promise<string | null> {
+export async function orientationOwnerOf(workOrderId: string): Promise<OrientationOwner | null> {
 	const [row] = await db
-		.select({ userId: reservation.createdByUserId })
+		.select({ userId: user.id, name: user.name, email: user.email })
 		.from(workOrder)
 		.innerJoin(reservation, eq(reservation.id, workOrder.reservationId))
+		.innerJoin(user, eq(user.id, reservation.createdByUserId))
 		.innerJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
 		.where(and(eq(workOrder.id, workOrderId), eq(dutyList.autoApplyOn, 'reservation.first')))
 		.limit(1);
 
-	return row?.userId ?? null;
+	return row ?? null;
+}
+
+export interface ReservationOrientationShift {
+	workOrderId: string;
+	startsAt: Date | null;
+	capacity: number;
+	claimed: number;
+}
+
+/**
+ * The live orientation shift staffing one booking, if there is one.
+ *
+ * For the staff booking page, which already asks "is this their first visit" and
+ * whose next question is "so has anybody agreed to meet them". Returns null for
+ * a cancelled shift as well as for no shift — from the desk's point of view
+ * those are the same answer.
+ */
+export async function orientationForReservation(
+	reservationId: string
+): Promise<ReservationOrientationShift | null> {
+	const [row] = await db
+		.select({
+			workOrderId: workOrder.id,
+			startsAt: workOrder.startsAt,
+			capacity: workOrder.capacity
+		})
+		.from(workOrder)
+		.innerJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
+		.where(
+			and(
+				eq(workOrder.reservationId, reservationId),
+				eq(dutyList.autoApplyOn, 'reservation.first'),
+				isNull(workOrder.cancelledAt)
+			)
+		)
+		.limit(1);
+
+	if (!row) return null;
+
+	return { ...row, claimed: await countActiveSignups(row.workOrderId) };
 }
 
 /**
