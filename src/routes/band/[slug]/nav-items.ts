@@ -19,6 +19,8 @@ export type BandNavKey =
 	| 'announcements'
 	| 'reservations'
 	| 'events'
+	| 'music'
+	| 'payouts'
 	| 'edit'
 	| 'press-kit'
 	| 'page-editor'
@@ -33,7 +35,7 @@ export interface BandNavInput {
 	tier: string;
 	userRole: string;
 	isStaff: boolean;
-	features: { bandPremium?: boolean; announcements?: boolean };
+	features: { announcements?: boolean; bandAudio?: boolean };
 }
 
 export interface BandNavItem extends NavNode<BandNavKey> {
@@ -50,7 +52,7 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	const slug = input.slug;
 	const isOwner = input.userRole === 'owner';
 	const isOwnerOrAdmin = isOwner || input.userRole === 'admin';
-	const premium = !!input.features.bandPremium && input.tier === 'premium';
+	const premium = input.tier === 'premium';
 
 	const items: BandNavItem[] = [
 		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }) },
@@ -73,6 +75,22 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	});
 	items.push({ key: 'events', label: 'Events', href: resolve('/band/[slug]/events', { slug }) });
 
+	// Every member sees the discography; only owner and admin can change it, and
+	// the page decides that from its own `canManage`. Flagged because the
+	// storefront's launch is a Stripe decision rather than a build one — the same
+	// ground `bandPremium` is held on.
+	if (input.features.bandAudio) {
+		items.push({ key: 'music', label: 'Releases', href: resolve('/band/[slug]/music', { slug }) });
+		// Banking setup, so owner-or-admin rather than every member — the same
+		// ground Settings is on, and narrower than Music above it.
+		if (isOwnerOrAdmin) {
+			items.push({
+				key: 'payouts',
+				label: 'Payouts',
+				href: resolve('/band/[slug]/music/payouts', { slug })
+			});
+		}
+	}
 	// Every role, staff included. The rider is the one panel page that is not
 	// owner/admin gated: the person who knows what their amp needs is the person
 	// who owns the amp, and a member who cannot reach the page cannot answer for
@@ -110,7 +128,7 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	if (isOwnerOrAdmin) {
 		// Billing is genuinely owner-only — `upgradeToPremium` and friends are
 		// `requireBandOwner` — so unlike Settings this one stays keyed on owner.
-		if (input.features.bandPremium && isOwner) {
+		if (isOwner) {
 			items.push({
 				key: 'subscription',
 				label: 'Subscription',

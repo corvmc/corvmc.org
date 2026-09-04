@@ -172,6 +172,21 @@ jobs:
       - run: pnpm test:e2e:prepare
       # Builds the app and serves it via playwright.config.ts's webServer.
       - run: pnpm test:e2e:run
+      # The failure log names an `error-context.md` per failed test and, on a
+      # retry, a trace. Without this step every one of those paths pointed at a
+      # file that was deleted with the runner, so a red E2E could only be
+      # triaged by guessing — and the races that fail here reproduce on a runner
+      # and not on a laptop, which is the whole reason they are hard.
+      #
+      # `if: failure()` so a green run uploads nothing. `retention-days` is short
+      # because these are only ever read while the run is still being triaged.
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failures-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
 
   schema-drift:
     name: Schema drift

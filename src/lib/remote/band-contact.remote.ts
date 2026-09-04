@@ -6,10 +6,9 @@
  * page for a scraper to take. Where the message actually lands is the band's
  * own booking contact, which lives in the press kit and is never rendered.
  *
- * It was premium once, sitting on the microsite behind two gates. Both are gone:
- * a `requireFeature('bandPremium')` that would keep it dark in production, and a
- * `tier !== 'premium'` 404. Turnstile plus the KV rate limit were always what
- * made it safe to expose, and neither of those is a tier.
+ * It was premium once, sitting on the microsite behind a `tier !== 'premium'`
+ * 404 and a feature flag. Both are gone. Turnstile plus the KV rate limit were
+ * always what made it safe to expose, and neither of those is a tier.
  */
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';

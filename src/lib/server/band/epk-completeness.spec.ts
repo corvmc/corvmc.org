@@ -23,8 +23,7 @@ const EMPTY: EpkCompletenessInput = {
 	upcomingShows: 0,
 	epk: null,
 	pressPhotos: 0,
-	tier: 'free',
-	premiumAvailable: false
+	tier: 'free'
 };
 
 const COMPLETE: EpkCompletenessInput = {
@@ -50,7 +49,7 @@ describe('epkSections', () => {
 		// An EPK is a booking document. What an act needs on stage is the tech
 		// rider's job, and a rung for it here would score a band on the wrong
 		// thing — as well as duplicating `rider_element`, which models it properly.
-		const keys = epkSections({ ...EMPTY, premiumAvailable: true }).map((s) => s.key);
+		const keys = epkSections(EMPTY).map((s) => s.key);
 		expect(keys).not.toContain('tech');
 		expect(keys.join(' ')).not.toMatch(/backline|stage/i);
 	});
@@ -62,28 +61,27 @@ describe('epkSections', () => {
 		expect(done).toEqual([]);
 	});
 
-	it('finishes everything for an act that has written everything', () => {
+	it('finishes every free rung for an act that has written everything', () => {
+		// Free rungs only: `COMPLETE` is a free act, and the three premium rungs
+		// are always listed now that band sites have launched. They are what the
+		// tier buys, so a free act leaves them undone by definition — which is
+		// what `epkProgress` scoring free rungs alone exists to reflect.
 		const unfinished = epkSections(COMPLETE)
-			.filter((s) => !s.done)
+			.filter((s) => s.tier === 'free' && !s.done)
 			.map((s) => s.key);
 		expect(unfinished).toEqual([]);
 	});
 
-	it('hides the premium rungs when there is nothing to sell', () => {
-		// `bandPremium` is off in production. Three locked rungs advertising a
-		// product nobody can buy is worse than a ladder that simply ends.
-		expect(epkSections({ ...EMPTY, premiumAvailable: false }).every((s) => s.tier === 'free')).toBe(
-			true
-		);
-		expect(
-			epkSections({ ...EMPTY, premiumAvailable: true }).filter((s) => s.tier === 'premium')
-		).toHaveLength(3);
+	it('always offers the three premium rungs now that band sites have launched', () => {
+		// They used to be withheld while `bandPremium` was off, on the grounds that
+		// a teaser for a product nobody could buy was worse than a ladder that
+		// simply ended. The product is buyable, so the ladder shows what it adds.
+		expect(epkSections(EMPTY).filter((s) => s.tier === 'premium')).toHaveLength(3);
 	});
 
 	it('never marks a premium rung done for a free act', () => {
 		const premium = epkSections({
 			...COMPLETE,
-			premiumAvailable: true,
 			pressPhotos: 8,
 			epk: { ...COMPLETE.epk, videos: [{ url: 'https://youtu.be/abc' }] }
 		}).filter((s) => s.tier === 'premium');
@@ -96,7 +94,6 @@ describe('epkSections', () => {
 		const premium = epkSections({
 			...COMPLETE,
 			tier: 'premium',
-			premiumAvailable: true,
 			pressPhotos: 8,
 			epk: { ...COMPLETE.epk, videos: [{ url: 'https://youtu.be/abc' }] }
 		}).filter((s) => s.tier === 'premium');
@@ -104,7 +101,7 @@ describe('epkSections', () => {
 	});
 
 	it('gives every rung a distinct key and a place to go', () => {
-		const sections = epkSections({ ...EMPTY, premiumAvailable: true });
+		const sections = epkSections(EMPTY);
 		expect(new Set(sections.map((s) => s.key)).size).toBe(sections.length);
 		expect(sections.every((s) => s.route.startsWith('/band/[slug]'))).toBe(true);
 		expect(sections.every((s) => s.hint.length > 0)).toBe(true);
@@ -158,7 +155,7 @@ describe('individual rungs', () => {
 
 describe('epkProgress', () => {
 	it('scores the free rungs only', () => {
-		const p = epkProgress({ ...EMPTY, premiumAvailable: true });
+		const p = epkProgress(EMPTY);
 		expect(p.total).toBe(11);
 		expect(p.done).toBe(0);
 		expect(p.sections.length).toBe(14);

@@ -282,8 +282,8 @@ premium subscription that unlocks a public band microsite.
   `band-checkout-listener.ts`; ongoing state syncs from
   `customer.subscription.updated/deleted` webhooks via `syncFromWebhook()` (dispatched by
   `metadata.subscription_type === 'band_premium'`). The public microsite lives under
-  `src/routes/band-site/[slug]/` (feature flag `bandPremium`), with member-editable page
-  config in `bandPageConfig` — custom CSS passes through `css-sanitizer.ts`.
+  `src/routes/band-site/[slug]/`, gated on the band's tier alone since the launch, with
+  member-editable page config in `bandPageConfig` — custom CSS passes through `css-sanitizer.ts`.
 - **Staff moderation:** `staff/bands` pages → the staff forms in `bands.remote.ts`
   (`deactivateBand`, `reactivateBand`, `updateStaffBand`, ...), all `requireStaff()`-guarded.
 
@@ -297,9 +297,9 @@ premium subscription that unlocks a public band microsite.
 - **Invite email never became a membership** → the email on the invite must match the
   login email exactly; check `groupInvite` rows and whether `resolvePendingInvites`
   errored (it's fire-and-forget in hooks with `captureException` — look in Sentry).
-- **Premium page not appearing** → feature flag `bandPremium` off, or subscription state
-  didn't sync — check the `customer.subscription.*` webhook deliveries and
-  `syncFromWebhook`.
+- **Premium page not appearing** → the band's `band_site.tier` is not `premium`, so
+  subscription state didn't sync — check the `customer.subscription.*` webhook deliveries
+  and `syncFromWebhook`.
 
 ---
 
@@ -1069,6 +1069,69 @@ already has a row identifying it, and March's deep clean is a different event fr
   bug.
 
 ---
+
+## 13. Music and CMC Radio
+
+Behind two flags: `bandAudio` (the storefront) and `cmcRadio` (the station). Design
+rationale in [band-audio-spec.md](../specs/shipped/band-audio-spec.md).
+
+### The story
+
+A band uploads a record from `/band/[slug]/music`, prices it (free, or at least
+$2), and optionally opts it into CMC Radio. Anyone can stream the whole thing for
+free from `/music/[bandSlug]/[releaseSlug]`; what is sold is the file. A buyer
+names their price, divides it between the band and the collective on a split bar,
+and gets a download link — by email, because they may well have no account.
+
+### The code path
+
+**Upload.** `POST /api/bands/[id]/audio` (multipart — a remote `form()` cannot
+carry 50MB). `requireGroupRole(…, 'admin')`, validate every file before writing
+any, `putAudioObject` → `R2_PRIVATE`, then `addTrack`. Duration comes from the
+browser (`<audio>` metadata) and is clamped, not trusted: the radio builds a
+wall-clock timetable out of it.
+
+**Streaming.** `GET /api/audio/track/[id]/stream`, public, Range-aware.
+`parseRangeHeader` is pure and specced separately — Safari opens every media
+request with `Range: bytes=0-1` and will not play a file answered with a 200.
+
+**Buying.** `buyReleaseForm` → `beginPurchase`. Free short-circuits to a `paid`
+row with no Stripe. Paid writes a `pending` row, then `checkout()` with
+`transfer_data.destination` and `application_fee_amount` from `computeSplit`.
+Stripe's webhook emits `checkout.completed`; `handleAudioCheckout` self-selects on
+`metadata.type === 'audio_purchase'` and calls `fulfillPurchase`, which is
+idempotent on the pending status. That emits `audio.purchased` → the receipt.
+
+**Downloading.** `GET /api/audio/download/[token]/[trackId]`, gated on a paid
+purchase, `Content-Disposition: attachment`, Range honoured so a dropped
+connection resumes.
+
+**The radio.** `/api/cron/schedule-radio` every 15 minutes fills `radio_play` 45
+minutes ahead (three passes of slack). `getRadioState()` returns the current
+entry, the next three, and the **server's clock**; the widget in the root layout
+seeks to `serverNow − startsAt`.
+
+### Data touched
+
+`audio_release`, `audio_track`, `release_purchase`, `band_stripe_account`,
+`radio_play`; `media`/`media_attachment` for cover art only; `group` throughout.
+
+### Where it breaks
+
+- **A second Stripe webhook endpoint with its own secret.** Wrong or missing, and
+  band accounts never flip to `charges_enabled` — silently. Verify by checking the
+  column, not by watching for an error.
+- **A band's Stripe account restricted after a priced release went up.**
+  `beginPurchase` re-checks `destinationFor` rather than trusting publish-time
+  state, and the release page hides the Buy control instead of offering one that
+  409s.
+- **An empty rotation.** The scheduler writes nothing and `nowPlaying` is null;
+  the widget renders nothing at all. This is the expected pre-launch state, not a
+  fault.
+- **A track outside the duration bounds** is opted in and still never heard.
+  Surfaced on the band's release page and counted on `/staff/music`.
+- **An abandoned checkout** leaves a `pending` row; `/api/cron/sweep-audio-purchases`
+  clears it after 24h.
 
 ## Cross-cutting patterns worth internalizing
 

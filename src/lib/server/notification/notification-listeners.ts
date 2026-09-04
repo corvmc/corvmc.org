@@ -158,6 +158,52 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Music purchase: the download link, and for a guest the only copy of it ---
+	domainEvents.on('audio.purchased', async ({ data: event }) => {
+		const base = env.PUBLIC_SITE_URL ?? '';
+		const downloadUrl = `${base}/music/download/${event.downloadToken}`;
+		const releaseUrl = `${base}/music/${event.bandSlug}/${event.releaseSlug}`;
+
+		const paid = event.amountPaidCents > 0;
+		const paragraphs: { text: string }[] = [
+			{
+				text: paid
+					? `Thanks for buying ${event.releaseTitle} by ${event.bandName}. Your download is ready.`
+					: `${event.releaseTitle} by ${event.bandName} is yours. Your download is ready.`
+			},
+			// The link is the entitlement for a buyer with no account, so the email
+			// says so rather than assuming they will guess.
+			{ text: 'Keep this email — the link below is how you get the files back later.' }
+		];
+
+		if (paid) {
+			paragraphs.push({
+				text: `${formatCents(event.bandNetCents)} of what you paid goes to the band${
+					event.platformFeeCents > 0
+						? `, and ${formatCents(event.platformFeeCents)} to the Corvallis Music Collective`
+						: ''
+				}.`
+			});
+		}
+
+		// Email-only: buyers may have no account at all, and requiring one to
+		// receive what you already paid for is the wrong trade.
+		await dispatchEmailOnly({
+			type: 'audio_purchase_receipt',
+			toEmail: event.buyerEmail,
+			templateAlias: 'notification',
+			model: {
+				subject: `${event.releaseTitle} — your download`,
+				preview_text: `${event.releaseTitle} by ${event.bandName}`,
+				heading: 'Your download is ready',
+				greeting: 'Hi,',
+				paragraphs,
+				cta: { url: downloadUrl, label: 'Download' },
+				footer_note: `Release page: ${releaseUrl}`
+			}
+		});
+	});
+
 	// --- Ticket purchase confirmation + receipt (dedicated template) ---
 	domainEvents.on('ticket.purchased', async ({ data: event }) => {
 		// Ticket buyers may not have accounts — use email-only dispatch

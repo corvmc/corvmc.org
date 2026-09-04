@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { env as publicEnv } from '$env/dynamic/public';
 import { query } from '$app/server';
-import { requireFeature } from '$lib/server/feature-flags';
 import { db } from '$lib/server/db';
 import { group, groupMember } from '$lib/server/db/schema/group';
 import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
@@ -19,6 +18,7 @@ import { resolveImageUrl } from '$lib/server/storage';
 import { prepareBlocksForRender } from '$lib/server/band/band-site-blocks';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { bandSiteUrl } from '$lib/utils/band-site-url';
+import { reconcileBlocks } from '$lib/utils/band-site-preset';
 import type { Block } from '$lib/server/db/schema/band-page';
 
 // ---------------------------------------------------------------------------
@@ -41,8 +41,6 @@ function toSiteEvent(e: EventRow) {
 }
 
 export const getBandSiteData = query(z.string(), async (slug) => {
-	await requireFeature('bandPremium');
-
 	// LEFT join, unlike the directory's. There, no entry means no listing and a
 	// 404 is the right answer; here the page is granted by `tier`, and a premium
 	// band whose entry went missing should lose its bio, not its site.
@@ -125,7 +123,9 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 			? {
 					theme: config.theme,
 					customCss: config.customCss,
-					blocks: prepareBlocksForRender(config.blocks as Block[]),
+					// Reconciled first, so a premium band that has never opened the
+					// editor still publishes the preset layout rather than the fallback.
+					blocks: prepareBlocksForRender(reconcileBlocks(config.blocks as Block[])),
 					epk: config.epk
 				}
 			: null,
