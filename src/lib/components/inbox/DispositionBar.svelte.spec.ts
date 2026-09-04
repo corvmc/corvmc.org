@@ -85,21 +85,6 @@ describe('DispositionBar', () => {
 
 		await press('s', true);
 
-		// The trigger's `aria-expanded`, not the menu's contents.
-		//
-		// This asserted `getByText('Tomorrow')` and failed on every CI run while
-		// passing locally both headed and headless — a longer timeout did not help,
-		// so the portal is not slow on CI, it does not open at all. bits-ui mounts
-		// `DropdownMenu.Content` through a portal with focus management, and a
-		// headless Linux page that never holds focus is the difference between the
-		// two environments.
-		//
-		// `aria-expanded` is the accessible expression of the thing the shortcut is
-		// responsible for, and bits-ui sets it on the trigger synchronously with
-		// `open`. What is *inside* the menu is SnoozeMenu's business, and
-		// `inbox-awaiting-reply.e2e.ts` clicks a real date in a real browser.
-		await expect
-			.element(page.getByRole('button', { name: /^Snooze/ }))
-			.toHaveAttribute('aria-expanded', 'true');
+		await expect.element(page.getByText('Tomorrow')).toBeVisible();
 	});
 });

@@ -135,14 +135,12 @@ test.describe('inbox awaiting reply', () => {
 
 		// And back again, from the snooze menu.
 		//
-		// The menu's content is a bits-ui portal mounted from a `$effect`, so it is
-		// a scheduler tick behind the trigger click rather than synchronous with
-		// it. Asserting it opened before reaching into it is what keeps a slow
-		// mount from surfacing as a 60s `locator.click` timeout on the item —
-		// which is how this failed on `main` and on unrelated branches, and it
-		// failed *destructively*: the marker had already been cleared by then, so
-		// every retry started from state the fixture never described and failed
-		// somewhere else entirely.
+		// Asserting the menu opened before reaching into it, so that a menu which
+		// does not mount fails naming the menu rather than as a 60s
+		// `locator.click` timeout on an item inside it. That is how #507's
+		// `each_key_duplicate` surfaced here, and this test fails *destructively* —
+		// the marker is already cleared by this point, so its retries start from
+		// state the fixture never described and fail somewhere else entirely.
 		await page.getByRole('button', { name: /^Snooze/ }).click();
 		const whenTheyReply = page.getByRole('menuitem', { name: 'When they reply' });
 		await expect(whenTheyReply).toBeVisible();
