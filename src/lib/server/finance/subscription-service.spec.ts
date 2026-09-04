@@ -48,11 +48,6 @@ const mockStripe = {
 	subscriptions: {
 		list: vi.fn(),
 		update: vi.fn()
-	},
-	billingPortal: {
-		sessions: {
-			create: vi.fn()
-		}
 	}
 };
 
@@ -73,7 +68,6 @@ const {
 	getSubscription,
 	updateQuantity,
 	cancel,
-	createBillingPortalUrl,
 	resume,
 	mapDbSubscription,
 	buildMemberSubscriptionState,
@@ -787,34 +781,5 @@ describe('resume', () => {
 	it('throws when no active subscription', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({ data: [] });
 		await expect(resume('cus_ghost')).rejects.toThrow(SubscriptionStateError);
-	});
-});
-
-// ---------------------------------------------------------------------------
-// createBillingPortalUrl
-// ---------------------------------------------------------------------------
-describe('createBillingPortalUrl', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('creates a billing portal session and returns the URL', async () => {
-		mockStripe.billingPortal.sessions.create.mockResolvedValue({
-			url: 'https://billing.stripe.com/session/abc'
-		});
-
-		const url = await createBillingPortalUrl('cus_123', 'https://example.com/return');
-
-		expect(url).toBe('https://billing.stripe.com/session/abc');
-		expect(mockStripe.billingPortal.sessions.create).toHaveBeenCalledWith({
-			customer: 'cus_123',
-			return_url: 'https://example.com/return'
-		});
-	});
-
-	it('returns null when no customer ID is provided', async () => {
-		expect(await createBillingPortalUrl(null, 'https://example.com')).toBeNull();
-		expect(await createBillingPortalUrl(undefined, 'https://example.com')).toBeNull();
-		expect(mockStripe.billingPortal.sessions.create).not.toHaveBeenCalled();
 	});
 });

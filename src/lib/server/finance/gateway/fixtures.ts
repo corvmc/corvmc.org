@@ -184,3 +184,39 @@ export function fakePaymentRecord(over: Partial<Stripe.PaymentRecord>): Stripe.P
 		...over
 	});
 }
+
+export function fakePaymentMethod(over: Partial<Stripe.PaymentMethod>): Stripe.PaymentMethod {
+	return build<Stripe.PaymentMethod>({
+		id: fakeId('pm'),
+		object: 'payment_method',
+		created: nowSeconds(),
+		livemode: false,
+		type: 'card',
+		metadata: {},
+		card: {
+			brand: 'visa',
+			last4: '4242',
+			exp_month: 12,
+			exp_year: new Date().getUTCFullYear() + 2
+		} as Stripe.PaymentMethod.Card,
+		...over
+	});
+}
+
+export function fakeSetupIntent(over: Partial<Stripe.SetupIntent>): Stripe.SetupIntent {
+	const id = over.id ?? fakeId('seti');
+	return build<Stripe.SetupIntent>({
+		id,
+		object: 'setup_intent',
+		created: nowSeconds(),
+		livemode: false,
+		status: 'requires_payment_method',
+		usage: 'off_session',
+		metadata: {},
+		// Stripe's own shape: the secret is the id plus an opaque suffix, and
+		// Stripe.js parses the id back out of it. Minting it any other way would
+		// let a test pass against a secret the real SDK would reject.
+		client_secret: `${id}_secret_fake`,
+		...over
+	});
+}

@@ -7,3 +7,5 @@ export { default as SubscriptionForm } from './SubscriptionForm.svelte';
 export { default as ContributionCard } from './ContributionCard.svelte';
 export { default as CreditBalanceCard } from './CreditBalanceCard.svelte';
 export { default as CancelledBanner } from './CancelledBanner.svelte';
+export { default as PaymentMethodsCard } from './PaymentMethodsCard.svelte';
+export { default as InvoiceHistoryCard } from './InvoiceHistoryCard.svelte';

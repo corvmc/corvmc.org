@@ -448,26 +448,3 @@ export async function resume(stripeCustomerId: string): Promise<void> {
 
 	await stripe.subscriptions.update(sub.id, { cancel_at_period_end: false });
 }
-
-// ---------------------------------------------------------------------------
-// Billing portal
-// ---------------------------------------------------------------------------
-
-/**
- * Create a Stripe Billing Portal session URL. Returns null if no customer ID
- * is provided. The portal lets members manage payment methods, view invoices,
- * and cancel subscriptions.
- */
-export async function createBillingPortalUrl(
-	stripeCustomerId: string | null | undefined,
-	returnUrl: string
-): Promise<string | null> {
-	if (!stripeCustomerId) return null;
-
-	const session = await stripe.billingPortal.sessions.create({
-		customer: stripeCustomerId,
-		return_url: returnUrl
-	});
-
-	return session.url;
-}
