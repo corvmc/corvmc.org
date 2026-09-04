@@ -79,31 +79,20 @@ describe('DispositionBar', () => {
 	});
 
 	// Snooze drew an `S` for a key that was never bound to anything. Opening the
-	// menu is what the letter has to do.
+	// menu is what the letter has to do — the dates live in there.
 	//
-	// The assertion is on the trigger's `aria-expanded`, not on a date inside the
-	// menu, and that is deliberate rather than a weakening. This asserted
-	// `getByText('Tomorrow')` until it started failing on CI and only on CI — four
-	// runs across three branches, never once locally, and not rescued by a five
-	// second budget. Every one of those failures dumped a trigger reading
-	// `data-state="open" aria-expanded="true" aria-controls="bits-c10"` with no
-	// `bits-c10` anywhere in `<body>`: the shortcut did its whole job and
-	// `DropdownMenu.Portal` did not paint. What that spells is a bits-ui portal
-	// that does not mount on a headless Linux runner — third-party behaviour this
-	// component neither owns nor can fix, and the same shape as the stranded-portal
-	// bug #497 patched Svelte for.
-	//
-	// So the unit test asserts what DispositionBar actually controls: the letter
-	// puts the menu in the open state. That the open menu then contains the dates
-	// is SnoozeMenu's contract, and `e2e/inbox-awaiting-reply.e2e.ts` still clicks
-	// through to "When they reply" in a real browser to prove it.
+	// Assert a date and not the trigger's `aria-expanded`. This test caught a real
+	// bug by reaching into the menu: on a Friday and a Sunday two presets resolved
+	// to the same day, the duplicate `{#each}` key threw `each_key_duplicate` while
+	// the portal's content rendered, and the whole menu died. `aria-expanded` was
+	// `"true"` throughout — the trigger is not where a broken menu shows up.
+	// `snooze-presets.spec.ts` now pins the dates directly; this stays the proof
+	// that they reach the DOM.
 	it('opens the snooze menu on its shortcut', async () => {
 		await render(DispositionBar, { threadId: 'thread-1', status: 'open' });
 
 		await press('s', true);
 
-		await expect
-			.element(page.getByRole('button', { name: /Snooze/ }))
-			.toHaveAttribute('aria-expanded', 'true');
+		await expect.element(page.getByText('Tomorrow')).toBeVisible();
 	});
 });
