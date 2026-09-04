@@ -43,7 +43,7 @@ import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
 import { seedCmcEventLineups } from './seed/lineups';
 import { seedBandReservations } from './seed/band-reservations';
-import { seedBandSites, seedBandPageConfigs } from './seed/band-sites';
+import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
 import { seedRecurringSeries } from './seed/recurring';
 import { seedPaymentRecords } from './seed/payments';
 import { seedTickets } from './seed/tickets';
@@ -70,6 +70,7 @@ import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
 import { seedSuggestions } from './seed/suggestions';
 import { seedProjects } from './seed/projects';
+import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
 
 async function main() {
@@ -117,6 +118,7 @@ async function main() {
 	const bandReservations = await seedBandReservations(bands);
 	const bandSites = await seedBandSites(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
+	await seedFreePressKits(bands);
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
 	const tickets = await seedTickets(allUsers, events);
@@ -160,6 +162,10 @@ async function main() {
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
+	// Needs the bands and somebody to have bought something. Writes real audio
+	// into the local private bucket, so it is the one seeder that does I/O
+	// outside D1 — see its header for why rows alone are not enough.
+	const audio = await seedAudio(bands, allUsers);
 	// After the bands and their rosters: a rider is owned corner by corner, so it
 	// reads the roster back rather than being handed one.
 	const riders = await seedRiders(roles);
@@ -235,7 +241,12 @@ async function main() {
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
 	);
 	console.log(
-		`  ${riders.riders} structured tech rider (${riders.structuredBand ?? '—'}), ${riders.uploaded} upload-only (${riders.uploadBand ?? '—'})`
+		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +
+			`${audio.purchases} sales, ${audio.accounts} band Stripe accounts, ` +
+			`${audio.radioEntries} radio entries`
+	);
+	console.log(
+		`  ${riders.riders} tech riders — ${riders.structuredBand ?? '—'} (fits the room), ${riders.oversizedBand ?? '—'} (over it); ${riders.uploadBand ?? '—'} uploaded a PDF; ${riders.emptyBand ?? '—'} has nothing`
 	);
 	console.log('\n  Tech rider demo logins (all `password`):');
 	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');

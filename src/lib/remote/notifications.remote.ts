@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, command, getRequestEvent } from '$app/server';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import {
 	getForUser,
 	getUnreadCount,
@@ -81,7 +81,7 @@ export const setNotificationPreference = command(
 // ---------------------------------------------------------------------------
 
 export const getUserNotifications = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('user.read');
 	const [items, unread, preferences] = await Promise.all([
 		getForUser(userId, { limit: 10 }),
 		getUnreadCount(userId),

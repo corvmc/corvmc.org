@@ -4,7 +4,7 @@
  * header, so a guard anywhere else guards nothing.
  *
  * What this pins is therefore narrow and deliberate — that every mutation calls
- * `requireStaff` **before** it reaches the service, and that the acting staffer's
+ * an `instructor.*` capability **before** it reaches the service, and that the acting staffer's
  * id is the one recorded on the grant. Schema validation is not testable through
  * this harness (the mocked `form` hands back the handler without applying the
  * schema), which is why the note-is-required rules are pinned in
@@ -12,9 +12,9 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const requireStaff = vi.fn(async () => ({ id: 'staff-1' }));
-const requireStaffOrOwner = vi.fn(async () => 'staff' as const);
-vi.mock('$lib/server/authorization', () => ({ requireStaff, requireStaffOrOwner }));
+const requireCapability = vi.fn(async () => ({ id: 'staff-1' }));
+const requireCapabilityOrOwner = vi.fn(async () => 'staff' as const);
+vi.mock('$lib/server/authorization', () => ({ requireCapability, requireCapabilityOrOwner }));
 
 const svc = {
 	listForStaff: vi.fn(async () => ({ awaitingReview: [], active: [], resolved: [] })),
@@ -47,7 +47,7 @@ const remote = (await import('./instructors.remote')) as unknown as Record<
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	requireStaff.mockResolvedValue({ id: 'staff-1' });
+	requireCapability.mockResolvedValue({ id: 'staff-1' });
 });
 
 describe('every mutation is staff-only', () => {
@@ -61,11 +61,11 @@ describe('every mutation is staff-only', () => {
 
 	it.each(calls)('%s guards before touching the service', async (name, data) => {
 		await remote[name](data);
-		expect(requireStaff).toHaveBeenCalled();
+		expect(requireCapability).toHaveBeenCalled();
 	});
 
 	it.each(calls)('%s refuses when the guard throws', async (name, data) => {
-		requireStaff.mockRejectedValueOnce(new Error('403'));
+		requireCapability.mockRejectedValueOnce(new Error('403'));
 		await expect(remote[name](data)).rejects.toThrow('403');
 		// The guard runs first, so nothing reached the service.
 		for (const fn of Object.values(svc)) expect(fn).not.toHaveBeenCalled();
@@ -100,15 +100,15 @@ describe('the acting staffer is recorded, not the subject', () => {
 describe('reads', () => {
 	it('lists for staff behind the staff guard', async () => {
 		await remote.getStaffInstructors(undefined);
-		expect(requireStaff).toHaveBeenCalled();
+		expect(requireCapability).toHaveBeenCalled();
 		expect(svc.listForStaff).toHaveBeenCalled();
 	});
 
 	it('lets a member read their own record, not only staff', async () => {
-		// `requireStaffOrOwner`, not `requireStaff`: the member needs this for the
+		// `requireCapabilityOrOwner`, not `requireCapability`: the member needs this for the
 		// profile card, and the guard already expresses exactly that.
 		await remote.getUserInstructor('u-1');
-		expect(requireStaffOrOwner).toHaveBeenCalledWith('staff-1', 'u-1');
-		expect(requireStaff).not.toHaveBeenCalled();
+		expect(requireCapabilityOrOwner).toHaveBeenCalledWith('instructor.read', 'u-1');
+		expect(requireCapability).not.toHaveBeenCalled();
 	});
 });

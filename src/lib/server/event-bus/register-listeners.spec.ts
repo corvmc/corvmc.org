@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -47,7 +47,7 @@ vi.mock('$lib/server/notification/dispatcher', () => ({
 
 const mockListStaffUsers = vi.fn().mockResolvedValue([]);
 vi.mock('$lib/server/authorization', () => ({
-	listStaffUsers: (...args: unknown[]) => mockListStaffUsers(...args)
+	listUsersWithCapability: (...args: unknown[]) => mockListStaffUsers(...args)
 }));
 
 vi.mock('$lib/server/reservation/waitlist-service', () => ({
@@ -66,8 +66,23 @@ beforeEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
+/**
+ * Pay the module graph's transform cost once, outside any test's 5s budget.
+ *
+ * Every test here imports `./register-listeners` inside itself — it has to,
+ * because `vi.resetModules()` runs between them and registration is a top-level
+ * side effect. That makes the FIRST test the one that pays for compiling the
+ * whole listener tree, and on a cold `.vite` in a wide run that alone exceeded
+ * the timeout. The failure reads as a broken listener registration; it is
+ * nothing of the sort.
+ */
+beforeAll(async () => {
+	await import('./register-listeners');
+	vi.resetModules();
+}, 60_000);
+
 describe('registerListeners', () => {
-	it('registers checkout.completed listeners for reservation, ticket, and band premium fulfillment', async () => {
+	it('registers checkout.completed listeners for reservation, ticket, band premium and music fulfillment', async () => {
 		const { registerListeners } = await import('./register-listeners');
 		registerListeners();
 
@@ -75,7 +90,11 @@ describe('registerListeners', () => {
 		await vi.dynamicImportSettled();
 
 		expect(registeredHandlers['checkout.completed']).toBeDefined();
-		expect(registeredHandlers['checkout.completed'].length).toBe(3);
+		// One per purchasable. Each handler opens with a metadata guard and returns
+		// immediately when the session is not its own, so the count is the whole
+		// contract — a listener that failed to register would simply never fulfil,
+		// silently.
+		expect(registeredHandlers['checkout.completed'].length).toBe(4);
 	});
 
 	it('invokes handleReservationCheckout with stripe session', async () => {
@@ -177,7 +196,7 @@ describe('inbox.message_received — staff fan-out', () => {
 	});
 
 	it('does not even look up the staff list for a direct message', async () => {
-		// Returning early *before* listStaffUsers, not filtering afterwards.
+		// Returning early *before* the capability lookup, not filtering afterwards.
 		await fire(message('direct'));
 		expect(mockListStaffUsers).not.toHaveBeenCalled();
 	});

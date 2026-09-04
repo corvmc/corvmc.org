@@ -35,7 +35,23 @@ vi.mock('$lib/server/event/rsvp-service', () => ({
 	countRsvps: vi.fn(async () => 0)
 }));
 
-const checkout = vi.fn(async () => ({ url: 'https://stripe.test/session' }));
+const checkout = vi.fn(async () => ({ checkoutUrl: 'https://stripe.test/session' }));
+
+/**
+ * The shared `getById` default omits `source`, which trips the "not ours to
+ * sell" guard long before any of the money code. Tests that need to reach the
+ * scale override it with this.
+ */
+const cmcShow = () =>
+	({
+		id: 'evt-1',
+		title: 'Open Mic Night',
+		status: 'published',
+		ticketingEnabled: true,
+		ticketPrice: 1500,
+		ticketPriceFloorCents: 0,
+		source: 'cmc'
+	}) as never;
 // Must be the same class the handler's `instanceof` compares against, so the
 // module is mocked rather than the real error imported alongside it.
 class InsufficientCreditsError extends Error {}
@@ -279,7 +295,12 @@ describe('purchaseTickets validation', () => {
 		expect(checkout).not.toHaveBeenCalled();
 	});
 
-	it('rejects an unparseable contribution without starting a checkout', async () => {
+	it('rejects an amount in the dead zone below the charge minimum', async () => {
+		// Between free and Stripe's own minimum, card fees take almost everything
+		// — so the scale offers nothing, not a dollar. Reported under the amount
+		// field, because that is the number the buyer has to change.
+		getById.mockResolvedValueOnce(cmcShow());
+
 		await expectRejects(
 			() =>
 				events.purchaseTickets(
@@ -288,16 +309,21 @@ describe('purchaseTickets validation', () => {
 						quantity: 1,
 						attendeeName: 'Ada',
 						attendeeEmail: 'ada@example.com',
-						contribution: 'twenty bucks'
+						unitPriceCents: 100,
+						collectiveCents: 0
 					},
 					makeIssue()
 				),
-			'contribution'
+			'unitPriceCents'
 		);
 		expect(checkout).not.toHaveBeenCalled();
 	});
 
-	it('rejects a contribution far above the cap rather than charging a typo', async () => {
+	it('rejects an allocation the client made negative', async () => {
+		// These numbers become what the acts are owed. A posted -500 is the attack
+		// the server-side re-derivation exists to stop.
+		getById.mockResolvedValueOnce(cmcShow());
+
 		await expectRejects(
 			() =>
 				events.purchaseTickets(
@@ -306,11 +332,12 @@ describe('purchaseTickets validation', () => {
 						quantity: 1,
 						attendeeName: 'Ada',
 						attendeeEmail: 'ada@example.com',
-						contribution: '150000'
+						unitPriceCents: 1500,
+						collectiveCents: -500
 					},
 					makeIssue()
 				),
-			'contribution'
+			'unitPriceCents'
 		);
 		expect(checkout).not.toHaveBeenCalled();
 	});
@@ -323,42 +350,24 @@ describe('purchaseTickets validation', () => {
 		expect(checkout).not.toHaveBeenCalled();
 	});
 
-	/**
-	 * checkout() spends credits before charging, and payment-service reverses
-	 * every completed deduction if a later one fails — so this can only be a lost
-	 * race, with nothing charged. It used to propagate as an unhandled throw: a
-	 * 500 in Sentry for a routine race, and a generic "Something went wrong" for
-	 * the buyer, since Form drops the message off a thrown error.
-	 */
-	it('turns a lost credit race into a quantity issue rather than an unhandled throw', async () => {
-		// The shared getById default omits `source`, which trips the "not ours to
-		// sell" guard long before checkout — override it so this test reaches the
-		// code it is actually about.
-		getById.mockResolvedValueOnce({
-			id: 'evt-1',
-			title: 'Open Mic Night',
-			status: 'published',
-			ticketingEnabled: true,
-			ticketPrice: 1500,
-			source: 'cmc'
-		} as never);
-		checkout.mockRejectedValueOnce(new InsufficientCreditsError('raced'));
+	it('starts a checkout once the amount and the allocation both hold', async () => {
+		// Guards the tests above: they pass on any validation rejection, including
+		// ones that fire long before the code under test. This is the same request
+		// with a valid amount, and it must reach Stripe.
+		getById.mockResolvedValueOnce(cmcShow());
 
-		await expectRejects(
-			() =>
-				events.purchaseTickets(
-					{
-						eventId: 'evt-1',
-						quantity: 2,
-						attendeeName: 'Ada',
-						attendeeEmail: 'ada@example.com'
-					},
-					makeIssue()
-				),
-			'quantity'
+		await events.purchaseTickets(
+			{
+				eventId: 'evt-1',
+				quantity: 2,
+				attendeeName: 'Ada',
+				attendeeEmail: 'ada@example.com',
+				unitPriceCents: 1500,
+				collectiveCents: 400
+			},
+			makeIssue()
 		);
-		// Guards the test itself: the assertion above passes for any validation
-		// rejection, including ones that fire long before the code under test.
+
 		expect(checkout).toHaveBeenCalled();
 	});
 });

@@ -10,6 +10,7 @@
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import { toast } from 'svelte-sonner';
+	import BandSiteRenderer from '$lib/components/band-site/BandSiteRenderer.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { env } from '$env/dynamic/public';
@@ -17,6 +18,9 @@
 	import { getBandLayoutContext } from '../layout-context';
 	import { getBandPageEditor, saveBandPageConfig } from '$lib/remote/band-page-editor.remote';
 	import { BAND_THEMES, type Block } from '$lib/types/band-page';
+	import { BLOCK_LABELS } from '$lib/utils/band-site-preset';
+	import themeSheet from '$lib/themes/band-site/index.css?raw';
+	import { themeStarterCss } from '$lib/utils/theme-starter';
 	import { page } from '$app/state';
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
@@ -40,89 +44,63 @@
 	const initialConfig = $derived(pageData.config);
 	let selectedTheme = $state(initialConfig?.theme ?? 'default');
 	let customCss = $state(initialConfig?.customCss ?? '');
-	let blocks = $state<Block[]>(structuredClone(initialConfig?.blocks ?? []));
 
-	// Block type picker
-	let showBlockPicker = $state(false);
+	/** What the theme blocks read. Printed under the CSS box — see the legend. */
+	/**
+	 * What the preview renders as the act. Enough of `BandData` to lay the page
+	 * out — the preview is for judging colour, type and spacing, so it does not
+	 * need the roster or the gig list, and asking for them would put two more
+	 * queries on an editor that has one.
+	 */
+	const previewBand = $derived({
+		name: band.name,
+		bio: band.bio ?? null,
+		tagline: null,
+		avatarUrl: band.avatarUrl ?? null,
+		links: null,
+		genres: []
+	});
 
-	const BLOCK_TYPES: Array<{ type: Block['type']; label: string; description: string }> = [
-		{ type: 'hero', label: 'Hero', description: 'Full-width hero image with headline' },
-		{ type: 'bio', label: 'Bio', description: 'Rich text bio section' },
-		{ type: 'links', label: 'Links', description: 'Social and music links' },
-		{ type: 'members', label: 'Members', description: 'Member roster' },
-		{ type: 'events', label: 'Events', description: 'Upcoming shows' },
-		{ type: 'gallery', label: 'Gallery', description: 'Photo gallery grid' },
-		{ type: 'embed', label: 'Embed', description: 'YouTube, Spotify, SoundCloud embed' },
-		{ type: 'press', label: 'Press', description: 'Press quotes from EPK' },
-		{ type: 'achievements', label: 'Achievements', description: 'Highlights from EPK' },
-		{ type: 'contact', label: 'Contact', description: 'Booking/management contacts from EPK' },
-		{
-			type: 'tech_rider',
-			label: 'Tech Rider',
-			description: 'Stage plot and backline requirements'
-		},
-		{ type: 'merch', label: 'Merch', description: 'Merchandise links' },
-		{ type: 'spacer', label: 'Spacer', description: 'Vertical spacing between blocks' },
-		{ type: 'custom_html', label: 'Custom HTML', description: 'Custom HTML content (sanitized)' }
+	const CSS_VARIABLES = [
+		{ name: '--bs-bg', what: 'page background' },
+		{ name: '--bs-text', what: 'body text' },
+		{ name: '--bs-accent', what: 'links and highlights' },
+		{ name: '--bs-surface', what: 'cards and panels' },
+		{ name: '--bs-muted', what: 'secondary text' }
 	];
 
-	function addBlock(type: Block['type']) {
-		const id = crypto.randomUUID();
-		let newBlock: Block;
-
-		switch (type) {
-			case 'hero':
-				newBlock = { id, type: 'hero', imageKey: '' };
-				break;
-			case 'bio':
-				newBlock = { id, type: 'bio', content: '' };
-				break;
-			case 'links':
-				newBlock = { id, type: 'links', style: 'buttons' };
-				break;
-			case 'members':
-				newBlock = { id, type: 'members', showPositions: true };
-				break;
-			case 'events':
-				newBlock = { id, type: 'events', limit: 5 };
-				break;
-			case 'gallery':
-				newBlock = { id, type: 'gallery', imageKeys: [], downloadable: false };
-				break;
-			case 'embed':
-				newBlock = { id, type: 'embed', platform: '', url: '' };
-				break;
-			case 'press':
-				newBlock = { id, type: 'press' };
-				break;
-			case 'achievements':
-				newBlock = { id, type: 'achievements' };
-				break;
-			case 'contact':
-				newBlock = { id, type: 'contact' };
-				break;
-			case 'tech_rider':
-				newBlock = { id, type: 'tech_rider' };
-				break;
-			case 'merch':
-				newBlock = { id, type: 'merch', items: [] };
-				break;
-			case 'spacer':
-				newBlock = { id, type: 'spacer', height: 'md' };
-				break;
-			case 'custom_html':
-				newBlock = { id, type: 'custom_html', content: '' };
-				break;
-			default:
-				return;
+	/**
+	 * Copy the selected theme's rules into the band's own CSS.
+	 *
+	 * Confirms before replacing work: the whole feature is a starting point, and
+	 * silently overwriting a page someone spent an evening on is the opposite of
+	 * that.
+	 */
+	function startFromTheme() {
+		const starter = themeStarterCss(themeSheet, selectedTheme);
+		if (!starter) {
+			toast.error('That theme has nothing to copy yet.');
+			return;
 		}
-
-		blocks = [...blocks, newBlock];
-		showBlockPicker = false;
+		if (
+			customCss.trim() &&
+			!confirm('Replace your custom CSS with this theme as a starting point?')
+		) {
+			return;
+		}
+		customCss = starter;
+		toast.success('Copied — edit it below.');
 	}
+	let blocks = $state<Block[]>(structuredClone(initialConfig?.blocks ?? []));
 
-	function removeBlock(index: number) {
-		blocks = blocks.filter((_, i) => i !== index);
+	/**
+	 * The page arrives with every block already on it — `reconcileBlocks` in
+	 * `$lib/utils/band-site-preset` sees to that — so this editor arranges a page
+	 * rather than building one. There is no add and no delete: a block a band does
+	 * not want is one they stop publishing.
+	 */
+	function toggleBlock(index: number) {
+		blocks[index].hidden = !blocks[index].hidden;
 	}
 
 	function moveBlock(index: number, direction: 'up' | 'down') {
@@ -150,7 +128,7 @@
 			case 'custom_html':
 				return block.content.slice(0, 40) || 'Empty HTML';
 			default:
-				return `${block.type} block`;
+				return BLOCK_LABELS[block.type].description;
 		}
 	}
 </script>
@@ -165,8 +143,9 @@
 		<EmptyState>
 			<p class="text-lg font-medium">Premium Feature</p>
 			<p class="mt-2 opacity-70">
-				The page editor is available with a premium subscription. Build a custom page for your act
-				with drag-and-drop blocks, genre themes, and custom CSS.
+				The page editor is available with a premium subscription. Your act's page arrives already
+				built — reorder its blocks, hide the ones you don't want, and make it yours with genre
+				themes and custom CSS.
 			</p>
 			<Button href="../subscription" variant="primary" class="mt-4">Upgrade to Premium</Button>
 		</EmptyState>
@@ -202,360 +181,345 @@
 							</Button>
 						{/each}
 					</div>
+
+					<!-- A theme is a starting point, not a skin. Copying its rules into
+					     the band's own CSS is what makes it one: they can see what it
+					     does and change any of it, rather than overriding rules they
+					     have no way to read. -->
+					<div class="mt-3 flex flex-wrap items-center gap-3">
+						<Button type="button" variant="default" outline size="sm" onclick={startFromTheme}>
+							Start from this theme
+						</Button>
+						<span class="text-muted text-xs">
+							Copies the <span class="capitalize">{selectedTheme}</span> theme's rules into your own CSS
+							below, so you can edit them.
+						</span>
+					</div>
 				</CardBody>
 			</Card>
 
 			<!-- Blocks editor -->
 			<Card>
 				<CardBody>
-					<div class="flex items-center justify-between">
-						<CardTitle size="lg" level={2}>Blocks</CardTitle>
-						<Button
-							type="button"
-							variant="primary"
-							size="sm"
-							onclick={() => {
-								showBlockPicker = !showBlockPicker;
-							}}
-						>
-							{showBlockPicker ? 'Cancel' : 'Add Block'}
-						</Button>
-					</div>
+					<CardTitle size="lg" level={2}>Blocks</CardTitle>
+					<p class="mt-1 text-muted">
+						Every block is already on your page. Move them into the order you want, and hide any you
+						have nothing for — a hidden block keeps whatever you put in it.
+					</p>
 
-					<!-- Block type picker -->
-					{#if showBlockPicker}
-						<div class="mt-4 grid grid-cols-2 gap-2 inset p-4 sm:grid-cols-3">
-							{#each BLOCK_TYPES as bt (bt.type)}
-								<Button
-									type="button"
-									variant="ghost"
-									size="sm"
-									class="h-auto justify-start py-2 text-left"
-									onclick={() => addBlock(bt.type)}
-								>
-									<div>
-										<p class="text-sm font-medium">{bt.label}</p>
-										<p class="text-subtle">{bt.description}</p>
+					<div class="mt-4 space-y-2">
+						{#each blocks as block, i (block.id)}
+							<div class="overflow-hidden rounded-lg bg-base-200">
+								<!-- Block header row -->
+								<div class="flex items-center gap-2 p-3" class:opacity-50={block.hidden}>
+									<span class="font-mono text-sm opacity-40">{i + 1}</span>
+									<Badge>{BLOCK_LABELS[block.type].label}</Badge>
+									<span class="flex-1 truncate text-muted">
+										{block.hidden ? 'Hidden' : blockLabel(block)}
+									</span>
+									<div class="flex items-center gap-1">
+										<Button
+											type="button"
+											variant="ghost"
+											size="xs"
+											aria-label="Move {BLOCK_LABELS[block.type].label} up"
+											onclick={() => moveBlock(i, 'up')}
+											disabled={i === 0}>&uarr;</Button
+										>
+										<Button
+											type="button"
+											variant="ghost"
+											size="xs"
+											aria-label="Move {BLOCK_LABELS[block.type].label} down"
+											onclick={() => moveBlock(i, 'down')}
+											disabled={i === blocks.length - 1}>&darr;</Button
+										>
+										<Button
+											type="button"
+											variant="ghost"
+											size="xs"
+											aria-pressed={!block.hidden}
+											onclick={() => toggleBlock(i)}
+										>
+											{block.hidden ? 'Show' : 'Hide'}
+										</Button>
+										<Button
+											type="button"
+											variant="ghost"
+											size="xs"
+											onclick={() => {
+												editingBlockId = editingBlockId === block.id ? null : block.id;
+											}}
+										>
+											{editingBlockId === block.id ? 'Close' : 'Edit'}
+										</Button>
 									</div>
-								</Button>
-							{/each}
-						</div>
-					{/if}
+								</div>
 
-					{#if blocks.length === 0}
-						<p class="mt-4 text-muted">
-							No blocks configured yet. Add blocks to build your custom page. Your page will show a
-							default layout until you add blocks.
-						</p>
-					{:else}
-						<div class="mt-4 space-y-2">
-							{#each blocks as block, i (block.id)}
-								<div class="overflow-hidden rounded-lg bg-base-200">
-									<!-- Block header row -->
-									<div class="flex items-center gap-2 p-3">
-										<span class="font-mono text-sm opacity-40">{i + 1}</span>
-										<Badge class="capitalize">{block.type}</Badge>
-										<span class="flex-1 truncate text-muted">{blockLabel(block)}</span>
-										<div class="flex items-center gap-1">
-											<Button
-												type="button"
-												variant="ghost"
-												size="xs"
-												onclick={() => moveBlock(i, 'up')}
-												disabled={i === 0}>&uarr;</Button
-											>
-											<Button
-												type="button"
-												variant="ghost"
-												size="xs"
-												onclick={() => moveBlock(i, 'down')}
-												disabled={i === blocks.length - 1}>&darr;</Button
-											>
-											<Button
-												type="button"
-												variant="ghost"
-												size="xs"
-												onclick={() => {
-													editingBlockId = editingBlockId === block.id ? null : block.id;
-												}}
-											>
-												{editingBlockId === block.id ? 'Close' : 'Edit'}
-											</Button>
-											<Button
-												type="button"
-												variant="ghost"
-												size="xs"
-												class="text-error"
-												onclick={() => removeBlock(i)}>&times;</Button
-											>
-										</div>
-									</div>
-
-									<!-- Block configuration panel -->
-									{#if editingBlockId === block.id}
-										<div class="space-y-3 px-3 pt-3 pb-3 rule-top">
-											{#if block.type === 'hero'}
-												<label class="form-control">
-													<span class="label-text text-xs">Image Key (R2 path or URL)</span>
-													<input
-														type="text"
-														class="input w-full input-sm"
-														value={block.imageKey}
-														oninput={(e) => {
-															block.imageKey = e.currentTarget.value;
-														}}
-													/>
-												</label>
-												<label class="form-control">
-													<span class="label-text text-xs">Headline</span>
-													<input
-														type="text"
-														class="input w-full input-sm"
-														value={block.headline ?? ''}
-														oninput={(e) => {
-															block.headline = e.currentTarget.value || undefined;
-														}}
-													/>
-												</label>
-												<label class="form-control">
-													<span class="label-text text-xs">Subtitle</span>
-													<input
-														type="text"
-														class="input w-full input-sm"
-														value={block.subtitle ?? ''}
-														oninput={(e) => {
-															block.subtitle = e.currentTarget.value || undefined;
-														}}
-													/>
-												</label>
-											{:else if block.type === 'bio'}
-												<label class="form-control">
-													<span class="label-text text-xs">Content (HTML/Markdown)</span>
-													<textarea
-														class="textarea w-full text-sm"
-														rows="5"
-														value={block.content}
-														oninput={(e) => {
-															block.content = e.currentTarget.value;
-														}}></textarea>
-												</label>
-											{:else if block.type === 'links'}
-												<label class="form-control">
-													<span class="label-text text-xs">Style</span>
-													<Select
-														size="sm"
-														class="w-full"
-														value={block.style}
-														onchange={(e: Event) => {
-															block.style = (e.currentTarget as HTMLSelectElement).value as
-																'buttons' | 'icons' | 'list';
-														}}
-													>
-														<option value="buttons">Buttons</option>
-														<option value="icons">Icons</option>
-														<option value="list">List</option>
-													</Select>
-												</label>
-											{:else if block.type === 'members'}
-												<label class="flex items-center gap-2">
-													<input
-														type="checkbox"
-														class="checkbox checkbox-sm"
-														checked={block.showPositions}
-														onchange={(e) => {
-															block.showPositions = e.currentTarget.checked;
-														}}
-													/>
-													<span class="text-sm">Show member positions</span>
-												</label>
-											{:else if block.type === 'events'}
-												<label class="form-control">
-													<span class="label-text text-xs">Max events to show</span>
-													<input
-														type="number"
-														class="input w-24 input-sm"
-														min="1"
-														max="20"
-														value={block.limit ?? 5}
-														oninput={(e) => {
-															block.limit = parseInt(e.currentTarget.value) || 5;
-														}}
-													/>
-												</label>
-											{:else if block.type === 'gallery'}
-												<label class="flex items-center gap-2">
-													<input
-														type="checkbox"
-														class="checkbox checkbox-sm"
-														checked={block.downloadable ?? false}
-														onchange={(e) => {
-															block.downloadable = e.currentTarget.checked;
-														}}
-													/>
-													<span class="text-sm">Allow downloads (press-quality)</span>
-												</label>
-												<p class="text-subtle">
-													Gallery images are pulled from your uploaded media. Use the media section
-													below to upload images.
-												</p>
-											{:else if block.type === 'embed'}
-												<label class="form-control">
-													<span class="label-text text-xs">Platform</span>
-													<input
-														type="text"
-														class="input w-full input-sm"
-														placeholder="spotify, youtube, soundcloud"
-														value={block.platform}
-														oninput={(e) => {
-															block.platform = e.currentTarget.value;
-														}}
-													/>
-												</label>
-												<label class="form-control">
-													<span class="label-text text-xs">URL</span>
-													<input
-														type="url"
-														class="input w-full input-sm"
-														placeholder="https://open.spotify.com/track/..."
-														value={block.url}
-														oninput={(e) => {
-															block.url = e.currentTarget.value;
-														}}
-													/>
-												</label>
-											{:else if block.type === 'spacer'}
-												<label class="form-control">
-													<span class="label-text text-xs">Height</span>
-													<Select
-														size="sm"
-														class="w-full"
-														value={block.height}
-														onchange={(e: Event) => {
-															block.height = (e.currentTarget as HTMLSelectElement).value as
-																'sm' | 'md' | 'lg';
-														}}
-													>
-														<option value="sm">Small</option>
-														<option value="md">Medium</option>
-														<option value="lg">Large</option>
-													</Select>
-												</label>
-											{:else if block.type === 'custom_html'}
-												<label class="form-control">
-													<span class="label-text text-xs">HTML Content (sanitized on save)</span>
-													<textarea
-														class="textarea w-full font-mono text-sm"
-														rows="6"
-														value={block.content}
-														oninput={(e) => {
-															block.content = e.currentTarget.value;
-														}}></textarea>
-												</label>
-											{:else if block.type === 'contact'}
-												<label class="flex items-center gap-2">
-													<input
-														type="checkbox"
-														class="checkbox checkbox-sm"
-														checked={block.showForm ?? true}
-														onchange={(e) => {
-															block.showForm = e.currentTarget.checked;
-														}}
-													/>
-													<span class="text-sm"
-														>Show contact form (messages are emailed to your booking contact)</span
-													>
-												</label>
-												<p class="text-muted">
-													Contact people render from your EPK.
-													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
-														>Edit EPK data &rarr;</a
-													>
-												</p>
-											{:else if block.type === 'press' || block.type === 'achievements' || block.type === 'tech_rider'}
-												<p class="text-muted">
-													This block renders data from your EPK.
-													<a href={resolve(`/band/${band.slug}/page-editor/epk`)} class="link"
-														>Edit EPK data &rarr;</a
-													>
-												</p>
-											{:else if block.type === 'merch'}
-												<p class="mb-2 text-subtle">
-													Add merchandise items with links to your store.
-												</p>
-												{#each block.items as item, mi (mi)}
-													<div class="flex items-start gap-2">
-														<input
-															type="text"
-															class="input flex-1 input-sm"
-															placeholder="Title"
-															value={item.title}
-															oninput={(e) => {
-																item.title = e.currentTarget.value;
-															}}
-														/>
-														<input
-															type="url"
-															class="input flex-1 input-sm"
-															placeholder="URL"
-															value={item.url}
-															oninput={(e) => {
-																item.url = e.currentTarget.value;
-															}}
-														/>
-														<input
-															type="text"
-															class="input w-20 input-sm"
-															placeholder="$25"
-															value={item.price ?? ''}
-															oninput={(e) => {
-																item.price = e.currentTarget.value || undefined;
-															}}
-														/>
-														<Button
-															type="button"
-															variant="ghost"
-															size="xs"
-															class="text-error"
-															onclick={() => {
-																block.items = block.items.filter((_, j) => j !== mi);
-															}}>&times;</Button
-														>
-													</div>
-												{/each}
-												<Button
-													type="button"
-													variant="ghost"
-													size="xs"
-													class="mt-1"
-													onclick={() => {
-														block.items = [...block.items, { title: '', url: '' }];
-													}}>+ Add item</Button
-												>
-											{/if}
-
-											<!-- CSS class (all blocks) -->
+								<!-- Block configuration panel -->
+								{#if editingBlockId === block.id}
+									<div class="space-y-3 px-3 pt-3 pb-3 rule-top">
+										{#if block.type === 'hero'}
 											<label class="form-control">
-												<span class="label-text text-xs">CSS Class (optional)</span>
+												<span class="label-text text-xs">Image Key (R2 path or URL)</span>
 												<input
 													type="text"
 													class="input w-full input-sm"
-													placeholder="custom-class"
-													value={block.cssClass ?? ''}
+													value={block.imageKey}
 													oninput={(e) => {
-														// Every member of the Block union carries `cssClass`, but TypeScript
-														// will not pick a member to write through on a union, so the
-														// write is narrowed to just that property.
-														(block as { cssClass?: string }).cssClass =
-															e.currentTarget.value || undefined;
+														block.imageKey = e.currentTarget.value;
 													}}
 												/>
 											</label>
-										</div>
-									{/if}
-								</div>
-							{/each}
-						</div>
-					{/if}
+											<label class="form-control">
+												<span class="label-text text-xs">Headline</span>
+												<input
+													type="text"
+													class="input w-full input-sm"
+													value={block.headline ?? ''}
+													oninput={(e) => {
+														block.headline = e.currentTarget.value || undefined;
+													}}
+												/>
+											</label>
+											<label class="form-control">
+												<span class="label-text text-xs">Subtitle</span>
+												<input
+													type="text"
+													class="input w-full input-sm"
+													value={block.subtitle ?? ''}
+													oninput={(e) => {
+														block.subtitle = e.currentTarget.value || undefined;
+													}}
+												/>
+											</label>
+										{:else if block.type === 'bio'}
+											<label class="form-control">
+												<span class="label-text text-xs">Content (HTML/Markdown)</span>
+												<textarea
+													class="textarea w-full text-sm"
+													rows="5"
+													value={block.content}
+													oninput={(e) => {
+														block.content = e.currentTarget.value;
+													}}></textarea>
+											</label>
+										{:else if block.type === 'links'}
+											<label class="form-control">
+												<span class="label-text text-xs">Style</span>
+												<Select
+													size="sm"
+													class="w-full"
+													value={block.style}
+													onchange={(e: Event) => {
+														block.style = (e.currentTarget as HTMLSelectElement).value as
+															'buttons' | 'icons' | 'list';
+													}}
+												>
+													<option value="buttons">Buttons</option>
+													<option value="icons">Icons</option>
+													<option value="list">List</option>
+												</Select>
+											</label>
+										{:else if block.type === 'members'}
+											<label class="flex items-center gap-2">
+												<input
+													type="checkbox"
+													class="checkbox checkbox-sm"
+													checked={block.showPositions}
+													onchange={(e) => {
+														block.showPositions = e.currentTarget.checked;
+													}}
+												/>
+												<span class="text-sm">Show member positions</span>
+											</label>
+										{:else if block.type === 'events'}
+											<label class="form-control">
+												<span class="label-text text-xs">Max events to show</span>
+												<input
+													type="number"
+													class="input w-24 input-sm"
+													min="1"
+													max="20"
+													value={block.limit ?? 5}
+													oninput={(e) => {
+														block.limit = parseInt(e.currentTarget.value) || 5;
+													}}
+												/>
+											</label>
+										{:else if block.type === 'gallery'}
+											<label class="flex items-center gap-2">
+												<input
+													type="checkbox"
+													class="checkbox checkbox-sm"
+													checked={block.downloadable ?? false}
+													onchange={(e) => {
+														block.downloadable = e.currentTarget.checked;
+													}}
+												/>
+												<span class="text-sm">Allow downloads (press-quality)</span>
+											</label>
+											<p class="text-subtle">
+												Gallery images are pulled from your uploaded media. Use the media section
+												below to upload images.
+											</p>
+										{:else if block.type === 'embed'}
+											<label class="form-control">
+												<span class="label-text text-xs">Platform</span>
+												<input
+													type="text"
+													class="input w-full input-sm"
+													placeholder="spotify, youtube, soundcloud"
+													value={block.platform}
+													oninput={(e) => {
+														block.platform = e.currentTarget.value;
+													}}
+												/>
+											</label>
+											<label class="form-control">
+												<span class="label-text text-xs">URL</span>
+												<input
+													type="url"
+													class="input w-full input-sm"
+													placeholder="https://open.spotify.com/track/..."
+													value={block.url}
+													oninput={(e) => {
+														block.url = e.currentTarget.value;
+													}}
+												/>
+											</label>
+										{:else if block.type === 'spacer'}
+											<label class="form-control">
+												<span class="label-text text-xs">Height</span>
+												<Select
+													size="sm"
+													class="w-full"
+													value={block.height}
+													onchange={(e: Event) => {
+														block.height = (e.currentTarget as HTMLSelectElement).value as
+															'sm' | 'md' | 'lg';
+													}}
+												>
+													<option value="sm">Small</option>
+													<option value="md">Medium</option>
+													<option value="lg">Large</option>
+												</Select>
+											</label>
+										{:else if block.type === 'custom_html'}
+											<label class="form-control">
+												<span class="label-text text-xs">HTML Content (sanitized on save)</span>
+												<textarea
+													class="textarea w-full font-mono text-sm"
+													rows="6"
+													value={block.content}
+													oninput={(e) => {
+														block.content = e.currentTarget.value;
+													}}></textarea>
+											</label>
+										{:else if block.type === 'contact'}
+											<label class="flex items-center gap-2">
+												<input
+													type="checkbox"
+													class="checkbox checkbox-sm"
+													checked={block.showForm ?? true}
+													onchange={(e) => {
+														block.showForm = e.currentTarget.checked;
+													}}
+												/>
+												<span class="text-sm"
+													>Show contact form (messages are emailed to your booking contact)</span
+												>
+											</label>
+											<p class="text-muted">
+												Contact people render from your EPK.
+												<a href={resolve(`/band/${band.slug}/press-kit`)} class="link"
+													>Edit EPK data &rarr;</a
+												>
+											</p>
+										{:else if block.type === 'press' || block.type === 'achievements' || block.type === 'tech_rider'}
+											<p class="text-muted">
+												This block renders data from your EPK.
+												<a href={resolve(`/band/${band.slug}/press-kit`)} class="link"
+													>Edit EPK data &rarr;</a
+												>
+											</p>
+										{:else if block.type === 'merch'}
+											<p class="mb-2 text-subtle">
+												Add merchandise items with links to your store.
+											</p>
+											{#each block.items as item, mi (mi)}
+												<div class="flex items-start gap-2">
+													<input
+														type="text"
+														class="input flex-1 input-sm"
+														placeholder="Title"
+														value={item.title}
+														oninput={(e) => {
+															item.title = e.currentTarget.value;
+														}}
+													/>
+													<input
+														type="url"
+														class="input flex-1 input-sm"
+														placeholder="URL"
+														value={item.url}
+														oninput={(e) => {
+															item.url = e.currentTarget.value;
+														}}
+													/>
+													<input
+														type="text"
+														class="input w-20 input-sm"
+														placeholder="$25"
+														value={item.price ?? ''}
+														oninput={(e) => {
+															item.price = e.currentTarget.value || undefined;
+														}}
+													/>
+													<Button
+														type="button"
+														variant="ghost"
+														size="xs"
+														class="text-error"
+														onclick={() => {
+															block.items = block.items.filter((_, j) => j !== mi);
+														}}>&times;</Button
+													>
+												</div>
+											{/each}
+											<Button
+												type="button"
+												variant="ghost"
+												size="xs"
+												class="mt-1"
+												onclick={() => {
+													block.items = [...block.items, { title: '', url: '' }];
+												}}>+ Add item</Button
+											>
+										{/if}
+
+										<!-- CSS class (all blocks) -->
+										<label class="form-control">
+											<span class="label-text text-xs">CSS Class (optional)</span>
+											<input
+												type="text"
+												class="input w-full input-sm"
+												placeholder="custom-class"
+												value={block.cssClass ?? ''}
+												oninput={(e) => {
+													// Every member of the Block union carries `cssClass`, but TypeScript
+													// will not pick a member to write through on a union, so the
+													// write is narrowed to just that property.
+													(block as { cssClass?: string }).cssClass =
+														e.currentTarget.value || undefined;
+												}}
+											/>
+										</label>
+									</div>
+								{/if}
+							</div>
+						{/each}
+					</div>
 				</CardBody>
 			</Card>
 
@@ -564,8 +528,19 @@
 				<CardBody>
 					<CardTitle size="lg" level={2}>Custom CSS</CardTitle>
 					<p class="text-muted">
-						Add custom styles to your page. CSS is scoped to your site's container.
+						Everything you write is wrapped in <code>.band-site-container</code>, so a bare selector
+						like <code>h1</code> only ever affects your page.
 					</p>
+					<!-- Nobody can guess these, and until they are written down the CSS
+					     box is a place to change colours one hex code at a time. -->
+					<dl class="mt-2 grid grid-cols-1 gap-x-6 text-muted text-xs sm:grid-cols-2">
+						{#each CSS_VARIABLES as item (item.name)}
+							<div class="flex gap-2 py-0.5">
+								<dt><code>{item.name}</code></dt>
+								<dd>{item.what}</dd>
+							</div>
+						{/each}
+					</dl>
 					<textarea
 						class="textarea mt-2 w-full font-mono text-sm"
 						rows="8"
@@ -575,8 +550,38 @@
 							customCss = e.currentTarget.value;
 						}}></textarea>
 					<p class="mt-1 text-xs opacity-40">
-						Max 50KB. External imports and scripts are stripped.
+						Max 50KB. External stylesheets and scripts are stripped; images from your own media
+						library are allowed.
 					</p>
+				</CardBody>
+			</Card>
+
+			<!-- Live preview.
+			     The editor already holds theme, blocks and CSS in local state, so
+			     this needs no route and no save round trip — which is the whole
+			     difference between a CSS box you can tinker in and one you have to
+			     guess at. Before this, seeing a change meant saving and opening the
+			     site in another tab. -->
+			<Card>
+				<CardBody>
+					<div class="flex flex-wrap items-center justify-between gap-2">
+						<CardTitle size="lg" level={2}>Preview</CardTitle>
+						<span class="text-muted text-xs">Updates as you type. Not saved until you save.</span>
+					</div>
+					<div class="preview-frame mt-2">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- the admin's own draft CSS, scoped to the preview container and never persisted unsanitized -->
+						{@html `<style>.band-site-preview { ${customCss} }</style>`}
+						<div class="band-site-preview band-site-container theme-{selectedTheme}">
+							<BandSiteRenderer
+								band={previewBand}
+								config={{ theme: selectedTheme, customCss: null, blocks, epk: null }}
+								members={[]}
+								events={[]}
+								pastEvents={[]}
+								media={[]}
+							/>
+						</div>
+					</div>
 				</CardBody>
 			</Card>
 
@@ -731,14 +736,26 @@
 							Manage your EPK data — contacts, press quotes, achievements, and tech rider.
 						</p>
 					</div>
-					<Button
-						href={resolve(`/band/${band.slug}/page-editor/epk`)}
-						variant="default"
-						size="sm"
-						outline>Edit EPK</Button
+					<Button href={resolve(`/band/${band.slug}/press-kit`)} variant="default" size="sm" outline
+						>Edit EPK</Button
 					>
 				</div>
 			</CardBody>
 		</Card>
 	{/if}
 </PageContent>
+
+<style>
+	/* Bounded and scrollable: a band's page is taller than a card, and letting
+	   the preview push the Save button off the screen defeats the point of
+	   having it beside the controls. */
+	.preview-frame {
+		max-height: 32rem;
+		overflow: auto;
+		border: 1px solid var(--surface-border, color-mix(in oklch, currentColor 15%, transparent));
+		border-radius: var(--radius-box, 8px);
+		/* The themes paint their own background, so the frame must not assume the
+		   app's — a dark theme on a light card would look like a bug. */
+		background: #fff;
+	}
+</style>

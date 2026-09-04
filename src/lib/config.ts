@@ -163,27 +163,45 @@ export const TICKET_CONTRIBUTION_PRESETS = [500, 1000, 2500] as const;
 
 /** Anything above this is a typo, not a gift. */
 export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
-
 // ---------------------------------------------------------------------------
-// Payment splits
+// The ticket sliding scale
 // ---------------------------------------------------------------------------
 
 /**
- * Where the split bar opens on a music sale: CMC's suggested share, in basis
- * points.
+ * Where the split bar opens on a ticket: the collective's suggested share of
+ * what is actually divisible, in basis points.
  *
- * A *default*, not a rake — the buyer drags it, and the floor is zero. At zero
- * `application_fee_amount` is exactly Stripe's fee, so the collective nets
- * nothing and loses nothing; that is what makes refusing it safe to offer.
+ * This is the house suggestion, and it is not the deal. CMC's standing
+ * arrangement is 70% of the door to the bands, but a bill with three acts on
+ * three different deals has no single percentage — the deal itself lives on
+ * `event_band` (see `docs/specs/project-spec.md`, the deal shape). Say "we
+ * suggest 70% to the acts" in copy, never "the acts' deal is 70%".
  */
-export const AUDIO_PLATFORM_FEE_BPS = 1000;
+export const TICKET_COLLECTIVE_SHARE_BPS = 3000;
 
 /**
- * A release is free, or it costs at least this. Nothing in between: Stripe's
- * own charge minimum is 50¢, and its 30¢ fixed fee is a third of a $1 sale, so
- * the prices this excludes are the ones where almost nothing reaches the band.
+ * A ticket is free, or it costs at least this. Nothing in between: Stripe's own
+ * charge minimum is 50¢ and its 30¢ fixed fee is a third of a $1 sale, so the
+ * amounts this excludes are the ones where almost nothing reaches the acts.
+ *
+ * Load-bearing beyond the copy: `checkout()` skips the fee-coverage line item
+ * entirely below 100¢ (`payment-service.ts`), which would silently charge a
+ * buyer who ticked "cover fees" less than the preview promised. That branch is
+ * unreachable from ticket checkout only because this floor sits above it. Move
+ * it below 100 and the two diverge.
  */
-export const AUDIO_MIN_PRICE_CENTS = 200;
+export const TICKET_MIN_CHARGE_CENTS = 200;
+
+/**
+ * The most free tickets one email may hold for one show, across every purchase.
+ *
+ * A paid ticket has a card behind it, which is friction enough. A free one has
+ * none, and the 1–10 cap on the purchase form is per submission rather than per
+ * person — so without this, ten requests mint a sold-out show that nobody can
+ * get into. Set at a party rather than a person: someone bringing five friends
+ * is the case this exists to allow, not the case it exists to stop.
+ */
+export const FREE_TICKETS_PER_EMAIL = 6;
 
 // ---------------------------------------------------------------------------
 // Equipment pricing
@@ -550,6 +568,28 @@ export const inboxChannels = [
 ] as const;
 
 /**
+ * The channels the staff inbox is a party to — every channel except `direct`.
+ *
+ * `direct` is member↔member. Staff have no queue role in it: `staffVisibleThread`
+ * keeps direct threads out of every staff read, `dispatchReply` throws rather
+ * than write into one, and there is no external system behind it to authenticate.
+ * So it has nothing to configure, and the staff settings page must not be handed
+ * it — `channelMeta` there is keyed by this list, not by `inboxChannels`.
+ *
+ * `inboxChannels` stays the `inbox_thread.channel` vocabulary; this is the
+ * subset staff administer.
+ */
+export const staffInboxChannels = [
+	'email',
+	'sms',
+	'web',
+	'portal',
+	'instagram',
+	'messenger'
+] as const;
+export type StaffInboxChannel = (typeof staffInboxChannels)[number];
+
+/**
  * The contact-form subject that reveals the event-tip fields.
  *
  * Here rather than beside the schema it validates: the public contact page has
@@ -640,6 +680,17 @@ export const DIRECT_MESSAGE_BODY_MAX = 5000;
 
 export function isAlwaysEnabledChannel(channel: string): boolean {
 	return (alwaysEnabledInboxChannels as readonly string[]).includes(channel);
+}
+
+/**
+ * Whether a thread's channel is one staff administer and can reply on.
+ *
+ * `direct` is the only one that is not, and a direct thread does reach staff
+ * surfaces: reporting one makes it staff-visible. This is what tells the
+ * composer there is no channel behind it to enable.
+ */
+export function isStaffInboxChannel(channel: string): channel is StaffInboxChannel {
+	return (staffInboxChannels as readonly string[]).includes(channel);
 }
 
 // ---------------------------------------------------------------------------
@@ -1205,7 +1256,15 @@ export const capabilities = {
 	group: ['read', 'manage'],
 	event: ['read', 'manage', 'publish', 'manageTickets'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
-	volunteer: ['read', 'manageShifts', 'reviewHours', 'manageRoster', 'manageRoles', 'report'],
+	volunteer: [
+		'read',
+		'manageShifts',
+		'reviewHours',
+		'manageRoster',
+		'manageRoles',
+		'manageCertifications',
+		'report'
+	],
 	inventory: [
 		'read',
 		'manageItems',
@@ -1325,7 +1384,15 @@ export const positions: Record<Position, Grants> = {
 		help: ['read', 'manage']
 	},
 	volunteer_coordinator: {
-		volunteer: ['read', 'manageShifts', 'reviewHours', 'manageRoster', 'manageRoles', 'report'],
+		volunteer: [
+			'read',
+			'manageShifts',
+			'reviewHours',
+			'manageRoster',
+			'manageRoles',
+			'manageCertifications',
+			'report'
+		],
 		user: ['list', 'read'],
 		directory: ['readContact'],
 		event: ['read']
@@ -1465,6 +1532,51 @@ export const flagEntityTypeToEntity: Record<string, EntityType> = {
 };
 
 // ---------------------------------------------------------------------------
+// Band audio — releases, pricing, radio
+// ---------------------------------------------------------------------------
+
+/** What a band is putting out. Editorial only — nothing branches on it. */
+export const releaseKinds = ['single', 'ep', 'album', 'live', 'demo'] as const;
+export type ReleaseKind = (typeof releaseKinds)[number];
+
+export const releaseKindLabels: Record<ReleaseKind, string> = {
+	single: 'Single',
+	ep: 'EP',
+	album: 'Album',
+	live: 'Live recording',
+	demo: 'Demo'
+};
+
+export const RELEASE_TITLE_MAX = 200;
+export const TRACK_TITLE_MAX = 200;
+
+/**
+ * Where the split bar opens: CMC's suggested share of a sale, in basis points.
+ *
+ * A *default*, not a rake — the buyer drags it, and the floor is zero. At zero
+ * `application_fee_amount` is exactly Stripe's fee, so the collective nets
+ * nothing and loses nothing; that is what makes refusing it safe to offer.
+ * Staff can move this default from site config without a deploy.
+ */
+export const AUDIO_PLATFORM_FEE_BPS = 1000;
+
+/**
+ * A release is free, or it costs at least this. Nothing in between: Stripe's
+ * own charge minimum is 50¢, and its 30¢ fixed fee is a third of a $1 sale, so
+ * the prices this excludes are the ones where almost nothing reaches the band.
+ */
+export const AUDIO_MIN_PRICE_CENTS = 200;
+
+/** A single upload. Comfortable for MP3 and FLAC, tight for a WAV master. */
+export const AUDIO_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+/**
+ * The station skips anything outside this window. The ceiling is the load-bearing
+ * one: a 40-minute live set would otherwise hold the stream for 40 minutes, and
+ * the rotation reads as broken rather than long.
+ */
+export const RADIO_MIN_TRACK_MS = 30 * 1000;
+export const RADIO_MAX_TRACK_MS = 15 * 60 * 1000;
 // Help audiences
 // ---------------------------------------------------------------------------
 

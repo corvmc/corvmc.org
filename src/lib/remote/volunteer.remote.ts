@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { query, form } from '$app/server';
-import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
 import { getStaffLayout } from './layout.remote';
 import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
 import { listInterestsForUser } from '$lib/server/volunteer/volunteer-interest-service';
@@ -150,8 +150,8 @@ function asStatus(raw: string | undefined): VolunteerHourStatus | undefined {
 // ---------------------------------------------------------------------------
 // Queries — Staff
 // ---------------------------------------------------------------------------
-// Staff functions guard with requireStaff() and deliberately do NOT check the
-// feature flag: flags gate the member, band and public surfaces only, so staff
+// Staff functions guard with a volunteer.* capability and deliberately do NOT
+// check the feature flag: flags gate the member, band and public surfaces only, so staff
 // can set up roles and work the queue before volunteering is switched on for
 // everyone — and keep administering it if it is switched back off (#171).
 // The member functions below do check it.
@@ -166,7 +166,7 @@ const staffLogFilters = z.object({
 });
 
 export const getStaffVolunteerLogs = query(staffLogFilters, async (f) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	const result = await listHourLogs(
 		{
 			status: asStatus(f.status),
@@ -198,7 +198,7 @@ export const getStaffVolunteerLogs = query(staffLogFilters, async (f) => {
 });
 
 export const getVolunteerStatusCounts = query(async () => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return getStatusCounts();
 });
 
@@ -236,7 +236,7 @@ async function loadVolunteerRoles() {
 }
 
 export const getVolunteerRoles = query(async () => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return loadVolunteerRoles();
 });
 
@@ -249,7 +249,7 @@ export const getVolunteerRoles = query(async () => {
  * `getRoleRequirements`, which `setRoleCertifications` already refreshes.
  */
 export const getVolunteerRoleDetail = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	const role = (await listVolunteerRoles({ includeInactive: true })).find((r) => r.id === id);
 	if (!role) error(404, 'Role not found');
 	return role;
@@ -283,7 +283,7 @@ const interestFilters = z.object({
  * uses for the member shift board.
  */
 export const getInterestedVolunteers = query(interestFilters, async (f) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 
 	const roleId = f.volunteerRoleId || undefined;
 	const result = await listInterestedMembers(
@@ -336,7 +336,7 @@ export const getShiftCandidates = query(
 		search: z.string().optional()
 	}),
 	async (f) => {
-		await requireStaff();
+		await requireCapability('volunteer.read');
 
 		const shift = await getShiftDetail(f.shiftId);
 		if (!shift) return { gated: false, rows: [] };
@@ -420,7 +420,7 @@ const volunteerListFilters = z.object({
  * a row rather than an omission.
  */
 export const getStaffVolunteers = query(volunteerListFilters, async (f) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 
 	// `listVolunteers` answers "who are our volunteers". The row also has to
 	// answer "and what, if anything, do I do about this one" — a claim of theirs
@@ -468,7 +468,7 @@ export const getStaffVolunteers = query(volunteerListFilters, async (f) => {
  * arg-keyed queue queries, which the page has to refresh itself.
  */
 export const getBlockedVolunteers = query(async () => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return listBlockedVolunteers();
 });
 
@@ -476,7 +476,7 @@ export const getBlockedVolunteers = query(async () => {
 export const approveVolunteerSignup = form(
 	z.object({ userId: z.string().min(1) }),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('volunteer.manageRoster');
 
 		try {
 			await approveMinorVolunteer(data.userId, staff.id);
@@ -501,7 +501,7 @@ const reportRange = z.object({
 });
 
 export const getVolunteerReport = query(reportRange, async (range) => {
-	await requireStaff();
+	await requireCapability('volunteer.report');
 
 	const [totals, contributed, byRole, byMonth] = await Promise.all([
 		getVolunteerTotals(range),
@@ -516,7 +516,7 @@ export const getVolunteerReport = query(reportRange, async (range) => {
 export const getVolunteerReportByMember = query(
 	reportRange.extend({ page: z.number().optional() }),
 	async (r) => {
-		await requireStaff();
+		await requireCapability('volunteer.report');
 		return getHoursByMember({ from: r.from, to: r.to }, { page: r.page ?? 1, pageSize: 50 });
 	}
 );
@@ -832,7 +832,7 @@ export const approveVolunteerHours = form(
 		notes: z.string().max(VOLUNTEER_REVIEW_NOTES_MAX).optional()
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('volunteer.reviewHours');
 
 		try {
 			await approveHourLog(data.id, staff.id, data.notes);
@@ -860,7 +860,7 @@ export const approveVolunteerHours = form(
 export const logHoursForMember = form(
 	hoursFormSchema.extend({ userId: z.string().min(1, 'Pick a member') }),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('volunteer.reviewHours');
 
 		try {
 			await submitHours(
@@ -894,7 +894,7 @@ export const rejectVolunteerHours = form(
 			.max(VOLUNTEER_REVIEW_NOTES_MAX, `Keep this under ${VOLUNTEER_REVIEW_NOTES_MAX} characters`)
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('volunteer.reviewHours');
 
 		try {
 			await rejectHourLog(data.id, staff.id, data.notes);
@@ -970,7 +970,7 @@ function rateToCents(input: string | undefined): number | null {
 }
 
 export const createVolunteerRole = form(roleFormSchema, async (data) => {
-	await requireStaff();
+	await requireCapability('volunteer.manageRoles');
 
 	try {
 		await createRoleService({
@@ -998,7 +998,7 @@ export const createVolunteerRole = form(roleFormSchema, async (data) => {
 export const updateVolunteerRole = form(
 	roleFormSchema.extend({ id: z.string().min(1) }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('volunteer.manageRoles');
 
 		try {
 			await updateRoleService(data.id, {
@@ -1024,7 +1024,7 @@ export const updateVolunteerRole = form(
 );
 
 export const archiveVolunteerRole = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('volunteer.manageRoles');
 
 	try {
 		await archiveRoleService(data.id);
@@ -1037,7 +1037,7 @@ export const archiveVolunteerRole = form(z.object({ id: z.string().min(1) }), as
 });
 
 export const restoreVolunteerRole = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('volunteer.manageRoles');
 
 	try {
 		await restoreRoleService(data.id);
@@ -1050,7 +1050,7 @@ export const restoreVolunteerRole = form(z.object({ id: z.string().min(1) }), as
 });
 
 export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('volunteer.manageRoles');
 
 	try {
 		await deleteRoleService(data.id);
@@ -1127,18 +1127,18 @@ async function refreshRoleViews(roleId?: string) {
 
 /** Staff view of the catalog — includes archived entries. */
 export const getCertifications = query(async () => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return listCertifications({ includeInactive: true });
 });
 
 /** Live catalog entries, for the grant form and the role requirements picker. */
 export const getActiveCertifications = query(async () => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return listCertifications();
 });
 
 export const getMemberCertifications = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return listCertificationsForUser(userId);
 });
 
@@ -1154,7 +1154,7 @@ const clearanceFilters = z.object({
 });
 
 export const getClearances = query(clearanceFilters, async (f) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return listClearances({
 		certificationId: f.certificationId || undefined,
 		state: f.state
@@ -1162,7 +1162,7 @@ export const getClearances = query(clearanceFilters, async (f) => {
 });
 
 export const getRoleRequirements = query(z.string(), async (roleId) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return getRequirementsForRole(roleId);
 });
 
@@ -1190,7 +1190,7 @@ function parseValidityMonths(raw: string | undefined): number | null {
 }
 
 export const createCertification = form(certificationFormSchema, async (data) => {
-	await requireStaff();
+	await requireCapability('volunteer.manageCertifications');
 
 	try {
 		await createCertificationService({
@@ -1212,7 +1212,7 @@ export const createCertification = form(certificationFormSchema, async (data) =>
 export const updateCertification = form(
 	certificationFormSchema.extend({ id: z.string().min(1) }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('volunteer.manageCertifications');
 
 		try {
 			await updateCertificationService(data.id, {
@@ -1233,7 +1233,7 @@ export const updateCertification = form(
 );
 
 export const archiveCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('volunteer.manageCertifications');
 	try {
 		await archiveCertificationService(data.id);
 	} catch (err) {
@@ -1244,7 +1244,7 @@ export const archiveCertification = form(z.object({ id: z.string().min(1) }), as
 });
 
 export const restoreCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('volunteer.manageCertifications');
 	try {
 		await restoreCertificationService(data.id);
 	} catch (err) {
@@ -1255,7 +1255,7 @@ export const restoreCertification = form(z.object({ id: z.string().min(1) }), as
 });
 
 export const deleteCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('volunteer.manageCertifications');
 	try {
 		await deleteCertificationService(data.id);
 	} catch (err) {
@@ -1272,7 +1272,7 @@ export const setRoleCertifications = form(
 		certificationIds: z.array(z.string().min(1)).max(20).default([])
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('volunteer.manageCertifications');
 		try {
 			await setRoleRequirements(data.roleId, data.certificationIds);
 		} catch (err) {
@@ -1296,7 +1296,7 @@ export const grantCertification = form(
 		notes: z.string().max(CERT_NOTES_MAX).optional()
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('volunteer.manageCertifications');
 
 		try {
 			await grantCertificationService({
@@ -1326,7 +1326,7 @@ export const revokeCertification = form(
 			.max(CERT_REVOKED_REASON_MAX)
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('volunteer.manageCertifications');
 
 		try {
 			await revokeCertificationService(data.id, staff.id, data.reason);
@@ -1342,7 +1342,7 @@ export const revokeCertification = form(
 export const deleteCertificationGrant = form(
 	z.object({ id: z.string().min(1), userId: z.string().min(1) }),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('volunteer.manageCertifications');
 
 		try {
 			await deleteCertificationRecord(data.id, staff.id);
@@ -1404,7 +1404,7 @@ const shiftFilters = z.object({
  * is how the two pages drifted apart in the first place.
  */
 export const getShifts = query(shiftFilters, async (f) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return listShifts({
 		volunteerRoleId: f.volunteerRoleId || undefined,
 		eventId: f.eventId || undefined,
@@ -1415,7 +1415,7 @@ export const getShifts = query(shiftFilters, async (f) => {
 });
 
 export const getShift = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	const shift = await getShiftDetail(id);
 	if (!shift) throw error(404, 'Shift not found');
 	const [claimants, cancelledByName] = await Promise.all([
@@ -1473,7 +1473,7 @@ const shiftFormSchema = z.object({
 });
 
 export const createShift = form(shiftFormSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('volunteer.manageShifts');
 
 	try {
 		await createShiftService({
@@ -1495,7 +1495,7 @@ export const createShift = form(shiftFormSchema, async (data) => {
 export const updateShift = form(
 	shiftFormSchema.partial().extend({ id: z.string().min(1) }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('volunteer.manageShifts');
 
 		try {
 			await updateShiftService(data.id, {
@@ -1518,7 +1518,7 @@ export const updateShift = form(
 export const duplicateShift = form(
 	z.object({ id: z.string().min(1), offsetDays: z.string().min(1) }),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('volunteer.manageShifts');
 
 		try {
 			await duplicateShiftService(data.id, parseInt(data.offsetDays, 10), staff.id);
@@ -1531,7 +1531,7 @@ export const duplicateShift = form(
 );
 
 export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('volunteer.manageShifts');
 
 	try {
 		await cancelShiftService(data.id, staff.id);
@@ -1551,7 +1551,7 @@ export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data
  * it; the count in the banner is what it clears.
  */
 export const notifyCancelledShift = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('volunteer.manageShifts');
 
 	const notified = await notifySignupsOfCancellationService(data.shiftId);
 
@@ -1563,7 +1563,7 @@ export const notifyCancelledShift = form(z.object({ shiftId: z.string().min(1) }
 export const markSignupNotified = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('volunteer.manageRoster');
 
 		await markSignupNotifiedService(data.signupId);
 
@@ -1622,7 +1622,7 @@ export const assignShiftToMember = form(
 		userId: z.string().min(1, 'Pick a member')
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('volunteer.manageRoster');
 
 		try {
 			await claimShiftService(data.shiftId, data.userId, { assignedByStaff: true });
@@ -1647,7 +1647,7 @@ export const assignShiftToMember = form(
 export const releaseSignup = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('volunteer.manageRoster');
 
 		try {
 			await releaseSignupService(data.signupId);
@@ -1663,7 +1663,7 @@ export const releaseSignup = form(
 export const confirmSignup = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('volunteer.manageRoster');
 
 		try {
 			await confirmSignupService(data.signupId);
@@ -1690,7 +1690,7 @@ export const confirmSignup = form(
 export const confirmSignups = form(
 	z.object({ shiftId: z.string().min(1), signupIds: z.array(z.string().min(1)).min(1) }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('volunteer.manageRoster');
 
 		let confirmed = 0;
 		for (const signupId of data.signupIds) {
@@ -1717,7 +1717,7 @@ export const confirmSignups = form(
  * Same service loop, one less thing for the list to know.
  */
 export const confirmShiftClaims = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('volunteer.manageRoster');
 
 	const claimants = await listClaimants(data.shiftId);
 	const outstanding = claimants.filter((c) => c.status === 'claimed');
@@ -1740,7 +1740,7 @@ export const confirmShiftClaims = form(z.object({ shiftId: z.string().min(1) }),
 export const markSignupNoShow = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('volunteer.manageRoster');
 
 		try {
 			await markNoShowService(data.signupId);
@@ -1804,13 +1804,13 @@ export const submitShiftFeedback = form(
 
 /** Staff: responses on one shift's detail page. */
 export const getShiftFeedback = query(z.string(), async (shiftId) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return listFeedbackForShift(shiftId);
 });
 
 /** Staff: the per-role rollup — the version that changes how shifts are briefed. */
 export const getFeedbackByRole = query(async () => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return summarizeFeedbackByRole();
 });
 
@@ -1822,7 +1822,7 @@ export const getFeedbackByRole = query(async () => {
 // ---------------------------------------------------------------------------
 
 export const getUserVolunteerProfile = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	const [profile, summary, interests] = await Promise.all([
 		getVolunteerProfile(userId),
 		getUserHourSummary(userId),
@@ -1832,12 +1832,12 @@ export const getUserVolunteerProfile = query(z.string(), async (userId) => {
 });
 
 export const getUserShifts = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return listSignupsForUser(userId, { limit: 20 });
 });
 
 export const getUserHourLogs = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 	return listUserHourLogs(userId);
 });
 
@@ -1977,7 +1977,7 @@ export const getStaffShiftPage = query(z.string(), async (id) => {
  * this screen that is neither a role nor a clearance but a person.
  */
 export const getStaffVolunteerSetupPage = query(async () => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 
 	const [roles, certifications, lapsing] = await Promise.all([
 		loadVolunteerRoles(),
@@ -2069,7 +2069,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * has become the table it was meant to summarise.
  */
 export const getVolunteerWorklist = query(async () => {
-	await requireStaff();
+	await requireCapability('volunteer.read');
 
 	const now = new Date();
 	const horizon = new Date(now.getTime() + WORKLIST_HORIZON_DAYS * DAY_MS);

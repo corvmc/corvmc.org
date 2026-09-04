@@ -111,6 +111,11 @@ export const FIXTURES: Fixture[] = [
 			feesCovered: false,
 			fees: '$0.00',
 			total: '$15.00',
+			// The buyer left the split bar where it opened: 30% of what is
+			// divisible after the card fee, the acts take the rest.
+			splitShown: true,
+			toActs: '$9.98',
+			toCollective: '$4.28',
 			ticketsUrl: 'https://corvmc.org/events/evt-1/tickets/success?purchase_id=7f3a9c21'
 		}
 	},
@@ -140,6 +145,12 @@ export const FIXTURES: Fixture[] = [
 			feesCovered: true,
 			fees: '$2.55',
 			total: '$77.55',
+			// And dragged the bar all the way to the acts — the refusal the model
+			// exists to allow, which the receipt has to state plainly rather than
+			// hide because it is zero.
+			splitShown: true,
+			toActs: '$75.00',
+			toCollective: '$0.00',
 			ticketsUrl: 'https://corvmc.org/events/evt-2/tickets/success?purchase_id=b82d5e60'
 		}
 	},

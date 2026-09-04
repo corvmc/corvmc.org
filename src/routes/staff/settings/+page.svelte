@@ -21,6 +21,8 @@
 	} from '$lib/remote/settings.remote';
 	import { updateInboxChannelConfig } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
+	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
+	import { inboxChannelMeta } from './inbox-channel-meta';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -42,12 +44,6 @@
 		IconCircleCheck,
 		IconCircleX,
 		IconCopy,
-		IconMail,
-		IconMessageCircle,
-		IconWorld,
-		IconMessages,
-		IconBrandInstagram,
-		IconBrandFacebook,
 		IconToggleRight,
 		IconToggleLeft
 	} from '@tabler/icons-svelte';
@@ -114,52 +110,18 @@
 	let syncResult = $state<SubscriptionSyncSummary | null>(null);
 	let statsResult = $state<CommunityStats | null>(null);
 
+	// `bandPremium` left this tab when it launched — the guards are gone rather
+	// than switched on, so there is nothing to toggle. Band music and CMC Radio
+	// arrived with their own flags and are the reason the tab is still here.
 	const featureMeta: Record<string, { label: string; description: string }> = {
-		bandPremium: {
-			label: 'Band Premium',
-			description: 'Premium tier with page editor, EPK, and public band sites'
-		}
-	};
-
-	const channelMeta: Record<
-		string,
-		{ label: string; icon: typeof IconMail; description: string; envHint: string }
-	> = {
-		email: {
-			label: 'Email',
-			icon: IconMail,
-			description: 'Receive and reply to emails via Postmark',
-			envHint: 'POSTMARK_SERVER_TOKEN, POSTMARK_INBOUND_TOKEN'
+		bandAudio: {
+			label: 'Band music',
+			description: 'Bands can upload releases and sell them. Uploading is what fills CMC Radio.'
 		},
-		sms: {
-			label: 'SMS',
-			icon: IconMessageCircle,
-			description: 'Send and receive text messages via Twilio',
-			envHint: 'TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER'
-		},
-		web: {
-			label: 'Contact Form',
-			icon: IconWorld,
-			description: 'Receive messages from the public contact form',
-			envHint: 'Always enabled'
-		},
-		portal: {
-			label: 'Member Portal',
-			icon: IconMessages,
-			description: 'Members message staff from their member portal',
-			envHint: 'Always enabled'
-		},
-		instagram: {
-			label: 'Instagram DMs',
-			icon: IconBrandInstagram,
-			description: 'Receive and reply to Instagram direct messages',
-			envHint: 'META_APP_SECRET, META_VERIFY_TOKEN, META_PAGE_ACCESS_TOKEN'
-		},
-		messenger: {
-			label: 'Messenger',
-			icon: IconBrandFacebook,
-			description: 'Receive and reply to Facebook Messenger messages',
-			envHint: 'META_APP_SECRET, META_VERIFY_TOKEN, META_PAGE_ACCESS_TOKEN'
+		cmcRadio: {
+			label: 'CMC Radio',
+			description:
+				'The site-wide station and its player. Leave this off until enough bands have opted in for the rotation to sound like one.'
 		}
 	};
 
@@ -864,6 +826,17 @@
 				always shows every feature, so you can set one up here before switching it on for everyone.
 			</p>
 
+			{#if Object.keys(featureMeta).length === 0}
+				<Card>
+					<CardBody>
+						<p class="text-muted">
+							Nothing to switch right now. Band Premium was the last feature behind a toggle and it
+							has launched for everyone.
+						</p>
+					</CardBody>
+				</Card>
+			{/if}
+
 			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
 				{@const enabled = featureFlags[flag as keyof typeof featureFlags]}
 				{@const toggleForm = updateFeatureFlag.for(flag)}
@@ -908,9 +881,10 @@
 			</p>
 
 			{#each channelConfigs as cfg (cfg.channel)}
-				{@const meta = channelMeta[cfg.channel]}
+				{@const meta = inboxChannelMeta[cfg.channel]}
+				{@const label = channelLabel(cfg.channel)}
 				{@const isAlwaysOn = isAlwaysEnabledChannel(cfg.channel)}
-				{@const ChannelIcon = meta.icon}
+				{@const ChannelIcon = channelIcon(cfg.channel)}
 				{@const toggleForm = updateInboxChannelConfig.for(cfg.channel)}
 				<Card>
 					<CardBody>
@@ -918,7 +892,7 @@
 							<div class="flex items-center gap-3">
 								<ChannelIcon size={20} class="opacity-60" />
 								<div>
-									<h3 class="font-semibold">{meta.label}</h3>
+									<h3 class="font-semibold">{label}</h3>
 									<p class="text-subtle">{meta.description}</p>
 								</div>
 							</div>
@@ -928,7 +902,7 @@
 								<Form
 									remote={toggleForm}
 									onsuccess={() =>
-										toast.success(`${meta.label} ${cfg.enabled ? 'disabled' : 'enabled'}`)}
+										toast.success(`${label} ${cfg.enabled ? 'disabled' : 'enabled'}`)}
 								>
 									<input {...toggleForm.fields.channel.as('hidden', cfg.channel)} />
 									<input

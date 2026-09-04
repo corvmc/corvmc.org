@@ -3,7 +3,7 @@
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { submitBandContactForm } from '$lib/remote/band-site.remote';
+	import { submitBandContactForm } from '$lib/remote/band-contact.remote';
 	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
 
 	let { slug, bandName }: { slug: string; bandName: string } = $props();

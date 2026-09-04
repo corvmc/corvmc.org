@@ -81,10 +81,20 @@
 
 	const evt = $derived(data.event);
 
-	// Gifts are recorded once per purchase, so a plain sum across the ledger is
-	// the show's contribution total — no de-duplication needed.
-	const contributionsTotal = $derived(
-		data.tickets.reduce((sum, t) => sum + t.contributionCents, 0)
+	// Summed on the server, over live tickets only. This page used to add up the
+	// ledger it renders — which is `getEventTickets` with no status filter, so a
+	// cancelled purchase's money still counted as the show's.
+	const money = $derived(data.ticketMoney);
+	// What Stripe took: everything collected, less what the buyers directed. Not
+	// stored, because it is exactly this subtraction.
+	const cardCents = $derived(
+		money
+			? money.ticketsCents +
+					money.contributionsCents +
+					money.feeCoveredCents -
+					money.actsCents -
+					money.collectiveCents
+			: 0
 	);
 	const liveVolunteerRoles = $derived(volunteerRoles.filter((r) => r.isActive));
 
@@ -144,6 +154,7 @@
 	let editReservationEndTime = $state('');
 	let editTicketingEnabled = $state(false);
 	let editTicketPriceDollars = $state('');
+	let editTicketFloorDollars = $state('');
 	let editTicketQuantity = $state('');
 
 	// Rebook state
@@ -164,6 +175,12 @@
 	// toggle: it's the price attendees pay wherever they buy.
 	const editTicketPriceCents = $derived(
 		editTicketPriceDollars ? String(Math.round(parseFloat(editTicketPriceDollars) * 100)) : ''
+	);
+	// A blank floor posts as an empty string, which the remote reads as zero —
+	// "no minimum" rather than "leave it alone". That is the right reading: an
+	// emptied minimum is a scale opened all the way to free.
+	const editTicketFloorCents = $derived(
+		editTicketFloorDollars ? String(Math.round(parseFloat(editTicketFloorDollars) * 100)) : ''
 	);
 
 	function startEditing() {
@@ -187,6 +204,9 @@
 		// one for the door or an outside seller.
 		editTicketingEnabled = evt.ticketingEnabled;
 		editTicketPriceDollars = evt.ticketPrice ? formatDollars(evt.ticketPrice) : '';
+		editTicketFloorDollars = evt.ticketPriceFloorCents
+			? formatDollars(evt.ticketPriceFloorCents)
+			: '';
 		editTicketQuantity = evt.ticketQuantity ? String(evt.ticketQuantity) : '';
 
 		// Pre-fill reservation times from linked reservation
@@ -388,6 +408,7 @@
 						<!-- Always submitted: the price is the attendee's price whoever sells
 						     the ticket, so it has to survive the ticketing toggle being off. -->
 						<input {...fields.ticketPrice.as('hidden', editTicketPriceCents)} />
+						<input {...fields.ticketPriceFloorCents.as('hidden', editTicketFloorCents)} />
 						{#if (rebookNeeded && rebookConfirmed) || reserveSpace}
 							<input {...fields.rebookReservation.as('hidden', true)} />
 						{/if}
@@ -503,7 +524,7 @@
 							     the link above, or the door — so it lives outside the ticketing
 							     toggle and applies to band gigs too. Only capacity depends on us
 							     doing the selling. -->
-							<FormField label="Ticket price ($)" id="editTicketPrice" issues={[]}>
+							<FormField label="Suggested price ($)" id="editTicketPrice" issues={[]}>
 								<input
 									id="editTicketPrice"
 									type="number"
@@ -514,7 +535,25 @@
 									class="input w-full"
 									required={editTicketingEnabled}
 								/>
-								<span class="label-text-alt mt-1 opacity-60"> Leave blank for a free event. </span>
+								<span class="label-text-alt mt-1 opacity-60">
+									Where the sliding scale opens. Leave blank for a free event.
+								</span>
+							</FormField>
+
+							<FormField label="Minimum price ($)" id="editTicketFloor" issues={[]}>
+								<input
+									id="editTicketFloor"
+									type="number"
+									bind:value={editTicketFloorDollars}
+									min="0"
+									step="0.01"
+									placeholder="0.00"
+									class="input w-full"
+								/>
+								<span class="label-text-alt mt-1 opacity-60">
+									The least someone can pay. $0 lets anyone come for free — no card, no questions.
+									Leave it at $0 unless an act needs a floor.
+								</span>
 							</FormField>
 
 							<div class="form-control">
@@ -723,13 +762,46 @@
 						<p class="text-lg font-medium">{data.ticketStats.remaining ?? '∞'}</p>
 					</div>
 				{/if}
-				{#if contributionsTotal > 0}
+				{#if money && money.contributionsCents > 0}
 					<div>
 						<p class="text-muted">Contributions</p>
-						<p class="text-lg font-medium">{formatCents(contributionsTotal)}</p>
+						<p class="text-lg font-medium">{formatCents(money.contributionsCents)}</p>
+					</div>
+				{/if}
+				{#if money && money.freeCount > 0}
+					<div>
+						<!-- A $0-floor show can be "sold out" on tickets nobody paid for.
+						     Staff should be able to see that at a glance. -->
+						<p class="text-muted">Free / paid</p>
+						<p class="text-lg font-medium">{money.freeCount} / {money.paidCount}</p>
 					</div>
 				{/if}
 			</div>
+
+			{#if money && (money.actsCents > 0 || money.collectiveCents > 0)}
+				<div class="mt-4 border-t border-base-200 pt-4">
+					<p class="text-muted">Where buyers sent it</p>
+					<div class="mt-2 flex gap-6">
+						<div>
+							<p class="text-muted">To the acts</p>
+							<p class="text-lg font-medium">{formatCents(money.actsCents)}</p>
+						</div>
+						<div>
+							<p class="text-muted">To the Collective</p>
+							<p class="text-lg font-medium">{formatCents(money.collectiveCents)}</p>
+						</div>
+						<div>
+							<p class="text-muted">Card processing</p>
+							<p class="text-lg font-medium">{formatCents(cardCents)}</p>
+						</div>
+					</div>
+					<!-- The only refund mechanism is a human in the Stripe dashboard,
+					     which nothing here can see. -->
+					<p class="mt-2 text-muted text-sm">
+						As sold. Refunds are handled in Stripe and are not reflected here.
+					</p>
+				</div>
+			{/if}
 
 			{#if evt.status === 'published' && evt.ticketingEnabled}
 				<div class="mt-3">
@@ -774,6 +846,15 @@
 								{#if t.contributionCents > 0}
 									<div class="text-sm text-success">
 										+{formatCents(t.contributionCents)} contributed
+									</div>
+								{/if}
+								{#if t.actsCents > 0 || t.collectiveCents > 0}
+									<!-- Order-level, so this is on the purchase's first row only —
+									     not a per-ticket fact, and the label has to say so. -->
+									<div class="text-muted text-sm">
+										order → acts {formatCents(t.actsCents)} · collective {formatCents(
+											t.collectiveCents
+										)}
 									</div>
 								{/if}
 								{#if t.discountWaived}

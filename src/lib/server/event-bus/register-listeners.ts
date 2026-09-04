@@ -41,6 +41,7 @@ async function registerCheckoutListeners(): Promise<void> {
 	const { handleReservationCheckout } = await import('$lib/server/reservation/checkout-listener');
 	const { handleTicketCheckout } = await import('$lib/server/ticket/checkout-listener');
 	const { handleBandPremiumCheckout } = await import('$lib/server/band/band-checkout-listener');
+	const { handleAudioCheckout } = await import('$lib/server/audio/checkout-listener');
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleReservationCheckout(event.stripeSession);
@@ -52,6 +53,10 @@ async function registerCheckoutListeners(): Promise<void> {
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleBandPremiumCheckout(event.stripeSession);
+	});
+
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
+		await handleAudioCheckout(event.stripeSession);
 	});
 }
 
@@ -78,7 +83,7 @@ async function registerNotificationListeners(): Promise<void> {
 
 async function registerInboxListeners(): Promise<void> {
 	const { dispatch } = await import('$lib/server/notification/dispatcher');
-	const { listStaffUsers } = await import('$lib/server/authorization');
+	const { listUsersWithCapability } = await import('$lib/server/authorization');
 
 	domainEvents.on('inbox.message_received', async ({ data: event }) => {
 		// Member↔member conversations are not staff's business, and this event
@@ -87,7 +92,8 @@ async function registerInboxListeners(): Promise<void> {
 		// staff member's notification bell.
 		if (event.channel === 'direct') return;
 
-		const staffUsers = await listStaffUsers();
+		// Whoever can read the inbox — the people for whom a new message is work.
+		const staffUsers = await listUsersWithCapability('inbox.read');
 		const contactLabel = event.contactName ?? 'Someone';
 
 		for (const staff of staffUsers) {

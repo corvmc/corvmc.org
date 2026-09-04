@@ -21,7 +21,7 @@ const mockStaffUsers = vi.fn(async () => [
 	{ id: 'staff-2', name: 'Bo', email: 'bo@test.com' }
 ]);
 vi.mock('$lib/server/authorization', () => ({
-	listStaffUsers: () => mockStaffUsers()
+	listUsersWithCapability: () => mockStaffUsers()
 }));
 
 // Returns null when INBOX_REPLY_ADDRESS is unconfigured, which is a supported

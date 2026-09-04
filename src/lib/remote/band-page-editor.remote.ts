@@ -1,22 +1,21 @@
 import { z } from 'zod';
+import { jsonArrayField } from '$lib/utils/zod-json';
 import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
-import { requireFeature } from '$lib/server/feature-flags';
 import { requireGroupRole } from '$lib/server/group/group-context';
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
 import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
 import { db } from '$lib/server/db';
 import { blockSchema, type Block } from '$lib/server/db/schema/band-page';
 import { bandSite } from '$lib/server/db/schema/band-site';
+import { reconcileBlocks } from '$lib/utils/band-site-preset';
 import { eq } from 'drizzle-orm';
-import { jsonArrayField, jsonObjectField } from '$lib/utils/zod-json';
 
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
 
 export const getBandPageEditor = query(z.string(), async (slug) => {
-	await requireFeature('bandPremium');
 	// `requireUser()` alone served any premium band's theme, custom CSS, blocks
 	// and — the part that actually matters — its `epk`, the band's private press
 	// kit, to any signed-in account that knew a slug. The blocks are semi-public
@@ -31,12 +30,16 @@ export const getBandPageEditor = query(z.string(), async (slug) => {
 	// exists, so there is nothing to create here.
 	const [config] = await db.select().from(bandSite).where(eq(bandSite.groupId, band.id)).limit(1);
 
+	// The editor opens on the full catalogue rather than an empty canvas. The
+	// preset is projected here rather than written at upgrade time — see
+	// `$lib/utils/band-site-preset` for why — so the column only gains it when
+	// the band saves.
 	return {
 		config: config
 			? {
 					theme: config.theme,
 					customCss: config.customCss,
-					blocks: config.blocks as Block[],
+					blocks: reconcileBlocks(config.blocks as Block[]),
 					epk: config.epk
 				}
 			: null
@@ -101,32 +104,6 @@ export const saveBandPageConfig = form(
 		if (blocks !== undefined) updates.blocks = blocks;
 
 		await db.update(bandSite).set(updates).where(eq(bandSite.groupId, band.id));
-
-		return { success: true };
-	}
-);
-
-export const saveBandEpk = form(
-	z.object({
-		slug: z.string().min(1),
-		// JSON-encoded BandEpk. Decoded in the schema so malformed input is a field
-		// issue on `epk` rather than a whole-page 400.
-		epk: jsonObjectField('Invalid EPK data')
-	}),
-	async (data) => {
-		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
-
-		if (band.tier !== 'premium') {
-			throw error(403, 'Premium subscription required');
-		}
-
-		const epk = data.epk;
-
-		// Always an update — see the note on the block save above.
-		await db
-			.update(bandSite)
-			.set({ epk, updatedAt: new Date() })
-			.where(eq(bandSite.groupId, band.id));
 
 		return { success: true };
 	}

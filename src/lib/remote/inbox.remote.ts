@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
-import { requireStaff, requireUser, listStaffUsers } from '$lib/server/authorization';
+import { requireCapability, requireUser, listUsersWithCapability } from '$lib/server/authorization';
+import { getUserContact } from '$lib/server/user/user-service';
 import { dispatch } from '$lib/server/notification/dispatcher';
 import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
 import { getStaffLayout, getMemberLayout } from '$lib/remote/layout.remote';
@@ -47,7 +48,7 @@ import {
 } from '$lib/server/inbox/portal-service';
 import { submitContactFormSchema } from '$lib/server/db/schema/inbox';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE, inboxChannels, inboxViews } from '$lib/config';
+import { DEFAULT_TIMEZONE, inboxChannels, inboxViews, staffInboxChannels } from '$lib/config';
 import type { InboxView } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -159,7 +160,7 @@ function toServiceFilters(filters: ThreadFilters, staffId: string): ListThreadsF
 }
 
 export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.read');
 	return listThreads(toServiceFilters(filters, staff.id), {
 		page: filters.page ?? 1,
 		pageSize: 25
@@ -174,30 +175,39 @@ export const getInboxThreads = query(threadFiltersSchema, async (filters) => {
  * list is — see `custom/no-concurrent-remote-queries`.
  */
 export const getInboxFilterCounts = query(threadFiltersSchema, async (filters) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.read');
 	return countThreadFacets(toServiceFilters(filters, staff.id));
 });
 
 export const getInboxThreadCounts = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	return countThreadsByStatus();
 });
 
 export const getInboxThread = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	const thread = await getThread(id);
 	if (!thread) throw error(404, 'Thread not found');
 	return thread;
 });
 
 export const getInboxUnreadCount = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	return getUnresolvedCount();
 });
 
+/**
+ * Who a thread can be handed to.
+ *
+ * `inbox.reply`, not "is staff": you may only assign a conversation to someone
+ * who is able to answer it.
+ */
 export const getAssignableStaff = query(z.void(), async () => {
-	await requireStaff();
-	return listStaffUsers();
+	// Two different capabilities, and deliberately so: reading the assignable
+	// list is part of working the inbox, but the list itself is whoever can
+	// actually answer a thread.
+	await requireCapability('inbox.read');
+	return listUsersWithCapability('inbox.reply');
 });
 
 // ---------------------------------------------------------------------------
@@ -220,7 +230,7 @@ const replySchema = z.object({
 });
 
 export const replyToThread = form(replySchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.reply');
 	const thread = await getThread(data.threadId);
 	if (!thread) throw error(404, 'Thread not found');
 
@@ -261,7 +271,7 @@ const noteSchema = z.object({
 });
 
 export const addThreadNote = form(noteSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.reply');
 	const thread = await getThread(data.threadId);
 	if (!thread) throw error(404, 'Thread not found');
 
@@ -288,7 +298,7 @@ export const addThreadNote = form(noteSchema, async (data) => {
 // this is after reading it.
 
 export const getInboxThreadContext = query(z.string().min(1), async (id) => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	const context = await getThreadContext(id);
 	if (!context) throw error(404, 'Thread not found');
 	return context;
@@ -300,13 +310,13 @@ const tagSchema = z.object({
 });
 
 export const addInboxThreadTag = command(tagSchema, async ({ threadId, tag }) => {
-	await requireStaff();
+	await requireCapability('inbox.reply');
 	await addThreadTag(threadId, tag);
 	void getInboxThreadContext(threadId).refresh();
 });
 
 export const removeInboxThreadTag = command(tagSchema, async ({ threadId, tag }) => {
-	await requireStaff();
+	await requireCapability('inbox.reply');
 	await removeThreadTag(threadId, tag);
 	void getInboxThreadContext(threadId).refresh();
 });
@@ -327,7 +337,11 @@ const assignSchema = z.object({
  * up assigned to someone who never found out.
  */
 async function notifyAssignee(threadId: string, userId: string) {
-	const assignee = (await listStaffUsers()).find((u) => u.id === userId);
+	// A direct read, not a scan of the assignable list: `assignThread` has
+	// already validated the assignee, so this is a lookup rather than a second
+	// authorization rule, and walking a list to fetch one row was the wrong
+	// shape regardless.
+	const assignee = await getUserContact(userId);
 	const thread = await getThread(threadId);
 	if (!assignee || !thread) return;
 
@@ -342,7 +356,7 @@ async function notifyAssignee(threadId: string, userId: string) {
 }
 
 export const assignThread = form(assignSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.assign');
 	await assignThreadSvc(data.threadId, data.userId);
 
 	// Notify the assignee, unless they assigned the thread to themselves.
@@ -378,7 +392,7 @@ const disposeSchema = z.object({
 });
 
 export const disposeThread = command(disposeSchema, async ({ threadId, action, snoozedUntil }) => {
-	await requireStaff();
+	await requireCapability('inbox.dispose');
 
 	if (action === 'wait') {
 		await setAwaitingReply(threadId, true);
@@ -414,7 +428,7 @@ export const disposeThread = command(disposeSchema, async ({ threadId, action, s
  * Silent when there is nothing to undo — pressing ⌘Z twice is not an error.
  */
 export const undoThreadDisposition = command(z.string().min(1), async (threadId) => {
-	await requireStaff();
+	await requireCapability('inbox.dispose');
 	const undone = await undoLastDisposition(threadId);
 	if (!undone) return { undone: false };
 
@@ -435,7 +449,7 @@ export const undoThreadDisposition = command(z.string().min(1), async (threadId)
  * spread over the session instead of one large one before it starts.
  */
 export const getInboxDailyScope = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	return getDailyScope();
 });
 
@@ -447,7 +461,7 @@ export const getInboxDailyScope = query(z.void(), async () => {
 // on the owner id rather than trusting the view id to belong to whoever sent it.
 
 export const getInboxSavedViews = query(z.void(), async () => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.read');
 	return listSavedViews(staff.id);
 });
 
@@ -462,14 +476,14 @@ const savedViewSchema = z.object({
 });
 
 export const saveInboxView = form(savedViewSchema, async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.read');
 	await createSavedView(staff.id, data.name, data.filters);
 	void getInboxSavedViews().refresh();
 	return { success: true };
 });
 
 export const removeInboxView = command(z.string().min(1), async (id) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('inbox.read');
 	await deleteSavedView(staff.id, id);
 	void getInboxSavedViews().refresh();
 });
@@ -483,22 +497,24 @@ export const removeInboxView = command(z.string().min(1), async (id) => {
 // the staff panel ignored flags by design — so it was retired rather than wired
 // up.
 export const getInboxChannelConfigs = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	return getAllChannelConfigs();
 });
 
 export const getInboxEnabledChannels = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('inbox.read');
 	return getEnabledChannels();
 });
 
 const channelConfigSchema = z.object({
-	channel: z.enum(inboxChannels),
+	// `staffInboxChannels`, not `inboxChannels`: `direct` has no toggle, and a
+	// request naming it should be rejected here rather than no-op in the service.
+	channel: z.enum(staffInboxChannels),
 	enabled: z.enum(['true', 'false']).transform((v) => v === 'true')
 });
 
 export const updateInboxChannelConfig = form(channelConfigSchema, async (data) => {
-	await requireStaff();
+	await requireCapability('inbox.manageChannels');
 	await updateChannelConfigSvc(data.channel, data.enabled);
 	void getInboxChannelConfigs().refresh();
 	void getInboxEnabledChannels().refresh();
@@ -606,7 +622,7 @@ export const markConversationRead = command(z.string(), async (id) => {
 export const getUserThreads = query(
 	z.object({ userId: z.string(), email: z.string() }),
 	async ({ userId, email }) => {
-		await requireStaff();
+		await requireCapability('inbox.read');
 		const [portal, open, unread, byEmail] = await Promise.all([
 			listPortalThreads(userId, { page: 1, pageSize: 10 }),
 			countOpenPortalThreads(userId),

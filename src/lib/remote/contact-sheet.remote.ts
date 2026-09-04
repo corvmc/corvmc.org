@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { query, form } from '$app/server';
 import { mapDomainError } from '$lib/server/errors';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import {
 	getContactSheetDisclosure,
@@ -26,7 +26,7 @@ import {
  * something these can assume.
  *
  * The two staff exports at the bottom are the other half: issuing and revoking,
- * both `requireStaff()`.
+ * both `directory.shareContactSheet`.
  */
 
 const tokenField = z.string().min(1);
@@ -100,7 +100,7 @@ export const sendContactSheetLink = form(
 		email: z.string().email('Where should the link go?')
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('directory.shareContactSheet');
 		const { token } = await issueContactSheetLink(data.entryId, data.email, staff.id);
 		// Returned rather than emailed here: the send belongs to the notification
 		// layer, and staff need the URL anyway when an act asks for it again.
@@ -111,7 +111,7 @@ export const sendContactSheetLink = form(
 export const revokeContactSheetLinkForm = form(
 	z.object({ entryId: z.string().min(1) }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('directory.shareContactSheet');
 		await revokeContactSheetLink(data.entryId);
 		return { success: true };
 	}
