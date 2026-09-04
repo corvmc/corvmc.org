@@ -7,9 +7,9 @@ import {
 	getMemberSubscription,
 	mapDbSubscription,
 	patchMemberSubscription,
-	createBillingPortalUrl,
 	updateQuantity,
-	resume
+	resume,
+	cancel
 } from '$lib/server/finance/subscription-service';
 import { getAllBalances, getUsageSinceLastAllocation } from '$lib/server/finance/credit-service';
 import { getCommunityStats } from '$lib/server/finance/community-stats';
@@ -20,45 +20,22 @@ import { mapDomainError } from '$lib/server/errors';
 import { captureException } from '$lib/server/sentry';
 import { DOLLARS_PER_UNIT } from '$lib/config';
 
-/**
- * The billing portal link, or null if Stripe cannot produce one.
- *
- * It used to sit unguarded in the `Promise.all` below, which made a convenience
- * link load-bearing for the whole page: a Stripe outage, or a customer deleted
- * from the Stripe dashboard, took `/member/membership` down for every
- * sustaining member instead of hiding one button. The subscription, credits and
- * allocation rendered beside it are the page; this is the button.
- *
- * It is also what made sustaining members unseedable. `scripts/seed/users.ts`
- * writes a placeholder `cus_seed_…` customer, which is not falsy, so the old
- * short-circuit did not catch it and every seeded sustaining member hit a
- * customer that does not exist.
- */
-async function billingPortalUrlOrNull(
-	stripeId: string | null,
-	returnUrl: string
-): Promise<string | null> {
-	if (!stripeId) return null;
-	try {
-		return await createBillingPortalUrl(stripeId, returnUrl);
-	} catch (err) {
-		captureException(err);
-		return null;
-	}
-}
-
 export const getMemberMembership = query(async () => {
 	const user = await requireMember();
 	const { url } = getRequestEvent();
 
-	const [dbSubscription, credits, communityStats, contributionConfig, billingPortalUrl] =
-		await Promise.all([
-			getMemberSubscription(user.id),
-			getAllBalances(user.id),
-			getCommunityStats(),
-			getProductConfig('contribution'),
-			billingPortalUrlOrNull(user.stripeId, `${url.origin}/member/membership`)
-		]);
+	// No Stripe call here any more. The billing portal link used to sit in this
+	// list, which made a convenience button load-bearing for the whole page: a
+	// Stripe outage, or a customer deleted from the dashboard, took
+	// `/member/membership` down for every sustaining member. What replaced it —
+	// the card on file and the invoice history — is `getBilling()` in
+	// `billing.remote.ts`, loaded beside this one so it degrades on its own.
+	const [dbSubscription, credits, communityStats, contributionConfig] = await Promise.all([
+		getMemberSubscription(user.id),
+		getAllBalances(user.id),
+		getCommunityStats(),
+		getProductConfig('contribution')
+	]);
 
 	const subscription = mapDbSubscription(dbSubscription);
 
@@ -74,7 +51,6 @@ export const getMemberMembership = query(async () => {
 	return {
 		subscription,
 		credits,
-		billingPortalUrl,
 		communityStats,
 		allocatedThisMonth,
 		usedThisMonth,
@@ -157,6 +133,31 @@ export const updateAmount = form(amountSchema, async (data) => {
 		hoursPerReset: units * 2,
 		coveringFees: data.coverFees
 	});
+	return { success: true };
+});
+
+/**
+ * Cancel at the end of the period.
+ *
+ * `cancel()` has been exported from the subscription service all along with no
+ * remote caller — the only way a member could reach it was Stripe's billing
+ * portal, and `user-service` for account deletion. Replacing the portal means
+ * this has to exist, and it is the same ten lines as `resumeSubscription`
+ * below, in reverse.
+ *
+ * Period end, not immediately: the member has paid for the month and their
+ * free practice hours are allocated against it.
+ */
+export const cancelSubscription = form('unchecked', async () => {
+	const user = await requireMember();
+	const stripeId = requireStripeId(user);
+
+	try {
+		await cancel(stripeId);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	await patchMemberSubscription(user.id, { cancelAtPeriodEnd: true });
 	return { success: true };
 });
 

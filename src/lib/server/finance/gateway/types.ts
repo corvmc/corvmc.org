@@ -24,9 +24,6 @@ export interface PaymentGateway {
 	 */
 	readonly accounts: Pick<Stripe['accounts'], 'create' | 'retrieve' | 'createLoginLink'>;
 	readonly accountLinks: Pick<Stripe['accountLinks'], 'create'>;
-	readonly billingPortal: {
-		sessions: Pick<Stripe['billingPortal']['sessions'], 'create'>;
-	};
 	readonly checkout: {
 		sessions: Pick<Stripe['checkout']['sessions'], 'create' | 'retrieve' | 'list'>;
 	};
@@ -34,6 +31,7 @@ export interface PaymentGateway {
 	readonly customers: Pick<Stripe['customers'], 'create'>;
 	readonly invoices: Pick<Stripe['invoices'], 'list'>;
 	readonly paymentIntents: Pick<Stripe['paymentIntents'], 'retrieve'>;
+	readonly paymentMethods: Pick<Stripe['paymentMethods'], 'list' | 'detach'>;
 	readonly paymentRecords: Pick<
 		Stripe['paymentRecords'],
 		'reportPayment' | 'reportRefund' | 'retrieve'
@@ -41,6 +39,7 @@ export interface PaymentGateway {
 	readonly prices: Pick<Stripe['prices'], 'retrieve'>;
 	readonly products: Pick<Stripe['products'], 'list' | 'create' | 'update'>;
 	readonly refunds: Pick<Stripe['refunds'], 'create'>;
+	readonly setupIntents: Pick<Stripe['setupIntents'], 'create' | 'retrieve'>;
 	readonly subscriptions: Pick<Stripe['subscriptions'], 'list' | 'update' | 'retrieve'>;
 }
 

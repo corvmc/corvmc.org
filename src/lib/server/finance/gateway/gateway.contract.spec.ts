@@ -37,10 +37,7 @@ const PORT_SURFACE: ReadonlyArray<readonly [keyof PaymentGateway, readonly strin
 	['subscriptions', ['list', 'update', 'retrieve']]
 ];
 
-const NESTED_SURFACE = [
-	['billingPortal', 'sessions', ['create']],
-	['checkout', 'sessions', ['create', 'retrieve', 'list']]
-] as const;
+const NESTED_SURFACE = [['checkout', 'sessions', ['create', 'retrieve', 'list']]] as const;
 
 describe('PaymentGateway contract', () => {
 	beforeEach(() => {

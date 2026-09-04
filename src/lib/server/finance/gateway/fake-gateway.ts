@@ -8,10 +8,12 @@ import {
 	fakeId,
 	fakeInvoice,
 	fakePaymentIntent,
+	fakePaymentMethod,
 	fakePaymentRecord,
 	fakePrice,
 	fakeProduct,
 	fakeRefund,
+	fakeSetupIntent,
 	fakeSubscription,
 	nowSeconds
 } from './fixtures';
@@ -91,6 +93,8 @@ interface FakeStore {
 	prices: Map<string, Stripe.Price>;
 	coupons: Map<string, Stripe.Coupon>;
 	accounts: Map<string, Stripe.Account>;
+	paymentMethods: Map<string, Stripe.PaymentMethod>;
+	setupIntents: Map<string, Stripe.SetupIntent>;
 }
 
 const store: FakeStore = {
@@ -104,7 +108,9 @@ const store: FakeStore = {
 	products: new Map(),
 	prices: new Map(),
 	coupons: new Map(),
-	accounts: new Map()
+	accounts: new Map(),
+	paymentMethods: new Map(),
+	setupIntents: new Map()
 };
 
 /** Drop all state. For specs — an e2e run relies on state surviving between requests. */
@@ -205,25 +211,6 @@ export function createFakeGateway(): PaymentGateway {
 				} as Stripe.AccountLink)
 		},
 
-		billingPortal: {
-			sessions: {
-				create: async (params) =>
-					respond({
-						id: fakeId('bps'),
-						object: 'billing_portal.session',
-						created: nowSeconds(),
-						customer: String(params?.customer ?? ''),
-						livemode: false,
-						locale: null,
-						on_behalf_of: null,
-						configuration: 'bpc_fake',
-						flow: null,
-						return_url: params?.return_url ?? null,
-						url: `${params?.return_url ?? ''}#fake-billing-portal`
-					} as Stripe.BillingPortal.Session)
-			}
-		},
-
 		checkout: {
 			sessions: {
 				create: async (params) => {
@@ -316,6 +303,27 @@ export function createFakeGateway(): PaymentGateway {
 			}
 		},
 
+		paymentMethods: {
+			list: (params) =>
+				listOf(
+					[...store.paymentMethods.values()].filter(
+						(pm) =>
+							(!params?.customer || pm.customer === params.customer) &&
+							(!params?.type || pm.type === params.type)
+					)
+				),
+			detach: (async (id: string) => {
+				const method = store.paymentMethods.get(id);
+				if (!method) notFound('payment method', id);
+				// Stripe returns the method with `customer` cleared rather than
+				// deleting it, and a second detach of the same id is an error — so
+				// the row stays, unattached.
+				const detached = { ...method, customer: null };
+				store.paymentMethods.set(id, detached);
+				return respond(detached);
+			}) as PaymentGateway['paymentMethods']['detach']
+		},
+
 		paymentRecords: {
 			reportPayment: async (params) => {
 				const record = fakePaymentRecord({
@@ -401,6 +409,23 @@ export function createFakeGateway(): PaymentGateway {
 			}
 		},
 
+		setupIntents: {
+			create: async (params) => {
+				const intent = fakeSetupIntent({
+					customer: (params?.customer as string) ?? null,
+					usage: params?.usage ?? 'off_session',
+					metadata: (params?.metadata as Record<string, string>) ?? {}
+				});
+				store.setupIntents.set(intent.id, intent);
+				return respond(intent);
+			},
+			retrieve: (async (id?: string) => {
+				const intent = typeof id === 'string' ? store.setupIntents.get(id) : undefined;
+				if (!intent) notFound('setup intent', String(id));
+				return respond(intent);
+			}) as PaymentGateway['setupIntents']['retrieve']
+		},
+
 		subscriptions: {
 			list: (params) => {
 				const matched = [...store.subscriptions.values()].filter(
@@ -462,6 +487,48 @@ export function getFakeSession(sessionId: string): Stripe.Checkout.Session | und
  * to `handleCheckoutCompleted` — the fake deliberately does not reach into the
  * domain bus itself, so the production path stays the only path to fulfillment.
  */
+/**
+ * Attach a card to a customer the way confirming a SetupIntent would.
+ *
+ * The real flow is `stripe.confirmSetup()` in the browser against the intent's
+ * client secret, which the fake has no way to receive — so the fake's own
+ * card-number form posts here instead. The card number picks the brand and last
+ * four so a spec can assert on something it chose, and a declining test card
+ * fails the way the live one does rather than attaching anyway.
+ */
+export function completeFakeSetupIntent(
+	setupIntentId: string,
+	cardNumber: string
+): Stripe.PaymentMethod {
+	const intent = store.setupIntents.get(setupIntentId);
+	if (!intent) notFound('setup intent', setupIntentId);
+
+	const digits = cardNumber.replace(/\s+/g, '');
+	const method = fakePaymentMethod({
+		// A SetupIntent's `customer` can expand to a deleted customer; a
+		// PaymentMethod's cannot. The fake never expands, so this is always the id.
+		customer: typeof intent.customer === 'string' ? intent.customer : null,
+		card: {
+			brand: digits.startsWith('5') ? 'mastercard' : 'visa',
+			last4: digits.slice(-4),
+			exp_month: 12,
+			exp_year: new Date().getUTCFullYear() + 2
+		} as Stripe.PaymentMethod.Card
+	});
+	store.paymentMethods.set(method.id, method);
+	store.setupIntents.set(setupIntentId, {
+		...intent,
+		status: 'succeeded',
+		payment_method: method.id
+	});
+
+	return method;
+}
+
+export function getFakeSetupIntent(id: string): Stripe.SetupIntent | undefined {
+	return store.setupIntents.get(id);
+}
+
 export function completeFakeCheckout(sessionId: string): Stripe.Checkout.Session {
 	const session = store.sessions.get(sessionId);
 	if (!session) notFound('checkout session', sessionId);

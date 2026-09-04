@@ -8,7 +8,9 @@
 		SubscriptionForm,
 		ContributionCard,
 		CreditBalanceCard,
-		CancelledBanner
+		CancelledBanner,
+		PaymentMethodsCard,
+		InvoiceHistoryCard
 	} from '$lib/components/member/membership';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { pageTitle } from '$lib/config';
@@ -19,8 +21,10 @@
 		createSubscription,
 		updateAmount,
 		resumeSubscription,
+		cancelSubscription,
 		getMemberMembership
 	} from '$lib/remote/membership.remote';
+	import { getBilling } from '$lib/remote/billing.remote';
 
 	let data = $derived(await getMemberMembership());
 
@@ -28,7 +32,6 @@
 
 	const subscription = $derived(data.subscription);
 	const credits = $derived(data.credits);
-	const billingPortalUrl = $derived(data.billingPortalUrl);
 	const communityStats = $derived(data.communityStats);
 	const allocatedThisMonth = $derived(data.allocatedThisMonth);
 	const usedThisMonth = $derived(data.usedThisMonth);
@@ -81,6 +84,37 @@
 	</div>
 {/snippet}
 
+{#snippet billing()}
+	<!--
+		The card on file and the invoice history, in their own boundary.
+
+		They are the only live Stripe calls left on this page, and the button they
+		replace is the reason: the billing-portal link used to sit inside
+		`getMemberMembership`'s `Promise.all`, so a Stripe outage took the whole
+		page down for every sustaining member. Behind a boundary, an outage costs
+		these two cards and nothing else.
+
+		`pending` is passed as an attribute rather than defined as a snippet: a
+		`pending` snippet makes the boundary skip its contents server-side, which
+		would drop both cards out of the SSR'd page entirely.
+	-->
+	<svelte:boundary pending={null}>
+		{@const billingData = await getBilling()}
+		<PaymentMethodsCard
+			cards={billingData.cards}
+			available={billingData.available}
+			driver={billingData.driver}
+		/>
+		<InvoiceHistoryCard invoices={billingData.invoices} available={billingData.available} />
+
+		{#snippet failed()}
+			<Alert type="warning">
+				We couldn't load your billing details just now. Everything else on this page is up to date.
+			</Alert>
+		{/snippet}
+	</svelte:boundary>
+{/snippet}
+
 <Modal bind:open={subscribeModalOpen} title="Become a Sustaining Member">
 	<SubscriptionForm mode="create" remote={createSubscription} />
 </Modal>
@@ -97,7 +131,13 @@
 	{#if isActive && subscription}
 		<MembershipHero variant="dashboard" />
 
-		<ContributionCard {subscription} {billingPortalUrl} updateRemote={updateAmount} />
+		<ContributionCard
+			{subscription}
+			updateRemote={updateAmount}
+			cancelAction={cancelSubscription}
+		/>
+
+		{@render billing()}
 
 		<CreditBalanceCard {credits} {subscription} {allocatedThisMonth} {usedThisMonth} />
 
@@ -108,7 +148,7 @@
 
 	<!-- Cancelled-but-active view -->
 	{#if isCancelled && subscription}
-		<CancelledBanner {subscription} {billingPortalUrl} resumeAction={resumeSubscription} />
+		<CancelledBanner {subscription} resumeAction={resumeSubscription} />
 
 		<MembershipHero variant="cancelled" />
 
