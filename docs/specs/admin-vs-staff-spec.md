@@ -451,8 +451,10 @@ position count triples or per-resource sharing becomes a real feature.
    rather than dropped, because the committee spending limit wants the same mechanism and
    building one for both is the cheap version. Widening `credit.adjust` later is a one-line
    config diff.
-3. **Does `requireCapability` compose with committee scope, or sit beside it?** Still open, and
-   the one to settle before the first committee surface. Both options are gamed out below.
+3. **Does `requireCapability` compose with committee scope, or sit beside it?** **Settled:
+   beside.** Two guards, composed at the call site — option A below, which also records the
+   rejected alternative and why. The deciding argument is that the nav has to know what you
+   can do _before_ it knows which thing you are doing.
 
 ---
 
@@ -512,9 +514,23 @@ keyed by resource rather than by user.
 
 **What it buys.** One guard to reach for, and no way to pick the unqualified one by accident.
 
-### Recommendation
+### Decision: A
 
-**Option A**, with one addition the spec should commit to: the composed helper lives in
+Two guards. The deciding argument is not the call site, it is the sidebar: the staff nav has
+to decide whether to draw the Events row before any event is in hand. Under A that is still a
+real question with a real answer — _could this person ever publish an event_ — which is
+exactly what a nav row is asking. Under B every answer needs a specific resource, so the nav
+either guesses or resolves ownership for every candidate row on every page load, and a guess
+that goes the wrong way is a row that renders and then 403s. That is the failure the layout
+work (#485) existed to remove, and it is not worth reintroducing for a tidier call site.
+
+The cost of A is vigilance: a handler on a committee-owned resource that reaches for the
+unqualified guard silently grants too much. That is the same failure mode `requireStaff()`
+had, so it deserves a lint rule over the handlers that touch committee-owned resources rather
+than trust. Vigilance at a few dozen call sites is cheaper to buy back than coherence in the
+layer everything else depends on.
+
+One addition the spec commits to: the composed helper lives in
 `src/lib/server/group/` rather than in `authorization.ts`, so the dependency runs
 group → authorization and never back. That keeps `authorization.ts` free of domain imports,
 keeps `capabilitySet()` a pure function of position, and leaves the client-side capability
