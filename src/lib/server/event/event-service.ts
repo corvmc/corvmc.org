@@ -5,11 +5,11 @@ import {
 	eventBand,
 	eventGroup,
 	publicEventStatuses,
-	type EventSource,
 	type EventKind,
 	type EventBandStatus,
 	type LineupEntry
 } from '$lib/server/db/schema/event';
+import type { EventSource } from '$lib/config';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { directoryEntry } from '$lib/server/db/schema/directory';

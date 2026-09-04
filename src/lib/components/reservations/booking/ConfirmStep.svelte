@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { BookerType } from '$lib/server/db/schema/reservation';
+	import type { BookerType } from '$lib/config';
 	import {
 		getReservationPricing,
 		previewRecurringInstances

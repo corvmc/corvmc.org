@@ -1,0 +1,30 @@
+// `pnpm check` runs svelte-check against the generated `.svelte-kit/tsconfig.json`,
+// whose `include` covers `src` and nothing else. Seeds, e2e fixtures and the db
+// scripts are real code against the real schema, and none of it was typechecked
+// by anything — a stale import there is invisible until the suite runs it.
+//
+// That is not theoretical: the `event` → `event_listing` rename (#527) shipped a
+// `scripts/lib` type and an `e2e/fixtures` import still naming the old table with
+// `pnpm check` reporting zero errors, and the second one took the whole E2E job
+// down in `prepare` before a single test started.
+//
+// `allowJs` is off on purpose. The `.mjs` helpers under `scripts/db` and
+// `scripts/claude` are plain JS with no annotations, so checking them is all
+// implicit-any noise — and the `.ts` files that import them already carry
+// `@ts-expect-error` for exactly that, which only stays correct while the import
+// really is unresolvable here.
+{
+	"extends": "./.svelte-kit/tsconfig.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"strict": true,
+		"skipLibCheck": true,
+		"allowJs": false,
+		"checkJs": false,
+		"esModuleInterop": true,
+		"moduleResolution": "bundler",
+		"resolveJsonModule": true,
+		"types": ["node", "@cloudflare/workers-types"]
+	},
+	"include": ["e2e/**/*.ts", "scripts/**/*.ts"]
+}

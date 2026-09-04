@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { attachableTypes } from '$lib/server/db/schema/media';
+import { attachableTypes } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Mocks

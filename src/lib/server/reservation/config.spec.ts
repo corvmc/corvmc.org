@@ -18,7 +18,7 @@ import {
 	DEFAULT_TEACHING_MAX_ADVANCE_DAYS_ONEOFF,
 	DEFAULT_TEACHING_MAX_ADVANCE_DAYS_RECURRING
 } from './config';
-import { bookerTypes } from '$lib/server/db/schema/reservation';
+import { bookerTypes } from '$lib/config';
 import { MINUTES_PER_CREDIT, creditValueCents } from '$lib/config';
 
 const cfg: ReservationConfig = {

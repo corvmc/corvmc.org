@@ -27,7 +27,8 @@ import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
-import type { BookerType, ReservationStatus } from '$lib/server/db/schema/reservation';
+import type { ReservationStatus } from '$lib/server/db/schema/reservation';
+import type { BookerType } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // ReservationService — create and cancel reservations

@@ -1,6 +1,6 @@
 import { addWeeks } from 'date-fns';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
-import type { BookerType } from '$lib/server/db/schema/reservation';
+import type { BookerType } from '$lib/config';
 import { getReservationConfig, termsFor } from './config';
 import { getPartsInTz } from './timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
