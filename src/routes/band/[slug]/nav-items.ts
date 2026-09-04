@@ -36,7 +36,7 @@ export interface BandNavInput {
 	tier: string;
 	userRole: string;
 	isStaff: boolean;
-	features: { announcements?: boolean; bandAudio?: boolean };
+	features: { bandAudio?: boolean };
 }
 
 /** Field names on `getBandLayout()`'s return. */
@@ -79,12 +79,15 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 
 	items.push({ key: 'members', label: 'Members', href: resolve('/band/[slug]/members', { slug }) });
 
-	// Announcements used to sit here behind an `announcements` flag, whose comment
-	// said the fan-out behind Publish was unbuilt. It has been built since —
-	// `announcement.published` has a listener with a latch — but the module is not
-	// launched, so the nav entry is absent and the route answers by direct URL
-	// only. Launching is putting this row back; see
-	// docs/plans/feature-flag-retirement.md.
+	// Every member reads announcements; only owner and admin post, which the page
+	// itself gates. It sat behind an `announcements` flag until the module was
+	// launched — a member who cannot see the entry cannot read what the band told
+	// them, which is backwards, so no role is gated here.
+	items.push({
+		key: 'announcements',
+		label: 'Announcements',
+		href: resolve('/band/[slug]/announcements', { slug })
+	});
 
 	// Reservations used to sit behind a `bandReservations` flag, retired on main
 	// in #238's wake — band booking is simply on now.
