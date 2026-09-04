@@ -77,6 +77,16 @@ export default defineConfig({
 					name: 'client',
 					browser: {
 						enabled: true,
+						// Out of `src/`. The default is
+						// `<test dir>/__screenshots__/<file>.svelte.spec.ts/`, whose last
+						// segment is a *directory* named like a source file — and the grep
+						// gates in `scripts/` glob `src/**` and read every path their globs
+						// return, so one failed browser test surfaced as ten EISDIR failures
+						// in two unrelated schema gates and cost a merge-queue slot. Only CI
+						// hits it: `screenshotFailures` defaults to `!browser.ui`, and
+						// `browser.ui` is on by default outside CI. `test-results/` is
+						// already gitignored.
+						screenshotDirectory: 'test-results/screenshots',
 						// Per-checkout, because vitest's default (63315) is a fixed
 						// constant every worktree would ask for at once — and unlike the
 						// dev server this binds during `pnpm test:unit`, so two suites
@@ -134,6 +144,8 @@ export default defineConfig({
 					browser: {
 						enabled: true,
 						headless: true,
+						// Same reasoning as `client` above: out of the trees the gates grep.
+						screenshotDirectory: 'test-results/screenshots',
 						// Its own port. Without one this project takes vitest's default,
 						// which is the number `client` already binds — two browser servers
 						// starting together in the same run, racing for one port.

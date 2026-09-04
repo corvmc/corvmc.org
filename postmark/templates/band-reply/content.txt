@@ -1,0 +1,13 @@
+Hi {{{contactName}}},
+
+{{{body}}}
+
+-- 
+{{{staffName}}}
+{{{bandName}}}
+
+Sent through the Corvallis Music Collective
+https://corvmc.org
+
+You're getting this because you used {{{bandName}}}'s booking form.
+Reply to this message to continue the conversation.

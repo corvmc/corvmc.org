@@ -90,6 +90,12 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'band_enquiry_received',
+		label: 'Booking enquiry',
+		description: 'Notification when someone contacts one of your bands through its booking form',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'recurring_skipped',
 		label: 'Recurring reservation skipped',
 		description: 'Notification when a recurring reservation is skipped due to a conflict',
