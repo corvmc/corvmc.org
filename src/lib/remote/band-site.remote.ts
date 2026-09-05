@@ -3,18 +3,11 @@ import { error, redirect } from '@sveltejs/kit';
 import { env as publicEnv } from '$env/dynamic/public';
 import { query } from '$app/server';
 import { db } from '$lib/server/db';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
-import { listFor as listMediaFor } from '$lib/server/media/media-service';
+import { group } from '$lib/server/db/schema/group';
+import { directoryEntry } from '$lib/server/db/schema/directory';
 import { bandSite } from '$lib/server/db/schema/band-site';
-import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, isNull } from 'drizzle-orm';
-import {
-	listBandEventsUpcoming,
-	listBandEventsPast,
-	type EventRow
-} from '$lib/server/event/event-service';
-import { resolveImageUrl } from '$lib/server/storage';
+import { loadBandSiteContent } from '$lib/server/band/band-site-content';
 import { prepareBlocksForRender } from '$lib/server/band/band-site-blocks';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 import { bandSiteUrl } from '$lib/utils/band-site-url';
@@ -24,21 +17,6 @@ import type { Block } from '$lib/server/db/schema/band-page';
 // ---------------------------------------------------------------------------
 // Band Site Data — loads everything needed to render a premium band page
 // ---------------------------------------------------------------------------
-
-/** Shape an event row for the microsite. */
-function toSiteEvent(e: EventRow) {
-	return {
-		id: e.id,
-		title: e.title,
-		description: e.description,
-		startsAt: e.startsAt,
-		endsAt: e.endsAt,
-		location: e.location,
-		externalTicketUrl: e.externalTicketUrl,
-		ticketPrice: e.ticketPrice,
-		posterUrl: resolveImageUrl(e.posterKey)
-	};
-}
 
 export const getBandSiteData = query(z.string(), async (slug) => {
 	// LEFT join, unlike the directory's. There, no entry means no listing and a
@@ -73,48 +51,13 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 	// The page config IS the site row since phase 3c — already fetched above.
 	const config = site;
 
-	// Fetch members
-	const members = await db
-		.select({
-			id: groupMember.id,
-			userName: user.name,
-			alias: groupMember.alias,
-			userImage: user.image,
-			position: groupMember.position,
-			role: groupMember.role
-		})
-		.from(groupMember)
-		.innerJoin(user, eq(user.id, groupMember.userId))
-		.where(and(eq(groupMember.groupId, bandRow.id), eq(groupMember.status, 'active')));
-
-	// Fetch genres
-	const genres = await db
-		.select({ value: directoryTag.value })
-		.from(directoryTag)
-		.innerJoin(directoryEntry, eq(directoryEntry.id, directoryTag.entryId))
-		.where(and(eq(directoryEntry.groupId, bandRow.id), eq(directoryTag.kind, 'genre')));
-
-	// Upcoming, plus enough history for a "past shows" section
-	const [events, pastEvents] = await Promise.all([
-		listBandEventsUpcoming(bandRow.id, 10),
-		listBandEventsPast(bandRow.id, { limit: 20, offset: 0 })
-	]);
-
-	// The four slots the microsite renders. Named explicitly rather than taking
-	// everything attached to the group, because the group's `avatar` is now a
-	// `media_attachment` too and is served from `band.avatarUrl`, not from here.
-	const media = await listMediaFor('group', bandRow.id, ['gallery', 'hero', 'stage_plot', 'rider']);
+	// The roster, gig list, genres and media — shared with the page editor, which
+	// renders the same component.
+	const content = await loadBandSiteContent(bandRow, entry ?? null);
 
 	return {
 		band: {
-			id: bandRow.id,
-			name: bandRow.name,
-			slug: bandRow.slug,
-			bio: entry?.bio ?? null,
-			tagline: entry?.tagline ?? null,
-			avatarUrl: resolveImageUrl(bandRow.avatarKey),
-			links: entry?.links as Array<{ label: string; url: string; embed?: boolean }> | null,
-			genres: genres.map((g) => g.value),
+			...content.band,
 			// Only a live custom domain counts — canonical URLs must not point at a
 			// hostname that isn't serving yet.
 			customDomain: site?.customDomainStatus === 'active' ? site.customDomain : null
@@ -129,23 +72,9 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 					epk: config.epk
 				}
 			: null,
-		members: members.map((m) => ({
-			id: m.id,
-			// The band's own site credits people the way the band credits them.
-			name: m.alias ?? m.userName,
-			image: resolveImageUrl(m.userImage),
-			position: m.position,
-			role: m.role
-		})),
-		events: events.map(toSiteEvent),
-		// listBandEventsPast fetches limit+1 to derive hasMore; the microsite
-		// just shows a fixed slice.
-		pastEvents: pastEvents.slice(0, 20).map(toSiteEvent),
-		media: media.map((m) => ({
-			id: m.attachmentId,
-			url: resolveImageUrl(m.key),
-			slot: m.slot,
-			caption: m.caption
-		}))
+		members: content.members,
+		events: content.events,
+		pastEvents: content.pastEvents,
+		media: content.media
 	};
 });

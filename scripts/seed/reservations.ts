@@ -3,10 +3,10 @@ import { closure, reservation } from '../../src/lib/server/db/schema/reservation
 import { db } from './db';
 import { CLOSURE_REASONS } from './pools';
 import { HOURLY_RATE_CENTS, type SeedReservation, type SeedUser } from './types';
-import { pick, ptDate, randomInt } from './util';
+import { pick, ptDate, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
 
-export async function seedReservations(users: SeedUser[]): SeedReservation[] {
+export async function seedReservations(users: SeedUser[]): Promise<SeedReservation[]> {
 	console.log('Seeding reservations...');
 	const rows: SeedReservation[] = [];
 
@@ -20,7 +20,7 @@ export async function seedReservations(users: SeedUser[]): SeedReservation[] {
 			hour += duration + 0.5;
 			if (hour > 21) break;
 
-			const status = Math.random() > 0.15 ? 'completed' : pick(['no_show', 'cancelled']);
+			const status = random() > 0.15 ? 'completed' : pick(['no_show', 'cancelled']);
 			const member = pick(users);
 
 			// Free-hour settlement, mirroring `commitReservationCredits`:
@@ -64,7 +64,7 @@ export async function seedReservations(users: SeedUser[]): SeedReservation[] {
 					status,
 					startsAt,
 					endsAt,
-					notes: Math.random() > 0.7 ? 'Band practice' : null,
+					notes: random() > 0.7 ? 'Band practice' : null,
 					cancellationReason: status === 'cancelled' ? 'Schedule conflict' : null,
 					creditsUsed,
 					cashDueCents,
@@ -116,7 +116,7 @@ export async function seedReservations(users: SeedUser[]): SeedReservation[] {
 					endsAt,
 					lockCode,
 					notes:
-						Math.random() > 0.6
+						random() > 0.6
 							? pick(['Drum practice', 'Guitar lesson prep', 'Recording session'])
 							: null
 				})

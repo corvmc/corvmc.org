@@ -51,6 +51,65 @@ Everything here is staff-facing and gated behind a `productions` feature flag.
 > Reasoning and prior art:
 > [project-management-prior-art.md](../reports/project-management-prior-art.md).
 
+> ## Amendment, 2026-09-04 — the `production` record shipped, narrower than written
+>
+> Phase 2 landed: the table, the status machine, the console tab set and the absorbed
+> index. What follows is the list of things in the text
+> below that are now **stale**, so nobody builds them from it.
+>
+> **Built.** `production`, 1:1 with `event_listing` on a cascading FK and
+> `uq_production_event`. Columns: `status`, `producerUserId`, `loadInAt`,
+> `soundcheckAt`, `firstSetAt`, `curfewAt`, `loadOutBy`, the three notes fields,
+> `createdByUserId`, timestamps. Status machine
+> `draft → offered → confirmed → completed → settled → closed`, `cancelled` off any
+> pre-completed state, every move an atomic conditional
+> `UPDATE … WHERE id = ? AND status IN (…)` with a row-count check — D1 has no
+> interactive transactions. `settled` and `closed` are in the machine and in
+> `StatusBadge` but have **no button**: the settlement worksheet and the close-out are
+> Phases 5 and 6, and a button that sets a status without doing the work it names is
+> worse than no button. Cancelling a listing pulls its pre-completed production back
+> with it.
+>
+> **Do not build these — they are superseded or wrong:**
+>
+> 1. **`bandSplitPercent` and the 70/30 model.** The pool is `sum(ticket.acts_cents)`
+>    and the deal lives on `event_band`; see amendment 2 above.
+> 2. **The settlement snapshot columns** (`doorCount`, `compCount`, `ticketRevenueCents`,
+>    `doorCashCents`, `otherRevenueCents`, `bandPoolCents`, `totalExpenseCents`,
+>    `totalPayoutCents`, `netCents`, `settledAt/By`, `closedAt/By`). Phase 5/6. Adding
+>    columns nothing reads is what the venue phase deliberately avoided with `backline`
+>    and `links`.
+> 3. **`production.venueId`.** Venue is a public fact about the show and lives on
+>    `event_listing.venueId`. The spec already says so; confirming it so nobody re-adds it.
+> 4. **The `productions` feature flag.** Dead twice: flags were replaced by long-lived
+>    feature branches, and the panel-wide rule is that staff surfaces ignore flags.
+> 5. **`/staff/productions/[id]` and its tab set.** The route collision was settled by
+>    **absorbing**: `/staff/productions` stays the CMC event index and gained the
+>    production status, the venue and a lineup summary as columns, plus venue and
+>    date-range filters — all inside its existing single query. The tab set the spec
+>    describes for that route is what the **console** got, at
+>    `/staff/events/[id]/production`, addressable by `?tab=`.
+> 6. **A `production.*` capability set, and a `production_lead` position.** Reads guard
+>    on `event.read`, writes on `event.manage` — the venue precedent, and it argues
+>    harder here, because a production cannot exist without the listing it hangs off.
+>    Naming a position with no `production.*` capabilities to hold would be naming
+>    nothing.
+> 7. **`production_task` with a `phase` column.** Shipped as
+>    `duty_list` → `work_order` → `work_task` (#405, #407); the spec supersedes itself
+>    on this below.
+> 8. **`band_profile` / member-less `band` rows for touring acts.** The shipped act
+>    record is `directory_entry` and the lineup row is `event_band`. Anything that
+>    re-declares the act, the running order or the confirmation status is a second
+>    answer to a question `event_band` already answers.
+> 9. **A `production.status >= confirmed` gate on the public lineup.** The public lineup
+>    already renders from `event_band` and works.
+> 10. **`StatusBadge`'s `invited` / `performed`.** No vocabulary emits them, and
+>     `StatusBadge.spec.ts` fails on a key that has outlived its vocabulary.
+>
+> Still unbuilt and still belonging here: run of show (`production_slot`, Phase 3), the
+> deal shape on `event_band` (Phase 4), settlement and expenses (Phase 5), close-out
+> (Phase 6).
+
 > **The band/group boundary is defined by [groups-spec.md](groups-spec.md), not here.** That spec
 > splits today's `band` table into `group` (the managed organization: roster, roles, slug,
 > announcements, documents) and `band_profile` (the musical identity: genres, links, tier, EPK).

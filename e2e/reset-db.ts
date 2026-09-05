@@ -42,7 +42,6 @@ import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { E2E_PERSIST_PATH, E2E_STATE_ROOT, e2eD1File } from './state-dir';
-// @ts-expect-error -- plain .mjs helper, no types
 import { tableOrder, deleteOrder } from '../scripts/d1-table-order.mjs';
 
 /**

@@ -18,6 +18,12 @@ const WAITLIST_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
  * When a time slot is freed (reservation cancelled), find the oldest
  * waitlisted reservation overlapping that slot and notify the member.
  * Only promotes one reservation at a time — first-come-first-served.
+ *
+ * "Promote" is an offer, not a transition: the row stays `waitlisted` and only
+ * gains the 24h window, so `expireWaitlisted()` below can still cancel it —
+ * without a `reservation.cancelled` for anything downstream to clean up after.
+ * That is why nothing here emits `reservation.created`; the member's own
+ * confirmation does, through `announceWaitlistConfirmed()`.
  */
 export async function promoteNextWaitlisted(
 	startsAt: Date,
@@ -166,17 +172,39 @@ export async function expireWaitlisted(): Promise<{ expired: number; rePromoted:
 			.where(eq(user.id, row.createdByUserId))
 			.limit(1);
 
+		const when = {
+			date: formatDateInTz(row.startsAt, TZ),
+			startTime: formatTimeInTz(row.startsAt, TZ),
+			endTime: formatTimeInTz(row.endsAt, TZ)
+		};
+
 		if (owner) {
 			await domainEvents.emit('reservation.waitlist_expired', {
 				reservationId: row.id,
 				userId: row.createdByUserId,
 				userName: owner.name,
 				userEmail: owner.email,
-				date: formatDateInTz(row.startsAt, TZ),
-				startTime: formatTimeInTz(row.startsAt, TZ),
-				endTime: formatTimeInTz(row.endsAt, TZ)
+				...when
 			});
 		}
+
+		// The row above is cancelled, so say so. This path writes its own `UPDATE`
+		// rather than going through `cancel()` — it has to, to clear the waitlist
+		// window in the same statement and to keep the count it returns — and for
+		// a long time that meant every `reservation.cancelled` listener was
+		// skipped for a reservation that had genuinely been cancelled.
+		//
+		// `cause` marks it as the one cancellation the member has already been
+		// written to about; see the field's own note for who reads it.
+		await domainEvents.emit('reservation.cancelled', {
+			reservationId: row.id,
+			userId: row.createdByUserId,
+			userName: owner?.name ?? '',
+			userEmail: owner?.email ?? '',
+			...when,
+			cancelledBy: 'system',
+			cause: 'waitlist_expired'
+		});
 
 		// Cascade: promote the next waitlisted reservation for this slot
 		const promotion = await promoteNextWaitlisted(row.startsAt, row.endsAt);

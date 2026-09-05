@@ -6,7 +6,7 @@
  * docs/specs/shipped/media-spec.md phase 3.
  */
 
-export type AttachableType = 'event' | 'group' | 'user';
+export type AttachableType = 'event_listing' | 'group' | 'user';
 
 export type Source = {
 	key: string;

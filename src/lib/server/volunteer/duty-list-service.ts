@@ -8,17 +8,20 @@ import {
 	workOrder,
 	workTask
 } from '$lib/server/db/schema/volunteer';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
+import { reservation } from '$lib/server/db/schema/reservation';
 import {
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_MAX_MINUTES,
-	VOLUNTEER_SHIFT_NOTES_MAX
+	VOLUNTEER_SHIFT_NOTES_MAX,
+	dutyListSubjectLabels
 } from '$lib/config';
-import type { DutyListAnchor } from '$lib/config';
+import type { DutyListAnchor, DutyListAutoApplyTrigger, DutyListSubject } from '$lib/config';
 import type { DutyList, DutyListItem } from '$lib/server/db/schema/volunteer';
+import { chunk, chunkSize } from '$lib/server/utils/chunk';
 
 /**
- * Duty lists: a named set of work orders, stamped onto an event.
+ * Duty lists: a named set of work orders, stamped onto a subject.
  *
  * Staffing a show is six work orders — Booking Lead a week out, then Door, Tech,
  * Merch and Tear Down around doors — and every one of them is entered by hand
@@ -28,6 +31,11 @@ import type { DutyList, DutyListItem } from '$lib/server/db/schema/volunteer';
  * `dutyListId` for provenance and nothing else: editing a list afterwards must
  * not reach into work people have already claimed, which is the same bargain
  * `duplicateShift` makes when it says the copy has "no link back".
+ *
+ * The subject is a show or a rehearsal booking. Both are a window with a start
+ * and an end, which is all an offset needs, so the two share one apply and one
+ * output — the only difference is which anchor column the work order carries
+ * and whether `doors` means anything.
  */
 
 // ---------------------------------------------------------------------------
@@ -71,7 +79,7 @@ export class DutyListAlreadyAppliedError extends DomainError {
 	readonly httpStatus = 409;
 	constructor(name: string, existing: number) {
 		super(
-			`"${name}" has already been applied to this event — it created ${existing} ` +
+			`"${name}" has already been applied to this one — it created ${existing} ` +
 				`work ${existing === 1 ? 'order' : 'orders'}. Cancel those first if you want to redo it.`
 		);
 	}
@@ -187,7 +195,14 @@ export interface DutyListRow extends DutyList {
 	itemCount: number;
 }
 
-export async function listDutyLists(opts: { includeInactive?: boolean } = {}) {
+export async function listDutyLists(
+	opts: { includeInactive?: boolean; subject?: DutyListSubject } = {}
+) {
+	const filters = [
+		opts.includeInactive ? undefined : eq(dutyList.isActive, true),
+		opts.subject ? eq(dutyList.subject, opts.subject) : undefined
+	].filter(Boolean);
+
 	const rows = await db
 		.select({
 			list: dutyList,
@@ -195,7 +210,7 @@ export async function listDutyLists(opts: { includeInactive?: boolean } = {}) {
 		})
 		.from(dutyList)
 		.leftJoin(dutyListItem, eq(dutyListItem.dutyListId, dutyList.id))
-		.where(opts.includeInactive ? undefined : eq(dutyList.isActive, true))
+		.where(filters.length ? and(...filters) : undefined)
 		.groupBy(dutyList.id)
 		.orderBy(asc(dutyList.name));
 
@@ -229,10 +244,15 @@ export async function createDutyList(data: {
 	name: string;
 	description?: string | null;
 	anchor: DutyListAnchor;
+	subject?: DutyListSubject;
+	autoApplyOn?: DutyListAutoApplyTrigger | null;
 	createdByUserId: string;
 }): Promise<DutyList> {
 	const name = data.name.trim();
 	if (!name) throw new DutyListValidationError('Name is required.', 'name');
+
+	const subject = data.subject ?? 'event';
+	assertAnchorFitsSubject(data.anchor, subject);
 
 	const [existing] = await db
 		.select({ id: dutyList.id })
@@ -247,6 +267,8 @@ export async function createDutyList(data: {
 			name,
 			description: data.description?.trim() || null,
 			anchor: data.anchor,
+			subject,
+			autoApplyOn: data.autoApplyOn ?? null,
 			createdByUserId: data.createdByUserId
 		})
 		.returning();
@@ -260,11 +282,18 @@ export async function updateDutyList(
 		name?: string;
 		description?: string | null;
 		anchor?: DutyListAnchor;
+		subject?: DutyListSubject;
+		autoApplyOn?: DutyListAutoApplyTrigger | null;
 		isActive?: boolean;
 	}
 ): Promise<DutyList> {
 	const [existing] = await db.select().from(dutyList).where(eq(dutyList.id, id)).limit(1);
 	if (!existing) throw new DutyListNotFoundError();
+
+	// Check the pair the row would *end up* with, not the half that moved:
+	// switching a doors-anchored list to a reservation is as illegal as
+	// switching a reservation list to doors, and either edit alone looks fine.
+	assertAnchorFitsSubject(data.anchor ?? existing.anchor, data.subject ?? existing.subject);
 
 	const updates: Partial<typeof dutyList.$inferInsert> = { updatedAt: new Date() };
 
@@ -283,6 +312,8 @@ export async function updateDutyList(
 	}
 	if (data.description !== undefined) updates.description = data.description?.trim() || null;
 	if (data.anchor !== undefined) updates.anchor = data.anchor;
+	if (data.subject !== undefined) updates.subject = data.subject;
+	if (data.autoApplyOn !== undefined) updates.autoApplyOn = data.autoApplyOn;
 	if (data.isActive !== undefined) updates.isActive = data.isActive;
 
 	const [row] = await db.update(dutyList).set(updates).where(eq(dutyList.id, id)).returning();
@@ -410,18 +441,11 @@ export async function removeDutyListItem(id: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * D1 caps one statement at 100 bound parameters, so a multi-row insert has to be
- * split by column count. A six-item list with eight tasks each clears that on
- * the task insert alone, so the chunking is not optional.
+ * Column count for `chunkSize` — see `$lib/server/utils/chunk`. A six-item list
+ * with eight tasks each clears D1's parameter ceiling on the task insert alone,
+ * so the chunking is not optional.
  */
 const TASK_COLUMNS = 4;
-const chunkSize = (columns: number) => Math.floor(100 / columns);
-
-function chunk<T>(rows: T[], size: number): T[][] {
-	const out: T[][] = [];
-	for (let i = 0; i < rows.length; i += size) out.push(rows.slice(i, i + size));
-	return out;
-}
 
 export interface ApplyDutyListResult {
 	workOrderIds: string[];
@@ -429,16 +453,81 @@ export interface ApplyDutyListResult {
 }
 
 /**
- * Stamp a duty list onto an event.
+ * What a duty list is stamped onto. A union rather than two loose ids, so a
+ * caller cannot hand an event id to the reservation branch.
+ */
+export type DutySubject = { kind: 'event'; id: string } | { kind: 'reservation'; id: string };
+
+/** Both subjects, in the only shape an offset actually needs. */
+interface TimedSubject {
+	kind: DutyListSubject;
+	id: string;
+	startsAt: Date;
+	endsAt: Date | null;
+	/** Always null for a reservation — a rehearsal has no doors. */
+	doorsAt: Date | null;
+}
+
+async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
+	if (subject.kind === 'event') {
+		const [row] = await db
+			.select({
+				id: eventListing.id,
+				startsAt: eventListing.startsAt,
+				endsAt: eventListing.endsAt,
+				doorsAt: eventListing.doorsAt
+			})
+			.from(eventListing)
+			.where(eq(eventListing.id, subject.id))
+			.limit(1);
+		return row ? { kind: 'event', ...row } : null;
+	}
+
+	const [row] = await db
+		.select({
+			id: reservation.id,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt
+		})
+		.from(reservation)
+		.where(eq(reservation.id, subject.id))
+		.limit(1);
+	return row ? { kind: 'reservation', ...row, doorsAt: null } : null;
+}
+
+/**
+ * A list anchored to `doors` cannot be stamped onto a rehearsal booking.
+ *
+ * `resolveAnchor` falls back from `doorsAt` to `startsAt` for an event because
+ * not every show sets a doors time — but a show without one still *has* doors.
+ * A rehearsal has no such concept, so taking the same fallback would quietly
+ * turn "fifteen minutes before doors" into "fifteen minutes before the booking"
+ * and read as correct on every screen. Refuse it at save time, so the pairing is
+ * unmakeable rather than merely unappliable.
+ */
+function assertAnchorFitsSubject(anchor: DutyListAnchor, subject: DutyListSubject): void {
+	if (anchor === 'doors' && subject !== 'event') {
+		throw new DutyListValidationError(
+			`${dutyListSubjectLabels[subject]} has no doors time — anchor this list to the start or the end instead.`,
+			'anchor'
+		);
+	}
+}
+
+/**
+ * Stamp a duty list onto a subject — a show, or a member's rehearsal booking.
  *
  * Offsets are plain instant arithmetic from a real anchor timestamp, so daylight
  * saving needs no special handling here — unlike `duplicateShift`, which shifts a
  * wall-clock date and does.
+ *
+ * `createdByUserId` is nullable because the orientation listener applies a list
+ * with no acting user; `work_order.created_by_user_id` is already set-null.
  */
 export async function applyDutyList(
 	dutyListId: string,
-	eventId: string,
-	createdByUserId: string
+	subject: DutySubject,
+	createdByUserId: string | null
 ): Promise<ApplyDutyListResult> {
 	const detail = await getDutyListDetail(dutyListId);
 	if (!detail) throw new DutyListNotFoundError();
@@ -448,33 +537,41 @@ export async function applyDutyList(
 		throw new DutyListValidationError('That duty list has no items on it yet.');
 	}
 
-	const [evt] = await db
-		.select({
-			id: event.id,
-			startsAt: event.startsAt,
-			endsAt: event.endsAt,
-			doorsAt: event.doorsAt
-		})
-		.from(event)
-		.where(eq(event.id, eventId))
-		.limit(1);
-	if (!evt) throw new DutyListValidationError('That event no longer exists.', 'eventId');
+	if (list.subject !== subject.kind) {
+		throw new DutyListValidationError(
+			`"${list.name}" is for ${dutyListSubjectLabels[list.subject].toLowerCase()}, not ${dutyListSubjectLabels[subject.kind].toLowerCase()}.`
+		);
+	}
+
+	const subj = await loadSubject(subject);
+	if (!subj) {
+		throw new DutyListValidationError(
+			`That ${subject.kind === 'event' ? 'event' : 'booking'} no longer exists.`,
+			subject.kind === 'event' ? 'eventId' : 'reservationId'
+		);
+	}
 
 	// Refuse rather than double the roster. Cancelled work orders do not count:
 	// cancelling the lot is how you redo an apply.
+	//
+	// This is also what makes the orientation listener idempotent — a repeated
+	// domain event lands here and is refused by name, so the machinery that stops
+	// a coordinator double-clicking Apply is the machinery that stops a
+	// re-delivered event doubling somebody's orientation.
+	const anchorColumn = subject.kind === 'event' ? workOrder.eventId : workOrder.reservationId;
 	const [{ existing }] = await db
 		.select({ existing: count() })
 		.from(workOrder)
 		.where(
 			and(
-				eq(workOrder.eventId, eventId),
+				eq(anchorColumn, subject.id),
 				eq(workOrder.dutyListId, dutyListId),
 				isNull(workOrder.cancelledAt)
 			)
 		);
 	if (existing > 0) throw new DutyListAlreadyAppliedError(list.name, existing);
 
-	const anchor = resolveAnchor(list.anchor, evt);
+	const anchor = resolveAnchor(list.anchor, subj);
 
 	const shiftRows: (typeof workOrder.$inferInsert)[] = [];
 	const taskRows: (typeof workTask.$inferInsert)[] = [];
@@ -488,7 +585,11 @@ export async function applyDutyList(
 		shiftRows.push({
 			id: workOrderId,
 			volunteerRoleId: item.volunteerRoleId,
-			eventId,
+			// Exactly one anchor is set. There is deliberately no CHECK forbidding
+			// both — a work order can legitimately carry several — but a list
+			// stamps out one subject's worth of work.
+			eventId: subject.kind === 'event' ? subject.id : null,
+			reservationId: subject.kind === 'reservation' ? subject.id : null,
 			startsAt,
 			endsAt: scheduled ? addMinutes(startsAt!, item.durationMinutes!) : null,
 			dueAt: item.dueOffsetMinutes !== null ? addMinutes(anchor, item.dueOffsetMinutes) : null,
@@ -522,25 +623,27 @@ export async function applyDutyList(
 	return { workOrderIds: shiftRows.map((r) => r.id!), taskCount: taskRows.length };
 }
 
-function resolveAnchor(
-	anchor: DutyListAnchor,
-	evt: { startsAt: Date; endsAt: Date | null; doorsAt: Date | null }
-): Date {
+function resolveAnchor(anchor: DutyListAnchor, subj: TimedSubject): Date {
 	switch (anchor) {
 		case 'doors':
 			// Mirrors the production page's shift modal, which prefills from
 			// `doorsAt ?? startsAt` for the same reason: not every show sets doors.
-			return evt.doorsAt ?? evt.startsAt;
+			// `assertAnchorFitsSubject` has already refused a non-event subject, so
+			// the fallback can never stand in for a doors time that does not exist
+			// as a concept.
+			assertAnchorFitsSubject(anchor, subj.kind);
+			return subj.doorsAt ?? subj.startsAt;
 		case 'start':
-			return evt.startsAt;
+			return subj.startsAt;
 		case 'end':
-			if (!evt.endsAt) {
+			// Only reachable for an event: `reservation.ends_at` is NOT NULL.
+			if (!subj.endsAt) {
 				throw new DutyListValidationError(
-					'This list is anchored to the end of the event, and this event has no end time.',
+					'This list is anchored to the end, and this event has no end time.',
 					'eventId'
 				);
 			}
-			return evt.endsAt;
+			return subj.endsAt;
 	}
 }
 

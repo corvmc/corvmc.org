@@ -99,7 +99,13 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # `pnpm check` runs svelte-check over `src` — all the generated tsconfig
+      # includes — and then `check:scripts` over `scripts/` and `e2e/`, which it
+      # does not. Both are the same job rather than their own because each is a
+      # few seconds of work on a checkout that is already installed, and the job
+      # setup floor is ~45s.
       - run: pnpm check
+      - run: pnpm check:tooling
 
   # `unit` and `e2e` were one `Test` job that ran them back to back. They share
   # nothing, so running them side by side halves the critical path. Deliberately no

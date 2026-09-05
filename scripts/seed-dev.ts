@@ -30,6 +30,7 @@ import { pendingSites } from './seed/pending';
 import { seedRoles, seedUsers, seedAdminUser, seedUserRoles } from './seed/users';
 import { seedReservations, seedClosures } from './seed/reservations';
 import { seedEvents } from './seed/events';
+import { seedVenues } from './seed/venues';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
@@ -42,6 +43,7 @@ import { seedGroupSessions } from './seed/group-sessions';
 import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
 import { seedCmcEventLineups } from './seed/lineups';
+import { seedProductions } from './seed/productions';
 import { seedBandReservations } from './seed/band-reservations';
 import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
 import { seedRecurringSeries } from './seed/recurring';
@@ -59,6 +61,7 @@ import { seedBandEnquiries } from './seed/band-enquiries';
 import { seedContentFlags } from './seed/content-flags';
 import { seedContractors } from './seed/contractors';
 import { seedDutyLists } from './seed/duty-lists';
+import { seedOrientation } from './seed/orientation';
 import {
 	seedVolunteerRoles,
 	seedVolunteerProfiles,
@@ -92,6 +95,9 @@ async function main() {
 	const reservations = await seedReservations(allUsers);
 	await seedClosures();
 	const events = await seedEvents(allUsers);
+	// After the events, because it backfills every one of them into the room —
+	// which is where they all were, there being nowhere else until this table.
+	const venues = await seedVenues(events);
 	const bands = await seedBands(allUsers);
 	// Appended rather than folded into `seedBands`: it brings its own persona and
 	// login, and every downstream band seeder either maps over the whole array —
@@ -116,6 +122,9 @@ async function main() {
 	const bandEvents = await seedBandEvents(bands, allUsers);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
+	// After the bill, because a production is the ops record for a night that
+	// already has acts on it — and the index shows the two side by side.
+	const productions = await seedProductions(events, allUsers);
 	const bandReservations = await seedBandReservations(bands);
 	const bandSites = await seedBandSites(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
@@ -157,6 +166,9 @@ async function main() {
 	// schedules against the role catalog.
 	const personas = await seedVolunteerPersonas(roles, volunteerRoles, certifications, adminUser);
 	const dutyLists = await seedDutyLists(volunteerRoles, events);
+	// After the duty lists and the reservations both: it seeds a list of its own
+	// and hangs work orders off bookings that already exist.
+	const orientation = await seedOrientation(volunteerRoles, allUsers);
 	// Needs only the role catalog. Kept out of `allUsers` like the volunteer
 	// personas, so nothing that slices or indexes that array shifts under it.
 	const sustainingPersonas = await seedSustainingPersonas(roles);
@@ -182,10 +194,14 @@ async function main() {
 	console.log(`  ${roles.length} roles`);
 	console.log(`  ${reservations.length} reservations`);
 	console.log(`  ${events.length} CMC events`);
+	console.log(`  ${venues.venues} venues, one of them ours`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(
 		`  ${dutyLists.lists} duty list, ${dutyLists.workOrders} work orders applied to a show`
+	);
+	console.log(
+		`  ${orientation.lists} orientation list, ${orientation.workOrders} orientation shifts, ${orientation.orientations} member orientations`
 	);
 	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
 	console.log(
@@ -244,6 +260,9 @@ async function main() {
 	);
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
+	);
+	console.log(
+		`  ${productions.productions} productions covering every status, ${productions.withoutProduction} CMC shows deliberately without one`
 	);
 	console.log(
 		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +

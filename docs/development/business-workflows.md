@@ -1,6 +1,6 @@
 # Business Workflows, Traced Through Code
 
-This guide walks through the twelve core workflows of the app in plain language, with the
+This guide walks through the core workflows of the app in plain language, with the
 actual code path for each. Read the [architecture overview](../architecture/overview.md)
 first — it explains the building blocks these workflows are made of (remote functions,
 guards, the event bus, `db.batch`, site config).
@@ -101,7 +101,7 @@ surface via `getUnresolvedReservations` in `reservations.remote.ts`; staff resol
   listener failed. Check Stripe dashboard → webhook delivery attempts, and Sentry for
   `stage: 'handler'` captures from the webhook route.
 - **"Time slot is not available" that looks wrong** → check the `waitlisted`/`cancelled`
-  exclusions in the conflict query, and whether a `bookerType: 'event'` reservation
+  exclusions in the conflict query, and whether a `bookerType: 'event_listing'` reservation
   (created by an event) is holding the slot.
 - **Confirm button rejected with the window message** → expected outside 3 days before
   start; only a Stripe charge (or staff) commits earlier.
@@ -166,7 +166,12 @@ one is offered the slot with a 24-hour window to confirm.
   `reservations.remote.ts` — checks the offer hasn't expired, re-checks the slot is free,
   flips to `scheduled`, then re-checks again and backs out if a competing booking raced in.
 - **Expiry:** cron `expire-waitlisted` → `expireWaitlisted()` in `waitlist-service.ts` —
-  cancels offers past their 24h window and promotes the next in line.
+  cancels offers past their 24h window and promotes the next in line. It emits both
+  `reservation.waitlist_expired` (the member's own notification) and
+  `reservation.cancelled` carrying `cause: 'waitlist_expired'` — the row really was
+  cancelled, and listeners on that event need to know. The two listeners that path
+  already handles — the cancellation email and the promotion cascade — stand down on
+  that `cause`; every other listener treats it as an ordinary cancellation.
 
 ### Data touched
 
@@ -340,7 +345,7 @@ events use RSVP instead.
 - **Create/publish:** `staff/events` UI → `createEvent` / `publishEvent` / `updateEvent`
   forms in `src/lib/remote/events.remote.ts` → `create()` / `publish()` / `update()` in
   `src/lib/server/event/event-service.ts`. Events that reserve practice space create a
-  linked `bookerType: 'event'` reservation; `checkRebookNeeded()` handles time changes.
+  linked `bookerType: 'event_listing'` reservation; `checkRebookNeeded()` handles time changes.
   Recurring events expand nightly via the same generation job as reservations (workflow 2).
 - **Purchase:** public event page → `purchaseTickets` form in `events.remote.ts` — creates
   `pending` tickets via `createTickets()` in `ticket/ticket-service.ts` under a fresh
@@ -374,7 +379,7 @@ events use RSVP instead.
 
 ### Data touched
 
-`event`, `ticket` (status: `pending → valid → checked_in`, or `cancelled`; plus the money the
+`event_listing`, `ticket` (status: `pending → valid → checked_in`, or `cancelled`; plus the money the
 purchase settled at — `unitPriceCents`, `contributionCents` on the purchase's first row only, and
 `discountWaived`), `eventRsvp`, linked `reservation` rows for space-holding events.
 
@@ -774,7 +779,7 @@ on a bill and have it appear on that band's own profile without their say-so.
 
 ### Data touched
 
-`event` (`source`, `status`, `startsAt`, `bandId`, `submittedByUserId`), `event_band`,
+`event_listing` (`source`, `status`, `startsAt`, `bandId`, `submittedByUserId`), `event_band`,
 `content_flag`, `member_standing` (scope `community_event`).
 
 ### Where it breaks
@@ -1022,8 +1027,9 @@ So:
 
 ### Duty lists
 
-A duty list is a named set of work orders stamped onto an event — staffing a show is six of
-them, and every one used to be entered by hand on the production page.
+A duty list is a named set of work orders stamped onto a **subject** — an event, or a member's
+rehearsal booking. Staffing a show is six of them, and every one used to be entered by hand on
+the production page.
 
 Two grains, one level of nesting, and **hours are what separate them**. A volunteer signs up
 for Tear Down and logs one entry for it; nobody signs up for "take the trash out" or logs four
@@ -1039,23 +1045,94 @@ unscheduled work order with a `dueAt` (Booking Lead, a week out, whose tasks are
 checklist). So there is **no `phase` column and no "advance" concept** — which phase a piece of
 work belongs to is which role's work order its tasks are on, and the offset says when.
 
-Applying is `applyDutyList()` in `volunteer/duty-list-service.ts`. Offsets are plain instant
-arithmetic from a real anchor — `doorsAt ?? startsAt`, `startsAt`, or `endsAt` — so DST needs
-no handling here, unlike `duplicateShift`, which shifts a wall-clock date and does. Writes go
-through `db.batch` with the task insert chunked to stay under D1's 100 bound parameters. A
-second apply to the same event is refused by name rather than deduplicated, because doubling a
-roster looks exactly like the first apply from the outside.
+Applying is `applyDutyList(id, subject, createdByUserId)` in
+`volunteer/duty-list-service.ts`, where the subject is a `DutySubject` union rather than a bare
+id, so an event id cannot reach the reservation branch. Both subjects load into one
+`TimedSubject` shape, because a booking and a show are both a window with a start and an end,
+which is everything an offset needs. Offsets are plain instant arithmetic from a real anchor —
+`doorsAt ?? startsAt`, `startsAt`, or `endsAt` — so DST needs no handling here, unlike
+`duplicateShift`, which shifts a wall-clock date and does. Writes go through `db.batch` with
+the task insert chunked to stay under D1's 100 bound parameters. A second apply to the same
+subject is refused by name rather than deduplicated, because doubling a roster looks exactly
+like the first apply from the outside.
 
-The event is the parent, and there is no separate one. Work parties and monthly deep cleans get
-their own event listings — they need advertising as much as a show does — so every application
-already has a row identifying it, and March's deep clean is a different event from April's.
+`duty_list.subject` is a column of its own rather than something read off the anchor: `start`
+and `end` resolve for both kinds, and only `doors` is show-shaped. So the illegal state is the
+_pair_ `(reservation, doors)`, refused when a list is **saved** as well as when it is applied.
+The `doorsAt ?? startsAt` fallback exists because not every show sets a doors time — but a show
+without one still has doors, and a rehearsal has no such concept, so taking the same fallback
+would quietly turn "fifteen minutes before doors" into something else and read as correct on
+every screen.
+
+For an event, the event is the parent and there is no separate one. Work parties and monthly
+deep cleans get their own event listings — they need advertising as much as a show does — so
+every application already has a row identifying it, and March's deep clean is a different event
+from April's.
+
+### Rehearsal orientation
+
+The one list that applies itself. `duty_list.auto_apply_on` names the domain event that stamps
+a list out with nobody pressing a button; a partial unique index allows one list per trigger,
+and `'reservation.first'` is the only trigger there is.
+
+`reservation.created` is emitted from `create()` and `staffCreate()` in
+`reservation/reservation-service.ts` — from the service, not from the five booking remotes,
+where a sixth would be forgotten — and **after** the post-insert race re-check, so a booking
+that gets compensated away never announces itself. `orientation-listener.ts` checks the booking
+is a member's (`bookerType === 'user'`) and their first (`priorBookingCount`), then applies.
+
+A booking that came off the **waitlist** announces itself too, from
+`announceWaitlistConfirmed()`, called by the `confirmWaitlisted` remote after its own race
+re-check. The emit hangs off the `waitlisted → scheduled` transition and nothing else:
+`createWaitlisted()` stays quiet because a queue position is not a visit, and
+`promoteNextWaitlisted()` stays quiet because it only _offers_ the slot — it stamps the 24h
+window and leaves the row `waitlisted`, where `expireWaitlisted()` can still cancel it without
+emitting `reservation.cancelled`. An orientation raised at promotion would outlive its booking;
+one raised at confirmation cannot, because the row is real from then on and an ordinary
+`cancel()` stands the shift down. `announceWaitlistConfirmed()` re-reads the row under the
+`not in ('cancelled','waitlisted')` filter rather than trusting the caller's copy, so a
+confirmation the race check rolled back announces nothing.
+
+The status filter in `priorBookingCount` is what makes this work in both directions: the rest of
+the member's queue counts for nothing while they are still in it, so the booking they actually
+got is still their first — and once one of those queued rows is itself confirmed, it becomes
+history and suppresses a second orientation.
+
+**Idempotence is the re-apply guard**, not a mechanism of its own. The bus is in-process and
+best-effort with no dedupe, so a re-delivered event lands on the same check that stops a
+coordinator double-clicking Apply and is refused by name. Without an orientation list in the
+database the feature is simply off, which is how it degrades before the seed exists.
+
+`reservation.rescheduled` moves it. A booking can be re-timed in place rather than cancelled and
+remade, and that leaves anything pinned to the old window behind — worse than a cancellation,
+because the volunteer turns up at an hour nobody is coming and nothing on any screen says so. The
+shift moves by the **delta**, not by recomputing from the duty list: the stamped work order has no
+link back, so a list edited since must not silently re-time work somebody has already claimed.
+Cancelled and resolved shifts stay where they are, being history rather than plans.
+
+`reservation.cancelled` stands the shift down through `cancelShift`, so it appears in the staff
+surfaces exactly as a hand-cancelled shift does — with the un-notified count and the "Notify
+all" button, because telling the volunteer is deliberately still a person's decision. The
+cascade is keyed on the **reservation**, not the member, which is why rebooking needs no
+special case: the new booking is that member's first again by the shared rule, gets its own
+shift, and the old one stays cancelled as a record.
+
+`member_orientation` holds timestamps and no status; `stateOf()` derives
+`pending | scheduled | completed | waived`. Two of those would be wrong the moment a clock
+ticked if they were stored — `scheduled` is really a fact about whether the shift is still
+live, and an orientation **nobody claims emits no completion event at all**, so a stored status
+would sit at `scheduled` for ever with its time in the past and need a cron to un-stick.
+
+Who may run one is the ordinary clearance gate: `volunteer_role_certification` links the
+Rehearsal Orientation role to the Space Orientation Trained certification, and `claimShift`
+already enforces it. Nothing new claims, assigns, or notifies.
 
 ### Data touched
 
 `volunteer_role`, `volunteer_role_interest`, `volunteer_profile`, `volunteer_hour_log`,
 `work_order`, `volunteer_signup`, `volunteer_shift_feedback`,
 `volunteer_certification`, `member_certification`, `volunteer_role_certification`,
-`duty_list`, `duty_list_item`, `work_task`.
+`duty_list`, `duty_list_item`, `work_task`, `member_orientation`.
 
 ### Where it breaks
 
@@ -1067,6 +1144,25 @@ already has a row identifying it, and March's deep clean is a different event fr
 - **The member surface is missing entirely** → the `volunteering` flag gates the member side
   only. The staff panel showing it while members cannot see it is the intended state, not a
   bug.
+- **No orientation shift appeared for a first booking** → in order: is there an active
+  `duty_list` with `auto_apply_on = 'reservation.first'` and `subject = 'reservation'`; is
+  `booker_type` actually `'user'`; and does the member have an earlier non-cancelled,
+  non-waitlisted booking. A **waitlisted** row is not history — that was a real defect in
+  `isFirstReservationSql`, harmless while it only drove a badge and silently suppressing an
+  orientation once it drove this.
+- **A member whose first booking was waitlisted got no orientation** → they get one when they
+  confirm the slot, not when they join the queue and not when it is offered to them. Check the
+  row actually reached `scheduled`: `confirmWaitlisted` rolls a confirmation back to
+  `waitlisted` if a competing booking landed mid-write, and `announceWaitlistConfirmed()`
+  deliberately says nothing for a row still in the queue. A booking that is only _offered_ —
+  `waitlist_notified_at` set, status still `waitlisted` — has not been confirmed yet and is
+  correctly silent.
+- **An orientation stuck at "Booked" after the date passed** → it cannot be. The state is
+  derived, and `stateOf` falls back to `pending` once `scheduledFor` is in the past with no
+  completion.
+- **An orientation left behind after a booking was re-timed** → `adjustWindow` emits
+  `reservation.rescheduled`; check the listener ran. Only live shifts move, and a shift whose
+  booking moved by zero minutes (an extension in place) is deliberately untouched.
 
 ---
 
@@ -1132,6 +1228,72 @@ seeks to `serverNow − startsAt`.
   Surfaced on the band's release page and counted on `/staff/music`.
 - **An abandoned checkout** leaves a `pending` row; `/api/cron/sweep-audio-purchases`
   clears it after 24h.
+
+## 14. Producing a show: the production record
+
+Design spec: [production-workflow-spec.md](../specs/production-workflow-spec.md) —
+**read its 2026-09-04 amendment first**; most of the body is superseded.
+
+### The story
+
+A listing on the gig guide says a show is happening. A **production** is the other
+half: load-in at four, soundcheck at half five, doors at seven, curfew at eleven,
+and somebody's name against all of it. Most listings never become one — a band's own
+gig and a member's community post never do — which is why it is a separate row
+rather than ten columns that would be NULL on the guide's hottest query.
+
+A staffer opens one from the event page, works on it in the console, and walks it
+forward as the night gets more real: **draft** (somebody is thinking about it) →
+**offered** (the offer is out, waiting on an act) → **confirmed** (it is happening) →
+**completed** (it happened). `settled` and `closed` are in the vocabulary but have no
+button yet; the settlement worksheet and the close-out are later phases.
+
+### Code path
+
+1. `/staff/events/[id]` → **Add production** → `createProduction`
+   (`lib/remote/productions.remote.ts`, guard `event.manage`) →
+   `production-service.createProduction()`. The 1:1 is held by `uq_production_event`,
+   so this inserts and reads the violation rather than selecting first — a
+   select-then-insert is a race.
+2. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
+   adds one entry to its existing `Promise.all` rather than a second remote query.
+3. **Overview** tab → `updateProduction` (times and notes) and
+   `setProductionProducer` (who is running it — `'me'` resolves server-side, so the
+   client never names a user id).
+4. `ProductionStatusAction` → `advanceProduction` →
+   `production-service.transitionProduction()`. Every move is
+   `UPDATE … WHERE id = ? AND status IN (…)` plus a `getRowCount` check: D1 has no
+   interactive transactions, so this is the house pattern. A zero row count re-reads
+   to tell "no such production" from "wrong status".
+5. `event-service.cancel()` → `cancelProductionsForEvent()`. One conditional update
+   over the three pre-completed statuses; a production that already `completed`
+   describes a night that happened, and cancelling the advertisement does not
+   un-happen it.
+6. `/staff/productions` reads everything through the one `getStaffEvents` query:
+   `listAll()` left-joins `venue` and `production` (both 1:1, so no fan-out), and
+   `getEventLineups()` — the batched helper — supplies the headliner and the count.
+
+### Data touched
+
+- `production` — the record. Cascades from `event_listing`; `producerUserId` and
+  `createdByUserId` are both set-null, because purging a staff account must not
+  delete the collective's production records.
+- `event_listing.venueId` — where the show is, and therefore whether it holds the
+  practice room. Deliberately **not** duplicated onto `production`.
+- `event_band` — the bill, which the index summarises and the production never
+  re-declares.
+
+### Where it breaks
+
+- **The index shows a production against a cancelled show.** The cascade in
+  `cancel()` did not run — it is the only thing keeping the status column honest.
+- **"Add production" is missing on a CMC show that has none.** `getStaffEventPage`
+  stopped returning `production`; the button is gated on it being null.
+- **A transition button does nothing.** The row moved underneath the page. The
+  conditional update matched zero rows and the error names the status it actually
+  found — read it rather than retrying.
+- **`settled` or `closed` appears with no way to reach it.** That is correct today.
+  Do not add a button for either until the work it names exists.
 
 ## Cross-cutting patterns worth internalizing
 

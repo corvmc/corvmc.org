@@ -757,7 +757,7 @@ export async function listSignupsForUser(
  * schema. One scalar select keeps it that way.
  */
 const eventTitleSql = sql<string | null>`(
-	select e."title" from "event" e where e."id" = ${workOrder.eventId}
+	select e."title" from "event_listing" e where e."id" = ${workOrder.eventId}
 )`;
 
 /**
@@ -884,7 +884,7 @@ export async function listUnclosedSignups(
 export async function countVolunteerWorkWaiting(now = new Date()): Promise<number> {
 	const lookback = new Date(now.getTime() - CLOSE_OUT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
 
-	const [pendingHours, claims, blocked, unclosed] = await Promise.all([
+	const [pendingHours, claims, blocked, unclosed, unscheduled] = await Promise.all([
 		db.select({ n: count() }).from(volunteerHourLog).where(eq(volunteerHourLog.status, 'pending')),
 		db
 			.select({ n: count() })
@@ -909,6 +909,16 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 					lt(workOrder.endsAt, now),
 					gte(workOrder.endsAt, lookback)
 				)
+			),
+		// Work with no time on it. `listShifts` filters these out by `starts_at`
+		// and every forward-looking query does the same, so before this they were
+		// waiting on a coordinator with nothing anywhere saying so — which is how
+		// the advance half of a duty list vanished the moment it was stamped.
+		db
+			.select({ n: count() })
+			.from(workOrder)
+			.where(
+				and(isNull(workOrder.startsAt), isNull(workOrder.resolvedAt), isNull(workOrder.cancelledAt))
 			)
 	]);
 
@@ -916,7 +926,8 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 		Number(pendingHours[0]?.n ?? 0) +
 		Number(claims[0]?.n ?? 0) +
 		Number(blocked[0]?.n ?? 0) +
-		Number(unclosed[0]?.n ?? 0)
+		Number(unclosed[0]?.n ?? 0) +
+		Number(unscheduled[0]?.n ?? 0)
 	);
 }
 

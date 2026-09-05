@@ -48,15 +48,24 @@ const ENDS = Math.floor(new Date('2026-10-10T07:00:00Z').getTime() / 1000);
 
 let applyDutyList: typeof import('./duty-list-service').applyDutyList;
 let DutyListAlreadyAppliedError: typeof import('./duty-list-service').DutyListAlreadyAppliedError;
+let DutyListValidationError: typeof import('./duty-list-service').DutyListValidationError;
 
 beforeAll(async () => {
 	migrate(base, { migrationsFolder: MIGRATIONS_FOLDER });
-	({ applyDutyList, DutyListAlreadyAppliedError } = await import('./duty-list-service'));
+	({ applyDutyList, DutyListAlreadyAppliedError, DutyListValidationError } =
+		await import('./duty-list-service'));
 }, 30_000);
 
 /** Fresh fixtures per test — every one of these applies a list and asserts on the rows. */
 beforeEach(() => {
-	for (const t of ['work_task', 'work_order', 'duty_list_item', 'duty_list', 'event']) {
+	for (const t of [
+		'work_task',
+		'work_order',
+		'duty_list_item',
+		'duty_list',
+		'event_listing',
+		'reservation'
+	]) {
 		sqlite.exec(`DELETE FROM ${t}`);
 	}
 	sqlite.exec(`DELETE FROM volunteer_role WHERE id LIKE 'role-%'`);
@@ -68,10 +77,20 @@ beforeEach(() => {
 	sqlite.exec(`INSERT INTO volunteer_role (id, name) VALUES ('role-1','Front Desk')`);
 	sqlite.exec(`INSERT INTO volunteer_role (id, name) VALUES ('role-2','Booking Lead')`);
 	sqlite.exec(
-		`INSERT INTO event (id, title, starts_at, ends_at, doors_at, created_by_user_id)
+		`INSERT INTO event_listing (id, title, starts_at, ends_at, doors_at, created_by_user_id)
 		 VALUES ('evt-1','Show', ${STARTS}, ${ENDS}, ${DOORS}, 'u1')`
 	);
+	sqlite.exec(
+		`INSERT INTO reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)
+		 VALUES ('res-1','user','u1','u1','scheduled', ${STARTS}, ${ENDS})`
+	);
 	sqlite.exec(`INSERT INTO duty_list (id, name, anchor) VALUES ('dl-1','Standard Show','doors')`);
+	// The orientation shape: anchored to the booking's own start, because a
+	// rehearsal has no doors.
+	sqlite.exec(
+		`INSERT INTO duty_list (id, name, anchor, subject, auto_apply_on)
+		 VALUES ('dl-res','Rehearsal Orientation','start','reservation','reservation.first')`
+	);
 });
 
 function addItem(id: string, cols: string, vals: string) {
@@ -101,7 +120,7 @@ describe('applyDutyList', () => {
 	it('turns a windowed item into a scheduled shift, measured from doors', async () => {
 		addItem('i1', 'offset_minutes, duration_minutes, capacity', '-180, 120, 2');
 
-		await applyDutyList('dl-1', 'evt-1', 'u1');
+		await applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1');
 
 		const [row] = shifts();
 		expect(row.starts_at).toBe(DOORS - 180 * 60);
@@ -114,7 +133,7 @@ describe('applyDutyList', () => {
 	it('turns a deadline item into an unscheduled work order with a due date', async () => {
 		addItem('i1', 'due_offset_minutes', '-10080');
 
-		await applyDutyList('dl-1', 'evt-1', 'u1');
+		await applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1');
 
 		const [row] = shifts();
 		// The whole reason the columns are nullable: this is work with a deadline
@@ -125,10 +144,10 @@ describe('applyDutyList', () => {
 	});
 
 	it('falls back to the start time when the event has no doors', async () => {
-		sqlite.exec(`UPDATE event SET doors_at = NULL WHERE id = 'evt-1'`);
+		sqlite.exec(`UPDATE event_listing SET doors_at = NULL WHERE id = 'evt-1'`);
 		addItem('i1', 'offset_minutes, duration_minutes', '0, 60');
 
-		await applyDutyList('dl-1', 'evt-1', 'u1');
+		await applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1');
 
 		expect(shifts()[0].starts_at).toBe(STARTS);
 	});
@@ -137,27 +156,31 @@ describe('applyDutyList', () => {
 		sqlite.exec(`UPDATE duty_list SET anchor = 'end' WHERE id = 'dl-1'`);
 		// `event_cmc_needs_end` forbids a CMC event without an end, so the only
 		// events that can reach this branch are the ones somebody else authored.
-		sqlite.exec(`UPDATE event SET ends_at = NULL, source = 'band' WHERE id = 'evt-1'`);
+		sqlite.exec(`UPDATE event_listing SET ends_at = NULL, source = 'band' WHERE id = 'evt-1'`);
 		addItem('i1', 'offset_minutes, duration_minutes', '0, 60');
 
-		await expect(applyDutyList('dl-1', 'evt-1', 'u1')).rejects.toThrow(/no end time/i);
+		await expect(applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1')).rejects.toThrow(
+			/no end time/i
+		);
 	});
 
 	it('refuses a second apply rather than doubling the roster', async () => {
 		addItem('i1', 'offset_minutes, duration_minutes', '-180, 120');
 
-		await applyDutyList('dl-1', 'evt-1', 'u1');
-		await expect(applyDutyList('dl-1', 'evt-1', 'u1')).rejects.toThrow(DutyListAlreadyAppliedError);
+		await applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1');
+		await expect(applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1')).rejects.toThrow(
+			DutyListAlreadyAppliedError
+		);
 		expect(shifts()).toHaveLength(1);
 	});
 
 	it('lets a re-apply through once the first round is cancelled', async () => {
 		addItem('i1', 'offset_minutes, duration_minutes', '-180, 120');
 
-		await applyDutyList('dl-1', 'evt-1', 'u1');
+		await applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1');
 		sqlite.exec(`UPDATE work_order SET cancelled_at = unixepoch()`);
 
-		await expect(applyDutyList('dl-1', 'evt-1', 'u1')).resolves.toBeTruthy();
+		await expect(applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1')).resolves.toBeTruthy();
 		expect(shifts()).toHaveLength(2);
 	});
 
@@ -168,7 +191,7 @@ describe('applyDutyList', () => {
 			 VALUES ('i2','dl-1','role-2', -10080, '["Confirm lineup","Poster out","Ticket link"]')`
 		);
 
-		const result = await applyDutyList('dl-1', 'evt-1', 'u1');
+		const result = await applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1');
 		expect(result.taskCount).toBe(5);
 
 		const rows = sqlite
@@ -199,7 +222,7 @@ describe('applyDutyList', () => {
 			`-180, 120, '${JSON.stringify(labels)}'`
 		);
 
-		const result = await applyDutyList('dl-1', 'evt-1', 'u1');
+		const result = await applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1');
 
 		expect(result.taskCount).toBe(60);
 		const [{ n }] = sqlite.prepare(`SELECT count(*) AS n FROM work_task`).all() as { n: number }[];
@@ -207,6 +230,124 @@ describe('applyDutyList', () => {
 	});
 
 	it('refuses a list with nothing on it', async () => {
-		await expect(applyDutyList('dl-1', 'evt-1', 'u1')).rejects.toThrow(/no items/i);
+		await expect(applyDutyList('dl-1', { kind: 'event', id: 'evt-1' }, 'u1')).rejects.toThrow(
+			/no items/i
+		);
+	});
+});
+
+/**
+ * The same machinery, stamped onto a rehearsal booking instead of a show.
+ *
+ * A booking is a window with a start and an end, which is everything an offset
+ * needs — so these assert the arithmetic is unchanged and only the anchor column
+ * moved, rather than re-testing chunking and task ordering a second time.
+ */
+describe('applyDutyList — reservation subject', () => {
+	function resItem(id: string, cols: string, vals: string) {
+		sqlite.exec(
+			`INSERT INTO duty_list_item (id, duty_list_id, volunteer_role_id, ${cols})
+			 VALUES ('${id}','dl-res','role-1', ${vals})`
+		);
+	}
+
+	it('measures offsets from the booking, and carries reservation_id instead of event_id', async () => {
+		resItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
+
+		const result = await applyDutyList('dl-res', { kind: 'reservation', id: 'res-1' }, null);
+		expect(result.workOrderIds).toHaveLength(1);
+
+		const [row] = sqlite
+			.prepare(
+				`SELECT starts_at, ends_at, event_id, reservation_id, created_by_user_id
+				 FROM work_order`
+			)
+			.all() as {
+			starts_at: number;
+			ends_at: number;
+			event_id: string | null;
+			reservation_id: string | null;
+			created_by_user_id: string | null;
+		}[];
+
+		expect(row.starts_at).toBe(STARTS - 15 * 60);
+		expect(row.ends_at).toBe(STARTS + 30 * 60);
+		expect(row.reservation_id).toBe('res-1');
+		// Exactly one anchor. A show's roster must not appear on a booking.
+		expect(row.event_id).toBeNull();
+		// A listener applied it, so there is no acting user to record.
+		expect(row.created_by_user_id).toBeNull();
+	});
+
+	it('produces a deadline work order from a booking too', async () => {
+		resItem('i1', 'due_offset_minutes', '-1440');
+
+		await applyDutyList('dl-res', { kind: 'reservation', id: 'res-1' }, null);
+
+		const [row] = sqlite.prepare(`SELECT starts_at, ends_at, due_at FROM work_order`).all() as {
+			starts_at: number | null;
+			ends_at: number | null;
+			due_at: number;
+		}[];
+		expect(row.starts_at).toBeNull();
+		expect(row.ends_at).toBeNull();
+		expect(row.due_at).toBe(STARTS - 1440 * 60);
+	});
+
+	it('refuses a second apply per booking, which is what makes the listener idempotent', async () => {
+		resItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
+
+		await applyDutyList('dl-res', { kind: 'reservation', id: 'res-1' }, null);
+		await expect(
+			applyDutyList('dl-res', { kind: 'reservation', id: 'res-1' }, null)
+		).rejects.toThrow(DutyListAlreadyAppliedError);
+		expect(shifts()).toHaveLength(1);
+	});
+
+	it('counts applies per booking, not across every booking at once', async () => {
+		sqlite.exec(
+			`INSERT INTO reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)
+			 VALUES ('res-2','user','u1','u1','scheduled', ${STARTS + 86400}, ${ENDS + 86400})`
+		);
+		resItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
+
+		await applyDutyList('dl-res', { kind: 'reservation', id: 'res-1' }, null);
+		await expect(
+			applyDutyList('dl-res', { kind: 'reservation', id: 'res-2' }, null)
+		).resolves.toBeTruthy();
+		expect(shifts()).toHaveLength(2);
+	});
+
+	it('refuses an event list on a booking, and a booking list on an event', async () => {
+		addItem('i1', 'offset_minutes, duration_minutes', '-180, 120');
+		resItem('i2', 'offset_minutes, duration_minutes', '-15, 45');
+
+		await expect(applyDutyList('dl-1', { kind: 'reservation', id: 'res-1' }, null)).rejects.toThrow(
+			DutyListValidationError
+		);
+		await expect(applyDutyList('dl-res', { kind: 'event', id: 'evt-1' }, 'u1')).rejects.toThrow(
+			DutyListValidationError
+		);
+		expect(shifts()).toHaveLength(0);
+	});
+
+	it('refuses a doors-anchored list on a booking rather than silently using its start', async () => {
+		// The row can only get here by going round the service — `createDutyList`
+		// and `updateDutyList` refuse the pair. Assert apply refuses it too, since
+		// that is the half a hand-written seed or a migration could reach.
+		sqlite.exec(`UPDATE duty_list SET anchor = 'doors' WHERE id = 'dl-res'`);
+		resItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
+
+		await expect(
+			applyDutyList('dl-res', { kind: 'reservation', id: 'res-1' }, null)
+		).rejects.toThrow(/no doors/i);
+	});
+
+	it('refuses a booking that no longer exists', async () => {
+		resItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
+
+		await expect(
+			applyDutyList('dl-res', { kind: 'reservation', id: 'gone' }, null)
+		).rejects.toThrow(/no longer exists/i);
 	});
 });

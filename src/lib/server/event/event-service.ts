@@ -1,15 +1,15 @@
 import { db, getRowCount } from '$lib/server/db';
 import { DomainError } from '$lib/server/domain-error';
 import {
-	event,
+	eventListing,
 	eventBand,
 	eventGroup,
 	publicEventStatuses,
-	type EventSource,
 	type EventKind,
 	type EventBandStatus,
 	type LineupEntry
 } from '$lib/server/db/schema/event';
+import type { EventSource } from '$lib/config';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { directoryEntry } from '$lib/server/db/schema/directory';
@@ -18,6 +18,9 @@ import { reservation } from '$lib/server/db/schema/reservation';
 import { ticket } from '$lib/server/db/schema/ticket';
 import { eventRsvp } from '$lib/server/db/schema/event-rsvp';
 import { contentFlag } from '$lib/server/db/schema/flag';
+import { venue } from '$lib/server/db/schema/venue';
+import { production } from '$lib/server/db/schema/production';
+import { cancelProductionsForEvent } from '$lib/server/production/production-service';
 import {
 	eq,
 	and,
@@ -39,7 +42,7 @@ import { alias } from 'drizzle-orm/sqlite-core';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { memberRefColumns } from '$lib/server/entity/refs';
 import type { EventStatus } from '$lib/server/db/schema/event';
-import { staffCreate } from '$lib/server/reservation/reservation-service';
+import { staffCreate, adjustWindow } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
@@ -167,6 +170,8 @@ export interface EventRow {
 	/** What the occasion is, as opposed to whose it is. See `eventKinds`. */
 	kind: EventKind;
 	location: string | null;
+	/** The structured half of `location`. Null means the practice room. */
+	venueId: string | null;
 	externalTicketUrl: string | null;
 	/** Staff's reason for turning down or pulling a community listing. */
 	reviewNotes: string | null;
@@ -190,6 +195,9 @@ export interface CreateEventParams {
 	ticketingEnabled?: boolean;
 	ticketPrice?: number | null;
 	ticketQuantity?: number | null;
+	/** Where it is. Null means the practice room, which is what every event meant before the column. */
+	venueId?: string | null;
+	location?: string | null;
 	createdByUserId: string;
 	reservation?: {
 		startsAt: Date;
@@ -214,6 +222,8 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		ticketingEnabled = false,
 		ticketPrice,
 		ticketQuantity,
+		venueId,
+		location,
 		createdByUserId,
 		reservation: reservationParams,
 		posterFile
@@ -252,7 +262,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 
 		const res = await staffCreate({
 			userId: createdByUserId,
-			bookerType: 'event',
+			bookerType: 'event_listing',
 			bookerId: eventId,
 			startsAt: reservationParams.startsAt,
 			endsAt: reservationParams.endsAt,
@@ -264,7 +274,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	let row: EventRow;
 	try {
 		[row] = await db
-			.insert(event)
+			.insert(eventListing)
 			.values({
 				id: eventId,
 				title,
@@ -278,6 +288,8 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				ticketPrice: ticketPrice ?? null,
 				// Capacity is only meaningful while we're the ones counting.
 				ticketQuantity: ticketingEnabled ? (ticketQuantity ?? null) : null,
+				venueId: venueId ?? null,
+				location: location ?? null,
 				reservationId,
 				createdByUserId
 			})
@@ -299,9 +311,9 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 	if (posterFile) {
 		const key = await writeEventPoster(row.id, posterFile);
 		await db
-			.update(event)
+			.update(eventListing)
 			.set({ posterKey: key, updatedAt: new Date() })
-			.where(eq(event.id, row.id));
+			.where(eq(eventListing.id, row.id));
 		row.posterKey = key;
 	}
 
@@ -321,6 +333,7 @@ export interface UpdateEventParams {
 	tags?: string | null;
 	kind?: EventKind;
 	location?: string | null;
+	venueId?: string | null;
 	externalTicketUrl?: string | null;
 	ticketingEnabled?: boolean;
 	ticketPrice?: number | null;
@@ -466,6 +479,7 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.kind !== undefined) updates.kind = params.kind;
 	if (params.location !== undefined) updates.location = params.location;
+	if (params.venueId !== undefined) updates.venueId = params.venueId;
 	if (params.externalTicketUrl !== undefined) {
 		updates.externalTicketUrl = params.externalTicketUrl;
 	}
@@ -531,52 +545,62 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		updates.ticketQuantity = params.ticketQuantity;
 	}
 
-	// Hold the space, or move an existing hold. Both live here because they differ
-	// only by whether there is an old reservation to release first: an event that
-	// was created without space is otherwise unfixable, since nothing else in the
-	// app can attach one after the fact.
+	// Hold the space, or move an existing hold. Both live here because an event
+	// created without space is otherwise unfixable — nothing else in the app can
+	// attach one after the fact — but they are no longer the same operation.
 	if (params.rebook) {
 		const { userId, reservationStartsAt, reservationEndsAt, overrideConflicts } = params.rebook;
 
-		// Conflict check first. Cancelling ahead of it meant a rejected window left
-		// the event pointing at a reservation we had already released, with nothing
-		// re-created and no compensating write — the room lost and the link dead.
-		// Excluding the current reservation keeps an event from conflicting with
-		// its own hold.
-		if (!overrideConflicts) {
-			const conflict = await hasConflict(
+		if (existing.reservationId) {
+			// Move the window on the row that is already there. This used to cancel
+			// and re-create, which threw away the row's `lock_code`: the cron that
+			// mints one runs in the morning and only looks at codeless rows starting
+			// today, so re-timing a show on the day it happens left nobody able to
+			// open the door. adjustWindow runs the conflict check itself, with this
+			// reservation excluded from its own comparison, and throws before it
+			// writes — so a rejected window still leaves the hold exactly as it was.
+			const { previousStartsAt, previousEndsAt } = await adjustWindow(
+				existing.reservationId,
 				reservationStartsAt,
 				reservationEndsAt,
-				existing.reservationId ?? undefined
+				{ overrideConflicts }
 			);
-			if (conflict) {
-				throw new ReservationConflictError();
-			}
-		}
 
-		if (existing.reservationId) {
+			// The lock enforces access through its own copy of the window, so it has
+			// to follow. Best-effort: a lock outage must not fail the re-time, and
+			// the daily job will reconcile whatever is left.
 			try {
-				await cancelReservation(existing.reservationId, userId, 'Event times changed — rebooking', {
-					staffOverride: true
-				});
-			} catch {
-				// Already cancelled — continue
+				const { syncAccessWindow } = await import('$lib/server/lock/lock-service');
+				await syncAccessWindow(existing.reservationId, previousStartsAt, previousEndsAt);
+			} catch (err) {
+				console.error(
+					`Failed to sync lock access for reservation ${existing.reservationId}: ${(err as Error).message}`
+				);
 			}
+		} else {
+			// Nothing to move: this is the first hold. Conflict-check before the
+			// insert so a rejected window leaves no half-booked room behind.
+			if (!overrideConflicts) {
+				const conflict = await hasConflict(reservationStartsAt, reservationEndsAt);
+				if (conflict) {
+					throw new ReservationConflictError();
+				}
+			}
+
+			const newRes = await staffCreate({
+				userId,
+				bookerType: 'event_listing',
+				bookerId: eventId,
+				startsAt: reservationStartsAt,
+				endsAt: reservationEndsAt,
+				// Event space is staff-held for drafts too: there is no member confirm/pay
+				// flow for it and publish() never touches the reservation, so a
+				// `scheduled` hold could only ever be swept away as unconfirmed.
+				status: 'confirmed'
+			});
+
+			updates.reservationId = newRes.id;
 		}
-
-		const newRes = await staffCreate({
-			userId,
-			bookerType: 'event',
-			bookerId: eventId,
-			startsAt: reservationStartsAt,
-			endsAt: reservationEndsAt,
-			// Event space is staff-held for drafts too: there is no member confirm/pay
-			// flow for it and publish() never touches the reservation, so a
-			// `scheduled` hold could only ever be swept away as unconfirmed.
-			status: 'confirmed'
-		});
-
-		updates.reservationId = newRes.id;
 	}
 
 	// Handle poster replacement
@@ -584,7 +608,11 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		updates.posterKey = await writeEventPoster(eventId, params.posterFile);
 	}
 
-	const [updated] = await db.update(event).set(updates).where(eq(event.id, eventId)).returning();
+	const [updated] = await db
+		.update(eventListing)
+		.set(updates)
+		.where(eq(eventListing.id, eventId))
+		.returning();
 
 	return updated;
 }
@@ -603,9 +631,11 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
  */
 export async function publish(eventId: string): Promise<void> {
 	const result = await db
-		.update(event)
+		.update(eventListing)
 		.set({ status: 'published', publishedAt: new Date(), updatedAt: new Date() })
-		.where(and(eq(event.id, eventId), inArray(event.status, ['draft', 'pending_review'])));
+		.where(
+			and(eq(eventListing.id, eventId), inArray(eventListing.status, ['draft', 'pending_review']))
+		);
 
 	if (getRowCount(result) === 0) {
 		const existing = await getById(eventId);
@@ -632,9 +662,9 @@ export async function unpublish(eventId: string): Promise<void> {
 	}
 
 	await db
-		.update(event)
+		.update(eventListing)
 		.set({ status: 'draft', publishedAt: null, updatedAt: new Date() })
-		.where(and(eq(event.id, eventId), eq(event.status, 'published')));
+		.where(and(eq(eventListing.id, eventId), eq(eventListing.status, 'published')));
 }
 
 /**
@@ -652,18 +682,18 @@ export async function unpublishWithNotice(
 ): Promise<void> {
 	const [row] = await db
 		.select({
-			id: event.id,
-			title: event.title,
-			status: event.status,
-			source: event.source,
-			groupId: event.groupId,
-			posterKey: event.posterKey,
-			createdByUserId: event.createdByUserId,
+			id: eventListing.id,
+			title: eventListing.title,
+			status: eventListing.status,
+			source: eventListing.source,
+			groupId: eventListing.groupId,
+			posterKey: eventListing.posterKey,
+			createdByUserId: eventListing.createdByUserId,
 			bandName: group.name
 		})
-		.from(event)
-		.leftJoin(group, eq(group.id, event.groupId))
-		.where(eq(event.id, eventId))
+		.from(eventListing)
+		.leftJoin(group, eq(group.id, eventListing.groupId))
+		.where(eq(eventListing.id, eventId))
 		.limit(1);
 
 	if (!row || row.status !== 'published') return;
@@ -721,7 +751,7 @@ export async function unpublishWithNotice(
 					// sweep treats a zero as a broken row.
 					const original = await findByKey(row.posterKey);
 					await replaceSlot({
-						attachableType: 'event',
+						attachableType: 'event_listing',
 						attachableId: eventId,
 						slot: 'poster',
 						key: withheldKey,
@@ -744,13 +774,13 @@ export async function unpublishWithNotice(
 		// member could lose the explanation of an earlier decision to an unrelated
 		// later one.
 		await db
-			.update(event)
+			.update(eventListing)
 			.set({
 				posterKey: nextPosterKey,
 				...(opts.notes ? { reviewNotes: opts.notes } : {}),
 				updatedAt: new Date()
 			})
-			.where(eq(event.id, eventId));
+			.where(eq(eventListing.id, eventId));
 
 		const [submitter] = await db
 			.select({ name: user.name, email: user.email })
@@ -911,13 +941,13 @@ export async function remove(eventId: string, userId: string): Promise<void> {
 
 	// Detach, not delete. A recurring series' occurrences share one poster
 	// object, so removing one occurrence must not take the others' image with it.
-	await detachSlot('event', eventId, 'poster');
+	await detachSlot('event_listing', eventId, 'poster');
 
 	await db
 		.delete(contentFlag)
 		.where(and(eq(contentFlag.entityType, 'event'), eq(contentFlag.entityId, eventId)));
 
-	await db.delete(event).where(eq(event.id, eventId));
+	await db.delete(eventListing).where(eq(eventListing.id, eventId));
 }
 
 // ---------------------------------------------------------------------------
@@ -930,9 +960,9 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 	if (existing.status === 'cancelled') throw new EventStateError('Event is already cancelled');
 
 	const result = await db
-		.update(event)
+		.update(eventListing)
 		.set({ status: 'cancelled', updatedAt: new Date() })
-		.where(and(eq(event.id, eventId), ne(event.status, 'cancelled')));
+		.where(and(eq(eventListing.id, eventId), ne(eventListing.status, 'cancelled')));
 
 	if (getRowCount(result) === 0) throw new EventStateError('Event status changed concurrently');
 
@@ -947,7 +977,14 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 		}
 	}
 
-	await detachSlot('event', eventId, 'poster');
+	// The ops record follows the listing. Without this the productions index
+	// would show a `confirmed` production against a cancelled show — the status
+	// column lying on the day it shipped. Only pre-completed rows move: a
+	// production that already happened is history, and cancelling the
+	// advertisement afterwards does not un-happen it.
+	await cancelProductionsForEvent(eventId);
+
+	await detachSlot('event_listing', eventId, 'poster');
 
 	// Capture ticket holders before voiding their tickets (the query below
 	// filters on live statuses), then mark the tickets cancelled so they can't
@@ -1007,7 +1044,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function getById(eventId: string): Promise<EventRow | null> {
-	const [row] = await db.select().from(event).where(eq(event.id, eventId)).limit(1);
+	const [row] = await db.select().from(eventListing).where(eq(eventListing.id, eventId)).limit(1);
 
 	return row ?? null;
 }
@@ -1018,16 +1055,16 @@ export async function getById(eventId: string): Promise<EventRow | null> {
 export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 	const query = db
 		.select()
-		.from(event)
+		.from(eventListing)
 		.where(
 			and(
-				eq(event.status, 'published'),
-				eq(event.source, 'cmc'),
-				eq(event.kind, 'show'),
-				gt(event.startsAt, new Date())
+				eq(eventListing.status, 'published'),
+				eq(eventListing.source, 'cmc'),
+				eq(eventListing.kind, 'show'),
+				gt(eventListing.startsAt, new Date())
 			)
 		)
-		.orderBy(asc(event.startsAt));
+		.orderBy(asc(eventListing.startsAt));
 
 	if (limit) return query.limit(limit);
 	return query;
@@ -1041,18 +1078,18 @@ export async function getShowTonight(now = new Date()): Promise<EventRow | null>
 
 	const [row] = await db
 		.select()
-		.from(event)
+		.from(eventListing)
 		.where(
 			and(
-				eq(event.status, 'published'),
-				eq(event.source, 'cmc'),
-				eq(event.kind, 'show'),
-				gte(event.startsAt, dayStart),
-				lt(event.startsAt, dayEnd),
-				gt(event.endsAt, now)
+				eq(eventListing.status, 'published'),
+				eq(eventListing.source, 'cmc'),
+				eq(eventListing.kind, 'show'),
+				gte(eventListing.startsAt, dayStart),
+				lt(eventListing.startsAt, dayEnd),
+				gt(eventListing.endsAt, now)
 			)
 		)
-		.orderBy(asc(event.startsAt))
+		.orderBy(asc(eventListing.startsAt))
 		.limit(1);
 
 	return row ?? null;
@@ -1062,16 +1099,16 @@ export async function getShowTonight(now = new Date()): Promise<EventRow | null>
 export async function listPast(limit?: number): Promise<EventRow[]> {
 	const query = db
 		.select()
-		.from(event)
+		.from(eventListing)
 		.where(
 			and(
-				eq(event.status, 'published'),
-				eq(event.source, 'cmc'),
-				eq(event.kind, 'show'),
-				lte(event.startsAt, new Date())
+				eq(eventListing.status, 'published'),
+				eq(eventListing.source, 'cmc'),
+				eq(eventListing.kind, 'show'),
+				lte(eventListing.startsAt, new Date())
 			)
 		)
-		.orderBy(desc(event.startsAt));
+		.orderBy(desc(eventListing.startsAt));
 
 	if (limit) return query.limit(limit);
 	return query;
@@ -1089,24 +1126,46 @@ export async function listPast(limit?: number): Promise<EventRow[]> {
  * asks staff for something, `published` is already public.
  */
 export async function listAll(
-	opts: { source?: EventSource; status?: EventStatus } = {},
+	opts: {
+		source?: EventSource;
+		status?: EventStatus;
+		venueId?: string;
+		from?: Date;
+		to?: Date;
+	} = {},
 	pagination: PaginationInput = {}
 ) {
 	const filters = [
-		opts.source ? eq(event.source, opts.source) : undefined,
-		opts.status ? eq(event.status, opts.status) : undefined,
-		not(and(eq(event.source, 'community'), eq(event.status, 'draft'))!)
+		opts.source ? eq(eventListing.source, opts.source) : undefined,
+		opts.status ? eq(eventListing.status, opts.status) : undefined,
+		opts.venueId ? eq(eventListing.venueId, opts.venueId) : undefined,
+		opts.from ? gte(eventListing.startsAt, opts.from) : undefined,
+		opts.to ? lte(eventListing.startsAt, opts.to) : undefined,
+		not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
 	].filter(Boolean);
 	const where = and(...filters);
 
+	// Both joins are 1:1 — `venue` by the FK, `production` by
+	// `uq_production_event` — so neither fans the row set out and `countQ` stays
+	// a single-table count over the same predicate.
 	const dataQ = db
-		.select({ ...getTableColumns(event), bandName: group.name, bandSlug: group.slug })
-		.from(event)
-		.leftJoin(group, eq(group.id, event.groupId))
+		.select({
+			...getTableColumns(eventListing),
+			bandName: group.name,
+			bandSlug: group.slug,
+			venueName: venue.name,
+			venueIsPrimary: venue.isPrimary,
+			productionId: production.id,
+			productionStatus: production.status
+		})
+		.from(eventListing)
+		.leftJoin(group, eq(group.id, eventListing.groupId))
+		.leftJoin(venue, eq(venue.id, eventListing.venueId))
+		.leftJoin(production, eq(production.eventId, eventListing.id))
 		.where(where)
-		.orderBy(desc(event.startsAt))
+		.orderBy(desc(eventListing.startsAt))
 		.$dynamic();
-	const countQ = db.select({ count: count() }).from(event).where(where);
+	const countQ = db.select({ count: count() }).from(eventListing).where(where);
 	return paginate(dataQ, countQ, pagination);
 }
 
@@ -1149,16 +1208,19 @@ export async function listStaffCalendar(
 		// counts it with no date filter at all. Flooring it here too would leave
 		// the badge reading 3 above a page showing 2, and the stale row would be
 		// unreachable in the only view that can clear it.
-		or(not(inArray(event.status, [...publicEventStatuses])), gte(event.startsAt, from)),
-		inArray(event.status, opts.statuses),
-		opts.sources?.length ? inArray(event.source, opts.sources) : undefined,
-		not(and(eq(event.source, 'community'), eq(event.status, 'draft'))!)
+		or(
+			not(inArray(eventListing.status, [...publicEventStatuses])),
+			gte(eventListing.startsAt, from)
+		),
+		inArray(eventListing.status, opts.statuses),
+		opts.sources?.length ? inArray(eventListing.source, opts.sources) : undefined,
+		not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
 	].filter(Boolean);
 	const where = and(...filters);
 
 	const dataQ = db
 		.select({
-			...getTableColumns(event),
+			...getTableColumns(eventListing),
 			bandName: group.name,
 			bandSlug: group.slug,
 			// Who posted it. `listAll` needs no such join — every row there is
@@ -1168,13 +1230,13 @@ export async function listStaffCalendar(
 			// an unlinked row rather than dropping it.
 			submitter: memberRefColumns()
 		})
-		.from(event)
-		.leftJoin(group, eq(group.id, event.groupId))
-		.leftJoin(user, eq(user.id, event.createdByUserId))
+		.from(eventListing)
+		.leftJoin(group, eq(group.id, eventListing.groupId))
+		.leftJoin(user, eq(user.id, eventListing.createdByUserId))
 		.where(where)
-		.orderBy(asc(event.startsAt))
+		.orderBy(asc(eventListing.startsAt))
 		.$dynamic();
-	const countQ = db.select({ count: count() }).from(event).where(where);
+	const countQ = db.select({ count: count() }).from(eventListing).where(where);
 	return paginate(dataQ, countQ, pagination);
 }
 
@@ -1210,24 +1272,24 @@ export async function listEventsNear(
 	const to = new Date(startsAt.getTime() + span);
 
 	const rows = await db
-		.select({ event, bandName: group.name, bandSlug: group.slug })
-		.from(event)
-		.leftJoin(group, eq(group.id, event.groupId))
+		.select({ event: eventListing, bandName: group.name, bandSlug: group.slug })
+		.from(eventListing)
+		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.where(
 			and(
-				gte(event.startsAt, from),
-				lte(event.startsAt, to),
-				ne(event.id, opts.excludeEventId),
+				gte(eventListing.startsAt, from),
+				lte(eventListing.startsAt, to),
+				ne(eventListing.id, opts.excludeEventId),
 				// `pending_review` belongs here and is the whole point: two members
 				// submitting one gig is the case the published-only heuristic could
 				// never see.
-				inArray(event.status, ['pending_review', 'published', 'cancelled']),
+				inArray(eventListing.status, ['pending_review', 'published', 'cancelled']),
 				// A member's private working copy stays private, exactly as in
 				// `listAll` and `listStaffCalendar`.
-				not(and(eq(event.source, 'community'), eq(event.status, 'draft'))!)
+				not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
 			)
 		)
-		.orderBy(asc(event.startsAt))
+		.orderBy(asc(eventListing.startsAt))
 		.limit(opts.limit ?? 10);
 
 	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
@@ -1617,25 +1679,25 @@ export async function listBandLineupInvites(bandId: string): Promise<LineupInvit
 	const owner = alias(group, 'owner_band');
 	return db
 		.select({
-			eventId: event.id,
-			eventTitle: event.title,
-			startsAt: event.startsAt,
-			location: event.location,
+			eventId: eventListing.id,
+			eventTitle: eventListing.title,
+			startsAt: eventListing.startsAt,
+			location: eventListing.location,
 			billingOrder: eventBand.billingOrder,
 			note: eventBand.note,
 			ownerBandName: owner.name
 		})
 		.from(eventBand)
-		.innerJoin(event, eq(event.id, eventBand.eventId))
-		.leftJoin(owner, eq(owner.id, event.groupId))
+		.innerJoin(eventListing, eq(eventListing.id, eventBand.eventId))
+		.leftJoin(owner, eq(owner.id, eventListing.groupId))
 		.where(
 			and(
 				creditBelongsToGroup(bandId),
 				eq(eventBand.status, 'pending'),
-				ne(event.status, 'cancelled')
+				ne(eventListing.status, 'cancelled')
 			)
 		)
-		.orderBy(asc(event.startsAt));
+		.orderBy(asc(eventListing.startsAt));
 }
 
 /**
@@ -1663,7 +1725,7 @@ function creditBelongsToGroup(groupId: string) {
  */
 function confirmedForBand(bandId: string) {
 	return inArray(
-		event.id,
+		eventListing.id,
 		db
 			.select({ id: eventBand.eventId })
 			.from(eventBand)
@@ -1721,7 +1783,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 	assertValidTicketPrice(ticketPrice);
 
 	const [row] = await db
-		.insert(event)
+		.insert(eventListing)
 		.values({
 			title,
 			description: description ?? null,
@@ -1771,9 +1833,9 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 	if (posterFile) {
 		const key = await writeEventPoster(row.id, posterFile);
 		await db
-			.update(event)
+			.update(eventListing)
 			.set({ posterKey: key, updatedAt: new Date() })
-			.where(eq(event.id, row.id));
+			.where(eq(eventListing.id, row.id));
 		row.posterKey = key;
 	}
 
@@ -1795,17 +1857,17 @@ export async function listGroupSessions(
 ): Promise<EventRow[]> {
 	const conditions = [
 		inArray(
-			event.id,
+			eventListing.id,
 			db.select({ id: eventGroup.eventId }).from(eventGroup).where(eq(eventGroup.groupId, groupId))
 		)
 	];
-	if (opts.upcomingOnly) conditions.push(gt(event.startsAt, new Date()));
+	if (opts.upcomingOnly) conditions.push(gt(eventListing.startsAt, new Date()));
 
 	return db
 		.select()
-		.from(event)
+		.from(eventListing)
 		.where(and(...conditions))
-		.orderBy(opts.upcomingOnly ? asc(event.startsAt) : desc(event.startsAt))
+		.orderBy(opts.upcomingOnly ? asc(eventListing.startsAt) : desc(eventListing.startsAt))
 		.limit(100);
 }
 
@@ -1851,7 +1913,7 @@ export interface CreateGroupEventParams {
  * `createBandEvent()`'s ownership.
  *
  * **The room is free and the group does not book it.** The reservation belongs
- * to the *event* — `bookerType: 'event'`, `bookerId` the event id — exactly as a
+ * to the *event* — `bookerType: 'event_listing'`, `bookerId` the event id — exactly as a
  * staff CMC event's does. Booking as the group would imply the group has a
  * balance to spend, which is precisely what a sanctioned program does not need,
  * and no credit ledger is touched.
@@ -1896,7 +1958,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 			userId: createdByUserId,
 			// Not `'group'`. The room is held for the session, not booked by the
 			// program — see docs/specs/groups-spec.md § Room time.
-			bookerType: 'event',
+			bookerType: 'event_listing',
 			bookerId: eventId,
 			startsAt: reservationParams.startsAt,
 			endsAt: reservationParams.endsAt,
@@ -1908,7 +1970,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 	let row: EventRow;
 	try {
 		[row] = await db
-			.insert(event)
+			.insert(eventListing)
 			.values({
 				id: eventId,
 				title,
@@ -1948,9 +2010,9 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 	if (posterFile) {
 		const key = await writeEventPoster(row.id, posterFile);
 		await db
-			.update(event)
+			.update(eventListing)
 			.set({ posterKey: key, updatedAt: new Date() })
-			.where(eq(event.id, row.id));
+			.where(eq(eventListing.id, row.id));
 		row.posterKey = key;
 	}
 
@@ -1974,7 +2036,7 @@ async function writeEventPoster(
 	const key = mediaKey('events/posters', eventId, posterFile.contentType);
 	await uploadFile(posterFile.buffer, key, posterFile.contentType);
 	await replaceSlot({
-		attachableType: 'event',
+		attachableType: 'event_listing',
 		attachableId: eventId,
 		slot: 'poster',
 		key,
@@ -2030,7 +2092,11 @@ export async function updateBandEvent(
 		updates.posterKey = await writeEventPoster(eventId, params.posterFile);
 	}
 
-	const [updated] = await db.update(event).set(updates).where(eq(event.id, eventId)).returning();
+	const [updated] = await db
+		.update(eventListing)
+		.set(updates)
+		.where(eq(eventListing.id, eventId))
+		.returning();
 
 	return updated;
 }
@@ -2042,11 +2108,11 @@ export async function cancelBandEvent(eventId: string, bandId: string): Promise<
 	if (existing.status === 'cancelled') throw new EventStateError('Event is already cancelled');
 
 	await db
-		.update(event)
+		.update(eventListing)
 		.set({ status: 'cancelled', updatedAt: new Date() })
-		.where(eq(event.id, eventId));
+		.where(eq(eventListing.id, eventId));
 
-	await detachSlot('event', eventId, 'poster');
+	await detachSlot('event_listing', eventId, 'poster');
 }
 
 /** Remove a gig's poster. Owner-only, like every other edit. */
@@ -2056,11 +2122,11 @@ export async function clearBandEventPoster(eventId: string, bandId: string): Pro
 	if (existing.groupId !== bandId) throw new Error('Event does not belong to this band');
 	if (!existing.posterKey) return;
 
-	await detachSlot('event', eventId, 'poster');
+	await detachSlot('event_listing', eventId, 'poster');
 	await db
-		.update(event)
+		.update(eventListing)
 		.set({ posterKey: null, updatedAt: new Date() })
-		.where(eq(event.id, eventId));
+		.where(eq(eventListing.id, eventId));
 }
 
 /** One backfilled gig, already parsed and validated by `parseGigImport`. */
@@ -2119,9 +2185,9 @@ export async function importBandEvents(
 	const inserted: { id: string }[] = [];
 	for (let i = 0; i < values.length; i += 8) {
 		const chunk = await db
-			.insert(event)
+			.insert(eventListing)
 			.values(values.slice(i, i + 8))
-			.returning({ id: event.id });
+			.returning({ id: eventListing.id });
 		inserted.push(...chunk);
 	}
 
@@ -2160,11 +2226,15 @@ export async function importBandEvents(
 export async function listBandEventsUpcoming(bandId: string, limit?: number): Promise<EventRow[]> {
 	const query = db
 		.select()
-		.from(event)
+		.from(eventListing)
 		.where(
-			and(confirmedForBand(bandId), eq(event.status, 'published'), gt(event.startsAt, new Date()))
+			and(
+				confirmedForBand(bandId),
+				eq(eventListing.status, 'published'),
+				gt(eventListing.startsAt, new Date())
+			)
 		)
-		.orderBy(asc(event.startsAt));
+		.orderBy(asc(eventListing.startsAt));
 
 	if (limit) return query.limit(limit);
 	return query;
@@ -2179,9 +2249,9 @@ export interface BandEventRow extends EventRow {
 export async function listBandEvents(bandId: string): Promise<BandEventRow[]> {
 	const rows = await db
 		.select()
-		.from(event)
+		.from(eventListing)
 		.where(confirmedForBand(bandId))
-		.orderBy(desc(event.startsAt));
+		.orderBy(desc(eventListing.startsAt));
 	return rows.map((r) => ({ ...r, isOwner: r.groupId === bandId }));
 }
 
@@ -2189,9 +2259,13 @@ export async function listBandEvents(bandId: string): Promise<BandEventRow[]> {
 export async function countBandPastEvents(bandId: string): Promise<number> {
 	const [row] = await db
 		.select({ value: count() })
-		.from(event)
+		.from(eventListing)
 		.where(
-			and(confirmedForBand(bandId), eq(event.status, 'published'), lte(event.startsAt, new Date()))
+			and(
+				confirmedForBand(bandId),
+				eq(eventListing.status, 'published'),
+				lte(eventListing.startsAt, new Date())
+			)
 		);
 	return row?.value ?? 0;
 }
@@ -2206,11 +2280,15 @@ export async function listBandEventsPast(
 ): Promise<EventRow[]> {
 	return db
 		.select()
-		.from(event)
+		.from(eventListing)
 		.where(
-			and(confirmedForBand(bandId), eq(event.status, 'published'), lte(event.startsAt, new Date()))
+			and(
+				confirmedForBand(bandId),
+				eq(eventListing.status, 'published'),
+				lte(eventListing.startsAt, new Date())
+			)
 		)
-		.orderBy(desc(event.startsAt))
+		.orderBy(desc(eventListing.startsAt))
 		.limit(opts.limit + 1)
 		.offset(opts.offset);
 }
@@ -2236,7 +2314,7 @@ export interface MemberShowRow extends EventRow {
  */
 function confirmedForMember(userId: string) {
 	return inArray(
-		event.id,
+		eventListing.id,
 		db
 			.select({ id: eventBand.eventId })
 			.from(eventBand)
@@ -2313,11 +2391,15 @@ async function withMemberBylines(rows: EventRow[], userId: string): Promise<Memb
 export async function listMemberUpcomingShows(userId: string): Promise<MemberShowRow[]> {
 	const rows = await db
 		.select()
-		.from(event)
+		.from(eventListing)
 		.where(
-			and(confirmedForMember(userId), eq(event.status, 'published'), gt(event.startsAt, new Date()))
+			and(
+				confirmedForMember(userId),
+				eq(eventListing.status, 'published'),
+				gt(eventListing.startsAt, new Date())
+			)
 		)
-		.orderBy(asc(event.startsAt));
+		.orderBy(asc(eventListing.startsAt));
 
 	return withMemberBylines(rows, userId);
 }
@@ -2332,15 +2414,15 @@ export async function listMemberPastShows(
 ): Promise<MemberShowRow[]> {
 	const rows = await db
 		.select()
-		.from(event)
+		.from(eventListing)
 		.where(
 			and(
 				confirmedForMember(userId),
-				eq(event.status, 'published'),
-				lte(event.startsAt, new Date())
+				eq(eventListing.status, 'published'),
+				lte(eventListing.startsAt, new Date())
 			)
 		)
-		.orderBy(desc(event.startsAt))
+		.orderBy(desc(eventListing.startsAt))
 		.limit(opts.limit + 1)
 		.offset(opts.offset);
 
@@ -2351,12 +2433,12 @@ export async function listMemberPastShows(
 export async function countMemberPastShows(userId: string): Promise<number> {
 	const [row] = await db
 		.select({ value: count() })
-		.from(event)
+		.from(eventListing)
 		.where(
 			and(
 				confirmedForMember(userId),
-				eq(event.status, 'published'),
-				lte(event.startsAt, new Date())
+				eq(eventListing.status, 'published'),
+				lte(eventListing.startsAt, new Date())
 			)
 		);
 	return row?.value ?? 0;
@@ -2387,17 +2469,17 @@ export async function listPublicCalendarEvents(
 	end: Date
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
-		.select({ event, bandName: group.name, bandSlug: group.slug })
-		.from(event)
-		.leftJoin(group, eq(group.id, event.groupId))
+		.select({ event: eventListing, bandName: group.name, bandSlug: group.slug })
+		.from(eventListing)
+		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.where(
 			and(
-				inArray(event.status, [...publicEventStatuses]),
-				gte(event.startsAt, start),
-				lt(event.startsAt, end)
+				inArray(eventListing.status, [...publicEventStatuses]),
+				gte(eventListing.startsAt, start),
+				lt(eventListing.startsAt, end)
 			)
 		)
-		.orderBy(asc(event.startsAt));
+		.orderBy(asc(eventListing.startsAt));
 
 	return rows.map((r) => ({ ...r.event, bandName: r.bandName, bandSlug: r.bandSlug }));
 }
@@ -2416,11 +2498,13 @@ export async function listPublicUpcomingEvents(
 	opts: { limit: number; offset: number }
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
-		.select({ event, bandName: group.name, bandSlug: group.slug })
-		.from(event)
-		.leftJoin(group, eq(group.id, event.groupId))
-		.where(and(inArray(event.status, [...publicEventStatuses]), gte(event.startsAt, from)))
-		.orderBy(asc(event.startsAt))
+		.select({ event: eventListing, bandName: group.name, bandSlug: group.slug })
+		.from(eventListing)
+		.leftJoin(group, eq(group.id, eventListing.groupId))
+		.where(
+			and(inArray(eventListing.status, [...publicEventStatuses]), gte(eventListing.startsAt, from))
+		)
+		.orderBy(asc(eventListing.startsAt))
 		.limit(opts.limit + 1)
 		.offset(opts.offset);
 

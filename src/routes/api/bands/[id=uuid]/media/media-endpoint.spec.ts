@@ -48,7 +48,10 @@ const uploadFile = vi.fn(async (_buffer: ArrayBuffer, key: string) => key);
 const deleteObject = vi.fn(async (_key: string) => undefined);
 vi.mock('$lib/server/storage', () => ({
 	uploadFile: (buffer: ArrayBuffer, key: string) => uploadFile(buffer, key),
-	deleteObject: (key: string) => deleteObject(key)
+	deleteObject: (key: string) => deleteObject(key),
+	// POST returns the public URL beside the key so the page editor can draw an
+	// upload in its canvas without a round trip.
+	resolveImageUrl: (key: string) => `https://cdn.test/${key}`
 }));
 
 /**

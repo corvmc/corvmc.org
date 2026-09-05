@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { ticket, type TicketStatus } from '$lib/server/db/schema/ticket';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, inArray, lt, sql, asc, desc } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
@@ -418,9 +418,9 @@ export async function getTicketsSold(eventId: string): Promise<number> {
 
 export async function getTicketsRemaining(eventId: string): Promise<number | null> {
 	const [ev] = await db
-		.select({ ticketQuantity: event.ticketQuantity })
-		.from(event)
-		.where(eq(event.id, eventId))
+		.select({ ticketQuantity: eventListing.ticketQuantity })
+		.from(eventListing)
+		.where(eq(eventListing.id, eventId))
 		.limit(1);
 
 	if (!ev || ev.ticketQuantity == null) return null;
@@ -440,12 +440,12 @@ export async function getUserTickets(userId: string) {
 			attendeeName: ticket.attendeeName,
 			checkedInAt: ticket.checkedInAt,
 			createdAt: ticket.createdAt,
-			eventTitle: event.title,
-			eventStartsAt: event.startsAt,
-			eventEndsAt: event.endsAt
+			eventTitle: eventListing.title,
+			eventStartsAt: eventListing.startsAt,
+			eventEndsAt: eventListing.endsAt
 		})
 		.from(ticket)
-		.innerJoin(event, eq(event.id, ticket.eventId))
+		.innerJoin(eventListing, eq(eventListing.id, ticket.eventId))
 		.where(and(eq(ticket.userId, userId), inArray(ticket.status, ['valid', 'checked_in'])))
-		.orderBy(desc(event.startsAt), asc(ticket.code));
+		.orderBy(desc(eventListing.startsAt), asc(ticket.code));
 }

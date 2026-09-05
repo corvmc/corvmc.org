@@ -120,7 +120,7 @@ describe('createBandEvent', () => {
 			startsAt: new Date('2026-09-01T02:00:00Z')
 		});
 
-		const [evt] = rowsFor('event');
+		const [evt] = rowsFor('event_listing');
 		expect(evt.groupId).toBe('band-1');
 		expect(evt).not.toHaveProperty('bandId');
 	});
@@ -141,7 +141,7 @@ describe('importBandEvents', () => {
 			{ title: 'Gig Two', startsAt: new Date('2026-02-01T02:00:00Z') }
 		]);
 
-		for (const evt of rowsFor('event')) {
+		for (const evt of rowsFor('event_listing')) {
 			expect(evt.groupId).toBe('band-1');
 		}
 		expect(rowsFor('event_group')).toHaveLength(2);

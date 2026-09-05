@@ -221,6 +221,6 @@ describe('POST /api/cron/confirmation-reminders', () => {
 			})
 		} as any);
 
-		expect(mockNe).toHaveBeenCalledWith('booker_type', 'event');
+		expect(mockNe).toHaveBeenCalledWith('booker_type', 'event_listing');
 	});
 });

@@ -14,6 +14,26 @@
  * The stylesheet stays the single source of truth: change a theme and the
  * starting point changes with it.
  */
+/**
+ * The opening words of the header `themeStarterCss` writes. Named because
+ * `themeOfStarter` reads them back.
+ */
+const STARTER_HEADER_PREFIX = 'Starting point: the ';
+
+/**
+ * Which theme a block of custom CSS was copied from, or `null`.
+ *
+ * The editor labels a forked stylesheet "Custom (from Punk)", and this is where
+ * that name comes from: the header comment `themeStarterCss` already writes.
+ * Reading it back costs nothing and keeps a purely presentational label out of
+ * the schema. CSS that was not produced here — hand-written, or written before
+ * this existed — simply has no origin, and the label falls back to "Custom".
+ */
+export function themeOfStarter(css: string): string | null {
+	const match = new RegExp(`${STARTER_HEADER_PREFIX}"([a-z0-9-]+)" theme`).exec(css);
+	return match ? match[1] : null;
+}
+
 export function themeStarterCss(themeCss: string, theme: string): string {
 	const blocks: string[] = [];
 	// `.theme-punk { … }` and `.theme-punk .band-site-hero { … }` alike.
@@ -33,7 +53,7 @@ export function themeStarterCss(themeCss: string, theme: string): string {
 
 	if (blocks.length === 0) return '';
 
-	return `/* Starting point: the "${theme}" theme, as CSS you can edit.
+	return `/* ${STARTER_HEADER_PREFIX}"${theme}" theme, as CSS you can edit.
  *
  * Everything here is already scoped to your page, so a bare selector like
  * \`h1\` only ever affects your site. The five variables below are what the
@@ -48,4 +68,18 @@ export function themeStarterCss(themeCss: string, theme: string): string {
 
 ${blocks.join('\n\n')}
 `;
+}
+
+/**
+ * The container class for a stored theme.
+ *
+ * `theme-custom` matches nothing in the stylesheet, which is exactly what a
+ * forked stylesheet wants — but `.band-site-container` carries no base rules of
+ * its own either (each theme paints the background and text colour), so a
+ * custom row with no CSS would render unstyled. Not reachable through the
+ * editor; this is the floor under a hand-edited row.
+ */
+export function themeClass(theme: string, customCss: string | null | undefined): string {
+	if (theme === 'custom' && !customCss?.trim()) return 'theme-default';
+	return `theme-${theme}`;
 }

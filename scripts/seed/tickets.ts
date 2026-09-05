@@ -1,10 +1,10 @@
 import { computeTicketSplit, suggestedCollectiveCents } from '../../src/lib/finance/ticket-split';
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { ticket } from '../../src/lib/server/db/schema/ticket';
 import { db } from './db';
 import { TICKET_CODES_PREFIX } from './pools';
 import { type SeedEvent, type SeedUser } from './types';
-import { pick, randomInt } from './util';
+import { pick, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 
@@ -14,13 +14,13 @@ export async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 
 	const ticketedEvents = await db
 		.select({
-			id: event.id,
-			startsAt: event.startsAt,
-			ticketPrice: event.ticketPrice,
-			floorCents: event.ticketPriceFloorCents
+			id: eventListing.id,
+			startsAt: eventListing.startsAt,
+			ticketPrice: eventListing.ticketPrice,
+			floorCents: eventListing.ticketPriceFloorCents
 		})
-		.from(event)
-		.where(eq(event.ticketingEnabled, true));
+		.from(eventListing)
+		.where(eq(eventListing.ticketingEnabled, true));
 
 	for (const evt of ticketedEvents) {
 		const ticketCount = randomInt(3, 8);
@@ -82,7 +82,7 @@ export async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 
 			for (let i = 0; i < qty; i++) {
 				const code = `${TICKET_CODES_PREFIX}-${randomUUID().slice(0, 8).toUpperCase()}`;
-				const checkedIn = isPast && Math.random() > 0.3;
+				const checkedIn = isPast && random() > 0.3;
 
 				const [t] = await db
 					.insert(ticket)

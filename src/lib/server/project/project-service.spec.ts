@@ -182,7 +182,9 @@ describe('attachment', () => {
 	it('refuses to attach to a project that does not exist', async () => {
 		selectResults = [[]];
 
-		await expect(attachToProject('event', 'e-1', 'gone')).rejects.toThrow(ProjectNotFoundError);
+		await expect(attachToProject('event_listing', 'e-1', 'gone')).rejects.toThrow(
+			ProjectNotFoundError
+		);
 	});
 });
 

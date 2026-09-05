@@ -4,10 +4,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock dependencies before importing the module under test
 // ---------------------------------------------------------------------------
 
-const { txSelect, txInsert } = vi.hoisted(() => ({
+const { txSelect, txInsert, emit } = vi.hoisted(() => ({
 	txSelect: vi.fn(),
-	txInsert: vi.fn()
+	txInsert: vi.fn(),
+	emit: vi.fn()
 }));
+
+vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit, on: vi.fn() } }));
 
 vi.mock('$lib/server/db', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('$lib/server/db')>();
@@ -16,7 +19,9 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 		db: {
 			select: txSelect,
 			insert: txInsert,
-			update: vi.fn()
+			update: vi.fn(),
+			// The compensating delete the post-insert race check makes.
+			delete: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) })
 		}
 	};
 });
@@ -35,6 +40,9 @@ import {
 	cancel,
 	cancelUnconfirmedReservations,
 	staffCreate,
+	createWaitlisted,
+	adjustWindow,
+	announceWaitlistConfirmed,
 	confirm,
 	markComplete,
 	markNoShow,
@@ -46,7 +54,7 @@ import {
 	ReservationNotFoundError,
 	ReservationAuthorizationError
 } from './reservation-service';
-import { validateBooking } from './conflict-service';
+import { validateBooking, hasConflict } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import { db } from '$lib/server/db';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
@@ -55,6 +63,20 @@ import type { SQL } from 'drizzle-orm';
 // drizzle and the schema are real, so the predicates the service builds can be
 // rendered to actual SQL and asserted on rather than taken on faith.
 const dialect = new SQLiteSyncDialect();
+
+/**
+ * One `.where(...)` result that answers both shapes the service uses.
+ *
+ * A conflict scan awaits the `where` directly; the owner lookup `emitCreated`
+ * does chains `.limit(1)` off it first. A thenable with a `limit` method is both,
+ * which keeps these tests from having to count select calls in order.
+ */
+function whereResult(rows: unknown[], limited: unknown[] = [{ name: 'Ada', email: 'a@x.test' }]) {
+	return {
+		then: (resolve: (v: unknown) => unknown) => resolve(rows),
+		limit: vi.fn().mockResolvedValue(limited)
+	};
+}
 
 describe('ReservationService', () => {
 	beforeEach(() => {
@@ -74,8 +96,9 @@ describe('ReservationService', () => {
 		it('creates a reservation when validation passes and no conflict', async () => {
 			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
 
-			// tx.select for conflict check — no conflicts
-			const txWhere = vi.fn().mockResolvedValue([]);
+			// tx.select for the conflict check and the post-insert race re-check —
+			// no conflicts — and for the owner lookup the created event needs.
+			const txWhere = vi.fn().mockReturnValue(whereResult([]));
 			const txFrom = vi.fn().mockReturnValue({ where: txWhere });
 			txSelect.mockReturnValue({ from: txFrom });
 
@@ -264,10 +287,28 @@ describe('ReservationService', () => {
 			const returning = vi.fn().mockResolvedValue([row]);
 			const values = vi.fn().mockReturnValue({ returning });
 			vi.mocked(db.insert).mockReturnValue({ values } as any);
+
+			// A desk booking announces itself too, and that costs an owner lookup.
+			const from = vi.fn().mockReturnValue({ where: () => whereResult([]) });
+			txSelect.mockReturnValue({ from });
 		}
 
+		// The row `.returning()` hands back is what the created event is built from,
+		// so it has to carry the columns that event reads — a bare {id, status}
+		// stub passes the assertion and then explodes formatting a null date.
+		const returnedRow = {
+			id: 'res-1',
+			status: 'confirmed',
+			bookerType: 'user',
+			createdByUserId: 'user-1',
+			createdByStaffId: 'staff-1',
+			recurringSeriesId: null,
+			startsAt: new Date('2025-07-15T17:00:00Z'),
+			endsAt: new Date('2025-07-15T19:00:00Z')
+		};
+
 		it('creates a reservation without validation or conflict check', async () => {
-			const mockRow = { id: 'res-1', status: 'confirmed' };
+			const mockRow = { ...returnedRow };
 			setupInsertMock(mockRow);
 
 			const result = await staffCreate({
@@ -283,7 +324,7 @@ describe('ReservationService', () => {
 		});
 
 		it('uses provided status', async () => {
-			const mockRow = { id: 'res-2', status: 'scheduled' };
+			const mockRow = { ...returnedRow, id: 'res-2', status: 'scheduled' };
 			setupInsertMock(mockRow);
 
 			const result = await staffCreate({
@@ -296,6 +337,285 @@ describe('ReservationService', () => {
 			});
 
 			expect(result.status).toBe('scheduled');
+		});
+	});
+
+	/**
+	 * `reservation.created` is what raises a first-timer's orientation shift, so
+	 * which calls emit it — and when — is behaviour, not plumbing.
+	 */
+	describe('reservation.created', () => {
+		const params = {
+			userId: 'user-1',
+			bookerType: 'user' as const,
+			bookerId: 'user-1',
+			startsAt: new Date('2025-07-15T17:00:00Z'),
+			endsAt: new Date('2025-07-15T19:00:00Z')
+		};
+
+		const row = {
+			id: 'res-1',
+			status: 'scheduled',
+			bookerType: 'user',
+			createdByUserId: 'user-1',
+			createdByStaffId: null,
+			recurringSeriesId: null,
+			startsAt: params.startsAt,
+			endsAt: params.endsAt
+		};
+
+		function insertReturns(r: Record<string, unknown>) {
+			const returning = vi.fn().mockResolvedValue([r]);
+			txInsert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning }) });
+		}
+
+		it('announces a booking that survived the race check', async () => {
+			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
+			txSelect.mockReturnValue({
+				from: () => ({ where: () => whereResult([]) })
+			});
+			insertReturns(row);
+
+			await create(params);
+
+			expect(emit).toHaveBeenCalledWith(
+				'reservation.created',
+				expect.objectContaining({
+					reservationId: 'res-1',
+					userId: 'user-1',
+					bookerType: 'user',
+					startsAt: params.startsAt.toISOString(),
+					endsAt: params.endsAt.toISOString(),
+					createdByStaffId: null
+				})
+			);
+		});
+
+		it('stays quiet about a booking the race check compensated away', async () => {
+			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
+			// Empty on the conflict scan, occupied on the re-check: the shape two
+			// concurrent bookings produce, where this one deletes itself.
+			const where = vi
+				.fn()
+				.mockReturnValueOnce(whereResult([]))
+				.mockReturnValueOnce(whereResult([{ id: 'other' }]));
+			txSelect.mockReturnValue({ from: () => ({ where }) });
+			vi.mocked(db.delete).mockReturnValue({
+				where: vi.fn().mockResolvedValue(undefined)
+			} as never);
+			insertReturns(row);
+
+			await expect(create(params)).rejects.toThrow(ReservationConflictError);
+			expect(emit).not.toHaveBeenCalled();
+		});
+
+		it('says nothing for a waitlisted booking, which is a queue position not a visit', async () => {
+			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
+			txSelect.mockReturnValue({ from: () => ({ where: () => whereResult([]) }) });
+			insertReturns({ ...row, status: 'waitlisted' });
+
+			await createWaitlisted(params);
+
+			expect(emit).not.toHaveBeenCalled();
+		});
+
+		it('announces a queued booking once the member confirms the slot', async () => {
+			// Two `.limit(1)` reads in a row: the row this function re-checks, then
+			// the owner lookup `emitCreated` does.
+			const where = vi
+				.fn()
+				.mockReturnValueOnce(whereResult([], [{ ...row, status: 'scheduled' }]))
+				.mockReturnValueOnce(whereResult([], [{ name: 'Ada', email: 'a@x.test' }]));
+			txSelect.mockReturnValue({ from: () => ({ where }) });
+
+			await announceWaitlistConfirmed('res-1');
+
+			expect(emit).toHaveBeenCalledWith(
+				'reservation.created',
+				expect.objectContaining({ reservationId: 'res-1', userId: 'user-1' })
+			);
+		});
+
+		it('stays quiet when the race check put the booking back in the queue', async () => {
+			// The status filter finds nothing, which is what a rolled-back
+			// confirmation looks like from here.
+			txSelect.mockReturnValue({ from: () => ({ where: () => whereResult([], []) }) });
+
+			await announceWaitlistConfirmed('res-1');
+
+			expect(emit).not.toHaveBeenCalled();
+		});
+
+		it('announces a desk booking, because it is still that member’s first visit', async () => {
+			const returning = vi
+				.fn()
+				.mockResolvedValue([{ ...row, status: 'confirmed', createdByStaffId: 'staff-1' }]);
+			txInsert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning }) });
+			txSelect.mockReturnValue({ from: () => ({ where: () => whereResult([]) }) });
+
+			await staffCreate({ ...params, staffUserId: 'staff-1' });
+
+			expect(emit).toHaveBeenCalledWith(
+				'reservation.created',
+				// The owning member, not the staffer who typed it.
+				expect.objectContaining({ userId: 'user-1', createdByStaffId: 'staff-1' })
+			);
+		});
+	});
+
+	// -----------------------------------------------------------------------
+	// adjustWindow — re-time in place, so the door code survives
+	// -----------------------------------------------------------------------
+
+	describe('adjustWindow', () => {
+		const current = {
+			startsAt: new Date('2025-07-15T02:00:00Z'),
+			endsAt: new Date('2025-07-15T05:00:00Z')
+		};
+
+		/** Queue the rows successive db.select() chains resolve to, in order. */
+		function setupSelects(...rows: unknown[][]) {
+			const queue = [...rows];
+			const limit = vi.fn(() => Promise.resolve(queue.shift() ?? []));
+			const where = vi.fn().mockReturnValue({ limit });
+			const from = vi.fn().mockReturnValue({ where });
+			vi.mocked(db.select).mockReturnValue({ from } as any);
+		}
+
+		function setupUpdate(rowCount: number) {
+			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
+			const set = vi.fn().mockReturnValue({ where: updateWhere });
+			vi.mocked(db.update).mockReturnValue({ set } as any);
+			return { set, updateWhere };
+		}
+
+		it('widens the window in place and returns the window it replaced', async () => {
+			setupSelects([current]);
+			vi.mocked(hasConflict).mockResolvedValue(false);
+			const { set } = setupUpdate(1);
+
+			const previous = await adjustWindow(
+				'res-1',
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z')
+			);
+
+			expect(previous).toEqual({
+				previousStartsAt: current.startsAt,
+				previousEndsAt: current.endsAt
+			});
+			expect(set).toHaveBeenCalledWith(
+				expect.objectContaining({
+					startsAt: new Date('2025-07-15T01:00:00Z'),
+					endsAt: new Date('2025-07-15T07:00:00Z')
+				})
+			);
+		});
+
+		// The whole point of the function: cancel-and-recreate dropped these, and
+		// the cron that mints a door code has already run by the afternoon.
+		it('leaves the status and the door code alone', async () => {
+			setupSelects([current]);
+			vi.mocked(hasConflict).mockResolvedValue(false);
+			const { set } = setupUpdate(1);
+
+			await adjustWindow(
+				'res-1',
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z')
+			);
+
+			const payload = set.mock.calls[0][0] as Record<string, unknown>;
+			expect(payload).not.toHaveProperty('status');
+			expect(payload).not.toHaveProperty('lockCode');
+		});
+
+		it('only re-times a live booking', async () => {
+			setupSelects([current]);
+			vi.mocked(hasConflict).mockResolvedValue(false);
+			const { updateWhere } = setupUpdate(1);
+
+			await adjustWindow(
+				'res-1',
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z')
+			);
+
+			const { sql: rendered, params } = dialect.sqlToQuery(updateWhere.mock.calls[0][0] as SQL);
+			expect(rendered).toContain('status');
+			expect(params).toContain('scheduled');
+			expect(params).toContain('confirmed');
+			expect(params).not.toContain('cancelled');
+		});
+
+		// A booking cannot conflict with the hold it is moving.
+		it('excludes the reservation from its own conflict check', async () => {
+			setupSelects([current]);
+			vi.mocked(hasConflict).mockResolvedValue(false);
+			setupUpdate(1);
+
+			await adjustWindow(
+				'res-1',
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z')
+			);
+
+			expect(hasConflict).toHaveBeenCalledWith(
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z'),
+				'res-1'
+			);
+		});
+
+		it('throws on a conflicting window without writing', async () => {
+			setupSelects([current]);
+			vi.mocked(hasConflict).mockResolvedValue(true);
+			setupUpdate(1);
+
+			await expect(
+				adjustWindow('res-1', new Date('2025-07-15T01:00:00Z'), new Date('2025-07-15T07:00:00Z'))
+			).rejects.toThrow(ReservationConflictError);
+
+			expect(db.update).not.toHaveBeenCalled();
+		});
+
+		it('skips the conflict check when overridden', async () => {
+			setupSelects([current]);
+			setupUpdate(1);
+
+			await adjustWindow(
+				'res-1',
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z'),
+				{ overrideConflicts: true }
+			);
+
+			expect(hasConflict).not.toHaveBeenCalled();
+		});
+
+		it('rejects a window that ends before it starts', async () => {
+			await expect(
+				adjustWindow('res-1', new Date('2025-07-15T07:00:00Z'), new Date('2025-07-15T01:00:00Z'))
+			).rejects.toThrow(ReservationValidationError);
+		});
+
+		it('throws when the reservation is gone', async () => {
+			setupSelects([]);
+
+			await expect(
+				adjustWindow('res-1', new Date('2025-07-15T01:00:00Z'), new Date('2025-07-15T07:00:00Z'))
+			).rejects.toThrow(ReservationNotFoundError);
+		});
+
+		// Cancelled between the read and the write — the row must not come back.
+		it('throws when the status changed under it', async () => {
+			setupSelects([current], [{ status: 'cancelled' }]);
+			vi.mocked(hasConflict).mockResolvedValue(false);
+			setupUpdate(0);
+
+			await expect(
+				adjustWindow('res-1', new Date('2025-07-15T01:00:00Z'), new Date('2025-07-15T07:00:00Z'))
+			).rejects.toThrow(ReservationStateError);
 		});
 	});
 
@@ -516,7 +836,7 @@ describe('ReservationService', () => {
 
 			const { sql: rendered, params } = dialect.sqlToQuery(sweepWhere.mock.calls[0][0] as SQL);
 			expect(rendered).toContain('"booker_type" <>');
-			expect(params).toContain('event');
+			expect(params).toContain('event_listing');
 		});
 	});
 

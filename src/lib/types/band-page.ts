@@ -10,6 +10,19 @@ export const BAND_THEMES = [
 
 export type BandTheme = (typeof BAND_THEMES)[number];
 
+/**
+ * What may actually be stored in `band_site.theme`.
+ *
+ * `custom` is the state a band reaches by editing a theme's CSS: the page
+ * editor copies that theme's rules into the band's own stylesheet and stops
+ * applying the class, so the CSS they can read is the whole of what applies.
+ * There is deliberately no `.theme-custom` block in the stylesheet — see
+ * `band-themes.spec.ts`, which iterates `BAND_THEMES` and would demand one.
+ */
+export const BAND_THEME_VALUES = [...BAND_THEMES, 'custom'] as const;
+
+export type BandThemeValue = (typeof BAND_THEME_VALUES)[number];
+
 export interface MerchItem {
 	title: string;
 	url: string;

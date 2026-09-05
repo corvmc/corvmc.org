@@ -548,6 +548,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/venues",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/venues/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/volunteer",
 		"panel": "staff"
 	},

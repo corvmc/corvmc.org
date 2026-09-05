@@ -2,7 +2,9 @@ import { z } from 'zod';
 
 export {
 	BAND_THEMES,
+	BAND_THEME_VALUES,
 	type BandTheme,
+	type BandThemeValue,
 	type Block,
 	type MerchItem,
 	type BandEpk,
@@ -10,7 +12,7 @@ export {
 	type PressQuote
 } from '../../../types/band-page';
 import type { BandSite } from './band-site';
-import { BAND_THEMES } from '../../../types/band-page';
+import { BAND_THEME_VALUES } from '../../../types/band-page';
 
 // ---------------------------------------------------------------------------
 // Zod schemas for validation
@@ -83,7 +85,7 @@ export const blockSchema = z.discriminatedUnion('type', [
 ]);
 
 export const bandPageConfigSchema = z.object({
-	theme: z.enum(BAND_THEMES),
+	theme: z.enum(BAND_THEME_VALUES),
 	customCss: z.string().max(51200).optional(), // 50KB
 	blocks: z.array(blockSchema).max(50)
 });

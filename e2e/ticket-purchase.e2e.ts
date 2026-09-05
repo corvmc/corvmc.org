@@ -48,11 +48,17 @@ async function openPurchasePage(page: import('@playwright/test').Page, url = tic
  * page's JavaScript has loaded and Svelte has attached its handlers. A fill in
  * that window sets a value nothing is listening to — the preview never updates,
  * and the assertion that follows waits out its timeout against a total that will
- * never change. It bit the *first* interactive test in this file and no other,
- * because by the second one the browser has the page's modules cached and
- * hydration wins the race.
+ * never change.
  *
- * **The retry has to clear the box first.** `fill()` on an input that already
+ * **The retry loop has to out-live its own assertion.** `expect.timeout` is
+ * 15000ms globally (playwright.config.ts), which was exactly the budget given to
+ * `toPass` — so the first `toHaveValue` inside the loop spent the whole thing and
+ * `toPass` never got a second iteration. The retry this function is built around
+ * had never once run: the CI trace for the failure shows one `fill("")`, one
+ * `fill("0.50")`, and then thirty-odd polls of an input still reading its
+ * server-rendered value. A short inner timeout is what makes the loop a loop.
+ *
+ * **And the retry has to clear the box first.** `fill()` on an input that already
  * holds the target text is a no-op that fires no `input` event — so once a lost
  * fill has written the value, every retry does nothing and the loop can never
  * recover. Clearing guarantees a real change on each attempt.
@@ -63,7 +69,12 @@ async function payPerTicket(page: import('@playwright/test').Page, dollars: stri
 		await amount.fill('');
 		await amount.fill(dollars);
 		await expect(page.locator('input[name$="unitPriceCents"]')).toHaveValue(
-			String(Math.round(Number(dollars) * 100))
+			String(Math.round(Number(dollars) * 100)),
+			// Deliberately far below the enclosing `toPass` budget: this is one
+			// attempt, not the deadline. Hydration lands in well under a second once
+			// it lands at all, so an attempt that has not taken by now is one where
+			// the fill went nowhere, and the answer is to type again.
+			{ timeout: 1000 }
 		);
 	}).toPass({ timeout: 15000 });
 }
@@ -242,4 +253,33 @@ test('a declined card keeps the buyer on checkout with the real decline copy', a
 
 	await expect(page.getByText('Your card has been declined.')).toBeVisible();
 	await expect(page).toHaveURL(/\/checkout\//);
+});
+
+/**
+ * The guard on `payPerTicket`'s retry loop, which for its whole life had never
+ * run a second iteration.
+ *
+ * Holding the entry chunk back reproduces, deterministically, what CI hits by
+ * luck on a slow runner: the server-rendered heading is visible, the test types,
+ * and nothing is listening yet. With the inner assertion on the global 15s
+ * `expect.timeout` this fails exactly as CI did — one attempt, then the whole
+ * budget spent watching a value that cannot change. It is the only test here
+ * that would notice if that timeout were tidied away again.
+ */
+test('a fill that lands before hydration is retried, not waited out', async ({ page }) => {
+	let held = 0;
+	await page.route('**/_app/immutable/entry/*.js', async (route) => {
+		held++;
+		await new Promise((r) => setTimeout(r, 1500));
+		await route.continue();
+	});
+
+	await openPurchasePage(page);
+	await payPerTicket(page, '30');
+
+	// Without this the test passes for the wrong reason the day the build stops
+	// emitting that path: the route matches nothing, hydration is never delayed,
+	// and a guard against a hydration race quietly stops involving one.
+	expect(held, 'the entry chunk was never intercepted, so nothing was delayed').toBeGreaterThan(0);
+	await expect(page.getByText('Contribution', { exact: true })).toBeVisible();
 });

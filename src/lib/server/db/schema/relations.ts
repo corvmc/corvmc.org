@@ -33,7 +33,7 @@ export const relations = defineRelations(schema, (t) => ({
 		files: t.many.file(),
 		rider: t.one.rider({ from: t.group.id, to: t.rider.groupId }),
 		/** Events this band OWNS. Shows it merely played are `lineups`. */
-		events: t.many.event(),
+		events: t.many.eventListing(),
 		// No `lineups` here any more. A credit names a `directory_entry`, so a
 		// group's credits are two hops away (group → its entry → its credits) and
 		// the relations API expresses one. `confirmedForBand()` in
@@ -67,22 +67,22 @@ export const relations = defineRelations(schema, (t) => ({
 			to: t.recurringSeries.id
 		})
 	},
-	event: {
-		reservation: t.one.reservation({ from: t.event.reservationId, to: t.reservation.id }),
-		createdBy: t.one.user({ from: t.event.createdByUserId, to: t.user.id }),
+	eventListing: {
+		reservation: t.one.reservation({ from: t.eventListing.reservationId, to: t.reservation.id }),
+		createdBy: t.one.user({ from: t.eventListing.createdByUserId, to: t.user.id }),
 		/** The owning band, not the bill. Who played is `lineup`. */
-		group: t.one.group({ from: t.event.groupId, to: t.group.id }),
-		project: t.one.project({ from: t.event.projectId, to: t.project.id }),
+		group: t.one.group({ from: t.eventListing.groupId, to: t.group.id }),
+		project: t.one.project({ from: t.eventListing.projectId, to: t.project.id }),
 		lineup: t.many.eventBand(),
 		media: t.many.mediaAttachment({
-			from: t.event.id,
+			from: t.eventListing.id,
 			to: t.mediaAttachment.attachableId,
-			where: { attachableType: 'event' },
+			where: { attachableType: 'event_listing' },
 			alias: 'mediaAttachment_event'
 		})
 	},
 	eventBand: {
-		event: t.one.event({ from: t.eventBand.eventId, to: t.event.id }),
+		event: t.one.eventListing({ from: t.eventBand.eventId, to: t.eventListing.id }),
 		/** The party credited — a member, a CMC band, or an external act. */
 		entry: t.one.directoryEntry({
 			from: t.eventBand.directoryEntryId,
@@ -198,12 +198,12 @@ export const relations = defineRelations(schema, (t) => ({
 		// service joins it explicitly.
 	},
 	ticket: {
-		event: t.one.event({ from: t.ticket.eventId, to: t.event.id }),
+		event: t.one.eventListing({ from: t.ticket.eventId, to: t.eventListing.id }),
 		user: t.one.user({ from: t.ticket.userId, to: t.user.id }),
 		checkedInBy: t.one.user({ from: t.ticket.checkedInByUserId, to: t.user.id })
 	},
 	eventRsvp: {
-		event: t.one.event({ from: t.eventRsvp.eventId, to: t.event.id }),
+		event: t.one.eventListing({ from: t.eventRsvp.eventId, to: t.eventListing.id }),
 		user: t.one.user({ from: t.eventRsvp.userId, to: t.user.id })
 	},
 	paymentCache: {
@@ -286,7 +286,7 @@ export const relations = defineRelations(schema, (t) => ({
 		contractorJobs: t.many.contractorJob(),
 		purchaseOrders: t.many.purchaseOrder(),
 		acquisitions: t.many.acquisition(),
-		events: t.many.event()
+		events: t.many.eventListing()
 	},
 	suggestionVote: {
 		suggestion: t.one.suggestion({ from: t.suggestionVote.suggestionId, to: t.suggestion.id }),
@@ -351,7 +351,7 @@ export const relations = defineRelations(schema, (t) => ({
 			from: t.workOrder.volunteerRoleId,
 			to: t.volunteerRole.id
 		}),
-		event: t.one.event({ from: t.workOrder.eventId, to: t.event.id }),
+		event: t.one.eventListing({ from: t.workOrder.eventId, to: t.eventListing.id }),
 		asset: t.one.inventoryAsset({ from: t.workOrder.assetId, to: t.inventoryAsset.id }),
 		project: t.one.project({ from: t.workOrder.projectId, to: t.project.id }),
 		resolvedBy: t.one.user({

@@ -81,7 +81,7 @@ describe('the migrated event_band', () => {
 		db.exec(`INSERT INTO directory_entry (id, group_id, name) VALUES ('de1', 'g1', 'The Squares')`);
 		// `ends_at` because `event_cmc_needs_end` requires one of a CMC event, and
 		// `source` defaults to 'cmc'.
-		db.exec(`INSERT INTO event (id, title, starts_at, ends_at, created_by_user_id)
+		db.exec(`INSERT INTO event_listing (id, title, starts_at, ends_at, created_by_user_id)
 		         VALUES ('e1', 'Show', 0, 100, 'u1')`);
 		db.exec(`INSERT INTO event_band (id, event_id, name, directory_entry_id, status)
 		         VALUES ('eb1', 'e1', 'The Squares', 'de1', 'confirmed')`);

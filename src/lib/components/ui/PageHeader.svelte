@@ -8,6 +8,7 @@
 		subtitle,
 		backHref,
 		documentTitle,
+		flush = false,
 		leading,
 		children
 	}: {
@@ -27,6 +28,12 @@
 		 * `title`; pass `null` to opt out and set `<title>` yourself.
 		 */
 		documentTitle?: string | null;
+		/**
+		 * Drop the gap below the header, for a page whose content runs to the edge
+		 * of the frame rather than sitting in cards — the band page editor, whose
+		 * canvas starts immediately under it.
+		 */
+		flush?: boolean;
 	} = $props();
 
 	const resolvedTitle = $derived(documentTitle === undefined ? title : documentTitle);
@@ -46,7 +53,9 @@
 </svelte:head>
 
 <div
-	class="sticky top-0 z-10 -mx-6 mb-6 flex flex-wrap items-center justify-between gap-2 border-b border-base-300 bg-base-100 px-6 py-3"
+	class="sticky top-0 z-10 -mx-6 {flush
+		? ''
+		: 'mb-6'} flex flex-wrap items-center justify-between gap-2 border-b border-base-300 bg-base-100 px-6 py-3"
 >
 	<div class="flex min-w-0 items-center gap-3">
 		{#if backHref}

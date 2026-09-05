@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { workOrder, volunteerSignup, volunteerRole } from '$lib/server/db/schema/volunteer';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
@@ -399,7 +399,7 @@ function shiftRowsQuery() {
 			shift: workOrder,
 			roleName: volunteerRole.name,
 			roleGroup: volunteerRole.group,
-			eventTitle: event.title,
+			eventTitle: eventListing.title,
 			claimed: sql<number>`(
 				select count(*) from "volunteer_signup" vs
 				where vs."shift_id" = ${workOrder.id}
@@ -427,7 +427,7 @@ function shiftRowsQuery() {
 		})
 		.from(workOrder)
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-		.leftJoin(event, eq(event.id, workOrder.eventId));
+		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId));
 }
 
 /**
@@ -553,6 +553,17 @@ export async function resolveWorkOrder(
 		.where(eq(workOrder.id, id))
 		.returning();
 
+	// Staff closing an orientation by hand is the other way one gets finished.
+	// The cron path emits `volunteer.shift_completed` per signup and a listener
+	// picks it up there; this path emits nothing, because the shift's clock may
+	// never have run out. `completeOrientation` is `where completed_at is null`,
+	// so the two racing is a no-op rather than a rewrite of who ran it.
+	const { completeOrientation, orientationOwnerOf } = await import('./orientation-service');
+	const member = await orientationOwnerOf(id);
+	if (member) {
+		await completeOrientation(member.userId, { completedByUserId: opts.resolvedByUserId });
+	}
+
 	return row;
 }
 
@@ -562,10 +573,29 @@ export async function resolveWorkOrder(
  * Oldest first, like every queue in this app — the thing that has been sitting
  * a fortnight is the one that has gone wrong.
  */
-export async function listWorkOrders(): Promise<ShiftWithCounts[]> {
+export async function listWorkOrders(
+	filters: {
+		volunteerRoleId?: string;
+		eventId?: string;
+		projectId?: string;
+	} = {}
+): Promise<ShiftWithCounts[]> {
 	const rows = await shiftRowsQuery()
 		.where(
-			and(isNull(workOrder.startsAt), isNull(workOrder.resolvedAt), isNull(workOrder.cancelledAt))
+			and(
+				isNull(workOrder.startsAt),
+				isNull(workOrder.resolvedAt),
+				isNull(workOrder.cancelledAt),
+				// The same optional anchors `listShifts` takes, for the same reason:
+				// the advance half of a duty list lands here carrying the event it is
+				// for, and a show that cannot be asked what it is waiting on shows
+				// nothing at all.
+				filters.volunteerRoleId
+					? eq(workOrder.volunteerRoleId, filters.volunteerRoleId)
+					: undefined,
+				filters.eventId ? eq(workOrder.eventId, filters.eventId) : undefined,
+				filters.projectId ? eq(workOrder.projectId, filters.projectId) : undefined
+			)
 		)
 		.orderBy(asc(workOrder.createdAt));
 
@@ -703,7 +733,7 @@ export async function listOpenShiftsForMember(
 			shift: workOrder,
 			roleName: volunteerRole.name,
 			roleGroup: volunteerRole.group,
-			eventTitle: event.title,
+			eventTitle: eventListing.title,
 			claimed: sql<number>`(
 				select count(*) from "volunteer_signup" vs
 				where vs."shift_id" = ${workOrder.id}
@@ -722,7 +752,7 @@ export async function listOpenShiftsForMember(
 		})
 		.from(workOrder)
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-		.leftJoin(event, eq(event.id, workOrder.eventId))
+		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 		.where(and(isNull(workOrder.cancelledAt), gte(workOrder.startsAt, now)))
 		.orderBy(asc(rankSql), asc(workOrder.startsAt))
 		.limit(opts.limit ?? 50);

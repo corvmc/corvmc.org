@@ -1,4 +1,4 @@
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { memberStanding } from '../../src/lib/server/db/schema/standing';
 import { db } from './db';
 import { type SeedUser } from './types';
@@ -36,7 +36,7 @@ export const COMMUNITY_TITLES = [
 
 export async function seedCommunityEvents(members: SeedUser[], staffUser: SeedUser) {
 	console.log('Seeding community listings...');
-	const rows = [];
+	const rows: (typeof eventListing.$inferSelect)[] = [];
 
 	if (members.length < 2) return rows;
 
@@ -46,7 +46,7 @@ export async function seedCommunityEvents(members: SeedUser[], staffUser: SeedUs
 	// Published, from a trusted member — what the gig guide shows.
 	for (let i = 0; i < 4; i++) {
 		const [e] = await db
-			.insert(event)
+			.insert(eventListing)
 			.values({
 				title: COMMUNITY_TITLES[i % COMMUNITY_TITLES.length],
 				description: 'Posted by a member. Not a CMC production.',
@@ -68,7 +68,7 @@ export async function seedCommunityEvents(members: SeedUser[], staffUser: SeedUs
 
 	// A draft, so the member-side publish flow is reachable straight away.
 	const [draft] = await db
-		.insert(event)
+		.insert(eventListing)
 		.values({
 			title: 'Untitled show (draft)',
 			description: 'Half-written — still checking the date.',
@@ -85,7 +85,7 @@ export async function seedCommunityEvents(members: SeedUser[], staffUser: SeedUs
 	// A member whose trust was revoked after an upheld report: one listing
 	// waiting on staff, one returned to them with a reason.
 	const [pending] = await db
-		.insert(event)
+		.insert(eventListing)
 		.values({
 			title: 'Warehouse show, address on request',
 			description: 'DIY space, BYO.',
@@ -100,7 +100,7 @@ export async function seedCommunityEvents(members: SeedUser[], staffUser: SeedUs
 	rows.push(pending);
 
 	const [rejected] = await db
-		.insert(event)
+		.insert(eventListing)
 		.values({
 			title: 'House party (bring your own)',
 			description: 'No details yet.',

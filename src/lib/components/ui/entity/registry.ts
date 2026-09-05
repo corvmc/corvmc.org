@@ -39,7 +39,7 @@ import {
 	IconSchool,
 	IconBuildingCommunity
 } from '@tabler/icons-svelte';
-import { entityTypes, entityLabels, type EntityType } from '$lib/config';
+import { entityTypes, entityLabels, type EntityType, type EntitySubtypeKey } from '$lib/config';
 import type { EntityRef } from '$lib/types/entity';
 import { variants } from '../StatusBadge.svelte';
 
@@ -74,7 +74,13 @@ export type EntityKind = {
 	 * `bookerType !== 'user'` guard; it is now stated once instead of at each
 	 * call site.
 	 */
-	subtypes?: Record<string, EntitySubtype>;
+	/**
+	 * Keyed by `EntitySubtypeKey` — the union of every subtype vocabulary — rather
+	 * than by `string`. It was `Record<string, …>` until #527, and that is how a
+	 * stale `event` key survived the `event` → `event_listing` rename with
+	 * `pnpm check` reporting nothing.
+	 */
+	subtypes?: Partial<Record<EntitySubtypeKey, EntitySubtype>>;
 };
 
 export const entityKinds: Record<EntityType, EntityKind> = {
@@ -118,7 +124,7 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 		// that this booking is teaching rather than rehearsal.
 		subtypes: {
 			group: { icon: IconMusic, label: 'Booked by an act' },
-			event: { icon: IconCalendarEvent, label: 'Held for an event' },
+			event_listing: { icon: IconCalendarEvent, label: 'Held for an event' },
 			instructor: { icon: IconSchool, label: 'Teaching' }
 		}
 	},
@@ -169,13 +175,15 @@ export function entityIcon(ref: EntityRef): EntitySubtype {
  */
 export function entityGlyph(ref: EntityRef): EntitySubtype {
 	const kind = entityKinds[ref.type];
-	const sub = ref.subtype ? kind.subtypes?.[ref.subtype] : undefined;
+	// `EntityRef.subtype` is a column value, so it is a plain string here; a value
+	// naming no vocabulary simply misses and falls through to the type's own glyph.
+	const sub = ref.subtype ? kind.subtypes?.[ref.subtype as EntitySubtypeKey] : undefined;
 	return sub ?? { icon: kind.icon, label: entityLabels[ref.type].one };
 }
 
 /** True when this record is a marked variant rather than the ordinary case. */
 export function hasSubtype(ref: EntityRef): boolean {
-	return !!ref.subtype && !!entityKinds[ref.type].subtypes?.[ref.subtype];
+	return !!ref.subtype && !!entityKinds[ref.type].subtypes?.[ref.subtype as EntitySubtypeKey];
 }
 
 /**
@@ -287,6 +295,9 @@ export const ordinaryStatuses: ReadonlySet<string> = new Set([
 	'cleared',
 	'done',
 	'active',
+	// A settled production has been paid out. `closed` is deliberately absent:
+	// it is ghost-toned, like `retired` and `dismissed`, and those are marked.
+	'settled',
 	// Resting states that happen to be info-toned: a confirmed booking and a
 	// valid ticket are both simply "as expected". So is an amp that is out on
 	// loan — being borrowed is what a loanable unit is *for*, and marking it

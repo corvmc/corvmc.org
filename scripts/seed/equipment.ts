@@ -332,7 +332,8 @@ export async function seedEquipment(users: SeedUser[]) {
 		});
 
 		if (item.kind === 'serialized') {
-			const units = opts.units ?? Array.from({ length: quantity }, () => ({}));
+			const units: NonNullable<typeof opts.units> =
+				opts.units ?? Array.from({ length: quantity }, () => ({}));
 			for (const unit of units) {
 				const assetId = randomUUID();
 				assets.push({

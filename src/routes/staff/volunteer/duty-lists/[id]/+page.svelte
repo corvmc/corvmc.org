@@ -10,7 +10,12 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { dutyListAnchors, dutyListAnchorLabels } from '$lib/config';
+	import {
+		dutyListAnchors,
+		dutyListAnchorLabels,
+		dutyListSubjects,
+		dutyListSubjectLabels
+	} from '$lib/config';
 	import {
 		getDutyListPage,
 		addDutyListItem,
@@ -24,6 +29,10 @@
 	let data = $derived(getDutyListPage(id));
 
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
+	const subjectOptions = dutyListSubjects.map((v) => ({
+		value: v,
+		label: dutyListSubjectLabels[v]
+	}));
 
 	const kindOptions = [
 		{ value: 'scheduled', label: 'Scheduled — a shift with a start and an end' },
@@ -61,6 +70,14 @@
 					label="Description"
 					type="textarea"
 					value={d.list.description ?? ''}
+				/>
+				<FormField
+					name="subject"
+					label="Applies to"
+					type="select"
+					options={subjectOptions}
+					value={d.list.subject}
+					description="A booking has no doors time — anchor those to the start or the end."
 				/>
 				<FormField
 					name="anchor"
@@ -129,7 +146,9 @@
 	<PageContent width="3xl">
 		<InfoCard title="Items">
 			<p class="mb-3 text-sm text-base-content/70">
-				Offsets are measured from {anchorLabel.toLowerCase()}.
+				Offsets are measured from {anchorLabel.toLowerCase()}, on {dutyListSubjectLabels[
+					d.list.subject
+				].toLowerCase()}.
 			</p>
 			{#if d.items.length === 0}
 				<EmptyState

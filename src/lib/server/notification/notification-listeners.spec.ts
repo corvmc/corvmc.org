@@ -35,15 +35,31 @@ vi.mock('$env/dynamic/private', () => ({
 	env: { PUBLIC_SITE_URL: 'https://test.corvmc.com', STAFF_CONTACT_EMAIL: 'staff@test.com' }
 }));
 
-// Capture event handlers
-const handlers: Record<string, (...args: any[]) => any> = {};
+// Capture event handlers.
+//
+// A LIST per event, not one slot: emittery allows several listeners on one
+// event and this file registers two on `volunteer.signup_confirmed` — the
+// roster email to the volunteer, and the orientation email to the member they
+// are meeting. A single slot would silently keep only whichever registered last
+// and quietly test the wrong one.
+const handlers: Record<string, ((...args: any[]) => any)[]> = {};
 vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: {
 		on: (event: string, handler: (...args: any[]) => any) => {
-			handlers[event] = handler;
+			(handlers[event] ??= []).push(handler);
 		},
 		emit: vi.fn()
 	}
+}));
+
+// The orientation listener reads the member behind an orientation shift, and
+// looks up their name and address. Null by default: most shifts are not
+// orientations, and that branch returns before it dispatches anything.
+const mockOrientationOwnerOf = vi.fn(
+	async (_shiftId: string): Promise<{ userId: string; name: string; email: string } | null> => null
+);
+vi.mock('$lib/server/volunteer/orientation-service', () => ({
+	orientationOwnerOf: (id: string) => mockOrientationOwnerOf(id)
 }));
 
 const { registerAllNotificationListeners } = await import('./notification-listeners');
@@ -51,7 +67,7 @@ const { registerAllNotificationListeners } = await import('./notification-listen
 // Emittery wraps emitted payloads as `{ name, data }` before invoking
 // listeners. Calling handlers directly in tests must mirror that envelope.
 function emit(event: string, payload: unknown): Promise<unknown> {
-	return handlers[event]({ data: payload });
+	return Promise.all((handlers[event] ?? []).map((h) => h({ data: payload })));
 }
 
 function paragraphText(model: { paragraphs?: { text: string }[] }): string {
@@ -78,6 +94,10 @@ function detailLabels(model: { details?: Detail[] }): string[] {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	// The registry holds a list per event now, and almost every describe
+	// re-registers in its own `beforeEach` — so without this the lists grow and
+	// one emit fans out to every copy registered so far.
+	for (const key of Object.keys(handlers)) delete handlers[key];
 });
 
 // All transactional emails (except ticket-confirmation + inbox-reply) render
@@ -125,6 +145,86 @@ describe('registerAllNotificationListeners', () => {
 		]) {
 			expect(handlers[event], event).toBeDefined();
 		}
+	});
+});
+
+/**
+ * The member being shown around is told who is meeting them.
+ *
+ * Two listeners sit on `volunteer.signup_confirmed`: the roster email to the
+ * volunteer, and this one. It has to reach the member behind the booking, not
+ * the volunteer in the payload, and it has to stay silent for the ordinary
+ * shifts that make up almost all of that event's traffic.
+ */
+describe('orientation_confirmed handler', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const signup = {
+		signupId: 'sg-1',
+		shiftId: 'wo-1',
+		userId: 'vol-1',
+		userName: 'Sam',
+		userEmail: 'sam@test.com',
+		roleName: 'Rehearsal Orientation',
+		startsAt: '2026-09-06T00:45:00.000Z',
+		endsAt: '2026-09-06T01:30:00.000Z'
+	};
+
+	it('writes to the member being met, not the volunteer doing the meeting', async () => {
+		mockOrientationOwnerOf.mockResolvedValueOnce({
+			userId: 'member-1',
+			name: 'Wren',
+			email: 'wren@test.com'
+		});
+
+		await emit('volunteer.signup_confirmed', signup);
+
+		const call = mockDispatch.mock.calls.find(
+			([a]) => (a as { type: string }).type === 'orientation_confirmed'
+		);
+		expect(call).toBeDefined();
+
+		const arg = call![0] as {
+			userId: string;
+			userEmail: string;
+			title: string;
+			emailTemplate: { alias: string; model: { paragraphs?: { text: string }[] } };
+		};
+		expect(arg.userId).toBe('member-1');
+		expect(arg.userEmail).toBe('wren@test.com');
+		// The volunteer's name is the useful part of the message — "somebody" is
+		// not what makes this worth sending.
+		expect(arg.title).toContain('Sam');
+		expect(arg.emailTemplate.alias).toBe(GENERIC);
+		expect(paragraphText(arg.emailTemplate.model)).toContain('Sam');
+	});
+
+	it('says nothing for an ordinary shift', async () => {
+		// The default: `orientationOwnerOf` returns null for anything that is not
+		// an orientation, which is almost every confirmed signup there is.
+		await emit('volunteer.signup_confirmed', signup);
+
+		expect(
+			mockDispatch.mock.calls.filter(
+				([a]) => (a as { type: string }).type === 'orientation_confirmed'
+			)
+		).toHaveLength(0);
+	});
+
+	it('still sends the volunteer their own roster email', async () => {
+		mockOrientationOwnerOf.mockResolvedValueOnce({
+			userId: 'member-1',
+			name: 'Wren',
+			email: 'wren@test.com'
+		});
+
+		await emit('volunteer.signup_confirmed', signup);
+
+		const roster = mockDispatch.mock.calls.find(
+			([a]) => (a as { type: string }).type === 'volunteer_shift_confirmed'
+		);
+		expect(roster).toBeDefined();
+		expect((roster![0] as { userId: string }).userId).toBe('vol-1');
 	});
 });
 
@@ -526,6 +626,20 @@ describe('reservation.cancelled handler', () => {
 
 	it('does NOT email when the member cancelled their own reservation', async () => {
 		await emit('reservation.cancelled', { ...base, cancelledBy: 'member' });
+
+		expect(mockDispatch).not.toHaveBeenCalled();
+	});
+
+	it('does NOT email a second time when a waitlist entry ran out of time', async () => {
+		// The expiry path emits both events: `waitlist_expired`, which explains
+		// what happened in the words that fit it, and `reservation.cancelled`, for
+		// the listeners that act on a released slot. Only the first is a letter to
+		// the member.
+		await emit('reservation.cancelled', {
+			...base,
+			cancelledBy: 'system',
+			cause: 'waitlist_expired'
+		});
 
 		expect(mockDispatch).not.toHaveBeenCalled();
 	});

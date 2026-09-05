@@ -14,7 +14,7 @@ const resetIds = () => (n = 0);
 function source(over: Partial<Source> = {}): Source {
 	return {
 		key: 'events/posters/a.jpg',
-		attachableType: 'event',
+		attachableType: 'event_listing',
 		attachableId: 'event-1',
 		slot: 'poster',
 		sortOrder: 0,

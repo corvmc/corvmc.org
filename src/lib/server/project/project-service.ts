@@ -5,7 +5,7 @@ import { suggestion } from '$lib/server/db/schema/suggestion';
 import { workOrder, volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { contractorJob } from '$lib/server/db/schema/contractor';
 import { acquisition, purchaseOrder, purchaseOrderLine } from '$lib/server/db/schema/inventory';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { valueOfMinutesCents, type ProjectStatus } from '$lib/config';
@@ -256,7 +256,7 @@ const ATTACHABLE = {
 	contractor_job: contractorJob,
 	purchase_order: purchaseOrder,
 	acquisition,
-	event
+	event_listing: eventListing
 } as const;
 
 export type AttachableKind = keyof typeof ATTACHABLE;
@@ -445,7 +445,11 @@ export async function listProjectAttachments(projectId: string) {
 			.from(acquisition)
 			.where(eq(acquisition.projectId, projectId))
 			.orderBy(desc(acquisition.occurredAt)),
-		db.select().from(event).where(eq(event.projectId, projectId)).orderBy(asc(event.startsAt))
+		db
+			.select()
+			.from(eventListing)
+			.where(eq(eventListing.projectId, projectId))
+			.orderBy(asc(eventListing.startsAt))
 	]);
 
 	return { workOrders, jobs, orders, acquisitions, events };

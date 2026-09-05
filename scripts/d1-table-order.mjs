@@ -22,6 +22,9 @@ export const tableOrder = [
 	// References user twice (subject + granter). No children.
 	'instructor',
 	'reservation',
+	// References nothing; `event.venue_id` references it, so it must precede
+	// `event`. Sits with the other rootless tables rather than beside it.
+	'venue',
 	'equipment_category',
 	'inventory_location',
 	'inventory_item',
@@ -37,7 +40,10 @@ export const tableOrder = [
 	// References contractor, inventory_asset and user, so it clears before none
 	// of them.
 	'contractor_job',
-	'event',
+	'event_listing',
+	// The ops half of one listing. References event_listing and user, so it
+	// clears before both.
+	'production',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
 	// (docs/specs/shipped/media-spec.md), so it constrains nothing else in this order.
@@ -58,11 +64,14 @@ export const tableOrder = [
 	'duty_list',
 	// References duty_list and volunteer_role.
 	'duty_list_item',
-	// references volunteer_role + event + duty_list, and is referenced by
-	// volunteer_signup, volunteer_hour_log and work_task, so it sits between them.
+	// references volunteer_role + event + duty_list + reservation, and is
+	// referenced by volunteer_signup, volunteer_hour_log, work_task and
+	// member_orientation, so it sits between them.
 	'work_order',
 	// The checklist inside one work order. References work_order and user.
 	'work_task',
+	// References user, work_order and reservation, so it follows all three.
+	'member_orientation',
 	'volunteer_signup',
 	// independents (no FKs)
 	'closure',

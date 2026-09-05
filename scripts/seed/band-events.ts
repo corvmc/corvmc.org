@@ -1,4 +1,4 @@
-import { event, eventGroup } from '../../src/lib/server/db/schema/event';
+import { eventListing, eventGroup } from '../../src/lib/server/db/schema/event';
 import { db } from './db';
 import { seedLineup } from './lineups';
 import {
@@ -8,7 +8,7 @@ import {
 	SUPPORT_BAND_NAMES
 } from './pools';
 import { type SeedUser } from './types';
-import { pick, pickN, ptDate, randomInt } from './util';
+import { pick, pickN, ptDate, random, randomInt } from './util';
 
 export async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 	console.log('Seeding band events...');
@@ -23,12 +23,12 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 			const hour = randomInt(19, 21);
 			const startsAt = ptDate(day, hour);
 			const [e] = await db
-				.insert(event)
+				.insert(eventListing)
 				.values({
 					title: pick(BAND_EVENT_TITLES),
 					description: `${veteran.name} live! An old favourite from the archives.`,
 					startsAt,
-					endsAt: Math.random() > 0.5 ? ptDate(day, hour + pick([2, 3, 4])) : null,
+					endsAt: random() > 0.5 ? ptDate(day, hour + pick([2, 3, 4])) : null,
 					doorsAt: ptDate(day, hour - 0.5),
 					status: 'published',
 					publishedAt: new Date(startsAt.getTime() - 14 * 86400000),
@@ -36,7 +36,7 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 					groupId: veteran.id,
 					source: 'band',
 					location: pick(BAND_EVENT_LOCATIONS),
-					ticketPrice: Math.random() > 0.35 ? pick([500, 1000, 1200, 1500]) : null,
+					ticketPrice: random() > 0.35 ? pick([500, 1000, 1200, 1500]) : null,
 					createdByUserId: veteran.ownerId
 				})
 				.returning();
@@ -66,7 +66,7 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 			const isPast = day < 0;
 
 			const [e] = await db
-				.insert(event)
+				.insert(eventListing)
 				.values({
 					title: pick(BAND_EVENT_TITLES),
 					description: `${b.name} live! Join us for a night of original music and good vibes. All ages welcome.`,
@@ -76,7 +76,7 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 					status: isPast ? 'published' : pick(['published', 'published', 'draft']),
 					publishedAt: isPast
 						? new Date(startsAt.getTime() - 14 * 86400000)
-						: Math.random() > 0.3
+						: random() > 0.3
 							? new Date()
 							: null,
 					tags: pickN(EVENT_TAGS_POOL, randomInt(1, 3)).join(', '),
@@ -84,9 +84,9 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 					source: 'band',
 					location: pick(BAND_EVENT_LOCATIONS),
 					externalTicketUrl:
-						Math.random() > 0.5 ? `https://eventbrite.com/e/${randomInt(100000, 999999)}` : null,
+						random() > 0.5 ? `https://eventbrite.com/e/${randomInt(100000, 999999)}` : null,
 					// Gigs are priced at the door or by the venue — never sold by us.
-					ticketPrice: Math.random() > 0.35 ? pick([500, 1000, 1200, 1500]) : null,
+					ticketPrice: random() > 0.35 ? pick([500, 1000, 1200, 1500]) : null,
 					createdByUserId: b.ownerId
 				})
 				.returning();
@@ -96,7 +96,7 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[]) {
 			// inbox has something in it, and a declined slot so that render path
 			// is visible too.
 			const support: { name: string; bandId?: string; status?: string }[] = [];
-			if (Math.random() > 0.66) {
+			if (random() > 0.66) {
 				support.push(...pickN(SUPPORT_BAND_NAMES, randomInt(1, 2)).map((name) => ({ name })));
 			}
 			const otherBand = bands.find((x: any) => x.id !== b.id && !x.deletedAt);

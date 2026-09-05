@@ -28,6 +28,21 @@ export function registerListeners(): void {
 
 	// --- Waitlist promotion on cancellation ---
 	registerWaitlistListeners();
+
+	// --- A member's first booking raises an orientation shift ---
+	registerOrientationGroup();
+}
+
+/**
+ * Orientation lives in its own module rather than inline here, because both of
+ * its listeners are the same feature seen from two ends — a booking raises the
+ * shift, a cancellation stands it down — and splitting them across files is how
+ * the second one gets forgotten.
+ */
+async function registerOrientationGroup(): Promise<void> {
+	const { registerOrientationListeners } =
+		await import('$lib/server/volunteer/orientation-listener');
+	registerOrientationListeners();
 }
 
 // ---------------------------------------------------------------------------
@@ -254,6 +269,12 @@ async function registerWaitlistListeners(): Promise<void> {
 	const { promoteNextWaitlisted } = await import('$lib/server/reservation/waitlist-service');
 
 	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
+		// `expireWaitlisted()` promotes the next member itself, before it emits
+		// this — it returns the count. Promoting again here would not find that
+		// member (they now have `waitlistNotifiedAt`) but the one behind them,
+		// and hand the same slot to two people.
+		if (event.cause === 'waitlist_expired') return;
+
 		// Parse the original reservation's time range to find waitlisted candidates
 		// We need the raw Date objects — reconstruct from the formatted strings
 		// by looking up the cancelled reservation directly

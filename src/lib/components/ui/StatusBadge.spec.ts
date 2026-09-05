@@ -7,12 +7,14 @@ import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
 	instructorStatuses,
+	memberOrientationStates,
 	suggestionStatuses,
 	suggestionVisibilities
 } from '$lib/config';
 import { ticketStatuses } from '$lib/server/db/schema/ticket';
 import { reservationStatuses } from '$lib/server/db/schema/reservation';
 import { eventStatuses } from '$lib/server/db/schema/event';
+import { productionStatuses } from '$lib/server/db/schema/production';
 import { flagStatuses } from '$lib/server/db/schema/flag';
 import { groupMemberStatuses } from '$lib/server/db/schema/group';
 import { bandTiers } from '$lib/server/db/schema/band-site';
@@ -68,11 +70,15 @@ const vocabularies: Record<string, readonly string[]> = {
 	// this component's own docs describe as saying nothing.
 	inventoryAsset: assetStatuses,
 	equipmentLoan: loanStatuses,
+	// Derived from `member_orientation`'s timestamps, never stored — but a
+	// vocabulary all the same, and the badge is how staff read it.
+	memberOrientation: memberOrientationStates,
 	inboxThread: inboxThreadStatuses,
 	volunteerHour: volunteerHourStatuses,
 	volunteerProfile: volunteerProfileStatuses,
 	instructor: instructorStatuses,
 	suggestion: suggestionStatuses,
+	production: productionStatuses,
 	// `visible` is intentionally absent: an on-the-board suggestion shows no badge.
 	suggestionVisibility: suggestionVisibilities.filter((v) => v !== 'visible'),
 	...derivedStatuses

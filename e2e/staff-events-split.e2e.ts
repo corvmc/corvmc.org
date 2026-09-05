@@ -76,6 +76,36 @@ test.describe('staff events split', () => {
 		await expect(page.getByText(SEED_SPLIT_DRAFT_TITLE)).toHaveCount(0);
 	});
 
+	// The filter lives in the URL so a reload and a back-out both land on the
+	// view the staffer left. This is the behaviour `replaceState()` could not
+	// give: it rewrites the address bar without telling the router, so the entry
+	// pushed on the next navigation overwrote it and Back returned to the
+	// default queue instead of the filtered calendar.
+	test('a filter survives a reload and a round trip into an event', async ({ page }) => {
+		await page.goto('/staff/events');
+		await page.getByLabel('Status').selectOption('all');
+		await expect(page).toHaveURL(/\?view=all$/);
+
+		await page.reload();
+		await expect(page.getByLabel('Status')).toHaveValue('all');
+
+		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}`);
+		await page.goBack();
+		await expect(page).toHaveURL(/\?view=all$/);
+		await expect(page.getByLabel('Status')).toHaveValue('all');
+	});
+
+	// Returning every control to its default returns the address to a bare path,
+	// so a staffer can tell at a glance whether anything is filtered.
+	test('clearing the filters clears the query string', async ({ page }) => {
+		await page.goto('/staff/events?view=all&source=cmc');
+		await expect(page.getByLabel('Source')).toHaveValue('cmc');
+
+		await page.getByLabel('Status').selectOption('review');
+		await page.getByLabel('Source').selectOption('');
+		await expect(page).toHaveURL(/\/staff\/events$/);
+	});
+
 	test('the general view carries facts and no production controls', async ({ page }) => {
 		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}`);
 		await expect(page.getByRole('heading', { name: SEED_SPLIT_PENDING_TITLE })).toBeVisible();
@@ -109,6 +139,11 @@ test.describe('staff events split', () => {
 		await page.goto(`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}/production`);
 		await expect(page.getByRole('heading', { name: SEED_SPLIT_CMC_LIVE_TITLE })).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
+
+		// The console is tabbed now, and the staffing lives on Advance. Reached by
+		// the tab rather than by `?tab=`, because what this asserts is that the
+		// console is whole — every part of it still reachable from where you land.
+		await page.getByRole('tab', { name: 'Advance' }).click();
 		await expect(page.getByRole('heading', { name: 'Volunteer Shifts' })).toBeVisible();
 
 		// The console has nothing to say about a listing, so a hand-typed URL goes

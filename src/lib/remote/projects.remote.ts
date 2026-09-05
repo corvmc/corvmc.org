@@ -80,7 +80,7 @@ const attachableKinds = z.enum([
 	'contractor_job',
 	'purchase_order',
 	'acquisition',
-	'event'
+	'event_listing'
 ]);
 
 // ---------------------------------------------------------------------------

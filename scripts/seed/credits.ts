@@ -1,7 +1,7 @@
 import { creditTransaction } from '../../src/lib/server/db/schema/finance';
 import { db } from './db';
 import { type SeedUser } from './types';
-import { randomInt } from './util';
+import { random, randomInt } from './util';
 
 export async function seedCreditTransactions(users: SeedUser[]) {
 	console.log('Seeding credit transactions...');
@@ -17,7 +17,7 @@ export async function seedCreditTransactions(users: SeedUser[]) {
 			metadata: { period: 'May 2026' }
 		});
 
-		if (Math.random() > 0.4) {
+		if (random() > 0.4) {
 			const used = randomInt(1, Math.min(3, hours));
 			await db.insert(creditTransaction).values({
 				userId: u.id,

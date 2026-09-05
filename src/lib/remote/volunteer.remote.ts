@@ -62,6 +62,7 @@ import {
 	getRequirementsForRoles,
 	setRoleRequirements
 } from '$lib/server/volunteer/volunteer-certification-service';
+import { listWorkTasks } from '$lib/server/volunteer/duty-list-service';
 import {
 	createShift as createShiftService,
 	duplicateShift as duplicateShiftService,
@@ -71,7 +72,11 @@ import {
 	getShiftCancelledByName,
 	countUnfilledByRole,
 	listOpenShiftsForMember,
-	getShiftDetail
+	getShiftDetail,
+	createWorkOrder as createWorkOrderService,
+	scheduleWorkOrder as scheduleWorkOrderService,
+	resolveWorkOrder as resolveWorkOrderService,
+	listWorkOrders
 } from '$lib/server/volunteer/work-order-service';
 import {
 	claimShift as claimShiftService,
@@ -1543,6 +1548,112 @@ export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data
 	return { success: true };
 });
 
+// ---------------------------------------------------------------------------
+// Work orders — the unscheduled half
+// ---------------------------------------------------------------------------
+// Work that needs doing with nobody booked to do it. `createWorkOrder`,
+// `scheduleWorkOrder`, `resolveWorkOrder` and `listWorkOrders` were written,
+// specced and then never exposed, so the rows `applyDutyList` stamps out from a
+// `dueOffsetMinutes` item existed and appeared nowhere. Everything here is a
+// thin pass through to a service that already exists.
+// ---------------------------------------------------------------------------
+
+/** The coordinator's queue, optionally scoped to one show or one project. */
+export const getWorkOrders = query(
+	z
+		.object({
+			volunteerRoleId: z.string().optional(),
+			eventId: z.string().optional(),
+			projectId: z.string().optional()
+		})
+		.optional(),
+	async (filters) => {
+		await requireCapability('volunteer.read');
+		return listWorkOrders(filters ?? {});
+	}
+);
+
+export const createWorkOrder = form(
+	z.object({
+		volunteerRoleId: z.string().min(1, 'Pick a role'),
+		dueAt: z.string().optional(),
+		capacity: z.string().optional(),
+		notes: z
+			.string()
+			.max(
+				VOLUNTEER_SHIFT_NOTES_MAX,
+				`Keep the notes under ${VOLUNTEER_SHIFT_NOTES_MAX} characters`
+			)
+			.optional()
+	}),
+	async (data) => {
+		const staff = await requireCapability('volunteer.manageShifts');
+
+		try {
+			await createWorkOrderService({
+				volunteerRoleId: data.volunteerRoleId,
+				// A deadline, not a window — read as club wall-clock time like every
+				// other date on this layer.
+				dueAt: data.dueAt ? new Date(data.dueAt) : null,
+				capacity: data.capacity ? parseInt(data.capacity, 10) : 1,
+				notes: data.notes,
+				createdByUserId: staff.id
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await refreshShiftViews();
+		return { success: true };
+	}
+);
+
+/** "We found a time for it" — which turns the work order into an ordinary shift. */
+export const scheduleWorkOrder = form(
+	z.object({
+		id: z.string().min(1),
+		startsAt: z.string().min(1, 'Pick when it starts'),
+		endsAt: z.string().min(1, 'Pick when it ends')
+	}),
+	async (data) => {
+		await requireCapability('volunteer.manageShifts');
+
+		try {
+			await scheduleWorkOrderService(data.id, { startsAt: data.startsAt, endsAt: data.endsAt });
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await refreshShiftViews(data.id);
+		return { success: true };
+	}
+);
+
+/**
+ * The work is finished, which is not the same as anybody having turned up.
+ *
+ * `completeFinishedShifts` keys on `ends_at` and can never reach a row that
+ * never had one, so the service completes the signups itself.
+ */
+export const resolveWorkOrder = form(
+	z.object({ id: z.string().min(1), notes: z.string().max(500).optional() }),
+	async (data) => {
+		const staff = await requireCapability('volunteer.manageShifts');
+
+		try {
+			await resolveWorkOrderService(data.id, {
+				resolvedByUserId: staff.id,
+				notes: data.notes
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await refreshShiftViews(data.id);
+		return { success: true };
+	}
+);
+
 /**
  * Tell everybody left on a called-off shift.
  *
@@ -1959,9 +2070,21 @@ export const getStaffVolunteerRolePage = query(z.string(), async (id) => {
 });
 
 /** The shift detail page's one load-bearing query. Both halves are keyed by the shift id. */
+/**
+ * One shift, its feedback, and its checklist.
+ *
+ * `work_task` rows are written by `applyDutyList` and were readable by nothing:
+ * `listWorkTasks` had no callers and `setWorkTaskDone` had a remote form no page
+ * called. A checklist that can be created and never ticked is worse than none,
+ * because the duty list promises it.
+ */
 export const getStaffShiftPage = query(z.string(), async (id) => {
-	const [shift, feedback] = await Promise.all([getShift(id), getShiftFeedback(id)]);
-	return { shift, feedback };
+	const [shift, feedback, tasks] = await Promise.all([
+		getShift(id),
+		getShiftFeedback(id),
+		listWorkTasks(id)
+	]);
+	return { shift, feedback, tasks };
 });
 
 /**
@@ -2075,7 +2198,7 @@ export const getVolunteerWorklist = query(async () => {
 	const horizon = new Date(now.getTime() + WORKLIST_HORIZON_DAYS * DAY_MS);
 	const lookback = new Date(now.getTime() - CLOSE_OUT_LOOKBACK_DAYS * DAY_MS);
 
-	const [claims, unclosed, upcoming, hours, counts, blocked, lapsing, waitingCount] =
+	const [claims, unclosed, upcoming, hours, counts, blocked, lapsing, unscheduled, waitingCount] =
 		await Promise.all([
 			listOutstandingClaims({}, now),
 			listUnclosedSignups({ since: lookback }, now),
@@ -2098,6 +2221,11 @@ export const getVolunteerWorklist = query(async () => {
 			getStatusCounts(),
 			listBlockedVolunteers(),
 			listLapsingBeforeRosteredShift(now),
+			// Work with no time on it — the advance half of a duty list, and anything
+			// a coordinator raised without a window. Every other query on this layer
+			// filters `starts_at >= now`, and `NULL >= x` is NULL, so before this card
+			// these rows were created and then invisible in the whole product.
+			listWorkOrders(),
 			// The same call the sidebar badge makes, rather than a sum of the arrays above:
 			// one source means the number on the nav and the rows on this page cannot
 			// disagree.
@@ -2132,6 +2260,8 @@ export const getVolunteerWorklist = query(async () => {
 		/** Finished shifts whose claims never completed, so no hours were ever offered. */
 		closeOut: unclosed,
 		lapsing,
+		/** Work orders waiting for a window, oldest first. */
+		unscheduled,
 		/** What the sidebar badge counts — the same call, so the two always agree. */
 		waitingCount
 	};

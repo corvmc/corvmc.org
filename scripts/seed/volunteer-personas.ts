@@ -71,7 +71,7 @@ export const VOLUNTEER_PERSONAS = [
 export async function seedVolunteerPersonas(
 	roles: SeedRole[],
 	volunteerRoles: any[],
-	certifications: { deskCert?: any; foodCert?: any },
+	certifications: { deskCert?: any; foodCert?: any; orientationCert?: any },
 	reviewer: any
 ) {
 	console.log('Seeding volunteer personas...');
@@ -317,7 +317,7 @@ export async function seedVolunteerPersonas(
 		}))
 	);
 
-	const { deskCert, foodCert } = certifications;
+	const { deskCert, foodCert, orientationCert } = certifications;
 	const certRows: any[] = [];
 	if (deskCert) {
 		certRows.push({
@@ -347,6 +347,22 @@ export async function seedVolunteerPersonas(
 			revokedByUserId: reviewer.id
 		});
 	}
+	// Sam holds the orientation clearance and Ellis does not, so the member board
+	// shows both sides of the gate on every seed: one persona who can take an
+	// auto-created orientation shift and one who is shown it with the reason they
+	// cannot.
+	if (orientationCert) {
+		certRows.push({
+			id: 'seed-vol-cert-orientation',
+			userId: 'seed-vol-active',
+			certificationId: orientationCert.id,
+			grantedAt: ago(90),
+			expiresAt: null,
+			grantedByUserId: 'seed-vol-coordinator',
+			notes: 'Shadowed two, ran one with a staffer in the building.'
+		});
+	}
+
 	if (foodCert) {
 		certRows.push({
 			// Expiring inside the 60-day warning window, and Front Desk now requires

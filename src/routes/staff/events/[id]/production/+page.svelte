@@ -46,6 +46,12 @@
 	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
 	import { createShift } from '$lib/remote/volunteer.remote';
 	import { applyDutyList } from '$lib/remote/duty-lists.remote';
+	import { updateProduction, setProductionProducer } from '$lib/remote/productions.remote';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import ProductionStatusAction from './ProductionStatusAction.svelte';
+	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
+	import { SvelteSet } from 'svelte/reactivity';
+	import { replaceState } from '$app/navigation';
 
 	let id = $derived(page.params.id!);
 
@@ -75,7 +81,14 @@
 	const shifts = $derived(loaded.shifts);
 	const volunteerRoles = $derived(loaded.volunteerRoles);
 	const dutyLists = $derived(loaded.dutyLists);
+	const venues = $derived(loaded.venues);
+	// Work orders with no window — the advance half of an applied duty list. They
+	// are a separate list rather than rows in the table below because they have no
+	// time to sort by and no confirmed/capacity story worth printing: what a
+	// producer wants from them is what is still open and by when.
+	const advance = $derived(loaded.advance);
 	const riders = $derived(loaded.riders);
+	const productionRecord = $derived(loaded.production);
 	/** The advance question: who has told us nothing at all. */
 	const ridersMissing = $derived(riders.filter((r) => r.empty).length);
 
@@ -145,6 +158,7 @@
 	let editDescription = $state('');
 	let editTags = $state('');
 	let editLocation = $state('');
+	let editVenueId = $state('');
 	let editExternalTicketUrl = $state('');
 	let editDate = $state('');
 	let editStartTime = $state('');
@@ -188,6 +202,7 @@
 		editDescription = evt.description ?? '';
 		editTags = evt.tags ?? '';
 		editLocation = evt.location ?? '';
+		editVenueId = evt.venueId ?? '';
 		editExternalTicketUrl = evt.externalTicketUrl ?? '';
 
 		// Parse existing dates into form values
@@ -339,6 +354,51 @@
 
 		return { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() };
 	}
+
+	// ── Tabs ──────────────────────────────────────────────────────────────
+	// Read out of the URL once, on mount, so a reload or a copied link lands on
+	// the right panel. `tab` is the source of truth from then on.
+	const initialTab = parseTab(page.url.searchParams.get('tab'));
+	let tab = $state<TabKey>(initialTab);
+	let tabBarEl = $state<HTMLElement | null>(null);
+
+	// Keep-alive. A plain {#if} would unmount the Overview panel on tab change
+	// and silently discard a half-typed edit — Form's `guard` only fires on
+	// navigation, and switching tabs is not one.
+	const visited = new SvelteSet<TabKey>([initialTab]);
+	$effect(() => {
+		visited.add(tab);
+	});
+
+	// `replaceState` (shallow routing) rather than `goto(..., { replaceState })`,
+	// which is what the filter bars use. A tab change is not a navigation, but
+	// `goto` is one, and `FormGuard` hooks `beforeNavigate`: with the edit form
+	// dirty, every tab click would cancel the navigation and pop "You have
+	// unsaved changes", whose <dialog> then swallows pointer events for the whole
+	// page. Shallow routing rewrites the address bar and nothing else, which is
+	// all mirroring local state wants.
+	$effect(() => {
+		const href = `${resolve(`/staff/events/${id}/production`)}${
+			tab === 'overview' ? '' : `?tab=${tab}`
+		}`;
+		if (location.pathname + location.search !== href) {
+			replaceState(href, {});
+		}
+	});
+
+	const tabs = $derived(TAB_KEYS.map((key) => ({ key, label: TAB_LABELS[key] })));
+
+	// ── Production form state ─────────────────────────────────────────────
+	const productionFields = updateProduction.fields;
+	const producerFields = setProductionProducer.fields;
+
+	// One date for all five times: the listing already refuses to span two dates,
+	// so five date fields would be five chances to disagree with each other.
+	let productionDate = $state('');
+	$effect(() => {
+		if (!productionRecord) return;
+		productionDate = toLocalDate(productionRecord.loadInAt ?? evt.startsAt);
+	});
 </script>
 
 <!-- Back where this row came from: a production is on /staff/events, and
@@ -361,748 +421,939 @@
 	</div>
 </PageHeader>
 <PageContent width="3xl">
-	<!-- Status -->
-	<div class="flex items-center gap-2">
-		<StatusBadge status={evt.status} />
-		{#if evt.publishedAt}
-			<span class="text-muted">Published {fullDate(evt.publishedAt)}</span>
-		{/if}
+	<div bind:this={tabBarEl}>
+		<TabBar {tabs} active={tab} collapse onchange={(key) => (tab = key as TabKey)} />
 	</div>
 
-	<!-- Recurring series -->
-	{#if recurringSeries}
-		<div class="flex flex-wrap items-center gap-2">
-			<Badge class="badge-info">Recurring · {recurringSeries.frequencyLabel}</Badge>
-			{#if recurringSeries.cancelledAt}
-				<span class="text-muted">Series cancelled — no new occurrences</span>
-			{:else}
-				<span class="text-muted">
-					{#if recurringSeries.endsAt}
-						Repeats until {fullDate(recurringSeries.endsAt)}
+	{#if visited.has('overview')}
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-overview"
+			class="space-y-6"
+			class:hidden={tab !== 'overview'}
+		>
+			<!-- Status -->
+			<div class="flex items-center gap-2">
+				<StatusBadge status={evt.status} />
+				{#if evt.publishedAt}
+					<span class="text-muted">Published {fullDate(evt.publishedAt)}</span>
+				{/if}
+			</div>
+
+			<!-- Recurring series -->
+			{#if recurringSeries}
+				<div class="flex flex-wrap items-center gap-2">
+					<Badge class="badge-info">Recurring · {recurringSeries.frequencyLabel}</Badge>
+					{#if recurringSeries.cancelledAt}
+						<span class="text-muted">Series cancelled — no new occurrences</span>
 					{:else}
-						New occurrences are generated automatically
+						<span class="text-muted">
+							{#if recurringSeries.endsAt}
+								Repeats until {fullDate(recurringSeries.endsAt)}
+							{:else}
+								New occurrences are generated automatically
+							{/if}
+						</span>
+						<Form
+							remote={cancelEventSeries}
+							successToast="Series cancelled"
+							onsuccess={() => void getStaffEventProduction(id).refresh()}
+						>
+							<input {...cancelEventSeries.fields.seriesId.as('hidden', recurringSeries.id)} />
+							<SubmitButton label="Cancel series" variant="ghost" size="xs" class="text-error" />
+						</Form>
 					{/if}
-				</span>
-				<Form
-					remote={cancelEventSeries}
-					successToast="Series cancelled"
-					onsuccess={() => void getStaffEventProduction(id).refresh()}
-				>
-					<input {...cancelEventSeries.fields.seriesId.as('hidden', recurringSeries.id)} />
-					<SubmitButton label="Cancel series" variant="ghost" size="xs" class="text-error" />
-				</Form>
+				</div>
 			{/if}
-		</div>
-	{/if}
 
-	<!-- Edit form -->
-	{#if editing}
-		<svelte:boundary>
-			<Card>
-				<CardBody class="space-y-4">
-					<h3 class="text-muted font-medium">Edit Event</h3>
+			<!-- Edit form -->
+			{#if editing}
+				<svelte:boundary>
+					<Card>
+						<CardBody class="space-y-4">
+							<h3 class="text-muted font-medium">Edit Event</h3>
 
-					<Form remote={updateEvent} guard successToast="Updated" onsuccess={handleUpdateSuccess}>
-						<input {...fields.eventId.as('hidden', evt.id)} />
-						<input {...fields.ticketingEnabled.as('hidden', editTicketingEnabled)} />
-						<!-- Always submitted: the price is the attendee's price whoever sells
-						     the ticket, so it has to survive the ticketing toggle being off. -->
-						<input {...fields.ticketPrice.as('hidden', editTicketPriceCents)} />
-						<input {...fields.ticketPriceFloorCents.as('hidden', editTicketFloorCents)} />
-						{#if (rebookNeeded && rebookConfirmed) || reserveSpace}
-							<input {...fields.rebookReservation.as('hidden', true)} />
-						{/if}
-						{#if overrideConflicts}
-							<input {...fields.overrideConflicts.as('hidden', true)} />
-						{/if}
+							<Form
+								remote={updateEvent}
+								guard
+								successToast="Updated"
+								onsuccess={handleUpdateSuccess}
+							>
+								<input {...fields.eventId.as('hidden', evt.id)} />
+								<input {...fields.ticketingEnabled.as('hidden', editTicketingEnabled)} />
+								<!-- Always submitted: the price is the attendee's price whoever sells
+							     the ticket, so it has to survive the ticketing toggle being off. -->
+								<input {...fields.ticketPrice.as('hidden', editTicketPriceCents)} />
+								<input {...fields.ticketPriceFloorCents.as('hidden', editTicketFloorCents)} />
+								{#if (rebookNeeded && rebookConfirmed) || reserveSpace}
+									<input {...fields.rebookReservation.as('hidden', true)} />
+								{/if}
+								{#if overrideConflicts}
+									<input {...fields.overrideConflicts.as('hidden', true)} />
+								{/if}
 
-						<div class="space-y-4">
-							<FormField label="Title" id="editTitle" issues={[]}>
-								<input
-									id="editTitle"
-									name="title"
-									type="text"
-									bind:value={editTitle}
-									class="input w-full"
-									required
-								/>
-							</FormField>
-
-							<FormField label="Description" id="editDesc" issues={[]}>
-								<textarea
-									id="editDesc"
-									name="description"
-									bind:value={editDescription}
-									class="textarea w-full"
-									rows="4"></textarea>
-							</FormField>
-
-							<FormField label="Date" id="editDate" issues={[]}>
-								<input
-									id="editDate"
-									name="eventDate"
-									type="date"
-									bind:value={editDate}
-									class="input w-full"
-									required
-									onchange={checkForRebook}
-								/>
-							</FormField>
-
-							<div class="grid grid-cols-2 gap-4">
-								<FormField label="Start time" id="editStartTime" issues={[]}>
-									<input
-										id="editStartTime"
-										name="eventStartTime"
-										type="time"
-										bind:value={editStartTime}
-										class="input w-full"
-										required
-										onchange={checkForRebook}
-									/>
-								</FormField>
-
-								<FormField label="End time" id="editEndTime" issues={[]}>
-									<input
-										id="editEndTime"
-										name="eventEndTime"
-										type="time"
-										bind:value={editEndTime}
-										class="input w-full"
-										required
-										onchange={checkForRebook}
-									/>
-								</FormField>
-							</div>
-
-							<FormField label="Doors time" id="editDoorsTime" issues={[]}>
-								<input
-									id="editDoorsTime"
-									name="doorsTime"
-									type="time"
-									bind:value={editDoorsTime}
-									class="input w-full"
-								/>
-							</FormField>
-
-							<FormField label="Tags" id="editTags" issues={[]}>
-								<input
-									id="editTags"
-									name="tags"
-									type="text"
-									bind:value={editTags}
-									class="input w-full"
-									placeholder="e.g. open mic, workshop"
-								/>
-							</FormField>
-
-							<!-- Venue and ticket link: what a band gig is made of. CMC shows
-							     happen at the space and sell through us, so both stay optional. -->
-							<FormField label="Location" id="editLocation" issues={[]}>
-								<input
-									id="editLocation"
-									name="location"
-									type="text"
-									bind:value={editLocation}
-									class="input w-full"
-									placeholder="Venue name and address"
-								/>
-							</FormField>
-
-							<FormField label="External ticket URL" id="editTicketUrl" issues={[]}>
-								<input
-									id="editTicketUrl"
-									name="externalTicketUrl"
-									type="url"
-									bind:value={editExternalTicketUrl}
-									class="input w-full"
-									placeholder="https://..."
-								/>
-							</FormField>
-
-							<!-- The price is what attendees pay wherever they buy — our checkout,
-							     the link above, or the door — so it lives outside the ticketing
-							     toggle and applies to band gigs too. Only capacity depends on us
-							     doing the selling. -->
-							<FormField label="Suggested price ($)" id="editTicketPrice" issues={[]}>
-								<input
-									id="editTicketPrice"
-									type="number"
-									bind:value={editTicketPriceDollars}
-									min="0.01"
-									step="0.01"
-									placeholder="15.00"
-									class="input w-full"
-									required={editTicketingEnabled}
-								/>
-								<span class="label-text-alt mt-1 opacity-60">
-									Where the sliding scale opens. Leave blank for a free event.
-								</span>
-							</FormField>
-
-							<FormField label="Minimum price ($)" id="editTicketFloor" issues={[]}>
-								<input
-									id="editTicketFloor"
-									type="number"
-									bind:value={editTicketFloorDollars}
-									min="0"
-									step="0.01"
-									placeholder="0.00"
-									class="input w-full"
-								/>
-								<span class="label-text-alt mt-1 opacity-60">
-									The least someone can pay. $0 lets anyone come for free — no card, no questions.
-									Leave it at $0 unless an act needs a floor.
-								</span>
-							</FormField>
-
-							<div class="form-control">
-								<label class="label cursor-pointer justify-start gap-3">
-									<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
-									<span class="label-text">Sell tickets through the site</span>
-								</label>
-							</div>
-
-							{#if editTicketingEnabled}
-								<Card tone="base-200" class="p-4">
-									<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
+								<div class="space-y-4">
+									<FormField label="Title" id="editTitle" issues={[]}>
 										<input
-											id="editTicketQuantity"
-											name="ticketQuantity"
-											type="number"
-											bind:value={editTicketQuantity}
-											min="1"
-											step="1"
-											placeholder="Unlimited"
+											id="editTitle"
+											name="title"
+											type="text"
+											bind:value={editTitle}
+											class="input w-full"
+											required
+										/>
+									</FormField>
+
+									<FormField label="Description" id="editDesc" issues={[]}>
+										<textarea
+											id="editDesc"
+											name="description"
+											bind:value={editDescription}
+											class="textarea w-full"
+											rows="4"></textarea>
+									</FormField>
+
+									<FormField label="Date" id="editDate" issues={[]}>
+										<input
+											id="editDate"
+											name="eventDate"
+											type="date"
+											bind:value={editDate}
+											class="input w-full"
+											required
+											onchange={checkForRebook}
+										/>
+									</FormField>
+
+									<div class="grid grid-cols-2 gap-4">
+										<FormField label="Start time" id="editStartTime" issues={[]}>
+											<input
+												id="editStartTime"
+												name="eventStartTime"
+												type="time"
+												bind:value={editStartTime}
+												class="input w-full"
+												required
+												onchange={checkForRebook}
+											/>
+										</FormField>
+
+										<FormField label="End time" id="editEndTime" issues={[]}>
+											<input
+												id="editEndTime"
+												name="eventEndTime"
+												type="time"
+												bind:value={editEndTime}
+												class="input w-full"
+												required
+												onchange={checkForRebook}
+											/>
+										</FormField>
+									</div>
+
+									<FormField label="Doors time" id="editDoorsTime" issues={[]}>
+										<input
+											id="editDoorsTime"
+											name="doorsTime"
+											type="time"
+											bind:value={editDoorsTime}
 											class="input w-full"
 										/>
 									</FormField>
-									<p class="mt-2 text-muted">Leave capacity blank for unlimited tickets.</p>
-								</Card>
-							{/if}
 
-							<!-- Rebook warning -->
-							{#if rebookNeeded}
-								<Alert type="warning">
-									<div class="w-full space-y-3">
-										<p class="font-medium">Reservation needs rebooking</p>
-										<p class="text-sm">
-											{rebookReason}. The existing reservation will be cancelled and a new one
-											created.
-										</p>
-
-										<label class="label cursor-pointer justify-start gap-3">
-											<input
-												type="checkbox"
-												bind:checked={rebookConfirmed}
-												class="checkbox checkbox-sm"
-											/>
-											<span class="label-text">Confirm rebook</span>
-										</label>
-
-										{#if rebookConfirmed}
-											<div class="mt-2 grid grid-cols-2 gap-4">
-												<FormField label="Reservation start" id="editResStart" issues={[]}>
-													<input
-														id="editResStart"
-														name="reservationStartTime"
-														type="time"
-														bind:value={editReservationStartTime}
-														class="input w-full"
-													/>
-												</FormField>
-												<FormField label="Reservation end" id="editResEnd" issues={[]}>
-													<input
-														id="editResEnd"
-														name="reservationEndTime"
-														type="time"
-														bind:value={editReservationEndTime}
-														class="input w-full"
-													/>
-												</FormField>
-											</div>
-
-											<ConflictWarnings
-												date={editDate}
-												startTime={editReservationStartTime}
-												endTime={editReservationEndTime}
-												{checkConflicts}
-												excludeReservationId={data.linkedReservation?.id}
-												bind:hasConflicts
-											/>
-											{#if hasConflicts}
-												<label class="label cursor-pointer justify-start gap-3">
-													<input
-														type="checkbox"
-														bind:checked={overrideConflicts}
-														class="checkbox checkbox-sm"
-													/>
-													<span class="label-text">Override conflicts</span>
-												</label>
-											{/if}
-										{/if}
-									</div>
-								</Alert>
-							{/if}
-
-							<!--
-								Hold the space for an event that never had a hold. The rebook alert
-								above covers the other case, so the two never render together.
-							-->
-							{#if canReserveSpace}
-								<div>
-									<label class="label cursor-pointer justify-start gap-3">
+									<FormField label="Tags" id="editTags" issues={[]}>
 										<input
-											type="checkbox"
-											bind:checked={reserveSpace}
-											onchange={toggleReserveSpace}
-											class="checkbox checkbox-sm"
+											id="editTags"
+											name="tags"
+											type="text"
+											bind:value={editTags}
+											class="input w-full"
+											placeholder="e.g. open mic, workshop"
 										/>
-										<span class="label-text">Reserve practice space</span>
-									</label>
+									</FormField>
 
-									{#if reserveSpace}
-										<Card tone="base-200" class="mt-2 space-y-4 p-4">
-											<p class="text-muted">
-												Reservation times can differ from event times to allow for setup and
-												teardown.
-											</p>
+									<!--
+									Venue and ticket link. A CMC show is usually at the space and sells
+									through us, so both stay optional — but "usually" is the whole
+									point of the picker: `venueId` is what decides whether this show
+									holds the room, and `location` stays the free-text line the guide
+									prints.
+								-->
+									{#if venues.length > 0}
+										<FormField
+											field={fields.venueId}
+											type="select"
+											label="Venue"
+											bind:value={editVenueId}
+											options={[
+												{ value: '', label: 'The practice room' },
+												...venues
+													.filter((v) => !v.isPrimary)
+													.map((v) => ({ value: v.id, label: v.name }))
+											]}
+										/>
+									{/if}
 
-											<div class="grid grid-cols-2 gap-4">
-												<FormField label="Reservation start" id="editReserveStart" issues={[]}>
-													<input
-														id="editReserveStart"
-														name="reservationStartTime"
-														type="time"
-														bind:value={editReservationStartTime}
-														class="input w-full"
-													/>
-												</FormField>
-												<FormField label="Reservation end" id="editReserveEnd" issues={[]}>
-													<input
-														id="editReserveEnd"
-														name="reservationEndTime"
-														type="time"
-														bind:value={editReservationEndTime}
-														class="input w-full"
-													/>
-												</FormField>
-											</div>
+									<FormField label="Address line" id="editLocation" issues={[]}>
+										<input
+											id="editLocation"
+											name="location"
+											type="text"
+											bind:value={editLocation}
+											class="input w-full"
+											placeholder="Venue name and address"
+										/>
+									</FormField>
 
-											<ConflictWarnings
-												date={editDate}
-												startTime={editReservationStartTime}
-												endTime={editReservationEndTime}
-												{checkConflicts}
-												bind:hasConflicts
-											/>
-											{#if hasConflicts}
-												<label class="label cursor-pointer justify-start gap-3">
-													<input
-														type="checkbox"
-														bind:checked={overrideConflicts}
-														class="checkbox checkbox-sm"
-													/>
-													<span class="label-text">Override conflicts</span>
-												</label>
-											{/if}
+									<FormField label="External ticket URL" id="editTicketUrl" issues={[]}>
+										<input
+											id="editTicketUrl"
+											name="externalTicketUrl"
+											type="url"
+											bind:value={editExternalTicketUrl}
+											class="input w-full"
+											placeholder="https://..."
+										/>
+									</FormField>
+
+									<!-- The price is what attendees pay wherever they buy — our checkout,
+								     the link above, or the door — so it lives outside the ticketing
+								     toggle and applies to band gigs too. Only capacity depends on us
+								     doing the selling. -->
+									<FormField label="Suggested price ($)" id="editTicketPrice" issues={[]}>
+										<input
+											id="editTicketPrice"
+											type="number"
+											bind:value={editTicketPriceDollars}
+											min="0.01"
+											step="0.01"
+											placeholder="15.00"
+											class="input w-full"
+											required={editTicketingEnabled}
+										/>
+										<span class="label-text-alt mt-1 opacity-60">
+											Where the sliding scale opens. Leave blank for a free event.
+										</span>
+									</FormField>
+
+									<FormField label="Minimum price ($)" id="editTicketFloor" issues={[]}>
+										<input
+											id="editTicketFloor"
+											type="number"
+											bind:value={editTicketFloorDollars}
+											min="0"
+											step="0.01"
+											placeholder="0.00"
+											class="input w-full"
+										/>
+										<span class="label-text-alt mt-1 opacity-60">
+											The least someone can pay. $0 lets anyone come for free — no card, no
+											questions. Leave it at $0 unless an act needs a floor.
+										</span>
+									</FormField>
+
+									<div class="form-control">
+										<label class="label cursor-pointer justify-start gap-3">
+											<input type="checkbox" bind:checked={editTicketingEnabled} class="toggle" />
+											<span class="label-text">Sell tickets through the site</span>
+										</label>
+									</div>
+
+									{#if editTicketingEnabled}
+										<Card tone="base-200" class="p-4">
+											<FormField label="Capacity" id="editTicketQuantity" issues={[]}>
+												<input
+													id="editTicketQuantity"
+													name="ticketQuantity"
+													type="number"
+													bind:value={editTicketQuantity}
+													min="1"
+													step="1"
+													placeholder="Unlimited"
+													class="input w-full"
+												/>
+											</FormField>
+											<p class="mt-2 text-muted">Leave capacity blank for unlimited tickets.</p>
 										</Card>
 									{/if}
-								</div>
-							{/if}
 
-							<div class="flex justify-end gap-2 pt-2">
-								<Button type="button" variant="ghost" size="sm" onclick={cancelEditing}
-									>Cancel</Button
-								>
-								<SubmitButton label="Save" variant="primary" size="sm" />
+									<!-- Rebook warning -->
+									{#if rebookNeeded}
+										<Alert type="warning">
+											<div class="w-full space-y-3">
+												<p class="font-medium">Reservation needs rebooking</p>
+												<p class="text-sm">
+													{rebookReason}. The existing reservation will be cancelled and a new one
+													created.
+												</p>
+
+												<label class="label cursor-pointer justify-start gap-3">
+													<input
+														type="checkbox"
+														bind:checked={rebookConfirmed}
+														class="checkbox checkbox-sm"
+													/>
+													<span class="label-text">Confirm rebook</span>
+												</label>
+
+												{#if rebookConfirmed}
+													<div class="mt-2 grid grid-cols-2 gap-4">
+														<FormField label="Reservation start" id="editResStart" issues={[]}>
+															<input
+																id="editResStart"
+																name="reservationStartTime"
+																type="time"
+																bind:value={editReservationStartTime}
+																class="input w-full"
+															/>
+														</FormField>
+														<FormField label="Reservation end" id="editResEnd" issues={[]}>
+															<input
+																id="editResEnd"
+																name="reservationEndTime"
+																type="time"
+																bind:value={editReservationEndTime}
+																class="input w-full"
+															/>
+														</FormField>
+													</div>
+
+													<ConflictWarnings
+														date={editDate}
+														startTime={editReservationStartTime}
+														endTime={editReservationEndTime}
+														{checkConflicts}
+														excludeReservationId={data.linkedReservation?.id}
+														bind:hasConflicts
+													/>
+													{#if hasConflicts}
+														<label class="label cursor-pointer justify-start gap-3">
+															<input
+																type="checkbox"
+																bind:checked={overrideConflicts}
+																class="checkbox checkbox-sm"
+															/>
+															<span class="label-text">Override conflicts</span>
+														</label>
+													{/if}
+												{/if}
+											</div>
+										</Alert>
+									{/if}
+
+									<!--
+									Hold the space for an event that never had a hold. The rebook alert
+									above covers the other case, so the two never render together.
+								-->
+									{#if canReserveSpace}
+										<div>
+											<label class="label cursor-pointer justify-start gap-3">
+												<input
+													type="checkbox"
+													bind:checked={reserveSpace}
+													onchange={toggleReserveSpace}
+													class="checkbox checkbox-sm"
+												/>
+												<span class="label-text">Reserve practice space</span>
+											</label>
+
+											{#if reserveSpace}
+												<Card tone="base-200" class="mt-2 space-y-4 p-4">
+													<p class="text-muted">
+														Reservation times can differ from event times to allow for setup and
+														teardown.
+													</p>
+
+													<div class="grid grid-cols-2 gap-4">
+														<FormField label="Reservation start" id="editReserveStart" issues={[]}>
+															<input
+																id="editReserveStart"
+																name="reservationStartTime"
+																type="time"
+																bind:value={editReservationStartTime}
+																class="input w-full"
+															/>
+														</FormField>
+														<FormField label="Reservation end" id="editReserveEnd" issues={[]}>
+															<input
+																id="editReserveEnd"
+																name="reservationEndTime"
+																type="time"
+																bind:value={editReservationEndTime}
+																class="input w-full"
+															/>
+														</FormField>
+													</div>
+
+													<ConflictWarnings
+														date={editDate}
+														startTime={editReservationStartTime}
+														endTime={editReservationEndTime}
+														{checkConflicts}
+														bind:hasConflicts
+													/>
+													{#if hasConflicts}
+														<label class="label cursor-pointer justify-start gap-3">
+															<input
+																type="checkbox"
+																bind:checked={overrideConflicts}
+																class="checkbox checkbox-sm"
+															/>
+															<span class="label-text">Override conflicts</span>
+														</label>
+													{/if}
+												</Card>
+											{/if}
+										</div>
+									{/if}
+
+									<div class="flex justify-end gap-2 pt-2">
+										<Button type="button" variant="ghost" size="sm" onclick={cancelEditing}
+											>Cancel</Button
+										>
+										<SubmitButton label="Save" variant="primary" size="sm" />
+									</div>
+								</div>
+							</Form>
+						</CardBody>
+					</Card>
+
+					{#snippet pending()}
+						<Card>
+							<CardBody class="flex items-center justify-center p-8">
+								<span class="loading loading-md loading-spinner"></span>
+							</CardBody>
+						</Card>
+					{/snippet}
+				</svelte:boundary>
+			{/if}
+
+			<!--
+			The production record: the ops half of the night, opened from the event
+			page and worked on here. Null until somebody opens one — a listing on the
+			guide is not a production, and most of them never become one.
+		-->
+			{#if productionRecord}
+				<InfoCard title="Production">
+					{#snippet header(title)}
+						<div class="flex flex-wrap items-center justify-between gap-2">
+							<CardTitle>{title}</CardTitle>
+							<div class="flex items-center gap-2">
+								<StatusBadge status={productionRecord.status} label />
+								<ProductionStatusAction production={productionRecord} eventId={evt.id} />
 							</div>
 						</div>
-					</Form>
-				</CardBody>
-			</Card>
-
-			{#snippet pending()}
-				<Card>
-					<CardBody class="flex items-center justify-center p-8">
-						<span class="loading loading-md loading-spinner"></span>
-					</CardBody>
-				</Card>
-			{/snippet}
-		</svelte:boundary>
-	{/if}
-
-	<!-- Ticketing -->
-	{#if evt.ticketingEnabled || evt.ticketPrice}
-		<InfoCard title="Ticketing">
-			<div class="flex gap-6">
-				<div>
-					<p class="text-muted">Price</p>
-					<p class="text-lg font-medium">{priceDisplay(evt).label}</p>
-				</div>
-				<div>
-					<p class="text-muted">Sold by</p>
-					<p class="text-lg font-medium">
-						{evt.ticketingEnabled ? 'Us' : evt.externalTicketUrl ? 'Off-site' : 'At the door'}
-					</p>
-				</div>
-				{#if evt.ticketingEnabled}
-					<div>
-						<p class="text-muted">Capacity</p>
-						<p class="text-lg font-medium">{evt.ticketQuantity ?? 'Unlimited'}</p>
-					</div>
-				{/if}
-				{#if data.ticketStats}
-					<div>
-						<p class="text-muted">Sold</p>
-						<p class="text-lg font-medium">{data.ticketStats.sold}</p>
-					</div>
-					<div>
-						<p class="text-muted">Remaining</p>
-						<p class="text-lg font-medium">{data.ticketStats.remaining ?? '∞'}</p>
-					</div>
-				{/if}
-				{#if money && money.contributionsCents > 0}
-					<div>
-						<p class="text-muted">Contributions</p>
-						<p class="text-lg font-medium">{formatCents(money.contributionsCents)}</p>
-					</div>
-				{/if}
-				{#if money && money.freeCount > 0}
-					<div>
-						<!-- A $0-floor show can be "sold out" on tickets nobody paid for.
-						     Staff should be able to see that at a glance. -->
-						<p class="text-muted">Free / paid</p>
-						<p class="text-lg font-medium">{money.freeCount} / {money.paidCount}</p>
-					</div>
-				{/if}
-			</div>
-
-			{#if money && (money.actsCents > 0 || money.collectiveCents > 0)}
-				<div class="mt-4 border-t border-base-200 pt-4">
-					<p class="text-muted">Where buyers sent it</p>
-					<div class="mt-2 flex gap-6">
-						<div>
-							<p class="text-muted">To the acts</p>
-							<p class="text-lg font-medium">{formatCents(money.actsCents)}</p>
-						</div>
-						<div>
-							<p class="text-muted">To the Collective</p>
-							<p class="text-lg font-medium">{formatCents(money.collectiveCents)}</p>
-						</div>
-						<div>
-							<p class="text-muted">Card processing</p>
-							<p class="text-lg font-medium">{formatCents(cardCents)}</p>
-						</div>
-					</div>
-					<!-- The only refund mechanism is a human in the Stripe dashboard,
-					     which nothing here can see. -->
-					<p class="mt-2 text-muted text-sm">
-						As sold. Refunds are handled in Stripe and are not reflected here.
-					</p>
-				</div>
-			{/if}
-
-			{#if evt.status === 'published' && evt.ticketingEnabled}
-				<div class="mt-3">
-					<a
-						href={resolve(`/events/${evt.id}/tickets`)}
-						class="link text-sm link-primary"
-						target="_blank"
-					>
-						View purchase page →
-					</a>
-				</div>
-			{/if}
-
-			{#if evt.status !== 'cancelled'}
-				<div class="mt-4 border-t border-base-200 pt-4">
-					<CompTicketsAction eventId={evt.id} />
-				</div>
-			{/if}
-		</InfoCard>
-
-		<!-- Ticket list -->
-		{#if data.tickets.length > 0}
-			<InfoCard title="Tickets ({data.tickets.length})">
-				<Table>
-					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Attendee</th>
-						<th class="w-px text-right">Paid</th>
-						<th class="col-support w-px">Code</th>
 					{/snippet}
-					{#each data.tickets as t (t.id)}
-						<tr class="hover">
-							<td class="w-px"><StatusBadge status={t.status} /></td>
-							<td class="cell-primary">
-								<div class="truncate font-medium">{t.attendeeName}</div>
-								<div class="truncate text-muted">{t.attendeeEmail}</div>
-							</td>
-							<td class="w-px text-right whitespace-nowrap">
-								<div class="font-medium">
-									{t.unitPriceCents === null ? '—' : formatCents(t.unitPriceCents)}
-								</div>
-								{#if t.contributionCents > 0}
-									<div class="text-sm text-success">
-										+{formatCents(t.contributionCents)} contributed
-									</div>
-								{/if}
-								{#if t.actsCents > 0 || t.collectiveCents > 0}
-									<!-- Order-level, so this is on the purchase's first row only —
-									     not a per-ticket fact, and the label has to say so. -->
-									<div class="text-muted text-sm">
-										order → acts {formatCents(t.actsCents)} · collective {formatCents(
-											t.collectiveCents
-										)}
-									</div>
-								{/if}
-								{#if t.discountWaived}
-									<div class="text-muted">Waived discount</div>
-								{/if}
-							</td>
-							<td class="col-support w-px"><span class="font-mono text-sm">{t.code}</span></td>
-						</tr>
-					{/each}
-				</Table>
-			</InfoCard>
-		{/if}
-	{/if}
 
-	<!-- Poster -->
-	<InfoCard title="Poster">
-		{#if data.posterUrl}
-			{@const poster = imageSrc(data.posterUrl, 'poster')}
-			<img
-				src={poster.src}
-				srcset={poster.srcset}
-				sizes={poster.sizes}
-				alt="Event poster"
-				class="max-h-64 rounded object-contain"
-			/>
-		{:else}
-			<p class="text-muted">No poster uploaded</p>
-		{/if}
-
-		{#if evt.status !== 'cancelled'}
-			<div class="mt-3">
-				<input
-					type="file"
-					accept="image/jpeg,image/png,image/webp"
-					onchange={handlePosterUpload}
-					class="file-input file-input-sm"
-				/>
-			</div>
-		{/if}
-	</InfoCard>
-
-	<!--
-		Linked reservation. Gated on source, and on nothing else: within a
-		production it is always rendered, because omitting the card when nothing is
-		held made "no space held" indistinguishable from "this page doesn't show
-		holds", which is how a whole calendar of events reached production with
-		none. A band gig or a community listing is at someone else's venue, so the
-		card had no question to answer there.
-
-		Note this deliberately gets one case wrong: a CMC show at an outside venue
-		still asks for a room that will never be held. Nothing on the record says
-		where a show is — `location` is free text — and the other failure is the
-		one that already happened.
-	-->
-	<InfoCard title="Space Reservation">
-		{#if data.linkedReservation}
-			<div class="flex items-center gap-3">
-				<StatusBadge status={data.linkedReservation.status} />
-				<span
-					>{formatTime(data.linkedReservation.startsAt)} – {formatTime(
-						data.linkedReservation.endsAt
-					)}</span
-				>
-			</div>
-			<div class="mt-2">
-				<a
-					href={resolve(`/staff/reservations/${data.linkedReservation.id}`)}
-					class="link text-sm link-primary"
-				>
-					View reservation →
-				</a>
-			</div>
-		{:else}
-			<p class="text-muted">
-				No space held for this event. Use Edit to reserve the practice space.
-			</p>
-		{/if}
-	</InfoCard>
-
-	<!--
-		What the bill needs on stage. The advance checklist has always carried a
-		task reading "Collect tech riders and stage plots"; this is where the answer
-		shows up, and the number worth reading is how many acts have told us
-		nothing — a channel count is interesting, an unanswered act is work.
-
-		Always rendered once there is a bill, including when every act is empty:
-		hiding it would make "nobody has sent a rider" and "this page doesn't track
-		riders" look identical, which is the mistake the staffing card below
-		documents.
-	-->
-	{#if riders.length > 0}
-		<InfoCard title="Tech riders">
-			{#snippet header(title)}
-				<div class="flex items-center justify-between gap-2">
-					<CardTitle>{title}</CardTitle>
-					{#if ridersMissing > 0}
-						<Badge color="warning">{ridersMissing} not in yet</Badge>
-					{/if}
-				</div>
-			{/snippet}
-			<ul class="divide-y divide-base-300">
-				{#each riders as act (act.id)}
-					<li class="flex flex-wrap items-center gap-2 py-2">
-						<span class="font-medium">{act.name}</span>
-						{#if act.empty}
-							<span class="text-sm text-base-content/60">
-								{act.slug ? 'Nothing sent yet' : 'Not a CMC act — ask them directly'}
-							</span>
-						{:else}
-							{#if act.channelCount > 0}
-								<Badge>{act.channelCount} ch</Badge>
-							{/if}
-							{#if act.phantomCount > 0}
-								<Badge>{act.phantomCount} × +48V</Badge>
-							{/if}
-							{#if act.venueProvidedCount > 0}
-								<Badge color="info">{act.venueProvidedCount} from us</Badge>
-							{/if}
-							{#if act.uploadCount > 0}
-								<Badge color="ghost">{act.uploadCount} file{act.uploadCount === 1 ? '' : 's'}</Badge
-								>
-							{/if}
-						{/if}
-						{#if act.slug}
-							<Button
-								href={resolve('/band/[slug]/rider/list', { slug: act.slug })}
+					<!--
+					Who is running the night, as a claim rather than a picker, and its own
+					form rather than a field on the one below: taking a job is a single
+					act that should not wait on a Save, and there is no list of candidates
+					a picker could offer — the capability matrix names no production lead.
+				-->
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-muted">Producer</span>
+						<span class="font-medium">{productionRecord.producerName ?? 'Nobody yet'}</span>
+						<Form remote={setProductionProducer} successToast="Producer updated">
+							<input {...producerFields.id.as('hidden', productionRecord.id)} />
+							<input {...producerFields.eventId.as('hidden', evt.id)} />
+							<input
+								{...producerFields.producer.as(
+									'hidden',
+									productionRecord.producerUserId ? 'none' : 'me'
+								)}
+							/>
+							<SubmitButton
+								label={productionRecord.producerUserId ? 'Hand it back' : 'I am producing this'}
 								variant="ghost"
-								size="sm"
-								class="ml-auto"
-							>
-								Open
-							</Button>
-						{/if}
-					</li>
-				{/each}
-			</ul>
-		</InfoCard>
+								size="xs"
+							/>
+						</Form>
+					</div>
+
+					<Form
+						remote={updateProduction}
+						guard
+						successToast="Production updated"
+						onsuccess={() => void getStaffEventProduction(id).refresh()}
+					>
+						<input {...productionFields.id.as('hidden', productionRecord.id)} />
+						<input {...productionFields.eventId.as('hidden', evt.id)} />
+
+						<!--
+						One date, five times. A production runs inside one night — the
+						listing already refuses to span two dates — so repeating the date on
+						every field would be five chances to disagree with itself.
+					-->
+						<FormField
+							field={productionFields.loadInDate}
+							type="date"
+							label="Show date"
+							bind:value={productionDate}
+						/>
+						<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+							<FormField field={productionFields.loadInTime} type="time" label="Load-in" />
+							<FormField field={productionFields.soundcheckTime} type="time" label="Soundcheck" />
+							<FormField field={productionFields.firstSetTime} type="time" label="First set" />
+							<FormField field={productionFields.curfewTime} type="time" label="Curfew" />
+							<FormField field={productionFields.loadOutTime} type="time" label="Load-out by" />
+						</div>
+						<input {...productionFields.soundcheckDate.as('hidden', productionDate)} />
+						<input {...productionFields.firstSetDate.as('hidden', productionDate)} />
+						<input {...productionFields.curfewDate.as('hidden', productionDate)} />
+						<input {...productionFields.loadOutDate.as('hidden', productionDate)} />
+
+						<FormField
+							field={productionFields.billingNotes}
+							label="Billing"
+							description="What the acts were told about the money, in their words."
+						/>
+						<FormField
+							field={productionFields.hospitalityNotes}
+							label="Hospitality"
+							description="Green room, food, parking — what the advance promised."
+						/>
+						<FormField
+							field={productionFields.internalNotes}
+							label="Internal notes"
+							description="Staff only. Never shown to an act."
+						/>
+
+						<SubmitButton label="Save production" />
+					</Form>
+				</InfoCard>
+			{:else}
+				<!-- Reachable state, and it has to say where the button is: "Add production"
+			     lives on the event page, which owns the listing's lifecycle. -->
+				<InfoCard title="Production">
+					<p class="text-muted">
+						No production record yet. Open one from
+						<a class="link" href={resolve(`/staff/events/${id}`)}>the event page</a>
+						to plan load-in, soundcheck and curfew.
+					</p>
+				</InfoCard>
+			{/if}
+
+			<!-- Poster -->
+			<InfoCard title="Poster">
+				{#if data.posterUrl}
+					{@const poster = imageSrc(data.posterUrl, 'poster')}
+					<img
+						src={poster.src}
+						srcset={poster.srcset}
+						sizes={poster.sizes}
+						alt="Event poster"
+						class="max-h-64 rounded object-contain"
+					/>
+				{:else}
+					<p class="text-muted">No poster uploaded</p>
+				{/if}
+
+				{#if evt.status !== 'cancelled'}
+					<div class="mt-3">
+						<input
+							type="file"
+							accept="image/jpeg,image/png,image/webp"
+							onchange={handlePosterUpload}
+							class="file-input file-input-sm"
+						/>
+					</div>
+				{/if}
+			</InfoCard>
+
+			<!--
+			Linked reservation. Gated on source, and on nothing else: within a
+			production it is always rendered, because omitting the card when nothing is
+			held made "no space held" indistinguishable from "this page doesn't show
+			holds", which is how a whole calendar of events reached production with
+			none. A band gig or a community listing is at someone else's venue, so the
+			card had no question to answer there.
+
+			This used to get one case wrong on purpose — a CMC show at an outside venue
+			asked forever for a room it would never hold, because nothing on the record
+			said where a show was. `event.venueId` now does, so the card answers the
+			question instead of nagging. A blank venue still means the room, which is
+			what every event created before the column meant, so the nag survives
+			exactly where it was earning its keep.
+		-->
+			<InfoCard title="Space Reservation">
+				{#if evt.venueName && !evt.venueIsPrimary}
+					<p class="text-muted">
+						Off-site — {evt.venueName}. The practice space stays bookable while this runs.
+					</p>
+				{:else if data.linkedReservation}
+					<div class="flex items-center gap-3">
+						<StatusBadge status={data.linkedReservation.status} />
+						<span
+							>{formatTime(data.linkedReservation.startsAt)} – {formatTime(
+								data.linkedReservation.endsAt
+							)}</span
+						>
+					</div>
+					<div class="mt-2">
+						<a
+							href={resolve(`/staff/reservations/${data.linkedReservation.id}`)}
+							class="link text-sm link-primary"
+						>
+							View reservation →
+						</a>
+					</div>
+				{:else}
+					<p class="text-muted">
+						No space held for this event. Use Edit to reserve the practice space.
+					</p>
+				{/if}
+			</InfoCard>
+		</div>
 	{/if}
 
-	<!--
-		Volunteer staffing. Gated the same way, for the same reason: within a
-		production it is always rendered, because with the card hidden "nobody is
-		staffing this show" and "this page doesn't track staffing" look identical,
-		and the second reading is how a calendar of events reaches production with
-		nothing booked. CMC does not staff a show it isn't producing.
-	-->
-	<InfoCard title="Volunteer Shifts">
-		{#snippet header(title)}
-			<div class="flex items-center justify-between gap-2">
-				<CardTitle>{title}</CardTitle>
-				<div class="flex items-center gap-1">
-					{#if dutyLists.length > 0}
-						<Action
-							action={applyDutyList}
-							label="Apply duty list"
-							variant="ghost"
-							size="sm"
-							modalTitle="Apply a duty list to {evt.title}"
-							submitLabel="Apply"
-							successToast="Work orders created"
-							onsuccess={() => getStaffEventProduction(id).refresh()}
-						>
-							{#snippet form()}
-								<input type="hidden" name="eventId" value={evt.id} />
-								<FormField
-									name="dutyListId"
-									label="Duty list"
-									type="select"
-									options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
-									description="Creates every work order the list describes, timed from this event. Applying the same list twice is refused."
-								/>
-							{/snippet}
-						</Action>
-					{/if}
-					{#if liveVolunteerRoles.length > 0}
-						<Action
-							action={createShift}
-							label="Schedule a shift"
-							variant="ghost"
-							size="sm"
-							modalTitle="Schedule a shift for {evt.title}"
-							submitLabel="Create"
-							successToast="Shift scheduled"
-							onsuccess={() => getStaffEventProduction(id).refresh()}
-						>
-							{#snippet form()}
-								<!--
-								The event is the one thing this form already knows, so it is
-								locked rather than offered as a picker.
-							-->
-								<ShiftFormFields
-									form={createShift}
-									roles={liveVolunteerRoles}
-									bind:roleId={shiftRoleId}
-									lockedEvent={{ id: evt.id, title: evt.title }}
-									startsAt={shiftStart}
-									endsAt={shiftEnd}
-									capacity={shiftCapacity}
-								/>
-							{/snippet}
-						</Action>
-					{/if}
-				</div>
-			</div>
-		{/snippet}
+	{#if visited.has('advance')}
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-advance"
+			class="space-y-6"
+			class:hidden={tab !== 'advance'}
+		>
+			<!--
+			What the bill needs on stage. The advance checklist has always carried a
+			task reading "Collect tech riders and stage plots"; this is where the answer
+			shows up, and the number worth reading is how many acts have told us
+			nothing — a channel count is interesting, an unanswered act is work.
 
-		{#if shifts.length === 0}
-			<EmptyState
-				title="No volunteer shifts"
-				description="Nobody is scheduled to work this show yet."
-			/>
-		{:else}
-			<Table>
-				{#snippet head()}
-					<th>Role</th>
-					<th class="whitespace-nowrap">When</th>
-					<th class="cell-num">Confirmed</th>
+			Always rendered once there is a bill, including when every act is empty:
+			hiding it would make "nobody has sent a rider" and "this page doesn't track
+			riders" look identical, which is the mistake the staffing card below
+			documents.
+		-->
+			{#if riders.length > 0}
+				<InfoCard title="Tech riders">
+					{#snippet header(title)}
+						<div class="flex items-center justify-between gap-2">
+							<CardTitle>{title}</CardTitle>
+							{#if ridersMissing > 0}
+								<Badge color="warning">{ridersMissing} not in yet</Badge>
+							{/if}
+						</div>
+					{/snippet}
+					<ul class="divide-y divide-base-300">
+						{#each riders as act (act.id)}
+							<li class="flex flex-wrap items-center gap-2 py-2">
+								<span class="font-medium">{act.name}</span>
+								{#if act.empty}
+									<span class="text-sm text-base-content/60">
+										{act.slug ? 'Nothing sent yet' : 'Not a CMC act — ask them directly'}
+									</span>
+								{:else}
+									{#if act.channelCount > 0}
+										<Badge>{act.channelCount} ch</Badge>
+									{/if}
+									{#if act.phantomCount > 0}
+										<Badge>{act.phantomCount} × +48V</Badge>
+									{/if}
+									{#if act.venueProvidedCount > 0}
+										<Badge color="info">{act.venueProvidedCount} from us</Badge>
+									{/if}
+									{#if act.uploadCount > 0}
+										<Badge color="ghost"
+											>{act.uploadCount} file{act.uploadCount === 1 ? '' : 's'}</Badge
+										>
+									{/if}
+								{/if}
+								{#if act.slug}
+									<Button
+										href={resolve('/band/[slug]/rider/list', { slug: act.slug })}
+										variant="ghost"
+										size="sm"
+										class="ml-auto"
+									>
+										Open
+									</Button>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				</InfoCard>
+			{/if}
+
+			<!--
+			Volunteer staffing. Gated the same way, for the same reason: within a
+			production it is always rendered, because with the card hidden "nobody is
+			staffing this show" and "this page doesn't track staffing" look identical,
+			and the second reading is how a calendar of events reaches production with
+			nothing booked. CMC does not staff a show it isn't producing.
+		-->
+			<InfoCard title="Volunteer Shifts">
+				{#snippet header(title)}
+					<div class="flex items-center justify-between gap-2">
+						<CardTitle>{title}</CardTitle>
+						<div class="flex items-center gap-1">
+							{#if dutyLists.length > 0}
+								<Action
+									action={applyDutyList}
+									label="Apply duty list"
+									variant="ghost"
+									size="sm"
+									modalTitle="Apply a duty list to {evt.title}"
+									submitLabel="Apply"
+									successToast="Work orders created"
+									onsuccess={() => getStaffEventProduction(id).refresh()}
+								>
+									{#snippet form()}
+										<input type="hidden" name="eventId" value={evt.id} />
+										<FormField
+											name="dutyListId"
+											label="Duty list"
+											type="select"
+											options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
+											description="Creates every work order the list describes, timed from this event. Applying the same list twice is refused."
+										/>
+									{/snippet}
+								</Action>
+							{/if}
+							{#if liveVolunteerRoles.length > 0}
+								<Action
+									action={createShift}
+									label="Schedule a shift"
+									variant="ghost"
+									size="sm"
+									modalTitle="Schedule a shift for {evt.title}"
+									submitLabel="Create"
+									successToast="Shift scheduled"
+									onsuccess={() => getStaffEventProduction(id).refresh()}
+								>
+									{#snippet form()}
+										<!--
+									The event is the one thing this form already knows, so it is
+									locked rather than offered as a picker.
+								-->
+										<ShiftFormFields
+											form={createShift}
+											roles={liveVolunteerRoles}
+											bind:roleId={shiftRoleId}
+											lockedEvent={{ id: evt.id, title: evt.title }}
+											startsAt={shiftStart}
+											endsAt={shiftEnd}
+											capacity={shiftCapacity}
+										/>
+									{/snippet}
+								</Action>
+							{/if}
+						</div>
+					</div>
 				{/snippet}
 
-				{#each shifts as shift (shift.id)}
-					<tr class="hover">
-						<td class="cell-primary">
-							<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link font-medium"
-								>{shift.roleName}</a
+				{#if advance.length > 0}
+					<div class="mb-4">
+						<h3 class="mb-2 text-sm font-semibold">Advance</h3>
+						<ul class="flex flex-col gap-1 text-sm">
+							{#each advance as order (order.id)}
+								<li class="flex flex-wrap items-baseline justify-between gap-2">
+									<a href={resolve(`/staff/volunteer/shifts/${order.id}`)} class="link font-medium">
+										{order.roleName}
+									</a>
+									<span class="text-subtle whitespace-nowrap">
+										{#if order.dueAt}
+											due {formatDateShort(order.dueAt)}
+										{:else}
+											no deadline
+										{/if}
+									</span>
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{/if}
+
+				{#if shifts.length === 0 && advance.length === 0}
+					<EmptyState
+						title="No volunteer shifts"
+						description="Nobody is scheduled to work this show yet."
+					/>
+				{:else if shifts.length > 0}
+					<Table>
+						{#snippet head()}
+							<th>Role</th>
+							<th class="whitespace-nowrap">When</th>
+							<th class="cell-num">Confirmed</th>
+						{/snippet}
+
+						{#each shifts as shift (shift.id)}
+							<tr class="hover">
+								<td class="cell-primary">
+									<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link font-medium"
+										>{shift.roleName}</a
+									>
+								</td>
+								<td class="whitespace-nowrap">
+									{formatDateShort(shift.startsAt)}, {formatTimeRange(shift.startsAt, shift.endsAt)}
+								</td>
+								<!--
+								Confirmed, not "filled". Only a confirmed signup gets the day-before
+								reminder and completes afterwards, so a show whose shifts are all
+								claimed and none confirmed is not staffed
+								(docs/reports/volunteer-workflow-findings.md#a3).
+							-->
+								<td class="cell-num whitespace-nowrap">
+									<span class:text-warning={shift.confirmed < shift.capacity}>
+										{shift.confirmed}/{shift.capacity}
+									</span>
+									{#if shift.claimed > shift.confirmed}
+										<Badge variant="warning" size="xs" class="ml-1">
+											+{shift.claimed - shift.confirmed}
+										</Badge>
+									{/if}
+								</td>
+							</tr>
+						{/each}
+					</Table>
+				{/if}
+			</InfoCard>
+		</div>
+	{/if}
+
+	{#if visited.has('tickets')}
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-tickets"
+			class="space-y-6"
+			class:hidden={tab !== 'tickets'}
+		>
+			<!-- Ticketing -->
+			{#if evt.ticketingEnabled || evt.ticketPrice}
+				<InfoCard title="Ticketing">
+					<div class="flex gap-6">
+						<div>
+							<p class="text-muted">Price</p>
+							<p class="text-lg font-medium">{priceDisplay(evt).label}</p>
+						</div>
+						<div>
+							<p class="text-muted">Sold by</p>
+							<p class="text-lg font-medium">
+								{evt.ticketingEnabled ? 'Us' : evt.externalTicketUrl ? 'Off-site' : 'At the door'}
+							</p>
+						</div>
+						{#if evt.ticketingEnabled}
+							<div>
+								<p class="text-muted">Capacity</p>
+								<p class="text-lg font-medium">{evt.ticketQuantity ?? 'Unlimited'}</p>
+							</div>
+						{/if}
+						{#if data.ticketStats}
+							<div>
+								<p class="text-muted">Sold</p>
+								<p class="text-lg font-medium">{data.ticketStats.sold}</p>
+							</div>
+							<div>
+								<p class="text-muted">Remaining</p>
+								<p class="text-lg font-medium">{data.ticketStats.remaining ?? '∞'}</p>
+							</div>
+						{/if}
+						{#if money && money.contributionsCents > 0}
+							<div>
+								<p class="text-muted">Contributions</p>
+								<p class="text-lg font-medium">{formatCents(money.contributionsCents)}</p>
+							</div>
+						{/if}
+						{#if money && money.freeCount > 0}
+							<div>
+								<!-- A $0-floor show can be "sold out" on tickets nobody paid for.
+							     Staff should be able to see that at a glance. -->
+								<p class="text-muted">Free / paid</p>
+								<p class="text-lg font-medium">{money.freeCount} / {money.paidCount}</p>
+							</div>
+						{/if}
+					</div>
+
+					{#if money && (money.actsCents > 0 || money.collectiveCents > 0)}
+						<div class="mt-4 border-t border-base-200 pt-4">
+							<p class="text-muted">Where buyers sent it</p>
+							<div class="mt-2 flex gap-6">
+								<div>
+									<p class="text-muted">To the acts</p>
+									<p class="text-lg font-medium">{formatCents(money.actsCents)}</p>
+								</div>
+								<div>
+									<p class="text-muted">To the Collective</p>
+									<p class="text-lg font-medium">{formatCents(money.collectiveCents)}</p>
+								</div>
+								<div>
+									<p class="text-muted">Card processing</p>
+									<p class="text-lg font-medium">{formatCents(cardCents)}</p>
+								</div>
+							</div>
+							<!-- The only refund mechanism is a human in the Stripe dashboard,
+						     which nothing here can see. -->
+							<p class="mt-2 text-muted text-sm">
+								As sold. Refunds are handled in Stripe and are not reflected here.
+							</p>
+						</div>
+					{/if}
+
+					{#if evt.status === 'published' && evt.ticketingEnabled}
+						<div class="mt-3">
+							<a
+								href={resolve(`/events/${evt.id}/tickets`)}
+								class="link text-sm link-primary"
+								target="_blank"
 							>
-						</td>
-						<td class="whitespace-nowrap">
-							{formatDateShort(shift.startsAt)}, {formatTimeRange(shift.startsAt, shift.endsAt)}
-						</td>
-						<!--
-							Confirmed, not "filled". Only a confirmed signup gets the day-before
-							reminder and completes afterwards, so a show whose shifts are all
-							claimed and none confirmed is not staffed
-							(docs/reports/volunteer-workflow-findings.md#a3).
-						-->
-						<td class="cell-num whitespace-nowrap">
-							<span class:text-warning={shift.confirmed < shift.capacity}>
-								{shift.confirmed}/{shift.capacity}
-							</span>
-							{#if shift.claimed > shift.confirmed}
-								<Badge variant="warning" size="xs" class="ml-1">
-									+{shift.claimed - shift.confirmed}
-								</Badge>
-							{/if}
-						</td>
-					</tr>
-				{/each}
-			</Table>
-		{/if}
-	</InfoCard>
+								View purchase page →
+							</a>
+						</div>
+					{/if}
+
+					{#if evt.status !== 'cancelled'}
+						<div class="mt-4 border-t border-base-200 pt-4">
+							<CompTicketsAction eventId={evt.id} />
+						</div>
+					{/if}
+				</InfoCard>
+
+				<!-- Ticket list -->
+				{#if data.tickets.length > 0}
+					<InfoCard title="Tickets ({data.tickets.length})">
+						<Table>
+							{#snippet head()}
+								<th class="w-px"><span class="sr-only">Status</span></th>
+								<th>Attendee</th>
+								<th class="w-px text-right">Paid</th>
+								<th class="col-support w-px">Code</th>
+							{/snippet}
+							{#each data.tickets as t (t.id)}
+								<tr class="hover">
+									<td class="w-px"><StatusBadge status={t.status} /></td>
+									<td class="cell-primary">
+										<div class="truncate font-medium">{t.attendeeName}</div>
+										<div class="truncate text-muted">{t.attendeeEmail}</div>
+									</td>
+									<td class="w-px text-right whitespace-nowrap">
+										<div class="font-medium">
+											{t.unitPriceCents === null ? '—' : formatCents(t.unitPriceCents)}
+										</div>
+										{#if t.contributionCents > 0}
+											<div class="text-sm text-success">
+												+{formatCents(t.contributionCents)} contributed
+											</div>
+										{/if}
+										{#if t.actsCents > 0 || t.collectiveCents > 0}
+											<!-- Order-level, so this is on the purchase's first row only —
+										     not a per-ticket fact, and the label has to say so. -->
+											<div class="text-muted text-sm">
+												order → acts {formatCents(t.actsCents)} · collective {formatCents(
+													t.collectiveCents
+												)}
+											</div>
+										{/if}
+										{#if t.discountWaived}
+											<div class="text-muted">Waived discount</div>
+										{/if}
+									</td>
+									<td class="col-support w-px"><span class="font-mono text-sm">{t.code}</span></td>
+								</tr>
+							{/each}
+						</Table>
+					</InfoCard>
+				{/if}
+			{/if}
+		</div>
+	{/if}
 </PageContent>
