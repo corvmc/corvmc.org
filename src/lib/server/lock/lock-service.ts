@@ -10,10 +10,15 @@ import {
 	updateLockUser,
 	listLockUsers,
 	getLockUser,
+	queryDeviceHealth,
 	generateLockCode,
 	lockDateTime,
-	LOCK_GRACE_MINUTES
+	LOCK_GRACE_MINUTES,
+	type LockDeviceHealth
 } from './ultraloc-client';
+import { getJson, putJson } from '$lib/server/kv';
+import { dispatchEmailOnly } from '$lib/server/notification';
+import { env } from '$env/dynamic/private';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -21,19 +26,147 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 // ---------------------------------------------------------------------------
 
 /**
- * Run the daily lock job: clean up yesterday's access, then provision today's.
+ * KV key holding the last health reading, so alerts are edge-triggered.
+ *
+ * KV rather than site-config: this is a cached observation, not a setting, and
+ * `getConfigsByPrefix('integration.utec')` backs the credentials form — a
+ * health reading has no business appearing there. Sits beside `ultraloc:token`.
+ */
+const LAST_ONLINE_KEY = 'ultraloc:lastSeenOnline';
+
+/**
+ * Run the daily lock job: check the lock is reachable, clean up yesterday's
+ * access, provision today's, then confirm which codes have actually landed.
+ *
+ * An offline lock is reported but does not stop the run. Writes are queued in
+ * U-tec's cloud and pushed down when the lock reconnects, so provisioning into
+ * an outage is still worth doing — it is only the *promise* that a code works
+ * that has to wait for `reconcileSyncState`.
  */
 export async function runDailyLockJob(): Promise<{
 	provisioned: number;
 	cleaned: number;
+	confirmed: number;
+	online: boolean | null;
 	errors: string[];
 }> {
 	const errors: string[] = [];
 
+	const online = await checkDeviceHealth(errors);
 	const cleaned = await cleanupPreviousDayAccess(errors);
 	const provisioned = await provisionDailyAccess(errors);
+	const confirmed = await reconcileSyncState(errors);
 
-	return { provisioned, cleaned, errors };
+	return { provisioned, cleaned, confirmed, online, errors };
+}
+
+/**
+ * Read the lock's health and tell staff when it goes offline.
+ *
+ * Edge-triggered against the last reading in site-config: a week-long outage
+ * should be one email, not seven identical ones. Returns null when the health
+ * check itself failed, which is not the same as the lock being offline.
+ */
+async function checkDeviceHealth(errors: string[]): Promise<boolean | null> {
+	let health: Awaited<ReturnType<typeof queryDeviceHealth>>;
+	try {
+		health = await queryDeviceHealth();
+	} catch (err) {
+		const msg = `Failed to read lock health: ${(err as Error).message}`;
+		console.error(msg);
+		errors.push(msg);
+		return null;
+	}
+
+	// Absent means we have never looked; treat that as "was online" so the first
+	// run during an outage still alerts.
+	const previous = (await getJson<boolean>(LAST_ONLINE_KEY)) ?? true;
+	await putJson(LAST_ONLINE_KEY, health.online);
+
+	if (!health.online) {
+		errors.push(
+			'Lock is offline — door codes are queued but will not reach it until it reconnects'
+		);
+		if (previous) await notifyStaffLockOffline(health);
+	}
+
+	return health.online;
+}
+
+async function notifyStaffLockOffline(health: LockDeviceHealth): Promise<void> {
+	try {
+		await dispatchEmailOnly({
+			type: 'lock_offline',
+			toEmail: env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org',
+			templateAlias: 'notification',
+			model: {
+				subject: 'The practice space lock is offline',
+				heading: 'Door lock unreachable',
+				paragraphs: [
+					{
+						text: 'U-tec reports the lock as offline. Door codes are still being issued, but they are queued in U-tec’s cloud and will not open the door until the lock reconnects. Members with a booking today may not be able to get in.'
+					},
+					{ text: 'Most often this is the building’s internet rather than the lock itself.' }
+				],
+				details: [
+					{ label: 'Lock state (last known)', value: health.lockState ?? 'unknown' },
+					{
+						label: 'Battery (last known)',
+						value: health.batteryLevel === null ? 'unknown' : `${health.batteryLevel} of 5`
+					}
+				],
+				cta: {
+					url: `${env.PUBLIC_SITE_URL ?? 'https://corvmc.org'}/staff/settings`,
+					label: 'Open lock settings'
+				}
+			}
+		});
+	} catch (err) {
+		// An alert that cannot be sent must not take the job down with it.
+		console.error(`Failed to send lock-offline alert: ${(err as Error).message}`);
+	}
+}
+
+/**
+ * Promote issued codes to "known good".
+ *
+ * U-tec accepts every write into a cloud queue and acks it identically whether
+ * the lock is reachable or not, so an `add` succeeding says nothing. Only
+ * `sync_status` on the user itself says the code is on the device — that is
+ * what `lockSyncedAt` records, and what the member-facing surfaces key on.
+ */
+async function reconcileSyncState(errors: string[]): Promise<number> {
+	let count = 0;
+
+	const rows = await db
+		.select({ id: reservation.id, lockAccessId: reservation.lockAccessId })
+		.from(reservation)
+		.where(
+			and(
+				eq(reservation.status, 'confirmed'),
+				isNotNull(reservation.lockAccessId),
+				isNull(reservation.lockSyncedAt)
+			)
+		);
+
+	for (const row of rows) {
+		try {
+			const detail = await getLockUser(Number(row.lockAccessId));
+			if (detail?.syncStatus !== 1) continue;
+
+			await db
+				.update(reservation)
+				.set({ lockSyncedAt: new Date(), updatedAt: new Date() })
+				.where(eq(reservation.id, row.id));
+			count++;
+		} catch (err) {
+			const msg = `Failed to confirm lock sync for reservation ${row.id}: ${(err as Error).message}`;
+			console.error(msg);
+			errors.push(msg);
+		}
+	}
+
+	return count;
 }
 
 /**

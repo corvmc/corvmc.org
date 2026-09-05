@@ -51,6 +51,8 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 		endsAt: 'ends_at',
 		createdByUserId: 'created_by_user_id',
 		lockCode: 'lock_code',
+		lockAccessId: 'lock_access_id',
+		lockSyncedAt: 'lock_synced_at',
 		updatedAt: 'updated_at'
 	}
 }));
@@ -72,12 +74,31 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 	buildDateInTz: vi.fn((date, time) => new Date(`${date}T${time}:00Z`))
 }));
 
+const mockGetJson = vi.fn().mockResolvedValue(true);
+const mockPutJson = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('$lib/server/kv', () => ({
+	getJson: (...args: unknown[]) => mockGetJson(...args),
+	putJson: (...args: unknown[]) => mockPutJson(...args)
+}));
+
+const mockDispatchEmailOnly = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('$lib/server/notification', () => ({
+	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args)
+}));
+
+vi.mock('$env/dynamic/private', () => ({ env: {} }));
+
 const mockCreateTemporaryUser = vi.fn().mockResolvedValue(null);
 const mockAddLockUser = vi.fn().mockResolvedValue(null);
 const mockRemoveTemporaryUser = vi.fn().mockResolvedValue(undefined);
 const mockUpdateLockUser = vi.fn().mockResolvedValue(undefined);
 const mockListLockUsers = vi.fn().mockResolvedValue([]);
 const mockGetLockUser = vi.fn().mockResolvedValue(null);
+const mockQueryDeviceHealth = vi
+	.fn()
+	.mockResolvedValue({ online: true, lockState: 'Locked', batteryLevel: 4 });
 const mockGenerateLockCode = vi.fn().mockReturnValue(4242);
 
 vi.mock('./ultraloc-client', () => ({
@@ -87,6 +108,7 @@ vi.mock('./ultraloc-client', () => ({
 	updateLockUser: (...args: unknown[]) => mockUpdateLockUser(...args),
 	listLockUsers: (...args: unknown[]) => mockListLockUsers(...args),
 	getLockUser: (...args: unknown[]) => mockGetLockUser(...args),
+	queryDeviceHealth: (...args: unknown[]) => mockQueryDeviceHealth(...args),
 	generateLockCode: (...args: unknown[]) => mockGenerateLockCode(...args),
 	// The real one formats in the lock's local zone; UTC is enough here, and it
 	// keeps the daterange strings the matcher compares deterministic.
@@ -133,6 +155,9 @@ beforeEach(() => {
 	mockRemoveTemporaryUser.mockResolvedValue(undefined);
 	mockUpdateLockUser.mockResolvedValue(undefined);
 	mockListLockUsers.mockResolvedValue([]);
+	mockQueryDeviceHealth.mockResolvedValue({ online: true, lockState: 'Locked', batteryLevel: 4 });
+	mockGetJson.mockResolvedValue(true);
+	mockDispatchEmailOnly.mockResolvedValue(undefined);
 	// `list` never carries daterange — only `get` does. Route the fixtures'
 	// windows through the mocked get, which is what the service now reads.
 	mockGetLockUser.mockImplementation(
@@ -539,5 +564,90 @@ describe('syncAccessWindow', () => {
 		expect(result.synced).toBe(true);
 		expect(result.errors[0]).toContain('lock offline');
 		expect(mockCreateTemporaryUser).toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Health gate and sync reconciliation
+// ---------------------------------------------------------------------------
+
+describe('lock health', () => {
+	it('reports an offline lock as a failed run and tells staff once', async () => {
+		mockQueryDeviceHealth.mockResolvedValue({
+			online: false,
+			lockState: 'Unlocked',
+			batteryLevel: 4
+		});
+		mockGetJson.mockResolvedValue(true); // was online last run
+		selectResults.push([], []);
+
+		const result = await runDailyLockJob();
+
+		expect(result.online).toBe(false);
+		expect(result.errors[0]).toContain('offline');
+		expect(mockDispatchEmailOnly).toHaveBeenCalledWith(
+			expect.objectContaining({ type: 'lock_offline' })
+		);
+		expect(mockPutJson).toHaveBeenCalledWith('ultraloc:lastSeenOnline', false);
+	});
+
+	// A week-long outage should be one email, not seven identical ones.
+	it('does not re-alert while the lock stays offline', async () => {
+		mockQueryDeviceHealth.mockResolvedValue({
+			online: false,
+			lockState: null,
+			batteryLevel: null
+		});
+		mockGetJson.mockResolvedValue(false); // already offline last run
+		selectResults.push([], []);
+
+		const result = await runDailyLockJob();
+
+		expect(result.errors[0]).toContain('offline');
+		expect(mockDispatchEmailOnly).not.toHaveBeenCalled();
+	});
+
+	// Not knowing is not the same as being offline.
+	it('records null and provisions anyway when the health check itself fails', async () => {
+		mockQueryDeviceHealth.mockRejectedValue(new Error('token expired'));
+		selectResults.push([], []);
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const result = await runDailyLockJob();
+
+		expect(result.online).toBeNull();
+		expect(result.errors[0]).toContain('Failed to read lock health');
+		expect(mockDispatchEmailOnly).not.toHaveBeenCalled();
+
+		consoleSpy.mockRestore();
+	});
+});
+
+describe('sync reconciliation', () => {
+	it('promotes a code to known-good only once the lock reports sync_status 1', async () => {
+		selectResults.push([]); // provision: none
+		selectResults.push([
+			{ id: 'res-synced', lockAccessId: '111' },
+			{ id: 'res-queued', lockAccessId: '222' }
+		]);
+		mockGetLockUser.mockImplementation(async (id: number) =>
+			id === 111 ? { id: 111, type: 2, syncStatus: 1 } : { id: 222, type: 2, syncStatus: 0 }
+		);
+
+		const result = await runDailyLockJob();
+
+		expect(result.confirmed).toBe(1);
+		expect(updateCalls).toContainEqual(expect.objectContaining({ lockSyncedAt: expect.any(Date) }));
+	});
+
+	it('leaves the code unconfirmed when the lock user has gone missing', async () => {
+		selectResults.push([]);
+		selectResults.push([{ id: 'res-1', lockAccessId: '999' }]);
+		mockGetLockUser.mockResolvedValue(null);
+
+		const result = await runDailyLockJob();
+
+		expect(result.confirmed).toBe(0);
+		expect(result.errors).toHaveLength(0);
 	});
 });

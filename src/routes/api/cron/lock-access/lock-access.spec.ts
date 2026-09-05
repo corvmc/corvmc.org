@@ -51,23 +51,47 @@ describe('POST /api/cron/lock-access', () => {
 	});
 
 	it('delegates to runDailyLockJob', async () => {
-		mockRunDailyLockJob.mockResolvedValue({ provisioned: 2, cleaned: 1, errors: [] });
+		mockRunDailyLockJob.mockResolvedValue({
+			provisioned: 2,
+			cleaned: 1,
+			confirmed: 1,
+			online: true,
+			errors: []
+		});
 
-		await POST(req());
+		const response = await POST(req());
 
 		expect(mockRunDailyLockJob).toHaveBeenCalled();
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			provisioned: 2,
+			cleaned: 1,
+			confirmed: 1,
+			online: true,
+			errors: []
+		});
 	});
 
-	it('returns provisioned, cleaned, and errors in response', async () => {
+	// runScheduledJobs derives its Sentry check-in from response.ok alone, so a
+	// 200 here closed the check-in green through a total lock outage.
+	it('fails the run when anything went wrong, so the check-in goes red', async () => {
 		mockRunDailyLockJob.mockResolvedValue({
 			provisioned: 4,
 			cleaned: 2,
+			confirmed: 0,
+			online: false,
 			errors: ['lock-xyz failed']
 		});
 
 		const response = await POST(req());
-		const body = await response.json();
 
-		expect(body).toEqual({ provisioned: 4, cleaned: 2, errors: ['lock-xyz failed'] });
+		expect(response.status).toBe(500);
+		expect(await response.json()).toEqual({
+			provisioned: 4,
+			cleaned: 2,
+			confirmed: 0,
+			online: false,
+			errors: ['lock-xyz failed']
+		});
 	});
 });
