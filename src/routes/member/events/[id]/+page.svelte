@@ -79,6 +79,7 @@
 	);
 
 	const calendarEvt = $derived({
+		id: evt.id,
 		title: evt.title,
 		description: evt.description,
 		location: evt.location,

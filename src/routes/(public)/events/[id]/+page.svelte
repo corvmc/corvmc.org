@@ -40,6 +40,7 @@
 				(evt.ticketQuantity ? data.remaining / evt.ticketQuantity <= 0.15 : false))
 	);
 	const calendarEvt = $derived({
+		id: evt.id,
 		title: evt.title,
 		description: evt.description,
 		location: evt.location,
