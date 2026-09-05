@@ -90,6 +90,12 @@ vi.mock('$lib/server/notification', () => ({
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
 
+const mockMaintainFallbackCode = vi.fn().mockResolvedValue({ active: null, rotated: false });
+
+vi.mock('./fallback-code-service', () => ({
+	maintainFallbackCode: (...args: unknown[]) => mockMaintainFallbackCode(...args)
+}));
+
 const mockCreateTemporaryUser = vi.fn().mockResolvedValue(null);
 const mockAddLockUser = vi.fn().mockResolvedValue(null);
 const mockRemoveTemporaryUser = vi.fn().mockResolvedValue(undefined);
@@ -158,6 +164,7 @@ beforeEach(() => {
 	mockQueryDeviceHealth.mockResolvedValue({ online: true, lockState: 'Locked', batteryLevel: 4 });
 	mockGetJson.mockResolvedValue(true);
 	mockDispatchEmailOnly.mockResolvedValue(undefined);
+	mockMaintainFallbackCode.mockResolvedValue({ active: null, rotated: false });
 	// `list` never carries daterange — only `get` does. Route the fixtures'
 	// windows through the mocked get, which is what the service now reads.
 	mockGetLockUser.mockImplementation(

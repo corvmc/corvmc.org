@@ -90,6 +90,9 @@ export const reservation = sqliteTable(
 		// opposed to merely queued in U-tec's cloud. Null means we have issued a
 		// code but cannot yet promise it opens the door.
 		lockSyncedAt: integer('lock_synced_at', { mode: 'timestamp' }),
+		// When the member was shown the break-glass code because their own could
+		// not be confirmed. This is the audit trail for who was handed it.
+		lockFallbackRevealedAt: integer('lock_fallback_revealed_at', { mode: 'timestamp' }),
 		recurringSeriesId: text('recurring_series_id').references(() => recurringSeries.id, {
 			onDelete: 'set null'
 		}),
@@ -135,9 +138,44 @@ export const closure = sqliteTable(
 	]
 );
 
+/**
+ * The break-glass door code.
+ *
+ * A code synced to the lock last month still opens the door while the lock is
+ * offline today — the lock enforces access locally, it is only *changes* that
+ * need connectivity. So one such code is kept alive and handed to a member
+ * whose own reservation code cannot be confirmed.
+ *
+ * Exactly one row is active at a time: `syncedAt` set, `retiredAt` null. A
+ * successor is minted before the incumbent is retired, never after, or there
+ * would be a window with no working break-glass code — the precise failure this
+ * exists to prevent.
+ */
+export const lockFallbackCode = sqliteTable(
+	'lock_fallback_code',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		/** The keypad code itself. */
+		code: text('code').notNull(),
+		/** Lock-assigned user id; null until the add is reconciled. */
+		lockAccessId: text('lock_access_id'),
+		/** Set when the lock reports sync_status 1 — until then it opens nothing. */
+		syncedAt: integer('synced_at', { mode: 'timestamp' }),
+		/** Set when a confirmed successor has taken over. */
+		retiredAt: integer('retired_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [index('idx_lock_fallback_active').on(t.retiredAt, t.syncedAt)]
+);
+
 // ---------------------------------------------------------------------------
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
 
 export type Reservation = typeof reservation.$inferSelect;
 export type Closure = typeof closure.$inferSelect;
+export type LockFallbackCode = typeof lockFallbackCode.$inferSelect;
