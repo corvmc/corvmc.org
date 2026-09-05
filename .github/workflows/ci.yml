@@ -233,3 +233,95 @@ jobs:
       # (broken help links, duplicate slugs, bad frontmatter, orphaned static slugs);
       # route drift is informational here and handled by the nightly sync.
       - run: node scripts/docs/check-docs-drift.mjs --ci
+
+  # `main` going red is the one CI outcome with nobody attached to it. A PR's red
+  # run is watched by whoever opened it, and a rejected queue entry gets a label
+  # and a comment from `merge-queue-guard.yml` — but a push to `main` that fails
+  # notifies an email nobody reads, and the next person to look is the next person
+  # to be confused by it. This leaves the same durable signal the queue guard
+  # leaves: one issue per failing job, a comment per recurrence, closed by the
+  # first green push.
+  #
+  # One issue per *job*, not per run: "Unit tests are broken on main" and "E2E is
+  # broken on main" are two problems, and a run that fails both should not
+  # collapse them into one thread. A recurrence comments rather than opening a
+  # second issue.
+  main-red:
+    name: Track main going red
+    # `always()` so this still runs when a dependency failed — that is the entire
+    # point. `lint-changed` is absent from `needs` because it does not run on
+    # push at all.
+    if: always() && github.event_name == 'push'
+    needs: [lint, check, unit, e2e, schema-drift, docs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      - name: Open, update or close the ci-failure issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ID: ${{ github.run_id }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          gh label create ci-failure \
+            --color B60205 --description 'main is red — opened and closed by CI' --force
+
+          # The display names, read back from the run rather than reconstructed
+          # from the `needs` ids, so the issue title matches what the checks tab
+          # shows. This job is still in progress and cannot appear in the list.
+          failed=$(gh run view "$RUN_ID" --json jobs \
+            --jq '[.jobs[] | select(.conclusion == "failure") | .name] | .[]')
+
+          open_issues=$(gh issue list --label ci-failure --state open --limit 50 \
+            --json number,title)
+
+          find_issue() {
+            jq -r --arg t "$1" 'map(select(.title == $t)) | first | .number // empty' \
+              <<<"$open_issues"
+          }
+
+          if [ -z "$failed" ]; then
+            # A green push closes everything the red ones opened. Comment first:
+            # a bare close loses which run vindicated it.
+            jq -r '.[].number' <<<"$open_issues" | while read -r n; do
+              [ -n "$n" ] || continue
+              gh issue comment "$n" --body "Green again on \`${SHA:0:7}\` — ${RUN_URL}"
+              gh issue close "$n" --reason completed
+            done
+            exit 0
+          fi
+
+          while IFS= read -r job; do
+            [ -n "$job" ] || continue
+            title="main is red: $job"
+            existing=$(find_issue "$title")
+
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" \
+                --body "Failed again on \`${SHA:0:7}\` — ${RUN_URL}"
+              continue
+            fi
+
+            gh issue create --title "$title" --label ci-failure --body "$(cat <<EOF
+          The **$job** job failed on a push to \`main\`.
+
+          - Commit: \`${SHA}\`
+          - Run: ${RUN_URL}
+
+          Every recurrence is a comment on this issue, and the first fully green push
+          to \`main\` closes it. If it is closed and reopens, the comment history is
+          the record of how long it took.
+
+          A red \`main\` blocks nothing mechanically — the merge queue tests each PR
+          against the queue head, so PRs keep merging past it. That is exactly why
+          this needs a place to sit rather than an email.
+          EOF
+          )"
+          done <<<"$failed"

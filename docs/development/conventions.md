@@ -8,7 +8,12 @@ any page) and the [architecture overview](../architecture/overview.md).
 
 When building a new feature, work through these phases in order:
 
-0. **Branch** — decide where the work lands before writing any of it. Anything member-facing or
+0. **Branch** — decide where the work lands before writing any of it. **Search the tracker first**
+   (`gh issue list --state open --search '<terms>'`): if an issue already covers this, open the
+   draft PR with `Fixes #<n>` **before** writing the code, so the next session sees the work in
+   flight rather than starting it again. The branch push is what makes that a claim — a second
+   session pushing the same ref is rejected non-fast-forward by the server, which no assignee,
+   label or project-board field can do, all being last-write-wins. Anything member-facing or
    public that takes more than one PR to become usable goes on a long-lived
    [feature branch](#long-lived-feature-branches); phases are PRs into that branch and `main` sees
    the feature once, working. Staff-only surfaces, schema, and refactors still go straight to
@@ -61,6 +66,7 @@ When building a new feature, work through these phases in order:
    [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). If the
    feature had a spec, **retire it now** — see below.
 9. **Land** — descriptive message summarizing what the feature adds. **No co-author lines.**
+   `Fixes #<n>` in the PR body if it answers an issue, so the queue's merge closes it.
    A phase PR targets its feature branch and merges with `gh pr merge --squash`; the finished
    feature targets `main` and is queued with `gh pr merge --auto`. See
    [Long-lived feature branches](#long-lived-feature-branches).
@@ -570,7 +576,8 @@ is in [working-with-claude.md](working-with-claude.md).
 Prefer existing libraries and managed services over new bespoke code — the goal is to
 minimize _maintained_ code, not just initial build effort. Lean on Stripe, Postmark, and
 Cloudflare primitives rather than re-creating vendor features in app code. When adding a
-dependency, note it in `IDEAS.md`'s library table if it's broadly useful.
+dependency, note it in [`docs/reports/library-candidates.md`](../reports/library-candidates.md)
+if it's broadly useful.
 
 ### Patched dependencies
 

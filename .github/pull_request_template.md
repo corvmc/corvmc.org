@@ -6,7 +6,11 @@
 
 ## Why
 
-<!-- The problem this solves or the motivation. Link any related issue (e.g. Closes #123). -->
+<!-- The problem this solves or the motivation. -->
+
+**Fixes #** <!-- The issue this answers, if there is one. `Fixes`/`Closes` closes it when the queue
+     merges, which is what keeps the tracker honest. Search before assuming there isn't one:
+     `gh issue list --state open --search '<terms>'`. Delete this line if it genuinely answers none. -->
 
 ## How to verify
 

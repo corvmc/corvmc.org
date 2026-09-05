@@ -454,7 +454,7 @@ position count triples or per-resource sharing becomes a real feature.
 2. **Is `credit.adjust` bounded by an amount?** **Settled: not for now.** It stays admin-only
    (shipped in #489), which is the conservative choice and reverses this document's earlier
    prose — comping an interrupted practice session currently routes through an admin. The
-   ceiling idea is recorded in [IDEAS.md](../../IDEAS.md#spending-ceilings-on-capabilities)
+   ceiling idea is recorded as an `enhancement` issue ("Spending Ceilings on Capabilities")
    rather than dropped, because the committee spending limit wants the same mechanism and
    building one for both is the cheap version. Widening `credit.adjust` later is a one-line
    config diff.

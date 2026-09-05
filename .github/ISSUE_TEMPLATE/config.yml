@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Something is broken in production
+    url: https://github.com/corvmc/corvmc.org/blob/main/docs/architecture/operations-manual.md
+    about: Day-to-day production triage is a runbook, not an issue. Open one afterwards for the fix.

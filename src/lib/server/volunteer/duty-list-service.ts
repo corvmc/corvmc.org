@@ -18,6 +18,7 @@ import {
 } from '$lib/config';
 import type { DutyListAnchor, DutyListAutoApplyTrigger, DutyListSubject } from '$lib/config';
 import type { DutyList, DutyListItem } from '$lib/server/db/schema/volunteer';
+import { chunk, chunkSize } from '$lib/server/utils/chunk';
 
 /**
  * Duty lists: a named set of work orders, stamped onto a subject.
@@ -440,18 +441,11 @@ export async function removeDutyListItem(id: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * D1 caps one statement at 100 bound parameters, so a multi-row insert has to be
- * split by column count. A six-item list with eight tasks each clears that on
- * the task insert alone, so the chunking is not optional.
+ * Column count for `chunkSize` — see `$lib/server/utils/chunk`. A six-item list
+ * with eight tasks each clears D1's parameter ceiling on the task insert alone,
+ * so the chunking is not optional.
  */
 const TASK_COLUMNS = 4;
-const chunkSize = (columns: number) => Math.floor(100 / columns);
-
-function chunk<T>(rows: T[], size: number): T[][] {
-	const out: T[][] = [];
-	for (let i = 0; i < rows.length; i += size) out.push(rows.slice(i, i + size));
-	return out;
-}
 
 export interface ApplyDutyListResult {
 	workOrderIds: string[];

@@ -117,7 +117,7 @@ Three things differ from the member path:
 
 - **Staff may override.** Conflicts and business-hours violations are warnings with an
   override, not refusals. `ConflictWarnings` currently conflates "overlaps a confirmed
-  booking" with "outside operating hours" into one flag — see `CHORES.md`; a double-booking
+  booking" with "outside operating hours" into one flag — see #563; a double-booking
   deserves louder treatment than a late night.
 - **Staff confirm at any time.** The 3-day confirmation window is a member gate;
   `visibleActions` is staff-only and unchanged by it.

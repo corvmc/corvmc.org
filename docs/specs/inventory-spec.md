@@ -506,7 +506,7 @@ is the opposite of what a one-member-record platform is for.
 
 What _is_ worth taking off the shelf is smaller and mechanical:
 [`barcode-detector`](https://www.npmjs.com/package/barcode-detector) for scanning
-(ZXing-C++ via wasm — **not** `html5-qrcode`, which `IDEAS.md` currently
+(ZXing-C++ via wasm — **not** `html5-qrcode`, which `docs/reports/library-candidates.md` currently
 recommends and which is unmaintained on a dead ZXing port), and `bwip-js` for
 rendering bin labels and tag reprints as SVG. `pdfkit` and `puppeteer` do not run
 on Workers; label printing is SVG and the browser's own print.

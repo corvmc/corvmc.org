@@ -44,6 +44,31 @@ export default defineConfig({
 	// and treat a red mutating test as real rather than waiting on a retry.
 	retries: process.env.CI ? 2 : 0,
 	/**
+	 * What CI can see of a failure from outside the log.
+	 *
+	 * With no reporter configured this took Playwright's default, which prints for
+	 * humans and annotates nothing — so GitHub's annotations API for a failed E2E
+	 * job returned one entry, `Process completed with exit code 1`, and named no
+	 * test. The log is no better as a fallback: its tail is the runner's credential
+	 * teardown, and the actual failure sits ~200 lines up.
+	 *
+	 * Only Playwright needs saying out loud. Vitest adds `github-actions` on its own
+	 * under `GITHUB_ACTIONS`, which is why a failed `Unit tests` job already
+	 * annotated the offending spec and line while a failed `E2E` job annotated
+	 * nothing — so `vite.config.ts` is deliberately left alone.
+	 *
+	 * That gap costs most on a merge-queue rejection. The PR's own checks stay
+	 * green, auto-merge is disarmed, and the session that opened it has ended, so
+	 * the run is the only record of what went wrong —
+	 * `.github/workflows/merge-queue-guard.yml` quotes these annotations into the
+	 * PR for exactly that reason.
+	 *
+	 * `github` emits `::error file=…,line=…` per failed test, which also surfaces
+	 * inline on the diff of an ordinary PR. `list` stays alongside it so the job log
+	 * still reads the way it always has.
+	 */
+	reporter: process.env.CI ? [['github'], ['list']] : 'list',
+	/**
 	 * How long an assertion waits — 15s, not Playwright's 5s.
 	 *
 	 * The suite already disagreed with the default, one assertion at a time: 110
