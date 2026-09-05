@@ -1,8 +1,9 @@
 import { addWeeks } from 'date-fns';
+import { CalendarDate, endOfMonth } from '@internationalized/date';
 import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
 import type { BookerType } from '$lib/config';
 import { getReservationConfig, termsFor } from './config';
-import { getPartsInTz } from './timezone';
+import { buildDateTimeInTz, getPartsInTz } from './timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -97,7 +98,7 @@ export function getOccurrences(rruleString: string, after: Date, before: Date): 
 
 	if (rule.freq === 'weekly') {
 		// Start from the rule's initial date and step forward
-		let current = buildDateFromParts(rule.start, rule.tz);
+		let current = buildDateTimeInTz(rule.start, rule.tz);
 
 		// If starting before the window, advance to the first candidate in/near the window
 		while (current.getTime() <= after.getTime()) {
@@ -114,7 +115,7 @@ export function getOccurrences(rruleString: string, after: Date, before: Date): 
 	} else if (rule.freq === 'monthly') {
 		// Monthly: find the matching date in each month - either the nth weekday
 		// (e.g. "2nd Tuesday") or a fixed day of the month (e.g. "the 20th").
-		let current = buildDateFromParts(rule.start, rule.tz);
+		let current = buildDateTimeInTz(rule.start, rule.tz);
 		let year = rule.start.year;
 		let month = rule.start.month;
 
@@ -203,38 +204,9 @@ export function monthlyModeOf(rruleString: string): MonthlyMode | null {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Build a Date from timezone-local components.
- */
-function buildDateFromParts(
-	parts: { year: number; month: number; day: number; hour: number; minute: number },
-	tz: string
-): Date {
-	// Create approximate UTC date, then adjust for timezone offset
-	const approx = new Date(
-		Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, 0)
-	);
-	const offset = getUtcOffsetMinutes(approx, tz);
-	const corrected = new Date(approx.getTime() + offset * 60_000);
-
-	// Verify and re-correct for DST boundaries
-	const check = getPartsInTz(corrected, tz);
-	if (check.hour !== parts.hour || check.minute !== parts.minute) {
-		const offset2 = getUtcOffsetMinutes(corrected, tz);
-		return new Date(approx.getTime() + offset2 * 60_000);
-	}
-
-	return corrected;
-}
-
-function getUtcOffsetMinutes(date: Date, tz: string): number {
-	const inTz = getPartsInTz(date, tz);
-	const inUtc = getPartsInTz(date, 'UTC');
-
-	const tzMinutes = inTz.hour * 60 + inTz.minute + inTz.day * 1440;
-	const utcMinutes = inUtc.hour * 60 + inUtc.minute + inUtc.day * 1440;
-
-	return utcMinutes - tzMinutes;
+/** Last day of a 1-based month, without routing through a local-time `Date`. */
+function daysInMonth(year: number, month: number): number {
+	return endOfMonth(new CalendarDate(year, month, 1)).day;
 }
 
 /**
@@ -261,9 +233,8 @@ function findDayOfMonth(
 	minute: number,
 	tz: string
 ): Date | null {
-	const daysInMonth = new Date(year, month, 0).getDate();
-	if (day > daysInMonth) return null;
-	return buildDateFromParts({ year, month, day, hour, minute }, tz);
+	if (day > daysInMonth(year, month)) return null;
+	return buildDateTimeInTz({ year, month, day, hour, minute }, tz);
 }
 
 /**
@@ -290,8 +261,7 @@ function findNthWeekdayOfMonth(
 	dayOfMonth += (nth - 1) * 7;
 
 	// Check if this day exists in the month
-	const daysInMonth = new Date(year, month, 0).getDate();
-	if (dayOfMonth > daysInMonth) return null;
+	if (dayOfMonth > daysInMonth(year, month)) return null;
 
-	return buildDateFromParts({ year, month, day: dayOfMonth, hour, minute }, tz);
+	return buildDateTimeInTz({ year, month, day: dayOfMonth, hour, minute }, tz);
 }
