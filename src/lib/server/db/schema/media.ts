@@ -1,41 +1,11 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
+import { attachableTypes } from '../../../config';
 
 // ---------------------------------------------------------------------------
 // Vocabularies
 // ---------------------------------------------------------------------------
-
-/**
- * What a `media_attachment` can hang off. Extending this emits **zero SQL** —
- * drizzle's SQLite dialect treats a text enum as a TypeScript-only constraint —
- * which is the property that makes adding `production` or `venue` later free.
- */
-export const attachableTypes = [
-	'event_listing',
-	'group',
-	'user',
-	/** A catalog entry: manuals and spec sheets, the same for every unit of it. */
-	'inventory_item',
-	/** One physical unit: photographs of damage to *this* amp. */
-	'inventory_asset',
-	/**
-	 * One report about a unit. Evidence belongs to the *observation*, not the
-	 * amp: three people flag the same crackle and each photographed something
-	 * different, and dismissing one report should not strand its picture.
-	 */
-	'work_request',
-	/** How stock arrived: the receipt or the donation paperwork behind it. */
-	'acquisition',
-	/**
-	 * A band's record. Its cover art only — the recordings themselves are in the
-	 * private bucket and deliberately outside this table, since everything here
-	 * is one `getPublicUrl()` away from being addressable. See
-	 * `audio_track.objectKey`.
-	 */
-	'audio_release'
-] as const;
-export type AttachableType = (typeof attachableTypes)[number];
 
 /**
  * Which usage an attachment represents, carrying over the `band_media.type`

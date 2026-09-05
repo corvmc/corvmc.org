@@ -1,6 +1,5 @@
 import Emittery from 'emittery';
-import type { GroupKind } from '$lib/config';
-import type { BookerType } from '$lib/server/db/schema/reservation';
+import type { BookerType, GroupKind } from '$lib/config';
 
 export interface VolunteerShiftEvent {
 	signupId: string;
@@ -81,6 +80,24 @@ export interface ReservationCreatedEvent {
 	recurringSeriesId: string | null;
 }
 
+/**
+ * A booking was re-timed in place rather than cancelled and remade.
+ *
+ * Carries the window it replaced as well as the new one, because the listeners
+ * that care are the ones holding something pinned to the old times — an
+ * orientation shift moves by the delta rather than being recomputed, so a duty
+ * list edited since the booking was made cannot silently re-time work somebody
+ * has already claimed.
+ */
+export interface ReservationRescheduledEvent {
+	reservationId: string;
+	userId: string;
+	previousStartsAt: string;
+	previousEndsAt: string;
+	startsAt: string;
+	endsAt: string;
+}
+
 export interface ReservationCancelledEvent {
 	reservationId: string;
 	userId: string;
@@ -90,6 +107,16 @@ export interface ReservationCancelledEvent {
 	startTime: string;
 	endTime: string;
 	cancelledBy: 'member' | 'staff' | 'system';
+	/**
+	 * Why the cancellation happened, on the paths where the member has already
+	 * been told about it by a more specific event. Today only the waitlist
+	 * expiry sets it: that path emits `reservation.waitlist_expired` too, and
+	 * promotes the next member inline so it can count the promotion. The two
+	 * listeners that would otherwise repeat that work stand down on this field;
+	 * every other listener — the orientation cascade, and whatever comes next —
+	 * sees an ordinary cancellation, which is what it is.
+	 */
+	cause?: 'waitlist_expired';
 }
 
 export interface ReservationReminderDueEvent {
@@ -534,6 +561,7 @@ export interface VolunteerHoursReviewedEvent {
 export type DomainEvents = {
 	'checkout.completed': CheckoutCompletedEvent;
 	'reservation.created': ReservationCreatedEvent;
+	'reservation.rescheduled': ReservationRescheduledEvent;
 	'reservation.confirmed': ReservationConfirmedEvent;
 	'reservation.cancelled': ReservationCancelledEvent;
 	'reservation.reminder_due': ReservationReminderDueEvent;

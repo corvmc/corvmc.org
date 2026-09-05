@@ -624,6 +624,12 @@ export function registerAllNotificationListeners(): void {
 		// Members who cancel their own reservation don't need an email about it.
 		if (event.cancelledBy === 'member') return;
 
+		// A waitlist entry that ran out of time is cancelled, and the member has
+		// already had `waitlist_expired` about it — wording that explains why,
+		// against a preference of their own. The generic "cancelled
+		// automatically" note on top of it would be the same news twice.
+		if (event.cause === 'waitlist_expired') return;
+
 		const reasonLine =
 			event.cancelledBy === 'staff'
 				? 'This was done by CMC staff. Reach out if you have any questions.'

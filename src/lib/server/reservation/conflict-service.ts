@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { reservation, closure } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, ne, eq, lt, gt, notInArray } from 'drizzle-orm';
-import type { BookerType } from '$lib/server/db/schema/reservation';
+import type { BookerType } from '$lib/config';
 import { getReservationConfig, termsFor } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from '$lib/server/db/schema/reservation';

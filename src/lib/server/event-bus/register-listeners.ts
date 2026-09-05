@@ -269,6 +269,12 @@ async function registerWaitlistListeners(): Promise<void> {
 	const { promoteNextWaitlisted } = await import('$lib/server/reservation/waitlist-service');
 
 	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
+		// `expireWaitlisted()` promotes the next member itself, before it emits
+		// this — it returns the count. Promoting again here would not find that
+		// member (they now have `waitlistNotifiedAt`) but the one behind them,
+		// and hand the same slot to two people.
+		if (event.cause === 'waitlist_expired') return;
+
 		// Parse the original reservation's time range to find waitlisted candidates
 		// We need the raw Date objects — reconstruct from the formatted strings
 		// by looking up the cancelled reservation directly

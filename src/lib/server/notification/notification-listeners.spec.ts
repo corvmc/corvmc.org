@@ -629,6 +629,20 @@ describe('reservation.cancelled handler', () => {
 
 		expect(mockDispatch).not.toHaveBeenCalled();
 	});
+
+	it('does NOT email a second time when a waitlist entry ran out of time', async () => {
+		// The expiry path emits both events: `waitlist_expired`, which explains
+		// what happened in the words that fit it, and `reservation.cancelled`, for
+		// the listeners that act on a released slot. Only the first is a letter to
+		// the member.
+		await emit('reservation.cancelled', {
+			...base,
+			cancelledBy: 'system',
+			cause: 'waitlist_expired'
+		});
+
+		expect(mockDispatch).not.toHaveBeenCalled();
+	});
 });
 
 // ---------------------------------------------------------------------------

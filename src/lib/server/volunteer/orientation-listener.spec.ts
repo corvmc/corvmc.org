@@ -290,3 +290,87 @@ describe('reservation.cancelled', () => {
 		await expect(fire('reservation.cancelled', cancelledEvent('res-1'))).resolves.toBeUndefined();
 	});
 });
+
+/**
+ * A booking can now be re-timed in place rather than cancelled and remade, which
+ * leaves anything pinned to the old window behind. That is worse than a
+ * cancellation: the volunteer turns up at an hour nobody is coming, and nothing
+ * on any screen says so.
+ */
+describe('reservation.rescheduled', () => {
+	const HOUR = 3_600_000;
+
+	function movedBy(ms: number) {
+		return {
+			reservationId: 'res-1',
+			userId: 'u-member',
+			previousStartsAt: new Date(STARTS * 1000).toISOString(),
+			previousEndsAt: new Date(ENDS * 1000).toISOString(),
+			startsAt: new Date(STARTS * 1000 + ms).toISOString(),
+			endsAt: new Date(ENDS * 1000 + ms).toISOString()
+		};
+	}
+
+	it('moves the shift by the same delta and keeps its length', async () => {
+		seedList();
+		await fire('reservation.created', createdEvent());
+		const before = shifts()[0];
+
+		await fire('reservation.rescheduled', movedBy(2 * HOUR));
+
+		const after = shifts()[0];
+		expect(after.starts_at).toBe(before.starts_at! + 2 * 3600);
+		// Still forty-five minutes, still fifteen minutes before the booking.
+		const [row] = sqlite
+			.prepare(`SELECT starts_at, ends_at FROM work_order WHERE id = '${after.id}'`)
+			.all() as { starts_at: number; ends_at: number }[];
+		expect(row.ends_at - row.starts_at).toBe(45 * 60);
+		expect(row.starts_at).toBe(STARTS + 2 * 3600 - 15 * 60);
+	});
+
+	it('moves the member’s scheduled time with it', async () => {
+		seedList();
+		await fire('reservation.created', createdEvent());
+
+		await fire('reservation.rescheduled', movedBy(2 * HOUR));
+
+		const orientation = await getOrientation('u-member', new Date(STARTS * 1000 - 86_400_000));
+		expect(orientation?.scheduledFor?.getTime()).toBe((STARTS + 2 * 3600 - 15 * 60) * 1000);
+		expect(orientation?.state).toBe('scheduled');
+	});
+
+	it('shifts by the delta rather than recomputing from the duty list', async () => {
+		seedList();
+		await fire('reservation.created', createdEvent());
+		// Staff edit the template after the booking was stamped out. The shift
+		// people may already have claimed must not silently re-time to match.
+		sqlite.exec(`UPDATE duty_list_item SET offset_minutes = -90 WHERE id = 'dli-1'`);
+
+		await fire('reservation.rescheduled', movedBy(HOUR));
+
+		expect(shifts()[0].starts_at).toBe(STARTS + 3600 - 15 * 60);
+	});
+
+	it('leaves a cancelled shift where it is', async () => {
+		seedList();
+		await fire('reservation.created', createdEvent());
+		const before = shifts()[0].starts_at;
+		sqlite.exec(`UPDATE work_order SET cancelled_at = unixepoch()`);
+
+		await fire('reservation.rescheduled', movedBy(2 * HOUR));
+
+		// History, not a plan. Re-timing it would rewrite what was called off.
+		expect(shifts()[0].starts_at).toBe(before);
+	});
+
+	it('does nothing when the window did not actually move', async () => {
+		seedList();
+		await fire('reservation.created', createdEvent());
+		const before = shifts()[0].starts_at;
+
+		// Only the end moved — a booking extended in place.
+		await fire('reservation.rescheduled', movedBy(0));
+
+		expect(shifts()[0].starts_at).toBe(before);
+	});
+});

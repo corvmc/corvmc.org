@@ -5,11 +5,11 @@ import {
 	eventBand,
 	eventGroup,
 	publicEventStatuses,
-	type EventSource,
 	type EventKind,
 	type EventBandStatus,
 	type LineupEntry
 } from '$lib/server/db/schema/event';
+import type { EventSource } from '$lib/config';
 import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { directoryEntry } from '$lib/server/db/schema/directory';
@@ -39,7 +39,7 @@ import { alias } from 'drizzle-orm/sqlite-core';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { memberRefColumns } from '$lib/server/entity/refs';
 import type { EventStatus } from '$lib/server/db/schema/event';
-import { staffCreate } from '$lib/server/reservation/reservation-service';
+import { staffCreate, adjustWindow } from '$lib/server/reservation/reservation-service';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
@@ -542,52 +542,62 @@ export async function update(eventId: string, params: UpdateEventParams): Promis
 		updates.ticketQuantity = params.ticketQuantity;
 	}
 
-	// Hold the space, or move an existing hold. Both live here because they differ
-	// only by whether there is an old reservation to release first: an event that
-	// was created without space is otherwise unfixable, since nothing else in the
-	// app can attach one after the fact.
+	// Hold the space, or move an existing hold. Both live here because an event
+	// created without space is otherwise unfixable — nothing else in the app can
+	// attach one after the fact — but they are no longer the same operation.
 	if (params.rebook) {
 		const { userId, reservationStartsAt, reservationEndsAt, overrideConflicts } = params.rebook;
 
-		// Conflict check first. Cancelling ahead of it meant a rejected window left
-		// the event pointing at a reservation we had already released, with nothing
-		// re-created and no compensating write — the room lost and the link dead.
-		// Excluding the current reservation keeps an event from conflicting with
-		// its own hold.
-		if (!overrideConflicts) {
-			const conflict = await hasConflict(
+		if (existing.reservationId) {
+			// Move the window on the row that is already there. This used to cancel
+			// and re-create, which threw away the row's `lock_code`: the cron that
+			// mints one runs in the morning and only looks at codeless rows starting
+			// today, so re-timing a show on the day it happens left nobody able to
+			// open the door. adjustWindow runs the conflict check itself, with this
+			// reservation excluded from its own comparison, and throws before it
+			// writes — so a rejected window still leaves the hold exactly as it was.
+			const { previousStartsAt, previousEndsAt } = await adjustWindow(
+				existing.reservationId,
 				reservationStartsAt,
 				reservationEndsAt,
-				existing.reservationId ?? undefined
+				{ overrideConflicts }
 			);
-			if (conflict) {
-				throw new ReservationConflictError();
-			}
-		}
 
-		if (existing.reservationId) {
+			// The lock enforces access through its own copy of the window, so it has
+			// to follow. Best-effort: a lock outage must not fail the re-time, and
+			// the daily job will reconcile whatever is left.
 			try {
-				await cancelReservation(existing.reservationId, userId, 'Event times changed — rebooking', {
-					staffOverride: true
-				});
-			} catch {
-				// Already cancelled — continue
+				const { syncAccessWindow } = await import('$lib/server/lock/lock-service');
+				await syncAccessWindow(existing.reservationId, previousStartsAt, previousEndsAt);
+			} catch (err) {
+				console.error(
+					`Failed to sync lock access for reservation ${existing.reservationId}: ${(err as Error).message}`
+				);
 			}
+		} else {
+			// Nothing to move: this is the first hold. Conflict-check before the
+			// insert so a rejected window leaves no half-booked room behind.
+			if (!overrideConflicts) {
+				const conflict = await hasConflict(reservationStartsAt, reservationEndsAt);
+				if (conflict) {
+					throw new ReservationConflictError();
+				}
+			}
+
+			const newRes = await staffCreate({
+				userId,
+				bookerType: 'event_listing',
+				bookerId: eventId,
+				startsAt: reservationStartsAt,
+				endsAt: reservationEndsAt,
+				// Event space is staff-held for drafts too: there is no member confirm/pay
+				// flow for it and publish() never touches the reservation, so a
+				// `scheduled` hold could only ever be swept away as unconfirmed.
+				status: 'confirmed'
+			});
+
+			updates.reservationId = newRes.id;
 		}
-
-		const newRes = await staffCreate({
-			userId,
-			bookerType: 'event_listing',
-			bookerId: eventId,
-			startsAt: reservationStartsAt,
-			endsAt: reservationEndsAt,
-			// Event space is staff-held for drafts too: there is no member confirm/pay
-			// flow for it and publish() never touches the reservation, so a
-			// `scheduled` hold could only ever be swept away as unconfirmed.
-			status: 'confirmed'
-		});
-
-		updates.reservationId = newRes.id;
 	}
 
 	// Handle poster replacement

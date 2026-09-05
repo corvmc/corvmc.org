@@ -41,6 +41,7 @@ import {
 	cancelUnconfirmedReservations,
 	staffCreate,
 	createWaitlisted,
+	adjustWindow,
 	confirm,
 	markComplete,
 	markNoShow,
@@ -52,7 +53,7 @@ import {
 	ReservationNotFoundError,
 	ReservationAuthorizationError
 } from './reservation-service';
-import { validateBooking } from './conflict-service';
+import { validateBooking, hasConflict } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import { db } from '$lib/server/db';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
@@ -431,6 +432,162 @@ describe('ReservationService', () => {
 				// The owning member, not the staffer who typed it.
 				expect.objectContaining({ userId: 'user-1', createdByStaffId: 'staff-1' })
 			);
+		});
+	});
+
+	// -----------------------------------------------------------------------
+	// adjustWindow — re-time in place, so the door code survives
+	// -----------------------------------------------------------------------
+
+	describe('adjustWindow', () => {
+		const current = {
+			startsAt: new Date('2025-07-15T02:00:00Z'),
+			endsAt: new Date('2025-07-15T05:00:00Z')
+		};
+
+		/** Queue the rows successive db.select() chains resolve to, in order. */
+		function setupSelects(...rows: unknown[][]) {
+			const queue = [...rows];
+			const limit = vi.fn(() => Promise.resolve(queue.shift() ?? []));
+			const where = vi.fn().mockReturnValue({ limit });
+			const from = vi.fn().mockReturnValue({ where });
+			vi.mocked(db.select).mockReturnValue({ from } as any);
+		}
+
+		function setupUpdate(rowCount: number) {
+			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
+			const set = vi.fn().mockReturnValue({ where: updateWhere });
+			vi.mocked(db.update).mockReturnValue({ set } as any);
+			return { set, updateWhere };
+		}
+
+		it('widens the window in place and returns the window it replaced', async () => {
+			setupSelects([current]);
+			vi.mocked(hasConflict).mockResolvedValue(false);
+			const { set } = setupUpdate(1);
+
+			const previous = await adjustWindow(
+				'res-1',
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z')
+			);
+
+			expect(previous).toEqual({
+				previousStartsAt: current.startsAt,
+				previousEndsAt: current.endsAt
+			});
+			expect(set).toHaveBeenCalledWith(
+				expect.objectContaining({
+					startsAt: new Date('2025-07-15T01:00:00Z'),
+					endsAt: new Date('2025-07-15T07:00:00Z')
+				})
+			);
+		});
+
+		// The whole point of the function: cancel-and-recreate dropped these, and
+		// the cron that mints a door code has already run by the afternoon.
+		it('leaves the status and the door code alone', async () => {
+			setupSelects([current]);
+			vi.mocked(hasConflict).mockResolvedValue(false);
+			const { set } = setupUpdate(1);
+
+			await adjustWindow(
+				'res-1',
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z')
+			);
+
+			const payload = set.mock.calls[0][0] as Record<string, unknown>;
+			expect(payload).not.toHaveProperty('status');
+			expect(payload).not.toHaveProperty('lockCode');
+		});
+
+		it('only re-times a live booking', async () => {
+			setupSelects([current]);
+			vi.mocked(hasConflict).mockResolvedValue(false);
+			const { updateWhere } = setupUpdate(1);
+
+			await adjustWindow(
+				'res-1',
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z')
+			);
+
+			const { sql: rendered, params } = dialect.sqlToQuery(updateWhere.mock.calls[0][0] as SQL);
+			expect(rendered).toContain('status');
+			expect(params).toContain('scheduled');
+			expect(params).toContain('confirmed');
+			expect(params).not.toContain('cancelled');
+		});
+
+		// A booking cannot conflict with the hold it is moving.
+		it('excludes the reservation from its own conflict check', async () => {
+			setupSelects([current]);
+			vi.mocked(hasConflict).mockResolvedValue(false);
+			setupUpdate(1);
+
+			await adjustWindow(
+				'res-1',
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z')
+			);
+
+			expect(hasConflict).toHaveBeenCalledWith(
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z'),
+				'res-1'
+			);
+		});
+
+		it('throws on a conflicting window without writing', async () => {
+			setupSelects([current]);
+			vi.mocked(hasConflict).mockResolvedValue(true);
+			setupUpdate(1);
+
+			await expect(
+				adjustWindow('res-1', new Date('2025-07-15T01:00:00Z'), new Date('2025-07-15T07:00:00Z'))
+			).rejects.toThrow(ReservationConflictError);
+
+			expect(db.update).not.toHaveBeenCalled();
+		});
+
+		it('skips the conflict check when overridden', async () => {
+			setupSelects([current]);
+			setupUpdate(1);
+
+			await adjustWindow(
+				'res-1',
+				new Date('2025-07-15T01:00:00Z'),
+				new Date('2025-07-15T07:00:00Z'),
+				{ overrideConflicts: true }
+			);
+
+			expect(hasConflict).not.toHaveBeenCalled();
+		});
+
+		it('rejects a window that ends before it starts', async () => {
+			await expect(
+				adjustWindow('res-1', new Date('2025-07-15T07:00:00Z'), new Date('2025-07-15T01:00:00Z'))
+			).rejects.toThrow(ReservationValidationError);
+		});
+
+		it('throws when the reservation is gone', async () => {
+			setupSelects([]);
+
+			await expect(
+				adjustWindow('res-1', new Date('2025-07-15T01:00:00Z'), new Date('2025-07-15T07:00:00Z'))
+			).rejects.toThrow(ReservationNotFoundError);
+		});
+
+		// Cancelled between the read and the write — the row must not come back.
+		it('throws when the status changed under it', async () => {
+			setupSelects([current], [{ status: 'cancelled' }]);
+			vi.mocked(hasConflict).mockResolvedValue(false);
+			setupUpdate(0);
+
+			await expect(
+				adjustWindow('res-1', new Date('2025-07-15T01:00:00Z'), new Date('2025-07-15T07:00:00Z'))
+			).rejects.toThrow(ReservationStateError);
 		});
 	});
 

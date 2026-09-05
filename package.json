@@ -10,6 +10,7 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo '' && lefthook install",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:tooling": "svelte-kit sync && node scripts/check-tooling-imports.mjs",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "tsx scripts/run-unit-tests.ts",
 		"test:components": "vitest --run --project=client --project=storybook",

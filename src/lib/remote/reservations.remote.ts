@@ -76,7 +76,7 @@ import {
 import { orientationForReservation } from '$lib/server/volunteer/orientation-service';
 import { mapDomainError } from '$lib/server/errors';
 import { isTerminalStatus } from '$lib/utils/reservation-actions';
-import { bookerTypes, type BookerType } from '$lib/server/db/schema/reservation';
+import { bookerTypes, type BookerType } from '$lib/config';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { requireInstructor } from '$lib/server/instructor/instructor-context';
 import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';

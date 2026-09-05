@@ -166,7 +166,12 @@ one is offered the slot with a 24-hour window to confirm.
   `reservations.remote.ts` — checks the offer hasn't expired, re-checks the slot is free,
   flips to `scheduled`, then re-checks again and backs out if a competing booking raced in.
 - **Expiry:** cron `expire-waitlisted` → `expireWaitlisted()` in `waitlist-service.ts` —
-  cancels offers past their 24h window and promotes the next in line.
+  cancels offers past their 24h window and promotes the next in line. It emits both
+  `reservation.waitlist_expired` (the member's own notification) and
+  `reservation.cancelled` carrying `cause: 'waitlist_expired'` — the row really was
+  cancelled, and listeners on that event need to know. The two listeners that path
+  already handles — the cancellation email and the promotion cascade — stand down on
+  that `cause`; every other listener treats it as an ordinary cancellation.
 
 ### Data touched
 
@@ -1081,6 +1086,13 @@ best-effort with no dedupe, so a re-delivered event lands on the same check that
 coordinator double-clicking Apply and is refused by name. Without an orientation list in the
 database the feature is simply off, which is how it degrades before the seed exists.
 
+`reservation.rescheduled` moves it. A booking can be re-timed in place rather than cancelled and
+remade, and that leaves anything pinned to the old window behind — worse than a cancellation,
+because the volunteer turns up at an hour nobody is coming and nothing on any screen says so. The
+shift moves by the **delta**, not by recomputing from the duty list: the stamped work order has no
+link back, so a list edited since must not silently re-time work somebody has already claimed.
+Cancelled and resolved shifts stay where they are, being history rather than plans.
+
 `reservation.cancelled` stands the shift down through `cancelShift`, so it appears in the staff
 surfaces exactly as a hand-cancelled shift does — with the un-notified count and the "Notify
 all" button, because telling the volunteer is deliberately still a person's decision. The
@@ -1128,6 +1140,9 @@ already enforces it. Nothing new claims, assigns, or notifies.
 - **An orientation stuck at "Booked" after the date passed** → it cannot be. The state is
   derived, and `stateOf` falls back to `pending` once `scheduledFor` is in the past with no
   completion.
+- **An orientation left behind after a booking was re-timed** → `adjustWindow` emits
+  `reservation.rescheduled`; check the listener ran. Only live shifts move, and a shift whose
+  booking moved by zero minutes (an extension in place) is deliberately untouched.
 
 ---
 

@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { dutyList, memberOrientation, workOrder } from '$lib/server/db/schema/volunteer';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
@@ -266,6 +266,58 @@ export async function cancelOrientationFor(
 	}
 
 	await clearScheduled(live.map((r) => r.id));
+	return live.length;
+}
+
+/**
+ * The booking moved, so the shift that staffs it moves with it.
+ *
+ * Shifts by the **delta**, not by recomputing from the duty list. The stamped
+ * work order is its own row with no link back — the same bargain `applyDutyList`
+ * and `duplicateShift` both make — so a list edited since the booking was made
+ * must not silently re-time work somebody has already claimed. Fifteen minutes
+ * before is preserved because it is fifteen minutes before, not because the
+ * template still says so.
+ *
+ * Only live shifts move. A cancelled one is history and a resolved one already
+ * happened; re-timing either would rewrite the past.
+ */
+export async function rescheduleOrientationFor(
+	reservationId: string,
+	deltaMs: number
+): Promise<number> {
+	if (deltaMs === 0) return 0;
+
+	const live = await db
+		.select({ id: workOrder.id, startsAt: workOrder.startsAt, endsAt: workOrder.endsAt })
+		.from(workOrder)
+		.where(
+			and(
+				eq(workOrder.reservationId, reservationId),
+				isNull(workOrder.cancelledAt),
+				isNull(workOrder.resolvedAt),
+				isNotNull(workOrder.startsAt)
+			)
+		);
+
+	if (live.length === 0) return 0;
+
+	const now = new Date();
+	for (const row of live) {
+		const startsAt = new Date(row.startsAt!.getTime() + deltaMs);
+		const endsAt = new Date(row.endsAt!.getTime() + deltaMs);
+
+		await db
+			.update(workOrder)
+			.set({ startsAt, endsAt, updatedAt: now })
+			.where(eq(workOrder.id, row.id));
+
+		await db
+			.update(memberOrientation)
+			.set({ scheduledFor: startsAt, updatedAt: now })
+			.where(and(eq(memberOrientation.workOrderId, row.id), isNull(memberOrientation.completedAt)));
+	}
+
 	return live.length;
 }
 

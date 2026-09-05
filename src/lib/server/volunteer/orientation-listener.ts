@@ -8,6 +8,7 @@ import {
 	cancelOrientationFor,
 	completeOrientation,
 	orientationOwnerOf,
+	rescheduleOrientationFor,
 	scheduleOrientation
 } from './orientation-service';
 
@@ -76,6 +77,18 @@ export function registerOrientationListeners(): void {
 			await cancelOrientationFor(event.reservationId);
 		} catch (err) {
 			console.error('[orientation] failed to stand down an orientation shift', err);
+		}
+	});
+
+	// A booking re-timed in place leaves its orientation shift behind, which is
+	// worse than a cancelled one: the volunteer turns up at an hour nobody is
+	// coming, and nothing on any screen says so.
+	domainEvents.on('reservation.rescheduled', async ({ data: event }) => {
+		try {
+			const delta = new Date(event.startsAt).getTime() - new Date(event.previousStartsAt).getTime();
+			await rescheduleOrientationFor(event.reservationId, delta);
+		} catch (err) {
+			console.error('[orientation] failed to move an orientation shift', err);
 		}
 	});
 

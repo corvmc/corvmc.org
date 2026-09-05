@@ -18,7 +18,7 @@ import {
 	sql,
 	type AnyColumn
 } from 'drizzle-orm';
-import { validateBooking } from './conflict-service';
+import { validateBooking, hasConflict } from './conflict-service';
 import { refund } from '$lib/server/finance/payment-service';
 import { reverseReservationCredits } from './reservation-credit-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -27,7 +27,8 @@ import { groupMember } from '$lib/server/db/schema/group';
 import { group } from '$lib/server/db/schema/group';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
-import type { BookerType, ReservationStatus } from '$lib/server/db/schema/reservation';
+import type { ReservationStatus } from '$lib/server/db/schema/reservation';
+import type { BookerType } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // ReservationService — create and cancel reservations
@@ -279,6 +280,91 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 
 export async function confirm(reservationId: string): Promise<void> {
 	await updateStatus(reservationId, ['scheduled'], 'confirmed');
+}
+
+// ---------------------------------------------------------------------------
+// adjustWindow() — re-time a booking without replacing it
+// ---------------------------------------------------------------------------
+
+/**
+ * Move an existing reservation's window in place.
+ *
+ * The alternative — cancel the row and create a replacement — loses everything
+ * the row carries that is not in the caller's hands, and the expensive one is
+ * `lockCode`. Door codes are minted by a once-daily cron that only looks at
+ * `confirmed` rows with a null code starting today (`lock/lock-service.ts`), so
+ * a replacement created after that cron has run is a booking nobody can open
+ * the door for, and the code already issued keeps working against a cancelled
+ * row until its original window ends.
+ *
+ * Same row, same status, same code. The caller is responsible for re-syncing
+ * the lock's own window — that is `lock-service.syncAccessWindow`, and it is
+ * deliberately not called from here: this module knows about rooms, not doors.
+ *
+ * Returns the window as it was, which is what the lock needs to find the
+ * temporary user it has to replace.
+ */
+export async function adjustWindow(
+	reservationId: string,
+	startsAt: Date,
+	endsAt: Date,
+	opts?: { overrideConflicts?: boolean }
+): Promise<{ previousStartsAt: Date; previousEndsAt: Date }> {
+	if (startsAt >= endsAt)
+		throw new ReservationValidationError('Reservation must end after it starts');
+
+	const [row] = await db
+		.select({
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			createdByUserId: reservation.createdByUserId
+		})
+		.from(reservation)
+		.where(eq(reservation.id, reservationId))
+		.limit(1);
+
+	if (!row) throw new ReservationNotFoundError();
+
+	// Excluding this reservation from its own comparison — a booking cannot
+	// conflict with the hold it is moving.
+	if (!opts?.overrideConflicts) {
+		if (await hasConflict(startsAt, endsAt, reservationId)) {
+			throw new ReservationConflictError();
+		}
+	}
+
+	// Atomic conditional update, in the shape of updateStatus(): only a live
+	// booking can be re-timed, and a row cancelled between the read and the
+	// write must not silently come back.
+	const adjustable: ReservationStatus[] = ['scheduled', 'confirmed'];
+	const result = await db
+		.update(reservation)
+		.set({ startsAt, endsAt, updatedAt: new Date() })
+		.where(and(eq(reservation.id, reservationId), inArray(reservation.status, adjustable)));
+
+	if (getRowCount(result) === 0) {
+		const [current] = await db
+			.select({ status: reservation.status })
+			.from(reservation)
+			.where(eq(reservation.id, reservationId))
+			.limit(1);
+
+		if (!current) throw new ReservationNotFoundError();
+		throw new ReservationStateError(`Cannot re-time a reservation with status "${current.status}"`);
+	}
+
+	// Anything pinned to the old window has to move with it — an orientation
+	// shift is fifteen minutes before a booking that is no longer at that time.
+	await domainEvents.emit('reservation.rescheduled', {
+		reservationId,
+		userId: row.createdByUserId,
+		previousStartsAt: row.startsAt.toISOString(),
+		previousEndsAt: row.endsAt.toISOString(),
+		startsAt: startsAt.toISOString(),
+		endsAt: endsAt.toISOString()
+	});
+
+	return { previousStartsAt: row.startsAt, previousEndsAt: row.endsAt };
 }
 
 // ---------------------------------------------------------------------------
