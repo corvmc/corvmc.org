@@ -41,7 +41,8 @@
 		IconPointFilled,
 		IconCalendarEvent,
 		IconArrowMerge,
-		IconEyeOff
+		IconEyeOff,
+		IconReceipt
 	} from '@tabler/icons-svelte';
 	import {
 		volunteerHourStatusLabels,
@@ -84,6 +85,13 @@
 		draft: 'badge-warning',
 		pending_review: 'badge-info',
 		published: 'badge-success',
+		// Productions. `draft`, `confirmed`, `completed` and `cancelled` are
+		// shared with the vocabularies above and already carry the right weight.
+		// `offered` is warning because the answer is owed by somebody else;
+		// `closed` is ghost because a closed production is finished business.
+		offered: 'badge-warning',
+		settled: 'badge-success',
+		closed: 'badge-ghost',
 		// Inbox. `awaiting_reply` is ghost against open's info on purpose: the
 		// thread is still open work, but nothing is owed from this end today.
 		open: 'badge-info',
@@ -183,6 +191,13 @@
 		// Waiting on staff, not on its author — the hourglass is the whole point.
 		pending_review: { icon: IconClockPause, color: 'text-info' },
 		published: { icon: IconWorld, color: 'text-success' },
+
+		// Production statuses. Only the three that are not already mapped: a
+		// production shares `draft`, `confirmed`, `completed` and `cancelled` with
+		// the event and reservation vocabularies, and means the same thing by them.
+		offered: { icon: IconSend, color: 'text-warning' },
+		settled: { icon: IconReceipt, color: 'text-success' },
+		closed: { icon: IconArchive, color: 'text-base-content' },
 		// `rejected` is shared with volunteer hour logs below — same meaning
 		// (sent back to its author to fix), same glyph, labelled "Returned".
 

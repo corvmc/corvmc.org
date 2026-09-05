@@ -295,6 +295,9 @@ export const ordinaryStatuses: ReadonlySet<string> = new Set([
 	'cleared',
 	'done',
 	'active',
+	// A settled production has been paid out. `closed` is deliberately absent:
+	// it is ghost-toned, like `retired` and `dismissed`, and those are marked.
+	'settled',
 	// Resting states that happen to be info-toned: a confirmed booking and a
 	// valid ticket are both simply "as expected". So is an amp that is out on
 	// loan — being borrowed is what a loanable unit is *for*, and marking it

@@ -43,6 +43,7 @@ import { seedGroupSessions } from './seed/group-sessions';
 import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
 import { seedCmcEventLineups } from './seed/lineups';
+import { seedProductions } from './seed/productions';
 import { seedBandReservations } from './seed/band-reservations';
 import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
 import { seedRecurringSeries } from './seed/recurring';
@@ -121,6 +122,9 @@ async function main() {
 	const bandEvents = await seedBandEvents(bands, allUsers);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
+	// After the bill, because a production is the ops record for a night that
+	// already has acts on it — and the index shows the two side by side.
+	const productions = await seedProductions(events, allUsers);
 	const bandReservations = await seedBandReservations(bands);
 	const bandSites = await seedBandSites(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
@@ -256,6 +260,9 @@ async function main() {
 	);
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
+	);
+	console.log(
+		`  ${productions.productions} productions covering every status, ${productions.withoutProduction} CMC shows deliberately without one`
 	);
 	console.log(
 		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +

@@ -38,14 +38,20 @@
 	let status = $state<'draft' | 'published' | 'cancelled' | ''>(
 		(initial.get('status') as 'draft' | 'published' | 'cancelled' | null) ?? ''
 	);
+	let venueId = $state(initial.get('venue') ?? '');
+	let dateFrom = $state(initial.get('from') ?? '');
+	let dateTo = $state(initial.get('to') ?? '');
 
-	// Writes the URL, never state — the filter above stays the source of truth.
+	// Writes the URL, never state — the filters above stay the source of truth.
 	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
 	// rewrites the address bar, and the router overwrites that entry on the next
 	// navigation, so back from an event landed on the wrong filter.
 	$effect(() => {
 		const pairs: [string, string][] = [];
 		if (status) pairs.push(['status', status]);
+		if (venueId) pairs.push(['venue', venueId]);
+		if (dateFrom) pairs.push(['from', dateFrom]);
+		if (dateTo) pairs.push(['to', dateTo]);
 		if (page > 1) pairs.push(['page', String(page)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
@@ -57,8 +63,18 @@
 
 	// The page's one query, and still a promise rather than an await: `DataList`
 	// consumes it with `{#await}` so a filter change does not suspend the page
-	// into the layout boundary's pending snippet.
-	const result = $derived(getStaffEvents({ source: 'cmc', status: status || undefined, page }));
+	// into the layout boundary's pending snippet. The venue, the production and
+	// the bill all ride along inside it — see `getStaffEvents`.
+	const result = $derived(
+		getStaffEvents({
+			source: 'cmc',
+			status: status || undefined,
+			venueId: venueId || undefined,
+			dateFrom: dateFrom || undefined,
+			dateTo: dateTo || undefined,
+			page
+		})
+	);
 
 	type Production = Awaited<typeof result>['rows'][number];
 
@@ -74,8 +90,22 @@
 		return formatDate(e.startsAt);
 	}
 
+	/** "Sunbathers +2", or nothing at all when the bill is empty. */
+	function lineupLabel(e: Production): string | null {
+		if (!e.lineup.headliner) return null;
+		const rest = e.lineup.count - 1;
+		return rest > 0 ? `${e.lineup.headliner} +${rest}` : e.lineup.headliner;
+	}
+
+	const activeCount = $derived(
+		(status ? 1 : 0) + (venueId ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0)
+	);
+
 	function clearFilters() {
 		status = '';
+		venueId = '';
+		dateFrom = '';
+		dateTo = '';
 		page = 1;
 	}
 </script>
@@ -86,13 +116,35 @@
 <PageContent>
 	<CreateEventModal bind:open={showCreateModal} />
 
-	<FilterBar activeCount={status ? 1 : 0} onclear={clearFilters}>
+	<FilterBar {activeCount} onclear={clearFilters}>
 		<Select size="sm" aria-label="Status" bind:value={status} onchange={() => (page = 1)}>
 			<option value="">Every status</option>
 			<option value="draft">Draft</option>
 			<option value="published">Published</option>
 			<option value="cancelled">Cancelled</option>
 		</Select>
+		{#await result then data}
+			<Select size="sm" aria-label="Venue" bind:value={venueId} onchange={() => (page = 1)}>
+				<option value="">Every venue</option>
+				{#each data.venues as v (v.id)}
+					<option value={v.id}>{v.name}</option>
+				{/each}
+			</Select>
+		{/await}
+		<input
+			type="date"
+			aria-label="From date"
+			class="input input-sm"
+			bind:value={dateFrom}
+			onchange={() => (page = 1)}
+		/>
+		<input
+			type="date"
+			aria-label="To date"
+			class="input input-sm"
+			bind:value={dateTo}
+			onchange={() => (page = 1)}
+		/>
 	</FilterBar>
 
 	<DataList {result} empty="No events yet" onpage={(p) => (page = p)}>
@@ -100,9 +152,15 @@
 			<!-- No zebra: the bg-base-200 day-group rows are the striping here. -->
 			<Table zebra={false}>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
+					<th class="w-px"><span class="sr-only">Listing status</span></th>
 					<th>Event</th>
-					<th class="col-support">Tags</th>
+					<!-- Two statuses, two columns, both labelled. The glyph on the left
+					     is the listing's — is it on the guide — and this one is the
+					     production's — how far through putting it on we are. -->
+					<th class="col-support w-px">Production</th>
+					<th class="col-support">Lineup</th>
+					<th class="col-extra">Venue</th>
+					<th class="col-extra">Tags</th>
 					<th class="col-support w-px">Space</th>
 				{/snippet}
 
@@ -111,7 +169,7 @@
 					{@const prevLabel = idx > 0 ? dayLabel(events[idx - 1]) : null}
 					{#if label !== prevLabel}
 						<tr>
-							<td colspan="4" class="cell-group">
+							<td colspan="7" class="cell-group">
 								{label}
 							</td>
 						</tr>
@@ -132,7 +190,28 @@
 								{/snippet}
 							</EntityIdentity>
 						</td>
+						<td class="col-support w-px">
+							{#if e.productionStatus}
+								<StatusBadge status={e.productionStatus} label />
+							{:else}
+								<span class="whitespace-nowrap text-base-content/50">No production</span>
+							{/if}
+						</td>
 						<td class="col-support">
+							{#if lineupLabel(e)}
+								{lineupLabel(e)}
+							{:else}
+								<span class="opacity-40">—</span>
+							{/if}
+						</td>
+						<td class="col-extra">
+							{#if e.venueName}
+								<span class="whitespace-nowrap">{e.venueName}</span>
+							{:else}
+								<span class="opacity-40">—</span>
+							{/if}
+						</td>
+						<td class="col-extra">
 							<div class="flex flex-wrap gap-1">
 								{#each parseTags(e.tags) as tag (tag)}
 									<Badge size="sm" variant="outline">{tag}</Badge>

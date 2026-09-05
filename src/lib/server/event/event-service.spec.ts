@@ -38,6 +38,10 @@ let selectResult: unknown[] = [];
 let selectResultQueue: unknown[][] = [];
 let updateRowCount = 1;
 
+// Every chain method a select builds, in order, so a spec can assert on the
+// query that was constructed rather than on what the stub returned.
+let selectChainCalls: { method: string; args: unknown[] }[] = [];
+
 function chainable(result?: unknown[]) {
 	const proxy: PromiseLike<unknown[]> = new Proxy(() => proxy, {
 		get(_, prop) {
@@ -49,7 +53,10 @@ function chainable(result?: unknown[]) {
 				};
 			}
 			if (prop === 'meta') return { changes: updateRowCount };
-			return () => proxy;
+			return (...args: unknown[]) => {
+				selectChainCalls.push({ method: String(prop), args });
+				return proxy;
+			};
 		}
 	}) as unknown as PromiseLike<unknown[]>;
 	return proxy;
@@ -156,11 +163,17 @@ vi.mock('$lib/server/ticket/ticket-service', () => ({
 	getTicketsSold: (...args: unknown[]) => mockTicketsSold(...args)
 }));
 
+const mockCancelProductions = vi.fn().mockResolvedValue(0);
+vi.mock('$lib/server/production/production-service', () => ({
+	cancelProductionsForEvent: (...args: unknown[]) => mockCancelProductions(...args)
+}));
+
 import {
 	create,
 	publish,
 	cancel,
 	update,
+	listAll,
 	checkRebookNeeded,
 	unpublishWithNotice,
 	listPublicUpcomingEvents,
@@ -185,6 +198,7 @@ describe('EventService', () => {
 		vi.clearAllMocks();
 		selectResult = [];
 		selectResultQueue = [];
+		selectChainCalls = [];
 		updateRowCount = 1;
 		lastInsertedValues = null;
 		lastUpdateSet = null;
@@ -436,6 +450,16 @@ describe('EventService', () => {
 			expect(cancelReservation).toHaveBeenCalledWith('res-1', 'staff-1', 'Event cancelled', {
 				staffOverride: true
 			});
+		});
+
+		// Without this the productions index would show a `confirmed` production
+		// against a cancelled show — the status column lying on the day it shipped.
+		it('pulls the production back with the listing', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published' }];
+
+			await cancel('evt-1', 'staff-1');
+
+			expect(mockCancelProductions).toHaveBeenCalledWith('evt-1');
 		});
 
 		it('releases the poster slot without deleting the object', async () => {
@@ -838,6 +862,61 @@ describe('EventService', () => {
 	// -----------------------------------------------------------------------
 	// update ticketing fields
 	// -----------------------------------------------------------------------
+
+	// -----------------------------------------------------------------------
+	// listAll — the productions index reads through this
+	// -----------------------------------------------------------------------
+
+	describe('listAll', () => {
+		function joinedTables() {
+			return selectChainCalls
+				.filter((c) => c.method === 'leftJoin')
+				.map((c) => {
+					const t = c.args[0] as { _: { name?: string } } & Record<symbol, unknown>;
+					return (t as any)[Symbol.for('drizzle:Name')] ?? t?._?.name;
+				});
+		}
+		function whereParams() {
+			const call = selectChainCalls.find((c) => c.method === 'where');
+			return new SQLiteSyncDialect().sqlToQuery(call!.args[0] as any).params;
+		}
+
+		// One query, three left joins, all 1:1 — the venue by its FK and the
+		// production by uq_production_event — so the row set does not fan out and
+		// the count query stays single-table over the same predicate.
+		it('joins the venue and the production without fanning the rows out', async () => {
+			await listAll({ source: 'cmc' });
+
+			expect(joinedTables()).toEqual(expect.arrayContaining(['venue', 'production']));
+		});
+
+		it('folds the venue and date filters into the same predicate as the count', async () => {
+			await listAll({
+				source: 'cmc',
+				venueId: 'ven-1',
+				from: new Date('2026-09-01T00:00:00Z'),
+				to: new Date('2026-09-30T23:59:00Z')
+			});
+
+			const wheres = selectChainCalls.filter((c) => c.method === 'where');
+			// dataQ and countQ both get one, and they are the same predicate.
+			expect(wheres).toHaveLength(2);
+			const render = (c: (typeof wheres)[number]) =>
+				new SQLiteSyncDialect().sqlToQuery(c.args[0] as any).params;
+			expect(render(wheres[0])).toEqual(render(wheres[1]));
+			expect(whereParams()).toContain('ven-1');
+		});
+
+		// A member's private working copy is not a staff browsing surface, and the
+		// new filters must not have displaced the exclusion that says so.
+		it('still holds back community drafts', async () => {
+			await listAll({ venueId: 'ven-1' });
+
+			const params = whereParams();
+			expect(params).toContain('community');
+			expect(params).toContain('draft');
+		});
+	});
 
 	describe('unpublishWithNotice', () => {
 		const publishedBandEvent = {

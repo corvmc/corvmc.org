@@ -14,6 +14,7 @@ import {
 import { ticketStatuses } from '$lib/server/db/schema/ticket';
 import { reservationStatuses } from '$lib/server/db/schema/reservation';
 import { eventStatuses } from '$lib/server/db/schema/event';
+import { productionStatuses } from '$lib/server/db/schema/production';
 import { flagStatuses } from '$lib/server/db/schema/flag';
 import { groupMemberStatuses } from '$lib/server/db/schema/group';
 import { bandTiers } from '$lib/server/db/schema/band-site';
@@ -77,6 +78,7 @@ const vocabularies: Record<string, readonly string[]> = {
 	volunteerProfile: volunteerProfileStatuses,
 	instructor: instructorStatuses,
 	suggestion: suggestionStatuses,
+	production: productionStatuses,
 	// `visible` is intentionally absent: an on-the-board suggestion shows no badge.
 	suggestionVisibility: suggestionVisibilities.filter((v) => v !== 'visible'),
 	...derivedStatuses
