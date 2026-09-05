@@ -39,10 +39,14 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 	const drafts = events.filter((e) => e.status === 'draft');
 	const cancelled = events.filter((e) => e.status === 'cancelled');
 
-	const rows: Record<string, unknown>[] = [];
+	const rows: (typeof production.$inferInsert)[] = [];
 	const used = new Set<string>();
 
-	function add(event: SeedEvent | undefined, status: string, extras: Record<string, unknown> = {}) {
+	function add(
+		event: SeedEvent | undefined,
+		status: NonNullable<(typeof production.$inferSelect)['status']>,
+		extras: Partial<typeof production.$inferInsert> = {}
+	) {
 		if (!event || used.has(event.id)) return;
 		used.add(event.id);
 		rows.push({
@@ -94,7 +98,7 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 
 	// upcoming[2] and everything after it stay production-less on purpose.
 
-	await batchInsert(production, rows as never[]);
+	await batchInsert(production, rows);
 
 	return { productions: rows.length, withoutProduction: upcoming.length - 2 };
 }

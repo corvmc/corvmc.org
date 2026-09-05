@@ -182,6 +182,9 @@ importers:
       drizzle-orm:
         specifier: 1.0.0-rc.3
         version: 1.0.0-rc.3(@cloudflare/workers-types@5.20260901.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.20.0)(better-sqlite3@13.0.3)(pg@8.21.0)(postgres@3.4.9)(zod@4.5.4)
+      drizzle-zod:
+        specifier: 1.0.0-beta.14-56703c9
+        version: 1.0.0-beta.14-56703c9(drizzle-orm@1.0.0-rc.3(@cloudflare/workers-types@5.20260901.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.20.0)(better-sqlite3@13.0.3)(pg@8.21.0)(postgres@3.4.9)(zod@4.5.4))(zod@4.5.4)
       eslint:
         specifier: ^10.9.1
         version: 10.9.1(jiti@2.7.0)
@@ -3433,6 +3436,12 @@ packages:
         optional: true
       zod:
         optional: true
+
+  drizzle-zod@1.0.0-beta.14-56703c9:
+    resolution: {integrity: sha512-sipAZBLTu+Y6IU9275T3a682dXp7xHevbodsw7OgHSEg8FOht2TpjZFn3lEIlrV97yXdIlez4/v+0LXyJlgBLg==}
+    peerDependencies:
+      drizzle-orm: '>=1.0.0-beta.2'
+      zod: ^3.25.0 || ^4.0.0
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -8539,6 +8548,11 @@ snapshots:
       better-sqlite3: 13.0.3
       pg: 8.21.0
       postgres: 3.4.9
+      zod: 4.5.4
+
+  drizzle-zod@1.0.0-beta.14-56703c9(drizzle-orm@1.0.0-rc.3(@cloudflare/workers-types@5.20260901.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.20.0)(better-sqlite3@13.0.3)(pg@8.21.0)(postgres@3.4.9)(zod@4.5.4))(zod@4.5.4):
+    dependencies:
+      drizzle-orm: 1.0.0-rc.3(@cloudflare/workers-types@5.20260901.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.20.0)(better-sqlite3@13.0.3)(pg@8.21.0)(postgres@3.4.9)(zod@4.5.4)
       zod: 4.5.4
 
   dunder-proto@1.0.1:

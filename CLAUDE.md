@@ -16,16 +16,16 @@ Stripe, Postmark. Documentation index: `docs/README.md`.
 Always through `pnpm`. A global prettier 2.8.8 shadows this project's prettier 3, so `npx prettier`
 reports results that are simply wrong.
 
-| Command                   | What it does                                            | CI job that already runs it |
-| ------------------------- | ------------------------------------------------------- | --------------------------- |
-| `pnpm check`              | svelte-check                                            | Svelte Check                |
-| `pnpm lint:changed`       | prettier + eslint vs `BASE_REF` (default `origin/main`) | Lint (changed)              |
-| `pnpm lint`               | the whole tree, including markdown                      | Lint (full)                 |
-| `pnpm test:unit -- --run` | vitest, one shot                                        | Unit tests                  |
-| `pnpm test:e2e`           | playwright — add `--workers=1` locally                  | E2E                         |
-| `pnpm docs:check`         | docs integrity + route drift                            | Docs integrity              |
-| `pnpm db:generate`        | the only way to create a migration                      | Schema drift                |
-| `pnpm db:reset`           | rebuild local D1 (wipe + migrate + seed)                | —                           |
+| Command                   | What it does                                             | CI job that already runs it |
+| ------------------------- | -------------------------------------------------------- | --------------------------- |
+| `pnpm check`              | svelte-check over `src`, then `tsc` over `scripts`+`e2e` | Svelte Check                |
+| `pnpm lint:changed`       | prettier + eslint vs `BASE_REF` (default `origin/main`)  | Lint (changed)              |
+| `pnpm lint`               | the whole tree, including markdown                       | Lint (full)                 |
+| `pnpm test:unit -- --run` | vitest, one shot                                         | Unit tests                  |
+| `pnpm test:e2e`           | playwright — add `--workers=1` locally                   | E2E                         |
+| `pnpm docs:check`         | docs integrity + route drift                             | Docs integrity              |
+| `pnpm db:generate`        | the only way to create a migration                       | Schema drift                |
+| `pnpm db:reset`           | rebuild local D1 (wipe + migrate + seed)                 | —                           |
 
 **Read the third column before running anything in the first.** Every one of those jobs runs on
 your PR and again on the merge-queue ref, so a whole-tree run here proves nothing new — and a

@@ -376,7 +376,7 @@ export async function seedRiders(roles: SeedRole[]) {
 	const [bigHead] = await db
 		.insert(rider)
 		.values({
-			groupId: oversized.groupId ?? oversized.id,
+			groupId: oversized.id,
 			monitorFormat: 'iems',
 			notes: 'We can drop the tom mics and the third vocal if the desk is tight.'
 		})

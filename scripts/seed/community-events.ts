@@ -36,7 +36,7 @@ export const COMMUNITY_TITLES = [
 
 export async function seedCommunityEvents(members: SeedUser[], staffUser: SeedUser) {
 	console.log('Seeding community listings...');
-	const rows = [];
+	const rows: (typeof eventListing.$inferSelect)[] = [];
 
 	if (members.length < 2) return rows;
 

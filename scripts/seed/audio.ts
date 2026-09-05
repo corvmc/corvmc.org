@@ -31,7 +31,7 @@ import {
 import { buildSchedule } from '../../src/lib/server/audio/radio-rotation';
 import { batchInsert, env } from './db';
 import { synthesizeTrack } from './audio-fixtures';
-import { pick, randomInt } from './util';
+import { pick, random, randomInt } from './util';
 
 // ---------------------------------------------------------------------------
 // Pools
@@ -308,25 +308,25 @@ export async function seedAudio(bands: any[], users: any[]) {
 				0,
 				2500
 			]);
-			const coverFees = !free && Math.random() < 0.45;
+			const coverFees = !free && random() < 0.45;
 			const paidCents = free ? 0 : release.priceMinCents + pick([0, 0, 300, 500, 1500]);
 			const amounts = free
 				? { amountPaidCents: 0, platformFeeCents: 0, bandNetCents: 0, feeCoveredCents: 0 }
 				: split(paidCents, cmcBps, coverFees);
 
 			// One in eight is abandoned at Stripe — what the stale sweep exists for.
-			const abandoned = !forced && !free && Math.random() < 0.125;
+			const abandoned = !forced && !free && random() < 0.125;
 			// And one in twelve of the rest was refunded, so /staff/music has a
 			// reversed row to render and the Refund button has something to be
 			// absent from. Never the guaranteed demo purchase — that one exists so
 			// a developer can open a working download.
-			const refunded = !forced && !free && !abandoned && Math.random() < 0.083;
+			const refunded = !forced && !free && !abandoned && random() < 0.083;
 
 			purchaseRows.push({
 				id: randomUUID(),
 				releaseId: release.id,
 				// A third of buyers never logged in. The email is the entitlement.
-				userId: forced || Math.random() < 0.66 ? buyer.id : null,
+				userId: forced || random() < 0.66 ? buyer.id : null,
 				buyerEmail: buyer.email,
 				purchaseId: randomUUID(),
 				...amounts,

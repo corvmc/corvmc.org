@@ -1,0 +1,13 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		// The `.mjs` helpers under `scripts/` are deliberately untyped, but their
+		// shapes still infer usefully for the `.ts` files that import them. Parse
+		// them, do not report on them — turning `checkJs` on here raises ~56 errors
+		// in tooling this project is not about.
+		"checkJs": false,
+		"types": ["node", "@cloudflare/workers-types"],
+		"noEmit": true
+	},
+	"include": ["scripts/**/*.ts", "e2e/**/*.ts", "src/app.d.ts"]
+}

@@ -4,7 +4,7 @@ import { ticket } from '../../src/lib/server/db/schema/ticket';
 import { db } from './db';
 import { TICKET_CODES_PREFIX } from './pools';
 import { type SeedEvent, type SeedUser } from './types';
-import { pick, randomInt } from './util';
+import { pick, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 
@@ -82,7 +82,7 @@ export async function seedTickets(users: SeedUser[], _events: SeedEvent[]) {
 
 			for (let i = 0; i < qty; i++) {
 				const code = `${TICKET_CODES_PREFIX}-${randomUUID().slice(0, 8).toUpperCase()}`;
-				const checkedIn = isPast && Math.random() > 0.3;
+				const checkedIn = isPast && random() > 0.3;
 
 				const [t] = await db
 					.insert(ticket)

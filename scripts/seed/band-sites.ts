@@ -9,7 +9,7 @@ import {
 	LAST_NAMES,
 	PRESS_QUOTES
 } from './pools';
-import { pick, pickN, randomInt } from './util';
+import { pick, pickN, random, randomInt } from './util';
 import { presetBlocks } from '../../src/lib/utils/band-site-preset';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
@@ -116,7 +116,7 @@ export async function seedBandPageConfigs(bands: any[]) {
 				email: `mgmt@${b.slug}.band`
 			},
 			prContact:
-				Math.random() > 0.5
+				random() > 0.5
 					? {
 							name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
 							email: `press@${b.slug}.band`
