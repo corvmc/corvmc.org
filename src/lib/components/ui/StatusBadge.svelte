@@ -235,7 +235,7 @@
 
 		// Orientation. `pending`, `scheduled` and `completed` are already mapped
 		// above and mean here what they mean there.
-		waived: { icon: IconCircleOff, color: 'text-base-content/50' },
+		waived: { icon: IconCircleOff, color: 'text-base-content/60' },
 
 		// Suggestion statuses. `open` (inbox) and `pending_review` (events) are
 		// already mapped above and mean the same thing here.
