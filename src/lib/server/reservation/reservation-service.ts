@@ -203,6 +203,14 @@ async function emitCreated(row: typeof reservation.$inferSelect): Promise<void> 
 // createWaitlisted() — create with waitlisted status (skip conflict check)
 // ---------------------------------------------------------------------------
 
+/**
+ * Take a place in the queue, and say nothing about it.
+ *
+ * A queue position is not a visit: nobody turns up, and the row can still be
+ * cancelled out from under itself by `expireWaitlisted()` without a
+ * `reservation.cancelled` to clean up after it. `announceWaitlistConfirmed()`
+ * is where the announcement happens instead.
+ */
 export async function createWaitlisted(params: CreateReservationParams): Promise<ReservationRow> {
 	const { userId, bookerType, bookerId, startsAt, endsAt, notes } = params;
 
@@ -225,6 +233,41 @@ export async function createWaitlisted(params: CreateReservationParams): Promise
 		.returning();
 
 	return row;
+}
+
+/**
+ * A queued booking has just become a real one — announce it.
+ *
+ * The `waitlisted -> scheduled` transition is the moment a queue position turns
+ * into somebody turning up, so it is the moment `reservation.created` is owed:
+ * a member whose very first booking went through the waitlist gets the same
+ * orientation shift as one who booked a free slot outright.
+ *
+ * Deliberately *not* `promoteNextWaitlisted()`, which is the other candidate and
+ * the wrong one. Promotion offers the slot — it stamps the 24h window and
+ * emails — and leaves the row `waitlisted`, where `expireWaitlisted()` can still
+ * cancel it without emitting `reservation.cancelled`. An orientation raised
+ * there would outlive the booking it was raised for.
+ *
+ * Re-reads under the same status filter the conflict scans use rather than
+ * trusting the caller's row, so a confirmation that the post-update race check
+ * rolled back to `waitlisted` announces nothing.
+ */
+export async function announceWaitlistConfirmed(reservationId: string): Promise<void> {
+	const [row] = await db
+		.select()
+		.from(reservation)
+		.where(
+			and(
+				eq(reservation.id, reservationId),
+				notInArray(reservation.status, ['cancelled', 'waitlisted'])
+			)
+		)
+		.limit(1);
+
+	if (!row) return;
+
+	await emitCreated(row);
 }
 
 // ---------------------------------------------------------------------------

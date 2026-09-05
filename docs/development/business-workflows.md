@@ -1081,6 +1081,23 @@ where a sixth would be forgotten — and **after** the post-insert race re-check
 that gets compensated away never announces itself. `orientation-listener.ts` checks the booking
 is a member's (`bookerType === 'user'`) and their first (`priorBookingCount`), then applies.
 
+A booking that came off the **waitlist** announces itself too, from
+`announceWaitlistConfirmed()`, called by the `confirmWaitlisted` remote after its own race
+re-check. The emit hangs off the `waitlisted → scheduled` transition and nothing else:
+`createWaitlisted()` stays quiet because a queue position is not a visit, and
+`promoteNextWaitlisted()` stays quiet because it only _offers_ the slot — it stamps the 24h
+window and leaves the row `waitlisted`, where `expireWaitlisted()` can still cancel it without
+emitting `reservation.cancelled`. An orientation raised at promotion would outlive its booking;
+one raised at confirmation cannot, because the row is real from then on and an ordinary
+`cancel()` stands the shift down. `announceWaitlistConfirmed()` re-reads the row under the
+`not in ('cancelled','waitlisted')` filter rather than trusting the caller's copy, so a
+confirmation the race check rolled back announces nothing.
+
+The status filter in `priorBookingCount` is what makes this work in both directions: the rest of
+the member's queue counts for nothing while they are still in it, so the booking they actually
+got is still their first — and once one of those queued rows is itself confirmed, it becomes
+history and suppresses a second orientation.
+
 **Idempotence is the re-apply guard**, not a mechanism of its own. The bus is in-process and
 best-effort with no dedupe, so a re-delivered event lands on the same check that stops a
 coordinator double-clicking Apply and is refused by name. Without an orientation list in the
@@ -1133,10 +1150,13 @@ already enforces it. Nothing new claims, assigns, or notifies.
   non-waitlisted booking. A **waitlisted** row is not history — that was a real defect in
   `isFirstReservationSql`, harmless while it only drove a badge and silently suppressing an
   orientation once it drove this.
-- **A member whose first booking was waitlisted got no orientation** → known and accepted.
-  `createWaitlisted()` does not emit, because `expireWaitlisted()` cancels without emitting
-  `reservation.cancelled`, so an orientation raised from a queue position would never be
-  cleaned up. Staff create one by hand.
+- **A member whose first booking was waitlisted got no orientation** → they get one when they
+  confirm the slot, not when they join the queue and not when it is offered to them. Check the
+  row actually reached `scheduled`: `confirmWaitlisted` rolls a confirmation back to
+  `waitlisted` if a competing booking landed mid-write, and `announceWaitlistConfirmed()`
+  deliberately says nothing for a row still in the queue. A booking that is only _offered_ —
+  `waitlist_notified_at` set, status still `waitlisted` — has not been confirmed yet and is
+  correctly silent.
 - **An orientation stuck at "Booked" after the date passed** → it cannot be. The state is
   derived, and `stateOf` falls back to `pending` once `scheduledFor` is in the past with no
   completion.
