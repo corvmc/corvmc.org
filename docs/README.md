@@ -14,14 +14,20 @@ system is designed and built; the user manual (`manual/`) describes how to use i
 | [`checklists/`](#checklists)     | Cross-cutting rollouts tracked to completion                                  | Developers          |
 | [`manual/`](#manual)             | End-user manual manifest & public-site articles                               | End users           |
 
-Two working files live at the repo root rather than in here, because they are edited constantly
-and are as much backlog as documentation. Specs and conventions link to both, so they are listed
-for findability, not because they belong to a folder above:
+The backlog is **[GitHub Issues](https://github.com/corvmc/corvmc.org/issues)**, not a file in
+here. `CHORES.md` and `IDEAS.md` used to sit at the repo root and were retired into the tracker in
+September 2026 — by then `CHORES.md` carried an open item whose own "Done" entry sat eighty lines
+below it, which is the argument for the move. Docs describe how things work; what is _owed_ is an
+issue, because an issue can be searched, labelled, assigned and closed by the PR that fixes it.
 
-| File                        | What's in it                                                                      |
-| --------------------------- | --------------------------------------------------------------------------------- |
-| [`CHORES.md`](../CHORES.md) | Running list of known gaps and cleanup owed — the source for "recorded in CHORES" |
-| [`IDEAS.md`](../IDEAS.md)   | Unbuilt feature ideas and the library table; where a spec starts life             |
+| You want               | Run                                             |
+| ---------------------- | ----------------------------------------------- |
+| Cleanup and known gaps | `gh issue list --label tech-debt`               |
+| Unbuilt feature ideas  | `gh issue list --label enhancement`             |
+| Anything in one area   | `gh issue list --label area:events` (and so on) |
+
+Library evaluations for unbuilt work moved to
+[`reports/library-candidates.md`](reports/library-candidates.md).
 
 **Status legend:** ✅ Current · 🔧 In progress · 📋 Designed, not built · 📦 Historical (shipped) · ⚠️ Action needed
 
@@ -153,14 +159,14 @@ user-management audit by writing a spec for each. None has been built since.
 Cross-cutting rather than owned by one panel. All six phases shipped; what survives in the spec is
 the design rationale — why the parent link carries no foreign key, and why `file` and `media` are
 two tables. How the layer _behaves_ is in the feature catalog's image-delivery and scheduled-jobs
-sections. Two follow-ups it did not close are in [`CHORES.md`](../CHORES.md): the sweep owes group
+sections. Two follow-ups it did not close are open issues: the sweep owes group
 documents a pass over the private bucket, and a moderation takedown no longer kills the old poster
 URL immediately.
 
 ## plans
 
 Sequenced build plans, kept only while they track something still in motion. A finished plan's
-content is either shipped (git history is the record) or was folded into `CHORES.md` when retired.
+content is either shipped (git history is the record) or was filed as an issue when retired.
 
 | Doc                                                            | Status | Notes                                     |
 | -------------------------------------------------------------- | ------ | ----------------------------------------- |
@@ -193,15 +199,16 @@ content is either shipped (git history is the record) or was folded into `CHORES
 
 ## reports
 
-| Doc                                                                        | Status | Notes                                                                                        |
-| -------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
-| [feature-catalog.md](reports/feature-catalog.md)                           | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship             |
-| [standardization-audit.md](reports/standardization-audit.md)               | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                     |
-| [inventory-workflow-findings.md](reports/inventory-workflow-findings.md)   | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign           |
-| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md)   | 📦     | The same pass over volunteering; findings complete, the restructure is separate work         |
-| [project-management-prior-art.md](reports/project-management-prior-art.md) | ✅     | Prior art behind the `project` entity — CMMS, venue, makerspace and ERP systems surveyed     |
-| [handoff/press-kit.md](handoff/press-kit.md)                               | ✅     | Screen handoff for the press-kit area — 12 screens at two viewports, with who/what/why each  |
-| [social-prior-art.md](reports/social-prior-art.md)                         | ✅     | The social vertical by role, against the products that compete with each — and what to steal |
+| Doc                                                                        | Status | Notes                                                                                           |
+| -------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| [feature-catalog.md](reports/feature-catalog.md)                           | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship                |
+| [standardization-audit.md](reports/standardization-audit.md)               | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                        |
+| [inventory-workflow-findings.md](reports/inventory-workflow-findings.md)   | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign              |
+| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md)   | 📦     | The same pass over volunteering; findings complete, the restructure is separate work            |
+| [project-management-prior-art.md](reports/project-management-prior-art.md) | ✅     | Prior art behind the `project` entity — CMMS, venue, makerspace and ERP systems surveyed        |
+| [handoff/press-kit.md](handoff/press-kit.md)                               | ✅     | Screen handoff for the press-kit area — 12 screens at two viewports, with who/what/why each     |
+| [social-prior-art.md](reports/social-prior-art.md)                         | ✅     | The social vertical by role, against the products that compete with each — and what to steal    |
+| [library-candidates.md](reports/library-candidates.md)                     | ✅     | Packages surveyed for unbuilt work, and the ones rejected — split out of the retired `IDEAS.md` |
 
 ## checklists
 

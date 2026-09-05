@@ -14,7 +14,7 @@
 	 * "Place exactly" disclosure below is a complete typed path to the same two
 	 * numbers. Somebody who cannot drag can still lay out a stage.
 	 *
-	 * That is also why there is **no plotting library**. `IDEAS.md` lists `konva`
+	 * That is also why there is **no plotting library**. `docs/reports/library-candidates.md` lists `konva`
 	 * for this and `conventions.md#dependency-posture` would ordinarily favour
 	 * taking it — but a canvas draws pixels, not focusable controls, so the
 	 * keyboard and screen-reader path would have to be built beside it anyway.
