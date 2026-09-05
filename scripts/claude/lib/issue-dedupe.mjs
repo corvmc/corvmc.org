@@ -46,6 +46,9 @@ const CREATE = /^gh\s+issue\s+create(\s|$)/;
  * What a command does to the marker: `'search'` arms it, `'create'` requires it,
  * `null` is everything else. A command chaining both is a search — it arms the
  * marker before the create in the same segment list is checked against it.
+ *
+ * @param {string} command
+ * @returns {'search' | 'create' | null}
  */
 export function classify(command) {
 	const segments = commandSegments(command);
@@ -54,17 +57,23 @@ export function classify(command) {
 	return null;
 }
 
-/** Where this session's marker lives. Not `.git/` — that is a file in a worktree. */
+/**
+ * Where this session's marker lives. Not `.git/` — that is a file in a worktree.
+ *
+ * @param {string | undefined} sessionId
+ */
 export function markerPath(sessionId) {
 	const safe = String(sessionId || 'unknown').replace(/[^A-Za-z0-9_-]/g, '');
 	return join(tmpdir(), `claude-issue-search-${safe || 'unknown'}`);
 }
 
+/** @param {string} path @param {number} [now] */
 export function armMarker(path, now = Date.now()) {
 	if (!existsSync(path)) closeSync(openSync(path, 'w'));
 	utimesSync(path, new Date(now), new Date(now));
 }
 
+/** @param {string} path @param {number} [now] */
 export function markerIsFresh(path, now = Date.now()) {
 	if (!existsSync(path)) return false;
 	return now - statSync(path).mtimeMs < MARKER_TTL_MS;
@@ -74,6 +83,10 @@ export function markerIsFresh(path, now = Date.now()) {
  * The whole guard over one payload. Returns `true` when the create should be
  * blocked; every other path is silent, including a payload that is not a
  * `PreToolUse` Bash call at all.
+ *
+ * @param {string} raw the hook payload, as JSON
+ * @param {{ now?: number }} [opts]
+ * @returns {boolean}
  */
 export function evaluate(raw, { now = Date.now() } = {}) {
 	const command = readCommand(raw);

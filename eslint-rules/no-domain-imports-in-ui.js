@@ -24,6 +24,10 @@ export default {
 		}
 	},
 	create(context) {
+		/**
+		 * @param {import('eslint').Rule.Node} node
+		 * @param {unknown} source the import specifier, which is only a string on a literal
+		 */
 		const check = (node, source) => {
 			if (typeof source !== 'string') return;
 			if (/^\$lib\/(remote|server)\b/.test(source)) {

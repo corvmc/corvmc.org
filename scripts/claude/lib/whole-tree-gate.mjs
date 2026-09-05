@@ -46,6 +46,7 @@ const VALUE_FLAGS = new Set([
  * that way is the wrong direction, so numbers are excluded by shape rather than
  * by knowing which flag they followed.
  */
+/** @param {string[]} args */
 function hasPathArg(args) {
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
@@ -65,6 +66,9 @@ function hasPathArg(args) {
  * Leading `VAR=value` assignments, removed. `CMC_FULL_GATE=1` is the escape
  * hatch: it means a human asked for this run in this turn, so the segment
  * carrying it is not this guard's business.
+ *
+ * @param {string[]} tokens
+ * @returns {string[] | null} null when `CMC_FULL_GATE` is set — the caller asked for the run.
  */
 function withoutEnv(tokens) {
 	let i = 0;
@@ -77,6 +81,7 @@ function withoutEnv(tokens) {
 }
 
 /** The CI job that already covers a pnpm script, or `undefined` if it is fine. */
+/** @param {string} script @param {string[]} args */
 function pnpmScript(script, args) {
 	if (script === 'test:e2e' || script === 'test:e2e:run' || script === 'test:e2e:prepare')
 		return 'E2E';
@@ -89,6 +94,7 @@ function pnpmScript(script, args) {
 }
 
 /** The CI job that already covers a directly-invoked binary. */
+/** @param {string} bin @param {string[]} args */
 function binary(bin, args) {
 	if (bin === 'vitest' && !hasPathArg(args)) return 'Unit tests';
 	if (bin === 'playwright' && args[0] === 'test') return 'E2E';
@@ -100,6 +106,7 @@ function binary(bin, args) {
  * The first segment of `command` that duplicates a CI job, or `null`.
  * Returns `{ segment, job }` so the guard can name both.
  */
+/** @param {string} command */
 export function redundantGate(command) {
 	for (const segment of commandSegments(command)) {
 		const tokens = withoutEnv(segment.split(/\s+/));

@@ -18,6 +18,7 @@ import { join, relative } from 'path';
 const ROUTES_DIR = 'src/routes';
 export const SNAPSHOT_PATH = 'docs/manual/route-inventory.json';
 
+/** @param {string} dir @returns {string[]} */
 function walk(dir) {
 	const out = [];
 	for (const entry of readdirSync(dir)) {
@@ -28,7 +29,11 @@ function walk(dir) {
 	return out;
 }
 
-/** Turn a `src/routes/.../+page.svelte` path into a normalized URL route. */
+/**
+ * Turn a `src/routes/.../+page.svelte` path into a normalized URL route.
+ *
+ * @param {string} file
+ */
 export function fileToRoute(file) {
 	let p = '/' + relative(ROUTES_DIR, file).replace(/\/?\+page\.svelte$/, '');
 	// Drop SvelteKit route groups: (public), (app), etc.
@@ -41,6 +46,7 @@ export function fileToRoute(file) {
 	return p === '' ? '/' : p;
 }
 
+/** @param {string} route */
 export function panelOf(route) {
 	if (route.startsWith('/member')) return 'member';
 	if (route.startsWith('/staff')) return 'staff';
@@ -48,7 +54,13 @@ export function panelOf(route) {
 	return 'public';
 }
 
-/** Returns a sorted array of { route, panel } for every page route. */
+/** @typedef {{ route: string, panel: string }} RouteEntry */
+
+/**
+ * Returns a sorted array of { route, panel } for every page route.
+ *
+ * @returns {RouteEntry[]}
+ */
 export function listRoutes() {
 	if (!existsSync(ROUTES_DIR)) return [];
 	const routes = walk(ROUTES_DIR).map((file) => {
@@ -56,11 +68,17 @@ export function listRoutes() {
 		return { route, panel: panelOf(route) };
 	});
 	// De-dupe (e.g. matcher collisions) and sort for stable diffs.
+	/** @type {Map<string, RouteEntry>} */
 	const seen = new Map();
 	for (const r of routes) seen.set(r.route, r);
 	return [...seen.values()].sort((a, b) => a.route.localeCompare(b.route));
 }
 
+/**
+ * The committed route inventory, or null when `pnpm docs:routes` has never run.
+ *
+ * @returns {RouteEntry[] | null}
+ */
 export function readSnapshot() {
 	if (!existsSync(SNAPSHOT_PATH)) return null;
 	return JSON.parse(readFileSync(SNAPSHOT_PATH, 'utf-8'));
