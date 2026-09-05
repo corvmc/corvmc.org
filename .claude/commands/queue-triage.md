@@ -27,15 +27,24 @@ Empty output means nothing is stranded. Say so and stop.
      --jq '[.[] | select(.conclusion == "failure" and (.headBranch | contains("/pr-<N>-")))] | first'
    ```
 
-2. Read the failing job's log — `gh run view <id> --log-failed` — and count how many times this PR
-   has already been round-tripped: `gh api repos/corvmc/corvmc.org/issues/<N>/timeline` and count
-   `removed_from_merge_queue`.
+2. Read the failing job's log — `gh run view <id> --log-failed` — then get the spec's history
+   rather than the PR's. The guard has already opened or commented on a `flaky: <spec>` issue, and
+   its comment count is how many PRs that spec has taken out of the queue:
+
+   ```bash
+   gh issue list --label flaky --state open
+   gh issue view <N> --comments
+   ```
+
+   `gh api repos/corvmc/corvmc.org/issues/<N>/timeline | grep removed_from_merge_queue` still
+   counts this PR's own round trips, which is a different and smaller question — reach for it only
+   if the guard recorded nothing.
 
 3. Classify honestly. It failed on the queue ref, tested against the queue head, so "green on the
    PR's own head" is not evidence of anything.
    - **A known CI-only flake** — `volunteering.e2e.ts` is the documented one — re-queue with
      `gh pr merge --auto`. The guard's `enqueued` job clears the label.
-   - **Anything else, including a flake that has now failed three or more times** — leave it
+   - **Anything else, including a spec whose `flaky` issue already has three failures** — leave it
      labelled, report the diagnosis to the user, and do not re-queue. A test that fails on the
      queue head and nowhere else is a real ordering bug more often than it is bad luck.
    - **No failed run at all** (manual removal, conflict, or the queue's one-hour check timeout) —
