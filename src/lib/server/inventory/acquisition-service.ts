@@ -17,6 +17,7 @@ import { inventoryAsset } from '$lib/server/db/schema/inventory';
 import { DomainError } from '$lib/server/domain-error';
 import { type AcquisitionKind } from '$lib/config';
 import type { EquipmentCondition } from '$lib/config';
+import { chunk, chunkSize } from '$lib/server/utils/chunk';
 
 /**
  * How stock arrives — purchase, donation or grant.
@@ -156,20 +157,12 @@ export class UnknownItemError extends DomainError {
 }
 
 /**
- * D1 caps one statement at 100 bound parameters, so a multi-row insert has to
- * be split by *column count*, not by a single round number. Each of these is
- * `floor(100 / columns)` for the row shape below it, which is why they differ.
+ * Column counts for `chunkSize` — see `$lib/server/utils/chunk`. Three numbers
+ * rather than one because the row budget falls as the row gets wider.
  */
 const LINE_COLUMNS = 5;
 const ASSET_COLUMNS = 8;
 const MOVEMENT_COLUMNS = 9;
-const chunkSize = (columns: number) => Math.floor(100 / columns);
-
-function chunk<T>(rows: T[], size: number): T[][] {
-	const out: T[][] = [];
-	for (let i = 0; i < rows.length; i += size) out.push(rows.slice(i, i + size));
-	return out;
-}
 
 export interface BulkAcquisitionResult {
 	acquisitionId: string;
