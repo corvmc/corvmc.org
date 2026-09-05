@@ -77,6 +77,16 @@ local run you did not do. Triage of a red or rejected run is the `qc` role's job
   `gh issue create --template finding.md`, labelled `agent-filed`. Fixing it inside an unrelated PR
   buries it; leaving it in the chat loses it when the session ends. A `PreToolUse` hook blocks the
   create until a search has run.
+- **A review with several findings is a parent issue plus one sub-issue each**, not one long body —
+  including when the ask was for "an issue". The parent carries only what the findings share: scope,
+  method, anything that shifted mid-review, and an explicit "not in this issue" for adjacent
+  problems deliberately left out. Each child is a `finding.md` in its own right. A seven-finding
+  body cannot be assigned, closed or picked up in parts, and it forces one set of labels onto
+  findings that need different triage. Attach with
+  `gh api --method POST repos/<owner>/<repo>/issues/<parent>/sub_issues -F sub_issue_id=<id>`, which
+  takes the child's **database id** (`gh api repos/<owner>/<repo>/issues/<n> --jq .id`), not its
+  number. Pull in anything already filed from the same pass; cross-reference another session's issue
+  rather than reparenting it.
 - **No co-author lines** in commit messages.
 
 ## Workflow
