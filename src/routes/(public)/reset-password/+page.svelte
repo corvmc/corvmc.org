@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { resetPassword } from '$lib/remote/password-reset.remote';
 
+	import Button from '$lib/components/ui/Button.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -44,14 +45,14 @@
 						<Alert type="success" class="text-sm">
 							Your password has been changed, and any other sessions were signed out.
 						</Alert>
-						<a class="btn w-full btn-primary" href={resolve('/login')}>Sign in</a>
+						<Button variant="primary" class="w-full" href={resolve('/login')}>Sign in</Button>
 					{:else if linkFailed}
 						<Alert type="error" class="text-sm">
 							That reset link has expired or has already been used.
 						</Alert>
-						<a class="btn w-full btn-primary" href={resolve('/forgot-password')}
-							>Request a new link</a
-						>
+						<Button variant="primary" class="w-full" href={resolve('/forgot-password')}>
+							Request a new link
+						</Button>
 					{:else}
 						{#each tokenIssues as issue (issue.message)}
 							<Alert type="error" class="text-sm">{issue.message}</Alert>

@@ -39,7 +39,7 @@
 							it hasn't arrived in a few minutes.
 						</Alert>
 					{:else}
-						<p class="text-sm opacity-70">
+						<p class="text-muted">
 							Enter the email address on your account and we'll send you a link to set a new
 							password.
 						</p>

@@ -82,10 +82,13 @@ test('a member who has forgotten their password can set a new one and sign in', 
 	await login(page, SEED_RESET_EMAIL, SEED_RESET_NEW_PASSWORD);
 	await page.waitForURL(/\/member(\/|$|\?)/);
 
-	// And the old one is gone, not merely superseded.
+	// And the old one is gone, not merely superseded. The copy appears twice —
+	// the alert and its live region — so `.first()`; what actually matters is
+	// that the page never left /login.
 	await page.context().clearCookies();
 	await login(page, SEED_RESET_EMAIL, SEED_RESET_PASSWORD);
-	await expect(page.getByText(/invalid email or password/i)).toBeVisible();
+	await expect(page.getByText(/invalid email or password/i).first()).toBeVisible();
+	await expect(page).toHaveURL(/\/login/);
 
 	// The token was consumed by the reset, so the same link is now a dead end.
 	await page.goto(`/api/auth/reset-password/${token}?callbackURL=%2Freset-password`);
