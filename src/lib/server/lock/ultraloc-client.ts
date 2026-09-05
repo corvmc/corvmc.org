@@ -161,7 +161,7 @@ export function generateLockCode(): number {
 }
 
 /** Format a Date as the lock's local "YYYY-MM-DD HH:mm" daterange string. */
-function lockDateTime(date: Date): string {
+export function lockDateTime(date: Date): string {
 	return `${formatDateInTz(date, DEFAULT_TIMEZONE)} ${formatTimeInTz(date, DEFAULT_TIMEZONE)}`;
 }
 

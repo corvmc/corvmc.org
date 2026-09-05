@@ -123,7 +123,16 @@ const { ReservationConflictError } = vi.hoisted(() => ({
 vi.mock('$lib/server/reservation/reservation-service', () => ({
 	staffCreate: vi.fn().mockResolvedValue({ id: 'res-1' }),
 	cancel: vi.fn().mockResolvedValue(undefined),
+	adjustWindow: vi.fn().mockResolvedValue({
+		previousStartsAt: new Date('2025-07-15T02:00:00Z'),
+		previousEndsAt: new Date('2025-07-15T05:00:00Z')
+	}),
 	ReservationConflictError
+}));
+
+const mockSyncAccessWindow = vi.fn().mockResolvedValue(undefined);
+vi.mock('$lib/server/lock/lock-service', () => ({
+	syncAccessWindow: (...args: unknown[]) => mockSyncAccessWindow(...args)
 }));
 
 vi.mock('$lib/server/reservation/conflict-service', () => ({
@@ -176,7 +185,8 @@ import {
 } from './event-service';
 import {
 	staffCreate,
-	cancel as cancelReservation
+	cancel as cancelReservation,
+	adjustWindow
 } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { uploadFile, deleteObject, copyObject } from '$lib/server/storage';
@@ -619,7 +629,12 @@ describe('EventService', () => {
 	// -----------------------------------------------------------------------
 
 	describe('update with rebook', () => {
-		it('cancels old reservation and creates new one', async () => {
+		// Rebooking used to cancel the hold and create a replacement. The
+		// replacement carried no `lock_code`, and the only thing that mints one is
+		// a cron that has already run by the afternoon — so re-timing a show on the
+		// day it happens left nobody with a door code. Moving the window on the row
+		// that already has the code is the whole fix.
+		it('moves the existing reservation window instead of replacing the row', async () => {
 			// getById for the update call
 			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
 
@@ -634,26 +649,67 @@ describe('EventService', () => {
 				}
 			});
 
-			expect(cancelReservation).toHaveBeenCalledWith(
+			expect(adjustWindow).toHaveBeenCalledWith(
 				'res-1',
-				'staff-1',
-				'Event times changed — rebooking',
-				{ staffOverride: true }
+				new Date('2025-07-15T00:00:00Z'),
+				new Date('2025-07-15T07:00:00Z'),
+				{ overrideConflicts: false }
 			);
-			expect(staffCreate).toHaveBeenCalledWith(
-				expect.objectContaining({
-					bookerType: 'event_listing',
-					bookerId: 'evt-1',
-					status: 'confirmed' // event-booked space is staff-held, never member-confirmed
+			expect(cancelReservation).not.toHaveBeenCalled();
+			expect(staffCreate).not.toHaveBeenCalled();
+			// Same row, so the event keeps pointing where it pointed.
+			expect(lastUpdateSet?.reservationId).toBeUndefined();
+		});
+
+		// The regression that motivated adjustWindow: same day, code already
+		// provisioned. The lock's temporary user still pins the OLD window, so the
+		// door has to be re-synced — with the same code, because staff have already
+		// been told what it is.
+		it('re-syncs lock access when a show is re-timed on the day it runs', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+
+			await update('evt-1', {
+				rebook: {
+					userId: 'staff-1',
+					reservationStartsAt: new Date('2025-07-15T01:00:00Z'),
+					reservationEndsAt: new Date('2025-07-15T08:00:00Z'),
+					overrideConflicts: false
+				}
+			});
+
+			expect(mockSyncAccessWindow).toHaveBeenCalledWith(
+				'res-1',
+				new Date('2025-07-15T02:00:00Z'),
+				new Date('2025-07-15T05:00:00Z')
+			);
+		});
+
+		// A lock outage must not fail the re-time. The room booking is the
+		// authoritative record; the door code is a convenience derived from it.
+		it('still re-times the event when the lock is unreachable', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+			mockSyncAccessWindow.mockRejectedValueOnce(new Error('lock offline'));
+
+			await expect(
+				update('evt-1', {
+					title: 'New Title',
+					rebook: {
+						userId: 'staff-1',
+						reservationStartsAt: new Date('2025-07-15T01:00:00Z'),
+						reservationEndsAt: new Date('2025-07-15T08:00:00Z'),
+						overrideConflicts: false
+					}
 				})
-			);
+			).resolves.toBeDefined();
+
+			expect(lastUpdateSet?.title).toBe('New Title');
 		});
 
 		// A draft event's space is held the same way a published one's is. Booking
 		// it as `scheduled` made it look like an uncommitted member booking, and
 		// publish() never confirms it, so the unconfirmed sweep released the room.
 		it('creates a confirmed reservation for draft events too', async () => {
-			selectResult = [{ ...mockEventRow, status: 'draft', reservationId: 'res-1' }];
+			selectResult = [{ ...mockEventRow, status: 'draft', reservationId: null }];
 
 			await update('evt-1', {
 				rebook: {
@@ -667,8 +723,28 @@ describe('EventService', () => {
 			expect(staffCreate).toHaveBeenCalledWith(expect.objectContaining({ status: 'confirmed' }));
 		});
 
+		// The conflict check for an existing hold lives in adjustWindow, which
+		// excludes the reservation from its own comparison. This asserts the
+		// rejection reaches the caller rather than being swallowed here.
 		it('throws on conflict when override is false', async () => {
 			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+			vi.mocked(adjustWindow).mockRejectedValueOnce(new ReservationConflictError());
+
+			await expect(
+				update('evt-1', {
+					rebook: {
+						userId: 'staff-1',
+						reservationStartsAt: new Date('2025-07-15T00:00:00Z'),
+						reservationEndsAt: new Date('2025-07-15T07:00:00Z'),
+						overrideConflicts: false
+					}
+				})
+			).rejects.toThrow(ReservationConflictError);
+		});
+
+		// The create branch has no reservation to defer to, so it checks for itself.
+		it('throws on conflict when booking a first hold', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: null }];
 			vi.mocked(hasConflict).mockResolvedValueOnce(true);
 
 			await expect(
@@ -681,6 +757,8 @@ describe('EventService', () => {
 					}
 				})
 			).rejects.toThrow(ReservationConflictError);
+
+			expect(staffCreate).not.toHaveBeenCalled();
 		});
 
 		it('skips conflict check when override is true', async () => {
@@ -695,8 +773,12 @@ describe('EventService', () => {
 				}
 			});
 
+			// event-service does not run the check itself; adjustWindow is told not
+			// to either, so the override survives the hand-off.
 			expect(hasConflict).not.toHaveBeenCalled();
-			expect(staffCreate).toHaveBeenCalled();
+			expect(adjustWindow).toHaveBeenCalledWith('res-1', expect.any(Date), expect.any(Date), {
+				overrideConflicts: true
+			});
 		});
 
 		// This used to assert the opposite — that an event without a reservation was
@@ -730,10 +812,11 @@ describe('EventService', () => {
 
 		// The conflict check used to run *after* the cancellation, so a rejected
 		// window released the room and left the event pointing at a cancelled
-		// reservation, with nothing re-created and no compensating write.
+		// reservation, with nothing re-created and no compensating write. Nothing
+		// is released any more, but the guarantee is still worth holding.
 		it('leaves the existing hold intact when the new window conflicts', async () => {
 			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
-			vi.mocked(hasConflict).mockResolvedValueOnce(true);
+			vi.mocked(adjustWindow).mockRejectedValueOnce(new ReservationConflictError());
 
 			await expect(
 				update('evt-1', {
@@ -748,10 +831,13 @@ describe('EventService', () => {
 
 			expect(cancelReservation).not.toHaveBeenCalled();
 			expect(staffCreate).not.toHaveBeenCalled();
+			expect(mockSyncAccessWindow).not.toHaveBeenCalled();
 		});
 
-		// An event must not collide with its own hold when it is only being re-timed.
-		it('excludes the event current reservation from the conflict check', async () => {
+		// An event must not collide with its own hold when it is only being
+		// re-timed. The exclusion is adjustWindow's job now; what this asserts is
+		// that the reservation id reaches it at all.
+		it('hands the existing reservation id to adjustWindow', async () => {
 			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
 
 			await update('evt-1', {
@@ -763,7 +849,13 @@ describe('EventService', () => {
 				}
 			});
 
-			expect(hasConflict).toHaveBeenCalledWith(expect.any(Date), expect.any(Date), 'res-1');
+			expect(adjustWindow).toHaveBeenCalledWith(
+				'res-1',
+				expect.any(Date),
+				expect.any(Date),
+				expect.anything()
+			);
+			expect(hasConflict).not.toHaveBeenCalled();
 		});
 	});
 

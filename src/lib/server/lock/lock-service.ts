@@ -8,7 +8,8 @@ import {
 	createControlUser,
 	removeTemporaryUser,
 	listLockUsers,
-	generateLockCode
+	generateLockCode,
+	lockDateTime
 } from './ultraloc-client';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -68,20 +69,7 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
 
 	for (const row of rows) {
 		try {
-			const code = generateLockCode();
-
-			await createTemporaryUser({
-				name: row.memberName,
-				startTime: row.startsAt,
-				endTime: row.endsAt,
-				code
-			});
-
-			await db
-				.update(reservation)
-				.set({ lockCode: String(code), updatedAt: new Date() })
-				.where(eq(reservation.id, row.id));
-
+			await provisionAccessFor(row);
 			count++;
 		} catch (err) {
 			const msg = `Failed to provision lock access for reservation ${row.id}: ${(err as Error).message}`;
@@ -91,6 +79,138 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
 	}
 
 	return count;
+}
+
+/** One reservation's worth of provisioning: mint a code, open the window, record it. */
+async function provisionAccessFor(row: {
+	id: string;
+	startsAt: Date;
+	endsAt: Date;
+	memberName: string;
+	code?: number;
+}): Promise<number> {
+	const code = row.code ?? generateLockCode();
+
+	await createTemporaryUser({
+		name: row.memberName,
+		startTime: row.startsAt,
+		endTime: row.endsAt,
+		code
+	});
+
+	await db
+		.update(reservation)
+		.set({ lockCode: String(code), updatedAt: new Date() })
+		.where(eq(reservation.id, row.id));
+
+	return code;
+}
+
+// ---------------------------------------------------------------------------
+// syncAccessWindow — follow a booking that moved
+// ---------------------------------------------------------------------------
+
+/**
+ * Re-point the lock at a reservation whose window has changed.
+ *
+ * Two cases, and the daily cron covers neither:
+ *
+ * - **No code yet, and the booking now starts today.** `provisionDailyAccess`
+ *   runs once, in the morning. A show re-timed — or moved onto today — after
+ *   that has already been passed over, so mint here or nobody gets in.
+ * - **A code already issued, and the window moved.** The lock enforces access
+ *   through the temporary user's `daterange`, which still pins the old window:
+ *   push a show later and the code stops working at the old end time. Delete
+ *   that user and re-add it against the new window, keeping the **same code** —
+ *   staff have already been told what it is.
+ *
+ * Matching the lock user by its `daterange` start is what `cleanupPreviousDayAccess`
+ * already does. `createTemporaryUser` resolves on a deferred ack that carries no
+ * user id, which is why `reservation.lockAccessId` has never been written and
+ * cannot be used as the handle here.
+ *
+ * Errors are collected, not thrown: a lock outage must not fail the booking
+ * change that prompted it.
+ */
+export async function syncAccessWindow(
+	reservationId: string,
+	previousStartsAt: Date,
+	previousEndsAt: Date
+): Promise<{ synced: boolean; errors: string[] }> {
+	const errors: string[] = [];
+	const tz = DEFAULT_TIMEZONE;
+
+	const [row] = await db
+		.select({
+			id: reservation.id,
+			status: reservation.status,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			lockCode: reservation.lockCode,
+			memberName: user.name
+		})
+		.from(reservation)
+		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.where(eq(reservation.id, reservationId))
+		.limit(1);
+
+	if (!row || row.status !== 'confirmed') return { synced: false, errors };
+
+	const unmoved =
+		row.startsAt.getTime() === previousStartsAt.getTime() &&
+		row.endsAt.getTime() === previousEndsAt.getTime();
+
+	// --- Nothing provisioned yet -------------------------------------------
+	if (!row.lockCode) {
+		const now = new Date();
+		const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
+		const startsToday =
+			row.startsAt >= buildDateInTz(todayStr, '00:00', tz) &&
+			row.startsAt < buildDateInTz(todayStr, '23:59', tz);
+
+		// Tomorrow's cron will pick it up; only today's has already gone past.
+		if (!startsToday) return { synced: false, errors };
+
+		try {
+			await provisionAccessFor(row);
+			return { synced: true, errors };
+		} catch (err) {
+			const msg = `Failed to provision lock access for reservation ${row.id}: ${(err as Error).message}`;
+			console.error(msg);
+			errors.push(msg);
+			return { synced: false, errors };
+		}
+	}
+
+	if (unmoved) return { synced: false, errors };
+
+	// --- A code is live against the old window ------------------------------
+	try {
+		const users = await listLockUsers();
+		const previousStart = lockDateTime(previousStartsAt);
+
+		for (const u of users) {
+			if (u.type !== 2 || !u.daterange) continue;
+			if (u.daterange[0] !== previousStart) continue;
+			await removeTemporaryUser(u.id);
+		}
+	} catch (err) {
+		// Fall through and re-add anyway: a duplicate window on the lock is
+		// recoverable by the daily cleanup, a member locked out is not.
+		const msg = `Failed to remove stale lock access for reservation ${row.id}: ${(err as Error).message}`;
+		console.error(msg);
+		errors.push(msg);
+	}
+
+	try {
+		await provisionAccessFor({ ...row, code: Number(row.lockCode) });
+		return { synced: true, errors };
+	} catch (err) {
+		const msg = `Failed to re-provision lock access for reservation ${row.id}: ${(err as Error).message}`;
+		console.error(msg);
+		errors.push(msg);
+		return { synced: false, errors };
+	}
 }
 
 /**
