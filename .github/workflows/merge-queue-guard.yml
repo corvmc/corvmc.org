@@ -63,10 +63,6 @@ jobs:
           else
             id=$(jq -r '.databaseId' <<<"$run")
             url=$(jq -r '.url' <<<"$run")
-            # Handed to the spec-recording step below, which needs the run but
-            # must not repeat the lookup — the queue ref is gone and the search
-            # is over the last 50 runs.
-            echo "$id" > run.id
             failed=$(gh run view "$id" --json jobs \
               --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")')
             # A run can fail with no failing job — cancelled, or the run itself timed out.
@@ -93,68 +89,6 @@ jobs:
 
           gh pr edit "$PR" --add-label queue-rejected
           gh pr comment "$PR" --body-file comment.md
-
-      # A spec that fails on the queue ref is either flaky or has an ordering
-      # dependency, and the two look identical from one run. Telling them apart
-      # needs a count over time, which until now lived in whoever was reading the
-      # PR timeline — `/queue-triage` counts `removed_from_merge_queue` events,
-      # which counts rejections rather than specs and forgets everything the
-      # moment the PR merges.
-      #
-      # One issue per spec, one comment per failure, so the count survives the PR
-      # and names the test rather than the branch. `volunteering.e2e.ts` was "the
-      # one documented case" recorded only in `.claude/agents/qc.md`; this is
-      # where that belongs.
-      - name: Record which spec failed
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          PR: ${{ github.event.number }}
-        run: |
-          set -euo pipefail
-          [ -f run.id ] || exit 0
-
-          gh label create flaky \
-            --color FBCA04 --description 'A test that fails without the code being wrong' --force
-
-          id=$(cat run.id)
-          # Playwright's failure header is the only line carrying both the spec
-          # and a line number after a `›`. Matching that shape rather than the
-          # bare filename keeps stack frames and imports out of the count.
-          specs=$(gh run view "$id" --log-failed 2>/dev/null |
-            grep -oE '›[[:space:]]*[A-Za-z0-9._/-]+\.e2e\.ts:[0-9]+' |
-            grep -oE '[A-Za-z0-9._/-]+\.e2e\.ts' |
-            sed 's|.*/||' | sort -u) || true
-          [ -n "$specs" ] || exit 0
-
-          open_issues=$(gh issue list --label flaky --state open --limit 100 --json number,title)
-
-          while IFS= read -r spec; do
-            [ -n "$spec" ] || continue
-            title="flaky: $spec"
-            n=$(jq -r --arg t "$title" 'map(select(.title == $t)) | first | .number // empty' \
-              <<<"$open_issues")
-
-            if [ -n "$n" ]; then
-              gh issue comment "$n" --body "Failed on the queue ref for #${PR}."
-              continue
-            fi
-
-            gh issue create --title "$title" --label flaky --body "$(cat <<EOF
-          \`$spec\` failed on the merge-queue ref, first seen on #${PR}.
-
-          Every subsequent failure is a comment here, so the comment count is the
-          number of times this spec has taken a PR out of the queue. **Three is the
-          line** — at three, stop re-queueing behind it and diagnose, because a
-          spec that only fails against the queue head is an ordering dependency
-          more often than it is noise.
-
-          Close this when the spec has been fixed or quarantined, not when a run
-          happens to pass.
-          EOF
-          )"
-          done <<<"$specs"
 
   requeued:
     name: Clear rejection label

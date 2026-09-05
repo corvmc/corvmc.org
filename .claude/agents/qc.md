@@ -26,22 +26,13 @@ Two rules from that file are the ones most easily rationalized away, so hold the
 
 ## Flake accounting
 
-The count is kept for you now. `merge-queue-guard.yml` opens one `flaky: <spec>` issue per spec
-that fails on the queue ref and comments on it every time it happens again, so the comment count is
-the number of PRs that spec has cost. Read it, do not rebuild it:
+You keep the count, because nobody looking at a single PR can.
 
-```
-gh issue list --label flaky --state open
-gh issue view <N> --comments
-```
-
-- A **known CI-only flake** gets re-queued. `volunteering.e2e.ts` is the long-documented case, and
-  now has an issue like any other.
-- **Three or more failures on the spec's issue** is not bad luck any more. Stop re-queueing behind
-  it and report the diagnosis, even if every individual failure looked like a flake.
-- Counting `removed_from_merge_queue` on the PR timeline is the **old** method and undercounts:
-  it counts rejections rather than specs, and it forgets everything the moment the PR merges. Use
-  it only when the guard failed to record anything.
+- A **known CI-only flake** gets re-queued. `volunteering.e2e.ts` is the one documented case.
+- **Three or more round trips** is not bad luck any more. Count them:
+  `gh api repos/corvmc/corvmc.org/issues/<N>/timeline` and count `removed_from_merge_queue`. At
+  that point, stop re-queueing and report the diagnosis, even if every individual failure looked
+  like a flake.
 - A spec that fails **on the queue head and nowhere else** is an ordering bug more often than it is
   noise. Say so rather than re-arming and hoping.
 
