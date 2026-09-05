@@ -20,7 +20,7 @@ import { hasActiveMemberCode, reconcileMemberCodeSync } from './member-code-serv
 import { getJson, putJson } from '$lib/server/kv';
 import { dispatchEmailOnly } from '$lib/server/notification';
 import { env } from '$env/dynamic/private';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE, CONFIRMATION_WINDOW_DAYS } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // LockService — provision and clean up Ultraloc temporary users
@@ -181,17 +181,28 @@ async function reconcileSyncState(errors: string[]): Promise<number> {
 }
 
 /**
- * Create Ultraloc temporary users for all confirmed reservations today
- * that don't already have lock access.
+ * Create Ultraloc temporary users for confirmed reservations starting inside
+ * the confirmation window that don't already have lock access.
+ *
+ * The window used to be a single day, which left no slack at all: the job runs
+ * once each morning, so a lock that was offline then meant a member with a
+ * booking that evening had a code queued in U-tec's cloud and no way in. Over
+ * `CONFIRMATION_WINDOW_DAYS` the queue has days to drain instead of hours, and
+ * the two numbers stop being independently chosen.
+ *
+ * The probe that prompted this measured 22 users on the lock, only four of them
+ * temporary, so a three-day window is nowhere near the device's ceiling —
+ * especially now a member holding a standing code is skipped entirely.
  */
 async function provisionDailyAccess(errors: string[]): Promise<number> {
 	const tz = DEFAULT_TIMEZONE;
 	const now = new Date();
 	const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
 
-	// Day boundaries in UTC
 	const dayStart = buildDateInTz(todayStr, '00:00', tz);
-	const dayEnd = buildDateInTz(todayStr, '23:59', tz);
+	const windowEnd = new Date(
+		buildDateInTz(todayStr, '23:59', tz).getTime() + CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000
+	);
 
 	const rows = await db
 		.select({
@@ -208,7 +219,7 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
 				eq(reservation.status, 'confirmed'),
 				isNull(reservation.lockCode),
 				gte(reservation.startsAt, dayStart),
-				lt(reservation.startsAt, dayEnd)
+				lt(reservation.startsAt, windowEnd)
 			)
 		);
 
@@ -470,25 +481,24 @@ async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 		errors.push(msg);
 	}
 
-	// --- DB hygiene: clear codes on yesterday's reservations -----------------
+	// --- DB hygiene: clear codes on reservations that have been and gone ------
+	// Anything before today, not yesterday specifically. The one-day window meant
+	// a code the job missed once — because the lock was unreachable that morning
+	// — was never cleared again, and it is the wrong shape now that provisioning
+	// looks days ahead rather than one.
 	try {
-		const yesterday = new Date(now);
-		yesterday.setDate(yesterday.getDate() - 1);
-		const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: tz });
-
-		const dayStart = buildDateInTz(yesterdayStr, '00:00', tz);
-		const dayEnd = buildDateInTz(yesterdayStr, '23:59', tz);
+		const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
+		const todayStart = buildDateInTz(todayStr, '00:00', tz);
 
 		await db
 			.update(reservation)
-			.set({ lockCode: null, updatedAt: new Date() })
-			.where(
-				and(
-					isNotNull(reservation.lockCode),
-					gte(reservation.startsAt, dayStart),
-					lt(reservation.startsAt, dayEnd)
-				)
-			);
+			.set({
+				lockCode: null,
+				lockAccessId: null,
+				lockSyncedAt: null,
+				updatedAt: new Date()
+			})
+			.where(and(isNotNull(reservation.lockCode), lt(reservation.startsAt, todayStart)));
 	} catch (err) {
 		const msg = `Failed to clear stale door codes: ${(err as Error).message}`;
 		console.error(msg);
