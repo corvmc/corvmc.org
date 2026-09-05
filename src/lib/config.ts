@@ -1367,6 +1367,12 @@ export const capabilities = {
 	group: ['read', 'manage'],
 	event: ['read', 'manage', 'publish', 'manageTickets'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
+	// Door access: granting and revoking standing member codes, adopting the
+	// hand-made ones already on the lock, re-provisioning a booking, rotating the
+	// break-glass code. Split out of `settings.update`, which was only ever the
+	// nearest thing to hand — these are member-affecting acts on a physical door,
+	// not configuration.
+	lock: ['manage'],
 	volunteer: [
 		'read',
 		'manageShifts',
@@ -1508,6 +1514,9 @@ export const positions: Record<Position, Grants> = {
 
 	technology_coordinator: {
 		settings: ['read', 'update'],
+		// They ran the lock self-test under `settings.update` before it was split
+		// out; keeping it here means the split is not a demotion.
+		lock: ['manage'],
 		user: ['list', 'read'],
 		inbox: ['read', 'manageChannels'],
 		help: ['read', 'manage']

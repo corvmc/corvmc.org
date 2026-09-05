@@ -296,26 +296,25 @@ describe('runDailyLockJob', () => {
 });
 
 describe('issueLockSelfTest', () => {
-	it('issues a named control (type 0) test code and reports both steps ok', async () => {
+	it('issues an expiring temporary code and reports both steps ok', async () => {
 		mockListLockUsers.mockResolvedValue([{ id: 1, name: 'Someone', type: 2 }]);
 
 		const result = await issueLockSelfTest();
 
 		expect(result.ok).toBe(true);
 		expect(result.code).toBe(4242);
-		// Uses the proven normal-user add, not the temporary-user path.
-		expect(mockAddLockUser).toHaveBeenCalledWith({
-			name: 'CMC Self-Test',
-			type: 0,
-			password: 4242
-		});
-		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+		// A type-2 user with a real window: the thing a reservation actually gets,
+		// and it expires on its own rather than living until someone clicks Revoke.
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'CMC Self-Test', code: 4242 })
+		);
+		expect(result.expiresAt).toBeInstanceOf(Date);
 		expect(result.steps.map((s) => s.name)).toEqual(['create', 'list']);
 		expect(result.steps.every((s) => s.ok)).toBe(true);
 	});
 
 	it('reports a failed create step without throwing', async () => {
-		mockAddLockUser.mockRejectedValueOnce(new Error('device offline'));
+		mockCreateTemporaryUser.mockRejectedValueOnce(new Error('device offline'));
 
 		const result = await issueLockSelfTest();
 

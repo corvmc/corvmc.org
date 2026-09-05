@@ -5,7 +5,6 @@ import { and, eq, isNull, isNotNull, gte, lt } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	createTemporaryUser,
-	addLockUser,
 	removeTemporaryUser,
 	updateLockUser,
 	listLockUsers,
@@ -232,6 +231,28 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
 	}
 
 	return count;
+}
+
+/**
+ * Re-issue door access for one booking on demand.
+ *
+ * The staff lever for a booking the daily job could not provision — otherwise
+ * the only recourse is waiting for tomorrow's run. Errors are returned rather
+ * than thrown so the page can say what went wrong.
+ */
+export async function reprovisionAccessFor(row: {
+	id: string;
+	startsAt: Date;
+	endsAt: Date;
+	memberName: string;
+	code?: number;
+}): Promise<{ ok: boolean; code?: number; error?: string }> {
+	try {
+		const code = await provisionAccessFor(row);
+		return { ok: true, code };
+	} catch (err) {
+		return { ok: false, error: (err as Error).message };
+	}
 }
 
 /** One reservation's worth of provisioning: mint a code, open the window, record it. */
@@ -485,6 +506,9 @@ async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 
 const SELF_TEST_NAME = 'CMC Self-Test';
 
+/** How long a self-test code stays usable. The lock enforces this itself. */
+const SELF_TEST_MINUTES = 15;
+
 export interface LockSelfTestStep {
 	name: 'create' | 'list';
 	ok: boolean;
@@ -502,30 +526,36 @@ export interface LockSelfTestResult {
 /**
  * Issue a short-lived test code and verify the lock command path works.
  *
- * `add` returns a deferred ack (no id) and the lock applies it asynchronously,
- * so the new user may not appear in the immediate `list`. We therefore assert
- * each command returns without an API error rather than requiring the new user
- * to be listed. Each step is captured (not thrown) so partial failures report.
+ * A type-2 temporary user with a real 15-minute window, which is what a
+ * reservation gets — the thing actually worth testing. It used to create a
+ * type-0 user with no expiry, on the since-disproven suspicion that the
+ * schedule fields were what U-tec rejected, so a self-test left a permanent
+ * working door code behind unless somebody clicked Revoke.
+ *
+ * Steps are captured rather than thrown so partial failures still report.
  */
 export async function issueLockSelfTest(): Promise<LockSelfTestResult> {
 	const steps: LockSelfTestStep[] = [];
 	const code = generateLockCode();
 
-	// Use the proven-working normal-user (type 0) `add` to validate the command
-	// path end to end. A normal user has no lock-side expiry, so the code stays
-	// active until "Revoke test codes" is clicked (or the daily cleanup removes
-	// it). This isolates the integration plumbing from the temporary-user schedule
-	// fields that U-tec has been rejecting with BAD-REQUEST.
+	const now = new Date();
+	const expiresAt = new Date(now.getTime() + SELF_TEST_MINUTES * 60_000);
+
 	try {
-		await addLockUser({ name: SELF_TEST_NAME, type: 0, password: code });
+		await createTemporaryUser({
+			name: SELF_TEST_NAME,
+			startTime: now,
+			endTime: expiresAt,
+			code
+		});
 		steps.push({
 			name: 'create',
 			ok: true,
-			detail: 'Issued test code on the lock. It stays active until you click "Revoke test codes".'
+			detail: `Issued a ${SELF_TEST_MINUTES}-minute test code on the lock.`
 		});
 	} catch (err) {
 		steps.push({ name: 'create', ok: false, detail: (err as Error).message });
-		return { ok: false, code, steps };
+		return { ok: false, code, expiresAt, steps };
 	}
 
 	try {
@@ -533,10 +563,10 @@ export async function issueLockSelfTest(): Promise<LockSelfTestResult> {
 		steps.push({ name: 'list', ok: true, detail: `Lock returned ${users.length} user(s).` });
 	} catch (err) {
 		steps.push({ name: 'list', ok: false, detail: (err as Error).message });
-		return { ok: false, code, steps };
+		return { ok: false, code, expiresAt, steps };
 	}
 
-	return { ok: true, code, steps };
+	return { ok: true, code, expiresAt, steps };
 }
 
 /** Remove any lingering self-test users from the lock. */

@@ -157,6 +157,29 @@ async function mintFallbackCode(errors: string[]): Promise<void> {
 	}
 }
 
+/**
+ * Mint a successor now, rather than waiting for the rotation to come due.
+ *
+ * The incumbent stays live and is only retired once the lock confirms the
+ * successor, exactly as in the scheduled path — so this is safe to press during
+ * an outage, it simply will not take effect until the lock is back.
+ */
+export async function rotateFallbackCodeNow(): Promise<{ ok: boolean; error?: string }> {
+	const errors: string[] = [];
+	const pending = await getPendingFallbackCode();
+
+	if (pending) {
+		return {
+			ok: false,
+			error: 'A replacement code is already waiting for the lock to confirm it.'
+		};
+	}
+
+	await mintFallbackCode(errors);
+
+	return errors.length ? { ok: false, error: errors[0] } : { ok: true };
+}
+
 // ---------------------------------------------------------------------------
 // Reveal
 // ---------------------------------------------------------------------------
