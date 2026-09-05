@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -292,15 +293,28 @@ describe('revokeLockSelfTest', () => {
 // ---------------------------------------------------------------------------
 
 describe('syncAccessWindow', () => {
-	// buildDateInTz is mocked to `${date}T${time}:00Z`, so "today" here is today
-	// in UTC — which is all the boundary comparison needs.
+	/**
+	 * "Today" as the service computes it — the calendar day in the app's own
+	 * timezone, not in UTC.
+	 *
+	 * Those are different dates for the seven or eight hours a day when UTC has
+	 * rolled over and Los Angeles has not, and building these timestamps off the
+	 * UTC day put them outside the window the service was checking. It passed
+	 * every daytime run and failed at 00:04 UTC.
+	 *
+	 * `buildDateInTz` is mocked to `${date}T${time}:00Z`, so the boundaries the
+	 * service compares against are that day string at 00:00Z and 23:59Z — which
+	 * is what these have to be built on.
+	 */
+	function appDay(offsetDays = 0) {
+		const d = new Date(Date.now() + offsetDays * 86_400_000);
+		return d.toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
+	}
 	function todayAt(time: string) {
-		const day = new Date().toISOString().slice(0, 10);
-		return new Date(`${day}T${time}:00Z`);
+		return new Date(`${appDay()}T${time}:00Z`);
 	}
 	function tomorrowAt(time: string) {
-		const d = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
-		return new Date(`${d}T${time}:00Z`);
+		return new Date(`${appDay(1)}T${time}:00Z`);
 	}
 
 	const previousStart = todayAt('18:00');

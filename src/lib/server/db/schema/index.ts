@@ -4,6 +4,7 @@ export * from './finance';
 export * from './reservation';
 export * from './venue';
 export * from './event';
+export * from './production';
 export * from './ticket';
 export * from './event-rsvp';
 export * from './notification';

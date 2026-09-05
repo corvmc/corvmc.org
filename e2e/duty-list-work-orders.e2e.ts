@@ -44,7 +44,10 @@ test.describe('duty lists — the unscheduled half', () => {
 
 	test('and the show it is for says so, beside the timed shifts', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production`);
+		// The console is tabbed, and the advance work is the Advance tab's whole
+		// subject. `?tab=` is the addressable form, so this also pins that a link
+		// somebody pastes lands where it says it does.
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
 
 		await expect(page.getByRole('heading', { name: 'Advance' })).toBeVisible();
 		await expect(

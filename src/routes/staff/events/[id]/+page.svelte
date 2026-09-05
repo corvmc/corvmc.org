@@ -23,6 +23,7 @@
 		DeleteEventAction
 	} from '$lib/components/actions';
 	import { getStaffEventPage, updateEvent, setStaffEventLineup } from '$lib/remote/events.remote';
+	import { createProduction } from '$lib/remote/productions.remote';
 	import { rejectListing, searchBandsForListing } from '$lib/remote/community-events.remote';
 	import { rowLink } from '$lib/actions/row-link';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
@@ -52,6 +53,7 @@
 	const isCommunityEvent = $derived(evt.source === 'community');
 
 	const rejectFields = rejectListing.fields;
+	const createProductionFields = createProduction.fields;
 	const { fields } = updateEvent;
 
 	function refresh() {
@@ -107,6 +109,16 @@
 			<Button href={resolve(`/staff/events/${id}/production`)} variant="default" size="sm" outline>
 				Manage production
 			</Button>
+		{/if}
+
+		{#if isProduction && !data.production}
+			<!-- The only way a production comes into existence. Nothing to fill in,
+			     so a plain form rather than an Action modal: the record opens as a
+			     draft and is worked on in the console. -->
+			<Form remote={createProduction}>
+				<input {...createProductionFields.eventId.as('hidden', evt.id)} />
+				<SubmitButton label="Add production" size="sm" variant="ghost" />
+			</Form>
 		{/if}
 
 		{#if evt.ticketingEnabled}

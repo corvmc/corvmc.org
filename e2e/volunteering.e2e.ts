@@ -725,7 +725,8 @@ test.describe('volunteering — shifts', () => {
 test.describe('volunteering — shifts and events', () => {
 	test('the event page lists the shifts staffing that show', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production`);
+		// Staffing is the Advance tab's subject on the tabbed console.
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
 
 		const card = page.locator('.card').filter({ hasText: 'Volunteer Shifts' });
 		await expect(card).toBeVisible({ timeout: 15000 });
@@ -738,7 +739,7 @@ test.describe('volunteering — shifts and events', () => {
 
 	test('scheduling from the event page attaches the shift to it', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production`);
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
 
 		const card = page.locator('.card').filter({ hasText: 'Volunteer Shifts' });
 		await expect(card).toBeVisible({ timeout: 15000 });

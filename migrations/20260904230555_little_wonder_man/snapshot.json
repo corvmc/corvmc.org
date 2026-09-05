@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ca06742e-5a90-4de0-a4bc-5ecbc18f1f34",
+  "id": "7b47cb77-c0f6-429c-8d48-ab4906fe8924",
   "prevIds": [
-    "87dec7b3-1f87-45e2-a25f-e6d4b307f306"
+    "ca06742e-5a90-4de0-a4bc-5ecbc18f1f34"
   ],
   "ddl": [
     {
@@ -60,6 +60,10 @@
     },
     {
       "name": "event_listing",
+      "entityType": "tables"
+    },
+    {
+      "name": "production",
       "entityType": "tables"
     },
     {
@@ -1965,6 +1969,156 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'draft'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "producer_user_id",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "load_in_at",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "soundcheck_at",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "first_set_at",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "curfew_at",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "load_out_by",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "billing_notes",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "hospitality_notes",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "internal_notes",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "production"
     },
     {
       "type": "text",
@@ -10162,6 +10316,51 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_production_event_id_event_listing_id_fk",
+      "entityType": "fks",
+      "table": "production"
+    },
+    {
+      "columns": [
+        "producer_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_production_producer_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "production"
+    },
+    {
+      "columns": [
+        "created_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_production_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "production"
+    },
+    {
+      "columns": [
+        "event_id"
+      ],
+      "tableTo": "event_listing",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_ticket_event_id_event_id_fk",
       "entityType": "fks",
       "table": "ticket"
@@ -12443,6 +12642,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "production_pk",
+      "table": "production",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "ticket_pk",
       "table": "ticket",
       "entityType": "pks"
@@ -13551,6 +13759,48 @@
       "name": "uq_event_recurring_instance",
       "entityType": "indexes",
       "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_production_event",
+      "entityType": "indexes",
+      "table": "production"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_production_status",
+      "entityType": "indexes",
+      "table": "production"
+    },
+    {
+      "columns": [
+        {
+          "value": "producer_user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_production_producer",
+      "entityType": "indexes",
+      "table": "production"
     },
     {
       "columns": [
@@ -16351,6 +16601,12 @@
       "table": "event_listing"
     },
     {
+      "value": "curfew_at is null or first_set_at is null or curfew_at > first_set_at",
+      "name": "production_curfew_after_first_set",
+      "entityType": "checks",
+      "table": "production"
+    },
+    {
       "value": "quantity > 0",
       "name": "acq_line_qty_positive",
       "entityType": "checks",
@@ -16477,7 +16733,5 @@
       "table": "rider_input"
     }
   ],
-  "renames": [
-    "event->event_listing"
-  ]
+  "renames": []
 }

@@ -109,6 +109,11 @@ test.describe('staff events split', () => {
 		await page.goto(`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}/production`);
 		await expect(page.getByRole('heading', { name: SEED_SPLIT_CMC_LIVE_TITLE })).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
+
+		// The console is tabbed now, and the staffing lives on Advance. Reached by
+		// the tab rather than by `?tab=`, because what this asserts is that the
+		// console is whole — every part of it still reachable from where you land.
+		await page.getByRole('tab', { name: 'Advance' }).click();
 		await expect(page.getByRole('heading', { name: 'Volunteer Shifts' })).toBeVisible();
 
 		// The console has nothing to say about a listing, so a hand-typed URL goes

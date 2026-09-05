@@ -48,6 +48,7 @@ import { seedStaffUser } from './fixtures/seed-staff-user';
 import { seedInventory } from './fixtures/seed-inventory';
 import { seedStaffEvent } from './fixtures/seed-staff-event';
 import { seedVenues } from './fixtures/seed-venues';
+import { seedProductions } from './fixtures/seed-productions';
 import { seedTicketPurchase } from './fixtures/seed-ticket-purchase';
 import { seedReservationPayments } from './fixtures/seed-reservation-payments';
 import { seedVolunteering } from './fixtures/seed-volunteering';
@@ -146,6 +147,10 @@ await seedDirectoryEntries();
 // changing behaviour — but a fixture that relies on a fallback is a fixture
 // that stops being true the day the fallback changes.
 await seedVenues();
+
+// After `seedVenues`, and pointedly not before it: this fixture's events name the
+// off-site venue, and the backfill above claims every event with a null one.
+await seedProductions();
 
 // Last, once every seed's miniflare has exited: leave no file with a WAL for the
 // preview server to recover. workerd opens its SQLite on the first *request*, by
