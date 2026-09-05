@@ -53,6 +53,15 @@ jobs:
             --json databaseId,headBranch,conclusion,url \
             --jq "[.[] | select(.conclusion == \"failure\" and (.headBranch | contains(\"/pr-${PR}-\")))] | first")
 
+          # How many times the queue has thrown this PR out. `.claude/agents/qc.md` treats
+          # three or more as a real ordering bug rather than bad luck, so the number decides
+          # whether re-queueing is even reasonable — put it in the comment so nobody has to
+          # go and count. Counted by line rather than with jq's `length`, which `--paginate`
+          # would evaluate once per page. This removal may not be in the timeline yet, so
+          # treat it as a floor.
+          ejections=$(gh api "repos/${GH_REPO}/issues/${PR}/timeline" --paginate \
+            --jq '.[] | select(.event == "removed_from_merge_queue") | .event' | wc -l | tr -d ' ')
+
           if [ -z "$run" ] || [ "$run" = 'null' ]; then
             cat > comment.md <<'EOF'
           ### Removed from the merge queue
@@ -63,10 +72,49 @@ jobs:
           else
             id=$(jq -r '.databaseId' <<<"$run")
             url=$(jq -r '.url' <<<"$run")
-            failed=$(gh run view "$id" --json jobs \
-              --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")')
+            # Fetched once and read twice: the names for the summary line, the ids for the
+            # annotations below. A run can fail more than one job at a time — pr-512 failed
+            # `Schema drift` and `Unit tests` together — so the names are joined by jq
+            # rather than by `paste -d ', '`, which cycles through the delimiter *list* and
+            # would space the separators differently for each pair.
+            jobs=$(gh run view "$id" --json jobs)
+            failed=$(jq -r '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")' <<<"$jobs")
             # A run can fail with no failing job — cancelled, or the run itself timed out.
             [ -n "$failed" ] || failed='(no job reported a failure — cancelled or timed out)'
+
+            # The failing tests, from GitHub's own annotations rather than from the log.
+            # A job's id is its check-run id, so the annotations API takes it directly.
+            # Parsing the log instead does not work: `--log-failed` ends in the runner's
+            # credential teardown with the failure ~200 lines up, and the three jobs that
+            # actually fail here (playwright, vitest, drizzle-kit) print three different
+            # shapes. Annotations are uniform and already structured.
+            #
+            # Vitest emits them on its own under `GITHUB_ACTIONS`; Playwright does not, so
+            # `playwright.config.ts` opts into the `github` reporter explicitly. Every job
+            # also emits a bare `Process completed with exit code N`, which names nothing;
+            # drop it and let the block be empty rather than filling it with noise.
+            annotations=$(
+              jq -r '.jobs[] | select(.conclusion == "failure") | .databaseId' <<<"$jobs" |
+              while read -r job; do
+                [ -n "$job" ] || continue
+                gh api "repos/${GH_REPO}/check-runs/${job}/annotations" \
+                  --jq '.[] | select(.annotation_level == "failure")
+                        | "- `\(.path):\(.start_line)` — \(.message | split("\n")[0])"' 2>/dev/null || true
+              done | { grep -v 'Process completed with exit code' || true; }
+            )
+
+            # `ci.yml`'s E2E job uploads `test-results/` on failure — traces, screenshots and
+            # an `error-context.md` per failed test — and until now the comment linked the run
+            # but never the artifact, so the paths the log names led nowhere. Kept 7 days, so
+            # say when it goes.
+            artifacts=$(
+              gh api "repos/${GH_REPO}/actions/runs/${id}/artifacts" \
+                --jq '.artifacts[] | select(.expired == false) | "\(.id)\t\(.name)"' 2>/dev/null |
+                while IFS=$'\t' read -r aid aname; do
+                  printf -- '- [%s](https://github.com/%s/actions/runs/%s/artifacts/%s)\n' \
+                    "$aname" "$GH_REPO" "$id" "$aid"
+                done
+            )
 
             cat > comment.md <<EOF
           ### Rejected by the merge queue
@@ -79,6 +127,33 @@ jobs:
           The checks on this PR's own head can still be green — that is the point of the queue, and
           the reason this needs saying out loud.
           EOF
+
+            if [ -n "$annotations" ]; then
+              cat >> comment.md <<EOF
+
+          **What failed**
+
+          ${annotations}
+          EOF
+            fi
+
+            if [ -n "$artifacts" ]; then
+              cat >> comment.md <<EOF
+
+          **Failure artifacts** (traces, screenshots, \`error-context.md\` — kept 7 days)
+
+          ${artifacts}
+          EOF
+            fi
+
+            if [ "$ejections" -ge 3 ] 2>/dev/null; then
+              cat >> comment.md <<EOF
+
+          > This PR has now been removed from the queue **${ejections} times**. Past three,
+          > \`.claude/agents/qc.md\` says to stop re-queueing and diagnose: a spec that fails on the
+          > queue head and nowhere else is an ordering bug more often than it is noise.
+          EOF
+            fi
           fi
 
           cat >> comment.md <<'EOF'

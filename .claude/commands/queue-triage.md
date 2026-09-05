@@ -18,6 +18,12 @@ Empty output means nothing is stranded. Say so and stop.
 
 ## Per PR
 
+**Read the guard's own comment first.** It names the failing tests (from GitHub's
+annotations), links the `e2e-failures-<run>-<attempt>` artifact holding the traces and
+`error-context.md`, and prints how many times the queue has ejected this PR. That is usually the
+whole diagnosis, and the steps below are the fallback for a PR whose comment predates it — or the
+long way round when the annotations block came back empty.
+
 1. Find the run. The queue ref is deleted on dequeue, so match on the branch name the run
    recorded rather than looking up a ref:
 
