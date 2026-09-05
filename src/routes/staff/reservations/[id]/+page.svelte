@@ -35,12 +35,30 @@
 		overlappingReservations
 	} from '$lib/utils/reservation-actions';
 	import { getStaffReservationDetail } from '$lib/remote/reservations.remote';
+	import { reprovisionReservationAccess } from '$lib/remote/lock.remote';
 	import { page } from '$app/state';
 
 	let data = $derived(await getStaffReservationDetail(page.params.id!));
 
 	const r = $derived(data.reservation);
 	const status = $derived(r.status);
+
+	// Re-issue door access without waiting for tomorrow's cron.
+	let reprovisioning = $state(false);
+	let reprovisionResult = $state<{ ok: boolean; code?: number; error?: string } | null>(null);
+
+	async function handleReprovision() {
+		reprovisioning = true;
+		reprovisionResult = null;
+		try {
+			reprovisionResult = await reprovisionReservationAccess(r.id);
+			await getStaffReservationDetail(r.id).refresh();
+		} catch (err) {
+			reprovisionResult = { ok: false, error: (err as Error).message };
+		} finally {
+			reprovisioning = false;
+		}
+	}
 	const actions = $derived(
 		visibleActions(status, r.startsAt, r.endsAt, r.stripePaymentRecordId, new Date(), {
 			cashDueCents: r.cashDueCents,
@@ -269,11 +287,37 @@
 		<InfoCard title="Door Access">
 			{#if r.lockCode}
 				<p class="font-mono text-2xl font-bold tracking-[0.2em]">{r.lockCode}</p>
-				<p class="text-muted">Keypad code for this reservation.</p>
+				{#if r.lockSyncedAt}
+					<p class="text-muted">Confirmed on the lock {fullDate(r.lockSyncedAt)}.</p>
+				{:else}
+					<!-- U-tec acks a queued write the same as an applied one, so an
+					     issued code is not a working code until the lock says so. -->
+					<p class="text-warning">
+						Issued but not confirmed at the door. The member is being shown the break-glass code
+						instead while their window is open.
+					</p>
+				{/if}
 			{:else}
-				<p class="text-muted">
-					Not provisioned yet — codes are issued the morning of the reservation.
-				</p>
+				<p class="text-muted">Not provisioned yet.</p>
+			{/if}
+
+			{#if r.status === 'confirmed'}
+				<Button
+					variant="ghost"
+					size="sm"
+					class="mt-3"
+					disabled={reprovisioning}
+					onclick={handleReprovision}
+				>
+					{reprovisioning ? 'Working…' : r.lockCode ? 'Re-issue on the lock' : 'Provision now'}
+				</Button>
+				{#if reprovisionResult}
+					<Alert type={reprovisionResult.ok ? 'success' : 'error'} class="mt-2">
+						{reprovisionResult.ok
+							? `Sent to the lock. Code ${reprovisionResult.code}.`
+							: reprovisionResult.error}
+					</Alert>
+				{/if}
 			{/if}
 		</InfoCard>
 	{/if}

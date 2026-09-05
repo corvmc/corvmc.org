@@ -19,6 +19,8 @@
 		syncSubscriptions,
 		refreshCommunityStats
 	} from '$lib/remote/settings.remote';
+	import { getLockHealth, rotateFallbackCode } from '$lib/remote/lock.remote';
+	import UnmanagedLockCodes from './UnmanagedLockCodes.svelte';
 	import { updateInboxChannelConfig, testMetaConnection } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
@@ -77,6 +79,21 @@
 	let selfTestResult = $state<Awaited<ReturnType<typeof runLockSelfTest>> | null>(null);
 	let selfTesting = $state(false);
 	let revokingTest = $state(false);
+	let rotatingFallback = $state(false);
+	let rotateResult = $state<{ ok: boolean; error?: string } | null>(null);
+
+	async function handleRotateFallback() {
+		rotatingFallback = true;
+		rotateResult = null;
+		try {
+			rotateResult = await rotateFallbackCode();
+			await getLockHealth().refresh();
+		} catch (err) {
+			rotateResult = { ok: false, error: (err as Error).message };
+		} finally {
+			rotatingFallback = false;
+		}
+	}
 
 	// U-tec is "connected" once a refresh token has been minted (via OAuth or
 	// pasted manually). Until then, only the Connect flow makes sense.
@@ -718,13 +735,74 @@
 						{/if}
 
 						{#if utecConnected}
+							<!-- Live health. `utecConnected` only means a refresh token is
+							     stored; it says nothing about whether the door is reachable. -->
+							<svelte:boundary>
+								{@const health = await getLockHealth()}
+								<div class="mt-2 border-t border-base-200 pt-3">
+									<div class="flex flex-wrap items-center gap-2">
+										<span class="text-sm font-medium">Lock</span>
+										{#if !health.ok}
+											<Badge variant="error">Unreachable</Badge>
+											<span class="text-subtle">{health.error}</span>
+										{:else if health.online}
+											<Badge variant="success">Online</Badge>
+											<span class="text-subtle">
+												{health.lockState ?? 'unknown'} · battery {health.batteryLevel ?? '?'}/5
+											</span>
+										{:else}
+											<Badge variant="warning">Offline</Badge>
+											<span class="text-subtle">
+												Door codes are queued and will not work until it reconnects. Last known:
+												{health.lockState ?? 'unknown'} · battery {health.batteryLevel ?? '?'}/5
+											</span>
+										{/if}
+									</div>
+
+									{#if health.ok}
+										<div class="mt-3 flex flex-wrap items-center gap-2">
+											<span class="text-subtle">Break-glass code</span>
+											{#if health.fallbackCode}
+												<span class="font-mono font-bold tracking-[0.2em]">
+													{health.fallbackCode}
+												</span>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													onclick={handleRotateFallback}
+													disabled={rotatingFallback}
+												>
+													Rotate
+												</Button>
+											{:else}
+												<span class="text-subtle">
+													None confirmed on the lock yet — one is minted by the daily job.
+												</span>
+											{/if}
+										</div>
+										{#if rotateResult}
+											<p class="mt-1 text-subtle">
+												{rotateResult.ok
+													? 'A replacement is on its way to the lock. The current code keeps working until it lands.'
+													: rotateResult.error}
+											</p>
+										{/if}
+									{/if}
+								</div>
+							</svelte:boundary>
+
+							<svelte:boundary>
+								<UnmanagedLockCodes />
+							</svelte:boundary>
+
 							<div class="mt-2 border-t border-base-200 pt-3">
 								<div class="flex items-start justify-between gap-2">
 									<div>
 										<p class="text-sm font-medium">Lock self-test</p>
 										<p class="text-subtle">
-											Issues a 15-minute test code and exercises the lock commands. Try the code on
-											the door, then revoke it.
+											Issues a temporary code that expires on its own after 15 minutes, and
+											exercises the lock commands. Try it on the door.
 										</p>
 									</div>
 									<div class="flex shrink-0 gap-2">
