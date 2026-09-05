@@ -182,5 +182,46 @@ export const FIXTURES: Fixture[] = [
 				"Hi there,\n\nI run a small folk trio & we're hoping to play a Saturday in March.\n\nThanks!",
 			threadUrl: 'https://corvmc.org/staff/inbox/thr-1'
 		}
+	},
+	{
+		name: 'password-reset',
+		alias: 'password-reset',
+		// The URL better-auth builds carries a `?callbackURL=` query string, which
+		// is the whole reason this template exists rather than reusing
+		// `notification`: its CTA renders `{{url}}` escaped in the text part, so an
+		// `&` would arrive as `&amp;`. Keep the query string in this fixture — it is
+		// what makes `pnpm email:validate` and the preview prove the triple brace.
+		//
+		// `transactional_only` suppresses the layout's notification-preferences
+		// line, and `preview_text` is set explicitly because only the
+		// `notification` alias goes through `normalizeNotificationModel`.
+		model: {
+			greeting: 'Hi Maya,',
+			resetUrl:
+				'https://corvmc.org/api/auth/reset-password/PfQ2rN8xKvT1?callbackURL=%2Freset-password',
+			expiresIn: '1 hour',
+			preview_text: 'Choose a new password for your CorvMC account.',
+			transactional_only: true
+		}
+	},
+	{
+		name: 'notification-password-changed',
+		alias: 'notification',
+		// The other half of the reset flow, and the one shape in the generic
+		// template that carries `transactional_only`.
+		model: {
+			subject: 'Your CorvMC password was changed',
+			preview_text: 'Your password was reset and other sessions were signed out.',
+			heading: 'Your password was changed',
+			greeting: 'Hi Maya,',
+			paragraphs: [
+				{
+					text: 'The password on your Corvallis Music Collective account was just reset, and any other sessions you had open were signed out.'
+				}
+			],
+			footnote:
+				'If you did not do this, reset your password again straight away and email contact@corvmc.org so we can help.',
+			transactional_only: true
+		}
 	}
 ];

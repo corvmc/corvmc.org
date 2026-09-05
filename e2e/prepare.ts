@@ -45,6 +45,7 @@ import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 import { seedBandAudio } from './fixtures/seed-band-audio';
 import { seedStaffUser } from './fixtures/seed-staff-user';
+import { seedPasswordReset } from './fixtures/seed-password-reset';
 import { seedInventory } from './fixtures/seed-inventory';
 import { seedStaffEvent } from './fixtures/seed-staff-event';
 import { seedVenues } from './fixtures/seed-venues';
@@ -104,6 +105,7 @@ await seedBandOnboarding();
 // After the bands: its releases hang off the public band's id.
 await seedBandAudio();
 await seedStaffUser();
+await seedPasswordReset();
 await seedInventory();
 // After the inventory fixture: it reuses that fixture's category, and seeds
 // its own item and unit so the two suites never mutate the same asset.

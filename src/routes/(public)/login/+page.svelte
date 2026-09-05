@@ -219,6 +219,12 @@
 						/>
 					</Form>
 
+					{#if mode === 'login'}
+						<div class="text-center text-sm">
+							<a class="link" href={resolve('/forgot-password')}>Forgot your password?</a>
+						</div>
+					{/if}
+
 					<div class="divider my-0 text-xs">OR</div>
 
 					<Button variant="ghost" size="sm" onclick={toggleMode}>
