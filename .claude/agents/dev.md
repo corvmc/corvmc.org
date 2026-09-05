@@ -16,11 +16,26 @@ Two things, both scoped to what you touched:
    mentions the function you changed. The directory run is ~10 files and under 3 seconds.
 2. **`pnpm lint:changed`**, if more than a couple of files moved.
 
-Then commit, push, open the PR, and arm `gh pr merge --auto` **in that same turn** — opening the PR
+Then commit, push, open the PR with `Fixes #<n>` if it answers an issue, and arm
+`gh pr merge --auto` **in that same turn** — opening the PR
 is not the finish line, and queueing is not gated on the user reading it first. If the change
 genuinely needs a human before it merges, open it as a draft and say why; do not open a ready PR
 and quietly decline to queue it. `.claude/rules/testing.md` has the rest of what is worth knowing
 about the suites.
+
+## Claiming an issue
+
+If the task names an issue, or a search turns one up that already covers it, **open the draft PR
+before you write the code**: a branch named for the issue and `Fixes #<n>` in the body. GitHub shows
+that PR on the issue, so a session starting an hour later sees the work in flight.
+
+Check first (`gh issue view <n> --json ...` shows linked PRs). If one is already open, do not race
+it — say so and stop. The branch push is what arbitrates: a second session pushing the same ref gets
+a non-fast-forward rejection from the server, which an assignee or a project-board field cannot give
+you, both being last-write-wins.
+
+Nothing changes about the rest — same scoped verification, same `gh pr merge --auto`, and `Fixes`
+closes the issue when the queue merges.
 
 ## What you do not run
 

@@ -16,7 +16,7 @@ path-scoped rule costs nothing until someone opens a matching file.
 | `.claude/rules/*.md` | when a file matching its `paths:` is read | only in matching work     |
 | `.claude/skills/*/`  | description at start, body when invoked   | near-zero until invoked   |
 | Subagents            | on spawn, in their own context            | isolated from the session |
-| Hooks                | on a lifecycle event, outside the model   | zero                      |
+| Hooks                | on a lifecycle event, outside the model   | zero, bar `SessionStart`  |
 
 That gradient is the whole design. `CLAUDE.md` stays short because a bloated one doesn't just
 cost tokens — it dilutes the rules that matter until the agent starts ignoring them. The test for
@@ -100,6 +100,7 @@ Advisory, in order of how hard they push back:
 | lefthook pre-commit           | prettier `--write` on staged files (no eslint — see git hooks)          | no, by design |
 | `PostToolUse` format hook     | formats every file the agent edits                                      | n/a           |
 | `PreToolUse` hooks            | reject `npm`/`npx`, reject edits to committed migrations                | **yes**       |
+| `require-issue-dedupe`        | rejects `gh issue create` until a search has run in this session        | **yes**       |
 | Custom ESLint rules           | `no-db-transaction`, `no-raw-form-elements`, `no-duplicate-field-names` | at lint time  |
 | CI                            | seven jobs — lint, check, unit, e2e, schema drift, docs                 | **yes**       |
 
@@ -109,6 +110,46 @@ escape hatch, so a blocked agent can correct course without asking you.
 One hook runs at the other end of the session's life: `SessionStart` fires
 `scripts/claude/cloud-session-start.sh`, which does nothing locally and boots a fresh clone in a
 cloud session. See [cloud-sessions.md](cloud-sessions.md).
+
+## Recording a finding
+
+A session that is changing one thing will find something else wrong. There are three things it can
+do with that, and two of them lose it:
+
+- **Fix it here.** The PR now does two things, the review is harder, and a revert takes the
+  unrelated fix with it.
+- **Say it in the chat.** Gone when the session ends, which for a background `dev` agent is a few
+  minutes after it is said.
+- **File it.** `gh issue create --template finding.md`, labelled `agent-filed` and `needs-triage`.
+
+The third is the rule, and `CLAUDE.md` states it. The template asks for the location, how it was
+found, why it was not fixed there, and — the field worth defending — whether the finding was
+**verified by running it or inferred from reading**. A finding is not a hunch: if the honest answer
+to "why not fix it here" is "it would have been quick", fix it instead.
+
+**Search first.** `require-issue-dedupe.sh` blocks the create until `gh issue list` or
+`gh search issues` has run in the same session, because a session has no memory of what it filed
+last week and the duplicate is the default outcome rather than the unlucky one. There is no escape
+hatch and none is needed — the hook sees the search command, not its result, so a search that fails
+offline still satisfies it.
+
+### Why this is not a markdown file any more
+
+It was, until 2026-09. `CHORES.md` was a genuinely well-written backlog, and by the time it was
+retired it held an **open** chore for a bug whose **done** entry sat eighty lines below it, and a
+"628 lint warnings" item that had been zero since `eslint --max-warnings 0` landed. Nobody caught
+either, for months, in a repo where the file is linked from four places. That is the failure mode
+to design against, and it is not solved by moving prose somewhere nicer:
+
+| Layer                | Cost                    | What it buys                                     |
+| -------------------- | ----------------------- | ------------------------------------------------ |
+| `SessionStart` hook  | ~8 lines, every session | The session knows the tracker exists and is live |
+| `.claude/rules/*.md` | nothing until a match   | The query is asked for when a vertical is opened |
+| `CLAUDE.md`          | every request           | The one rule: file it, do not fix or say it      |
+
+Deliberately **not** injected: the issue list itself. A hundred titles is a couple of thousand
+tokens on every request, buying recall of a list nothing reads top to bottom — the same mistake
+`CLAUDE.md` avoids by staying short. Counts plus the query beat the list.
 
 ## Keeping it healthy
 

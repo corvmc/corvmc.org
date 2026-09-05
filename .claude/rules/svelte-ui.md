@@ -5,6 +5,10 @@ paths:
 
 # Svelte components
 
+> Before changing a page here, check what is already known about it:
+> `gh issue list --state open --label area:staff`. The backlog is GitHub Issues, not a
+> markdown file.
+
 `docs/development/ui-patterns.md` is the component reference — read it before building a page.
 Compose the existing shared primitives rather than inventing new ones.
 

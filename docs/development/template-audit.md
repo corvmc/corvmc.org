@@ -264,7 +264,7 @@ members as ordinary ones. And `staff/flags/[id]` rebuilt five routes in a nested
 
 What the tiers deliberately do not cover: `member/events/**` and `member/directory/**` keep their
 art-directed set (`PosterCard`, `VinylCard`, `IdCard`), and `member/reservations/ReservationCard`
-keeps its own card — see CHORES for the divergence that leaves.
+keeps its own card — see #566 for the divergence that leaves.
 
 ### Phase 8 notes
 

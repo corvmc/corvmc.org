@@ -246,7 +246,7 @@ export interface ReservationRefRow {
  * formatting it on the server changes the string not at all.
  *
  * `band` unlocks the band panel's route, `ownerUserId` the booker's own. A
- * band has no per-reservation page yet (see CHORES), so today the band arm of
+ * band has no per-reservation page yet (#565), so today the band arm of
  * `entityHref` lands on the list — the ref is right either way, and the page
  * appearing is what changes the answer.
  */

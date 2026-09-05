@@ -124,4 +124,5 @@ await render(CancelReservationAction, { reservation: { id: 'r1' }, action: fakeF
 ## Coverage
 
 Coverage is built up incrementally, component by component, rather than tracked as a
-checklist. `CHORES.md` names the components still missing a story or spec.
+checklist. Issue #572 names the components still missing a story or spec — and undercounts:
+there are 55 `*Action.svelte` files and no `*Action.spec.ts` at all.
