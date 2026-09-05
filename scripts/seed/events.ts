@@ -5,10 +5,10 @@ import { buildSeedRRule as seedRRule } from '../seed-rrule';
 import { db } from './db';
 import { EVENT_TAGS_POOL, EVENT_TITLES } from './pools';
 import { type SeedEvent, type SeedUser } from './types';
-import { pick, pickN, ptDate, randomInt } from './util';
+import { pick, pickN, ptDate, random, randomInt } from './util';
 import { sql } from 'drizzle-orm';
 
-export async function seedEvents(users: SeedUser[]): SeedEvent[] {
+export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 	console.log('Seeding events...');
 	const rows: SeedEvent[] = [];
 	const staffUsers = users.slice(0, 6);
@@ -19,7 +19,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		eventStartHour: number,
 		eventEndHour: number,
 		createdByUserId: string,
-		reservationStatus: string
+		reservationStatus: (typeof reservation.$inferSelect)['status']
 	): Promise<string> {
 		const startsAt = ptDate(day, eventStartHour, -30);
 		const endsAt = ptDate(day, eventEndHour, 30);
@@ -55,7 +55,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		// ordering event-service.create() uses.
 		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
-		if (Math.random() < 0.75) {
+		if (random() < 0.75) {
 			reservationId = await createEventReservation(
 				eventId,
 				day,
@@ -127,7 +127,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 
 		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
-		if (Math.random() < 0.75) {
+		if (random() < 0.75) {
 			reservationId = await createEventReservation(
 				eventId,
 				day,
@@ -173,7 +173,7 @@ export async function seedEvents(users: SeedUser[]): SeedEvent[] {
 
 		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
-		if (Math.random() < 0.75) {
+		if (random() < 0.75) {
 			reservationId = await createEventReservation(
 				eventId,
 				day,

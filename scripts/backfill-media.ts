@@ -172,7 +172,6 @@ function collectSources(): Source[] {
 			attachableType: 'event_listing',
 			attachableId: String(r.id),
 			slot: 'poster',
-			caption: null,
 			sortOrder: 0,
 			label: `event "${r.title}"`
 		});
@@ -186,7 +185,6 @@ function collectSources(): Source[] {
 			attachableType: 'group',
 			attachableId: String(r.id),
 			slot: 'avatar',
-			caption: null,
 			sortOrder: 0,
 			label: `group "${r.name}"`
 		});
@@ -200,7 +198,6 @@ function collectSources(): Source[] {
 			attachableType: 'user',
 			attachableId: String(r.id),
 			slot: 'avatar',
-			caption: null,
 			sortOrder: 0,
 			label: `user "${r.name}"`
 		});

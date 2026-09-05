@@ -9,8 +9,13 @@
  */
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
+import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
+import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
+import { assertRows } from './validate';
 
-const proxy = await getPlatformProxy();
+// `src/app.d.ts` is where this project's bindings are named; without the type
+// argument `env` is `unknown` and `env.DB` is unchecked.
+const proxy = await getPlatformProxy<NonNullable<App.Platform['env']>>();
 export const env = proxy.env;
 export const dispose = proxy.dispose;
 export const db = drizzle(env.DB);
@@ -24,16 +29,18 @@ export const db = drizzle(env.DB);
  * the way `seedDirectoryEntries` (19 × 5 = 95) and `seedVolunteerHours`
  * (13 × 7 = 91) do. The default of 10 is safe for anything up to 10 columns.
  */
-export async function batchInsert<T extends Record<string, unknown>>(
-	table: any,
-	rows: T[],
+export async function batchInsert<TTable extends SQLiteTable>(
+	table: TTable,
+	rows: InferInsertModel<TTable>[],
 	batchSize = 10
-): Promise<T[]> {
-	const results: T[] = [];
+): Promise<InferSelectModel<TTable>[]> {
+	assertRows(table, rows);
+
+	const results: InferSelectModel<TTable>[] = [];
 	for (let i = 0; i < rows.length; i += batchSize) {
 		const batch = rows.slice(i, i + batchSize);
 		const returned = await db.insert(table).values(batch).returning();
-		results.push(...returned);
+		results.push(...(returned as InferSelectModel<TTable>[]));
 	}
 	return results;
 }

@@ -10,6 +10,7 @@ import { batchInsert, db } from './db';
 import { type SeedUser } from './types';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
+import { random } from './util';
 
 export async function seedMarketing(users: SeedUser[]) {
 	console.log('Seeding marketing...');
@@ -102,13 +103,12 @@ export async function seedMarketing(users: SeedUser[]) {
 	}[] = [];
 	for (const sub of allSubs) {
 		for (const aud of audienceRows) {
-			if (Math.random() < 0.7) {
+			if (random() < 0.7) {
 				membershipRows.push({
 					id: randomUUID(),
 					subscriberId: sub.id,
 					audienceId: aud.id,
-					unsubscribedAt:
-						Math.random() < 0.1 ? new Date(Date.now() - Math.random() * 30 * 86400000) : null
+					unsubscribedAt: random() < 0.1 ? new Date(Date.now() - random() * 30 * 86400000) : null
 				});
 			}
 		}

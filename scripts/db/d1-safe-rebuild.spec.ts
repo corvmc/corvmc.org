@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error -- plain .mjs helper, no types
 import {
 	rewriteMigration,
 	findCreatedTables,
@@ -7,7 +6,6 @@ import {
 	findUnsafeDrops,
 	collapseCommentOnlyChunks
 } from './d1-safe-rebuild.mjs';
-// @ts-expect-error -- plain .mjs helper, no types
 import { childGraph, descendantsDeepestFirst, readSnapshot } from './d1-ddl.mjs';
 
 /** parent <- child <- grandchild, plus a second child on the parent. */
@@ -281,6 +279,17 @@ describe('collapseCommentOnlyChunks', () => {
 		);
 	}
 
+	/**
+	 * `collapseCommentOnlyChunks` returns null when there is nothing to collapse.
+	 * Every case below has something to collapse, so assert that once here rather
+	 * than re-narrowing `string | null` in each test.
+	 */
+	function collapse(sql: string): string {
+		const out = collapseCommentOnlyChunks(sql);
+		expect(out, 'expected a collapse, got null').not.toBeNull();
+		return out as string;
+	}
+
 	it('returns null when every chunk already carries a statement', () => {
 		const sql = `SELECT 1;\n${BREAK}\n-- explains the next one\nSELECT 2;\n`;
 		expect(collapseCommentOnlyChunks(sql)).toBeNull();
@@ -289,7 +298,7 @@ describe('collapseCommentOnlyChunks', () => {
 	it('moves a lone comment onto the statement it describes', () => {
 		const sql = `-- why we defer\n${BREAK}\nPRAGMA defer_foreign_keys=ON;\n`;
 
-		const out = collapseCommentOnlyChunks(sql);
+		const out = collapse(sql);
 
 		expect(chunksWithoutStatements(out)).toEqual([]);
 		expect(out).toContain('-- why we defer\nPRAGMA defer_foreign_keys=ON;');
@@ -298,7 +307,7 @@ describe('collapseCommentOnlyChunks', () => {
 	it('keeps consecutive comment lines together, in order', () => {
 		const sql = `-- first\n${BREAK}\n-- second\n${BREAK}\nSELECT 1;\n`;
 
-		const out = collapseCommentOnlyChunks(sql);
+		const out = collapse(sql);
 
 		expect(chunksWithoutStatements(out)).toEqual([]);
 		expect(out).toContain('-- first\n-- second\nSELECT 1;');
@@ -307,7 +316,7 @@ describe('collapseCommentOnlyChunks', () => {
 	it('parks trailing comments on the preceding statement', () => {
 		const sql = `SELECT 1;\n${BREAK}\n-- nothing follows this\n`;
 
-		const out = collapseCommentOnlyChunks(sql);
+		const out = collapse(sql);
 
 		expect(chunksWithoutStatements(out)).toEqual([]);
 		expect(out).toContain('SELECT 1;\n-- nothing follows this');
@@ -316,7 +325,7 @@ describe('collapseCommentOnlyChunks', () => {
 	it('preserves every statement', () => {
 		const sql = `-- a\n${BREAK}\nSELECT 1;\n${BREAK}\n-- b\n${BREAK}\nSELECT 2;\n`;
 
-		const out = collapseCommentOnlyChunks(sql);
+		const out = collapse(sql);
 
 		expect(out).toContain('SELECT 1;');
 		expect(out).toContain('SELECT 2;');

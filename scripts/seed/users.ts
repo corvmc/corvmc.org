@@ -19,11 +19,11 @@ import {
 	TAGLINES
 } from './pools';
 import { type SeedRole, type SeedUser } from './types';
-import { pick, pickN, randomInt } from './util';
+import { pick, pickN, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 
-export async function seedRoles(): SeedRole[] {
+export async function seedRoles(): Promise<SeedRole[]> {
 	console.log('Seeding roles...');
 	// The named positions are seeded alongside the legacy rows so local dev has
 	// somebody to sign in as for each one. Without them the matrix is only ever
@@ -49,7 +49,7 @@ export async function seedRoles(): SeedRole[] {
 	return inserted;
 }
 
-export async function seedUsers(count: number): SeedUser[] {
+export async function seedUsers(count: number): Promise<SeedUser[]> {
 	console.log(`Seeding ${count} users...`);
 	const users: SeedUser[] = [];
 	const usedEmails = new Set<string>();
@@ -70,12 +70,11 @@ export async function seedUsers(count: number): SeedUser[] {
 		const id = randomUUID();
 		const createdAt = new Date(Date.now() - randomInt(7, 365) * 86400000);
 
-		const hasProfile = Math.random() > 0.3;
+		const hasProfile = random() > 0.3;
 		const memberInstruments = hasProfile ? pickN(INSTRUMENTS, randomInt(1, 3)) : [];
 		const memberGenres = hasProfile ? pickN(GENRES, randomInt(1, 3)) : [];
-		const memberLinks =
-			hasProfile && Math.random() > 0.4 ? pickN(SAMPLE_LINKS, randomInt(1, 3)) : null;
-		const visibility = !hasProfile ? 'hidden' : Math.random() > 0.6 ? 'public' : 'members';
+		const memberLinks = hasProfile && random() > 0.4 ? pickN(SAMPLE_LINKS, randomInt(1, 3)) : null;
+		const visibility = !hasProfile ? 'hidden' : random() > 0.6 ? 'public' : 'members';
 
 		const [u] = await db
 			.insert(user)
@@ -85,7 +84,7 @@ export async function seedUsers(count: number): SeedUser[] {
 				email,
 				emailVerified: true,
 				pronouns: pick(PRONOUNS),
-				phone: Math.random() > 0.4 ? `541-555-${String(randomInt(1000, 9999))}` : null,
+				phone: random() > 0.4 ? `541-555-${String(randomInt(1000, 9999))}` : null,
 				creditFreeHours: randomInt(0, 8),
 				creditEquipment: randomInt(0, 3),
 				memberNumber: 100 + i,
@@ -100,10 +99,10 @@ export async function seedUsers(count: number): SeedUser[] {
 			bio: hasProfile ? pick(MEMBER_BIOS) : null,
 			tagline: hasProfile ? pick(TAGLINES) : null,
 			hometown: hasProfile ? pick(HOMETOWNS) : null,
-			lookingFor: hasProfile && Math.random() > 0.7 ? 'band' : null,
-			availableForHire: hasProfile && Math.random() > 0.7,
-			teachesLessons: hasProfile && Math.random() > 0.8,
-			openToCollaboration: hasProfile && Math.random() > 0.5,
+			lookingFor: hasProfile && random() > 0.7 ? 'band' : null,
+			availableForHire: hasProfile && random() > 0.7,
+			teachesLessons: hasProfile && random() > 0.8,
+			openToCollaboration: hasProfile && random() > 0.5,
 			visibility: visibility as DirectoryVisibility,
 			contact: visibility === 'public' ? { email } : null,
 			links: memberLinks
@@ -237,7 +236,7 @@ export async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, role
 					stripeSubscriptionId: `sub_seed_${randomUUID().slice(0, 8)}`,
 					hoursPerReset,
 					creditsResetAt: creditsResetAt.toISOString(),
-					coveringFees: Math.random() > 0.6,
+					coveringFees: random() > 0.6,
 					cancelAtPeriodEnd: false
 				}
 			})

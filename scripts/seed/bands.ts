@@ -13,7 +13,7 @@ import {
 	SAMPLE_LINKS
 } from './pools';
 import { type SeedUser } from './types';
-import { pick, pickN, randomInt } from './util';
+import { pick, pickN, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
 
 /**
@@ -123,7 +123,7 @@ export async function seedBands(users: SeedUser[]) {
 				: {})
 		});
 
-		const lookingForMembers = Math.random() > 0.6;
+		const lookingForMembers = random() > 0.6;
 
 		// The listing half — these columns are gone from `group`.
 		pendingEntries.set(b.id, {
@@ -159,8 +159,8 @@ export async function seedBands(users: SeedUser[]) {
 				userId: m.id,
 				role: 'member',
 				position: pick(BAND_POSITIONS),
-				alias: Math.random() > 0.66 ? pick(BAND_ALIASES) : null,
-				status: Math.random() > 0.15 ? 'active' : 'pending',
+				alias: random() > 0.66 ? pick(BAND_ALIASES) : null,
+				status: random() > 0.15 ? 'active' : 'pending',
 				invitedById: owner.id
 			});
 		}
@@ -231,7 +231,6 @@ export async function seedBands(users: SeedUser[]) {
 			name: 'Disbanded Project',
 			slug: 'disbanded-project',
 			bio: 'This band was deactivated by staff.',
-			ownerId: deactivatedOwner.id,
 			deletedAt: new Date(Date.now() - 10 * 86400000)
 		},
 		deactivatedOwner.id,

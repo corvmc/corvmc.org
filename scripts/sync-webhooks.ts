@@ -66,8 +66,8 @@ async function main() {
 
 async function updateEndpoint(stripe: Stripe, endpointId: string) {
 	const endpoint = await stripe.webhookEndpoints.retrieve(endpointId);
-	const current = new Set(endpoint.enabled_events);
-	const desired = new Set(registeredEvents);
+	const current = new Set<string>(endpoint.enabled_events);
+	const desired = new Set<string>(registeredEvents);
 
 	const added = registeredEvents.filter((e) => !current.has(e));
 	const removed = [...current].filter((e) => !desired.has(e) && e !== '*');

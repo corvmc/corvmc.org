@@ -73,7 +73,9 @@ function findMarkdownFiles(dir: string): string[] {
 }
 
 async function main() {
-	const { env, dispose } = await getPlatformProxy();
+	// `src/app.d.ts` is where this project's bindings are named; without the
+	// type argument `env` is `unknown` and `env.DB` is unchecked.
+	const { env, dispose } = await getPlatformProxy<NonNullable<App.Platform['env']>>();
 	const db = drizzle(env.DB);
 
 	const files = findMarkdownFiles(CONTENT_DIR);

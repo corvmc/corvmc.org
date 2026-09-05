@@ -1,4 +1,3 @@
-// @ts-expect-error -- plain .mjs helper, no types
 import { deleteOrder } from '../d1-table-order.mjs';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
