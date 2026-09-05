@@ -570,7 +570,8 @@ is in [working-with-claude.md](working-with-claude.md).
 Prefer existing libraries and managed services over new bespoke code — the goal is to
 minimize _maintained_ code, not just initial build effort. Lean on Stripe, Postmark, and
 Cloudflare primitives rather than re-creating vendor features in app code. When adding a
-dependency, note it in `IDEAS.md`'s library table if it's broadly useful.
+dependency, note it in [`docs/reports/library-candidates.md`](../reports/library-candidates.md)
+if it's broadly useful.
 
 ### Patched dependencies
 

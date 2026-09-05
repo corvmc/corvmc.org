@@ -1,5 +1,7 @@
 # Feature flag retirement
 
+> **Why this ledger exists, from `IDEAS.md`:** Nine of the original eleven are gone, and most of those removals were launches rather than cleanups: five flags had no staff toggle at all, so their features had been dark in production since the day they shipped. `docs/plans/feature-flag-retirement.md` is the per-flag ledger — what each one gated, whether it was on in production, and whether removing it went live or only unlinked the nav. Inventory left this list earlier still, as `equipment`, cut in #286.
+
 Feature flags did one job here — let a half-built feature sit on `main` without members seeing it.
 [Long-lived feature branches](../development/conventions.md#long-lived-feature-branches) do that job
 now, so the flags come out. This is the per-flag ledger; it outlives any one session.
