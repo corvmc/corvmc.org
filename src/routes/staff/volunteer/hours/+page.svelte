@@ -3,9 +3,8 @@
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { urlState, oneOf, text, positiveInt } from '$lib/urlState.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import DataList from '$lib/components/ui/DataList.svelte';
@@ -30,63 +29,41 @@
 	type StatusView = (typeof volunteerHourStatuses)[number] | 'all';
 	const statusViews: StatusView[] = [...volunteerHourStatuses, 'all'];
 
-	// Filter state is seeded from the query string and mirrored back into it, so
-	// a reload lands on the same view. Local state rather than reading `page.url`
-	// back out, so a filter change re-renders immediately instead of waiting on
-	// the navigation that mirrors it.
-	const initial = page.url.searchParams;
-	const parseStatus = (raw: string | null): StatusView =>
-		statusViews.includes(raw as StatusView) ? (raw as StatusView) : 'pending';
-
-	let statusView = $state(parseStatus(initial.get('status')));
-	let roleFilter = $state(initial.get('role') ?? '');
-	let fromDate = $state(initial.get('from') ?? '');
-	let toDate = $state(initial.get('to') ?? '');
-	// `searchText` (not `search`): FilterBar's always-visible slot is a snippet
-	// named `search`, and a snippet shadows a same-named script binding.
-	let searchText = $state(initial.get('q') ?? '');
-	let searchQuery = $state(initial.get('q') ?? '');
-	let pageNumber = $state(Number(initial.get('page') ?? '1') || 1);
-
-	// Writes the URL, never state — the filters above stay the source of truth.
-	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
-	// rewrites the address bar, and the router overwrites that entry with its own
-	// record on the next navigation.
-	$effect(() => {
-		// Pairs rather than URLSearchParams: the lint rule bans mutable instances
-		// of it, and defaults are left out so a clean view has a clean URL.
-		const pairs: [string, string][] = [];
-		if (statusView !== 'pending') pairs.push(['status', statusView]);
-		if (roleFilter) pairs.push(['role', roleFilter]);
-		if (fromDate) pairs.push(['from', fromDate]);
-		if (toDate) pairs.push(['to', toDate]);
-		if (searchQuery) pairs.push(['q', searchQuery]);
-		if (pageNumber > 1) pairs.push(['page', String(pageNumber)]);
-
-		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = `${resolve('/staff/volunteer/hours')}${search ? `?${search}` : ''}`;
-		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
-		}
+	// Seeded from the query string and mirrored back into it, so a reload lands
+	// on the same view.
+	const filters = urlState(resolve('/staff/volunteer/hours'), {
+		status: oneOf(statusViews, 'pending' as StatusView),
+		role: text(),
+		from: text(),
+		to: text(),
+		q: text(),
+		page: positiveInt(1)
 	});
 
-	let filters = $derived({
-		status: statusView === 'all' ? undefined : statusView,
-		volunteerRoleId: roleFilter || undefined,
-		from: fromDate || undefined,
-		to: toDate || undefined,
-		search: searchQuery || undefined,
-		page: pageNumber
+	// The live text in the box, which is NOT `filters.q`: `q` only moves when the
+	// search input settles, so a half-typed word never reaches the URL or the
+	// query. Named `searchText` rather than `search` because FilterBar's
+	// always-visible slot is a snippet called `search`, and a snippet shadows a
+	// same-named script binding.
+	let searchText = $state(filters.q);
+
+	let query = $derived({
+		status: filters.status === 'all' ? undefined : filters.status,
+		volunteerRoleId: filters.role || undefined,
+		from: filters.from || undefined,
+		to: filters.to || undefined,
+		search: filters.q || undefined,
+		page: filters.page
 	});
 
 	// The page's one query. The counts, the pending-review queue and the role filter each own
 	// theirs — all three are unparameterized and refreshed by name, so none could join this one.
-	const result = $derived(getStaffVolunteerLogs(filters));
+	const result = $derived(getStaffVolunteerLogs(query));
 
 	// The status view is a view, not a filter — it always has a value, so counting
 	// it would leave "Clear" permanently offered.
 	const activeFilterCount = $derived(
-		(searchQuery ? 1 : 0) + (roleFilter ? 1 : 0) + (fromDate ? 1 : 0) + (toDate ? 1 : 0)
+		(filters.q ? 1 : 0) + (filters.role ? 1 : 0) + (filters.from ? 1 : 0) + (filters.to ? 1 : 0)
 	);
 
 	// A review has to refresh the list from HERE, not from the remote function:
@@ -94,7 +71,7 @@
 	// object it subscribed with. Refreshing `getStaffVolunteerLogs({})` server-side
 	// updated the tab counts but left the approved row sitting in the queue.
 	function refreshQueue() {
-		void getStaffVolunteerLogs(filters).refresh();
+		void getStaffVolunteerLogs(query).refresh();
 		// VolunteerStatusTabs reads this query directly rather than through a wrapper, so
 		// refreshing it here still repaints the badges.
 		void getVolunteerStatusCounts().refresh();
@@ -102,11 +79,11 @@
 
 	function clearFilters() {
 		searchText = '';
-		searchQuery = '';
-		roleFilter = '';
-		fromDate = '';
-		toDate = '';
-		pageNumber = 1;
+		filters.q = '';
+		filters.role = '';
+		filters.from = '';
+		filters.to = '';
+		filters.page = 1;
 	}
 </script>
 
@@ -122,9 +99,9 @@
 
 <PageContent>
 	<VolunteerStatusTabs
-		bind:view={statusView}
+		bind:view={filters.status}
 		onchange={() => {
-			pageNumber = 1;
+			filters.page = 1;
 		}}
 	/>
 
@@ -134,8 +111,8 @@
 				bind:value={searchText}
 				placeholder="Search members..."
 				onsearch={(q) => {
-					searchQuery = q;
-					pageNumber = 1;
+					filters.q = q;
+					filters.page = 1;
 				}}
 			/>
 		{/snippet}
@@ -143,10 +120,10 @@
 		<Select
 			size="sm"
 			aria-label="Role"
-			value={roleFilter}
+			value={filters.role}
 			onchange={(e: Event) => {
-				roleFilter = (e.currentTarget as HTMLSelectElement).value;
-				pageNumber = 1;
+				filters.role = (e.currentTarget as HTMLSelectElement).value;
+				filters.page = 1;
 			}}
 		>
 			<option value="">All roles</option>
@@ -157,30 +134,30 @@
 			type="date"
 			class="input input-sm"
 			aria-label="Worked on or after"
-			value={fromDate}
+			value={filters.from}
 			onchange={(e) => {
-				fromDate = (e.currentTarget as HTMLInputElement).value;
-				pageNumber = 1;
+				filters.from = (e.currentTarget as HTMLInputElement).value;
+				filters.page = 1;
 			}}
 		/>
 		<input
 			type="date"
 			class="input input-sm"
 			aria-label="Worked on or before"
-			value={toDate}
+			value={filters.to}
 			onchange={(e) => {
-				toDate = (e.currentTarget as HTMLInputElement).value;
-				pageNumber = 1;
+				filters.to = (e.currentTarget as HTMLInputElement).value;
+				filters.page = 1;
 			}}
 		/>
 	</FilterBar>
 
 	<DataList
 		{result}
-		empty={statusView === 'pending'
+		empty={filters.status === 'pending'
 			? 'Nothing to review — the queue is clear.'
 			: 'No hour logs found'}
-		onpage={(p) => (pageNumber = p)}
+		onpage={(p) => (filters.page = p)}
 	>
 		{#snippet children(logs)}
 			<Table>
