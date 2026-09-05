@@ -5,7 +5,7 @@ import { and, eq, isNull, isNotNull, gte, lt } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	createTemporaryUser,
-	createControlUser,
+	addLockUser,
 	removeTemporaryUser,
 	listLockUsers,
 	generateLockCode,
@@ -321,7 +321,7 @@ export async function issueLockSelfTest(): Promise<LockSelfTestResult> {
 	// it). This isolates the integration plumbing from the temporary-user schedule
 	// fields that U-tec has been rejecting with BAD-REQUEST.
 	try {
-		await createControlUser(SELF_TEST_NAME, code);
+		await addLockUser({ name: SELF_TEST_NAME, type: 0, password: code });
 		steps.push({
 			name: 'create',
 			ok: true,
