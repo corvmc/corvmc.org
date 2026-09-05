@@ -54,7 +54,7 @@
 </script>
 
 <div
-	class="flex h-8 items-center gap-2.5 px-2 text-[11px] font-semibold tracking-wide uppercase
+	class="strip flex h-8 items-center gap-2.5 px-2 text-[11px] font-semibold tracking-wide uppercase
 	       {open ? 'bg-primary text-primary-content' : 'bg-neutral text-neutral-content'}"
 >
 	<!-- Drag starts here and nowhere else: the block below is full of links and
@@ -132,3 +132,15 @@
 		{/if}
 	</div>
 </div>
+
+<style>
+	/* The strip sits inside the band's page, so it inherits the band's typeface —
+	   Impact under the punk theme, a monospace under electronic. Colour, size,
+	   weight and tracking are all set by classes above; the family was the one
+	   thing nothing claimed. Only that is reset here: taking `text-transform` back
+	   as well would undo the strip's own `uppercase`, since an unlayered rule
+	   beats a Tailwind utility. */
+	.strip {
+		font-family: var(--font-sans);
+	}
+</style>

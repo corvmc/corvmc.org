@@ -6,7 +6,7 @@ import { requireGroupRole } from '$lib/server/group/group-context';
 import { sanitizeCss } from '$lib/server/band/css-sanitizer';
 import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
 import { db } from '$lib/server/db';
-import { blockSchema, type Block } from '$lib/server/db/schema/band-page';
+import { blockSchema, BAND_THEME_VALUES, type Block } from '$lib/server/db/schema/band-page';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { reconcileBlocks } from '$lib/utils/band-site-preset';
 import { loadBandSiteContent, blockImageUrls } from '$lib/server/band/band-site-content';
@@ -87,7 +87,9 @@ const blocksField = z
 export const saveBandPageConfig = form(
 	z.object({
 		slug: z.string().min(1),
-		theme: z.string().optional(),
+		// The value becomes a class name on the public container, so it is the
+		// theme list plus `custom` — not any string a client cares to post.
+		theme: z.enum(BAND_THEME_VALUES).optional(),
 		customCss: z.string().max(51200).optional(),
 		blocks: blocksField
 	}),

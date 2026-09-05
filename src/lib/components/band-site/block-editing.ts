@@ -30,8 +30,7 @@ export const BLOCK_SOURCES: Record<Block['type'], BlockSource> = {
 	embed: { label: 'yours', owner: null, action: 'Paste a Bandcamp or Spotify link' },
 	events: { label: 'from your gig list', owner: 'events', action: 'Add a show' },
 	members: { label: 'from your roster', owner: 'members', action: 'Invite your bandmates' },
-	// Uploads live in this page's own Media section, so this one stays put.
-	gallery: { label: 'from your media', owner: null, action: 'Upload photos below' },
+	gallery: { label: 'from your media', owner: null, action: 'Upload photos' },
 	press: { label: 'from your press kit', owner: 'press-kit', action: 'Add a press quote' },
 	achievements: {
 		label: 'from your press kit',

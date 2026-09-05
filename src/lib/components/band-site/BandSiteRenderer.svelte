@@ -509,17 +509,21 @@
 				/>
 
 				{#if blockSettings && edit.openId === block.id}
-					{@render blockSettings(block)}
+					<div class="editor-chrome">{@render blockSettings(block)}</div>
 				{/if}
 
 				{#if block.hidden}
 					<p
-						class="m-0 flex items-center gap-2 border-b border-base-300 bg-base-200 px-4 py-3 text-xs text-base-content/60"
+						class="editor-chrome m-0 flex items-center gap-2 border-b border-base-300 bg-base-200 px-4 py-3 text-xs text-base-content/60"
 					>
 						Not published. Whatever you put in this block is kept.
 					</p>
 				{:else if blockIsEmpty(block, contentContext)}
-					<BlockGhost type={block.type} slug={edit.slug} />
+					<BlockGhost
+						type={block.type}
+						slug={edit.slug}
+						onsettings={() => edit.onToggleOpen(block.id)}
+					/>
 				{:else}
 					{@render blockBody(edit.displayBlocks[i] ?? block)}
 				{/if}
@@ -612,3 +616,24 @@
 		>
 	{/if}
 </nav>
+
+<style>
+	/* The editor's own controls live inside the band's page, which is what makes
+	   them useful — and also puts them inside the band's cascade. A theme sets
+	   `color`, `font-family`, `text-transform` and `letter-spacing` on the
+	   container, and those inherit straight into the control strip: the punk theme
+	   rendered the settings labels in Impact, in white, on the app's own light
+	   surface. So the chrome takes the app's text back.
+
+	   Only inherited properties, and only the ones a theme can reach. Custom CSS
+	   that targets these elements by selector still wins, which is the correct
+	   trade: this is a floor, not a shield. */
+	:global(.editor-chrome) {
+		color: var(--color-base-content);
+		font-family: var(--font-sans);
+		font-style: normal;
+		font-weight: 400;
+		text-transform: none;
+		letter-spacing: normal;
+	}
+</style>
