@@ -138,7 +138,9 @@ test('the theme control shows what the theme does, read-only until you take it o
 	await page.goto(`/band/${SEED_PREMIUM_BAND_SLUG}/page-editor`);
 	await expect(page.getByLabel('Move Hero down')).toBeVisible({ timeout: 15000 });
 
-	const themeSelect = page.getByLabel('Theme');
+	// By role, not by label: the control carries `aria-label="Theme"` and sits
+	// inside a `<label>` whose text is also "Theme", so `getByLabel` matches both.
+	const themeSelect = page.getByRole('combobox', { name: 'Theme' });
 	await expect(themeSelect).toBeVisible();
 
 	// A theme is legible: its actual rules are in the pane, not hidden behind a
