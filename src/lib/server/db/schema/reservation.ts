@@ -172,6 +172,50 @@ export const lockFallbackCode = sqliteTable(
 	(t) => [index('idx_lock_fallback_active').on(t.retiredAt, t.syncedAt)]
 );
 
+/**
+ * A member's persistent door code.
+ *
+ * These predate the app: seventeen of them were created by hand in the U-tec
+ * app and existed nowhere else, so nothing revoked one when a person stopped
+ * being a member. This table makes them known, attributable and revocable.
+ *
+ * `userId` is nullable because an adopted code may not match an account yet —
+ * a row can exist to say "this code on the lock is accounted for" before anyone
+ * has worked out whose it is.
+ */
+export const lockMemberCode = sqliteTable(
+	'lock_member_code',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+		/** The lock-assigned user id. The handle for revoking: names collide. */
+		lockAccessId: text('lock_access_id').notNull(),
+		code: text('code'),
+		/** The name as it reads on the lock, which is how staff recognise it. */
+		label: text('label').notNull(),
+		grantedByStaffId: text('granted_by_staff_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		/** Set when the lock reports sync_status 1. */
+		syncedAt: integer('synced_at', { mode: 'timestamp' }),
+		revokedAt: integer('revoked_at', { mode: 'timestamp' }),
+		revokedReason: text('revoked_reason'),
+		/** Set on a row created by reconciliation rather than by a staff grant. */
+		adoptedAt: integer('adopted_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		// One row per lock user: reconciliation matches on this to decide what is
+		// unmanaged, so a duplicate would make a code look adopted twice.
+		uniqueIndex('uq_lock_member_code_access').on(t.lockAccessId),
+		index('idx_lock_member_code_user').on(t.userId, t.revokedAt)
+	]
+);
+
 // ---------------------------------------------------------------------------
 // Client-safe serialized types
 // ---------------------------------------------------------------------------
@@ -179,3 +223,4 @@ export const lockFallbackCode = sqliteTable(
 export type Reservation = typeof reservation.$inferSelect;
 export type Closure = typeof closure.$inferSelect;
 export type LockFallbackCode = typeof lockFallbackCode.$inferSelect;
+export type LockMemberCode = typeof lockMemberCode.$inferSelect;

@@ -96,6 +96,14 @@ vi.mock('./fallback-code-service', () => ({
 	maintainFallbackCode: (...args: unknown[]) => mockMaintainFallbackCode(...args)
 }));
 
+const mockHasActiveMemberCode = vi.fn().mockResolvedValue(false);
+const mockReconcileMemberCodeSync = vi.fn().mockResolvedValue(0);
+
+vi.mock('./member-code-service', () => ({
+	hasActiveMemberCode: (...args: unknown[]) => mockHasActiveMemberCode(...args),
+	reconcileMemberCodeSync: (...args: unknown[]) => mockReconcileMemberCodeSync(...args)
+}));
+
 const mockCreateTemporaryUser = vi.fn().mockResolvedValue(null);
 const mockAddLockUser = vi.fn().mockResolvedValue(null);
 const mockRemoveTemporaryUser = vi.fn().mockResolvedValue(undefined);
@@ -165,6 +173,8 @@ beforeEach(() => {
 	mockGetJson.mockResolvedValue(true);
 	mockDispatchEmailOnly.mockResolvedValue(undefined);
 	mockMaintainFallbackCode.mockResolvedValue({ active: null, rotated: false });
+	mockHasActiveMemberCode.mockResolvedValue(false);
+	mockReconcileMemberCodeSync.mockResolvedValue(0);
 	// `list` never carries daterange — only `get` does. Route the fixtures'
 	// windows through the mocked get, which is what the service now reads.
 	mockGetLockUser.mockImplementation(
@@ -656,5 +666,28 @@ describe('sync reconciliation', () => {
 
 		expect(result.confirmed).toBe(0);
 		expect(result.errors).toHaveLength(0);
+	});
+});
+
+describe('persistent member codes', () => {
+	// Every code not issued is one less user on the lock's finite table.
+	it('skips provisioning for a member who already holds a standing code', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				startsAt: new Date(),
+				endsAt: new Date(),
+				createdByUserId: 'user-1',
+				memberName: 'Jordan'
+			}
+		]);
+		selectResults.push([]); // reconcile: nothing outstanding
+		mockHasActiveMemberCode.mockResolvedValue(true);
+
+		const result = await runDailyLockJob();
+
+		expect(mockHasActiveMemberCode).toHaveBeenCalledWith('user-1');
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+		expect(result.provisioned).toBe(0);
 	});
 });

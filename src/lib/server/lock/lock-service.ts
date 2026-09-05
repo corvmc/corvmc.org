@@ -17,6 +17,7 @@ import {
 	type LockDeviceHealth
 } from './ultraloc-client';
 import { maintainFallbackCode } from './fallback-code-service';
+import { hasActiveMemberCode, reconcileMemberCodeSync } from './member-code-service';
 import { getJson, putJson } from '$lib/server/kv';
 import { dispatchEmailOnly } from '$lib/server/notification';
 import { env } from '$env/dynamic/private';
@@ -58,7 +59,7 @@ export async function runDailyLockJob(): Promise<{
 	const online = await checkDeviceHealth(errors);
 	const cleaned = await cleanupPreviousDayAccess(errors);
 	const provisioned = await provisionDailyAccess(errors);
-	const confirmed = await reconcileSyncState(errors);
+	const confirmed = (await reconcileSyncState(errors)) + (await reconcileMemberCodeSync(errors));
 	const fallback = await maintainFallbackCode(errors);
 
 	return {
@@ -216,6 +217,11 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
 
 	for (const row of rows) {
 		try {
+			// A member with a standing door code can already get in. Issuing a
+			// second code per booking would only consume the lock's finite user
+			// table for no gain.
+			if (await hasActiveMemberCode(row.createdByUserId)) continue;
+
 			await provisionAccessFor(row);
 			count++;
 		} catch (err) {
