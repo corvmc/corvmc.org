@@ -161,17 +161,18 @@ export interface LockUser {
 	 * ack — is what says a door code actually works.
 	 */
 	syncStatus?: number;
-	/**
-	 * NOTE: `list` never returns this. Only `getLockUser()` does. It is still on
-	 * the type because `lock-service` filters on it; that filter is the bug in
-	 * #637 and is rewritten in the next phase.
-	 */
-	daterange?: [string, string];
 }
 
-/** The fuller record `get` returns: schedule fields and the keypad code. */
+/**
+ * The fuller record `get` returns: schedule fields and the keypad code.
+ *
+ * `daterange` lives here and deliberately not on `LockUser`, because `list` does
+ * not return it. Filtering list rows on it silently matched nothing, which is
+ * how expired users sat on the lock for months (#637).
+ */
 export interface LockUserDetail extends LockUser {
 	password?: string;
+	daterange?: [string, string];
 	weeks?: number[];
 	timerange?: [string, string];
 }

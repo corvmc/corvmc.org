@@ -81,9 +81,15 @@ export const reservation = sqliteTable(
 		// or comped); > 0 = cash owed. Combined with paidAt: paidAt set ⇒ paid,
 		// paidAt null & >0 ⇒ cash owed, paidAt null & 0 ⇒ comped/credit-settled.
 		cashDueCents: integer('cash_due_cents'),
+		// The lock-assigned user id, recovered by diffing the lock's user list
+		// around the add — U-tec's `add` ack carries no id of its own.
 		lockAccessId: text('lock_access_id'),
 		// Per-reservation door lock code (not backfilled from legacy data).
 		lockCode: text('lock_code'),
+		// When the code was observed on the physical lock (`sync_status` 1), as
+		// opposed to merely queued in U-tec's cloud. Null means we have issued a
+		// code but cannot yet promise it opens the door.
+		lockSyncedAt: integer('lock_synced_at', { mode: 'timestamp' }),
 		recurringSeriesId: text('recurring_series_id').references(() => recurringSeries.id, {
 			onDelete: 'set null'
 		}),
