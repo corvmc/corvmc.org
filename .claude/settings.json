@@ -1,5 +1,25 @@
 {
 	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash scripts/claude/inject-open-issues.sh"
+					}
+				]
+			},
+			{
+				"matcher": "startup|resume",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"$CLAUDE_PROJECT_DIR\"/scripts/claude/cloud-session-start.sh",
+						"timeout": 600
+					}
+				]
+			}
+		],
 		"PreToolUse": [
 			{
 				"matcher": "Edit|Write|MultiEdit",
@@ -43,16 +63,6 @@
 					{
 						"type": "command",
 						"command": "bash scripts/format-edited-file.sh"
-					}
-				]
-			}
-		],
-		"SessionStart": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "bash scripts/claude/inject-open-issues.sh"
 					}
 				]
 			}

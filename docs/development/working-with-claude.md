@@ -107,6 +107,10 @@ Advisory, in order of how hard they push back:
 The two `PreToolUse` hooks live in `scripts/claude/`. Each explains itself on stderr, including the
 escape hatch, so a blocked agent can correct course without asking you.
 
+One hook runs at the other end of the session's life: `SessionStart` fires
+`scripts/claude/cloud-session-start.sh`, which does nothing locally and boots a fresh clone in a
+cloud session. See [cloud-sessions.md](cloud-sessions.md).
+
 ## Recording a finding
 
 A session that is changing one thing will find something else wrong. There are three things it can
