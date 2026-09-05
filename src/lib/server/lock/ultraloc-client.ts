@@ -152,7 +152,43 @@ export interface LockUser {
 	id: number;
 	name: string;
 	type: number;
+	/** Lock-side enable flag. */
+	status?: number;
+	/**
+	 * Whether the change has reached the physical lock. 0 = queued in U-tec's
+	 * cloud only, 1 = on the device. Every write is accepted into that queue and
+	 * pushed down whenever the lock is next reachable, so this — not the command
+	 * ack — is what says a door code actually works.
+	 */
+	syncStatus?: number;
+	/**
+	 * NOTE: `list` never returns this. Only `getLockUser()` does. It is still on
+	 * the type because `lock-service` filters on it; that filter is the bug in
+	 * #637 and is rewritten in the next phase.
+	 */
 	daterange?: [string, string];
+}
+
+/** The fuller record `get` returns: schedule fields and the keypad code. */
+export interface LockUserDetail extends LockUser {
+	password?: string;
+	weeks?: number[];
+	timerange?: [string, string];
+}
+
+export interface LockDeviceHealth {
+	/** From `st.healthCheck`. Everything else here is last-known-cached. */
+	online: boolean;
+	lockState: string | null;
+	batteryLevel: number | null;
+}
+
+/** Map a raw lock-user row onto the camelCase shape the rest of the app uses. */
+function toLockUser<T extends LockUser>(raw: Record<string, unknown>): T {
+	const { sync_status: syncStatus, ...rest } = raw as Record<string, unknown> & {
+		sync_status?: number;
+	};
+	return { ...rest, syncStatus } as T;
 }
 
 /** Generate a random 4-digit keypad PIN (U-tec passcodes are 4–8 digits). */
@@ -184,37 +220,61 @@ async function lockUserCommand(name: string, args?: Record<string, unknown>): Pr
 }
 
 /**
- * Create a temporary lock user for a reservation.
- *
- * The `add` command returns a deferred ack (no user id), so this resolves once
- * the command is accepted. The door code is the caller-supplied `code`.
+ * How long to give U-tec before re-reading the list to find an added user.
+ * Overridable so tests do not sit through it.
  */
-export async function createTemporaryUser(params: TempUserParams): Promise<void> {
+const ADD_SETTLE_MS = 3000;
+
+/**
+ * Add a lock user and return the id the lock assigned it.
+ *
+ * The `add` ack carries no id — it is only `st.deferredResponse`, meaning the
+ * command was queued. The id is recoverable by diffing `list` around the add,
+ * which is what lets `reservation.lockAccessId` be written at all. Returns null
+ * when the diff is ambiguous (nothing new, or more than one new row, which can
+ * only happen if something else wrote to the lock concurrently); the caller
+ * keeps working, it just has no id to delete or update by later.
+ */
+export async function addLockUser(
+	user: Record<string, unknown>,
+	settleMs = ADD_SETTLE_MS
+): Promise<number | null> {
+	const before = new Set((await listLockUsers()).map((u) => u.id));
+
+	await lockUserCommand('add', user);
+
+	if (settleMs > 0) await new Promise((resolve) => setTimeout(resolve, settleMs));
+
+	const added = (await listLockUsers()).filter((u) => !before.has(u.id));
+	return added.length === 1 ? added[0].id : null;
+}
+
+/**
+ * Create a temporary lock user for a reservation. The door code is the
+ * caller-supplied `code`. Returns the lock-assigned user id, or null.
+ */
+export async function createTemporaryUser(
+	params: TempUserParams,
+	settleMs = ADD_SETTLE_MS
+): Promise<number | null> {
 	const graceEnd = new Date(params.endTime.getTime() + LOCK_GRACE_MINUTES * 60_000);
 
 	// A temporary user (type 2) requires the full schedule quartet: U-tec rejects
 	// the command with BAD-REQUEST if `weeks`/`timerange`/`limit` are omitted. The
 	// `daterange` already pins the exact window, so we leave every weekday and the
 	// whole day open and set no open-count limit.
-	await lockUserCommand('add', {
-		name: params.name,
-		type: USER_TYPE_TEMPORARY,
-		password: params.code,
-		daterange: [lockDateTime(params.startTime), lockDateTime(graceEnd)],
-		weeks: [0, 1, 2, 3, 4, 5, 6],
-		timerange: ['00:00', '23:59'],
-		limit: 0
-	});
-}
-
-/**
- * Create a plain normal (type 0) lock user — the minimal `add` payload proven to
- * work (name + type + password, no schedule). Used by the self-test to isolate
- * whether the temporary-user schedule fields are what U-tec is rejecting. A
- * normal user has no lock-side expiry, so it stays until explicitly deleted.
- */
-export async function createControlUser(name: string, code: number): Promise<void> {
-	await lockUserCommand('add', { name, type: 0, password: code });
+	return addLockUser(
+		{
+			name: params.name,
+			type: USER_TYPE_TEMPORARY,
+			password: params.code,
+			daterange: [lockDateTime(params.startTime), lockDateTime(graceEnd)],
+			weeks: [0, 1, 2, 3, 4, 5, 6],
+			timerange: ['00:00', '23:59'],
+			limit: 0
+		},
+		settleMs
+	);
 }
 
 /** Remove a lock user by its lock-assigned id. */
@@ -222,11 +282,60 @@ export async function removeTemporaryUser(userId: number): Promise<void> {
 	await lockUserCommand('delete', { id: userId });
 }
 
-/** List all users currently on the lock. */
+/**
+ * Update an existing lock user in place. A partial patch is enough — U-tec
+ * merges it rather than replacing the record — so re-pointing a booking's window
+ * leaves the member's code untouched.
+ */
+export async function updateLockUser(
+	userId: number,
+	patch: Record<string, unknown>
+): Promise<void> {
+	await lockUserCommand('update', { id: userId, ...patch });
+}
+
+/**
+ * List all users currently on the lock. Rows carry only
+ * `{id, name, type, status, sync_status}` — for the schedule or the keypad code,
+ * `getLockUser()` each row.
+ */
 export async function listLockUsers(): Promise<LockUser[]> {
 	const result = (await lockUserCommand('list')) as
-		{ devices?: Array<{ users?: LockUser[] }> } | undefined;
-	return result?.devices?.[0]?.users ?? [];
+		{ devices?: Array<{ users?: Array<Record<string, unknown>> }> } | undefined;
+	return (result?.devices?.[0]?.users ?? []).map((u) => toLockUser<LockUser>(u));
+}
+
+/** Read one lock user in full, including its schedule and keypad code. */
+export async function getLockUser(userId: number): Promise<LockUserDetail | null> {
+	const result = (await lockUserCommand('get', { id: userId })) as
+		{ devices?: Array<{ user?: Record<string, unknown> }> } | undefined;
+	const user = result?.devices?.[0]?.user;
+	return user ? toLockUser<LockUserDetail>(user) : null;
+}
+
+/**
+ * Ask whether the lock is actually reachable.
+ *
+ * Only `st.healthCheck` is live. `lockState` and `batteryLevel` are whatever the
+ * cloud last heard from the device, which may be months old — an offline lock
+ * still reports a plausible-looking battery level.
+ */
+export async function queryDeviceHealth(): Promise<LockDeviceHealth> {
+	const { deviceId } = await getConfig();
+
+	const result = (await apiCall('Uhome.Device', 'Query', { devices: [{ id: deviceId }] })) as
+		| { devices?: Array<{ states?: Array<{ capability: string; name: string; value: unknown }> }> }
+		| undefined;
+
+	const states = result?.devices?.[0]?.states ?? [];
+	const find = (capability: string, name: string) =>
+		states.find((s) => s.capability === capability && s.name === name)?.value;
+
+	return {
+		online: find('st.healthCheck', 'status') === 'Online',
+		lockState: (find('st.lock', 'lockState') as string) ?? null,
+		batteryLevel: (find('st.batteryLevel', 'level') as number) ?? null
+	};
 }
 
 // ---------------------------------------------------------------------------

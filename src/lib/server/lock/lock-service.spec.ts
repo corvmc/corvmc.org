@@ -73,14 +73,14 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 }));
 
 const mockCreateTemporaryUser = vi.fn().mockResolvedValue(undefined);
-const mockCreateControlUser = vi.fn().mockResolvedValue(undefined);
+const mockAddLockUser = vi.fn().mockResolvedValue(null);
 const mockRemoveTemporaryUser = vi.fn().mockResolvedValue(undefined);
 const mockListLockUsers = vi.fn().mockResolvedValue([]);
 const mockGenerateLockCode = vi.fn().mockReturnValue(4242);
 
 vi.mock('./ultraloc-client', () => ({
 	createTemporaryUser: (...args: unknown[]) => mockCreateTemporaryUser(...args),
-	createControlUser: (...args: unknown[]) => mockCreateControlUser(...args),
+	addLockUser: (...args: unknown[]) => mockAddLockUser(...args),
 	removeTemporaryUser: (...args: unknown[]) => mockRemoveTemporaryUser(...args),
 	listLockUsers: (...args: unknown[]) => mockListLockUsers(...args),
 	generateLockCode: (...args: unknown[]) => mockGenerateLockCode(...args),
@@ -122,7 +122,7 @@ beforeEach(() => {
 	selectCallIndex = 0;
 	updateCalls.length = 0;
 	mockCreateTemporaryUser.mockResolvedValue(undefined);
-	mockCreateControlUser.mockResolvedValue(undefined);
+	mockAddLockUser.mockResolvedValue(null);
 	mockRemoveTemporaryUser.mockResolvedValue(undefined);
 	mockListLockUsers.mockResolvedValue([]);
 	mockGenerateLockCode.mockReturnValue(4242);
@@ -248,14 +248,18 @@ describe('issueLockSelfTest', () => {
 		expect(result.ok).toBe(true);
 		expect(result.code).toBe(4242);
 		// Uses the proven normal-user add, not the temporary-user path.
-		expect(mockCreateControlUser).toHaveBeenCalledWith('CMC Self-Test', 4242);
+		expect(mockAddLockUser).toHaveBeenCalledWith({
+			name: 'CMC Self-Test',
+			type: 0,
+			password: 4242
+		});
 		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
 		expect(result.steps.map((s) => s.name)).toEqual(['create', 'list']);
 		expect(result.steps.every((s) => s.ok)).toBe(true);
 	});
 
 	it('reports a failed create step without throwing', async () => {
-		mockCreateControlUser.mockRejectedValueOnce(new Error('device offline'));
+		mockAddLockUser.mockRejectedValueOnce(new Error('device offline'));
 
 		const result = await issueLockSelfTest();
 
