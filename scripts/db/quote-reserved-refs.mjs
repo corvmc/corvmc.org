@@ -67,8 +67,9 @@ const RESERVED = new Set([
 	'return'
 ]);
 
+/** @param {string} sql */
 function fix(sql) {
-	return sql.replace(UNQUOTED_REF, (match, table) =>
+	return sql.replace(UNQUOTED_REF, (/** @type {string} */ match, /** @type {string} */ table) =>
 		RESERVED.has(table.toLowerCase()) ? `REFERENCES \`${table}\`(` : match
 	);
 }

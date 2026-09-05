@@ -9,10 +9,11 @@
  * instead of a `Promise`, and nine reads of a field `batchInsert` had erased all
  * survived without a word.
  *
- * `pnpm check:scripts` (in the `Svelte Check` job) is the real guard — it fails
- * loudly on any of that. These tests cover only what a compiler cannot see: that
- * the project still points at the seed tree, and that the two patterns which
- * *defeat* the compiler have not come back.
+ * `pnpm check:tooling` (in the `Svelte Check` job) is the real guard — it fails
+ * loudly on any of that, and `scripts/coverage.spec.ts` fails if the seed tree
+ * ever drops out of a typecheck project again. These tests cover the one thing
+ * neither can see: the two patterns that *defeat* the compiler while still
+ * compiling.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -20,34 +21,11 @@ import { readFileSync, readdirSync } from 'node:fs';
 const root = new URL('../', import.meta.url);
 const seedDir = new URL('seed/', new URL('scripts/', root));
 
-function read(path: string): string {
-	return readFileSync(new URL(path, root), 'utf8');
-}
-
 const seedFiles = readdirSync(seedDir)
 	.filter((name) => name.endsWith('.ts') && !name.endsWith('.spec.ts'))
 	.map((name) => [name, readFileSync(new URL(name, seedDir), 'utf8')] as const);
 
 describe('seed typing', () => {
-	it('keeps the seed tree inside a typecheck project', () => {
-		const config = JSON.parse(read('tsconfig.scripts.json').replace(/^\s*\/\/.*$/gm, ''));
-		expect(config.include).toContain('scripts/**/*.ts');
-		expect(config.include).toContain('e2e/**/*.ts');
-	});
-
-	it('runs that project from `pnpm check`', () => {
-		const pkg = JSON.parse(read('package.json'));
-		expect(pkg.scripts['check:scripts']).toContain('tsconfig.scripts.json');
-		expect(pkg.scripts.check).toContain('check:scripts');
-	});
-
-	it('runs it in CI too', () => {
-		// A gate nothing runs is not a gate. `check:scripts` rides the existing
-		// `Svelte Check` job rather than its own — the per-job setup floor is ~45s
-		// and this step is a few seconds.
-		expect(read('.github/workflows/ci.yml')).toMatch(/- run: pnpm check\b/);
-	});
-
 	it('declares seeded row arrays from the table, not as bare records', () => {
 		// `batchInsert` is generic over the drizzle table, so a row array typed
 		// `Record<string, unknown>[]` opts every column name and value back out of

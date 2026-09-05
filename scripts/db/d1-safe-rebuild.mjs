@@ -37,6 +37,10 @@
 //   node scripts/db/d1-safe-rebuild.mjs --check    # CI: fail on unsafe migrations
 //   node scripts/db/d1-safe-rebuild.mjs --write    # rewrite unsafe migrations in place
 
+/** @typedef {import('./snapshot-types.js').Snapshot} Snapshot */
+/** @typedef {import('./snapshot-types.js').GroupedSnapshot} GroupedSnapshot */
+/** @typedef {import('./snapshot-types.js').ChildGraph} ChildGraph */
+
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -74,6 +78,7 @@ const GRANDFATHERED = new Set([
 ]);
 
 /** Tables rebuilt by a migration, i.e. drizzle's `recreate_table` output. */
+/** @param {string} sql @returns {string[]} */
 export function findRebuiltTables(sql) {
 	const out = [];
 	// `__new_x` is created, then the real `x` is dropped and `__new_x` renamed
@@ -96,6 +101,7 @@ export function findRebuiltTables(sql) {
  * nothing worth preserving: it is empty, so the parent's DROP cascading into it
  * deletes nothing.
  */
+/** @param {string} sql @returns {string[]} */
 export function findCreatedTables(sql) {
 	const out = [];
 	for (const m of sql.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?`([A-Za-z0-9_]+)`/g)) {
@@ -123,6 +129,12 @@ export function findCreatedTables(sql) {
  *
  *   -- d1-safe-rebuild: intentional drop `band`
  */
+/**
+ * @param {string} sql
+ * @param {ChildGraph} kids
+ * @param {string[]} [rebuilt]
+ * @returns {string[]}
+ */
 export function findUnsafeDrops(sql, kids, rebuilt = []) {
 	// A rewritten migration drops its children on purpose, as part of the
 	// detach/reattach dance, and restores them before commit. Those drops are
@@ -145,8 +157,9 @@ export function findUnsafeDrops(sql, kids, rebuilt = []) {
  * Split a migration into statements, dropping the pragma lines drizzle emits
  * around a rebuild — we supply our own framing.
  */
+/** @param {string} sql @returns {string[]} */
 function statements(sql) {
-	return sql
+	return /** @type {string} */ (sql)
 		.split(BREAK)
 		.map((s) => s.trim())
 		.filter(Boolean)
@@ -154,6 +167,12 @@ function statements(sql) {
 }
 
 /** Rebuild `table` under a temporary name, then swap it in. */
+/**
+ * @param {GroupedSnapshot} snap
+ * @param {string} table
+ * @param {string} tmpPrefix
+ * @param {Set<string>} demote
+ */
 function rebuildBlock(snap, table, tmpPrefix, demote) {
 	const tmp = `${tmpPrefix}_${table}`;
 	const cols = columnList(snap, table);
@@ -169,6 +188,11 @@ function rebuildBlock(snap, table, tmpPrefix, demote) {
 /**
  * Rewrite one migration. Returns the new SQL, or null when nothing is needed.
  */
+/**
+ * @param {string} sql
+ * @param {Snapshot} snapshot
+ * @returns {string | null}
+ */
 export function rewriteMigration(sql, snapshot) {
 	if (sql.includes(SAFE_MARKER)) return null; // already rewritten
 	const rebuilt = findRebuiltTables(sql);
@@ -183,6 +207,7 @@ export function rewriteMigration(sql, snapshot) {
 	// block runs, and they're empty, so there is nothing to protect.
 	const rebuiltSet = new Set(rebuilt);
 	const createdSet = new Set(findCreatedTables(sql));
+	/** @type {string[]} */
 	const toDetach = [];
 	for (const table of rebuilt) {
 		for (const d of descendantsDeepestFirst(table, kids)) {
@@ -227,7 +252,9 @@ export function rewriteMigration(sql, snapshot) {
  * deploy), so `pnpm db:fix-migrations` repairs the class wherever it appears.
  * Idempotent. Returns null when nothing needs moving.
  */
+/** @param {string} sql @returns {string | null} */
 export function collapseCommentOnlyChunks(sql) {
+	/** @param {string} chunk */
 	const isCommentOnly = (chunk) =>
 		chunk
 			.split('\n')

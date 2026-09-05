@@ -16,16 +16,16 @@ Stripe, Postmark. Documentation index: `docs/README.md`.
 Always through `pnpm`. A global prettier 2.8.8 shadows this project's prettier 3, so `npx prettier`
 reports results that are simply wrong.
 
-| Command                   | What it does                                             | CI job that already runs it |
-| ------------------------- | -------------------------------------------------------- | --------------------------- |
-| `pnpm check`              | svelte-check over `src`, then `tsc` over `scripts`+`e2e` | Svelte Check                |
-| `pnpm lint:changed`       | prettier + eslint vs `BASE_REF` (default `origin/main`)  | Lint (changed)              |
-| `pnpm lint`               | the whole tree, including markdown                       | Lint (full)                 |
-| `pnpm test:unit -- --run` | vitest, one shot                                         | Unit tests                  |
-| `pnpm test:e2e`           | playwright — add `--workers=1` locally                   | E2E                         |
-| `pnpm docs:check`         | docs integrity + route drift                             | Docs integrity              |
-| `pnpm db:generate`        | the only way to create a migration                       | Schema drift                |
-| `pnpm db:reset`           | rebuild local D1 (wipe + migrate + seed)                 | —                           |
+| Command                   | What it does                                            | CI job that already runs it |
+| ------------------------- | ------------------------------------------------------- | --------------------------- |
+| `pnpm check`              | svelte-check over `src`, then over everything else      | Svelte Check                |
+| `pnpm lint:changed`       | prettier + eslint vs `BASE_REF` (default `origin/main`) | Lint (changed)              |
+| `pnpm lint`               | the whole tree, including markdown                      | Lint (full)                 |
+| `pnpm test:unit -- --run` | vitest, one shot                                        | Unit tests                  |
+| `pnpm test:e2e`           | playwright — add `--workers=1` locally                  | E2E                         |
+| `pnpm docs:check`         | docs integrity + route drift                            | Docs integrity              |
+| `pnpm db:generate`        | the only way to create a migration                      | Schema drift                |
+| `pnpm db:reset`           | rebuild local D1 (wipe + migrate + seed)                | —                           |
 
 **Read the third column before running anything in the first.** Every one of those jobs runs on
 your PR and again on the merge-queue ref, so a whole-tree run here proves nothing new — and a
@@ -65,7 +65,10 @@ local run you did not do. Triage of a red or rejected run is the `qc` role's job
   page stays next to that page instead. There is no `shared/`. See
   `docs/development/conventions.md#where-a-file-goes`.
 - **Tests are `.spec.ts`**, colocated, never `.test.ts` — the vitest globs only match `.spec`,
-  so a misnamed file silently never runs.
+  so a misnamed file silently never runs. `scripts/coverage.spec.ts` fails on a `.test.ts`, and on
+  any source file that no tsconfig project compiles: `src` is the generated config's, everything
+  else — `scripts/`, `e2e/`, `eslint-rules/`, `.storybook/`, the root configs — is
+  `tsconfig.tooling.json`. A new top-level directory has to be added to one of them.
 - **Forms use `$lib/components/ui/Form/`** (`Form`, `FormField`, `SubmitButton`) — never a raw
   `<form>`, `<input>`, or `<select>`, not even inline.
 - **No gradients** in any interface.

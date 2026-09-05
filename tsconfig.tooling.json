@@ -1,30 +1,64 @@
+// Everything outside `src`, typechecked.
+//
 // `pnpm check` runs svelte-check against the generated `.svelte-kit/tsconfig.json`,
-// whose `include` covers `src` and nothing else. Seeds, e2e fixtures and the db
-// scripts are real code against the real schema, and none of it was typechecked
-// by anything — a stale import there is invisible until the suite runs it.
+// whose `include` covers `src` and nothing else. Seeds, e2e fixtures, the db
+// scripts, the Storybook config and the Playwright config are all real code
+// against the real schema, and until #536 none of it was compiled by anything: a
+// stale import there was invisible until the suite ran it. The `event` →
+// `event_listing` rename (#527) shipped an `e2e/fixtures` import still naming the
+// old table with `pnpm check` reporting zero errors, and it took the whole E2E
+// job down in `prepare` before a single test started.
 //
-// That is not theoretical: the `event` → `event_listing` rename (#527) shipped a
-// `scripts/lib` type and an `e2e/fixtures` import still naming the old table with
-// `pnpm check` reporting zero errors, and the second one took the whole E2E job
-// down in `prepare` before a single test started.
+// This file used to report only the import/export error family, through
+// `scripts/check-tooling-imports.mjs`, because the trees carried ~40 other
+// errors and gating on those would have blocked on a cleanup nobody had done.
+// #536 did the cleanup. The narrowing — and the script that implemented it — are
+// gone, and `pnpm check:tooling` is a full svelte-check now.
 //
-// `allowJs` is off on purpose. The `.mjs` helpers under `scripts/db` and
-// `scripts/claude` are plain JS with no annotations, so checking them is all
-// implicit-any noise — and the `.ts` files that import them already carry
-// `@ts-expect-error` for exactly that, which only stays correct while the import
-// really is unresolvable here.
+// svelte-check rather than plain `tsc` because `.storybook` has two `.svelte`
+// components in it and `tsc` cannot see inside a `.svelte` file. Verified to
+// report `.mjs`, `.ts` and `.svelte` errors from this one config.
+//
+// `checkJs` is on: the `.mjs` helpers under `scripts/` generate the migrations
+// that run against production, which is the last place to accept "plain JS, no
+// annotations". They carry JSDoc for the same reason.
+//
+// `scripts/coverage.spec.ts` fails if any source file outside `src` stops being
+// matched here.
 {
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
 		"noEmit": true,
 		"strict": true,
 		"skipLibCheck": true,
-		"allowJs": false,
-		"checkJs": false,
+		"allowJs": true,
+		"checkJs": true,
 		"esModuleInterop": true,
 		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
-		"types": ["node", "@cloudflare/workers-types"]
+		// `vite/client` for `import.meta.env` in the Storybook config; the rest is
+		// Node scripts and the workers bindings the seeds open D1 through.
+		"types": ["node", "vite/client", "@cloudflare/workers-types"]
 	},
-	"include": ["e2e/**/*.ts", "scripts/**/*.ts"]
+	"include": [
+		"scripts/**/*.ts",
+		"scripts/**/*.mjs",
+		"e2e/**/*.ts",
+		".storybook/**/*.ts",
+		".storybook/**/*.svelte",
+		"playwright.config.ts",
+		// The custom lint rules enforce the hard rules in CLAUDE.md — `no-db-transaction`
+		// stands between this repo and a silently broken write on D1 — so they are the
+		// last place to run unchecked JS.
+		"eslint-rules/**/*.js",
+		"eslint-rules/**/*.ts",
+		"eslint.config.js",
+		"svelte.config.js",
+		"drizzle.config.ts",
+		"vite.config.ts",
+		// `App.Platform['env']` is the only correct declaration of this project's
+		// bindings — `worker-configuration.d.ts` is stale (it still says
+		// `corvmc_db`, where wrangler.toml says `DB`).
+		"src/app.d.ts"
+	]
 }

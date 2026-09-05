@@ -10,27 +10,48 @@
 // `DEFAULT` before `NOT NULL`, constraints after columns) so a rewritten
 // migration reads like the generated ones around it.
 
+/** @typedef {import('./snapshot-types.js').Snapshot} Snapshot */
+/** @typedef {import('./snapshot-types.js').GroupedSnapshot} GroupedSnapshot */
+/** @typedef {import('./snapshot-types.js').SnapshotEntity} SnapshotEntity */
+/** @typedef {import('./snapshot-types.js').ChildGraph} ChildGraph */
+
+/** @param {string} s */
 const q = (s) => `\`${s}\``;
 
-/** Group a snapshot's flat entity list into a per-table shape. */
+/**
+ * Group a snapshot's flat entity list into a per-table shape.
+ *
+ * @param {Snapshot} snapshot
+ * @returns {GroupedSnapshot}
+ */
 export function readSnapshot(snapshot) {
+	/** @param {SnapshotEntity['entityType']} t */
 	const byType = (t) => snapshot.ddl.filter((e) => e.entityType === t);
+	/** @template {{ table: string }} E @param {E[]} entities @returns {Map<string, E[]>} */
 	const group = (entities) => {
+		/** @type {Map<string, E[]>} */
 		const m = new Map();
 		for (const e of entities) {
-			if (!m.has(e.table)) m.set(e.table, []);
-			m.get(e.table).push(e);
+			const bucket = m.get(e.table) ?? [];
+			bucket.push(e);
+			m.set(e.table, bucket);
 		}
 		return m;
 	};
 	return {
-		tables: byType('tables').map((t) => t.name),
-		columns: group(byType('columns')),
-		pks: group(byType('pks')),
-		fks: group(byType('fks')),
-		uniques: group(byType('uniques')),
-		checks: group(byType('checks')),
-		indexes: group(byType('indexes'))
+		tables: /** @type {import('./snapshot-types.js').SnapshotTable[]} */ (byType('tables')).map(
+			(t) => t.name
+		),
+		columns: group(
+			/** @type {import('./snapshot-types.js').SnapshotColumn[]} */ (byType('columns'))
+		),
+		pks: group(/** @type {import('./snapshot-types.js').SnapshotPk[]} */ (byType('pks'))),
+		fks: group(/** @type {import('./snapshot-types.js').SnapshotFk[]} */ (byType('fks'))),
+		uniques: group(
+			/** @type {import('./snapshot-types.js').SnapshotUnique[]} */ (byType('uniques'))
+		),
+		checks: group(/** @type {import('./snapshot-types.js').SnapshotCheck[]} */ (byType('checks'))),
+		indexes: group(/** @type {import('./snapshot-types.js').SnapshotIndex[]} */ (byType('indexes')))
 	};
 }
 
@@ -40,13 +61,19 @@ export function readSnapshot(snapshot) {
  * including it would make the descendant walk non-terminating in spirit even
  * though the `seen` set stops it in practice.
  */
+/**
+ * @param {GroupedSnapshot} snap
+ * @returns {ChildGraph}
+ */
 export function childGraph(snap) {
+	/** @type {ChildGraph} */
 	const kids = new Map();
 	for (const [table, fks] of snap.fks) {
 		for (const fk of fks) {
 			if (fk.tableTo === table) continue;
-			if (!kids.has(fk.tableTo)) kids.set(fk.tableTo, new Set());
-			kids.get(fk.tableTo).add(table);
+			const bucket = kids.get(fk.tableTo) ?? new Set();
+			bucket.add(table);
+			kids.set(fk.tableTo, bucket);
 		}
 	}
 	return kids;
@@ -60,9 +87,16 @@ export function childGraph(snap) {
  * which fires actions on *its* children, so the deepest descendants have to be
  * detached before the ones above them. Reattaching runs in the exact reverse.
  */
+/**
+ * @param {string} root
+ * @param {ChildGraph} kids
+ * @returns {string[]}
+ */
 export function descendantsDeepestFirst(root, kids) {
+	/** @type {string[]} */
 	const out = [];
 	const seen = new Set([root]);
+	/** @param {string} table @returns {void} */
 	const visit = (table) => {
 		for (const child of kids.get(table) ?? []) {
 			if (seen.has(child)) continue;
@@ -75,6 +109,10 @@ export function descendantsDeepestFirst(root, kids) {
 	return out;
 }
 
+/**
+ * @param {import('./snapshot-types.js').SnapshotColumn} col
+ * @param {string | null} singlePk
+ */
 function renderColumn(col, singlePk) {
 	let s = `\t${q(col.name)} ${col.type}`;
 	if (singlePk === col.name) s += ' PRIMARY KEY';
@@ -84,6 +122,10 @@ function renderColumn(col, singlePk) {
 	return s;
 }
 
+/**
+ * @param {import('./snapshot-types.js').SnapshotFk} fk
+ * @param {Set<string>} demote
+ */
 function renderFk(fk, demote) {
 	const cols = fk.columns.map(q).join(', ');
 	const colsTo = fk.columnsTo.map(q).join(', ');
@@ -100,7 +142,7 @@ function renderFk(fk, demote) {
 /**
  * CREATE TABLE for `table`, optionally renamed and with FK actions demoted.
  *
- * @param {object} snap        grouped snapshot from readSnapshot()
+ * @param {GroupedSnapshot} snap grouped snapshot from readSnapshot()
  * @param {string} table       table to render
  * @param {object} [opts]
  * @param {string} [opts.as]   emit under a different name (e.g. `__detach_x`)
@@ -133,6 +175,10 @@ export function renderCreateTable(snap, table, opts = {}) {
  * to put them back. Unique constraints declared as `uniques` are part of the
  * CREATE TABLE above; these are the standalone CREATE INDEX statements.
  */
+/**
+ * @param {GroupedSnapshot} snap
+ * @param {string} table
+ */
 export function renderIndexes(snap, table) {
 	return (snap.indexes.get(table) ?? []).map((idx) => {
 		const cols = idx.columns.map((c) => (c.isExpression ? c.value : q(c.value))).join(',');
@@ -142,7 +188,12 @@ export function renderIndexes(snap, table) {
 	});
 }
 
-/** Column list shared by a table and its rebuild copy. */
+/**
+ * Column list shared by a table and its rebuild copy.
+ *
+ * @param {GroupedSnapshot} snap
+ * @param {string} table
+ */
 export function columnList(snap, table) {
 	return (snap.columns.get(table) ?? []).map((c) => q(c.name)).join(', ');
 }

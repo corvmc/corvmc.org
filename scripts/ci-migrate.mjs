@@ -24,7 +24,11 @@ const PROD_BRANCH = 'main';
 // `main` specifically — a queue on another base is not production.
 const PROD_QUEUE_PREFIX = `gh-readonly-queue/${PROD_BRANCH}/`;
 
-/** Does a build on this branch publish to production, and so need the schema applied first? */
+/**
+ * Does a build on this branch publish to production, and so need the schema applied first?
+ *
+ * @param {string} branch
+ */
 export function isProductionBranch(branch) {
 	return branch === PROD_BRANCH || branch.startsWith(PROD_QUEUE_PREFIX);
 }

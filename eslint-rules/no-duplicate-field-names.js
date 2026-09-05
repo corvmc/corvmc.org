@@ -1,3 +1,5 @@
+/** @typedef {import('./ast.js').RuleNode} RuleNode */
+
 /**
  * Resolve the submitted property name from an element's attributes, or null when it
  * can't be determined statically.
@@ -68,12 +70,14 @@ export default {
 		/** @type {Array<{ names: Map<string, any> }>} */
 		const formStack = [];
 
+		/** @param {RuleNode} node */
 		function isFormTag(node) {
 			const tag = node.name?.name;
 			return tag === 'Form' || tag === 'form';
 		}
 
 		return {
+			/** @param {RuleNode} node */
 			SvelteElement(node) {
 				if (isFormTag(node)) {
 					formStack.push({ names: new Map() });
@@ -112,6 +116,7 @@ export default {
 					scope.names.set(resolved.name, resolved.attr);
 				}
 			},
+			/** @param {RuleNode} node */
 			'SvelteElement:exit'(node) {
 				if (isFormTag(node)) formStack.pop();
 			}
