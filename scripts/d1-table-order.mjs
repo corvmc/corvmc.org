@@ -64,11 +64,14 @@ export const tableOrder = [
 	'duty_list',
 	// References duty_list and volunteer_role.
 	'duty_list_item',
-	// references volunteer_role + event + duty_list, and is referenced by
-	// volunteer_signup, volunteer_hour_log and work_task, so it sits between them.
+	// references volunteer_role + event + duty_list + reservation, and is
+	// referenced by volunteer_signup, volunteer_hour_log, work_task and
+	// member_orientation, so it sits between them.
 	'work_order',
 	// The checklist inside one work order. References work_order and user.
 	'work_task',
+	// References user, work_order and reservation, so it follows all three.
+	'member_orientation',
 	'volunteer_signup',
 	// independents (no FKs)
 	'closure',

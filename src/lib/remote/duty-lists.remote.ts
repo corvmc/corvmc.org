@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
-import { dutyListAnchors } from '$lib/config';
+import { dutyListAnchors, dutyListSubjects } from '$lib/config';
 import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
 import {
 	addDutyListItem as addItemService,
@@ -70,10 +70,14 @@ export const getDutyLists = query(async () => {
 	return listDutyLists({ includeInactive: true });
 });
 
-/** The picker on the production console: only lists worth applying. */
+/**
+ * The picker on the production console: only lists worth applying, and only the
+ * ones for an event — a coordinator must not be offered "Rehearsal Orientation"
+ * for Saturday's show.
+ */
 export const getActiveDutyLists = query(async () => {
 	await requireCapability('volunteer.read');
-	const lists = await listDutyLists();
+	const lists = await listDutyLists({ subject: 'event' });
 	return lists.filter((l) => l.itemCount > 0);
 });
 
@@ -101,7 +105,8 @@ export const createDutyList = form(
 	z.object({
 		name: z.string().min(1, 'Name is required'),
 		description: z.string().optional(),
-		anchor: z.enum(dutyListAnchors).default('doors')
+		anchor: z.enum(dutyListAnchors).default('doors'),
+		subject: z.enum(dutyListSubjects).default('event')
 	}),
 	async (data) => {
 		const staff = await requireCapability('volunteer.manageRoles');
@@ -110,6 +115,7 @@ export const createDutyList = form(
 				name: data.name,
 				description: data.description,
 				anchor: data.anchor,
+				subject: data.subject,
 				createdByUserId: staff.id
 			});
 			await getDutyLists().refresh();
@@ -126,6 +132,7 @@ export const updateDutyList = form(
 		name: z.string().optional(),
 		description: z.string().optional(),
 		anchor: z.enum(dutyListAnchors).optional(),
+		subject: z.enum(dutyListSubjects).optional(),
 		// `.optional().default(false)`, never a bare required boolean: an unchecked
 		// box is not submitted at all, and kit reports the absence as the boolean's
 		// own validation failure.
@@ -138,6 +145,7 @@ export const updateDutyList = form(
 				name: data.name,
 				description: data.description,
 				anchor: data.anchor,
+				subject: data.subject,
 				isActive: data.isActive
 			});
 			await Promise.all([getDutyLists().refresh(), getDutyListPage(data.id).refresh()]);
@@ -259,7 +267,11 @@ export const applyDutyList = form(
 	async (data) => {
 		const staff = await requireCapability('volunteer.manageShifts');
 		try {
-			const result = await applyService(data.dutyListId, data.eventId, staff.id);
+			const result = await applyService(
+				data.dutyListId,
+				{ kind: 'event', id: data.eventId },
+				staff.id
+			);
 			// The advance items land unscheduled, which is the coordinator's queue on
 			// Today. Without this the card the apply just filled stays empty until
 			// somebody navigates.

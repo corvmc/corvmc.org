@@ -91,6 +91,15 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		defaultCapacity: 1
 	},
 	{
+		name: 'Rehearsal Orientation',
+		group: 'away-from-shows' as const,
+		description:
+			'Meet a member at the door for their first rehearsal. Show them the room, the gear, the door code, and how to report something broken.\n\nForty-five minutes, and the single highest-leverage shift we run — it is the difference between somebody booking once and somebody joining.',
+		displayOrder: 57,
+		defaultDurationMinutes: 45,
+		defaultCapacity: 1
+	},
+	{
 		name: 'Outreach & Tabling',
 		group: 'away-from-shows' as const,
 		description:
@@ -255,7 +264,7 @@ export async function seedCertifications(users: any[], roles: any[]) {
 	const now = new Date();
 	const day = 86_400_000;
 
-	const [deskCert, foodCert] = await batchInsert(volunteerCertification, [
+	const [deskCert, foodCert, orientationCert] = await batchInsert(volunteerCertification, [
 		{
 			id: randomUUID(),
 			name: 'Sound Desk Cleared',
@@ -272,6 +281,17 @@ export async function seedCertifications(users: any[], roles: any[]) {
 			issuedBy: 'Oregon Health Authority',
 			validityMonths: 36,
 			displayOrder: 20
+		},
+		{
+			id: randomUUID(),
+			name: 'Space Orientation Trained',
+			description:
+				'Cleared to walk a new member through the space on their first booking. Shadow one, then run one with a staffer in the building.',
+			// Internal and permanent, like the desk clearance: we taught you the
+			// room, and the room does not expire.
+			issuedBy: null,
+			validityMonths: null,
+			displayOrder: 30
 		}
 	]);
 
@@ -296,6 +316,16 @@ export async function seedCertifications(users: any[], roles: any[]) {
 		await db
 			.insert(volunteerRoleCertification)
 			.values({ volunteerRoleId: deskRole.id, certificationId: foodCert.id });
+	}
+
+	// Rehearsal Orientation requires the orientation clearance. This is the gate
+	// that makes an auto-created orientation shift claimable by the people who
+	// have been shown how rather than by whoever refreshes the board first.
+	const orientationRole = roles.find((r: any) => r.name === 'Rehearsal Orientation');
+	if (orientationRole) {
+		await db
+			.insert(volunteerRoleCertification)
+			.values({ volunteerRoleId: orientationRole.id, certificationId: orientationCert.id });
 	}
 
 	const holders = pickN(users, Math.min(6, users.length));
@@ -332,7 +362,7 @@ export async function seedCertifications(users: any[], roles: any[]) {
 
 	// The certification rows travel out, not just their count: `seedVolunteerPersonas`
 	// grants against these two by id.
-	return { certs: 2, held: held.length, deskCert, foodCert };
+	return { certs: 3, held: held.length, deskCert, foodCert, orientationCert };
 }
 
 /**

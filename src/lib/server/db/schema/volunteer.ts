@@ -3,6 +3,7 @@ import {
 	text,
 	integer,
 	index,
+	uniqueIndex,
 	check,
 	unique,
 	primaryKey
@@ -13,6 +14,7 @@ import { user } from './authentication';
 import { eventListing } from './event';
 import { inventoryAsset } from './inventory';
 import { project } from './project';
+import { reservation } from './reservation';
 import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
@@ -36,7 +38,11 @@ import {
 	VOLUNTEER_ROLE_NAME_MAX,
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_NOTES_MAX,
-	dutyListAnchors
+	ORIENTATION_NOTES_MAX,
+	ORIENTATION_WAIVED_REASON_MAX,
+	dutyListAnchors,
+	dutyListAutoApplyTriggers,
+	dutyListSubjects
 } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -300,6 +306,18 @@ export const workOrder = sqliteTable(
 		// four people worked it.
 		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
 
+		// The booking this staffs, when it staffs one — a member's first rehearsal
+		// wants somebody there to show them around. A fourth optional anchor, and
+		// like the other three it neither excludes nor is excluded by them: there
+		// is deliberately no "at most one anchor" CHECK, because a work order can
+		// be *in* the renovation and *at* Thursday's booking.
+		//
+		// Set-null for the reason the others give: deleting the subject must not
+		// delete the record that somebody worked it.
+		reservationId: text('reservation_id').references(() => reservation.id, {
+			onDelete: 'set null'
+		}),
+
 		/** A deadline, which is not a window: "done by Friday" is not "happens Friday 6-8". */
 		dueAt: integer('due_at', { mode: 'timestamp' }),
 
@@ -365,6 +383,8 @@ export const workOrder = sqliteTable(
 		index('volunteer_shift_event_idx').on(t.eventId),
 		index('volunteer_shift_asset_idx').on(t.assetId),
 		index('work_order_project_idx').on(t.projectId),
+		// The orientation cascade: "which live work orders staff this booking".
+		index('work_order_reservation_idx').on(t.reservationId),
 		// The coordinator's queue: work that needs somebody on it.
 		index('volunteer_shift_unscheduled_idx')
 			.on(t.createdAt)
@@ -906,6 +926,23 @@ export const dutyList = sqliteTable(
 		name: text('name').notNull().unique(),
 		description: text('description'),
 		anchor: text('anchor', { enum: dutyListAnchors }).notNull().default('doors'),
+
+		// What this list is stamped onto. It is not derivable from `anchor`:
+		// `start` and `end` resolve for a show and a rehearsal booking alike, and
+		// only `doors` is show-shaped. So this filters the apply picker — a
+		// coordinator must not be offered "Rehearsal Orientation" for Saturday's
+		// show — and makes `(reservation, doors)` refusable when the list is
+		// *saved* rather than only when somebody tries to apply it.
+		subject: text('subject', { enum: dutyListSubjects }).notNull().default('event'),
+
+		// Which domain event stamps this list out with nobody pressing a button.
+		// Null for the ordinary case: a coordinator applies it by hand.
+		//
+		// Naming: `auto_apply_on`, not `trigger`. TRIGGER is a SQLite keyword, and
+		// the partial index below is raw SQL where an unquoted `trigger is not
+		// null` is a syntax error nobody would find until CI.
+		autoApplyOn: text('auto_apply_on', { enum: dutyListAutoApplyTriggers }),
+
 		isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
@@ -917,7 +954,15 @@ export const dutyList = sqliteTable(
 			.notNull()
 			.default(sql`(unixepoch())`)
 	},
-	(t) => [index('duty_list_active_idx').on(t.isActive, t.name)]
+	(t) => [
+		index('duty_list_active_idx').on(t.isActive, t.name),
+		// One list per trigger, so the listener's lookup can never be ambiguous.
+		// Partial, because null is the ordinary case and every hand-applied list
+		// would otherwise collide with every other.
+		uniqueIndex('uq_duty_list_auto_apply')
+			.on(t.autoApplyOn)
+			.where(sql`auto_apply_on is not null`)
+	]
 );
 
 /**
@@ -998,6 +1043,95 @@ export const dutyListItem = sqliteTable(
 	]
 );
 
+/**
+ * Whether a member has been shown around the space, and when.
+ *
+ * **Timestamps, not a status column** — the state is derived by `stateOf()` in
+ * `orientation-service.ts`, the same call `member_certification` makes. Two of
+ * the four states would be wrong the moment a clock ticked if they were stored:
+ * `scheduled` is really a fact about whether the shift is still live, and an
+ * orientation nobody claims emits no completion event at all, so a stored status
+ * would sit at `scheduled` for ever with its time in the past. Derived, it falls
+ * back to `pending` on its own with nothing to un-stick.
+ *
+ * One row per member (`user_id` is unique), reused rather than appended to when
+ * somebody cancels and rebooks: this answers "has this person been shown
+ * around", which is one fact about them, unlike `member_certification`, where
+ * each renewal is its own grant with its own expiry.
+ *
+ * Both pointers are set-null. `work_order_id` going null is ordinary — the
+ * cascade clears it when the booking is cancelled — and neither of them going
+ * null may lose `completed_at`, which is the fact worth keeping.
+ */
+export const memberOrientation = sqliteTable(
+	'member_orientation',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+
+		userId: text('user_id')
+			.notNull()
+			.unique()
+			.references(() => user.id, { onDelete: 'cascade' }),
+
+		/** The shift somebody claims to run it. Cleared when the booking is called off. */
+		workOrderId: text('work_order_id').references(() => workOrder.id, { onDelete: 'set null' }),
+
+		/** The first booking that prompted it, kept so staff can see what this hung off. */
+		reservationId: text('reservation_id').references(() => reservation.id, {
+			onDelete: 'set null'
+		}),
+
+		scheduledFor: integer('scheduled_for', { mode: 'timestamp' }),
+
+		completedAt: integer('completed_at', { mode: 'timestamp' }),
+		/** The volunteer who ran it, not the member who received it. */
+		completedByUserId: text('completed_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+
+		waivedAt: integer('waived_at', { mode: 'timestamp' }),
+		waivedReason: text('waived_reason'),
+		waivedByUserId: text('waived_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+
+		notes: text('notes'),
+
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		// The staff queue: orientations booked but not yet done.
+		index('member_orientation_scheduled_idx')
+			.on(t.scheduledFor)
+			.where(sql`completed_at is null`),
+		// A reason is not optional when staff waive one — same bargain
+		// `member_certification_revoked_has_reason` strikes, and the same
+		// null-ness comparison, because `false OR NULL` is NULL and SQLite passes
+		// a CHECK that returns NULL.
+		check(
+			'member_orientation_waived_has_reason',
+			sql`(waived_at is null) = (waived_reason is null)`
+		)
+	]
+);
+
+export const waiveOrientationSchema = z.object({
+	userId: z.string().min(1),
+	reason: z.string().trim().min(1, 'Say why it is not needed').max(ORIENTATION_WAIVED_REASON_MAX)
+});
+
+export const completeOrientationSchema = z.object({
+	userId: z.string().min(1),
+	notes: z.string().trim().max(ORIENTATION_NOTES_MAX).optional()
+});
+
 export type VolunteerRole = typeof volunteerRole.$inferSelect;
 export type VolunteerHourLog = typeof volunteerHourLog.$inferSelect;
 export type VolunteerRoleInterest = typeof volunteerRoleInterest.$inferSelect;
@@ -1010,3 +1144,4 @@ export type MemberCertification = typeof memberCertification.$inferSelect;
 export type WorkTask = typeof workTask.$inferSelect;
 export type DutyList = typeof dutyList.$inferSelect;
 export type DutyListItem = typeof dutyListItem.$inferSelect;
+export type MemberOrientation = typeof memberOrientation.$inferSelect;

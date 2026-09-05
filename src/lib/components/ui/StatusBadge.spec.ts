@@ -7,6 +7,7 @@ import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
 	instructorStatuses,
+	memberOrientationStates,
 	suggestionStatuses,
 	suggestionVisibilities
 } from '$lib/config';
@@ -69,6 +70,9 @@ const vocabularies: Record<string, readonly string[]> = {
 	// this component's own docs describe as saying nothing.
 	inventoryAsset: assetStatuses,
 	equipmentLoan: loanStatuses,
+	// Derived from `member_orientation`'s timestamps, never stored — but a
+	// vocabulary all the same, and the badge is how staff read it.
+	memberOrientation: memberOrientationStates,
 	inboxThread: inboxThreadStatuses,
 	volunteerHour: volunteerHourStatuses,
 	volunteerProfile: volunteerProfileStatuses,

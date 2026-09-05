@@ -161,13 +161,56 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 		throw new ReservationConflictError();
 	}
 
+	// After the race check, never before: a booking that gets compensated away
+	// above must not have announced itself to anybody.
+	await emitCreated(row);
+
 	return row;
+}
+
+/**
+ * Tell the bus a booking exists.
+ *
+ * Costs one `user` read per booking, which `cancel()` already pays for the same
+ * reason — a listener needs a name and an address, and re-reading the row from
+ * inside a listener would cost the same lookup later and lose the ordering.
+ */
+async function emitCreated(row: typeof reservation.$inferSelect): Promise<void> {
+	const TZ = DEFAULT_TIMEZONE;
+	const [owner] = await db
+		.select({ name: user.name, email: user.email })
+		.from(user)
+		.where(eq(user.id, row.createdByUserId))
+		.limit(1);
+
+	await domainEvents.emit('reservation.created', {
+		reservationId: row.id,
+		userId: row.createdByUserId,
+		userName: owner?.name ?? '',
+		userEmail: owner?.email ?? '',
+		date: formatDateInTz(row.startsAt, TZ),
+		startTime: formatTimeInTz(row.startsAt, TZ),
+		endTime: formatTimeInTz(row.endsAt, TZ),
+		bookerType: row.bookerType,
+		startsAt: row.startsAt.toISOString(),
+		endsAt: row.endsAt.toISOString(),
+		createdByStaffId: row.createdByStaffId,
+		recurringSeriesId: row.recurringSeriesId
+	});
 }
 
 // ---------------------------------------------------------------------------
 // createWaitlisted() — create with waitlisted status (skip conflict check)
 // ---------------------------------------------------------------------------
 
+/**
+ * Take a place in the queue, and say nothing about it.
+ *
+ * A queue position is not a visit: nobody turns up, and the row can still be
+ * cancelled out from under itself by `expireWaitlisted()` without a
+ * `reservation.cancelled` to clean up after it. `announceWaitlistConfirmed()`
+ * is where the announcement happens instead.
+ */
 export async function createWaitlisted(params: CreateReservationParams): Promise<ReservationRow> {
 	const { userId, bookerType, bookerId, startsAt, endsAt, notes } = params;
 
@@ -190,6 +233,41 @@ export async function createWaitlisted(params: CreateReservationParams): Promise
 		.returning();
 
 	return row;
+}
+
+/**
+ * A queued booking has just become a real one — announce it.
+ *
+ * The `waitlisted -> scheduled` transition is the moment a queue position turns
+ * into somebody turning up, so it is the moment `reservation.created` is owed:
+ * a member whose very first booking went through the waitlist gets the same
+ * orientation shift as one who booked a free slot outright.
+ *
+ * Deliberately *not* `promoteNextWaitlisted()`, which is the other candidate and
+ * the wrong one. Promotion offers the slot — it stamps the 24h window and
+ * emails — and leaves the row `waitlisted`, where `expireWaitlisted()` can still
+ * cancel it without emitting `reservation.cancelled`. An orientation raised
+ * there would outlive the booking it was raised for.
+ *
+ * Re-reads under the same status filter the conflict scans use rather than
+ * trusting the caller's row, so a confirmation that the post-update race check
+ * rolled back to `waitlisted` announces nothing.
+ */
+export async function announceWaitlistConfirmed(reservationId: string): Promise<void> {
+	const [row] = await db
+		.select()
+		.from(reservation)
+		.where(
+			and(
+				eq(reservation.id, reservationId),
+				notInArray(reservation.status, ['cancelled', 'waitlisted'])
+			)
+		)
+		.limit(1);
+
+	if (!row) return;
+
+	await emitCreated(row);
 }
 
 // ---------------------------------------------------------------------------
@@ -230,6 +308,11 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 			notes: notes ?? null
 		})
 		.returning();
+
+	// A desk booking on a member's behalf is still that member's first visit —
+	// `createdByUserId` is the owning member here by design, and
+	// `createdByStaffId` carries the audit trail.
+	await emitCreated(row);
 
 	return row;
 }
@@ -274,7 +357,11 @@ export async function adjustWindow(
 		throw new ReservationValidationError('Reservation must end after it starts');
 
 	const [row] = await db
-		.select({ startsAt: reservation.startsAt, endsAt: reservation.endsAt })
+		.select({
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			createdByUserId: reservation.createdByUserId
+		})
 		.from(reservation)
 		.where(eq(reservation.id, reservationId))
 		.limit(1);
@@ -308,6 +395,17 @@ export async function adjustWindow(
 		if (!current) throw new ReservationNotFoundError();
 		throw new ReservationStateError(`Cannot re-time a reservation with status "${current.status}"`);
 	}
+
+	// Anything pinned to the old window has to move with it — an orientation
+	// shift is fifteen minutes before a booking that is no longer at that time.
+	await domainEvents.emit('reservation.rescheduled', {
+		reservationId,
+		userId: row.createdByUserId,
+		previousStartsAt: row.startsAt.toISOString(),
+		previousEndsAt: row.endsAt.toISOString(),
+		startsAt: startsAt.toISOString(),
+		endsAt: endsAt.toISOString()
+	});
 
 	return { previousStartsAt: row.startsAt, previousEndsAt: row.endsAt };
 }
@@ -740,10 +838,14 @@ export async function listForMember(
  *
  * - **Member bookings only.** A band's rehearsal hold or a staff-created event
  *   hold is not somebody's first visit, so the flag is gated on `booker_type`.
- * - **Prior history is every non-cancelled booking that member *created***,
- *   whatever its booker type — someone who has been in before as their band's
- *   booker is not a first-timer. A cancelled booking is not a visit, so it
- *   never counts as history, and a cancelled row never carries the flag itself.
+ * - **Prior history is every live booking that member *created***, whatever its
+ *   booker type — someone who has been in before as their band's booker is not
+ *   a first-timer. Neither a cancelled booking nor a waitlisted one is a visit,
+ *   so neither counts as history, and neither carries the flag itself. The
+ *   waitlisted half was missing until this was shared with the orientation
+ *   listener: as a badge it merely mislabelled a row, but as a gate a stale
+ *   queue position ahead of somebody's real first booking would have silently
+ *   suppressed their orientation.
  * - **`starts_at` ties break by `id`**, so exactly one row of a same-instant
  *   pair is the first.
  *
@@ -759,11 +861,11 @@ export function isFirstReservationSql() {
 	return sql<boolean>`(
 		case
 			when ${outer(reservation.bookerType)} = 'user'
-				and ${outer(reservation.status)} <> 'cancelled'
+				and ${outer(reservation.status)} not in ('cancelled', 'waitlisted')
 				and not exists (
 					select 1 from ${reservation} r0
 					where r0.created_by_user_id = ${outer(reservation.createdByUserId)}
-						and r0.status <> 'cancelled'
+						and r0.status not in ('cancelled', 'waitlisted')
 						and (
 							r0.starts_at < ${outer(reservation.startsAt)}
 							or (
@@ -776,4 +878,36 @@ export function isFirstReservationSql() {
 			else 0
 		end
 	)`;
+}
+
+/**
+ * How many bookings this member has that come strictly before the given one, by
+ * `(starts_at, id)`.
+ *
+ * The imperative half of `isFirstReservationSql`, stating one rule twice on
+ * purpose: the correlated subquery is what a *page* of bookings needs, and a
+ * caller holding one booking wants a count, not a select-back-and-coerce. They
+ * must not drift, and `correlated-sql.spec.ts` runs both over one fixture to
+ * make sure they cannot.
+ */
+export async function priorBookingCount(
+	userId: string,
+	startsAt: Date,
+	reservationId: string
+): Promise<number> {
+	const [row] = await db
+		.select({ n: count() })
+		.from(reservation)
+		.where(
+			and(
+				eq(reservation.createdByUserId, userId),
+				notInArray(reservation.status, ['cancelled', 'waitlisted']),
+				or(
+					lt(reservation.startsAt, startsAt),
+					and(eq(reservation.startsAt, startsAt), lt(reservation.id, reservationId))
+				)
+			)
+		);
+
+	return row?.n ?? 0;
 }

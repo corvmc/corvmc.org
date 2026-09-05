@@ -813,18 +813,57 @@ export const volunteerRoleGroupLabels: Record<(typeof volunteerRoleGroups)[numbe
 };
 
 /**
- * Which of an event's times a duty list measures its offsets from.
+ * Which of the subject's times a duty list measures its offsets from.
  *
- * `doors` falls back to the event's start when no doors time is set, matching
- * the production page's shift modal — not every show sets one.
+ * `doors` falls back to the subject's start when no doors time is set, matching
+ * the production page's shift modal — not every show sets one. That fallback is
+ * why `doors` is refused outright for a reservation rather than aliased to its
+ * start: a show without a doors time still *has* doors, and a rehearsal does
+ * not. Silently treating one as the other is a lie a staffer could configure
+ * and never see.
  */
 export const dutyListAnchors = ['doors', 'start', 'end'] as const;
 export type DutyListAnchor = (typeof dutyListAnchors)[number];
 
+// Generic nouns, because `start` and `end` now resolve for a rehearsal booking
+// as well as a show.
 export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 	doors: 'Doors',
-	start: 'Event start',
-	end: 'Event end'
+	start: 'Start',
+	end: 'End'
+};
+
+/**
+ * What a duty list is stamped onto.
+ *
+ * The anchor enum does not need a member per subject: `start` and `end` already
+ * resolve for both, because `reservation.starts_at` and `ends_at` are NOT NULL.
+ * Only `doors` is show-shaped, so the illegal combination is the *pair*
+ * `(reservation, doors)` — validated in the service, not in SQL.
+ */
+export const dutyListSubjects = ['event', 'reservation'] as const;
+export type DutyListSubject = (typeof dutyListSubjects)[number];
+
+export const dutyListSubjectLabels: Record<DutyListSubject, string> = {
+	event: 'An event',
+	reservation: 'A rehearsal booking'
+};
+
+/**
+ * The domain event that stamps a list out with nobody pressing a button.
+ *
+ * A column on the list rather than a well-known name or a config key: a name is
+ * a string staff can rename out from under the code, and a config key has no
+ * referential integrity and is invisible from the duty-list page. This way, what
+ * an orientation *is* — which role, how long, which checklist — stays editable
+ * without a deploy, which is the same argument `duty_list` makes for being a
+ * table rather than a config tuple.
+ */
+export const dutyListAutoApplyTriggers = ['reservation.first'] as const;
+export type DutyListAutoApplyTrigger = (typeof dutyListAutoApplyTriggers)[number];
+
+export const dutyListAutoApplyTriggerLabels: Record<DutyListAutoApplyTrigger, string> = {
+	'reservation.first': "A member's first rehearsal booking"
 };
 
 /**
@@ -902,6 +941,42 @@ export const VOLUNTEER_SHIFT_MAX_MINUTES = 1440;
 export const VOLUNTEER_SHIFT_MAX_CAPACITY = 50;
 
 export const VOLUNTEER_SHIFT_NOTES_MAX = 1000;
+
+// ---------------------------------------------------------------------------
+// Orientation
+// ---------------------------------------------------------------------------
+
+/**
+ * Where a member is in being shown around the space.
+ *
+ * **Derived, never stored** — `member_orientation` holds timestamps and
+ * `stateOf()` reads them, the same call `member_certification` makes. Two of
+ * these four states would be wrong the moment a clock passed midnight if they
+ * were written down:
+ *
+ * - `scheduled` is a fact about whether the shift is still live, and cancelling
+ *   the booking cancels the shift. A stored `scheduled` is a lie unless the
+ *   cascade remembers to rewrite it — the write most likely to be missed.
+ * - An orientation **nobody claims emits no completion event at all**, so a
+ *   stored status would sit at `scheduled` for ever with its time in the past,
+ *   and un-sticking it would need a cron. Derived, it falls back to `pending`
+ *   on its own.
+ *
+ * `completed` beats `waived`: actually being shown around outranks a staff note
+ * saying it was not needed.
+ */
+export const memberOrientationStates = ['pending', 'scheduled', 'completed', 'waived'] as const;
+export type MemberOrientationState = (typeof memberOrientationStates)[number];
+
+export const memberOrientationStateLabels: Record<MemberOrientationState, string> = {
+	pending: 'Not yet booked',
+	scheduled: 'Booked',
+	completed: 'Done',
+	waived: 'Waived'
+};
+
+export const ORIENTATION_WAIVED_REASON_MAX = 1000;
+export const ORIENTATION_NOTES_MAX = 1000;
 
 // ---------------------------------------------------------------------------
 // Certifications

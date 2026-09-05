@@ -138,6 +138,10 @@
 		// Platform invites
 		accepted: 'badge-success',
 		revoked: 'badge-error',
+		// Orientation. `pending`, `scheduled` and `completed` are all mapped
+		// already and mean here what they mean elsewhere; only a waiver is new,
+		// and it is ghost because it is an absence rather than an outcome.
+		waived: 'badge-ghost',
 		// Certifications a member holds. Expiring is a warning rather than an
 		// error: the clearance is still valid, it just needs booking in.
 		current: 'badge-success',
@@ -243,6 +247,10 @@
 		// Platform invite statuses
 		accepted: { icon: IconCircleCheck, color: 'text-success' },
 		revoked: { icon: IconBan, color: 'text-error' },
+
+		// Orientation. `pending`, `scheduled` and `completed` are already mapped
+		// above and mean here what they mean there.
+		waived: { icon: IconCircleOff, color: 'text-base-content/60' },
 
 		// Suggestion statuses. `open` (inbox) and `pending_review` (events) are
 		// already mapped above and mean the same thing here.

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "7b47cb77-c0f6-429c-8d48-ab4906fe8924",
+  "id": "526439c1-ac69-4a70-bbc1-b509176a484f",
   "prevIds": [
-    "ca06742e-5a90-4de0-a4bc-5ecbc18f1f34"
+    "7b47cb77-c0f6-429c-8d48-ab4906fe8924"
   ],
   "ddl": [
     {
@@ -272,6 +272,10 @@
     },
     {
       "name": "member_certification",
+      "entityType": "tables"
+    },
+    {
+      "name": "member_orientation",
       "entityType": "tables"
     },
     {
@@ -7021,6 +7025,26 @@
       "table": "duty_list"
     },
     {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'event'",
+      "generated": null,
+      "name": "subject",
+      "entityType": "columns",
+      "table": "duty_list"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "auto_apply_on",
+      "entityType": "columns",
+      "table": "duty_list"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -7309,6 +7333,136 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "member_certification"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "work_order_id",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reservation_id",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "scheduled_for",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "completed_at",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "completed_by_user_id",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "waived_at",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "waived_reason",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "waived_by_user_id",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "member_orientation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "member_orientation"
     },
     {
       "type": "text",
@@ -8097,6 +8251,16 @@
       "default": null,
       "generated": null,
       "name": "project_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reservation_id",
       "entityType": "columns",
       "table": "work_order"
     },
@@ -11786,6 +11950,81 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_member_orientation_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "member_orientation"
+    },
+    {
+      "columns": [
+        "work_order_id"
+      ],
+      "tableTo": "work_order",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_member_orientation_work_order_id_work_order_id_fk",
+      "entityType": "fks",
+      "table": "member_orientation"
+    },
+    {
+      "columns": [
+        "reservation_id"
+      ],
+      "tableTo": "reservation",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_member_orientation_reservation_id_reservation_id_fk",
+      "entityType": "fks",
+      "table": "member_orientation"
+    },
+    {
+      "columns": [
+        "completed_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_member_orientation_completed_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "member_orientation"
+    },
+    {
+      "columns": [
+        "waived_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_member_orientation_waived_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "member_orientation"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_volunteer_hour_log_user_id_user_id_fk",
       "entityType": "fks",
       "table": "volunteer_hour_log"
@@ -12027,6 +12266,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_work_order_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        "reservation_id"
+      ],
+      "tableTo": "reservation",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_work_order_reservation_id_reservation_id_fk",
       "entityType": "fks",
       "table": "work_order"
     },
@@ -13085,6 +13339,15 @@
       "nameExplicit": false,
       "name": "member_certification_pk",
       "table": "member_certification",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "member_orientation_pk",
+      "table": "member_orientation",
       "entityType": "pks"
     },
     {
@@ -15529,6 +15792,20 @@
     {
       "columns": [
         {
+          "value": "auto_apply_on",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "auto_apply_on is not null",
+      "origin": "manual",
+      "name": "uq_duty_list_auto_apply",
+      "entityType": "indexes",
+      "table": "duty_list"
+    },
+    {
+      "columns": [
+        {
           "value": "duty_list_id",
           "isExpression": false
         },
@@ -15575,6 +15852,20 @@
       "name": "member_certification_expiry_idx",
       "entityType": "indexes",
       "table": "member_certification"
+    },
+    {
+      "columns": [
+        {
+          "value": "scheduled_for",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "completed_at is null",
+      "origin": "manual",
+      "name": "member_orientation_scheduled_idx",
+      "entityType": "indexes",
+      "table": "member_orientation"
     },
     {
       "columns": [
@@ -15813,6 +16104,20 @@
       "where": null,
       "origin": "manual",
       "name": "work_order_project_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "reservation_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "work_order_reservation_idx",
       "entityType": "indexes",
       "table": "work_order"
     },
@@ -16527,6 +16832,15 @@
     },
     {
       "columns": [
+        "user_id"
+      ],
+      "nameExplicit": false,
+      "name": "member_orientation_user_id_unique",
+      "entityType": "uniques",
+      "table": "member_orientation"
+    },
+    {
+      "columns": [
         "name"
       ],
       "nameExplicit": false,
@@ -16671,6 +16985,12 @@
       "name": "member_certification_revoked_has_reason",
       "entityType": "checks",
       "table": "member_certification"
+    },
+    {
+      "value": "(waived_at is null) = (waived_reason is null)",
+      "name": "member_orientation_waived_has_reason",
+      "entityType": "checks",
+      "table": "member_orientation"
     },
     {
       "value": "minutes > 0 AND minutes <= 1440",
