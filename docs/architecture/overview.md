@@ -359,6 +359,36 @@ sweeps. Each job is bracketed with Sentry Crons check-ins (plain HTTP,
 `src/lib/server/cron/sentry-check-in.ts`), so Sentry alerts on failed and missed runs.
 See the cron section of the [operations manual](operations-manual.md) for the runbook.
 
+## Rate limiting: KV, on purpose
+
+`allowRateLimited(key, max, ttlSeconds)` (`src/lib/server/rate-limit.ts`) is a KV counter.
+Its own docstring calls it best-effort, and it is: the read and the write are not atomic,
+so two concurrent requests can both see the old count and both be allowed. Pair it with a
+stronger gate (Turnstile) on anything public.
+
+**Cloudflare's own rate-limiting binding does not fit, and this is not a backlog item.**
+It supports a `period` of 10 or 60 seconds only. Every one of the seven call sites is a
+product quota measured in hours or days, not a flood control measured in seconds:
+
+| Call site                                   | Key                        | Budget      |
+| ------------------------------------------- | -------------------------- | ----------- |
+| `direct-service.requestThread`              | `dm-request:<user>`        | 5 / 24 h    |
+| `direct-service.sendDirectMessage`          | `dm-send:<user>`           | 60 / 1 h    |
+| `community-event-service.publish`           | `community-publish:<user>` | 20 / 1 h    |
+| `band-contact.remote.submitBandContactForm` | `band-contact:<band>:<ip>` | 5 / 1 h     |
+| `suggestions.remote.flagSuggestion`         | `suggestion-flag:<user>`   | 5 / 1 h     |
+| `band-address.remote` slug change           | `band-slug:<band>`         | 3 / 30 days |
+| `/api/audio/track/[id]/stream`              | `audio-stream:<ip>`        | 600 / 5 min |
+
+The shortest window in the table is sixty times the binding's longest. These also aren't
+the same _kind_ of control: the binding is a sliding window sized to absorb a burst,
+whereas "five DM requests a day" is a policy someone chose, and the member is meant to
+feel it. Two of them are additionally per-band or per-user rather than per-IP, which the
+binding's per-colo counting would not preserve.
+
+The one call site the binding would suit is `audio-stream`, and it is also the one where
+the race costs nothing.
+
 ## Configuration: three tiers
 
 1. **`wrangler.toml [vars]`** — non-secret deploy-time config: `ORIGIN`, public URLs, email

@@ -6,8 +6,15 @@ import { getJson, putJson } from '$lib/server/kv';
  * throttle for abuse mitigation, not a hard guarantee — pair it with a
  * stronger gate (e.g. Turnstile) on public endpoints.
  *
- * Returns true when the hit is allowed. The TTL restarts on each hit, so a
- * steady stream of requests keeps the window open.
+ * Returns true when the hit is allowed. The TTL restarts on each allowed hit
+ * (a rejected one returns before writing), so the window is fixed-with-refresh
+ * rather than sliding.
+ *
+ * Cloudflare's own rate-limiting binding is not the upgrade path here, and was
+ * checked rather than assumed: its `period` is 10 or 60 seconds only, and every
+ * caller of this function is a product quota measured in hours or days — the
+ * shortest is five minutes. See "Rate limiting: KV, on purpose" in
+ * docs/architecture/overview.md for the table.
  */
 export async function allowRateLimited(
 	key: string,
