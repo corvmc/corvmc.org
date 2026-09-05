@@ -23,7 +23,16 @@
 	 * Editor-only. The public page renders nothing here, exactly as it does now,
 	 * so Preview and the live site still agree about what actually publishes.
 	 */
-	let { type, slug }: { type: Block['type']; slug: string } = $props();
+	let {
+		type,
+		slug,
+		/**
+		 * Open this block's settings. A block whose content the band writes here —
+		 * a hero image, a gallery upload — has no page to send them to, so the
+		 * ghost's one action is the settings panel that holds the field.
+		 */
+		onsettings
+	}: { type: Block['type']; slug: string; onsettings?: () => void } = $props();
 
 	const source = $derived(BLOCK_SOURCES[type]);
 	const ownerHref = $derived(source.owner ? resolve(`/band/${slug}/${source.owner}`) : null);
@@ -117,6 +126,8 @@
 					{source.action}
 					<IconArrowUpRight size={13} />
 				</a>
+			{:else if onsettings}
+				<button type="button" class="link" onclick={onsettings}>{source.action}</button>
 			{:else}
 				<span class="opacity-60">{source.action}</span>
 			{/if}

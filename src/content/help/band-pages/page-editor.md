@@ -37,4 +37,5 @@ nothing for.
 - [Upload media](/member/help/page-media)
 - [Fill in your press kit](/member/help/electronic-press-kit)
 
-A **preview link** lets you see the live page as you build it.
+The editor _is_ your page — full width, with each block's controls sitting on
+the block itself. **View site** opens the published version in a new tab.

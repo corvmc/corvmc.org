@@ -21,6 +21,10 @@ import {
  *      block taller than the viewport.
  *   3. The PUBLIC page still renders with none of it. One component draws both,
  *      so a leak here would put editor chrome on every band's live site.
+ *
+ * The style panel's own invariant is the fourth: a theme's CSS is shown, not
+ * hidden, and taking it over drops the theme rather than layering on top of it.
+ * That is the whole reason the control was rebuilt — see `theme-fork.ts`.
  */
 
 async function login(page: Page) {
@@ -125,4 +129,52 @@ test('the public band site renders with none of the editor chrome', async ({ pag
 	// An empty block stays empty in public — the ghost is editor-only, so Preview
 	// and the live site agree about what actually publishes.
 	await expect(page.getByRole('link', { name: /Add a show/ })).toHaveCount(0);
+});
+
+test('the theme control shows what the theme does, read-only until you take it over', async ({
+	page
+}) => {
+	await login(page);
+	await page.goto(`/band/${SEED_PREMIUM_BAND_SLUG}/page-editor`);
+	await expect(page.getByLabel('Move Hero down')).toBeVisible({ timeout: 15000 });
+
+	const themeSelect = page.getByLabel('Theme');
+	await expect(themeSelect).toBeVisible();
+
+	// A theme is legible: its actual rules are in the pane, not hidden behind a
+	// class the band can only override blindly.
+	const pane = page.getByLabel('Theme CSS (read-only)');
+	await expect(pane).toHaveValue(/--bs-accent/);
+	await expect(pane).toHaveAttribute('readonly', '');
+
+	// Switching themes switches what the pane shows.
+	await themeSelect.selectOption('punk');
+	await expect(pane).toHaveValue(/#ff2d55/);
+
+	// Taking it over is the fork: the pane becomes the band's, and the theme
+	// stops applying — so what they can read is the whole of what applies.
+	await page.getByRole('button', { name: 'Customize' }).click();
+	const own = page.getByLabel('Your custom CSS');
+	await expect(own).toBeVisible();
+	await expect(own).not.toHaveAttribute('readonly', '');
+	await expect(own).toHaveValue(/#ff2d55/);
+	await expect(themeSelect).toHaveValue('custom');
+	// It still says where it came from.
+	await expect(page.getByRole('option', { name: 'Custom (from Punk)' })).toBeAttached();
+});
+
+test('the hero block carries its own upload, not a Media section at the foot of the page', async ({
+	page
+}) => {
+	await login(page);
+	await page.goto(`/band/${SEED_PREMIUM_BAND_SLUG}/page-editor`);
+	await expect(page.getByLabel('Move Hero down')).toBeVisible({ timeout: 15000 });
+
+	// The page-level Media card and the EPK button are gone; the sidebar already
+	// links to the press kit, and an upload belongs to the block that shows it.
+	await expect(page.getByRole('link', { name: 'Edit EPK' })).toHaveCount(0);
+	await expect(page.getByText('Gallery images')).toHaveCount(0);
+
+	await page.getByLabel('Hero settings').click();
+	await expect(page.getByText('Hero image')).toBeVisible();
 });

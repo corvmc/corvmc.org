@@ -7,7 +7,7 @@ import { mediaAttachment } from '$lib/server/db/schema/media';
 import type { MediaSlot } from '$lib/server/db/schema/media';
 import { eq, and, max, count } from 'drizzle-orm';
 import { requireGroupRole } from '$lib/server/group/group-context';
-import { uploadFile } from '$lib/server/storage';
+import { uploadFile, resolveImageUrl } from '$lib/server/storage';
 import { extensionForType } from '$lib/server/storage-keys';
 import { attach, detach, record } from '$lib/server/media/media-service';
 import { photoLimitForTier } from '$lib/server/band/press-kit-limits';
@@ -153,7 +153,10 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 	let sortOrder = (slotStats?.maxOrder ?? -1) + 1;
 
-	const uploaded: Array<{ id: string; key: string; sortOrder: number }> = [];
+	// The public URL rides along with the key: the page editor now uploads from
+	// inside a block's settings and wants to draw the result in the canvas
+	// immediately, and resolving a key is server-side work.
+	const uploaded: Array<{ id: string; key: string; url: string | null; sortOrder: number }> = [];
 
 	for (const file of files) {
 		const buffer = await file.arrayBuffer();
@@ -186,7 +189,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		// The attachment id, which is what DELETE below takes. This used to return
 		// the uuid embedded in the key — a different value from the row's id, so a
 		// caller that fed it straight back got a 404.
-		uploaded.push({ id: attachment.id, key, sortOrder: sortOrder - 1 });
+		uploaded.push({ id: attachment.id, key, url: resolveImageUrl(key), sortOrder: sortOrder - 1 });
 	}
 
 	return json({ success: true, media: uploaded });
