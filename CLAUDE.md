@@ -95,6 +95,21 @@ The finishing steps that are easiest to skip: extend `scripts/seed-dev.ts` so th
 realistic local data, add its row to the feature catalog (`docs/reports/feature-catalog.md`), and run
 `pnpm docs:routes && pnpm docs:check` if any route moved.
 
+**Work that answers an issue claims it first, and the branch is the claim.** Search before
+starting (`gh issue list --state open --search '<terms>'`), and if an issue already covers it, open
+the **draft PR before writing the code** — branch named for the issue, `Fixes #<n>` in the body.
+GitHub then shows the PR on the issue, so the next session sees the work in flight instead of
+starting it again.
+
+The branch is what makes that a claim rather than an announcement. A second session pushing the
+same ref is rejected non-fast-forward, server-side, which is the only compare-and-swap GitHub gives
+us here — an assignee, a label and a project-board field are all last-write-wins, so two sessions
+can each set them and neither learns the other exists. Read the issue's linked PRs before claiming;
+if one is already open, say so and pick something else rather than racing it.
+
+`Fixes #<n>` (or `Closes`) also closes the issue when the queue merges the PR, which is the half
+that keeps the tracker honest without anyone tidying it.
+
 **A finished PR is queued, not merged.** `gh pr merge --auto`, and the session ends there. No merge
 method: a queue rejects one outright ("merge method is not valid for merge queue"), and the queue's
 own configuration squashes anyway.
