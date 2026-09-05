@@ -1,0 +1,7 @@
+{
+  "Name": "Password Reset",
+  "Alias": "password-reset",
+  "Subject": "Reset your CorvMC password",
+  "TemplateType": "Standard",
+  "LayoutTemplate": "corvmc-transactional"
+}
