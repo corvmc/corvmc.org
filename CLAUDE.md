@@ -69,6 +69,11 @@ local run you did not do. Triage of a red or rejected run is the `qc` role's job
 - **Forms use `$lib/components/ui/Form/`** (`Form`, `FormField`, `SubmitButton`) — never a raw
   `<form>`, `<input>`, or `<select>`, not even inline.
 - **No gradients** in any interface.
+- **A problem you find but did not cause is filed, not fixed.** Search the tracker
+  (`gh issue list --state open --search '<terms>'`), then
+  `gh issue create --template finding.md`, labelled `agent-filed`. Fixing it inside an unrelated PR
+  buries it; leaving it in the chat loses it when the session ends. A `PreToolUse` hook blocks the
+  create until a search has run.
 - **No co-author lines** in commit messages.
 
 ## Workflow
