@@ -118,3 +118,10 @@ automatically. `/queue-triage` is how a session picks those up and decides.
 Work usually happens in a `git worktree` under `.claude/worktrees/`. Edit paths inside the worktree
 — a subagent may report paths in the main checkout. A fresh worktree has no `node_modules`, `.env`,
 or `.dev.vars`; running anything from one needs setup first: `/worktree-dev`.
+
+A **cloud session** (claude.ai/code) is not a worktree: it is a fresh clone on its own VM, and
+`scripts/claude/cloud-session-start.sh` has already written `.env`, installed dependencies and
+seeded a local D1 before you read this. It is secretless by design — nothing that sends mail, SMS
+or real payments will work — and `gh pr merge --auto` may be refused by the GitHub proxy, in which
+case open the PR, say so plainly, and leave arming it to the user.
+`docs/development/cloud-sessions.md` has the rest, including the e2e invocation.
