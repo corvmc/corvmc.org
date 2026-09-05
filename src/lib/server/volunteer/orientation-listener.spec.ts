@@ -285,6 +285,22 @@ describe('a booking confirmed off the waitlist', () => {
 
 		expect(shifts()).toHaveLength(1);
 	});
+
+	it('points the member at the shift staff made by hand instead of leaving them pending', async () => {
+		seedList();
+		// The other half of that workaround, and the half the re-apply guard used
+		// to swallow: the work order exists, so nothing needs raising, but nobody
+		// ever wrote `member_orientation` — the member read as `pending` while a
+		// volunteer was already rostered to meet them at the door.
+		await applyDutyList('dl-orient', { kind: 'reservation', id: 'res-1' }, null);
+		const [byHand] = shifts();
+
+		await fire('reservation.created', createdEvent());
+
+		const orientation = await getOrientation('u-member', new Date(STARTS * 1000 - 86_400_000));
+		expect(orientation?.workOrderId).toBe(byHand.id);
+		expect(orientation?.state).toBe('scheduled');
+	});
 });
 
 describe('reservation.cancelled', () => {

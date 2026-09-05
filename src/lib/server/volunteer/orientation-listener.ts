@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { domainEvents } from '$lib/server/event-bus';
 import { dutyList, workOrder } from '$lib/server/db/schema/volunteer';
 import { priorBookingCount } from '$lib/server/reservation/reservation-service';
@@ -41,7 +41,7 @@ export function registerOrientationListeners(): void {
 			);
 			if (prior !== 0) return;
 
-			let workOrderIds: string[];
+			let workOrderIds: string[] | null = null;
 			try {
 				workOrderIds = (
 					await applyDutyList(list.id, { kind: 'reservation', id: event.reservationId }, null)
@@ -52,11 +52,21 @@ export function registerOrientationListeners(): void {
 				// the roster. Refusing by name is the correct outcome, not a failure:
 				// the machinery that stops a coordinator double-clicking Apply is the
 				// machinery that makes this listener idempotent.
-				if (err instanceof DutyListAlreadyAppliedError) return;
-				throw err;
+				//
+				// It is not, however, a reason to stop. The same refusal covers the
+				// case staff have been working around by hand — a coordinator applied
+				// the list to the booking themselves, so the work order exists but
+				// nothing ever wrote `member_orientation`, and the member reads as
+				// `pending` while somebody is already rostered to meet them. So fall
+				// through to the shift that is already there rather than returning.
+				if (!(err instanceof DutyListAlreadyAppliedError)) throw err;
 			}
 
-			const first = await earliestScheduled(workOrderIds);
+			// `scheduleOrientation` upserts on `user_id`, so taking this path on a
+			// genuine re-delivery rewrites the same three values and changes nothing.
+			const first = workOrderIds
+				? await earliestScheduled(workOrderIds)
+				: await earliestApplied(event.reservationId, list.id);
 			if (!first) return;
 
 			await scheduleOrientation({
@@ -134,6 +144,32 @@ async function findAutoApplyList() {
  * window — and that is not the moment anybody is met at the door, so this only
  * considers rows that have a start.
  */
+/**
+ * The same shift, found by where it is anchored rather than by what an apply
+ * just returned — for the booking that already carries the list.
+ *
+ * Cancelled rows are excluded on the same reasoning as the re-apply guard:
+ * cancelling the lot is how you redo an apply, so a booking whose shifts are all
+ * called off has nothing to point the member at.
+ */
+async function earliestApplied(reservationId: string, dutyListId: string) {
+	const [row] = await db
+		.select({ id: workOrder.id, startsAt: workOrder.startsAt })
+		.from(workOrder)
+		.where(
+			and(
+				eq(workOrder.reservationId, reservationId),
+				eq(workOrder.dutyListId, dutyListId),
+				isNull(workOrder.cancelledAt),
+				isNotNull(workOrder.startsAt)
+			)
+		)
+		.orderBy(asc(workOrder.startsAt))
+		.limit(1);
+
+	return row?.startsAt ? { id: row.id, startsAt: row.startsAt } : null;
+}
+
 async function earliestScheduled(workOrderIds: string[]) {
 	if (workOrderIds.length === 0) return null;
 
