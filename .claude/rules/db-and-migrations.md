@@ -7,6 +7,10 @@ paths:
 
 # Schema and migrations
 
+> Before changing the schema here, check what is already known about it:
+> `gh issue list --state open --label area:platform`. The backlog is GitHub Issues, not a
+> markdown file.
+
 - **`db.transaction()` does not work on D1.** Use `db.batch([...])` for atomic writes. ESLint
   errors on the former across `src/lib/server/**`.
 - **Schema files import config by relative path** (`from '../../../config'`), not `$lib/config` —
