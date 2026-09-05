@@ -16,7 +16,7 @@ import {
 	LOCK_GRACE_MINUTES,
 	type LockDeviceHealth
 } from './ultraloc-client';
-import { config, updateSiteConfig } from '$lib/server/site-config/site-config-service';
+import { getJson, putJson } from '$lib/server/kv';
 import { dispatchEmailOnly } from '$lib/server/notification';
 import { env } from '$env/dynamic/private';
 import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -25,8 +25,14 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 // LockService — provision and clean up Ultraloc temporary users
 // ---------------------------------------------------------------------------
 
-/** Site-config key holding the last health reading, so alerts are edge-triggered. */
-const LAST_ONLINE_KEY = 'integration.utec.lastSeenOnline';
+/**
+ * KV key holding the last health reading, so alerts are edge-triggered.
+ *
+ * KV rather than site-config: this is a cached observation, not a setting, and
+ * `getConfigsByPrefix('integration.utec')` backs the credentials form — a
+ * health reading has no business appearing there. Sits beside `ultraloc:token`.
+ */
+const LAST_ONLINE_KEY = 'ultraloc:lastSeenOnline';
 
 /**
  * Run the daily lock job: check the lock is reachable, clean up yesterday's
@@ -72,8 +78,10 @@ async function checkDeviceHealth(errors: string[]): Promise<boolean | null> {
 		return null;
 	}
 
-	const previous = await config<boolean>(LAST_ONLINE_KEY, true);
-	await updateSiteConfig(LAST_ONLINE_KEY, health.online);
+	// Absent means we have never looked; treat that as "was online" so the first
+	// run during an outage still alerts.
+	const previous = (await getJson<boolean>(LAST_ONLINE_KEY)) ?? true;
+	await putJson(LAST_ONLINE_KEY, health.online);
 
 	if (!health.online) {
 		errors.push(

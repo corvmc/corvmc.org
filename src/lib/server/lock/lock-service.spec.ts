@@ -74,12 +74,12 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 	buildDateInTz: vi.fn((date, time) => new Date(`${date}T${time}:00Z`))
 }));
 
-const mockConfig = vi.fn().mockResolvedValue(true);
-const mockUpdateSiteConfig = vi.fn().mockResolvedValue(undefined);
+const mockGetJson = vi.fn().mockResolvedValue(true);
+const mockPutJson = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('$lib/server/site-config/site-config-service', () => ({
-	config: (...args: unknown[]) => mockConfig(...args),
-	updateSiteConfig: (...args: unknown[]) => mockUpdateSiteConfig(...args)
+vi.mock('$lib/server/kv', () => ({
+	getJson: (...args: unknown[]) => mockGetJson(...args),
+	putJson: (...args: unknown[]) => mockPutJson(...args)
 }));
 
 const mockDispatchEmailOnly = vi.fn().mockResolvedValue(undefined);
@@ -156,7 +156,7 @@ beforeEach(() => {
 	mockUpdateLockUser.mockResolvedValue(undefined);
 	mockListLockUsers.mockResolvedValue([]);
 	mockQueryDeviceHealth.mockResolvedValue({ online: true, lockState: 'Locked', batteryLevel: 4 });
-	mockConfig.mockResolvedValue(true);
+	mockGetJson.mockResolvedValue(true);
 	mockDispatchEmailOnly.mockResolvedValue(undefined);
 	// `list` never carries daterange — only `get` does. Route the fixtures'
 	// windows through the mocked get, which is what the service now reads.
@@ -578,7 +578,7 @@ describe('lock health', () => {
 			lockState: 'Unlocked',
 			batteryLevel: 4
 		});
-		mockConfig.mockResolvedValue(true); // was online last run
+		mockGetJson.mockResolvedValue(true); // was online last run
 		selectResults.push([], []);
 
 		const result = await runDailyLockJob();
@@ -588,7 +588,7 @@ describe('lock health', () => {
 		expect(mockDispatchEmailOnly).toHaveBeenCalledWith(
 			expect.objectContaining({ type: 'lock_offline' })
 		);
-		expect(mockUpdateSiteConfig).toHaveBeenCalledWith('integration.utec.lastSeenOnline', false);
+		expect(mockPutJson).toHaveBeenCalledWith('ultraloc:lastSeenOnline', false);
 	});
 
 	// A week-long outage should be one email, not seven identical ones.
@@ -598,7 +598,7 @@ describe('lock health', () => {
 			lockState: null,
 			batteryLevel: null
 		});
-		mockConfig.mockResolvedValue(false); // already offline last run
+		mockGetJson.mockResolvedValue(false); // already offline last run
 		selectResults.push([], []);
 
 		const result = await runDailyLockJob();
