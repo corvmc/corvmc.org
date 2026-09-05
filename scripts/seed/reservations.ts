@@ -1,5 +1,10 @@
 import { user } from '../../src/lib/server/db/schema/authentication';
-import { closure, reservation } from '../../src/lib/server/db/schema/reservation';
+import {
+	closure,
+	reservation,
+	lockFallbackCode,
+	lockMemberCode
+} from '../../src/lib/server/db/schema/reservation';
 import { db } from './db';
 import { CLOSURE_REASONS } from './pools';
 import { HOURLY_RATE_CENTS, type SeedReservation, type SeedUser } from './types';
@@ -93,9 +98,19 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 			const status = day === 0 ? 'confirmed' : pick(['scheduled', 'confirmed']);
 			const member = pick(users);
 
-			// Today's confirmed reservations have a provisioned door code, mirroring
-			// the daily lock job (codes are issued the morning of the reservation).
-			const lockCode = day === 0 && status === 'confirmed' ? String(randomInt(1000, 9999)) : null;
+			// Confirmed bookings inside the provisioning window carry a door code,
+			// mirroring the daily lock job.
+			//
+			// Whether the lock has *confirmed* it is the interesting part, and both
+			// states have to be reachable locally: `lockSyncedAt` set is the code the
+			// member sees, null is the code that is queued in U-tec's cloud and shows
+			// as pending — with the break-glass code standing in once they are inside
+			// their window. Today's first booking is deliberately left unconfirmed so
+			// that path is not something you can only see in production.
+			const withinWindow = day >= 0 && day <= 2 && status === 'confirmed';
+			const lockCode = withinWindow ? String(randomInt(1000, 9999)) : null;
+			const lockAccessId = withinWindow ? String(randomInt(100000, 999999)) : null;
+			const lockSyncedAt = withinWindow && !(day === 0 && i === 0) ? new Date() : null;
 
 			const [r] = await db
 				.insert(reservation)
@@ -107,6 +122,8 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 					startsAt,
 					endsAt,
 					lockCode,
+					lockAccessId,
+					lockSyncedAt,
 					notes:
 						random() > 0.6
 							? pick(['Drum practice', 'Guitar lesson prep', 'Recording session'])
@@ -167,5 +184,73 @@ export async function seedClosures() {
 			endsAt: ptDate(22, 18)
 		},
 		{ reason: pick(CLOSURE_REASONS), startsAt: ptDate(35, 0), endsAt: ptDate(35, 23, 59) }
+	]);
+}
+
+/**
+ * The door-access rows that are not per-reservation: the break-glass code, and
+ * a few standing member codes.
+ *
+ * Without these the staff surfaces render empty and the member break-glass path
+ * is unreachable locally — which is how the whole integration came to be built
+ * against states nobody had ever seen.
+ */
+export async function seedLockAccess(users: SeedUser[]) {
+	console.log('Seeding lock access...');
+
+	// One active break-glass code, confirmed on the lock a while back — which is
+	// the point of it: it predates any current outage.
+	await db.insert(lockFallbackCode).values({
+		code: String(randomInt(10000000, 99999999)),
+		lockAccessId: String(randomInt(100000, 999999)),
+		syncedAt: ptDate(-12, 9)
+	});
+
+	const [holder, lapsed, pending] = users;
+	if (!holder) return;
+
+	await db.insert(lockMemberCode).values([
+		// A member with a standing code: provisioning skips them entirely.
+		{
+			userId: holder.id,
+			lockAccessId: String(randomInt(100000, 999999)),
+			code: String(randomInt(10000000, 99999999)),
+			label: holder.name,
+			syncedAt: ptDate(-40, 10)
+		},
+		// Adopted from the lock with no member matched yet — staff still have to
+		// work out whose it is.
+		{
+			lockAccessId: String(randomInt(100000, 999999)),
+			code: String(randomInt(100000, 999999)),
+			label: 'Trevor',
+			adoptedAt: ptDate(-3, 14),
+			syncedAt: ptDate(-3, 14)
+		},
+		// Revoked, so the history is not empty.
+		...(lapsed
+			? [
+					{
+						userId: lapsed.id,
+						lockAccessId: String(randomInt(100000, 999999)),
+						code: String(randomInt(10000000, 99999999)),
+						label: lapsed.name,
+						syncedAt: ptDate(-90, 10),
+						revokedAt: ptDate(-5, 11),
+						revokedReason: 'Membership lapsed'
+					}
+				]
+			: []),
+		// Granted but not yet on the lock — the queued state.
+		...(pending
+			? [
+					{
+						userId: pending.id,
+						lockAccessId: String(randomInt(100000, 999999)),
+						code: String(randomInt(10000000, 99999999)),
+						label: pending.name
+					}
+				]
+			: [])
 	]);
 }

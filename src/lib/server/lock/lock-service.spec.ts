@@ -690,3 +690,28 @@ describe('persistent member codes', () => {
 		expect(result.provisioned).toBe(0);
 	});
 });
+
+describe('provisioning window', () => {
+	// The window was a single day, which left no slack: the job runs once each
+	// morning, so a lock offline then meant a member with a booking that evening
+	// had a code queued in the cloud and no way in.
+	it('provisions across the confirmation window, not just today', async () => {
+		selectResults.push([
+			{
+				id: 'res-in-3-days',
+				startsAt: new Date(Date.now() + 2.5 * 24 * 60 * 60_000),
+				endsAt: new Date(Date.now() + 2.5 * 24 * 60 * 60_000 + 3_600_000),
+				createdByUserId: 'user-1',
+				memberName: 'Jordan'
+			}
+		]);
+		selectResults.push([]);
+
+		const result = await runDailyLockJob();
+
+		expect(result.provisioned).toBe(1);
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'Jordan' })
+		);
+	});
+});
