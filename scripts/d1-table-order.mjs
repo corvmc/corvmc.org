@@ -75,6 +75,7 @@ export const tableOrder = [
 	'volunteer_signup',
 	// independents (no FKs)
 	'closure',
+	'lock_fallback_code',
 	'inbox_channel_config',
 	'verification',
 	// leaves

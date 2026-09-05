@@ -16,6 +16,7 @@ import {
 	LOCK_GRACE_MINUTES,
 	type LockDeviceHealth
 } from './ultraloc-client';
+import { maintainFallbackCode } from './fallback-code-service';
 import { getJson, putJson } from '$lib/server/kv';
 import { dispatchEmailOnly } from '$lib/server/notification';
 import { env } from '$env/dynamic/private';
@@ -48,6 +49,8 @@ export async function runDailyLockJob(): Promise<{
 	cleaned: number;
 	confirmed: number;
 	online: boolean | null;
+	/** Whether a break-glass code is confirmed on the lock right now. */
+	fallbackActive: boolean;
 	errors: string[];
 }> {
 	const errors: string[] = [];
@@ -56,8 +59,16 @@ export async function runDailyLockJob(): Promise<{
 	const cleaned = await cleanupPreviousDayAccess(errors);
 	const provisioned = await provisionDailyAccess(errors);
 	const confirmed = await reconcileSyncState(errors);
+	const fallback = await maintainFallbackCode(errors);
 
-	return { provisioned, cleaned, confirmed, online, errors };
+	return {
+		provisioned,
+		cleaned,
+		confirmed,
+		online,
+		fallbackActive: fallback.active !== null,
+		errors
+	};
 }
 
 /**
