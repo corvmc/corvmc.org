@@ -1,3 +1,5 @@
+/** @typedef {import('./ast.js').RuleNode} RuleNode */
+
 /**
  * If a query is composed into another query, refreshing it alone repaints nothing.
  *
@@ -54,6 +56,7 @@ export default {
 				/** constituent name → the query that wraps it. */
 				const wrappedBy = new Map();
 
+				/** @param {RuleNode} node @param {(n: RuleNode) => void} visit */
 				const walk = (node, visit) => {
 					if (!node || typeof node.type !== 'string') return;
 					visit(node);
@@ -66,7 +69,7 @@ export default {
 				};
 
 				for (const [outer, node] of queries) {
-					walk(node, (n) => {
+					walk(node, (/** @type {RuleNode} */ n) => {
 						if (
 							n.type === 'CallExpression' &&
 							n.callee.type === 'Identifier' &&
@@ -80,7 +83,7 @@ export default {
 
 				if (wrappedBy.size === 0) return;
 
-				walk(program, (n) => {
+				walk(program, (/** @type {RuleNode} */ n) => {
 					if (
 						n.type !== 'CallExpression' ||
 						n.callee.type !== 'MemberExpression' ||

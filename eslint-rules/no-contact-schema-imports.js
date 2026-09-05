@@ -48,7 +48,7 @@ export default {
 		}
 	},
 	create(context) {
-		const filename = (context.filename ?? context.getFilename()).replaceAll('\\', '/');
+		const filename = context.filename.replaceAll('\\', '/');
 		if (ALLOWED.some((allowed) => filename.endsWith(allowed))) return {};
 
 		return {
@@ -57,8 +57,14 @@ export default {
 				if (typeof source !== 'string' || !SCHEMA_SOURCE.test(source)) return;
 
 				for (const spec of node.specifiers) {
-					const name =
-						spec.type === 'ImportSpecifier' ? (spec.imported.name ?? spec.imported.value) : null;
+					// `imported` is an Identifier for `{ foo }` and a Literal for the
+					// `{ 'foo-bar' as x }` form; only one of `.name` / `.value` exists on each.
+					const imported = spec.type === 'ImportSpecifier' ? spec.imported : null;
+					const name = !imported
+						? null
+						: imported.type === 'Identifier'
+							? imported.name
+							: String(imported.value);
 					if (name && GUARDED.has(name)) {
 						context.report({ node: spec, messageId: 'contactImport', data: { name } });
 					}

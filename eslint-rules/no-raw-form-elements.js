@@ -1,3 +1,5 @@
+/** @typedef {import('./ast.js').RuleNode} RuleNode */
+
 /** @type {import('eslint').Rule.RuleModule} */
 export default {
 	meta: {
@@ -12,10 +14,11 @@ export default {
 		}
 	},
 	create(context) {
-		const filename = context.filename ?? context.getFilename();
+		const filename = context.filename;
 		if (!filename.includes('+page.svelte')) return {};
 
 		return {
+			/** @param {RuleNode} node */
 			SvelteElement(node) {
 				if (node.name?.name === 'form') {
 					context.report({ node, messageId: 'noRawForm' });

@@ -1,3 +1,5 @@
+/** @typedef {import('./ast.js').RuleNode} RuleNode */
+
 /**
  * A page gets one load-bearing server query. Everything else loads lazily.
  *
@@ -73,23 +75,27 @@ export default {
 				/** Local names imported from a `*.remote` module. */
 				const remoteNames = new Set();
 
+				/** @param {RuleNode} node @param {(n: RuleNode) => void} visit */
 				const children = (node, visit) => {
 					for (const key of Object.keys(node)) {
 						if (key === 'parent') continue;
 						const child = node[key];
 						if (Array.isArray(child))
-							child.forEach((c) => c && typeof c.type === 'string' && visit(c));
+							child.forEach(
+								(/** @type {RuleNode} */ c) => c && typeof c.type === 'string' && visit(c)
+							);
 						else if (child && typeof child.type === 'string') visit(child);
 					}
 				};
 
+				/** @param {RuleNode} node @param {(n: RuleNode) => void} visit */
 				const walk = (node, visit) => {
 					if (!node || typeof node.type !== 'string') return;
 					visit(node);
-					children(node, (c) => walk(c, visit));
+					children(node, (/** @type {RuleNode} */ c) => walk(c, visit));
 				};
 
-				walk(program, (n) => {
+				walk(program, (/** @type {RuleNode} */ n) => {
 					if (n.type !== 'ImportDeclaration') return;
 					if (!/\.remote$/.test(n.source.value ?? '')) return;
 					for (const spec of n.specifiers) {
@@ -98,12 +104,14 @@ export default {
 				});
 				if (remoteNames.size === 0) return;
 
+				/** @param {RuleNode} n */
 				const isRemoteCall = (n) =>
 					n.type === 'CallExpression' &&
 					n.callee.type === 'Identifier' &&
 					remoteNames.has(n.callee.name);
 
 				/** `$derived.by(fn)` / `$state.by(fn)` — the rune evaluates `fn` for us. */
+				/** @param {RuleNode} callee */
 				const isByRune = (callee) =>
 					callee.type === 'MemberExpression' &&
 					callee.object.type === 'Identifier' &&
@@ -115,6 +123,7 @@ export default {
 				// easy to leave out and the omission is silent: it made `staff/events/[id]` — the
 				// #270 conversion, one query — count 2, because a `const result = await
 				// checkRebook(...)` inside a hoisted `function` looked like a top-level start.
+				/** @param {RuleNode} n */
 				const isFunction = (n) =>
 					n.type === 'ArrowFunctionExpression' ||
 					n.type === 'FunctionExpression' ||
@@ -122,8 +131,10 @@ export default {
 					n.type === 'SvelteSnippetBlock';
 
 				/** Remote calls this expression starts immediately, rather than deferring. */
+				/** @param {RuleNode} root */
 				function countImmediate(root) {
 					let count = 0;
+					/** @param {RuleNode} n */
 					const visit = (n) => {
 						if (isFunction(n)) return;
 						if (isRemoteCall(n)) count += 1;
@@ -144,7 +155,9 @@ export default {
 
 				// Declarations at component top level. A declaration inside a function is that
 				// function's business, and runs when it is called.
+				/** @type {RuleNode[]} */
 				const starters = [];
+				/** @param {RuleNode} node */
 				const scan = (node) => {
 					if (!node || typeof node.type !== 'string') return;
 					if (isFunction(node)) return;
