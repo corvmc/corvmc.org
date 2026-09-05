@@ -101,7 +101,12 @@ export async function createCheckoutSession(options: CreateSubscriptionOptions):
 			subscription_type: 'contribution'
 		},
 		successUrl,
-		cancelUrl
+		cancelUrl,
+		// Contributions are paid on our own page. Not an option on
+		// `CreateSubscriptionOptions`: `checkout()` carries `uiMode` so products
+		// could migrate one at a time, and this one has. A knob no caller turns is
+		// worse than none.
+		uiMode: 'elements'
 	});
 
 	if (!result.checkoutUrl) {
@@ -442,27 +447,4 @@ export async function resume(stripeCustomerId: string): Promise<void> {
 	}
 
 	await stripe.subscriptions.update(sub.id, { cancel_at_period_end: false });
-}
-
-// ---------------------------------------------------------------------------
-// Billing portal
-// ---------------------------------------------------------------------------
-
-/**
- * Create a Stripe Billing Portal session URL. Returns null if no customer ID
- * is provided. The portal lets members manage payment methods, view invoices,
- * and cancel subscriptions.
- */
-export async function createBillingPortalUrl(
-	stripeCustomerId: string | null | undefined,
-	returnUrl: string
-): Promise<string | null> {
-	if (!stripeCustomerId) return null;
-
-	const session = await stripe.billingPortal.sessions.create({
-		customer: stripeCustomerId,
-		return_url: returnUrl
-	});
-
-	return session.url;
 }

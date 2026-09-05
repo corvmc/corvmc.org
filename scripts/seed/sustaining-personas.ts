@@ -31,9 +31,12 @@ import { type SeedRole } from './types';
  * volunteer personas, 100–119 the bulk members, 999 the first-timer.
  *
  * They keep a placeholder `cus_seed_…` `stripeId`, which is *not* a detail to
- * tidy away: it is the case that used to take the whole page down, and
- * `billingPortalUrlOrNull` in `membership.remote.ts` now absorbs it. Seeding it
- * keeps that guard exercised every time somebody opens the page.
+ * tidy away. It used to be the case that took the whole page down — a real
+ * Stripe call for a customer that does not exist, inside the page query's own
+ * `Promise.all`. That call is gone, and the prefix now earns its keep the other
+ * way round: `fake-gateway.ts` materialises a card and six months of invoices
+ * for a `cus_seed_…` customer, so the billing surfaces that replaced the Stripe
+ * portal have something to render for these personas.
  */
 const SUSTAINING_PERSONAS = [
 	{

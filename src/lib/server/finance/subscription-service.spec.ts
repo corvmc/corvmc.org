@@ -48,11 +48,6 @@ const mockStripe = {
 	subscriptions: {
 		list: vi.fn(),
 		update: vi.fn()
-	},
-	billingPortal: {
-		sessions: {
-			create: vi.fn()
-		}
 	}
 };
 
@@ -73,7 +68,6 @@ const {
 	getSubscription,
 	updateQuantity,
 	cancel,
-	createBillingPortalUrl,
 	resume,
 	mapDbSubscription,
 	buildMemberSubscriptionState,
@@ -128,6 +122,30 @@ describe('createCheckoutSession', () => {
 				cancelUrl: 'https://example.com/cancel'
 			})
 		);
+	});
+
+	it('asks for the in-app payment page, not checkout.stripe.com', async () => {
+		mockCheckout.mockResolvedValue({
+			paid: false,
+			checkoutUrl: '/checkout/cs_sub',
+			clientSecret: 'cs_sub_secret'
+		});
+
+		const url = await createCheckoutSession({
+			userId: 'user-1',
+			stripeCustomerId: 'cus_123',
+			quantity: 5,
+			coverFees: false,
+			successUrl: 'https://example.com/success',
+			cancelUrl: 'https://example.com/cancel'
+		});
+
+		// `mode: 'subscription'` is supported under `elements`, and the caller
+		// still gets one URL to redirect to — it is just a route in this app now.
+		expect(mockCheckout).toHaveBeenCalledWith(
+			expect.objectContaining({ uiMode: 'elements', mode: 'subscription' })
+		);
+		expect(url).toBe('/checkout/cs_sub');
 	});
 
 	it('passes coverFees through to shared checkout', async () => {
@@ -763,34 +781,5 @@ describe('resume', () => {
 	it('throws when no active subscription', async () => {
 		mockStripe.subscriptions.list.mockResolvedValue({ data: [] });
 		await expect(resume('cus_ghost')).rejects.toThrow(SubscriptionStateError);
-	});
-});
-
-// ---------------------------------------------------------------------------
-// createBillingPortalUrl
-// ---------------------------------------------------------------------------
-describe('createBillingPortalUrl', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('creates a billing portal session and returns the URL', async () => {
-		mockStripe.billingPortal.sessions.create.mockResolvedValue({
-			url: 'https://billing.stripe.com/session/abc'
-		});
-
-		const url = await createBillingPortalUrl('cus_123', 'https://example.com/return');
-
-		expect(url).toBe('https://billing.stripe.com/session/abc');
-		expect(mockStripe.billingPortal.sessions.create).toHaveBeenCalledWith({
-			customer: 'cus_123',
-			return_url: 'https://example.com/return'
-		});
-	});
-
-	it('returns null when no customer ID is provided', async () => {
-		expect(await createBillingPortalUrl(null, 'https://example.com')).toBeNull();
-		expect(await createBillingPortalUrl(undefined, 'https://example.com')).toBeNull();
-		expect(mockStripe.billingPortal.sessions.create).not.toHaveBeenCalled();
 	});
 });

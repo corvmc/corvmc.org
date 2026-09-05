@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { stripe, webhookCryptoProvider } from '$lib/server/stripe';
+import { stripeWebhooks, webhookCryptoProvider } from '$lib/server/stripe';
 import { webhookHandlerMap } from '$lib/server/finance/webhook-handlers';
 import { captureException } from '$lib/server/sentry';
 
@@ -22,7 +22,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		// Workers has no synchronous crypto — must use the async verifier with an
 		// explicit SubtleCrypto provider (sync `constructEvent` throws here).
-		event = await stripe.webhooks.constructEventAsync(
+		event = await stripeWebhooks.constructEventAsync(
 			body,
 			signature,
 			webhookSecret,

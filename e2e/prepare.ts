@@ -42,6 +42,7 @@ import {
 	resetE2eDatabase
 } from './reset-db';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
+import { seedMembershipBilling } from './fixtures/seed-membership-billing';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
 import { seedBandAudio } from './fixtures/seed-band-audio';
 import { seedStaffUser } from './fixtures/seed-staff-user';
@@ -100,6 +101,7 @@ await migrateLocal(E2E_STATE_ROOT);
 resetE2eDatabase();
 
 await seedPayReservation();
+await seedMembershipBilling();
 await seedBandOnboarding();
 // After the bands: its releases hang off the public band's id.
 await seedBandAudio();

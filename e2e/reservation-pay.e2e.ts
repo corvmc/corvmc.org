@@ -1,4 +1,7 @@
-import { expect, test, type Response } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { eq } from 'drizzle-orm';
+import { readLocalDb } from './fixtures/platform-db';
+import { reservation } from '../src/lib/server/db/schema/reservation';
 import {
 	SEED_MEMBER_EMAIL,
 	SEED_MEMBER_PASSWORD,
@@ -6,26 +9,36 @@ import {
 } from './fixtures/seed-pay-reservation';
 
 /**
- * Regression test for the reservation "cover processing fees" payment flow.
+ * Paying for a reservation, all the way through.
  *
- * Background: the `coverFees` control is a FormField checkbox bound to a
- * `z.boolean()` schema field, submitted with SvelteKit's `b:` prefix so it
- * arrives as a real boolean. A prior bug typed the schema as `z.enum(['','on'])`,
- * which threw `Invalid option: expected one of ""|"on"` during form submission
- * (Zod validation) the moment a member checked "cover fees" — BEFORE any Stripe
- * redirect.
+ * This began as a narrow regression test. The `coverFees` control is a
+ * FormField checkbox bound to a `z.boolean()` schema field, submitted with
+ * SvelteKit's `b:` prefix so it arrives as a real boolean; a prior bug typed the
+ * schema as `z.enum(['','on'])`, which threw `Invalid option: expected one of
+ * ""|"on"` the moment a member checked "cover fees". The test could only assert
+ * that the submission got *past* Zod, because the dummy Stripe key meant
+ * everything after validation failed — so it treated "a non-JSON 303 toward
+ * Stripe" as a pass and inspected the response envelope by hand.
  *
- * This test drives the real browser → SvelteKit → Zod → handler path and asserts
- * the submission gets PAST Zod validation: no "Invalid option" / "expected one
- * of" error surfaces, and the request proceeds (it does not re-render the page
- * with a validation issue, and the server response is not a validation error).
+ * With `PAYMENTS_DRIVER=fake` the payment completes locally, so the flow can be
+ * asserted by its outcome instead of its envelope. Reaching a confirmed, paid
+ * reservation subsumes the original assertion — Zod cannot have rejected a
+ * submission that went on to settle — and additionally covers the credit
+ * commitment, the fee line, the checkout session, and the webhook translation
+ * that flips the row.
  *
- * It deliberately does NOT complete a real Stripe payment — the dummy Stripe key
- * means the post-validation Stripe call may fail, but that failure is distinct
- * from (and proves we passed) the Zod validation the bug lived in.
+ * The read-back goes through `readLocalDb` (read-only) rather than the rendered
+ * page: `status` and `paidAt` are the contract, the wording on the list is not.
+ * It is polled, because that reader opens the same SQLite file the preview
+ * server is still writing through workerd.
+ *
+ * Card declines are covered in `ticket-purchase.e2e.ts`, not here: this spec
+ * owns `SEED_RESERVATION_ID` and spends it, so a second case in this file would
+ * be asserting against a row the first one already paid.
  */
 
-const ZOD_BUG_PATTERNS = [/invalid option/i, /expected one of/i];
+/** See `.claude/rules/testing.md` — a bare read of a row just written can be stale. */
+const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 async function login(page: import('@playwright/test').Page) {
 	await page.goto('/login');
@@ -33,71 +46,69 @@ async function login(page: import('@playwright/test').Page) {
 	await page.locator('input[name="email"]').fill(SEED_MEMBER_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_MEMBER_PASSWORD);
 	await page.getByRole('button', { name: 'Sign in' }).click();
-	// Successful login redirects to /member.
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
 }
 
-test('covering processing fees submits without a Zod validation error', async ({ page }) => {
+test('a member covers the processing fee and the reservation settles', async ({ page }) => {
 	await login(page);
 
 	await page.goto(`/member/reservations/${SEED_RESERVATION_ID}/pay`);
 
-	// Page rendered the pay form for a balance-due ($15.00) reservation. The
-	// balance summary and the cover-fees checkbox are both present.
+	// The pay form for a balance-due ($15.00) reservation.
 	await expect(page.getByText('$15.00').first()).toBeVisible();
 
-	// The cover-fees checkbox is the boolean field rendered with the SvelteKit
-	// `b:` prefix — the exact mechanism the bug fix relies on.
+	// The boolean field rendered with SvelteKit's `b:` prefix — the exact
+	// mechanism the original bug lived in.
 	const checkbox = page.locator('input[name="b:coverFees"]');
 	await expect(checkbox).toBeVisible();
 	await checkbox.check();
 	await expect(checkbox).toBeChecked();
 
-	// The submit button shows the charge amount (with the processing fee once
-	// cover-fees is checked), e.g. "Pay $15.44".
-	const submit = page.getByRole('button', { name: /^Pay \$/ });
-	await expect(submit).toBeVisible();
+	await page.getByRole('button', { name: /^Pay \$/ }).click();
 
-	// Capture the POST to the payReservation remote form so we can confirm the
-	// server did not reject the submission with a validation error.
-	const remotePost = page.waitForResponse(
-		(res: Response) =>
-			res.request().method() === 'POST' && /payReservation|remote/i.test(res.url()),
-		{ timeout: 15000 }
-	);
-
-	await submit.click();
-
-	const response = await remotePost;
-	const bodyText = await response.text().catch(() => '');
-
-	// The submission must NOT be rejected as a Zod validation error. The old bug
-	// (coverFees typed as z.enum(['','on'])) produced an "Invalid option: expected
-	// one of ""|"on"" issue the moment the boolean `b:coverFees` value arrived.
+	// The in-app checkout page, reached by the same 303 the live integration
+	// issues. Reservations create an `elements` session now, so `checkout()`
+	// returns this route directly rather than the fake standing in for a
+	// checkout.stripe.com URL — the page is the same either way.
+	await expect(page).toHaveURL(/\/checkout\//);
+	// $15.00 grossed up for 2.9% + 30¢ — `calculateTotalWithFeeCoverage(1500)` is
+	// `{ totalCents: 1576, feeCents: 76 }`. Asserting the total here is what proves
+	// the fee line reached the checkout session rather than only the preview.
 	//
-	// SvelteKit remote forms always return HTTP 200 and carry the real outcome in
-	// a JSON envelope, so assert on the envelope, not the transport status:
-	//   - validation failure → { type: 'error', status: 400, ... } mentioning the issue
-	//   - success            → a redirect/result (no error)
-	//   - post-validation failure (e.g. the dummy Stripe key) → status 500
-	// A 500 here is fine: it happens AFTER Zod validation, proving the fix works.
-	for (const pattern of ZOD_BUG_PATTERNS) {
-		expect(bodyText, `payReservation response: ${bodyText.slice(0, 400)}`).not.toMatch(pattern);
-	}
+	// `exact`: the submit button beside it is labelled "Pay $15.76", so a
+	// substring match resolves to both and fails on strict mode. It passed at all
+	// only while the button had yet to render its label — a race, not a pass.
+	await expect(page.getByText('$15.76', { exact: true })).toBeVisible();
 
-	let envelope: { type?: string; status?: number } = {};
-	try {
-		envelope = JSON.parse(bodyText);
-	} catch {
-		// Non-JSON (e.g. a 303 redirect to Stripe) — that's a pass: it means the
-		// handler ran past validation and reached the checkout/redirect step.
-	}
-	expect(
-		envelope.status,
-		`payReservation returned a 400 validation error: ${bodyText.slice(0, 400)}`
-	).not.toBe(400);
+	await page.locator('input[name$="cardNumber"]').fill('4242424242424242');
+	await page.getByRole('button', { name: /^Pay / }).click();
 
-	// And the rendered page must never show the validation error text either.
-	await expect(page.locator('body')).not.toContainText('Invalid option');
-	await expect(page.locator('body')).not.toContainText('expected one of');
+	// `?paid=` is the session's `return_url`, which only `elements` mode sets —
+	// landing on it proves `checkout()` mapped `successUrl` rather than dropping
+	// it, and it is what the page polls on while the webhook is in flight.
+	await page.waitForURL(/\/member\/reservations\?paid=/, { timeout: 15000 });
+	expect(new URL(page.url()).searchParams.get('paid')).toBe(SEED_RESERVATION_ID);
+
+	const readReservation = async () => {
+		const [row] = await readLocalDb((db) =>
+			db
+				.select({
+					status: reservation.status,
+					paidAt: reservation.paidAt,
+					stripePaymentRecordId: reservation.stripePaymentRecordId
+				})
+				.from(reservation)
+				.where(eq(reservation.id, SEED_RESERVATION_ID))
+		);
+		return row;
+	};
+
+	await expect.poll(async () => (await readReservation()).status, DB_POLL).toBe('confirmed');
+
+	const row = await readReservation();
+	expect(row.paidAt).not.toBeNull();
+	// Written only by `reservation/checkout-listener.ts`, off the domain event the
+	// webhook translation emits — so this asserts fulfillment ran, not just that
+	// the charge succeeded.
+	expect(row.stripePaymentRecordId).not.toBeNull();
 });

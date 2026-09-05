@@ -94,6 +94,18 @@ export interface CheckoutOptions {
 	applicationFeeCents?: number;
 	successUrl: string;
 	cancelUrl: string;
+	/**
+	 * Who renders the payment form.
+	 *
+	 * `hosted_page` is Stripe's own page at checkout.stripe.com, reached by the
+	 * returned absolute `checkoutUrl`. `elements` keeps the buyer on this site:
+	 * Stripe still owns line items, discounts, currency and the payment methods,
+	 * but the card fields are a Payment Element we mount ourselves, and
+	 * `checkoutUrl` comes back as the in-app `/checkout/<session>`.
+	 *
+	 * Defaults to `hosted_page` so a caller migrates deliberately, one at a time.
+	 */
+	uiMode?: 'hosted_page' | 'elements';
 }
 
 /** Describes a credit type eligible for discount on this checkout. */
@@ -105,7 +117,14 @@ export interface EligibleCredit {
 
 export interface CheckoutResult {
 	paid: boolean;
+	/**
+	 * Where to send the buyer to pay. Absolute (checkout.stripe.com) under
+	 * `hosted_page`, and the in-app `/checkout/<session>` under `elements` — so a
+	 * caller can keep handing this straight to a redirect either way.
+	 */
 	checkoutUrl?: string;
+	/** Only under `uiMode: 'elements'`; what the Payment Element initialises from. */
+	clientSecret?: string;
 	stripePaymentRecordId?: string;
 }
 
@@ -133,7 +152,8 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 		destinationAccountId,
 		applicationFeeCents,
 		successUrl,
-		cancelUrl
+		cancelUrl,
+		uiMode = 'hosted_page'
 	} = options;
 
 	if (lineItems.length === 0)
@@ -234,6 +254,12 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 
 	if (userId) sessionMetadata.user_id = userId;
 
+	// Stripe rejects `cancel_url` outright in `elements` mode — there is no
+	// cancel redirect, because the buyer never leaves the site to begin with. The
+	// in-app checkout page still wants somewhere to send them when they back out,
+	// so the destination rides along as metadata instead of as a session field.
+	if (uiMode === 'elements') sessionMetadata.cancel_url = cancelUrl;
+
 	// 4. Credits fully cover the price
 	if (remainingCents <= 0 && userId) {
 		const now = Math.floor(Date.now() / 1000);
@@ -295,11 +321,15 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 	// declared `mode: string` where Stripe wants the literal union, and that
 	// single widening was the only thing the `as any` at the call below existed
 	// to paper over.
+	// `elements` takes `return_url` where `hosted_page` takes success/cancel: the
+	// pair is rejected in that mode, and there is only one destination anyway,
+	// since a buyer who abandons an Elements checkout never navigated away.
 	const sessionParams: Stripe.Checkout.SessionCreateParams = {
 		mode,
 		line_items: finalLineItems,
-		success_url: successUrl,
-		cancel_url: cancelUrl,
+		...(uiMode === 'elements'
+			? { ui_mode: 'elements' as const, return_url: successUrl }
+			: { success_url: successUrl, cancel_url: cancelUrl }),
 		metadata: sessionMetadata,
 		...(mode === 'payment' && {
 			payment_intent_data: {
@@ -340,6 +370,21 @@ export async function checkout(options: CheckoutOptions): Promise<CheckoutResult
 		}
 
 		const session = await stripe.checkout.sessions.create(sessionParams);
+
+		// An `elements` session has no `url` — we are the checkout page. It has a
+		// client secret instead, and the buyer goes to the in-app route keyed on
+		// the session id, so both modes still hand the caller one `checkoutUrl` to
+		// redirect to.
+		if (uiMode === 'elements') {
+			if (!session.client_secret) {
+				throw new Error('Stripe did not return a checkout client secret');
+			}
+			return {
+				paid: false,
+				checkoutUrl: `/checkout/${session.id}`,
+				clientSecret: session.client_secret
+			};
+		}
 
 		if (!session.url) {
 			throw new Error('Stripe did not return a checkout URL');

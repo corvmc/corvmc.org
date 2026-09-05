@@ -4,7 +4,7 @@
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { goto } from '$app/navigation';
+	import { goToCheckout } from '$lib/utils/checkout-navigation';
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -38,13 +38,7 @@
 	const maxQuantity = $derived(data.remaining !== null ? Math.min(data.remaining, 10) : 10);
 
 	async function handleSuccess(result?: { redirectUrl?: string }) {
-		if (result?.redirectUrl) {
-			if (result.redirectUrl.startsWith('http')) {
-				window.location.href = result.redirectUrl;
-			} else {
-				await goto(result.redirectUrl);
-			}
-		}
+		if (result?.redirectUrl) await goToCheckout(result.redirectUrl);
 	}
 </script>
 

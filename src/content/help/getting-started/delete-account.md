@@ -23,7 +23,7 @@ sidebar.
 - **Settle anything outstanding first.** Cancel upcoming reservations and resolve
   any unpaid balances.
 - **Sustaining members** should cancel their subscription through the
-  [billing portal](/member/help/manage-billing) first.
+  [Membership page](/member/help/manage-billing) first.
 
 If you only want to stop receiving messages, you don't need to delete your
 account — adjust your

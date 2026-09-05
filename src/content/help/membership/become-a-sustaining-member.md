@@ -22,7 +22,7 @@ the subscription is set up.
 
 Membership uses a sliding scale so you can contribute what works for you. Higher
 tiers support the space more, but the core benefits apply across the scale. You can
-change your amount later from the [billing portal](/member/help/manage-billing).
+change your amount later from your [Membership page](/member/help/manage-billing).
 
 ## Related
 
