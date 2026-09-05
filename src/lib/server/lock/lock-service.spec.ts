@@ -72,17 +72,21 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 	buildDateInTz: vi.fn((date, time) => new Date(`${date}T${time}:00Z`))
 }));
 
-const mockCreateTemporaryUser = vi.fn().mockResolvedValue(undefined);
+const mockCreateTemporaryUser = vi.fn().mockResolvedValue(null);
 const mockAddLockUser = vi.fn().mockResolvedValue(null);
 const mockRemoveTemporaryUser = vi.fn().mockResolvedValue(undefined);
+const mockUpdateLockUser = vi.fn().mockResolvedValue(undefined);
 const mockListLockUsers = vi.fn().mockResolvedValue([]);
+const mockGetLockUser = vi.fn().mockResolvedValue(null);
 const mockGenerateLockCode = vi.fn().mockReturnValue(4242);
 
 vi.mock('./ultraloc-client', () => ({
 	createTemporaryUser: (...args: unknown[]) => mockCreateTemporaryUser(...args),
 	addLockUser: (...args: unknown[]) => mockAddLockUser(...args),
 	removeTemporaryUser: (...args: unknown[]) => mockRemoveTemporaryUser(...args),
+	updateLockUser: (...args: unknown[]) => mockUpdateLockUser(...args),
 	listLockUsers: (...args: unknown[]) => mockListLockUsers(...args),
+	getLockUser: (...args: unknown[]) => mockGetLockUser(...args),
 	generateLockCode: (...args: unknown[]) => mockGenerateLockCode(...args),
 	// The real one formats in the lock's local zone; UTC is enough here, and it
 	// keeps the daterange strings the matcher compares deterministic.
@@ -104,6 +108,8 @@ const expiredUser = {
 	type: 2,
 	daterange: ['2020-01-01 18:00', '2020-01-01 20:30'] as [string, string]
 };
+/** What `list` actually returns for that user: no schedule fields at all. */
+const expiredRow = { id: 111, name: 'Alice', type: 2 };
 // A temporary user still inside its window (far future).
 const activeUser = {
 	id: 222,
@@ -111,6 +117,7 @@ const activeUser = {
 	type: 2,
 	daterange: ['2999-01-01 18:00', '2999-01-01 20:30'] as [string, string]
 };
+const activeRow = { id: 222, name: 'Bob', type: 2 };
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -121,10 +128,16 @@ beforeEach(() => {
 	selectResults = [];
 	selectCallIndex = 0;
 	updateCalls.length = 0;
-	mockCreateTemporaryUser.mockResolvedValue(undefined);
+	mockCreateTemporaryUser.mockResolvedValue(null);
 	mockAddLockUser.mockResolvedValue(null);
 	mockRemoveTemporaryUser.mockResolvedValue(undefined);
+	mockUpdateLockUser.mockResolvedValue(undefined);
 	mockListLockUsers.mockResolvedValue([]);
+	// `list` never carries daterange — only `get` does. Route the fixtures'
+	// windows through the mocked get, which is what the service now reads.
+	mockGetLockUser.mockImplementation(
+		async (id: number) => [expiredUser, activeUser].find((u) => u.id === id) ?? null
+	);
 	mockGenerateLockCode.mockReturnValue(4242);
 });
 
@@ -163,7 +176,7 @@ describe('runDailyLockJob', () => {
 	});
 
 	it('deletes only expired temporary users on cleanup', async () => {
-		mockListLockUsers.mockResolvedValue([expiredUser, activeUser]);
+		mockListLockUsers.mockResolvedValue([expiredRow, activeRow]);
 		selectResults.push([]); // provision: none
 
 		const result = await runDailyLockJob();
@@ -178,8 +191,9 @@ describe('runDailyLockJob', () => {
 	it('ignores non-temporary and codeless users on cleanup', async () => {
 		mockListLockUsers.mockResolvedValue([
 			{ id: 1, name: 'Admin', type: 3 },
+			// A member's persistent door code. Deleting one locks a real person out.
 			{ id: 2, name: 'Normal', type: 0 },
-			{ id: 3, name: 'NoRange', type: 2 } // temporary but no daterange
+			{ id: 3, name: 'NoRange', type: 2 } // temporary, but `get` returns no window
 		]);
 		selectResults.push([]);
 
@@ -223,7 +237,7 @@ describe('runDailyLockJob', () => {
 	});
 
 	it('handles cleanup deletion errors gracefully', async () => {
-		mockListLockUsers.mockResolvedValue([expiredUser]);
+		mockListLockUsers.mockResolvedValue([expiredRow]);
 		selectResults.push([]);
 
 		mockRemoveTemporaryUser.mockRejectedValueOnce(new Error('not found'));
@@ -368,7 +382,7 @@ describe('syncAccessWindow', () => {
 
 	// The lock enforces access through its own copy of the window, so a show
 	// pushed later would stop opening the door at the old end time.
-	it('replaces the stale lock user, keeping the same code', async () => {
+	it('re-points the existing lock user in place when the id is known', async () => {
 		selectResults.push([
 			{
 				id: 'res-1',
@@ -376,22 +390,55 @@ describe('syncAccessWindow', () => {
 				startsAt: todayAt('20:00'),
 				endsAt: todayAt('23:00'),
 				lockCode: '1357',
+				lockAccessId: '777',
 				memberName: 'Alice'
 			}
 		]);
-		mockListLockUsers.mockResolvedValue([
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		expect(result.synced).toBe(true);
+		// One update, no delete: the member's code never leaves the lock.
+		expect(mockUpdateLockUser).toHaveBeenCalledWith(777, {
+			daterange: [
+				todayAt('20:00').toISOString().slice(0, 16).replace('T', ' '),
+				// end + LOCK_GRACE_MINUTES
+				new Date(todayAt('23:00').getTime() + 30 * 60_000)
+					.toISOString()
+					.slice(0, 16)
+					.replace('T', ' ')
+			]
+		});
+		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+		// The window moved, so the code is queued again and no longer known good.
+		expect(updateCalls).toContainEqual(expect.objectContaining({ lockSyncedAt: null }));
+	});
+
+	it('falls back to delete-and-re-add for a legacy row with no lock access id', async () => {
+		selectResults.push([
 			{
-				id: 777,
-				name: 'Alice',
-				type: 2,
-				daterange: [previousStart.toISOString().slice(0, 16).replace('T', ' '), 'x'] as [
-					string,
-					string
-				]
-			},
-			// Someone else's booking, same day. Must survive.
-			{ id: 888, name: 'Bob', type: 2, daterange: ['2999-01-01 18:00', '2999-01-01 20:30'] }
+				id: 'res-1',
+				status: 'confirmed',
+				startsAt: todayAt('20:00'),
+				endsAt: todayAt('23:00'),
+				lockCode: '1357',
+				lockAccessId: null,
+				memberName: 'Alice'
+			}
 		]);
+		// `list` carries no windows, so the match has to go through `get`.
+		mockListLockUsers.mockResolvedValue([
+			{ id: 777, name: 'Alice', type: 2 },
+			// Someone else's booking, same day. Must survive.
+			{ id: 888, name: 'Bob', type: 2 }
+		]);
+		const previousStartStr = previousStart.toISOString().slice(0, 16).replace('T', ' ');
+		mockGetLockUser.mockImplementation(async (id: number) =>
+			id === 777
+				? { id: 777, name: 'Alice', type: 2, daterange: [previousStartStr, 'x'] }
+				: { id: 888, name: 'Bob', type: 2, daterange: ['2999-01-01 18:00', '2999-01-01 20:30'] }
+		);
 
 		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
 
@@ -407,6 +454,32 @@ describe('syncAccessWindow', () => {
 			})
 		);
 		expect(mockGenerateLockCode).not.toHaveBeenCalled();
+	});
+
+	it('falls back to delete-and-re-add when the in-place update fails', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				status: 'confirmed',
+				startsAt: todayAt('20:00'),
+				endsAt: todayAt('23:00'),
+				lockCode: '1357',
+				lockAccessId: '777',
+				memberName: 'Alice'
+			}
+		]);
+		mockUpdateLockUser.mockRejectedValueOnce(new Error('device offline'));
+		mockListLockUsers.mockResolvedValue([]);
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		// A member pointed at the old window is worse than a duplicate on the lock.
+		expect(result.synced).toBe(true);
+		expect(result.errors[0]).toContain('re-point');
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(expect.objectContaining({ code: 1357 }));
+
+		consoleSpy.mockRestore();
 	});
 
 	it('does nothing when the window did not actually move', async () => {

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "526439c1-ac69-4a70-bbc1-b509176a484f",
+  "id": "9b1174e9-aa9d-4859-ad2c-f28edaa19e81",
   "prevIds": [
-    "7b47cb77-c0f6-429c-8d48-ab4906fe8924"
+    "526439c1-ac69-4a70-bbc1-b509176a484f"
   ],
   "ddl": [
     {
@@ -1341,6 +1341,16 @@
       "default": null,
       "generated": null,
       "name": "lock_code",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lock_synced_at",
       "entityType": "columns",
       "table": "reservation"
     },

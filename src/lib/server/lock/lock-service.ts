@@ -7,9 +7,12 @@ import {
 	createTemporaryUser,
 	addLockUser,
 	removeTemporaryUser,
+	updateLockUser,
 	listLockUsers,
+	getLockUser,
 	generateLockCode,
-	lockDateTime
+	lockDateTime,
+	LOCK_GRACE_MINUTES
 } from './ultraloc-client';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -91,16 +94,24 @@ async function provisionAccessFor(row: {
 }): Promise<number> {
 	const code = row.code ?? generateLockCode();
 
-	await createTemporaryUser({
+	const lockAccessId = await createTemporaryUser({
 		name: row.memberName,
 		startTime: row.startsAt,
 		endTime: row.endsAt,
 		code
 	});
 
+	// lockSyncedAt stays null: the add is queued in U-tec's cloud and only
+	// reaches the lock when the lock is next online. The reconciliation pass is
+	// what promotes it to "known good".
 	await db
 		.update(reservation)
-		.set({ lockCode: String(code), updatedAt: new Date() })
+		.set({
+			lockCode: String(code),
+			lockAccessId: lockAccessId === null ? null : String(lockAccessId),
+			lockSyncedAt: null,
+			updatedAt: new Date()
+		})
 		.where(eq(reservation.id, row.id));
 
 	return code;
@@ -120,14 +131,13 @@ async function provisionAccessFor(row: {
  *   that has already been passed over, so mint here or nobody gets in.
  * - **A code already issued, and the window moved.** The lock enforces access
  *   through the temporary user's `daterange`, which still pins the old window:
- *   push a show later and the code stops working at the old end time. Delete
- *   that user and re-add it against the new window, keeping the **same code** —
- *   staff have already been told what it is.
+ *   push a show later and the code stops working at the old end time. Re-point
+ *   that user at the new window, keeping the **same code** — staff have already
+ *   been told what it is.
  *
- * Matching the lock user by its `daterange` start is what `cleanupPreviousDayAccess`
- * already does. `createTemporaryUser` resolves on a deferred ack that carries no
- * user id, which is why `reservation.lockAccessId` has never been written and
- * cannot be used as the handle here.
+ * When `lockAccessId` is known the re-point is a single `update`, which leaves
+ * the member's code untouched on the lock. Rows provisioned before the id was
+ * recorded fall back to deleting the old user and re-adding it.
  *
  * Errors are collected, not thrown: a lock outage must not fail the booking
  * change that prompted it.
@@ -147,6 +157,7 @@ export async function syncAccessWindow(
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			lockCode: reservation.lockCode,
+			lockAccessId: reservation.lockAccessId,
 			memberName: user.name
 		})
 		.from(reservation)
@@ -185,13 +196,36 @@ export async function syncAccessWindow(
 	if (unmoved) return { synced: false, errors };
 
 	// --- A code is live against the old window ------------------------------
+	// Preferred path: re-point the existing lock user in place. The member keeps
+	// the same code and we never have a moment with no user on the lock.
+	if (row.lockAccessId) {
+		try {
+			const graceEnd = new Date(row.endsAt.getTime() + LOCK_GRACE_MINUTES * 60_000);
+			await updateLockUser(Number(row.lockAccessId), {
+				daterange: [lockDateTime(row.startsAt), lockDateTime(graceEnd)]
+			});
+			await db
+				.update(reservation)
+				.set({ lockSyncedAt: null, updatedAt: new Date() })
+				.where(eq(reservation.id, row.id));
+			return { synced: true, errors };
+		} catch (err) {
+			// Fall through to delete-and-re-add rather than leaving the member
+			// pointed at the old window.
+			const msg = `Failed to re-point lock access for reservation ${row.id}: ${(err as Error).message}`;
+			console.error(msg);
+			errors.push(msg);
+		}
+	}
+
+	// Legacy rows have no id, so the old user has to be found by its window.
 	try {
-		const users = await listLockUsers();
 		const previousStart = lockDateTime(previousStartsAt);
 
-		for (const u of users) {
-			if (u.type !== 2 || !u.daterange) continue;
-			if (u.daterange[0] !== previousStart) continue;
+		for (const u of await listLockUsers()) {
+			if (u.type !== 2) continue;
+			const detail = await getLockUser(u.id);
+			if (detail?.daterange?.[0] !== previousStart) continue;
 			await removeTemporaryUser(u.id);
 		}
 	} catch (err) {
@@ -220,6 +254,15 @@ export async function syncAccessWindow(
  * any temporary user (type 2) whose window has fully passed, then null out the
  * door code on yesterday's reservations for DB hygiene. The two steps are
  * independent — a failure in one does not block the other.
+ *
+ * The window has to come from `getLockUser`, not from the list row: `list`
+ * returns only `{id, name, type, status, sync_status}`. Filtering the list rows
+ * on `daterange` — which is what this did until #637 — skipped every user, so
+ * nothing was ever deleted and temporary users from months earlier were still
+ * on the lock.
+ *
+ * Only type-2 users are touched. Type-0 users are members' persistent door
+ * codes, granted by hand, and deleting one locks a real person out.
  */
 async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 	const tz = DEFAULT_TIMEZONE;
@@ -232,13 +275,16 @@ async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 		const users = await listLockUsers();
 
 		for (const u of users) {
-			if (u.type !== 2 || !u.daterange) continue;
-
-			const [datePart, timePart] = u.daterange[1].split(' ');
-			const end = buildDateInTz(datePart, timePart, tz);
-			if (end >= now) continue;
+			if (u.type !== 2) continue;
 
 			try {
+				const detail = await getLockUser(u.id);
+				if (!detail?.daterange) continue;
+
+				const [datePart, timePart] = detail.daterange[1].split(' ');
+				const end = buildDateInTz(datePart, timePart, tz);
+				if (end >= now) continue;
+
 				await removeTemporaryUser(u.id);
 				count++;
 			} catch (err) {
