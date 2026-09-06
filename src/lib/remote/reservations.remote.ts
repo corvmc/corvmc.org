@@ -82,6 +82,7 @@ import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/res
 import { requireInstructor } from '$lib/server/instructor/instructor-context';
 import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
 import { config } from '$lib/server/site-config/site-config-service';
+import { revealFallbackCodeFor } from '$lib/server/lock/fallback-code-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import {
 	checkout,
@@ -175,11 +176,18 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
+	// A code we issued is not a code that works: U-tec queues writes in its cloud
+	// and only pushes them down when the lock is reachable. `lockSyncedAt` is the
+	// lock's own confirmation. Until it is set, the member gets the break-glass
+	// code instead — but only inside their window, and the reveal is recorded.
+	const fallbackCode = await revealFallbackCodeFor(row);
+
 	return {
 		reservation: row,
 		durationHours,
 		totalCents,
-		hourlyRateCents
+		hourlyRateCents,
+		fallbackCode
 	};
 });
 

@@ -28,7 +28,7 @@ import { db, dispose } from './seed/db';
 import { deleteAll } from './seed/teardown';
 import { pendingSites } from './seed/pending';
 import { seedRoles, seedUsers, seedAdminUser, seedUserRoles } from './seed/users';
-import { seedReservations, seedClosures } from './seed/reservations';
+import { seedReservations, seedClosures, seedLockAccess } from './seed/reservations';
 import { seedEvents } from './seed/events';
 import { seedVenues } from './seed/venues';
 import { seedBands } from './seed/bands';
@@ -93,6 +93,7 @@ async function main() {
 	await seedUserRoles(users, adminUser, roles);
 	const allUsers = [adminUser, ...users];
 	const reservations = await seedReservations(allUsers);
+	await seedLockAccess(allUsers);
 	await seedClosures();
 	const events = await seedEvents(allUsers);
 	// After the events, because it backfills every one of them into the room —

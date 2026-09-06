@@ -96,6 +96,14 @@ vi.mock('./fallback-code-service', () => ({
 	maintainFallbackCode: (...args: unknown[]) => mockMaintainFallbackCode(...args)
 }));
 
+const mockHasActiveMemberCode = vi.fn().mockResolvedValue(false);
+const mockReconcileMemberCodeSync = vi.fn().mockResolvedValue(0);
+
+vi.mock('./member-code-service', () => ({
+	hasActiveMemberCode: (...args: unknown[]) => mockHasActiveMemberCode(...args),
+	reconcileMemberCodeSync: (...args: unknown[]) => mockReconcileMemberCodeSync(...args)
+}));
+
 const mockCreateTemporaryUser = vi.fn().mockResolvedValue(null);
 const mockAddLockUser = vi.fn().mockResolvedValue(null);
 const mockRemoveTemporaryUser = vi.fn().mockResolvedValue(undefined);
@@ -165,6 +173,8 @@ beforeEach(() => {
 	mockGetJson.mockResolvedValue(true);
 	mockDispatchEmailOnly.mockResolvedValue(undefined);
 	mockMaintainFallbackCode.mockResolvedValue({ active: null, rotated: false });
+	mockHasActiveMemberCode.mockResolvedValue(false);
+	mockReconcileMemberCodeSync.mockResolvedValue(0);
 	// `list` never carries daterange — only `get` does. Route the fixtures'
 	// windows through the mocked get, which is what the service now reads.
 	mockGetLockUser.mockImplementation(
@@ -286,26 +296,25 @@ describe('runDailyLockJob', () => {
 });
 
 describe('issueLockSelfTest', () => {
-	it('issues a named control (type 0) test code and reports both steps ok', async () => {
+	it('issues an expiring temporary code and reports both steps ok', async () => {
 		mockListLockUsers.mockResolvedValue([{ id: 1, name: 'Someone', type: 2 }]);
 
 		const result = await issueLockSelfTest();
 
 		expect(result.ok).toBe(true);
 		expect(result.code).toBe(4242);
-		// Uses the proven normal-user add, not the temporary-user path.
-		expect(mockAddLockUser).toHaveBeenCalledWith({
-			name: 'CMC Self-Test',
-			type: 0,
-			password: 4242
-		});
-		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+		// A type-2 user with a real window: the thing a reservation actually gets,
+		// and it expires on its own rather than living until someone clicks Revoke.
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'CMC Self-Test', code: 4242 })
+		);
+		expect(result.expiresAt).toBeInstanceOf(Date);
 		expect(result.steps.map((s) => s.name)).toEqual(['create', 'list']);
 		expect(result.steps.every((s) => s.ok)).toBe(true);
 	});
 
 	it('reports a failed create step without throwing', async () => {
-		mockAddLockUser.mockRejectedValueOnce(new Error('device offline'));
+		mockCreateTemporaryUser.mockRejectedValueOnce(new Error('device offline'));
 
 		const result = await issueLockSelfTest();
 
@@ -656,5 +665,53 @@ describe('sync reconciliation', () => {
 
 		expect(result.confirmed).toBe(0);
 		expect(result.errors).toHaveLength(0);
+	});
+});
+
+describe('persistent member codes', () => {
+	// Every code not issued is one less user on the lock's finite table.
+	it('skips provisioning for a member who already holds a standing code', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				startsAt: new Date(),
+				endsAt: new Date(),
+				createdByUserId: 'user-1',
+				memberName: 'Jordan'
+			}
+		]);
+		selectResults.push([]); // reconcile: nothing outstanding
+		mockHasActiveMemberCode.mockResolvedValue(true);
+
+		const result = await runDailyLockJob();
+
+		expect(mockHasActiveMemberCode).toHaveBeenCalledWith('user-1');
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+		expect(result.provisioned).toBe(0);
+	});
+});
+
+describe('provisioning window', () => {
+	// The window was a single day, which left no slack: the job runs once each
+	// morning, so a lock offline then meant a member with a booking that evening
+	// had a code queued in the cloud and no way in.
+	it('provisions across the confirmation window, not just today', async () => {
+		selectResults.push([
+			{
+				id: 'res-in-3-days',
+				startsAt: new Date(Date.now() + 2.5 * 24 * 60 * 60_000),
+				endsAt: new Date(Date.now() + 2.5 * 24 * 60 * 60_000 + 3_600_000),
+				createdByUserId: 'user-1',
+				memberName: 'Jordan'
+			}
+		]);
+		selectResults.push([]);
+
+		const result = await runDailyLockJob();
+
+		expect(result.provisioned).toBe(1);
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'Jordan' })
+		);
 	});
 });

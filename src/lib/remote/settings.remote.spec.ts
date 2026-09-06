@@ -121,8 +121,10 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 	{ name: 'testUtecConnection', cap: 'settings.read' },
 	// Not reads: each has a real-world effect. runLockSelfTest issues a working
 	// door code, revokeLockTest withdraws one, and the other two reach Stripe.
-	{ name: 'runLockSelfTest', cap: 'settings.update' },
-	{ name: 'revokeLockTest', cap: 'settings.update' },
+	// The two lock commands moved to `lock.manage` when lock management grew past
+	// a self-test — they no longer ride on the capability that renames the org.
+	{ name: 'runLockSelfTest', cap: 'lock.manage' },
+	{ name: 'revokeLockTest', cap: 'lock.manage' },
 	{ name: 'getFeatureFlags', cap: 'settings.read' },
 	{ name: 'syncSubscriptions', cap: 'settings.update' },
 	{ name: 'refreshCommunityStats', cap: 'settings.update' },

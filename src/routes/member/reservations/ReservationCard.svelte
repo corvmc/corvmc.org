@@ -52,7 +52,15 @@
 			<ReservationSummary {reservation} class="space-y-1 p-2 px-3" />
 			{#if reservation.status === 'confirmed' && reservation.lockCode}
 				<p class="px-3 pb-1 text-sm">
-					Door code: <span class="font-mono font-bold tracking-wider">{reservation.lockCode}</span>
+					{#if reservation.lockSyncedAt}
+						Door code:
+						<span class="font-mono font-bold tracking-wider">{reservation.lockCode}</span>
+					{:else}
+						<!-- Issued, but the lock has not confirmed it. Showing the digits
+						     here would be a promise we cannot keep; the detail page has
+						     the break-glass code once they are due in. -->
+						<span class="text-muted">Door code pending</span>
+					{/if}
 				</p>
 			{/if}
 		</a>

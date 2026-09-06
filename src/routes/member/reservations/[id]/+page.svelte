@@ -40,13 +40,27 @@
 
 	{#if res.status === 'confirmed'}
 		<InfoCard title="Door Code">
-			{#if res.lockCode}
+			{#if res.lockCode && res.lockSyncedAt}
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
 				<p class="text-muted">
 					Enter this code on the door keypad to get in. It works for the length of your reservation.
 				</p>
+			{:else if data.fallbackCode}
+				<!-- Their own code has not reached the lock, and they are due in
+				     now. The break-glass code was synced long ago, so it opens the
+				     door even while the lock is offline. -->
+				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{data.fallbackCode}</p>
+				<p class="text-muted">
+					We couldn't confirm your usual code reached the door, so this one will get you in for now.
+					Staff know about it. If it doesn't work, call us rather than waiting outside.
+				</p>
+			{:else if res.lockCode}
+				<p class="text-muted">
+					Your code is issued but the door hasn't confirmed it yet. It should be ready before your
+					session — check back here, and get in touch if it still isn't showing.
+				</p>
 			{:else}
-				<p class="text-muted">Your door code will appear here on the day of your reservation.</p>
+				<p class="text-muted">Your door code will appear here before your reservation.</p>
 			{/if}
 		</InfoCard>
 	{/if}

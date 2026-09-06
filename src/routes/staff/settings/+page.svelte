@@ -19,6 +19,8 @@
 		syncSubscriptions,
 		refreshCommunityStats
 	} from '$lib/remote/settings.remote';
+	import LockHealth from './LockHealth.svelte';
+	import UnmanagedLockCodes from './UnmanagedLockCodes.svelte';
 	import { updateInboxChannelConfig, testMetaConnection } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
@@ -718,13 +720,23 @@
 						{/if}
 
 						{#if utecConnected}
+							<!-- Live health. `utecConnected` only means a refresh token is
+							     stored; it says nothing about whether the door is reachable. -->
+							<svelte:boundary>
+								<LockHealth />
+							</svelte:boundary>
+
+							<svelte:boundary>
+								<UnmanagedLockCodes />
+							</svelte:boundary>
+
 							<div class="mt-2 border-t border-base-200 pt-3">
 								<div class="flex items-start justify-between gap-2">
 									<div>
 										<p class="text-sm font-medium">Lock self-test</p>
 										<p class="text-subtle">
-											Issues a 15-minute test code and exercises the lock commands. Try the code on
-											the door, then revoke it.
+											Issues a temporary code that expires on its own after 15 minutes, and
+											exercises the lock commands. Try it on the door.
 										</p>
 									</div>
 									<div class="flex shrink-0 gap-2">

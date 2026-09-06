@@ -5,7 +5,6 @@ import { and, eq, isNull, isNotNull, gte, lt } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	createTemporaryUser,
-	addLockUser,
 	removeTemporaryUser,
 	updateLockUser,
 	listLockUsers,
@@ -17,10 +16,11 @@ import {
 	type LockDeviceHealth
 } from './ultraloc-client';
 import { maintainFallbackCode } from './fallback-code-service';
+import { hasActiveMemberCode, reconcileMemberCodeSync } from './member-code-service';
 import { getJson, putJson } from '$lib/server/kv';
 import { dispatchEmailOnly } from '$lib/server/notification';
 import { env } from '$env/dynamic/private';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE, CONFIRMATION_WINDOW_DAYS } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // LockService — provision and clean up Ultraloc temporary users
@@ -58,7 +58,7 @@ export async function runDailyLockJob(): Promise<{
 	const online = await checkDeviceHealth(errors);
 	const cleaned = await cleanupPreviousDayAccess(errors);
 	const provisioned = await provisionDailyAccess(errors);
-	const confirmed = await reconcileSyncState(errors);
+	const confirmed = (await reconcileSyncState(errors)) + (await reconcileMemberCodeSync(errors));
 	const fallback = await maintainFallbackCode(errors);
 
 	return {
@@ -181,17 +181,28 @@ async function reconcileSyncState(errors: string[]): Promise<number> {
 }
 
 /**
- * Create Ultraloc temporary users for all confirmed reservations today
- * that don't already have lock access.
+ * Create Ultraloc temporary users for confirmed reservations starting inside
+ * the confirmation window that don't already have lock access.
+ *
+ * The window used to be a single day, which left no slack at all: the job runs
+ * once each morning, so a lock that was offline then meant a member with a
+ * booking that evening had a code queued in U-tec's cloud and no way in. Over
+ * `CONFIRMATION_WINDOW_DAYS` the queue has days to drain instead of hours, and
+ * the two numbers stop being independently chosen.
+ *
+ * The probe that prompted this measured 22 users on the lock, only four of them
+ * temporary, so a three-day window is nowhere near the device's ceiling —
+ * especially now a member holding a standing code is skipped entirely.
  */
 async function provisionDailyAccess(errors: string[]): Promise<number> {
 	const tz = DEFAULT_TIMEZONE;
 	const now = new Date();
 	const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
 
-	// Day boundaries in UTC
 	const dayStart = buildDateInTz(todayStr, '00:00', tz);
-	const dayEnd = buildDateInTz(todayStr, '23:59', tz);
+	const windowEnd = new Date(
+		buildDateInTz(todayStr, '23:59', tz).getTime() + CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000
+	);
 
 	const rows = await db
 		.select({
@@ -208,7 +219,7 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
 				eq(reservation.status, 'confirmed'),
 				isNull(reservation.lockCode),
 				gte(reservation.startsAt, dayStart),
-				lt(reservation.startsAt, dayEnd)
+				lt(reservation.startsAt, windowEnd)
 			)
 		);
 
@@ -216,6 +227,11 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
 
 	for (const row of rows) {
 		try {
+			// A member with a standing door code can already get in. Issuing a
+			// second code per booking would only consume the lock's finite user
+			// table for no gain.
+			if (await hasActiveMemberCode(row.createdByUserId)) continue;
+
 			await provisionAccessFor(row);
 			count++;
 		} catch (err) {
@@ -226,6 +242,28 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
 	}
 
 	return count;
+}
+
+/**
+ * Re-issue door access for one booking on demand.
+ *
+ * The staff lever for a booking the daily job could not provision — otherwise
+ * the only recourse is waiting for tomorrow's run. Errors are returned rather
+ * than thrown so the page can say what went wrong.
+ */
+export async function reprovisionAccessFor(row: {
+	id: string;
+	startsAt: Date;
+	endsAt: Date;
+	memberName: string;
+	code?: number;
+}): Promise<{ ok: boolean; code?: number; error?: string }> {
+	try {
+		const code = await provisionAccessFor(row);
+		return { ok: true, code };
+	} catch (err) {
+		return { ok: false, error: (err as Error).message };
+	}
 }
 
 /** One reservation's worth of provisioning: mint a code, open the window, record it. */
@@ -443,25 +481,24 @@ async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 		errors.push(msg);
 	}
 
-	// --- DB hygiene: clear codes on yesterday's reservations -----------------
+	// --- DB hygiene: clear codes on reservations that have been and gone ------
+	// Anything before today, not yesterday specifically. The one-day window meant
+	// a code the job missed once — because the lock was unreachable that morning
+	// — was never cleared again, and it is the wrong shape now that provisioning
+	// looks days ahead rather than one.
 	try {
-		const yesterday = new Date(now);
-		yesterday.setDate(yesterday.getDate() - 1);
-		const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: tz });
-
-		const dayStart = buildDateInTz(yesterdayStr, '00:00', tz);
-		const dayEnd = buildDateInTz(yesterdayStr, '23:59', tz);
+		const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
+		const todayStart = buildDateInTz(todayStr, '00:00', tz);
 
 		await db
 			.update(reservation)
-			.set({ lockCode: null, updatedAt: new Date() })
-			.where(
-				and(
-					isNotNull(reservation.lockCode),
-					gte(reservation.startsAt, dayStart),
-					lt(reservation.startsAt, dayEnd)
-				)
-			);
+			.set({
+				lockCode: null,
+				lockAccessId: null,
+				lockSyncedAt: null,
+				updatedAt: new Date()
+			})
+			.where(and(isNotNull(reservation.lockCode), lt(reservation.startsAt, todayStart)));
 	} catch (err) {
 		const msg = `Failed to clear stale door codes: ${(err as Error).message}`;
 		console.error(msg);
@@ -478,6 +515,9 @@ async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 // ---------------------------------------------------------------------------
 
 const SELF_TEST_NAME = 'CMC Self-Test';
+
+/** How long a self-test code stays usable. The lock enforces this itself. */
+const SELF_TEST_MINUTES = 15;
 
 export interface LockSelfTestStep {
 	name: 'create' | 'list';
@@ -496,30 +536,36 @@ export interface LockSelfTestResult {
 /**
  * Issue a short-lived test code and verify the lock command path works.
  *
- * `add` returns a deferred ack (no id) and the lock applies it asynchronously,
- * so the new user may not appear in the immediate `list`. We therefore assert
- * each command returns without an API error rather than requiring the new user
- * to be listed. Each step is captured (not thrown) so partial failures report.
+ * A type-2 temporary user with a real 15-minute window, which is what a
+ * reservation gets — the thing actually worth testing. It used to create a
+ * type-0 user with no expiry, on the since-disproven suspicion that the
+ * schedule fields were what U-tec rejected, so a self-test left a permanent
+ * working door code behind unless somebody clicked Revoke.
+ *
+ * Steps are captured rather than thrown so partial failures still report.
  */
 export async function issueLockSelfTest(): Promise<LockSelfTestResult> {
 	const steps: LockSelfTestStep[] = [];
 	const code = generateLockCode();
 
-	// Use the proven-working normal-user (type 0) `add` to validate the command
-	// path end to end. A normal user has no lock-side expiry, so the code stays
-	// active until "Revoke test codes" is clicked (or the daily cleanup removes
-	// it). This isolates the integration plumbing from the temporary-user schedule
-	// fields that U-tec has been rejecting with BAD-REQUEST.
+	const now = new Date();
+	const expiresAt = new Date(now.getTime() + SELF_TEST_MINUTES * 60_000);
+
 	try {
-		await addLockUser({ name: SELF_TEST_NAME, type: 0, password: code });
+		await createTemporaryUser({
+			name: SELF_TEST_NAME,
+			startTime: now,
+			endTime: expiresAt,
+			code
+		});
 		steps.push({
 			name: 'create',
 			ok: true,
-			detail: 'Issued test code on the lock. It stays active until you click "Revoke test codes".'
+			detail: `Issued a ${SELF_TEST_MINUTES}-minute test code on the lock.`
 		});
 	} catch (err) {
 		steps.push({ name: 'create', ok: false, detail: (err as Error).message });
-		return { ok: false, code, steps };
+		return { ok: false, code, expiresAt, steps };
 	}
 
 	try {
@@ -527,10 +573,10 @@ export async function issueLockSelfTest(): Promise<LockSelfTestResult> {
 		steps.push({ name: 'list', ok: true, detail: `Lock returned ${users.length} user(s).` });
 	} catch (err) {
 		steps.push({ name: 'list', ok: false, detail: (err as Error).message });
-		return { ok: false, code, steps };
+		return { ok: false, code, expiresAt, steps };
 	}
 
-	return { ok: true, code, steps };
+	return { ok: true, code, expiresAt, steps };
 }
 
 /** Remove any lingering self-test users from the lock. */
