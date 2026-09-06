@@ -225,7 +225,13 @@ export async function beginPurchase(input: BeginPurchaseInput): Promise<BeginPur
 			row_id: row.id
 		},
 		successUrl: input.successUrl,
-		cancelUrl: input.cancelUrl
+		cancelUrl: input.cancelUrl,
+		// Paid on our own page. `elements` places no restriction on
+		// `payment_intent_data`, so the destination charge that pays the band —
+		// `transfer_data` plus `application_fee_amount` — carries across unchanged;
+		// only `success_url`, `cancel_url` and `branding_settings` are disallowed,
+		// and `checkout()` already maps the first two.
+		uiMode: 'elements'
 	});
 
 	return {
@@ -375,6 +381,21 @@ export async function refundPurchase(purchaseId: string): Promise<void> {
 
 /** The purchase a download token names, if it is paid. */
 export async function findPaidPurchaseByToken(token: string) {
+	const row = await findPurchaseByToken(token);
+	return row?.purchase.status === 'paid' ? row : null;
+}
+
+/**
+ * The purchase behind a token whatever its status, so a caller can tell
+ * "not paid yet" from "no such token".
+ *
+ * Only the download page needs that distinction, and only because paying on our
+ * own page means the buyer can arrive before `checkout.session.completed` has
+ * been delivered. Everything that hands over files goes through
+ * `findPaidPurchaseByToken` above and still sees a pending purchase as nothing
+ * at all.
+ */
+export async function findPurchaseByToken(token: string) {
 	const [row] = await db
 		.select({
 			purchase: releasePurchase,
@@ -385,7 +406,7 @@ export async function findPaidPurchaseByToken(token: string) {
 		.from(releasePurchase)
 		.innerJoin(audioRelease, eq(audioRelease.id, releasePurchase.releaseId))
 		.innerJoin(group, eq(group.id, audioRelease.groupId))
-		.where(and(eq(releasePurchase.downloadToken, token), eq(releasePurchase.status, 'paid')))
+		.where(eq(releasePurchase.downloadToken, token))
 		.limit(1);
 	return row ?? null;
 }

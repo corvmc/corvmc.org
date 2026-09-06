@@ -4,15 +4,12 @@
 	import { toast } from 'svelte-sonner';
 	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
 	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
 
 	let {
 		subscription,
-		billingPortalUrl,
 		resumeAction
 	}: {
 		subscription: SubscriptionInfo;
-		billingPortalUrl: string | null;
 		resumeAction: RemoteForm<TInput, TOutput>;
 	} = $props();
 
@@ -51,10 +48,6 @@
 					<p class="py-4">Resume your sustaining membership?</p>
 				{/snippet}
 			</Action>
-
-			{#if billingPortalUrl}
-				<Button href={billingPortalUrl} variant="default" size="sm" outline>Manage Billing</Button>
-			{/if}
 		</div>
 	</div>
 </div>

@@ -7,6 +7,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { goToCheckout } from '$lib/utils/checkout-navigation';
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import {
 		getBandSubscriptionInfo,
@@ -42,15 +43,44 @@
 	const upgradeMonthly = upgradeToPremium.for('monthly');
 	const upgradeYearly = upgradeToPremium.for('yearly');
 
-	// Stripe Checkout lives on another origin, so this is a full-page navigation
-	// rather than client-side routing.
-	function goToCheckout(result?: { redirectUrl: string }) {
-		if (result?.redirectUrl) window.location.href = result.redirectUrl;
+	async function startCheckout(result?: { redirectUrl: string }) {
+		if (result?.redirectUrl) await goToCheckout(result.redirectUrl);
 	}
+
+	// `?success=true` is the session's `return_url`. The tier is written by
+	// `syncFromWebhook`, not by the payment, and premium is now paid for on our
+	// own page — so the owner can land here in the same second they confirm and
+	// be told they are still on the free tier. Poll, bounded: twenty seconds is
+	// longer than the webhook has taken, and the charge stands either way.
+	const justPaid = $derived(page.url.searchParams.get('success') === 'true');
+	const UPGRADE_RETRY_LIMIT = 10;
+	const UPGRADE_RETRY_MS = 2000;
+	let upgradeAttempts = $state(0);
+	const awaitingUpgrade = $derived(justPaid && info.tier !== 'premium');
+
+	$effect(() => {
+		if (!awaitingUpgrade || upgradeAttempts >= UPGRADE_RETRY_LIMIT) return;
+
+		const timer = setTimeout(() => {
+			upgradeAttempts += 1;
+			void getBandSubscriptionInfo(page.params.slug!).refresh();
+		}, UPGRADE_RETRY_MS);
+
+		return () => clearTimeout(timer);
+	});
 </script>
 
 <PageHeader title="Subscription" subtitle={band.name} />
 <PageContent width="2xl">
+	{#if awaitingUpgrade}
+		<div class="mb-4">
+			<Alert type="info">
+				{upgradeAttempts >= UPGRADE_RETRY_LIMIT
+					? "We haven't had confirmation from our payment processor yet. Your card has been charged and premium switches on as soon as it lands — if this page still says otherwise in a few minutes, get in touch."
+					: 'Confirming your payment…'}
+			</Alert>
+		</div>
+	{/if}
 	{#if info.tier === 'premium' && info.subscription}
 		<!-- Active premium subscription -->
 		<Card>
@@ -132,7 +162,7 @@
 							>
 						</p>
 						{#if isOwner}
-							<Form remote={upgradeMonthly} onsuccess={goToCheckout}>
+							<Form remote={upgradeMonthly} onsuccess={startCheckout}>
 								<input {...upgradeMonthly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeMonthly.fields.billingInterval.as('hidden', 'monthly')} />
 								<Button variant="primary" class="mt-4">Subscribe Monthly</Button>
@@ -152,7 +182,7 @@
 							{formatCents(info.pricing.yearlyCents)}<span class="text-muted font-normal">/yr</span>
 						</p>
 						{#if isOwner}
-							<Form remote={upgradeYearly} onsuccess={goToCheckout}>
+							<Form remote={upgradeYearly} onsuccess={startCheckout}>
 								<input {...upgradeYearly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeYearly.fields.billingInterval.as('hidden', 'yearly')} />
 								<Button variant="primary" class="mt-4">Subscribe Yearly</Button>

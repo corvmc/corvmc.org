@@ -17,8 +17,12 @@ import {
  * lives in a remote function, and the two agreeing is the whole point of
  * `TicketPurchaseFields`.
  *
- * Nothing here submits. The next step after the button is Stripe Checkout, and
- * a test suite has no business opening one.
+ * The last two cases do submit. They can, now that `PAYMENTS_DRIVER=fake` puts
+ * an in-memory gateway behind checkout (see `playwright.config.ts`): the button
+ * leads to a local page rather than `checkout.stripe.com`, so the round trip
+ * through fulfillment — pending ticket, payment, webhook translation, valid
+ * ticket — is finally assertable. It is the only coverage of that path; the unit
+ * tests hand `handleCheckoutCompleted` a session literal and start from there.
  */
 
 const PRICE = SEED_TP_PRICE_CENTS / 100;
@@ -178,6 +182,77 @@ test('a show with a floor says so, and refuses less', async ({ page }) => {
 
 	await expect(page.getByText(/least you can pay/).first()).toBeVisible();
 	await expect(page.getByRole('button', { name: /^Pay/ })).toBeDisabled();
+});
+
+/**
+ * The in-app checkout page, on the fake driver. It is the same `/checkout/<session>`
+ * route a real `ui_mode: 'elements'` session lands on — the page asks the server
+ * which gateway is live and renders a card-number form instead of a Payment
+ * Element, so the navigation under test is the production one.
+ */
+async function payOnFakeCheckout(page: import('@playwright/test').Page, cardNumber: string) {
+	await expect(page).toHaveURL(/\/checkout\//);
+	await expect(page.getByRole('heading', { name: 'Test checkout' })).toBeVisible();
+	await page.locator('input[name$="cardNumber"]').fill(cardNumber);
+	await page.getByRole('button', { name: /^Pay / }).click();
+}
+
+async function fillGuestDetails(page: import('@playwright/test').Page) {
+	await page.locator('input[name$="attendeeName"]').fill('E2E Guest');
+	await page.locator('input[name$="attendeeEmail"]').fill('e2e-guest@example.test');
+}
+
+/**
+ * Commit the purchase.
+ *
+ * The button is labelled with the amount — `TicketPurchaseFields` owns it,
+ * because only that component knows what the card is charged — so there is no
+ * fixed string to match and matching the amount is the better assertion anyway:
+ * the number on the button is the number the server is about to charge.
+ *
+ * `payPerTicket` first, to set that amount explicitly rather than trusting the
+ * default, and because it doubles as the hydration proof this file's other
+ * interactive tests rely on (see its own note): it retries until the hidden
+ * field has actually changed, which cannot happen before Svelte has attached.
+ * Submitting a remote form before hydration would post it as a plain GET.
+ */
+async function submitPurchase(page: import('@playwright/test').Page) {
+	await payPerTicket(page, PRICE.toFixed(2));
+	await page.getByRole('button', { name: `Pay $${PRICE.toFixed(2)}`, exact: true }).click();
+}
+
+test('a guest buys a ticket and it comes back valid', async ({ page }) => {
+	await openPurchasePage(page);
+	await fillGuestDetails(page);
+
+	await submitPurchase(page);
+
+	await payOnFakeCheckout(page, '4242424242424242');
+
+	// The success page is keyed on purchase_id, which only the completed session
+	// carries — landing here at all proves the redirect survived the round trip.
+	await expect(page).toHaveURL(/\/tickets\/success\?purchase_id=/);
+	await expect(page.getByRole('heading', { name: 'Tickets Confirmed' })).toBeVisible();
+	// The `Your Tickets` list renders one row per ticket the query returns, and it
+	// only returns `valid` rows — a still-`pending` ticket leaves it empty. The
+	// code beside the label is what the door scans, so its presence is the real
+	// proof fulfillment ran.
+	// `exact`: the buyer's address also appears in the "a receipt will be sent to
+	// …" sentence above, and a substring match resolves to both.
+	await expect(page.getByText('e2e-guest@example.test', { exact: true })).toBeVisible();
+	await expect(page.getByText('Ticket code')).toBeVisible();
+});
+
+test('a declined card keeps the buyer on checkout with the real decline copy', async ({ page }) => {
+	await openPurchasePage(page);
+	await fillGuestDetails(page);
+
+	await submitPurchase(page);
+
+	await payOnFakeCheckout(page, '4000000000000002');
+
+	await expect(page.getByText('Your card has been declined.')).toBeVisible();
+	await expect(page).toHaveURL(/\/checkout\//);
 });
 
 /**

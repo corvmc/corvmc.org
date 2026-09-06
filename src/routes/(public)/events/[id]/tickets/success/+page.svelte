@@ -3,6 +3,7 @@
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import { fullDate } from '$lib/utils/format';
 	import { IconCircleCheck } from '@tabler/icons-svelte';
 	import { getTicketPurchaseSuccess } from '$lib/remote/events.remote';
@@ -15,6 +16,32 @@
 	const evt = $derived(data.event);
 	// Free claims keep the historic `rsvp-` purchase prefix; they're still tickets.
 	const isFreeClaim = $derived(purchaseId.startsWith('rsvp-'));
+
+	// Tickets are written `pending` before payment and flipped to `valid` by the
+	// checkout.session.completed webhook. Paying on Stripe's own page meant the
+	// redirect took long enough that the webhook had all but always landed first;
+	// paying on our page, the buyer can arrive here in the same second they
+	// confirm, and read codes for tickets nobody has been paid for yet.
+	//
+	// So poll, briefly. `attempts` bounds it: a webhook that has not arrived in
+	// twenty seconds is not going to be waited out, and the tickets are valid
+	// either way once it does land — the codes below are already correct, it is
+	// only the claim that they are paid for that has to wait.
+	const pending = $derived(data.tickets.some((t) => t.status === 'pending'));
+	let attempts = $state(0);
+	const RETRY_LIMIT = 10;
+	const RETRY_MS = 2000;
+
+	$effect(() => {
+		if (!pending || attempts >= RETRY_LIMIT) return;
+
+		const timer = setTimeout(() => {
+			attempts += 1;
+			getTicketPurchaseSuccess({ eventId: page.params.id!, purchaseId }).refresh();
+		}, RETRY_MS);
+
+		return () => clearTimeout(timer);
+	});
 </script>
 
 <div class="mx-auto max-w-lg space-y-6">
@@ -46,6 +73,14 @@
 			</p>
 		</CardBody>
 	</Card>
+
+	{#if pending}
+		<Alert type="info">
+			{attempts >= RETRY_LIMIT
+				? "We haven't had confirmation from our payment processor yet. Your tickets are below and stay valid — if the confirmation email doesn't arrive shortly, get in touch."
+				: 'Confirming your payment…'}
+		</Alert>
+	{/if}
 
 	<!-- Ticket codes -->
 	<Card>

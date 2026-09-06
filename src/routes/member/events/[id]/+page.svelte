@@ -2,7 +2,7 @@
 	import { untrack } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
+	import { goToCheckout } from '$lib/utils/checkout-navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
@@ -113,13 +113,7 @@
 
 	async function handlePurchaseSuccess(result?: unknown) {
 		const data = result as { redirectUrl?: string } | undefined;
-		if (data?.redirectUrl) {
-			if (data.redirectUrl.startsWith('http')) {
-				window.location.href = data.redirectUrl;
-			} else {
-				await goto(data.redirectUrl);
-			}
-		}
+		if (data?.redirectUrl) await goToCheckout(data.redirectUrl);
 	}
 </script>
 

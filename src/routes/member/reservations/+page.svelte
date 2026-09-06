@@ -13,6 +13,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -40,6 +41,32 @@
 
 	const activeReservations = $derived(pageData.then((d) => d.active));
 	const allReservations = $derived(pageData.then((d) => d.all));
+	// Payment confirmation via ?paid={id}
+	//
+	// A reservation is flipped to `confirmed` with a `paidAt` by
+	// `checkout.session.completed`, not by the payment itself. Paying on Stripe's
+	// own page meant the redirect back took long enough that the webhook had all
+	// but always landed first; paying on our page, the member can arrive here in
+	// the same second they confirm and read their own booking as unpaid.
+	//
+	// So poll, briefly, and only for the reservation they just paid for.
+	// `paidAttempts` bounds it: a webhook that has not arrived in twenty seconds
+	// is not going to be waited out, and the money is taken either way — it is
+	// only this page's account of it that has to catch up. A reservation missing
+	// from the list is not "still waiting": there is nothing left to confirm.
+	//
+	// Resolved inside the effect rather than as `$derived(await allReservations…)`
+	// because the banner reads the result in the template. An awaited declaration
+	// is a blocker Svelte hangs on every node that reads it, and this page's
+	// `{#each await …}` supplies the async expression that turns a blocker into
+	// the crash `async-effect-shape.spec.ts` guards against — which it does
+	// catch, promptly, if this is rewritten the obvious way.
+	const paidId = $derived(page.url.searchParams.get('paid'));
+	const PAID_RETRY_LIMIT = 10;
+	const PAID_RETRY_MS = 2000;
+	let paidAttempts = $state(0);
+	let awaitingPayment = $state(false);
+
 	const creditData = $derived(await pageData.then((d) => d.membership));
 	const isSustaining = $derived(creditData.isSustainingMember);
 
@@ -59,6 +86,37 @@
 	function refreshReservations() {
 		void getMemberReservationsPage().refresh();
 	}
+
+	$effect(() => {
+		const id = paidId;
+		if (!id) {
+			awaitingPayment = false;
+			return;
+		}
+
+		let cancelled = false;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const attempt = paidAttempts;
+
+		void allReservations.then((rows) => {
+			if (cancelled) return;
+
+			const match = rows.find((r) => r.id === id) ?? null;
+			const settled = match === null || match.paidAt !== null;
+			awaitingPayment = !settled && attempt < PAID_RETRY_LIMIT;
+			if (settled || attempt >= PAID_RETRY_LIMIT) return;
+
+			timer = setTimeout(() => {
+				paidAttempts += 1;
+				refreshReservations();
+			}, PAID_RETRY_MS);
+		});
+
+		return () => {
+			cancelled = true;
+			clearTimeout(timer);
+		};
+	});
 
 	// Waitlist confirmation via ?confirm={id}
 	const confirmId = $derived(page.url.searchParams.get('confirm'));
@@ -95,6 +153,15 @@
 	{/if}
 </PageHeader>
 <PageContent>
+	{#if awaitingPayment}
+		<div class="mb-4">
+			<Alert type="info">
+				{paidAttempts >= PAID_RETRY_LIMIT
+					? "We haven't had confirmation from our payment processor yet. Your booking is below and the time is held — if it still reads unpaid in a few minutes, get in touch."
+					: 'Confirming your payment…'}
+			</Alert>
+		</div>
+	{/if}
 	<BookingPolicy />
 	<FreeHoursRemaining />
 	<article class="@container">

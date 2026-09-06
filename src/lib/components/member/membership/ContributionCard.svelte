@@ -8,22 +8,33 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import { DOLLARS_PER_UNIT } from '$lib/config';
 	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
 	import SubscriptionForm from './SubscriptionForm.svelte';
 	import type { RemoteForm } from '$lib/components/ui/Form/Form.svelte';
 	import type { RemoteFormInput } from '@sveltejs/kit';
+	import type { ComponentProps } from 'svelte';
 
 	let {
 		subscription,
-		billingPortalUrl,
 		updateRemote,
+		cancelAction,
 		showModifyForm = false
 	}: {
 		subscription: SubscriptionInfo;
-		billingPortalUrl: string | null;
 		updateRemote: RemoteForm<TInput, TOutput>;
+		/**
+		 * Cancelling used to be reachable only through Stripe's billing portal,
+		 * which is why this is the one control here that is new rather than moved.
+		 *
+		 * Typed off `Action`'s own prop rather than as a second `RemoteForm<…>`:
+		 * `RemoteForm` is invariant in its input, so a second one in this props
+		 * object drags `TInput` down to `RemoteFormInput` and `updateRemote` stops
+		 * accepting the concrete form the page passes.
+		 */
+		cancelAction: ComponentProps<typeof Action>['action'];
 		showModifyForm?: boolean;
 	} = $props();
 
@@ -70,9 +81,23 @@
 			<Button variant="default" size="sm" outline onclick={() => (modalOpen = true)}
 				>Modify Amount</Button
 			>
-			{#if billingPortalUrl}
-				<Button href={billingPortalUrl} variant="default" size="sm" outline>Manage Billing</Button>
-			{/if}
+			<Action
+				action={cancelAction}
+				label="Cancel Membership"
+				modalTitle="Cancel Membership"
+				variant="error"
+				size="sm"
+				outline
+				onsuccess={() => toast.success('Membership cancelled')}
+			>
+				{#snippet form()}
+					<p class="py-4">
+						Your benefits — including <strong>{subscription.quantity} free practice hours</strong> —
+						stay active until <strong>{nextBilling}</strong>, and you can pick it back up any time
+						before then.
+					</p>
+				{/snippet}
+			</Action>
 		</div>
 	</CardBody>
 </Card>

@@ -4,6 +4,7 @@
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { payForReservation } from '$lib/remote/reservations.remote';
+	import { goToCheckout } from '$lib/utils/checkout-navigation';
 	import PaymentStep from '../reservations/booking/PaymentStep.svelte';
 	import type { Reservation } from '$lib/server/reservation';
 
@@ -38,7 +39,7 @@
 	onsuccess={async (result) => {
 		const r = result as { paid?: boolean; redirectUrl?: string };
 		if (r?.redirectUrl) {
-			window.location.href = r.redirectUrl;
+			await goToCheckout(r.redirectUrl);
 		} else {
 			await invalidateAll();
 		}
