@@ -229,9 +229,23 @@ bcrypt-ts silently fails on Cloudflare Workers (returns `false` in 0ms), so bcry
 
 **Check remaining bcrypt hashes:**
 
-```sql
-SELECT count(*) FROM account WHERE provider_id = 'credential' AND password LIKE '$2%';
+```bash
+pnpm auth:hash-census --remote
 ```
+
+Read-only. It breaks the credential accounts down by hash scheme, separates the
+deactivated ones, and says how many of the legacy accounts have ever held a
+session on this app. `--emails` lists the addresses.
+
+The count only falls: a successful bcrypt verify rewrites the hash to scrypt on
+the way through, so an account still on `$2*` is one that has not signed in
+since the migration.
+
+**Password reset is the exit, not a migration script.** A reset never checks the
+old password and writes a scrypt hash, so every account on this list can already
+recover without the Laravel box — the dependency is only on the path where
+somebody types their _old_ password. That is what makes step 4 above a decision
+rather than a risk. See [#623](https://github.com/corvmc/corvmc.org/issues/623).
 
 ---
 
