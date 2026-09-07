@@ -307,7 +307,7 @@ administering it if it is switched back off. Member and public remote functions 
 | ---------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
 | `directMessages` | Member↔member messaging | The DM half of `/member/messages` — member↔staff portal chat in the same UI is not gated |
 | `bandAudio`      | Releases and storefront | `/band/[slug]/music`, `/music/**`, and the Releases nav row                              |
-| `cmcRadio`       | The station and player  | `/radio` and the site-wide player                                                        |
+| `cmcRadio`       | The station and player  | `/radio`, the site-wide player, and its public-footer row (removed until launch, #626)   |
 
 ### Staff administration of each flagged feature
 
