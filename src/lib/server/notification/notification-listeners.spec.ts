@@ -141,7 +141,12 @@ describe('registerAllNotificationListeners', () => {
 			'contact.form_submitted',
 			'volunteer.hours_submitted',
 			'volunteer.hours_approved',
-			'volunteer.hours_rejected'
+			'volunteer.hours_rejected',
+			'membership.started',
+			'membership.renewed',
+			'membership.payment_failed',
+			'membership.cancellation_scheduled',
+			'membership.ended'
 		]) {
 			expect(handlers[event], event).toBeDefined();
 		}
@@ -880,5 +885,128 @@ describe('every notification-alias model', () => {
 				(normalizeNotificationModel(model as never).preview_text as string);
 			expect(preview?.trim()).toBeTruthy();
 		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Membership
+// ---------------------------------------------------------------------------
+describe('membership notifications', () => {
+	const paid = {
+		userId: 'user-1',
+		userName: 'Ada',
+		userEmail: 'ada@test.com',
+		amountCents: 2500,
+		freeHoursPerMonth: 5,
+		periodEnd: '2026-07-01T00:00:00.000Z',
+		invoiceId: 'inv_1',
+		coveringFees: false
+	};
+
+	beforeEach(() => {
+		registerAllNotificationListeners();
+	});
+
+	function callFor(type: string) {
+		return mockDispatch.mock.calls.find(([p]) => p.type === type)?.[0];
+	}
+
+	it('sends a receipt when a contribution starts', async () => {
+		await emit('membership.started', paid);
+
+		const call = callFor('membership_receipt');
+		expect(call).toBeDefined();
+		expect(call.userEmail).toBe('ada@test.com');
+		expect(call.emailTemplate.alias).toBe(GENERIC);
+		expect(detailText(call.emailTemplate.model)).toContain('$25.00 / month');
+	});
+
+	it('states the hours in hours, not in credits', async () => {
+		// hoursPerReset is stored in 30-minute credits; a receipt that read them
+		// straight would promise double the rehearsal time actually granted.
+		await emit('membership.started', paid);
+
+		expect(detailText(callFor('membership_receipt').emailTemplate.model)).toContain(
+			'5 hours / month'
+		);
+	});
+
+	it('names the fee coverage only when the member opted into it', async () => {
+		await emit('membership.started', paid);
+		expect(detailLabels(callFor('membership_receipt').emailTemplate.model)).not.toContain(
+			'Processing fees'
+		);
+
+		vi.clearAllMocks();
+		await emit('membership.started', { ...paid, coveringFees: true });
+		expect(detailLabels(callFor('membership_receipt').emailTemplate.model)).toContain(
+			'Processing fees'
+		);
+	});
+
+	it('sends the renewal receipt under its own, muteable type', async () => {
+		await emit('membership.renewed', paid);
+
+		// A separate type from the first receipt so a member can silence the
+		// monthly one without losing the record of signing up.
+		expect(callFor('membership_renewal_receipt')).toBeDefined();
+		expect(callFor('membership_receipt')).toBeUndefined();
+	});
+
+	it('points a failed payment at the invoice the member can actually pay', async () => {
+		await emit('membership.payment_failed', {
+			userId: 'user-1',
+			userName: 'Ada',
+			userEmail: 'ada@test.com',
+			amountCents: 2500,
+			invoiceId: 'inv_2',
+			hostedInvoiceUrl: 'https://stripe.test/pay',
+			nextAttemptAt: '2026-07-05T00:00:00.000Z'
+		});
+
+		const call = callFor('membership_payment_failed');
+		expect(call.emailTemplate.model.cta.url).toBe('https://stripe.test/pay');
+		expect(detailLabels(call.emailTemplate.model)).toContain('Next attempt');
+	});
+
+	it('falls back to the membership page when Stripe gave no pay link', async () => {
+		await emit('membership.payment_failed', {
+			userId: 'user-1',
+			userName: 'Ada',
+			userEmail: 'ada@test.com',
+			amountCents: 2500,
+			invoiceId: 'inv_2',
+			hostedInvoiceUrl: null,
+			nextAttemptAt: null
+		});
+
+		const model = callFor('membership_payment_failed').emailTemplate.model;
+		expect(model.cta.url).toContain('/member/membership');
+		expect(detailLabels(model)).not.toContain('Next attempt');
+	});
+
+	it('tells a cancelling member the date their benefits actually stop', async () => {
+		await emit('membership.cancellation_scheduled', {
+			userId: 'user-1',
+			userName: 'Ada',
+			userEmail: 'ada@test.com',
+			endsAt: '2026-07-01T00:00:00.000Z'
+		});
+
+		const model = callFor('membership_cancellation_scheduled').emailTemplate.model;
+		expect(detailLabels(model)).toContain('Benefits run through');
+		expect(paragraphText(model)).toContain('not be charged again');
+	});
+
+	it('says what happened to the recurring bookings when a membership ends', async () => {
+		await emit('membership.ended', {
+			userId: 'user-1',
+			userName: 'Ada',
+			userEmail: 'ada@test.com',
+			endsAt: null
+		});
+
+		const call = callFor('membership_ended');
+		expect(call.emailTemplate.model.footnote).toContain('recurring bookings');
 	});
 });

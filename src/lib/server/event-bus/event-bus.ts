@@ -558,6 +558,93 @@ export interface VolunteerHoursReviewedEvent {
 // Event map — keys are event names, values are payload types
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Membership (sustaining contribution) lifecycle
+// ---------------------------------------------------------------------------
+// Emitted from the Stripe webhook handlers rather than from a fifth
+// `checkout.completed` listener. Two reasons: the money and the billing period
+// are already in hand there, and `checkout.session.completed` and the first
+// `invoice.paid` BOTH fire on a subscribe — a checkout listener would race the
+// invoice one for who gets to send the receipt.
+//
+// Every payload carries the member's name and email so a listener need not
+// re-read the row, which is the rule the rest of this file follows.
+// ---------------------------------------------------------------------------
+
+/**
+ * A contribution invoice was paid — the first one (`membership.started`) or a
+ * later cycle (`membership.renewed`). Same shape, because a receipt asks the
+ * same questions either way; only the copy differs.
+ *
+ * The CTA points at /member/membership rather than Stripe's hosted invoice,
+ * the way every other receipt in this repo points at our own page; the
+ * itemised copy is one click further on, behind the billing-portal button.
+ */
+export interface MembershipPaymentEvent {
+	userId: string;
+	userName: string;
+	userEmail: string;
+	/** What the card was actually charged, for this invoice. */
+	amountCents: number;
+	/**
+	 * Free rehearsal HOURS this contribution buys per cycle.
+	 *
+	 * Converted at this boundary on purpose. `subscription.hoursPerReset` is
+	 * stored in credits — 30-minute blocks, two to the hour — despite its name,
+	 * and a listener writing "10 hours" for a five-hour benefit is the mistake
+	 * that name invites. The credit unit stays inside the finance module, where
+	 * it is documented.
+	 */
+	freeHoursPerMonth: number;
+	/** End of the period this invoice covers — ISO, like every date here. */
+	periodEnd: string;
+	invoiceId: string;
+	/** True when the member elected to cover the processing fee. */
+	coveringFees: boolean;
+}
+
+/**
+ * A contribution invoice failed.
+ *
+ * Deliberately does NOT zero credits: Stripe retries on its own schedule, and
+ * taking someone's rehearsal hours away on the first failed attempt would
+ * punish a member whose card recovers on the second. The email is the whole
+ * response — it asks them to fix the card before the retries run out.
+ */
+export interface MembershipPaymentFailedEvent {
+	userId: string;
+	userName: string;
+	userEmail: string;
+	amountCents: number;
+	invoiceId: string;
+	/** Stripe's own "pay this invoice" page, when it gave us one. */
+	hostedInvoiceUrl: string | null;
+	/** When Stripe will try the card again — ISO, null when it won't. */
+	nextAttemptAt: string | null;
+}
+
+/**
+ * The two ends of a membership finishing.
+ *
+ * `membership.cancellation_scheduled` fires when `cancelAtPeriodEnd` flips
+ * false → true: the member cancelled in Stripe's billing portal, off-site,
+ * and today comes back to the app to find nothing acknowledging it.
+ * `endsAt` is the date their access actually stops, which is the one fact
+ * that email exists to state.
+ *
+ * `membership.ended` fires when the subscription is gone and credits have been
+ * zeroed. It is NOT redundant with the above: Stripe cancels a subscription on
+ * its own once dunning is exhausted, and that path never sets
+ * `cancelAtPeriodEnd`, so a failed-card lapse would otherwise end in silence.
+ */
+export interface MembershipLifecycleEvent {
+	userId: string;
+	userName: string;
+	userEmail: string;
+	/** Only on `cancellation_scheduled` — when the paid-through period runs out. */
+	endsAt: string | null;
+}
+
 export type DomainEvents = {
 	'checkout.completed': CheckoutCompletedEvent;
 	'reservation.created': ReservationCreatedEvent;
@@ -568,6 +655,13 @@ export type DomainEvents = {
 	'reservation.confirmation_reminder_due': ConfirmationReminderDueEvent;
 	'ticket.purchased': TicketPurchasedEvent;
 	'audio.purchased': AudioPurchasedEvent;
+	// The four moments a sustaining membership touches somebody's money. All
+	// emitted from src/lib/server/finance/webhook-handlers.ts.
+	'membership.started': MembershipPaymentEvent;
+	'membership.renewed': MembershipPaymentEvent;
+	'membership.payment_failed': MembershipPaymentFailedEvent;
+	'membership.cancellation_scheduled': MembershipLifecycleEvent;
+	'membership.ended': MembershipLifecycleEvent;
 	'event.cancelled': EventCancelledEvent;
 	'event.recurring_reservation_skipped': EventRecurringReservationSkippedEvent;
 	'band.invitation_sent': BandInvitationSentEvent;

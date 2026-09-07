@@ -45,6 +45,48 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// they bought.
 		mandatory: true
 	},
+	// --- Membership (sustaining contribution) -----------------------------
+	// A member's contribution is a donation to a nonprofit, so the money types
+	// here are mandatory for the same reason the audio receipt is: they are the
+	// member's record of it. The two that are not mandatory are the ones a
+	// reasonable person might tire of — a monthly renewal notice, and a
+	// confirmation of something they just did themselves.
+	{
+		key: 'membership_receipt',
+		label: 'Membership receipt',
+		description: 'Your receipt when you start a sustaining contribution',
+		defaults: { email: true, inApp: true, sms: false },
+		mandatory: true
+	},
+	{
+		key: 'membership_renewal_receipt',
+		label: 'Monthly contribution receipt',
+		description: 'A receipt each month your contribution renews',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'membership_payment_failed',
+		label: 'Contribution payment failed',
+		description: 'When a card is declined and your membership needs attention',
+		defaults: { email: true, inApp: true, sms: false },
+		// Mandatory because it is the only warning before the membership lapses:
+		// Stripe retries a handful of times and then cancels. Someone who had
+		// switched this off would find out by losing their rehearsal hours.
+		mandatory: true
+	},
+	{
+		key: 'membership_cancellation_scheduled',
+		label: 'Membership cancellation scheduled',
+		description: 'Confirmation of when your membership will end after you cancel',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'membership_ended',
+		label: 'Membership ended',
+		description: 'When your contribution ends and your member credits reset',
+		defaults: { email: true, inApp: true, sms: false },
+		mandatory: true
+	},
 	{
 		key: 'ticket_confirmation',
 		label: 'Ticket purchase confirmation',
