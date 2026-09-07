@@ -1,6 +1,14 @@
-import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
+import {
+	sqliteTable,
+	text,
+	integer,
+	real,
+	index,
+	uniqueIndex,
+	check
+} from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { eventListing } from './event';
+import { eventListing, eventBand } from './event';
 import { user } from './authentication';
 
 // ---------------------------------------------------------------------------
@@ -22,8 +30,9 @@ import { user } from './authentication';
 // nobody updates.
 //
 // Deliberately **no** settlement snapshot and no `bandSplitPercent`. The acts'
-// pool is `sum(ticket.acts_cents)` and the deal lives on `event_band`; adding
-// columns nothing reads is how a table starts lying about what it holds.
+// pool is `sum(ticket.acts_cents)` and the deal is per act, on
+// `production_slot` below; adding columns nothing reads is how a table starts
+// lying about what it holds.
 //
 // See `docs/specs/production-workflow-spec.md#production`.
 // ---------------------------------------------------------------------------
@@ -119,3 +128,108 @@ export const production = sqliteTable(
 
 export type Production = typeof production.$inferSelect;
 export type NewProduction = typeof production.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Run of show
+// ---------------------------------------------------------------------------
+
+/**
+ * One act, one set, one position in the running order.
+ *
+ * The timing and settlement child of `event_band`, 1:1. It carries what a
+ * credit cannot answer — how long they play, when they go on, what they need on
+ * stage, and what they are paid — while `event_band` stays what its own doc
+ * comment says it is: a public credit on a bill.
+ *
+ * **No `bandProfileId`, no `billing`, no `status`.** Anything that re-declares
+ * the act, the running order or the confirmation status is a second answer to a
+ * question `event_band` already answers.
+ *
+ * **Two parents, and both are load-bearing.** `eventBandId` is set-null so a
+ * dropped credit leaves the payout record intact — which is exactly why it
+ * cannot be the only link: a detached slot would be an orphan nothing could
+ * find or delete. `productionId` is the row's home and the predicate every
+ * ordered read filters on.
+ *
+ * See `docs/specs/production-workflow-spec.md` — the 2026-09-07 amendment.
+ */
+export const productionSlot = sqliteTable(
+	'production_slot',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+
+		productionId: text('production_id')
+			.notNull()
+			.references(() => production.id, { onDelete: 'cascade' }),
+
+		/**
+		 * The credit this set belongs to. Null is a slot whose credit came off the
+		 * bill, or one that was never on it — a DJ between sets, a host.
+		 */
+		eventBandId: text('event_band_id').references(() => eventBand.id, { onDelete: 'set null' }),
+
+		/**
+		 * Fractional, and deliberately **not** unique.
+		 *
+		 * SQLite enforces a unique index per-row as an `UPDATE` walks the table and
+		 * has no `DEFERRABLE INITIALLY DEFERRED`, so `unique (production_id,
+		 * sort_order)` trips mid-statement on any swap — and `db.batch()` controls
+		 * atomicity, not constraint timing. Place a slot between two neighbours by
+		 * averaging theirs; ties break on `createdAt`. `unique` here looks
+		 * obviously correct and is the one thing that breaks reordering, so do not
+		 * add it back.
+		 */
+		sortOrder: real('sort_order').notNull(),
+
+		setLengthMinutes: integer('set_length_minutes').notNull(),
+		/** The gap after this set, before the next one starts. */
+		changeoverMinutes: integer('changeover_minutes').notNull().default(10),
+
+		/**
+		 * Derived output, never hand-edited. Rewritten on every mutation that can
+		 * move it. There is no override field, no lock flag and no recalculate
+		 * button: a column that is sometimes derived and sometimes not is worse
+		 * than one that is always a function of the lineup.
+		 */
+		scheduledStartAt: integer('scheduled_start_at', { mode: 'timestamp' }),
+
+		/**
+		 * Manual, and **not** part of the walk — soundcheck order is frequently the
+		 * reverse of set order, and it happens hours earlier.
+		 */
+		soundcheckAt: integer('soundcheck_at', { mode: 'timestamp' }),
+
+		techNotes: text('tech_notes'),
+		backlineNeeds: text('backline_needs'),
+		hospitalityNotes: text('hospitality_notes'),
+
+		/** Per-show override of the act's stored contact — a tour manager, a fill-in. */
+		contactName: text('contact_name'),
+		contactEmail: text('contact_email'),
+		contactPhone: text('contact_phone'),
+
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('idx_production_slot_order').on(t.productionId, t.sortOrder),
+		// The 1:1 with a credit, stated by the database. Partial, because a
+		// production may hold several slots that name no credit at all.
+		uniqueIndex('uq_production_slot_event_band')
+			.on(t.eventBandId)
+			.where(sql`event_band_id is not null`),
+		// A zero-length set is a mistake rather than a warning, so it is refused
+		// here — which is why `runOfShowWarnings` has no case for it.
+		check('production_slot_set_length_positive', sql`set_length_minutes > 0`),
+		check('production_slot_changeover_nonneg', sql`changeover_minutes >= 0`)
+	]
+);
+
+export type ProductionSlot = typeof productionSlot.$inferSelect;
+export type NewProductionSlot = typeof productionSlot.$inferInsert;

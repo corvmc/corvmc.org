@@ -44,6 +44,7 @@ import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
 import { seedCmcEventLineups } from './seed/lineups';
 import { seedProductions } from './seed/productions';
+import { seedRunOfShow } from './seed/run-of-show';
 import { seedBandReservations } from './seed/band-reservations';
 import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
 import { seedRecurringSeries } from './seed/recurring';
@@ -125,6 +126,9 @@ async function main() {
 	// After the bill, because a production is the ops record for a night that
 	// already has acts on it — and the index shows the two side by side.
 	const productions = await seedProductions(events, allUsers);
+	// After the productions, because a slot hangs off one — and it reads the bill
+	// back rather than being handed it, the way the rider seeder reads a roster.
+	const runOfShow = await seedRunOfShow(productions.rows);
 	const bandReservations = await seedBandReservations(bands);
 	const bandSites = await seedBandSites(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
@@ -263,6 +267,9 @@ async function main() {
 	);
 	console.log(
 		`  ${productions.productions} productions covering every status, ${productions.withoutProduction} CMC shows deliberately without one`
+	);
+	console.log(
+		`  ${runOfShow.slots} run-of-show sets — ${runOfShow.uncredited} on no poster, ${runOfShow.withoutTimes} with no downbeat yet`
 	);
 	console.log(
 		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +
