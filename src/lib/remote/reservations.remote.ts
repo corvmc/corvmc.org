@@ -2308,8 +2308,8 @@ export const getUserRecurringSeries = query(z.string(), async (userId) => {
  * The schedule, whether the band has a sustaining member (which sets the rate the booking form
  * quotes) and the booking contact are all first paint, and the page awaited the three side by
  * side. Past kit 2.64 that renders the error boundary instead of the page; assembled here it is
- * one request. Each callee re-guards — `getBandReservations` in particular does its own slug
- * cross-check, which is the boundary that stops one band reading another's schedule.
+ * one request. Each callee re-guards — `getBandReservations` resolves the band from this slug
+ * through `requireGroupRole`, the boundary that stops one band reading another's schedule.
  */
 export const getBandReservationsPage = query(z.string(), async (slug) => {
 	const [reservations, membership, contact] = await Promise.all([
