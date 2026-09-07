@@ -68,7 +68,9 @@ import {
 	cancelProductionsForEvent,
 	ProductionNotFoundError,
 	ProductionExistsError,
-	InvalidProductionTransitionError
+	InvalidProductionTransitionError,
+	NotACmcListingError,
+	ListingNotFoundError
 } from './production-service';
 import { db } from '$lib/server/db';
 
@@ -85,6 +87,11 @@ function productionRow(overrides: Record<string, unknown> = {}) {
 	return { id: 'prod-1', eventId: 'evt-1', status: 'draft', ...overrides };
 }
 
+/** What `createProduction` reads before it inserts: the listing's source, and nothing else. */
+function listingSource(source: string) {
+	return [[{ source }]];
+}
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	selectQueue = [];
@@ -96,6 +103,8 @@ beforeEach(() => {
 
 describe('createProduction', () => {
 	it('opens a draft production on the event', async () => {
+		selectQueue = listingSource('cmc');
+
 		await createProduction('evt-1', { createdByUserId: 'staff-1' });
 
 		const values = calls.find((c) => c.method === 'values')?.args[0] as Record<string, unknown>;
@@ -108,9 +117,29 @@ describe('createProduction', () => {
 	// would be a race. This is the index's violation reaching the caller as a
 	// 409 rather than a 500.
 	it('reports the second production on one event as a conflict', async () => {
+		selectQueue = listingSource('cmc');
 		insertShouldViolateUnique = true;
 
 		await expect(createProduction('evt-1')).rejects.toThrow(ProductionExistsError);
+	});
+
+	// A production is the ops record for a show CMC puts on. Roughly nine in ten
+	// listings are somebody else's gig at somebody else's venue, and opening a
+	// production on one is how `/staff/events/[id]` grew the dead "Space
+	// Reservation: no space held" cards that #597 removed — reintroduced from the
+	// service side, where the UI gate cannot see it.
+	it.each(['band', 'community', 'group'])('refuses a %s listing', async (source) => {
+		selectQueue = listingSource(source);
+
+		await expect(createProduction('evt-1')).rejects.toThrow(NotACmcListingError);
+		expect(db.insert).not.toHaveBeenCalled();
+	});
+
+	it('reports a listing that does not exist as not found', async () => {
+		selectQueue = [[]];
+
+		await expect(createProduction('evt-1')).rejects.toThrow(ListingNotFoundError);
+		expect(db.insert).not.toHaveBeenCalled();
 	});
 });
 

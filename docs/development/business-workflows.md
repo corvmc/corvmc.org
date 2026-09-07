@@ -1252,9 +1252,13 @@ button yet; the settlement worksheet and the close-out are later phases.
 
 1. `/staff/events/[id]` → **Add production** → `createProduction`
    (`lib/remote/productions.remote.ts`, guard `event.manage`) →
-   `production-service.createProduction()`. The 1:1 is held by `uq_production_event`,
-   so this inserts and reads the violation rather than selecting first — a
-   select-then-insert is a race.
+   `production-service.createProduction()`. The service reads the listing's `source`
+   first and refuses anything but `'cmc'` (422) — a production is the ops record for a
+   show CMC puts on, and about nine listings in ten are somebody else's gig at somebody
+   else's venue. The button is hidden for those too, but the service is the guard. The
+   1:1 is a different shape: it is held by `uq_production_event`, so the insert reads
+   the violation rather than selecting first — _that_ select-then-insert would be a
+   race.
 2. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
    adds one entry to its existing `Promise.all` rather than a second remote query.
 3. **Overview** tab → `updateProduction` (times and notes) and
