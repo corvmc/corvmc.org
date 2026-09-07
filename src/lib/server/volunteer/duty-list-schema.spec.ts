@@ -1,14 +1,10 @@
 /**
  * The duty-list constraints, against real SQLite on the real migrated tables.
  *
- * Three of them cannot be checked any other way. `duty_list_item_one_shape` and
- * `work_task_done_has_time` are written as null-ness comparisons on purpose —
- * **SQLite passes a CHECK that evaluates to NULL**, so the obvious spelling
- * (`(a is null and b is null) or b > a`) lets one-set-one-null through as
- * `false OR NULL`. Whether the form actually rejects is a question for the
- * engine, not for the type checker or a mocked query. And `work_task`'s cascade
- * is a statement about what happens to a checklist when its work order is
- * deleted, which only a database can answer.
+ * `duty_list_item_one_shape` and `work_task_done_has_time` compare null-ness
+ * because **SQLite passes a CHECK that evaluates to NULL**: the obvious
+ * spelling lets one-set-one-null through as `false OR NULL`. Only the engine
+ * answers that, and only a database answers what `work_task`'s cascade does.
  */
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';

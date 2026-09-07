@@ -23,19 +23,10 @@ import { chunk, chunkSize } from '$lib/server/utils/chunk';
 /**
  * Duty lists: a named set of work orders, stamped onto a subject.
  *
- * Staffing a show is six work orders — Booking Lead a week out, then Door, Tech,
- * Merch and Tear Down around doors — and every one of them is entered by hand
- * today. This is that, once.
- *
- * Applying a list writes ordinary `work_order` rows. They carry
- * `dutyListId` for provenance and nothing else: editing a list afterwards must
- * not reach into work people have already claimed, which is the same bargain
- * `duplicateShift` makes when it says the copy has "no link back".
- *
- * The subject is a show or a rehearsal booking. Both are a window with a start
- * and an end, which is all an offset needs, so the two share one apply and one
- * output — the only difference is which anchor column the work order carries
- * and whether `doors` means anything.
+ * Applying one writes ordinary `work_order` rows carrying `dutyListId` for
+ * provenance and nothing else — editing a list afterwards must not reach into
+ * work people have already claimed. The subject is a show or a rehearsal
+ * booking: both are a window, which is all an offset needs, so they share an apply.
  */
 
 // ---------------------------------------------------------------------------
@@ -498,12 +489,10 @@ async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
 /**
  * A list anchored to `doors` cannot be stamped onto a rehearsal booking.
  *
- * `resolveAnchor` falls back from `doorsAt` to `startsAt` for an event because
- * not every show sets a doors time — but a show without one still *has* doors.
- * A rehearsal has no such concept, so taking the same fallback would quietly
- * turn "fifteen minutes before doors" into "fifteen minutes before the booking"
- * and read as correct on every screen. Refuse it at save time, so the pairing is
- * unmakeable rather than merely unappliable.
+ * `resolveAnchor` falls back from `doorsAt` to `startsAt` for an event, because
+ * a show without a doors time still has doors. A rehearsal has no such concept,
+ * so the same fallback would quietly turn "fifteen minutes before doors" into
+ * "before the booking" and read as correct everywhere. Refuse it at save time.
  */
 function assertAnchorFitsSubject(anchor: DutyListAnchor, subject: DutyListSubject): void {
 	if (anchor === 'doors' && subject !== 'event') {
@@ -517,12 +506,10 @@ function assertAnchorFitsSubject(anchor: DutyListAnchor, subject: DutyListSubjec
 /**
  * Stamp a duty list onto a subject — a show, or a member's rehearsal booking.
  *
- * Offsets are plain instant arithmetic from a real anchor timestamp, so daylight
- * saving needs no special handling here — unlike `duplicateShift`, which shifts a
- * wall-clock date and does.
- *
- * `createdByUserId` is nullable because the orientation listener applies a list
- * with no acting user; `work_order.created_by_user_id` is already set-null.
+ * Offsets are instant arithmetic from a real anchor timestamp, so daylight
+ * saving needs no handling here — unlike `duplicateShift`, which shifts a
+ * wall-clock date and does. `createdByUserId` is nullable because the
+ * orientation listener applies a list with no acting user.
  */
 export async function applyDutyList(
 	dutyListId: string,

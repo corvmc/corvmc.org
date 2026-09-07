@@ -45,15 +45,10 @@ export const ROLE_NAME_SEPARATOR = String.fromCharCode(31);
 /**
  * Replace a member's interest set.
  *
- * A checkbox form always posts the whole set, including the empty one — that is
- * how "take me off the list" arrives — so this diffs rather than appends.
- * Deleting the removed rows and inserting the added ones (instead of
- * delete-all-then-reinsert) keeps `createdAt` intact on the roles they kept,
- * which is the only signal of how long someone has been on the list.
- *
- * Two statements rather than a transaction: the lint rule forbids
- * `db.transaction()`, and the worst case if the second fails is that the member
- * sees an unchanged checkbox and saves again.
+ * A checkbox form posts the whole set, including the empty one — that is how
+ * "take me off the list" arrives — so this diffs rather than appends. Deleting
+ * removed rows and inserting added ones keeps `createdAt` intact on the roles
+ * they kept, which is the only signal of how long they have been on the list.
  */
 export async function setInterests(userId: string, roleIds: string[]): Promise<void> {
 	const wanted = [...new Set(roleIds)];

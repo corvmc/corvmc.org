@@ -1,16 +1,10 @@
 /**
  * `applyDutyList` against a real database on the real migrated schema.
  *
- * The arithmetic is the point. An item says "3 hours before doors" and the row
- * it produces has to land on an actual instant, in the right column — `startsAt`
- * for a windowed item, `dueAt` for a deadline one — and a mocked query builder
- * cannot tell you whether it did. Nor can it tell you whether the CHECKs accept
- * what the service writes, which is the other half of the risk.
- *
- * The shim below is the whole trick: `db.batch` is a D1 method and the node
- * driver has no such thing, so it is supplied by awaiting the statements in
- * order. That is what D1 does with a batch anyway, minus the atomicity — and
- * atomicity is not what these tests are about.
+ * The arithmetic is the point: "3 hours before doors" has to land on a real
+ * instant in the right column — `startsAt` when windowed, `dueAt` when a
+ * deadline — and the CHECKs have to accept it. Neither is answerable through a
+ * mock. `db.batch` is D1's; the shim below awaits statements in order instead.
  */
 import { describe, expect, it, beforeAll, beforeEach, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
