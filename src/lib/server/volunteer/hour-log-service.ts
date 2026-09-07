@@ -428,13 +428,10 @@ export interface BulkApprovalResult {
 /**
  * Approve a selection of pending logs.
  *
- * One conditional UPDATE per chunk rather than a loop of `approveHourLog`: the
- * queue is a page of rows a coordinator ticks through, and a per-row round trip
- * turns thirty ticks into a hundred and twenty statements.
- *
- * `status = 'pending'` stays in the WHERE, so a row another staffer reviewed
- * between the page load and the click is skipped rather than overwritten — and
- * the count says so instead of the whole batch failing.
+ * One conditional UPDATE per chunk rather than a loop of `approveHourLog`: a
+ * per-row round trip turns thirty ticks into a hundred and twenty statements.
+ * `status = 'pending'` stays in the WHERE, so a row another staffer reviewed in
+ * the meantime is skipped and counted rather than overwritten.
  */
 export async function approveHourLogs(
 	logIds: string[],
