@@ -8,6 +8,7 @@ import { computeSetTimes, orderSlots, runOfShowWarnings, SLOT_MAX } from './run-
 
 import { DomainError } from '$lib/server/domain-error';
 import type { EventBandStatus } from '$lib/server/db/schema/event';
+import type { ActTerms } from '$lib/production/terms';
 import type {
 	PublicSetTime,
 	RunOfShow,
@@ -120,6 +121,11 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				contactName: productionSlot.contactName,
 				contactEmail: productionSlot.contactEmail,
 				contactPhone: productionSlot.contactPhone,
+				guaranteeCents: productionSlot.guaranteeCents,
+				percentageBps: productionSlot.percentageBps,
+				versus: productionSlot.versus,
+				againstNet: productionSlot.againstNet,
+				contributed: productionSlot.contributed,
 				createdAt: productionSlot.createdAt,
 				actName: eventBand.name,
 				actStatus: eventBand.status,
@@ -170,7 +176,14 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				hospitalityNotes: r.hospitalityNotes,
 				contactName: r.contactName,
 				contactEmail: r.contactEmail,
-				contactPhone: r.contactPhone
+				contactPhone: r.contactPhone,
+				terms: {
+					guaranteeCents: r.guaranteeCents,
+					percentageBps: r.percentageBps,
+					versus: r.versus ?? false,
+					againstNet: r.againstNet ?? false,
+					contributed: r.contributed ?? false
+				}
 			}))
 	);
 
@@ -193,7 +206,8 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 		hospitalityNotes: r.hospitalityNotes,
 		contactName: r.contactName,
 		contactEmail: r.contactEmail,
-		contactPhone: r.contactPhone
+		contactPhone: r.contactPhone,
+		terms: r.terms
 	}));
 
 	const slotted = new Set(slots.map((s) => s.eventBandId).filter((id): id is string => !!id));
@@ -458,6 +472,30 @@ export async function moveSlot(slotId: string, direction: 'up' | 'down'): Promis
 		.where(eq(productionSlot.id, slotId));
 
 	await recomputeSetTimes(owner.productionId);
+}
+
+/**
+ * Set what an act is paid.
+ *
+ * Its own function rather than fields on `updateSlot`: a timing save and a money
+ * save want different confirmations, and this is the seam a settlement
+ * capability would guard without splitting a form that had already grown.
+ */
+export async function setSlotTerms(slotId: string, terms: ActTerms): Promise<void> {
+	const [row] = await db
+		.update(productionSlot)
+		.set({
+			guaranteeCents: terms.guaranteeCents,
+			percentageBps: terms.percentageBps,
+			versus: terms.versus,
+			againstNet: terms.againstNet,
+			contributed: terms.contributed,
+			updatedAt: new Date()
+		})
+		.where(eq(productionSlot.id, slotId))
+		.returning({ id: productionSlot.id });
+
+	if (!row) throw new SlotNotFoundError();
 }
 
 /** Drop a set. The gap it leaves in `sortOrder` is correct — nothing renumbers. */

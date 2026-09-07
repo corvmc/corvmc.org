@@ -7,6 +7,8 @@
  * drift from the schema's vocabulary in silence.
  */
 
+import type { ActTerms } from '$lib/production/terms';
+
 export type RunOfShowActStatus = 'unlinked' | 'pending' | 'confirmed' | 'declined';
 
 export type RunOfShowWarningCode =
@@ -40,6 +42,8 @@ export interface RunOfShowSlot {
 	contactName: string | null;
 	contactEmail: string | null;
 	contactPhone: string | null;
+	/** What this act is paid. Per act, because a headliner and an opener differ. */
+	terms: ActTerms;
 }
 
 export interface RunOfShow {

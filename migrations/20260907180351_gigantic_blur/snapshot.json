@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "63c4b1ef-7718-42aa-a5a6-8a8aa46ed8c3",
+  "id": "071b8c64-5dfd-4fc0-833b-082926d6fbaa",
   "prevIds": [
-    "42516010-804e-468a-8c22-1b93f0048af4"
+    "63c4b1ef-7718-42aa-a5a6-8a8aa46ed8c3"
   ],
   "ddl": [
     {
@@ -2275,6 +2275,56 @@
       "default": null,
       "generated": null,
       "name": "contact_phone",
+      "entityType": "columns",
+      "table": "production_slot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "guarantee_cents",
+      "entityType": "columns",
+      "table": "production_slot"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "percentage_bps",
+      "entityType": "columns",
+      "table": "production_slot"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "versus",
+      "entityType": "columns",
+      "table": "production_slot"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "against_net",
+      "entityType": "columns",
+      "table": "production_slot"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "contributed",
       "entityType": "columns",
       "table": "production_slot"
     },
