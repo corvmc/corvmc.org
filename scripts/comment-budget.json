@@ -171,8 +171,6 @@
 	"src/lib/components/layout/Nav/NavGroup.svelte.spec.ts",
 	"src/lib/components/layout/Nav/active-nav.ts",
 	"src/lib/components/layout/Nav/nav-collapse.ts",
-	"src/lib/components/layout/NotificationBell.pending.svelte.spec.ts",
-	"src/lib/components/layout/NotificationBell.svelte",
 	"src/lib/components/layout/panel-tabs.ts",
 	"src/lib/components/public/Section.svelte",
 	"src/lib/components/public/Tile.svelte",

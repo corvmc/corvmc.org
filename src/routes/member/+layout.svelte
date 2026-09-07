@@ -118,7 +118,7 @@
 	{/if}
 {/snippet}
 
-<AppShell drawerId="member-drawer" {panels} activePanel="member">
+<AppShell drawerId="member-drawer" {panels} activePanel="member" chrome={layout.chrome}>
 	{#snippet navigation()}
 		{#each mainItems as item (item.key)}
 			{@render row(item)}
