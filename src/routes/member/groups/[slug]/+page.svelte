@@ -19,12 +19,18 @@
 		getMemberGroup,
 		leaveGroupForm,
 		approveApplicationForm,
-		declineApplicationForm
+		declineApplicationForm,
+		removeGroupMember,
+		revokeGroupInvitation,
+		revokeGroupEmailInvite,
+		transferGroupOwner
 	} from '$lib/remote/groups.remote';
 	import AnnouncementList from '$lib/components/groups/AnnouncementList.svelte';
 	import DocumentList from '$lib/components/groups/DocumentList.svelte';
 	import MuteAnnouncementsAction from '$lib/components/groups/MuteAnnouncementsAction.svelte';
 	import CreateSessionAction from '$lib/components/groups/CreateSessionAction.svelte';
+	import InviteGroupMemberAction from '$lib/components/groups/InviteGroupMemberAction.svelte';
+	import GroupMemberEditAction from '$lib/components/groups/GroupMemberEditAction.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -45,6 +51,10 @@
 	const leaveFields = leaveGroupForm.fields;
 	const approveFields = approveApplicationForm.fields;
 	const declineFields = declineApplicationForm.fields;
+	const removeFields = removeGroupMember.fields;
+	const revokeFields = revokeGroupInvitation.fields;
+	const revokeEmailFields = revokeGroupEmailInvite.fields;
+	const transferFields = transferGroupOwner.fields;
 
 	type Tab = 'announcements' | 'documents' | 'overview' | 'projects' | 'sessions' | 'roster';
 
@@ -85,6 +95,16 @@
 	 * from here waits on the capability work that spec designs.
 	 */
 	const projects = $derived(data.projects);
+
+	// Only the outgoing owner can hand the program on, and only to somebody
+	// already active on the roster — staff appoint over a leader's head through
+	// `assignGroupLeader` instead.
+	const isOwner = $derived(data.role === 'owner');
+	const pendingEmailInvites = $derived(data.emailInvites.filter((i) => i.status === 'pending'));
+
+	// Repointed at the wrapper query: nothing reads the parts, so refreshing one
+	// of those would repaint nothing. See `custom/refresh-the-composed-query`.
+	const refreshRoster = () => void getMemberGroup(slug).refresh();
 </script>
 
 <PageHeader title={group.name} subtitle={kindLabel}>
@@ -311,9 +331,19 @@
 			</InfoCard>
 		{/if}
 
+		{#if data.canManage}
+			<div class="flex justify-end">
+				<InviteGroupMemberAction {slug} groupName={group.name} onchanged={refreshRoster} />
+			</div>
+		{/if}
+
 		<InfoCard title="Members">
 			{#if members.active.length === 0 && members.pending.length === 0}
-				<EmptyState description="No members yet." />
+				<EmptyState
+					description={data.canManage
+						? 'Nobody on the roster yet. Invite the first person.'
+						: 'No members yet.'}
+				/>
 			{:else}
 				<Table>
 					{#snippet head()}
@@ -321,6 +351,9 @@
 						<th>Member</th>
 						<th class="w-px">Role</th>
 						<th class="col-support">Position</th>
+						{#if data.canManage}
+							<th class="w-px"><span class="sr-only">Actions</span></th>
+						{/if}
 					{/snippet}
 					{#each [...members.active, ...members.pending] as m (m.id)}
 						<tr>
@@ -330,10 +363,120 @@
 							<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
 							<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
 							<td class="col-support">{m.position ?? '—'}</td>
+							{#if data.canManage}
+								<td class="w-px">
+									<div class="flex justify-end gap-2">
+										{#if m.status === 'pending'}
+											<Action
+												action={revokeGroupInvitation.for(m.id)}
+												label="Revoke"
+												aria-label={`Revoke the invitation for ${m.member.title}`}
+												variant="ghost"
+												size="xs"
+												confirm="Revoke the invitation for {m.member.title}?"
+												successToast="Invitation revoked"
+												onsuccess={refreshRoster}
+												onfailure={() => toast.error('Failed to revoke')}
+											>
+												{#snippet form()}
+													<input {...revokeFields.slug.as('hidden', slug)} />
+													<input {...revokeFields.memberId.as('hidden', m.id)} />
+												{/snippet}
+											</Action>
+										{:else if m.role !== 'owner'}
+											<GroupMemberEditAction
+												{slug}
+												memberId={m.id}
+												memberName={m.member.title}
+												role={m.role as 'admin' | 'member'}
+												position={m.position}
+												kindLabel={group.kind}
+												onchanged={refreshRoster}
+											/>
+											{#if isOwner}
+												<!-- Owner only, and the seat moves rather than being shared:
+												     the partial unique index allows one owner per group. -->
+												<Action
+													action={transferGroupOwner.for(m.id)}
+													label="Make owner"
+													aria-label={`Make ${m.member.title} the owner`}
+													modalTitle="Hand {group.name} on"
+													submitLabel="Transfer"
+													confirm={`Make ${m.member.title} the owner of ${group.name}? You become an admin.`}
+													variant="ghost"
+													size="xs"
+													successToast="Ownership transferred"
+													onsuccess={refreshRoster}
+													onfailure={() => toast.error('Failed to transfer')}
+												>
+													{#snippet form()}
+														<input {...transferFields.slug.as('hidden', slug)} />
+														<input {...transferFields.newOwnerId.as('hidden', m.userId)} />
+													{/snippet}
+												</Action>
+											{/if}
+											<Action
+												action={removeGroupMember.for(m.id)}
+												label="Remove"
+												aria-label={`Remove ${m.member.title}`}
+												variant="ghost"
+												size="xs"
+												confirm="Remove {m.member.title} from {group.name}?"
+												successToast="Member removed"
+												onsuccess={refreshRoster}
+												onfailure={() => toast.error('Failed to remove')}
+											>
+												{#snippet form()}
+													<input {...removeFields.slug.as('hidden', slug)} />
+													<input {...removeFields.memberId.as('hidden', m.id)} />
+												{/snippet}
+											</Action>
+										{/if}
+									</div>
+								</td>
+							{/if}
 						</tr>
 					{/each}
 				</Table>
 			{/if}
 		</InfoCard>
+
+		{#if data.canManage && pendingEmailInvites.length > 0}
+			<!-- Invitations to an address rather than an account. They have no roster
+			     row until the person signs up, so they cannot live in the table. -->
+			<InfoCard title="Invited by email">
+				<Table>
+					{#snippet head()}
+						<th>Email</th>
+						<th class="w-px">Role</th>
+						<th class="w-px"><span class="sr-only">Actions</span></th>
+					{/snippet}
+					{#each pendingEmailInvites as inv (inv.id)}
+						<tr>
+							<td class="cell-primary">{inv.email}</td>
+							<td class="w-px"><Badge variant="ghost">{inv.role}</Badge></td>
+							<td class="w-px">
+								<Action
+									action={revokeGroupEmailInvite.for(inv.id)}
+									label="Revoke"
+									aria-label={`Revoke the invitation to ${inv.email}`}
+									variant="ghost"
+									size="xs"
+									confirm="Revoke the invitation to {inv.email}?"
+									successToast="Invitation revoked"
+									onsuccess={refreshRoster}
+									onfailure={() => toast.error('Failed to revoke')}
+								>
+									{#snippet form()}
+										<input {...revokeEmailFields.slug.as('hidden', slug)} />
+										<input {...revokeEmailFields.inviteId.as('hidden', inv.id)} />
+									{/snippet}
+								</Action>
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			</InfoCard>
+		{/if}
 	{/if}
 </PageContent>
