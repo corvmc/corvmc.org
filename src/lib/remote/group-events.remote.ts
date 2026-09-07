@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { form } from '$app/server';
 import { mapDomainError } from '$lib/server/errors';
-import { requireGroupRole } from '$lib/server/group/group-context';
+import { requireProgramRole } from '$lib/server/group/group-context';
 import { DEFAULT_TIMEZONE, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { buildTimeRangeInTz } from '$lib/server/reservation/timezone';
 import {
@@ -49,8 +49,11 @@ export const createGroupSession = form(
 	}),
 	async (data, issue) => {
 		// Owner or admin, matching the spec's role table: members read the
-		// calendar, they do not put things on it.
-		const { user, group } = await requireGroupRole({ id: data.groupId }, 'admin');
+		// calendar, they do not put things on it. `requireProgramRole`, not
+		// `requireGroupRole`: this is the one member-reachable path that holds the
+		// room for free, and that privilege travels with `kind`. A band admin
+		// reaching it with their own band's id was #714.
+		const { user, group } = await requireProgramRole({ id: data.groupId }, 'admin');
 
 		// `buildTimeRangeInTz` rolls a past-midnight end onto the next day, which
 		// is why the comparison happens after it rather than on the raw strings.
@@ -99,7 +102,7 @@ const sessionRef = z.object({
  * `publishBandEvent` uses.
  */
 async function requireOwnSession(data: { groupId: string; eventId: string }) {
-	const { user, group } = await requireGroupRole({ id: data.groupId }, 'admin');
+	const { user, group } = await requireProgramRole({ id: data.groupId }, 'admin');
 	const evt = await getEventById(data.eventId);
 	if (!evt || evt.groupId !== group.id) error(404, 'Session not found');
 	return { user, group, evt };

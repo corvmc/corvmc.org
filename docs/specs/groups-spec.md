@@ -801,6 +801,8 @@ This is why free room time is safe: only staff create clubs and committees, so o
 
 Bands are excluded deliberately. A band event is an off-site gig listing and does not reserve anything; a band rehearsal is private paid time under `bookerType: 'group'`. Neither becomes free, and a band cannot reach the free path by creating an "event" for its own rehearsal.
 
+That exclusion is enforced twice, because for a while it was enforced nowhere (#714). The five session remotes in `group-events.remote.ts` guard with `requireProgramRole`, and `requireProgramGroup` in `src/lib/server/group/group-kind.ts` rejects a band inside `createGroupEvent` and again in the recurring generator, which writes occurrences without going through it.
+
 ---
 
 ## Roles and permissions
