@@ -92,7 +92,7 @@ vi.mock('$lib/server/db/schema/event', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/group', () => ({
-	group: { __table: 'group', id: 'id', name: 'name' }
+	group: { __table: 'group', id: 'id', name: 'name', kind: 'kind' }
 }));
 
 vi.mock('$lib/server/db/schema/directory', () => ({
@@ -760,7 +760,7 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 	});
 
 	it("inherits the prototype's source, owner and location", async () => {
-		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], []);
+		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], [], [{ kind: 'club' }]);
 		setupInsert();
 		setupUpdate();
 		mockGetOccurrences.mockReturnValue([OCC1]);
@@ -780,7 +780,7 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 	 * a CMC series keeps its staff review step, which already exists.
 	 */
 	it('publishes a program session, and still drafts a CMC one', async () => {
-		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], []);
+		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], [], [{ kind: 'club' }]);
 		setupInsert();
 		setupUpdate();
 		mockGetOccurrences.mockReturnValue([OCC1]);
@@ -806,7 +806,7 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 	});
 
 	it('gives each occurrence its own event_group row', async () => {
-		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], []);
+		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], [], [{ kind: 'club' }]);
 		setupInsert();
 		setupUpdate();
 		mockGetOccurrences.mockReturnValue([OCC1]);
@@ -820,7 +820,7 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 
 	/** A program's session has no bill; a band's gig heads its own. */
 	it('writes no lineup credit for a program session', async () => {
-		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], []);
+		queueSelects([EVENT_SERIES], [GROUP_PROTO], [OWNER], [EVENT_PROTO_RES], [], [{ kind: 'club' }]);
 		setupInsert();
 		setupUpdate();
 		mockGetOccurrences.mockReturnValue([OCC1]);
@@ -828,6 +828,34 @@ describe('generateRecurringEvents — a prototype that is not a CMC event', () =
 		await generateRecurringEvents();
 
 		expect(insertsFor('event_band')).toHaveLength(0);
+	});
+
+	/**
+	 * #714. A series is the one-off repeated unattended, so it owes the same kind
+	 * check — a band prototype here would hold the free room every week rather
+	 * than once, with nothing on the path reading `kind`.
+	 */
+	it('generates nothing for a band-owned program series', async () => {
+		queueSelects(
+			[EVENT_SERIES],
+			[{ ...GROUP_PROTO, groupId: 'band-1' }],
+			[OWNER],
+			[EVENT_PROTO_RES],
+			[],
+			[{ kind: 'band' }]
+		);
+		setupInsert();
+		setupUpdate();
+		mockGetOccurrences.mockReturnValue([OCC1]);
+
+		const result = await generateRecurringEvents();
+
+		expect(insertsFor('event_listing')).toHaveLength(0);
+		expect(mockStaffCreate).not.toHaveBeenCalled();
+		// Recorded rather than swallowed: the series exists and must not generate,
+		// which is worth a line the job's caller can see.
+		expect(result.seriesProcessed).toBe(0);
+		expect(result.errors).toEqual([`Series ${EVENT_SERIES.id}: Group not found`]);
 	});
 
 	it('writes the owner credit for a band occurrence', async () => {

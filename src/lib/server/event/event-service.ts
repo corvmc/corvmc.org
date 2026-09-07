@@ -21,6 +21,7 @@ import { contentFlag } from '$lib/server/db/schema/flag';
 import { venue } from '$lib/server/db/schema/venue';
 import { production } from '$lib/server/db/schema/production';
 import { cancelProductionsForEvent } from '$lib/server/production/production-service';
+import { requireProgramGroup } from '$lib/server/group/group-kind';
 import {
 	eq,
 	and,
@@ -2015,6 +2016,13 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 		throw new EventValidationError('Event must end after it starts', 'endsAt');
 	if (doorsAt && doorsAt > startsAt)
 		throw new EventValidationError('Doors must open before event starts', 'doorsAt');
+
+	// The invariant the free room rests on. A band's rehearsal is paid time under
+	// `bookerType: 'group'` and its gig is an off-site listing; neither is this,
+	// and an "event" for its own rehearsal is how the free path would be reached.
+	// Checked before anything is written, reservation or not — the wrong `source`
+	// on a band's listing is a second, quieter bug.
+	await requireProgramGroup(groupId);
 
 	const eventId = crypto.randomUUID();
 
