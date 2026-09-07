@@ -71,6 +71,7 @@ import {
 	isFirstReservationSql,
 	priorBookingCount,
 	announceWaitlistConfirmed,
+	announceConfirmed,
 	ReservationConflictError,
 	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
@@ -1240,6 +1241,8 @@ async function commitCreditsAndSettleIfCovered(opts: {
 			)
 		);
 
+	await announceConfirmed(opts.reservationId);
+
 	return { remainingCents: 0, settled: true };
 }
 
@@ -1313,6 +1316,7 @@ async function payReservationRemainder(opts: {
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, opts.row.id));
+		await announceConfirmed(opts.row.id);
 		return { paid: true };
 	}
 
@@ -1438,6 +1442,9 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 				.update(reservation)
 				.set({ status: 'confirmed', updatedAt: new Date() })
 				.where(eq(reservation.id, res.id));
+			// The settled branch announced it from inside
+			// `commitCreditsAndSettleIfCovered`; this is the other half.
+			await announceConfirmed(res.id);
 		}
 		return { reservationId: res.id, confirmed: true as const };
 	}
@@ -1504,6 +1511,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, res.id));
+
+		await announceConfirmed(res.id);
 
 		return { reservationId: res.id, paid: true as const };
 	}
