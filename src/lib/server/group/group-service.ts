@@ -6,6 +6,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
 import { create as createGroupRow, deactivate, reactivate } from '$lib/server/band/band-service';
+import { sanitizeBio } from '$lib/utils/markdown';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
 import { DomainError } from '$lib/server/domain-error';
 import type { GroupKind, GroupJoinPolicy } from '$lib/config';
@@ -391,6 +392,49 @@ export async function createGroup(data: CreateGroupData) {
 	// owner from the first write rather than a second one, so there is no window
 	// in which the group exists with an empty owner seat.
 	return createGroupRow(data.leaderId, { kind: data.kind, name: data.name, bio: data.bio });
+}
+
+export interface UpdateGroupProfile {
+	name?: string;
+	bio?: string | null;
+	joinInstructions?: string | null;
+}
+
+/**
+ * What a program's own leader may change about it.
+ *
+ * Deliberately not `joinPolicy` or `visibility`: those decide who may walk in
+ * and whether the program is advertised, and the spec's own argument for free
+ * room time is that only staff decide who runs a program and on what terms.
+ * `updateGroupSettings` is their one writer.
+ */
+// `name` and `bio` are mirrored onto `directory_entry` for the same reason
+// band-service `update` mirrors them: the directory orders and searches on the
+// copy, so writing only `group` leaves the old name showing indefinitely.
+export async function updateGroupProfile(groupId: string, data: UpdateGroupProfile) {
+	const groupUpdates: Record<string, unknown> = { updatedAt: new Date() };
+	const entryUpdates: Record<string, unknown> = { updatedAt: new Date() };
+
+	if (data.name !== undefined) {
+		groupUpdates.name = data.name;
+		entryUpdates.name = data.name;
+	}
+	if (data.bio !== undefined) {
+		const bio = data.bio ? sanitizeBio(data.bio).slice(0, 2000) || null : null;
+		groupUpdates.bio = bio;
+		entryUpdates.bio = bio;
+	}
+	if (data.joinInstructions !== undefined) {
+		groupUpdates.joinInstructions = data.joinInstructions || null;
+	}
+
+	// `db.batch`, never `db.transaction` — the latter is broken on D1. No
+	// existence check: the caller's guard has already resolved the group, and
+	// `updateGroupSettings` beside this makes the same assumption.
+	await db.batch([
+		db.update(group).set(groupUpdates).where(eq(group.id, groupId)),
+		db.update(directoryEntry).set(entryUpdates).where(eq(directoryEntry.groupId, groupId))
+	]);
 }
 
 export interface UpdateGroupSettings {
