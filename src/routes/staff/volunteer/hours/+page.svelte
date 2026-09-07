@@ -19,10 +19,13 @@
 	import { formatDateShort, relativeDay } from '$lib/utils/format';
 	import { formatVolunteerHours, volunteerHourStatuses } from '$lib/config';
 	import { IconCheck, IconArrowBackUp, IconAlertTriangle } from '@tabler/icons-svelte';
+	import { SvelteSet } from 'svelte/reactivity';
+	import { toast } from 'svelte-sonner';
 	import {
 		getStaffVolunteerLogs,
 		getVolunteerStatusCounts,
 		approveVolunteerHours,
+		approveVolunteerHoursBulk,
 		rejectVolunteerHours
 	} from '$lib/remote/volunteer.remote';
 
@@ -71,10 +74,43 @@
 	// object it subscribed with. Refreshing `getStaffVolunteerLogs({})` server-side
 	// updated the tab counts but left the approved row sitting in the queue.
 	function refreshQueue() {
+		selected.clear();
 		void getStaffVolunteerLogs(query).refresh();
 		// VolunteerStatusTabs reads this query directly rather than through a wrapper, so
 		// refreshing it here still repaints the badges.
 		void getVolunteerStatusCounts().refresh();
+	}
+
+	// Ticked rows, by id. Client state, so it survives a filter change no more
+	// than the rows themselves do — clearing it on every repaint is the point.
+	const selected = new SvelteSet<string>();
+
+	function toggle(id: string, on: boolean) {
+		if (on) selected.add(id);
+		else selected.delete(id);
+	}
+
+	// Read off the page's own rows, so the confirmation names a total rather than
+	// a count and nobody approves forty hours thinking they clicked four.
+	const selectedMinutes = $derived(
+		(result.current?.rows ?? [])
+			.filter((log) => selected.has(log.id))
+			.reduce((sum, log) => sum + log.minutes, 0)
+	);
+
+	/**
+	 * A partial approval is the normal case, not a failure: another staffer may
+	 * have reviewed a row between this page loading and the click, and the
+	 * service skips those rather than refusing the batch.
+	 */
+	function handleBulkApproved(result?: unknown) {
+		const { approved = 0, skipped = 0 } = (result ?? {}) as { approved?: number; skipped?: number };
+		if (skipped > 0) {
+			toast.warning(`${approved} approved. ${skipped} were already reviewed.`);
+		} else {
+			toast.success(`${approved} ${approved === 1 ? 'entry' : 'entries'} approved`);
+		}
+		refreshQueue();
 	}
 
 	function clearFilters() {
@@ -152,6 +188,43 @@
 		/>
 	</FilterBar>
 
+	{#if selected.size > 0}
+		<!--
+			Only on the pending view, because only a pending log can be approved and
+			a checkbox that does nothing on four of the five tabs is worse than none.
+		-->
+		<div class="flex items-center justify-between gap-3 rounded-box bg-base-200 px-4 py-2">
+			<span class="text-sm"
+				>{selected.size}
+				{selected.size === 1 ? 'entry' : 'entries'} selected</span
+			>
+			<Action
+				action={approveVolunteerHoursBulk}
+				label="Approve selected"
+				icon={checkIcon}
+				variant="primary"
+				size="sm"
+				modalTitle="Approve these hours?"
+				submitLabel="Approve"
+				onsuccess={handleBulkApproved}
+			>
+				{#snippet form()}
+					<input type="hidden" name="ids" value={JSON.stringify([...selected])} />
+					<p class="text-sm">
+						{selected.size}
+						{selected.size === 1 ? 'entry' : 'entries'}, {formatVolunteerHours(selectedMinutes)} in total.
+					</p>
+					<FormField
+						name="notes"
+						label="Note (optional)"
+						type="textarea"
+						description="Shared with every member in the selection."
+					/>
+				{/snippet}
+			</Action>
+		</div>
+	{/if}
+
 	<DataList
 		{result}
 		empty={filters.status === 'pending'
@@ -162,6 +235,20 @@
 		{#snippet children(logs)}
 			<Table>
 				{#snippet head()}
+					{#if filters.status === 'pending'}
+						<th class="w-px">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								aria-label="Select every row on this page"
+								checked={logs.length > 0 && logs.every((l) => selected.has(l.id))}
+								onchange={(e) => {
+									const on = e.currentTarget.checked;
+									for (const log of logs) toggle(log.id, on);
+								}}
+							/>
+						</th>
+					{/if}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Member</th>
 					<th class="col-support">Role</th>
@@ -172,6 +259,17 @@
 
 				{#each logs as log (log.id)}
 					<tr class="hover">
+						{#if filters.status === 'pending'}
+							<td class="w-px">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-sm"
+									aria-label="Select these hours"
+									checked={selected.has(log.id)}
+									onchange={(e) => toggle(log.id, e.currentTarget.checked)}
+								/>
+							</td>
+						{/if}
 						<td class="w-px">
 							<StatusBadge status={log.status} />
 							{#if log.uncleared}

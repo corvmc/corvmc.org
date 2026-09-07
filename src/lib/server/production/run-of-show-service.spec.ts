@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import type { SQL } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Mocks — records every statement the service builds, and lets each test queue
@@ -274,6 +276,31 @@ describe('removeSlot', () => {
 });
 
 describe('getPublicSetTimes', () => {
+	const dialect = new SQLiteSyncDialect();
+
+	// The gate is four predicates in one WHERE, and every one of them is the
+	// difference between a draft running order being public and not. Asserted on
+	// the rendered SQL, because a mock cannot enforce it.
+	it('gates on a confirmed-or-later production with a downbeat and a credit', async () => {
+		selectResults = [[]];
+
+		await getPublicSetTimes('evt-1');
+
+		const where = calls.find((c) => c.op === 'select')!.where as SQL;
+		const sql = dialect.sqlToQuery(where);
+
+		expect(sql.sql).toContain('"production"."event_id" = ?');
+		expect(sql.sql).toContain('"production"."status" in');
+		expect(sql.params).toEqual(
+			expect.arrayContaining(['evt-1', 'confirmed', 'completed', 'settled', 'closed'])
+		);
+		// A production still sketching, and a slot whose time was never derived.
+		expect(sql.params).not.toContain('draft');
+		expect(sql.params).not.toContain('offered');
+		expect(sql.sql).toContain('"production"."first_set_at" is not null');
+		expect(sql.sql).toContain('"production_slot"."scheduled_start_at" is not null');
+	});
+
 	it('returns names in running order, not in the order the rows arrived', async () => {
 		selectResults = [
 			[
