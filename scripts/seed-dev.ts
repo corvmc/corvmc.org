@@ -202,7 +202,7 @@ async function main() {
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(
-		`  ${dutyLists.lists} duty list, ${dutyLists.workOrders} work orders applied to a show`
+		`  ${dutyLists.lists} duty lists (one on the show's own clock), ${dutyLists.workOrders} work orders applied to a show`
 	);
 	console.log(
 		`  ${orientation.lists} orientation list, ${orientation.workOrders} orientation shifts, ${orientation.orientations} member orientations`
