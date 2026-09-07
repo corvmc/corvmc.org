@@ -39,7 +39,6 @@ const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 async function login(page: Page) {
 	await page.goto('/login');
-	// FormField renders a <legend>, not a <label for>, so target inputs by name.
 	await page.locator('input[name="email"]').fill(SEED_OWNER_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_OWNER_PASSWORD);
 	await page.getByRole('button', { name: 'Sign in' }).click();

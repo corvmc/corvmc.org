@@ -29,7 +29,6 @@ const ZOD_BUG_PATTERNS = [/invalid option/i, /expected one of/i];
 
 async function login(page: import('@playwright/test').Page) {
 	await page.goto('/login');
-	// FormField renders a <legend>, not a <label for>, so target inputs by name.
 	await page.locator('input[name="email"]').fill(SEED_MEMBER_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_MEMBER_PASSWORD);
 	await page.getByRole('button', { name: 'Sign in' }).click();
