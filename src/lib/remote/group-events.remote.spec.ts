@@ -140,7 +140,9 @@ describe('a program still reaches them', () => {
 		await remotes.createGroupSession({ groupId: 'group-1', ...SESSION, reserveRoom: true });
 
 		expect(service.createGroupEvent).toHaveBeenCalledOnce();
-		expect(service.createGroupEvent.mock.calls[0][0]).toMatchObject({ groupId: 'group-1' });
+		expect(service.createGroupEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ groupId: 'group-1' })
+		);
 	});
 
 	it.each(['cancelGroupSession', 'publishGroupSession', 'unpublishGroupSession'])(
