@@ -23,6 +23,8 @@
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
 	import { inboxChannelMeta } from './inbox-channel-meta';
+	import { featureMeta } from './feature-meta';
+	import type { FeatureFlag } from '$lib/server/feature-flags';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -117,21 +119,6 @@
 
 	let syncResult = $state<SubscriptionSyncSummary | null>(null);
 	let statsResult = $state<CommunityStats | null>(null);
-
-	// `bandPremium` left this tab when it launched — the guards are gone rather
-	// than switched on, so there is nothing to toggle. Band music and CMC Radio
-	// arrived with their own flags and are the reason the tab is still here.
-	const featureMeta: Record<string, { label: string; description: string }> = {
-		bandAudio: {
-			label: 'Band music',
-			description: 'Bands can upload releases and sell them. Uploading is what fills CMC Radio.'
-		},
-		cmcRadio: {
-			label: 'CMC Radio',
-			description:
-				'The site-wide station and its player. Leave this off until enough bands have opted in for the rotation to sound like one.'
-		}
-	};
 
 	async function handleTestConnection() {
 		connectionTesting = true;
@@ -848,19 +835,8 @@
 				always shows every feature, so you can set one up here before switching it on for everyone.
 			</p>
 
-			{#if Object.keys(featureMeta).length === 0}
-				<Card>
-					<CardBody>
-						<p class="text-muted">
-							Nothing to switch right now. Band Premium was the last feature behind a toggle and it
-							has launched for everyone.
-						</p>
-					</CardBody>
-				</Card>
-			{/if}
-
 			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
-				{@const enabled = featureFlags[flag as keyof typeof featureFlags]}
+				{@const enabled = featureFlags[flag as FeatureFlag]}
 				{@const toggleForm = updateFeatureFlag.for(flag)}
 				<Card>
 					<CardBody>

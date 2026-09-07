@@ -278,8 +278,10 @@ more (`venue`, `production`, `production_slot`, `production_task`, `production_e
 
 ## Feature flags
 
-Three flags, all defaulting to **off**, toggled from Staff Settings → Features — except
-`directMessages`, which was never added to that tab and so has never been switchable at all.
+Three flags, all defaulting to **off**, toggled from Staff Settings → Features.
+`directMessages` was missing from that tab for as long as the tab has existed — enforced at seven
+call sites with no way to switch it on — until #555 typed the tab's list by `FeatureFlag` and put a
+spec on it. It still defaults to off; what is new is that staff can change that.
 `bandPremium` was the fourth until it **launched**: the guards came out rather than being switched
 on, so band sites answer on `band_site.tier` alone.
 `bandAudio` gates the music storefront and `cmcRadio` the station; both were added with toggles, and
