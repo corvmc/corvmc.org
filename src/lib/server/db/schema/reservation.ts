@@ -139,17 +139,12 @@ export const closure = sqliteTable(
 );
 
 /**
- * The break-glass door code.
+ * The break-glass door code. Only *changes* need connectivity, so a code synced
+ * last month still opens the door during today's outage.
  *
- * A code synced to the lock last month still opens the door while the lock is
- * offline today — the lock enforces access locally, it is only *changes* that
- * need connectivity. So one such code is kept alive and handed to a member
- * whose own reservation code cannot be confirmed.
- *
- * Exactly one row is active at a time: `syncedAt` set, `retiredAt` null. A
+ * Exactly one row is active — `syncedAt` set, `retiredAt` null — and a
  * successor is minted before the incumbent is retired, never after, or there
- * would be a window with no working break-glass code — the precise failure this
- * exists to prevent.
+ * would be a window with no working code.
  */
 export const lockFallbackCode = sqliteTable(
 	'lock_fallback_code',
@@ -173,15 +168,12 @@ export const lockFallbackCode = sqliteTable(
 );
 
 /**
- * A member's persistent door code.
+ * A member's persistent door code. These predate the app, so nothing revoked
+ * one when a person stopped being a member.
  *
- * These predate the app: seventeen of them were created by hand in the U-tec
- * app and existed nowhere else, so nothing revoked one when a person stopped
- * being a member. This table makes them known, attributable and revocable.
- *
- * `userId` is nullable because an adopted code may not match an account yet —
- * a row can exist to say "this code on the lock is accounted for" before anyone
- * has worked out whose it is.
+ * `userId` is nullable because an adopted code may not match an account yet: a
+ * row can record that a code is accounted for before anyone has worked out
+ * whose it is.
  */
 export const lockMemberCode = sqliteTable(
 	'lock_member_code',

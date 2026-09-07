@@ -10,17 +10,14 @@ import {
 } from './ultraloc-client';
 import type { LockFallbackCode } from '$lib/server/db/schema/reservation';
 
-// ---------------------------------------------------------------------------
-// The break-glass door code
-// ---------------------------------------------------------------------------
-// The lock enforces access locally — only *changes* need connectivity. So a
-// code that reached the lock last month still opens the door during an outage
-// today, which is exactly when a member's freshly-issued reservation code does
-// not. One such code is kept alive for that case.
+// The break-glass door code.
+//
+// The lock enforces access locally — only *changes* need connectivity — so a
+// code that reached it last month still opens the door during today's outage,
+// which is exactly when a freshly-issued reservation code does not.
 //
 // It is a type-0 (normal) lock user: no lock-side expiry, because an expiry is
-// a change the lock would have to be online to learn about.
-// ---------------------------------------------------------------------------
+// itself a change the lock would have to be online to learn about.
 
 /** How long a break-glass code stays in service before a successor is minted. */
 export const FALLBACK_ROTATION_DAYS = 30;
@@ -52,16 +49,12 @@ async function getPendingFallbackCode(): Promise<LockFallbackCode | null> {
 }
 
 /**
- * Keep exactly one confirmed break-glass code in service.
+ * Keep one confirmed break-glass code in service. From the daily job, in order:
  *
- * Run from the daily job. Three things, in this order:
- *
- * 1. A pending successor that the lock now reports as synced becomes active,
- *    and only *then* is the code it replaces retired and deleted. Retiring
- *    first would leave a window with no working break-glass code.
- * 2. Mint a successor when there is no active code at all, or the active one is
- *    older than the rotation period.
- * 3. Nothing, if the incumbent is current and no successor is outstanding.
+ * 1. A synced successor becomes active, and only *then* is the code it replaces
+ *    retired — retiring first leaves a window with no working code.
+ * 2. Mint a successor when there is none, or the active one is past rotation.
+ * 3. Otherwise nothing.
  */
 export async function maintainFallbackCode(errors: string[]): Promise<{
 	active: string | null;
@@ -185,17 +178,12 @@ export async function rotateFallbackCodeNow(): Promise<{ ok: boolean; error?: st
 // ---------------------------------------------------------------------------
 
 /**
- * Whether this member should be shown the break-glass code, and what it is.
+ * Whether to show this member the break-glass code. All three must hold:
+ * the reservation is confirmed; now is inside the access window, with the
+ * grace the lock itself gives; and their own code is not confirmed on the
+ * device.
  *
- * Deliberately narrow. All three have to hold:
- *
- * - the reservation is confirmed;
- * - now is inside the access window, with the same grace the lock itself gives;
- * - their own code is not confirmed on the device.
- *
- * A member whose code is known good never sees this, and neither does one whose
- * booking is next week. Revealing stamps `lockFallbackRevealedAt`, which is the
- * record of who was given it.
+ * Revealing stamps `lockFallbackRevealedAt`: the record of who was given it.
  */
 export async function revealFallbackCodeFor(row: {
 	id: string;

@@ -1,15 +1,12 @@
 <script lang="ts">
-	// Type-0 lock users the site does not account for.
+	// Type-0 lock users the site does not account for: standing door codes made
+	// by hand in the U-tec app, which nothing revoked when someone stopped being
+	// a member. Adopting one changes nothing on the lock — it starts tracking it
+	// and reads the code back, so staff can tell a member theirs without
+	// resetting it.
 	//
-	// Seventeen of these existed when the integration was audited: standing door
-	// codes created by hand in the U-tec app, which nothing revoked when someone
-	// stopped being a member. Adopting one changes nothing on the lock — it just
-	// starts tracking it, and reads the code back so staff can tell the member
-	// what theirs is without resetting it.
-	//
-	// There is no bulk action here on purpose. Each of these opens the building
-	// for a real person, and the wrong one revoked locks somebody out of their
-	// band practice.
+	// No bulk action here on purpose: each one opens the building for a real
+	// person, and the wrong one revoked locks somebody out.
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';

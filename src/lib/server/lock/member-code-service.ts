@@ -11,18 +11,14 @@ import {
 } from './ultraloc-client';
 import type { LockMemberCode } from '$lib/server/db/schema/reservation';
 
-// ---------------------------------------------------------------------------
-// Persistent member door codes
-// ---------------------------------------------------------------------------
-// Standing codes are type-0 lock users: no lock-side expiry, so they keep
-// working through an outage and keep working after someone leaves. Seventeen
-// of them existed only inside the U-tec app before this table.
+// Persistent member door codes.
 //
-// Nothing here ever deletes a lock user the app did not grant. Reconciliation
-// *surfaces* unknown codes for staff to adopt or revoke; a wrong guess locks a
-// real person out of their band practice, which is not a mistake worth
-// automating.
-// ---------------------------------------------------------------------------
+// Standing codes are type-0 lock users: no lock-side expiry, so they survive an
+// outage and also survive someone leaving.
+//
+// Nothing here deletes a lock user the app did not grant. Reconciliation
+// *surfaces* unknown codes for staff to adopt or revoke — a wrong guess locks a
+// real person out, which is not a mistake worth automating.
 
 /** The self-test's own user, which is not a member code. */
 const SELF_TEST_NAME = 'CMC Self-Test';

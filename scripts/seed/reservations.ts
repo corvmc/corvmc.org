@@ -99,14 +99,11 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 			const member = pick(users);
 
 			// Confirmed bookings inside the provisioning window carry a door code,
-			// mirroring the daily lock job.
-			//
-			// Whether the lock has *confirmed* it is the interesting part, and both
-			// states have to be reachable locally: `lockSyncedAt` set is the code the
-			// member sees, null is the code that is queued in U-tec's cloud and shows
-			// as pending — with the break-glass code standing in once they are inside
-			// their window. Today's first booking is deliberately left unconfirmed so
-			// that path is not something you can only see in production.
+			// mirroring the daily lock job. Both sync states must be reachable
+			// locally: `lockSyncedAt` set is the code the member sees, null is the
+			// one queued in U-tec's cloud that shows as pending, with the break-glass
+			// code standing in. Today's first booking is left unconfirmed so that
+			// path is not visible only in production.
 			const withinWindow = day >= 0 && day <= 2 && status === 'confirmed';
 			const lockCode = withinWindow ? String(randomInt(1000, 9999)) : null;
 			const lockAccessId = withinWindow ? String(randomInt(100000, 999999)) : null;

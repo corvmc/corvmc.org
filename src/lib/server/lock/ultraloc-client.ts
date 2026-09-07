@@ -229,12 +229,10 @@ const ADD_SETTLE_MS = 3000;
 /**
  * Add a lock user and return the id the lock assigned it.
  *
- * The `add` ack carries no id — it is only `st.deferredResponse`, meaning the
- * command was queued. The id is recoverable by diffing `list` around the add,
- * which is what lets `reservation.lockAccessId` be written at all. Returns null
- * when the diff is ambiguous (nothing new, or more than one new row, which can
- * only happen if something else wrote to the lock concurrently); the caller
- * keeps working, it just has no id to delete or update by later.
+ * The `add` ack carries no id — only `st.deferredResponse`, meaning queued. The
+ * id comes from diffing `list` around the add, which is what lets
+ * `reservation.lockAccessId` be written at all. Null when that diff is
+ * ambiguous (nothing new, or several, from a concurrent write).
  */
 export async function addLockUser(
 	user: Record<string, unknown>,

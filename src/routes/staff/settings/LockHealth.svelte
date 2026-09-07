@@ -2,12 +2,11 @@
 	// Whether the door is actually reachable, and the break-glass code.
 	//
 	// Its own component so the settings page keeps one load-bearing query: this
-	// one talks to U-tec over the network and nothing above the fold needs it, so
-	// it loads lazily behind its own boundary rather than fanning out alongside
-	// `getStaffSettingsPage()`.
+	// one talks to U-tec over the network and nothing above the fold needs it,
+	// so it loads lazily behind its own boundary.
 	//
-	// The page's "Connected" badge means only that a refresh token is stored. This
-	// is the part that says whether a door code will actually work.
+	// The page's "Connected" badge means only that a refresh token is stored;
+	// this says whether a door code will actually work.
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { getLockHealth, rotateFallbackCode } from '$lib/remote/lock.remote';
