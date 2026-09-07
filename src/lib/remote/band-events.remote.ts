@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form } from '$app/server';
 import { requireGroupRole } from '$lib/server/group/group-context';
+import { listBandSlotTerms } from '$lib/server/production/run-of-show-service';
 import {
 	createBandEvent,
 	updateBandEvent,
@@ -72,8 +73,25 @@ export const getBandLineupInvites = query(z.string(), async (slug) => {
  * they are one request and two local reads. See `custom/no-concurrent-remote-queries`.
  */
 export const getBandEventsPage = query(z.string(), async (slug) => {
-	const [events, invites] = await Promise.all([getBandEvents(slug), getBandLineupInvites(slug)]);
-	return { events, invites };
+	const [events, invites, bookings] = await Promise.all([
+		getBandEvents(slug),
+		getBandLineupInvites(slug),
+		getBandBookings(slug)
+	]);
+	return { events, invites, bookings };
+});
+
+/**
+ * Shows this band is booked on, with the deal it was offered.
+ *
+ * Read-only, and only this band's own terms — the act sees the deal before the
+ * show rather than only the payout that came out the other end. It cannot
+ * accept, decline or edit anything here; the invite banner above is where a
+ * credit is answered.
+ */
+export const getBandBookings = query(z.string(), async (slug) => {
+	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	return listBandSlotTerms(band.id);
 });
 
 /** One gig, for the detail page. */

@@ -8,6 +8,7 @@ import { computeSetTimes, orderSlots, runOfShowWarnings, SLOT_MAX } from './run-
 
 import { DomainError } from '$lib/server/domain-error';
 import type { EventBandStatus } from '$lib/server/db/schema/event';
+import type { ActTerms } from '$lib/production/terms';
 import type {
 	PublicSetTime,
 	RunOfShow,
@@ -120,6 +121,11 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				contactName: productionSlot.contactName,
 				contactEmail: productionSlot.contactEmail,
 				contactPhone: productionSlot.contactPhone,
+				guaranteeCents: productionSlot.guaranteeCents,
+				percentageBps: productionSlot.percentageBps,
+				versus: productionSlot.versus,
+				againstNet: productionSlot.againstNet,
+				contributed: productionSlot.contributed,
 				createdAt: productionSlot.createdAt,
 				actName: eventBand.name,
 				actStatus: eventBand.status,
@@ -170,7 +176,14 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				hospitalityNotes: r.hospitalityNotes,
 				contactName: r.contactName,
 				contactEmail: r.contactEmail,
-				contactPhone: r.contactPhone
+				contactPhone: r.contactPhone,
+				terms: {
+					guaranteeCents: r.guaranteeCents,
+					percentageBps: r.percentageBps,
+					versus: r.versus ?? false,
+					againstNet: r.againstNet ?? false,
+					contributed: r.contributed ?? false
+				}
 			}))
 	);
 
@@ -193,7 +206,8 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 		hospitalityNotes: r.hospitalityNotes,
 		contactName: r.contactName,
 		contactEmail: r.contactEmail,
-		contactPhone: r.contactPhone
+		contactPhone: r.contactPhone,
+		terms: r.terms
 	}));
 
 	const slotted = new Set(slots.map((s) => s.eventBandId).filter((id): id is string => !!id));
@@ -460,6 +474,30 @@ export async function moveSlot(slotId: string, direction: 'up' | 'down'): Promis
 	await recomputeSetTimes(owner.productionId);
 }
 
+/**
+ * Set what an act is paid.
+ *
+ * Its own function rather than fields on `updateSlot`: a timing save and a money
+ * save want different confirmations, and this is the seam a settlement
+ * capability would guard without splitting a form that had already grown.
+ */
+export async function setSlotTerms(slotId: string, terms: ActTerms): Promise<void> {
+	const [row] = await db
+		.update(productionSlot)
+		.set({
+			guaranteeCents: terms.guaranteeCents,
+			percentageBps: terms.percentageBps,
+			versus: terms.versus,
+			againstNet: terms.againstNet,
+			contributed: terms.contributed,
+			updatedAt: new Date()
+		})
+		.where(eq(productionSlot.id, slotId))
+		.returning({ id: productionSlot.id });
+
+	if (!row) throw new SlotNotFoundError();
+}
+
 /** Drop a set. The gap it leaves in `sortOrder` is correct — nothing renumbers. */
 export async function removeSlot(slotId: string): Promise<void> {
 	const [row] = await db
@@ -516,6 +554,79 @@ export async function buildSlotsFromLineup(productionId: string, eventId: string
 	await db.insert(productionSlot).values(rows);
 	await recomputeSetTimes(productionId);
 	return rows.length;
+}
+
+/** One show this band is booked on, as the band is allowed to see it. */
+export interface BandSlotTerms {
+	eventId: string;
+	eventTitle: string;
+	startsAt: Date;
+	location: string | null;
+	scheduledStartAt: Date | null;
+	setLengthMinutes: number;
+	soundcheckAt: Date | null;
+	loadInAt: Date | null;
+	curfewAt: Date | null;
+	terms: ActTerms;
+}
+
+/**
+ * The deal a band was offered, on its own page.
+ *
+ * Returns only what belongs to this band — its own terms and call times, never
+ * another act's, a whole-show total, or anything on `production`'s notes.
+ * `offered` and later, because a producer sketching a draft has offered nothing
+ * and a band reading one would be reading a guess.
+ */
+export async function listBandSlotTerms(groupId: string): Promise<BandSlotTerms[]> {
+	const rows = await db
+		.select({
+			eventId: eventListing.id,
+			eventTitle: eventListing.title,
+			startsAt: eventListing.startsAt,
+			location: eventListing.location,
+			scheduledStartAt: productionSlot.scheduledStartAt,
+			setLengthMinutes: productionSlot.setLengthMinutes,
+			soundcheckAt: productionSlot.soundcheckAt,
+			loadInAt: production.loadInAt,
+			curfewAt: production.curfewAt,
+			guaranteeCents: productionSlot.guaranteeCents,
+			percentageBps: productionSlot.percentageBps,
+			versus: productionSlot.versus,
+			againstNet: productionSlot.againstNet,
+			contributed: productionSlot.contributed
+		})
+		.from(productionSlot)
+		.innerJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
+		.innerJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
+		.innerJoin(production, eq(production.id, productionSlot.productionId))
+		.innerJoin(eventListing, eq(eventListing.id, production.eventId))
+		.where(
+			and(
+				eq(directoryEntry.groupId, groupId),
+				inArray(production.status, ['offered', ...PUBLISHED_STATUSES])
+			)
+		)
+		.orderBy(asc(eventListing.startsAt));
+
+	return rows.map((r) => ({
+		eventId: r.eventId,
+		eventTitle: r.eventTitle,
+		startsAt: r.startsAt,
+		location: r.location,
+		scheduledStartAt: r.scheduledStartAt,
+		setLengthMinutes: r.setLengthMinutes,
+		soundcheckAt: r.soundcheckAt,
+		loadInAt: r.loadInAt,
+		curfewAt: r.curfewAt,
+		terms: {
+			guaranteeCents: r.guaranteeCents,
+			percentageBps: r.percentageBps,
+			versus: r.versus,
+			againstNet: r.againstNet,
+			contributed: r.contributed
+		}
+	}));
 }
 
 /**

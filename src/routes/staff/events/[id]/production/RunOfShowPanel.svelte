@@ -7,6 +7,7 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import Field from '$lib/components/ui/Form/FormField.svelte';
+	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { formatTime, toLocalTime } from '$lib/utils/format';
 	import { IconArrowUp, IconArrowDown, IconTrash } from '@tabler/icons-svelte';
@@ -15,8 +16,10 @@
 		updateRunOfShowSlot,
 		moveRunOfShowSlot,
 		removeRunOfShowSlot,
+		setRunOfShowTerms,
 		buildRunOfShowFromLineup
 	} from '$lib/remote/productions.remote';
+	import { describeTerms } from '$lib/production/terms';
 	import type { RunOfShow } from '$lib/types/run-of-show';
 
 	/**
@@ -132,6 +135,11 @@
 									· soundcheck {formatTime(slot.soundcheckAt)}
 								{/if}
 							</div>
+							{#if slot.eventBandId}
+								<!-- The deal reads on the row, not only inside the editor: the
+								     number the act will question is the one worth showing. -->
+								<div class="text-subtle">{describeTerms(slot.terms)}</div>
+							{/if}
 						</div>
 
 						<div class="flex shrink-0 items-center gap-1">
@@ -266,6 +274,60 @@
 							</div>
 							<div class="flex justify-end"><SubmitButton label="Save" /></div>
 						</Form>
+
+						{#if slot.eventBandId}
+							{@const terms = setRunOfShowTerms.for(slot.id)}
+							<!--
+								A separate form from the one above. What an act is credited and
+								what an act is paid are different questions, edited by different
+								people, and a settlement capability would guard one of them.
+							-->
+							<Form remote={terms} guard successToast="Terms saved" class="mt-4 space-y-4">
+								<input {...terms.fields.eventId.as('hidden', eventId)} />
+								<input {...terms.fields.slotId.as('hidden', slot.id)} />
+								<h3 class="text-sm font-semibold">The deal</h3>
+								<div class="grid gap-4 md:grid-cols-2">
+									<MoneyField
+										field={terms.fields.guaranteeCents}
+										label="Guarantee"
+										value={slot.terms.guaranteeCents}
+										description="Leave empty for no guarantee. Zero is a deal at zero."
+									/>
+									<Field
+										field={terms.fields.percentageBps}
+										type="number"
+										label="Percentage (basis points)"
+										value={slot.terms.percentageBps ?? undefined}
+										description="7000 is 70%."
+									/>
+								</div>
+								<Field
+									field={terms.fields.versus}
+									type="checkbox"
+									label="Versus"
+									checkboxLabel="Pay the guarantee or the percentage, whichever is greater"
+									value={slot.terms.versus}
+								/>
+								<Field
+									field={terms.fields.againstNet}
+									type="checkbox"
+									label="Against net"
+									checkboxLabel="The percentage is of net rather than of the acts' pool"
+									value={slot.terms.againstNet}
+								/>
+								<Field
+									field={terms.fields.contributed}
+									type="checkbox"
+									label="Donated"
+									checkboxLabel="Played for free — records what the set was worth"
+									value={slot.terms.contributed}
+								/>
+								<div class="flex items-center justify-between gap-3">
+									<span class="text-subtle">{describeTerms(slot.terms)}</span>
+									<SubmitButton label="Save terms" />
+								</div>
+							</Form>
+						{/if}
 					{/if}
 				</li>
 			{/each}
