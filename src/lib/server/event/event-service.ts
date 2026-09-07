@@ -2055,6 +2055,12 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 				tags: tags ?? null,
 				groupId,
 				source: 'group',
+				// Published, matching `processEventSeries` — a club's weekly series
+				// publishes itself, and the extra meeting the chair adds by hand used
+				// to land as a draft only staff could release. The room is held
+				// `confirmed` either way, so the draft bought no review.
+				status: 'published',
+				publishedAt: new Date(),
 				reservationId,
 				createdByUserId
 			})
@@ -2091,6 +2097,99 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 	}
 
 	return row;
+}
+
+export interface UpdateGroupSessionParams {
+	title?: string;
+	description?: string | null;
+	startsAt?: Date;
+	endsAt?: Date;
+}
+
+/**
+ * Move or rename a program's session, keeping the room it holds in step.
+ *
+ * The reservation is the reason this is not `updateBandEvent`: a gig reserves
+ * nothing, so moving one is a single write. Moving a session has to re-run the
+ * conflict check — excluding its own reservation, or it collides with itself —
+ * and then move the held window too.
+ */
+export async function updateGroupSession(
+	eventId: string,
+	groupId: string,
+	params: UpdateGroupSessionParams
+): Promise<EventRow> {
+	const existing = await getById(eventId);
+	if (!existing) throw new EventNotFoundError();
+	if (existing.groupId !== groupId) throw new EventNotFoundError();
+	if (existing.status === 'cancelled') throw new EventStateError('Cannot update a cancelled event');
+	assertTimeOrder(existing, params);
+
+	const startsAt = params.startsAt ?? existing.startsAt;
+	const endsAt = params.endsAt ?? existing.endsAt;
+	const timeMoved =
+		(params.startsAt && +params.startsAt !== +existing.startsAt) ||
+		(params.endsAt && +params.endsAt !== +(existing.endsAt ?? 0));
+
+	if (existing.reservationId && timeMoved && endsAt) {
+		if (await hasConflict(startsAt, endsAt, existing.reservationId)) {
+			throw new ReservationConflictError();
+		}
+		await db
+			.update(reservation)
+			.set({ startsAt, endsAt, updatedAt: new Date() })
+			.where(eq(reservation.id, existing.reservationId));
+	}
+
+	const updates: Record<string, unknown> = { updatedAt: new Date() };
+	if (params.title !== undefined) updates.title = params.title;
+	if (params.description !== undefined) updates.description = params.description;
+	if (params.startsAt !== undefined) updates.startsAt = params.startsAt;
+	if (params.endsAt !== undefined) updates.endsAt = params.endsAt;
+
+	const [updated] = await db
+		.update(eventListing)
+		.set(updates)
+		.where(eq(eventListing.id, eventId))
+		.returning();
+
+	return updated;
+}
+
+/**
+ * Call a session off, and give the room back.
+ *
+ * `cancelBandEvent` does not do this because a gig holds nothing. Leaving the
+ * reservation behind would keep the practice space blocked for a meeting that
+ * is not happening, which is the whole cost of the room being free.
+ */
+export async function cancelGroupSession(
+	eventId: string,
+	groupId: string,
+	userId: string
+): Promise<void> {
+	const existing = await getById(eventId);
+	if (!existing) throw new EventNotFoundError();
+	if (existing.groupId !== groupId) throw new EventNotFoundError();
+	if (existing.status === 'cancelled') throw new EventStateError('Event is already cancelled');
+
+	await db
+		.update(eventListing)
+		.set({ status: 'cancelled', updatedAt: new Date() })
+		.where(eq(eventListing.id, eventId));
+
+	if (existing.reservationId) {
+		try {
+			await cancelReservation(existing.reservationId, userId, 'Session cancelled', {
+				staffOverride: true
+			});
+		} catch {
+			// Already cancelled is not a failure — the listing is what the leader
+			// pressed the button about.
+		}
+	}
+
+	await detachSlot('event_listing', eventId, 'poster');
 }
 
 /**
