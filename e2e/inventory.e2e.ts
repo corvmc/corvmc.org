@@ -54,7 +54,6 @@ import {
 
 async function loginAsStaff(page: Page) {
 	await page.goto('/login');
-	// FormField renders a <legend>, not a <label for>, so target inputs by name.
 	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
 	await page.getByRole('button', { name: 'Sign in' }).click();
@@ -178,9 +177,7 @@ test.describe('inventory', () => {
 
 		// Put them back with a stocktake correction — the one caller-signed reason.
 		// The modal asks for the counted total now, not the difference; the delta
-		// it derives is what still reaches the ledger. By name rather than by
-		// label — a `FormField` label is a `<legend>` naming the fieldset, so no
-		// FormField input in this app is reachable by its label text.
+		// it derives is what still reaches the ledger.
 		await page.getByRole('button', { name: 'Stocktake' }).click();
 		await page.getByRole('dialog').locator('input[name="counted"]').fill(String(before));
 		await modalSubmit(page, /^Stocktake$/).click();
