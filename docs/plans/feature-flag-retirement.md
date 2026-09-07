@@ -129,7 +129,7 @@ Counts are non-spec call sites in `src/`, taken at `63e5890`.
 | `groups`         | 9                | 0                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
 | `groupEvents`    | 1                | 1                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
 | `announcements`  | 3                | 1                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
-| `helpArticles`   | 5                | 0                  | yes     | **false** (probed)    | ✅ **Unlinked** — footer row removed           | #376 |
+| `helpArticles`   | 5                | 0                  | yes     | **false** (probed)    | ✅ Unlinked #376, then **launched**            | #630 |
 | `emailMarketing` | 6                | 2                  | yes     | **true** (probed)     | ✅ Flag deleted, feature **stays live**        | #376 |
 | `directMessages` | 7                | 0                  | **no**  | false                 | Unlink — **held**, costs an e2e lifecycle test |      |
 | `bandPremium`    | 8                | 1                  | yes     | **false** (confirmed) | ✅ **Launched** — guards out, band sites live  | #494 |
@@ -149,7 +149,7 @@ feature branch, not a flag.
 | Flag             | Surfaces                                                                                               | Where the guards are                                                         |
 | ---------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | `emailMarketing` | `/subscribe/[slug]`, campaign sends                                                                    | `marketing.remote.ts`; the Postmark event webhook; the `send-campaigns` cron |
-| `helpArticles`   | `/member/help/**` and its nav entry, `/api/help/**`                                                    | `help.remote.ts`; three `api/help` endpoints                                 |
+| `helpArticles`   | `/member/help/**` and its nav entry, `/api/help/**` — all live since #630                              | `help.remote.ts`; three `api/help` endpoints                                 |
 | `contentFlags`   | Report actions on directory profiles, events, DMs and suggestions                                      | `events`, `flags`, `direct-messages`, `suggestions` remotes                  |
 | `volunteering`   | `/member/volunteer/**` and its nav entry                                                               | `volunteer.remote.ts` — 19 guards, the largest single surface                |
 | `directMessages` | The member↔member half of `/member/messages`; member↔staff portal chat in the same UI is **not** gated | `direct-messages.remote.ts`, `directory.remote.ts`                           |
