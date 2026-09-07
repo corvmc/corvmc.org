@@ -1440,6 +1440,9 @@ export interface SetLineupOptions {
  * Rows that already exist keep their status, with one hard rule: a `declined`
  * row is never resurrected. Re-adding a band that said no leaves it declined,
  * which is what stops an owner from re-inviting on a loop.
+ *
+ * They also keep their **id** — see `writeLineup`. A credit is a durable thing
+ * other rows point at, not a line in a list that is rewritten wholesale.
  */
 export async function setEventLineup(
 	eventId: string,
@@ -1529,6 +1532,10 @@ export async function setEventLineup(
 		}
 
 		return {
+			// The row this entry already is, or null for a credit that is new to the
+			// bill. Carried out of the map so the write below can tell an update
+			// from an insert without matching a second time.
+			priorId: prior?.id ?? null,
 			eventId,
 			name: e.name,
 			// `e.bandId` is the *group* a lineup editor picked; the credit stores
@@ -1541,19 +1548,86 @@ export async function setEventLineup(
 		};
 	});
 
-	await db.delete(eventBand).where(eq(eventBand.eventId, eventId));
-	if (rows.length) {
-		// D1 caps a statement at 100 bound params; ~7 columns per row.
-		for (let i = 0; i < rows.length; i += 12) {
-			await db.insert(eventBand).values(rows.slice(i, i + 12));
-		}
-	}
+	await writeLineup(eventId, existing, rows);
 
 	if (invited.length)
 		await notifyLineupInvites(
 			evt,
 			invited.map((i) => i.bandId)
 		);
+}
+
+/** One resolved credit, ready to be written. `priorId` is null for a new one. */
+type ResolvedCredit = {
+	priorId: string | null;
+	eventId: string;
+	name: string;
+	directoryEntryId: string | null;
+	billingOrder: number;
+	status: EventBandStatus;
+	note: string | null;
+	addedByGroupId: string | null;
+};
+
+/**
+ * Write a resolved bill, keeping the id of every credit that survived it.
+ *
+ * The obvious implementation — delete the event's rows and insert the new list —
+ * is what this replaces, and it was wrong for one reason: the inserted rows carry
+ * no `id`, so every credit on the show got a fresh one on every save. Renaming an
+ * act, reordering the bill, or adding a fourth support changed nothing about who
+ * was playing and changed every id. Anything hanging off a credit — a lineup
+ * invitation, and from Phase 3 a `production_slot` — was pointing at a row that no
+ * longer existed.
+ *
+ * **Delete before update, not after.** `uq_event_band_event_band` is a partial
+ * unique on `(eventId, directoryEntryId)`, and SQLite enforces a unique index
+ * per-row as the statement walks — there is no `DEFERRABLE INITIALLY DEFERRED`,
+ * and `db.batch()` controls atomicity rather than constraint timing. So an entry
+ * id freed by a removal has to be gone from the table before a surviving row can
+ * claim it, or the update trips the index mid-statement.
+ *
+ * **`addedByGroupId` is not rewritten on an update.** It records who put the act
+ * on the bill; a later edit by somebody else did not. Delete-and-reinsert
+ * overwrote it with whoever saved last, which was never the intent of the column.
+ */
+async function writeLineup(
+	eventId: string,
+	existing: (typeof eventBand.$inferSelect)[],
+	rows: ResolvedCredit[]
+): Promise<void> {
+	const kept = new Set(rows.map((r) => r.priorId).filter((id): id is string => id !== null));
+	const dropped = existing.filter((r) => !kept.has(r.id)).map((r) => r.id);
+
+	if (dropped.length) await db.delete(eventBand).where(inArray(eventBand.id, dropped));
+
+	// At most `LINEUP_MAX` + the owner's slot, so nothing here approaches D1's
+	// 100-parameter statement cap and the updates need no chunking.
+	const updates = rows
+		.filter((r) => r.priorId !== null)
+		.map((r) =>
+			db
+				.update(eventBand)
+				.set({
+					name: r.name,
+					directoryEntryId: r.directoryEntryId,
+					billingOrder: r.billingOrder,
+					status: r.status,
+					note: r.note
+				})
+				.where(eq(eventBand.id, r.priorId!))
+		);
+	if (updates.length) await db.batch(updates as [(typeof updates)[number], ...typeof updates]);
+
+	const inserts = rows
+		.filter((r) => r.priorId === null)
+		.map(({ priorId: _priorId, ...row }) => row);
+	if (inserts.length) {
+		// D1 caps a statement at 100 bound params; ~7 columns per row.
+		for (let i = 0; i < inserts.length; i += 12) {
+			await db.insert(eventBand).values(inserts.slice(i, i + 12));
+		}
+	}
 }
 
 /**
