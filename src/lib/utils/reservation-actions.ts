@@ -49,15 +49,22 @@ export function reservationPaymentState(r: {
 	paidAt?: Date | null;
 	cashDueCents?: number | null;
 	creditsUsed?: number | null;
-	stripePaymentRecordId?: string | null;
-	refundedAt?: Date | null;
+	/**
+	 * Required, unlike its neighbours, and that is the point: a query that
+	 * forgets to select it would otherwise report every refunded booking as a
+	 * plain cancellation with nothing to catch it. `stripePaymentRecordId` used
+	 * to be read here and is gone from the shape rather than left as a field
+	 * nothing uses.
+	 */
+	refundedAt: Date | null;
 }): ReservationPaymentState {
 	if (r.status === 'no_show') return 'no_show';
-	// NOTE: infers "refunded" from "cancelled and once had a payment", so a cancel
-	// whose refund failed still displays as refunded. Keying this on `refundedAt`
-	// is the correct fix but needs a data check first — rows cancelled before that
-	// column was populated would flip to "cancelled". See #573.
-	if (r.status === 'cancelled') return r.stripePaymentRecordId ? 'refunded' : 'cancelled';
+	// `refundedAt`, not "was there ever a payment". Having been charged is not
+	// evidence of having been repaid, and the old inference said "refunded" to
+	// every cancelled booking that had ever taken money — including a refund that
+	// threw, since `reservation-service` writes the column inside the try around
+	// `refund()`. See #573 for the production count behind this.
+	if (r.status === 'cancelled') return r.refundedAt ? 'refunded' : 'cancelled';
 	if (r.paidAt) return 'paid';
 	if ((r.cashDueCents ?? 0) > 0) return 'cash_due';
 	if (r.cashDueCents == null) return 'unpaid';
