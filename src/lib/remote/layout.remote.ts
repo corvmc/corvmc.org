@@ -199,6 +199,15 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		throw error(404, 'Band not found');
 	}
 
+	// A club or committee has no band panel — no press kit, no microsite, no
+	// subscription, and deleting one is staff's. The whole panel was being served
+	// for a program slug, and it was the only place a club leader could invite or
+	// remove anyone. Redirect rather than 404: a bookmark keeps working and lands
+	// where the controls actually live.
+	if (band.kind !== 'band') {
+		redirect(302, `/member/groups/${band.slug}`);
+	}
+
 	const [role, isStaff, userBands, features, messagesUnread] = await Promise.all([
 		getUserRole(band.id, locals.user.id),
 		isElevated(locals.user.id),
