@@ -81,6 +81,7 @@ const {
 	removeSlot,
 	recomputeSetTimes,
 	getPublicSetTimes,
+	setSlotTerms,
 	SlotExistsError,
 	SlotNotFoundError,
 	TooManySlotsError,
@@ -272,6 +273,57 @@ describe('removeSlot', () => {
 	it('throws when the slot is gone', async () => {
 		writeResults = [[]];
 		await expect(removeSlot('slot-a')).rejects.toThrow(SlotNotFoundError);
+	});
+});
+
+describe('setSlotTerms', () => {
+	// Its own write, not fields on `updateSlot`: a money save and a timing save
+	// want different confirmations, and the seam is where a settlement capability
+	// would guard one without splitting the other.
+	it('writes the five deal columns and nothing else', async () => {
+		writeResults = [[{ id: 'slot-a' }]];
+
+		await setSlotTerms('slot-a', {
+			guaranteeCents: 30000,
+			percentageBps: 7000,
+			versus: true,
+			againstNet: false,
+			contributed: false
+		});
+
+		const written = updatesTo(productionSlot)[0].set!;
+		expect(written).toMatchObject({ guaranteeCents: 30000, percentageBps: 7000, versus: true });
+		expect(written).not.toHaveProperty('setLengthMinutes');
+		expect(written).not.toHaveProperty('scheduledStartAt');
+	});
+
+	// Money cannot move a set time, so nothing recomputes.
+	it('does not recompute the schedule', async () => {
+		writeResults = [[{ id: 'slot-a' }]];
+
+		await setSlotTerms('slot-a', {
+			guaranteeCents: null,
+			percentageBps: null,
+			versus: false,
+			againstNet: false,
+			contributed: true
+		});
+
+		expect(calls.filter((c) => c.op === 'select')).toHaveLength(0);
+	});
+
+	it('throws when the slot is gone', async () => {
+		writeResults = [[]];
+
+		await expect(
+			setSlotTerms('slot-a', {
+				guaranteeCents: null,
+				percentageBps: null,
+				versus: false,
+				againstNet: false,
+				contributed: false
+			})
+		).rejects.toThrow(SlotNotFoundError);
 	});
 });
 
