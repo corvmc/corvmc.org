@@ -90,6 +90,9 @@ vi.mock('$lib/server/db/schema/recurring', () => ({
 vi.mock('$lib/server/authorization', () => ({
 	requireUser: vi.fn(() => ({ id: 'user-owner', name: 'Test Owner' })),
 	hasAnyRole: vi.fn(async () => false),
+	// `requireGroupRole`'s `allowStaff` branch asks this one. Absent from the
+	// factory, it throws "No export is defined" and the 403 test reads as a crash.
+	isElevated: vi.fn(async () => false),
 	// `memberRefColumns()` selects this as a correlated subquery. The value is
 	// never asserted here — only that building the projection doesn't throw.
 	topPositionFor: vi.fn(() => sql`null`)
@@ -192,8 +195,9 @@ const {
 	getBandReservations
 } = (await import('$lib/remote/reservations.remote')) as any;
 
-const { hasAnyRole } = (await import('$lib/server/authorization')) as unknown as {
+const { hasAnyRole, isElevated } = (await import('$lib/server/authorization')) as unknown as {
 	hasAnyRole: ReturnType<typeof vi.fn>;
+	isElevated: ReturnType<typeof vi.fn>;
 };
 
 beforeEach(() => {
@@ -201,6 +205,7 @@ beforeEach(() => {
 	bandServiceMock.getUserRole.mockResolvedValue('member');
 	ensureContactPhone.mockResolvedValue(true);
 	hasAnyRole.mockResolvedValue(false);
+	isElevated.mockResolvedValue(false);
 	selectResult = [];
 });
 
@@ -369,7 +374,7 @@ describe('getBandReservations', () => {
 
 	it('allows staff who are not band members', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
-		hasAnyRole.mockResolvedValue(true);
+		isElevated.mockResolvedValue(true);
 
 		await expect(getBandReservations('the-velvet-underground')).resolves.toBeDefined();
 	});

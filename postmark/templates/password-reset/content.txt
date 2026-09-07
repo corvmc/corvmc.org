@@ -1,0 +1,9 @@
+Reset your password
+
+{{#greeting}}{{greeting}}
+
+{{/greeting}}Someone asked to reset the password for your Corvallis Music Collective account. Open this link to choose a new one:
+
+{{{resetUrl}}}
+
+This link expires in {{expiresIn}} and can only be used once. If you didn't ask for this, you can ignore this email — your password stays as it is.

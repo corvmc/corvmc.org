@@ -7,13 +7,14 @@
 	import { invalidateAll } from '$app/navigation';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import type { MemberRef } from '$lib/types/entity';
+	import type { BookerType } from '$lib/config';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { formatCents, formatDate, formatTimeRange } from '$lib/utils/format';
 
 	let {
 		open = $bindable(false),
 		unresolved,
-		hourlyRateCents
+		hourlyRates
 	}: {
 		open: boolean;
 		unresolved: Array<{
@@ -25,13 +26,21 @@
 			notes: string | null;
 			member: MemberRef;
 			cashDueCents: number | null;
+			bookerType: BookerType;
 		}>;
-		hourlyRateCents: number;
+		// One rate per booker type, not one rate. An instructor's unresolved
+		// booking is owed at the teaching rate, and this list is mixed.
+		hourlyRates: Record<BookerType, number>;
 	} = $props();
 
-	function dueLabel(r: { startsAt: Date; endsAt: Date; cashDueCents: number | null }): string {
+	function dueLabel(r: {
+		startsAt: Date;
+		endsAt: Date;
+		cashDueCents: number | null;
+		bookerType: BookerType;
+	}): string {
 		const hrs = (r.endsAt.getTime() - r.startsAt.getTime()) / (1000 * 60 * 60);
-		const dueCents = r.cashDueCents ?? Math.round(hrs * hourlyRateCents);
+		const dueCents = r.cashDueCents ?? Math.round(hrs * hourlyRates[r.bookerType]);
 		const hrsLabel = hrs === 1 ? '1 hr' : `${hrs} hrs`;
 		return `${hrsLabel} · ${formatCents(dueCents)} due`;
 	}

@@ -188,7 +188,9 @@ per-request CPU cap kills it.
 
 Public sign-up is additionally gated by **Cloudflare Turnstile** (bot protection): the
 before-hook in `auth.ts` rejects `/sign-up/email` unless the `x-turnstile-token` header
-verifies (`src/lib/server/turnstile.ts`).
+verifies (`src/lib/server/turnstile.ts`). Verification fails closed — Cloudflare's always-pass
+test secret is reachable only from a local origin, so an unset `TURNSTILE_SECRET_KEY` in
+production rejects submissions instead of accepting everyone.
 
 ### Roles
 

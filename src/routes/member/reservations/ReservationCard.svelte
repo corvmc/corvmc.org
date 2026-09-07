@@ -1,6 +1,15 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
-	import { formatDollars } from '$lib/utils/format';
+	import {
+		formatDollars,
+		formatWeekdayShortCased,
+		formatDayNumber,
+		formatMonthShortCased,
+		formatDateShort,
+		isVenueToday,
+		isVenueTomorrow,
+		isVenueThisWeek
+	} from '$lib/utils/format';
 	import {
 		CancelReservationAction,
 		ConfirmReservationAction,
@@ -11,8 +20,6 @@
 	import { resolve } from '$app/paths';
 	import { withinConfirmationWindow, confirmWindowOpensAt } from '$lib/config';
 	import { isTerminalStatus } from '$lib/utils/reservation-actions';
-
-	import { isToday, isTomorrow, isThisWeek, format } from 'date-fns';
 
 	let { reservation, onchange }: { reservation: Reservation; onchange?: () => void } = $props();
 
@@ -28,11 +35,11 @@
 >
 	<div class="date-block">
 		{#if !isTerminal}
-			{#if isThisWeek(reservation.startsAt)}
+			{#if isVenueThisWeek(reservation.startsAt)}
 				<span class="upcoming-tag">
-					{#if isToday(reservation.startsAt)}
+					{#if isVenueToday(reservation.startsAt)}
 						Today
-					{:else if isTomorrow(reservation.startsAt)}
+					{:else if isVenueTomorrow(reservation.startsAt)}
 						Tomorrow
 					{:else}
 						This Week
@@ -40,9 +47,9 @@
 				</span>
 			{/if}
 		{/if}
-		<span>{format(reservation.startsAt, 'E')}</span>
-		<span class="text-3xl">{format(reservation.startsAt, 'd')}</span>
-		<span>{format(reservation.startsAt, 'MMM')}</span>
+		<span>{formatWeekdayShortCased(reservation.startsAt)}</span>
+		<span class="text-3xl">{formatDayNumber(reservation.startsAt)}</span>
+		<span>{formatMonthShortCased(reservation.startsAt)}</span>
 	</div>
 	<div class="flex flex-1 flex-col">
 		<a
@@ -68,7 +75,7 @@
 		{#if !isPast && reservation.status === 'scheduled' && !canConfirm}
 			<!-- Hint lives above the action row so it never wraps behind the buttons. -->
 			<p class="px-3 text-right text-subtle">
-				Confirm from {format(confirmWindowOpensAt(reservation.startsAt), 'MMM d')}
+				Confirm from {formatDateShort(confirmWindowOpensAt(reservation.startsAt))}
 			</p>
 		{/if}
 		<div class="mt-5 flex h-0 items-center justify-end gap-2 px-2">

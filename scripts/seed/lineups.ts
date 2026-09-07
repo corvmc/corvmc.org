@@ -78,12 +78,18 @@ export async function seedCmcEventLineups(events: any[], bands: any[]) {
 	const liveBands = bands.filter((b: any) => !b.deletedAt).slice(0, 4);
 	if (liveBands.length === 0) return;
 
-	const published = events.filter((e: any) => e.status === 'published').slice(0, 5);
+	// Every published CMC show, not the first five. The five were the past ones,
+	// so the upcoming shows a producer actually works on had no bill at all —
+	// which left the advance, the riders panel and the run of show all looking at
+	// an empty lineup on the one night they exist to describe.
+	const published = events.filter((e: any) => e.status === 'published');
 	for (const [i, evt] of published.entries()) {
 		const headliner = liveBands[i % liveBands.length];
+		// At least one support: a running order of one act is a bill, but it is not
+		// a running order, and nothing about ordering is visible on it.
 		await seedLineup(evt.id, null, [
 			{ name: headliner.name, bandId: headliner.id, status: 'confirmed' },
-			...pickN(SUPPORT_BAND_NAMES, randomInt(0, 2)).map((name) => ({ name }))
+			...pickN(SUPPORT_BAND_NAMES, randomInt(1, 3)).map((name) => ({ name }))
 		]);
 	}
 }

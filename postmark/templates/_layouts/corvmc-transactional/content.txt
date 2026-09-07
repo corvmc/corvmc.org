@@ -7,5 +7,6 @@ Corvallis Music Collective
 6775 SW Philomath Blvd, Corvallis, OR 97333
 corvmc.org · contact@corvmc.org
 
-You're receiving this because of your notification preferences.
+{{^transactional_only}}You're receiving this because of your notification preferences.
 Manage them at https://corvmc.org/member/account
+{{/transactional_only}}

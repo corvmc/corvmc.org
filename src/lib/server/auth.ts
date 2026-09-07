@@ -15,6 +15,11 @@ import { captureException } from '$lib/server/sentry';
 import { ensureUserEntry } from '$lib/server/directory/entry-service';
 import { assignMemberNumber } from '$lib/server/user/member-number-service';
 import { verifyTurnstile } from '$lib/server/turnstile';
+import {
+	RESET_PASSWORD_TOKEN_TTL_SECONDS,
+	sendPasswordChangedEmail,
+	sendPasswordResetEmail
+} from '$lib/server/auth-emails';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
 // ---------------------------------------------------------------------------
 // PBKDF2 password hashing via Web Crypto API
@@ -420,6 +425,27 @@ function createAuth() {
 					return false;
 				},
 				hash: scryptHash
+			},
+			resetPasswordTokenExpiresIn: RESET_PASSWORD_TOKEN_TTL_SECONDS,
+			// A reset is the way back in from an account somebody else has, so it
+			// has to end every other session. Note the 60s `cookieCache` window
+			// below: the session rows go immediately, but a cookie already issued
+			// is trusted without a read until it ages out.
+			revokeSessionsOnPasswordReset: true,
+			// `url` is passed through exactly as better-auth built it. It points at
+			// better-auth's own `/reset-password/:token` callback, which validates
+			// the token before redirecting to the `redirectTo` the request asked
+			// for — so an expired link lands on an error page rather than on a form
+			// that only fails once the member has typed a new password.
+			sendResetPassword: async ({ user: recipient, url }) => {
+				await sendPasswordResetEmail({
+					toEmail: recipient.email,
+					name: recipient.name,
+					resetUrl: url
+				});
+			},
+			onPasswordReset: async ({ user: recipient }) => {
+				await sendPasswordChangedEmail({ toEmail: recipient.email, name: recipient.name });
 			}
 		},
 		user: {

@@ -40,9 +40,19 @@ export const restoreMemberStanding = form(
 );
 
 /**
- * Staff imposing a standing directly, without a report behind it — today that
- * is switching messaging off for the occasional under-18 member, since the site
- * has no age of its own.
+ * Staff imposing a standing directly, without a report behind it.
+ *
+ * Its one documented use was switching messaging off for the occasional
+ * under-18 member, "since the site has no age of its own". The site has one now
+ * — `user.dateOfBirth`, with messaging eligibility derived from it — and that
+ * case is gone from here: it was a fact about who a member is wearing the shape
+ * of a judgement about what they did, appealable under
+ * `docs/specs/moderation-appeals-spec.md` and shown on the same staff card as a
+ * DM abuser. See #556.
+ *
+ * What remains is a staffer acting on something they saw themselves. The
+ * appeals spec closes that path too, by requiring a filed-and-upheld report on
+ * every standing write; this form is what it replaces, not what it keeps.
  *
  * `setStanding` rejects a status the scope has no meaning for, so this cannot be
  * used to put someone in a state no reader understands.

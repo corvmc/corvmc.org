@@ -34,6 +34,11 @@ import { seedVenues } from './seed/venues';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
+import {
+	GROUP_INVITEE_PERSONA,
+	GROUP_LEADER_PERSONAS,
+	seedGroupLeaders
+} from './seed/group-leaders';
 import { seedGroupDocuments } from './seed/group-documents';
 import { seedDirectoryEntries } from './seed/directory';
 import { seedDirectoryPersonas } from './seed/directory-personas';
@@ -44,6 +49,7 @@ import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
 import { seedCmcEventLineups } from './seed/lineups';
 import { seedProductions } from './seed/productions';
+import { seedRunOfShow } from './seed/run-of-show';
 import { seedBandReservations } from './seed/band-reservations';
 import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
 import { seedRecurringSeries } from './seed/recurring';
@@ -105,7 +111,10 @@ async function main() {
 	// which should include it — or slices the first few, which should not.
 	const soloAct = await seedSoloAct(roles);
 	if (soloAct) bands.push(soloAct);
-	const groups = await seedGroups(allUsers);
+	// Before the groups, which take their leaders from it. Kept out of `allUsers`
+	// for the reason `seedGroupLeaders` gives.
+	const groupLeaders = await seedGroupLeaders(roles);
+	const groups = await seedGroups(allUsers, groupLeaders);
 	// After the bands and before the entries, which is the only window that works:
 	// it reads `pendingTags` to point each persona at data the bulk seed actually
 	// produced, and `seedDirectoryEntries` is what gives these accounts a listing
@@ -126,6 +135,9 @@ async function main() {
 	// After the bill, because a production is the ops record for a night that
 	// already has acts on it — and the index shows the two side by side.
 	const productions = await seedProductions(events, allUsers);
+	// After the productions, because a slot hangs off one — and it reads the bill
+	// back rather than being handed it, the way the rider seeder reads a roster.
+	const runOfShow = await seedRunOfShow(productions.rows);
 	const bandReservations = await seedBandReservations(bands);
 	const bandSites = await seedBandSites(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
@@ -199,7 +211,7 @@ async function main() {
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(
-		`  ${dutyLists.lists} duty list, ${dutyLists.workOrders} work orders applied to a show`
+		`  ${dutyLists.lists} duty lists (one on the show's own clock), ${dutyLists.workOrders} work orders applied to a show`
 	);
 	console.log(
 		`  ${orientation.lists} orientation list, ${orientation.workOrders} orientation shifts, ${orientation.orientations} member orientations`
@@ -266,6 +278,9 @@ async function main() {
 		`  ${productions.productions} productions covering every status, ${productions.withoutProduction} CMC shows deliberately without one`
 	);
 	console.log(
+		`  ${runOfShow.slots} run-of-show sets — ${runOfShow.uncredited} on no poster, ${runOfShow.withoutTimes} with no downbeat yet`
+	);
+	console.log(
 		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +
 			`${audio.purchases} sales, ${audio.accounts} band Stripe accounts, ` +
 			`${audio.radioEntries} radio entries`
@@ -290,6 +305,14 @@ async function main() {
 	console.log('    seeker@corvallismusic.org       wants a band — matched bands on /member');
 	console.log('    bandleader@corvallismusic.org   wants members — matched members on /member');
 	console.log('    undecided@corvallismusic.org    no lookingFor — the empty state');
+
+	console.log('\n  Group leader demo logins (all `password`, none of them staff):');
+	for (const p of GROUP_LEADER_PERSONAS) {
+		console.log(`    ${p.email.padEnd(31)} ${p.joinPolicy} group — /member/groups`);
+	}
+	console.log(
+		`    ${GROUP_INVITEE_PERSONA.email.padEnd(31)} a pending invitation to accept — /member/groups`
+	);
 
 	console.log('\n  Solo-act demo login (`password`):');
 	console.log(

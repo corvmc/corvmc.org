@@ -40,6 +40,15 @@ export interface NotificationEmailModel {
 	cta?: NotificationEmailCta;
 	/** Optional small footnote below the body */
 	footnote?: string;
+	/**
+	 * Suppress the shared layout's "you're receiving this because of your
+	 * notification preferences" line.
+	 *
+	 * Set it on mail that no preference governs — password reset, the notice
+	 * that a password changed — where the line is both untrue and, for a member
+	 * who cannot sign in, unactionable. Absent, the line renders as it always has.
+	 */
+	transactional_only?: boolean;
 }
 
 /**

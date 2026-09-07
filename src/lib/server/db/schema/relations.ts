@@ -93,7 +93,33 @@ export const relations = defineRelations(schema, (t) => ({
 			from: t.eventBand.addedByGroupId,
 			to: t.group.id,
 			alias: 'eventBand_addedBy'
-		})
+		}),
+		/** The set this credit plays, once the show has a run of show. */
+		slot: t.one.productionSlot({ from: t.eventBand.id, to: t.productionSlot.eventBandId })
+	},
+	// Two FKs to user — who is running the night, and who opened the record — so
+	// both name which one they follow.
+	production: {
+		event: t.one.eventListing({ from: t.production.eventId, to: t.eventListing.id }),
+		producer: t.one.user({
+			from: t.production.producerUserId,
+			to: t.user.id,
+			alias: 'production_producer'
+		}),
+		createdBy: t.one.user({
+			from: t.production.createdByUserId,
+			to: t.user.id,
+			alias: 'production_createdBy'
+		}),
+		slots: t.many.productionSlot()
+	},
+	productionSlot: {
+		production: t.one.production({
+			from: t.productionSlot.productionId,
+			to: t.production.id
+		}),
+		/** The credit this set belongs to. Null once that credit is off the bill. */
+		credit: t.one.eventBand({ from: t.productionSlot.eventBandId, to: t.eventBand.id })
 	},
 	// Two FKs to user (the member, and the staffer who last changed it), so both
 	// need an alias to say which one they follow. One entry covers every scope —

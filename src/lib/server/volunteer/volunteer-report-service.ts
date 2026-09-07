@@ -14,14 +14,12 @@ import { toContributedValue, type ContributedValue } from './hour-value';
 export type { ReportRange };
 
 /**
- * Every rollup here filters to approved hours only. That is the entire purpose
- * of the review step: a member can claim anything, and this report has to be
- * defensible to a funder.
- *
- * The club-time date handling lives in `$lib/server/report/range` now — it was
- * this function, generalised, and it is the part worth sharing: a naive
- * `new Date('2026-07-01')` is the previous evening here and silently moves a
- * day's work across the boundary of every report that reimplements it.
+ * Every rollup here filters to approved hours only. That is the purpose of the
+ * review step: a member can claim anything, and this report has to be
+ * defensible to a funder. Club-time date handling lives in
+ * `$lib/server/report/range` — a naive `new Date('2026-07-01')` is the previous
+ * evening here, and moves a day's work across the boundary of every report that
+ * reimplements it.
  */
 function approvedIn(range: ReportRange): SQL {
 	const window = rangeCondition(volunteerHourLog.workedOn, range);
@@ -249,15 +247,11 @@ export interface HourLogExportRow {
 
 /**
  * Every approved hour in the range, one row each, for a CSV a grant writer
- * takes away.
+ * takes away. Rows rather than a rollup: the aggregates above answer the
+ * questions we thought of, an export the ones we did not.
  *
- * Rows rather than a rollup on purpose: the aggregates above answer the
- * questions we thought of, and an export exists for the ones we did not.
- *
- * Unpaginated, which is a deliberate difference from `getHoursByMember`. A
- * partial export is a wrong answer rather than a first page, and the ceiling is
- * a few thousand rows a year at this collective's scale. If that stops being
- * true the fix is streaming, not a page size.
+ * Unpaginated, unlike `getHoursByMember` — a partial export is a wrong answer
+ * rather than a first page. If that stops scaling the fix is streaming.
  */
 export async function listApprovedHoursForExport(
 	range: ReportRange = {}

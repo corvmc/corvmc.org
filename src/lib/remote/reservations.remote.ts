@@ -71,6 +71,7 @@ import {
 	isFirstReservationSql,
 	priorBookingCount,
 	announceWaitlistConfirmed,
+	announceConfirmed,
 	ReservationConflictError,
 	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
@@ -81,7 +82,6 @@ import { bookerTypes, type BookerType } from '$lib/config';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { requireInstructor } from '$lib/server/instructor/instructor-context';
 import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
-import { config } from '$lib/server/site-config/site-config-service';
 import { revealFallbackCodeFor } from '$lib/server/lock/fallback-code-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import {
@@ -135,7 +135,9 @@ export const getReservationPayment = query(z.string(), async (id) => {
 	if (row.status !== 'scheduled' && !confirmedUnpaid)
 		throw error(400, 'This reservation is not awaiting payment');
 
-	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
+	// Resolved for who is booking. Reading the config directly quoted an
+	// instructor the $15 drop-in rate on the page they pay from.
+	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
 	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
@@ -172,7 +174,7 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	if (!row) throw error(404, 'Reservation not found');
 	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
 
-	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
+	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
 	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
@@ -413,7 +415,7 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			row.status !== 'waitlisted' &&
 			priorCount === 0,
 		orientation,
-		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
+		hourlyRateCents: (await getBookingTerms(row.bookerType)).hourlyRateCents
 	};
 });
 
@@ -894,6 +896,10 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			notes: reservation.notes,
 			stripePaymentRecordId: reservation.stripePaymentRecordId,
 			paidAt: reservation.paidAt,
+			// `reservationPaymentState` reads this to tell a refunded booking from a
+			// plain cancellation, and takes it as a required field so a query that
+			// forgets it cannot compile.
+			refundedAt: reservation.refundedAt,
 			cashDueCents: reservation.cashDueCents,
 			creditsUsed: reservation.creditsUsed,
 			createdByUserId: reservation.createdByUserId,
@@ -968,7 +974,10 @@ export const getUnresolvedReservations = query(async () => {
 			createdByUserId: reservation.createdByUserId,
 			notes: reservation.notes,
 			member: memberRefColumns(),
-			cashDueCents: reservation.cashDueCents
+			cashDueCents: reservation.cashDueCents,
+			// So the resolve modal can price a row that has no `cashDueCents` yet
+			// at the booker's own rate rather than everyone's at the member one.
+			bookerType: reservation.bookerType
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
@@ -993,10 +1002,20 @@ export const getUnresolvedReservations = query(async () => {
 	return rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
 });
 
-/** Staff: current hourly rate for reservation pricing. */
-export const getHourlyRate = query(async () => {
+/**
+ * Staff: the hourly rate for every booker type, for reservation pricing.
+ *
+ * A table rather than a number because the caller is the staff reservations
+ * list, which is mixed: one scalar applied down the rows quoted every
+ * instructor booking at the member rate. There is no booker in scope here to
+ * resolve against, so the page indexes by each row's own `bookerType`.
+ */
+export const getHourlyRates = query(async () => {
 	await requireCapability('reservation.read');
-	return config<number>('reservation.hourlyRateCents');
+	const cfg = await getReservationConfig();
+	return Object.fromEntries(
+		bookerTypes.map((t) => [t, termsFor(t, cfg).hourlyRateCents])
+	) as Record<BookerType, number>;
 });
 
 // ===========================================================================
@@ -1230,6 +1249,8 @@ async function commitCreditsAndSettleIfCovered(opts: {
 			)
 		);
 
+	await announceConfirmed(opts.reservationId);
+
 	return { remainingCents: 0, settled: true };
 }
 
@@ -1303,6 +1324,7 @@ async function payReservationRemainder(opts: {
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, opts.row.id));
+		await announceConfirmed(opts.row.id);
 		return { paid: true };
 	}
 
@@ -1428,6 +1450,9 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 				.update(reservation)
 				.set({ status: 'confirmed', updatedAt: new Date() })
 				.where(eq(reservation.id, res.id));
+			// The settled branch announced it from inside
+			// `commitCreditsAndSettleIfCovered`; this is the other half.
+			await announceConfirmed(res.id);
 		}
 		return { reservationId: res.id, confirmed: true as const };
 	}
@@ -1494,6 +1519,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, res.id));
+
+		await announceConfirmed(res.id);
 
 		return { reservationId: res.id, paid: true as const };
 	}
@@ -2272,14 +2299,14 @@ export const getBandReservationsPage = query(z.string(), async (slug) => {
 export const getStaffReservationsPage = query(staffReservationFiltersSchema, async (filters) => {
 	await requireCapability('reservation.read');
 
-	const [list, counts, unresolved, hourlyRate] = await Promise.all([
+	const [list, counts, unresolved, hourlyRates] = await Promise.all([
 		getStaffReservations(filters),
 		getReservationCounts(),
 		getUnresolvedReservations(),
-		getHourlyRate()
+		getHourlyRates()
 	]);
 
-	return { list, counts, unresolved, hourlyRate };
+	return { list, counts, unresolved, hourlyRates };
 });
 
 /**

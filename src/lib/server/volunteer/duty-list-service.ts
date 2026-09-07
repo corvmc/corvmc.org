@@ -9,12 +9,15 @@ import {
 	workTask
 } from '$lib/server/db/schema/volunteer';
 import { eventListing } from '$lib/server/db/schema/event';
+import { production } from '$lib/server/db/schema/production';
 import { reservation } from '$lib/server/db/schema/reservation';
 import {
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_MAX_MINUTES,
 	VOLUNTEER_SHIFT_NOTES_MAX,
-	dutyListSubjectLabels
+	dutyListAnchorLabels,
+	dutyListSubjectLabels,
+	productionDutyListAnchors
 } from '$lib/config';
 import type { DutyListAnchor, DutyListAutoApplyTrigger, DutyListSubject } from '$lib/config';
 import type { DutyList, DutyListItem } from '$lib/server/db/schema/volunteer';
@@ -23,19 +26,10 @@ import { chunk, chunkSize } from '$lib/server/utils/chunk';
 /**
  * Duty lists: a named set of work orders, stamped onto a subject.
  *
- * Staffing a show is six work orders — Booking Lead a week out, then Door, Tech,
- * Merch and Tear Down around doors — and every one of them is entered by hand
- * today. This is that, once.
- *
- * Applying a list writes ordinary `work_order` rows. They carry
- * `dutyListId` for provenance and nothing else: editing a list afterwards must
- * not reach into work people have already claimed, which is the same bargain
- * `duplicateShift` makes when it says the copy has "no link back".
- *
- * The subject is a show or a rehearsal booking. Both are a window with a start
- * and an end, which is all an offset needs, so the two share one apply and one
- * output — the only difference is which anchor column the work order carries
- * and whether `doors` means anything.
+ * Applying one writes ordinary `work_order` rows carrying `dutyListId` for
+ * provenance and nothing else — editing a list afterwards must not reach into
+ * work people have already claimed. The subject is a show or a rehearsal
+ * booking: both are a window, which is all an offset needs, so they share an apply.
  */
 
 // ---------------------------------------------------------------------------
@@ -466,21 +460,48 @@ interface TimedSubject {
 	endsAt: Date | null;
 	/** Always null for a reservation — a rehearsal has no doors. */
 	doorsAt: Date | null;
+	/** The show's own clock. Null for a reservation, and for a show with no production. */
+	loadInAt: Date | null;
+	firstSetAt: Date | null;
+	curfewAt: Date | null;
+	loadOutBy: Date | null;
+	hasProduction: boolean;
 }
 
 async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
 	if (subject.kind === 'event') {
+		// Left join: most listings have no production, and a list anchored to the
+		// listing's own clock must still apply to one that does not.
 		const [row] = await db
 			.select({
 				id: eventListing.id,
 				startsAt: eventListing.startsAt,
 				endsAt: eventListing.endsAt,
-				doorsAt: eventListing.doorsAt
+				doorsAt: eventListing.doorsAt,
+				productionId: production.id,
+				loadInAt: production.loadInAt,
+				firstSetAt: production.firstSetAt,
+				curfewAt: production.curfewAt,
+				loadOutBy: production.loadOutBy
 			})
 			.from(eventListing)
+			.leftJoin(production, eq(production.eventId, eventListing.id))
 			.where(eq(eventListing.id, subject.id))
 			.limit(1);
-		return row ? { kind: 'event', ...row } : null;
+		return row
+			? {
+					kind: 'event',
+					id: row.id,
+					startsAt: row.startsAt,
+					endsAt: row.endsAt,
+					doorsAt: row.doorsAt,
+					loadInAt: row.loadInAt,
+					firstSetAt: row.firstSetAt,
+					curfewAt: row.curfewAt,
+					loadOutBy: row.loadOutBy,
+					hasProduction: row.productionId !== null
+				}
+			: null;
 	}
 
 	const [row] = await db
@@ -492,37 +513,77 @@ async function loadSubject(subject: DutySubject): Promise<TimedSubject | null> {
 		.from(reservation)
 		.where(eq(reservation.id, subject.id))
 		.limit(1);
-	return row ? { kind: 'reservation', ...row, doorsAt: null } : null;
+	return row
+		? {
+				kind: 'reservation',
+				...row,
+				doorsAt: null,
+				loadInAt: null,
+				firstSetAt: null,
+				curfewAt: null,
+				loadOutBy: null,
+				hasProduction: false
+			}
+		: null;
 }
 
 /**
  * A list anchored to `doors` cannot be stamped onto a rehearsal booking.
  *
- * `resolveAnchor` falls back from `doorsAt` to `startsAt` for an event because
- * not every show sets a doors time — but a show without one still *has* doors.
- * A rehearsal has no such concept, so taking the same fallback would quietly
- * turn "fifteen minutes before doors" into "fifteen minutes before the booking"
- * and read as correct on every screen. Refuse it at save time, so the pairing is
- * unmakeable rather than merely unappliable.
+ * `resolveAnchor` falls back from `doorsAt` to `startsAt` for an event, because
+ * a show without a doors time still has doors. A rehearsal has no such concept,
+ * so the same fallback would quietly turn "fifteen minutes before doors" into
+ * "before the booking" and read as correct everywhere. Refuse it at save time.
  */
 function assertAnchorFitsSubject(anchor: DutyListAnchor, subject: DutyListSubject): void {
-	if (anchor === 'doors' && subject !== 'event') {
+	if (subject === 'event') return;
+
+	if (anchor === 'doors') {
 		throw new DutyListValidationError(
 			`${dutyListSubjectLabels[subject]} has no doors time — anchor this list to the start or the end instead.`,
+			'anchor'
+		);
+	}
+	// The four production anchors are the show's own clock, and a rehearsal
+	// booking has no run of show to hang them off — same reasoning as `doors`.
+	if ((productionDutyListAnchors as readonly string[]).includes(anchor)) {
+		throw new DutyListValidationError(
+			`${dutyListSubjectLabels[subject]} has no ${dutyListAnchorLabels[anchor].toLowerCase()} — that is a show's own clock.`,
 			'anchor'
 		);
 	}
 }
 
 /**
+ * Resolve one of the show's own times, or say why it cannot.
+ *
+ * Two different failures, and the difference matters to whoever reads it: no
+ * production at all means the show has no ops record yet, while a null column
+ * means the producer has not filled that time in.
+ */
+function productionTime(subj: TimedSubject, anchor: DutyListAnchor, at: Date | null): Date {
+	if (!subj.hasProduction) {
+		throw new DutyListValidationError(
+			`This list is anchored to ${dutyListAnchorLabels[anchor].toLowerCase()}, and this show has no production yet.`,
+			'eventId'
+		);
+	}
+	if (!at) {
+		throw new DutyListValidationError(
+			`This show's production has no ${dutyListAnchorLabels[anchor].toLowerCase()} time set yet.`,
+			'eventId'
+		);
+	}
+	return at;
+}
+
+/**
  * Stamp a duty list onto a subject — a show, or a member's rehearsal booking.
  *
- * Offsets are plain instant arithmetic from a real anchor timestamp, so daylight
- * saving needs no special handling here — unlike `duplicateShift`, which shifts a
- * wall-clock date and does.
- *
- * `createdByUserId` is nullable because the orientation listener applies a list
- * with no acting user; `work_order.created_by_user_id` is already set-null.
+ * Offsets are instant arithmetic from a real anchor timestamp, so daylight
+ * saving needs no handling here — unlike `duplicateShift`, which shifts a
+ * wall-clock date and does. `createdByUserId` is nullable because the
+ * orientation listener applies a list with no acting user.
  */
 export async function applyDutyList(
 	dutyListId: string,
@@ -635,6 +696,18 @@ function resolveAnchor(anchor: DutyListAnchor, subj: TimedSubject): Date {
 			return subj.doorsAt ?? subj.startsAt;
 		case 'start':
 			return subj.startsAt;
+		case 'load_in':
+			assertAnchorFitsSubject(anchor, subj.kind);
+			return productionTime(subj, anchor, subj.loadInAt);
+		case 'first_set':
+			assertAnchorFitsSubject(anchor, subj.kind);
+			return productionTime(subj, anchor, subj.firstSetAt);
+		case 'curfew':
+			assertAnchorFitsSubject(anchor, subj.kind);
+			return productionTime(subj, anchor, subj.curfewAt);
+		case 'load_out':
+			assertAnchorFitsSubject(anchor, subj.kind);
+			return productionTime(subj, anchor, subj.loadOutBy);
 		case 'end':
 			// Only reachable for an event: `reservation.ends_at` is NOT NULL.
 			if (!subj.endsAt) {

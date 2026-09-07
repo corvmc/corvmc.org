@@ -100,9 +100,12 @@ POSTMARK_BROADCAST_STREAM = "broadcast"
 # docs/architecture/inbox-reply-setup.md
 INBOX_REPLY_ADDRESS = "reply@replies.corvmc.org"
 # Public Cloudflare Turnstile site key for the bot-protection widget on the public
-# sign-up, contact, and subscribe forms. Non-secret. The matching secret is the
-# TURNSTILE_SECRET_KEY Worker secret (set via `wrangler secret put`). The value
-# below is Cloudflare's always-pass test key; replace with the real site key.
+# sign-up, contact, and subscribe forms. Non-secret. This is the real site key —
+# Cloudflare's always-pass test key is `1x00000000000000000000AA`, and an earlier
+# comment here wrongly claimed the value below was it. The matching
+# TURNSTILE_SECRET_KEY Worker secret (`wrangler secret put`) is REQUIRED: off a
+# local origin, verification now fails closed without it rather than falling back
+# to the always-pass test secret. See src/lib/server/turnstile.ts.
 PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADkKhGrOdNGAT-pY"
 # Legacy Laravel app (Forge-hosted, currently served at corvmc.org) — used for
 # bcrypt password verification during the migration window; drops out after cutover.

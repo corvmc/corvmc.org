@@ -1,6 +1,7 @@
 <script lang="ts">
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import { ADULT_AGE_YEARS } from '$lib/utils/age';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import {
@@ -23,11 +24,21 @@
 <svelte:boundary>
 	{@const messaging = settings.standing}
 	<InfoCard title="Direct Messages">
-		<!-- Two separate things, shown together on purpose. The restriction is
-		     staff's and read-only; the switch below it is the member's own and
-		     always theirs to set. Toggling it never lifts the restriction —
-		     they write different tables. -->
-		{#if messaging.standing.status !== 'none'}
+		<!-- Three separate things, shown together on purpose. Age is a fact and
+		     lifts itself; the restriction is staff's and read-only; the switch
+		     below is the member's own and always theirs to set. Toggling the
+		     switch never lifts either of the others — they are different tables,
+		     and one of them is not a table at all. -->
+		{#if messaging.ageRestricted}
+			<!-- Deliberately not an Alert with a reason and a "contact staff" line.
+			     Nobody judged this member and there is nothing for them to appeal;
+			     before #556 they were shown a moderation notice about their own
+			     date of birth. -->
+			<Alert type="info">
+				Direct messages are open to members {ADULT_AGE_YEARS} and over. Everything else on the site is
+				yours to use.
+			</Alert>
+		{:else if messaging.standing.status !== 'none'}
 			<Alert type="warning">
 				{messaging.standing.status === 'disabled'
 					? 'Direct messaging is switched off for your account by staff.'

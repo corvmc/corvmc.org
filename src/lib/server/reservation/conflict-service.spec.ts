@@ -39,6 +39,10 @@ vi.mock('drizzle-orm', async (importOriginal) => {
 	};
 });
 
+// The `teaching*` keys are fixtures, not decoration: without them `termsFor`
+// falls through to the DEFAULT_TEACHING_* constants and an instructor case
+// would be asserting against the module's own defaults rather than against
+// anything this mock controls.
 vi.mock('$lib/server/site-config/site-config-service', () => ({
 	getConfigsByPrefix: vi.fn(async () => ({
 		operatingHoursStart: '09:00',
@@ -48,7 +52,10 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 		timeSlotMinutes: 30,
 		bufferMinutes: 0,
 		maxAdvanceDaysOneoff: 14,
-		maxAdvanceDaysRecurring: 17.5
+		maxAdvanceDaysRecurring: 17.5,
+		teachingMinDurationHours: 0.5,
+		teachingMaxAdvanceDaysOneoff: 60,
+		teachingMaxAdvanceDaysRecurring: 90
 	}))
 }));
 
@@ -105,6 +112,39 @@ describe('validateBooking', () => {
 		const result = await validateBooking(makeDate(date, '10:00'), makeDate(date, '10:30'));
 		expect(result.valid).toBe(false);
 		expect(result.code).toBe('MIN_DURATION');
+	});
+
+	/**
+	 * Instructor terms, which nothing in this file exercised: every call passed
+	 * `(startsAt, endsAt)` and so only ever took `termsFor`'s default `'user'`
+	 * branch. A teaching lesson is half an hour and books a term ahead, and both
+	 * halves were unguarded here.
+	 */
+	it('accepts a 30-minute booking for an instructor — the member minimum is not theirs', async () => {
+		const result = await validateBooking(makeDate(date, '10:00'), makeDate(date, '10:30'), {
+			bookerType: 'instructor'
+		});
+		expect(result).toEqual({ valid: true });
+	});
+
+	it('still rejects a 30-minute booking for everyone else', async () => {
+		for (const bookerType of ['user', 'group', 'event_listing'] as const) {
+			const result = await validateBooking(makeDate(date, '10:00'), makeDate(date, '10:30'), {
+				bookerType
+			});
+			expect(result.code, bookerType).toBe('MIN_DURATION');
+		}
+	});
+
+	it('lets an instructor book a term ahead, where a member is capped at two weeks', async () => {
+		const farOff = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+		farOff.setUTCHours(18, 0, 0, 0);
+		const end = new Date(farOff.getTime() + 60 * 60 * 1000);
+
+		expect((await validateBooking(farOff, end)).code).toBe('TOO_FAR_AHEAD');
+		expect(await validateBooking(farOff, end, { bookerType: 'instructor' })).toEqual({
+			valid: true
+		});
 	});
 
 	it('rejects duration longer than maximum', async () => {

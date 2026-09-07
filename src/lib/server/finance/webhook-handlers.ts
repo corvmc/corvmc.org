@@ -1,6 +1,7 @@
 import type Stripe from 'stripe';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
+import { paymentCache } from '$lib/server/db/schema/finance';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
 import { DOLLARS_PER_UNIT } from '$lib/config';
@@ -51,7 +52,9 @@ export const webhookHandlerMap: WebhookHandlerMap = {
 	'checkout.session.completed': handleCheckoutCompleted,
 	'invoice.paid': handleInvoicePaid,
 	'customer.subscription.updated': handleSubscriptionUpdated,
-	'customer.subscription.deleted': handleSubscriptionDeleted
+	'customer.subscription.deleted': handleSubscriptionDeleted,
+	'invoice.payment_failed': handleInvoicePaymentFailed,
+	'charge.refunded': handleChargeRefunded
 };
 
 // ---------------------------------------------------------------------------
@@ -123,6 +126,84 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 	};
 
 	await db.update(user).set({ subscription }).where(eq(user.id, member.id));
+
+	// `billing_reason` is Stripe's own answer to first-payment-or-renewal.
+	// Inferring it from `existingSub == null` would be wrong for a member who
+	// lapsed and came back: `subscription.deleted` nulls the column, so their
+	// second first-payment would look like a renewal.
+	const started = invoice.billing_reason === 'subscription_create';
+	await domainEvents.emit(started ? 'membership.started' : 'membership.renewed', {
+		userId: member.id,
+		userName: member.name,
+		userEmail: member.email,
+		amountCents: invoice.amount_paid ?? 0,
+		// hoursPerReset is credits (30-min blocks); the bus carries hours.
+		freeHoursPerMonth: subscription.hoursPerReset / 2,
+		periodEnd: nextReset,
+		invoiceId: invoice.id ?? '',
+		coveringFees
+	});
+}
+
+// ---------------------------------------------------------------------------
+// invoice.payment_failed — the member's card did not go through
+// ---------------------------------------------------------------------------
+// Mirrors handleInvoicePaid's guards and then does nothing but emit. Credits
+// are deliberately left alone: Stripe retries on its own schedule, and zeroing
+// a balance on the first failed attempt would take rehearsal hours away from a
+// member whose card recovers on the second. If the retries do run out, Stripe
+// cancels the subscription and `customer.subscription.deleted` zeroes them
+// there, which is the right moment.
+// ---------------------------------------------------------------------------
+
+export async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+	if (!invoice.parent?.subscription_details) return;
+
+	const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
+	if (!customerId) return;
+
+	const member = await findUserByStripeId(customerId);
+	if (!member) {
+		console.warn(`invoice.payment_failed: no user found for Stripe customer ${customerId}`);
+		return;
+	}
+
+	await domainEvents.emit('membership.payment_failed', {
+		userId: member.id,
+		userName: member.name,
+		userEmail: member.email,
+		amountCents: invoice.amount_due ?? 0,
+		invoiceId: invoice.id ?? '',
+		hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+		nextAttemptAt: invoice.next_payment_attempt
+			? new Date(invoice.next_payment_attempt * 1000).toISOString()
+			: null
+	});
+}
+
+// ---------------------------------------------------------------------------
+// charge.refunded — a refund issued outside the app
+// ---------------------------------------------------------------------------
+// Deliberately minimal, and it sends nothing. Refunds raised through the app
+// already mark their own row (payment-service.ts); this exists so a refund
+// issued from the Stripe dashboard stops the local record reading as if the
+// money had stayed.
+//
+// `payment_cache.id` is a payment-intent id on the paths that have one and a
+// Stripe payment-record id on the others, so this matches what it can and
+// no-ops otherwise. Subscription invoices never write a payment_cache row at
+// all, so a refunded contribution is a no-op here by construction.
+// ---------------------------------------------------------------------------
+
+export async function handleChargeRefunded(charge: Stripe.Charge): Promise<void> {
+	const paymentIntentId =
+		typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
+	if (!paymentIntentId) return;
+
+	await db
+		.update(paymentCache)
+		.set({ status: 'refunded', refundedAt: new Date() })
+		.where(eq(paymentCache.id, paymentIntentId));
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +229,12 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
 	if (!customerId) return;
 
 	const [member] = await db
-		.select({ id: user.id, subscription: user.subscription })
+		.select({
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			subscription: user.subscription
+		})
 		.from(user)
 		.where(eq(user.stripeId, customerId))
 		.limit(1);
@@ -157,6 +243,19 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
 	const existingSub = member.subscription as Subscription | null;
 	const next = await buildMemberSubscriptionState(subscription, existingSub);
 	await db.update(user).set({ subscription: next }).where(eq(user.id, member.id));
+
+	// A member cancels in Stripe's billing portal, off-site, and returns to an
+	// app that says nothing about it. This is the transition — false to true —
+	// rather than the state, because Stripe re-sends `updated` for unrelated
+	// reasons and a state check would mail them again each time.
+	if (!existingSub?.cancelAtPeriodEnd && next?.cancelAtPeriodEnd) {
+		await domainEvents.emit('membership.cancellation_scheduled', {
+			userId: member.id,
+			userName: member.name,
+			userEmail: member.email,
+			endsAt: next.creditsResetAt
+		});
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -204,6 +303,16 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
 	await cancelAllForUser(member.id);
 
 	await db.update(user).set({ subscription: null }).where(eq(user.id, member.id));
+
+	// Emitted after the credits are zeroed and the series are cancelled, so the
+	// email describes what has already happened rather than what is about to.
+	// `endsAt` is null: this IS the end.
+	await domainEvents.emit('membership.ended', {
+		userId: member.id,
+		userName: member.name,
+		userEmail: member.email,
+		endsAt: null
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -314,9 +423,14 @@ export async function allocateCreditsFromInvoice(
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Selects name and email as well as the id, because every membership event on
+ * the bus carries them — a listener that had to re-read the row to address an
+ * email would be doing a query the webhook already paid for.
+ */
 async function findUserByStripeId(stripeCustomerId: string) {
 	const [found] = await db
-		.select({ id: user.id })
+		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
 		.where(eq(user.stripeId, stripeCustomerId))
 		.limit(1);

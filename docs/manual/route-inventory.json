@@ -132,6 +132,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/forgot-password",
+		"panel": "public"
+	},
+	{
 		"route": "/groups",
 		"panel": "public"
 	},
@@ -209,6 +213,10 @@
 	},
 	{
 		"route": "/member/groups/[slug]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/groups/[slug]/edit",
 		"panel": "member"
 	},
 	{
@@ -301,6 +309,10 @@
 	},
 	{
 		"route": "/radio",
+		"panel": "public"
+	},
+	{
+		"route": "/reset-password",
 		"panel": "public"
 	},
 	{

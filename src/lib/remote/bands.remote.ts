@@ -513,7 +513,13 @@ export const updateBand = form(
 // something to validate and the schema comes back.
 export const deleteBand = form(z.object({ bandId: bandIdField }), async (data) => {
 	const { group: band } = await requireGroupRole({ id: data.bandId }, 'owner');
-	await deleteBandService(band.id);
+	try {
+		await deleteBandService(band.id);
+	} catch (err) {
+		// `CannotDeleteProgramError` is a 403 and a rule, not a fault. Unmapped it
+		// reached the client as a 500.
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 

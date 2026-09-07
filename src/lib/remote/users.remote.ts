@@ -65,6 +65,7 @@ import { findMatchesFor, isProfileComplete } from '$lib/server/directory/directo
 import { startOfWeek, endOfWeek } from 'date-fns';
 import type { CreditType } from '$lib/server/db/schema/finance';
 import type { BatchItem } from 'drizzle-orm/batch';
+import { parseBirthDateInput } from '$lib/utils/age';
 
 // ---------------------------------------------------------------------------
 // Staff list queries
@@ -247,6 +248,7 @@ export const getUser = query(z.string(), async (id) => {
 			emailVerified: user.emailVerified,
 			pronouns: user.pronouns,
 			phone: user.phone,
+			dateOfBirth: user.dateOfBirth,
 			image: user.image,
 			memberNumber: user.memberNumber,
 			directoryVisibility: directoryEntry.visibility,
@@ -324,6 +326,10 @@ const updateUserSchema = z.object({
 	name: z.string().trim().min(1).max(SHORT_TEXT_MAX),
 	pronouns: z.string().trim().max(50),
 	phone: z.string().trim().max(30),
+	// `YYYY-MM-DD`, or empty to clear. Unlike the member's own form this is not
+	// write-once: staff are who a member asks when the date is wrong, and this is
+	// the only place it can be put right.
+	dateOfBirth: z.string().trim().max(10).optional().default(''),
 	// `.optional()`, not `.default([])`, and still no `.catch([])`. Once the role
 	// picker is hidden from a caller without `user.setRole`, an absent field
 	// means "not submitted" — which is not the same as `[]`, "remove every
@@ -407,6 +413,7 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 				name: data.name,
 				pronouns: data.pronouns || null,
 				phone: data.phone || null,
+				dateOfBirth: parseBirthDateInput(data.dateOfBirth),
 				updatedAt: new Date()
 			})
 			.where(eq(user.id, id))

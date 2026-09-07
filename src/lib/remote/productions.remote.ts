@@ -9,6 +9,15 @@ import {
 	updateProductionDetails as updateService,
 	transitionProduction as transitionService
 } from '$lib/server/production/production-service';
+import {
+	addSlot,
+	updateSlot,
+	moveSlot,
+	removeSlot,
+	setSlotTerms,
+	buildSlotsFromLineup
+} from '$lib/server/production/run-of-show-service';
+import { PERCENTAGE_BPS_MAX } from '$lib/production/terms';
 import { getStaffEventPage, getStaffEventProduction, getStaffEvents } from './events.remote';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -145,5 +154,165 @@ export const advanceProduction = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
+	}
+);
+
+// ---------------------------------------------------------------------------
+// Run of show
+// ---------------------------------------------------------------------------
+
+const slotRef = {
+	eventId: z.string().min(1),
+	slotId: z.string().min(1)
+};
+
+/** A set that runs longer than a working day is a typo, not a set. */
+const setLength = z.number().int().min(1).max(600);
+const changeover = z.number().int().min(0).max(240);
+
+/** Turn '' into null once, so a handler never has to decide what blank means. */
+function optionalText(value?: string): string | null {
+	const trimmed = value?.trim();
+	return trimmed ? trimmed : null;
+}
+
+export const addRunOfShowSlot = form(
+	z.object({
+		eventId: z.string().min(1),
+		productionId: z.string().min(1),
+		/** Blank is a slot on no poster — a DJ between sets, a host. */
+		eventBandId: z.string().optional(),
+		setLengthMinutes: setLength,
+		changeoverMinutes: changeover.optional()
+	}),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await addSlot(data.productionId, {
+				eventBandId: data.eventBandId || null,
+				setLengthMinutes: data.setLengthMinutes,
+				changeoverMinutes: data.changeoverMinutes
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
+	}
+);
+
+export const updateRunOfShowSlot = form(
+	z.object({
+		...slotRef,
+		setLengthMinutes: setLength,
+		changeoverMinutes: changeover,
+		soundcheckDate: z.string().optional(),
+		soundcheckTime: z.string().optional(),
+		techNotes: z.string().max(2000).optional(),
+		backlineNeeds: z.string().max(2000).optional(),
+		hospitalityNotes: z.string().max(2000).optional(),
+		contactName: z.string().max(200).optional(),
+		contactEmail: z.string().max(200).optional(),
+		contactPhone: z.string().max(50).optional()
+	}),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await updateSlot(data.slotId, {
+				setLengthMinutes: data.setLengthMinutes,
+				changeoverMinutes: data.changeoverMinutes,
+				soundcheckAt: optionalMoment(data.soundcheckDate, data.soundcheckTime),
+				techNotes: optionalText(data.techNotes),
+				backlineNeeds: optionalText(data.backlineNeeds),
+				hospitalityNotes: optionalText(data.hospitalityNotes),
+				contactName: optionalText(data.contactName),
+				contactEmail: optionalText(data.contactEmail),
+				contactPhone: optionalText(data.contactPhone)
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
+	}
+);
+
+export const moveRunOfShowSlot = form(
+	z.object({ ...slotRef, direction: z.enum(['up', 'down']) }),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await moveSlot(data.slotId, data.direction);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
+	}
+);
+
+export const removeRunOfShowSlot = form(z.object(slotRef), async (data) => {
+	await requireCapability('event.manage');
+	try {
+		await removeSlot(data.slotId);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	await getStaffEventProduction(data.eventId).refresh();
+	return { success: true };
+});
+
+/** The empty state's one button: a bill is already a running order, usually. */
+export const buildRunOfShowFromLineup = form(
+	z.object({ eventId: z.string().min(1), productionId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await buildSlotsFromLineup(data.productionId, data.eventId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
+	}
+);
+
+/**
+ * The deal, per act.
+ *
+ * Its own form rather than fields on `updateRunOfShowSlot`: a money save and a
+ * timing save want different confirmations, and this is the seam a settlement
+ * capability would guard without splitting a form that had already grown.
+ *
+ * The ranges are here because they cannot be CHECK constraints — a CHECK on a
+ * populated table is a rebuild — and because a client can post any number
+ * regardless of what the column allows.
+ */
+export const setRunOfShowTerms = form(
+	z.object({
+		...slotRef,
+		guaranteeCents: z.number().int().min(0).max(100_000_000).optional(),
+		percentageBps: z.number().int().min(0).max(PERCENTAGE_BPS_MAX).optional(),
+		versus: z.boolean().optional().default(false),
+		againstNet: z.boolean().optional().default(false),
+		contributed: z.boolean().optional().default(false)
+	}),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await setSlotTerms(data.slotId, {
+				// A cleared number field is dropped from the payload rather than sent
+				// as null, so the missing key is what "no guarantee" looks like.
+				guaranteeCents: data.guaranteeCents ?? null,
+				percentageBps: data.percentageBps ?? null,
+				versus: data.versus,
+				againstNet: data.againstNet,
+				contributed: data.contributed
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
 	}
 );

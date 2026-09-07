@@ -128,6 +128,23 @@ describe('without a room booking', () => {
 		expect(staffCreate).not.toHaveBeenCalled();
 	});
 
+	/**
+	 * Published, not the column default of `draft`.
+	 *
+	 * A club's recurring series publishes each occurrence itself, so the extra
+	 * meeting a chair added by hand was the only one that did not reach the gig
+	 * guide — and the leader had no way to release it. The room is held
+	 * `confirmed` either way, so the draft bought no review that anything acted
+	 * on.
+	 */
+	it('publishes the listing rather than leaving a draft nobody can release', async () => {
+		await createGroupEvent(params());
+
+		const [evt] = rowsFor('event_listing');
+		expect(evt).toMatchObject({ status: 'published' });
+		expect(evt.publishedAt).toBeInstanceOf(Date);
+	});
+
 	it('writes the group its event_group row', async () => {
 		await createGroupEvent(params());
 		expect(rowsFor('event_group')).toHaveLength(1);

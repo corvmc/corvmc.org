@@ -93,7 +93,27 @@ export const user = sqliteTable(
 		 */
 		acceptsDirectMessages: integer('accepts_direct_messages', { mode: 'boolean' })
 			.notNull()
-			.default(true)
+			.default(true),
+		/**
+		 * The member's date of birth, where they have given one.
+		 *
+		 * The site had no age of its own, so "this member is a minor" had nowhere
+		 * to live but a `member_standing` row scoped to messaging — the same
+		 * table, ladder and staff card as somebody restricted for abusing DMs.
+		 * Eligibility is a fact about who a member is; moderation is a judgement
+		 * about what they did, and the two must not share a mechanism.
+		 *
+		 * Nullable, and null means "not known to be a minor" rather than "adult".
+		 * That is exactly today's behaviour for every existing row, so nothing
+		 * changes for anyone until they give a date — and a restriction derived
+		 * from one re-applies itself instead of depending on whoever took the
+		 * signup call remembering.
+		 *
+		 * Distinct from `volunteer_profile.isAdult`, which is a one-time answer to
+		 * a different question and carries a guardian process; that answer goes
+		 * stale on a birthday and this does not.
+		 */
+		dateOfBirth: integer('date_of_birth', { mode: 'timestamp' })
 	},
 	(t) => [uniqueIndex('user_member_number_unique').on(t.memberNumber)]
 );

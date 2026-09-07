@@ -154,6 +154,21 @@ export class NotAnActiveBandMemberError extends DomainError {
 	}
 }
 
+/**
+ * Only a band can be deleted by the person who runs it.
+ *
+ * `docs/specs/groups-spec.md:818` is the one place the role table differs by
+ * kind: an appointed program leader runs the program, they do not own it, and
+ * ending a CMC program is a staff decision made in `/staff/groups`.
+ */
+export class CannotDeleteProgramError extends DomainError {
+	readonly httpStatus = 403;
+
+	constructor() {
+		super('A club or committee is ended by staff, not by its leader.');
+	}
+}
+
 export class BandTierManagedByStripeError extends DomainError {
 	readonly httpStatus = 409;
 
@@ -288,6 +303,10 @@ export async function update(bandId: string, data: UpdateBandData) {
 export async function deleteBand(bandId: string) {
 	const [row] = await db.select().from(group).where(eq(group.id, bandId)).limit(1);
 	if (!row) throw new BandNotFoundError();
+	// In the service rather than in `deleteBand`'s remote: the remote is one
+	// caller and this is the invariant's home. The cascade below takes the
+	// announcements, the documents and the roster with it.
+	if (row.kind !== 'band') throw new CannotDeleteProgramError();
 
 	// Cancel all future band reservations
 	const futureReservations = await db
