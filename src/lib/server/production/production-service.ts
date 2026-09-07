@@ -5,6 +5,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eventListing } from '$lib/server/db/schema/event';
 import { DomainError } from '$lib/server/domain-error';
 import type { Production, ProductionStatus } from '$lib/server/db/schema/production';
+import { recomputeSetTimes } from './run-of-show-service';
 
 /**
  * The ops half of a show.
@@ -190,6 +191,14 @@ export async function updateProductionDetails(
 		.returning();
 
 	if (!row) throw new ProductionNotFoundError();
+
+	// A moved downbeat moves every set after it. Keyed on the field being
+	// *present* rather than on it having changed — comparing against a value read
+	// before the write is a race, and the recompute is idempotent and costs one
+	// select when nothing moved. `setProductionProducer` posts only
+	// `producerUserId`, so the common non-timing edit skips this entirely.
+	if ('firstSetAt' in data) await recomputeSetTimes(row.id);
+
 	return row;
 }
 

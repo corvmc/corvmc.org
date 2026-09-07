@@ -98,7 +98,13 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 
 	// upcoming[2] and everything after it stay production-less on purpose.
 
-	await batchInsert(production, rows);
+	// The rows come back because the run of show hangs off them: a slot needs the
+	// production id and the downbeat the set times are walked from.
+	const inserted = await batchInsert(production, rows);
 
-	return { productions: rows.length, withoutProduction: upcoming.length - 2 };
+	return {
+		productions: rows.length,
+		withoutProduction: upcoming.length - 2,
+		rows: inserted
+	};
 }
