@@ -105,12 +105,14 @@ import {
 	updateHourLog,
 	withdrawHourLog,
 	approveHourLog,
+	approveHourLogs,
 	rejectHourLog,
 	getUserHourSummary,
 	HourLogNotFoundError,
 	HourLogAlreadyReviewedError,
 	HourLogNotEditableError,
-	HourLogValidationError
+	HourLogValidationError,
+	TooManyHourLogsError
 } from './hour-log-service';
 import { VolunteerRoleNotFoundError } from './volunteer-role-service';
 import {
@@ -402,7 +404,7 @@ describe('HourLogService', () => {
 			// getRawLog, then the post-update context join, then the reviewer lookup.
 			selectResultQueue = [
 				[pendingLog()],
-				[{ userName: 'Ada', userEmail: 'ada@example.com', roleName: ROLE.name }],
+				[{ logId: 'log-1', userName: 'Ada', userEmail: 'ada@example.com', roleName: ROLE.name }],
 				[{ name: 'Staffer' }]
 			];
 			updateResult = [pendingLog({ status: 'approved', minutes: 120 })];
@@ -462,11 +464,78 @@ describe('HourLogService', () => {
 		});
 	});
 
+	describe('approveHourLogs', () => {
+		beforeEach(() => {
+			// The bulk path reads no log first — the conditional UPDATE is the check.
+			// Its selects are the context join and the reviewer lookup.
+			selectResultQueue = [
+				[
+					{ logId: 'log-1', userName: 'Ada', userEmail: 'ada@example.com', roleName: ROLE.name },
+					{ logId: 'log-2', userName: 'Bo', userEmail: 'bo@example.com', roleName: ROLE.name }
+				],
+				[{ name: 'Staffer' }]
+			];
+			updateResult = [
+				pendingLog({ id: 'log-1', status: 'approved', minutes: 120 }),
+				pendingLog({ id: 'log-2', status: 'approved', minutes: 60 })
+			];
+		});
+
+		it('approves the whole selection in one statement', async () => {
+			const result = await approveHourLogs(['log-1', 'log-2'], STAFF_ID);
+
+			expect(result).toEqual({ approved: 2, skipped: 0 });
+			expect(db.update).toHaveBeenCalledTimes(1);
+		});
+
+		// A row somebody else reviewed between the page load and the click is
+		// skipped by the `status = 'pending'` predicate, not a failure of the batch.
+		it('counts the rows that were no longer pending as skipped', async () => {
+			updateResult = [pendingLog({ id: 'log-1', status: 'approved', minutes: 120 })];
+
+			const result = await approveHourLogs(['log-1', 'log-2'], STAFF_ID);
+
+			expect(result).toEqual({ approved: 1, skipped: 1 });
+		});
+
+		it('notifies every member it approved', async () => {
+			await approveHourLogs(['log-1', 'log-2'], STAFF_ID);
+			await new Promise((r) => setTimeout(r, 0));
+
+			expect(emit).toHaveBeenCalledTimes(2);
+			expect(emit).toHaveBeenCalledWith(
+				'volunteer.hours_approved',
+				expect.objectContaining({ logId: 'log-2', userName: 'Bo', hours: 1 })
+			);
+		});
+
+		it('writes nothing for an empty selection', async () => {
+			const result = await approveHourLogs([], STAFF_ID);
+
+			expect(result).toEqual({ approved: 0, skipped: 0 });
+			expect(db.update).not.toHaveBeenCalled();
+		});
+
+		it('collapses a duplicated id rather than counting it twice', async () => {
+			updateResult = [pendingLog({ id: 'log-1', status: 'approved', minutes: 120 })];
+
+			const result = await approveHourLogs(['log-1', 'log-1'], STAFF_ID);
+
+			expect(result).toEqual({ approved: 1, skipped: 0 });
+		});
+
+		it('refuses a selection past the cap', async () => {
+			const ids = Array.from({ length: 201 }, (_, i) => `log-${i}`);
+
+			await expect(approveHourLogs(ids, STAFF_ID)).rejects.toThrow(TooManyHourLogsError);
+		});
+	});
+
 	describe('rejectHourLog', () => {
 		beforeEach(() => {
 			selectResultQueue = [
 				[pendingLog()],
-				[{ userName: 'Ada', userEmail: 'ada@example.com', roleName: ROLE.name }],
+				[{ logId: 'log-1', userName: 'Ada', userEmail: 'ada@example.com', roleName: ROLE.name }],
 				[{ name: 'Staffer' }]
 			];
 			updateResult = [pendingLog({ status: 'rejected' })];
