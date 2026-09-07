@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs';
-import { dirname } from 'node:path';
 
 /** A run of consecutive comment lines, measured in lines whatever the syntax. */
 export type CommentBlock = { start: number; lines: number };
@@ -47,14 +46,9 @@ export function commentBlocks(source: string): CommentBlock[] {
 	return out;
 }
 
-/** Comment lines living in blocks longer than `cap`, keyed by containing directory. */
-export function overCapLinesByDirectory(files: string[], cap: number): Record<string, number> {
-	const totals: Record<string, number> = {};
-	for (const file of files) {
-		const lines = commentBlocks(readFileSync(file, 'utf8'))
-			.filter((block) => block.lines > cap)
-			.reduce((sum, block) => sum + block.lines, 0);
-		if (lines > 0) totals[dirname(file)] = (totals[dirname(file)] ?? 0) + lines;
-	}
-	return Object.fromEntries(Object.entries(totals).sort(([a], [b]) => a.localeCompare(b)));
+/** Files carrying at least one comment block longer than `cap`. */
+export function filesOverCap(files: string[], cap: number): string[] {
+	return files.filter((file) =>
+		commentBlocks(readFileSync(file, 'utf8')).some((block) => block.lines > cap)
+	);
 }
