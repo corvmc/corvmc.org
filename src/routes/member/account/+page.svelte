@@ -16,6 +16,7 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import { IconMail, IconBell } from '@tabler/icons-svelte';
 	import { updateProfile, changePassword, deleteAccount } from '$lib/remote/account.remote';
+	import { ADULT_AGE_YEARS, toBirthDateInput } from '$lib/utils/age';
 	import {
 		getMemberAccountPage,
 		setNotificationPreference
@@ -65,6 +66,28 @@
 					value={data.user.phone ?? ''}
 					placeholder="(541) 555-0123"
 				/>
+
+				<!-- Answerable once, then read-only. Messaging eligibility is derived
+				     from it, so a member who could re-answer could lift their own
+				     restriction — the same reason the volunteer onboarding form omits
+				     `isAdult` from its edit schema. Staff can correct a mistake. -->
+				{#if data.user.dateOfBirth}
+					<FormField
+						type="date"
+						label="Date of birth"
+						value={toBirthDateInput(data.user.dateOfBirth)}
+						readonly
+						description="Contact staff if this is wrong."
+					/>
+				{:else}
+					<FormField
+						field={fields.dateOfBirth}
+						type="date"
+						label="Date of birth"
+						value=""
+						description="Optional. A few things — direct messages among them — open at {ADULT_AGE_YEARS}. You can only set this once."
+					/>
+				{/if}
 
 				<div class="flex justify-end pt-2">
 					<SubmitButton label="Save" successLabel="Saved" variant="primary" shortcut="mod+s" />

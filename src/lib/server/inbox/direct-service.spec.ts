@@ -168,11 +168,20 @@ const getStanding = vi.fn(async (): Promise<Standing> => ({
 	triggeringFlagId: null,
 	updatedAt: null
 }));
-// Reachability has two halves: a restriction (`getStanding`) and the member's
-// own switch (`user.accepts_direct_messages`, which rides along on the
-// recipient row). `messagingIsDisabled` is the one place they recombine.
+// Reachability has three parts: a restriction (`getStanding`), the member's own
+// switch (`user.accepts_direct_messages`, which rides along on the recipient
+// row) and their age (`user.date_of_birth`, which rides along too).
+// `messagingIsDisabled` is the one place they recombine.
 const messagingIsDisabled = vi.fn(async () => false);
 const acceptsDirectMessages = vi.fn(async () => true);
+const isMessagingAgeRestricted = vi.fn(async () => false);
+
+/** A birth date that makes its owner 16, whenever the suite runs. */
+function minorBirthDate(): Date {
+	const d = new Date();
+	d.setFullYear(d.getFullYear() - 16);
+	return d;
+}
 vi.mock('$lib/server/moderation/standing-service', () => ({
 	getStanding: (...a: unknown[]) => getStanding(...(a as []))
 }));
@@ -180,7 +189,8 @@ vi.mock('$lib/server/moderation/moderation-service', () => ({
 	isBlockedEitherWay: (...a: unknown[]) => isBlockedEitherWay(...(a as [])),
 	blockUser: (...a: unknown[]) => blockUser(...(a as [])),
 	messagingIsDisabled: (...a: unknown[]) => messagingIsDisabled(...(a as [])),
-	acceptsDirectMessages: (...a: unknown[]) => acceptsDirectMessages(...(a as []))
+	acceptsDirectMessages: (...a: unknown[]) => acceptsDirectMessages(...(a as [])),
+	isMessagingAgeRestricted: (...a: unknown[]) => isMessagingAgeRestricted(...(a as []))
 }));
 
 const allowRateLimited = vi.fn(async () => true);
@@ -208,6 +218,7 @@ beforeEach(() => {
 	blockUser.mockResolvedValue(undefined);
 	messagingIsDisabled.mockResolvedValue(false);
 	acceptsDirectMessages.mockResolvedValue(true);
+	isMessagingAgeRestricted.mockResolvedValue(false);
 	allowRateLimited.mockResolvedValue(true);
 	addPeerMessage.mockResolvedValue({ id: 'msg-1' });
 	getStanding.mockResolvedValue({
@@ -252,7 +263,7 @@ describe('startDirectThread — every silent drop looks identical', () => {
 		return { result, wrote: inserted.length > 0, messaged: addPeerMessage.mock.calls.length > 0 };
 	}
 
-	it('returns the same thing whether blocked, unknown, hidden, or switched off', async () => {
+	it('returns the same thing whether blocked, unknown, hidden, switched off, or too young', async () => {
 		const blocked = await outcomeWhen(() => {
 			results = [[{ id: 'bob', acceptsDirectMessages: true }]];
 			isBlockedEitherWay.mockResolvedValue(true);
@@ -265,9 +276,15 @@ describe('startDirectThread — every silent drop looks identical', () => {
 			getStanding.mockResolvedValue({
 				status: 'disabled',
 				triggeringFlagId: 'flag-1',
-				reason: 'under 18',
+				reason: 'continued messaging after being asked to stop',
 				updatedAt: null
 			});
+		});
+		// A recipient under 18 has to be indistinguishable from the rest of these,
+		// and for a reason the others do not share: a sender who could tell this
+		// case apart would have learned the recipient's age.
+		const tooYoung = await outcomeWhen(() => {
+			results = [[{ id: 'bob', acceptsDirectMessages: true, dateOfBirth: minorBirthDate() }]];
 		});
 		// The member's own preference is a different table from the standing, and
 		// deliberately indistinguishable from outside: telling a sender which one
@@ -282,14 +299,37 @@ describe('startDirectThread — every silent drop looks identical', () => {
 		expect(blocked.result).toEqual(unknownOrHidden.result);
 		expect(blocked.result).toEqual(switchedOffByStaff.result);
 		expect(blocked.result).toEqual(switchedOffThemselves.result);
+		expect(blocked.result).toEqual(tooYoung.result);
 		expect(blocked.result).toEqual({ status: 'sent' });
 
 		// And none of them wrote anything.
-		for (const o of [blocked, unknownOrHidden, switchedOffByStaff, switchedOffThemselves]) {
+		for (const o of [
+			blocked,
+			unknownOrHidden,
+			switchedOffByStaff,
+			switchedOffThemselves,
+			tooYoung
+		]) {
 			expect(o.wrote).toBe(false);
 			expect(o.messaged).toBe(false);
 		}
 		void self;
+	});
+
+	/**
+	 * The sender side, which is where the two must NOT look alike.
+	 *
+	 * `restricted` carries a staff note and an implied appeal; `ineligible` does
+	 * not, because nobody judged this member. Before #556 a minor got the first
+	 * of those with an empty reason, which read as having been moderated for
+	 * something nobody would name.
+	 */
+	it('tells a sender under 18 they are ineligible, not restricted', async () => {
+		isMessagingAgeRestricted.mockResolvedValue(true);
+		results = [[{ id: 'bob', acceptsDirectMessages: true }]];
+
+		expect(await startDirectThread(START)).toEqual({ status: 'ineligible' });
+		expect(inserted).toHaveLength(0);
 	});
 
 	it('stops a sender who switched their own messaging off, with no reason to give', async () => {
@@ -438,13 +478,17 @@ describe('replyToDirectThread', () => {
 		expect(built).toContain('isNotNull'); // caller has accepted
 		expect(built).toContain('accepted_at IS NOT NULL'); // counterpart has accepted
 		expect(built).toContain('user_block'); // no block either way
-		// Both halves of "switched off", and the table each lives in. Named
+		// All three parts of "cannot be messaged", and where each lives. Named
 		// explicitly because these are raw `sql` strings: #224 renamed
 		// messaging_standing to member_standing and nothing here or in the type
 		// checker noticed, so every list 500'd until it reached production.
 		expect(built).toContain('member_standing'); // staff switched them off…
 		expect(built).toContain("ms.status = 'disabled'");
-		expect(built).toContain('accepts_direct_messages'); // …or they did themselves
+		expect(built).toContain('accepts_direct_messages'); // …or they did themselves…
+		expect(built).toContain('date_of_birth'); // …or they are under 18 (#556)
+		// The guard, not just the column. Without it the clause would say nothing
+		// about the members who have given no date — which is most of them.
+		expect(built).toContain('date_of_birth IS NOT NULL');
 		expect(built).not.toContain('messaging_standing');
 	});
 

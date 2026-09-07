@@ -5,6 +5,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { auth } from '$lib/server/auth';
 import { eq } from 'drizzle-orm';
+import { parseBirthDateInput } from '$lib/utils/age';
 import { requireUser, hasAnyRole } from '$lib/server/authorization';
 import { deactivateUser } from '$lib/server/user/user-service';
 import {
@@ -34,7 +35,8 @@ export const getMemberAccount = query(async () => {
 				name: user.name,
 				email: user.email,
 				pronouns: user.pronouns,
-				phone: user.phone
+				phone: user.phone,
+				dateOfBirth: user.dateOfBirth
 			})
 			.from(user)
 			.where(eq(user.id, currentUser.id))
@@ -65,10 +67,29 @@ export const updateProfile = form(
 	z.object({
 		name: z.string().min(1, 'Name is required').max(255),
 		pronouns: z.string().max(50).optional().default(''),
-		phone: z.string().max(30).optional().default('')
+		phone: z.string().max(30).optional().default(''),
+		// `YYYY-MM-DD` from a date input, parsed and range-checked server-side.
+		dateOfBirth: z.string().max(10).optional().default('')
 	}),
 	async (data) => {
 		const currentUser = requireUser();
+
+		const [existing] = await db
+			.select({ dateOfBirth: user.dateOfBirth })
+			.from(user)
+			.where(eq(user.id, currentUser.id))
+			.limit(1);
+
+		/**
+		 * Write-once from here, the way `volunteer_profile.isAdult` is.
+		 *
+		 * Messaging eligibility is derived from this, so a member who could edit it
+		 * freely could lift their own restriction by claiming a different birthday
+		 * — the exact hole `updateVolunteerProfileSchema` omits `isAdult` to close.
+		 * Staff can correct a mistake through `updateUser`; the member cannot
+		 * quietly re-answer.
+		 */
+		const dateOfBirth = existing?.dateOfBirth ?? parseBirthDateInput(data.dateOfBirth);
 
 		await db
 			.update(user)
@@ -76,6 +97,7 @@ export const updateProfile = form(
 				name: data.name,
 				pronouns: data.pronouns || null,
 				phone: data.phone || null,
+				dateOfBirth,
 				updatedAt: new Date()
 			})
 			.where(eq(user.id, currentUser.id));

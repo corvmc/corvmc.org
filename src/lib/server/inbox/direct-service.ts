@@ -14,10 +14,12 @@ import {
 	isBlockedEitherWay,
 	blockUser,
 	messagingIsDisabled,
-	acceptsDirectMessages
+	acceptsDirectMessages,
+	isMessagingAgeRestricted
 } from '$lib/server/moderation/moderation-service';
 import { getStanding } from '$lib/server/moderation/standing-service';
 import { allowRateLimited } from '$lib/server/rate-limit';
+import { adultBirthDateCutoff, isMinor } from '$lib/utils/age';
 import { MAX_PENDING_SENT_REQUESTS, DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
 
 /**
@@ -78,22 +80,31 @@ function counterpartAccepted(userId: string) {
  * SQL for `messagingIsDisabled`, for the four places that need it inside a
  * WHERE clause rather than as a separate round-trip.
  *
- * Both halves matter and they live in different tables now: staff switching
- * someone off is `member_standing` scoped to `messaging`, while the member's own
- * switch is `user.accepts_direct_messages`. They used to be one row with a
- * `source` column, which is what `messaging_standing` was; #224 split it. These
- * predicates are raw `sql`, so nothing type-checked them and they kept naming
- * the dropped table for a day — every conversation list 500'd
+ * Three halves now, and they live in three places. Staff switching someone off
+ * is `member_standing` scoped to `messaging`; the member's own switch is
+ * `user.accepts_direct_messages`; and being under 18 is derived from
+ * `user.date_of_birth`. The first two used to be one row with a `source`
+ * column, which is what `messaging_standing` was; #224 split it, and #556 took
+ * the age case out of the standing table it never belonged in. These predicates
+ * are raw `sql`, so nothing type-checked them and they kept naming the dropped
+ * table for a day — every conversation list 500'd
  * (JAVASCRIPT-SVELTEKIT-2F/2G). Keep them here, once, rather than inline.
  *
- * A LEFT JOIN because absence of a standing row means good standing.
+ * A LEFT JOIN because absence of a standing row means good standing. The
+ * `date_of_birth IS NOT NULL` guard matters for the same reason in the other
+ * direction: most rows have no date, and a bare `>` against NULL would be
+ * unknown rather than false — but the explicit guard says the intent, which is
+ * that not knowing somebody's age is not grounds for restricting them.
  */
 function messagingDisabledFor(userIdExpr: SQL | AnyColumn) {
+	const cutoff = adultBirthDateCutoff();
 	return sql`EXISTS (SELECT 1 FROM "user" u
 	                   LEFT JOIN member_standing ms ON ms.user_id = u.id
 	                                               AND ms.scope = 'messaging'
 	                   WHERE u.id = ${userIdExpr}
-	                     AND (u.accepts_direct_messages = 0 OR ms.status = 'disabled'))`;
+	                     AND (u.accepts_direct_messages = 0
+	                          OR ms.status = 'disabled'
+	                          OR (u.date_of_birth IS NOT NULL AND u.date_of_birth > ${cutoff})))`;
 }
 
 /** Nobody on this thread has messaging switched off. */
@@ -120,6 +131,11 @@ function noBlockBetweenParticipants() {
 export type StartDirectResult =
 	| { status: 'sent' }
 	| { status: 'restricted'; reason: string | null }
+	// Distinct from `restricted`, and the whole point of #556: a member under 18
+	// has not been judged, so there is no reason to quote and nothing to appeal.
+	// Folding this into `restricted` would put a staff note's shape around a fact
+	// about somebody's birthday.
+	| { status: 'ineligible' }
 	| { status: 'rate_limited' }
 	| { status: 'too_many_pending' };
 
@@ -155,7 +171,13 @@ export async function startDirectThread(
 	// directory, are not reachable. Hidden is a statement about being found, and
 	// we read it as covering being messaged too.
 	const [recipient] = await db
-		.select({ id: user.id, acceptsDirectMessages: user.acceptsDirectMessages })
+		.select({
+			id: user.id,
+			acceptsDirectMessages: user.acceptsDirectMessages,
+			// Rides along on the row we are already fetching, the way the preference
+			// does, so the age gate below costs no extra query.
+			dateOfBirth: user.dateOfBirth
+		})
 		.from(user)
 		// The visibility gate reads `directory_entry` since phase 3a.
 		//
@@ -177,11 +199,14 @@ export async function startDirectThread(
 
 	if (await isBlockedEitherWay(params.senderId, params.recipientId)) return SILENTLY_DROPPED;
 
-	// A member with messaging switched off cannot be reached — whether they
-	// switched it off or staff did. Same silent drop, and deliberately the same
-	// one for both: which of the two it was is nobody else's business. The
-	// preference rode along on the row above, so only the standing costs a query.
+	// A member who cannot be reached is a silent drop, and deliberately the same
+	// silent drop whichever of the three reasons it is: they switched messaging
+	// off, staff did, or they are under 18. Which one it is is nobody else's
+	// business — and a sender who could tell the third apart would have learned
+	// that the recipient is a minor. The preference and the birth date both rode
+	// along on the row above, so only the standing costs a query.
 	if (!recipient.acceptsDirectMessages) return SILENTLY_DROPPED;
+	if (isMinor(recipient.dateOfBirth)) return SILENTLY_DROPPED;
 	if ((await getStanding(params.recipientId, 'messaging')).status === 'disabled') {
 		return SILENTLY_DROPPED;
 	}
@@ -189,6 +214,12 @@ export async function startDirectThread(
 	// The sender's own restriction is not silent — they are entitled to know why
 	// they cannot write, and to be told what staff said about it. Their own switch
 	// being off stops them too, with no reason to give: they already know.
+	//
+	// Age comes first and answers differently. A minor has not been restricted by
+	// anyone, so they get `ineligible` rather than a `restricted` with an empty
+	// staff note, which is what they used to get.
+	if (await isMessagingAgeRestricted(params.senderId)) return { status: 'ineligible' };
+
 	const senderStanding = await getStanding(params.senderId, 'messaging');
 	if (senderStanding.status !== 'none') {
 		return { status: 'restricted', reason: senderStanding.reason };

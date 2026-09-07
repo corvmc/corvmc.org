@@ -760,10 +760,15 @@ export type StandingStatus = (typeof standingStatuses)[number];
 /**
  * Which rungs each scope may actually hold, and what to call it on screen.
  *
- * Only messaging has a use for `disabled` — staff switching it off wholesale,
- * which is how the occasional under-18 member is handled. "You may not post
+ * Only messaging has a use for `disabled`: it is the escalation past reply-only
+ * `restricted`, for somebody who may not write at all. "You may not post
  * community listings at all" is not a thing anyone can do, so `setStanding`
  * rejects it rather than leaving an unreachable value lying in the column.
+ *
+ * It used to double as the switch-off for under-18 members, "since the site has
+ * no age of its own". The site has one now — `user.dateOfBirth`, with messaging
+ * eligibility derived from it — so this rung is a moderation rung again and
+ * nothing else. See #556.
  */
 export const standingScopeConfig: Record<
 	StandingScope,
