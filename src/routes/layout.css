@@ -666,26 +666,6 @@ p {
 }
 
 /* ---------------------------------------------------------------------------
-   Retro tabs — half-pressed active state for DaisyUI tab elements.
-   --------------------------------------------------------------------------- */
-.tab {
-	border-bottom: 2.5px solid transparent;
-	transition:
-		transform 80ms ease,
-		box-shadow 80ms ease,
-		border-color 80ms ease;
-}
-.tab:hover {
-	border-bottom-color: color-mix(in oklch, var(--cmc-brown) 50%, transparent);
-}
-.tab-active,
-.tab.tab-active {
-	border-bottom: 2.5px solid var(--cmc-brown);
-	box-shadow: 2px 2px 0 var(--cmc-brown);
-	transform: translate(-1px, -1px);
-}
-
-/* ---------------------------------------------------------------------------
    Washi-tape badges — semi-transparent stripe texture + slight rotation.
    --------------------------------------------------------------------------- */
 .washi-badge {
