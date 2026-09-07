@@ -80,6 +80,13 @@ import * as productions from './productions.remote';
 
 const SLOT = { eventId: 'evt-1', slotId: 'slot-1' };
 
+/**
+ * A `RemoteForm` is not callable at the type level, but the `$app/server` mock
+ * above makes it a plain function at runtime. One cast, named, rather than one
+ * per call site.
+ */
+const submit = (fn: unknown, data: unknown) => (fn as (d: unknown) => Promise<unknown>)(data);
+
 /** Every write in the module, with the capability it must name. */
 const WRITES: { name: keyof typeof productions; args: unknown[] }[] = [
 	{ name: 'createProduction', args: [{ eventId: 'evt-1' }] },
@@ -107,9 +114,7 @@ beforeEach(() => {
 describe('productions.remote guards', () => {
 	for (const { name, args } of WRITES) {
 		it(`${name} requires event.manage before doing any work`, async () => {
-			const fn = productions[name] as (...a: unknown[]) => Promise<unknown>;
-
-			await expect(fn(...args)).rejects.toThrow('Staff access required');
+			await expect(submit(productions[name], args[0])).rejects.toThrow('Staff access required');
 
 			expect(requireCapability).toHaveBeenCalledWith('event.manage');
 			for (const spy of Object.values({ ...service, ...runOfShow })) {
@@ -137,7 +142,7 @@ describe('run of show validation', () => {
 	// refuse it before the service ever sees one.
 	it('refuses a zero-length set before the service is called', async () => {
 		await expect(
-			productions.addRunOfShowSlot({
+			submit(productions.addRunOfShowSlot, {
 				eventId: 'evt-1',
 				productionId: 'prod-1',
 				setLengthMinutes: 0
@@ -148,7 +153,7 @@ describe('run of show validation', () => {
 	});
 
 	it("passes a blank act through as a slot on nobody's poster", async () => {
-		await productions.addRunOfShowSlot({
+		await submit(productions.addRunOfShowSlot, {
 			eventId: 'evt-1',
 			productionId: 'prod-1',
 			eventBandId: '',
@@ -162,7 +167,7 @@ describe('run of show validation', () => {
 	});
 
 	it('turns a blank note into null rather than an empty string', async () => {
-		await productions.updateRunOfShowSlot({
+		await submit(productions.updateRunOfShowSlot, {
 			...SLOT,
 			setLengthMinutes: 30,
 			changeoverMinutes: 10,
