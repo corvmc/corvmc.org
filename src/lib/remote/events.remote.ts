@@ -538,9 +538,10 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
  * The statuses the staff calendar will read, and the only ones it will.
  *
  * `draft` is absent on purpose. A CMC draft is production work and belongs on
- * `/staff/events`; a community draft is a member's private working copy that no
- * staffer should read. `listStaffCalendar` excludes the latter again at the
- * service level — this enum is the first of two guards, not the only one.
+ * `/staff/productions`, which is the page scoped to `source: 'cmc'` at every
+ * status; a community draft is a member's private working copy that no staffer
+ * should read. `listStaffCalendar` excludes the latter again at the service
+ * level — this enum is the first of two guards, not the only one.
  */
 const calendarStatuses = ['pending_review', 'published', 'cancelled', 'rejected'] as const;
 
