@@ -19,7 +19,30 @@ import { groupPublicPath } from '$lib/utils/canonical-address';
 import { resolveBandSubdomain } from '$lib/server/band/band-host-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
 
+/**
+ * Sessions whose pending group invites have already been resolved.
+ *
+ * Module scope, so it survives between requests the way the isolate does —
+ * which is the point, and was also the bug: nothing removed from it, and a
+ * Worker isolate can live long enough to see a very large number of sessions.
+ *
+ * Cleared wholesale at a ceiling rather than evicted one at a time. An LRU
+ * would be the careful answer if a miss were expensive, and it is not:
+ * `resolvePendingInvites` selects invites that are still `pending` and not yet
+ * expired, and returns 0 before touching anything when there are none. So the
+ * worst a clear costs is one indexed SELECT per session still in flight, and
+ * the whole structure stays four lines.
+ */
+export const RESOLVED_SESSIONS_MAX = 1000;
 const resolvedSessions = new Set<string>();
+
+/** Returns true the first time it sees a session id after each clear. */
+function markSessionResolved(sessionId: string): boolean {
+	if (resolvedSessions.has(sessionId)) return false;
+	if (resolvedSessions.size >= RESOLVED_SESSIONS_MAX) resolvedSessions.clear();
+	resolvedSessions.add(sessionId);
+	return true;
+}
 
 function validateEnv(platform: App.Platform | undefined) {
 	const missing: string[] = [];
@@ -67,8 +90,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 		event.locals.session = session.session;
 		event.locals.user = session.user;
 
-		if (!resolvedSessions.has(session.session.id)) {
-			resolvedSessions.add(session.session.id);
+		if (markSessionResolved(session.session.id)) {
 			resolvePendingInvites(session.user.id, session.user.email).catch(captureException);
 		}
 	}
