@@ -21,6 +21,7 @@ import {
 	setAcceptsDirectMessages
 } from '$lib/server/moderation/moderation-service';
 import { getMemberLayout } from './layout.remote';
+import { ADULT_AGE_YEARS } from '$lib/utils/age';
 import {
 	MAX_PENDING_SENT_REQUESTS,
 	MAX_UNRESOLVED_REPORTS,
@@ -117,6 +118,16 @@ export const startDirectConversation = form(startDirectSchema, async (data, issu
 				result.reason
 					? `You cannot start new conversations right now: ${result.reason}`
 					: 'You cannot start new conversations right now. Contact staff if you think this is a mistake.'
+			)
+		);
+	}
+	if (result.status === 'ineligible') {
+		// No staff note, no appeal, no "contact staff if you think this is a
+		// mistake" — none of those apply to somebody's age, and offering them is
+		// how the old moderation-shaped handling read to a 16-year-old.
+		invalid(
+			issue.body(
+				`Direct messages are open to members ${ADULT_AGE_YEARS} and over. Everything else on the site is yours to use.`
 			)
 		);
 	}

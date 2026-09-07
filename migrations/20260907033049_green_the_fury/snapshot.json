@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "526439c1-ac69-4a70-bbc1-b509176a484f",
+  "id": "42516010-804e-468a-8c22-1b93f0048af4",
   "prevIds": [
-    "7b47cb77-c0f6-429c-8d48-ab4906fe8924"
+    "526439c1-ac69-4a70-bbc1-b509176a484f"
   ],
   "ddl": [
     {
@@ -781,6 +781,16 @@
       "default": "true",
       "generated": null,
       "name": "accepts_direct_messages",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "date_of_birth",
       "entityType": "columns",
       "table": "user"
     },
