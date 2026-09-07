@@ -9,6 +9,7 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { resolve } from '$app/paths';
 	import JoinGroupAction from '$lib/components/groups/JoinGroupAction.svelte';
+	import AnswerGroupInviteAction from '$lib/components/groups/AnswerGroupInviteAction.svelte';
 	import { getMemberGroups } from '$lib/remote/groups.remote';
 
 	/**
@@ -64,7 +65,7 @@
 								<span class="font-semibold">{g.name}</span>
 								<p class="text-subtle">{kindLabel(g.kind)} · invited you to join</p>
 							</div>
-							<StatusBadge status="pending" label />
+							<AnswerGroupInviteAction groupId={g.id} groupName={g.name} />
 						</CardBody>
 					</Card>
 				{/each}

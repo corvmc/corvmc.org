@@ -34,7 +34,11 @@ import { seedVenues } from './seed/venues';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
-import { GROUP_LEADER_PERSONAS, seedGroupLeaders } from './seed/group-leaders';
+import {
+	GROUP_INVITEE_PERSONA,
+	GROUP_LEADER_PERSONAS,
+	seedGroupLeaders
+} from './seed/group-leaders';
 import { seedGroupDocuments } from './seed/group-documents';
 import { seedDirectoryEntries } from './seed/directory';
 import { seedDirectoryPersonas } from './seed/directory-personas';
@@ -305,6 +309,9 @@ async function main() {
 	for (const p of GROUP_LEADER_PERSONAS) {
 		console.log(`    ${p.email.padEnd(31)} ${p.joinPolicy} group — /member/groups`);
 	}
+	console.log(
+		`    ${GROUP_INVITEE_PERSONA.email.padEnd(31)} a pending invitation to accept — /member/groups`
+	);
 
 	console.log('\n  Solo-act demo login (`password`):');
 	console.log(

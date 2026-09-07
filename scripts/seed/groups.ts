@@ -2,7 +2,7 @@ import { announcement } from '../../src/lib/server/db/schema/announcement';
 import { groupMember } from '../../src/lib/server/db/schema/group';
 import { insertBandWithOwner } from './bands';
 import { db } from './db';
-import { GROUP_LEADER_PERSONAS } from './group-leaders';
+import { GROUP_INVITEE_PERSONA, GROUP_LEADER_PERSONAS } from './group-leaders';
 import { type SeedUser } from './types';
 import { pick, pickN } from './util';
 
@@ -142,14 +142,16 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 		// shape and opposite meanings, which is the whole reason `'requested'` is
 		// a distinct status — and the only way to see the roster render them
 		// apart is to have both.
-		// The invite-only committee gets one pending invitation. It is the only way
-		// in for that policy, so without a waiting row the accept path has nothing
-		// to be read against locally.
+		// The invite-only committee gets one pending invitation, held by the
+		// loginable invitee persona. It is the only way in for that policy, and a
+		// bulk user has no `account`, so nobody could press Accept locally.
 		if (d.joinPolicy === 'invite_only') {
-			const [invitee] = pickN(
-				users.filter((u) => !taken.has(u.id)),
-				1
-			);
+			const invitee =
+				leaders.find((l) => l.id === GROUP_INVITEE_PERSONA.id) ??
+				pickN(
+					users.filter((u) => !taken.has(u.id)),
+					1
+				)[0];
 			await db.insert(groupMember).values({
 				groupId: g.id,
 				userId: invitee.id,

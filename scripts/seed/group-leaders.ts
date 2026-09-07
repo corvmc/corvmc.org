@@ -49,6 +49,22 @@ export const GROUP_LEADER_PERSONAS = [
 export type GroupLeaderPersona = (typeof GROUP_LEADER_PERSONAS)[number];
 
 /**
+ * The other end of an invitation, with a login.
+ *
+ * The invite-only committee's pending row used to belong to a bulk user, who
+ * has no `account` — so the Accept control on `/member/groups` could not be
+ * pressed by anybody locally.
+ */
+export const GROUP_INVITEE_PERSONA = {
+	id: 'seed-group-invitee',
+	email: 'invitee@corvallismusic.org',
+	name: 'Priya Raghunathan',
+	memberNumber: 76,
+	tagline: 'Invited to the Facilities Committee',
+	bio: 'Handy with a soldering iron. Said yes before hearing the whole list.'
+};
+
+/**
  * Kept out of `allUsers`, like the solo-act and volunteer personas:
  * `seedUserRoles` indexes into that array and `seedVolunteerProfiles` slices
  * it, so appending would silently reassign both.
@@ -64,7 +80,7 @@ export async function seedGroupLeaders(roles: SeedRole[]): Promise<SeedUser[]> {
 	const createdAt = new Date(Date.now() - 300 * 86400000);
 	const leaders: SeedUser[] = [];
 
-	for (const p of GROUP_LEADER_PERSONAS) {
+	for (const p of [...GROUP_LEADER_PERSONAS, GROUP_INVITEE_PERSONA]) {
 		const [row] = await db
 			.insert(user)
 			.values({
