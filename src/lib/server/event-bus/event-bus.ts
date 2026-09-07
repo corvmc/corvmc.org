@@ -38,15 +38,22 @@ export interface CheckoutCompletedEvent {
 	stripeSession: import('stripe').default.Checkout.Session;
 }
 
+/**
+ * A booking is confirmed and the room is committed.
+ *
+ * Emitted from `reservation-service.announceConfirmed`, for the same reason
+ * `reservation.created` is emitted from the service: a reservation reaches
+ * `confirmed` six ways, and a seventh would be forgotten.
+ */
 export interface ReservationConfirmedEvent {
 	reservationId: string;
+	/** The owning member — `created_by_user_id`, even when staff typed it in. */
 	userId: string;
 	userName: string;
 	userEmail: string;
 	date: string;
 	startTime: string;
 	endTime: string;
-	spaceName?: string;
 }
 
 /**
