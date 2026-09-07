@@ -7,7 +7,7 @@ import {
 } from './reservation-actions';
 
 describe('reservationPaymentState', () => {
-	const base = { status: 'confirmed' as const };
+	const base = { status: 'confirmed' as const, refundedAt: null };
 
 	it('cash/online paid → paid', () => {
 		expect(reservationPaymentState({ ...base, paidAt: new Date(), cashDueCents: 0 })).toBe('paid');
@@ -18,9 +18,14 @@ describe('reservationPaymentState', () => {
 	});
 
 	it('not yet settled (scheduled) → unpaid', () => {
-		expect(reservationPaymentState({ status: 'scheduled', paidAt: null, cashDueCents: null })).toBe(
-			'unpaid'
-		);
+		expect(
+			reservationPaymentState({
+				status: 'scheduled',
+				paidAt: null,
+				cashDueCents: null,
+				refundedAt: null
+			})
+		).toBe('unpaid');
 	});
 
 	it('fully credit-covered → credits (the bug: must not read as comped)', () => {
@@ -42,15 +47,30 @@ describe('reservationPaymentState', () => {
 		).toBe('paid');
 	});
 
-	it('cancelled with payment → refunded, without → cancelled', () => {
-		expect(reservationPaymentState({ status: 'cancelled', stripePaymentRecordId: 'pr_1' })).toBe(
+	it('cancelled and refunded → refunded, cancelled alone → cancelled', () => {
+		expect(reservationPaymentState({ status: 'cancelled', refundedAt: new Date() })).toBe(
 			'refunded'
 		);
-		expect(reservationPaymentState({ status: 'cancelled' })).toBe('cancelled');
+		expect(reservationPaymentState({ status: 'cancelled', refundedAt: null })).toBe('cancelled');
+	});
+
+	/**
+	 * The whole of #573. Having been charged is not evidence of having been
+	 * repaid: `reservation-service` writes `refundedAt` *inside* the try around
+	 * `refund()`, so a refund that throws leaves a cancelled booking with a
+	 * payment record and no refund — and the old inference called that
+	 * "refunded" to the member whose money we still have.
+	 */
+	it('cancelled with a payment but no refund → cancelled, not refunded', () => {
+		expect(
+			reservationPaymentState({ status: 'cancelled', paidAt: new Date(), refundedAt: null })
+		).toBe('cancelled');
 	});
 
 	it('no_show → no_show', () => {
-		expect(reservationPaymentState({ status: 'no_show', paidAt: new Date() })).toBe('no_show');
+		expect(
+			reservationPaymentState({ status: 'no_show', paidAt: new Date(), refundedAt: null })
+		).toBe('no_show');
 	});
 
 	it('confirmed with credits never committed (staff-created) → unpaid, not comped', () => {
@@ -58,9 +78,14 @@ describe('reservationPaymentState', () => {
 	});
 
 	it('completed with credits never committed → unpaid, not comped', () => {
-		expect(reservationPaymentState({ status: 'completed', paidAt: null, cashDueCents: null })).toBe(
-			'unpaid'
-		);
+		expect(
+			reservationPaymentState({
+				status: 'completed',
+				paidAt: null,
+				cashDueCents: null,
+				refundedAt: null
+			})
+		).toBe('unpaid');
 	});
 });
 

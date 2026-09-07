@@ -887,6 +887,10 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			notes: reservation.notes,
 			stripePaymentRecordId: reservation.stripePaymentRecordId,
 			paidAt: reservation.paidAt,
+			// `reservationPaymentState` reads this to tell a refunded booking from a
+			// plain cancellation, and takes it as a required field so a query that
+			// forgets it cannot compile.
+			refundedAt: reservation.refundedAt,
 			cashDueCents: reservation.cashDueCents,
 			creditsUsed: reservation.creditsUsed,
 			createdByUserId: reservation.createdByUserId,
