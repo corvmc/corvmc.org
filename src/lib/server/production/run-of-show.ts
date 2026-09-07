@@ -1,14 +1,10 @@
 /**
- * The run of show, as arithmetic.
+ * The run of show, as arithmetic. Nothing here touches a database.
  *
- * Its own module rather than a corner of `run-of-show-service`, for one
- * concrete reason: `scripts/seed/` runs under plain tsx with no `$lib` alias
- * map, so a file that imports `$lib/server/db` is unreachable from a seeder.
- * The seed has to derive the same set times the service does, and the only way
- * the two cannot disagree is to compute them with the same function.
- *
- * Nothing here touches a database. See
- * `docs/specs/production-workflow-spec.md#run-of-show`.
+ * Separate from `run-of-show-service` because a seeder runs under plain tsx
+ * with no `$lib` alias map, so a module importing `$lib/server/db` is
+ * unreachable from one — and the seed must derive set times with this exact
+ * function or the fixture disagrees with the feature.
  */
 
 /** Matching `LINEUP_MAX` — the bill this mirrors is already capped there. */
@@ -46,18 +42,11 @@ export function orderSlots<T extends { sortOrder: number; createdAt: Date }>(
 }
 
 /**
- * The walk.
+ * The walk: each set starts where the previous one's changeover ended.
  *
- * ```
- * cursor = firstSetAt
- * for slot in slots ordered by sortOrder:
- *     slot.scheduledStartAt = cursor
- *     cursor += setLengthMinutes + changeoverMinutes
- * ```
- *
- * A null `firstSetAt` maps every slot to null. A production with no downbeat has
- * no schedule, and falling back to the listing's `startsAt` would be a second,
- * silent source of truth for the one number the whole night hangs off.
+ * A null `firstSetAt` maps every slot to null. A production with no downbeat
+ * has no schedule, and falling back to the listing's `startsAt` would be a
+ * second, silent source of truth for the number the whole night hangs off.
  */
 export function computeSetTimes(
 	firstSetAt: Date | null,
@@ -94,17 +83,12 @@ export interface WarnableSlot extends SetTimeSlot {
 }
 
 /**
- * Warnings, never errors — real shows run late, and a schedule that refuses to
- * save because the headliner is nine minutes past curfew is a schedule nobody
- * keeps up to date.
+ * Warnings, never errors: a schedule that refuses to save because the headliner
+ * is nine minutes past curfew is a schedule nobody keeps up to date.
  *
- * Computed from the walk rather than from the stored `scheduledStartAt`, so a
- * read is never wrong about a night whose recompute has not landed yet.
- *
- * **There is no `set_length_zero`.** `production_slot_set_length_positive` makes
- * a zero-length set unrepresentable, so it is a 422 out of the mutations rather
- * than a warning here. The spec lists the two together; the CHECK is what splits
- * them.
+ * Computed from the walk, not from a stored `scheduledStartAt`. There is no
+ * `set_length_zero` — the CHECK makes it unrepresentable, so it is a 422 out of
+ * the mutations instead.
  */
 export function runOfShowWarnings(input: {
 	firstSetAt: Date | null;

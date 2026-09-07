@@ -5,23 +5,17 @@ import { batchInsert, db } from './db';
 import { asc, inArray } from 'drizzle-orm';
 
 /**
- * Who plays when, for the shows that have got that far.
+ * Who plays when. Four states, because each renders differently:
  *
- * Four states, because each one renders differently and only one of them is the
- * happy path:
- *
- * - a **confirmed** upcoming show with a clean schedule that fits inside curfew;
- * - a **closed** past show that ran long, so the past-curfew warning has data;
- * - an **offered** show with sets but no downbeat, where every time is null and
- *   the console has to say why rather than showing a column of blanks;
- * - one slot with **no credit at all** — a DJ between sets is on the running
- *   order and never on the poster, which is the case the nullable
- *   `event_band_id` exists for.
- *
- * Set times are written by `computeSetTimes`, the same function the service
- * runs. Hand-writing them here would seed a schedule that disagrees with the
- * one the app derives, which is exactly the failure the derivation exists to
- * prevent.
+ * - **confirmed** — a clean schedule that fits inside curfew;
+ * - **closed** — ran long, so the past-curfew warning has data;
+ * - **offered** — sets but no downbeat, so every time is null;
+ * - one slot with **no credit**: a DJ is on the running order, never the poster.
+ */
+
+/*
+ * Set times come from `computeSetTimes`, the function the service runs.
+ * Hand-writing them would seed a schedule that disagrees with the derived one.
  */
 
 type ProductionRow = typeof production.$inferSelect;

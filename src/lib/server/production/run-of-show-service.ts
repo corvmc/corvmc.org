@@ -19,18 +19,12 @@ export type {
 } from './run-of-show';
 
 // ---------------------------------------------------------------------------
-// Run of show
-//
-// Who plays when, derived from one downbeat and the lengths of the sets.
-//
-// This module imports nothing from `production-service`, because the arrow goes
-// the other way: `updateProductionDetails` calls `recomputeSetTimes` when the
-// downbeat moves. It declares its own errors for the same reason
-// `production-service` declares `ListingNotFoundError` rather than importing
-// one — a shared errors module for four classes is more machinery than the
-// duplication costs.
-//
+// Run of show — who plays when, derived from one downbeat and the set lengths.
 // See `docs/specs/production-workflow-spec.md#run-of-show`.
+//
+// Imports nothing from `production-service`: the arrow goes the other way,
+// since `updateProductionDetails` calls `recomputeSetTimes` when the downbeat
+// moves. Its errors are declared here for that reason.
 // ---------------------------------------------------------------------------
 
 /**
@@ -292,17 +286,10 @@ function sameInstant(a: Date | null, b: Date | null): boolean {
 /**
  * Rewrite every derived start time on a production.
  *
- * One select, then one `db.batch` of the updates that actually change. Skipping
- * the unchanged rows is what makes this cheap enough to run unconditionally: a
- * slot whose tech notes were edited writes nothing, and a production with no
- * slots costs exactly one read.
- *
- * `db.batch`, never `db.transaction` — D1 has no interactive transactions — and
- * at most `SLOT_MAX` single-row updates of three bound parameters each, so
- * nothing here approaches the 100-parameter statement cap. A single
- * `UPDATE … SET scheduled_start_at = CASE id WHEN … END` would be one statement
- * instead of twelve; it is also `2n + 1` parameters of unreadable SQL for a
- * table capped at a dozen rows.
+ * One select, then one `db.batch` of only the updates that change — which is
+ * what makes it cheap enough to run unconditionally. At most `SLOT_MAX`
+ * single-row updates, so nothing here approaches D1's 100-parameter cap; a
+ * `CASE id WHEN …` would be one statement and unreadable SQL for a dozen rows.
  */
 export async function recomputeSetTimes(productionId: string): Promise<void> {
 	const rows = await db
@@ -463,11 +450,9 @@ export async function updateSlot(slotId: string, patch: UpdateSlotInput): Promis
 /**
  * Move one set up or down the running order, as a single write.
  *
- * Takes a direction rather than a target position: the service reads the current
- * order and moves against the true neighbour, so a client working from a stale
- * list cannot drop a set in the wrong place. The moved row's `sortOrder` becomes
- * the midpoint of where it lands and nothing else is renumbered — that is the
- * whole point of the column being a fractional `real`.
+ * A direction rather than a target position, so a client working from a stale
+ * list cannot drop a set in the wrong place. The moved row lands at the
+ * midpoint of its neighbours and nothing else is renumbered.
  */
 export async function moveSlot(slotId: string, direction: 'up' | 'down'): Promise<void> {
 	const [owner] = await db
