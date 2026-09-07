@@ -67,6 +67,33 @@ describe('reservationPaymentState', () => {
 		).toBe('cancelled');
 	});
 
+	/**
+	 * #669: "Refund only" leaves the booking standing (a comp after the fact),
+	 * so the row is still `confirmed` with a `paidAt` on it. `paidAt` used to be
+	 * read first, and staff saw "Paid" on money that had already gone back.
+	 */
+	it('refunded but not cancelled → refunded, not paid', () => {
+		expect(
+			reservationPaymentState({
+				status: 'confirmed',
+				paidAt: new Date(),
+				cashDueCents: 0,
+				refundedAt: new Date()
+			})
+		).toBe('refunded');
+	});
+
+	it('refunded on a completed booking → refunded, not paid', () => {
+		expect(
+			reservationPaymentState({
+				status: 'completed',
+				paidAt: new Date(),
+				cashDueCents: 0,
+				refundedAt: new Date()
+			})
+		).toBe('refunded');
+	});
+
 	it('no_show → no_show', () => {
 		expect(
 			reservationPaymentState({ status: 'no_show', paidAt: new Date(), refundedAt: null })
@@ -136,6 +163,41 @@ describe('visibleActions cash tracking', () => {
 				paidAt: new Date()
 			}).has('cashReceived')
 		).toBe(false);
+	});
+});
+
+describe('visibleActions refund split (#669)', () => {
+	const past = new Date(Date.now() - 2 * 60 * 60 * 1000);
+	const pastEnd = new Date(Date.now() - 60 * 60 * 1000);
+	const paid = { cashDueCents: 0, paidAt: new Date(), refundedAt: null };
+
+	it('offers both refund actions on a confirmed, paid, unrefunded booking', () => {
+		const actions = visibleActions('confirmed', past, pastEnd, 'pr_1', new Date(), paid);
+		expect(actions.has('refundAndCancel')).toBe(true);
+		expect(actions.has('refundOnly')).toBe(true);
+	});
+
+	// `cancel()` rejects a completed booking outright, so offering the combined
+	// action there would be a button that can only 400.
+	it('offers only the refund-only action on a completed booking', () => {
+		const actions = visibleActions('completed', past, pastEnd, 'pr_1', new Date(), paid);
+		expect(actions.has('refundAndCancel')).toBe(false);
+		expect(actions.has('refundOnly')).toBe(true);
+	});
+
+	it('offers neither once the row is refunded', () => {
+		const actions = visibleActions('confirmed', past, pastEnd, 'pr_1', new Date(), {
+			...paid,
+			refundedAt: new Date()
+		});
+		expect(actions.has('refundAndCancel')).toBe(false);
+		expect(actions.has('refundOnly')).toBe(false);
+	});
+
+	it('offers neither when there is no payment to refund', () => {
+		const actions = visibleActions('confirmed', past, pastEnd, null, new Date(), paid);
+		expect(actions.has('refundAndCancel')).toBe(false);
+		expect(actions.has('refundOnly')).toBe(false);
 	});
 });
 

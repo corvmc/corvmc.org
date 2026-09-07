@@ -543,9 +543,12 @@ export async function cancel(
 				userId: row.createdByUserId,
 				stripePaymentRecordId: row.stripePaymentRecordId
 			});
+			// `paidAt` goes with the money: it is the display's evidence that the
+			// member's payment is still with us, and leaving it set made a refunded
+			// booking read as Paid (#669).
 			await db
 				.update(reservation)
-				.set({ refundedAt: new Date() })
+				.set({ refundedAt: new Date(), paidAt: null, updatedAt: new Date() })
 				.where(eq(reservation.id, reservationId));
 		} catch (err) {
 			// The row is already `cancelled` at this point and the status guard

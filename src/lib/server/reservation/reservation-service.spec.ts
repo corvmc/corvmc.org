@@ -194,6 +194,31 @@ describe('ReservationService', () => {
 			});
 		});
 
+		/**
+		 * #669: the second write, the one that runs only after `refund()` resolves,
+		 * is what makes a refunded booking stop reading as Paid. It has to clear
+		 * `paidAt` — the money is back with the member — and stamp `updatedAt`.
+		 */
+		it('clears paidAt and stamps updatedAt on the post-refund write', async () => {
+			setupSelectMock({
+				id: 'res-1',
+				createdByUserId: 'user-1',
+				status: 'confirmed',
+				stripePaymentRecordId: 'pr_123',
+				startsAt: future,
+				endsAt: futureEnd
+			});
+			const set = setupUpdateMock(1);
+
+			await cancel('res-1', 'user-1');
+
+			const refundWrite = set.mock.calls.map((c) => c[0]).find((v) => v.refundedAt);
+			expect(refundWrite).toBeDefined();
+			expect(refundWrite.paidAt).toBeNull();
+			expect(refundWrite.refundedAt).toBeInstanceOf(Date);
+			expect(refundWrite.updatedAt).toBeInstanceOf(Date);
+		});
+
 		it('rejects cancellation by non-owner', async () => {
 			setupSelectMock({
 				id: 'res-1',

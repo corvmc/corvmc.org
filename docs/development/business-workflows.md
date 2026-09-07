@@ -87,7 +87,10 @@ waitlist listener uses to promote the next person (workflow 2).
 **Staff resolution.** Unresolved reservations (past end, still `scheduled` or cash owed)
 surface via `getUnresolvedReservations` in `reservations.remote.ts`; staff resolve with the
 `completeReservation` / `noShowReservation` / `cashReceivedReservation` /
-`compReservation` / `refundReservation` forms in the same file.
+`compReservation` / `refundAndCancelReservation` / `refundOnlyReservation` forms in the same
+file. The two refund forms are the staff member's intent made explicit: the first delegates to
+`cancel()` above; the second leaves the booking standing (a comp after a session that ran) and
+only stamps `refundedAt`, which `reservationPaymentState` reads ahead of `paidAt`.
 
 ### Data touched
 
