@@ -44,9 +44,8 @@ export function overlappingReservations<T extends OverlapCandidate>(
 }
 
 /**
- * Derive a reservation's payment state for display. Order matters:
- * refunded → cancelled → paidAt (cash/online) → cash owed → not-yet-settled →
- * credit-settled → comped.
+ * Derive a reservation's payment state for display. Order matters: refunded →
+ * cancelled → paid → cash owed → not-yet-settled → credit-settled → comped.
  * Credit-settled and comped share `paidAt null & cashDueCents 0`; `creditsUsed`
  * is what distinguishes them. A null `cashDueCents` means credits were never
  * committed (plain scheduled, or a staff-created confirm) — that's `unpaid`,

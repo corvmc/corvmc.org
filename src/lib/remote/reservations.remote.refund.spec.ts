@@ -59,7 +59,16 @@ vi.mock('$lib/server/reservation/reservation-credit-service', () => ({
 	reverseReservationCredits
 }));
 
-const cancel = vi.fn(async () => undefined);
+// Typed parameters, not a bare `vi.fn()`: the delegation test reads the
+// arguments back, and an untyped mock records them as an empty tuple.
+const cancel = vi.fn(
+	async (
+		_id: string,
+		_userId: string,
+		_reason?: string,
+		_options?: { staffOverride?: boolean; authorizedActor?: boolean }
+	) => undefined
+);
 vi.mock('$lib/server/reservation/reservation-service', () => ({
 	staffCreate: vi.fn(),
 	create: vi.fn(),
