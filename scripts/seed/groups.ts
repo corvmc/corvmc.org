@@ -2,6 +2,7 @@ import { announcement } from '../../src/lib/server/db/schema/announcement';
 import { groupMember } from '../../src/lib/server/db/schema/group';
 import { insertBandWithOwner } from './bands';
 import { db } from './db';
+import { GROUP_LEADER_PERSONAS } from './group-leaders';
 import { type SeedUser } from './types';
 import { pick, pickN } from './util';
 
@@ -17,8 +18,12 @@ import { pick, pickN } from './util';
  * member index lead with a different action under each and none of that can be
  * looked at locally without one of each. The Real Book Club is `open` because it
  * is the spec's driving case: a drop-in jazz jam anyone may join unaided.
+ *
+ * `leaders` are the loginable non-staff personas from `group-leaders.ts`, one
+ * per join policy. Drawing a leader from `users` instead is what left the
+ * leader seat unreachable in dev — see the comment there.
  */
-export async function seedGroups(users: SeedUser[]) {
+export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 	console.log('Seeding groups...');
 	const groups = [];
 
@@ -90,9 +95,12 @@ export async function seedGroups(users: SeedUser[]) {
 
 	for (let i = 0; i < definitions.length; i++) {
 		const d = definitions[i];
-		// Offset from the band owners so a leader is not also fronting a band —
-		// the two roles look identical on a roster otherwise.
-		const leader = users[(i + 7) % users.length];
+		// The persona seeded for this group's join policy, falling back to the old
+		// offset-from-the-band-owners pick so the seeder still runs standalone. The
+		// offset is what keeps a leader from also fronting a band, which looks
+		// identical on a roster.
+		const persona = GROUP_LEADER_PERSONAS.find((p) => p.joinPolicy === d.joinPolicy);
+		const leader = leaders.find((l) => l.id === persona?.id) ?? users[(i + 7) % users.length];
 
 		const g = await insertBandWithOwner(
 			{
@@ -108,7 +116,11 @@ export async function seedGroups(users: SeedUser[]) {
 		);
 		groups.push(g);
 
-		const candidates = users.filter((u) => u.id !== leader.id);
+		// Every leader persona is excluded, not just this group's: a leader seeded
+		// as a plain member elsewhere would make the three personas interchangeable
+		// on screen, which is the opposite of what they are for.
+		const leaderIds = new Set(leaders.map((l) => l.id));
+		const candidates = users.filter((u) => u.id !== leader.id && !leaderIds.has(u.id));
 		// Tracked, because the waiting rows below draw from the same pool. Picking
 		// them independently collided with a member already seeded here and failed
 		// the whole seed on `group_member.group_id, user_id` — intermittently,
@@ -130,6 +142,23 @@ export async function seedGroups(users: SeedUser[]) {
 		// shape and opposite meanings, which is the whole reason `'requested'` is
 		// a distinct status — and the only way to see the roster render them
 		// apart is to have both.
+		// The invite-only committee gets one pending invitation. It is the only way
+		// in for that policy, so without a waiting row the accept path has nothing
+		// to be read against locally.
+		if (d.joinPolicy === 'invite_only') {
+			const [invitee] = pickN(
+				users.filter((u) => !taken.has(u.id)),
+				1
+			);
+			await db.insert(groupMember).values({
+				groupId: g.id,
+				userId: invitee.id,
+				role: 'member',
+				status: 'pending',
+				invitedById: leader.id
+			});
+		}
+
 		if (d.joinPolicy === 'by_application') {
 			const [applicant, invitee] = pickN(
 				users.filter((u) => !taken.has(u.id)),

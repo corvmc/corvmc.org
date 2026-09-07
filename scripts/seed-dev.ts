@@ -34,6 +34,7 @@ import { seedVenues } from './seed/venues';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
+import { GROUP_LEADER_PERSONAS, seedGroupLeaders } from './seed/group-leaders';
 import { seedGroupDocuments } from './seed/group-documents';
 import { seedDirectoryEntries } from './seed/directory';
 import { seedDirectoryPersonas } from './seed/directory-personas';
@@ -105,7 +106,10 @@ async function main() {
 	// which should include it — or slices the first few, which should not.
 	const soloAct = await seedSoloAct(roles);
 	if (soloAct) bands.push(soloAct);
-	const groups = await seedGroups(allUsers);
+	// Before the groups, which take their leaders from it. Kept out of `allUsers`
+	// for the reason `seedGroupLeaders` gives.
+	const groupLeaders = await seedGroupLeaders(roles);
+	const groups = await seedGroups(allUsers, groupLeaders);
 	// After the bands and before the entries, which is the only window that works:
 	// it reads `pendingTags` to point each persona at data the bulk seed actually
 	// produced, and `seedDirectoryEntries` is what gives these accounts a listing
@@ -296,6 +300,11 @@ async function main() {
 	console.log('    seeker@corvallismusic.org       wants a band — matched bands on /member');
 	console.log('    bandleader@corvallismusic.org   wants members — matched members on /member');
 	console.log('    undecided@corvallismusic.org    no lookingFor — the empty state');
+
+	console.log('\n  Group leader demo logins (all `password`, none of them staff):');
+	for (const p of GROUP_LEADER_PERSONAS) {
+		console.log(`    ${p.email.padEnd(31)} ${p.joinPolicy} group — /member/groups`);
+	}
 
 	console.log('\n  Solo-act demo login (`password`):');
 	console.log(
