@@ -60,6 +60,14 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 	};
 });
 
+// The recompute is the run of show's business, and it has its own spec. Here
+// the only question is whether the hook fires, so it is a spy rather than a
+// second copy of that module's database expectations.
+const recomputeSetTimes = vi.fn();
+vi.mock('./run-of-show-service', () => ({
+	recomputeSetTimes: (id: string) => recomputeSetTimes(id)
+}));
+
 import {
 	createProduction,
 	getProductionByEvent,
@@ -168,6 +176,20 @@ describe('updateProductionDetails', () => {
 		returningRows = [];
 
 		await expect(updateProductionDetails('prod-999', {})).rejects.toThrow(ProductionNotFoundError);
+	});
+
+	// A moved downbeat moves every set after it, and the schedule is derived with
+	// no escape hatch — so the recompute is not optional and not a button.
+	it('recomputes the set times when the downbeat is in the payload', async () => {
+		await updateProductionDetails('prod-1', { firstSetAt: new Date('2026-10-01T03:30:00Z') });
+
+		expect(recomputeSetTimes).toHaveBeenCalledWith('prod-1');
+	});
+
+	it('leaves the set times alone for an edit that cannot move them', async () => {
+		await updateProductionDetails('prod-1', { internalNotes: 'Door code is on the whiteboard' });
+
+		expect(recomputeSetTimes).not.toHaveBeenCalled();
 	});
 });
 
