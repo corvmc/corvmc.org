@@ -827,15 +827,35 @@ export const volunteerRoleGroupLabels: Record<(typeof volunteerRoleGroups)[numbe
  * not. Silently treating one as the other is a lie a staffer could configure
  * and never see.
  */
-export const dutyListAnchors = ['doors', 'start', 'end'] as const;
+export const dutyListAnchors = [
+	'doors',
+	'start',
+	'end',
+	'load_in',
+	'first_set',
+	'curfew',
+	'load_out'
+] as const;
 export type DutyListAnchor = (typeof dutyListAnchors)[number];
 
-// Generic nouns, because `start` and `end` now resolve for a rehearsal booking
-// as well as a show.
+/**
+ * The four production anchors are the show's own clock rather than the
+ * listing's. Staffing a show from `doorsAt` alone puts every shift against the
+ * one time the run of show does not turn on: a sound tech is wanted at load-in,
+ * a stage hand at the first set, and a lock-up at load-out.
+ */
+export const productionDutyListAnchors = ['load_in', 'first_set', 'curfew', 'load_out'] as const;
+
+// Generic nouns for the first three, because `start` and `end` resolve for a
+// rehearsal booking as well as a show.
 export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 	doors: 'Doors',
 	start: 'Start',
-	end: 'End'
+	end: 'End',
+	load_in: 'Load-in',
+	first_set: 'First set',
+	curfew: 'Curfew',
+	load_out: 'Load-out'
 };
 
 /**

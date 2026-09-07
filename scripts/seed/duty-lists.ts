@@ -34,6 +34,40 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 				'What it takes to run an ordinary night: someone to advance it, someone to set the room, someone on the desk, someone on the board, and enough hands to put it all away.',
 			anchor: 'doors' as const,
 			createdByUserId: 'seed-vol-coordinator'
+		},
+		{
+			// Anchored to the show's own clock rather than the listing's. Staffing
+			// from doors alone puts the load-in crew against the one time the run of
+			// show does not turn on.
+			id: 'seed-duty-load-in',
+			name: 'Load-in Crew',
+			description:
+				'Hands for the part of the night that happens before anybody is watching. Anchored to the production’s load-in, so it moves when the producer moves it.',
+			anchor: 'load_in' as const,
+			createdByUserId: 'seed-vol-coordinator'
+		}
+	]);
+
+	await batchInsert(dutyListItem, [
+		{
+			id: 'seed-duty-item-load-in',
+			dutyListId: 'seed-duty-load-in',
+			volunteerRoleId: setup.id,
+			offsetMinutes: 0,
+			durationMinutes: 90,
+			capacity: 3,
+			sortOrder: 10,
+			tasks: ['Unload the van', 'Backline to its marks', 'Cases stowed out of the walkway']
+		},
+		{
+			id: 'seed-duty-item-load-out',
+			dutyListId: 'seed-duty-load-in',
+			volunteerRoleId: teardown.id,
+			offsetMinutes: 30,
+			durationMinutes: 60,
+			capacity: 2,
+			sortOrder: 20,
+			tasks: ['Stage cleared', 'Gear back to storage', 'Room reset for tomorrow']
 		}
 	]);
 
@@ -105,7 +139,7 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 	const show = events.find(
 		(e: any) => e.status === 'published' && e.kind === 'show' && e.endsAt && e.startsAt > new Date()
 	);
-	if (!show) return { lists: 1, workOrders: 0 };
+	if (!show) return { lists: 2, workOrders: 0 };
 
 	const anchor: Date = show.doorsAt ?? show.startsAt;
 	const at = (minutes: number) => new Date(anchor.getTime() + minutes * 60_000);
@@ -146,5 +180,5 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[]) {
 	);
 	await batchInsert(workTask, tasks, 12);
 
-	return { lists: 1, workOrders: workOrders.length };
+	return { lists: 2, workOrders: workOrders.length };
 }
