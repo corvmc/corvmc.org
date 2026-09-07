@@ -14,8 +14,10 @@ import {
 	updateSlot,
 	moveSlot,
 	removeSlot,
+	setSlotTerms,
 	buildSlotsFromLineup
 } from '$lib/server/production/run-of-show-service';
+import { PERCENTAGE_BPS_MAX } from '$lib/production/terms';
 import { getStaffEventPage, getStaffEventProduction, getStaffEvents } from './events.remote';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -267,6 +269,46 @@ export const buildRunOfShowFromLineup = form(
 		await requireCapability('event.manage');
 		try {
 			await buildSlotsFromLineup(data.productionId, data.eventId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
+	}
+);
+
+/**
+ * The deal, per act.
+ *
+ * Its own form rather than fields on `updateRunOfShowSlot`: a money save and a
+ * timing save want different confirmations, and this is the seam a settlement
+ * capability would guard without splitting a form that had already grown.
+ *
+ * The ranges are here because they cannot be CHECK constraints — a CHECK on a
+ * populated table is a rebuild — and because a client can post any number
+ * regardless of what the column allows.
+ */
+export const setRunOfShowTerms = form(
+	z.object({
+		...slotRef,
+		guaranteeCents: z.number().int().min(0).max(100_000_000).optional(),
+		percentageBps: z.number().int().min(0).max(PERCENTAGE_BPS_MAX).optional(),
+		versus: z.boolean().optional().default(false),
+		againstNet: z.boolean().optional().default(false),
+		contributed: z.boolean().optional().default(false)
+	}),
+	async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await setSlotTerms(data.slotId, {
+				// A cleared number field is dropped from the payload rather than sent
+				// as null, so the missing key is what "no guarantee" looks like.
+				guaranteeCents: data.guaranteeCents ?? null,
+				percentageBps: data.percentageBps ?? null,
+				versus: data.versus,
+				againstNet: data.againstNet,
+				contributed: data.contributed
+			});
 		} catch (err) {
 			mapDomainError(err);
 		}
