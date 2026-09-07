@@ -14,7 +14,7 @@ belong to staff, not to whoever is doing the deletion.
 
 `updateFeatureFlag` (`src/lib/remote/settings.remote.ts`) is the only write path to
 `site-config:feature.*` in the codebase, and the staff Features tab drives it by iterating
-`featureMeta` (`src/routes/staff/settings/+page.svelte`), which listed six of the eleven. The other
+`featureMeta` (`src/routes/staff/settings/feature-meta.ts`), which listed six of the eleven. The other
 five never had a toggle anywhere. `bandPremium` has since left that list by launching, and
 `bandAudio` and `cmcRadio` joined it with the band-audio work. Unless someone wrote the KV key by hand, they sit at their `DEFAULTS`
 value of `false` — which means the entire groups module and member↔member DMs have been dark in
@@ -104,7 +104,8 @@ scoped API token in the dashboard (Account → Workers KV Storage → Read) and 
 
 Two ways to read a value without any of that:
 
-1. **Staff Settings → Features**, which shows every flag with a `featureMeta` entry.
+1. **Staff Settings → Features**, which shows every flag with a `featureMeta` entry — since #555,
+   that is every flag, and a spec keeps it that way.
 2. **Probe production.** `requireFeature` throws `error(404, 'Not found')`, and a handler-thrown
    404 is distinguishable from an unmatched route: the handler returns
    `content-type: application/json` with `{"message":"Not found"}`, while an unmatched route
@@ -115,8 +116,10 @@ Two ways to read a value without any of that:
    The trap is a surface where both branches 404 identically. `/band-site/[slug]/robots.txt` checks
    the flag and then the tier, and throws the same 404 either way, so it proves nothing.
 
-A flag with no `featureMeta` entry needs no reading at all: `updateFeatureFlag` is the only write
-path in the codebase, so it is provably at its `DEFAULTS` value of `false`.
+A flag with no `featureMeta` entry used to need no reading at all: `updateFeatureFlag` is the only
+write path in the codebase, so an untoggleable flag was provably at its `DEFAULTS` value of `false`.
+That shortcut is gone as of #555, which is the point — it was only ever available because a live
+flag had no way to be switched on.
 
 ## The ledger
 
