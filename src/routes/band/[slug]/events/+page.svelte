@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -10,7 +11,8 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import ImportGigsModal from './ImportGigsModal.svelte';
 	import CreateEventModal from './CreateEventModal.svelte';
-	import { formatDate } from '$lib/utils/format';
+	import { formatDate, formatTime } from '$lib/utils/format';
+	import { describeTerms } from '$lib/production/terms';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import {
 		getBandEventsPage,
@@ -26,7 +28,7 @@
 	// in flight in this component. See `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-	const { events, invites } = $derived(await getBandEventsPage(page.params.slug!));
+	const { events, invites, bookings } = $derived(await getBandEventsPage(page.params.slug!));
 	const band = $derived(layout.band);
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
@@ -95,6 +97,43 @@
 						{/if}
 					</CardBody>
 				</div>
+			{/each}
+		</div>
+	{/if}
+
+	<!--
+		The deal, before the show rather than after it. Read-only: an act cannot
+		accept or edit anything here, and it sees only its own terms — never another
+		act's, and never a whole-show total.
+	-->
+	{#if bookings.length > 0}
+		<div class="mb-6 space-y-3">
+			<h2 class="text-muted font-semibold uppercase">Bookings</h2>
+			{#each bookings as booking (booking.eventId)}
+				<Card>
+					<CardBody class="gap-1 py-4">
+						<p class="font-medium">{booking.eventTitle}</p>
+						<p class="text-muted">
+							{formatDate(booking.startsAt)}{booking.location ? ` · ${booking.location}` : ''}
+						</p>
+						<p class="text-subtle">
+							{#if booking.scheduledStartAt}
+								On at {formatTime(booking.scheduledStartAt)} ·
+							{/if}
+							{booking.setLengthMinutes} min set
+							{#if booking.soundcheckAt}
+								· soundcheck {formatTime(booking.soundcheckAt)}
+							{/if}
+							{#if booking.loadInAt}
+								· load-in {formatTime(booking.loadInAt)}
+							{/if}
+							{#if booking.curfewAt}
+								· curfew {formatTime(booking.curfewAt)}
+							{/if}
+						</p>
+						<p>{describeTerms(booking.terms)}</p>
+					</CardBody>
+				</Card>
 			{/each}
 		</div>
 	{/if}

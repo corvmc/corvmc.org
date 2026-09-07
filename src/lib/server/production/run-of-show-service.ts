@@ -556,6 +556,79 @@ export async function buildSlotsFromLineup(productionId: string, eventId: string
 	return rows.length;
 }
 
+/** One show this band is booked on, as the band is allowed to see it. */
+export interface BandSlotTerms {
+	eventId: string;
+	eventTitle: string;
+	startsAt: Date;
+	location: string | null;
+	scheduledStartAt: Date | null;
+	setLengthMinutes: number;
+	soundcheckAt: Date | null;
+	loadInAt: Date | null;
+	curfewAt: Date | null;
+	terms: ActTerms;
+}
+
+/**
+ * The deal a band was offered, on its own page.
+ *
+ * Returns only what belongs to this band — its own terms and call times, never
+ * another act's, a whole-show total, or anything on `production`'s notes.
+ * `offered` and later, because a producer sketching a draft has offered nothing
+ * and a band reading one would be reading a guess.
+ */
+export async function listBandSlotTerms(groupId: string): Promise<BandSlotTerms[]> {
+	const rows = await db
+		.select({
+			eventId: eventListing.id,
+			eventTitle: eventListing.title,
+			startsAt: eventListing.startsAt,
+			location: eventListing.location,
+			scheduledStartAt: productionSlot.scheduledStartAt,
+			setLengthMinutes: productionSlot.setLengthMinutes,
+			soundcheckAt: productionSlot.soundcheckAt,
+			loadInAt: production.loadInAt,
+			curfewAt: production.curfewAt,
+			guaranteeCents: productionSlot.guaranteeCents,
+			percentageBps: productionSlot.percentageBps,
+			versus: productionSlot.versus,
+			againstNet: productionSlot.againstNet,
+			contributed: productionSlot.contributed
+		})
+		.from(productionSlot)
+		.innerJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
+		.innerJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
+		.innerJoin(production, eq(production.id, productionSlot.productionId))
+		.innerJoin(eventListing, eq(eventListing.id, production.eventId))
+		.where(
+			and(
+				eq(directoryEntry.groupId, groupId),
+				inArray(production.status, ['offered', ...PUBLISHED_STATUSES])
+			)
+		)
+		.orderBy(asc(eventListing.startsAt));
+
+	return rows.map((r) => ({
+		eventId: r.eventId,
+		eventTitle: r.eventTitle,
+		startsAt: r.startsAt,
+		location: r.location,
+		scheduledStartAt: r.scheduledStartAt,
+		setLengthMinutes: r.setLengthMinutes,
+		soundcheckAt: r.soundcheckAt,
+		loadInAt: r.loadInAt,
+		curfewAt: r.curfewAt,
+		terms: {
+			guaranteeCents: r.guaranteeCents,
+			percentageBps: r.percentageBps,
+			versus: r.versus,
+			againstNet: r.againstNet,
+			contributed: r.contributed
+		}
+	}));
+}
+
 /**
  * Which production a listing has, or null.
  *
