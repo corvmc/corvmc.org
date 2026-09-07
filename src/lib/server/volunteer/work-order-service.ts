@@ -310,11 +310,9 @@ export interface ShiftWithCounts extends WorkOrder {
 	/**
 	 * How many of those places are actually booked.
 	 *
-	 * Separate from `claimed` because the difference is the whole of
-	 * docs/reports/volunteer-workflow-findings.md#a3: only a confirmed signup gets the
-	 * day-before reminder, auto-completes, and produces an hour log. A shift showing 3/3
-	 * where none are confirmed is not staffed, and a list that prints one number cannot
-	 * say so.
+	 * Separate from `claimed` because only a confirmed signup gets the day-before
+	 * reminder, auto-completes, and produces an hour log. A shift showing 3/3
+	 * where none are confirmed is not staffed.
 	 */
 	confirmed: number;
 	/**
@@ -512,14 +510,10 @@ export async function scheduleWorkOrder(
 /**
  * The work is finished, which is not the same as anybody having turned up.
  *
- * `completeFinishedShifts` promotes a signup once the clock runs out; that says
- * the volunteer worked and earns their hours. A session can end with the amp
- * still broken, so closure lives on the work row. And because that cron keys on
- * `ends_at`, it can never reach an unscheduled row — so resolving has to
- * complete the signups itself or they sit at `confirmed` forever.
- *
- * Deliberately does not touch the asset or its flags: those are the inventory
- * domain's, and the remote orchestrates the pair.
+ * `completeFinishedShifts` promotes a signup once the clock runs out; a session
+ * can end with the amp still broken, so closure lives on the work row. That cron
+ * keys on `ends_at` and can never reach an unscheduled row, so resolving has to
+ * complete the signups itself. Does not touch the asset or its flags.
  */
 export async function resolveWorkOrder(
 	id: string,
@@ -637,13 +631,10 @@ export async function listShifts(
 /**
  * One shift, with the same trimmings as a list row.
  *
- * Separate from `getShiftById`, which returns the bare table row: the signup
- * service branches on that shape, and widening it there would push the role and
- * event joins onto every claim, confirm and no-show. This is the read for a
- * page that is *showing* a shift to somebody.
- *
- * Cancelled shifts are included. The detail page is exactly where you go to
- * find out what was called off.
+ * Separate from `getShiftById`, which returns the bare table row that the signup
+ * service branches on; widening it there would push the role and event joins
+ * onto every claim, confirm and no-show. Cancelled shifts are included — the
+ * detail page is where you go to find out what was called off.
  */
 export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null> {
 	const rows = await shiftRowsQuery().where(eq(workOrder.id, id)).limit(1);
@@ -653,11 +644,9 @@ export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null
 /**
  * Who called a shift off, by name.
  *
- * Its own lookup rather than a join on `shiftRowsQuery`, because only one page
- * asks and only when the shift is actually cancelled — which is a handful of
- * rows in the table. Putting it on the shared row query would join `user` a
- * second time on every schedule row to answer a question almost none of them
- * have.
+ * Its own lookup rather than a join on `shiftRowsQuery`: only one page asks, and
+ * only when the shift is actually cancelled. On the shared row query it would
+ * join `user` a second time on every schedule row.
  */
 export async function getShiftCancelledByName(shiftId: string): Promise<string | null> {
 	const [row] = await db

@@ -10,16 +10,10 @@ import { cancelShift, countActiveSignups } from './work-order-service';
 /**
  * Whether a member has been shown around the space, and when.
  *
- * One row per member, reused rather than appended to: this answers "has this
- * person been shown around", which is one fact about them — unlike
- * `member_certification`, where each renewal is its own grant with its own
- * expiry and the ledger has to keep all of them.
- *
- * The state is **derived**, which is the whole design. See
- * `memberOrientationStates` in `$lib/config` for why; the short version is that
- * an orientation nobody claims never emits a completion event, so a stored
- * status would sit at `scheduled` for ever with its time in the past and need a
- * cron to un-stick it.
+ * One row per member, reused rather than appended to: this is one fact about
+ * them, unlike `member_certification` where each renewal is its own grant with
+ * its own expiry. The state is **derived** — see `memberOrientationStates` in
+ * `$lib/config`; a stored status would sit at `scheduled` for ever unclaimed.
  */
 
 export interface MemberOrientationView extends MemberOrientation {
@@ -169,14 +163,10 @@ export interface OrientationOwner {
 /**
  * Whose orientation is this work order, if it is one at all?
  *
- * Two conditions, and both are needed. `reservation_id` alone would catch any
- * future work order that hangs off a booking; the `auto_apply_on` join is what
- * says this row came from the orientation list rather than from some other list
- * a coordinator applied to the same booking.
- *
- * Returns the *member who booked*, not whoever worked the shift — and their
- * name and address with it, because both callers need to write to them and
- * neither should be running its own query to find out who they are.
+ * Both conditions are needed: `reservation_id` alone would catch any work order
+ * hanging off a booking, and the `auto_apply_on` join is what says this row came
+ * from the orientation list. Returns the *member who booked* with their name and
+ * address, because both callers need to write to them.
  */
 export async function orientationOwnerOf(workOrderId: string): Promise<OrientationOwner | null> {
 	const [row] = await db
@@ -234,15 +224,10 @@ export async function orientationForReservation(
 /**
  * The booking is off, so the shift that staffed it is off.
  *
- * Keyed on the reservation rather than on the member, which is what makes
- * rebooking need no special case: the new booking gets its own orientation, and
- * this one stays cancelled as a record of what was called off.
- *
- * Goes through `cancelShift` rather than writing `cancelled_at` directly, so the
- * row lands in every staff surface exactly as a hand-cancelled shift does —
- * including the unnotified count and the "Notify all" button. Telling the
- * volunteer is deliberately still a person's decision; see the note on
- * `notifySignupsOfCancellation`.
+ * Keyed on the reservation rather than the member, which is what makes
+ * rebooking need no special case. Goes through `cancelShift` rather than writing
+ * `cancelled_at`, so the row lands in every staff surface as a hand-cancelled
+ * shift does — telling the volunteer stays a person's decision.
  */
 export async function cancelOrientationFor(
 	reservationId: string,
@@ -272,15 +257,10 @@ export async function cancelOrientationFor(
 /**
  * The booking moved, so the shift that staffs it moves with it.
  *
- * Shifts by the **delta**, not by recomputing from the duty list. The stamped
- * work order is its own row with no link back — the same bargain `applyDutyList`
- * and `duplicateShift` both make — so a list edited since the booking was made
- * must not silently re-time work somebody has already claimed. Fifteen minutes
- * before is preserved because it is fifteen minutes before, not because the
- * template still says so.
- *
- * Only live shifts move. A cancelled one is history and a resolved one already
- * happened; re-timing either would rewrite the past.
+ * Shifts by the **delta**, not by recomputing from the duty list: the stamped
+ * work order has no link back, so a list edited since must not re-time work
+ * somebody has already claimed. Only live shifts move — a cancelled one is
+ * history and a resolved one already happened.
  */
 export async function rescheduleOrientationFor(
 	reservationId: string,

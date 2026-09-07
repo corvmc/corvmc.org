@@ -503,10 +503,33 @@ are not blocked at all; run them yourself when you want them.
 ## Style
 
 - Interfaces/UI: **no gradients**.
-- Match the surrounding code's comment density, naming, and idioms. Comments state
-  constraints the code can't show — this codebase does that well (see
-  `src/lib/server/auth.ts` or `reservation-service.ts` for the house style).
+- Match the surrounding code's naming and idioms.
 - Prettier (with the svelte + tailwind plugins) is the formatter; don't hand-format.
+
+### Comments
+
+**A comment states a constraint the code can't show. It is not a record of how the code got
+here.** That second sentence is the one this repo kept getting wrong: it reached 24% comment by
+line and 28.4% by byte, most of it in blocks long enough to be essays, because the instruction
+that used to live here was "match the surrounding comment density" — which is an instruction to
+reproduce whatever is already there.
+
+- **Eight lines per block, capped and enforced.** `scripts/comment-budget.spec.ts` holds every
+  directory to a recorded ceiling in `scripts/comment-budget.json`; a longer block reddens the
+  **Unit tests** job. When the reasoning genuinely needs more room it goes in `docs/` or in the PR
+  that made the change, and the code keeps a one-line pointer.
+- **No historical narration.** "This used to delete the object outright", "it was
+  `Record<string, …>` until #527" — that is what git is for, and nothing reddens when a comment's
+  account of the past stops matching the present. If the old behaviour matters, assert the current
+  one in a spec; that version fails when it stops being true.
+- **No PR numbers, phase numbers, or dependency versions** as load-bearing context. They date
+  immediately and cannot be checked from the file that carries them.
+- **Rationale earns its lines only where a reader would otherwise undo the decision**, and gets one
+  or two of them rather than a section. The test to apply: would deleting this comment cause
+  someone to make the change it argues against? If not, delete it.
+
+The ceilings only move down. A directory that comes in under its number fails the gate too, with
+the fix being to lower the number — otherwise the next change quietly spends what a prune freed.
 
 ## pnpm script reference
 
