@@ -10,6 +10,7 @@
 		IconTool,
 		IconPackage,
 		IconPlus,
+		IconSearch,
 		IconHelp,
 		IconMetronome,
 		IconMessages,
@@ -155,34 +156,42 @@
 
 		<!-- A second group rather than a merge. An act is a member's own project
 		     with a panel; a club is a program with a page, and the two indexes
-		     answer different questions. Absent rather than empty when you belong
-		     to none, which is also the day-one shape: a member with no groups
-		     should see no heading, not a heading over nothing. -->
-		{#if layout.userGroups.length > 0}
-			<Nav.Group
-				title="My Groups"
-				collapsible
-				persistKey="my-groups"
-				persistScope="member"
-				containsActive={page.url.pathname.startsWith('/member/groups')}
-			>
-				{#snippet action()}
-					<Button href="/member/groups" variant="ghost" size="xs">All</Button>
-				{/snippet}
-				{#each layout.userGroups as group (group.slug)}
-					<Nav.Item href={`/member/groups/${group.slug}`} label={group.name}>
-						{#snippet icon()}
-							<Avatar
-								class="size-8"
-								size="avatar-sm"
-								src={group.avatarUrl ?? undefined}
-								name={group.name}
-							/>
-						{/snippet}
-					</Nav.Item>
-				{/each}
-			</Nav.Group>
-		{/if}
+		     answer different questions.
+		     Rendered whether or not you belong to one, like My Bands above:
+		     /member/groups IS the discovery surface, so hiding the heading while
+		     the list was empty left the people most likely to want it with no
+		     link to it anywhere in the panel. -->
+		<Nav.Group
+			title="My Groups"
+			collapsible
+			persistKey="my-groups"
+			persistScope="member"
+			containsActive={page.url.pathname.startsWith('/member/groups')}
+		>
+			{#snippet action()}
+				<Button href="/member/groups" variant="ghost" size="xs">All</Button>
+			{/snippet}
+			{#each layout.userGroups as group (group.slug)}
+				<Nav.Item href={`/member/groups/${group.slug}`} label={group.name}>
+					{#snippet icon()}
+						<Avatar
+							class="size-8"
+							size="avatar-sm"
+							src={group.avatarUrl ?? undefined}
+							name={group.name}
+						/>
+					{/snippet}
+				</Nav.Item>
+			{/each}
+			{#if layout.userGroups.length === 0}
+				<!-- The row that replaces the heading-over-nothing. It says what the
+				     page is for rather than repeating "All", which reads as a filter
+				     when there is nothing to filter. -->
+				<Nav.Item href={resolve('/member/groups')} label="Find a club">
+					{#snippet icon()}<IconSearch />{/snippet}
+				</Nav.Item>
+			{/if}
+		</Nav.Group>
 
 		<div class="flex grow"></div>
 
