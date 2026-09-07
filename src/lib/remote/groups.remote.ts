@@ -292,12 +292,16 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		sessions: sessions.map((e) => ({
 			id: e.id,
 			title: e.title,
+			// The edit form needs to open pre-filled, so it needs what it edits.
+			description: e.description,
 			startsAt: e.startsAt,
 			endsAt: e.endsAt,
 			status: e.status,
 			// Whether this one holds the room, which is the fact that distinguishes
-			// a program's session from a listing it merely advertises.
-			reservesRoom: !!e.reservationId
+			// a program's session from a listing it merely advertises. A cancelled
+			// session keeps the pointer — the reservation is cancelled beside it,
+			// not unlinked — so the status has to be part of the answer.
+			reservesRoom: !!e.reservationId && e.status !== 'cancelled'
 		})),
 		// Name, status and dates only. A committee member reads what their group is
 		// working on; the budget and what it has burned are a staff question, and

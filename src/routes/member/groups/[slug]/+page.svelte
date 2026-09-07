@@ -25,12 +25,18 @@
 		revokeGroupEmailInvite,
 		transferGroupOwner
 	} from '$lib/remote/groups.remote';
+	import {
+		cancelGroupSession,
+		publishGroupSession,
+		unpublishGroupSession
+	} from '$lib/remote/group-events.remote';
 	import AnnouncementList from '$lib/components/groups/AnnouncementList.svelte';
 	import DocumentList from '$lib/components/groups/DocumentList.svelte';
 	import MuteAnnouncementsAction from '$lib/components/groups/MuteAnnouncementsAction.svelte';
 	import CreateSessionAction from '$lib/components/groups/CreateSessionAction.svelte';
 	import InviteGroupMemberAction from '$lib/components/groups/InviteGroupMemberAction.svelte';
 	import GroupMemberEditAction from '$lib/components/groups/GroupMemberEditAction.svelte';
+	import EditSessionAction from '$lib/components/groups/EditSessionAction.svelte';
 
 	/**
 	 * A club gets a page, not a panel.
@@ -55,6 +61,9 @@
 	const revokeFields = revokeGroupInvitation.fields;
 	const revokeEmailFields = revokeGroupEmailInvite.fields;
 	const transferFields = transferGroupOwner.fields;
+	const cancelSessionFields = cancelGroupSession.fields;
+	const publishSessionFields = publishGroupSession.fields;
+	const unpublishSessionFields = unpublishGroupSession.fields;
 
 	type Tab = 'announcements' | 'documents' | 'overview' | 'projects' | 'sessions' | 'roster';
 
@@ -238,6 +247,9 @@
 						<th>What</th>
 						<th class="w-px"><span class="sr-only">Room</span></th>
 						<th class="w-px">Status</th>
+						{#if data.canManage}
+							<th class="w-px"><span class="sr-only">Actions</span></th>
+						{/if}
 					{/snippet}
 					{#each data.sessions as s (s.id)}
 						<tr>
@@ -253,6 +265,74 @@
 								{/if}
 							</td>
 							<td class="w-px"><StatusBadge status={s.status} /></td>
+							{#if data.canManage}
+								<td class="w-px">
+									{#if s.status !== 'cancelled'}
+										<div class="flex justify-end gap-2">
+											<EditSessionAction groupId={group.id} session={s} onchanged={refreshRoster} />
+											{#if s.status === 'published'}
+												<Action
+													action={unpublishGroupSession.for(s.id)}
+													label="Unlist"
+													aria-label={`Take ${s.title} off the gig guide`}
+													modalTitle="Take it off the guide"
+													submitLabel="Unlist"
+													confirm="Take {s.title} off the public gig guide? The room stays held and the roster still sees it."
+													variant="ghost"
+													size="xs"
+													successToast="Taken off the guide"
+													onsuccess={refreshRoster}
+													onfailure={() => toast.error('Could not unlist it')}
+												>
+													{#snippet form()}
+														<input {...unpublishSessionFields.groupId.as('hidden', group.id)} />
+														<input {...unpublishSessionFields.eventId.as('hidden', s.id)} />
+													{/snippet}
+												</Action>
+											{:else}
+												<Action
+													action={publishGroupSession.for(s.id)}
+													label="Publish"
+													aria-label={`Publish ${s.title}`}
+													modalTitle="Publish this session"
+													submitLabel="Publish"
+													confirm="Put {s.title} on the public gig guide?"
+													variant="ghost"
+													size="xs"
+													successToast="Published"
+													onsuccess={refreshRoster}
+													onfailure={() => toast.error('Could not publish it')}
+												>
+													{#snippet form()}
+														<input {...publishSessionFields.groupId.as('hidden', group.id)} />
+														<input {...publishSessionFields.eventId.as('hidden', s.id)} />
+													{/snippet}
+												</Action>
+											{/if}
+											<Action
+												action={cancelGroupSession.for(s.id)}
+												label="Cancel"
+												aria-label={`Cancel ${s.title}`}
+												modalTitle="Call it off"
+												submitLabel="Cancel session"
+												confirm={s.reservesRoom
+													? `Cancel ${s.title}? The room it holds goes back.`
+													: `Cancel ${s.title}?`}
+												variant="ghost"
+												size="xs"
+												successToast="Session cancelled"
+												onsuccess={refreshRoster}
+												onfailure={() => toast.error('Could not cancel it')}
+											>
+												{#snippet form()}
+													<input {...cancelSessionFields.groupId.as('hidden', group.id)} />
+													<input {...cancelSessionFields.eventId.as('hidden', s.id)} />
+												{/snippet}
+											</Action>
+										</div>
+									{/if}
+								</td>
+							{/if}
 						</tr>
 					{/each}
 				</Table>
