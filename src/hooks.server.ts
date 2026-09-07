@@ -14,7 +14,7 @@ import { captureException } from '$lib/server/sentry';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
 import { env as publicEnv } from '$env/dynamic/public';
-import { bandSiteUrl, bandSlugFromHost } from '$lib/utils/band-site-url';
+import { bandSiteUrl, bandSlugFromHost, isAppDomain } from '$lib/utils/band-site-url';
 import { groupPublicPath } from '$lib/utils/canonical-address';
 import { resolveBandSubdomain } from '$lib/server/band/band-host-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
@@ -146,6 +146,44 @@ const handleBandSubdomain: Handle = async ({ event, resolve }) => {
 // drowned out real issues, so drop them before they reach Sentry. The matching
 // 4xx guard in `handleError` covers our explicit captures; this catches anything
 // captured by the request handler itself.
+/**
+ * Security response headers.
+ *
+ * Sits above `handleBetterAuth` in the sequence so it wraps every response the
+ * app produces, including the two redirects `handleBandSubdomain` builds by
+ * hand — those never call `resolve`, so a handler placed below it would let
+ * them out bare.
+ *
+ * The CSP is deliberately not here. It lives in `kit.csp` (svelte.config.js),
+ * because Kit has to nonce the inline hydration script it injects into every
+ * rendered page and only the renderer can do that. Static assets are answered
+ * by the assets binding before this worker runs and are covered by `_headers`.
+ */
+const handleSecurityHeaders: Handle = async ({ event, resolve }) => {
+	const response = await resolve(event);
+
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	// The modern equivalent is `frame-ancestors`, which kit.csp enforces. This is
+	// its companion for browsers that only understand the older header.
+	response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+
+	// HSTS is a promise about a domain, not about a response, and the wildcard
+	// zone route means this worker also answers premium bands' own domains as
+	// Cloudflare for SaaS custom hostnames. Pinning an apex we do not own to
+	// HTTPS would outlive the band leaving CMC, so it is scoped to our own
+	// addresses. `includeSubDomains` covers band subdomains and media.corvmc.org,
+	// which are HTTPS-only already. No `preload`: that is close to irreversible.
+	if (
+		event.url.protocol === 'https:' &&
+		isAppDomain(event.url.hostname, publicEnv.PUBLIC_SITE_URL)
+	) {
+		response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+	}
+
+	return response;
+};
+
 function isNotFoundError(error: unknown): boolean {
 	const message = error instanceof Error ? error.message : String(error ?? '');
 	return message.startsWith('Not found:');
@@ -190,6 +228,9 @@ export const handle: Handle = sequence(
 		enableLogs: true
 	}),
 	Sentry.sentryHandle(),
+	// Above everything below it, so it sees the final response whichever branch
+	// produced it — including the redirects that never reach `resolve`.
+	handleSecurityHeaders,
 	// Must come after handleBetterAuth: that is where initDb() runs, and the
 	// subdomain gate queries the band table.
 	handleBetterAuth,

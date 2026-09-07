@@ -82,10 +82,28 @@ vi.mock('$lib/server/sentry', () => ({
 	captureException: (...args: unknown[]) => mockCaptureException(...args)
 }));
 
+// Pinned so the host-scoped headers are tested against a known base domain
+// rather than whatever PUBLIC_SITE_URL the checkout's .env happens to carry.
+vi.mock('$env/dynamic/public', () => ({
+	env: { PUBLIC_SITE_URL: 'https://corvmc.org' }
+}));
+
+const mockResolveBandSubdomain = vi.fn();
+vi.mock('$lib/server/band/band-host-service', () => ({
+	resolveBandSubdomain: (...args: unknown[]) => mockResolveBandSubdomain(...args)
+}));
+
+const mockResolveBandSlug = vi.fn();
+vi.mock('$lib/server/band/band-address-service', () => ({
+	resolveBandSlug: (...args: unknown[]) => mockResolveBandSlug(...args)
+}));
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	mockSvelteKitHandler.mockResolvedValue(new Response('ok'));
 	mockResolvePendingInvites.mockResolvedValue(undefined);
+	mockResolveBandSubdomain.mockResolvedValue(null);
+	mockResolveBandSlug.mockResolvedValue(null);
 });
 
 // ---------------------------------------------------------------------------
@@ -248,5 +266,98 @@ describe('hooks.server handleError', () => {
 		});
 
 		expect(mockCaptureException).toHaveBeenCalledWith(error);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Security headers (#628)
+// ---------------------------------------------------------------------------
+
+describe('hooks.server security headers', () => {
+	async function respond(href: string) {
+		mockGetSession.mockResolvedValue(null);
+		// The real svelteKitHandler calls through for anything that isn't a
+		// better-auth route; the shared mock returns a canned Response, which would
+		// leave the band-subdomain gate below it unreachable.
+		mockSvelteKitHandler.mockImplementation(
+			({ event, resolve }: { event: unknown; resolve: (e: unknown) => unknown }) => resolve(event)
+		);
+		const url = new URL(href);
+		const event = makeEvent({ url, request: new Request(href, { method: 'GET' }) });
+		return (await handle({
+			event: event as any,
+			resolve: vi.fn().mockResolvedValue(new Response('ok'))
+		})) as Response;
+	}
+
+	it('sets the always-on headers on an ordinary response', async () => {
+		const response = await respond('https://corvmc.org/');
+
+		expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+		expect(response.headers.get('referrer-policy')).toBe('strict-origin-when-cross-origin');
+		expect(response.headers.get('x-frame-options')).toBe('SAMEORIGIN');
+	});
+
+	it('sends HSTS for the app domain and its subdomains', async () => {
+		const apex = await respond('https://corvmc.org/');
+		expect(apex.headers.get('strict-transport-security')).toBe(
+			'max-age=31536000; includeSubDomains'
+		);
+
+		mockResolveBandSubdomain.mockResolvedValue({
+			slug: 'the-neons',
+			kind: 'band',
+			servesSite: true
+		});
+		const subdomain = await respond('https://the-neons.corvmc.org/');
+		expect(subdomain.headers.get('strict-transport-security')).toBe(
+			'max-age=31536000; includeSubDomains'
+		);
+	});
+
+	// A premium band's own domain reaches this worker through the `*/*` zone
+	// route. HSTS there would pin an apex we do not own, and survive the band
+	// leaving CMC.
+	it('does not send HSTS on a band custom domain, but still sends the rest', async () => {
+		const response = await respond('https://theband.com/');
+
+		expect(response.headers.get('strict-transport-security')).toBeNull();
+		expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+	});
+
+	it('does not send HSTS over plain http', async () => {
+		const response = await respond('http://corvmc.org/');
+
+		expect(response.headers.get('strict-transport-security')).toBeNull();
+	});
+
+	// handleBandSubdomain builds these by hand and never calls resolve, so a
+	// header handler placed below it in the sequence would miss them entirely.
+	it('sets headers on the free-band redirect, which never calls resolve', async () => {
+		mockResolveBandSubdomain.mockResolvedValue({
+			slug: 'tiny-band',
+			kind: 'band',
+			servesSite: false
+		});
+
+		const response = await respond('https://tiny-band.corvmc.org/events');
+
+		expect(response.status).toBe(302);
+		expect(response.headers.get('location')).toBe('https://corvmc.org/directory/bands/tiny-band');
+		expect(response.headers.get('x-frame-options')).toBe('SAMEORIGIN');
+		expect(response.headers.get('strict-transport-security')).toBe(
+			'max-age=31536000; includeSubDomains'
+		);
+	});
+
+	it('sets headers on the moved-slug redirect', async () => {
+		mockResolveBandSubdomain.mockResolvedValue(null);
+		mockResolveBandSlug.mockResolvedValue({ kind: 'moved', slug: 'the-neons' });
+
+		const response = await respond('https://old-name.corvmc.org/epk');
+
+		expect(response.status).toBe(302);
+		expect(response.headers.get('location')).toBe('https://the-neons.corvmc.org/epk');
+		expect(response.headers.get('referrer-policy')).toBe('strict-origin-when-cross-origin');
 	});
 });
