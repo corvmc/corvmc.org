@@ -503,10 +503,40 @@ are not blocked at all; run them yourself when you want them.
 ## Style
 
 - Interfaces/UI: **no gradients**.
-- Match the surrounding code's comment density, naming, and idioms. Comments state
-  constraints the code can't show — this codebase does that well (see
-  `src/lib/server/auth.ts` or `reservation-service.ts` for the house style).
+- Match the surrounding code's naming and idioms.
 - Prettier (with the svelte + tailwind plugins) is the formatter; don't hand-format.
+
+### Comments
+
+**A comment states a constraint the code can't show. It is not a record of how the code got
+here.** That second sentence is the one this repo kept getting wrong: it reached 24% comment by
+line and 28.4% by byte, most of it in blocks long enough to be essays, because the instruction
+that used to live here was "match the surrounding comment density" — which is an instruction to
+reproduce whatever is already there.
+
+- **Eight lines per block, capped and enforced.** `scripts/comment-budget.spec.ts` reddens the
+  **Unit tests** job on a longer block in any file not listed in `scripts/comment-budget.json`.
+  When the reasoning genuinely needs more room it goes in `docs/` or in the PR that made the
+  change, and the code keeps a one-line pointer.
+- **No historical narration.** "This used to delete the object outright", "it was
+  `Record<string, …>` until #527" — that is what git is for, and nothing reddens when a comment's
+  account of the past stops matching the present. If the old behaviour matters, assert the current
+  one in a spec; that version fails when it stops being true.
+- **No PR numbers, phase numbers, or dependency versions** as load-bearing context. They date
+  immediately and cannot be checked from the file that carries them.
+- **Rationale earns its lines only where a reader would otherwise undo the decision**, and gets one
+  or two of them rather than a section. The test to apply: would deleting this comment cause
+  someone to make the change it argues against? If not, delete it.
+
+`comment-budget.json` lists the files that predate the cap, and it only shrinks: prune a file
+below the cap and the gate fails until you delete its line, so the next change cannot quietly spend
+what a prune freed.
+
+**It is a path list rather than a line count, and that is load-bearing in a merge-queue repo.** A
+count is a whole-tree snapshot — any PR merging alongside yours changes the totals, so your branch
+passes its own checks and then fails on the queue's rebased ref for a change that did nothing
+wrong. That happened once and cost a queue slot. Two PRs editing a path list conflict in git
+instead, where a human sees it.
 
 ## pnpm script reference
 

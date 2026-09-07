@@ -72,6 +72,10 @@ local run you did not do. Triage of a red or rejected run is the `qc` role's job
 - **Forms use `$lib/components/ui/Form/`** (`Form`, `FormField`, `SubmitButton`) — never a raw
   `<form>`, `<input>`, or `<select>`, not even inline.
 - **No gradients** in any interface.
+- **Comments cap at eight lines**, and state a constraint rather than the history of a decision.
+  `scripts/comment-budget.spec.ts` enforces the length;
+  `docs/development/conventions.md#comments` has the rest. Do not match the surrounding comment
+  density — much of this tree predates the rule.
 - **A problem you find but did not cause is filed, not fixed.** Search the tracker
   (`gh issue list --state open --search '<terms>'`), then
   `gh issue create --template finding.md`, labelled `agent-filed`. Fixing it inside an unrelated PR

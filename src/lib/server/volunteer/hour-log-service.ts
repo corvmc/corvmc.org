@@ -177,22 +177,10 @@ async function requireActiveRole(volunteerRoleId: string) {
 /**
  * Record hours for `userId`.
  *
- * `enteredByUserId` is the staffer typing it in on somebody else's behalf — for the
- * volunteer who does not use the app, or for work older than the backdate window. It
- * changes three things and nothing else:
- *
- * - the backdate limit does not apply, because "ask staff to add anything older" is the
- *   sentence this path exists to make true;
- * - the log lands `approved` rather than `pending`, stamped with the staffer. A staffer
- *   typing it in IS the review, and filing it into the queue they then clear is a round
- *   trip with no reader;
- * - no `hours_submitted` event fires. That event exists to tell staff a log is waiting;
- *   there is nothing waiting, and notifying the whole staff about their own keystroke is
- *   noise.
- *
- * Everything else is shared deliberately, so a staff-entered log is not a second kind of
- * row: same active-volunteer check, same active-role check, same future-date rule, same
- * minute and description limits.
+ * `enteredByUserId` is a staffer typing it in for somebody else. It lifts the
+ * backdate limit, lands the log `approved` rather than `pending` (the staffer
+ * typing it IS the review), and fires no `hours_submitted` event — nothing is
+ * waiting for staff. Every other rule is shared: not a second kind of row.
  */
 export async function submitHours(
 	userId: string,

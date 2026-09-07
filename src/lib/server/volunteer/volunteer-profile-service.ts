@@ -17,14 +17,10 @@ import type { VolunteerProfile, VolunteerProfileStatus } from '$lib/server/db/sc
 // ---------------------------------------------------------------------------
 // Volunteer profiles
 // ---------------------------------------------------------------------------
-// What we know about somebody as a volunteer, as opposed to as a member. Exists
-// because of one question — "are you 18 or older?" — whose answer has to be on
-// file before anybody claims a shift.
-//
 // The member owns this row apart from `status`, which only staff move. That
-// split is the whole security model here: every self-service mutation is scoped
-// to one userId and refuses to touch `isAdult` or `status`, so the one way out
-// of `blocked` is a staff action.
+// split is the security model: every self-service mutation is scoped to one
+// userId and refuses to touch `isAdult` or `status`, so the one way out of
+// `blocked` is a staff action.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -143,11 +139,8 @@ export interface OnboardingInput extends ProfileNameInput {
  * {@link updateVolunteerProfile}, which cannot reach `isAdult`.
  *
  * `isAdult: false` writes `blocked`, and that mapping lives here rather than in
- * the remote so a hand-crafted POST cannot skip it.
- *
- * Pronouns and phone are written back to `user`, not copied onto the profile:
- * both columns already exist, `/member/account` edits them, and a second copy
- * would be stale by the next time anybody looked.
+ * the remote so a hand-crafted POST cannot skip it. Pronouns and phone are
+ * written back to `user` rather than copied, so no second copy can go stale.
  */
 export async function completeVolunteerOnboarding(
 	userId: string,
@@ -396,14 +389,12 @@ export interface VolunteerListRow {
 }
 
 /**
- * The staff volunteers index: everyone who has signed up to volunteer, with
- * what they put their hand up for and what they have actually worked.
+ * The staff volunteers index: everyone who has signed up to volunteer.
  *
  * Keyed on the profile rather than on interest rows, unlike its sibling
  * `listInterestedMembers`. The interests step is skippable and a blocked minor
  * never reaches it, so an interest-keyed list silently drops the two groups
- * staff most need to see — the person who onboarded and picked nothing, and the
- * minor waiting on approval.
+ * staff most need to see.
  */
 export async function listVolunteers(
 	filters: { roleId?: string; search?: string; status?: VolunteerProfileStatus } = {},
