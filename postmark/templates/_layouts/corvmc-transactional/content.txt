@@ -1,4 +1,4 @@
-{{preview_text}}
+{{{preview_text}}}
 
 {{{@content}}}
 

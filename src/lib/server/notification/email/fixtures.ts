@@ -88,7 +88,9 @@ export const FIXTURES: Fixture[] = [
 			paragraphs: [{ text: '<script>alert(1)</script>' }, { text: 'Ampersand & "quotes"' }],
 			has_details: true,
 			details: [{ label: '<b>label</b>', value: '<img src=x onerror=alert(1)>' }],
-			cta: { url: 'https://corvmc.org/member', label: '<b>Go</b>' },
+			// Two query params: the text part must keep the bare `&`, the HTML part
+			// must not. That divergence is the whole reason the parts differ.
+			cta: { url: 'https://corvmc.org/member?tab=billing&ref=email', label: '<b>Go</b>' },
 			footnote: '<i>footnote</i>'
 		}
 	},
