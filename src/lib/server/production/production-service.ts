@@ -2,6 +2,7 @@ import { db, getRowCount } from '$lib/server/db';
 import { production } from '$lib/server/db/schema/production';
 import { and, eq, getTableColumns, inArray } from 'drizzle-orm';
 import { user } from '$lib/server/db/schema/authentication';
+import { eventListing } from '$lib/server/db/schema/event';
 import { DomainError } from '$lib/server/domain-error';
 import type { Production, ProductionStatus } from '$lib/server/db/schema/production';
 
@@ -26,6 +27,26 @@ export class ProductionExistsError extends DomainError {
 	readonly httpStatus = 409;
 	constructor() {
 		super('This event already has a production');
+	}
+}
+
+/**
+ * Declared here rather than imported from `event-service`, which imports *this*
+ * module for `cancelProductionsForEvent`. A shared errors module for one 404 is
+ * more machinery than the duplication costs.
+ */
+export class ListingNotFoundError extends DomainError {
+	readonly httpStatus = 404;
+	constructor() {
+		super('Event not found');
+	}
+}
+
+/** 422: a stale button on a listing that should never have offered it. */
+export class NotACmcListingError extends DomainError {
+	readonly httpStatus = 422;
+	constructor(source: string) {
+		super(`A production is for a show CMC puts on; this listing's source is "${source}"`);
 	}
 }
 
@@ -118,11 +139,28 @@ export async function getProductionByEvent(
  * The 1:1 is enforced by `uq_production_event`, so this inserts and reads the
  * violation rather than selecting first: a select-then-insert is a race, and
  * the index is the thing that actually holds the invariant.
+ *
+ * The **source** check above it is a different shape and is not a race. A
+ * production is the ops record for a show CMC puts on, and `event_listing` is a
+ * community calendar CMC also appears on — roughly nine listings in ten are
+ * somebody else's gig at somebody else's venue, where load-in times, a producer
+ * and a settlement mean nothing. `source` does not change under us in any way
+ * that matters here, and no index can express "only for one enum value", so
+ * reading it first is the check. The UI already hides the button; this is the
+ * guard, and the guard is what a remote function is allowed to rely on.
  */
 export async function createProduction(
 	eventId: string,
 	opts?: { createdByUserId?: string }
 ): Promise<Production> {
+	const [listing] = await db
+		.select({ source: eventListing.source })
+		.from(eventListing)
+		.where(eq(eventListing.id, eventId))
+		.limit(1);
+	if (!listing) throw new ListingNotFoundError();
+	if (listing.source !== 'cmc') throw new NotACmcListingError(listing.source);
+
 	try {
 		const [row] = await db
 			.insert(production)
