@@ -183,7 +183,10 @@
 	let reserveSpace = $state(false);
 	const canReserveSpace = $derived(!data.linkedReservation);
 
-	let hasConflicts = $state(false);
+	// Only a real overlap — an existing booking or a closure — gates the
+	// override. An advisory about opening hours or advance days renders in
+	// yellow and asks for nothing.
+	let hasBlockingConflict = $state(false);
 
 	// Ticket price in cents for the hidden field. Independent of the ticketing
 	// toggle: it's the price attendees pay wherever they buy.
@@ -238,7 +241,7 @@
 		rebookConfirmed = false;
 		overrideConflicts = false;
 		reserveSpace = false;
-		hasConflicts = false;
+		hasBlockingConflict = false;
 		editing = true;
 	}
 
@@ -249,7 +252,7 @@
 		reserveSpace = false;
 		// Outlives the form otherwise: ConflictWarnings only writes it while
 		// mounted, so a conflict seen before Cancel would arm the next override.
-		hasConflicts = false;
+		hasBlockingConflict = false;
 		overrideConflicts = false;
 	}
 
@@ -265,7 +268,7 @@
 		} else {
 			editReservationStartTime = '';
 			editReservationEndTime = '';
-			hasConflicts = false;
+			hasBlockingConflict = false;
 			overrideConflicts = false;
 		}
 	}
@@ -305,7 +308,7 @@
 		rebookNeeded = false;
 		rebookConfirmed = false;
 		reserveSpace = false;
-		hasConflicts = false;
+		hasBlockingConflict = false;
 		overrideConflicts = false;
 		void getStaffEventProduction(id).refresh();
 	}
@@ -724,16 +727,18 @@
 														endTime={editReservationEndTime}
 														{checkConflicts}
 														excludeReservationId={data.linkedReservation?.id}
-														bind:hasConflicts
+														bind:hasBlockingConflict
 													/>
-													{#if hasConflicts}
+													{#if hasBlockingConflict}
 														<label class="label cursor-pointer justify-start gap-3">
 															<input
 																type="checkbox"
 																bind:checked={overrideConflicts}
 																class="checkbox checkbox-sm"
 															/>
-															<span class="label-text">Override conflicts</span>
+															<span class="label-text">
+																Book it anyway — I know this double-books the space
+															</span>
 														</label>
 													{/if}
 												{/if}
@@ -790,16 +795,18 @@
 														startTime={editReservationStartTime}
 														endTime={editReservationEndTime}
 														{checkConflicts}
-														bind:hasConflicts
+														bind:hasBlockingConflict
 													/>
-													{#if hasConflicts}
+													{#if hasBlockingConflict}
 														<label class="label cursor-pointer justify-start gap-3">
 															<input
 																type="checkbox"
 																bind:checked={overrideConflicts}
 																class="checkbox checkbox-sm"
 															/>
-															<span class="label-text">Override conflicts</span>
+															<span class="label-text">
+																Book it anyway — I know this double-books the space
+															</span>
 														</label>
 													{/if}
 												</Card>
