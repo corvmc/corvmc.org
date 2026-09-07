@@ -1,3 +1,5 @@
+import type { RunOfShowWarning } from '../../types/run-of-show';
+
 /**
  * The run of show, as arithmetic. Nothing here touches a database.
  *
@@ -64,16 +66,6 @@ export function computeSetTimes(
 		cursor += (slot.setLengthMinutes + slot.changeoverMinutes) * 60_000;
 	}
 	return out;
-}
-
-export type RunOfShowWarningCode =
-	'past_curfew' | 'before_doors' | 'set_too_long' | 'soundcheck_after_first_set';
-
-export interface RunOfShowWarning {
-	code: RunOfShowWarningCode;
-	message: string;
-	/** Null for a warning about the night as a whole. */
-	slotId: string | null;
 }
 
 /** What `runOfShowWarnings` needs to know about one slot. */

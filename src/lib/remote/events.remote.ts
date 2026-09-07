@@ -7,7 +7,7 @@ import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
 import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venue-service';
 import { getProductionByEvent } from '$lib/server/production/production-service';
-import { getPublicSetTimes } from '$lib/server/production/run-of-show-service';
+import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
 import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
 import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
 import {
@@ -1100,7 +1100,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		dutyLists,
 		venues,
 		riders,
-		production
+		production,
+		runOfShow
 	] = await Promise.all([
 		getStaffEventDetail(id),
 		getEventRecurringSeries(id),
@@ -1119,7 +1120,10 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		getEventRiderSummaries(id),
 		// The ops record: load-in through load-out, the producer, the notes.
 		// Null until someone opens one from the event page.
-		getProductionByEvent(id)
+		getProductionByEvent(id),
+		// Who plays when. Times are derived and written on every mutation, so this
+		// read never recomputes — it only re-checks the warnings.
+		getRunOfShow(id)
 	]);
 
 	return {
@@ -1131,7 +1135,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		dutyLists,
 		venues,
 		riders,
-		production
+		production,
+		runOfShow
 	};
 });
 
