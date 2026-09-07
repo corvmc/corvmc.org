@@ -21,6 +21,7 @@ import {
 	updateHourLog,
 	withdrawHourLog,
 	approveHourLog,
+	approveHourLogs,
 	rejectHourLog,
 	listHourLogs,
 	listUserHourLogs,
@@ -847,6 +848,45 @@ export const approveVolunteerHours = form(
 
 		await refreshStaffQueue();
 		return { success: true };
+	}
+);
+
+/**
+ * Approve a whole selection at once.
+ *
+ * The ids travel as one JSON string and are parsed inside the handler: a
+ * `.transform()` in a `form()` schema breaks the `fields` inference `<Form>`
+ * relies on, so malformed input is a 422 here rather than a 500 there.
+ *
+ * The result carries `skipped` because a partial approval is the normal case —
+ * a row somebody else reviewed between the page load and the click is not a
+ * failure of the batch.
+ */
+export const approveVolunteerHoursBulk = form(
+	z.object({
+		ids: z.string().min(1),
+		notes: z.string().max(VOLUNTEER_REVIEW_NOTES_MAX).optional()
+	}),
+	async (data) => {
+		const staff = await requireCapability('volunteer.reviewHours');
+
+		let ids: string[];
+		try {
+			const parsed: unknown = JSON.parse(data.ids);
+			if (!Array.isArray(parsed) || parsed.some((id) => typeof id !== 'string')) throw new Error();
+			ids = parsed;
+		} catch {
+			return { success: false, message: 'That selection could not be read.' };
+		}
+
+		try {
+			const result = await approveHourLogs(ids, staff.id, data.notes);
+			await refreshStaffQueue();
+			return { success: true, ...result };
+		} catch (err) {
+			mapDomainError(err);
+			throw err;
+		}
 	}
 );
 

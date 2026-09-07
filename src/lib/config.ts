@@ -913,6 +913,8 @@ export const VOLUNTEER_MAX_MINUTES_PER_LOG = 720;
 
 export const VOLUNTEER_DESCRIPTION_MAX = 1000;
 export const VOLUNTEER_REVIEW_NOTES_MAX = 1000;
+/** How many hour logs one bulk approval may move. A page of the queue, not a year of it. */
+export const VOLUNTEER_BULK_REVIEW_MAX = 200;
 export const VOLUNTEER_ROLE_NAME_MAX = 100;
 export const VOLUNTEER_ROLE_DESCRIPTION_MAX = 2000;
 
