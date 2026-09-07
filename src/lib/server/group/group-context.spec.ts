@@ -22,9 +22,10 @@ vi.mock('$lib/server/band/band-service', () => ({
 	getUserRole: (...a: unknown[]) => getUserRole(...(a as []))
 }));
 
-import { requireGroupRole } from './group-context';
+import { requireBandRole, requireGroupRole, requireProgramRole } from './group-context';
 
-const GROUP = { id: 'group-1', slug: 'our-band', name: 'Our Band' };
+const GROUP = { id: 'group-1', slug: 'our-band', name: 'Our Band', kind: 'band' };
+const CLUB = { id: 'group-2', slug: 'real-book-club', name: 'Real Book Club', kind: 'club' };
 
 beforeEach(() => {
 	for (const m of [getBySlug, getByIdActive, getUserRole, hasAnyRole]) m.mockReset();
@@ -204,5 +205,49 @@ describe('requireGroupRole', () => {
 			).resolves.toMatchObject({ role: 'member' });
 			expect(hasAnyRole).not.toHaveBeenCalled();
 		});
+	});
+});
+
+/**
+ * The kind gates. `requireGroupRole` is deliberately kind-agnostic — a roster
+ * is a roster — but the surfaces are not interchangeable: the band editor
+ * writes `directoryVisibility`, which for a program is staff's to set, and the
+ * program editor omits the listing fields a band needs.
+ */
+describe('requireBandRole', () => {
+	beforeEach(() => getUserRole.mockResolvedValue('admin'));
+
+	it('admits an admin of a band', async () => {
+		getBySlug.mockResolvedValue(GROUP);
+		await expect(requireBandRole({ slug: 'our-band' }, 'admin')).resolves.toMatchObject({
+			role: 'admin'
+		});
+	});
+
+	it.each([['club'], ['committee']])('404s a %s even for its own admin', async (kind) => {
+		getBySlug.mockResolvedValue({ ...CLUB, kind });
+		expect(await statusOf(() => requireBandRole({ slug: CLUB.slug }, 'admin'))).toBe(404);
+	});
+
+	it('still 403s a non-member of a band', async () => {
+		getBySlug.mockResolvedValue(GROUP);
+		getUserRole.mockResolvedValue(null);
+		expect(await statusOf(() => requireBandRole({ slug: 'our-band' }, 'admin'))).toBe(403);
+	});
+});
+
+describe('requireProgramRole', () => {
+	beforeEach(() => getUserRole.mockResolvedValue('admin'));
+
+	it.each([['club'], ['committee']])('admits an admin of a %s', async (kind) => {
+		getBySlug.mockResolvedValue({ ...CLUB, kind });
+		await expect(requireProgramRole({ slug: CLUB.slug }, 'admin')).resolves.toMatchObject({
+			role: 'admin'
+		});
+	});
+
+	it('404s a band', async () => {
+		getBySlug.mockResolvedValue(GROUP);
+		expect(await statusOf(() => requireProgramRole({ slug: 'our-band' }, 'admin'))).toBe(404);
 	});
 });

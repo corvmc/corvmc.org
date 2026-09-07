@@ -216,6 +216,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/groups/[slug]/edit",
+		"panel": "member"
+	},
+	{
 		"route": "/member/help",
 		"panel": "member"
 	},

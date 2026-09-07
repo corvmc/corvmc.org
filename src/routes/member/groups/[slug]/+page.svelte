@@ -6,6 +6,7 @@
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -89,6 +90,7 @@
 <PageHeader title={group.name} subtitle={kindLabel}>
 	{#if data.canManage}
 		<Badge variant="ghost">{data.role}</Badge>
+		<Button href={resolve(`/member/groups/${slug}/edit`)} variant="ghost" size="sm">Edit</Button>
 	{/if}
 	<!-- Beside Leave, which is the other thing a member does to a group they are
 	     tired of hearing from. Null for staff, who have no roster row to mute. -->
@@ -241,7 +243,17 @@
 			{#if group.bio}
 				<p class="text-sm">{group.bio}</p>
 			{:else}
-				<EmptyState description="Nothing written about this program yet." />
+				<EmptyState
+					description={data.canManage
+						? 'Nothing written about this program yet. Say what it is for.'
+						: 'Nothing written about this program yet.'}
+				>
+					{#if data.canManage}
+						<Button href={resolve(`/member/groups/${slug}/edit`)} variant="primary" size="sm">
+							Write it
+						</Button>
+					{/if}
+				</EmptyState>
 			{/if}
 		</InfoCard>
 

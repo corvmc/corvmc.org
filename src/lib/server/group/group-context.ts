@@ -72,6 +72,43 @@ export async function requireGroupRole(
 }
 
 /**
+ * `requireGroupRole`, narrowed to `kind === 'band'`.
+ *
+ * For the band-only surfaces — the profile editor, the press kit, the
+ * microsite, the subscription. Those guards were kind-agnostic, so a club or
+ * committee admin reached band-shaped writes over their own program; the
+ * directory-visibility one mattered, because staff own that setting for a
+ * program and a leader was able to change it anyway.
+ */
+// 404, not 403: `/band/{club-slug}` names no band, and the caller's role in
+// the group is beside the point.
+export async function requireBandRole(
+	ref: GroupRef,
+	minRole: 'owner' | 'admin' | 'member',
+	opts?: { allowStaff?: boolean }
+): Promise<GroupContext> {
+	const ctx = await requireGroupRole(ref, minRole, opts);
+	if (ctx.group.kind !== 'band') throw error(404, 'Band not found');
+	return ctx;
+}
+
+/**
+ * `requireGroupRole`, narrowed to a club or committee.
+ *
+ * The mirror of `requireBandRole`, for the leader surfaces under
+ * `/member/groups/{slug}`. A band has its own panel and must not resolve here.
+ */
+export async function requireProgramRole(
+	ref: GroupRef,
+	minRole: 'owner' | 'admin' | 'member',
+	opts?: { allowStaff?: boolean }
+): Promise<GroupContext> {
+	const ctx = await requireGroupRole(ref, minRole, opts);
+	if (ctx.group.kind === 'band') throw error(404, 'Group not found');
+	return ctx;
+}
+
+/**
  * Resolve the ref, or throw.
  *
  * The blank-ref check is deliberate and is a regression guard, not a

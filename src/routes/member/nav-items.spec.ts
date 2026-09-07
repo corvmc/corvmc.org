@@ -176,7 +176,10 @@ describe('route coverage', () => {
 		// for two indexes, which is the separation the routes draw.
 		'/member/bands',
 		'/member/groups',
-		'/member/groups/[slug]'
+		'/member/groups/[slug]',
+		// Reached from the club page's own Edit button. A leader edits the program
+		// they are already looking at; a nav row to it would point at no group.
+		'/member/groups/[slug]/edit'
 	]);
 
 	it('leaves no member page unmatched', () => {

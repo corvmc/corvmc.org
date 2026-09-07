@@ -4,9 +4,10 @@ import { query, form, getRequestEvent } from '$app/server';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupJoinPolicies } from '$lib/config';
 import { mapDomainError } from '$lib/server/errors';
 import { requireStaff, requireUser } from '$lib/server/authorization';
-import { requireGroupRole } from '$lib/server/group/group-context';
+import { requireGroupRole, requireProgramRole } from '$lib/server/group/group-context';
 import { directoryVisibilities } from '$lib/server/db/schema/directory';
 import { getMembers, partitionByStatus } from '$lib/server/band/band-service';
+import { resolveImageUrl } from '$lib/server/storage';
 import {
 	getMuteState,
 	listForManager,
@@ -31,6 +32,7 @@ import {
 	listMemberGroups,
 	listPublicGroups,
 	reactivate,
+	updateGroupProfile,
 	updateGroupSettings
 } from '$lib/server/group/group-service';
 
@@ -349,6 +351,62 @@ export const declineApplicationForm = form(applicationSchema, async (data) => {
 		mapDomainError(err);
 	}
 });
+
+// ---------------------------------------------------------------------------
+// Member — /member/groups/{slug}/edit
+// ---------------------------------------------------------------------------
+
+/**
+ * The leader's editor: what a program's own owner or admin may change.
+ *
+ * `joinPolicy` and `visibility` come back read-only. They decide who may walk
+ * in and whether the program is advertised, and the spec's argument for free
+ * room time is that staff alone settle both — so they render as facts with a
+ * pointer at staff, not as fields. See `updateGroupProfile`.
+ */
+// `requireProgramRole`, so a band slug 404s here: a band edits at
+// `/band/{slug}/edit`, which carries a listing this form deliberately omits.
+export const getGroupEditor = query(z.string(), async (slug) => {
+	const { group } = await requireProgramRole({ slug }, 'admin', { allowStaff: true });
+
+	return {
+		id: group.id,
+		kind: group.kind,
+		name: group.name,
+		slug: group.slug,
+		bio: group.bio,
+		joinInstructions: group.joinInstructions,
+		avatarUrl: resolveImageUrl(group.avatarKey),
+		// Read-only, and named so the page can say who to ask.
+		joinPolicy: group.joinPolicy
+	};
+});
+
+export const updateGroupProfileForm = form(
+	z.object({
+		slug: z.string().min(1),
+		name: z.string().trim().min(1, 'Name is required').max(SHORT_TEXT_MAX),
+		bio: z.string().max(LONG_TEXT_MAX).optional().default(''),
+		joinInstructions: z.string().trim().max(LONG_TEXT_MAX).optional().default('')
+	}),
+	async (data) => {
+		// Admin and no `allowStaff`: a write, and staff have `/staff/groups`.
+		const { group } = await requireProgramRole({ slug: data.slug }, 'admin');
+		try {
+			await updateGroupProfile(group.id, {
+				name: data.name,
+				bio: data.bio,
+				joinInstructions: data.joinInstructions
+			});
+			// Renaming does not move the slug, so both queries stay keyed on it.
+			void getGroupEditor(data.slug).refresh();
+			void getMemberGroup(data.slug).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
 
 // ---------------------------------------------------------------------------
 // Public — /groups

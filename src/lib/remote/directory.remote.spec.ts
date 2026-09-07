@@ -51,15 +51,21 @@ let storedBandSlug = 'the-regressions';
 const bandNotFound = () =>
 	Object.assign(new Error('Band not found'), { status: 404, body: { message: 'Band not found' } });
 
+// `kind: 'band'`, because `requireBandRole` is the real guard on these two and
+// it 404s anything else — a club admin must not reach a form that writes
+// `directoryVisibility`, which for a program is staff's.
+const resolveBand = vi.fn(async (ref: { slug?: string }) => {
+	if ((ref.slug ?? submittedSlug) !== storedBandSlug) throw bandNotFound();
+	return {
+		user: { id: 'user-1' },
+		group: { id: 'band-1', slug: storedBandSlug, kind: 'band' },
+		role: 'admin'
+	};
+});
+
 vi.mock('$lib/server/group/group-context', () => ({
-	requireGroupRole: vi.fn(async (ref: { slug?: string }) => {
-		if ((ref.slug ?? submittedSlug) !== storedBandSlug) throw bandNotFound();
-		return {
-			user: { id: 'user-1' },
-			group: { id: 'band-1', slug: storedBandSlug },
-			role: 'admin'
-		};
-	})
+	requireGroupRole: (...a: unknown[]) => resolveBand(...(a as [{ slug?: string }])),
+	requireBandRole: (...a: unknown[]) => resolveBand(...(a as [{ slug?: string }]))
 }));
 
 vi.mock('$lib/server/event/event-service', () => ({
