@@ -84,7 +84,7 @@ export const getStaffBandMembers = query(z.string(), async (bandId) => {
 	return getMembers(bandId);
 });
 
-export const getBandReservations = query(z.string(), async (bandId) => {
+export const getStaffBandReservations = query(z.string(), async (bandId) => {
 	await requireCapability('band.read');
 	return db
 		.select({
@@ -745,7 +745,7 @@ export const getStaffBandPage = query(z.string(), async (id) => {
 	const [band, members, reservations, emailInvites] = await Promise.all([
 		getStaffBand(id),
 		getStaffBandMembers(id),
-		getBandReservations(id),
+		getStaffBandReservations(id),
 		getStaffEmailInvites(id)
 	]);
 
