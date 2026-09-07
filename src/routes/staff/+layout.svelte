@@ -160,7 +160,7 @@
 	{/if}
 {/snippet}
 
-<AppShell drawerId="staff-drawer" {panels} activePanel="staff">
+<AppShell drawerId="staff-drawer" {panels} activePanel="staff" chrome={layout.chrome}>
 	{#snippet navigation()}
 		{#each navTop as item (item.key)}
 			{@render row(item)}
