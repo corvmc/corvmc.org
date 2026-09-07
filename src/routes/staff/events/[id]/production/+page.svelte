@@ -49,6 +49,7 @@
 	import { updateProduction, setProductionProducer } from '$lib/remote/productions.remote';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
+	import RunOfShowPanel from './RunOfShowPanel.svelte';
 	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { replaceState } from '$app/navigation';
@@ -89,6 +90,7 @@
 	const advance = $derived(loaded.advance);
 	const riders = $derived(loaded.riders);
 	const productionRecord = $derived(loaded.production);
+	const runOfShow = $derived(loaded.runOfShow);
 	/** The advance question: who has told us nothing at all. */
 	const ridersMissing = $derived(riders.filter((r) => r.empty).length);
 
@@ -1215,6 +1217,17 @@
 					</Table>
 				{/if}
 			</InfoCard>
+		</div>
+	{/if}
+
+	{#if visited.has('runOfShow')}
+		<div
+			role="tabpanel"
+			aria-labelledby="tab-runOfShow"
+			class="space-y-6"
+			class:hidden={tab !== 'runOfShow'}
+		>
+			<RunOfShowPanel {runOfShow} eventId={id} showDate={productionDate} />
 		</div>
 	{/if}
 

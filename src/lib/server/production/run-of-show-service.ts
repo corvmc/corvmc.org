@@ -5,18 +5,29 @@ import { directoryEntry } from '$lib/server/db/schema/directory';
 import { group } from '$lib/server/db/schema/group';
 import { and, asc, eq, inArray, isNotNull, notInArray } from 'drizzle-orm';
 import { computeSetTimes, orderSlots, runOfShowWarnings, SLOT_MAX } from './run-of-show';
-import type { RunOfShowWarning } from './run-of-show';
+
 import { DomainError } from '$lib/server/domain-error';
 import type { EventBandStatus } from '$lib/server/db/schema/event';
+import type {
+	PublicSetTime,
+	RunOfShow,
+	RunOfShowActStatus,
+	RunOfShowSlot
+} from '$lib/types/run-of-show';
+
+/**
+ * The DTO's status union is spelled out in `$lib/types`, which cannot import a
+ * schema. This is what stops the two drifting: adding a value to
+ * `eventBandStatuses` fails here until the DTO carries it too.
+ */
 import type { ProductionStatus } from '$lib/server/db/schema/production';
 
+type _StatusesAgree = EventBandStatus extends RunOfShowActStatus ? true : never;
+const _statusesAgree: _StatusesAgree = true;
+void _statusesAgree;
+
 export { computeSetTimes, orderSlots, runOfShowWarnings, SLOT_MAX } from './run-of-show';
-export type {
-	RunOfShowWarning,
-	RunOfShowWarningCode,
-	SetTimeSlot,
-	WarnableSlot
-} from './run-of-show';
+export type { SetTimeSlot, WarnableSlot } from './run-of-show';
 
 // ---------------------------------------------------------------------------
 // Run of show — who plays when, derived from one downbeat and the set lengths.
@@ -64,45 +75,6 @@ export class TooManySlotsError extends DomainError {
 // ---------------------------------------------------------------------------
 // DTOs
 // ---------------------------------------------------------------------------
-
-export interface RunOfShowSlot {
-	id: string;
-	eventBandId: string | null;
-	/** From `event_band`. Null once the credit is off the bill. */
-	actName: string | null;
-	actStatus: EventBandStatus | null;
-	/** The band's page on CMC, when the credit names a member band. */
-	actSlug: string | null;
-	sortOrder: number;
-	setLengthMinutes: number;
-	changeoverMinutes: number;
-	scheduledStartAt: Date | null;
-	/** Derived on read — start plus length, and nothing stored. */
-	scheduledEndAt: Date | null;
-	soundcheckAt: Date | null;
-	techNotes: string | null;
-	backlineNeeds: string | null;
-	hospitalityNotes: string | null;
-	contactName: string | null;
-	contactEmail: string | null;
-	contactPhone: string | null;
-}
-
-export interface RunOfShow {
-	productionId: string;
-	firstSetAt: Date | null;
-	curfewAt: Date | null;
-	slots: RunOfShowSlot[];
-	/** Credits on the bill with no set yet — what the add picker offers. */
-	unslotted: { eventBandId: string; name: string; billingOrder: number }[];
-	warnings: RunOfShowWarning[];
-}
-
-/** One line of the published running order. */
-export interface PublicSetTime {
-	name: string;
-	scheduledStartAt: Date;
-}
 
 /**
  * The statuses at which a running order is real enough to print.
