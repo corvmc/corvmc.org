@@ -210,6 +210,29 @@ export const productionSlot = sqliteTable(
 		contactEmail: text('contact_email'),
 		contactPhone: text('contact_phone'),
 
+		/**
+		 * The deal, per act. `{ guaranteeCents, percentageBps, versus, againstNet }`
+		 * subsumes every case CMC has — donated, flat fee, pure split, guarantee
+		 * against the door, versus — and `contributed` is the flag that makes a
+		 * zero-and-zero a donated set rather than an unfilled row.
+		 *
+		 * Here rather than on `event_band`, which is a public credit joined by the
+		 * gig guide and every band page: about one listing in ten is a CMC show, so
+		 * these would be NULL on nine rows in ten of the table the public reads
+		 * most. There are no CHECK constraints on them — a CHECK on a populated
+		 * table is a rebuild, and the ranges live in the zod schema, which they
+		 * have to anyway.
+		 */
+		guaranteeCents: integer('guarantee_cents'),
+		/** Basis points of the acts' pool. 7000 is the house's opening 70%. */
+		percentageBps: integer('percentage_bps'),
+		/** Guarantee *or* percentage, whichever is greater — rather than both. */
+		versus: integer('versus', { mode: 'boolean' }).notNull().default(false),
+		/** The percentage applies after expenses rather than to the gross. */
+		againstNet: integer('against_net', { mode: 'boolean' }).notNull().default(false),
+		/** Zero and zero on purpose: the act played for free, and it was worth this. */
+		contributed: integer('contributed', { mode: 'boolean' }).notNull().default(false),
+
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),

@@ -30,6 +30,7 @@ const runOfShow = {
 	updateSlot: vi.fn(),
 	moveSlot: vi.fn(),
 	removeSlot: vi.fn(),
+	setSlotTerms: vi.fn(),
 	buildSlotsFromLineup: vi.fn()
 };
 vi.mock('$lib/server/production/run-of-show-service', () => ({
@@ -37,6 +38,7 @@ vi.mock('$lib/server/production/run-of-show-service', () => ({
 	updateSlot: (...a: unknown[]) => runOfShow.updateSlot(...a),
 	moveSlot: (...a: unknown[]) => runOfShow.moveSlot(...a),
 	removeSlot: (...a: unknown[]) => runOfShow.removeSlot(...a),
+	setSlotTerms: (...a: unknown[]) => runOfShow.setSlotTerms(...a),
 	buildSlotsFromLineup: (...a: unknown[]) => runOfShow.buildSlotsFromLineup(...a)
 }));
 
@@ -103,6 +105,7 @@ const WRITES: { name: keyof typeof productions; args: unknown[] }[] = [
 	},
 	{ name: 'moveRunOfShowSlot', args: [{ ...SLOT, direction: 'up' }] },
 	{ name: 'removeRunOfShowSlot', args: [SLOT] },
+	{ name: 'setRunOfShowTerms', args: [SLOT] },
 	{ name: 'buildRunOfShowFromLineup', args: [{ eventId: 'evt-1', productionId: 'prod-1' }] }
 ];
 
@@ -163,6 +166,44 @@ describe('run of show validation', () => {
 		expect(runOfShow.addSlot).toHaveBeenCalledWith(
 			'prod-1',
 			expect.objectContaining({ eventBandId: null, setLengthMinutes: 45 })
+		);
+	});
+
+	// A cleared number field is dropped from the payload rather than sent as null,
+	// so the missing key is what "no guarantee" has to mean.
+	it('reads a missing guarantee as no guarantee rather than zero', async () => {
+		await submit(productions.setRunOfShowTerms, { ...SLOT, percentageBps: 7000 });
+
+		expect(runOfShow.setSlotTerms).toHaveBeenCalledWith('slot-1', {
+			guaranteeCents: null,
+			percentageBps: 7000,
+			versus: false,
+			againstNet: false,
+			contributed: false
+		});
+	});
+
+	it('refuses a percentage over 100%', async () => {
+		await expect(
+			submit(productions.setRunOfShowTerms, { ...SLOT, percentageBps: 10_001 })
+		).rejects.toThrow();
+
+		expect(runOfShow.setSlotTerms).not.toHaveBeenCalled();
+	});
+
+	// Zero and zero is a real deal — a donated set — and has to survive a schema
+	// that could as easily have treated it as absent.
+	it('keeps a guarantee of zero', async () => {
+		await submit(productions.setRunOfShowTerms, {
+			...SLOT,
+			guaranteeCents: 0,
+			percentageBps: 0,
+			contributed: true
+		});
+
+		expect(runOfShow.setSlotTerms).toHaveBeenCalledWith(
+			'slot-1',
+			expect.objectContaining({ guaranteeCents: 0, percentageBps: 0, contributed: true })
 		);
 	});
 

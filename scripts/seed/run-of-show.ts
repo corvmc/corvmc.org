@@ -20,6 +20,27 @@ import { asc, inArray } from 'drizzle-orm';
 
 type ProductionRow = typeof production.$inferSelect;
 
+/**
+ * One deal per act, walking `docs/specs/project-spec.md#the-deal-shape`. Every
+ * shape has to be reachable locally or the terms editor and the band-facing
+ * summary are both built against one case.
+ */
+type Terms = {
+	guaranteeCents?: number;
+	percentageBps?: number;
+	versus?: boolean;
+	againstNet?: boolean;
+	contributed?: boolean;
+};
+
+const DEAL_SHAPES: Terms[] = [
+	{ percentageBps: 7000 },
+	{ guaranteeCents: 30000, percentageBps: 7000, versus: true },
+	{ guaranteeCents: 25000 },
+	{ contributed: true },
+	{ percentageBps: 5000, againstNet: true }
+];
+
 interface Plan {
 	/** Minutes on stage, per act down the bill. */
 	sets: number[];
@@ -28,6 +49,8 @@ interface Plan {
 	dj?: boolean;
 	/** Offsets from the downbeat, in hours, for the acts that soundcheck. */
 	soundcheckOffsets?: (number | null)[];
+	/** Where in `DEAL_SHAPES` this show's first act starts. */
+	dealOffset?: number;
 }
 
 export async function seedRunOfShow(productions: ProductionRow[]) {
@@ -55,7 +78,7 @@ export async function seedRunOfShow(productions: ProductionRow[]) {
 		// two-and-a-half-hour curfew, so the warning is real rather than contrived.
 		{
 			row: byStatus('closed'),
-			plan: { sets: [45, 55, 70], changeover: 20, dj: true }
+			plan: { sets: [45, 55, 70], changeover: 20, dj: true, dealOffset: 2 }
 		},
 		// Sets agreed, downbeat not. Every `scheduled_start_at` is null.
 		{ row: byStatus('offered'), plan: { sets: [30, 45], changeover: 10 } }
@@ -116,7 +139,12 @@ export async function seedRunOfShow(productions: ProductionRow[]) {
 		const times = computeSetTimes(row.firstSetAt, planned);
 		if (!row.firstSetAt) withoutTimes += planned.length;
 
-		for (const slot of planned) {
+		planned.forEach((slot, i) => {
+			// Only a credited act has a deal. An uncredited slot is a DJ between
+			// sets, which is not what settlement splits across.
+			const terms = slot.eventBandId
+				? DEAL_SHAPES[((plan.dealOffset ?? 0) + i) % DEAL_SHAPES.length]
+				: {};
 			rows.push({
 				productionId: row.id,
 				eventBandId: slot.eventBandId,
@@ -125,16 +153,21 @@ export async function seedRunOfShow(productions: ProductionRow[]) {
 				changeoverMinutes: slot.changeoverMinutes,
 				scheduledStartAt: times.get(slot.id) ?? null,
 				soundcheckAt: slot.soundcheckAt,
-				techNotes: slot.eventBandId ? null : 'Runs off a laptop; one DI and a monitor.'
+				techNotes: slot.eventBandId ? null : 'Runs off a laptop; one DI and a monitor.',
+				guaranteeCents: terms.guaranteeCents ?? null,
+				percentageBps: terms.percentageBps ?? null,
+				versus: terms.versus ?? false,
+				againstNet: terms.againstNet ?? false,
+				contributed: terms.contributed ?? false
 			});
-		}
+		});
 	}
 
 	if (rows.length === 0) return { slots: 0, uncredited: 0, withoutTimes: 0 };
 
-	// Eight columns a row, so twelve rows a statement stays under D1's
-	// 100-parameter cap (8 × 12 = 96).
-	await batchInsert(productionSlot, rows, 12);
+	// Thirteen columns a row, so seven rows a statement stays under D1's
+	// 100-parameter cap (13 × 7 = 91).
+	await batchInsert(productionSlot, rows, 7);
 
 	return { slots: rows.length, uncredited, withoutTimes };
 }
