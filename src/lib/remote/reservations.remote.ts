@@ -2036,20 +2036,62 @@ export const compReservation = form(z.object({ id: z.string() }), async (data, _
 	return { success: true };
 });
 
-/** Staff: refund the payment on a reservation. */
-export const refundReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireCapability('finance.refund');
-
+/**
+ * The row a refund action needs before it commits to anything: who owns the
+ * booking, what there is to refund, and whether it has already been refunded.
+ * Refunding twice is a no-op at the payment layer, but the 400 tells staff why
+ * nothing happened rather than reporting a second success.
+ */
+async function readRefundableReservation(id: string) {
 	const [row] = await db
 		.select({
 			createdByUserId: reservation.createdByUserId,
-			stripePaymentRecordId: reservation.stripePaymentRecordId
+			stripePaymentRecordId: reservation.stripePaymentRecordId,
+			refundedAt: reservation.refundedAt
 		})
 		.from(reservation)
-		.where(eq(reservation.id, data.id))
+		.where(eq(reservation.id, id))
 		.limit(1);
 	if (!row) throw error(404, 'Reservation not found');
 	if (!row.stripePaymentRecordId) throw error(400, 'No payment to refund');
+	if (row.refundedAt) throw error(400, 'Reservation has already been refunded');
+	return row as typeof row & { stripePaymentRecordId: string };
+}
+
+/**
+ * Staff: refund the payment and cancel the booking. Delegates to `cancel()`,
+ * which cancels first and refunds after, and is also what reverses credits,
+ * clears the credit-commit markers and emits `reservation.cancelled` for the
+ * waitlist. Duplicating any of that here would refund twice (#669).
+ */
+export const refundAndCancelReservation = form(
+	z.object({ id: z.string(), reason: z.string().optional() }),
+	async (data, _issue) => {
+		await requireCapability('finance.refund');
+		const currentUser = requireUser();
+		await readRefundableReservation(data.id);
+
+		try {
+			// `staffOverride` unconditionally: the capability check above already
+			// established that, and reading it off the request would let a client
+			// pick its own authority.
+			await cancel(data.id, currentUser.id, data.reason, { staffOverride: true });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
+	}
+);
+
+/**
+ * Staff: refund the payment and leave the booking standing — a comp after the
+ * fact on a session that went ahead. `status` and `paidAt` are deliberately
+ * untouched; `reservationPaymentState` reads `refundedAt` first, so the row
+ * reports as refunded without pretending the session never happened (#669).
+ */
+export const refundOnlyReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
+	await requireCapability('finance.refund');
+	const row = await readRefundableReservation(data.id);
 
 	await refundPayment({
 		userId: row.createdByUserId,
@@ -2058,7 +2100,10 @@ export const refundReservation = form(z.object({ id: z.string() }), async (data,
 	// Reservation free-hour credits live in the ledger (not the payment record's
 	// breakdown), so reverse them explicitly. Idempotent and a no-op when none.
 	await reverseReservationCredits(row.createdByUserId, data.id);
-	await db.update(reservation).set({ refundedAt: new Date() }).where(eq(reservation.id, data.id));
+	await db
+		.update(reservation)
+		.set({ refundedAt: new Date(), updatedAt: new Date() })
+		.where(eq(reservation.id, data.id));
 	return { success: true };
 });
 

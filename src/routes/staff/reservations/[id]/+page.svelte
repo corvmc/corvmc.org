@@ -13,7 +13,8 @@
 		CancelReservationAction,
 		CashReceivedAction,
 		CompReservationAction,
-		RefundReservationAction
+		RefundAndCancelReservationAction,
+		RefundOnlyReservationAction
 	} from '$lib/components/actions';
 	import DayTimeline from '$lib/components/reservations/DayTimeline.svelte';
 	import RecordNav from '$lib/components/ui/RecordNav.svelte';
@@ -229,7 +230,7 @@
 					</div>
 				{/if}
 
-				{#if actions.has('cashReceived') || actions.has('comp') || actions.has('refund')}
+				{#if actions.has('cashReceived') || actions.has('comp') || actions.has('refundAndCancel') || actions.has('refundOnly')}
 					<div class="mt-3 flex flex-wrap gap-2 pt-3 rule-top">
 						{#if actions.has('cashReceived')}
 							<CashReceivedAction
@@ -249,8 +250,17 @@
 								class="flex-1"
 							/>
 						{/if}
-						{#if actions.has('refund')}
-							<RefundReservationAction
+						{#if actions.has('refundAndCancel')}
+							<RefundAndCancelReservationAction
+								reservation={r}
+								variant="error"
+								size="sm"
+								outline
+								class="flex-1"
+							/>
+						{/if}
+						{#if actions.has('refundOnly')}
+							<RefundOnlyReservationAction
 								reservation={r}
 								variant="error"
 								size="sm"
