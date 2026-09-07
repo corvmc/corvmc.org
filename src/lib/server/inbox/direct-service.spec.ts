@@ -448,6 +448,19 @@ describe('replyToDirectThread', () => {
 		andCalls.forEach(walk);
 		return flat;
 	}
+
+	/** Every value bound into a raw `sql` fragment in the WHERE tree. */
+	function paramsBound() {
+		const flat: unknown[] = [];
+		const walk = (n: unknown) => {
+			if (!n || typeof n !== 'object') return;
+			const o = n as Record<string, unknown>;
+			if (o.op === 'sql' && Array.isArray(o.v)) flat.push(...o.v);
+			Object.values(o).forEach((v) => (Array.isArray(v) ? v.forEach(walk) : walk(v)));
+		};
+		andCalls.forEach(walk);
+		return flat;
+	}
 	let andCalls: unknown[] = [];
 
 	beforeEach(async () => {
@@ -490,6 +503,26 @@ describe('replyToDirectThread', () => {
 		// about the members who have given no date — which is most of them.
 		expect(built).toContain('date_of_birth IS NOT NULL');
 		expect(built).not.toContain('messaging_standing');
+	});
+
+	/**
+	 * The values, not just the text — which is a different way for these raw
+	 * fragments to be wrong and the one that got past the assertions above.
+	 *
+	 * Drizzle converts a `Date` for a typed `integer(..., { mode: 'timestamp' })`
+	 * column, but a raw `sql` parameter reaches D1 as it is, and D1 rejects an
+	 * object outright: `D1_TYPE_ERROR: Type 'object' not supported`. The age
+	 * cutoff went in as a `Date` and 500'd every conversation list — the same
+	 * blast radius as the `messaging_standing` rename, from the same cause.
+	 */
+	it('binds no Date into a raw sql fragment', async () => {
+		results = [[]];
+		await replyToDirectThread({ threadId: 't1', userId: 'alice', userName: 'Alice', body: 'yo' });
+
+		// Column and SQL references are objects too and are fine — drizzle resolves
+		// those. A `Date` is the one that reaches the driver unconverted.
+		const dates = paramsBound().filter((v) => v instanceof Date);
+		expect(dates).toEqual([]);
 	});
 
 	it('refuses an empty body without querying', async () => {

@@ -97,14 +97,21 @@ function counterpartAccepted(userId: string) {
  * that not knowing somebody's age is not grounds for restricting them.
  */
 function messagingDisabledFor(userIdExpr: SQL | AnyColumn) {
-	const cutoff = adultBirthDateCutoff();
+	// Unix *seconds*, not a `Date` and not milliseconds. Drizzle converts a Date
+	// for a typed `integer(..., { mode: 'timestamp' })` column, but a raw `sql`
+	// parameter goes to D1 as-is — and D1 rejects an object outright:
+	// `D1_TYPE_ERROR: Type 'object' not supported`. Every conversation list 500s,
+	// which is the same blast radius as the messaging_standing rename this
+	// helper's header describes, from the same cause: nothing type-checks a raw
+	// `sql` binding.
+	const cutoffSeconds = Math.floor(adultBirthDateCutoff().getTime() / 1000);
 	return sql`EXISTS (SELECT 1 FROM "user" u
 	                   LEFT JOIN member_standing ms ON ms.user_id = u.id
 	                                               AND ms.scope = 'messaging'
 	                   WHERE u.id = ${userIdExpr}
 	                     AND (u.accepts_direct_messages = 0
 	                          OR ms.status = 'disabled'
-	                          OR (u.date_of_birth IS NOT NULL AND u.date_of_birth > ${cutoff})))`;
+	                          OR (u.date_of_birth IS NOT NULL AND u.date_of_birth > ${cutoffSeconds})))`;
 }
 
 /** Nobody on this thread has messaging switched off. */
