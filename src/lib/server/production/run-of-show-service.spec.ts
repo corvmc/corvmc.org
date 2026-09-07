@@ -82,6 +82,7 @@ const {
 	recomputeSetTimes,
 	getPublicSetTimes,
 	setSlotTerms,
+	listBandSlotTerms,
 	SlotExistsError,
 	SlotNotFoundError,
 	TooManySlotsError,
@@ -324,6 +325,62 @@ describe('setSlotTerms', () => {
 				contributed: false
 			})
 		).rejects.toThrow(SlotNotFoundError);
+	});
+});
+
+describe('listBandSlotTerms', () => {
+	const dialect = new SQLiteSyncDialect();
+
+	// The band sees a deal once it has been offered — a producer sketching a draft
+	// has not offered anything, and an act reading one would be reading a guess.
+	it('starts at offered and stops at nothing before it', async () => {
+		selectResults = [[]];
+
+		await listBandSlotTerms('group-1');
+
+		const where = calls.find((c) => c.op === 'select')!.where as SQL;
+		const rendered = dialect.sqlToQuery(where);
+
+		expect(rendered.params).toEqual(
+			expect.arrayContaining(['group-1', 'offered', 'confirmed', 'completed', 'settled', 'closed'])
+		);
+		expect(rendered.params).not.toContain('draft');
+		expect(rendered.params).not.toContain('cancelled');
+	});
+
+	it('returns the act’s own terms and call times, and no whole-show figure', async () => {
+		selectResults = [
+			[
+				{
+					eventId: 'evt-1',
+					eventTitle: 'Punk Rock Matinee',
+					startsAt: T0,
+					location: 'Whiteside',
+					scheduledStartAt: T0,
+					setLengthMinutes: 30,
+					soundcheckAt: null,
+					loadInAt: null,
+					curfewAt: null,
+					guaranteeCents: 25000,
+					percentageBps: null,
+					versus: false,
+					againstNet: false,
+					contributed: false
+				}
+			]
+		];
+
+		const [booking] = await listBandSlotTerms('group-1');
+
+		expect(booking.terms).toEqual({
+			guaranteeCents: 25000,
+			percentageBps: null,
+			versus: false,
+			againstNet: false,
+			contributed: false
+		});
+		expect(booking).not.toHaveProperty('internalNotes');
+		expect(booking).not.toHaveProperty('techNotes');
 	});
 });
 
