@@ -1,7 +1,7 @@
 import { marked } from 'marked';
 import { CAMPAIGN_LAYOUT } from './campaign-layout';
 import { emailButton } from '$lib/email/button';
-import { escapeHtml } from '$lib/utils/html';
+import { escapeHtml, unescapeHtml } from '$lib/utils/html';
 
 // ---------------------------------------------------------------------------
 // Campaign email rendering
@@ -29,22 +29,49 @@ function markdownToHtml(markdown: string): string {
 }
 
 /**
- * The inbox preview snippet, off the top of the source. Still markdown, so a
- * link near the top leaks its syntax; `{.button}` is stripped because this
- * render introduced it, and the rest is filed separately.
+ * Splice a value into a template placeholder.
+ *
+ * The replacement is a *function* deliberately: a string replacement is still
+ * scanned for `$&`, `` $` ``, `$'` and `$$`, so a body reading "100% of
+ * $&whatever" would splice the placeholder back into itself and reach the
+ * reader as `{{CONTENT}}amp;whatever`.
  */
-function derivePreviewText(markdown: string): string {
-	return markdown
-		.slice(0, 100)
+function splice(template: string, placeholder: string, value: string): string {
+	return template.replaceAll(placeholder, () => value);
+}
+
+/** Mail clients truncate the preview well before this. */
+const PREVIEW_TEXT_MAX = 140;
+
+/** Tags whose end is a visible break, so flattening must not join across them. */
+const BLOCK_BOUNDARY = /<\/(?:p|h[1-6]|li|blockquote|div|td|tr|table|pre)>|<br\s*\/?>/gi;
+
+/**
+ * The inbox preview snippet, flattened out of the *rendered* body.
+ *
+ * Taking it off the markdown source put a leading CTA in the preview pane as
+ * `[Buy Tickets](https://…)`, and stripping `#*_` by character class ate the
+ * asterisk in "50% * limited". Rendering first is also what the transactional
+ * side does (`notification/email/normalize-model.ts`), so both halves agree.
+ */
+function derivePreviewText(html: string): string {
+	const flat = unescapeHtml(html.replace(BLOCK_BOUNDARY, ' ').replace(/<[^>]+>/g, ''))
 		.replaceAll('{.button}', '')
-		.replace(/[#*_\n]/g, '')
+		.replace(/\s+/g, ' ')
 		.trim();
+
+	if (flat.length <= PREVIEW_TEXT_MAX) return flat;
+	// Cut back to a word boundary: the one line a recipient reads before
+	// opening should not end mid-word.
+	const cut = flat.slice(0, PREVIEW_TEXT_MAX - 1);
+	const lastSpace = cut.lastIndexOf(' ');
+	return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
 function renderWithLayout(htmlContent: string, previewText: string, footerHtml: string): string {
-	return CAMPAIGN_LAYOUT.replace('{{CONTENT}}', htmlContent)
-		.replace('{{PREVIEW_TEXT}}', escapeHtml(previewText))
-		.replace('{{FOOTER}}', footerHtml);
+	const withContent = splice(CAMPAIGN_LAYOUT, '{{CONTENT}}', htmlContent);
+	const withPreview = splice(withContent, '{{PREVIEW_TEXT}}', escapeHtml(previewText));
+	return splice(withPreview, '{{FOOTER}}', footerHtml);
 }
 
 /**
@@ -55,10 +82,10 @@ export function renderCampaignPreview(markdown: string): string {
 	let html = markdownToHtml(markdown);
 
 	// Replace template variables with preview placeholders
-	html = html.replaceAll('{{subscriber_name}}', 'there');
-	html = html.replaceAll('{{unsubscribe_url}}', '#');
+	html = splice(html, '{{subscriber_name}}', 'there');
+	html = splice(html, '{{unsubscribe_url}}', '#');
 
-	const previewText = derivePreviewText(markdown);
+	const previewText = derivePreviewText(html);
 	const footerHtml = '<a href="#">Unsubscribe from this list</a>';
 
 	return renderWithLayout(html, previewText, footerHtml);
@@ -75,10 +102,10 @@ export function renderCampaignForSend(
 	let html = markdownToHtml(markdown);
 
 	// Replace template variables with real values
-	html = html.replaceAll('{{subscriber_name}}', escapeHtml(subscriberName || 'there'));
-	html = html.replaceAll('{{unsubscribe_url}}', escapeHtml(unsubscribeUrl));
+	html = splice(html, '{{subscriber_name}}', escapeHtml(subscriberName || 'there'));
+	html = splice(html, '{{unsubscribe_url}}', escapeHtml(unsubscribeUrl));
 
-	const previewText = derivePreviewText(markdown);
+	const previewText = derivePreviewText(html);
 	const footerHtml = `<a href="${escapeHtml(unsubscribeUrl)}">Unsubscribe from this list</a>`;
 
 	return renderWithLayout(html, previewText, footerHtml);
