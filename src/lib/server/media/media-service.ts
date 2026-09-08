@@ -309,10 +309,12 @@ export async function findByKey(key: string): Promise<Media | null> {
  *
  * The sweep's own question, minus the grace window — exported so the one caller
  * allowed to delete an object inline (the moderation takedown in
- * `event-service.ts`) asks it exactly the way the sweep does. Both references
- * count: an attachment on the object's row, and the denormalized
- * `event_listing.poster_key`, which a generated occurrence can hold even when
- * its attachment was never written.
+ * `event-service.ts`) asks it exactly the way the sweep does.
+ *
+ * The `poster_key` arm is the last reader of that column and goes with it (issue
+ * #617). It is kept for now because the column is still written, so a row that
+ * names a key must not have its object reaped underneath it — not because a
+ * generated occurrence can still hold an unattached key, which it no longer can.
  */
 export async function isKeyReferenced(key: string): Promise<boolean> {
 	const row = await findByKey(key);

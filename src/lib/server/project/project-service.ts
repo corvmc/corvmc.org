@@ -6,6 +6,7 @@ import { workOrder, volunteerHourLog, volunteerRole } from '$lib/server/db/schem
 import { contractorJob } from '$lib/server/db/schema/contractor';
 import { acquisition, purchaseOrder, purchaseOrderLine } from '$lib/server/db/schema/inventory';
 import { eventListing } from '$lib/server/db/schema/event';
+import { eventListingColumns } from '$lib/server/event/event-columns';
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import { valueOfMinutesCents, type ProjectStatus } from '$lib/config';
@@ -446,7 +447,7 @@ export async function listProjectAttachments(projectId: string) {
 			.where(eq(acquisition.projectId, projectId))
 			.orderBy(desc(acquisition.occurredAt)),
 		db
-			.select()
+			.select(eventListingColumns)
 			.from(eventListing)
 			.where(eq(eventListing.projectId, projectId))
 			.orderBy(asc(eventListing.startsAt))

@@ -31,8 +31,13 @@ vi.mock('$lib/server/db/schema/event', () => ({
 	eventListing: {}
 }));
 
+// The last two are what `purchased-event` pulls in through `event-columns`,
+// which builds its listing column map — poster resolved from
+// `media_attachment` — at import time.
 vi.mock('drizzle-orm', () => ({
-	eq: vi.fn()
+	eq: vi.fn(),
+	sql: vi.fn(),
+	getTableColumns: vi.fn(() => ({}))
 }));
 
 vi.mock('luxon', () => ({

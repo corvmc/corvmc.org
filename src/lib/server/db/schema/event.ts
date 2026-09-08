@@ -71,6 +71,13 @@ export const eventListing = sqliteTable(
 		status: text('status', { enum: eventStatuses }).notNull().default('draft'),
 		publishedAt: integer('published_at', { mode: 'timestamp' }),
 		reservationId: text('reservation_id').references(() => reservation.id),
+		/**
+		 * @deprecated A write-only mirror of the `poster` slot in
+		 * `media_attachment`, which is the source of truth. Every writer keeps it in
+		 * step; nothing reads it except `isKeyReferenced`, and reads of `posterKey`
+		 * on an event row come from `eventListingColumns`. Dropped separately — see
+		 * issue #617.
+		 */
 		posterKey: text('poster_key'),
 		tags: text('tags'),
 		ticketingEnabled: integer('ticketing_enabled', { mode: 'boolean' }).notNull().default(false),

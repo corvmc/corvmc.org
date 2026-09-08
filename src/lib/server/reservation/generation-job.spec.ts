@@ -140,6 +140,8 @@ vi.mock('$lib/server/sentry', () => ({
 	captureException: vi.fn()
 }));
 
+// `getTableColumns` is what `event-columns` needs at import time to build the
+// listing column map that resolves `posterKey` from `media_attachment`.
 vi.mock('drizzle-orm', () => ({
 	eq: vi.fn(),
 	and: vi.fn(),
@@ -151,7 +153,8 @@ vi.mock('drizzle-orm', () => ({
 	lte: vi.fn(),
 	ne: vi.fn(),
 	notInArray: vi.fn(),
-	sql: vi.fn(() => 'sql')
+	sql: vi.fn(() => 'sql'),
+	getTableColumns: vi.fn(() => ({}))
 }));
 
 const mockGetOccurrences = vi.fn();
