@@ -4,24 +4,12 @@ import { captureException } from '$lib/server/sentry';
 import type Stripe from 'stripe';
 
 /**
- * Cache a completed card checkout, so the local record covers every payment type.
+ * Cache a completed card checkout, so the record covers every payment type.
  *
- * Without this `payment_cache` held only the two paths that go through
- * `report_payment` — a purchase fully covered by credits, at zero, and a cash
- * payment staff recorded. **Card revenue, the largest channel, was absent**, so
- * a `sum(amount_cents)` returned cash and zeroes and looked plausible while
- * omitting most of the money (#824). Two unbuilt features planned to read it
- * that way.
- *
- * It also restores a guard that could never fire: `refund()` checks this table
- * for a `refunded` row before calling Stripe, and a card payment had no row to
- * find, so refund-then-cancel called Stripe twice and the second throw landed
- * after the reservation had already been cancelled (#828).
- *
- * Best-effort and last in the listener order, matching the other two cache
- * writes: a cache that fails must not fail a checkout the member has already
- * paid for. The webhook is retried by Stripe, and `id` is the payment record so
- * a retry collides rather than duplicating.
+ * The table held only the `report_payment` paths before this — credits at zero,
+ * and cash — so a sum omitted the largest channel (#824) and `refund()`'s guard
+ * had no card row to find (#828). Best-effort and last in the listener order: a
+ * cache must not fail a checkout already paid for.
  */
 export async function handleCheckoutCache(session: Stripe.Checkout.Session): Promise<void> {
 	// The same id `checkout-listener.ts` writes onto the purchasable: the payment
