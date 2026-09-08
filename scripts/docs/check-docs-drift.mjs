@@ -29,8 +29,13 @@ import { listRoutes, readSnapshot, SNAPSHOT_PATH } from './route-inventory.mjs';
 
 const HELP_DIR = 'src/content/help';
 
-/** A folder README that orients rather than catalogues; the index above it owns the files. */
-export const DELEGATED = /<!--\s*docs-index:\s*delegated\s*-->/;
+/**
+ * A folder README that orients rather than catalogues; the index above it owns the files.
+ * Anchored to its own line so a README that *documents* the marker inline — as `docs/README.md`
+ * does — is not read as using it. That mistake makes the root index delegate to nothing above it,
+ * which strips every doc in the tree of an owner at once.
+ */
+export const DELEGATED = /^<!--\s*docs-index:\s*delegated\s*-->\s*$/m;
 const DOCS_DIR = 'docs';
 const SEED_FILE = 'scripts/seed-dev.ts';
 const REPORT_PATH = 'docs-drift-report.json';

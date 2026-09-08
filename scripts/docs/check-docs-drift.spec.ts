@@ -43,6 +43,18 @@ describe('DELEGATED', () => {
 	it('does not match prose that merely mentions delegating', () => {
 		expect(DELEGATED.test('This folder delegates its docs-index to the parent.')).toBe(false);
 	});
+
+	// docs/README.md documents the marker in a sentence. Matching that made the root index
+	// delegate upward to nothing, so every doc under it lost its owner in one go.
+	it('does not match the marker quoted inside a line of prose', () => {
+		expect(DELEGATED.test('carry `<!-- docs-index: delegated -->`, which tells the check')).toBe(
+			false
+		);
+	});
+
+	it('still matches the marker on a line of its own', () => {
+		expect(DELEGATED.test('# reports\n\n<!-- docs-index: delegated -->\n')).toBe(true);
+	});
 });
 
 describe('the real docs tree', () => {
