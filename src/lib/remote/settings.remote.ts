@@ -243,10 +243,6 @@ export const updateReservationSettings = form(reservationSettingsSchema, async (
 // ---------------------------------------------------------------------------
 
 const orgSettingsSchema = z.object({
-	name: z.string().trim().min(1, 'Organization name is required'),
-	shortName: z.string().trim().min(1, 'Short name is required'),
-	contactEmail: z.string().trim().email('Invalid email address'),
-	timezone: z.string().trim().min(1, 'Timezone is required'),
 	addressStreet: z.string().trim().max(200).optional().default(''),
 	addressCity: z.string().trim().max(100).optional().default(''),
 	addressState: z.string().trim().max(50).optional().default(''),
@@ -260,10 +256,6 @@ export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
 	const data = raw as z.infer<typeof orgSettingsSchema>;
 
 	await updateSiteConfigs([
-		{ key: 'org.name', value: data.name },
-		{ key: 'org.shortName', value: data.shortName },
-		{ key: 'org.contactEmail', value: data.contactEmail },
-		{ key: 'org.timezone', value: data.timezone },
 		{ key: 'org.addressStreet', value: data.addressStreet ?? '' },
 		{ key: 'org.addressCity', value: data.addressCity ?? '' },
 		{ key: 'org.addressState', value: data.addressState ?? '' },
