@@ -83,21 +83,30 @@
 	let revokingTest = $state(false);
 
 	// U-tec is "connected" once a refresh token has been minted (via OAuth or
-	// pasted manually). Until then, only the Connect flow makes sense.
-	const utecConnected = $derived(!!integrationSettings.refreshToken);
+	// pasted manually). Until then, only the Connect flow makes sense. Presence
+	// is all this needs, which is the whole reason the value can stay server-side.
+	const utecConnected = $derived(integrationSettings.refreshToken.configured);
 	const utecCanConnect = $derived(
 		!!integrationSettings.clientId && integrationSettings.clientSecret.configured
 	);
 
-	// The field renders empty whether or not a secret is stored, so the hint is
-	// the only thing telling a staffer which it is — and that saving blank keeps
-	// what is there rather than wiping the lock's credential.
+	// Both fields render empty whether or not a credential is stored, so the hint
+	// is the only thing telling a staffer which it is — and that saving blank
+	// keeps what is there rather than wiping the lock's credential.
 	const clientSecretHint = $derived(
 		{
 			kv: 'Saved. Leave blank to keep it, or enter a new one to replace it.',
 			env: 'Set by the ULTRALOC_CLIENT_SECRET environment variable. Saving a value here overrides it.',
 			null: 'Not set. The lock cannot authenticate until this is entered.'
 		}[String(integrationSettings.clientSecret.source)]
+	);
+
+	const refreshTokenHint = $derived(
+		{
+			kv: 'Saved by the Connect flow. Leave blank to keep it.',
+			env: 'Set by the ULTRALOC_REFRESH_TOKEN environment variable. Saving a value here overrides it.',
+			null: 'Not set. Use Connect above rather than pasting one, where you can.'
+		}[String(integrationSettings.refreshToken.source)]
 	);
 	const utecRedirectUri = $derived(`${page.url.origin}/api/integrations/utec/callback`);
 
@@ -775,7 +784,8 @@
 								name="refreshToken"
 								label="Refresh Token"
 								type="password"
-								value={integrationSettings.refreshToken}
+								value=""
+								description={refreshTokenHint}
 							/>
 						</div>
 

@@ -15,7 +15,6 @@
 		onsuccess,
 		...rest
 	}: {
-		bandId: string;
 		inviteId: string;
 		email: string;
 		variant?: ButtonVariant;

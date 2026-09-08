@@ -1,4 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+/**
+ * The public bucket, which the two cross-bucket copies reach through
+ * `getBucket`. Mocked rather than initialized so the specs can tell which
+ * bucket each half of a copy touched.
+ */
+const publicPut = vi.fn(async () => undefined);
+const publicGet = vi.fn(async (_key: string) => null as unknown);
+vi.mock('$lib/server/storage', () => ({
+	getBucket: () => ({ put: publicPut, get: publicGet })
+}));
+
 import {
 	initPrivateStorage,
 	getPrivateBucket,
@@ -6,6 +18,8 @@ import {
 	getPrivateObject,
 	deletePrivateObject,
 	listPrivateObjects,
+	copyToPrivate,
+	copyFromPrivate,
 	validatePrivateUpload,
 	PRIVATE_ALLOWED_TYPES,
 	MAX_DOCUMENT_BYTES
@@ -164,5 +178,68 @@ describe('listPrivateObjects', () => {
 
 		list.mockResolvedValueOnce({ objects: [], truncated: false, cursor: 'stale' });
 		expect((await listPrivateObjects('groups/')).cursor).toBeUndefined();
+	});
+});
+
+/**
+ * The two directions a moderation takedown and its appeal move bytes. Both
+ * stream, and both return a key — never a URL, which is what the boundary test
+ * above enforces for the module as a whole.
+ */
+describe('the cross-bucket copies', () => {
+	const source = { body: new ReadableStream(), httpMetadata: { contentType: 'image/jpeg' } };
+
+	it('reads the public bucket and writes the private one', async () => {
+		publicGet.mockResolvedValueOnce(source);
+
+		const key = await copyToPrivate('events/posters/e1.jpg', 'events/posters/withheld/e1-x.jpg');
+
+		expect(publicGet).toHaveBeenCalledWith('events/posters/e1.jpg');
+		expect(put).toHaveBeenCalledWith('events/posters/withheld/e1-x.jpg', source.body, {
+			httpMetadata: source.httpMetadata
+		});
+		expect(key).toBe('events/posters/withheld/e1-x.jpg');
+		// The source is never removed here: the caller deletes it only once the
+		// database has stopped naming it.
+		expect(del).not.toHaveBeenCalled();
+	});
+
+	it('reads the private bucket and writes the public one', async () => {
+		get.mockResolvedValueOnce(source as never);
+
+		const key = await copyFromPrivate(
+			'events/posters/withheld/e1-x.jpg',
+			'events/posters/e1-y.jpg'
+		);
+
+		expect(get).toHaveBeenCalledWith('events/posters/withheld/e1-x.jpg');
+		expect(publicPut).toHaveBeenCalledWith('events/posters/e1-y.jpg', source.body, {
+			httpMetadata: source.httpMetadata
+		});
+		expect(key).toBe('events/posters/e1-y.jpg');
+		expect(del).not.toHaveBeenCalled();
+	});
+
+	it('writes nothing and returns null when the source is gone', async () => {
+		publicGet.mockResolvedValueOnce(null);
+		expect(await copyToPrivate('gone.jpg', 'events/posters/withheld/e1-x.jpg')).toBeNull();
+		expect(put).not.toHaveBeenCalled();
+
+		get.mockResolvedValueOnce(null as never);
+		expect(await copyFromPrivate('gone.jpg', 'events/posters/e1-y.jpg')).toBeNull();
+		expect(publicPut).not.toHaveBeenCalled();
+	});
+
+	/**
+	 * A 25 MB object re-read into a 128 MB isolate to count its bytes is the one
+	 * thing a copy must not do; the source was size-checked on its way into R2.
+	 */
+	it('streams the body rather than buffering it', async () => {
+		const arrayBuffer = vi.fn();
+		publicGet.mockResolvedValueOnce({ ...source, arrayBuffer });
+
+		await copyToPrivate('events/posters/e1.jpg', 'events/posters/withheld/e1-x.jpg');
+
+		expect(arrayBuffer).not.toHaveBeenCalled();
 	});
 });

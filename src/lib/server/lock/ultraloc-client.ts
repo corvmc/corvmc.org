@@ -37,20 +37,32 @@ async function getConfig() {
 }
 
 /**
- * Whether a client secret is available to sign a token request, and from where.
+ * The two stored values that mint an access token, and their env fallbacks.
  *
- * Presence, never the value: this is what the staff settings page renders, and
- * `settings.read` being a staff capability is not a reason to put an OAuth
- * secret somewhere extensions, screenshots and error reports can reach it.
- * Precedence mirrors `getConfig` above — KV first, environment second.
+ * `clientId` and `deviceId` are absent deliberately: the client id is public by
+ * OAuth construction (`buildAuthorizeUrl` puts it in a URL the staffer's own
+ * browser follows), and the device id names which lock an already-authorised
+ * call acts on rather than authorising anything.
  */
-export async function clientSecretStatus(): Promise<{
-	configured: boolean;
-	source: 'kv' | 'env' | null;
-}> {
+const CREDENTIAL_ENV = {
+	clientSecret: 'ULTRALOC_CLIENT_SECRET',
+	refreshToken: 'ULTRALOC_REFRESH_TOKEN'
+} as const;
+
+/**
+ * Whether a stored credential is set, and from where — never its value.
+ *
+ * This is what the staff settings page renders: `settings.read` being a staff
+ * capability is not a reason to put a bearer credential somewhere extensions,
+ * screenshots and error reports can reach it. Precedence mirrors `getConfig`
+ * above — KV first, environment second.
+ */
+export async function credentialStatus(
+	field: keyof typeof CREDENTIAL_ENV
+): Promise<{ configured: boolean; source: 'kv' | 'env' | null }> {
 	const dbConfig = await getConfigsByPrefix('integration.utec');
-	if (dbConfig.clientSecret) return { configured: true, source: 'kv' };
-	if (env.ULTRALOC_CLIENT_SECRET) return { configured: true, source: 'env' };
+	if (dbConfig[field]) return { configured: true, source: 'kv' };
+	if (env[CREDENTIAL_ENV[field]]) return { configured: true, source: 'env' };
 	return { configured: false, source: null };
 }
 

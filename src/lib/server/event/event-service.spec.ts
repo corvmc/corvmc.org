@@ -146,10 +146,15 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 
 vi.mock('$lib/server/storage', () => ({
 	uploadFile: vi.fn().mockResolvedValue('events/posters/evt-1.jpg'),
-	deleteObject: vi.fn().mockResolvedValue(undefined),
-	// Returns the destination key on success, null when the source is gone —
-	// the real contract in storage.ts.
-	copyObject: vi.fn((_src: string, dest: string) => Promise.resolve(dest))
+	deleteObject: vi.fn().mockResolvedValue(undefined)
+}));
+
+// The two buckets. Both copies return the destination key on success and null
+// when the source is gone — the real contract in private-storage.ts.
+vi.mock('$lib/server/private-storage', () => ({
+	copyToPrivate: vi.fn((_src: string, dest: string) => Promise.resolve(dest)),
+	copyFromPrivate: vi.fn((_src: string, dest: string) => Promise.resolve(dest)),
+	deletePrivateObject: vi.fn().mockResolvedValue(undefined)
 }));
 
 vi.mock('$lib/server/media/media-service', () => ({
@@ -183,7 +188,8 @@ import {
 	EventNotFoundError,
 	EventValidationError,
 	EventStateError,
-	EventHasTicketsError
+	EventHasTicketsError,
+	PosterRestoreError
 } from './event-service';
 import {
 	staffCreate,
@@ -191,7 +197,8 @@ import {
 	adjustWindow
 } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
-import { uploadFile, deleteObject, copyObject } from '$lib/server/storage';
+import { uploadFile, deleteObject } from '$lib/server/storage';
+import { copyToPrivate, copyFromPrivate, deletePrivateObject } from '$lib/server/private-storage';
 import { detachSlot, isKeyReferenced, replaceSlot } from '$lib/server/media/media-service';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 
@@ -427,6 +434,113 @@ describe('EventService', () => {
 			selectResult = [];
 
 			await expect(publish('evt-999')).rejects.toThrow(EventNotFoundError);
+		});
+
+		// -------------------------------------------------------------------
+		// Republish after a takedown
+		// -------------------------------------------------------------------
+		//
+		// A takedown moves the poster into R2_PRIVATE, so republishing is no
+		// longer a no-op: the bytes have to come back out or the listing goes
+		// live with a poster nothing can fetch.
+
+		const WITHHELD = 'events/posters/withheld/evt-1-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
+		const freshPublicKey = expect.stringMatching(/^events\/posters\/evt-1-[0-9a-f]{8}\.jpg$/);
+
+		it('copies a withheld poster back into the public bucket', async () => {
+			selectResult = [{ ...mockEventRow, status: 'draft', posterKey: WITHHELD }];
+
+			await publish('evt-1');
+
+			expect(copyFromPrivate).toHaveBeenCalledWith(WITHHELD, freshPublicKey);
+			// A fresh key, never the one the takedown deleted: a URL that was public
+			// before must not come back to life.
+			expect(copyFromPrivate).not.toHaveBeenCalledWith(WITHHELD, WITHHELD);
+		});
+
+		it('re-points the listing at the restored public key', async () => {
+			selectResult = [{ ...mockEventRow, status: 'draft', posterKey: WITHHELD }];
+
+			await publish('evt-1');
+
+			expect(replaceSlot).toHaveBeenCalledWith(
+				expect.objectContaining({
+					attachableType: 'event_listing',
+					attachableId: 'evt-1',
+					slot: 'poster',
+					key: freshPublicKey
+				})
+			);
+		});
+
+		/**
+		 * The invariant from the takedown, in reverse. The bytes are at the public
+		 * key and the row names it before the private copy is deleted, so the last
+		 * copy can never be the one that goes.
+		 */
+		it('deletes the private copy only after the row names the public one', async () => {
+			selectResult = [{ ...mockEventRow, status: 'draft', posterKey: WITHHELD }];
+
+			await publish('evt-1');
+
+			expect(deletePrivateObject).toHaveBeenCalledWith(WITHHELD);
+			expect(vi.mocked(replaceSlot).mock.invocationCallOrder[0]).toBeLessThan(
+				vi.mocked(deletePrivateObject).mock.invocationCallOrder[0]
+			);
+			expect(vi.mocked(copyFromPrivate).mock.invocationCallOrder[0]).toBeLessThan(
+				vi.mocked(deletePrivateObject).mock.invocationCallOrder[0]
+			);
+		});
+
+		/**
+		 * The regression this whole path exists to prevent: silently publishing a
+		 * listing whose poster 404s. A missing private object fails the publish
+		 * instead, leaving the listing down where an appeal can be re-run.
+		 */
+		it('refuses to publish when the copy back fails', async () => {
+			vi.mocked(copyFromPrivate).mockResolvedValueOnce(null);
+			selectResult = [{ ...mockEventRow, status: 'draft', posterKey: WITHHELD }];
+
+			await expect(publish('evt-1')).rejects.toThrow(PosterRestoreError);
+			expect(replaceSlot).not.toHaveBeenCalled();
+			expect(deletePrivateObject).not.toHaveBeenCalled();
+		});
+
+		it('leaves an ordinary poster in the public bucket alone', async () => {
+			selectResult = [{ ...mockEventRow, status: 'draft', posterKey: 'events/posters/evt-1.jpg' }];
+
+			await publish('evt-1');
+
+			expect(copyFromPrivate).not.toHaveBeenCalled();
+			expect(replaceSlot).not.toHaveBeenCalled();
+		});
+
+		// A status the update below would refuse. Restoring for it would put the
+		// bytes back in the public bucket for a listing that stays down.
+		it('restores nothing for a listing it cannot publish', async () => {
+			updateRowCount = 0;
+			selectResult = [{ ...mockEventRow, status: 'published', posterKey: WITHHELD }];
+
+			await expect(publish('evt-1')).rejects.toThrow(EventStateError);
+			expect(copyFromPrivate).not.toHaveBeenCalled();
+		});
+
+		// The bytes are already public and the row names them; a private leftover
+		// is the sweep's problem, not a reason to fail somebody's appeal.
+		it('publishes even when the private copy cannot be deleted', async () => {
+			vi.mocked(deletePrivateObject).mockRejectedValueOnce(new Error('R2 down'));
+			selectResult = [{ ...mockEventRow, status: 'draft', posterKey: WITHHELD }];
+
+			await expect(publish('evt-1')).resolves.toBeUndefined();
+		});
+
+		it('leaves the private copy alone when something still references it', async () => {
+			vi.mocked(isKeyReferenced).mockResolvedValueOnce(true);
+			selectResult = [{ ...mockEventRow, status: 'draft', posterKey: WITHHELD }];
+
+			await publish('evt-1');
+
+			expect(deletePrivateObject).not.toHaveBeenCalled();
 		});
 	});
 
@@ -1011,11 +1125,11 @@ describe('EventService', () => {
 		// Community listings
 		// -------------------------------------------------------------------
 		//
-		// Posters are served straight from R2 at a guessable key, and that URL
-		// consults nothing — not status, not source. So for a community listing
-		// this path has to destroy the object, not just drop the row off the
-		// guide: it is the advertised kill switch, and an image is the riskiest
-		// thing on the page.
+		// Posters are served straight from R2 and that URL consults nothing — not
+		// status, not source. So for a community listing this path has to move the
+		// bytes out of the public bucket, not just drop the row off the guide: it
+		// is the advertised kill switch, and an image is the riskiest thing on the
+		// page.
 
 		const publishedCommunityListing = {
 			id: 'evt-1',
@@ -1028,11 +1142,11 @@ describe('EventService', () => {
 			createdByUserId: 'member-1'
 		};
 
-		// The poster has to stop being reachable at the key already handed out —
-		// that is the whole control — but a takedown is a moderation decision, not
-		// a reason to destroy the member's artwork. Moving the bytes to a fresh key
-		// and deleting the old object satisfies the first without the second.
-		it('rotates a community listing’s poster to an unguessable key', async () => {
+		// The poster has to stop being fetchable — that is the whole control — but
+		// a takedown is a moderation decision, not a reason to destroy the member's
+		// artwork. Moving the bytes to the private bucket and deleting the public
+		// object satisfies the first without the second.
+		it('moves a community listing’s poster into the private bucket', async () => {
 			selectResultQueue = [
 				[publishedCommunityListing],
 				[{ ...mockEventRow, status: 'published' }],
@@ -1044,7 +1158,7 @@ describe('EventService', () => {
 			const withheldKey = expect.stringMatching(
 				/^events\/posters\/withheld\/evt-1-[0-9a-f-]{36}\.jpg$/
 			);
-			expect(copyObject).toHaveBeenCalledWith('events/posters/evt-1.jpg', withheldKey);
+			expect(copyToPrivate).toHaveBeenCalledWith('events/posters/evt-1.jpg', withheldKey);
 			expect(replaceSlot).toHaveBeenCalledWith(
 				expect.objectContaining({
 					attachableType: 'event_listing',
@@ -1056,6 +1170,61 @@ describe('EventService', () => {
 				posterKey: withheldKey,
 				reviewNotes: 'No venue given'
 			});
+		});
+
+		/**
+		 * The exposure #771 is about. A withheld copy in the *public* bucket is
+		 * unreachable in practice — unguessable, unlinked — and still fetchable by
+		 * anyone holding the key from a log, a cache or a referrer. Nothing this
+		 * path writes may land in the public bucket.
+		 */
+		it('puts the withheld bytes in the private bucket and nothing in the public one', async () => {
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1');
+
+			expect(copyToPrivate).toHaveBeenCalledTimes(1);
+			// The public bucket is written to nowhere on this path — only deleted from.
+			expect(uploadFile).not.toHaveBeenCalled();
+		});
+
+		/**
+		 * The ordering that survives the move to two buckets, and matters more for
+		 * it: the private copy exists and the row names it before the public
+		 * original is deleted, so a failed copy can never cost the last copy.
+		 */
+		it('writes the private copy before deleting the public original', async () => {
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1');
+
+			expect(vi.mocked(copyToPrivate).mock.invocationCallOrder[0]).toBeLessThan(
+				vi.mocked(deleteObject).mock.invocationCallOrder[0]
+			);
+			expect(vi.mocked(replaceSlot).mock.invocationCallOrder[0]).toBeLessThan(
+				vi.mocked(deleteObject).mock.invocationCallOrder[0]
+			);
+		});
+
+		it('deletes nothing when the copy into the private bucket fails', async () => {
+			vi.mocked(copyToPrivate).mockRejectedValueOnce(new Error('R2 down'));
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1');
+
+			expect(deleteObject).not.toHaveBeenCalled();
 		});
 
 		// The regression this pins: detaching alone left the old URL serving the
@@ -1144,7 +1313,7 @@ describe('EventService', () => {
 		});
 
 		it('nulls posterKey only when the object is already gone', async () => {
-			vi.mocked(copyObject).mockResolvedValueOnce(null);
+			vi.mocked(copyToPrivate).mockResolvedValueOnce(null);
 			selectResultQueue = [
 				[publishedCommunityListing],
 				[{ ...mockEventRow, status: 'published' }],

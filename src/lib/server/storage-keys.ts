@@ -43,6 +43,37 @@ export function mediaKey(prefix: string, id: string, contentType: string): strin
 	return `${prefix}/${id}-${token}.${extensionForType(contentType)}`;
 }
 
+/**
+ * Where a moderation takedown parks a listing's poster — in the **private**
+ * bucket, not the public one.
+ *
+ * The prefix is the whole record of which bucket holds the bytes. There is no
+ * column saying so, and there does not need to be: every key in this tree is
+ * built by `withheldPosterKey`, so the shape is decidable from the key alone by
+ * the sweep, the delete paths and `getPublicUrl`.
+ */
+export const WITHHELD_POSTER_PREFIX = 'events/posters/withheld/';
+
+/**
+ * The private-bucket key a takedown moves a poster to.
+ *
+ * Takes the extension rather than a content type: the caller has an existing
+ * key, and carrying its extension across is more faithful than re-deriving one.
+ * The random token is what invalidates links already handed out — the same
+ * reason `mediaKey` carries one.
+ */
+export function withheldPosterKey(eventId: string, ext: string): string {
+	return `${WITHHELD_POSTER_PREFIX}${eventId}-${crypto.randomUUID()}.${ext}`;
+}
+
+/**
+ * Is this key in the private bucket? The one question every caller that holds a
+ * poster key has to be able to answer without a database round trip.
+ */
+export function isWithheldPosterKey(key: string | null | undefined): boolean {
+	return !!key && key.startsWith(WITHHELD_POSTER_PREFIX);
+}
+
 /** The prefix every `documentKey` shares. The orphan sweep lists the bucket by it. */
 export const DOCUMENT_KEY_PREFIX = 'groups/';
 

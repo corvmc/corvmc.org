@@ -71,3 +71,50 @@ export interface NotificationEmailPayload extends NotificationEmailModel {
 	category_color?: string;
 	category_class?: string;
 }
+
+/** A button whose URL the email layer may supply. See `NotificationEmailContent.cta`. */
+export interface NotificationEmailCtaSpec {
+	label: string;
+	/** Absolute URL, or a site-relative path the email layer makes absolute. */
+	url?: string;
+}
+
+/**
+ * What a notification says, as its sender declares it.
+ *
+ * The half of `NotificationEmailModel` that is a decision about this
+ * notification. Everything else on that model — the greeting, the absolute CTA
+ * URL, the preview text, the derived flags — is a decision about how CorvMC
+ * mail reads, and `buildNotificationEmail` makes it once for all of them.
+ */
+export interface NotificationEmailContent {
+	/**
+	 * Who it is addressed to. The email layer writes the greeting from it, so
+	 * every notification greets the same way. Omit when there is no name to use.
+	 */
+	recipientName?: string;
+	/** Subject line. Required: it is the most-read copy in the mail. */
+	subject: string;
+	/** Inbox preview snippet. Derived from the first paragraph when unset. */
+	preview_text?: string;
+	heading: string;
+	paragraphs?: { text: string }[];
+	details?: NotificationEmailDetail[];
+	/** Raw member-written text. Escaped, and dropped for types that must not carry it. */
+	quote?: string;
+	footnote?: string;
+	transactional_only?: boolean;
+	/**
+	 * The button. Its URL defaults to the notification's own `href`, so the bell
+	 * row and the email button lead to the same place unless one says otherwise.
+	 */
+	cta?: NotificationEmailCtaSpec;
+}
+
+/**
+ * Content for mail with no in-app row: there is no `href` to fall back on, so a
+ * button has to name its own URL.
+ */
+export interface StandaloneEmailContent extends NotificationEmailContent {
+	cta?: NotificationEmailCta;
+}

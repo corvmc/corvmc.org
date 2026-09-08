@@ -7,9 +7,23 @@ vi.mock('./in-app-service', () => ({ createNotification: vi.fn() }));
 vi.mock('./preference-service', () => ({ getPreference: vi.fn() }));
 vi.mock('./sse', () => ({ pushToUser: vi.fn() }));
 
-const EMAIL_TEMPLATE = {
-	alias: 'reservation-reminder',
-	model: { userName: 'Ada', date: '2026-02-01' }
+const EMAIL_CONTENT = {
+	recipientName: 'Ada',
+	subject: 'Your reservation is confirmed',
+	heading: 'Reservation confirmed',
+	paragraphs: [{ text: 'Your reservation has been confirmed.' }],
+	cta: { label: 'View my reservations' }
+};
+
+/** What the email layer makes of `EMAIL_CONTENT` on the way out. */
+const SENT_MODEL = {
+	subject: EMAIL_CONTENT.subject,
+	heading: EMAIL_CONTENT.heading,
+	greeting: 'Hi Ada,',
+	paragraphs: EMAIL_CONTENT.paragraphs,
+	cta: { url: 'https://corvmc.org/reservations/1', label: 'View my reservations' },
+	preview_text: 'Your reservation has been confirmed.',
+	has_details: false
 };
 
 const BASE_PARAMS = {
@@ -19,7 +33,7 @@ const BASE_PARAMS = {
 	title: 'Reservation Confirmed',
 	body: 'Your reservation has been confirmed.',
 	href: '/reservations/1',
-	emailTemplate: EMAIL_TEMPLATE
+	email: EMAIL_CONTENT
 };
 
 const FAKE_ROW = {
@@ -51,7 +65,7 @@ describe('dispatch', () => {
 	it('sends in-app notification and SSE push when pref.inApp is true', async () => {
 		getPreference.mockResolvedValue({ email: false, inApp: true });
 
-		await dispatch({ ...BASE_PARAMS, emailTemplate: undefined });
+		await dispatch({ ...BASE_PARAMS, email: undefined });
 
 		expect(createNotification).toHaveBeenCalledWith({
 			userId: BASE_PARAMS.userId,
@@ -71,23 +85,23 @@ describe('dispatch', () => {
 		});
 	});
 
-	it('sends templated email when pref.email is true and a template is provided', async () => {
+	it('builds the generic-template model from declared content', async () => {
 		getPreference.mockResolvedValue({ email: true, inApp: false });
 
 		await dispatch(BASE_PARAMS);
 
 		expect(sendEmailWithTemplate).toHaveBeenCalledWith({
 			to: BASE_PARAMS.userEmail,
-			templateAlias: EMAIL_TEMPLATE.alias,
-			model: EMAIL_TEMPLATE.model,
+			templateAlias: 'notification',
+			model: SENT_MODEL,
 			tag: BASE_PARAMS.type
 		});
 	});
 
-	it('skips email when no emailTemplate', async () => {
+	it('skips email when no content was declared', async () => {
 		getPreference.mockResolvedValue({ email: true, inApp: false });
 
-		await dispatch({ ...BASE_PARAMS, emailTemplate: undefined });
+		await dispatch({ ...BASE_PARAMS, email: undefined });
 
 		expect(sendEmailWithTemplate).not.toHaveBeenCalled();
 	});
@@ -99,8 +113,8 @@ describe('dispatch', () => {
 
 		expect(sendEmailWithTemplate).toHaveBeenCalledWith({
 			to: BASE_PARAMS.userEmail,
-			templateAlias: EMAIL_TEMPLATE.alias,
-			model: EMAIL_TEMPLATE.model,
+			templateAlias: 'notification',
+			model: SENT_MODEL,
 			tag: BASE_PARAMS.type
 		});
 	});
@@ -119,7 +133,7 @@ describe('dispatch', () => {
 		createNotification.mockRejectedValue(new Error('DB error'));
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-		await expect(dispatch({ ...BASE_PARAMS, emailTemplate: undefined })).resolves.toBeUndefined();
+		await expect(dispatch({ ...BASE_PARAMS, email: undefined })).resolves.toBeUndefined();
 
 		expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
 		consoleSpy.mockRestore();
@@ -211,13 +225,8 @@ describe('notification model normalization', () => {
 	 */
 	const PREFIX = `${NOTIFICATION_CATEGORIES[getNotificationType('contact_form')!.category].label} · `;
 
-	async function sentModel(model: Record<string, unknown>) {
-		await dispatchEmailOnly({
-			type: 'contact_form',
-			toEmail: 'staff@example.com',
-			templateAlias: 'notification',
-			model
-		});
+	async function sentModel(email: Record<string, unknown>) {
+		await dispatchEmailOnly({ type: 'contact_form', toEmail: 'staff@example.com', email });
 		return sendEmailWithTemplate.mock.calls[0][0].model;
 	}
 
@@ -302,9 +311,10 @@ describe('emailOmitsUserContent', () => {
 			userId: 'user-1',
 			userEmail: 'user@example.com',
 			title: 'Robin sent you a message',
-			emailTemplate: {
-				alias: 'notification',
-				model: { heading: 'New message', quote: 'the private words of a member' }
+			email: {
+				subject: 'You have a new message',
+				heading: 'New message',
+				quote: 'the private words of a member'
 			}
 		});
 
@@ -320,10 +330,7 @@ describe('emailOmitsUserContent', () => {
 			userId: 'user-1',
 			userEmail: 'user@example.com',
 			title: 'New message request',
-			emailTemplate: {
-				alias: 'notification',
-				model: { heading: 'New request', quote: 'let me in' }
-			}
+			email: { subject: 'New request', heading: 'New request', quote: 'let me in' }
 		});
 		const model = sendEmailWithTemplate.mock.calls[0][0].model;
 		expect(model.quote).toBeUndefined();
@@ -339,9 +346,10 @@ describe('emailOmitsUserContent', () => {
 			userId: 'user-1',
 			userEmail: 'user@example.com',
 			title: 'New message',
-			emailTemplate: {
-				alias: 'notification',
-				model: { paragraphs: [{ text: 'the private words of a member' }] }
+			email: {
+				subject: 'New message',
+				heading: 'New message',
+				paragraphs: [{ text: 'the private words of a member' }]
 			}
 		});
 		const model = sendEmailWithTemplate.mock.calls[0][0].model;
@@ -360,10 +368,7 @@ describe('emailOmitsUserContent', () => {
 			userId: 'user-1',
 			userEmail: 'user@example.com',
 			title: 'CorvMC replied',
-			emailTemplate: {
-				alias: 'notification',
-				model: { heading: 'Reply', quote: 'here is your answer' }
-			}
+			email: { subject: 'Reply', heading: 'Reply', quote: 'here is your answer' }
 		});
 		const model = sendEmailWithTemplate.mock.calls[0][0].model;
 		expect(model.quote).toContain('here is your answer');
@@ -375,8 +380,7 @@ describe('emailOmitsUserContent', () => {
 		await dispatchEmailOnly({
 			type: 'direct_message_received',
 			toEmail: 'user@example.com',
-			templateAlias: 'notification',
-			model: { heading: 'New message', quote: 'private' }
+			email: { subject: 'New message', heading: 'New message', quote: 'private' }
 		});
 		const model = sendEmailWithTemplate.mock.calls[0][0].model;
 		expect(model.quote).toBeUndefined();

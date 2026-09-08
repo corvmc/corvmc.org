@@ -11,7 +11,7 @@ import {
 	updateSiteConfigs,
 	updateSiteConfig
 } from '$lib/server/site-config/site-config-service';
-import { testConnection, clientSecretStatus } from '$lib/server/lock/ultraloc-client';
+import { testConnection, credentialStatus } from '$lib/server/lock/ultraloc-client';
 import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
 import { requireCapability } from '$lib/server/authorization';
 import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '$lib/server/feature-flags';
@@ -109,15 +109,23 @@ export const getVenueSettings = query(async () => {
 export const getIntegrationSettings = query(async () => {
 	await requireCapability('settings.read');
 	const raw = await getConfigsByPrefix('integration.utec');
+
+	// Presence, never the value, for the two that mint an access token.
+	// Everything this query returns is serialised to the browser —
+	// `getStaffSettingsPage` folds it into the payload the staff route SSRs into
+	// its HTML — and no reading of `settings.read` makes a shipped bearer
+	// credential the right answer. `clientId` and `deviceId` are not credentials:
+	// see `CREDENTIAL_ENV` in `ultraloc-client.ts`.
+	const [clientSecret, refreshToken] = await Promise.all([
+		credentialStatus('clientSecret'),
+		credentialStatus('refreshToken')
+	]);
+
 	return {
 		clientId: raw.clientId ? String(raw.clientId) : '',
-		// Presence, never the value. Everything this query returns is serialised
-		// to the browser — `getStaffSettingsPage` folds it into the payload the
-		// staff route SSRs into its HTML — and no reading of `settings.read`
-		// makes a shipped OAuth secret the right answer.
-		clientSecret: await clientSecretStatus(),
+		clientSecret,
 		deviceId: raw.deviceId ? String(raw.deviceId) : '',
-		refreshToken: raw.refreshToken ? String(raw.refreshToken) : ''
+		refreshToken
 	};
 });
 
@@ -381,17 +389,17 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
 	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof integrationSettingsSchema>;
 
-	// A blank secret means "unchanged", not "clear it". The form is never handed
-	// the current value to render, so an untouched field submits empty — and a
-	// save that silently emptied the credential would break the lock at 3am.
-	// Removing it stays a deliberate act, not a side effect of editing Device ID.
+	// A blank credential means "unchanged", not "clear it". Neither is rendered
+	// with its current value, so an untouched field submits empty — and a save
+	// that silently emptied one would break the lock at 3am. The refresh token
+	// has a second writer, the OAuth callback, which a wipe here would undo.
+	// Removing either stays deliberate, not a side effect of editing Device ID.
 	await updateSiteConfigs([
 		{ key: 'integration.utec.clientId', value: data.clientId },
-		...(data.clientSecret
-			? [{ key: 'integration.utec.clientSecret', value: data.clientSecret }]
-			: []),
 		{ key: 'integration.utec.deviceId', value: data.deviceId },
-		{ key: 'integration.utec.refreshToken', value: data.refreshToken }
+		...(['clientSecret', 'refreshToken'] as const)
+			.filter((field) => data[field])
+			.map((field) => ({ key: `integration.utec.${field}`, value: data[field] }))
 	]);
 
 	void getStaffSettingsPage().refresh();
