@@ -76,6 +76,10 @@
 		"panel": "band"
 	},
 	{
+		"route": "/band/[slug]/reservations/[id]",
+		"panel": "band"
+	},
+	{
 		"route": "/band/[slug]/rider",
 		"panel": "band"
 	},
