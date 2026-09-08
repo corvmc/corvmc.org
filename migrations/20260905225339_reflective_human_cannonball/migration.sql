@@ -1,1 +1,0 @@
-ALTER TABLE `reservation` ADD `lock_synced_at` integer;
