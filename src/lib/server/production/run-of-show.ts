@@ -147,12 +147,9 @@ export const POOL_BPS = 10_000;
 /**
  * Equal shares of the acts' pool, in basis points, summing to exactly `POOL_BPS`.
  *
- * CMC takes 30% of the door and the acts split the rest among themselves, on an
- * equal basis — there is no house headliner/opener split. Three acts get
- * 3333/3333/3334: the remainder goes one basis point at a time down the billing
- * order, so the total is exact rather than approximately right.
- *
- * Returned in `sortOrder` order, so index 0 is the first act on the bill.
+ * The acts split the pool on an equal basis — no house headliner/opener split.
+ * Three acts get 3333/3333/3334: the remainder goes one basis point at a time
+ * down the billing order, so the total is exact. Returned in `sortOrder` order.
  */
 export function equalPoolShares(count: number): number[] {
 	if (count <= 0) return [];
@@ -166,10 +163,9 @@ export function equalPoolShares(count: number): number[] {
 /**
  * Whether a proposed share fits in what the pool has left.
  *
- * Over-allocating is the dangerous direction: three acts at 7000 each pays out
- * 210% of a pool that only holds 100%, and the overspend comes out of the
- * collective's own 30%. Under-allocating is merely unfinished — a bill mid-edit
- * legitimately sums low — so this refuses only the overspend.
+ * Only the overspend is refused: three acts at 7000 each pays out 210% of a
+ * pool holding 100%, and the excess comes out of the collective's own cut. A
+ * bill mid-edit legitimately sums low, which is unfinished rather than wrong.
  */
 export function poolShareFits(otherSharesBps: number[], proposedBps: number): boolean {
 	const used = otherSharesBps.reduce((sum, bps) => sum + bps, 0);
