@@ -211,11 +211,16 @@ describe('validateTicketSplit', () => {
 	it('recomputes the fee rather than believing a posted one', () => {
 		// There is nowhere in the input for a client to put a fee at all, which is
 		// the strongest form of not trusting it.
-		const result = validateTicketSplit({ ...base, unitPriceCents: 1500, collectiveCents: 428 });
+		//
+		// The figures moved in #827: at the suggestion the acts take 70% of the
+		// $15 gross — $10.50 — rather than 70% of the $14.26 left after the card
+		// fee, and the collective is what remains. This case used to post 428 and
+		// expect 998, which is the proportional split that shorted the acts.
+		const result = validateTicketSplit({ ...base, unitPriceCents: 1500, collectiveCents: 376 });
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.split.stripeFeeCents).toBe(74);
-			expect(result.split.actsCents).toBe(998);
+			expect(result.split.actsCents).toBe(1050);
 		}
 	});
 

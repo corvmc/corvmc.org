@@ -10,7 +10,11 @@
 	import SplitBar from '$lib/components/ui/SplitBar.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { formatCents } from '$lib/utils/format';
-	import { computeTicketSplit, suggestedCollectiveCents } from '$lib/finance/ticket-split';
+	import {
+		actsAnchoredCollectiveCents,
+		actsMinCents,
+		computeTicketSplit
+	} from '$lib/finance/ticket-split';
 	import { TICKET_MIN_CHARGE_CENTS } from '$lib/config';
 	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 
@@ -84,14 +88,33 @@
 		})
 	);
 	const divisibleCents = $derived(atZero.chargeCents - atZero.stripeFeeCents);
+	// The acts' take is anchored to the suggested price, so the collective is the
+	// residual and the bar has a **ceiling**, not just a floor of zero: a buyer
+	// may drag money towards the acts and never away from them. Same number the
+	// server validates against — `validateTicketSplit` calls `actsMinCents` too.
+	const actsFloorCents = $derived(
+		actsMinCents({
+			baseCents: suggestedUnitCents * quantity,
+			grossPaidCents: totalCents,
+			coverFees,
+			bps: collectiveShareBps
+		})
+	);
+	const collectiveCeilingCents = $derived(Math.max(0, divisibleCents - actsFloorCents));
 	const collective = $derived(
-		collectiveOverride ?? suggestedCollectiveCents(divisibleCents, collectiveShareBps)
+		collectiveOverride ??
+			actsAnchoredCollectiveCents({
+				baseCents: suggestedUnitCents * quantity,
+				grossPaidCents: totalCents,
+				coverFees,
+				bps: collectiveShareBps
+			})
 	);
 	const split = $derived(
 		computeTicketSplit({
 			unitPriceCents: unitCents,
 			quantity,
-			collectiveCents: Math.min(collective, Math.max(0, divisibleCents)),
+			collectiveCents: Math.min(Math.max(0, collective), collectiveCeilingCents),
 			coverFees,
 			suggestedUnitCents
 		})
@@ -195,15 +218,18 @@
 {#if !isFree && !inDeadZone && !belowFloor}
 	<div class="space-y-3 border-t border-base-200 pt-4">
 		<p class="font-medium">Where should it go?</p>
-		<!-- No `otherFloorCents`. Passing the price floor there is the bug fixed in
-		     the music BuyPanel: it consumed the whole amount, clamped the
-		     collective's share to zero, and the suggested position never appeared.
-		     The acts' protection is the total the buyer named, not a floor on the
-		     bar. -->
+		<!-- `otherFloorCents` is the acts' **anchored** take, not the event's price
+		     floor. Passing the price floor there is the bug fixed in the music
+		     BuyPanel: it consumed the whole amount, clamped the collective's share
+		     to zero, and the suggested position never appeared. This number is
+		     already clamped to what is divisible, so on a show paid under the
+		     suggestion it is the whole divisible amount and the bar correctly has
+		     nowhere to go — the acts get everything. #827. -->
 		<SplitBar
 			{totalCents}
 			value={split.collectiveCents}
 			onchange={(c) => (collectiveOverride = c)}
+			otherFloorCents={actsFloorCents}
 			fixedCents={split.stripeFeeCents}
 			fixedLabel="Card processing"
 			valueLabel="The Collective"
