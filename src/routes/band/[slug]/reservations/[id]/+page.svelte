@@ -12,6 +12,7 @@
 	import { formatDateLong, formatTimeRange, formatDollars } from '$lib/utils/format';
 	import { cancelBandReservation, getBandReservationDetail } from '$lib/remote/reservations.remote';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	// Declared above the awaited query: a declaration after a top-level await is
 	// async-gated, which would compile every `fields.X.as()` into an async derived.
@@ -113,8 +114,8 @@
 			{:else if res.inAccessWindow}
 				<p class="text-muted">
 					This session's code hasn't reached the door and we don't have a backup to give you right
-					now. Don't wait outside — <a class="link" href="/contact">get in touch</a> and someone will
-					let the act in.
+					now. Don't wait outside — <a class="link" href={resolve('/contact')}>get in touch</a> and someone
+					will let the act in.
 				</p>
 			{:else if res.lockCode}
 				<p class="text-muted">
