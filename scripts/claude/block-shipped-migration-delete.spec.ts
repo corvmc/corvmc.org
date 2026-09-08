@@ -100,6 +100,40 @@ describe('block-shipped-migration-delete', () => {
 		expect(run(`git rm -r ${SHIPPED}/snapshot.json ${SHIPPED}`).code).toBe(2);
 	});
 
+	// `git update-index --force-remove` drops the index entry with no `rm` anywhere in
+	// the command, which is how a session got past this guard while #728 was open.
+	it('blocks removing a shipped migration from the index with update-index', () => {
+		const { code, stderr } = run(`git update-index --force-remove ${SHIPPED}/migration.sql`);
+		expect(code).toBe(2);
+		expect(stderr).toContain(SHIPPED);
+	});
+
+	// Only the removing flags make it a remove. `--assume-unchanged` and the rest of
+	// update-index touch no content, and blocking those would be a new false positive.
+	it('allows update-index on a draft, and non-removing update-index flags anywhere', () => {
+		expect(run(`git update-index --force-remove ${DRAFT}/migration.sql`).code).toBe(0);
+		expect(run(`git update-index --assume-unchanged ${SHIPPED}/migration.sql`).code).toBe(0);
+	});
+
+	// A glob names no directory the path scan can read while destroying every one it
+	// expands to, so it is resolved against the directories origin/main actually has.
+	it('blocks a glob rooted at migrations/ that reaches a shipped migration', () => {
+		const all = run('rm -rf migrations/*');
+		expect(all.code).toBe(2);
+		expect(all.stderr).toContain(SHIPPED);
+		expect(run('git rm -r migrations/2026*').code).toBe(2);
+	});
+
+	it('allows a glob that expands to branch-local migrations only', () => {
+		expect(run('rm -rf migrations/20260102*').code).toBe(0);
+		expect(run(`rm -rf ${DRAFT}/*`).code).toBe(0);
+	});
+
+	// What `prune-snapshots.mjs` does, written as one command instead of a loop.
+	it('allows a glob that prunes snapshots out of every migration', () => {
+		expect(run('rm -f migrations/*/snapshot.json').code).toBe(0);
+	});
+
 	it('blocks a mixed delete that sweeps up a shipped migration', () => {
 		expect(run(`rm -rf ${DRAFT} ${SHIPPED}`).code).toBe(2);
 	});
