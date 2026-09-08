@@ -100,7 +100,7 @@
 							{#if m.role !== 'owner'}
 								<div class="flex justify-end gap-1">
 									{#if m.status === 'pending'}
-										<RevokeInviteAction bandId={id} memberId={m.id} name={m.member.title} />
+										<RevokeInviteAction memberId={m.id} name={m.member.title} />
 									{/if}
 									{#if m.status === 'active'}
 										<TransferOwnershipAction
@@ -109,7 +109,7 @@
 											name={m.member.title}
 										/>
 									{/if}
-									<RemoveBandMemberAction bandId={id} memberId={m.id} name={m.member.title} />
+									<RemoveBandMemberAction memberId={m.id} name={m.member.title} />
 								</div>
 							{/if}
 						</td>
@@ -140,7 +140,7 @@
 						<td class="w-px"><Badge size="sm" variant="outline">{inv.role}</Badge></td>
 						<td class="col-extra truncate">{inv.invitedByName}</td>
 						<td class="w-px">
-							<RevokeEmailInviteAction bandId={id} inviteId={inv.id} email={inv.email} />
+							<RevokeEmailInviteAction inviteId={inv.id} email={inv.email} />
 						</td>
 					</tr>
 				{/each}

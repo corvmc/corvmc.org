@@ -69,6 +69,14 @@ vi.mock('$lib/server/storage', () => ({
 	deleteObject: (key: string) => deleteObjectMock(key)
 }));
 
+const deletePrivateObjectMock = vi.fn(async (key: string) => {
+	journal.push(`r2-private:${key}`);
+});
+
+vi.mock('$lib/server/private-storage', () => ({
+	deletePrivateObject: (key: string) => deletePrivateObjectMock(key)
+}));
+
 const { sweepMedia } = await import('./media-sweep-service');
 const { MEDIA_SWEEP_GRACE_MS } = await import('$lib/config');
 
@@ -82,6 +90,10 @@ beforeEach(() => {
 	deleteObjectMock.mockReset();
 	deleteObjectMock.mockImplementation(async (key: string) => {
 		journal.push(`r2:${key}`);
+	});
+	deletePrivateObjectMock.mockReset();
+	deletePrivateObjectMock.mockImplementation(async (key: string) => {
+		journal.push(`r2-private:${key}`);
 	});
 	vi.clearAllMocks();
 });
@@ -159,6 +171,35 @@ describe('sweepMedia — unreferenced media', () => {
 
 		expect(result.reapedMedia).toBe(0);
 		expect(deleteObjectMock).not.toHaveBeenCalled();
+		expect(journal).not.toContain('delete:media');
+	});
+
+	/**
+	 * A withheld poster's bytes are in R2_PRIVATE, and the key shape is the only
+	 * record of that. Deleting from the public bucket would succeed against
+	 * nothing, drop the row that is the only handle on the key, and leave the
+	 * object billed forever — the exact failure the object-before-row order is
+	 * designed to prevent, reintroduced by using the wrong bucket.
+	 */
+	it('deletes a withheld key from the private bucket, not the public one', async () => {
+		const withheld = 'events/posters/withheld/evt-1-aaaaaaaa.jpg';
+		mediaCandidates = [{ id: 'm1', key: withheld }];
+
+		const result = await sweepMedia(NOW);
+
+		expect(deletePrivateObjectMock).toHaveBeenCalledWith(withheld);
+		expect(deleteObjectMock).not.toHaveBeenCalled();
+		expect(result.reapedMedia).toBe(1);
+		expect(journal.indexOf(`r2-private:${withheld}`)).toBeLessThan(journal.indexOf('delete:media'));
+	});
+
+	it('keeps the row when the private bucket refuses', async () => {
+		mediaCandidates = [{ id: 'm1', key: 'events/posters/withheld/evt-1-bbbbbbbb.jpg' }];
+		deletePrivateObjectMock.mockRejectedValueOnce(new Error('R2 down'));
+
+		const result = await sweepMedia(NOW);
+
+		expect(result.failedDeletes).toBe(1);
 		expect(journal).not.toContain('delete:media');
 	});
 

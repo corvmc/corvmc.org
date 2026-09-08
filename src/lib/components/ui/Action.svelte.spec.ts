@@ -247,3 +247,64 @@ describe('Action, form mode', () => {
 		expect(document.querySelector('[role="dialog"] button[type="submit"]')).toBeNull();
 	});
 });
+
+/**
+ * `canSubmit` gates the modal's submit, not the trigger: a form you cannot open
+ * is a form you can never fill in to the point where it becomes submittable.
+ * It arrived as an undeclared prop at thirteen call sites, which meant it fell
+ * into `...rest` and landed on the trigger as a stray `cansubmit` attribute.
+ */
+describe('Action, canSubmit', () => {
+	const gated = (canSubmit?: boolean) => ({
+		action: fakeRemoteForm(),
+		label: 'Adjust',
+		submitLabel: 'Save',
+		fieldName: 'amount',
+		...(canSubmit === undefined ? {} : { canSubmit })
+	});
+
+	const submit = () => page.getByRole('dialog').getByRole('button', { name: 'Save' });
+
+	it('disables the modal submit while it is false', async () => {
+		await render(ActionHarness, gated(false));
+
+		await page.getByRole('button', { name: 'Adjust' }).click();
+
+		await expect.element(submit()).toBeDisabled();
+	});
+
+	it('leaves the trigger enabled so the form can still be opened', async () => {
+		await render(ActionHarness, gated(false));
+
+		await expect.element(page.getByRole('button', { name: 'Adjust' })).toBeEnabled();
+	});
+
+	it('enables the submit once the gate opens', async () => {
+		const props = gated(false);
+		const { rerender } = await render(ActionHarness, props);
+
+		await page.getByRole('button', { name: 'Adjust' }).click();
+		await expect.element(submit()).toBeDisabled();
+
+		await rerender({ ...props, canSubmit: true });
+
+		await expect.element(submit()).toBeEnabled();
+	});
+
+	it('gates nothing when it is not given', async () => {
+		await render(ActionHarness, gated());
+
+		await page.getByRole('button', { name: 'Adjust' }).click();
+
+		await expect.element(submit()).toBeEnabled();
+	});
+
+	// The original defect, pinned at the DOM: an unread prop reaches the trigger
+	// as an attribute, which is silent — no error, no type failure, no CSS.
+	it('does not leak onto the trigger as an HTML attribute', async () => {
+		await render(ActionHarness, gated(false));
+
+		const trigger = page.getByRole('button', { name: 'Adjust' }).element();
+		expect(trigger.getAttribute('cansubmit')).toBeNull();
+	});
+});

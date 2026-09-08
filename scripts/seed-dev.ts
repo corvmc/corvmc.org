@@ -82,6 +82,7 @@ import { seedSuggestions } from './seed/suggestions';
 import { seedProjects } from './seed/projects';
 import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
+import { seedPacking } from './seed/packing';
 
 async function main() {
 	console.log('\nStarting dev seed...\n');
@@ -196,6 +197,9 @@ async function main() {
 	// After the bands and their rosters: a rider is owned corner by corner, so it
 	// reads the roster back rather than being handed one.
 	const riders = await seedRiders(roles);
+	// Straight after the rider, whose band and logins it reuses: one account
+	// reaches both features, and the promote path has a real rider to aim at.
+	const packing = await seedPacking(riders.structuredBandId);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -287,6 +291,9 @@ async function main() {
 	);
 	console.log(
 		`  ${riders.riders} tech riders — ${riders.structuredBand ?? '—'} (fits the room), ${riders.oversizedBand ?? '—'} (over it); ${riders.uploadBand ?? '—'} uploaded a PDF; ${riders.emptyBand ?? '—'} has nothing`
+	);
+	console.log(
+		`  ${packing.items} packing rows on the same band — ${packing.packed} already in the van, ${packing.unassigned} nobody has yet, ${packing.settled} already on the rider`
 	);
 	console.log('\n  Tech rider demo logins (all `password`):');
 	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');

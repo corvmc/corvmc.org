@@ -9,6 +9,22 @@ export function escapeHtml(str: string): string {
 }
 
 /**
+ * The inverse of `escapeHtml`, for flattening rendered HTML back to text.
+ *
+ * Covers exactly what `escapeHtml` and `marked` emit. `&amp;` is decoded last
+ * so `&amp;lt;` comes back as the literal `&lt;` rather than a `<`.
+ */
+export function unescapeHtml(str: string): string {
+	return str
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#(?:39|x27);/g, "'")
+		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&');
+}
+
+/**
  * Escape a plain string and preserve its line breaks as `<br />`.
  *
  * For user-generated text rendered into email, where `white-space: pre-wrap`

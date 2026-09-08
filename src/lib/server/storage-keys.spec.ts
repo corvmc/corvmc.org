@@ -4,9 +4,40 @@ import {
 	documentKey,
 	extensionForType,
 	isDocumentKey,
+	isWithheldPosterKey,
 	mediaKey,
-	sanitizeFilename
+	sanitizeFilename,
+	withheldPosterKey
 } from './storage-keys';
+
+/**
+ * The key shape is the only record of which bucket holds a withheld poster —
+ * no column says so — so `isWithheldPosterKey` has to accept everything
+ * `withheldPosterKey` builds and nothing an ordinary upload could produce.
+ */
+describe('withheld poster keys', () => {
+	it('accepts every key withheldPosterKey produces', () => {
+		for (const ext of ['jpg', 'png', 'webp', 'gif', 'bin']) {
+			expect(isWithheldPosterKey(withheldPosterKey('evt-1', ext))).toBe(true);
+		}
+	});
+
+	it('gives each takedown its own key, to invalidate links already handed out', () => {
+		expect(withheldPosterKey('evt-1', 'jpg')).not.toBe(withheldPosterKey('evt-1', 'jpg'));
+		expect(withheldPosterKey('evt-1', 'jpg')).toMatch(
+			/^events\/posters\/withheld\/evt-1-[0-9a-f-]{36}\.jpg$/
+		);
+	});
+
+	it('rejects an ordinary poster key, which lives in the public bucket', () => {
+		expect(isWithheldPosterKey(mediaKey('events/posters', 'evt-1', 'image/jpeg'))).toBe(false);
+		expect(isWithheldPosterKey('events/posters/evt-1.jpg')).toBe(false);
+		expect(isWithheldPosterKey('groups/g1/documents/f1.pdf')).toBe(false);
+		expect(isWithheldPosterKey('')).toBe(false);
+		expect(isWithheldPosterKey(null)).toBe(false);
+		expect(isWithheldPosterKey(undefined)).toBe(false);
+	});
+});
 
 describe('extensionForType', () => {
 	it('maps every type the upload endpoints accept', () => {

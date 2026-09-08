@@ -32,7 +32,7 @@ import { allowRateLimited } from '$lib/server/rate-limit';
 import { dispatchEmailOnly } from '$lib/server/notification/dispatcher';
 import { handleBandEnquiry } from '$lib/server/inbox/band-service';
 import { listBandAdmins } from '$lib/server/band/band-service';
-import type { NotificationEmailModel } from '$lib/types/notification-email';
+import type { StandaloneEmailContent } from '$lib/types/notification-email';
 import type { BandEpk } from '$lib/types/band-page';
 
 /** The address a band put on its profile, back when that field was published. */
@@ -124,7 +124,7 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 	);
 	if (onRoster) return { success: true };
 
-	const model: NotificationEmailModel = {
+	const enquiry: StandaloneEmailContent = {
 		subject: `New booking enquiry — ${bandRow.name}`,
 		heading: 'New enquiry',
 		preview_text: `${data.name}: ${data.message.slice(0, 100)}`,
@@ -138,12 +138,7 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 		footnote: 'Reply directly to the sender at the email address above.'
 	};
 
-	await dispatchEmailOnly({
-		type: 'band_site_contact',
-		toEmail: bookingEmail,
-		templateAlias: 'notification',
-		model: model as unknown as Record<string, unknown>
-	});
+	await dispatchEmailOnly({ type: 'band_site_contact', toEmail: bookingEmail, email: enquiry });
 
 	return { success: true };
 });

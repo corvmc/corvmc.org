@@ -15,7 +15,6 @@
 		onsuccess,
 		...rest
 	}: {
-		bandId: string;
 		memberId: string;
 		name: string;
 		variant?: ButtonVariant;

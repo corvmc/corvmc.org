@@ -109,8 +109,7 @@ async function notifyStaffLockOffline(health: LockDeviceHealth): Promise<void> {
 		await dispatchEmailOnly({
 			type: 'lock_offline',
 			toEmail: env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org',
-			templateAlias: 'notification',
-			model: {
+			email: {
 				subject: 'The practice space lock is offline',
 				heading: 'Door lock unreachable',
 				paragraphs: [
@@ -126,10 +125,7 @@ async function notifyStaffLockOffline(health: LockDeviceHealth): Promise<void> {
 						value: health.batteryLevel === null ? 'unknown' : `${health.batteryLevel} of 5`
 					}
 				],
-				cta: {
-					url: `${env.PUBLIC_SITE_URL ?? 'https://corvmc.org'}/staff/settings`,
-					label: 'Open lock settings'
-				}
+				cta: { url: '/staff/settings', label: 'Open lock settings' }
 			}
 		});
 	} catch (err) {

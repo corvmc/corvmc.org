@@ -201,8 +201,32 @@ question — fast-forward push it, per the previous section.
 
 ### Migrations on a branch that outlives a merge from `main`
 
-Git never conflicts under `migrations/` — each migration is its own directory, so both sides simply
-coexist. That is exactly why this is worth writing down.
+Git does not conflict on a **migration** under `migrations/` — each is its own directory, so both
+sides coexist. It does conflict on the **snapshot**, and the two facts get conflated.
+
+`scripts/db/prune-snapshots.mjs` keeps only the newest `snapshot.json`, so a branch that generates
+a migration both adds one and deletes the base one. Do that on either side of a fork and git pairs
+each side's delete with that side's add, reporting a rename of the base snapshot to two different
+destinations. `-X no-renames` does not suppress it (tried three ways on git 2.44).
+
+**Delete the branch's own migration directory first, as its own commit, then merge.** With no new
+snapshot on your side there is nothing for git to pair main's rename against. This **downgrades the
+conflict, it does not remove it** — the branch has already pruned the base snapshot, so your side
+still shows a delete and you get:
+
+```
+CONFLICT (rename/delete): migrations/<base>/snapshot.json renamed to
+  migrations/<main's newest>/snapshot.json in origin/main, but deleted in HEAD.
+```
+
+That one has a single right answer — `git checkout --theirs` on main's snapshot, leaving
+`migrations/` byte-identical to `main` — where the rename/rename it replaces does not. Regenerate
+on top with `pnpm db:generate` afterwards.
+
+Verify with the **bare command CI runs**, not with `db:generate`'s summary: `pnpm exec drizzle-kit
+generate` and then `git status --porcelain migrations/`, which must be **empty**. `db:generate`
+printing "No schema changes" does not prove the gate passes — it runs three post-processing scripts
+that can themselves write.
 
 Snapshots carry **`prevIds`** — plural. The chain is a DAG, and `drizzle-kit generate` merges forks
 by itself: `20260831171927_lame_hydra` lists both #341's and #342's snapshots as parents, and
@@ -256,7 +280,7 @@ it across worktrees) and it replays the resolutions.
 | `src/routes/*/nav-items.ts`         | Ordered arrays where the order is cosmetic. Take both sides, then run the adjacent `nav-items.spec.ts`, which asserts the list.                                                                             |
 | `docs/reports/feature-catalog.md`   | A wide table plus a `Last updated:` line every phase wants to touch. One row per feature, in the landing PR.                                                                                                |
 | `pnpm-lock.yaml`                    | Never hand-resolve: `git checkout --theirs pnpm-lock.yaml && pnpm install`.                                                                                                                                 |
-| `migrations/`                       | Never conflicts, which is the trap. See above.                                                                                                                                                              |
+| `migrations/`                       | The migrations never conflict; the pruned `snapshot.json` does. Delete this branch's own migration first, then merge, then take `--theirs`. See above.                                                      |
 
 Never rebase a feature branch and never force-push one. Other worktrees hold it and open phase PRs
 would redisplay every merged phase as new commits. The `non_fast_forward` rule now refuses the push

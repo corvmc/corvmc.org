@@ -9,11 +9,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // in a unit test. Mock Sentry to no-ops, and reimplement `sequence` as plain
 // composition. (It used to just return the last handler — that silently stopped
 // exercising handleBetterAuth the moment another handler was appended after it.)
+// Recorded at construction, which is module scope in hooks.server.ts — these
+// are the options the Cloudflare SDK is inited with on every request.
+const sentryInitOptions: Record<string, unknown>[] = [];
 vi.mock('@sentry/sveltekit', () => ({
-	initCloudflareSentryHandle:
-		() =>
-		({ event, resolve }: { event: unknown; resolve: (event: unknown) => unknown }) =>
-			resolve(event),
+	initCloudflareSentryHandle: (options: Record<string, unknown>) => {
+		sentryInitOptions.push(options);
+		return ({ event, resolve }: { event: unknown; resolve: (event: unknown) => unknown }) =>
+			resolve(event);
+	},
 	sentryHandle:
 		() =>
 		({ event, resolve }: { event: unknown; resolve: (event: unknown) => unknown }) =>
@@ -411,5 +415,19 @@ describe('hooks.server security headers', () => {
 		expect(response.status).toBe(302);
 		expect(response.headers.get('location')).toBe('https://the-neons.corvmc.org/epk');
 		expect(response.headers.get('referrer-policy')).toBe('strict-origin-when-cross-origin');
+	});
+});
+
+describe('Sentry init options', () => {
+	// These options reach the Cloudflare SDK untouched: `wrapRequestHandler` does
+	// not run `getFinalOptions`, so nothing else can supply a release. Drop the
+	// option and every worker frame goes back to an unresolvable
+	// `app:///worker.js:<line>` under no release at all.
+	it('carries a release', () => {
+		expect(sentryInitOptions[0]).toHaveProperty('release');
+	});
+
+	it('takes it from the constant vite.config.ts also gives the Sentry plugin', () => {
+		expect(sentryInitOptions[0]?.release).toBe(__SENTRY_RELEASE_NAME__ ?? undefined);
 	});
 });
