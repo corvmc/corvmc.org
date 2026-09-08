@@ -94,11 +94,32 @@
 
 	{#if res.status === 'confirmed'}
 		<InfoCard title="Door Code">
-			{#if res.lockCode}
+			{#if res.lockCode && res.lockSyncedAt}
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
 				<p class="text-muted">
 					Enter this code on the door keypad. It works for the length of the session, for whoever on
 					the act gets there first.
+				</p>
+			{:else if res.fallbackCode}
+				<!-- The session's own code has not reached the lock. The break-glass
+				     code was synced long ago, so it opens the door even now, and it
+				     is shown rather than asked for — see #780. -->
+				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.fallbackCode}</p>
+				<p class="text-muted">
+					We couldn't confirm this session's usual code reached the door, so this one will get the
+					act in for now. Staff know about it. If it doesn't work, call us rather than waiting
+					outside.
+				</p>
+			{:else if res.inAccessWindow}
+				<p class="text-muted">
+					This session's code hasn't reached the door and we don't have a backup to give you right
+					now. Don't wait outside — <a class="link" href="/contact">get in touch</a> and someone will
+					let the act in.
+				</p>
+			{:else if res.lockCode}
+				<p class="text-muted">
+					The code is issued but the door hasn't confirmed it yet. It should be ready before the
+					session — check back here, and get in touch if it still isn't showing.
 				</p>
 			{:else}
 				<p class="text-muted">The door code appears here on the day of the session.</p>
