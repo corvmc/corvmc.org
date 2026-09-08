@@ -6,6 +6,7 @@ import { eventListing, eventBand } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { linkManagingGroup } from '$lib/server/event/event-service';
+import { requireProgramGroup } from '$lib/server/group/group-kind';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, isNull, lt, gt, gte, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 import { getOccurrences, generationWindowEnd } from './rrule-helpers';
@@ -475,6 +476,15 @@ async function processEventSeries(
 	 */
 	const inheritsCmcReview = prototype.source === 'cmc';
 	const occurrenceStatus = inheritsCmcReview ? ('draft' as const) : ('published' as const);
+
+	// A series is the same write repeated unattended, so it owes the kind check
+	// its one-off does — a band prototype here would hold the room free every
+	// week rather than once. Thrown, not skipped: the caller records it per
+	// series and carries on, and a series that must not generate is worth a line
+	// in `errors` rather than a run of listings nobody asked for.
+	if (prototype.source === 'group' && prototype.groupId) {
+		await requireProgramGroup(prototype.groupId);
+	}
 
 	// The owner's display name, for the lineup credit a band occurrence owes.
 	// Looked up once rather than per occurrence.

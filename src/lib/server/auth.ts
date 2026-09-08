@@ -14,7 +14,13 @@ import { userAdditionalFields } from './auth-fields';
 import { captureException } from '$lib/server/sentry';
 import { ensureUserEntry } from '$lib/server/directory/entry-service';
 import { assignMemberNumber } from '$lib/server/user/member-number-service';
+import { linkExistingSubscriberToUser } from '$lib/server/marketing/subscriber-service';
 import { verifyTurnstile } from '$lib/server/turnstile';
+import {
+	RESET_PASSWORD_TOKEN_TTL_SECONDS,
+	sendPasswordChangedEmail,
+	sendPasswordResetEmail
+} from '$lib/server/auth-emails';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
 // ---------------------------------------------------------------------------
 // PBKDF2 password hashing via Web Crypto API
@@ -375,6 +381,43 @@ export const AUTH_IP_ADDRESS_HEADERS = ['cf-connecting-ip'];
  * that each sign in against a budget of 3 per 10 seconds. Fails closed: an
  * origin that does not parse is treated as remote and keeps its limits.
  */
+/**
+ * Everything a new account needs that better-auth does not write itself.
+ *
+ * Every step is deliberately non-fatal and independently caught: the account
+ * is already committed by the time this runs, so a failure here must cost the
+ * member a listing, a tidy URL or a mailing-list link — never the account.
+ */
+export async function onUserCreated(created: {
+	id: string;
+	name: string;
+	email: string;
+}): Promise<void> {
+	// The member directory reads `directory_entry`, so an account without one
+	// is not in the directory at all. A failure repairs itself the next time
+	// they save their profile, through `getOrCreateUserEntryId`.
+	try {
+		await ensureUserEntry(created.id, created.name);
+	} catch (err) {
+		captureException(err);
+	}
+	// A member number is what makes `/m/{n}` an address they can say out loud.
+	try {
+		await assignMemberNumber(created.id);
+	} catch (err) {
+		captureException(err);
+	}
+	// Someone who joined a list before they joined the collective already has a
+	// `subscriber` row under this address; without this it stays orphaned until
+	// a built-in audience sends, and their account page reads as if they had
+	// subscribed to nothing. Link only — see linkExistingSubscriberToUser.
+	try {
+		await linkExistingSubscriberToUser(created.id, created.email);
+	} catch (err) {
+		captureException(err);
+	}
+}
+
 export function authRateLimitEnabled(origin: string | undefined): boolean {
 	return !isLocalOrigin(origin);
 }
@@ -420,6 +463,27 @@ function createAuth() {
 					return false;
 				},
 				hash: scryptHash
+			},
+			resetPasswordTokenExpiresIn: RESET_PASSWORD_TOKEN_TTL_SECONDS,
+			// A reset is the way back in from an account somebody else has, so it
+			// has to end every other session. Note the 60s `cookieCache` window
+			// below: the session rows go immediately, but a cookie already issued
+			// is trusted without a read until it ages out.
+			revokeSessionsOnPasswordReset: true,
+			// `url` is passed through exactly as better-auth built it. It points at
+			// better-auth's own `/reset-password/:token` callback, which validates
+			// the token before redirecting to the `redirectTo` the request asked
+			// for — so an expired link lands on an error page rather than on a form
+			// that only fails once the member has typed a new password.
+			sendResetPassword: async ({ user: recipient, url }) => {
+				await sendPasswordResetEmail({
+					toEmail: recipient.email,
+					name: recipient.name,
+					resetUrl: url
+				});
+			},
+			onPasswordReset: async ({ user: recipient }) => {
+				await sendPasswordChangedEmail({ toEmail: recipient.email, name: recipient.name });
 			}
 		},
 		user: {
@@ -427,34 +491,7 @@ function createAuth() {
 		},
 		databaseHooks: {
 			user: {
-				create: {
-					// A new account needs its `directory_entry` immediately: the member
-					// directory reads that table, so an account without one is not in
-					// the directory at all. This is the only path in the groups
-					// migration that can produce a NEW member with no listing —
-					// everything that existed when phase 3a shipped was backfilled.
-					//
-					// Deliberately non-fatal. A failure here costs the member their
-					// directory presence until they next save their profile, which
-					// repairs it through `getOrCreateUserEntryId`; throwing would cost
-					// them the account.
-					after: async (created) => {
-						try {
-							await ensureUserEntry(created.id, created.name);
-						} catch (err) {
-							captureException(err);
-						}
-						// Same treatment, for the same reason: a member number is what
-						// makes `/m/{n}` an address they can say out loud, and losing it
-						// costs a tidy URL, not an account. It is issued separately from
-						// the entry above so one failing does not take the other with it.
-						try {
-							await assignMemberNumber(created.id);
-						} catch (err) {
-							captureException(err);
-						}
-					}
-				}
+				create: { after: onUserCreated }
 			}
 		},
 		advanced: {

@@ -75,6 +75,9 @@ export const tableOrder = [
 	'volunteer_signup',
 	// independents (no FKs)
 	'closure',
+	'lock_fallback_code',
+	// References user twice (holder + granting staff), so it follows `user`.
+	'lock_member_code',
 	'inbox_channel_config',
 	'verification',
 	// leaves
@@ -104,6 +107,9 @@ export const tableOrder = [
 	'event_rsvp',
 	// The bill: references event and band, so it wipes before either.
 	'event_band',
+	// The run of show: references production and event_band, so it lands after
+	// both. Note it sits well below `production` — its other parent is the bill.
+	'production_slot',
 	// Shared advertising: references event and group, so it wipes before either.
 	'event_group',
 	'group_invite',

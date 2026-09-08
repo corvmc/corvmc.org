@@ -17,16 +17,13 @@
 	// Free claims keep the historic `rsvp-` purchase prefix; they're still tickets.
 	const isFreeClaim = $derived(purchaseId.startsWith('rsvp-'));
 
-	// Tickets are written `pending` before payment and flipped to `valid` by the
-	// checkout.session.completed webhook. Paying on Stripe's own page meant the
-	// redirect took long enough that the webhook had all but always landed first;
-	// paying on our page, the buyer can arrive here in the same second they
-	// confirm, and read codes for tickets nobody has been paid for yet.
+	// Tickets go `valid` on the webhook, not on payment. Paying on Stripe's page
+	// the redirect took long enough that it had always landed; paying on ours the
+	// buyer arrives in the same second and would read unpaid codes.
 	//
-	// So poll, briefly. `attempts` bounds it: a webhook that has not arrived in
-	// twenty seconds is not going to be waited out, and the tickets are valid
-	// either way once it does land — the codes below are already correct, it is
-	// only the claim that they are paid for that has to wait.
+	// So poll, briefly. `attempts` bounds it: a webhook twenty seconds late is not
+	// going to be waited out, and the codes below are already correct either way —
+	// only the claim that they are paid for has to wait.
 	const pending = $derived(data.tickets.some((t) => t.status === 'pending'));
 	let attempts = $state(0);
 	const RETRY_LIMIT = 10;

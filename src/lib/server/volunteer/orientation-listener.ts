@@ -15,11 +15,10 @@ import {
 /**
  * A member's first rehearsal booking raises a shift to meet them at the door.
  *
- * What the orientation *is* — which role, how far ahead, how long, which
- * checklist — is a duty list staff can edit, found by its `auto_apply_on`
- * trigger rather than by a name or a constant. Until one exists the feature is
- * simply off, which is the degradation story for production: no seed, no
- * shifts, no errors.
+ * What the orientation *is* — role, lead time, length, checklist — is a duty
+ * list staff can edit, found by its `auto_apply_on` trigger rather than by name
+ * or constant. Until one exists the feature is simply off: no seed, no shifts,
+ * no errors.
  */
 
 /** Registered from `registerListeners()`, which is itself idempotent. */
@@ -47,18 +46,13 @@ export function registerOrientationListeners(): void {
 					await applyDutyList(list.id, { kind: 'reservation', id: event.reservationId }, null)
 				).workOrderIds;
 			} catch (err) {
-				// The bus has no dedupe, so a re-delivered event lands here a second
-				// time — and `applyDutyList`'s re-apply guard is what stops it doubling
-				// the roster. Refusing by name is the correct outcome, not a failure:
-				// the machinery that stops a coordinator double-clicking Apply is the
-				// machinery that makes this listener idempotent.
-				//
-				// It is not, however, a reason to stop. The same refusal covers the
-				// case staff have been working around by hand — a coordinator applied
-				// the list to the booking themselves, so the work order exists but
-				// nothing ever wrote `member_orientation`, and the member reads as
-				// `pending` while somebody is already rostered to meet them. So fall
-				// through to the shift that is already there rather than returning.
+				// The bus has no dedupe, so a re-delivered event lands here twice, and
+				// `applyDutyList`'s re-apply guard is what stops it doubling the roster.
+				// Refusing by name is the correct outcome, not a failure — but it is not
+				// a reason to stop: the same refusal covers a coordinator having applied
+				// the list by hand, where the work order exists but nothing wrote
+				// `member_orientation` and the member still reads as `pending`. So fall
+				// through to the shift that is already there.
 				if (!(err instanceof DutyListAlreadyAppliedError)) throw err;
 			}
 
@@ -138,19 +132,12 @@ async function findAutoApplyList() {
 }
 
 /**
- * The soonest shift the list produced, which is the one the member turns up to.
+ * The soonest shift the list produced, found by where it is anchored rather
+ * than by what an apply returned — the one the member turns up to.
  *
- * A list could carry an unscheduled item — advance work with a deadline and no
- * window — and that is not the moment anybody is met at the door, so this only
- * considers rows that have a start.
- */
-/**
- * The same shift, found by where it is anchored rather than by what an apply
- * just returned — for the booking that already carries the list.
- *
- * Cancelled rows are excluded on the same reasoning as the re-apply guard:
- * cancelling the lot is how you redo an apply, so a booking whose shifts are all
- * called off has nothing to point the member at.
+ * Only rows with a start: a list can carry an unscheduled item, and that is not
+ * when anybody is met at the door. Cancelled rows are excluded for the same
+ * reason as the re-apply guard — cancelling the lot is how you redo an apply.
  */
 async function earliestApplied(reservationId: string, dutyListId: string) {
 	const [row] = await db

@@ -9,7 +9,14 @@ export const registeredEvents = [
 	'checkout.session.completed',
 	'invoice.paid',
 	'customer.subscription.updated',
-	'customer.subscription.deleted'
+	'customer.subscription.deleted',
+	// A failed contribution is the one billing event a member has to act on, and
+	// until this was subscribed their card could fail, credits stop, and nobody
+	// — member or staff — be told.
+	'invoice.payment_failed',
+	// A refund issued from the Stripe dashboard never reached the app, so the
+	// local payment row stood as if the money had stayed.
+	'charge.refunded'
 ] as const;
 
 export type RegisteredEvent = (typeof registeredEvents)[number];

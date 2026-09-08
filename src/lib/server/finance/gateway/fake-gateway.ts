@@ -19,20 +19,11 @@ import {
 } from './fixtures';
 
 /**
- * An in-memory stand-in for Stripe.
- *
- * It exists because Stripe's own guidance rules out the alternative: the
- * Payment Element and Checkout "have security measures in place that prevent
- * automated testing", and the recommendation is to return simulated objects
- * rather than call Stripe.js and the API from a test suite
- * (https://docs.stripe.com/automated-testing). `stripe-mock` does not help
- * either — it is stateless by design, so a session created on one request is
- * not there to be retrieved on the next, which is exactly what every flow here
- * depends on.
- *
- * State lives for the life of the worker isolate, which is what makes an
- * end-to-end run possible: create a session on one request, complete it on
- * another, read the fulfilled row on a third.
+ * An in-memory stand-in for Stripe, because Stripe's own guidance rules out
+ * driving the real thing from a suite and `stripe-mock` is stateless — see
+ * `docs/specs/shipped/finance-spec.md#testing`. State lives for the life of the
+ * worker isolate, which is what makes an end-to-end run possible: create a
+ * session on one request, complete it on another, read the row on a third.
  */
 
 // ---------------------------------------------------------------------------
@@ -145,13 +136,10 @@ function discountAmount(discounts: Stripe.Checkout.SessionCreateParams.Discount[
 
 /**
  * Where the fake sends the customer instead of `checkout.stripe.com`. The origin
- * is lifted from whichever return URL the caller supplied, so the fake follows
- * the app around ports and preview hosts without configuration of its own.
- *
- * It is the same `/checkout/<session>` route an `elements` session uses: that
- * page decides from the live driver whether to mount a Payment Element or the
- * fake's card-number form, so a hosted-mode fake and a real Elements session
- * land in the same place.
+ * comes from the caller's return URL, so the fake follows the app around ports
+ * and preview hosts unconfigured. It is the same `/checkout/<session>` an
+ * `elements` session uses — that page picks the Payment Element or the
+ * card-number form off the live driver, so both land in the same place.
  */
 function fakeCheckoutUrl(params: Stripe.Checkout.SessionCreateParams, sessionId: string): string {
 	const reference = params.success_url ?? params.return_url ?? params.cancel_url;
@@ -165,21 +153,10 @@ function fakeCheckoutUrl(params: Stripe.Checkout.SessionCreateParams, sessionId:
 
 /**
  * A `cus_seed_…` customer has a card and a billing history; it just does not
- * exist in Stripe.
- *
- * The dev seed writes those ids onto its sustaining-member personas
- * (`scripts/seed/sustaining-personas.ts`). Everything Stripe holds about them —
- * the card on file, the invoices — lives in Stripe rather than in D1, so
- * without this the surfaces that replaced the billing portal render empty for
- * every seeded member and nobody can look at the feature they just built.
- *
- * Materialised into the store on first read rather than returned from a
- * synthesizer, so the rest of the flow works on it for real: the card can be
- * detached, the subscription can be pointed at another one.
- *
- * Deliberately keyed on the seed's own `cus_seed_` prefix, and deliberately not
- * on anything an e2e fixture uses — a spec that means to start with no card
- * says so by choosing a customer id outside this prefix.
+ * exist in Stripe. Without this every billing surface renders empty for a
+ * seeded member. Materialised into the store on first read rather than
+ * synthesized on the way out, so detaching and re-defaulting work for real.
+ * Keyed on the seed's prefix and nothing an e2e fixture uses.
  */
 function materialiseSeedCustomer(customerId: string | undefined): void {
 	if (!customerId?.startsWith('cus_seed')) return;
@@ -242,12 +219,10 @@ export function createFakeGateway(): PaymentGateway {
 		/**
 		 * Connect, standing in far enough for a band to be "onboarded" locally.
 		 *
-		 * `charges_enabled` and `payouts_enabled` come back true immediately,
-		 * because the thing they gate — whether a record can be sold — is what the
-		 * seed and the e2e suite need to be able to reach. The real Express flow
-		 * takes a human through Stripe's hosted onboarding and can sit
-		 * `restricted` for days; nothing on this side can stand in for that, so
-		 * the onboarding link is a URL that goes nowhere and is never followed.
+		 * `charges_enabled` / `payouts_enabled` come back true immediately: what
+		 * they gate — whether a record can be sold — is what the seed and the suite
+		 * need to reach. The real Express flow takes a human through Stripe's
+		 * hosted onboarding, so the link here goes nowhere and is never followed.
 		 */
 		accounts: {
 			create: async (params) => {
@@ -569,14 +544,14 @@ export function getFakeSession(sessionId: string): Stripe.Checkout.Session | und
  * to `handleCheckoutCompleted` — the fake deliberately does not reach into the
  * domain bus itself, so the production path stays the only path to fulfillment.
  */
+
 /**
  * Attach a card to a customer the way confirming a SetupIntent would.
  *
- * The real flow is `stripe.confirmSetup()` in the browser against the intent's
- * client secret, which the fake has no way to receive — so the fake's own
- * card-number form posts here instead. The card number picks the brand and last
- * four so a spec can assert on something it chose, and a declining test card
- * fails the way the live one does rather than attaching anyway.
+ * `stripe.confirmSetup()` runs in the browser against the intent's client
+ * secret, which the fake cannot receive — so its own card-number form posts
+ * here instead. The number picks the brand and last four, so a spec asserts on
+ * something it chose.
  */
 export function completeFakeSetupIntent(
 	setupIntentId: string,

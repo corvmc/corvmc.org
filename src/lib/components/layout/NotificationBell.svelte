@@ -5,24 +5,16 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { invalidateAll } from '$app/navigation';
-	import {
-		getNotifications,
-		markNotificationRead,
-		markAllNotificationsRead
-	} from '$lib/remote/notifications.remote';
+	import { markNotificationRead, markAllNotificationsRead } from '$lib/remote/notifications.remote';
+	import type { ChromeNotification } from './chrome';
 
-	// Everything that does not derive from `data` is declared *above* the awaited
-	// derived on purpose, and the order is load-bearing. Anything after a
-	// top-level await is async-gated: the compiler assigns it inside a
-	// continuation that runs only once the promise settles. But
-	// `<svelte:window onclick>` is attached synchronously during setup, so gating
-	// this block left the click-outside handler live for the length of one
-	// `getNotifications()` round trip with `open` and `destroyed` both still
-	// `undefined` — `destroyed` read falsy and waved the click through, and
-	// reading the absent `open` signal threw
-	// `undefined is not an object (evaluating 'e.f')` (JAVASCRIPT-SVELTEKIT-2S).
-	// Hoisting also gets `onMount`/`onDestroy` registered at setup, where they
-	// belong, instead of one round trip late.
+	// Props, not a query of its own. This component is mounted by `AppTopbar` on
+	// every authenticated page, so a `getNotifications()` here was a third remote
+	// query racing the layout's and the page's (#569). Each panel's layout query
+	// assembles it now — see `appChrome` in `$lib/remote/layout.remote`.
+	let { notifications, unreadCount }: { notifications: ChromeNotification[]; unreadCount: number } =
+		$props();
+
 	let open = $state(false);
 	let eventSource: EventSource | null = null;
 	let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -82,10 +74,6 @@
 		if (browser) window.removeEventListener('beforeunload', handleBeforeUnload);
 	});
 
-	let data = $derived(await getNotifications());
-	let notifications = $derived(data.notifications);
-	let unreadCount = $derived(data.unreadCount);
-
 	function toggleDropdown() {
 		open = !open;
 	}
@@ -115,8 +103,7 @@
 		// This handler can be invoked by the very click that unmounts the component
 		// (navigation), after its reactive state is torn down — even reading `open`
 		// then throws (JAVASCRIPT-SVELTEKIT-Q, JAVASCRIPT-SVELTEKIT-1A). `destroyed`
-		// is only a plain boolean it is safe to read here because it is declared
-		// above the awaited derived; gated, it read `undefined` and guarded nothing.
+		// is a plain boolean, so it stays readable once the signals have gone.
 		if (destroyed) return;
 		// Only react when the dropdown is open — avoids a reactive write on every
 		// document click and skips the case where the target is detached/null.

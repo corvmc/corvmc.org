@@ -52,3 +52,58 @@ describe('renderCampaignPreview', () => {
 		expect(html).not.toContain('{{unsubscribe_url}}');
 	});
 });
+
+// ---------------------------------------------------------------------------
+// The {.button} CTA (#647)
+// ---------------------------------------------------------------------------
+const BUTTON_MD = '[Buy Tickets](https://corvmc.org/events/1?ref=email){.button}';
+
+describe('campaign buttons', () => {
+	const html = renderCampaignForSend(BUTTON_MD, 'Maya', 'https://corvmc.org/unsub');
+
+	it('promotes a tagged link into the offset-shadow button', () => {
+		// bgcolor as an attribute, not just CSS: Word-engine Outlook drops
+		// background-color on the cell and the button would render white.
+		expect(html).toContain('bgcolor="#e5771e"');
+		expect(html).toContain('class="btn-cell"');
+		expect(html).toContain('>Buy Tickets</a>');
+	});
+
+	it('keeps the query string in the href', () => {
+		expect(html).toContain('href="https://corvmc.org/events/1?ref=email"');
+	});
+
+	it('leaves the marker nowhere in the output', () => {
+		expect(html).not.toContain('{.button}');
+	});
+
+	it('renders the same button in the editor preview as in the send', () => {
+		// Two entry points, one markdownToHtml — a staffer who sees a button in
+		// the composer has to get one in the mail.
+		const preview = renderCampaignPreview(BUTTON_MD);
+		expect(preview).toContain('bgcolor="#e5771e"');
+		expect(preview).toContain('class="btn-cell"');
+	});
+
+	it('leaves an untagged link as an inline link', () => {
+		const plain = renderCampaignForSend('[Buy Tickets](https://corvmc.org/x)', null, '#');
+		expect(plain).not.toContain('class="btn-cell"');
+		expect(plain).toContain('<a href="https://corvmc.org/x"');
+	});
+
+	it('leaves a tagged link that shares its paragraph alone', () => {
+		// The marker promotes a whole paragraph, so it only applies when the
+		// link is the only thing in it.
+		const inline = renderCampaignForSend('Go now [Buy](https://corvmc.org/x){.button}', null, '#');
+		expect(inline).not.toContain('class="btn-cell"');
+	});
+});
+
+describe('campaign heading styles', () => {
+	it('styles every heading level markdown can emit', () => {
+		const html = renderCampaignForSend('#### Fourth', 'Maya', '#');
+		// An unstyled h4 falls through to the client default — Times, undersized.
+		expect(html).toContain('.content h4 { font-size:17px; }');
+		expect(html).toContain('<h4>Fourth</h4>');
+	});
+});

@@ -76,6 +76,10 @@
 		"panel": "band"
 	},
 	{
+		"route": "/band/[slug]/reservations/[id]",
+		"panel": "band"
+	},
+	{
 		"route": "/band/[slug]/rider",
 		"panel": "band"
 	},
@@ -133,6 +137,10 @@
 	},
 	{
 		"route": "/events/[id]/tickets/success",
+		"panel": "public"
+	},
+	{
+		"route": "/forgot-password",
 		"panel": "public"
 	},
 	{
@@ -213,6 +221,10 @@
 	},
 	{
 		"route": "/member/groups/[slug]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/groups/[slug]/edit",
 		"panel": "member"
 	},
 	{
@@ -305,6 +317,10 @@
 	},
 	{
 		"route": "/radio",
+		"panel": "public"
+	},
+	{
+		"route": "/reset-password",
 		"panel": "public"
 	},
 	{

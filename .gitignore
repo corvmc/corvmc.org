@@ -21,6 +21,8 @@ db.sqlite
 .env.*
 !.env.example
 !.env.test
+# Dummy env for Claude Code cloud sessions — tracked on purpose, no secrets in it.
+!.env.cloud
 .dev.vars
 .dev.vars.*
 

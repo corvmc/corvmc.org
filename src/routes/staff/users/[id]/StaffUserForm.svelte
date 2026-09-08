@@ -6,6 +6,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import { toBirthDateInput } from '$lib/utils/age';
 
 	// Everything arrives as a resolved prop. Keeping this component's script
 	// fully synchronous is the point of extracting it: a top-level `await` marks
@@ -80,6 +81,18 @@
 				name="phone"
 				type="tel"
 				value={member.phone ?? ''}
+				class="col-span-4 @md:col-span-2 @lg:col-span-2"
+			/>
+			<!-- Staff-editable, where the member's own copy is answerable once.
+			     They are who a member asks when the date is wrong, so this is the
+			     only place it can be corrected. Under 18 closes direct messages,
+			     and does so as an eligibility fact rather than a moderation row —
+			     nothing here appears on the standing card. -->
+			<Field
+				name="dateOfBirth"
+				type="date"
+				label="Date of birth"
+				value={toBirthDateInput(member.dateOfBirth)}
 				class="col-span-4 @md:col-span-2 @lg:col-span-2"
 			/>
 			<!--

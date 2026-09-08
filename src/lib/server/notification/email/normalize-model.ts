@@ -20,6 +20,22 @@ import type { NotificationEmailPayload } from '$lib/types/notification-email';
 /** Postmark's preview text is truncated by mail clients well before this. */
 const PREVIEW_TEXT_MAX = 140;
 
+/**
+ * Prefix every line with `>` so a mail client renders it as a quote.
+ *
+ * For the text-only templates, which carry no HTML and cannot fence a quoted
+ * message the way `quote` does. Mustachio has no per-line transform, so this
+ * has to happen before the model reaches the template. Trailing whitespace is
+ * dropped from blank lines: `> ` on its own is what makes a client show an
+ * empty quoted line rather than close the quote.
+ */
+export function quoteForPlainText(text: string): string {
+	return text
+		.split(/\r?\n/)
+		.map((line) => (line.length > 0 ? `> ${line}` : '>'))
+		.join('\n');
+}
+
 function derivePreviewText(model: NotificationEmailPayload): string {
 	const source = model.paragraphs?.[0]?.text ?? model.greeting ?? model.heading ?? '';
 	const flat = source

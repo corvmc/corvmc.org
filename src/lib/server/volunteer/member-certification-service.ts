@@ -60,13 +60,10 @@ function atNoon(dateStr: string): Date {
 }
 
 /**
- * Whether a held certification was in force on a given instant.
- *
- * The asymmetry is deliberate and easy to get backwards:
- *
- * - `expiresAt >= at` — a card is valid **through** its expiry date.
- * - `revokedAt > at` — a clearance pulled **on** the day of a shift was not in
- *   force for that shift.
+ * Whether a held certification was in force on a given instant. The asymmetry
+ * is easy to get backwards: `expiresAt >= at`, because a card is valid
+ * **through** its expiry date; but `revokedAt > at`, because a clearance pulled
+ * **on** the day of a shift was not in force for that shift.
  */
 export function wasHeldOn(
 	row: Pick<MemberCertification, 'grantedAt' | 'expiresAt' | 'revokedAt'>,
@@ -110,12 +107,11 @@ export function certificationState(
 
 /**
  * Grant a certification to a member. Renewals call this again — the new row is
- * the current one, and the old row keeps its dates as the record of the window
- * it covered.
+ * the current one, and the old row keeps its dates.
  *
  * `expiresAt` is stamped **here**, from the catalog's `validityMonths` as it
- * stands today. Editing the catalog later cannot reach back and expire cards
- * that were validly issued under the old rule.
+ * stands today, so editing the catalog later cannot reach back and expire cards
+ * that were validly issued.
  */
 export async function grantCertification(data: {
 	userId: string;
@@ -322,11 +318,9 @@ const GATE_LOOKUP_CHUNK = 90;
 /**
  * The same rows as `listHeldForGate`, for many members at once, keyed by user.
  *
- * For a page of members against one role — "who on this list is actually
- * cleared" — this is the second of two queries, the other being the role's
- * requirements. The per-member alternative is two queries each. Members with no
- * certification rows are absent from the map rather than present and empty; read
- * it with `?? []`.
+ * For a page of members against one role this is one of two queries; the
+ * per-member alternative is two each. Members with no certification rows are
+ * absent from the map rather than present and empty — read it with `?? []`.
  */
 export async function listHeldForGateMany(userIds: string[]): Promise<Map<string, HeldForGate[]>> {
 	const byUser = new Map<string, HeldForGate[]>();
@@ -400,20 +394,10 @@ export async function missingRequirements(
 
 /**
  * Whether each member actually held their role's clearances **on the day they
- * worked** — the audit, as opposed to the gate.
- *
- * These are two different questions against two different dates, and only the
- * first was ever asked. `claimShift` checks as of the shift's date, which stops
- * somebody committing to work they are not cleared for. But a card can lapse
- * between claiming and working, and hour-log review re-checked nothing at all:
- * the hours were approved and the record showed a cleared volunteer.
- *
- * `member_certification` is append-only precisely so "was their card current on
- * the night they worked?" stays answerable. It was answerable and never asked.
- *
- * Two queries whatever the row count, matching the shift board's
- * `getRequirementsForRoles` + `listHeldForGate` + `missingFrom` shape. Keyed by
- * row id, and a row whose role requires nothing simply has no entry.
+ * worked** — the audit, as opposed to the gate `claimShift` applies when a
+ * shift is claimed. A card can lapse in between, and `member_certification` is
+ * append-only precisely so this stays answerable. Two queries whatever the row
+ * count, keyed by row id; a row whose role requires nothing has no entry.
  */
 export async function auditClearances(
 	rows: { id: string; userId: string; volunteerRoleId: string; workedOn: Date }[]
@@ -575,21 +559,10 @@ export interface LapsingBeforeShift {
 /**
  * People whose clearance runs out before a shift they are already on.
  *
- * The clearances page answers "who expires soon", which is a list nobody is obliged to
- * act on. This answers the version with a deadline attached: somebody is rostered for
- * Saturday, the card their role requires lapses on Friday, and the gate — which is
- * evaluated as of the shift's date — will be right to refuse them while the roster still
- * says they are booked.
- *
- * Deliberately narrow: only live signups on upcoming, uncancelled shifts, and only where
- * the role genuinely requires that certification. A card expiring next month that gates
- * nothing anybody is booked for is not this list's business — it is the clearances page's.
- *
- * The expiry test runs in SQL rather than through `missingFrom` because the question is
- * one row per (person, certification, shift) and the answer is a comparison of two
- * timestamps; pulling every held row into JS to filter it would be the same logic further
- * from the data. `wasHeldOn`'s other two clauses are here too: a revoked card is already
- * gone, and one granted after the shift never covered it.
+ * Narrow on purpose: only live signups on upcoming, uncancelled shifts, and
+ * only where the role genuinely requires that certification. A card expiring
+ * next month that gates nothing belongs to the clearances page instead. The
+ * expiry test runs in SQL — one row per (person, certification, shift).
  */
 export async function listLapsingBeforeRosteredShift(
 	now = new Date()

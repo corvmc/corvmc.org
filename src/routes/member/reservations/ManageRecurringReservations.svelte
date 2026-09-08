@@ -3,8 +3,10 @@
 	import { CancelSeriesAction } from '$lib/components/actions';
 	import { getLocalUser } from '$lib/remote/users.remote';
 	import { getRecurringReservations } from '$lib/remote/reservations.remote';
-	import { formatScheduleLabel } from '$lib/utils/format';
-	import { format, formatDistanceStrict } from 'date-fns';
+	import { formatScheduleLabel, formatTimeRange, formatDateShortYear } from '$lib/utils/format';
+	// A strict distance between two instants has no timezone to get wrong, so
+	// this one stays date-fns; the formatting around it does not.
+	import { formatDistanceStrict } from 'date-fns';
 </script>
 
 {#if !(await getLocalUser()).subscription}
@@ -33,14 +35,14 @@
 					{formatScheduleLabel(series.frequencyLabel, series.startsAt, series.monthlyMode)}
 				</p>
 				<p class="text-muted">
-					{format(series.startsAt, 'p')} – {format(series.endsAt, 'p')} · {formatDistanceStrict(
+					{formatTimeRange(series.startsAt, series.endsAt)} · {formatDistanceStrict(
 						series.endsAt,
 						series.startsAt,
 						{ unit: 'minute' }
 					)}
 				</p>
 				{#if series.seriesEndsAt}
-					<p class="text-xs opacity-50">Ends {format(series.seriesEndsAt, 'PP')}</p>
+					<p class="text-xs opacity-50">Ends {formatDateShortYear(series.seriesEndsAt)}</p>
 				{/if}
 			</div>
 			<CancelSeriesAction

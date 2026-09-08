@@ -30,7 +30,6 @@ import {
 
 async function loginAsStaff(page: Page) {
 	await page.goto('/login');
-	// FormField renders a <legend>, not a <label for>, so target inputs by name.
 	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
 	await page.getByRole('button', { name: 'Sign in' }).click();
@@ -204,7 +203,7 @@ test.describe('staff event creation — reserve space', () => {
 		await expect(page.getByText('Booked by')).toBeVisible();
 	});
 
-	test('unchecking the toggle drops the conflict override it raised', async ({ page }) => {
+	test('a double-booking blocks the submit until the override is ticked', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/productions');
 		await page.getByRole('button', { name: 'New Event' }).click();
@@ -215,17 +214,28 @@ test.describe('staff event creation — reserve space', () => {
 		await page.locator('input[name="eventEndTime"]').fill(SEED_CONFLICT_END);
 		await page.locator(RESERVE_TOGGLE).check();
 
-		// The seeded booking holds this window, so the warning has to fire.
-		await expect(page.getByText(/Conflicts with reservation/)).toBeVisible({ timeout: 15000 });
-		await expect(page.getByRole('button', { name: 'Create with Override' })).toBeVisible();
+		// The seeded booking holds this window, so the overlap has to fire — and it
+		// is an error, not a warning. Double-booking is a different kind of thing
+		// from finishing after closing time and no longer looks like one.
+		await expect(page.getByText(/Double-books the space/)).toBeVisible({ timeout: 15000 });
+
+		const override = page.getByRole('checkbox', { name: /double-books the space/i });
+		const submit = page.getByRole('button', { name: 'Create Event' });
+
+		// The override is a second, deliberate action rather than a relabelled
+		// submit: until it is ticked the form cannot be sent at all.
+		await expect(override).not.toBeChecked();
+		await expect(submit).toBeDisabled();
+		await override.check();
+		await expect(submit).toBeEnabled();
 
 		// ConflictWarnings unmounts with the toggle and stops maintaining the flag.
 		// Left stale, it keeps the hidden overrideConflicts input in the form and
 		// the next submission skips the server's double-booking check.
 		await page.locator(RESERVE_TOGGLE).uncheck();
 
-		await expect(page.getByRole('button', { name: 'Create Event' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Create with Override' })).toHaveCount(0);
+		await expect(submit).toBeEnabled();
+		await expect(page.getByRole('checkbox', { name: /double-books the space/i })).toHaveCount(0);
 	});
 });
 
@@ -316,8 +326,12 @@ test.describe('staff event edit — reserve space', () => {
 		// The real assertion. checkConflicts filtered on `!('id' in c)` while
 		// getConflictDetails never selected an id, so the filter dropped nothing and
 		// the event's own hold came back as a conflict against a window that merely
-		// extends it. Note this is about the *reservation* warning specifically —
-		// "Override conflicts" is still offered here, for the advance-days warning.
-		await expect(page.getByText(/Conflicts with reservation/)).toHaveCount(0);
+		// extends it.
+		await expect(page.getByText(/Double-books the space/)).toHaveCount(0);
+
+		// And the advance-days warning on its own asks for nothing. It used to
+		// offer an override, which is how "this is further out than we normally
+		// take" ended up wearing the same control as "somebody else has the room".
+		await expect(page.getByRole('checkbox', { name: /double-books the space/i })).toHaveCount(0);
 	});
 });

@@ -44,7 +44,6 @@ function quickFact(page: import('@playwright/test').Page, label: string) {
 
 async function login(page: import('@playwright/test').Page) {
 	await page.goto('/login');
-	// FormField renders a <legend>, not a <label for>, so target inputs by name.
 	await page.locator('input[name="email"]').fill(SEED_OWNER_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_OWNER_PASSWORD);
 	await page.getByRole('button', { name: 'Sign in' }).click();

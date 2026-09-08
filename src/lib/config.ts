@@ -760,10 +760,15 @@ export type StandingStatus = (typeof standingStatuses)[number];
 /**
  * Which rungs each scope may actually hold, and what to call it on screen.
  *
- * Only messaging has a use for `disabled` — staff switching it off wholesale,
- * which is how the occasional under-18 member is handled. "You may not post
+ * Only messaging has a use for `disabled`: it is the escalation past reply-only
+ * `restricted`, for somebody who may not write at all. "You may not post
  * community listings at all" is not a thing anyone can do, so `setStanding`
  * rejects it rather than leaving an unreachable value lying in the column.
+ *
+ * It used to double as the switch-off for under-18 members, "since the site has
+ * no age of its own". The site has one now — `user.dateOfBirth`, with messaging
+ * eligibility derived from it — so this rung is a moderation rung again and
+ * nothing else. See #556.
  */
 export const standingScopeConfig: Record<
 	StandingScope,
@@ -822,15 +827,35 @@ export const volunteerRoleGroupLabels: Record<(typeof volunteerRoleGroups)[numbe
  * not. Silently treating one as the other is a lie a staffer could configure
  * and never see.
  */
-export const dutyListAnchors = ['doors', 'start', 'end'] as const;
+export const dutyListAnchors = [
+	'doors',
+	'start',
+	'end',
+	'load_in',
+	'first_set',
+	'curfew',
+	'load_out'
+] as const;
 export type DutyListAnchor = (typeof dutyListAnchors)[number];
 
-// Generic nouns, because `start` and `end` now resolve for a rehearsal booking
-// as well as a show.
+/**
+ * The four production anchors are the show's own clock rather than the
+ * listing's. Staffing a show from `doorsAt` alone puts every shift against the
+ * one time the run of show does not turn on: a sound tech is wanted at load-in,
+ * a stage hand at the first set, and a lock-up at load-out.
+ */
+export const productionDutyListAnchors = ['load_in', 'first_set', 'curfew', 'load_out'] as const;
+
+// Generic nouns for the first three, because `start` and `end` resolve for a
+// rehearsal booking as well as a show.
 export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 	doors: 'Doors',
 	start: 'Start',
-	end: 'End'
+	end: 'End',
+	load_in: 'Load-in',
+	first_set: 'First set',
+	curfew: 'Curfew',
+	load_out: 'Load-out'
 };
 
 /**
@@ -908,6 +933,8 @@ export const VOLUNTEER_MAX_MINUTES_PER_LOG = 720;
 
 export const VOLUNTEER_DESCRIPTION_MAX = 1000;
 export const VOLUNTEER_REVIEW_NOTES_MAX = 1000;
+/** How many hour logs one bulk approval may move. A page of the queue, not a year of it. */
+export const VOLUNTEER_BULK_REVIEW_MAX = 200;
 export const VOLUNTEER_ROLE_NAME_MAX = 100;
 export const VOLUNTEER_ROLE_DESCRIPTION_MAX = 2000;
 
@@ -1367,6 +1394,12 @@ export const capabilities = {
 	group: ['read', 'manage'],
 	event: ['read', 'manage', 'publish', 'manageTickets'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
+	// Door access: granting and revoking standing member codes, adopting the
+	// hand-made ones already on the lock, re-provisioning a booking, rotating the
+	// break-glass code. Split out of `settings.update`, which was only ever the
+	// nearest thing to hand — these are member-affecting acts on a physical door,
+	// not configuration.
+	lock: ['manage'],
 	volunteer: [
 		'read',
 		'manageShifts',
@@ -1508,6 +1541,9 @@ export const positions: Record<Position, Grants> = {
 
 	technology_coordinator: {
 		settings: ['read', 'update'],
+		// They ran the lock self-test under `settings.update` before it was split
+		// out; keeping it here means the split is not a demotion.
+		lock: ['manage'],
 		user: ['list', 'read'],
 		inbox: ['read', 'manageChannels'],
 		help: ['read', 'manage']

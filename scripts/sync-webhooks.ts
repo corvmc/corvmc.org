@@ -2,7 +2,12 @@
  * sync-webhooks.ts
  *
  * Ensures the Stripe webhook endpoint is subscribed to exactly the events
- * declared in src/lib/server/finance/webhook-handlers.ts.
+ * declared in src/lib/server/finance/webhook-events.ts — which is what this
+ * script imports, and has been since the registry moved out of
+ * webhook-handlers.ts.
+ *
+ * "Exactly" is meant literally: any event enabled on the Stripe endpoint that
+ * is not in the registry is REMOVED. Read the printed diff before confirming.
  *
  * Usage:
  *   pnpm tsx scripts/sync-webhooks.ts [--endpoint-id we_xxx]

@@ -40,6 +40,7 @@ const DAISY = new Set(
 	 modal navbar pagination progress radial-progress radio range rating select skeleton stat stats
 	 status steps swap tab table textarea timeline toast toggle tooltip validator`.split(/\s+/)
 );
+/** @param {string} t */
 const isDaisy = (t) => {
 	if (DAISY.has(t)) return true;
 	const base = t.replace(/^(hover|focus|active|sm|md|lg|xl|@sm|@md|@lg):/, '');
@@ -47,6 +48,7 @@ const isDaisy = (t) => {
 	return false;
 };
 
+/** @param {string} dir @param {string[]} [out] @returns {string[]} */
 function walk(dir, out = []) {
 	for (const entry of readdirSync(dir)) {
 		const full = join(dir, entry);
@@ -57,6 +59,7 @@ function walk(dir, out = []) {
 	return out;
 }
 
+/** @param {string} dir */
 function census(dir) {
 	const files = walk(join(ROOT, dir));
 	const perFile = [];
@@ -135,7 +138,9 @@ if (argv.includes('--json')) {
 	process.exit(0);
 }
 
+/** @param {number} n @param {number} d */
 const pct = (n, d) => (d ? `${Math.round((n / d) * 100)}%` : '—');
+/** @param {unknown[]} c */
 const row = (c) => c.map((x, i) => String(x).padEnd(i === 0 ? 20 : 14)).join('');
 
 console.log('\nCLASS CENSUS\n');

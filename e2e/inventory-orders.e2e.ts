@@ -36,7 +36,6 @@ import { SEED_LOW_ID, SEED_LOW_NAME, SEED_LOW_REORDER_QUANTITY } from './fixture
 
 async function loginAsStaff(page: Page) {
 	await page.goto('/login');
-	// FormField renders a <legend>, not a <label for>, so target inputs by name.
 	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
 	await page.getByRole('button', { name: 'Sign in' }).click();

@@ -1,8 +1,11 @@
 import { sentrySvelteKit } from '@sentry/sveltekit';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
+// `loadEnv` from vite itself: `vitest/config` does not re-export it.
+import { loadEnv } from 'vite';
 import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { assertNoTransactableStripeCredentials } from './e2e/stripe-guard';
 import fs from 'node:fs';
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
@@ -37,7 +40,26 @@ export default defineConfig({
 					})
 				]),
 		tailwindcss(),
-		sveltekit()
+		sveltekit(),
+		/**
+		 * No `vite preview` in this repo may serve the app with a Stripe credential
+		 * that can move real money (#667).
+		 *
+		 * `playwright.config.ts` pins the suite's own credentials, but it sets
+		 * `reuseExistingServer` outside CI: a preview a developer already started
+		 * with a live key in their shell gets adopted, and the config's env never
+		 * applies. Only the server itself can refuse that, so it does — this is the
+		 * same check, at the one point every preview passes through.
+		 */
+		{
+			name: 'corvmc:no-transactable-stripe-in-preview',
+			configurePreviewServer() {
+				assertNoTransactableStripeCredentials(
+					loadEnv('production', dirname, ''),
+					'the preview server'
+				);
+			}
+		}
 	],
 	server: {
 		// The main checkout keeps 5173; a worktree gets a port of its own, derived

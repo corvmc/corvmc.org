@@ -49,26 +49,121 @@ jobs:
           # The queue ref (`gh-readonly-queue/main/pr-<n>-<sha>`) is deleted the moment the PR is
           # dequeued, so there is nothing left to look up by ref — and nothing to re-run either.
           # The run outlives the ref and is found by the branch name it recorded.
+          #
+          # `cancelled` is in the filter because that is what a job hitting its own
+          # `timeout-minutes` produces — a run with no failing job that is still a build problem.
+          # A run cancelled because its ref went away is cancelled too; they are told apart below.
           run=$(gh run list --event merge_group --limit 50 \
             --json databaseId,headBranch,conclusion,url \
-            --jq "[.[] | select(.conclusion == \"failure\" and (.headBranch | contains(\"/pr-${PR}-\")))] | first")
+            --jq "[.[] | select((.conclusion == \"failure\" or .conclusion == \"cancelled\" or .conclusion == \"timed_out\") and (.headBranch | contains(\"/pr-${PR}-\")))] | first")
+
+          # How many times the queue has thrown this PR out. `.claude/agents/qc.md` treats
+          # three or more as a real ordering bug rather than bad luck, so the number decides
+          # whether re-queueing is even reasonable — put it in the comment so nobody has to
+          # go and count. Counted by line rather than with jq's `length`, which `--paginate`
+          # would evaluate once per page. This removal may not be in the timeline yet, so
+          # treat it as a floor.
+          ejections=$(gh api "repos/${GH_REPO}/issues/${PR}/timeline" --paginate \
+            --jq '.[] | select(.event == "removed_from_merge_queue") | .event' | wc -l | tr -d ' ')
 
           if [ -z "$run" ] || [ "$run" = 'null' ]; then
-            cat > comment.md <<'EOF'
-          ### Removed from the merge queue
-
-          No failed `merge_group` CI run exists for this PR, so this was a manual removal, a merge
-          conflict, or the queue's one-hour check timeout — not a failed build.
-          EOF
+            kind=none
           else
             id=$(jq -r '.databaseId' <<<"$run")
             url=$(jq -r '.url' <<<"$run")
-            failed=$(gh run view "$id" --json jobs \
-              --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")')
-            # A run can fail with no failing job — cancelled, or the run itself timed out.
-            [ -n "$failed" ] || failed='(no job reported a failure — cancelled or timed out)'
+            conclusion=$(jq -r '.conclusion' <<<"$run")
 
-            cat > comment.md <<EOF
+            # Fetched once and read three times: the names for the summary line, the ids for
+            # the timeout probe and for the annotations below. A run can fail more than one
+            # job at a time — pr-512 failed `Schema drift` and `Unit tests` together — so the
+            # names are joined by jq rather than by `paste -d ', '`, which cycles through the
+            # delimiter *list* and would space the separators differently for each pair.
+            jobs=$(gh run view "$id" --json jobs)
+            failed=$(jq -r '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")' <<<"$jobs")
+
+            # A job killed by its own `timeout-minutes` reports `cancelled`, indistinguishable
+            # from a job cancelled because the queue ref was deleted under it. The one thing
+            # separating them is the annotation the runner leaves on a timeout — `The job has
+            # exceeded the maximum execution time of 30m0s` — so that annotation, not the
+            # conclusion, is what promotes a cancelled run to a rejection. Accumulated in the
+            # pipeline rather than with `paste -sd ', '`, for the delimiter-list reason above.
+            timedout=$(
+              jq -r '.jobs[] | select(.conclusion == "cancelled" or .conclusion == "timed_out")
+                     | "\(.databaseId)\t\(.name)"' <<<"$jobs" |
+              {
+                acc=''
+                while IFS=$'\t' read -r job name; do
+                  [ -n "$job" ] || continue
+                  limit=$(gh api "repos/${GH_REPO}/check-runs/${job}/annotations" \
+                    --jq '[.[] | .message | capture("maximum execution time of (?<limit>\\S+)") | .limit] | first // empty' 2>/dev/null || true)
+                  [ -n "$limit" ] || continue
+                  acc="${acc:+${acc}, }${name} (${limit})"
+                done
+                printf '%s' "$acc"
+              }
+            )
+
+            if [ -n "$failed" ]; then
+              kind=failed
+            elif [ -n "$timedout" ]; then
+              kind=timeout
+            elif [ "$conclusion" = 'cancelled' ]; then
+              # Cancelled, nothing failed, nobody's clock ran out: the ref went away under a
+              # still-running build — the queue reordered, or an earlier PR in the group failed
+              # out. A supersede is not a verdict on this PR, so it stays in the quiet branch.
+              kind=superseded
+            else
+              # A `failure`/`timed_out` run whose jobs all passed: the workflow itself, not a job.
+              kind=failed
+              failed='(no job reported a failure — the run itself did)'
+            fi
+          fi
+
+          case "$kind" in
+            none)
+              cat > comment.md <<'EOF'
+          ### Removed from the merge queue
+
+          No `merge_group` CI run for this PR failed, timed out or was cancelled, so this was a
+          manual removal, a merge conflict, or the queue's one-hour check timeout — not a failed
+          build.
+          EOF
+              ;;
+            superseded)
+              cat > comment.md <<EOF
+          ### Removed from the merge queue
+
+          A \`merge_group\` run for this PR was cancelled, but no job failed and no job hit its own
+          \`timeout-minutes\` — which is what a *superseded* build looks like: the queue ref was
+          deleted while it was still running, because the queue reordered or an earlier PR in the
+          group failed out. That is not a verdict on this PR.
+
+          ${url}
+
+          So the removal itself was a manual one, a merge conflict, or the queue's one-hour check
+          timeout — not a failed build.
+          EOF
+              ;;
+            timeout)
+              cat > comment.md <<EOF
+          ### Rejected by the merge queue — a job hung
+
+          Killed by its own \`timeout-minutes\` on the queue ref, where this PR is tested against
+          the queue head rather than against its own base: **${timedout}**
+
+          ${url}
+
+          Nothing failed an assertion, so the question is what the job was *waiting on* — a preview
+          server that never bound, a browser that never exited, a lock nobody released — not which
+          test broke. \`ci.yml\` sets these limits at roughly 2x the slowest run observed, so
+          reaching one is a regression rather than a limit set too tight.
+
+          The checks on this PR's own head can still be green — that is the point of the queue, and
+          the reason this needs saying out loud.
+          EOF
+              ;;
+            failed)
+              cat > comment.md <<EOF
           ### Rejected by the merge queue
 
           Failed on the queue ref, where this PR is tested against the queue head rather than
@@ -79,6 +174,75 @@ jobs:
           The checks on this PR's own head can still be green — that is the point of the queue, and
           the reason this needs saying out loud.
           EOF
+              ;;
+          esac
+
+          if [ "$kind" = 'failed' ] || [ "$kind" = 'timeout' ]; then
+            # The failing tests, from GitHub's own annotations rather than from the log.
+            # A job's id is its check-run id, so the annotations API takes it directly.
+            # Parsing the log instead does not work: `--log-failed` ends in the runner's
+            # credential teardown with the failure ~200 lines up, and the three jobs that
+            # actually fail here (playwright, vitest, drizzle-kit) print three different
+            # shapes. Annotations are uniform and already structured.
+            #
+            # Vitest emits them on its own under `GITHUB_ACTIONS`; Playwright does not, so
+            # `playwright.config.ts` opts into the `github` reporter explicitly. A cancelled
+            # job carries them too — the timed-out E2E on pr-548 named five specs — which is
+            # why this filter matches the run filter rather than `failure` alone. Two messages
+            # name nothing and are dropped: the bare `Process completed with exit code N`, and
+            # the timeout notice already quoted in the heading above.
+            annotations=$(
+              jq -r '.jobs[] | select(.conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out") | .databaseId' <<<"$jobs" |
+              while read -r job; do
+                [ -n "$job" ] || continue
+                gh api "repos/${GH_REPO}/check-runs/${job}/annotations" \
+                  --jq '.[] | select(.annotation_level == "failure")
+                        | "- `\(.path):\(.start_line)` — \(.message | split("\n")[0])"' 2>/dev/null || true
+              done | {
+                grep -v -e 'Process completed with exit code' \
+                        -e 'exceeded the maximum execution time' || true
+              }
+            )
+
+            # `ci.yml`'s E2E job uploads `test-results/` on failure — traces, screenshots and
+            # an `error-context.md` per failed test — and until now the comment linked the run
+            # but never the artifact, so the paths the log names led nowhere. Kept 7 days, so
+            # say when it goes.
+            artifacts=$(
+              gh api "repos/${GH_REPO}/actions/runs/${id}/artifacts" \
+                --jq '.artifacts[] | select(.expired == false) | "\(.id)\t\(.name)"' 2>/dev/null |
+                while IFS=$'\t' read -r aid aname; do
+                  printf -- '- [%s](https://github.com/%s/actions/runs/%s/artifacts/%s)\n' \
+                    "$aname" "$GH_REPO" "$id" "$aid"
+                done
+            )
+
+            if [ -n "$annotations" ]; then
+              cat >> comment.md <<EOF
+
+          **What failed**
+
+          ${annotations}
+          EOF
+            fi
+
+            if [ -n "$artifacts" ]; then
+              cat >> comment.md <<EOF
+
+          **Failure artifacts** (traces, screenshots, \`error-context.md\` — kept 7 days)
+
+          ${artifacts}
+          EOF
+            fi
+
+            if [ "$ejections" -ge 3 ] 2>/dev/null; then
+              cat >> comment.md <<EOF
+
+          > This PR has now been removed from the queue **${ejections} times**. Past three,
+          > \`.claude/agents/qc.md\` says to stop re-queueing and diagnose: a spec that fails on the
+          > queue head and nowhere else is an ordering bug more often than it is noise.
+          EOF
+            fi
           fi
 
           cat >> comment.md <<'EOF'

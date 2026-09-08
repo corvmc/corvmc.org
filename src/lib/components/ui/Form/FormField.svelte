@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { type Snippet } from 'svelte';
 	import type { RemoteFormFieldValue, RemoteFormField, RemoteFormIssue } from '@sveltejs/kit';
-	import TagInput from './TagInput.svelte';
+	import TagSelect from './TagSelect.svelte';
 	import CalendarSelect from './CalendarSelect.svelte';
 	import Select from './Select.svelte';
 	import FileUpload from './FileUpload.svelte';
@@ -93,7 +93,7 @@
 
 	const form = getFormContext();
 
-	// `options` means two different shapes depending on `type` — TagInput keys on
+	// `options` means two different shapes depending on `type` — TagSelect keys on
 	// `id`, the selects on `value` — so it stays in the forwarded rest props and
 	// is narrowed here, once per variant, instead of being declared as one shape
 	// that would be wrong for the other.
@@ -188,16 +188,50 @@
 		const { type: _type, ...props } = inputProps;
 		return props;
 	});
+
+	/**
+	 * Whether the caption can be a `<label for>` rather than a `<legend>`.
+	 *
+	 * True only when exactly one control below carries `resolvedId`, because a
+	 * `for` pointing at nothing is worse than a legend: it claims an association
+	 * that does not exist and focuses nothing when clicked. The branch order here
+	 * mirrors the markup's, so the two cannot disagree.
+	 */
+	let labelsOneControl = $derived.by(() => {
+		if (readonly) return false; // renders a display box, not a control
+		if (type === 'select') return true; // one <select>, `multiple` or not
+		if (children) return false; // caller markup we never handed the id to
+		if (input) return true; // the snippet is handed `resolvedId` to place
+		if (type === 'textarea') return true;
+		// Composites: TagSelect and CalendarSelect are several controls, and the one
+		// a caption would point at (the combobox input) is swapped out for a chip
+		// once a value is picked. FileUpload names its own picker.
+		if (type === 'tags' || type === 'calendar') return false;
+		if (type === 'file' && (upload || field)) return false;
+		// A checkbox with an inline caption is already named by the `<label>` that
+		// wraps it; a second one would make the name "Fees Cover the processing fee".
+		if (isBooleanInput) return !rest.checkboxLabel;
+		return true;
+	});
 </script>
 
-<fieldset
+<!-- `<div class="fieldset">` for a single control: daisyUI 5 styles `.fieldset`
+     and `.fieldset-legend` by class with an explicit `display`, so the element
+     swap is invisible, and a one-control `<fieldset>` announces a group that
+     isn't one. -->
+<svelte:element
+	this={labelsOneControl ? 'div' : 'fieldset'}
 	class="fieldset {className}"
 	oninput={() => form?.changed()}
 	onchange={() => form?.changed()}
 >
-	<legend class="fieldset-legend">
+	<svelte:element
+		this={labelsOneControl ? 'label' : 'legend'}
+		class="fieldset-legend"
+		for={labelsOneControl ? resolvedId : undefined}
+	>
 		{_label}
-	</legend>
+	</svelte:element>
 	{#if issues}
 		{#each issues as issue (issue.message)}
 			<p class="text-sm text-error">{issue.message}</p>
@@ -287,8 +321,8 @@
 		<textarea class="textarea w-full" class:ghost={readonly} {...inputProps} bind:value></textarea>
 	{:else if type === 'tags'}
 		<!-- `value` is its own prop, so it is not in `...rest` and must be forwarded
-		     explicitly — without it TagInput starts empty and submits `[]`. -->
-		<TagInput {...rest} options={tagOptions} {...inputProps} {value} disabled={pending} />
+		     explicitly — without it TagSelect starts empty and submits `[]`. -->
+		<TagSelect {...rest} options={tagOptions} {...inputProps} {value} disabled={pending} />
 	{:else if type === 'calendar'}
 		<CalendarSelect {...rest} name={resolvedName} bind:value disabled={pending || readonly} />
 	{:else if type === 'checkbox'}
@@ -345,4 +379,4 @@
 	{:else}
 		<input class="input w-full" class:ghost={readonly} {...rest} {...inputProps} bind:value />
 	{/if}
-</fieldset>
+</svelte:element>

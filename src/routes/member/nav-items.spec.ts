@@ -72,14 +72,13 @@ describe('flag gating', () => {
 	});
 
 	/**
-	 * Help had a footer row gated on a `helpArticles` flag. The flag is retired
-	 * and the help centre is unlinked rather than launched, so no input produces
-	 * the row — relaunching means putting it back, and this is what fails first
-	 * when someone does.
+	 * The help centre spent a release reachable only by typing the URL: the
+	 * `helpArticles` flag was retired without the row going back, so 75 articles
+	 * had no way in. Nothing gates it now, which is what these two lines pin.
 	 */
-	it('keeps Help out of the nav entirely while the help centre is unlinked', () => {
-		expect(keysOf(ALL_ON)).not.toContain('help');
-		expect(keysOf(ALL_OFF)).not.toContain('help');
+	it('always shows Help — the articles ship with the repo, so there is nothing to gate on', () => {
+		expect(keysOf(ALL_ON)).toContain('help');
+		expect(keysOf(ALL_OFF)).toContain('help');
 	});
 
 	it('keeps Suggestions ungated — a board with no audience has nothing to dark-launch', () => {
@@ -87,12 +86,12 @@ describe('flag gating', () => {
 	});
 
 	it('never lets a flag disturb the bottom cluster order', () => {
-		// Identical for both inputs now: Help was the only footer row a flag could
-		// add, and it is unlinked.
+		// Identical for both inputs: no footer row is conditional on anything.
 		for (const input of [ALL_OFF, ALL_ON]) {
 			expect(memberNavFooter(input).map((i) => i.key)).toEqual([
 				'profile',
 				'account',
+				'help',
 				'membership'
 			]);
 		}
@@ -178,12 +177,9 @@ describe('route coverage', () => {
 		'/member/bands',
 		'/member/groups',
 		'/member/groups/[slug]',
-		// Unlinked rather than launched: the `helpArticles` flag was off in
-		// production and was retired without turning the help centre on, so the
-		// footer row went with it. Relaunching restores the row and these two
-		// lines come out. See docs/plans/feature-flag-retirement.md.
-		'/member/help',
-		'/member/help/[slug]'
+		// Reached from the club page's own Edit button. A leader edits the program
+		// they are already looking at; a nav row to it would point at no group.
+		'/member/groups/[slug]/edit'
 	]);
 
 	it('leaves no member page unmatched', () => {

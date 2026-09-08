@@ -25,7 +25,7 @@ dozen times, so it is worth deciding once.
 
 This spec covers **how reports are built and where they live**. It does not survey analytics
 vendors or charting libraries — those verdicts are durable and live in
-`docs/development/conventions.md#dependency-posture` and `IDEAS.md`'s library tables, because a
+`docs/development/conventions.md#dependency-posture` and `docs/reports/library-candidates.md`, because a
 spec is retired into `docs/specs/shipped/` once it ships and a tooling decision should outlive it.
 
 ## The rule

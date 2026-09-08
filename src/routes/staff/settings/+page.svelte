@@ -19,10 +19,14 @@
 		syncSubscriptions,
 		refreshCommunityStats
 	} from '$lib/remote/settings.remote';
+	import LockHealth from './LockHealth.svelte';
+	import UnmanagedLockCodes from './UnmanagedLockCodes.svelte';
 	import { updateInboxChannelConfig, testMetaConnection } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
 	import { inboxChannelMeta } from './inbox-channel-meta';
+	import { featureMeta } from './feature-meta';
+	import type { FeatureFlag } from '$lib/server/feature-flags';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -82,7 +86,18 @@
 	// pasted manually). Until then, only the Connect flow makes sense.
 	const utecConnected = $derived(!!integrationSettings.refreshToken);
 	const utecCanConnect = $derived(
-		!!integrationSettings.clientId && !!integrationSettings.clientSecret
+		!!integrationSettings.clientId && integrationSettings.clientSecret.configured
+	);
+
+	// The field renders empty whether or not a secret is stored, so the hint is
+	// the only thing telling a staffer which it is — and that saving blank keeps
+	// what is there rather than wiping the lock's credential.
+	const clientSecretHint = $derived(
+		{
+			kv: 'Saved. Leave blank to keep it, or enter a new one to replace it.',
+			env: 'Set by the ULTRALOC_CLIENT_SECRET environment variable. Saving a value here overrides it.',
+			null: 'Not set. The lock cannot authenticate until this is entered.'
+		}[String(integrationSettings.clientSecret.source)]
 	);
 	const utecRedirectUri = $derived(`${page.url.origin}/api/integrations/utec/callback`);
 
@@ -117,21 +132,6 @@
 
 	let syncResult = $state<SubscriptionSyncSummary | null>(null);
 	let statsResult = $state<CommunityStats | null>(null);
-
-	// `bandPremium` left this tab when it launched — the guards are gone rather
-	// than switched on, so there is nothing to toggle. Band music and CMC Radio
-	// arrived with their own flags and are the reason the tab is still here.
-	const featureMeta: Record<string, { label: string; description: string }> = {
-		bandAudio: {
-			label: 'Band music',
-			description: 'Bands can upload releases and sell them. Uploading is what fills CMC Radio.'
-		},
-		cmcRadio: {
-			label: 'CMC Radio',
-			description:
-				'The site-wide station and its player. Leave this off until enough bands have opted in for the rotation to sound like one.'
-		}
-	};
 
 	async function handleTestConnection() {
 		connectionTesting = true;
@@ -452,7 +452,7 @@
 				<Card>
 					<CardBody>
 						<div class="flex items-center justify-between">
-							<CardTitle size="base">Organization Info</CardTitle>
+							<CardTitle size="base">Location</CardTitle>
 							<SubmitButton
 								label="Save"
 								successLabel="Saved"
@@ -461,48 +461,6 @@
 								size="sm"
 							/>
 						</div>
-
-						<div class="mt-2 grid gap-4 sm:grid-cols-2">
-							<FormField
-								name="name"
-								label="Organization name"
-								type="text"
-								value={String(orgSettings.name ?? 'Corvallis Music Collective')}
-							/>
-							<FormField
-								name="shortName"
-								label="Short name"
-								type="text"
-								value={String(orgSettings.shortName ?? 'CorvMC')}
-								description="Used in navigation and email subjects"
-							/>
-							<FormField
-								name="contactEmail"
-								label="Staff contact email"
-								type="email"
-								value={String(orgSettings.contactEmail ?? 'staff@corvmc.org')}
-							/>
-							<FormField
-								name="timezone"
-								label="Timezone"
-								type="select"
-								value={String(orgSettings.timezone ?? 'America/Los_Angeles')}
-								options={[
-									{ value: 'America/Los_Angeles', label: 'Pacific (Los Angeles)' },
-									{ value: 'America/Denver', label: 'Mountain (Denver)' },
-									{ value: 'America/Chicago', label: 'Central (Chicago)' },
-									{ value: 'America/New_York', label: 'Eastern (New York)' },
-									{ value: 'America/Anchorage', label: 'Alaska (Anchorage)' },
-									{ value: 'Pacific/Honolulu', label: 'Hawaii (Honolulu)' }
-								]}
-							/>
-						</div>
-					</CardBody>
-				</Card>
-
-				<Card>
-					<CardBody>
-						<CardTitle size="base">Location</CardTitle>
 						<p class="text-subtle">Shown in the site footer and on the contact page.</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
@@ -718,13 +676,23 @@
 						{/if}
 
 						{#if utecConnected}
+							<!-- Live health. `utecConnected` only means a refresh token is
+							     stored; it says nothing about whether the door is reachable. -->
+							<svelte:boundary>
+								<LockHealth />
+							</svelte:boundary>
+
+							<svelte:boundary>
+								<UnmanagedLockCodes />
+							</svelte:boundary>
+
 							<div class="mt-2 border-t border-base-200 pt-3">
 								<div class="flex items-start justify-between gap-2">
 									<div>
 										<p class="text-sm font-medium">Lock self-test</p>
 										<p class="text-subtle">
-											Issues a 15-minute test code and exercises the lock commands. Try the code on
-											the door, then revoke it.
+											Issues a temporary code that expires on its own after 15 minutes, and
+											exercises the lock commands. Try it on the door.
 										</p>
 									</div>
 									<div class="flex shrink-0 gap-2">
@@ -794,7 +762,8 @@
 								name="clientSecret"
 								label="Client Secret"
 								type="password"
-								value={integrationSettings.clientSecret}
+								value=""
+								description={clientSecretHint}
 							/>
 							<FormField
 								name="deviceId"
@@ -848,19 +817,8 @@
 				always shows every feature, so you can set one up here before switching it on for everyone.
 			</p>
 
-			{#if Object.keys(featureMeta).length === 0}
-				<Card>
-					<CardBody>
-						<p class="text-muted">
-							Nothing to switch right now. Band Premium was the last feature behind a toggle and it
-							has launched for everyone.
-						</p>
-					</CardBody>
-				</Card>
-			{/if}
-
 			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
-				{@const enabled = featureFlags[flag as keyof typeof featureFlags]}
+				{@const enabled = featureFlags[flag as FeatureFlag]}
 				{@const toggleForm = updateFeatureFlag.for(flag)}
 				<Card>
 					<CardBody>

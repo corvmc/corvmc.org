@@ -96,7 +96,7 @@
 	}
 </script>
 
-<AppShell drawerId="band-drawer" {panels} activePanel={layout.band.slug}>
+<AppShell drawerId="band-drawer" {panels} activePanel={layout.band.slug} chrome={layout.chrome}>
 	{#snippet navigation()}
 		{#each navItems as item (item.key)}
 			{@const Icon = icons[item.key]}

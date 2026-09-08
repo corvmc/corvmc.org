@@ -3,8 +3,8 @@
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { refundReservation } from '$lib/remote/reservations.remote';
-	const { fields } = refundReservation;
+	import { refundAndCancelReservation } from '$lib/remote/reservations.remote';
+	const { fields } = refundAndCancelReservation;
 
 	let {
 		reservation,
@@ -26,11 +26,11 @@
 </script>
 
 <Action
-	action={refundReservation}
-	label="Refund"
-	modalTitle="Refund Payment"
+	action={refundAndCancelReservation}
+	label="Refund and cancel"
+	modalTitle="Refund and Cancel"
 	submitVariant="error"
-	successToast="Payment refunded"
+	successToast="Payment refunded and reservation cancelled"
 	{variant}
 	{size}
 	{outline}
@@ -42,7 +42,8 @@
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
 		<p class="text-sm">
-			Refund the payment for this reservation? This does not cancel the reservation.
+			Refund the payment and cancel this reservation? The slot is released to the waitlist and the
+			member is notified.
 		</p>
 	{/snippet}
 </Action>

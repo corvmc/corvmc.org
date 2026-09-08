@@ -1154,18 +1154,34 @@ buttons rather than 40. The `Showing X–Y of Z` line renders even for a single
 page, so every list states its size. `DataList` renders this for you — reach for
 `Pagination` directly only outside a `DataList`.
 
-## TagInput
+## Tag inputs: TagSelect vs FreeformTagInput
 
-Multi-select combobox with search, badge display, and hidden `<select>` for form submission.
+Two components, two different contracts. Pick by whether the user is allowed to
+invent a tag that did not already exist.
+
+`Form/TagSelect` — **option list in, ids out.** A multi-select combobox over an
+`{id, label}` list; the value can only ever be ids that were passed in, so it
+cannot coin a new tag. Usually reached through `FormField type="tags"` rather
+than directly. The selection is serialised as JSON into a hidden input.
 
 ```svelte
-<TagInput
+<TagSelect
 	options={roleOptions}
 	value={selectedRoleIds}
 	name="roles"
 	placeholder="Search roles..."
 />
 ```
+
+`FreeformTagInput` — **free text in, new tags out.** Whatever is typed becomes a
+tag, lowercased. `suggestions` only autocompletes; it never constrains, so a
+value that is not on the list is still accepted.
+
+```svelte
+<FreeformTagInput bind:value={genres} suggestions={knownGenres} name="genres" />
+```
+
+They are not interchangeable: neither can do the other's job.
 
 ## PageHeader
 

@@ -1,5 +1,7 @@
 # Feature flag retirement
 
+> **Why this ledger exists, from `IDEAS.md`:** Nine of the original eleven are gone, and most of those removals were launches rather than cleanups: five flags had no staff toggle at all, so their features had been dark in production since the day they shipped. `docs/plans/feature-flag-retirement.md` is the per-flag ledger — what each one gated, whether it was on in production, and whether removing it went live or only unlinked the nav. Inventory left this list earlier still, as `equipment`, cut in #286.
+
 Feature flags did one job here — let a half-built feature sit on `main` without members seeing it.
 [Long-lived feature branches](../development/conventions.md#long-lived-feature-branches) do that job
 now, so the flags come out. This is the per-flag ledger; it outlives any one session.
@@ -12,7 +14,7 @@ belong to staff, not to whoever is doing the deletion.
 
 `updateFeatureFlag` (`src/lib/remote/settings.remote.ts`) is the only write path to
 `site-config:feature.*` in the codebase, and the staff Features tab drives it by iterating
-`featureMeta` (`src/routes/staff/settings/+page.svelte`), which listed six of the eleven. The other
+`featureMeta` (`src/routes/staff/settings/feature-meta.ts`), which listed six of the eleven. The other
 five never had a toggle anywhere. `bandPremium` has since left that list by launching, and
 `bandAudio` and `cmcRadio` joined it with the band-audio work. Unless someone wrote the KV key by hand, they sit at their `DEFAULTS`
 value of `false` — which means the entire groups module and member↔member DMs have been dark in
@@ -102,7 +104,8 @@ scoped API token in the dashboard (Account → Workers KV Storage → Read) and 
 
 Two ways to read a value without any of that:
 
-1. **Staff Settings → Features**, which shows every flag with a `featureMeta` entry.
+1. **Staff Settings → Features**, which shows every flag with a `featureMeta` entry — since #555,
+   that is every flag, and a spec keeps it that way.
 2. **Probe production.** `requireFeature` throws `error(404, 'Not found')`, and a handler-thrown
    404 is distinguishable from an unmatched route: the handler returns
    `content-type: application/json` with `{"message":"Not found"}`, while an unmatched route
@@ -113,8 +116,10 @@ Two ways to read a value without any of that:
    The trap is a surface where both branches 404 identically. `/band-site/[slug]/robots.txt` checks
    the flag and then the tier, and throws the same 404 either way, so it proves nothing.
 
-A flag with no `featureMeta` entry needs no reading at all: `updateFeatureFlag` is the only write
-path in the codebase, so it is provably at its `DEFAULTS` value of `false`.
+A flag with no `featureMeta` entry used to need no reading at all: `updateFeatureFlag` is the only
+write path in the codebase, so an untoggleable flag was provably at its `DEFAULTS` value of `false`.
+That shortcut is gone as of #555, which is the point — it was only ever available because a live
+flag had no way to be switched on.
 
 ## The ledger
 
@@ -127,7 +132,7 @@ Counts are non-spec call sites in `src/`, taken at `63e5890`.
 | `groups`         | 9                | 0                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
 | `groupEvents`    | 1                | 1                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
 | `announcements`  | 3                | 1                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
-| `helpArticles`   | 5                | 0                  | yes     | **false** (probed)    | ✅ **Unlinked** — footer row removed           | #376 |
+| `helpArticles`   | 5                | 0                  | yes     | **false** (probed)    | ✅ Unlinked #376, then **launched**            | #630 |
 | `emailMarketing` | 6                | 2                  | yes     | **true** (probed)     | ✅ Flag deleted, feature **stays live**        | #376 |
 | `directMessages` | 7                | 0                  | **no**  | false                 | Unlink — **held**, costs an e2e lifecycle test |      |
 | `bandPremium`    | 8                | 1                  | yes     | **false** (confirmed) | ✅ **Launched** — guards out, band sites live  | #494 |
@@ -147,7 +152,7 @@ feature branch, not a flag.
 | Flag             | Surfaces                                                                                               | Where the guards are                                                         |
 | ---------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | `emailMarketing` | `/subscribe/[slug]`, campaign sends                                                                    | `marketing.remote.ts`; the Postmark event webhook; the `send-campaigns` cron |
-| `helpArticles`   | `/member/help/**` and its nav entry, `/api/help/**`                                                    | `help.remote.ts`; three `api/help` endpoints                                 |
+| `helpArticles`   | `/member/help/**` and its nav entry, `/api/help/**` — all live since #630                              | `help.remote.ts`; three `api/help` endpoints                                 |
 | `contentFlags`   | Report actions on directory profiles, events, DMs and suggestions                                      | `events`, `flags`, `direct-messages`, `suggestions` remotes                  |
 | `volunteering`   | `/member/volunteer/**` and its nav entry                                                               | `volunteer.remote.ts` — 19 guards, the largest single surface                |
 | `directMessages` | The member↔member half of `/member/messages`; member↔staff portal chat in the same UI is **not** gated | `direct-messages.remote.ts`, `directory.remote.ts`                           |

@@ -1,4 +1,10 @@
 <script lang="ts">
+	/**
+	 * Option list in, ids out: the value can only ever be ids drawn from
+	 * `options`, so this cannot create a tag that did not already exist. Reached
+	 * through `FormField type="tags"` rather than directly. Use
+	 * `ui/FreeformTagInput` when the point is to let someone coin a new tag.
+	 */
 	import { IconX } from '@tabler/icons-svelte';
 	import { Combobox } from 'bits-ui';
 	import Button from '$lib/components/ui/Button.svelte';

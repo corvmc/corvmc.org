@@ -71,8 +71,12 @@ vi.mock('$lib/server/band/band-service', () => bandServiceMock);
 const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 
 const hasAnyRole = vi.fn(async () => false);
+// What `requireGroupRole`'s `allowStaff` branch asks: any position, matching
+// `requireStaff()`. `hasAnyRole` is the two literal role rows and is narrower.
+const isElevated = vi.fn(async () => false);
 vi.mock('$lib/server/authorization', () => ({
 	hasAnyRole: (...a: unknown[]) => hasAnyRole(...(a as [])),
+	isElevated: (...a: unknown[]) => isElevated(...(a as [])),
 	requireUser: () => testUser
 }));
 
@@ -135,6 +139,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	bandServiceMock.getUserRole.mockResolvedValue('owner');
 	hasAnyRole.mockResolvedValue(false);
+	isElevated.mockResolvedValue(false);
 	selectResult = [];
 });
 
@@ -152,7 +157,7 @@ describe('getBandMembersPage', () => {
 	 */
 	it('admits a staff non-member read-only, rather than 403ing the page', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
-		hasAnyRole.mockResolvedValue(true);
+		isElevated.mockResolvedValue(true);
 
 		const data = await getBandMembersPage('band-1');
 
@@ -162,7 +167,7 @@ describe('getBandMembersPage', () => {
 
 	it('still refuses someone who is neither a member nor staff', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
-		hasAnyRole.mockResolvedValue(false);
+		isElevated.mockResolvedValue(false);
 
 		await expect(getBandMembersPage('band-1')).rejects.toMatchObject({ status: 403 });
 	});

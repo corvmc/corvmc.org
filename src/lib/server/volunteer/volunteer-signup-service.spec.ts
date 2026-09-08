@@ -194,14 +194,11 @@ describe('claimShift', () => {
 	});
 
 	/**
-	 * Splitting a shift means two people covering different halves of it, so the
-	 * guard counts only signups whose window *overlaps* the claimant's rather
-	 * than every signup on the row.
-	 *
-	 * The equivalence matters more than the feature: with nobody naming a custom
-	 * window every `coalesce` lands on the shift's own times, everything overlaps
-	 * everything, and this is exactly the headcount it replaced. That is what
-	 * makes the change safe to land before any UI can produce a split.
+	 * Splitting a shift means two people covering different halves, so the guard
+	 * counts only signups whose window *overlaps* the claimant's rather than every
+	 * signup on the row. With nobody naming a custom window every `coalesce` lands
+	 * on the shift's own times, everything overlaps everything, and this is exactly
+	 * the headcount it replaced.
 	 */
 	it('counts only overlapping signups, and still every signup when no window is named', async () => {
 		selectResultQueue = [[], [{ id: 'signup-new', status: 'claimed' }]];

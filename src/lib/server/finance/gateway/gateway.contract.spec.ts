@@ -13,13 +13,10 @@ const { createStripeGateway } = await import('./stripe-gateway');
 /**
  * The fidelity guard for the fake.
  *
- * Half of it is free: both factories are declared `() => PaymentGateway`, and
- * the port is `Pick`ed off Stripe's own resource types, so `pnpm check` already
- * proves the fake's signatures match the live SDK's. What the compiler cannot
- * see is a method that exists but does nothing useful, or a shape the app reads
- * that the fake never populates — so the structural sweep below walks both
- * implementations, and the behavioural cases assert the specific invariants
- * `payment-service` and the checkout listeners depend on.
+ * Half is free: the port is `Pick`ed off Stripe's own types, so `pnpm check`
+ * already proves the signatures match. What it cannot see is a method that
+ * exists but does nothing — hence the structural sweep over both
+ * implementations, and the behavioural cases below.
  */
 
 /** Flat resources the port declares. Nested ones are covered by NESTED_SURFACE below. */

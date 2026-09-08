@@ -106,18 +106,12 @@ function hasRoomSql(
 	const end = effEnd ? Math.floor(effEnd.getTime() / 1000) : null;
 
 	// Counts only signups whose window *overlaps* the claimant's, so a 6-10 shift
-	// with capacity 1 can hold somebody on 6-8 and somebody else on 8-10 without
-	// the second being told it is full.
-	//
-	// Two degenerate cases, both of which must count rather than skip:
-	//
-	//  - Nobody named a window. Every coalesce lands on the shift's own times, so
-	//    everything overlaps everything and this is exactly the headcount it
-	//    replaced. That equivalence is asserted in the spec.
-	//  - The row is a work order, so there are no times anywhere. A plain overlap
-	//    test would compare against NULL, count zero, and let capacity stop
-	//    binding altogether -- an unbounded piece of work is not disjoint from
-	//    another, it is the same work.
+	// with capacity 1 can hold somebody on 6-8 and somebody else on 8-10. Two
+	// degenerate cases must count rather than skip: with nobody naming a window
+	// every coalesce lands on the shift's own times, so everything overlaps
+	// everything and this is the plain headcount; and a work order has no times
+	// anywhere, where a plain overlap test would compare against NULL and let
+	// capacity stop binding altogether.
 	return sql`(
 		select count(*) from "volunteer_signup" vs
 		join "work_order" vsh on vsh."id" = vs."shift_id"
@@ -141,17 +135,10 @@ const unixNow = () => Math.floor(Date.now() / 1000);
 /**
  * Claim a shift.
  *
- * Four guards, in the order that gives the most useful message: you've finished
- * onboarding, the shift is still open, you're cleared for it, and there's room.
- * The room check is part of the write (see hasRoomSql) rather than a separate
- * read, so the last place goes to exactly one of two simultaneous claimants; the
- * loser gets ShiftFullError. No transaction, per the lint rule — the conditional
- * write is what makes that safe.
- *
- * The onboarding check is here rather than only on the route because the remote
- * function is a directly callable endpoint. A route gate is a redirect for
- * somebody using a browser; it stops nothing else, and this is the check that
- * keeps an under-18 signup off a shift.
+ * Four guards, ordered for the most useful message: onboarding finished, shift
+ * open, cleared for it, room on it. The room check is part of the write (see
+ * hasRoomSql), so the last place goes to exactly one of two simultaneous
+ * claimants. Onboarding is checked here because the remote is directly callable.
  */
 export async function claimShift(
 	shiftId: string,
@@ -160,13 +147,9 @@ export async function claimShift(
 ): Promise<VolunteerSignup> {
 	// A staff assignment lands `confirmed`, not `claimed`. `claimed` means "somebody put
 	// their hand up and a coordinator has not looked yet", and a coordinator typing the
-	// name in IS that look — leaving it `claimed` would file work into their own queue and
-	// cost the member the day-before reminder until they cleared it. Same call as the one
-	// a staff-entered hour log makes.
-	//
-	// Every guard above still applies, clearance included: refusing to roster somebody the
-	// system says is not cleared is the whole point of recording clearances, and the
-	// refusal names what is missing so the coordinator can go and grant it.
+	// name in IS that look. Every guard above still applies, clearance included: refusing
+	// to roster somebody the system says is not cleared is the point of recording
+	// clearances, and the refusal names what is missing.
 	const assigned = options.assignedByStaff === true;
 	const status: VolunteerSignupStatus = assigned ? 'confirmed' : 'claimed';
 
@@ -266,14 +249,10 @@ export async function claimShift(
 /**
  * Release a place on a shift, freeing it immediately.
  *
- * `owner` scopes the write to one member's own signup. The member path passes it, so a
- * signup id from somebody else's shift is a 404 rather than a cancellation; the staff path
- * (`releaseSignup`) does not, because a coordinator is acting on the roster and not on
- * their own claim.
- *
- * The status guard is shared: only a live claim can be released. Cancelling a `completed`
- * or `no_show` signup would rewrite a fact about a shift that has already happened, which
- * is what `markNoShow` is for.
+ * `owner` scopes the write to one member's own signup, so a signup id from
+ * somebody else's shift is a 404. The staff path (`releaseSignup`) omits it,
+ * acting on the roster rather than its own claim. Only a live claim can be
+ * released: cancelling a `completed` or `no_show` signup would rewrite a fact.
  */
 async function releaseSignupRow(signupId: string, owner?: string): Promise<VolunteerSignup> {
 	const [row] = await db
@@ -306,11 +285,10 @@ export async function cancelSignup(signupId: string, userId: string): Promise<Vo
 /**
  * Announce that a signup changed hands, loading the payload the listeners need.
  *
- * Fire-and-forget on purpose, the same shape `submitHours` uses: the status is already
- * written, and a notification that fails must not roll back a claim or leave a confirmed
- * signup looking unconfirmed. The row is re-read rather than passed in because every
- * caller has a bare `volunteer_signup` and the listeners want the role name and the
- * member's name — which is one join here instead of three call sites doing it.
+ * Fire-and-forget: the status is already written, and a notification that fails
+ * must not roll back a claim. The row is re-read rather than passed in because
+ * every caller has a bare `volunteer_signup` and the listeners want the role and
+ * member names — one join here instead of three call sites doing it.
  */
 async function emitSignupEvent(
 	event:
@@ -362,11 +340,10 @@ async function emitSignupEvent(
 /**
  * Take somebody off a shift, on their behalf.
  *
- * Deliberately the same write as a member dropping out, not a third status: the fact being
- * recorded is "this place is open again", and who typed it changes nothing about that. It
- * is emphatically NOT `markNoShow` — a coordinator hearing "I can't make Saturday" on
- * Thursday is being given notice, and recording that as a no-show would put a mark against
- * somebody who did the right thing.
+ * The same write as a member dropping out, not a third status: the fact recorded
+ * is "this place is open again". Emphatically NOT `markNoShow` — a coordinator
+ * hearing "I can't make Saturday" on Thursday is being given notice, and a
+ * no-show would mark somebody who did the right thing.
  */
 export async function releaseSignup(signupId: string): Promise<VolunteerSignup> {
 	const row = await releaseSignupRow(signupId);
@@ -512,17 +489,12 @@ export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
 }
 
 /**
- * Tell everybody still on a called-off shift that it is off, and record that
- * they were told.
+ * Tell everybody still on a called-off shift that it is off, and record it.
  *
  * Deliberately **not** run by `cancelShift`. Calling a shift off and telling six
- * people about it are two decisions: the first is often made in a hurry and
- * sometimes reversed, and a coordinator who has already rung the sound engineer
- * does not want the system mailing them anyway. So cancelling leaves a notify
- * list, and this is the button on it.
- *
- * Idempotent by the `notified_at IS NULL` filter: pressing "Notify all" twice
- * mails nobody twice, and anyone staff already marked by hand is skipped.
+ * people are two decisions: the first is often made in a hurry and sometimes
+ * reversed. So cancelling leaves a notify list, and this is the button on it.
+ * Idempotent by the `notified_at IS NULL` filter.
  */
 export async function notifySignupsOfCancellation(shiftId: string): Promise<number> {
 	const pending = await db
@@ -652,13 +624,12 @@ export async function listUnloggedCompletions(userId: string) {
 }
 
 /**
- * Completed signups whose shift ended inside a window and that haven't been
+ * Completed signups whose shift ended inside a window and that have not been
  * asked for feedback yet — the day-after survey.
  *
- * The "no feedback row" clause is what makes the cron idempotent: a second run
- * over the same window finds nothing, so a retry can't double-ask. Asking is
- * recorded by the answer, not by a sent-flag, which means somebody who never
- * answers is asked once and then left alone.
+ * The "no feedback row" clause makes the cron idempotent: a second run over the
+ * same window finds nothing. Asking is recorded by the answer, not a sent-flag,
+ * so somebody who never answers is asked once and then left alone.
  */
 export async function listCompletionsAwaitingFeedback(
 	from: Date,
@@ -783,13 +754,10 @@ export interface OutstandingClaim {
 /**
  * Claims on shifts that have not happened yet and nobody has confirmed.
  *
- * The join is the whole point: a claim is only interesting alongside the shift it is on,
- * because "confirm this" and "this is on Saturday" are one decision. Ordered by the shift
- * rather than by when the claim arrived — the soonest shift is the one that runs out of
- * time first.
- *
- * Cancelled shifts are excluded. A claim on a shift that was called off is not waiting on
- * anybody; the shift page still shows it, which is where you go to see what was cancelled.
+ * The join is the point: "confirm this" and "this is on Saturday" are one
+ * decision. Ordered by the shift rather than by when the claim arrived — the
+ * soonest shift runs out of time first. Cancelled shifts are excluded; a claim
+ * on one is not waiting on anybody.
  */
 export async function listOutstandingClaims(
 	{ before }: { before?: Date } = {},
@@ -828,13 +796,10 @@ export async function listOutstandingClaims(
 /**
  * Shifts that have finished with a claim nobody ever confirmed.
  *
- * These are the silent losses. `completeFinishedShifts` only promotes `confirmed`
- * signups, so an unconfirmed claim on a shift that has already happened never completes:
- * no hour log is offered, no feedback is asked for, and the person who very probably
- * turned up leaves no trace. Nothing in the app said so, and by the time anybody looked
- * the shift had dropped off the default list.
- *
- * The window is deliberately short. Past a week this is history, not work.
+ * These are the silent losses. `completeFinishedShifts` only promotes
+ * `confirmed` signups, so an unconfirmed claim on a past shift never completes:
+ * no hour log offered, no feedback asked, and the person who probably turned up
+ * leaves no trace. The window is short — past a week this is history, not work.
  */
 export async function listUnclosedSignups(
 	{ since }: { since: Date },
@@ -873,13 +838,10 @@ export async function listUnclosedSignups(
 /**
  * How many things are waiting on a coordinator, as one number.
  *
- * The sidebar badge and the dashboard's own summary both read this, so the count on the
- * nav and the rows on the page cannot disagree. It counts rather than lists: the badge
- * runs on every staff page load and has no use for the rows.
- *
- * The four buckets are the four cards the dashboard leads with. Lapsing clearances are
- * deliberately absent — those are waiting on a member to go and renew something, not on
- * staff, and a badge that never reaches zero stops being read.
+ * The sidebar badge and the dashboard summary both read this, so nav and page
+ * cannot disagree. It counts rather than lists: the badge runs on every staff
+ * page load. Lapsing clearances are deliberately absent — those wait on a member
+ * to renew something, and a badge that never reaches zero stops being read.
  */
 export async function countVolunteerWorkWaiting(now = new Date()): Promise<number> {
 	const lookback = new Date(now.getTime() - CLOSE_OUT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
@@ -934,12 +896,9 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 // ---------------------------------------------------------------------------
 // Who to ask
 // ---------------------------------------------------------------------------
-// The candidate list beside a shift's roster. It used to live on the role's own
-// page, one navigation away from the shift you were trying to fill
-// (docs/reports/volunteer-workflow-findings.md#a5), and it could only ever
-// answer "who ticked this role" because it was anchored on the interest table.
-// A coordinator filling a door shift also wants the people who have worked it
-// before and, when neither list turns anybody up, everybody else.
+// The candidate list beside a shift's roster. Anchored on more than the
+// interest table: a coordinator filling a door shift also wants the people who
+// have worked it before and, when neither turns anybody up, everybody else.
 // ---------------------------------------------------------------------------
 
 export type CandidateScope = 'interested' | 'worked' | 'all';
@@ -968,13 +927,10 @@ const WEEKDAY_WORDS: readonly (readonly string[])[] = [
 /**
  * Does a member's stated availability argue against this shift's day?
  *
- * Deliberately only a flag, never a block. The field is free text — "weekends",
- * "Tues/Thurs evenings", "whenever you need me" — so this can be wrong, and the
- * screen says "read their note" rather than pretending to have parsed it.
- *
- * Silence is not a conflict: text that names no day at all returns false,
- * because "I can do evenings" tells you nothing about Saturday and flagging it
- * would put an amber line on almost everybody.
+ * Only a flag, never a block. The field is free text — "weekends", "Tues/Thurs
+ * evenings" — so this can be wrong, and the screen says "read their note".
+ * Silence is not a conflict: text naming no day returns false, because "I can do
+ * evenings" tells you nothing about Saturday.
  */
 export function availabilityConflictsWithDay(
 	availability: string | null | undefined,
@@ -1000,11 +956,10 @@ export function availabilityConflictsWithDay(
 /**
  * Candidates for one shift, by scope, excluding anybody already on it.
  *
- * Active profiles only: a blocked minor cannot claim a shift, so offering them
- * as a one-click add would produce a refusal the coordinator could have been
- * spared. Clearance is *not* filtered here — a blocked candidate is shown with
- * what they are missing, because "go and grant this" is the useful next step
- * and hiding them just makes the list mysteriously short.
+ * Active profiles only: a blocked minor cannot claim, so offering them would
+ * produce a refusal. Clearance is *not* filtered — a blocked candidate is shown
+ * with what they are missing, because "go and grant this" is the useful next
+ * step and hiding them makes the list mysteriously short.
  */
 export async function listShiftCandidates(
 	shiftId: string,

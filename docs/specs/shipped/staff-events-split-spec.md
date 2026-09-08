@@ -6,6 +6,19 @@ and source-gates the detail page so each surface does one job.
 
 No schema changes. This is a routing and presentation split over data that already exists.
 
+> **The two addresses reversed late, and only §6 below was rewritten.** As shipped,
+> **`/staff/events` is the Calendar** and **`/staff/productions` is the CMC work index** — the
+> opposite of the allocation this document proposes everywhere except
+> [§6](#6-the-canonical-url-holds-the-general-view--reversed-after-shipping). The reasoning for the swap is there, and it is the
+> authority: the canonical URL that `entity-href` pins every event ref to hosts the
+> _least-privileged_ useful view, and privilege becomes additive at more specific addresses.
+> `/staff/calendar` briefly existed and now 308s.
+>
+> Everything below §6 — the comparison table, the file-by-file implementation table, the test
+> list — describes the plan as written, not the code as shipped. It is left intact because an
+> archived spec is a record of the reasoning, not a map of the tree; read it with the addresses
+> swapped.
+
 ---
 
 ## Purpose

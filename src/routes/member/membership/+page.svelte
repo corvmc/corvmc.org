@@ -86,17 +86,11 @@
 
 {#snippet billing()}
 	<!--
-		The card on file and the invoice history, in their own boundary.
-
-		They are the only live Stripe calls left on this page, and the button they
-		replace is the reason: the billing-portal link used to sit inside
-		`getMemberMembership`'s `Promise.all`, so a Stripe outage took the whole
-		page down for every sustaining member. Behind a boundary, an outage costs
-		these two cards and nothing else.
-
-		`pending` is passed as an attribute rather than defined as a snippet: a
-		`pending` snippet makes the boundary skip its contents server-side, which
-		would drop both cards out of the SSR'd page entirely.
+		The only live Stripe calls left on this page, so they get their own
+		boundary: the billing-portal link they replace sat inside
+		`getMemberMembership`'s `Promise.all`, where an outage took the whole page
+		down. `pending` is an attribute, not a snippet — a `pending` snippet makes
+		the boundary skip its contents server-side.
 	-->
 	<svelte:boundary pending={null}>
 		{@const billingData = await getBilling()}

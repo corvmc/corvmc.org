@@ -114,21 +114,20 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 }
 
 /** The cluster a spacer pins to the bottom of the sidebar. */
-// Takes the input it no longer reads: Help was the only footer row a flag could
-// add, and it is unlinked. The parameter stays so restoring that row — or adding
-// any other conditional footer entry — is a one-line change rather than a
-// signature change across every caller.
+// Takes the input none of its rows read. The parameter stays so adding a
+// conditional footer entry is a one-line change rather than a signature change
+// across every caller.
 export function memberNavFooter(_input: MemberNavInput): MemberNavItem[] {
 	const items: MemberNavItem[] = [
 		{ key: 'profile', label: 'Profile', href: resolve('/member/profile') },
-		{ key: 'account', label: 'Account', href: resolve('/member/account') }
+		{ key: 'account', label: 'Account', href: resolve('/member/account') },
+		// Unconditional, because the help centre has nothing to gate on: the
+		// `helpArticles` flag is retired, `/member/help` was already ungated, and
+		// the articles ship in the repo rather than accumulating like posts. The
+		// row was left out when the flag went, which left 75 articles reachable
+		// only by typing the URL.
+		{ key: 'help', label: 'Help', href: resolve('/member/help') }
 	];
-
-	// Help had a footer row gated on a `helpArticles` flag. The flag is retired and
-	// the help centre is unlinked rather than launched — it was off in production,
-	// so nothing a member could see has changed — and `/member/help` answers by
-	// direct URL. Launching is putting this row back; see
-	// docs/plans/feature-flag-retirement.md.
 
 	items.push({ key: 'membership', label: 'Membership', href: resolve('/member/membership') });
 

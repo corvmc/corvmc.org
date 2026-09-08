@@ -11,16 +11,10 @@ import {
 import { handleCheckoutCompleted } from '$lib/server/finance/webhook-handlers';
 
 /**
- * The in-app checkout page's data, for both drivers.
- *
- * Under `stripe` this is an `ui_mode: 'elements'` session and the page mounts a
- * Payment Element against the client secret. Under `fake` it is an in-memory
- * session and the page renders a card-number form instead — same route, same
- * totals, same destination, so nothing above this layer knows which one ran.
- *
- * Deliberately unauthenticated: guest ticket checkout has no session, and the
- * only thing a caller can do is complete a checkout session id it already
- * holds — which is the same capability the real Stripe URL confers.
+ * The in-app checkout page's data, for both drivers: an `ui_mode: 'elements'`
+ * session under `stripe`, an in-memory one under `fake`. Same route and totals
+ * either way. Deliberately unauthenticated — guest checkout has no session, and
+ * holding a session id confers what holding the Stripe URL confers.
  */
 function requireFakeDriver(): void {
 	if (paymentDriver() !== 'fake') error(404, 'Not found');

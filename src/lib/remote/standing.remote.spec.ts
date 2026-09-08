@@ -92,7 +92,7 @@ const cases: [string, () => Promise<unknown>][] = [
 				userId: 'user-9',
 				scope: 'messaging',
 				status: 'disabled',
-				reason: 'Under 18'
+				reason: 'Continued messaging after being asked to stop'
 			})
 	]
 ];
@@ -140,13 +140,13 @@ describe('staff', () => {
 			userId: 'user-9',
 			scope: 'messaging',
 			status: 'disabled',
-			reason: 'Under 18'
+			reason: 'Continued messaging after being asked to stop'
 		});
 		expect(svc.setStanding).toHaveBeenCalledWith({
 			userId: 'user-9',
 			scope: 'messaging',
 			status: 'disabled',
-			reason: 'Under 18',
+			reason: 'Continued messaging after being asked to stop',
 			staffId: 'staff-1'
 		});
 	});

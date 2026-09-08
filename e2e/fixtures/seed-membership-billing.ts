@@ -1,15 +1,10 @@
 /**
- * Seed a sustaining member with a Stripe customer id, so the billing surface on
+ * A sustaining member with a Stripe customer id, so the billing surface on
  * `/member/membership` has somebody to render for.
  *
- * The cards and invoices themselves are **not** seeded here. They live in the
- * fake gateway's in-isolate store, not in D1, and the point of the spec this
- * fixture serves is the round trip that puts one there: no card → add one →
- * default → remove.
- *
- * Run by `e2e/prepare.ts`, before Playwright starts the preview server.
- * Idempotent: deletes and recreates the user (and its cascade-owned account
- * rows) on every run.
+ * Cards and invoices are deliberately not seeded: they live in the fake
+ * gateway's store rather than D1, and the spec this serves is the round trip
+ * that puts one there. Run by `e2e/prepare.ts`; idempotent.
  */
 import 'dotenv/config';
 import { eq } from 'drizzle-orm';

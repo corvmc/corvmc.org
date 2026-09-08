@@ -245,10 +245,8 @@ export interface ReservationRefRow {
  * room at an hour, so the club's clock is the only one that means anything;
  * formatting it on the server changes the string not at all.
  *
- * `band` unlocks the band panel's route, `ownerUserId` the booker's own. A
- * band has no per-reservation page yet (see CHORES), so today the band arm of
- * `entityHref` lands on the list — the ref is right either way, and the page
- * appearing is what changes the answer.
+ * `band` unlocks the band panel's route, `ownerUserId` the booker's own — two
+ * different pages over one row, showing what each viewer is entitled to.
  */
 export function toReservationRef(
 	row: ReservationRefRow,

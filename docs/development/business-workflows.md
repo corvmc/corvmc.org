@@ -87,7 +87,10 @@ waitlist listener uses to promote the next person (workflow 2).
 **Staff resolution.** Unresolved reservations (past end, still `scheduled` or cash owed)
 surface via `getUnresolvedReservations` in `reservations.remote.ts`; staff resolve with the
 `completeReservation` / `noShowReservation` / `cashReceivedReservation` /
-`compReservation` / `refundReservation` forms in the same file.
+`compReservation` / `refundAndCancelReservation` / `refundOnlyReservation` forms in the same
+file. The two refund forms are the staff member's intent made explicit: the first delegates to
+`cancel()` above; the second leaves the booking standing (a comp after a session that ran) and
+only stamps `refundedAt`, which `reservationPaymentState` reads ahead of `paidAt`.
 
 ### Data touched
 
@@ -117,7 +120,7 @@ Three things differ from the member path:
 
 - **Staff may override.** Conflicts and business-hours violations are warnings with an
   override, not refusals. `ConflictWarnings` currently conflates "overlaps a confirmed
-  booking" with "outside operating hours" into one flag — see `CHORES.md`; a double-booking
+  booking" with "outside operating hours" into one flag — see #563; a double-booking
   deserves louder treatment than a late night.
 - **Staff confirm at any time.** The 3-day confirmation window is a member gate;
   `visibleActions` is staff-only and unchanged by it.
@@ -1252,9 +1255,13 @@ button yet; the settlement worksheet and the close-out are later phases.
 
 1. `/staff/events/[id]` → **Add production** → `createProduction`
    (`lib/remote/productions.remote.ts`, guard `event.manage`) →
-   `production-service.createProduction()`. The 1:1 is held by `uq_production_event`,
-   so this inserts and reads the violation rather than selecting first — a
-   select-then-insert is a race.
+   `production-service.createProduction()`. The service reads the listing's `source`
+   first and refuses anything but `'cmc'` (422) — a production is the ops record for a
+   show CMC puts on, and about nine listings in ten are somebody else's gig at somebody
+   else's venue. The button is hidden for those too, but the service is the guard. The
+   1:1 is a different shape: it is held by `uq_production_event`, so the insert reads
+   the violation rather than selecting first — _that_ select-then-insert would be a
+   race.
 2. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
    adds one entry to its existing `Promise.all` rather than a second remote query.
 3. **Overview** tab → `updateProduction` (times and notes) and

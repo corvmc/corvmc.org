@@ -8,7 +8,12 @@ any page) and the [architecture overview](../architecture/overview.md).
 
 When building a new feature, work through these phases in order:
 
-0. **Branch** — decide where the work lands before writing any of it. Anything member-facing or
+0. **Branch** — decide where the work lands before writing any of it. **Search the tracker first**
+   (`gh issue list --state open --search '<terms>'`): if an issue already covers this, open the
+   draft PR with `Fixes #<n>` **before** writing the code, so the next session sees the work in
+   flight rather than starting it again. The branch push is what makes that a claim — a second
+   session pushing the same ref is rejected non-fast-forward by the server, which no assignee,
+   label or project-board field can do, all being last-write-wins. Anything member-facing or
    public that takes more than one PR to become usable goes on a long-lived
    [feature branch](#long-lived-feature-branches); phases are PRs into that branch and `main` sees
    the feature once, working. Staff-only surfaces, schema, and refactors still go straight to
@@ -61,6 +66,7 @@ When building a new feature, work through these phases in order:
    [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). If the
    feature had a spec, **retire it now** — see below.
 9. **Land** — descriptive message summarizing what the feature adds. **No co-author lines.**
+   `Fixes #<n>` in the PR body if it answers an issue, so the queue's merge closes it.
    A phase PR targets its feature branch and merges with `gh pr merge --squash`; the finished
    feature targets `main` and is queued with `gh pr merge --auto`. See
    [Long-lived feature branches](#long-lived-feature-branches).
@@ -116,8 +122,82 @@ half-shipped feature is the thing being eliminated. The phase commits stay reach
 branch is deleted, because GitHub keeps `refs/pull/<n>/head` indefinitely:
 `git fetch origin refs/pull/353/head`.
 
-Nothing enforces the branch, and **nothing protects it**: branch protection covers `main` only, so
-a phase PR can be merged with CI red. Read the checks before merging one.
+### What protects the branch
+
+A `feature/*` branch is protected, by a **ruleset** rather than by classic branch protection. It
+carries three rules — and, unlike `main`, no `pull_request` rule and no merge queue:
+
+```bash
+gh api repos/corvmc/corvmc.org/rules/branches/feature%2F<slug> --jq '[.[].type]'
+# ["deletion","non_fast_forward","required_status_checks"]
+```
+
+`gh api repos/corvmc/corvmc.org/branches/feature%2F<slug>/protection` answers
+`404 Branch not protected`. That is not a finding — the endpoint reads classic branch protection,
+which this repo does not use for either `main` or `feature/*`. Only `rules/branches/<ref>` sees a
+ruleset. Read that one, and URL-encode the slash.
+
+What the three rules mean in practice:
+
+- **A phase PR cannot be merged with CI red.** The five checks are required, so the earlier advice
+  to "read the checks before merging" was describing a hazard that does not exist.
+- **The branch cannot be force-pushed or deleted.** `non_fast_forward` and `deletion` cover the
+  thing "never rebase a feature branch" asks for; the server refuses it now.
+- **A direct push is allowed.** Protected here means _checks are required_, not _changes must go
+  through a PR_ — the two get conflated, and only the second would forbid a push. A fast-forward
+  push whose head SHA already has green checks is accepted.
+
+That last one is what makes landing a merge from `main` possible at all; see below.
+
+Two details worth knowing before trusting a green feature branch. The required set is
+`E2E`, `Unit tests`, `Schema drift`, `Svelte Check` and **`Lint (full)`** — but `Lint (full)` is
+`if: github.event_name == 'push'`, so on a PR it reports `skipped`, which rulesets count as passing.
+`Lint (changed)` and `Docs integrity` are required on `main` and **not** on `feature/*`. So lint and
+docs failures reach the branch and surface only at the landing PR. Run them yourself
+(#762 tracks the mismatch).
+
+### Merging `main` in is a push, not a PR
+
+The repo allows **squash only** (`allow_merge_commit` and `allow_rebase_merge` are both false), and
+squashing a merge-`main` PR is actively wrong. It collapses the merge commit into a single new
+commit, so `main`'s commits never enter the branch's ancestry: `merge-base(main, feature)` stays at
+the old fork point, and the eventual landing PR renders every one of `main`'s commits as though the
+branch had authored them, conflicting against anything `main` touched in between. That is the exact
+outcome "merge `main` in, never rebase" exists to prevent, and squash-only leaves the PR route
+unable to honour it.
+
+So the merge PR exists to **run the checks**, not to be merged:
+
+```bash
+git merge origin/main                       # a real merge commit, on a merge/ branch
+git push -u origin HEAD
+gh pr create --base feature/<slug> ...      # CI runs; the checks report on this head SHA
+# wait for green, then, from the worktree that owns the branch:
+git switch feature/<slug> && git merge --ff-only merge/main-into-<slug>
+git push origin HEAD                        # fast-forward. No force, ever.
+```
+
+The push satisfies `required_status_checks` because the checks are already green on that SHA, and
+GitHub marks the PR `MERGED` on its own once the base contains its head. Confirmed on #727
+(`feature/uloc-rework`) and #735 (`feature/band-packing-list`); both branches carry a real merge
+commit with `main` as a second parent.
+
+**Phase PRs are different and unaffected.** They add new work, so `gh pr merge --squash` is right
+and loses nothing.
+
+### `gh pr merge --auto` does not work against a feature base
+
+```
+$ gh pr merge <n> --auto            # base: feature/<slug>
+--merge, --rebase, or --squash required when not running interactively
+```
+
+`merge_queue` is a rule on `main` alone. Without a queue, auto-merge needs an explicit method, and
+`gh` will not guess one. On a phase PR pass `--squash`; on a merge-`main` PR do not open the
+question — fast-forward push it, per the previous section.
+
+**None of this changes `main`.** A finished PR into `main` is still queued with a bare
+`gh pr merge --auto` — no merge method, never `--admin`, never `gh pr update-branch`.
 
 ### Migrations on a branch that outlives a merge from `main`
 
@@ -178,10 +258,11 @@ it across worktrees) and it replays the resolutions.
 | `pnpm-lock.yaml`                    | Never hand-resolve: `git checkout --theirs pnpm-lock.yaml && pnpm install`.                                                                                                                                 |
 | `migrations/`                       | Never conflicts, which is the trap. See above.                                                                                                                                                              |
 
-Never rebase a feature branch and never force-push one. Other worktrees hold it, open phase PRs
-would redisplay every merged phase as new commits, and `allow_force_pushes=false` protects `main`
-only — nothing stops the push. Commit rather than stashing, too: the stash lives in the common
-`.git` and every worktree in this repo shares it.
+Never rebase a feature branch and never force-push one. Other worktrees hold it and open phase PRs
+would redisplay every merged phase as new commits. The `non_fast_forward` rule now refuses the push
+server-side, so this is enforced rather than merely asked for — but it fails _after_ you have
+rewritten your local history, which is the expensive half. Commit rather than stashing, too: the
+stash lives in the common `.git` and every worktree in this repo shares it.
 
 ## Table rebuilds on D1
 
@@ -497,10 +578,40 @@ are not blocked at all; run them yourself when you want them.
 ## Style
 
 - Interfaces/UI: **no gradients**.
-- Match the surrounding code's comment density, naming, and idioms. Comments state
-  constraints the code can't show — this codebase does that well (see
-  `src/lib/server/auth.ts` or `reservation-service.ts` for the house style).
+- Match the surrounding code's naming and idioms.
 - Prettier (with the svelte + tailwind plugins) is the formatter; don't hand-format.
+
+### Comments
+
+**A comment states a constraint the code can't show. It is not a record of how the code got
+here.** That second sentence is the one this repo kept getting wrong: it reached 24% comment by
+line and 28.4% by byte, most of it in blocks long enough to be essays, because the instruction
+that used to live here was "match the surrounding comment density" — which is an instruction to
+reproduce whatever is already there.
+
+- **Eight lines per block, capped and enforced.** `scripts/comment-budget.spec.ts` reddens the
+  **Unit tests** job on a longer block in any file not listed in `scripts/comment-budget.json`.
+  When the reasoning genuinely needs more room it goes in `docs/` or in the PR that made the
+  change, and the code keeps a one-line pointer.
+- **No historical narration.** "This used to delete the object outright", "it was
+  `Record<string, …>` until #527" — that is what git is for, and nothing reddens when a comment's
+  account of the past stops matching the present. If the old behaviour matters, assert the current
+  one in a spec; that version fails when it stops being true.
+- **No PR numbers, phase numbers, or dependency versions** as load-bearing context. They date
+  immediately and cannot be checked from the file that carries them.
+- **Rationale earns its lines only where a reader would otherwise undo the decision**, and gets one
+  or two of them rather than a section. The test to apply: would deleting this comment cause
+  someone to make the change it argues against? If not, delete it.
+
+`comment-budget.json` lists the files that predate the cap, and it only shrinks: prune a file
+below the cap and the gate fails until you delete its line, so the next change cannot quietly spend
+what a prune freed.
+
+**It is a path list rather than a line count, and that is load-bearing in a merge-queue repo.** A
+count is a whole-tree snapshot — any PR merging alongside yours changes the totals, so your branch
+passes its own checks and then fails on the queue's rebased ref for a change that did nothing
+wrong. That happened once and cost a queue slot. Two PRs editing a path list conflict in git
+instead, where a human sees it.
 
 ## pnpm script reference
 
@@ -570,7 +681,8 @@ is in [working-with-claude.md](working-with-claude.md).
 Prefer existing libraries and managed services over new bespoke code — the goal is to
 minimize _maintained_ code, not just initial build effort. Lean on Stripe, Postmark, and
 Cloudflare primitives rather than re-creating vendor features in app code. When adding a
-dependency, note it in `IDEAS.md`'s library table if it's broadly useful.
+dependency, note it in [`docs/reports/library-candidates.md`](../reports/library-candidates.md)
+if it's broadly useful.
 
 ### Patched dependencies
 

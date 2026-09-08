@@ -2,11 +2,10 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
-// NotificationBell awaits `getNotifications()` and opens an EventSource stream —
-// both need a live server. Mocking the remote module and stubbing EventSource
-// lets it render fully isolated (same pattern as AccountDropdown.svelte.spec.ts).
+// The notifications arrive as props now (#569); what still needs a live server
+// is the mark-read commands and the EventSource stream, so the remote module is
+// mocked for those two and EventSource is stubbed below.
 vi.mock('$lib/remote/notifications.remote', () => ({
-	getNotifications: () => Promise.resolve({ notifications: [], unreadCount: 0 }),
 	markNotificationRead: vi.fn(),
 	markAllNotificationsRead: vi.fn()
 }));
@@ -42,7 +41,7 @@ describe('NotificationBell', () => {
 	});
 
 	it('opens on click and closes when clicking outside', async () => {
-		await render(NotificationBell);
+		await render(NotificationBell, { notifications: [], unreadCount: 0 });
 
 		const trigger = page.getByRole('button', { name: 'Notifications' });
 		await expect.element(trigger).toBeVisible();
@@ -61,7 +60,7 @@ describe('NotificationBell', () => {
 	// `open` then throws. Simulate by unmounting in a capture-phase listener so
 	// the same click reaches the window handler after teardown.
 	it('survives a click that unmounts the component mid-dispatch (JAVASCRIPT-SVELTEKIT-Q/1A)', async () => {
-		const screen = await render(NotificationBell);
+		const screen = await render(NotificationBell, { notifications: [], unreadCount: 0 });
 
 		const trigger = page.getByRole('button', { name: 'Notifications' });
 		await trigger.click();

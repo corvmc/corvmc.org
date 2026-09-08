@@ -23,9 +23,22 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const result = await runDailyLockJob();
 
-	return json({
+	const body = {
 		provisioned: result.provisioned,
 		cleaned: result.cleaned,
+		confirmed: result.confirmed,
+		online: result.online,
 		errors: result.errors
-	});
+	};
+
+	// `runScheduledJobs` derives its Sentry Crons check-in from response.ok
+	// alone, so returning 200 with a populated `errors` array closed the check-in
+	// green through a total lock outage. Anything that went wrong is a failed
+	// run — including the lock being unreachable, which is exactly the state
+	// nobody was finding out about.
+	if (result.errors.length > 0) {
+		return json(body, { status: 500 });
+	}
+
+	return json(body);
 };

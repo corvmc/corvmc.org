@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, or, like, gte, lte, desc, count, sql, type SQL } from 'drizzle-orm';
+import { eq, and, or, inArray, like, gte, lte, desc, count, sql, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
 import { memberRefColumns, toMemberRef, type MemberRefRow } from '$lib/server/entity/refs';
 import type { MemberRef } from '$lib/types/entity';
@@ -14,12 +14,14 @@ import {
 	VOLUNTEER_BACKDATE_LIMIT_DAYS,
 	VOLUNTEER_DESCRIPTION_MAX,
 	VOLUNTEER_MAX_MINUTES_PER_LOG,
+	VOLUNTEER_BULK_REVIEW_MAX,
 	VOLUNTEER_REVIEW_NOTES_MAX,
 	volunteerHourStatusLabels
 } from '$lib/config';
 import { getActiveVolunteerRoleById } from './volunteer-role-service';
 import { VolunteerRoleNotFoundError } from './volunteer-role-service';
 import { requireActiveVolunteer } from './volunteer-profile-service';
+import { chunk } from '$lib/server/utils/chunk';
 import type { VolunteerHourLog, VolunteerHourStatus } from '$lib/server/db/schema/volunteer';
 
 const TZ = DEFAULT_TIMEZONE;
@@ -32,6 +34,13 @@ export class HourLogNotFoundError extends DomainError {
 	readonly httpStatus = 404;
 	constructor() {
 		super('Hour log not found');
+	}
+}
+
+export class TooManyHourLogsError extends DomainError {
+	readonly httpStatus = 422;
+	constructor() {
+		super(`Approve at most ${VOLUNTEER_BULK_REVIEW_MAX} entries at a time`);
 	}
 }
 
@@ -177,22 +186,10 @@ async function requireActiveRole(volunteerRoleId: string) {
 /**
  * Record hours for `userId`.
  *
- * `enteredByUserId` is the staffer typing it in on somebody else's behalf — for the
- * volunteer who does not use the app, or for work older than the backdate window. It
- * changes three things and nothing else:
- *
- * - the backdate limit does not apply, because "ask staff to add anything older" is the
- *   sentence this path exists to make true;
- * - the log lands `approved` rather than `pending`, stamped with the staffer. A staffer
- *   typing it in IS the review, and filing it into the queue they then clear is a round
- *   trip with no reader;
- * - no `hours_submitted` event fires. That event exists to tell staff a log is waiting;
- *   there is nothing waiting, and notifying the whole staff about their own keystroke is
- *   noise.
- *
- * Everything else is shared deliberately, so a staff-entered log is not a second kind of
- * row: same active-volunteer check, same active-role check, same future-date rule, same
- * minute and description limits.
+ * `enteredByUserId` is a staffer typing it in for somebody else. It lifts the
+ * backdate limit, lands the log `approved` rather than `pending` (the staffer
+ * typing it IS the review), and fires no `hours_submitted` event — nothing is
+ * waiting for staff. Every other rule is shared: not a second kind of row.
  */
 export async function submitHours(
 	userId: string,
@@ -348,18 +345,48 @@ async function review(
 
 	if (!row) throw new HourLogAlreadyReviewedError('reviewed');
 
+	await announceReviewed([row], staffId, status, reviewNotes);
+
+	return row;
+}
+
+/**
+ * Tell each volunteer their hours were reviewed.
+ *
+ * Takes a list so one approval and a bulk approval cost the same two context
+ * reads. Detached, and per-row: a notification that throws must not undo a
+ * review that is already written.
+ */
+async function announceReviewed(
+	rows: VolunteerHourLog[],
+	staffId: string,
+	status: Extract<VolunteerHourStatus, 'approved' | 'rejected'>,
+	reviewNotes: string | null
+): Promise<void> {
+	if (rows.length === 0) return;
+
 	// Archived roles still resolve here — the work happened either way.
-	const [context] = await db
-		.select({
-			userName: user.name,
-			userEmail: user.email,
-			roleName: volunteerRole.name
-		})
-		.from(volunteerHourLog)
-		.innerJoin(user, eq(volunteerHourLog.userId, user.id))
-		.innerJoin(volunteerRole, eq(volunteerHourLog.volunteerRoleId, volunteerRole.id))
-		.where(eq(volunteerHourLog.id, logId))
-		.limit(1);
+	const contexts = (
+		await Promise.all(
+			chunk(
+				rows.map((r) => r.id),
+				100
+			).map((ids) =>
+				db
+					.select({
+						logId: volunteerHourLog.id,
+						userName: user.name,
+						userEmail: user.email,
+						roleName: volunteerRole.name
+					})
+					.from(volunteerHourLog)
+					.innerJoin(user, eq(volunteerHourLog.userId, user.id))
+					.innerJoin(volunteerRole, eq(volunteerHourLog.volunteerRoleId, volunteerRole.id))
+					.where(inArray(volunteerHourLog.id, ids))
+			)
+		)
+	).flat();
+	const contextFor = new Map(contexts.map((c) => [c.logId, c]));
 
 	const [reviewer] = await db
 		.select({ name: user.name })
@@ -369,25 +396,76 @@ async function review(
 
 	const event = status === 'approved' ? 'volunteer.hours_approved' : 'volunteer.hours_rejected';
 
-	Promise.resolve().then(async () => {
-		try {
-			await domainEvents.emit(event, {
-				logId: row.id,
-				userId: row.userId,
-				userName: context?.userName ?? 'Unknown',
-				userEmail: context?.userEmail ?? '',
-				roleName: context?.roleName ?? 'Volunteering',
-				hours: row.minutes / 60,
-				workedOn: row.workedOn.toISOString(),
-				reviewNotes,
-				reviewedByName: reviewer?.name ?? 'Staff'
-			});
-		} catch (err) {
-			captureException(err, { event, logId: row.id });
-		}
-	});
+	for (const row of rows) {
+		const context = contextFor.get(row.id);
+		Promise.resolve().then(async () => {
+			try {
+				await domainEvents.emit(event, {
+					logId: row.id,
+					userId: row.userId,
+					userName: context?.userName ?? 'Unknown',
+					userEmail: context?.userEmail ?? '',
+					roleName: context?.roleName ?? 'Volunteering',
+					hours: row.minutes / 60,
+					workedOn: row.workedOn.toISOString(),
+					reviewNotes,
+					reviewedByName: reviewer?.name ?? 'Staff'
+				});
+			} catch (err) {
+				captureException(err, { event, logId: row.id });
+			}
+		});
+	}
+}
 
-	return row;
+/** What a bulk approval did, per the rows it actually moved. */
+export interface BulkApprovalResult {
+	approved: number;
+	/** Selected but no longer pending — reviewed by somebody else, or gone. */
+	skipped: number;
+}
+
+/**
+ * Approve a selection of pending logs.
+ *
+ * One conditional UPDATE per chunk rather than a loop of `approveHourLog`: a
+ * per-row round trip turns thirty ticks into a hundred and twenty statements.
+ * `status = 'pending'` stays in the WHERE, so a row another staffer reviewed in
+ * the meantime is skipped and counted rather than overwritten.
+ */
+export async function approveHourLogs(
+	logIds: string[],
+	staffId: string,
+	notes?: string
+): Promise<BulkApprovalResult> {
+	const reviewNotes = validateReviewNotes(notes, false);
+	const ids = [...new Set(logIds)].filter(Boolean);
+	if (ids.length === 0) return { approved: 0, skipped: 0 };
+	if (ids.length > VOLUNTEER_BULK_REVIEW_MAX) throw new TooManyHourLogsError();
+
+	const reviewedAt = new Date();
+	const rows: VolunteerHourLog[] = [];
+
+	// Five bound parameters before the ids, so 90 leaves room to spare under
+	// D1's 100-parameter ceiling.
+	for (const batch of chunk(ids, 90)) {
+		const updated = await db
+			.update(volunteerHourLog)
+			.set({
+				status: 'approved',
+				reviewedByUserId: staffId,
+				reviewedAt,
+				reviewNotes,
+				updatedAt: reviewedAt
+			})
+			.where(and(inArray(volunteerHourLog.id, batch), eq(volunteerHourLog.status, 'pending')))
+			.returning();
+		rows.push(...updated);
+	}
+
+	await announceReviewed(rows, staffId, 'approved', reviewNotes);
+
+	return { approved: rows.length, skipped: ids.length - rows.length };
 }
 
 async function getRawLog(logId: string) {

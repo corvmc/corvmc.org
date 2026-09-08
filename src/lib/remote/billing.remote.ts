@@ -16,14 +16,11 @@ import { mapDomainError } from '$lib/server/errors';
 import { captureException } from '$lib/server/sentry';
 
 /**
- * The card on file and the invoice history — what the Stripe billing portal was
- * the only way to reach.
- *
- * Deliberately its own query rather than a slice of `getMemberMembership`.
- * Everything here is a live Stripe call, and the portal link this replaces used
- * to sit inside that page's `Promise.all`, which made a Stripe outage take
- * `/member/membership` down for every sustaining member instead of hiding one
- * card. Kept separate, the page renders and this section is what degrades.
+ * The card on file and the invoice history — what the billing portal alone
+ * reached. Its own query rather than a slice of `getMemberMembership`, because
+ * everything here is a live Stripe call: the portal link this replaces sat
+ * inside that page's `Promise.all`, so an outage took `/member/membership` down
+ * for every sustaining member. Separate, only this section degrades.
  */
 function requireStripeId(user: { stripeId: string | null }): string {
 	if (!user.stripeId) error(400, 'No billing account found. Please contact support.');

@@ -9,19 +9,10 @@
 	/**
 	 * Stripe's Payment Element, mounted on our own page.
 	 *
-	 * Stripe still owns the line items, the discount, the currency and the
-	 * hundred-odd payment methods — this is a Checkout Session with
-	 * `ui_mode: 'elements'`, not a hand-rolled PaymentIntent. What we take back is
-	 * the page around the card fields, which is the whole point of the migration.
-	 *
-	 * The card fields themselves stay inside Stripe's iframe, so the PCI posture
-	 * is unchanged (SAQ A) and none of this violates the no-raw-`<input>` rule:
-	 * the Element mounts into a plain `<div>` and the only control we render is a
-	 * `Button`. It is not a `Form`/`SubmitButton` because there is no form to
-	 * submit — confirmation is an imperative call into Stripe.js.
-	 *
-	 * Everything here is client-only. `loadStripe` injects a script tag, so it
-	 * runs in `onMount` and never during SSR.
+	 * A Checkout Session with `ui_mode: 'elements'`, not a hand-rolled
+	 * PaymentIntent: Stripe keeps the line items, discount and payment methods,
+	 * we take back the page around them. Card fields stay in its iframe (SAQ A
+	 * unchanged) and the one control is a `Button`. Client-only.
 	 */
 	let {
 		clientSecret,

@@ -3,19 +3,10 @@ import type Stripe from 'stripe';
 /**
  * Typed skeletons for the Stripe objects the fake gateway hands back.
  *
- * Each builder returns the *exact* Stripe type, so anything the application
- * reads off one of these is checked against Stripe's real shape and a pinned
- * `apiVersion` bump that renames a field turns the reader red at `pnpm check`.
- *
- * The single `as T` per builder is the deliberate trade-off: Stripe's object
- * types carry 50-100 required members each, almost all of them nullable and
- * none of them read by this application. Spelling every one out would be a few
- * hundred lines of `null` that no test asserts on. What you pass *in* is fully
- * checked; what you leave out is what the app never touches.
- *
- * To raise fidelity later, capture real objects from a sandbox
- * (`stripe sandbox create`, then `stripe fixtures ./fixtures.json`) and paste
- * them in as the defaults — the call sites below would not change.
+ * Each builder returns the exact Stripe type, so an `apiVersion` bump renaming
+ * a field turns its reader red at `pnpm check`. The single `as T` each is the
+ * trade-off: Stripe's types carry 50-100 mostly-nullable members nobody reads.
+ * What you pass in is checked; what you omit is what the app never touches.
  */
 function build<T>(shape: Partial<T>): T {
 	return shape as T;

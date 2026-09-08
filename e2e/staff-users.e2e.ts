@@ -22,7 +22,6 @@ import {
 
 async function loginAsStaff(page: Page) {
 	await page.goto('/login');
-	// FormField renders a <legend>, not a <label for>, so target inputs by name.
 	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
 	await page.getByRole('button', { name: 'Sign in' }).click();
@@ -63,7 +62,7 @@ test.describe('staff user management', () => {
 		// itself as a set of radio buttons.
 		await page.getByRole('tab', { name: 'Account' }).click();
 
-		// TagInput serialises the selection into a hidden input — this is the exact
+		// TagSelect serialises the selection into a hidden input — this is the exact
 		// value updateUser rewrites model_has_roles from.
 		const rolesInput = page.locator('input[name="roles"]');
 		await expect(rolesInput).toHaveCount(1);

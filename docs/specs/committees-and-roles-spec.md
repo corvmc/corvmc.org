@@ -212,7 +212,7 @@ the relationships with bookers in nearby towns that turn up new ones.
 **As Programming**, I want to record that an act was asked and never answered, or said no and
 why, so the same act is not chased three times in a season.
 🆕 Nothing models an offer that did not become a show. `Booking Request Pipeline` in
-[IDEAS.md](../../IDEAS.md) is the inbound half; this is the outbound half.
+[the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement) is the inbound half; this is the outbound half.
 
 **As Programming**, I want submissions from acts to arrive somewhere I can work through rather
 than in a personal inbox.
@@ -298,7 +298,7 @@ what the room cannot do.
 📋 Rider and stage-plot upload plus per-slot `techNotes` / `backlineNeeds` in
 [production-workflow-spec.md](production-workflow-spec.md). 🆕 Matching a rider against the
 equipment catalog is explicitly out of that spec — it is `Tech Rider Management` in
-[IDEAS.md](../../IDEAS.md).
+[the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement).
 
 **As Production**, I want the show-day tech schedule — soundcheck, doors, changeovers — to come
 from the lineup rather than a separate document.
@@ -349,7 +349,7 @@ a human the two counts side by side.
 renew — to the board at every meeting.
 🆕 The numbers exist; the packet does not. [reporting-spec.md](reporting-spec.md) sequences a
 rollup that calls each module's existing report service, and `Annual Report Generator` in
-[IDEAS.md](../../IDEAS.md) is the same thing at annual cadence.
+[the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement) is the same thing at annual cadence.
 
 **As Development**, I want to record an in-kind donation and stay compliant on the paperwork.
 ✅ For gear: `acquisition` records the donor, and the Form 8283 / 8282 machinery on
@@ -362,7 +362,7 @@ history, appeal tracking and year-end statements have nothing behind them.
 
 **As Development**, I want to track grant applications and their reporting deadlines, and
 maintain business sponsorships.
-🆕 `Grant & Fundraising Tracker` and `Sponsor Management` in [IDEAS.md](../../IDEAS.md), both
+🆕 `Grant & Fundraising Tracker` and `Sponsor Management` in [the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement), both
 unbuilt.
 
 **As Development**, I want a record per venue of the terms we negotiated and the checklist we
@@ -438,7 +438,7 @@ photo and has no account has nothing to attach to, which is the harder half of t
 **As Communications**, I want the flyer cutoff enforced, so an event with no art from Art and
 Merch runs on the template flyer and the standard schedule.
 🆕 No deadline, and no template fallback. `Automatic Poster Compositing` in
-[IDEAS.md](../../IDEAS.md) is the fallback half.
+[the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement) is the fallback half.
 
 **As Communications**, I want a social posting calendar, press contacts, and a season-over-season
 read on what promotion actually worked.
@@ -468,7 +468,7 @@ Involves local artists in how the Collective looks, and keeps its merchandise.
 **As Art and Merch**, I want a roster of local artists and a record of what each has made for
 us.
 🆕 Artists are not a modeled population. `Poster Art Repository` in
-[IDEAS.md](../../IDEAS.md) imagines the library; the roster and the relationship are not in it.
+[the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement) imagines the library; the roster and the relationship are not in it.
 
 **As Art and Merch**, I want to commission the poster for an event — send the info packet, agree
 image rights in writing before work starts, get the file back before the publication deadline,
@@ -478,7 +478,7 @@ there. This is the single largest uncovered workflow in the document.
 
 **As Art and Merch**, I want to design and source CMC merchandise, approve samples, and reorder
 what sells.
-🆕 `Merch Consignment` in [IDEAS.md](../../IDEAS.md) is band merch sold at the venue, which is
+🆕 `Merch Consignment` in [the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement) is band merch sold at the venue, which is
 a different thing from the Collective's own stock.
 
 **As Art and Merch**, I want to decide what a dead instrument becomes and hand the build to a
@@ -511,7 +511,7 @@ a code are not modeled.
 
 **As Facility**, I want repairs and maintenance tracked from report to resolution, and a
 cleaning schedule somebody is assigned to.
-🔧 `Venue Maintenance Requests` in [IDEAS.md](../../IDEAS.md), half built. Work parties exist as a
+🔧 `Venue Maintenance Requests` in [the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement), half built. Work parties exist as a
 volunteer role and can be scheduled as shifts, so the unpaid labor half is served and the queue
 half is not. **Outside contractors are now recorded** — `contractor` and `contractor_job` at
 `/staff/contractors` answer who services the building and when they were last in, for both a unit
@@ -537,7 +537,7 @@ the work-order half and is not.
 
 **As Facility**, I want fire extinguishers, exits, first aid, posted capacity and emergency
 procedures maintained and current.
-🆕 `Incident & Safety Log` in [IDEAS.md](../../IDEAS.md) covers logging what happened; nothing
+🆕 `Incident & Safety Log` in [the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement) covers logging what happened; nothing
 covers the standing compliance checklist. `/staff/inventory/compliance` is IRS donation
 paperwork, not building compliance, despite the name.
 
@@ -720,7 +720,7 @@ one uncovered feature, not two.
 complaints. The board approves the frame and receives reports; the reports it receives are
 stories above, under each committee and under Chairs. Board _governance_ — agendas, minutes of
 board meetings, the record of decisions, elections — is a different document and arguably not
-software at all. `Member Voting / Proposals` in [IDEAS.md](../../IDEAS.md) is the piece of it
+software at all. `Member Voting / Proposals` in [the `enhancement` issues](https://github.com/corvmc/corvmc.org/issues?q=is%3Aissue+label%3Aenhancement) is the piece of it
 that might be.
 
 **The Technology Coordinator (5.1) and Volunteer Coordinator (5.2).** Both are cross-committee

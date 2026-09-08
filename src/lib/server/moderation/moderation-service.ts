@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { userBlock, type UserBlockSource } from '$lib/server/db/schema/moderation';
 import { user } from '$lib/server/db/schema/authentication';
 import { getStanding } from '$lib/server/moderation/standing-service';
+import { isMinor } from '$lib/utils/age';
 import { eq, and, or, desc, sql } from 'drizzle-orm';
 import type { SQL, SQLWrapper } from 'drizzle-orm';
 
@@ -116,19 +117,45 @@ export async function listBlockedBy(blockerUserId: string): Promise<BlockedMembe
 // Messaging policy
 // ---------------------------------------------------------------------------
 
-// Two halves decide whether a member can be messaged, and they are deliberately
-// different things:
+// Three things decide whether a member can be messaged, and they are
+// deliberately different:
 //
-//   - their `messaging` standing, which staff or an upheld report imposed, and
-//   - `user.acceptsDirectMessages`, which is the member's own preference.
+//   - their `messaging` standing, which staff or an upheld report imposed,
+//   - `user.acceptsDirectMessages`, which is the member's own preference, and
+//   - their age, derived from `user.dateOfBirth`.
 //
-// Only the second is theirs to change. Keeping them apart is why neither needs
-// to record who set it — see `docs/specs/shipped/member-standing-spec.md`.
+// Only the second is theirs to change. Keeping them apart is why neither of the
+// first two needs to record who set it — see
+// `docs/specs/shipped/member-standing-spec.md`.
+//
+// The third is the newest and the reason #556 exists. Being under 18 is a fact
+// about who a member is, not a judgement about what they did, and it used to be
+// written as a `member_standing` row scoped to `messaging` — indistinguishable,
+// to staff reading the card and to the member reading the notice, from somebody
+// restricted for abusing DMs. It is derived rather than stored as a
+// restriction, so it lifts itself on their eighteenth birthday.
 
-/** May this member start new conversations? Restriction only; a preference doesn't stop them replying. */
+/** May this member start new conversations? Restriction and age; a preference doesn't stop them replying. */
 export async function canInitiateMessages(userId: string): Promise<boolean> {
+	if (await isMessagingAgeRestricted(userId)) return false;
 	const { status } = await getStanding(userId, 'messaging');
 	return status === 'none';
+}
+
+/**
+ * Is this member under the age at which the collective opens messaging?
+ *
+ * False for the overwhelming majority, who have given no date of birth: not
+ * knowing somebody's age is not grounds for restricting them, and the column is
+ * new, so every existing row answers exactly as it did before.
+ */
+export async function isMessagingAgeRestricted(userId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ dateOfBirth: user.dateOfBirth })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	return isMinor(row?.dateOfBirth);
 }
 
 /** The member's own switch, on its own. Defaults to reachable for a row that isn't there. */
@@ -151,6 +178,7 @@ export async function acceptsDirectMessages(userId: string): Promise<boolean> {
  */
 export async function messagingIsDisabled(userId: string): Promise<boolean> {
 	if (!(await acceptsDirectMessages(userId))) return true;
+	if (await isMessagingAgeRestricted(userId)) return true;
 	const { status } = await getStanding(userId, 'messaging');
 	return status === 'disabled';
 }
@@ -160,10 +188,20 @@ export async function setAcceptsDirectMessages(userId: string, accepts: boolean)
 	await db.update(user).set({ acceptsDirectMessages: accepts }).where(eq(user.id, userId));
 }
 
-/** What the member sees on their own account page: their switch, plus any restriction on them. */
+/**
+ * What the member sees on their own account page: their switch, any restriction
+ * on them, and whether they are simply too young yet.
+ *
+ * `ageRestricted` is a separate field rather than folded into the standing on
+ * purpose. The account page has to be able to tell a 16-year-old that messaging
+ * opens at 18 without showing them a staff note, an appeal, or the words
+ * "switched off for your account by staff" — which is what they read before
+ * this, because the age case was written as a moderation row.
+ */
 export async function getMessagingState(userId: string) {
 	return {
 		acceptsDirectMessages: await acceptsDirectMessages(userId),
-		standing: await getStanding(userId, 'messaging')
+		standing: await getStanding(userId, 'messaging'),
+		ageRestricted: await isMessagingAgeRestricted(userId)
 	};
 }

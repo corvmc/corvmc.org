@@ -3,16 +3,10 @@ import type Stripe from 'stripe';
 /**
  * The slice of the Stripe SDK this application actually calls.
  *
- * Every member is `Pick`ed off Stripe's own resource types, so an implementation
- * has to match Stripe's real signatures — the compiler is the contract, and a
- * fake cannot drift into a shape the live API would reject. It also means
- * reaching for a Stripe method the app has never used is a type error until it
- * is added here deliberately, which keeps the surface a fake has to cover
- * enumerable rather than open-ended.
- *
- * `webhooks` is absent on purpose: signature verification is a pure function of
- * the payload and the secret, so it stays on the real SDK regardless of driver
- * (see `stripeWebhooks` and `webhookCryptoProvider` in `$lib/server/stripe`).
+ * Every member is `Pick`ed off Stripe's own resource types, so the compiler is
+ * the contract: a fake cannot drift into a shape the live API would reject.
+ * `webhooks` is absent on purpose — verifying a signature needs no API call, so
+ * it stays on the real SDK whichever driver is live (`$lib/server/stripe`).
  */
 export interface PaymentGateway {
 	/**

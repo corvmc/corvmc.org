@@ -208,7 +208,10 @@ describe('setStanding', () => {
 		expect(inserted).toHaveLength(0);
 	});
 
-	it('allows disabled for messaging — the staff switch-off for under-18 accounts', async () => {
+	// The rung stays legal and the justification changed. `disabled` is the
+	// escalation past reply-only `restricted`; it used to double as the
+	// under-18 switch-off, which #556 moved to `user.date_of_birth`.
+	it('allows disabled for messaging — the escalation past reply-only', async () => {
 		await setStanding({ userId: 'u1', scope: 'messaging', status: 'disabled', staffId: 'staff1' });
 		expect(inserted[0].values).toMatchObject({ scope: 'messaging', status: 'disabled' });
 	});

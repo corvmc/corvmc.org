@@ -4,6 +4,7 @@ import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement } from '$lib/server/group/announcement-fanout';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
+import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '$lib/server/sentry';
 import { listUsersWithCapability } from '$lib/server/authorization';
 import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
@@ -251,7 +252,7 @@ export function registerAllNotificationListeners(): void {
 			try {
 				const model = {
 					subject: `${event.eventTitle} has been cancelled`,
-					heading: 'Event Cancelled',
+					heading: 'Event cancelled',
 					greeting: `Hi ${holder.attendeeName},`,
 					paragraphs: [
 						{ text: `Unfortunately this event has been cancelled.` },
@@ -305,11 +306,11 @@ export function registerAllNotificationListeners(): void {
 				model: {
 					subject: `Reservation reminder: ${event.date}`,
 					preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
-					heading: 'Upcoming Reservation',
+					heading: 'Upcoming reservation',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [{ text: 'You have a reservation coming up at the space.' }],
 					details: whenDetails(event.date, event.startTime, event.endTime),
-					cta: { url: `${siteUrl}/member/reservations`, label: 'View My Reservations' }
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -329,13 +330,13 @@ export function registerAllNotificationListeners(): void {
 				model: {
 					subject: `Please confirm your reservation: ${event.date}`,
 					preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
-					heading: 'Please Confirm Your Reservation',
+					heading: 'Please confirm your reservation',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [{ text: 'You have an unconfirmed reservation.' }],
 					details: whenDetails(event.date, event.startTime, event.endTime),
 					footnote:
 						'Please confirm or cancel your reservation to free up the time slot for others.',
-					cta: { url: `${siteUrl}/member/reservations`, label: 'Confirm Now' }
+					cta: { url: `${siteUrl}/member/reservations`, label: 'Confirm now' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -425,7 +426,7 @@ export function registerAllNotificationListeners(): void {
 			model: {
 				subject: `${event.invitedByName} invited you to join ${event.groupName} on CorvMC`,
 				preview_text: `${event.invitedByName} wants you in ${event.groupName}. Your invite link is good for 7 days.`,
-				heading: `You've Been Invited to Join ${event.groupName}`,
+				heading: `You've been invited to join ${event.groupName}`,
 				paragraphs: [
 					{
 						text: `${event.invitedByName} has invited you to join the ${kind} ${event.groupName} as a ${event.role} on CorvMC.`
@@ -453,7 +454,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Recurring reservation skipped: ${event.skippedDate}`,
-					heading: 'Recurring Reservation Skipped',
+					heading: 'Recurring reservation skipped',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{ text: 'One date in your recurring reservation was skipped.' },
@@ -482,7 +483,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Recurring event needs space: ${event.eventTitle} on ${event.date}`,
-					heading: 'Recurring Event Could Not Reserve Space',
+					heading: 'Recurring event could not reserve space',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{
@@ -514,7 +515,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Equipment pickup confirmed: ${event.equipmentName}`,
-					heading: 'Equipment Pickup Confirmed',
+					heading: 'Equipment pickup confirmed',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{ text: 'Your equipment loan has been confirmed.' },
@@ -540,7 +541,7 @@ export function registerAllNotificationListeners(): void {
 			templateAlias: GENERIC_ALIAS,
 			model: {
 				subject: `Equipment request from ${event.userName}`,
-				heading: 'New Equipment Loan Request',
+				heading: 'New equipment loan request',
 				paragraphs: [{ text: `${event.userName} has requested to borrow equipment.` }],
 				details: [
 					{ label: 'Item', value: event.equipmentName ?? 'Free-form request' },
@@ -609,11 +610,200 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Equipment returned: ${event.equipmentName}`,
-					heading: 'Equipment Returned',
+					heading: 'Equipment returned',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [{ text: `Thanks for returning ${event.equipmentName}.` }],
 					details,
-					cta: { url: `${siteUrl}/member/equipment/loans`, label: 'View My Loans' }
+					cta: { url: `${siteUrl}/member/equipment/loans`, label: 'View my loans' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	// --- Membership: the four moments a contribution touches somebody's money ---
+	// Before these existed a sustaining member's only record was whatever the
+	// Stripe dashboard happened to be configured to send — outside the repo,
+	// outside review, and outside this preference system. All four render
+	// through the generic template; a contribution receipt is a heading, a few
+	// detail rows and a link, which is exactly what that template is.
+
+	function contributionDetails(event: {
+		amountCents: number;
+		freeHoursPerMonth: number;
+		periodEnd: string;
+		coveringFees: boolean;
+	}): NotificationEmailDetail[] {
+		const details: NotificationEmailDetail[] = [
+			{ label: 'Contribution', value: `${formatCents(event.amountCents)} / month` },
+			{ label: 'Free rehearsal hours', value: `${formatHours(event.freeHoursPerMonth)} / month` },
+			{ label: 'Next renewal', value: formatPickupDate(event.periodEnd) }
+		];
+		if (event.coveringFees) {
+			details.push({ label: 'Processing fees', value: 'Covered by you — thank you' });
+		}
+		return details;
+	}
+
+	domainEvents.on('membership.started', async ({ data: event }) => {
+		await dispatch({
+			type: 'membership_receipt',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Thanks for becoming a sustaining member`,
+			body: `${formatCents(event.amountCents)} per month`,
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC sustaining membership',
+					heading: 'Thank you',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your sustaining contribution is set up. It keeps the rehearsal space open and the rates low for everyone who uses it.'
+						},
+						{
+							text: 'This email is your receipt. Itemised invoices for every contribution live in the billing portal, linked from your membership page.'
+						}
+					],
+					details: contributionDetails(event),
+					cta: { url: `${siteUrl}/member/membership`, label: 'View my membership' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.renewed', async ({ data: event }) => {
+		await dispatch({
+			type: 'membership_renewal_receipt',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Contribution received — ${formatCents(event.amountCents)}`,
+			body: 'Your monthly contribution renewed',
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Your contribution receipt — ${formatCents(event.amountCents)}`,
+					heading: 'Contribution received',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your monthly contribution renewed today. Thank you for keeping this place running.'
+						}
+					],
+					details: contributionDetails(event),
+					cta: { url: `${siteUrl}/member/membership`, label: 'View my membership' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.payment_failed', async ({ data: event }) => {
+		const details: NotificationEmailDetail[] = [
+			{ label: 'Amount due', value: formatCents(event.amountCents) }
+		];
+		if (event.nextAttemptAt) {
+			details.push({ label: 'Next attempt', value: formatPickupDate(event.nextAttemptAt) });
+		}
+
+		// Stripe's hosted invoice is a card form the member can complete without
+		// signing in anywhere; our membership page can only send them onward to
+		// the billing portal. On the one email that asks for an action, the
+		// shorter path wins.
+		const cta = event.hostedInvoiceUrl
+			? { url: event.hostedInvoiceUrl, label: 'Update payment method' }
+			: { url: `${siteUrl}/member/membership`, label: 'View my membership' };
+
+		await dispatch({
+			type: 'membership_payment_failed',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Your contribution payment did not go through',
+			body: `${formatCents(event.amountCents)} could not be charged`,
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC contribution needs attention',
+					heading: 'Payment did not go through',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{ text: 'We could not charge the card on file for your sustaining contribution.' },
+						{
+							text: event.nextAttemptAt
+								? 'We will try again automatically. Updating your card now saves the retry.'
+								: 'Please update your card to keep your membership active.'
+						}
+					],
+					details,
+					cta,
+					footnote:
+						'Your member benefits are unchanged for now. If the card keeps declining, the membership will end and your free hours will reset.'
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.cancellation_scheduled', async ({ data: event }) => {
+		const details: NotificationEmailDetail[] = event.endsAt
+			? [{ label: 'Benefits run through', value: formatPickupDate(event.endsAt) }]
+			: [];
+
+		await dispatch({
+			type: 'membership_cancellation_scheduled',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Your membership is set to end',
+			body: event.endsAt ? `Benefits run through ${formatPickupDate(event.endsAt)}` : undefined,
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC membership is set to end',
+					heading: 'Cancellation scheduled',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your sustaining contribution is scheduled to stop. You will not be charged again.'
+						},
+						{
+							text: 'Nothing changes until then, and you can start it back up any time from your membership page.'
+						}
+					],
+					details,
+					cta: { url: `${siteUrl}/member/membership`, label: 'View my membership' },
+					footnote: 'Thank you for the time you did support us — it mattered.'
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.ended', async ({ data: event }) => {
+		await dispatch({
+			type: 'membership_ended',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Your sustaining membership has ended',
+			body: 'Your member credits have reset',
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC membership has ended',
+					heading: 'Membership ended',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your sustaining contribution has ended and your free rehearsal hours have reset.'
+						},
+						{
+							text: 'You are still a member — the space, the calendar and your bookings are all still yours at the standard rate.'
+						}
+					],
+					cta: { url: `${siteUrl}/member/membership`, label: 'Start contributing again' },
+					footnote:
+						'Any recurring bookings tied to your member hours have been cancelled. You can rebook them at any time.'
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -646,11 +836,11 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Reservation cancelled: ${event.date}`,
-					heading: 'Reservation Cancelled',
+					heading: 'Reservation cancelled',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [{ text: 'Your reservation has been cancelled.' }, { text: reasonLine }],
 					details: whenDetails(event.date, event.startTime, event.endTime),
-					cta: { url: `${siteUrl}/member/reservations`, label: 'View My Reservations' }
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -669,7 +859,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Recurring reservation waitlisted: ${event.date}`,
-					heading: 'Recurring Reservation Waitlisted',
+					heading: 'Recurring reservation waitlisted',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{
@@ -678,7 +868,7 @@ export function registerAllNotificationListeners(): void {
 						{ text: "You'll be notified automatically if the slot opens up." }
 					],
 					details: whenDetails(event.date, event.startTime, event.endTime),
-					cta: { url: `${siteUrl}/member/reservations`, label: 'View My Reservations' }
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -698,12 +888,12 @@ export function registerAllNotificationListeners(): void {
 				model: {
 					subject: `Slot available: ${event.date} ${event.startTime}`,
 					preview_text: `${event.date}, ${event.startTime} – confirm within 24 hours or it goes to the next member.`,
-					heading: 'A Slot Has Opened Up',
+					heading: 'A slot has opened up',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [{ text: 'The time slot you were waiting on is now available.' }],
 					details: whenDetails(event.date, event.startTime, event.endTime),
 					footnote: 'You have 24 hours to confirm your reservation before it expires.',
-					cta: { url: event.confirmUrl, label: 'Confirm Reservation' }
+					cta: { url: event.confirmUrl, label: 'Confirm reservation' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -722,7 +912,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Waitlisted reservation expired: ${event.date}`,
-					heading: 'Waitlisted Reservation Expired',
+					heading: 'Waitlisted reservation expired',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{
@@ -730,7 +920,7 @@ export function registerAllNotificationListeners(): void {
 						}
 					],
 					details: whenDetails(event.date, event.startTime, event.endTime),
-					cta: { url: `${siteUrl}/member/reservations`, label: 'View My Reservations' }
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -768,7 +958,10 @@ export function registerAllNotificationListeners(): void {
 				contactEmail: event.email,
 				formSubject: event.subject,
 				replyNote,
-				message: event.message,
+				// `>`-quoted here, not in the template: Mustachio cannot prefix
+				// per line, and the marker has to survive into the staffer's reply
+				// as a quote rather than as literal fence text.
+				message: quoteForPlainText(event.message),
 				threadUrl: `${env.PUBLIC_SITE_URL}/staff/inbox/${event.threadId}`
 			}
 		});
@@ -914,7 +1107,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Your volunteer hours were approved`,
-					heading: 'Volunteer Hours Approved',
+					heading: 'Volunteer hours approved',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{ text: 'Thanks for helping out — your logged hours have been approved.' },
@@ -946,7 +1139,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Your volunteer hours need another look`,
-					heading: 'Volunteer Hours Returned',
+					heading: 'Volunteer hours returned',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{
