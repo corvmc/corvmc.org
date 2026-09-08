@@ -21,8 +21,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { globSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { dirname, join, relative } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = new URL('../', import.meta.url);
 
@@ -36,7 +36,10 @@ const IGNORED = [
 	'dist/**',
 	'.wrangler/**',
 	'coverage/**',
-	'storybook-static/**'
+	'storybook-static/**',
+	// Vitest browser mode names a failure screenshot's directory after the spec
+	// that failed, so this tree is full of directories called `*.spec.ts`.
+	'test-results/**'
 ];
 
 /**
@@ -58,12 +61,18 @@ const EXEMPT: Record<string, string> = {
 };
 
 /**
- * Every glob in this file goes through here, and every one of them takes its
- * root as an argument so the fixture at the bottom can point them somewhere
- * with a known answer.
+ * Every glob in this file goes through here, for two reasons: each takes its
+ * root as an argument so the fixture at the bottom can point it at a tree with
+ * a known answer, and each drops anything that is not a regular file. A
+ * directory named `Action.svelte.spec.ts` is a screenshot, not a source file,
+ * and the ignore list above can only ever name the tools we already know write
+ * one.
  */
 function filesMatching(pattern: string, root: URL): string[] {
-	return globSync(pattern, { cwd: root, exclude: IGNORED }).map((p) => p.replaceAll('\\', '/'));
+	const base = fileURLToPath(root);
+	return globSync(pattern, { cwd: root, exclude: IGNORED, withFileTypes: true })
+		.filter((entry) => entry.isFile())
+		.map((entry) => relative(base, join(entry.parentPath, entry.name)).replaceAll('\\', '/'));
 }
 
 /** tsconfig files are JSONC — strip comments before parsing. */
