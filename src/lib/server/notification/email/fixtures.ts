@@ -170,6 +170,20 @@ export const FIXTURES: Fixture[] = [
 		}
 	},
 	{
+		name: 'band-reply',
+		alias: 'band-reply',
+		// A distinct shape from `inbox-reply`, not a copy of it: the staffer is
+		// speaking as the act, so the signature names the band and the why-line
+		// points at the band's own booking form.
+		model: {
+			contactName: 'Charlie',
+			subject: 'Re: Booking for your Saturday show',
+			body: "Thanks for asking — we're free that weekend and we'd love to play.\n\nWhat time would you want us on & how long a set?",
+			staffName: 'Rosa',
+			bandName: 'Indigo Kiss'
+		}
+	},
+	{
 		name: 'contact-alert',
 		alias: 'contact-alert',
 		// Text-only: staff reply to this one straight from their mail client.
