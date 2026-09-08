@@ -45,6 +45,7 @@
 		outline = false,
 		class: className = '',
 		disabled = false,
+		canSubmit = true,
 		onsuccess,
 		onfailure,
 		...rest
@@ -93,6 +94,12 @@
 		outline?: boolean;
 		class?: string;
 		disabled?: boolean;
+		/**
+		 * Gates the modal's submit while the form is not yet fillable — an owner
+		 * not chosen, an amount still zero. It deliberately does not touch the
+		 * trigger: a form you cannot open is a form you can never satisfy.
+		 */
+		canSubmit?: boolean;
 		onsuccess?: (result?: unknown) => void;
 		onfailure?: (error?: unknown) => void;
 		[key: string]: unknown;
@@ -226,7 +233,11 @@
 				{@render formSnippet?.({ close })}
 				{#if !noFooter}
 					<div class="flex justify-end pt-2">
-						<SubmitButton label={submitLabel ?? label} variant={submitVariant ?? variant} />
+						<SubmitButton
+							label={submitLabel ?? label}
+							variant={submitVariant ?? variant}
+							disabled={!canSubmit}
+						/>
 					</div>
 				{/if}
 			</Form>
