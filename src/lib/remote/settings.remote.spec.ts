@@ -19,22 +19,28 @@ vi.mock('$lib/server/authorization', () => ({
 	requireCapability: (...args: unknown[]) => requireCapability(...(args as [string]))
 }));
 
+// Distinctive enough to search a whole serialised payload for. The guard below
+// asserts it appears nowhere in what the browser receives, which catches a
+// reintroduction under any field name, nested or renamed.
+const STORED_CLIENT_SECRET = 'utec-client-secret-sentinel';
+
 const getConfigsByPrefix = vi.fn(async (prefix: string) => {
 	if (prefix === 'integration.utec') {
 		return {
 			clientId: 'utec-client',
-			clientSecret: 'utec-secret',
+			clientSecret: STORED_CLIENT_SECRET,
 			deviceId: 'device-1',
 			refreshToken: 'utec-refresh'
 		};
 	}
 	return { socialFacebook: 'fb', addressStreet: '123 Main St' };
 });
-const updateSiteConfigs = vi.fn(async () => undefined);
+type ConfigWrite = { key: string; value: unknown };
+const updateSiteConfigs = vi.fn(async (_writes: ConfigWrite[]) => undefined);
 const updateSiteConfig = vi.fn(async () => undefined);
 vi.mock('$lib/server/site-config/site-config-service', () => ({
 	getConfigsByPrefix: (...args: unknown[]) => getConfigsByPrefix(...(args as [string])),
-	updateSiteConfigs: (...args: unknown[]) => updateSiteConfigs(...(args as [])),
+	updateSiteConfigs: (...args: unknown[]) => updateSiteConfigs(...(args as [ConfigWrite[]])),
 	updateSiteConfig: (...args: unknown[]) => updateSiteConfig(...(args as []))
 }));
 
@@ -46,8 +52,14 @@ vi.mock('$lib/server/finance/product-config-service', () => ({
 }));
 
 const testConnection = vi.fn(async () => ({ ok: true }));
+const clientSecretStatus = vi.fn(async () => ({ configured: true, source: 'kv' as const }));
 vi.mock('$lib/server/lock/ultraloc-client', () => ({
-	testConnection: () => testConnection()
+	testConnection: () => testConnection(),
+	clientSecretStatus: () => clientSecretStatus()
+}));
+
+vi.mock('./inbox.remote', () => ({
+	getInboxChannelConfigs: vi.fn(async () => [])
 }));
 
 vi.mock('$lib/server/lock/lock-service', () => ({
@@ -77,12 +89,20 @@ vi.mock('$app/server', () => ({
 		url: new URL('http://localhost/'),
 		request: { headers: new Headers() }
 	}),
+	// The returned promise carries `.refresh()` because that is the shape the
+	// forms call — `void getStaffSettingsPage().refresh()` after a write. Without
+	// it no successful submit could be exercised here, only the rejection path.
 	query: (...args: unknown[]) => {
 		const handler = (typeof args[0] === 'function' ? args[0] : args[1]) as (
 			...a: unknown[]
 		) => unknown;
-		(handler as unknown as Record<string, unknown>).__ = { type: 'query' };
-		return handler;
+		const wrapped = (...a: unknown[]) => {
+			const result = handler(...a) as Promise<unknown> & { refresh: () => void };
+			result.refresh = () => undefined;
+			return result;
+		};
+		(wrapped as unknown as Record<string, unknown>).__ = { type: 'query' };
+		return wrapped;
 	},
 	form: (_schema: unknown, handler: (...a: unknown[]) => unknown) => {
 		const fn = handler as unknown as Record<string, unknown>;
@@ -98,16 +118,12 @@ vi.mock('$app/server', () => ({
 
 const settings = (await import('./settings.remote')) as unknown as Record<
 	string,
-	((...args: unknown[]) => Promise<unknown>) & { refresh?: () => void }
+	(...args: unknown[]) => Promise<unknown>
 >;
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	requireCapability.mockRejectedValue(new Error('403: Staff access required'));
-	// query results carry a .refresh() used by the forms after a successful write
-	for (const fn of Object.values(settings)) {
-		if (typeof fn === 'function') fn.refresh = () => undefined;
-	}
 });
 
 const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
@@ -199,15 +215,61 @@ describe('settings.remote staff guards', () => {
 		});
 	}
 
-	it('getIntegrationSettings returns lock credentials only once permitted', async () => {
+	it('getIntegrationSettings reports the secret as configured without returning it', async () => {
 		requireCapability.mockResolvedValue(undefined);
 		const result = await settings.getIntegrationSettings();
 		expect(requireCapability).toHaveBeenCalledWith('settings.read');
 		expect(result).toEqual({
 			clientId: 'utec-client',
-			clientSecret: 'utec-secret',
+			clientSecret: { configured: true, source: 'kv' },
 			deviceId: 'device-1',
 			refreshToken: 'utec-refresh'
+		});
+	});
+
+	// The guard, and the reason this file pins a sentinel rather than a plausible
+	// string: a projection is a place a secret leaks back into by accident, and
+	// an equality assertion only catches the field name someone thought to check.
+	// Serialising the whole payload catches it under any name, at any depth, on
+	// every path that projects this object — the query, and the combined page
+	// query the staff route SSRs into its HTML.
+	it.each(['getIntegrationSettings', 'getStaffSettingsPage'])(
+		'%s never serialises the stored client secret',
+		async (name) => {
+			requireCapability.mockResolvedValue(undefined);
+			const payload = JSON.stringify(await settings[name]());
+			expect(payload).not.toContain(STORED_CLIENT_SECRET);
+			// Proves the assertion above is looking at a payload that really was
+			// built from the secret-bearing config, not an empty object.
+			expect(payload).toContain('utec-client');
+		}
+	);
+
+	it('an empty client secret leaves the stored one alone rather than clearing it', async () => {
+		requireCapability.mockResolvedValue(undefined);
+		await settings.updateIntegrationSettings({
+			clientId: 'utec-client',
+			clientSecret: '',
+			deviceId: 'device-1',
+			refreshToken: 'utec-refresh'
+		});
+
+		const keys = updateSiteConfigs.mock.calls[0][0]!.map((c) => c.key);
+		expect(keys).not.toContain('integration.utec.clientSecret');
+	});
+
+	it('a submitted client secret is written through', async () => {
+		requireCapability.mockResolvedValue(undefined);
+		await settings.updateIntegrationSettings({
+			clientId: 'utec-client',
+			clientSecret: 'rotated',
+			deviceId: 'device-1',
+			refreshToken: 'utec-refresh'
+		});
+
+		expect(updateSiteConfigs.mock.calls[0][0]).toContainEqual({
+			key: 'integration.utec.clientSecret',
+			value: 'rotated'
 		});
 	});
 
