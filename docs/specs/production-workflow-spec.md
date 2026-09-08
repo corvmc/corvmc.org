@@ -259,7 +259,7 @@ reach `closed` with unfinished close-out tasks.
 
 This design surfaced two bugs in shipped code. Neither was caused by productions and
 neither depended on it, so both were fixed separately in
-[#161](https://github.com/DevonCash/corvmc-svelte/pull/161) rather than being carried by
+[#161](https://github.com/corvmc/corvmc.org/pull/161) rather than being carried by
 this feature. They are recorded here because the design leans on both, and because the
 reasoning explains why parts of the spec below assume behavior that is newer than the rest
 of the codebase.

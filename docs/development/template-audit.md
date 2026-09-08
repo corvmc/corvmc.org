@@ -27,7 +27,7 @@ Measured at `e58a707` (post-#221), excluding `*.stories.svelte` and test harness
 - **80% of route class tokens are raw utilities**, not daisyUI component classes.
 - 185 distinct multi-class strings repeat 3+ times in routes, covering 1,390 occurrences.
 
-[#221](https://github.com/DevonCash/corvmc-svelte/pull/221) is the proof the approach works:
+[#221](https://github.com/corvmc/corvmc.org/pull/221) is the proof the approach works:
 extracting `DefinitionList`/`Fact` erased 15 of the 19 hand-rolled
 `<dl style="grid-template-columns: auto 1fr">` blocks in a single pass. It is also the **idiom this
 audit follows** — a namespaced folder with an `index.ts`, semantic boolean/enum props (`mono`,
