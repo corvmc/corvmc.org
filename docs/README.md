@@ -20,11 +20,25 @@ September 2026 — by then `CHORES.md` carried an open item whose own "Done" ent
 below it, which is the argument for the move. Docs describe how things work; what is _owed_ is an
 issue, because an issue can be searched, labelled, assigned and closed by the PR that fixes it.
 
-| You want               | Run                                             |
-| ---------------------- | ----------------------------------------------- |
-| Cleanup and known gaps | `gh issue list --label tech-debt`               |
-| Unbuilt feature ideas  | `gh issue list --label enhancement`             |
-| Anything in one area   | `gh issue list --label area:events` (and so on) |
+| You want                 | Run                                             |
+| ------------------------ | ----------------------------------------------- |
+| Cleanup and known gaps   | `gh issue list --search 'type:"Tech debt"'`     |
+| Unbuilt feature ideas    | `gh issue list --search 'type:Feature'`         |
+| Something behaving badly | `gh issue list --search 'type:Bug'`             |
+| Anything in one area     | `gh issue list --label area:events` (and so on) |
+
+**Type is a GitHub issue type, area is a label**, and the split is deliberate: a type is
+single-select, so an issue cannot be both a feature and debt, which is what `tech-debt` and
+`enhancement` allowed while they were labels. An area is a label because it is what the tooling
+reads — `gh issue list --label area:<vertical>` needs no project, no GraphQL and no field id, and
+the SessionStart hook and `.claude/rules/` both print it. Every issue must carry one;
+`.github/workflows/issue-area-guard.yml` labels `needs-area` on any that does not.
+
+Each folder also has a short `README.md` so it lands somewhere legible when opened on github.com.
+Those are orientation — what the folder is for and the rule that governs it — and carry
+`<!-- docs-index: delegated -->`, which tells `pnpm docs:check` that **this file remains the one
+index**. Do not start a second catalog in a folder README; a doc missing from _this_ page is still
+an integrity error.
 
 Library evaluations for unbuilt work moved to
 [`reports/library-candidates.md`](reports/library-candidates.md).

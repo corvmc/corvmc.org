@@ -1,7 +1,8 @@
 ---
 name: Bug
 about: Something behaves incorrectly
-labels: bug, needs-triage
+type: Bug
+labels: needs-triage
 ---
 
 ## What happens

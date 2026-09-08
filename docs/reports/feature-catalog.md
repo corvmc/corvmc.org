@@ -14,8 +14,8 @@ else finds out the feature exists.
 
 **Status legend:** ✅ Built · 📋 Designed, not built (see the linked spec)
 
-**Not here:** unbuilt ideas are `enhancement` issues, design intent for unbuilt features
-in [`docs/specs/`](../specs), tech debt is `tech-debt` issues, and how the eight core
+**Not here:** unbuilt ideas are `Feature` issues, design intent for unbuilt features
+in [`docs/specs/`](../specs), tech debt is `Tech debt` issues, and how the eight core
 workflows actually behave in
 [development/business-workflows.md](../development/business-workflows.md).
 

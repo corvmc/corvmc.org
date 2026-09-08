@@ -8,6 +8,11 @@
 # GitHub does not fix that by itself. This does: a session cannot claim not to
 # know the tracker exists if the counts are already in front of it.
 #
+# Bug/Feature/Tech debt/Task are GitHub issue *types*, not labels: a type is
+# single-select, so an issue cannot be two of them at once, which is the reason
+# `tech-debt` and `enhancement` stopped being labels. `untyped` is printed when
+# it is non-zero because an issue with no type is one the vocabulary missed.
+#
 # What it deliberately does NOT do is print the issues. A hundred titles is a
 # couple of thousand tokens on every request for the whole session, which buys
 # recall of a list the session has no reason to read top to bottom. The counts
@@ -37,21 +42,23 @@ run_gh() {
 	fi
 }
 
-issues=$(run_gh issue list --state open --limit 300 --json number,title,labels 2>/dev/null) || exit 0
+issues=$(run_gh issue list --state open --limit 300 --json number,title,labels,issueType 2>/dev/null) || exit 0
 [ -n "$issues" ] || exit 0
 [ "$(jq 'length' <<<"$issues" 2>/dev/null || echo 0)" -gt 0 ] || exit 0
 
 jq -r '
   def labels: [.labels[].name];
+  def oftype($t): map(select(.issueType.name? == $t)) | length | "\($t) \(.)";
+  def oflabel($l): map(select(labels | index($l))) | length | "\($l) \(.)";
   "Open GitHub issues: \(length). This is the backlog — CHORES.md and IDEAS.md are gone.",
   "  " + ([
-      (map(select(labels | index("tech-debt")))   | length | "tech-debt \(.)"),
-      (map(select(labels | index("bug")))         | length | "bug \(.)"),
-      (map(select(labels | index("enhancement"))) | length | "enhancement \(.)"),
-      (map(select(labels | index("spec")))        | length | "spec \(.)"),
-      (map(select(labels | index("flaky")))       | length | "flaky \(.)"),
-      (map(select(labels | index("ci-failure")))  | length | "ci-failure \(.)")
+      oftype("Bug"), oftype("Feature"), oftype("Tech debt"), oftype("Task"),
+      (map(select(.issueType == null)) | length | "untyped \(.)")
     ] | map(select(test(" 0$") | not)) | join(" · ")),
+  ([
+      oflabel("spec"), oflabel("needs-area"), oflabel("flaky"), oflabel("ci-failure")
+    ] | map(select(test(" 0$") | not))
+    | if length == 0 then empty else "  " + join(" · ") end),
   "  Scoped by vertical: gh issue list --label area:<events|bands|money|…>",
   "  Free text:          gh issue list --state open --search '"'"'<terms>'"'"'",
   (map(select(labels | index("needs-triage"))) |
