@@ -73,19 +73,52 @@ cancel. So a pool gets a key and the invariant is read per pool:
 
 ```
 sum(amountCents) where kind = 'pass_through' and settlementGroup = <event>
-    == 0   settled
-     > 0   money held and still owed
-     < 0   paid out more than came in; a top-up mis-booked as pass-through
 ```
 
-"What do we owe acts right now" is the sum over unsettled groups — a number that exists nowhere
-today.
+**Closure is a fact, not an inference.** The sum alone conflates "still owed" with "we took a
+loss", so it is read against `production.status`, which already reaches `settled` and then `closed`:
+
+| Production status    | Pool sum | Means                                                     |
+| -------------------- | -------- | --------------------------------------------------------- |
+| Before `settled`     | `> 0`    | Money held and still owed                                 |
+| `settled` / `closed` | `== 0`   | Clean                                                     |
+| `settled` / `closed` | `< 0`    | A post-settlement refund the collective absorbed          |
+| `settled` / `closed` | `> 0`    | **Money arrived after settlement and nobody paid it out** |
+
+"What do we owe acts right now" is the sum over groups whose production has not settled — a number
+that exists nowhere today. The last row falls out for free and is worth having: a door sale
+reconciled late, or a comp converted after the night, leaves an act genuinely underpaid and nothing
+would currently notice.
 
 **It is a key, not a constraint.** It identifies associated rows and enforces nothing, so a pool
 that legitimately does not balance is recordable and visible rather than refused. Four ledger
 systems reach this same answer in four vocabularies —
 [ledger-reconciliation-prior-art.md](../reports/ledger-reconciliation-prior-art.md) has the survey,
 and what was deliberately not adopted.
+
+### A pool that goes negative stays negative
+
+A refunded ticket reverses its entries whether or not the act has been paid. If settlement has
+already run, the pool goes negative and **stays** there. A $20 ticket split $6/$14, settled, then
+refunded:
+
+| Entry                    | `earned` | `pass_through` |
+| ------------------------ | -------- | -------------- |
+| Sale                     | +$6      | +$14           |
+| Settlement pays the act  |          | −$14           |
+| Refund reverses the sale | −$6      | −$14           |
+| **Total**                | **$0**   | **−$14**       |
+
+The collective took $20, paid the act $14, and returned $20 — it is $14 down, and the pool balance
+is that number, correctly signed. **No compensating entry.** Writing a `spent` −$14 to "record the
+loss" would make it −$28 and count money that only left once.
+
+The loss therefore lives in `pass_through` rather than `spent`, so an expense total will not include
+it. That is right rather than missing: `pass_through` nets to zero when nothing goes wrong, so a
+non-zero balance **is** the anomaly, and the report that matters is "pools that did not settle to
+zero" — not a line in the cost report. It cuts against the rounding rule above, where a cost got its
+own `spent` category to stay visible; the difference is that rounding is money leaving on purpose,
+and this is money that left and then did not come back.
 
 ### Category is a `config.ts` const, not a table
 
@@ -259,12 +292,6 @@ figures here orient rather than attest.
 | **#605** inventory spend        | `spendByCategory()` over `acquisition` only                          | Contractor and PO spend included |
 | **In-kind disclosure**          | `inKindContributions()` written and unused                           | `kind = 'in_kind'`               |
 | **#612** `ticket.paymentMethod` | Added to say "retires into a payment table when donations force one" | `settlement`                     |
-
-## Open questions
-
-1. **What does a refund after settlement do to a closed pool?** The act is already paid, so the pool
-   goes negative and the collective ate it. That is believed correct; it should be confirmed rather
-   than "fixed" by suppressing the reversal.
 
 ## Not in this spec
 
