@@ -5,6 +5,7 @@ import {
 	putPrivateObject,
 	getPrivateObject,
 	deletePrivateObject,
+	listPrivateObjects,
 	validatePrivateUpload,
 	PRIVATE_ALLOWED_TYPES,
 	MAX_DOCUMENT_BYTES
@@ -19,8 +20,9 @@ import * as privateStorage from './private-storage';
 const put = vi.fn(async () => undefined);
 const get = vi.fn(async () => null);
 const del = vi.fn(async () => undefined);
+const list = vi.fn(async () => ({ objects: [], truncated: false }) as unknown);
 
-const bucket = { put, get, delete: del } as unknown as R2Bucket;
+const bucket = { put, get, delete: del, list } as unknown as R2Bucket;
 
 function fileOf(type: string, size: number, name = 'doc'): File {
 	// A File whose byte length would actually cost that much to allocate is not
@@ -132,5 +134,35 @@ describe('validatePrivateUpload', () => {
 	it('does not raise the 10MB cap the public bucket enforces', () => {
 		// 10MB is `storage.ts`'s hard cap; documents deliberately go past it.
 		expect(validatePrivateUpload(fileOf('application/pdf', 11 * 1024 * 1024))).toBeNull();
+	});
+});
+
+describe('listPrivateObjects', () => {
+	it('returns keys and upload times, and nothing else off the R2 object', async () => {
+		const uploaded = new Date('2026-01-01T00:00:00Z');
+		list.mockResolvedValueOnce({
+			objects: [{ key: 'groups/g1/documents/f1.pdf', uploaded, size: 12, etag: 'e' }],
+			truncated: false
+		});
+
+		const page = await listPrivateObjects('groups/');
+
+		expect(page.objects).toEqual([{ key: 'groups/g1/documents/f1.pdf', uploaded }]);
+		expect(page.cursor).toBeUndefined();
+	});
+
+	it('passes the prefix and cursor through to the bucket', async () => {
+		await listPrivateObjects('groups/', 'c1');
+
+		expect(list).toHaveBeenCalledWith({ prefix: 'groups/', cursor: 'c1', limit: 1000 });
+	});
+
+	/** A cursor on an untruncated page would make the caller loop forever. */
+	it('returns a cursor only when the page is truncated', async () => {
+		list.mockResolvedValueOnce({ objects: [], truncated: true, cursor: 'next' });
+		expect((await listPrivateObjects('groups/')).cursor).toBe('next');
+
+		list.mockResolvedValueOnce({ objects: [], truncated: false, cursor: 'stale' });
+		expect((await listPrivateObjects('groups/')).cursor).toBeUndefined();
 	});
 });

@@ -50,13 +50,19 @@ export const CAMPAIGN_LAYOUT = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Tra
     img { -ms-interpolation-mode:bicubic; border:0; outline:none; text-decoration:none; max-width:100%; }
     body { margin:0 !important; padding:0 !important; width:100% !important; }
 
-    .content h1, .content h2, .content h3 {
+    .content h1, .content h2, .content h3,
+    .content h4, .content h5, .content h6 {
       margin:0 0 14px; font-family:${FONT}; font-weight:700;
       line-height:1.15; letter-spacing:-0.01em; color:${BRAND.navy};
     }
     .content h1 { font-size:32px; }
     .content h2 { font-size:24px; }
     .content h3 { font-size:19px; }
+    /* Styled, not just h1-h3: an unstyled h4 falls through to the client's
+       default and arrives as undersized Times. */
+    .content h4 { font-size:17px; }
+    .content h5 { font-size:15px; }
+    .content h6 { font-size:14px; }
     .content p, .content li {
       font-family:${FONT}; font-size:16px; line-height:1.6; color:${BRAND.muted};
     }
@@ -84,7 +90,10 @@ export const CAMPAIGN_LAYOUT = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Tra
       .logo-plate { background:${BRAND.cream} !important; padding:10px 16px !important; }
       .footer-bg { background:${BRAND.dark.panel} !important; }
       .footer-bg a, .footer-bg div { color:${BRAND.dark.muted} !important; }
-      .content h1, .content h2, .content h3 { color:${BRAND.dark.text} !important; }
+      .content h1, .content h2, .content h3,
+      .content h4, .content h5, .content h6 { color:${BRAND.dark.text} !important; }
+      .btn-cell { background:${BRAND.dark.orange} !important; border-color:${BRAND.dark.orange} !important; border-right-color:#000000 !important; border-bottom-color:#000000 !important; }
+      .btn-cell a { color:#ffffff !important; }
       .content p, .content li, .content blockquote { color:${BRAND.dark.muted} !important; }
       .content a { color:${BRAND.dark.teal} !important; }
       .content blockquote { background:${BRAND.dark.panel} !important; border-color:${BRAND.dark.stroke} !important; }
@@ -128,12 +137,11 @@ export const CAMPAIGN_LAYOUT = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Tra
             <a href="https://corvmc.org" target="_blank" style="${footerLink}">corvmc.org</a>
             <span style="color:${BRAND.brown};">&middot;</span>
             <a href="https://instagram.com/corvmc" target="_blank" style="${footerLink}">@corvmc</a>
-            <span style="color:${BRAND.brown};">&middot;</span>
-            <a href="mailto:contact@corvmc.org" style="${footerLink}">contact@corvmc.org</a>
           </div>
-          <div style="font-family:${FONT}; font-size:12px; line-height:1.6; color:${BRAND.brown};">
+          <div class="footer-fine" style="font-family:${FONT}; font-size:12px; line-height:1.6; color:${BRAND.brown};">
             Corvallis Music Collective &middot; 501(c)(3) nonprofit<br>
-            6775 SW Philomath Blvd, Corvallis, OR 97333
+            6775 SW Philomath Blvd, Corvallis, OR 97333<br>
+            <a href="mailto:contact@corvmc.org" style="color:${BRAND.brown}; text-decoration:underline;">contact@corvmc.org</a>
           </div>
           <div style="margin-top:14px; font-family:${FONT}; font-size:12px; line-height:1.6; color:${BRAND.brown};">
             {{FOOTER}}

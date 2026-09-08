@@ -111,6 +111,28 @@ export async function deletePrivateObject(key: string): Promise<void> {
 	await getPrivateBucket().delete(key);
 }
 
+/** One listed object. Deliberately not an `R2Object`: nothing downstream needs its body or metadata. */
+export type PrivateObjectSummary = { key: string; uploaded: Date };
+
+/**
+ * One page of keys under `prefix`, and a cursor when more remain.
+ *
+ * The sweep's only way to see an object whose row is gone. Paged rather than
+ * exhaustive because a bucket is unbounded and a cron isolate is not, so the
+ * caller decides how much of it one run may walk.
+ */
+export async function listPrivateObjects(
+	prefix: string,
+	cursor?: string
+): Promise<{ objects: PrivateObjectSummary[]; cursor: string | undefined }> {
+	const page = await getPrivateBucket().list({ prefix, cursor, limit: 1000 });
+
+	return {
+		objects: page.objects.map((object) => ({ key: object.key, uploaded: object.uploaded })),
+		cursor: page.truncated ? page.cursor : undefined
+	};
+}
+
 // ---------------------------------------------------------------------------
 // Document policy
 // ---------------------------------------------------------------------------

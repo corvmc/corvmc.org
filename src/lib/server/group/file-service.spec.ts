@@ -123,6 +123,7 @@ const {
 	remove,
 	listAllKeys,
 	listSweepCandidates,
+	listExistingKeys,
 	deleteRows,
 	FileNotFoundError,
 	DocumentsNotAvailableError,
@@ -480,6 +481,35 @@ describe('the reaper reads', () => {
 		const where = lastWhere();
 		expect(where).toContain('"deleted_at" is not null');
 		expect(where).toContain('"deleted_at" < ?');
+	});
+
+	/**
+	 * The orphan pass reaps on a proven absence, so this must count a
+	 * soft-deleted row as present — otherwise a document inside its undo week is
+	 * reaped by the pass that owes it no grace.
+	 */
+	it('listExistingKeys asks about keys without filtering on deleted_at', async () => {
+		selectQueue.push([{ key: 'k1' }]);
+
+		const found = await listExistingKeys(['k1', 'k2']);
+
+		expect(found).toEqual(new Set(['k1']));
+		const where = lastWhere();
+		expect(where).toContain('"key" in (?, ?)');
+		expect(where).not.toContain('deleted_at');
+	});
+
+	it('listExistingKeys chunks under D1 parameter cap', async () => {
+		const keys = Array.from({ length: 200 }, (_, i) => `k${i}`);
+
+		await listExistingKeys(keys);
+
+		expect(statements.filter((s) => s.op === 'select')).toHaveLength(3);
+	});
+
+	it('listExistingKeys issues no statement for an empty list', async () => {
+		expect(await listExistingKeys([])).toEqual(new Set());
+		expect(statements).toHaveLength(0);
 	});
 
 	it('deleteRows chunks under D1 parameter cap', async () => {

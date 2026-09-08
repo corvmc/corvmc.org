@@ -25,8 +25,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		throw error(401, 'Unauthorized');
 	}
 
-	// Two reapers, one schedule. They share nothing — media's passes feed each
-	// other, group documents' do not — so they run concurrently rather than in
+	// Two reapers, one schedule. Each orders its own passes internally; the two
+	// share no table and no bucket, so they run concurrently rather than in
 	// sequence, and the route keeps its name because `wrangler.toml`,
 	// `cron/schedule.ts` and the docs snapshot all name it.
 	const [media, files] = await Promise.all([sweepMedia(), sweepGroupFiles()]);

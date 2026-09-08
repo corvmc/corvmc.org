@@ -34,6 +34,7 @@ import {
 } from '$lib/server/marketing/campaign-service';
 import {
 	findOrCreateByEmail,
+	linkSubscriberToExistingUser,
 	findByUserId as findSubscriberByUserId,
 	suppressSelfService,
 	clearSelfServiceSuppression
@@ -74,6 +75,9 @@ export const subscribeToAudience = form(
 		const aud = await getAudienceBySlug(data.slug);
 		if (!aud || !aud.allowOptIn) throw error(404, 'List not found');
 		const sub = await findOrCreateByEmail(data.email.trim().toLowerCase(), data.name?.trim());
+		// The reverse of the signup link: a member subscribing while signed out
+		// would otherwise leave the row orphaned from their account.
+		if (!sub.userId) await linkSubscriberToExistingUser(sub.id, sub.email);
 		// Signing up again is an explicit request for mail, so it lifts a previous
 		// "unsubscribe from all" — otherwise this form would report success while
 		// suppression silently kept every campaign away.
@@ -310,6 +314,7 @@ export const addSubscriber = form(
 		}
 
 		const sub = await findOrCreateByEmail(email, (data.name as string)?.trim() || undefined);
+		if (!sub.userId) await linkSubscriberToExistingUser(sub.id, sub.email);
 		await addSubscriberService(data.audienceId as string, sub.id);
 
 		void getStaffAudienceDetail(data.audienceId as string).refresh();
