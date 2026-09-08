@@ -1,10 +1,7 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import BandReservationCard from '$lib/components/reservations/BandReservationCard.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { getBandUpcoming } from '$lib/remote/bands.remote';
@@ -71,24 +68,9 @@
 			{#if sessions.length === 0}
 				<EmptyState message="No upcoming sessions scheduled." />
 			{:else}
-				<div class="grid grid-cols-1 gap-3">
+				<div class="grid grid-cols-1">
 					{#each sessions as res (res.id)}
-						<Card>
-							<CardBody row class="py-4">
-								<EntityIdentity ref={res.ref} size="md">
-									{#snippet subtitle()}
-										{res.ref.subtitle}
-										{#if res.bookedBy.id}
-											&middot; Booked by {res.bookedBy.title}
-										{/if}
-										{#if res.notes}
-											&middot; {res.notes}
-										{/if}
-									{/snippet}
-								</EntityIdentity>
-								<StatusBadge status={res.status} />
-							</CardBody>
-						</Card>
+						<BandReservationCard reservation={res} slug={band.slug} />
 					{/each}
 				</div>
 			{/if}
