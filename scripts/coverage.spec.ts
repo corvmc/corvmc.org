@@ -18,9 +18,11 @@
  * else imports it is not covered in any useful sense, because deleting that
  * import would drop it back out without a word.
  */
-import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { globSync } from 'node:fs';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { globSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, relative } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = new URL('../', import.meta.url);
 
@@ -34,7 +36,10 @@ const IGNORED = [
 	'dist/**',
 	'.wrangler/**',
 	'coverage/**',
-	'storybook-static/**'
+	'storybook-static/**',
+	// Vitest browser mode names a failure screenshot's directory after the spec
+	// that failed, so this tree is full of directories called `*.spec.ts`.
+	'test-results/**'
 ];
 
 /**
@@ -55,9 +60,24 @@ const EXEMPT: Record<string, string> = {
 	'worker.js': 'imports a build artifact that does not exist at check time'
 };
 
+/**
+ * Every glob in this file goes through here, for two reasons: each takes its
+ * root as an argument so the fixture at the bottom can point it at a tree with
+ * a known answer, and each drops anything that is not a regular file. A
+ * directory named `Action.svelte.spec.ts` is a screenshot, not a source file,
+ * and the ignore list above can only ever name the tools we already know write
+ * one.
+ */
+function filesMatching(pattern: string, root: URL): string[] {
+	const base = fileURLToPath(root);
+	return globSync(pattern, { cwd: root, exclude: IGNORED, withFileTypes: true })
+		.filter((entry) => entry.isFile())
+		.map((entry) => relative(base, join(entry.parentPath, entry.name)).replaceAll('\\', '/'));
+}
+
 /** tsconfig files are JSONC — strip comments before parsing. */
-function readJsonc(path: string): { include?: string[]; exclude?: string[] } {
-	const raw = readFileSync(new URL(path, ROOT), 'utf8');
+function readJsonc(path: string, root: URL): { include?: string[]; exclude?: string[] } {
+	const raw = readFileSync(new URL(path, root), 'utf8');
 	return JSON.parse(raw.replace(/^\s*\/\/.*$/gm, ''));
 }
 
@@ -66,9 +86,9 @@ function readJsonc(path: string): { include?: string[]; exclude?: string[] } {
  * holding the config. The generated config lives in `.svelte-kit/`, so its
  * globs read `../src/**` and have to be normalised against the repo root.
  */
-function globsOf(configPath: string): string[] {
+function globsOf(configPath: string, root: URL = ROOT): string[] {
 	const dir = configPath.includes('/') ? configPath.slice(0, configPath.lastIndexOf('/') + 1) : '';
-	return (readJsonc(configPath).include ?? []).map((pattern) => {
+	return (readJsonc(configPath, root).include ?? []).map((pattern) => {
 		const joined = `${dir}${pattern}`;
 		// Collapse a single leading `../` that points back at the repo root.
 		return joined.replace(/^[^/]+\/\.\.\//, '');
@@ -77,17 +97,15 @@ function globsOf(configPath: string): string[] {
 
 const PROJECTS = ['tsconfig.tooling.json', '.svelte-kit/tsconfig.json'];
 
-function sourceFiles(): string[] {
-	return globSync(SOURCE_GLOB, { cwd: ROOT, exclude: IGNORED }).map((p) => p.replaceAll('\\', '/'));
+function sourceFiles(root: URL = ROOT): string[] {
+	return filesMatching(SOURCE_GLOB, root);
 }
 
-function coveredFiles(): Set<string> {
+function coveredFiles(root: URL = ROOT): Set<string> {
 	const covered = new Set<string>();
 	for (const project of PROJECTS) {
-		for (const pattern of globsOf(project)) {
-			for (const file of globSync(pattern, { cwd: ROOT, exclude: IGNORED })) {
-				covered.add(file.replaceAll('\\', '/'));
-			}
+		for (const pattern of globsOf(project, root)) {
+			for (const file of filesMatching(pattern, root)) covered.add(file);
 		}
 	}
 	return covered;
@@ -127,7 +145,7 @@ describe('test discovery', () => {
 		// The vitest project globs match `.spec` only, so a `.test.ts` is a file
 		// full of assertions that nothing ever runs — the failure mode being that
 		// it looks exactly like passing.
-		const misnamed = globSync('**/*.test.{ts,js,svelte.ts}', { cwd: ROOT, exclude: IGNORED });
+		const misnamed = filesMatching('**/*.test.{ts,js,svelte.ts}', ROOT);
 
 		expect(misnamed, 'rename to `.spec.ts` — the vitest globs do not match `.test`').toEqual([]);
 	});
@@ -135,10 +153,55 @@ describe('test discovery', () => {
 	it('keeps every spec under a root some vitest project scans', () => {
 		// `src/`, `scripts/` and `e2e/` are the three include roots in
 		// vite.config.ts. A spec outside them is the same silent no-op.
-		const stranded = globSync('**/*.spec.{ts,js}', { cwd: ROOT, exclude: IGNORED })
-			.map((p) => p.replaceAll('\\', '/'))
-			.filter((file) => !/^(src|scripts|e2e)\//.test(file));
+		const stranded = filesMatching('**/*.spec.{ts,js}', ROOT).filter(
+			(file) => !/^(src|scripts|e2e)\//.test(file)
+		);
 
 		expect(stranded, 'no vitest project includes these').toEqual([]);
+	});
+});
+
+describe('the glob everything above runs on', () => {
+	// Vitest browser mode writes a failure screenshot into a DIRECTORY named
+	// after the spec — `test-results/screenshots/…/Action.svelte.spec.ts`. A
+	// plain glob hands that back as if it were a source file, and both gates
+	// above then fail on a spec they have nothing to do with. Screenshots are
+	// written only in CI (locally they need `--browser.screenshotFailures`), so
+	// the fixture builds the shape by hand.
+	let dir: string;
+	let fixture: URL;
+
+	beforeAll(() => {
+		dir = mkdtempSync(join(tmpdir(), 'coverage-glob-'));
+		fixture = pathToFileURL(`${dir}/`);
+
+		const write = (rel: string, body: string) => {
+			const target = join(dir, rel);
+			mkdirSync(dirname(target), { recursive: true });
+			writeFileSync(target, body);
+		};
+
+		write('tsconfig.tooling.json', JSON.stringify({ include: ['covered/**/*.ts'] }));
+		write('.svelte-kit/tsconfig.json', JSON.stringify({ include: ['../src/**/*.ts'] }));
+		write('covered/a.ts', 'export {};');
+		write('src/b.ts', 'export {};');
+		write('stray/c.ts', 'export {};');
+
+		mkdirSync(join(dir, 'test-results/screenshots/src/Fake.svelte.spec.ts'), { recursive: true });
+		mkdirSync(join(dir, 'reports/Widget.svelte'), { recursive: true });
+	});
+
+	afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+	it('never counts a directory named like a source file', () => {
+		// `reports/` is in no ignore list: the file-type filter is what excludes
+		// it, so this keeps failing if only the `test-results/**` entry is kept.
+		expect(sourceFiles(fixture).sort()).toEqual(['covered/a.ts', 'src/b.ts', 'stray/c.ts']);
+	});
+
+	it('still reports a source file that no project compiles', () => {
+		const covered = coveredFiles(fixture);
+
+		expect(sourceFiles(fixture).filter((file) => !covered.has(file))).toEqual(['stray/c.ts']);
 	});
 });
