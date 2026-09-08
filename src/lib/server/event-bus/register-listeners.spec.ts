@@ -98,7 +98,7 @@ beforeAll(async () => {
 }, 60_000);
 
 describe('registerListeners', () => {
-	it('registers checkout.completed listeners for reservation, ticket, band premium and music fulfillment', async () => {
+	it('registers checkout.completed listeners for the four purchasables and the payment cache', async () => {
 		const { registerListeners } = await import('./register-listeners');
 		registerListeners();
 
@@ -106,11 +106,14 @@ describe('registerListeners', () => {
 		await vi.dynamicImportSettled();
 
 		expect(registeredHandlers['checkout.completed']).toBeDefined();
-		// One per purchasable. Each handler opens with a metadata guard and returns
-		// immediately when the session is not its own, so the count is the whole
-		// contract — a listener that failed to register would simply never fulfil,
-		// silently.
-		expect(registeredHandlers['checkout.completed'].length).toBe(4);
+		// One per purchasable, plus the payment cache. Each handler opens with a
+		// metadata guard and returns immediately when the session is not its own,
+		// so the count is the whole contract — a listener that failed to register
+		// would simply never fulfil, silently.
+		//
+		// The fifth is the cache (#824), and it is last on purpose: the four above
+		// have already given the member what they paid for by the time it runs.
+		expect(registeredHandlers['checkout.completed'].length).toBe(5);
 	});
 
 	it('invokes handleReservationCheckout with stripe session', async () => {
