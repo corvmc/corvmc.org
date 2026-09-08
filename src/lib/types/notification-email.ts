@@ -61,4 +61,13 @@ export interface NotificationEmailPayload extends NotificationEmailModel {
 	has_details?: boolean;
 	/** Plain-text counterpart of `quote`, for the text/plain part. */
 	quote_text?: string;
+	/**
+	 * The category bar, from the notification type's `category`. Never set by a
+	 * caller: which bucket a notification belongs to is a property of its type.
+	 * `category_label` also opens the preheader, so the signal survives a reader
+	 * who cannot use the colour.
+	 */
+	category_label?: string;
+	category_color?: string;
+	category_class?: string;
 }

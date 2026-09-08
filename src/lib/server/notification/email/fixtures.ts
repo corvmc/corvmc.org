@@ -24,7 +24,10 @@ export const FIXTURES: Fixture[] = [
 		// leaves no empty card, button or callout behind.
 		model: {
 			subject: 'Your reservation was cancelled',
-			preview_text: 'Thursday, December 5 · 7:00 – 9:00 PM',
+			preview_text: 'Practice space · Thursday, December 5 · 7:00 – 9:00 PM',
+			category_label: 'Practice space',
+			category_color: '#00859b',
+			category_class: 'kicker-practice-space',
 			heading: 'Reservation Cancelled'
 		}
 	},
@@ -33,7 +36,10 @@ export const FIXTURES: Fixture[] = [
 		alias: 'notification',
 		model: {
 			subject: 'Practice space reminder',
-			preview_text: 'Thursday, December 5, 7:00 – 9:00 PM',
+			preview_text: 'Practice space · Thursday, December 5, 7:00 – 9:00 PM',
+			category_label: 'Practice space',
+			category_color: '#00859b',
+			category_class: 'kicker-practice-space',
 			heading: "You're Booked Thursday",
 			greeting: 'Hi Maya,',
 			paragraphs: [
@@ -60,7 +66,10 @@ export const FIXTURES: Fixture[] = [
 		// text-only template now — see `contact-alert` below.)
 		model: {
 			subject: 'A band claimed your listing',
-			preview_text: 'Indigo Kiss added a note to their claim',
+			preview_text: 'Shows & tickets · Indigo Kiss added a note to their claim',
+			category_label: 'Shows & tickets',
+			category_color: '#f84d13',
+			category_class: 'kicker-shows',
 			heading: 'Listing Claim Submitted',
 			paragraphs: [{ text: 'Indigo Kiss submitted a claim with this note:' }],
 			has_details: true,
@@ -77,12 +86,39 @@ export const FIXTURES: Fixture[] = [
 		}
 	},
 	{
+		name: 'notification-volunteer-shift',
+		alias: 'notification',
+		// The fifth category, and the only one whose bar changes colour between
+		// schemes rather than staying put — navy is 1.18:1 on the dark surface, so
+		// the layout swaps it the same way it already swaps `.navy-text`.
+		model: {
+			subject: "You're on for front of house",
+			preview_text: 'Volunteering & community · Saturday, December 7 · 6:30 PM',
+			category_label: 'Volunteering & community',
+			category_color: '#003b5c',
+			category_class: 'kicker-volunteering',
+			heading: "You're on the roster",
+			greeting: 'Hi Rosa,',
+			paragraphs: [{ text: 'Sam confirmed you for front of house on Saturday.' }],
+			has_details: true,
+			details: [
+				{ label: 'Role', value: 'Front of house' },
+				{ label: 'Date', value: 'Saturday, December 7' },
+				{ label: 'Arrive', value: '6:30 PM' }
+			],
+			cta: { url: 'https://corvmc.org/member/volunteer', label: 'View my shifts' }
+		}
+	},
+	{
 		name: 'notification-escaping',
 		alias: 'notification',
 		// Hostile input in every escaped field. Nothing here may render as markup.
 		model: {
 			subject: 'Escaping check',
-			preview_text: '<script>alert(1)</script>',
+			preview_text: 'People & messages · <script>alert(1)</script>',
+			category_label: 'People & messages',
+			category_color: '#ffb500',
+			category_class: 'kicker-people',
 			heading: '<script>alert("heading")</script>',
 			greeting: 'Hi <b>bold</b>,',
 			paragraphs: [{ text: '<script>alert(1)</script>' }, { text: 'Ampersand & "quotes"' }],
@@ -229,7 +265,11 @@ export const FIXTURES: Fixture[] = [
 		// template that carries `transactional_only`.
 		model: {
 			subject: 'Your CorvMC password was changed',
-			preview_text: 'Your password was reset and other sessions were signed out.',
+			preview_text:
+				'Membership & billing · Your password was reset and other sessions were signed out.',
+			category_label: 'Membership & billing',
+			category_color: '#e5771e',
+			category_class: 'kicker-membership',
 			heading: 'Your password was changed',
 			greeting: 'Hi Maya,',
 			paragraphs: [

@@ -1,6 +1,7 @@
 import { sendEmailWithTemplate } from './email/postmark-client';
 import { normalizeNotificationModel } from './email/normalize-model';
 import { NOTIFICATION_TYPES } from '$lib/server/db/schema/notification';
+import { NOTIFICATION_CATEGORIES } from '$lib/email/notification-category';
 import { createNotification } from './in-app-service';
 import { getPreference } from './preference-service';
 import { pushToUser } from './sse';
@@ -34,10 +35,14 @@ function prepareModel(
 	// Looked up from the registry rather than passed by the caller: whether a
 	// notification may quote a member is a property of what kind of notification
 	// it is, which is where every other per-type policy already lives.
-	const omitUserContent = NOTIFICATION_TYPES.find((t) => t.key === type)?.emailOmitsUserContent;
+	const def = NOTIFICATION_TYPES.find((t) => t.key === type);
 	return alias === GENERIC_ALIAS
 		? normalizeNotificationModel(model as unknown as NotificationEmailPayload, {
-				omitUserContent
+				omitUserContent: def?.emailOmitsUserContent,
+				// Same argument as omitUserContent: which bucket a notification falls
+				// in is a property of its type, not something ~40 call sites should
+				// each restate. An unregistered type simply renders no bar.
+				category: def && NOTIFICATION_CATEGORIES[def.category]
 			})
 		: model;
 }

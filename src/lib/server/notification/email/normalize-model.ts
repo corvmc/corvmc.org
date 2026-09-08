@@ -1,5 +1,6 @@
 import { escapeHtmlWithBreaks } from '$lib/utils/html';
 import type { NotificationEmailPayload } from '$lib/types/notification-email';
+import type { NotificationCategory } from '$lib/email/notification-category';
 
 // ---------------------------------------------------------------------------
 // Notification model normalization
@@ -49,6 +50,11 @@ function derivePreviewText(model: NotificationEmailPayload): string {
 
 export interface NormalizeOptions {
 	/**
+	 * The type's category, from the registry rather than the caller. Fills the
+	 * colour bar and opens the preheader with the category name.
+	 */
+	category?: NotificationCategory;
+	/**
 	 * Drop any member-written text before it reaches the mail server.
 	 *
 	 * Set from the notification type's `emailOmitsUserContent`, not by the
@@ -91,5 +97,27 @@ export function normalizeNotificationModel(
 		normalized.quote_text = model.quote;
 	}
 
+	if (options.category) {
+		normalized.category_label = options.category.label;
+		normalized.category_color = options.category.light;
+		normalized.category_class = options.category.className;
+		normalized.preview_text = withCategory(options.category.label, normalized.preview_text);
+	}
+
 	return normalized as unknown as Record<string, unknown>;
+}
+
+/**
+ * Open the inbox preview with the category, so the signal the colour bar gives
+ * sighted readers is also there in text — before the mail is even opened, and
+ * whatever the client does to the colours. Re-applying is a no-op, which keeps
+ * `normalizeNotificationModel` idempotent.
+ */
+function withCategory(label: string, preview: string | undefined): string {
+	const rest = preview?.trim() ?? '';
+	if (rest.startsWith(label)) return rest;
+	const joined = rest ? `${label} · ${rest}` : label;
+	return joined.length > PREVIEW_TEXT_MAX
+		? `${joined.slice(0, PREVIEW_TEXT_MAX - 1).trimEnd()}…`
+		: joined;
 }

@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getNotificationType } from '$lib/server/db/schema/notification';
+import { NOTIFICATION_CATEGORIES } from '$lib/email/notification-category';
 
 vi.mock('./email/postmark-client', () => ({ sendEmailWithTemplate: vi.fn() }));
 vi.mock('./in-app-service', () => ({ createNotification: vi.fn() }));
@@ -201,6 +203,14 @@ describe('notification model normalization', () => {
 		vi.resetAllMocks();
 	});
 
+	/**
+	 * The preheader opens with the notification's category (#645), so these
+	 * assertions carry the prefix. Read from the registry rather than written
+	 * out, so re-categorising `contact_form` does not fail three derivation
+	 * tests that are not about categories.
+	 */
+	const PREFIX = `${NOTIFICATION_CATEGORIES[getNotificationType('contact_form')!.category].label} · `;
+
 	async function sentModel(model: Record<string, unknown>) {
 		await dispatchEmailOnly({
 			type: 'contact_form',
@@ -218,13 +228,13 @@ describe('notification model normalization', () => {
 			paragraphs: [{ text: 'Your reservation has been cancelled.' }]
 		});
 
-		expect(model.preview_text).toBe('Your reservation has been cancelled.');
+		expect(model.preview_text).toBe(`${PREFIX}Your reservation has been cancelled.`);
 	});
 
 	it('falls back to the heading when there are no paragraphs', async () => {
 		const model = await sentModel({ subject: 's', heading: 'Reservation Cancelled' });
 
-		expect(model.preview_text).toBe('Reservation Cancelled');
+		expect(model.preview_text).toBe(`${PREFIX}Reservation Cancelled`);
 	});
 
 	it('does not overwrite a preview_text the caller wrote', async () => {
@@ -235,7 +245,7 @@ describe('notification model normalization', () => {
 			paragraphs: [{ text: 'Generic opening line.' }]
 		});
 
-		expect(model.preview_text).toBe('May 21, 10:00 AM – 11:00 AM');
+		expect(model.preview_text).toBe(`${PREFIX}May 21, 10:00 AM – 11:00 AM`);
 	});
 
 	it('sets has_details only when there are rows', async () => {
@@ -335,7 +345,11 @@ describe('emailOmitsUserContent', () => {
 			}
 		});
 		const model = sendEmailWithTemplate.mock.calls[0][0].model;
-		expect(model.preview_text).toBe('');
+		// The category is all that is left: it comes from the type, not the
+		// member, and it is already what the subject says. Nothing of the body.
+		const category =
+			NOTIFICATION_CATEGORIES[getNotificationType('direct_message_received')!.category];
+		expect(model.preview_text).toBe(category.label);
 	});
 
 	it('leaves other notification types alone', async () => {

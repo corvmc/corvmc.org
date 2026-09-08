@@ -1,4 +1,6 @@
-{{#heading}}{{{heading}}}
+{{#category_label}}{{{category_label}}}
+
+{{/category_label}}{{#heading}}{{{heading}}}
 
 {{/heading}}{{#greeting}}{{{greeting}}}
 
