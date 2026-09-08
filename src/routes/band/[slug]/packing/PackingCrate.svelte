@@ -9,13 +9,12 @@
 	import type { PackingItemRowState } from '$lib/types/packing';
 
 	/**
-	 * One person's crate — or the band's shared kit, which is what a null owner
-	 * means.
+	 * One person's crate — or the band's shared kit, which a null owner means.
 	 *
-	 * The component picks its own remote function from `mine`, and that is the
-	 * whole permission story on the client: a member's save runs through
-	 * `savePackingItems`, which takes no owner and writes against the guard's
-	 * user. No code path here can ask to edit somebody else's rows.
+	 * `mine` picks the remote function, and that is the whole client-side
+	 * permission story: a member's save runs through `savePackingItems`, which
+	 * takes no owner and writes against the guard's user, so no path here can
+	 * ask to edit somebody else's rows.
 	 */
 	let {
 		bandId,

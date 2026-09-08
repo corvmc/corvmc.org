@@ -216,14 +216,12 @@ export const assignPackingItem = form(
 );
 
 /**
- * Tick or untick one row.
- *
- * Guarded at `member` and no further: ownership governs who says what the band
+ * Tick or untick one row. Guarded at `member`: ownership governs what the band
  * brings, not who may carry a box.
  *
- * `packed` is a `'0' | '1'` enum rather than a boolean: kit's boolean coercion
- * keys off a `b:` field-name prefix, which a hidden input driven by a button
- * does not carry, and the failure is reported as the boolean's own error.
+ * `packed` is a `'0' | '1'` enum rather than a boolean because kit's boolean
+ * coercion keys off a `b:` field-name prefix, which a hidden input driven by a
+ * button does not carry — and the failure surfaces as the boolean's own error.
  */
 export const setPackingItemPacked = form(
 	z.object({ bandId: bandIdField, itemId: itemIdField, packed: z.enum(['0', '1']) }),

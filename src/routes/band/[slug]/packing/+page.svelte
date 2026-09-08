@@ -23,14 +23,11 @@
 
 	/**
 	 * What goes in the van, who is bringing it, and whether it is loaded yet.
-	 *
-	 * **Every member gets this page**, like the rider and for the same reason:
-	 * the person who knows what their amp needs is the person who owns the amp.
-	 * Writes are still split — a member's save only touches their own rows.
+	 * Every member gets this page; a member's save touches only their own rows.
+	 * Rationale: docs/specs/packing-list-spec.md
 	 *
 	 * Read above the awaited query: a declaration after a top-level await is
-	 * async-gated, which would compile every `fields.X.as()` into an async
-	 * derived.
+	 * async-gated, which compiles every `fields.X.as()` into an async derived.
 	 */
 	const notesFields = savePackingNotes.fields;
 	const resetFields = resetPackingList.fields;
