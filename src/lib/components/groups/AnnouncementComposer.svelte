@@ -10,7 +10,7 @@
 	 *
 	 * Mount-agnostic: it takes its group as a prop and knows nothing about either
 	 * route, because the same component is the band panel's composer and the club
-	 * page's. See docs/specs/groups-spec.md § One implementation, two mount points.
+	 * page's. See docs/specs/shipped/groups-spec.md § One implementation, two mount points.
 	 *
 	 * Writing is not publishing. What this saves is a draft — the roster hears
 	 * nothing until somebody presses Publish — which is why the submit button

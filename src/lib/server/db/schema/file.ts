@@ -5,7 +5,7 @@ import { group } from './group';
 
 /**
  * A document a group holds for its own members. Phase 8 of
- * `docs/specs/groups-spec.md`.
+ * `docs/specs/shipped/groups-spec.md`.
  *
  * **A file store, not a document tool.** Members upload files produced
  * elsewhere — minutes from whatever word processor the committee already uses,

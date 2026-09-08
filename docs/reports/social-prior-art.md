@@ -319,7 +319,7 @@ Paid downloads need storage the public cannot address by key. There is **one** R
 today (`R2_BUCKET` → `corvmc`), served publicly at `media.corvmc.org`.
 
 `R2_PRIVATE` / `corvmc-private` — "no custom domain and no public access" — is designed in
-[groups-spec.md](../specs/groups-spec.md) and unbuilt. **Three unrelated features wait on
+[groups-spec.md](../specs/shipped/groups-spec.md) and unbuilt. **Three unrelated features wait on
 it:** group documents (that spec), contractor invoices (whose schema comment says outright
 that an invoice with hourly rates "has no business being addressable by key… revisit when a
 private bucket exists"), and now digital sales. That shared dependency raises its priority

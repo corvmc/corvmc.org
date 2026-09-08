@@ -13,7 +13,10 @@ existing `event`, carrying the lineup, the schedule, the checklists, and the set
 It adds a real `venue` table, and it lets a touring act with no account be a first-class
 lineup entry — and later claim its own profile without the show history being rewritten.
 
-Everything here is staff-facing and gated behind a `productions` feature flag.
+Everything here is staff-facing. It is not behind a feature flag — this sentence used to say a
+`productions` flag gated it, which was never one of the eleven flags and could not have been:
+the flags were retired in favour of long-lived feature branches
+([feature-flag-retirement](../plans/feature-flag-retirement.md)).
 
 ---
 
@@ -192,7 +195,7 @@ Everything here is staff-facing and gated behind a `productions` feature flag.
 > `/staff/productions` the CMC work index. See
 > [staff-events-split-spec.md](shipped/staff-events-split-spec.md) §6.
 
-> **The band/group boundary is defined by [groups-spec.md](groups-spec.md), not here.** That spec
+> **The band/group boundary is defined by [groups-spec.md](shipped/groups-spec.md), not here.** That spec
 > splits today's `band` table into `group` (the managed organization: roster, roles, slug,
 > announcements, documents) and `band_profile` (the musical identity: genres, links, tier, EPK).
 > An external act is a `band_profile` with no group. Sections below that used to describe external
@@ -229,7 +232,7 @@ member and non-member acts without a polymorphic column, and an act that later j
 Collective keeps every production it ever played.
 
 This is also why lineups are **not** modeled with `event_group`, the co-billing join
-introduced in [groups-spec.md](groups-spec.md). `production_slot` carries set times, set
+introduced in [groups-spec.md](shipped/groups-spec.md). `production_slot` carries set times, set
 lengths, ordering, and per-act settlement; `event_group` carries only which member groups a
 band-authored event is advertised on. A production uses `production_slot`; a member-authored
 event uses `event_group`; nothing uses both.
@@ -420,7 +423,7 @@ The objection the second draft raised against a separate table — "a painful me
 the act joins" — does not apply, because nothing merges. Claiming creates a group, moves
 name/description/avatar onto it, and links the existing profile; every production the act
 ever played is already attached to that profile and stays attached. See
-[Claiming an external act](groups-spec.md#claiming-an-external-act).
+[Claiming an external act](shipped/groups-spec.md#claiming-an-external-act).
 
 **`band.ownerId` is still dropped**, for the reasons below; ownership is now a
 `group_member` row with `role: 'owner'`, enforced by a partial unique index on
@@ -532,7 +535,7 @@ What matters for this migration specifically:
 `group_invite` to the act's contact email with `role: 'owner'` — the role column is already
 typed as the full role tuple (`['owner', 'admin', 'member']`), so no schema change. Claiming
 is the two-part operation described in
-[groups-spec.md](groups-spec.md#claiming-an-external-act): a `group` is created for the
+[groups-spec.md](shipped/groups-spec.md#claiming-an-external-act): a `group` is created for the
 profile, and the invitee's `group_member` row is inserted with the invited role when they
 sign up. There is no `claimStatus` to flip and no `ownerId` to backfill.
 
@@ -1138,7 +1141,7 @@ active productions unless the closed filter is on.
 ### The gig-guide attribution rule
 
 **A production never writes an external act into `event.groupId`.** That column — renamed
-from `event.bandId` by [groups-spec.md](groups-spec.md#events), where it marks who manages
+from `event.bandId` by [groups-spec.md](shipped/groups-spec.md#events), where it marks who manages
 an event rather than who is billed on it — stays for member-authored events
 (`source: 'band'` or `'group'`); CMC lineups live entirely in `production_slot`.
 
@@ -1154,7 +1157,7 @@ slug to emit. It still applies to **hidden member bands**, which do have slugs; 
 pre-existing hole in the audit below.
 
 **The published run of show links out, never in.** Per
-[groups-spec.md](groups-spec.md#an-external-act-has-no-page-anywhere), an external act has
+[groups-spec.md](shipped/groups-spec.md#an-external-act-has-no-page-anywhere), an external act has
 no hosted page at all — not even an unlisted one — so a slot renders as:
 
 - a link to `/directory/bands/[slug]` when the act is a member band and publicly visible;

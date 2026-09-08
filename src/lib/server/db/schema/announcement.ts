@@ -4,7 +4,7 @@ import { user } from './authentication';
 import { group } from './group';
 
 /**
- * A post from a group to its own members. Phase 7 of `docs/specs/groups-spec.md`.
+ * A post from a group to its own members. Phase 7 of `docs/specs/shipped/groups-spec.md`.
  *
  * One table for bands, clubs and committees alike, because a band posting to its
  * roster and a committee posting to its members are the same act — which is what

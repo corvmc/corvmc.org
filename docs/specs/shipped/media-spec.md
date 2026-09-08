@@ -286,7 +286,7 @@ Each is its own PR, sequenced so nothing is dropped before its replacement is pr
 - `CHORES.md` — the media-management entry this spec closes.
 - `docs/reports/feature-catalog.md#image-delivery` — Cloudflare Image Transformations, the layer
   above this one.
-- `docs/specs/groups-spec.md` — private group documents, the `R2_PRIVATE` bucket, and the quota this
+- `docs/specs/shipped/groups-spec.md` — private group documents, the `R2_PRIVATE` bucket, and the quota this
   spec must not inflate.
 - `docs/specs/shipped/recurring-reservations-spec.md` — prototype cloning, which is why occurrences
   copy a poster today.

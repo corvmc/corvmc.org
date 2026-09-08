@@ -2129,7 +2129,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 		const res = await staffCreate({
 			userId: createdByUserId,
 			// Not `'group'`. The room is held for the session, not booked by the
-			// program — see docs/specs/groups-spec.md § Room time.
+			// program — see docs/specs/shipped/groups-spec.md § Room time.
 			bookerType: 'event_listing',
 			bookerId: eventId,
 			startsAt: reservationParams.startsAt,

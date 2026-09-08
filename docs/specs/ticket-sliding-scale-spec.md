@@ -1,5 +1,18 @@
 # The ticket sliding scale, and where the money goes
 
+> ## Status, 2026-09-08 — partly shipped
+>
+> Two pieces of this are already in the tree and this document does not say so, which is how a
+> price floor gets built twice:
+>
+> - **`event.ticketPriceFloorCents`** (`src/lib/server/db/schema/event.ts:85`) — the per-event
+>   floor, defaulting to 0.
+> - **`src/lib/finance/ticket-split.ts`** — the split arithmetic.
+>
+> What is unbuilt is the checkout surface that uses them: the suggested price, the split bar the
+> buyer sees, and the retirement of the member ticket discount. Check the tree before building
+> any section below.
+
 CMC concert tickets are NOTAFLOF — no one is turned away for lack of funds. Up
 to now that has been a sentence on the checkout page rather than something the
 checkout page can do: the form sells one fixed price, so a person who cannot

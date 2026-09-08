@@ -58,7 +58,7 @@ import {
  *
  * Staff-guarded throughout, and flag-gated on `groups`. Bands are deliberately
  * absent from every export here: they are member self-service and have their own
- * staff surface at `/staff/bands`. See docs/specs/groups-spec.md.
+ * staff surface at `/staff/bands`. See docs/specs/shipped/groups-spec.md.
  */
 
 async function requireGroupsStaff() {

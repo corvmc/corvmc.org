@@ -11,7 +11,7 @@ import { RESERVED_SLUGS, isReservedSlug } from './reserved-slugs';
  * someone else, which is exactly the shape of change a test should guard.
  */
 describe('reserved slugs', () => {
-	/** docs/specs/groups-spec.md — the groups module cannot ship without these. */
+	/** docs/specs/shipped/groups-spec.md — the groups module cannot ship without these. */
 	const GROUP_VOCABULARY = [
 		'group',
 		'groups',

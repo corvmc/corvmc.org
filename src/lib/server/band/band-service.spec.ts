@@ -495,7 +495,7 @@ describe('BandService', () => {
 
 		/**
 		 * The one place the role table differs by kind
-		 * (`docs/specs/groups-spec.md:818`): an appointed leader runs a program,
+		 * (`docs/specs/shipped/groups-spec.md:818`): an appointed leader runs a program,
 		 * they do not own it, and ending one is a staff decision. The guard on the
 		 * remote is `requireGroupRole(…, 'owner')`, which a club owner satisfies —
 		 * so the check has to be here, where the cascade is.

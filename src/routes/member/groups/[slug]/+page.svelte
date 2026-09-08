@@ -45,7 +45,7 @@
 	 * a band member keeps coming back to band-shaped work with money attached. A
 	 * club is a subscription to a program: its value arrives by notification and
 	 * on the calendar, and this page is where you come for the archive and the
-	 * roster. See docs/specs/groups-spec.md § Interface.
+	 * roster. See docs/specs/shipped/groups-spec.md § Interface.
 	 *
 	 * Announcements, Documents and Sessions are phases 7, 8 and 9, and all three
 	 * are now built.
@@ -73,7 +73,7 @@
 	const members = $derived(data.members);
 
 	/**
-	 * Announcements lead, per docs/specs/groups-spec.md § Interface: the archive
+	 * Announcements lead, per docs/specs/shipped/groups-spec.md § Interface: the archive
 	 * is what you come back for, where Overview is what you read once. It is also
 	 * the default tab, so `?tab=` names the other three and the bare URL is the
 	 * post list.
