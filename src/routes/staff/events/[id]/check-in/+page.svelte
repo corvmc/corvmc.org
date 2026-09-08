@@ -72,11 +72,7 @@
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
 								<SubmitButton label="Check In" variant="primary" size="sm" />
 							</Form>
-							<CancelTicketAction
-								eventId={data.event.id}
-								ticketId={ticket.id}
-								attendeeName={ticket.attendeeName}
-							/>
+							<CancelTicketAction ticketId={ticket.id} attendeeName={ticket.attendeeName} />
 						{/if}
 					</div>
 				</CardBody>
