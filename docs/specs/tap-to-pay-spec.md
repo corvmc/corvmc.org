@@ -122,6 +122,11 @@ entry** and **QR-based payment methods**. Android Tap to Pay is a fuller reader 
 in this respect. What it still does not do is **tipping** or **collecting any input on its own
 screen** — see [Money](#money).
 
+**The phone's own NFC sensor is the reader.** No external hardware, no dongle, no Bluetooth
+pairing — which the SDK's vocabulary actively obscures, so say it plainly: `discoverReaders()` and
+`connectReader()` are discovering and connecting to **the handset itself**, and the Stripe Location
+is a record of where that handset is rather than a device in its own right.
+
 **Offline is unavailable.** Not "preview", not "by request" — Android Tap to Pay has no offline
 mode. The door needs working connectivity, full stop. That is a flat constraint on the venue, and it
 is the reason the architecture below can be recommended without hedging.
@@ -182,6 +187,31 @@ sure the device is never the only way to take money:
 
 The rest of the forbidden list is configuration a person can change. This one is not, and
 architecting around it is cheap only if it is done now.
+
+### The second path covers three cases, not one
+
+That card-not-present path is not only the accessibility answer, and it is worth listing what it
+serves so nobody later treats it as a single-purpose escape hatch and prunes it.
+
+Tap to Pay is **contactless only**. The phone's NFC is the whole reader, so there is no slot to
+insert a card into and **swiping is not allowed at all**. A customer holding a magstripe-only or
+chip-only card, or a contactless card whose antenna has died, cannot pay at the door — not as a
+degraded experience, but at all.
+
+So the door screen's second way to take money covers three situations that look identical from the
+outside and are not:
+
+1. **A staffer who uses a screen reader**, where a running accessibility service blocks PIN
+   collection above the contactless limit.
+2. **A card that cannot tap** — magstripe-only, chip-only, or a dead antenna. No swipe, no insert,
+   no exceptions.
+3. **A tap that failed on a card that should have worked.**
+
+**Only the third is a retry.** The first two are not, and presenting either as a decline tells the
+customer their card was refused when it was never read — which is the same failure the
+`TAP_TO_PAY_INSECURE_ENVIRONMENT` handling above exists to avoid, arriving by a different route. It
+is the strongest argument for the affordance being always present rather than appearing after an
+error: in two of three cases there is no error to appear after.
 
 ## The tap screen
 
