@@ -47,7 +47,7 @@ const field = (name: string) =>
 
 const open = async (props: Record<string, unknown> = {}) => {
 	await render(ReportContentAction, {
-		entityType: 'band',
+		entityType: 'band_profile',
 		entityId: 'band-9',
 		entityLabel: 'The Setlist',
 		...props
@@ -62,7 +62,7 @@ describe('ReportContentAction', () => {
 	it('carries what is being reported into the form', async () => {
 		await open();
 
-		expect(field('entityType').value).toBe('band');
+		expect(field('entityType').value).toBe('band_profile');
 		expect(field('entityId').value).toBe('band-9');
 	});
 
