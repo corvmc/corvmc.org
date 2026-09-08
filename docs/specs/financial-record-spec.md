@@ -108,6 +108,7 @@ One table.
 | `stripePaymentRecordId` | text, nullable                | Present when `settlement = 'stripe'`; the cross-check key                              |
 | `subjectType`           | text enum not null            | House polymorphic pattern — see below                                                  |
 | `subjectId`             | text not null                 | **No foreign key**, deliberately                                                       |
+| `settlementGroup`       | text, nullable                | The pool a `pass_through` belongs to — see below                                       |
 | `projectId`             | text → `project.id`, nullable | A real FK. `project` is the budget container, and burn reads this                      |
 | `userId`                | text → `user.id`, nullable    | The member this concerns, where there is one                                           |
 | `description`           | text not null                 | Human-readable, as `credit_transaction.description`                                    |
@@ -199,19 +200,57 @@ backfill written before the write path is settled gets written twice.
 All four of this spec's open questions were settled on 2026-09-08. They are recorded as decisions
 rather than deleted, because each one rejects a cheaper alternative.
 
-### Fee coverage is a pass-through pair, not a silent netting
+### The card fee is always `spent`; fee coverage is `earned`
 
 When a member covers processing fees, `calculateTotalWithFeeCoverage` grosses the charge up so the
-collective still nets the base: on a $20 ticket the member pays ~$21.19 and Stripe keeps $1.19.
+collective still nets the base. The first version of this decision made that a `pass_through` pair
+and stopped there, which left a hole: **an uncovered fee was recorded nowhere.** The collective's
+share is already net of the fee, so an `earned` entry captured the outcome and the cost vanished —
+meaning "what did card processing cost us this year" was answerable for the covered half of sales
+and unanswerable for the half where the collective actually paid it.
 
-That $1.19 is money **in from the member and out to Stripe**, netting zero — the same shape as the
-door split. So it is `kind = 'pass_through'`, not a fifth kind, and it is written as **two entries**
-rather than folded into the earned amount.
+So the fee to Stripe is **always** a `spent` entry, whoever funded it, and fee coverage is a
+separate `earned` inflow under its own category. The two cases become the same shape.
 
-The reason is that fee coverage is a small act of generosity repeated thousands of times, and
-"members covered $X in processing fees this year" is a number worth being able to ask for. Netting
-it into revenue makes it permanently unanswerable. The cost is two extra rows on every fee-covered
-sale, which is the correct price for a queryable number.
+**Uncovered — buyer pays $10.00 on a $10 show.** Stripe takes $0.59; divisible $9.41.
+
+| Kind              | Category       | Amount     |
+| ----------------- | -------------- | ---------- |
+| `earned`          | `ticket_sales` | **+$3.00** |
+| `pass_through` in | `act_payout`   | **+$7.00** |
+| `spent`           | `card_fees`    | **−$0.59** |
+
+Sums to $9.41 — what lands in the Stripe balance. The collective's position is $3.00 − $0.59 =
+**$2.41**, which is what the split produced.
+
+**Covered — buyer pays $10.61.** The gross-up gives coverage $0.61 and the actual fee on $10.61 is
+also $0.61; divisible $10.00.
+
+| Kind              | Category       | Amount     |
+| ----------------- | -------------- | ---------- |
+| `earned`          | `ticket_sales` | **+$3.00** |
+| `pass_through` in | `act_payout`   | **+$7.00** |
+| `earned`          | `fee_coverage` | **+$0.61** |
+| `spent`           | `card_fees`    | **−$0.61** |
+
+The collective's position is **$3.00** — the full 30%, which is the point of covering fees.
+
+Both queries now work in both cases, which was the original ask:
+
+```
+sum(spent  where category = 'card_fees')      -- what processing cost us
+sum(earned where category = 'fee_coverage')   -- what members chipped in
+```
+
+**Why `earned` rather than `pass_through` for the coverage.** `pass_through` means the collective is
+a conduit for someone else's money — the band's cut. A member covering fees is giving the collective
+money against a cost the collective incurred, which is revenue offset by an expense. It is also how
+a bookkeeper would do it: you do not net a merchant fee against a customer's payment.
+
+**Recording both legs matters even when they look identical.** The gross-up solves a continuous
+equation and then rounds, so on other amounts the member's contribution and Stripe's actual take
+differ by a cent. Two entries put that cent honestly in the collective's position; one netted entry
+asserts it away.
 
 ### A refund is a reversing entry, never a mutation
 
@@ -316,6 +355,67 @@ revenue report run in between must not count it.
 recording all three numbers rather than only the payout is that a discrepancy between what buyers
 intended and what the act received is a thing someone chose. It must not be resolvable by
 arithmetic that hides it.
+
+### The payout leg is not mirrored, and the pool is what ties the two together
+
+Door money arrives as **many** inbound entries — one per ticket, spread over weeks of presales — and
+leaves as **one** payout per act. The outbound is not mirrored per ticket.
+
+The ledger's granularity follows the real events. A buyer designating $15 on a Tuesday is one fact;
+the collective handing an act $340 after the show is one fact, not forty. Mirroring would fabricate
+forty payment events that never happened. `stock_movement` already works this way — a restock of
+fifty units is one row — and so does `credit_transaction`.
+
+**At most two outbound entries per act.** With `designated` as the sum of that act's inbound pool and
+`guarantee` as the deal's floor, the payout is `max(guarantee, designated)`:
+
+| Case                                      | `pass_through` out | `spent`                  | Rows |
+| ----------------------------------------- | ------------------ | ------------------------ | ---- |
+| Buyers designated more than the guarantee | `designated`       | —                        | 1    |
+| The guarantee wins                        | `designated`       | `guarantee − designated` | 2    |
+
+The pass-through leg always carries exactly the money that arrived earmarked, so the pool nets to
+zero by construction. A guarantee top-up never passed through anything — it is the collective
+spending its own money — so it is `spent`, and the soft-night cost surfaces on its own.
+
+Three acts on a $840 pool at $280 each, one of them on a $400 guarantee: three `pass_through` rows
+of −$280 and one `spent` of −$120. Four outbound rows, not forty.
+
+### `settlementGroup`, because summing to zero proves nothing
+
+Nothing links an inbound entry to the payout that discharges it, and **`sum() == 0` across the table
+is not evidence of correctness — two errors cancel.** An event underpaid by $100 and another
+overpaid by $100 sum to zero and look settled.
+
+[ledger-reconciliation-prior-art.md](../reports/ledger-reconciliation-prior-art.md) surveys four
+systems and finds one answer in four vocabularies: **nobody links entry to entry.** A clearing
+account makes the pool a place; Stripe's `transfer_group` makes it a shared string that "only
+identifies associated objects"; TigerBeetle makes the obligation a `pending` state; general ledger
+practice calls it a settlement batch and treats many-to-one as the normal case.
+
+So `financial_entry` carries a nullable **`settlementGroup`** — for the door split, the event's act
+pool — and the invariant is read per pool rather than in aggregate:
+
+    sum(amountCents) where kind = 'pass_through' and settlementGroup = <event>
+        == 0   settled
+         > 0   money held and still owed
+         < 0   paid out more than came in; a top-up mis-booked as pass-through
+
+Errors stop cancelling, and **"what do we owe acts right now" becomes a number** — the sum over
+unsettled groups, which exists nowhere today.
+
+Following Stripe, it is a key and not a constraint: it identifies associated rows and enforces
+nothing, so a pool that legitimately does not balance is recordable and visible rather than refused.
+
+**Two things this leaves open.**
+
+- **The inbound pool is per-event; deals are per-act.** `ticket.acts_cents` is one number for "the
+  acts", so on a three-band bill nothing says how $15 divides among them. Reconciliation still works
+  at pool level, but the allocation rule is #593's to settle. The consequence to accept: you cannot
+  say which ticket paid which band, which is almost certainly fine.
+- **A refund after settlement leaves the pool short**, because the act has already been paid. That
+  is the correct outcome — the collective ate it — and under this model it shows as the pool going
+  negative rather than disappearing. Nobody should "fix" it by suppressing the reversal.
 
 ### Every split payment works this way
 
