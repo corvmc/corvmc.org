@@ -144,6 +144,14 @@ beforeEach(() => {
 	vi.mocked(requireUser).mockReturnValue(mockLocals.user);
 });
 
+// `subscriberForCurrentUser` reads `emailVerified` off the user row rather than
+// the session, so the fixture's own flag never reaches it — the verified case is
+// set through the db mock here.
+function setUserEmailVerified(emailVerified: boolean) {
+	queryResults = [[{ emailVerified }]];
+	queryIndex = 0;
+}
+
 // ---------------------------------------------------------------------------
 // Profile update
 // ---------------------------------------------------------------------------
@@ -228,12 +236,15 @@ describe('getAvailableLists', () => {
 
 describe('subscribe', () => {
 	it('finds or creates subscriber then adds to audience', async () => {
+		setUserEmailVerified(true);
+
 		await subscribe({ audienceId: 'aud-99' });
 
 		expect(findOrCreateForUser).toHaveBeenCalledWith(
 			'user-1',
 			mockLocals.user.email,
-			mockLocals.user.name
+			mockLocals.user.name,
+			{ emailVerified: true }
 		);
 		expect(addSubscriber).toHaveBeenCalledWith('aud-99', 'sub-1');
 	});
@@ -241,6 +252,8 @@ describe('subscribe', () => {
 	// Without this, opting back in after "unsubscribe from all" reports success
 	// while global suppression silently keeps every campaign away.
 	it('lifts a previous global opt-out so the subscription actually delivers', async () => {
+		setUserEmailVerified(true);
+
 		await subscribe({ audienceId: 'aud-99' });
 
 		expect(clearSelfServiceSuppression).toHaveBeenCalledWith('sub-1');
@@ -249,6 +262,8 @@ describe('subscribe', () => {
 
 describe('unsubscribeFromList', () => {
 	it('resolves the subscriber and unsubscribes from the audience', async () => {
+		setUserEmailVerified(true);
+
 		await unsubscribeFromList({ audienceId: 'aud-99' });
 
 		expect(unsubscribeService).toHaveBeenCalledWith('sub-1', 'aud-99');
@@ -259,14 +274,45 @@ describe('unsubscribeFromList', () => {
 	// subscriber record. Bailing out when none exists left them unable to opt
 	// out of mail they were still receiving.
 	it('creates a subscriber record when the member has none, so opt-out still lands', async () => {
+		setUserEmailVerified(true);
+
 		await unsubscribeFromList({ audienceId: 'aud-99' });
 
 		expect(findOrCreateForUser).toHaveBeenCalledWith(
 			'user-1',
 			mockLocals.user.email,
-			mockLocals.user.name
+			mockLocals.user.name,
+			{ emailVerified: true }
 		);
 		expect(unsubscribeService).toHaveBeenCalledWith('sub-1', 'aud-99');
+	});
+});
+
+// A subscriber row under this address that belongs to nobody predates the
+// account and carries a stranger's audience memberships and suppression state.
+// The service refuses to hand it over unverified (#757), and both mutations
+// have to say so: a silent no-op would report a subscription change it never
+// made.
+describe('mailing lists when the address is unconfirmed', () => {
+	it('answers subscribe with a 403 instead of reporting success', async () => {
+		setUserEmailVerified(false);
+		vi.mocked(findOrCreateForUser).mockResolvedValueOnce(null);
+
+		await expect(subscribe({ audienceId: 'aud-99' })).rejects.toMatchObject({
+			status: 403,
+			body: { message: expect.stringMatching(/confirm your email address/i) }
+		});
+		expect(addSubscriber).not.toHaveBeenCalled();
+	});
+
+	it('answers unsubscribe with a 403 instead of a silent no-op', async () => {
+		setUserEmailVerified(false);
+		vi.mocked(findOrCreateForUser).mockResolvedValueOnce(null);
+
+		await expect(unsubscribeFromList({ audienceId: 'aud-99' })).rejects.toMatchObject({
+			status: 403
+		});
+		expect(unsubscribeService).not.toHaveBeenCalled();
 	});
 });
 
