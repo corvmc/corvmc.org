@@ -84,8 +84,8 @@ plumbing. It would have to answer a question CMC has, and there is exactly one:
 
 At the scope this is being built to — **one phone, one Location, one operator at a time** — two
 thirds of that question have constant answers and the third is the session. _Which handset_ is the
-handset. _Which night_ is `paidAt`. _Which staffer_ is who was logged in, which is a column
-(`staffUserId`) on the payment row, not a table.
+handset. _Which night_ is `paidAt`. _Which staffer_ is who was logged in, and `ticket.checkedInByUserId` already
+records them — a column that exists, on a table that exists.
 
 Nor would a device row buy control. A self-reported device identifier is an audit convenience: the
 app reports whatever the app says, and a tampered handset reports a handset that has not been. The
@@ -159,10 +159,29 @@ Three requirements follow, and they belong in the build rather than in a runbook
 - No screenshots on the door phone, ever. That rules out screenshot-based debugging, and it means a
   staffer's habit of screenshotting a receipt breaks the next large sale.
 
-Worth saying plainly rather than burying: **a running accessibility service is on that forbidden
-list.** A staffer who needs a screen reader cannot use this phone to take a PIN payment. That is
-Stripe's constraint and not one we can engineer around, and it is a reason the door should never
-depend on exactly one person's handset.
+## Who can work the door
+
+One item on that forbidden list deserves to be read as what it is rather than as a technical note.
+
+**A running accessibility service blocks PIN collection.** PIN is required above the regional
+contactless CVM limit. There is exactly one handset. Put those three together and the conclusion is
+not about software: **a staffer who uses a screen reader cannot take a large door payment.** For a
+nonprofit whose door is worked by whoever is around, that is a constraint on who can hold the shift,
+and it should be written down in those terms rather than discovered by the person it excludes.
+
+It is Stripe's constraint and not one we can engineer around on this device. What we can do is make
+sure the device is never the only way to take money:
+
+- **Keep a card-not-present path for large amounts.** A Stripe Payment Link on the show, opened on
+  the buyer's own phone, needs no reader and no accessibility compromise. Once #522 lands, the
+  in-house checkout is the better version of the same escape hatch.
+- **The door screen should offer it as a normal choice, not a fallback for failures** — a "send a
+  link instead" affordance next to the tap, always present. A path that only appears after an error
+  is a path that is only found under pressure.
+- Two qualifying handsets would also solve it, and are the same answer as [Open](#open) item 4.
+
+The rest of the forbidden list is configuration a person can change. This one is not, and
+architecting around it is cheap only if it is done now.
 
 ## The tap screen
 
@@ -180,7 +199,9 @@ makes this easy to comply with by accident; state it so nobody reaches for a dra
 
 ## Model
 
-The schema question reduces to one thing: where a door payment gets recorded.
+The schema question reduces to one thing: where a door payment gets recorded. The answer this spec
+lands on is **one additive nullable column and no new table**, which is not where it started; the
+options are walked below because the obvious one is wrong for a reason worth writing down.
 
 ### `payment_cache.userId` is `NOT NULL`, and a door sale has no account
 
@@ -206,57 +227,96 @@ anything. Each is a filter somebody has to remember to add, and the failure mode
 on a nonprofit's report** rather than an error anyone sees. `ticket.userId` was made nullable
 instead, for exactly this reason.
 
-**(c) A separate `terminal_payment` table.** Its own row per card-present take.
+**(c) A separate `terminal_payment` table.** Its own row per card-present take, with the operator on
+it. Solves the problem cleanly and is the obvious answer.
 
-**Recommend (c).** Three reasons, in order of weight:
+**(d) Add nothing. `ticket` already carries a door sale.** Not obvious, and correct.
 
-1. `payment_cache` means _a payment by a member_. That is what its `NOT NULL` FK, its cascade, its
-   `idx_payment_record_user` and its three inner joins all independently encode. It is also, per its
-   own header comment, a **cache of Stripe Payment Records** — and a card-present PaymentIntent is
-   not one of those.
-2. The row we want to write has a field `payment_cache` has no column for and never will: the
-   **operator**. A door payment has a buyer who may not exist and a staffer who always does. Putting
-   a nullable buyer and a `NOT NULL` staffer into a table whose entire shape is one-user-per-row
-   makes it two tables wearing one name.
-3. It leaves the cascade honest, and leaves the existing consumers alone.
+**Recommend (d),** and the reason is not that it is less code.
 
-**`terminal_payment`** — `id`, `paymentIntentId` (unique, the `pi_…`), `staffUserId` (`NOT NULL`,
-restrict), `buyerUserId` (nullable, `set null`), `amountCents`, `currency`, `status`, `purpose`,
-`purchaseId` (nullable), `locationId`, `paidAt`, `refundedAt`.
+**It is the only option that adds no new source to settlement.** #593 is designed to read ticket
+revenue from `ticket` + `payment_cache`. A door ticket paid by tap writes a `ticket` row with
+`stripePaymentRecordId` set — a source that worksheet was **already** going to read. Option (c)
+takes settlement to three sources permanently; option (b) takes it to two with a filter that has to
+be remembered in every place a member count or an audience is derived; (a) takes it to two, one of
+which silently drops the rows in question. Only (d) leaves settlement at exactly the two sources it
+planned for.
 
-No device column, per [above](#there-is-no-device-registry). `locationId` is kept where the device
-is not, and the asymmetry is deliberate: the reconciliation sweep lists PaymentIntents **by
-Location**, so denormalising it makes the match cheap — and a second venue is a far more plausible
-future than a second phone.
+Everything a door ticket needs is already on the row, and every one of these columns exists on
+`main` today:
 
-`purpose` is deliberately not a discriminated FK set. It names what the money was for
-(`door_ticket`, `donation`, …) and `purchaseId` is a bare nullable `text`, matching what `ticket`
-already does: `ticket.purchaseId` is `NOT NULL text` with **no FK and no purchase table**, indexed
-as `idx_ticket_purchase`. A door sale mints its tickets under a fresh `purchaseId` exactly as the
-online flow does, and `terminal_payment.purchaseId` is how the two find each other. This follows
-`directory_entry`'s reasoning and `acquisition.purchaseOrderId`'s precedent, both cited in
-`contractor-work-spec.md`.
+| Question              | Column                                                           |
+| --------------------- | ---------------------------------------------------------------- |
+| Who bought it         | `userId`, **nullable**, `onDelete: 'set null'` — no account fine |
+| What they paid        | `unitPriceCents`, plus the split columns the scale writes        |
+| Proof of payment      | `stripePaymentRecordId`, nullable `text` — holds the `pi_…`      |
+| Which staffer took it | `checkedInByUserId` — see below                                  |
+| When                  | `checkedInAt`, `createdAt`                                       |
+| Which order           | `purchaseId`, `NOT NULL text`, no FK, `idx_ticket_purchase`      |
 
-`ticket.stripePaymentRecordId` is a nullable `text` already holding proof of payment, and a `pi_…`
-id fits it — which matters more than it looks, because `refund()` in `payment-service.ts` already
-branches on that exact prefix.
+`checkedInByUserId` answers the operator question for free, and only because of a fact about the
+door specifically: **a door ticket is checked in at the moment it is minted**, because the person is
+already walking in. Seller and check-in-er are the same staffer in the same gesture. That is a real
+coincidence of the surface rather than a column doing double duty, and it is worth saying out loud
+so nobody later assumes it generalises to donations.
+
+**One additive column is needed:** `ticket.paymentMethod`, nullable `text`, mirroring
+`payment_cache.paymentMethod`'s existing free-text vocabulary. Without it, "door versus online" —
+which is exactly the split #593 wants — has no local answer, and the `pi_` prefix cannot supply one
+because the online path can produce a PaymentIntent id too. Nullable with no default, so it is a
+plain `ADD COLUMN` with no table rebuild and no backfill. A column is not a new source.
+
+### Why not (c), stated as the repo states it
+
+`inventory-spec.md:589` declined a `supplier` table and said to revisit it "when free text actually
+fragments, or when one of those features forces the entity into being" —
+and `contractor-work-spec.md` is the record of servicing eventually forcing it, years of free text
+later. That is the pattern to follow here.
+
+The thing that would force a payment table is **donations** (phase 4): they have no ticket row to
+hang off, no `purchaseId`, and no check-in gesture to supply an operator. When that surface is
+designed, it will need somewhere to put a payment, and `terminal_payment` as sketched under (c) is
+probably what it should be. **It gets built then, with that surface's requirements in hand, and not
+before.** Building it now means designing a table against a use case nobody has written down, which
+is how you get columns that are wrong in ways only the second caller discovers.
+
+### Where a card-present refund is recorded
+
+This is the one column (c) was buying for tickets — `refundedAt` — so (d) owes it an answer.
+
+The answer is that it does not need a local column, because **Stripe already is the guard.**
+`refundPaymentIntent` in `payment-service.ts` retrieves the intent with `expand: ['latest_charge']`
+and computes `outstanding = amount_captured - amount_refunded`, refunding only when that is
+positive. That charge-level check is complete and race-free on its own; the `payment_cache` lookup
+at the top of `refund()` is a round-trip optimisation, not the thing that makes it safe. A door
+ticket with no `payment_cache` row falls through to the `pi_` branch and is guarded correctly, and
+the trailing `UPDATE payment_cache … WHERE id = ?` matches zero rows, which is the right outcome
+rather than an error.
+
+Locally, the refund is recorded as the ticket being **cancelled** — the existing terminal state,
+which is what settlement needs, since a cancelled ticket is excluded from revenue either way.
+
+The honest cost: "was this ticket refunded, or comped and cancelled?" is not answerable from D1
+without asking Stripe. That is acceptable here and it is the position `reporting-spec.md` already
+takes about which vendor answers which question — Stripe is the payment ledger, and "how much did we
+refund at the door last month" is a Stripe question. It would stop being acceptable the moment
+somebody wants that number on a CMC page, which is a second thing that would force the table.
 
 ### Status moves
 
-`terminal_payment.status` moves by atomic conditional update with a row-count check, never
-read-then-write:
+A ticket's status moves by atomic conditional update with a row-count check, never read-then-write:
 
 ```sql
-UPDATE terminal_payment
-   SET status = 'refunded', refunded_at = ?
- WHERE id = ? AND status = 'captured'
+UPDATE ticket
+   SET status = 'cancelled', updated_at = ?
+ WHERE id = ? AND status IN ('valid', 'checked_in')
 ```
 
-Zero rows affected means somebody else already refunded it — return without calling Stripe. This is
-`refund()`'s existing idempotency guard tightened: that one does a `SELECT` and then an `UPDATE`,
-which is a race under concurrency. `db.transaction()` is unavailable on D1 and `db.batch([...])`
-gives no read-your-write inside the batch, so the condition has to live in the `WHERE` clause. The
-D1 constraint produces the better design here rather than a worse one.
+Zero rows affected means somebody already cancelled it — return without calling Stripe. This is
+`refund()`'s local guard tightened: that one does a `SELECT` and then an `UPDATE`, which is a race
+under concurrency. `db.transaction()` is unavailable on D1 and `db.batch([...])` gives no
+read-your-write inside the batch, so the condition has to live in the `WHERE` clause. The D1
+constraint produces the better design here rather than a worse one.
 
 ## Money
 
@@ -319,6 +379,26 @@ Plugin surface: `initialize()`, `discoverReaders()`, `connectReader()`, `collect
 The one cost of this shape is that it **requires connectivity** — which costs nothing, because
 Android Tap to Pay has no offline mode either way. There is no offline path to lose.
 
+### The thin shell is what makes sideloading tolerable
+
+These two decisions look like they are in tension and are not. Sideloading makes every reinstall a
+physical trip to the phone, Developer options toggled twice, a reboot and a manual test payment —
+and the phone cannot be updated during an event. That would be a serious ongoing cost for a normal
+app.
+
+**It is not a cost here, because a thin shell almost never needs reinstalling.** Everything that
+changes — the door screen, the sliding-scale controls, the pricing, the copy, every fix — is web
+content served from corvmc.org and reaches the phone on the next page load, exactly like the rest of
+the site. The native binary changes only when the Capacitor or Terminal SDK versions do. The thin
+shell is the **mitigation** for the sideload burden, not a casualty of it, and that is the second
+independent argument for `server.url` after the security-boundary one.
+
+The residual is real and points the same direction: **there is no store-update path underneath, so
+the native shell has to be close to right on first install.** A bug in the bridge is a trip to the
+phone; a bug in the web app is a deploy. That is a design constraint, not just a risk — **keep the
+native surface as small as it can possibly be.** Nothing in the shell but the Terminal bridge and
+the tap-screen configuration. Any logic that could live on either side lives on the web side.
+
 _(For the record, the alternative once considered was a second `adapter-static` SPA target built
 from this repo. It is not recommended: it would put the app on a different origin, forcing CORS on
 `/_app/remote/*` and `SameSite=None` on the session cookie, and remote function URLs carry a module
@@ -378,10 +458,12 @@ The rest follow rather than lead, and for different reasons:
 
 ## Refunds
 
-A card-present payment is a `pi_…` PaymentIntent, and `refund()` already branches on that prefix —
-but both its idempotency guard and its status write target `payment_cache`, which a
-`terminal_payment` row is not in. So the Terminal path gets its own guard, in the atomic conditional
-form given under [Status moves](#status-moves).
+A card-present payment is a `pi_…` PaymentIntent, and `refund()` already branches on that prefix. It
+needs no new Stripe-side work at all: the charge-level `amount_captured - amount_refunded` check is
+the guard, as set out under [Where a card-present refund is
+recorded](#where-a-card-present-refund-is-recorded). What the Terminal path adds is the local half —
+moving the ticket to `cancelled` in the atomic conditional form given under [Status
+moves](#status-moves).
 
 **Who:** `finance.refund` exists as a capability today and should stand as-is — refunding a door
 sale is the same act as refunding a reservation, and it would be strange for the venue to be the one
@@ -400,28 +482,36 @@ verified state to do.
 
 ## Reconciliation
 
+**`purchaseId` is the PaymentIntent id.** That one decision does most of the work below: it makes
+"have we already minted for this tap" a lookup on an index that exists (`idx_ticket_purchase`), and
+it makes the sweep's match trivial. `purchaseId` is a bare `text` with no FK, so nothing objects.
+
 1. `collectPaymentMethod()` then `confirmPaymentIntent()` on the device; the SDK returns the
    confirmed PaymentIntent.
-2. Stripe's **`payment_intent.succeeded` webhook** writes `terminal_payment` and mints the `ticket`
-   rows under a fresh `purchaseId`, with `ticket.stripePaymentRecordId` set to the `pi_…` id. Two
-   writes with no read between them, so `db.batch([...])`; never `db.transaction()`.
-3. The webview also calls a guarded remote `form` with the PaymentIntent id, so the staffer sees the
-   ticket immediately rather than waiting on a webhook. **The server re-reads the intent's status
-   from Stripe** — the client's word that a payment succeeded is not evidence of anything. Both
-   writers are idempotent on `terminal_payment.paymentIntentId` being unique, so whichever arrives
-   second is a no-op.
-4. #593's settlement worksheet sums ticket revenue and reads both `payment_cache` and
-   `terminal_payment`. The two never overlap: a payment is either card-not-present through Checkout
-   or card-present through the reader.
+2. Stripe's **`payment_intent.succeeded` webhook is the only writer.** It mints the `ticket` rows
+   under `purchaseId = <the pi_… id>`, with `stripePaymentRecordId` set to the same id,
+   `paymentMethod` set, and `checkedInAt` / `checkedInByUserId` stamped from the intent's metadata.
+   Several row inserts, no read between them, so `db.batch([...])`; never `db.transaction()`.
+3. The webview then calls a guarded remote `query` with the PaymentIntent id. **It is a read, not a
+   second writer.** It returns the tickets for that `purchaseId` once they exist, so the staffer
+   sees the sale confirmed without the app ever being trusted to assert that a payment succeeded.
+4. #593's settlement worksheet reads `ticket` + `payment_cache`, exactly as designed. Door sales are
+   distinguished by `ticket.paymentMethod`.
 
-Step 2 being the **primary** writer and step 3 an optimisation is the whole point of the ordering.
-The failure that matters is the tap succeeding and the network dropping before the app can tell us —
-money taken, no ticket, customer standing there. Making the phone the only reporter turns that into
-a lost sale nobody can reconstruct; making the webhook the reporter makes it a two-second delay.
+**One writer is the whole point.** The tempting shape is to let the app report the success too, so
+the screen updates instantly — and it costs more than it looks. Two writers minting rows under the
+same `purchaseId` need a dedupe, D1 gives no read-your-write inside a `batch`, and `ticket.code` is
+unique but randomly generated, so there is no natural key to conflict on. Making the webhook sole
+writer removes the problem rather than guarding it.
 
-A periodic sweep is still worth building as the backstop: list card-present PaymentIntents for the
-Location since the last run, match on `paymentIntentId`, and surface unmatched ones on a staff
-screen for a human to attach or refund. Webhooks are delivered, not guaranteed.
+The cost is honest and small: the confirmation on screen waits on webhook latency rather than
+appearing instantly. The door screen should show a pending state and poll, not block. The failure
+that would matter — the tap succeeding and the phone dropping off the network before it can tell us
+— does not exist under this shape at all, because the phone was never the reporter.
+
+A periodic sweep is still the backstop: list card-present PaymentIntents for the Location since the
+last run, match against `ticket.purchaseId`, and surface unmatched ones on a staff screen for a
+human to attach or refund. Webhooks are delivered, not guaranteed.
 
 ## Testing
 
@@ -440,8 +530,8 @@ it.
 - The **Terminal `PaymentGateway` driver** against `gateway.contract.spec.ts` (#522), with
   `fake-gateway.ts` standing in for Stripe. This is where amount handling, the free-ticket path and
   the below-minimum rounding get tested.
-- **Reconciliation**: the webhook writer, the remote-form writer, their idempotency on
-  `paymentIntentId`, and the settlement read across `payment_cache` and `terminal_payment`.
+- **Reconciliation**: the webhook writer, its re-run behaviour on a redelivered event, the sweep's
+  match on `ticket.purchaseId`, and the settlement read across `ticket` + `payment_cache`.
 - The **door screen** in e2e, with the plugin stubbed at the `window` boundary — the sliding-scale
   controls, the amount that would be sent, and the `TAP_TO_PAY_INSECURE_ENVIRONMENT` message
   rendering as itself rather than as a decline.
@@ -472,8 +562,9 @@ needs rethinking before anything is scheduled. Then create a Stripe **Location**
 customer-facing `display_name`, and confirm the handset against
 [the checklist](#what-the-phone-has-to-be).
 
-**Phase 1 — the driver.** Behind #522. Terminal as a third `PaymentGateway`; `terminal_payment`; the
-webhook writer; the reconciliation sweep. No app work yet, and all of it automatable.
+**Phase 1 — the driver.** Behind #522. Terminal as a third `PaymentGateway`; the additive
+`ticket.paymentMethod` column; the webhook writer; the reconciliation sweep. No app work yet, no new
+table, and all of it automatable.
 
 **Phase 2 — the shell.** Capacitor project, `server.url`, the connection-token path, the plugin
 bridge, `setTapToPayUxConfiguration` with the CMC palette, and the install procedure written down
@@ -494,6 +585,9 @@ past tickets.
   settles. Those cases need a smart reader (S700 / WisePOS E).
 - **A device registry.** See [above](#there-is-no-device-registry). One phone, one Location, one
   operator: no table and no column.
+- **A payments table.** No `terminal_payment`, no row per card-present take. `ticket` already carries
+  a door sale, and adding a table would take #593's settlement from the two sources it was designed
+  for to three. Donations are what would force one; they get it when they are designed.
 - **iOS.** Not a hedge — a decision. It reintroduces two Apple entitlements, a business Apple ID,
   Apple's Terms and Conditions acceptance, an instructional overlay required before review, and an
   App Review that may object to a webview shell. All of that is schedule we do not currently have to
