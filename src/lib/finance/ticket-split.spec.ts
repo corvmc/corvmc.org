@@ -234,11 +234,9 @@ describe('validateTicketSplit', () => {
 /**
  * The acts' take is anchored to the base rate, not to what the buyer paid (#827).
  *
- * A proportional split hands the acts 70% of a discount as well as 70% of a
- * sale, so a NOTAFLOF buyer shorts the band rather than the collective. The
- * table below is the agreed model: the acts' number is absolute, the collective
- * is the residual, and the collective absorbs the card fee until its own share
- * reaches zero and stops.
+ * A proportional split hands the acts 70% of a discount as well as of a sale,
+ * so a NOTAFLOF buyer shorts the band rather than the collective. Here their
+ * number is absolute and the collective is the residual.
  */
 describe('the acts are paid off the base rate', () => {
 	const show = { quantity: 1, coverFees: false, suggestedUnitCents: 1000, floorCents: 0 };
