@@ -266,6 +266,12 @@ which is exactly the split #593 wants — has no local answer, and the `pi_` pre
 because the online path can produce a PaymentIntent id too. Nullable with no default, so it is a
 plain `ADD COLUMN` with no table rebuild and no backfill. A column is not a new source.
 
+**It is a down payment, not a permanent answer.** When donations force the payment table, this
+column is retired into it and `ticket` stops carrying a payment method. Otherwise phase 4 is the
+moment payment method starts being recorded in two places at once — the exact fragmentation
+`inventory-spec.md` is warning about, arriving by the same forcing function. Same trigger, same
+migration, resolved together.
+
 ### Why not (c), stated as the repo states it
 
 `inventory-spec.md:589` declined a `supplier` table and said to revisit it "when free text actually
@@ -486,28 +492,42 @@ verified state to do.
 "have we already minted for this tap" a lookup on an index that exists (`idx_ticket_purchase`), and
 it makes the sweep's match trivial. `purchaseId` is a bare `text` with no FK, so nothing objects.
 
-1. `collectPaymentMethod()` then `confirmPaymentIntent()` on the device; the SDK returns the
-   confirmed PaymentIntent.
+**Two things happen at a tap, and conflating them is the mistake to avoid.** The _admission
+decision_ — paid, let them in — and the _ticket record_ are not the same event and do not need the
+same latency.
+
+1. `collectPaymentMethod()` then `confirmPaymentIntent()` on the device. **The SDK returns the
+   confirmed PaymentIntent synchronously**: a successful tap returns a success indication and
+   control returns to the app. That return is the merchant's proof of payment, and it is what the
+   door screen shows. **Admission is settled here, with no webhook involved** — a staffer is
+   physically present and admission is their judgement, not a scan.
 2. Stripe's **`payment_intent.succeeded` webhook is the only writer.** It mints the `ticket` rows
    under `purchaseId = <the pi_… id>`, with `stripePaymentRecordId` set to the same id,
    `paymentMethod` set, and `checkedInAt` / `checkedInByUserId` stamped from the intent's metadata.
    Several row inserts, no read between them, so `db.batch([...])`; never `db.transaction()`.
 3. The webview then calls a guarded remote `query` with the PaymentIntent id. **It is a read, not a
-   second writer.** It returns the tickets for that `purchaseId` once they exist, so the staffer
-   sees the sale confirmed without the app ever being trusted to assert that a payment succeeded.
+   second writer** — it returns the tickets for that `purchaseId` once they exist. The app is never
+   trusted to assert to the server that a payment succeeded; it only asks whether the record has
+   landed.
 4. #593's settlement worksheet reads `ticket` + `payment_cache`, exactly as designed. Door sales are
    distinguished by `ticket.paymentMethod`.
 
-**One writer is the whole point.** The tempting shape is to let the app report the success too, so
-the screen updates instantly — and it costs more than it looks. Two writers minting rows under the
-same `purchaseId` need a dedupe, D1 gives no read-your-write inside a `batch`, and `ticket.code` is
-unique but randomly generated, so there is no natural key to conflict on. Making the webhook sole
-writer removes the problem rather than guarding it.
+**One writer is right, not a compromise.** Letting the app write too would put two writers on rows
+sharing a `purchaseId` with nothing to conflict on: D1 gives no read-your-write inside a `batch`,
+and `ticket.code` is unique but randomly generated, so there is no natural key for a dedupe to hang
+off. Sole-writer removes that problem rather than guarding it, and it costs nothing at the door
+because step 1 already answered the only question anyone is standing there waiting on.
 
-The cost is honest and small: the confirmation on screen waits on webhook latency rather than
-appearing instantly. The door screen should show a pending state and poll, not block. The failure
-that would matter — the tap succeeding and the phone dropping off the network before it can tell us
-— does not exist under this shape at all, because the phone was never the reporter.
+Webhook latency would only bite if the door had to put a scannable code in the customer's hand at
+the moment of payment. It does not — that is what the online purchase flow is for.
+
+**This is a solved problem, not a new one.** #522 established exactly this pattern across four
+landing pages: once the buyer paid on our own page rather than being redirected back, they arrived
+in the same second they confirmed and would have read unpaid codes, so each page polls its own query
+on a bounded retry keyed on the fact that the webhook writes. The
+`(public)/events/[id]/tickets/success` page carries the reasoning in a comment and a
+`RETRY_LIMIT` / `RETRY_MS` pair. The door screen is the fifth instance and should reuse the shape
+rather than invent one.
 
 A periodic sweep is still the backstop: list card-present PaymentIntents for the Location since the
 last run, match against `ticket.purchaseId`, and surface unmatched ones on a staff screen for a
@@ -624,7 +644,11 @@ past tickets.
    point of failure, and the accessibility-service constraint above means it cannot simply be
    whoever's phone is nearest. A second qualifying device kept in the building is the obvious answer
    and is also the trigger for revisiting the device registry.
-5. **Does CMC want an S700 for the unattended cases?** Everything #612 originally described needs
+5. **When donations force the payment table, does `ticket.paymentMethod` retire into it cleanly?**
+   The intent is that it does and that both land in one migration. Worth confirming against the
+   donations design when it exists rather than assuming, because a column with rows in it is harder
+   to move than a column that was never added.
+6. **Does CMC want an S700 for the unattended cases?** Everything #612 originally described needs
    one, and this spec deliberately serves none of it. The real question is whether those cases are
    live wants or an artefact of a Laravel resource nobody documented. "No" closes #612 outright when
    this ships; "yes" is a second spec, a hardware purchase, and the tipping question coming back
