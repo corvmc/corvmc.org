@@ -143,6 +143,19 @@ after the show is one fact. With `designated` as the sum of that act's inbound p
 | Buyers designated more than the guarantee | `designated`       | —                        | 1    |
 | The guarantee wins                        | `designated`       | `guarantee − designated` | 2    |
 
+**The pool divides equally.** CMC takes 30% of the door and the acts split the rest among
+themselves — `production_slot.percentageBps` is basis points **of the acts' pool**, defaulting to
+`10000 / N` across credited slots, with the remainder distributed one basis point at a time by
+`sortOrder`. Three acts get 3333/3333/3334. The same rule settles odd cents, so $841 pays
+$280.34/$280.33/$280.33 rather than depending on which row the rounding lands in. A per-act override
+stays for a touring act with a guarantee, or `contributed` for a donated set.
+
+**The split is agreed at booking and applied at settlement**, from the slots as they stand then. If
+an act drops off a three-band bill two days out, the remaining two split the whole pool — including
+money from tickets sold when there were three. That is why the inbound is one pool row per ticket
+rather than one row per act: the pool is divided among who actually played, and a lineup change
+rewrites nothing. The pre-agreed split is a commitment to the act, not a ledger fact.
+
 Three acts on an $840 pool, one on a $400 guarantee: three `pass_through` rows of −$280 and one
 `spent` of −$120. Four rows, not forty. The pass-through leg carries exactly what arrived earmarked,
 so the pool nets to zero; a guarantee top-up never passed through anything, so it is `spent`, and
@@ -230,10 +243,7 @@ figures here orient rather than attest.
 
 ## Open questions
 
-1. **How is an event's designated pool allocated among several acts on a bill?** `ticket.acts_cents`
-   is one number for "the acts". Reconciliation works at pool level without an answer, but the
-   payout rows need one. #593's to settle.
-2. **What does a refund after settlement do to a closed pool?** The act is already paid, so the pool
+1. **What does a refund after settlement do to a closed pool?** The act is already paid, so the pool
    goes negative and the collective ate it. That is believed correct; it should be confirmed rather
    than "fixed" by suppressing the reversal.
 
