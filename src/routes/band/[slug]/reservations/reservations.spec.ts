@@ -68,9 +68,9 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 // `termsFor` and `getBookingTerms` come through real: they are pure, and a
 // stubbed rate resolver would let this spec pass while the resolver it is
 // standing in for returned something else. Only the config *read* is faked.
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
-	getReservationConfig: vi.fn(async () => ({
+vi.mock('$lib/server/reservation/config', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('$lib/server/reservation/config')>();
+	const cfg = {
 		timeSlotMinutes: 30,
 		minDurationHours: 1,
 		maxDurationHours: 8,
@@ -80,8 +80,18 @@ vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
 		maxAdvanceDaysOneoff: 14,
 		maxAdvanceDaysRecurring: 17.5,
 		hourlyRateCents: 1500
-	}))
-}));
+	};
+	return {
+		...actual,
+		getReservationConfig: vi.fn(async () => cfg),
+		// `getBookingTerms` reads the config through the module's *own* binding,
+		// which a mocked export cannot reach — left real it goes to KV and throws.
+		// Re-bound onto the real `termsFor` so only the read is still faked.
+		getBookingTerms: vi.fn(async (bookerType: Parameters<typeof actual.termsFor>[0]) =>
+			actual.termsFor(bookerType, cfg as Parameters<typeof actual.termsFor>[1])
+		)
+	};
+});
 
 vi.mock('$lib/server/db/schema/recurring', () => ({
 	RECURRING_FREQUENCIES: ['weekly', 'biweekly', 'monthly']
@@ -192,7 +202,8 @@ const {
 	bookBandReservation: bookReservation,
 	cancelBandReservation,
 	getBandMembershipStatus,
-	getBandReservations
+	getBandReservations,
+	getBandReservationDetail
 } = (await import('$lib/remote/reservations.remote')) as any;
 
 const { hasAnyRole, isElevated } = (await import('$lib/server/authorization')) as unknown as {
@@ -415,6 +426,160 @@ describe('getBandReservations', () => {
 		const result = await getBandReservations('the-velvet-underground');
 
 		expect(result.past[0].canCancel).toBe(false);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// getBandReservationDetail — the band panel had no per-reservation page at all
+// (#565), so what this pins is the guard and, just as much, the projection:
+// widening what a bandmate may read is a deliberate act, not a side effect of
+// selecting the whole row.
+// ---------------------------------------------------------------------------
+
+/** The row the detail query reads: whole reservation, ref, and booker. */
+function detailRow(overrides: Record<string, unknown> = {}, createdByUserId = 'user-owner') {
+	const startsAt = new Date(Date.now() + 86_400_000);
+	const endsAt = new Date(startsAt.getTime() + 2 * 60 * 60 * 1000);
+	const res = {
+		id: 'res-1',
+		bookerType: 'group',
+		bookerId: 'band-1',
+		createdByUserId,
+		status: 'confirmed',
+		startsAt,
+		endsAt,
+		notes: 'Load in through the back',
+		cancellationReason: null,
+		paidAt: null,
+		refundedAt: null,
+		creditsUsed: null,
+		cashDueCents: 1500,
+		lockCode: '4821',
+		...overrides
+	};
+	return [
+		{
+			reservation: res,
+			ref: { id: res.id, status: res.status, startsAt, endsAt, ownerUserId: createdByUserId },
+			bookedBy: { id: createdByUserId, name: 'Someone', email: 'someone@example.com' }
+		}
+	];
+}
+
+const detailArgs = { slug: 'the-velvet-underground', reservationId: 'res-1' };
+
+describe('getBandReservationDetail', () => {
+	it('gives a bandmate the booking behind the card', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('member');
+		selectResult = detailRow({}, 'user-2');
+
+		const result = await getBandReservationDetail(detailArgs);
+
+		expect(result.notes).toBe('Load in through the back');
+		expect(result.cashDueCents).toBe(1500);
+		// 2 hours at the mocked $15/hr.
+		expect(result.totalCents).toBe(3000);
+	});
+
+	it('refuses a signed-in non-member', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		selectResult = detailRow();
+
+		await expect(getBandReservationDetail(detailArgs)).rejects.toMatchObject({ status: 403 });
+	});
+
+	it('404s a booking belonging to another band', async () => {
+		selectResult = detailRow({ bookerId: 'band-other' });
+
+		await expect(getBandReservationDetail(detailArgs)).rejects.toMatchObject({ status: 404 });
+	});
+
+	it('404s a booking that is not a band booking at all', async () => {
+		selectResult = detailRow({ bookerType: 'user', bookerId: 'user-2' });
+
+		await expect(getBandReservationDetail(detailArgs)).rejects.toMatchObject({ status: 404 });
+	});
+
+	// The act sees what it owes; it does not see the bandmate's contact details.
+	// `memberRefColumns` selects the email, so this has to be dropped on the way
+	// out rather than merely not asked for.
+	it('does not hand a bandmate the booker contact details', async () => {
+		selectResult = detailRow({ stripePaymentRecordId: 'pay_123' }, 'user-2');
+
+		const result = await getBandReservationDetail(detailArgs);
+
+		const payload = JSON.stringify(result);
+		expect(payload).not.toContain('someone@example.com');
+		// #756 widened the door code and nothing else: the payment instrument is
+		// still not projected, so the whole row is still not spread out here.
+		expect(payload).not.toContain('pay_123');
+	});
+
+	// #756 answered the question this case used to pin open: every member of the
+	// act reads the code, because whoever arrives first opens the door. Flipping
+	// it is the decision, so the case stays and asserts the other way.
+	it('gives the door code to a bandmate who did not book', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('member');
+		selectResult = detailRow({}, 'user-2');
+
+		const result = await getBandReservationDetail(detailArgs);
+
+		expect(result.lockCode).toBe('4821');
+		expect(result.isBooker).toBe(false);
+	});
+
+	it('gives the booker their own door code', async () => {
+		selectResult = detailRow({}, 'user-owner');
+
+		const result = await getBandReservationDetail(detailArgs);
+
+		expect(result.lockCode).toBe('4821');
+	});
+
+	// Staff administer band panels, so `allowStaff` lets them onto the page —
+	// and they already read the same code on the staff detail page.
+	it('gives a staff non-member the door code', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		isElevated.mockResolvedValue(true);
+		selectResult = detailRow({}, 'user-2');
+
+		const result = await getBandReservationDetail(detailArgs);
+
+		expect(result.lockCode).toBe('4821');
+	});
+
+	// Widening the code to the act did not widen it past the act: the guard is
+	// still membership, and the row must still belong to this band.
+	it('gives the door code to nobody outside the act', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		selectResult = detailRow({}, 'user-2');
+		await expect(getBandReservationDetail(detailArgs)).rejects.toMatchObject({ status: 403 });
+
+		bandServiceMock.getUserRole.mockResolvedValue('member');
+		selectResult = detailRow({ bookerId: 'band-other' }, 'user-2');
+		await expect(getBandReservationDetail(detailArgs)).rejects.toMatchObject({ status: 404 });
+	});
+
+	// Same rule as the list, so the page never offers a Cancel that
+	// `cancelBandReservation` will refuse.
+	it('offers Cancel to a band admin and not to a plain bandmate', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('member');
+		selectResult = detailRow({}, 'user-2');
+		expect((await getBandReservationDetail(detailArgs)).canCancel).toBe(false);
+
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+		selectResult = detailRow({}, 'user-2');
+		expect((await getBandReservationDetail(detailArgs)).canCancel).toBe(true);
+	});
+
+	it('never offers Cancel on a session that has already started', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('owner');
+		selectResult = detailRow({
+			startsAt: new Date(Date.now() - 86_400_000),
+			status: 'completed'
+		});
+
+		expect((await getBandReservationDetail(detailArgs)).canCancel).toBe(false);
 	});
 });
 

@@ -4,9 +4,7 @@ Hi {{{contactName}}},
 
 -- 
 {{{staffName}}}
-{{{bandName}}}
-
-Sent through the Corvallis Music Collective
+{{{bandName}}}, via the Corvallis Music Collective
 https://corvmc.org
 
 You're getting this because you used {{{bandName}}}'s booking form.

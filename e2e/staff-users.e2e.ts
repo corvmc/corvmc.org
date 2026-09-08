@@ -62,7 +62,7 @@ test.describe('staff user management', () => {
 		// itself as a set of radio buttons.
 		await page.getByRole('tab', { name: 'Account' }).click();
 
-		// TagInput serialises the selection into a hidden input — this is the exact
+		// TagSelect serialises the selection into a hidden input — this is the exact
 		// value updateUser rewrites model_has_roles from.
 		const rolesInput = page.locator('input[name="roles"]');
 		await expect(rolesInput).toHaveCount(1);

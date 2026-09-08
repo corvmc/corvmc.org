@@ -82,6 +82,7 @@ import { bookerTypes, type BookerType } from '$lib/config';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { requireInstructor } from '$lib/server/instructor/instructor-context';
 import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
+import { revealFallbackCodeFor } from '$lib/server/lock/fallback-code-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import {
 	checkout,
@@ -177,11 +178,18 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
+	// A code we issued is not a code that works: U-tec queues writes in its cloud
+	// and only pushes them down when the lock is reachable. `lockSyncedAt` is the
+	// lock's own confirmation. Until it is set, the member gets the break-glass
+	// code instead — but only inside their window, and the reveal is recorded.
+	const fallbackCode = await revealFallbackCodeFor(row);
+
 	return {
 		reservation: row,
 		durationHours,
 		totalCents,
-		hourlyRateCents
+		hourlyRateCents,
+		fallbackCode
 	};
 });
 
@@ -272,6 +280,86 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		past: past.map((r) => withBooker(r, false))
 	};
 });
+
+/**
+ * One of the band's own bookings, for a member of that band.
+ *
+ * The band panel could show *that* a session existed and nothing behind it, so
+ * the notes, the settlement state and a cancellation reason all had to come
+ * from staff. The guard is the list's — `member`, `allowStaff` because staff
+ * administer band panels — and the row must belong to this band, 404 otherwise.
+ *
+ * What it deliberately does not return: the booker's phone or email (a
+ * bandmate's contact details are not the act's business) or the payment
+ * instrument. The door code is not on that list — #756 settled that every
+ * member of the act reads it.
+ */
+export const getBandReservationDetail = query(
+	z.object({ slug: z.string().min(1), reservationId: z.string().min(1) }),
+	async ({ slug, reservationId }) => {
+		const {
+			user: currentUser,
+			group: band,
+			role
+		} = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+
+		const [row] = await db
+			.select({
+				reservation: reservation,
+				ref: reservationRefColumns(),
+				bookedBy: memberRefColumns()
+			})
+			.from(reservation)
+			.leftJoin(user, eq(user.id, reservation.createdByUserId))
+			.where(eq(reservation.id, reservationId))
+			.limit(1);
+
+		// 404 rather than 403, matching `cancelBandReservation`: whether some other
+		// band's booking exists is not this band's business.
+		if (!row || row.reservation.bookerType !== 'group' || row.reservation.bookerId !== band.id) {
+			error(404, 'Reservation not found');
+		}
+
+		const res = row.reservation;
+		const { hourlyRateCents } = await getBookingTerms(res.bookerType);
+		const durationHours = (res.endsAt.getTime() - res.startsAt.getTime()) / (1000 * 60 * 60);
+		const totalCents = Math.round(durationHours * hourlyRateCents);
+
+		const bandAdmin = role === 'owner' || role === 'admin';
+		const isBooker = res.createdByUserId === currentUser.id;
+
+		return {
+			id: res.id,
+			ref: toReservationRef(row.ref, band),
+			status: res.status,
+			startsAt: res.startsAt,
+			endsAt: res.endsAt,
+			notes: res.notes,
+			cancellationReason: res.cancellationReason,
+			// Email dropped before the ref is built: `toMemberRef` puts it in
+			// `subtitle`, and a bandmate's address is not what this page is for.
+			bookedBy: toMemberRef({ ...row.bookedBy, email: null }),
+			isBooker,
+			durationHours,
+			totalCents,
+			hourlyRateCents,
+			// What the act owes and whether it has been settled. `cashDueCents` is
+			// null until credits are committed at Confirm; see the schema comment.
+			paidAt: res.paidAt,
+			refundedAt: res.refundedAt,
+			cashDueCents: res.cashDueCents,
+			creditsUsed: res.creditsUsed,
+			// Every member of the act, not just whoever booked (#756): a band loads
+			// in together and whoever arrives first opens the door. The guard above
+			// is what bounds this — membership in the band the row belongs to.
+			lockCode: res.lockCode,
+			canCancel:
+				(bandAdmin || isBooker) &&
+				res.startsAt.getTime() > Date.now() &&
+				(res.status === 'scheduled' || res.status === 'confirmed')
+		};
+	}
+);
 
 export const getStaffReservationDetail = query(z.string(), async (id) => {
 	await requireCapability('reservation.read');

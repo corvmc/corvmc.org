@@ -108,6 +108,15 @@ do about migrations after merging `main`, which is not what you would guess. Sta
 schema and refactors still go straight to `main`; a half-built admin page is a normal intermediate
 state. This replaced feature flags, which existed only to let half-built work sit on `main`.
 
+A `feature/*` branch **is** protected, by a ruleset rather than classic branch protection, so read
+`gh api repos/corvmc/corvmc.org/rules/branches/feature%2F<slug>` —
+`.../branches/<ref>/protection` answers `404 Branch not protected` for a ruleset and that 404 means
+nothing. The rules are `deletion`, `non_fast_forward` and `required_status_checks`; there is no
+`pull_request` rule and no queue. Checks are required but a PR is not, which is why **merging
+`main` in is a fast-forward push once the checks go green, not a PR merge**: the repo is
+squash-only, and squashing a merge PR collapses the merge commit, leaving `main` outside the
+branch's ancestry and the landing PR claiming every commit `main` made in the meantime.
+
 The finishing steps that are easiest to skip: extend `scripts/seed-dev.ts` so the feature has
 realistic local data, add its row to the feature catalog (`docs/reports/feature-catalog.md`), and run
 `pnpm docs:routes && pnpm docs:check` if any route moved.
@@ -130,6 +139,11 @@ that keeps the tracker honest without anyone tidying it.
 **A finished PR is queued, not merged.** `gh pr merge --auto`, and the session ends there. No merge
 method: a queue rejects one outright ("merge method is not valid for merge queue"), and the queue's
 own configuration squashes anyway.
+
+That is `main`. A **phase** PR into a `feature/*` branch has no queue to enter — `merge_queue` is a
+rule on `main` alone — so a bare `gh pr merge --auto` refuses there with
+`--merge, --rebase, or --squash required when not running interactively`; pass `--squash`. Nothing
+about `main` changes.
 
 **Arming it is yours to do, in the same turn you open the PR.** It is not gated on the user reading
 the PR first, and there is no class of change — not tooling, not one that alters how sessions

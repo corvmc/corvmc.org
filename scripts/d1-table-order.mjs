@@ -75,6 +75,9 @@ export const tableOrder = [
 	'volunteer_signup',
 	// independents (no FKs)
 	'closure',
+	'lock_fallback_code',
+	// References user twice (holder + granting staff), so it follows `user`.
+	'lock_member_code',
 	'inbox_channel_config',
 	'verification',
 	// leaves

@@ -47,8 +47,13 @@ import { staffCreate, adjustWindow } from '$lib/server/reservation/reservation-s
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { captureException } from '$lib/server/sentry';
-import { uploadFile, copyObject } from '$lib/server/storage';
-import { detachSlot, findByKey, replaceSlot } from '$lib/server/media/media-service';
+import { uploadFile, copyObject, deleteObject } from '$lib/server/storage';
+import {
+	detachSlot,
+	findByKey,
+	isKeyReferenced,
+	replaceSlot
+} from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
 import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
@@ -736,20 +741,15 @@ export async function unpublishWithNotice(
 				// case there is nothing to preserve and nothing to delete.
 				const moved = await copyObject(row.posterKey, withheldKey);
 				if (moved) {
-					// The original is detached, not deleted. Deleting it inline is the
-					// one thing this module may not do — the write path cannot tell
-					// whether another event still points at that object — so the sweep
-					// reclaims it instead.
+					// The listing is re-pointed at the copy first; the original object is
+					// deleted below, once the database no longer names it. Order matters
+					// — the reverse would leave the listing pointing at bytes that are
+					// already gone.
 					//
-					// That is a real change to this control's timing, and worth naming:
-					// a link handed out for the old key stays live until the next daily
-					// sweep rather than dying with the takedown. The row is already
-					// past the grace window (its `createdAt` is the upload's), so it
-					// goes on the first pass, not a day after that.
-					// The copy is byte-identical, so it inherits the original's
-					// recorded size and type rather than inventing them — a fabricated
-					// byteSize is the one thing the backfill refuses to write, and the
-					// sweep treats a zero as a broken row.
+					// The copy is byte-identical, so it inherits the original's recorded
+					// size and type rather than inventing them — a fabricated byteSize is
+					// the one thing the backfill refuses to write, and the sweep treats a
+					// zero as a broken row.
 					const original = await findByKey(row.posterKey);
 					await replaceSlot({
 						attachableType: 'event_listing',
@@ -782,6 +782,21 @@ export async function unpublishWithNotice(
 				updatedAt: new Date()
 			})
 			.where(eq(eventListing.id, eventId));
+
+		// A takedown is not ordinary unreferenced-media cleanup. The sweep's grace
+		// window exists so an accidental detach can be undone; this is deliberate,
+		// and the point is that the old link stops resolving now rather than within
+		// a day. Sound only in this position: the bytes are already at the withheld
+		// key and the row above no longer names the old one, so `isKeyReferenced`
+		// is the sweep's own question asked early. A failure is left to the sweep,
+		// which is why the original's `media` row is not touched here.
+		if (nextPosterKey && row.posterKey && row.posterKey !== nextPosterKey) {
+			try {
+				if (!(await isKeyReferenced(row.posterKey))) await deleteObject(row.posterKey);
+			} catch (err) {
+				captureException(err, { event: 'community_event.poster_purge', eventId });
+			}
+		}
 
 		const [submitter] = await db
 			.select({ name: user.name, email: user.email })

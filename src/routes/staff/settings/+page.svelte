@@ -19,6 +19,8 @@
 		syncSubscriptions,
 		refreshCommunityStats
 	} from '$lib/remote/settings.remote';
+	import LockHealth from './LockHealth.svelte';
+	import UnmanagedLockCodes from './UnmanagedLockCodes.svelte';
 	import { updateInboxChannelConfig, testMetaConnection } from '$lib/remote/inbox.remote';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
@@ -84,7 +86,18 @@
 	// pasted manually). Until then, only the Connect flow makes sense.
 	const utecConnected = $derived(!!integrationSettings.refreshToken);
 	const utecCanConnect = $derived(
-		!!integrationSettings.clientId && !!integrationSettings.clientSecret
+		!!integrationSettings.clientId && integrationSettings.clientSecret.configured
+	);
+
+	// The field renders empty whether or not a secret is stored, so the hint is
+	// the only thing telling a staffer which it is — and that saving blank keeps
+	// what is there rather than wiping the lock's credential.
+	const clientSecretHint = $derived(
+		{
+			kv: 'Saved. Leave blank to keep it, or enter a new one to replace it.',
+			env: 'Set by the ULTRALOC_CLIENT_SECRET environment variable. Saving a value here overrides it.',
+			null: 'Not set. The lock cannot authenticate until this is entered.'
+		}[String(integrationSettings.clientSecret.source)]
 	);
 	const utecRedirectUri = $derived(`${page.url.origin}/api/integrations/utec/callback`);
 
@@ -439,7 +452,7 @@
 				<Card>
 					<CardBody>
 						<div class="flex items-center justify-between">
-							<CardTitle size="base">Organization Info</CardTitle>
+							<CardTitle size="base">Location</CardTitle>
 							<SubmitButton
 								label="Save"
 								successLabel="Saved"
@@ -448,48 +461,6 @@
 								size="sm"
 							/>
 						</div>
-
-						<div class="mt-2 grid gap-4 sm:grid-cols-2">
-							<FormField
-								name="name"
-								label="Organization name"
-								type="text"
-								value={String(orgSettings.name ?? 'Corvallis Music Collective')}
-							/>
-							<FormField
-								name="shortName"
-								label="Short name"
-								type="text"
-								value={String(orgSettings.shortName ?? 'CorvMC')}
-								description="Used in navigation and email subjects"
-							/>
-							<FormField
-								name="contactEmail"
-								label="Staff contact email"
-								type="email"
-								value={String(orgSettings.contactEmail ?? 'staff@corvmc.org')}
-							/>
-							<FormField
-								name="timezone"
-								label="Timezone"
-								type="select"
-								value={String(orgSettings.timezone ?? 'America/Los_Angeles')}
-								options={[
-									{ value: 'America/Los_Angeles', label: 'Pacific (Los Angeles)' },
-									{ value: 'America/Denver', label: 'Mountain (Denver)' },
-									{ value: 'America/Chicago', label: 'Central (Chicago)' },
-									{ value: 'America/New_York', label: 'Eastern (New York)' },
-									{ value: 'America/Anchorage', label: 'Alaska (Anchorage)' },
-									{ value: 'Pacific/Honolulu', label: 'Hawaii (Honolulu)' }
-								]}
-							/>
-						</div>
-					</CardBody>
-				</Card>
-
-				<Card>
-					<CardBody>
-						<CardTitle size="base">Location</CardTitle>
 						<p class="text-subtle">Shown in the site footer and on the contact page.</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
@@ -705,13 +676,23 @@
 						{/if}
 
 						{#if utecConnected}
+							<!-- Live health. `utecConnected` only means a refresh token is
+							     stored; it says nothing about whether the door is reachable. -->
+							<svelte:boundary>
+								<LockHealth />
+							</svelte:boundary>
+
+							<svelte:boundary>
+								<UnmanagedLockCodes />
+							</svelte:boundary>
+
 							<div class="mt-2 border-t border-base-200 pt-3">
 								<div class="flex items-start justify-between gap-2">
 									<div>
 										<p class="text-sm font-medium">Lock self-test</p>
 										<p class="text-subtle">
-											Issues a 15-minute test code and exercises the lock commands. Try the code on
-											the door, then revoke it.
+											Issues a temporary code that expires on its own after 15 minutes, and
+											exercises the lock commands. Try it on the door.
 										</p>
 									</div>
 									<div class="flex shrink-0 gap-2">
@@ -781,7 +762,8 @@
 								name="clientSecret"
 								label="Client Secret"
 								type="password"
-								value={integrationSettings.clientSecret}
+								value=""
+								description={clientSecretHint}
 							/>
 							<FormField
 								name="deviceId"

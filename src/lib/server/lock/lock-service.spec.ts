@@ -51,6 +51,8 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 		endsAt: 'ends_at',
 		createdByUserId: 'created_by_user_id',
 		lockCode: 'lock_code',
+		lockAccessId: 'lock_access_id',
+		lockSyncedAt: 'lock_synced_at',
 		updatedAt: 'updated_at'
 	}
 }));
@@ -72,17 +74,55 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 	buildDateInTz: vi.fn((date, time) => new Date(`${date}T${time}:00Z`))
 }));
 
-const mockCreateTemporaryUser = vi.fn().mockResolvedValue(undefined);
-const mockCreateControlUser = vi.fn().mockResolvedValue(undefined);
+const mockGetJson = vi.fn().mockResolvedValue(true);
+const mockPutJson = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('$lib/server/kv', () => ({
+	getJson: (...args: unknown[]) => mockGetJson(...args),
+	putJson: (...args: unknown[]) => mockPutJson(...args)
+}));
+
+const mockDispatchEmailOnly = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('$lib/server/notification', () => ({
+	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args)
+}));
+
+vi.mock('$env/dynamic/private', () => ({ env: {} }));
+
+const mockMaintainFallbackCode = vi.fn().mockResolvedValue({ active: null, rotated: false });
+
+vi.mock('./fallback-code-service', () => ({
+	maintainFallbackCode: (...args: unknown[]) => mockMaintainFallbackCode(...args)
+}));
+
+const mockHasActiveMemberCode = vi.fn().mockResolvedValue(false);
+const mockReconcileMemberCodeSync = vi.fn().mockResolvedValue(0);
+
+vi.mock('./member-code-service', () => ({
+	hasActiveMemberCode: (...args: unknown[]) => mockHasActiveMemberCode(...args),
+	reconcileMemberCodeSync: (...args: unknown[]) => mockReconcileMemberCodeSync(...args)
+}));
+
+const mockCreateTemporaryUser = vi.fn().mockResolvedValue(null);
+const mockAddLockUser = vi.fn().mockResolvedValue(null);
 const mockRemoveTemporaryUser = vi.fn().mockResolvedValue(undefined);
+const mockUpdateLockUser = vi.fn().mockResolvedValue(undefined);
 const mockListLockUsers = vi.fn().mockResolvedValue([]);
+const mockGetLockUser = vi.fn().mockResolvedValue(null);
+const mockQueryDeviceHealth = vi
+	.fn()
+	.mockResolvedValue({ online: true, lockState: 'Locked', batteryLevel: 4 });
 const mockGenerateLockCode = vi.fn().mockReturnValue(4242);
 
 vi.mock('./ultraloc-client', () => ({
 	createTemporaryUser: (...args: unknown[]) => mockCreateTemporaryUser(...args),
-	createControlUser: (...args: unknown[]) => mockCreateControlUser(...args),
+	addLockUser: (...args: unknown[]) => mockAddLockUser(...args),
 	removeTemporaryUser: (...args: unknown[]) => mockRemoveTemporaryUser(...args),
+	updateLockUser: (...args: unknown[]) => mockUpdateLockUser(...args),
 	listLockUsers: (...args: unknown[]) => mockListLockUsers(...args),
+	getLockUser: (...args: unknown[]) => mockGetLockUser(...args),
+	queryDeviceHealth: (...args: unknown[]) => mockQueryDeviceHealth(...args),
 	generateLockCode: (...args: unknown[]) => mockGenerateLockCode(...args),
 	// The real one formats in the lock's local zone; UTC is enough here, and it
 	// keeps the daterange strings the matcher compares deterministic.
@@ -104,6 +144,8 @@ const expiredUser = {
 	type: 2,
 	daterange: ['2020-01-01 18:00', '2020-01-01 20:30'] as [string, string]
 };
+/** What `list` actually returns for that user: no schedule fields at all. */
+const expiredRow = { id: 111, name: 'Alice', type: 2 };
 // A temporary user still inside its window (far future).
 const activeUser = {
 	id: 222,
@@ -111,6 +153,7 @@ const activeUser = {
 	type: 2,
 	daterange: ['2999-01-01 18:00', '2999-01-01 20:30'] as [string, string]
 };
+const activeRow = { id: 222, name: 'Bob', type: 2 };
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -121,10 +164,22 @@ beforeEach(() => {
 	selectResults = [];
 	selectCallIndex = 0;
 	updateCalls.length = 0;
-	mockCreateTemporaryUser.mockResolvedValue(undefined);
-	mockCreateControlUser.mockResolvedValue(undefined);
+	mockCreateTemporaryUser.mockResolvedValue(null);
+	mockAddLockUser.mockResolvedValue(null);
 	mockRemoveTemporaryUser.mockResolvedValue(undefined);
+	mockUpdateLockUser.mockResolvedValue(undefined);
 	mockListLockUsers.mockResolvedValue([]);
+	mockQueryDeviceHealth.mockResolvedValue({ online: true, lockState: 'Locked', batteryLevel: 4 });
+	mockGetJson.mockResolvedValue(true);
+	mockDispatchEmailOnly.mockResolvedValue(undefined);
+	mockMaintainFallbackCode.mockResolvedValue({ active: null, rotated: false });
+	mockHasActiveMemberCode.mockResolvedValue(false);
+	mockReconcileMemberCodeSync.mockResolvedValue(0);
+	// `list` never carries daterange — only `get` does. Route the fixtures'
+	// windows through the mocked get, which is what the service now reads.
+	mockGetLockUser.mockImplementation(
+		async (id: number) => [expiredUser, activeUser].find((u) => u.id === id) ?? null
+	);
 	mockGenerateLockCode.mockReturnValue(4242);
 });
 
@@ -163,7 +218,7 @@ describe('runDailyLockJob', () => {
 	});
 
 	it('deletes only expired temporary users on cleanup', async () => {
-		mockListLockUsers.mockResolvedValue([expiredUser, activeUser]);
+		mockListLockUsers.mockResolvedValue([expiredRow, activeRow]);
 		selectResults.push([]); // provision: none
 
 		const result = await runDailyLockJob();
@@ -178,8 +233,9 @@ describe('runDailyLockJob', () => {
 	it('ignores non-temporary and codeless users on cleanup', async () => {
 		mockListLockUsers.mockResolvedValue([
 			{ id: 1, name: 'Admin', type: 3 },
+			// A member's persistent door code. Deleting one locks a real person out.
 			{ id: 2, name: 'Normal', type: 0 },
-			{ id: 3, name: 'NoRange', type: 2 } // temporary but no daterange
+			{ id: 3, name: 'NoRange', type: 2 } // temporary, but `get` returns no window
 		]);
 		selectResults.push([]);
 
@@ -223,7 +279,7 @@ describe('runDailyLockJob', () => {
 	});
 
 	it('handles cleanup deletion errors gracefully', async () => {
-		mockListLockUsers.mockResolvedValue([expiredUser]);
+		mockListLockUsers.mockResolvedValue([expiredRow]);
 		selectResults.push([]);
 
 		mockRemoveTemporaryUser.mockRejectedValueOnce(new Error('not found'));
@@ -240,22 +296,25 @@ describe('runDailyLockJob', () => {
 });
 
 describe('issueLockSelfTest', () => {
-	it('issues a named control (type 0) test code and reports both steps ok', async () => {
+	it('issues an expiring temporary code and reports both steps ok', async () => {
 		mockListLockUsers.mockResolvedValue([{ id: 1, name: 'Someone', type: 2 }]);
 
 		const result = await issueLockSelfTest();
 
 		expect(result.ok).toBe(true);
 		expect(result.code).toBe(4242);
-		// Uses the proven normal-user add, not the temporary-user path.
-		expect(mockCreateControlUser).toHaveBeenCalledWith('CMC Self-Test', 4242);
-		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+		// A type-2 user with a real window: the thing a reservation actually gets,
+		// and it expires on its own rather than living until someone clicks Revoke.
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'CMC Self-Test', code: 4242 })
+		);
+		expect(result.expiresAt).toBeInstanceOf(Date);
 		expect(result.steps.map((s) => s.name)).toEqual(['create', 'list']);
 		expect(result.steps.every((s) => s.ok)).toBe(true);
 	});
 
 	it('reports a failed create step without throwing', async () => {
-		mockCreateControlUser.mockRejectedValueOnce(new Error('device offline'));
+		mockCreateTemporaryUser.mockRejectedValueOnce(new Error('device offline'));
 
 		const result = await issueLockSelfTest();
 
@@ -364,7 +423,7 @@ describe('syncAccessWindow', () => {
 
 	// The lock enforces access through its own copy of the window, so a show
 	// pushed later would stop opening the door at the old end time.
-	it('replaces the stale lock user, keeping the same code', async () => {
+	it('re-points the existing lock user in place when the id is known', async () => {
 		selectResults.push([
 			{
 				id: 'res-1',
@@ -372,22 +431,55 @@ describe('syncAccessWindow', () => {
 				startsAt: todayAt('20:00'),
 				endsAt: todayAt('23:00'),
 				lockCode: '1357',
+				lockAccessId: '777',
 				memberName: 'Alice'
 			}
 		]);
-		mockListLockUsers.mockResolvedValue([
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		expect(result.synced).toBe(true);
+		// One update, no delete: the member's code never leaves the lock.
+		expect(mockUpdateLockUser).toHaveBeenCalledWith(777, {
+			daterange: [
+				todayAt('20:00').toISOString().slice(0, 16).replace('T', ' '),
+				// end + LOCK_GRACE_MINUTES
+				new Date(todayAt('23:00').getTime() + 30 * 60_000)
+					.toISOString()
+					.slice(0, 16)
+					.replace('T', ' ')
+			]
+		});
+		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+		// The window moved, so the code is queued again and no longer known good.
+		expect(updateCalls).toContainEqual(expect.objectContaining({ lockSyncedAt: null }));
+	});
+
+	it('falls back to delete-and-re-add for a legacy row with no lock access id', async () => {
+		selectResults.push([
 			{
-				id: 777,
-				name: 'Alice',
-				type: 2,
-				daterange: [previousStart.toISOString().slice(0, 16).replace('T', ' '), 'x'] as [
-					string,
-					string
-				]
-			},
-			// Someone else's booking, same day. Must survive.
-			{ id: 888, name: 'Bob', type: 2, daterange: ['2999-01-01 18:00', '2999-01-01 20:30'] }
+				id: 'res-1',
+				status: 'confirmed',
+				startsAt: todayAt('20:00'),
+				endsAt: todayAt('23:00'),
+				lockCode: '1357',
+				lockAccessId: null,
+				memberName: 'Alice'
+			}
 		]);
+		// `list` carries no windows, so the match has to go through `get`.
+		mockListLockUsers.mockResolvedValue([
+			{ id: 777, name: 'Alice', type: 2 },
+			// Someone else's booking, same day. Must survive.
+			{ id: 888, name: 'Bob', type: 2 }
+		]);
+		const previousStartStr = previousStart.toISOString().slice(0, 16).replace('T', ' ');
+		mockGetLockUser.mockImplementation(async (id: number) =>
+			id === 777
+				? { id: 777, name: 'Alice', type: 2, daterange: [previousStartStr, 'x'] }
+				: { id: 888, name: 'Bob', type: 2, daterange: ['2999-01-01 18:00', '2999-01-01 20:30'] }
+		);
 
 		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
 
@@ -403,6 +495,32 @@ describe('syncAccessWindow', () => {
 			})
 		);
 		expect(mockGenerateLockCode).not.toHaveBeenCalled();
+	});
+
+	it('falls back to delete-and-re-add when the in-place update fails', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				status: 'confirmed',
+				startsAt: todayAt('20:00'),
+				endsAt: todayAt('23:00'),
+				lockCode: '1357',
+				lockAccessId: '777',
+				memberName: 'Alice'
+			}
+		]);
+		mockUpdateLockUser.mockRejectedValueOnce(new Error('device offline'));
+		mockListLockUsers.mockResolvedValue([]);
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		// A member pointed at the old window is worse than a duplicate on the lock.
+		expect(result.synced).toBe(true);
+		expect(result.errors[0]).toContain('re-point');
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(expect.objectContaining({ code: 1357 }));
+
+		consoleSpy.mockRestore();
 	});
 
 	it('does nothing when the window did not actually move', async () => {
@@ -462,5 +580,138 @@ describe('syncAccessWindow', () => {
 		expect(result.synced).toBe(true);
 		expect(result.errors[0]).toContain('lock offline');
 		expect(mockCreateTemporaryUser).toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Health gate and sync reconciliation
+// ---------------------------------------------------------------------------
+
+describe('lock health', () => {
+	it('reports an offline lock as a failed run and tells staff once', async () => {
+		mockQueryDeviceHealth.mockResolvedValue({
+			online: false,
+			lockState: 'Unlocked',
+			batteryLevel: 4
+		});
+		mockGetJson.mockResolvedValue(true); // was online last run
+		selectResults.push([], []);
+
+		const result = await runDailyLockJob();
+
+		expect(result.online).toBe(false);
+		expect(result.errors[0]).toContain('offline');
+		expect(mockDispatchEmailOnly).toHaveBeenCalledWith(
+			expect.objectContaining({ type: 'lock_offline' })
+		);
+		expect(mockPutJson).toHaveBeenCalledWith('ultraloc:lastSeenOnline', false);
+	});
+
+	// A week-long outage should be one email, not seven identical ones.
+	it('does not re-alert while the lock stays offline', async () => {
+		mockQueryDeviceHealth.mockResolvedValue({
+			online: false,
+			lockState: null,
+			batteryLevel: null
+		});
+		mockGetJson.mockResolvedValue(false); // already offline last run
+		selectResults.push([], []);
+
+		const result = await runDailyLockJob();
+
+		expect(result.errors[0]).toContain('offline');
+		expect(mockDispatchEmailOnly).not.toHaveBeenCalled();
+	});
+
+	// Not knowing is not the same as being offline.
+	it('records null and provisions anyway when the health check itself fails', async () => {
+		mockQueryDeviceHealth.mockRejectedValue(new Error('token expired'));
+		selectResults.push([], []);
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const result = await runDailyLockJob();
+
+		expect(result.online).toBeNull();
+		expect(result.errors[0]).toContain('Failed to read lock health');
+		expect(mockDispatchEmailOnly).not.toHaveBeenCalled();
+
+		consoleSpy.mockRestore();
+	});
+});
+
+describe('sync reconciliation', () => {
+	it('promotes a code to known-good only once the lock reports sync_status 1', async () => {
+		selectResults.push([]); // provision: none
+		selectResults.push([
+			{ id: 'res-synced', lockAccessId: '111' },
+			{ id: 'res-queued', lockAccessId: '222' }
+		]);
+		mockGetLockUser.mockImplementation(async (id: number) =>
+			id === 111 ? { id: 111, type: 2, syncStatus: 1 } : { id: 222, type: 2, syncStatus: 0 }
+		);
+
+		const result = await runDailyLockJob();
+
+		expect(result.confirmed).toBe(1);
+		expect(updateCalls).toContainEqual(expect.objectContaining({ lockSyncedAt: expect.any(Date) }));
+	});
+
+	it('leaves the code unconfirmed when the lock user has gone missing', async () => {
+		selectResults.push([]);
+		selectResults.push([{ id: 'res-1', lockAccessId: '999' }]);
+		mockGetLockUser.mockResolvedValue(null);
+
+		const result = await runDailyLockJob();
+
+		expect(result.confirmed).toBe(0);
+		expect(result.errors).toHaveLength(0);
+	});
+});
+
+describe('persistent member codes', () => {
+	// Every code not issued is one less user on the lock's finite table.
+	it('skips provisioning for a member who already holds a standing code', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				startsAt: new Date(),
+				endsAt: new Date(),
+				createdByUserId: 'user-1',
+				memberName: 'Jordan'
+			}
+		]);
+		selectResults.push([]); // reconcile: nothing outstanding
+		mockHasActiveMemberCode.mockResolvedValue(true);
+
+		const result = await runDailyLockJob();
+
+		expect(mockHasActiveMemberCode).toHaveBeenCalledWith('user-1');
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+		expect(result.provisioned).toBe(0);
+	});
+});
+
+describe('provisioning window', () => {
+	// The window was a single day, which left no slack: the job runs once each
+	// morning, so a lock offline then meant a member with a booking that evening
+	// had a code queued in the cloud and no way in.
+	it('provisions across the confirmation window, not just today', async () => {
+		selectResults.push([
+			{
+				id: 'res-in-3-days',
+				startsAt: new Date(Date.now() + 2.5 * 24 * 60 * 60_000),
+				endsAt: new Date(Date.now() + 2.5 * 24 * 60 * 60_000 + 3_600_000),
+				createdByUserId: 'user-1',
+				memberName: 'Jordan'
+			}
+		]);
+		selectResults.push([]);
+
+		const result = await runDailyLockJob();
+
+		expect(result.provisioned).toBe(1);
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'Jordan' })
+		);
 	});
 });
