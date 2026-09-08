@@ -110,7 +110,7 @@ The build checklist. Each row is a call site.
 | `acquisition` — purchase          | `spent`                                                                       | 4     |
 | `acquisition` — donation          | `in_kind` at `fairValueCents`                                                 | 5     |
 | Volunteer hour approved           | `in_kind` at the role's `marketRateCents`                                     | 5     |
-| Settlement pays an act            | `pass_through` out · `spent` if a guarantee tops it up                        | 5     |
+| Settlement pays an act            | `pass_through` out · `spent` for a guarantee top-up or a cash round-up        | 5     |
 
 ### Worked: a ticket sale
 
@@ -135,20 +135,22 @@ position rather than asserted away.
 
 ### Worked: paying the acts
 
-**The payout is not mirrored per ticket.** Forty tickets are forty facts weeks apart; one act paid
-after the show is one fact. With `designated` as the sum of that act's inbound pool:
-
-| Case                                      | `pass_through` out | `spent`                  | Rows |
-| ----------------------------------------- | ------------------ | ------------------------ | ---- |
-| Buyers designated more than the guarantee | `designated`       | —                        | 1    |
-| The guarantee wins                        | `designated`       | `guarantee − designated` | 2    |
-
 **The pool divides equally.** CMC takes 30% of the door and the acts split the rest among
 themselves — `production_slot.percentageBps` is basis points **of the acts' pool**, defaulting to
 `10000 / N` across credited slots, with the remainder distributed one basis point at a time by
-`sortOrder`. Three acts get 3333/3333/3334. The same rule settles odd cents, so $841 pays
-$280.34/$280.33/$280.33 rather than depending on which row the rounding lands in. A per-act override
-stays for a touring act with a guarantee, or `contributed` for a donated set.
+`sortOrder`. Three acts get 3333/3333/3334. A per-act override stays for a touring act with a
+guarantee, or `contributed` for a donated set.
+
+**A cash payout rounds up to the whole dollar, and the collective eats the difference.** Bands like
+being paid in cash and dislike being paid in change, so an $841 pool across three acts pays **$281
+each** rather than $280.34/$280.33/$280.33 — $843 handed over, $2 absorbed. It is what already
+happens at the door, and rounding up is what makes an equal split actually equal, so no odd-cent
+tie-break rule is needed.
+
+The round-up comes out of the collective's 30% and **never takes it below zero**. On a door thin
+enough that rounding every act up would cost more than the collective earned, the payout is exact to
+the cent instead — a rule that exists so the arithmetic cannot produce a negative, not because the
+case arises at a real show. Cash only: a Stripe Connect payout has no change to make.
 
 **The split is agreed at booking and applied at settlement**, from the slots as they stand then. If
 an act drops off a three-band bill two days out, the remaining two split the whole pool — including
@@ -156,10 +158,27 @@ money from tickets sold when there were three. That is why the inbound is one po
 rather than one row per act: the pool is divided among who actually played, and a lineup change
 rewrites nothing. The pre-agreed split is a commitment to the act, not a ledger fact.
 
-Three acts on an $840 pool, one on a $400 guarantee: three `pass_through` rows of −$280 and one
-`spent` of −$120. Four rows, not forty. The pass-through leg carries exactly what arrived earmarked,
-so the pool nets to zero; a guarantee top-up never passed through anything, so it is `spent`, and
-the soft-night cost surfaces on its own.
+**The payout is not mirrored per ticket.** Forty tickets are forty facts weeks apart; one act paid
+after the show is one fact. `pass_through` out is always the act's share of the pool — what arrived
+earmarked for them — and anything the collective adds on top to reach the figure actually handed
+over is `spent`:
+
+| What the collective added | Category          | Rows |
+| ------------------------- | ----------------- | ---- |
+| Nothing                   | —                 | 1    |
+| A guarantee top-up        | `act_guarantee`   | 2    |
+| A cash round-up           | `payout_rounding` | 2    |
+| Both                      | both of the above | 3    |
+
+Two categories rather than one `spent` row, because they answer different questions: a guarantee
+top-up is what a booking decision cost, and rounding is what a payment-convenience policy costs.
+Netting them together loses both.
+
+Three acts on an $840 pool, one on a $400 guarantee, paid in cash: three `pass_through` rows of
+−$280, one `spent` of −$120 for the guarantee, and no rounding row because the split is already
+whole dollars. Five rows at the very most, against forty if mirrored. The pass-through leg carries
+exactly what arrived earmarked, so the pool nets to zero and everything the collective added shows
+as its own cost.
 
 ## Rules a writer must follow
 
