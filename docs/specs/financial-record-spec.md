@@ -257,14 +257,53 @@ different job and the baseline rows say by how much the reconstruction is off.
 **The acts' share is anchored to the base rate, and the collective is the residual.** The scale is
 an opt-up: a buyer may give the acts more than the deal specifies and may never give them less.
 
-    actsTargetCents = suggestedUnitCents × quantity × (1 − collectiveShareBps / 10000)
-    actsCents       = min(divisibleCents, max(actsTargetCents, buyerOptUpCents))
-    collectiveCents = divisibleCents − actsCents
+    divisibleCents  = chargeCents − stripeFeeCents
+    otherFloorCents = round(baseCents × (10000 − shareBps) / 10000)
+    surplusCents    = max(0, divisibleCents − baseCents)
+    otherTarget     = otherFloorCents + round(surplusCents × (10000 − shareBps) / 10000)
+    otherCents      = min(divisibleCents, max(otherTarget, buyerOptUpCents))
+    shareCents      = divisibleCents − otherCents        // never below zero
+
+`baseCents` is the event's suggested price for a ticket and the release's `priceMinCents` for a
+music sale; `shareBps` is the collective's share of both the base and the surplus.
 
 On a $10 show at the default 70/30, the acts' target is **$7 regardless of what the buyer pays**.
 A buyer paying $7 sends $7 to the acts and $0 to the collective. **The collective absorbs the
 discount, and it absorbs the Stripe fee**, because the acts' number is absolute rather than
 proportional — it only falls once the collective's share is already zero.
+
+**Surplus above the base rate is split, not kept.** A buyer paying $15 on a $10 show is not making
+a donation to the collective; they are paying more for the same thing, and the same ratio applies
+to the extra. The `surplusCents` term above is what does that: at 70/30, $4.26 of surplus sends
+$2.98 to the acts and $1.28 to the collective.
+
+### Every split payment works this way
+
+This is one rule in `split.ts`, not a ticket rule. Music sales follow it too, with the release's
+`priceMinCents` as the base and `AUDIO_PLATFORM_FEE_BPS` (10%) as the share — so a band has a
+minimum take anchored to the price it set, exactly as an act does at the door.
+
+`audio-split.ts` today argues the opposite in its own doc comment:
+
+> Both sides therefore fund processing in proportion to what they take, and a buyer who drags CMC to
+> nothing leaves the collective with no share of the fee either — so refusing the cut costs CMC
+> nothing rather than costing it money. **That property is why this needs no minimum share to be
+> safe.**
+
+That reasoning is sound and answers a different question. It protects **the collective** from being
+dragged below zero. It says nothing about protecting **the band**, which is what a minimum take is
+for. Both properties are wanted, and the `min(divisibleCents, …)` clamp is what preserves the first:
+the collective's share reaches zero and never goes below it, so absorbing the fee can cost the
+collective its cut but never its own money.
+
+**The consequence to accept: on a small sale the collective's share is structurally zero.** A $2
+music sale carries a ~$0.36 card fee — 18% of the sale against a 10% platform share — so the fee
+consumes the whole cut before the band's minimum is touched. That is the correct outcome under this
+rule and it should surprise nobody later.
+
+One detail left to implementation: whether surplus is measured against the base rate or against the
+base net of its own share of the fee. This spec measures it against the base, because "you paid more
+than the sticker price, and the extra divides the same way" is the sentence a buyer would recognise.
 
 Nothing enforces this today: the split is a percentage of what was actually paid, so a discount is
 divided proportionally and the acts absorb 70% of it. At full price they receive $6.59 rather than
