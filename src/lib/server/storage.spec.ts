@@ -13,11 +13,15 @@ import {
 	uploadFile,
 	deleteObject,
 	getPublicUrl,
+	resolveImageUrl,
 	isConfigured,
 	validateUpload,
 	MAX_SIZE_BYTES
 } from './storage';
 import { env } from '$env/dynamic/private';
+
+/** A key as `withheldPosterKey` builds one — the private bucket's, not this one's. */
+const WITHHELD = 'events/posters/withheld/evt-1-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
 
 const mockBucket = {
 	put: vi.fn().mockResolvedValue({}),
@@ -157,6 +161,28 @@ describe('storage', () => {
 		it('does not double-prefix an already-resolved URL', () => {
 			const full = 'https://media.corvmc.org/46/01K7W8TMZGMCBKW803NR9TAAKR.jpg';
 			expect(getPublicUrl(full)).toBe(full);
+		});
+
+		/**
+		 * A withheld poster's bytes are in the private bucket, so a public URL for
+		 * one is a link that 404s — and a way for a caller holding the key to ask
+		 * for content that was deliberately moderated away. `resolveImageUrl`
+		 * below turns the throw into the null every caller already handles.
+		 */
+		it('refuses to mint a URL for a withheld key', () => {
+			expect(() => getPublicUrl(WITHHELD)).toThrow(/withheld/i);
+		});
+	});
+
+	describe('resolveImageUrl', () => {
+		it('returns null for a withheld key rather than a broken image', () => {
+			expect(resolveImageUrl(WITHHELD)).toBeNull();
+		});
+
+		it('still resolves an ordinary key', () => {
+			expect(resolveImageUrl('events/posters/evt-1.jpg')).toBe(
+				'https://pub.example.com/events/posters/evt-1.jpg'
+			);
 		});
 	});
 

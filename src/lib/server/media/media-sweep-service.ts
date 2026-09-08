@@ -12,6 +12,8 @@ import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { audioRelease } from '$lib/server/db/schema/audio';
 import { deleteObject } from '$lib/server/storage';
+import { deletePrivateObject } from '$lib/server/private-storage';
+import { isWithheldPosterKey } from '$lib/server/storage-keys';
 import { MEDIA_SWEEP_GRACE_MS } from '$lib/config';
 import { and, eq, lt, sql, notExists, inArray, type SQLWrapper } from 'drizzle-orm';
 
@@ -125,7 +127,11 @@ async function reapUnreferencedMedia(now: Date): Promise<{ reaped: number; faile
 
 	for (const row of candidates) {
 		try {
-			await deleteObject(row.key);
+			// The key says which bucket holds it. A withheld poster's bytes were moved
+			// to R2_PRIVATE by a takedown, and `deleteObject` on the public bucket
+			// would succeed against nothing — dropping the row that is the only record
+			// of the key, and leaving the object billed forever.
+			await (isWithheldPosterKey(row.key) ? deletePrivateObject(row.key) : deleteObject(row.key));
 			deletedIds.push(row.id);
 		} catch (err) {
 			// Keep the row. Losing the key is the one unrecoverable outcome here.
