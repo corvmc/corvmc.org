@@ -118,11 +118,12 @@ the way it is, and the workflow guide to find out **what** it does today.
 
 ### Moderation
 
-| Doc                                                                    | Status | Lifecycle | Notes                                                                                                          |
-| ---------------------------------------------------------------------- | ------ | --------- | -------------------------------------------------------------------------------------------------------------- |
-| [member-standing-spec.md](specs/shipped/member-standing-spec.md)       | ✅     | archived  | Scoped `member_standing`: what an upheld report costs, per domain. Merges the three per-domain standing tables |
-| [member-suggestions-spec.md](specs/shipped/member-suggestions-spec.md) | ✅     | archived  | Upvoted member idea board with staff responses, duplicate merging, posting-under-review                        |
-| [moderation-appeals-spec.md](specs/moderation-appeals-spec.md)         | 📋     | spec      | Every moderation action is an upheld report; `moderation_appeal` hangs off the upheld flag                     |
+| Doc                                                                    | Status | Lifecycle | Notes                                                                                                                        |
+| ---------------------------------------------------------------------- | ------ | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| [member-standing-spec.md](specs/shipped/member-standing-spec.md)       | ✅     | archived  | Scoped `member_standing`: what an upheld report costs, per domain. Merges the three per-domain standing tables               |
+| [member-suggestions-spec.md](specs/shipped/member-suggestions-spec.md) | ✅     | archived  | Upvoted member idea board with staff responses, duplicate merging, posting-under-review                                      |
+| [moderation-appeals-spec.md](specs/moderation-appeals-spec.md)         | 📋     | spec      | Every moderation action is an upheld report; `moderation_appeal` hangs off the upheld flag                                   |
+| [platform-ban-spec.md](specs/platform-ban-spec.md)                     | 📋     | spec      | There is no ban, only deactivation. `account_removal` records who, why and until when; suspension is a term, not a mechanism |
 
 ### Volunteering
 
