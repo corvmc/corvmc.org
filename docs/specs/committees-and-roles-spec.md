@@ -39,7 +39,7 @@ The word means two unrelated things in the codebase today, with no key between t
 
 - `groupKinds = ['band', 'club', 'committee']` — [src/lib/config.ts](../../src/lib/config.ts).
   A committee is a `group` row with a roster (`group_member`) and — once phases 7 and 8 of
-  [groups-spec.md](groups-spec.md) land — announcements and shared documents. Staff-created
+  [groups-spec.md](shipped/groups-spec.md) land — announcements and shared documents. Staff-created
   only, which is what makes free room time safe to grant by kind. The roster is live today;
   everything hanging off it is designed and unbuilt.
 - `volunteerRoleGroups = ['at-shows', 'away-from-shows', 'committee']` — same file. A
@@ -58,7 +58,7 @@ itself, a member applies from its own page, and a chair approves — `group_memb
 `requested → active` and the roster is the only record. Interest and membership stop being two
 objects.
 
-This is not a new idea imported here; [groups-spec.md](groups-spec.md) already names the
+This is not a new idea imported here; [groups-spec.md](shipped/groups-spec.md) already names the
 motivating case in almost these words — the policy exists for "the program that wants everyone
 to be able to _find_ it but not everyone to be in it — **a committee with a seat count**, a
 workshop with a skill floor." The committee structure is what that sentence was written for.
@@ -138,7 +138,7 @@ Two things follow, both deliberate:
   equals there is nothing to distinguish. "Who chairs Programming" is answered by
   `group_member.position`, which is a label, not a permission.
 - **A committee is normally unowned**, and that is legal rather than a gap.
-  [groups-spec.md](groups-spec.md) says so directly — "a group with no owner is legal", a normal
+  [groups-spec.md](shipped/groups-spec.md) says so directly — "a group with no owner is legal", a normal
   transient state for a program between leaders — and the unique index caps a group at one owner
   without requiring one. The column that would have forced the question, `group.ownerId`, is
   dropped by that spec anyway. Admins keep working while the seat is empty; the owner-exclusive
@@ -516,7 +516,7 @@ volunteer role and can be scheduled as shifts, so the unpaid labor half is serve
 half is not. **Outside contractors are now recorded** — `contractor` and `contractor_job` at
 `/staff/contractors` answer who services the building and when they were last in, for both a unit
 sent out to a tech and work on the building itself. See
-[contractor-work-spec.md](contractor-work-spec.md).
+[contractor-work-spec.md](shipped/contractor-work-spec.md).
 
 **As Facility**, I want equipment other committees ask for acquired, consumables restocked
 before they run out, and storage organized.
@@ -562,7 +562,7 @@ was wrong, and the label is doing exactly the job it should.
 
 **As a chair**, I want members to be able to apply to my committee, and to approve or decline
 them myself.
-📋 `joinPolicy = 'by_application'` — phase 5 of [groups-spec.md](groups-spec.md). Approving is
+📋 `joinPolicy = 'by_application'` — phase 5 of [groups-spec.md](shipped/groups-spec.md). Approving is
 a `group_member.status` flip from `'requested'` to `'active'`, the same flip that accepts an
 invitation. This replaces the interest-to-roster funnel an earlier draft proposed; see
 [What a committee is in this app](#what-a-committee-is-in-this-app) for what retires with it.
@@ -578,7 +578,7 @@ row with `status = 'pending'` that appears on the invitee's dashboard. Blocked o
 
 **As a chair**, I want the committee's minutes and its working documents in one place that
 outlives whoever took them.
-📋 Group documents — phase 8 of [groups-spec.md](groups-spec.md), unbuilt. Designed with
+📋 Group documents — phase 8 of [groups-spec.md](shipped/groups-spec.md), unbuilt. Designed with
 committee minutes as the named use case, and deliberately a file store rather than a document
 tool: no in-app authoring, no versioning, no structured agenda format. A dissolved committee
 keeps its documents, because they are the record of it. The same store would hold the
@@ -586,7 +586,7 @@ committee's checklists, templates and rosters — but nothing prompts anyone to 
 current, which the proposal makes a standing duty of the chair.
 
 **As a chair**, I want to post to my committee without email.
-📋 Group announcements — phase 7 of [groups-spec.md](groups-spec.md), unbuilt. The per-member
+📋 Group announcements — phase 7 of [groups-spec.md](shipped/groups-spec.md), unbuilt. The per-member
 mute (`group_member.notifyAnnouncements`) already exists and its schema comment says outright
 that nothing reads it until phase 7 lands.
 
@@ -646,7 +646,7 @@ Responsible for one recurring program, session to session.
 **As a program lead**, I want to run my program's sessions, welcome newcomers, and keep the
 roster.
 🔧 A club `group` with the lead as owner. Blocked on `/staff/groups` and the club page, which
-arrive later in [groups-spec.md](groups-spec.md).
+arrive later in [groups-spec.md](shipped/groups-spec.md).
 
 **As a program lead**, I want to tell my own attendees about a cancellation or a change,
 directly.
@@ -775,7 +775,7 @@ edited away, because each one closes off an alternative that will otherwise be r
    consenting to _this_ recording, an artist licensing _this_ poster — is the same mechanism
    pointed at the work once the work is an entity, and needs a value added to `attachableTypes`
    rather than a table. The non-member photo subject resolves the same way: `contact` exists in
-   [groups-spec.md](groups-spec.md) precisely to hold people who are not members, and a release
+   [groups-spec.md](shipped/groups-spec.md) precisely to hold people who are not members, and a release
    attaches to a `contact` like anything else. No release table, in any of the three cases.
 
 4. **Two cadences, one strategy.** There is a monthly committee report to the board and an
@@ -837,7 +837,7 @@ What is left is not a question but a sequence. Committee-scoped authority does n
 [admin-vs-staff-spec.md](admin-vs-staff-spec.md) settled first — they are independent — but the
 two now share a design: guards name capabilities, and a committee guard resolves the committee
 from the resource. The application flow needs phase 5 of
-[groups-spec.md](groups-spec.md), and carries the status-blind roster reads with it. The first
+[groups-spec.md](shipped/groups-spec.md), and carries the status-blind roster reads with it. The first
 workflow surface is Programming and Production, most of which is
 [production-workflow-spec.md](production-workflow-spec.md) already — so the honest next step is
 to build that spec and find out whether a domain surface is what it turns out to be.

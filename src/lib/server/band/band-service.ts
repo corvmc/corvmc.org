@@ -157,7 +157,7 @@ export class NotAnActiveBandMemberError extends DomainError {
 /**
  * Only a band can be deleted by the person who runs it.
  *
- * `docs/specs/groups-spec.md:818` is the one place the role table differs by
+ * `docs/specs/shipped/groups-spec.md:818` is the one place the role table differs by
  * kind: an appointed program leader runs the program, they do not own it, and
  * ending a CMC program is a staff decision made in `/staff/groups`.
  */
@@ -451,7 +451,7 @@ export async function getById(bandId: string) {
  * and committees the moment the first one is created, and the group surfaces
  * must not list bands: `/member/groups` answers "what can I be part of", and a
  * band, always `invite_only` and already holding its own index and panel, has no
- * answer to give. See docs/specs/groups-spec.md § The index.
+ * answer to give. See docs/specs/shipped/groups-spec.md § The index.
  */
 export async function listForUser(
 	userId: string,

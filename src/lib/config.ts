@@ -137,7 +137,7 @@ export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
  * document's row and object are written in one request, so no such gap exists —
  * what the delay buys instead is an undo window on a destructive click, and a
  * week is the useful size for "the minutes I deleted on Monday". See
- * docs/specs/groups-spec.md § Documents and private storage.
+ * docs/specs/shipped/groups-spec.md § Documents and private storage.
  */
 export const DOCUMENT_SWEEP_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -258,7 +258,7 @@ export type GroupKind = (typeof groupKinds)[number];
  * and no page open, so "you've been invited to join a band" has to be true, and
  * for the Real Book Club it is not.
  */
-/** An announcement's title and markdown body — see docs/specs/groups-spec.md. */
+/** An announcement's title and markdown body — see docs/specs/shipped/groups-spec.md. */
 export const ANNOUNCEMENT_TITLE_MAX = 200;
 export const ANNOUNCEMENT_BODY_MAX = 10000;
 
@@ -267,7 +267,7 @@ export const groupKindLabels: Record<GroupKind, string> = {
 	// a musical group of any size: both call sites — the invitation email and the
 	// announcement fan-out — address somebody about a roster they are joining or
 	// already on, and a roster of people is exactly where "band" still reads
-	// better. See docs/specs/groups-spec.md § Solo acts.
+	// better. See docs/specs/shipped/groups-spec.md § Solo acts.
 	band: 'band',
 	club: 'club',
 	committee: 'committee'
@@ -291,7 +291,7 @@ export const groupKindLabels: Record<GroupKind, string> = {
  * under all three. A band is always `invite_only` and the service refuses any
  * other value for `kind: 'band'` — a band member may spend the band's credits on
  * rehearsal time, so an `open` band would be a way to join a stranger's band and
- * spend their money. See `docs/specs/groups-spec.md`.
+ * spend their money. See `docs/specs/shipped/groups-spec.md`.
  */
 export const groupJoinPolicies = ['invite_only', 'open', 'by_application'] as const;
 export type GroupJoinPolicy = (typeof groupJoinPolicies)[number];

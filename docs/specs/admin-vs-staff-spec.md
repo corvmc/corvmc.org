@@ -156,7 +156,7 @@ plus relationship checks for per-resource permissions. That is exactly what this
 already half has: named positions are the RBAC half, and `group_member` — committee and band
 membership — is the relationship half. It is **one** relationship type, which is why it stays a
 hand-rolled guard (`requireGroupRole`, already designed in
-[groups-spec.md](groups-spec.md)) rather than a policy engine.
+[groups-spec.md](shipped/groups-spec.md)) rather than a policy engine.
 
 ---
 
@@ -411,7 +411,7 @@ Timing seals it. Schema mapping is supported (`modelName`, `fields`, `additional
 pointing `member` at `group_member` is mechanically possible — but `group_member` carries
 `status`, `position`, `alias`, `notifyAnnouncements` and a partial unique owner index that
 better-auth's `member` does not, several of them load-bearing in
-[groups-spec.md](groups-spec.md). _Corrected: that spec's migration is now **complete** — all
+[groups-spec.md](shipped/groups-spec.md). _Corrected: that spec's migration is now **complete** — all
 eleven phases shipped, and `requireGroupRole` has existed since phase 4
 (`src/lib/server/group/group-context.ts`). The original objection was that retargeting those
 tables mid-rename would put group bugs and migration bugs in one diff; that particular hazard is

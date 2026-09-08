@@ -10,7 +10,7 @@ export type InviteStatus = (typeof inviteStatuses)[number];
  * An invitation to a roster, addressed to an **email** rather than to an account
  * — the only case that needs a token and an expiry.
  *
- * Renamed from `platform_invite` in phase 6 of `docs/specs/groups-spec.md`. The
+ * Renamed from `platform_invite` in phase 6 of `docs/specs/shipped/groups-spec.md`. The
  * old name promised something it never was: `band_id` was NOT NULL and the role
  * was `groupRoles`, so every row was already an invitation to one roster. It was
  * never a gate on joining CMC either — signup is open, and
