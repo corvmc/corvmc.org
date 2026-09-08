@@ -90,8 +90,14 @@ unexpectedly`, or as a bare SIGKILL, and never as anything about the tests.
   these assertions are load-dominated: two overlapping suites redden whole spec files in both runs
   with failure sets that barely intersect. If a run died and left the lock, the error prints the
   `rm` for it.
-- A whole-suite red run can still be workerd dying on `SQLITE_BUSY_RECOVERY` — but since the state
-  directory is the suite's own, that means a second `pnpm test:e2e` in this same checkout, not a
-  dev server, and the lock above should now have refused it first.
+- **A dead web server aborts the run, and says so.** Playwright stops watching `webServer` once
+  the port is open, so a workerd that dies on its first request used to be reported as hundreds of
+  failing tests against a closed port (#793). `e2e/supervise.ts` now watches the output the runner
+  forwards and stops the run on `ERR_RUNTIME_FAILURE` or a fatal `kj::Exception`, printing "The
+  e2e web server did not start". If you see that, no assertion failed — re-run `pnpm test:e2e`.
+- `SENTRY_DO` in that crash text is **not** a Durable Object; this app declares none. It is
+  workerd's redaction marker on the words "SQLite failed", so the crash never names the file that
+  failed — which is why `checkpointE2eDatabase` sweeps every SQLite under the persist path, and
+  why `e2e/global-setup.ts` makes the first request itself, before any worker holds a reader.
 - `playwright.config.ts` spawns `npm run build && npm run preview` for its web server. That is
   fine — it only delegates to `package.json`. Leave it alone.
