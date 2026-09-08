@@ -11,6 +11,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import PackingCrate from './PackingCrate.svelte';
 	import LoadInList from './LoadInList.svelte';
+	import PromoteToRider from './PromoteToRider.svelte';
 	import {
 		getBandPackingPage,
 		savePackingNotes,
@@ -24,7 +25,7 @@
 	/**
 	 * What goes in the van, who is bringing it, and whether it is loaded yet.
 	 * Every member gets this page; a member's save touches only their own rows.
-	 * Rationale: docs/specs/packing-list-spec.md
+	 * Rationale: docs/specs/shipped/packing-list-spec.md
 	 *
 	 * Read above the awaited query: a declaration after a top-level await is
 	 * async-gated, which compiles every `fields.X.as()` into an async derived.
@@ -166,6 +167,15 @@
 				/>
 			</CardBody>
 		</Card>
+	{/if}
+
+	{#if data.isOnRoster}
+		<PromoteToRider
+			bandId={data.bandId}
+			items={list.items}
+			viewerId={data.viewerId}
+			onpromoted={refresh}
+		/>
 	{/if}
 
 	<div class="space-y-6">

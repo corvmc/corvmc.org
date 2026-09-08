@@ -2,6 +2,8 @@ import { db } from '$lib/server/db';
 import { packingItem, packingList } from '$lib/server/db/schema/packing';
 import { groupMember } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
+import { rider, riderElement } from '$lib/server/db/schema/rider';
+import { appendOwnElements } from './rider-service';
 import { aliasedTable, and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
 import {
@@ -44,6 +46,16 @@ export class PackingItemNotFoundError extends DomainError {
 	}
 }
 
+/** A first-aid kit and a box of shirts are not stage gear — see `rider_kind`. */
+export class PackingNotPromotableError extends DomainError {
+	readonly httpStatus = 422;
+
+	constructor(message: string) {
+		super(message);
+		this.name = 'PackingNotPromotableError';
+	}
+}
+
 /** Somebody else claimed it first. Expected, not exceptional — see `claimItem`. */
 export class PackingAlreadyClaimedError extends DomainError {
 	readonly httpStatus = 422;
@@ -72,7 +84,16 @@ export interface PackingItemView {
 	packed: boolean;
 	packedAt: Date | null;
 	packedByName: string | null;
+	/** That the band decided to promote it. Never whether it is there now. */
 	promotedAt: Date | null;
+	/**
+	 * Whether an element with this owner and label is on the rider **now**.
+	 *
+	 * Computed, not stored: `promotedAt` would say yes forever, so a member who
+	 * promoted something and then deliberately deleted it would be nagged to
+	 * promote it again on every load. The pair is the whole point of having both.
+	 */
+	onRider: boolean;
 }
 
 export interface PackingListView {
@@ -253,7 +274,21 @@ export async function getPackingList(groupId: string): Promise<PackingListView> 
 		.where(eq(packingItem.listId, head.id))
 		.orderBy(asc(packingItem.sortOrder));
 
-	const items = [...rows].sort(compareItems);
+	// The live "is it on the rider" answer, by `(owner, label)`. One extra read
+	// rather than a join, because a row with no `riderKind` can never match and
+	// most rows have none. `promotedAt` is the decision; this is the state.
+	const onRider = await db
+		.select({ userId: riderElement.userId, label: riderElement.label })
+		.from(riderElement)
+		.innerJoin(rider, eq(rider.id, riderElement.riderId))
+		.where(eq(rider.groupId, groupId));
+
+	const key = (userId: string | null, label: string) => `${userId ?? ''} ${label}`;
+	const onRiderKeys = new Set(onRider.map((e) => key(e.userId, e.label)));
+
+	const items = [...rows]
+		.map((row) => ({ ...row, onRider: onRiderKeys.has(key(row.userId, row.label)) }))
+		.sort(compareItems);
 
 	return {
 		...view,
@@ -542,6 +577,69 @@ export async function resetPacked(
 	]);
 
 	return { cleared: cleared.length };
+}
+
+/**
+ * Copy the caller's own rows onto the tech rider.
+ *
+ * **Takes no owner**, like every other own-rows verb here. `promotedAt` is
+ * stamped whether or not anything was added, because it records that the band
+ * made the decision — the live "is it there" answer is the label match
+ * `getPackingList` computes on read. Rationale: docs/specs/packing-list-spec.md
+ */
+export async function promoteOwnItems(
+	groupId: string,
+	callerUserId: string,
+	itemIds: string[]
+): Promise<{ promoted: number; added: number }> {
+	if (itemIds.length === 0) return { promoted: 0, added: 0 };
+
+	const head = await findPackingList(groupId);
+	if (!head) throw new PackingItemNotFoundError('That item is not on this list.');
+
+	const rows = await db
+		.select({
+			id: packingItem.id,
+			label: packingItem.label,
+			riderKind: packingItem.riderKind,
+			notes: packingItem.notes
+		})
+		.from(packingItem)
+		.where(
+			and(
+				eq(packingItem.listId, head.id),
+				eq(packingItem.userId, callerUserId),
+				inArray(packingItem.id, itemIds)
+			)
+		);
+
+	// Scoped by `(listId, userId)` like the diff: an id the filter did not
+	// return is rejected, never adopted, so no payload promotes another
+	// member's gear onto the rider under their name.
+	if (rows.length !== itemIds.length) {
+		throw new PackingItemNotFoundError('That item is not on this list.');
+	}
+
+	if (rows.some((r) => !r.riderKind)) {
+		throw new PackingNotPromotableError('That one never stands on a stage.');
+	}
+
+	const { added } = await appendOwnElements(
+		groupId,
+		callerUserId,
+		rows.map((r) => ({
+			kind: r.riderKind as RiderElementKind,
+			label: r.label,
+			notes: r.notes
+		}))
+	);
+
+	await db
+		.update(packingItem)
+		.set({ promotedAt: new Date() })
+		.where(inArray(packingItem.id, itemIds));
+
+	return { promoted: rows.length, added };
 }
 
 /** Bumped by edits to what the band brings — never by a tick or a claim. */

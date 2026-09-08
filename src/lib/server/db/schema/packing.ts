@@ -10,7 +10,7 @@ import { packingCategories, riderElementKinds } from '../../../config';
  * One list per band and durable — no event link, no per-show copy.
  * `last_reset_at` is the column this head table exists for.
  *
- * Rationale: docs/specs/packing-list-spec.md#two-tables
+ * Rationale: docs/specs/shipped/packing-list-spec.md#two-tables
  */
 export const packingList = sqliteTable(
 	'packing_list',
@@ -70,7 +70,7 @@ export type NewPackingList = typeof packingList.$inferInsert;
  * `user_id` (whose gear) and `assigned_user_id` (who carries it) are two facts
  * and neither substitutes for the other — the band's merch tub forces both.
  * Order comes from `category`, not `sort_order`, and there is no
- * `rider_element_id`. Rationale: docs/specs/packing-list-spec.md
+ * `rider_element_id`. Rationale: docs/specs/shipped/packing-list-spec.md
  */
 export const packingItem = sqliteTable(
 	'packing_item',

@@ -1302,6 +1302,63 @@ button yet; the settlement worksheet and the close-out are later phases.
 - **`settled` or `closed` appears with no way to reach it.** That is correct today.
   Do not add a button for either until the work it names exists.
 
+## 15. The packing list: what goes in the van, and who is bringing it
+
+Spec: [specs/shipped/packing-list-spec.md](../specs/shipped/packing-list-spec.md)
+
+### The story
+
+A tech rider asks _what does the desk have to find?_, which only a band that has already
+played out can answer. A packing list asks _what do you bring to a gig?_, which a band can
+answer on the day it forms. Every member of a band gets `/band/[slug]/packing`, the same
+rule the rider uses and for the same reason.
+
+Three verbs with three different permission rules. **Editing** is the row's owner or an
+admin. **Assigning** lets anyone claim an unassigned row or release their own, with admins
+assigning anybody. **Packing** — ticking a thing off as loaded — is anyone on the roster on
+any row, because one person walks the list at load-out and it is not reliably an admin.
+
+Rows that carry a `rider_kind` can be **promoted onto the tech rider**, which is the bridge
+between the two features: walking through the easy door furnishes the rider on the way.
+
+### Code path
+
+- **Read:** `getBandPackingPage` in `packing.remote.ts` — one load-bearing query, guarded at
+  `member` with `allowStaff` so a staffer advancing a show can read but not tick.
+- **Edit:** `saveOwnItems` (no owner argument) and `saveItemsFor` (admin, names a target) in
+  `src/lib/server/band/packing-service.ts`. The save is a **diff, not a replacement**:
+  drafts carry ids scoped by `(listId, ownerUserId)`, so `packed`, `assignedUserId` and
+  `promotedAt` survive an edit.
+- **Assign:** `claimItem` is a conditional write carrying its own `assigned_user_id IS NULL`
+  predicate; zero affected rows becomes `PackingAlreadyClaimedError`, which the remote
+  renders as "somebody else is already bringing that" rather than a 422.
+- **Pack / reset:** `setPacked`, and `resetPacked` which clears ticks in a `db.batch` and
+  **leaves assignments alone** — two verbs, two lifetimes.
+- **Promote:** `promoteOwnItems` → `appendOwnElements` in `rider-service.ts`.
+
+### Data touched
+
+- `packing_list` — one durable row per band, existing for `last_reset_at`.
+- `packing_item` — two owner columns that are not redundant: `user_id` is whose gear it is,
+  `assigned_user_id` is who is carrying it. The band's merch tub is the case forcing both.
+- `rider_element` / `rider_input` — written by promotion, read by the on-page match.
+
+### Where it breaks
+
+- **A member's rider corner empties after they promote something.** `appendOwnElements`
+  stopped reading the existing corner, or stopped carrying its inputs through.
+  `replaceElementsForOwner` deletes and rebuilds, and `rider_input.element_id` is
+  `on delete cascade`, so a promote that saves only the new rows takes the member's whole
+  input list with it. Pinned by two tests in `packing-service.spec.ts`.
+- **Something the band deleted from the rider keeps being suggested.** The nudge is gated on
+  `promotedAt` as well as `onRider`. `onRider` alone re-suggests a deliberate deletion on
+  every load; that difference is the whole reason both exist.
+- **A tick re-seeds somebody's open editor.** A tick or a claim must not touch
+  `packing_list.updated_at` — the page's `{#key}` remount keys off it.
+- **The unassigned count reads zero on a list that plainly has gaps.** `assigned_user_id`
+  null means "nobody has this"; a member leaving nulls it via `on delete set null`, which is
+  the state the count should then show.
+
 ## Cross-cutting patterns worth internalizing
 
 - **Everything money-related converges on two Stripe entry points:** `checkout()` in

@@ -13,6 +13,7 @@ import {
 	assignItem,
 	setPacked,
 	resetPacked,
+	promoteOwnItems,
 	PackingAlreadyClaimedError
 } from '$lib/server/band/packing-service';
 import { packingItemsDraftSchema } from '$lib/types/packing';
@@ -24,7 +25,7 @@ import { PACKING_NOTES_MAX } from '$lib/config';
  * **Three verbs, three guards, and the split is in the signatures rather than a
  * role check**: `savePackingItems` takes no owner, `claimPackingItem` no
  * assignee. Packing and resetting are guarded at `member` on purpose — not an
- * oversight to tighten later. Rationale: docs/specs/packing-list-spec.md
+ * oversight to tighten later. Rationale: docs/specs/shipped/packing-list-spec.md
  */
 
 const bandIdField = z.string().min(1);
@@ -234,6 +235,31 @@ export const setPackingItemPacked = form(
 		}
 		await getBandPackingPage(band.id).refresh();
 		return { success: true };
+	}
+);
+
+/**
+ * Copy your own rows onto the tech rider.
+ *
+ * Guarded at `member` and **takes no owner** — the service writes the caller
+ * the guard resolved, so no payload promotes somebody else's gear under their
+ * name. Ids arrive as one comma-separated field for the reason the editor
+ * posts JSON: `FormData` cannot express a list.
+ */
+export const promotePackingItems = form(
+	z.object({ bandId: bandIdField, itemIds: z.string().min(1) }),
+	async (data) => {
+		const { user, group: band } = await requireGroupRole({ id: data.bandId }, 'member');
+		const ids = data.itemIds.split(',').filter(Boolean);
+
+		let added = 0;
+		try {
+			({ added } = await promoteOwnItems(band.id, user.id, ids));
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getBandPackingPage(band.id).refresh();
+		return { success: true, added };
 	}
 );
 
