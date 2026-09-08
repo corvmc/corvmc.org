@@ -447,6 +447,84 @@ export async function saveElementsFor(
 	await touch(riderId);
 }
 
+/**
+ * Add to a member's corner without rebuilding what is already in it.
+ *
+ * `replaceElementsForOwner` is a replacement, so a caller holding only the new
+ * elements would delete the rest of that member's rider — and `rider_input` is
+ * `on delete cascade`, so their channels would go with it. Reading the corner
+ * and saving the union is the only safe way in. Labels already present are
+ * skipped, the same match promotion computes on read.
+ */
+export async function appendOwnElements(
+	groupId: string,
+	callerUserId: string,
+	additions: RiderElementDraft[]
+): Promise<{ added: number }> {
+	const riderId = await ensureRider(groupId);
+
+	const existing = await db
+		.select({
+			id: riderElement.id,
+			kind: riderElement.kind,
+			label: riderElement.label,
+			providedBy: riderElement.providedBy,
+			notes: riderElement.notes,
+			sortOrder: riderElement.sortOrder
+		})
+		.from(riderElement)
+		.where(and(eq(riderElement.riderId, riderId), eq(riderElement.userId, callerUserId)))
+		.orderBy(asc(riderElement.sortOrder));
+
+	const have = new Set(existing.map((e) => e.label));
+	const fresh = additions.filter((a) => !have.has(a.label));
+	if (fresh.length === 0) return { added: 0 };
+
+	const inputRows = existing.length
+		? await db
+				.select()
+				.from(riderInput)
+				.where(
+					inArray(
+						riderInput.elementId,
+						existing.map((e) => e.id)
+					)
+				)
+				.orderBy(asc(riderInput.sortOrder))
+		: [];
+
+	const inputsByElement = new Map<string, RiderInputDraft[]>();
+	for (const row of inputRows) {
+		const list = inputsByElement.get(row.elementId) ?? [];
+		list.push({
+			label: row.label,
+			source: row.source,
+			micPref: row.micPref,
+			phantom: row.phantom,
+			stand: row.stand,
+			monitorMixUserId: row.monitorMixUserId,
+			notes: row.notes
+		});
+		inputsByElement.set(row.elementId, list);
+	}
+
+	const union: RiderElementDraft[] = [
+		...existing.map((e) => ({
+			kind: e.kind,
+			label: e.label,
+			providedBy: e.providedBy,
+			notes: e.notes,
+			inputs: inputsByElement.get(e.id) ?? []
+		})),
+		...fresh
+	];
+
+	assertSize(union);
+	await replaceElementsForOwner(riderId, callerUserId, union);
+	await touch(riderId);
+	return { added: fresh.length };
+}
+
 export interface RiderSettingsDraft {
 	techContactUserId?: string | null;
 	monitorFormat?: RiderMonitorFormat | null;

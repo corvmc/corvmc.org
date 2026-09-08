@@ -174,7 +174,7 @@ export async function seedRiders(roles: SeedRole[]) {
 		.groupBy(group.id)
 		.orderBy(desc(sql`active_members`), asc(group.slug));
 
-	if (bands.length < 4) return { riders: 0, uploaded: 0 };
+	if (bands.length < 4) return { riders: 0, uploaded: 0, structuredBandId: null };
 
 	/**
 	 * Four bands, because a rider has four states worth looking at and each one
@@ -517,6 +517,12 @@ export async function seedRiders(roles: SeedRole[]) {
 	return {
 		riders: 2,
 		uploaded: 1,
+		// The id as well as the name: the packing seed hangs its fixture off this
+		// same band so one login sees both features, and a name is not a lookup
+		// key. Re-deriving "the first free band with the biggest roster" over
+		// there would be the duplicated derivation this file's own comments warn
+		// about.
+		structuredBandId: structured.id,
 		structuredBand: structured.name,
 		oversizedBand: oversized.name,
 		uploadBand: uploadOnly.name,
