@@ -414,7 +414,9 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.model.contactName).toBe('Charlie');
 		expect(params.model.contactEmail).toBe('charlie@test.com');
 		expect(params.model.formSubject).toBe('General Inquiry');
-		expect(params.model.message).toBe('Hello, I have a question');
+		// `>`-quoted before it reaches the template, so it survives into the
+		// staffer's reply as a quote rather than as literal fence text.
+		expect(params.model.message).toBe('> Hello, I have a question');
 		expect(params.model.threadUrl).toBe('https://test.corvmc.com/staff/inbox/thread-9');
 	});
 

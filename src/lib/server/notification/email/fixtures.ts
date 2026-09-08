@@ -173,6 +173,8 @@ export const FIXTURES: Fixture[] = [
 		name: 'contact-alert',
 		alias: 'contact-alert',
 		// Text-only: staff reply to this one straight from their mail client.
+		// `message` is the post-`quoteForPlainText` shape the listener passes —
+		// the template cannot prefix per line.
 		model: {
 			subject: 'Contact form: Performance Inquiry',
 			contactName: 'Charlie Rivera',
@@ -181,7 +183,7 @@ export const FIXTURES: Fixture[] = [
 			replyNote:
 				'Reply to this email to answer Charlie Rivera. Your reply is sent from CMC and saved on the conversation in the staff inbox.',
 			message:
-				"Hi there,\n\nI run a small folk trio & we're hoping to play a Saturday in March.\n\nThanks!",
+				"> Hi there,\n>\n> I run a small folk trio & we're hoping to play a Saturday in March.\n>\n> Thanks!",
 			threadUrl: 'https://corvmc.org/staff/inbox/thr-1'
 		}
 	},
