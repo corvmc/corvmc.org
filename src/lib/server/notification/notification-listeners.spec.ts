@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { INVITE_EXPIRY_DAYS } from '$lib/config';
+import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 
 // ---------------------------------------------------------------------------
@@ -102,7 +103,6 @@ beforeEach(() => {
 
 // All transactional emails (except ticket-confirmation + inbox-reply) render
 // through the single generic `notification` template.
-const GENERIC = 'notification';
 
 const volunteerPayload = {
 	logId: 'log-1',
@@ -193,15 +193,15 @@ describe('orientation_confirmed handler', () => {
 			userId: string;
 			userEmail: string;
 			title: string;
-			emailTemplate: { alias: string; model: { paragraphs?: { text: string }[] } };
+			email: { paragraphs?: { text: string }[] };
 		};
 		expect(arg.userId).toBe('member-1');
 		expect(arg.userEmail).toBe('wren@test.com');
 		// The volunteer's name is the useful part of the message — "somebody" is
 		// not what makes this worth sending.
 		expect(arg.title).toContain('Sam');
-		expect(arg.emailTemplate.alias).toBe(GENERIC);
-		expect(paragraphText(arg.emailTemplate.model)).toContain('Sam');
+		expect(arg.email).toBeDefined();
+		expect(paragraphText(arg.email)).toContain('Sam');
 	});
 
 	it('says nothing for an ordinary shift', async () => {
@@ -311,13 +311,16 @@ describe('collapsed listeners use the generic template', () => {
 
 		const params = mockDispatch.mock.calls[0][0];
 		expect(params.type).toBe('reservation_reminder');
-		expect(params.emailTemplate.alias).toBe(GENERIC);
-		expect(params.emailTemplate.model.subject).toContain('May 21');
-		expect(params.emailTemplate.model.details.map((d: { value: string }) => d.value)).toEqual([
+		expect(params.email).toBeDefined();
+		expect(params.email.subject).toContain('May 21');
+		expect(params.email.details.map((d: { value: string }) => d.value)).toEqual([
 			'May 21',
 			'10:00 AM – 11:00 AM'
 		]);
-		expect(params.emailTemplate.model.cta.url).toBe('https://test.corvmc.com/member/reservations');
+		// The button carries a label only; it follows the notification's own href,
+		// and build-model.spec.ts owns turning that into an absolute URL.
+		expect(params.email.cta).toEqual({ label: 'View my reservations' });
+		expect(params.href).toBe('/member/reservations');
 	});
 
 	it('confirmation_reminder → notification alias', async () => {
@@ -332,8 +335,8 @@ describe('collapsed listeners use the generic template', () => {
 
 		const params = mockDispatch.mock.calls[0][0];
 		expect(params.type).toBe('confirmation_reminder');
-		expect(params.emailTemplate.alias).toBe(GENERIC);
-		expect(params.emailTemplate.model.subject).toContain('May 22');
+		expect(params.email).toBeDefined();
+		expect(params.email.subject).toContain('May 22');
 	});
 
 	it('band.invitation_sent → notification alias', async () => {
@@ -347,9 +350,9 @@ describe('collapsed listeners use the generic template', () => {
 
 		const params = mockDispatch.mock.calls[0][0];
 		expect(params.type).toBe('band_invitation');
-		expect(params.emailTemplate.alias).toBe(GENERIC);
-		expect(params.emailTemplate.model.subject).toContain('Alice');
-		expect(params.emailTemplate.model.subject).toContain('The Strokes');
+		expect(params.email).toBeDefined();
+		expect(params.email.subject).toContain('Alice');
+		expect(params.email.subject).toContain('The Strokes');
 	});
 
 	it('group_invite.created → email-only notification alias with signup link', async () => {
@@ -365,9 +368,9 @@ describe('collapsed listeners use the generic template', () => {
 
 		const params = mockDispatchEmailOnly.mock.calls[0][0];
 		expect(params.type).toBe('group_invitation');
-		expect(params.templateAlias).toBe(GENERIC);
-		expect(params.model.cta.url).toBe('https://test.corvmc.com/login?invite=tok-xyz');
-		expect(params.model.footnote).toContain(String(INVITE_EXPIRY_DAYS));
+		expect(params.email).toBeDefined();
+		expect(params.email.cta.url).toBe('/login?invite=tok-xyz');
+		expect(params.email.footnote).toContain(String(INVITE_EXPIRY_DAYS));
 	});
 
 	/**
@@ -387,10 +390,10 @@ describe('collapsed listeners use the generic template', () => {
 		});
 
 		const params = mockDispatchEmailOnly.mock.calls[0][0];
-		expect(params.model.paragraphs[0].text).toContain('Real Book Club');
+		expect(params.email.paragraphs[0].text).toContain('Real Book Club');
 		// A club must never be described as a band — the vocabulary follows groupKind.
-		expect(params.model.paragraphs[0].text).not.toContain('band');
-		expect(params.model.heading).toContain('Real Book Club');
+		expect(params.email.paragraphs[0].text).not.toContain('band');
+		expect(params.email.heading).toContain('Real Book Club');
 	});
 
 	const contactFormEvent = {
@@ -447,9 +450,9 @@ describe('collapsed listeners use the generic template', () => {
 		});
 
 		const params = mockDispatchEmailOnly.mock.calls[0][0];
-		expect(params.templateAlias).toBe(GENERIC);
-		expect(detailLabels(params.model)).not.toContain('Notes');
-		expect(params.model.cta.url).toBe('https://test.corvmc.com/staff/inventory/loans/loan-1');
+		expect(params.email).toBeDefined();
+		expect(detailLabels(params.email)).not.toContain('Notes');
+		expect(params.email.cta.url).toBe('/staff/inventory/loans/loan-1');
 	});
 });
 
@@ -466,8 +469,8 @@ describe('event.cancelled handler', () => {
 
 		const params = mockDispatch.mock.calls[0][0];
 		expect(params.type).toBe('event_cancellation');
-		expect(params.emailTemplate.alias).toBe(GENERIC);
-		expect(params.emailTemplate.model.subject).toContain('Jazz Night');
+		expect(params.email).toBeDefined();
+		expect(params.email.subject).toContain('Jazz Night');
 	});
 
 	it('uses dispatchEmailOnly (generic alias) for holders without a userId', async () => {
@@ -479,7 +482,10 @@ describe('event.cancelled handler', () => {
 		});
 
 		expect(mockDispatchEmailOnly).toHaveBeenCalledWith(
-			expect.objectContaining({ type: 'event_cancellation', templateAlias: GENERIC })
+			expect.objectContaining({
+				type: 'event_cancellation',
+				email: expect.objectContaining({ heading: 'Event cancelled' })
+			})
 		);
 	});
 
@@ -517,9 +523,9 @@ describe('band.invitation_accepted handler', () => {
 		expect(mockDispatch).toHaveBeenCalledTimes(2);
 		const first = mockDispatch.mock.calls[0][0];
 		expect(first.type).toBe('band_invitation_accepted');
-		expect(first.emailTemplate.alias).toBe(GENERIC);
-		expect(first.emailTemplate.model.subject).toContain('Charlie');
-		expect(first.emailTemplate.model.subject).toContain('The Strokes');
+		expect(first.email).toBeDefined();
+		expect(first.email.subject).toContain('Charlie');
+		expect(first.email.subject).toContain('The Strokes');
 	});
 
 	it('continues notifying remaining admins if one fails', async () => {
@@ -559,8 +565,8 @@ describe('equipment.checked_out handler', () => {
 		const params = mockDispatch.mock.calls[0][0];
 		expect(params.type).toBe('equipment_checked_out');
 		expect(params.userEmail).toBe('user@test.com');
-		expect(params.emailTemplate.alias).toBe(GENERIC);
-		expect(params.emailTemplate.model.subject).toContain('SM58');
+		expect(params.email).toBeDefined();
+		expect(params.email.subject).toContain('SM58');
 	});
 });
 
@@ -582,8 +588,8 @@ describe('equipment.returned handler', () => {
 
 		const params = mockDispatch.mock.calls[0][0];
 		expect(params.type).toBe('equipment_returned');
-		expect(params.emailTemplate.alias).toBe(GENERIC);
-		const text = detailText(params.emailTemplate.model);
+		expect(params.email).toBeDefined();
+		const text = detailText(params.email);
 		expect(text).toContain('3 days');
 		expect(text).toContain('$15.00');
 		expect(text).toContain('credits $5.00, cash $10.00');
@@ -602,7 +608,7 @@ describe('equipment.returned handler', () => {
 			daysBorrowed: 1
 		});
 
-		const model = mockDispatch.mock.calls[0][0].emailTemplate.model;
+		const model = mockDispatch.mock.calls[0][0].email;
 		expect(detailLabels(model)).not.toContain('Total charge');
 		expect(detailText(model)).toContain('1 day');
 	});
@@ -627,8 +633,8 @@ describe('reservation.cancelled handler', () => {
 		expect(mockDispatch).toHaveBeenCalledTimes(1);
 		const params = mockDispatch.mock.calls[0][0];
 		expect(params.type).toBe('reservation_cancelled');
-		expect(params.emailTemplate.alias).toBe(GENERIC);
-		expect(params.emailTemplate.model.subject).toContain('May 21');
+		expect(params.email).toBeDefined();
+		expect(params.email.subject).toContain('May 21');
 	});
 
 	it('does NOT email when the member cancelled their own reservation', async () => {
@@ -693,7 +699,7 @@ describe('volunteer hour-log handlers', () => {
 			description: 'Covered the door'
 		});
 
-		expect(mockDispatch.mock.calls[0][0].emailTemplate).toBeUndefined();
+		expect(mockDispatch.mock.calls[0][0].email).toBeUndefined();
 		expect(mockDispatch.mock.calls[0][0].href).toBe('/staff/volunteer');
 	});
 
@@ -720,9 +726,9 @@ describe('volunteer hour-log handlers', () => {
 
 		const call = mockDispatch.mock.calls[0][0];
 		expect(call.userId).toBe('user-1');
-		expect(call.emailTemplate.alias).toBe(GENERIC);
-		expect(detailLabels(call.emailTemplate.model)).toEqual(['Date', 'Role', 'Hours']);
-		expect(detailText(call.emailTemplate.model)).toContain('Front Desk');
+		expect(call.email).toBeDefined();
+		expect(detailLabels(call.email)).toEqual(['Date', 'Role', 'Hours']);
+		expect(detailText(call.email)).toContain('Front Desk');
 	});
 
 	// The reason is the point of the rejection email — without it the member
@@ -735,8 +741,8 @@ describe('volunteer hour-log handlers', () => {
 
 		const call = mockDispatch.mock.calls[0][0];
 		expect(call.body).toBe('Looks like a duplicate');
-		expect(detailLabels(call.emailTemplate.model)).toContain('Reason');
-		expect(paragraphText(call.emailTemplate.model)).toContain('Looks like a duplicate');
+		expect(detailLabels(call.email)).toContain('Reason');
+		expect(paragraphText(call.email)).toContain('Looks like a duplicate');
 	});
 
 	it('pluralizes hours correctly', async () => {
@@ -852,12 +858,8 @@ describe('every notification-alias model', () => {
 		});
 
 		return [
-			...mockDispatch.mock.calls
-				.filter((c) => c[0].emailTemplate?.alias === GENERIC)
-				.map((c) => c[0].emailTemplate.model),
-			...mockDispatchEmailOnly.mock.calls
-				.filter((c) => c[0].templateAlias === GENERIC)
-				.map((c) => c[0].model)
+			...mockDispatch.mock.calls.filter((c) => c[0].email).map((c) => c[0].email),
+			...mockDispatchEmailOnly.mock.calls.filter((c) => c[0].email).map((c) => c[0].email)
 		];
 	}
 
@@ -882,9 +884,8 @@ describe('every notification-alias model', () => {
 
 		for (const model of models) {
 			// Either written deliberately, or derived by the dispatcher's normalizer.
-			const preview =
-				(model.preview_text as string | undefined) ??
-				(normalizeNotificationModel(model as never).preview_text as string);
+			const preview = normalizeNotificationModel(buildNotificationEmail(model as never) as never)
+				.preview_text as string;
 			expect(preview?.trim()).toBeTruthy();
 		}
 	});
@@ -919,8 +920,8 @@ describe('membership notifications', () => {
 		const call = callFor('membership_receipt');
 		expect(call).toBeDefined();
 		expect(call.userEmail).toBe('ada@test.com');
-		expect(call.emailTemplate.alias).toBe(GENERIC);
-		expect(detailText(call.emailTemplate.model)).toContain('$25.00 / month');
+		expect(call.email).toBeDefined();
+		expect(detailText(call.email)).toContain('$25.00 / month');
 	});
 
 	it('states the hours in hours, not in credits', async () => {
@@ -928,22 +929,16 @@ describe('membership notifications', () => {
 		// straight would promise double the rehearsal time actually granted.
 		await emit('membership.started', paid);
 
-		expect(detailText(callFor('membership_receipt').emailTemplate.model)).toContain(
-			'5 hours / month'
-		);
+		expect(detailText(callFor('membership_receipt').email)).toContain('5 hours / month');
 	});
 
 	it('names the fee coverage only when the member opted into it', async () => {
 		await emit('membership.started', paid);
-		expect(detailLabels(callFor('membership_receipt').emailTemplate.model)).not.toContain(
-			'Processing fees'
-		);
+		expect(detailLabels(callFor('membership_receipt').email)).not.toContain('Processing fees');
 
 		vi.clearAllMocks();
 		await emit('membership.started', { ...paid, coveringFees: true });
-		expect(detailLabels(callFor('membership_receipt').emailTemplate.model)).toContain(
-			'Processing fees'
-		);
+		expect(detailLabels(callFor('membership_receipt').email)).toContain('Processing fees');
 	});
 
 	it('sends the renewal receipt under its own, muteable type', async () => {
@@ -967,8 +962,8 @@ describe('membership notifications', () => {
 		});
 
 		const call = callFor('membership_payment_failed');
-		expect(call.emailTemplate.model.cta.url).toBe('https://stripe.test/pay');
-		expect(detailLabels(call.emailTemplate.model)).toContain('Next attempt');
+		expect(call.email.cta.url).toBe('https://stripe.test/pay');
+		expect(detailLabels(call.email)).toContain('Next attempt');
 	});
 
 	it('falls back to the membership page when Stripe gave no pay link', async () => {
@@ -982,9 +977,12 @@ describe('membership notifications', () => {
 			nextAttemptAt: null
 		});
 
-		const model = callFor('membership_payment_failed').emailTemplate.model;
-		expect(model.cta.url).toContain('/member/membership');
-		expect(detailLabels(model)).not.toContain('Next attempt');
+		const call = callFor('membership_payment_failed');
+		// No URL of its own, so the button follows the notification to the
+		// membership page — which is the fallback this test is named for.
+		expect(call.email.cta).toEqual({ label: 'View my membership' });
+		expect(call.href).toBe('/member/membership');
+		expect(detailLabels(call.email)).not.toContain('Next attempt');
 	});
 
 	it('tells a cancelling member the date their benefits actually stop', async () => {
@@ -995,7 +993,7 @@ describe('membership notifications', () => {
 			endsAt: '2026-07-01T00:00:00.000Z'
 		});
 
-		const model = callFor('membership_cancellation_scheduled').emailTemplate.model;
+		const model = callFor('membership_cancellation_scheduled').email;
 		expect(detailLabels(model)).toContain('Benefits run through');
 		expect(paragraphText(model)).toContain('not be charged again');
 	});
@@ -1009,6 +1007,6 @@ describe('membership notifications', () => {
 		});
 
 		const call = callFor('membership_ended');
-		expect(call.emailTemplate.model.footnote).toContain('recurring bookings');
+		expect(call.email.footnote).toContain('recurring bookings');
 	});
 });
