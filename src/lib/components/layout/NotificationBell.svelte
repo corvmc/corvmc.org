@@ -161,8 +161,10 @@
 								     the contract rather than switching the rule off. -->
 								<a
 									href={n.href as ResolvedPathname}
-									class="border-base-300/50} block border-b px-4 py-3 transition-colors hover:bg-base-200"
-									class:bg-primary={isUnread}
+									class={[
+										'block border-b border-base-300/50 px-4 py-3 transition-colors hover:bg-base-200',
+										isUnread && 'bg-primary/10'
+									]}
 									onclick={() => {
 										if (isUnread) markRead(n.id);
 										open = false;
@@ -184,7 +186,7 @@
 									</div>
 								</a>
 							{:else}
-								<div class="border-b border-base-300/50 px-4 py-3" class:bg-primary={isUnread}>
+								<div class={['border-b border-base-300/50 px-4 py-3', isUnread && 'bg-primary/10']}>
 									<div class="flex items-start gap-2">
 										{#if isUnread}
 											<button
