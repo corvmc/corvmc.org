@@ -229,6 +229,14 @@ export function isLocalOriginEvent(event: { request?: { url?: string } }): boole
 export const handle: Handle = sequence(
 	Sentry.initCloudflareSentryHandle({
 		dsn: SENTRY_DSN,
+		// The only way a worker event gets a release. This handle inits through
+		// `wrapRequestHandler`, which passes these options to the Cloudflare SDK
+		// untouched — it never runs `getFinalOptions`, so the CF_VERSION_METADATA
+		// binding in wrangler.toml is not read here, and there is no
+		// `globalThis.SENTRY_RELEASE` fallback as there is in the browser. The
+		// constant comes from vite.config.ts, which hands the same string to the
+		// Sentry vite plugin as its release name.
+		release: __SENTRY_RELEASE_NAME__ ?? undefined,
 		environment: process.env.SENTRY_ENVIRONMENT ?? (dev ? 'development' : 'production'),
 		// Don't report from local dev or the Playwright/preview e2e run (env set in
 		// playwright.config.ts). The env-var gate fails open when a preview server
