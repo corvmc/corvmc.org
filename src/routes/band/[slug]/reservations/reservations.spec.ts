@@ -504,22 +504,27 @@ describe('getBandReservationDetail', () => {
 	// `memberRefColumns` selects the email, so this has to be dropped on the way
 	// out rather than merely not asked for.
 	it('does not hand a bandmate the booker contact details', async () => {
-		selectResult = detailRow({}, 'user-2');
+		selectResult = detailRow({ stripePaymentRecordId: 'pay_123' }, 'user-2');
 
 		const result = await getBandReservationDetail(detailArgs);
 
-		expect(JSON.stringify(result)).not.toContain('someone@example.com');
+		const payload = JSON.stringify(result);
+		expect(payload).not.toContain('someone@example.com');
+		// #756 widened the door code and nothing else: the payment instrument is
+		// still not projected, so the whole row is still not spread out here.
+		expect(payload).not.toContain('pay_123');
 	});
 
-	// Whether every bandmate may read the door code is the open product decision
-	// in #566. Until it is answered the code stays with whoever booked, who
-	// already reads it on `/member/reservations/[id]`.
-	it('withholds the door code from a bandmate who did not book', async () => {
+	// #756 answered the question this case used to pin open: every member of the
+	// act reads the code, because whoever arrives first opens the door. Flipping
+	// it is the decision, so the case stays and asserts the other way.
+	it('gives the door code to a bandmate who did not book', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('member');
 		selectResult = detailRow({}, 'user-2');
 
 		const result = await getBandReservationDetail(detailArgs);
 
-		expect(result.lockCode).toBeNull();
+		expect(result.lockCode).toBe('4821');
 		expect(result.isBooker).toBe(false);
 	});
 
@@ -529,6 +534,30 @@ describe('getBandReservationDetail', () => {
 		const result = await getBandReservationDetail(detailArgs);
 
 		expect(result.lockCode).toBe('4821');
+	});
+
+	// Staff administer band panels, so `allowStaff` lets them onto the page —
+	// and they already read the same code on the staff detail page.
+	it('gives a staff non-member the door code', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		isElevated.mockResolvedValue(true);
+		selectResult = detailRow({}, 'user-2');
+
+		const result = await getBandReservationDetail(detailArgs);
+
+		expect(result.lockCode).toBe('4821');
+	});
+
+	// Widening the code to the act did not widen it past the act: the guard is
+	// still membership, and the row must still belong to this band.
+	it('gives the door code to nobody outside the act', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+		selectResult = detailRow({}, 'user-2');
+		await expect(getBandReservationDetail(detailArgs)).rejects.toMatchObject({ status: 403 });
+
+		bandServiceMock.getUserRole.mockResolvedValue('member');
+		selectResult = detailRow({ bookerId: 'band-other' }, 'user-2');
+		await expect(getBandReservationDetail(detailArgs)).rejects.toMatchObject({ status: 404 });
 	});
 
 	// Same rule as the list, so the page never offers a Cancel that

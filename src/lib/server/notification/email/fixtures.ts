@@ -28,7 +28,7 @@ export const FIXTURES: Fixture[] = [
 			category_label: 'Practice space',
 			category_color: '#00859b',
 			category_class: 'kicker-practice-space',
-			heading: 'Reservation Cancelled'
+			heading: 'Reservation cancelled'
 		}
 	},
 	{
@@ -40,7 +40,7 @@ export const FIXTURES: Fixture[] = [
 			category_label: 'Practice space',
 			category_color: '#00859b',
 			category_class: 'kicker-practice-space',
-			heading: "You're Booked Thursday",
+			heading: "You're booked Thursday",
 			greeting: 'Hi Maya,',
 			paragraphs: [
 				{ text: 'You have a reservation coming up at the Collective.' },
@@ -54,7 +54,7 @@ export const FIXTURES: Fixture[] = [
 				{ label: 'Band', value: 'Indigo Kiss' },
 				{ label: 'Cost', value: 'Free · 2 of 10 free hours used this month' }
 			],
-			cta: { url: 'https://corvmc.org/member/reservations', label: 'Manage Reservation' },
+			cta: { url: 'https://corvmc.org/member/reservations', label: 'Manage reservation' },
 			footnote: 'Need to cancel? Do it at least 24 hours ahead so someone else can use the room.'
 		}
 	},
@@ -70,7 +70,7 @@ export const FIXTURES: Fixture[] = [
 			category_label: 'Shows & tickets',
 			category_color: '#f84d13',
 			category_class: 'kicker-shows',
-			heading: 'Listing Claim Submitted',
+			heading: 'Listing claim submitted',
 			paragraphs: [{ text: 'Indigo Kiss submitted a claim with this note:' }],
 			has_details: true,
 			details: [

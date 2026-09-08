@@ -304,6 +304,28 @@ export async function findByKey(key: string): Promise<Media | null> {
 	return row ?? null;
 }
 
+/**
+ * Is anything still pointing at this key?
+ *
+ * The sweep's own question, minus the grace window — exported so the one caller
+ * allowed to delete an object inline (the moderation takedown in
+ * `event-service.ts`) asks it exactly the way the sweep does. Both references
+ * count: an attachment on the object's row, and the denormalized
+ * `event_listing.poster_key`, which a generated occurrence can hold even when
+ * its attachment was never written.
+ */
+export async function isKeyReferenced(key: string): Promise<boolean> {
+	const row = await findByKey(key);
+	if (row && (await countAttachments(row.id)) > 0) return true;
+
+	const [listing] = await db
+		.select({ id: eventListing.id })
+		.from(eventListing)
+		.where(eq(eventListing.posterKey, key))
+		.limit(1);
+	return !!listing;
+}
+
 /** Total bytes referenced by live attachments. Uses the guard above. */
 export async function totalLiveBytes(): Promise<number> {
 	const [row] = await db

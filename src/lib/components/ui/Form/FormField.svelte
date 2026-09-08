@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { type Snippet } from 'svelte';
 	import type { RemoteFormFieldValue, RemoteFormField, RemoteFormIssue } from '@sveltejs/kit';
-	import TagInput from './TagInput.svelte';
+	import TagSelect from './TagSelect.svelte';
 	import CalendarSelect from './CalendarSelect.svelte';
 	import Select from './Select.svelte';
 	import FileUpload from './FileUpload.svelte';
@@ -93,7 +93,7 @@
 
 	const form = getFormContext();
 
-	// `options` means two different shapes depending on `type` — TagInput keys on
+	// `options` means two different shapes depending on `type` — TagSelect keys on
 	// `id`, the selects on `value` — so it stays in the forwarded rest props and
 	// is narrowed here, once per variant, instead of being declared as one shape
 	// that would be wrong for the other.
@@ -203,7 +203,7 @@
 		if (children) return false; // caller markup we never handed the id to
 		if (input) return true; // the snippet is handed `resolvedId` to place
 		if (type === 'textarea') return true;
-		// Composites: TagInput and CalendarSelect are several controls, and the one
+		// Composites: TagSelect and CalendarSelect are several controls, and the one
 		// a caption would point at (the combobox input) is swapped out for a chip
 		// once a value is picked. FileUpload names its own picker.
 		if (type === 'tags' || type === 'calendar') return false;
@@ -321,8 +321,8 @@
 		<textarea class="textarea w-full" class:ghost={readonly} {...inputProps} bind:value></textarea>
 	{:else if type === 'tags'}
 		<!-- `value` is its own prop, so it is not in `...rest` and must be forwarded
-		     explicitly — without it TagInput starts empty and submits `[]`. -->
-		<TagInput {...rest} options={tagOptions} {...inputProps} {value} disabled={pending} />
+		     explicitly — without it TagSelect starts empty and submits `[]`. -->
+		<TagSelect {...rest} options={tagOptions} {...inputProps} {value} disabled={pending} />
 	{:else if type === 'calendar'}
 		<CalendarSelect {...rest} name={resolvedName} bind:value disabled={pending || readonly} />
 	{:else if type === 'checkbox'}

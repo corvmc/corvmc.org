@@ -7,6 +7,7 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { assertNoTransactableStripeCredentials } from './e2e/stripe-guard';
 import fs from 'node:fs';
+import { execSync } from 'node:child_process';
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +15,27 @@ import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import { browserPort, devPort, previewPort, storybookPort } from './scripts/lib/checkout-ports';
 const dirname =
 	typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+
+// The Sentry vite plugin names its release after the checked-out commit and
+// injects that string into the browser bundle, which is why browser events
+// carry a release and worker events do not: `initCloudflareSentryHandle` inits
+// through `wrapRequestHandler`, which skips the `getFinalOptions` step that
+// reads CF_VERSION_METADATA off the Worker env, and the Cloudflare SDK has no
+// `globalThis.SENTRY_RELEASE` fallback either. Resolving the name once here and
+// handing it to both the plugin and `define` is what keeps a server event's tag
+// equal to the release its artifacts are uploaded under.
+function resolveSentryRelease(): string | undefined {
+	if (process.env.SENTRY_RELEASE) return process.env.SENTRY_RELEASE;
+	try {
+		return execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+			.toString()
+			.trim();
+	} catch {
+		return undefined;
+	}
+}
+
+const sentryRelease = resolveSentryRelease();
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
@@ -36,7 +58,10 @@ export default defineConfig({
 			: [
 					sentrySvelteKit({
 						org: 'corvallis-music-collective',
-						project: 'javascript-sveltekit'
+						project: 'javascript-sveltekit',
+						// Pinned rather than left to the plugin's own detection, so the
+						// release it creates and the tag hooks.server.ts sets cannot drift.
+						...(sentryRelease ? { release: { name: sentryRelease } } : {})
 					})
 				]),
 		tailwindcss(),
@@ -61,6 +86,12 @@ export default defineConfig({
 			}
 		}
 	],
+	// Read by hooks.server.ts. `null` rather than absent when nothing resolved:
+	// the identifier has to be replaced in every build, or it is a ReferenceError
+	// at import rather than an untagged event.
+	define: {
+		__SENTRY_RELEASE_NAME__: JSON.stringify(sentryRelease ?? null)
+	},
 	server: {
 		// The main checkout keeps 5173; a worktree gets a port of its own, derived
 		// from its path. See scripts/lib/checkout-ports.ts.

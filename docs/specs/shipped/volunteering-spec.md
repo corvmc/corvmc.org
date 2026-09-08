@@ -402,7 +402,7 @@ somebody else's signup renders as absent.
 
 **Built, as designed below.** The domain model survived contact with
 implementation unchanged. Two UI-level deviations: the role requirements picker
-is a checkbox group rather than a TagInput, and the clearances view is its own
+is a checkbox group rather than a TagSelect, and the clearances view is its own
 page (`/staff/volunteer/clearances`) rather than a section of the catalog.
 Certifications answer "who can run the desk?" on their own, and are what
 shift-claiming checks.

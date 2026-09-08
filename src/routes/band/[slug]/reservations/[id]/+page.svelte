@@ -97,14 +97,11 @@
 			{#if res.lockCode}
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
 				<p class="text-muted">
-					Enter this code on the door keypad. It works for the length of the session.
+					Enter this code on the door keypad. It works for the length of the session, for whoever on
+					the act gets there first.
 				</p>
-			{:else if res.isBooker}
-				<p class="text-muted">Your door code will appear here on the day of the session.</p>
 			{:else}
-				<p class="text-muted">
-					The door code goes to {res.bookedBy.title}, who booked this session.
-				</p>
+				<p class="text-muted">The door code appears here on the day of the session.</p>
 			{/if}
 		</InfoCard>
 	{/if}
