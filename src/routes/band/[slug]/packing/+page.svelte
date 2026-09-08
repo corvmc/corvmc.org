@@ -11,6 +11,7 @@
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import PackingCrate from './PackingCrate.svelte';
 	import LoadInList from './LoadInList.svelte';
+	import PromoteToRider from './PromoteToRider.svelte';
 	import {
 		getBandPackingPage,
 		savePackingNotes,
@@ -166,6 +167,15 @@
 				/>
 			</CardBody>
 		</Card>
+	{/if}
+
+	{#if data.isOnRoster}
+		<PromoteToRider
+			bandId={data.bandId}
+			items={list.items}
+			viewerId={data.viewerId}
+			onpromoted={refresh}
+		/>
 	{/if}
 
 	<div class="space-y-6">

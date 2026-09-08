@@ -59,6 +59,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const { packingItem } = await import('$lib/server/db/schema/packing');
+const { riderElement, riderInput } = await import('$lib/server/db/schema/rider');
 const {
 	compareItems,
 	getPackingList,
@@ -69,9 +70,11 @@ const {
 	assignItem,
 	setPacked,
 	resetPacked,
+	promoteOwnItems,
 	PackingTooLargeError,
 	PackingItemNotFoundError,
-	PackingAlreadyClaimedError
+	PackingAlreadyClaimedError,
+	PackingNotPromotableError
 } = await import('./packing-service');
 const { PACKING_MAX_ITEMS, PACKING_MAX_QUANTITY } = await import('$lib/config');
 
@@ -164,6 +167,60 @@ describe('getPackingList', () => {
 		expect(view.itemCount).toBe(3);
 		expect(view.packedCount).toBe(2);
 		expect(view.unassignedCount).toBe(2);
+	});
+
+	it('matches the rider on (owner, label), so one owner’s row is not another’s', async () => {
+		const row = (id: string, userId: string | null, label: string) => ({
+			...stored(id),
+			userId,
+			label,
+			category: 'backline',
+			sortOrder: 0,
+			assignedUserId: null,
+			packed: false,
+			promotedAt: null
+		});
+		selectResults = [
+			[HEAD],
+			[row('a', 'u-1', 'Fender Twin'), row('b', 'u-2', 'Fender Twin'), row('c', null, 'Merch tub')],
+			[{ userId: 'u-1', label: 'Fender Twin' }]
+		];
+
+		const view = await getPackingList('band-1');
+		const by = (id: string) => view.items.find((i) => i.id === id)!;
+
+		expect(by('a').onRider).toBe(true);
+		// Same label, different owner. The rider attributes gear to a person, so
+		// collapsing these would mark a member's amp settled off someone else's.
+		expect(by('b').onRider).toBe(false);
+		expect(by('c').onRider).toBe(false);
+	});
+
+	it('reads onRider false for a row promoted and then deleted from the rider', async () => {
+		selectResults = [
+			[HEAD],
+			[
+				{
+					...stored('a'),
+					userId: 'u-1',
+					label: 'Rhodes suitcase',
+					category: 'backline',
+					sortOrder: 0,
+					assignedUserId: null,
+					packed: false,
+					promotedAt: new Date('2026-01-01')
+				}
+			],
+			[]
+		];
+
+		const view = await getPackingList('band-1');
+
+		// Both halves, which is why both columns exist: the decision was made and
+		// is still recorded, and the element is not there now. The UI reads the
+		// pair — a stamped `promotedAt` is what stops this nagging forever.
+		expect(view.items[0].promotedAt).not.toBeNull();
+		expect(view.items[0].onRider).toBe(false);
 	});
 });
 
@@ -368,6 +425,123 @@ describe('resetPacked', () => {
 		const result = await resetPacked('band-1', 'u-1');
 		expect(result.cleared).toBe(0);
 		expect(batches).toEqual([]);
+		expect(updates).toEqual([]);
+	});
+});
+
+describe('promoteOwnItems', () => {
+	const RIDER = { id: 'rider-1', groupId: 'band-1' };
+
+	/** A packing row as the owner-scoped promotion read returns it. */
+	const promotable = (id: string, label: string) => ({
+		id,
+		label,
+		riderKind: 'guitar_amp',
+		notes: null
+	});
+
+	/** An element the member already has, and the one input hanging off it. */
+	const existingElement = {
+		id: 'el-1',
+		kind: 'keys',
+		label: 'Nord Stage',
+		providedBy: 'band',
+		notes: null,
+		sortOrder: 0,
+		x: null,
+		y: null
+	};
+	const existingInput = {
+		id: 'in-1',
+		elementId: 'el-1',
+		label: 'Nord L',
+		source: 'di',
+		micPref: null,
+		phantom: true,
+		stand: 'none',
+		monitorMixUserId: null,
+		notes: null,
+		sortOrder: 0
+	};
+
+	const insertedInto = (table: unknown) =>
+		inserts.filter((i) => i.table === table).flatMap((i) => i.values as { label: string }[]);
+
+	it('appends to the rider — it never replaces the corner the member already had', async () => {
+		selectResults = [
+			[HEAD],
+			[promotable('p-1', 'Fender Twin')],
+			[RIDER],
+			[existingElement],
+			[existingInput],
+			[existingElement]
+		];
+
+		await promoteOwnItems('band-1', 'u-1', ['p-1']);
+
+		// `replaceElementsForOwner` deletes and rebuilds, so promoting has to save
+		// the union. Passing only the promoted row wipes the member's rider.
+		expect(insertedInto(riderElement).map((e) => e.label)).toEqual(['Nord Stage', 'Fender Twin']);
+	});
+
+	it('carries the existing inputs through, because the rebuild cascades them away', async () => {
+		selectResults = [
+			[HEAD],
+			[promotable('p-1', 'Fender Twin')],
+			[RIDER],
+			[existingElement],
+			[existingInput],
+			[existingElement]
+		];
+
+		await promoteOwnItems('band-1', 'u-1', ['p-1']);
+
+		// `rider_input.element_id` is `on delete cascade`, so rebuilding a corner
+		// without re-sending its inputs drops every channel the member defined.
+		expect(insertedInto(riderInput).map((i) => i.label)).toEqual(['Nord L']);
+	});
+
+	it('adds no second copy of what is already there, but still records the decision', async () => {
+		selectResults = [
+			[HEAD],
+			[promotable('p-1', 'Nord Stage')],
+			[RIDER],
+			[existingElement],
+			[existingInput]
+		];
+
+		const result = await promoteOwnItems('band-1', 'u-1', ['p-1']);
+
+		expect(result.added).toBe(0);
+		expect(insertedInto(riderElement)).toEqual([]);
+		expect(updates.at(-1)).toMatchObject({ promotedAt: expect.any(Date) });
+	});
+
+	it('stamps promotedAt, so one promoted and then deleted never nags again', async () => {
+		selectResults = [[HEAD], [promotable('p-1', 'Fender Twin')], [RIDER], [], [], []];
+
+		await promoteOwnItems('band-1', 'u-1', ['p-1']);
+
+		expect(updates.at(-1)).toMatchObject({ promotedAt: expect.any(Date) });
+	});
+
+	it('refuses an id the owner filter did not return, and writes nothing', async () => {
+		selectResults = [[HEAD], []];
+
+		await expect(promoteOwnItems('band-1', 'u-1', ['not-mine'])).rejects.toBeInstanceOf(
+			PackingItemNotFoundError
+		);
+		expect(inserts).toEqual([]);
+		expect(updates).toEqual([]);
+	});
+
+	it('refuses a row that never stands on a stage', async () => {
+		selectResults = [[HEAD], [{ id: 'p-1', label: 'First-aid kit', riderKind: null, notes: null }]];
+
+		await expect(promoteOwnItems('band-1', 'u-1', ['p-1'])).rejects.toBeInstanceOf(
+			PackingNotPromotableError
+		);
+		expect(inserts).toEqual([]);
 		expect(updates).toEqual([]);
 	});
 });
