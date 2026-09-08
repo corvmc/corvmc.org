@@ -194,20 +194,143 @@ That last one names this spec as its own forcing function.
 Phase 2 before phase 3 deliberately: getting new money right matters more than history, and a
 backfill written before the write path is settled gets written twice.
 
-## Open questions
+## Decisions
 
-1. **Does the backfill reach Stripe?** Phase 3 can reconstruct from local columns alone, or call the
-   Reporting API for the authoritative historical total. The first is cheap and approximate; the
-   second is slow, rate-limited, and correct. Probably: local backfill, flagged as
-   `metadata.backfilled`, with the Stripe total recorded once as a reconciliation baseline.
-2. **Where does the fee live?** `fee_covered_cents` exists on `ticket` and `audio` and is money the
-   member paid on the collective's behalf. One entry net of fees, or two? Two is more honest and
-   doubles the row count.
-3. **Does a refund reverse or annotate?** This spec says a reversing entry. That makes
-   `sum()` correct at every point in time and makes "what is the current state of this sale"
-   a two-row question.
-4. **Who writes the pass-through pair for a door split**, and when — at settlement, or at the moment
-   cash changes hands? #593 settles the first half of this.
+All four of this spec's open questions were settled on 2026-09-08. They are recorded as decisions
+rather than deleted, because each one rejects a cheaper alternative.
+
+### Fee coverage is a pass-through pair, not a silent netting
+
+When a member covers processing fees, `calculateTotalWithFeeCoverage` grosses the charge up so the
+collective still nets the base: on a $20 ticket the member pays ~$21.19 and Stripe keeps $1.19.
+
+That $1.19 is money **in from the member and out to Stripe**, netting zero — the same shape as the
+door split. So it is `kind = 'pass_through'`, not a fifth kind, and it is written as **two entries**
+rather than folded into the earned amount.
+
+The reason is that fee coverage is a small act of generosity repeated thousands of times, and
+"members covered $X in processing fees this year" is a number worth being able to ask for. Netting
+it into revenue makes it permanently unanswerable. The cost is two extra rows on every fee-covered
+sale, which is the correct price for a queryable number.
+
+### A refund is a reversing entry, never a mutation
+
+The table is append-only, so this follows — but it would be right even if it were not.
+
+A refund in January against a ticket sold in November: **annotating** the original row retroactively
+changes November's revenue, a figure that may already have been reported. **Reversing** puts the
+negative entry in January, where the money actually moved. That is simply correct, and it is the
+reason to accept the cost.
+
+Two consequences, both accepted:
+
+- `sum(amountCents)` is correct over any window with **no status filter**. Nothing has to remember
+  to exclude refunds, and the query that forgets cannot over-report.
+- A **partial refund** is expressible, which an annotated status column cannot represent at all.
+- "What is the current state of this sale" becomes a two-row question. That is the same trade
+  `credit_transaction` and `stock_movement` already made.
+
+Note that `payment_cache` does the opposite today — `refund()` mutates `status` to `'refunded'` —
+which is one of the reasons it is a cache and not a record. See #828.
+
+### The backfill reconstructs locally, with one Stripe baseline per period
+
+Phase 3 rebuilds history from local columns (`ticket.unit_price_cents`, `reservation.cash_due_cents`
+and the rest) rather than from Stripe's Reporting API.
+
+Local columns record what was **intended**, not what **cleared** — they know nothing about disputes,
+partial refunds, or a payment that failed and was retried, and they do not store card fees at all.
+Stripe knows all of that but does not know what a reservation is, so it can supply totals with no
+purpose attached.
+
+So: backfilled entries carry `metadata.backfilled: true`, and **one Stripe-derived total per period
+is recorded as a reconciliation baseline**. Purpose-attributed history at local cost, plus one
+honest number per period saying what the authoritative total was — so the drift is visible to
+anyone without re-deriving it.
+
+This is the right trade only because historical figures here orient rather than attest. If a funder
+or auditor ever needs numbers that survive being checked against a bank statement, that is a
+different job and the baseline rows say by how much the reconstruction is off.
+
+### The door split records the designation, the payout, and the difference
+
+**The acts' share is anchored to the base rate, and the collective is the residual.** The scale is
+an opt-up: a buyer may give the acts more than the deal specifies and may never give them less.
+
+    divisibleCents  = chargeCents − stripeFeeCents
+    otherFloorCents = round(baseCents × (10000 − shareBps) / 10000)
+    surplusCents    = max(0, divisibleCents − baseCents)
+    otherTarget     = otherFloorCents + round(surplusCents × (10000 − shareBps) / 10000)
+    otherCents      = min(divisibleCents, max(otherTarget, buyerOptUpCents))
+    shareCents      = divisibleCents − otherCents        // never below zero
+
+`baseCents` is the event's suggested price for a ticket and the release's `priceMinCents` for a
+music sale; `shareBps` is the collective's share of both the base and the surplus.
+
+On a $10 show at the default 70/30, the acts' target is **$7 regardless of what the buyer pays**.
+A buyer paying $7 sends $7 to the acts and $0 to the collective. **The collective absorbs the
+discount, and it absorbs the Stripe fee**, because the acts' number is absolute rather than
+proportional — it only falls once the collective's share is already zero.
+
+**Surplus above the base rate is split, not kept.** A buyer paying $15 on a $10 show is not making
+a donation to the collective; they are paying more for the same thing, and the same ratio applies
+to the extra. The `surplusCents` term above is what does that: at 70/30, $4.26 of surplus sends
+$2.98 to the acts and $1.28 to the collective.
+
+### Every split payment works this way
+
+This is one rule in `split.ts`, not a ticket rule. Music sales follow it too, with the release's
+`priceMinCents` as the base and `AUDIO_PLATFORM_FEE_BPS` (10%) as the share — so a band has a
+minimum take anchored to the price it set, exactly as an act does at the door.
+
+`audio-split.ts` today argues the opposite in its own doc comment:
+
+> Both sides therefore fund processing in proportion to what they take, and a buyer who drags CMC to
+> nothing leaves the collective with no share of the fee either — so refusing the cut costs CMC
+> nothing rather than costing it money. **That property is why this needs no minimum share to be
+> safe.**
+
+That reasoning is sound and answers a different question. It protects **the collective** from being
+dragged below zero. It says nothing about protecting **the band**, which is what a minimum take is
+for. Both properties are wanted, and the `min(divisibleCents, …)` clamp is what preserves the first:
+the collective's share reaches zero and never goes below it, so absorbing the fee can cost the
+collective its cut but never its own money.
+
+**The consequence to accept: on a small sale the collective's share is structurally zero.** A $2
+music sale carries a ~$0.36 card fee — 18% of the sale against a 10% platform share — so the fee
+consumes the whole cut before the band's minimum is touched. That is the correct outcome under this
+rule and it should surprise nobody later.
+
+One detail left to implementation: whether surplus is measured against the base rate or against the
+base net of its own share of the fee. This spec measures it against the base, because "you paid more
+than the sticker price, and the extra divides the same way" is the sentence a buyer would recognise.
+
+Nothing enforces this today: the split is a percentage of what was actually paid, so a discount is
+divided proportionally and the acts absorb 70% of it. At full price they receive $6.59 rather than
+$7.00, having silently paid 70% of the processing fee. See **#827**, filed and corrected from this
+decision.
+
+Both numbers are recorded, because they are different facts:
+
+| Fact                           | When       | Entry                                                                |
+| ------------------------------ | ---------- | -------------------------------------------------------------------- |
+| What the buyer designated      | Sale time  | `earned` for the collective's share, `pass_through` in for the acts' |
+| What the act was actually paid | Settlement | `pass_through` out                                                   |
+| The difference                 | Settlement | An explicit `spent` entry                                            |
+
+The two do not match by design: #593 pays an act `max(guarantee, door split %)`, so a band with a
+$200 guarantee is paid $200 on a night when buyers designated $140. **That $60 gap is recorded, not
+netted away** — it is the guarantee costing the collective money on a soft night, which is precisely
+the number a programming committee should be able to see.
+
+Recording at sale time also keeps the presale window honest: money designated for an act weeks
+before the show is a liability from the moment it is designated, not from the night of, and a
+revenue report run in between must not count it.
+
+**Changing any of this is a policy decision, and it has to be visible as one.** The reason for
+recording all three numbers rather than only the payout is that a discrepancy between what buyers
+intended and what the act received is a thing someone chose. It must not be resolvable by
+arithmetic that hides it.
 
 ## Not in this spec
 
@@ -215,6 +338,8 @@ backfill written before the write path is settled gets written twice.
 - **Payouts.** How an act is actually paid is `stripe-connect-manual.md` and
   `ticket-sliding-scale-spec.md`'s "recorded, not routed" rule. This records that a payout happened.
 - **Retiring `payment_cache`.** It can stay as the cache it is, or go once phase 2 lands. #824 is
-  where that is decided.
+  where that is decided; #828 is the refund guard that rests on it.
+- **Enforcing the acts-share floor.** #827. This spec records what the split produced; it does not
+  fix the control that produced it.
 - **Budgeting or forecasting.** `project.budgetCents` is a number to compare against, not a planning
   system.
