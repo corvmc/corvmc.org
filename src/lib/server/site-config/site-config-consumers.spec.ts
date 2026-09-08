@@ -45,8 +45,9 @@ const READERS: Record<string, string> = {
 	'org.socialFacebook': 'src/lib/remote/settings.remote.ts',
 	'org.socialInstagram': 'src/lib/remote/settings.remote.ts',
 
+	// `clientSecret` is not here on purpose: it lives in `wrangler secret` only
+	// (#745). The refresh token kept its key — the OAuth callback writes one.
 	'integration.utec.clientId': 'src/lib/server/lock/ultraloc-client.ts',
-	'integration.utec.clientSecret': 'src/lib/server/lock/ultraloc-client.ts',
 	'integration.utec.deviceId': 'src/lib/server/lock/ultraloc-client.ts',
 	'integration.utec.refreshToken': 'src/lib/server/lock/ultraloc-client.ts',
 

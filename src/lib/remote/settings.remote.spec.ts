@@ -23,6 +23,10 @@ vi.mock('$lib/server/authorization', () => ({
 // asserts none of them appears in what the browser receives, which catches a
 // reintroduction under any field name, nested or renamed. Both mint access
 // tokens for the door lock; neither is something a staff browser needs.
+//
+// The KV mock below holds both. For the refresh token that is just how it is
+// stored; for the client secret it is a leftover #745 stopped reading, which
+// the guard doubles as a check on — a production entry outlives its writer.
 const CREDENTIALS = {
 	clientSecret: 'utec-client-secret-sentinel',
 	refreshToken: 'utec-refresh-token-sentinel'
@@ -56,9 +60,9 @@ vi.mock('$lib/server/finance/product-config-service', () => ({
 }));
 
 const testConnection = vi.fn(async () => ({ ok: true }));
-const credentialStatus = vi.fn(async (_field: string) => ({
+const credentialStatus = vi.fn(async (field: string) => ({
 	configured: true,
-	source: 'kv' as const
+	source: (field === 'refreshToken' ? 'kv' : 'env') as 'kv' | 'env'
 }));
 vi.mock('$lib/server/lock/ultraloc-client', () => ({
 	testConnection: () => testConnection(),
@@ -223,16 +227,19 @@ describe('settings.remote staff guards', () => {
 	}
 
 	// clientId and deviceId stay verbatim on purpose. The client id is public by
-	// OAuth construction — `buildAuthorizeUrl` puts it in a URL the staffer's own
-	// browser is redirected to — and the device id names which lock an already
+	// OAuth construction — it is the public client identifier in the
+	// authorization request — and the device id names which lock an already
 	// authorised call acts on rather than authorising anything itself.
+	//
+	// The two credentials differ only in provenance: the client secret can come
+	// from nowhere but its Worker secret, the refresh token still from KV.
 	it('getIntegrationSettings reports credentials as configured without returning them', async () => {
 		requireCapability.mockResolvedValue(undefined);
 		const result = await settings.getIntegrationSettings();
 		expect(requireCapability).toHaveBeenCalledWith('settings.read');
 		expect(result).toEqual({
 			clientId: 'utec-client',
-			clientSecret: { configured: true, source: 'kv' },
+			clientSecret: { configured: true, source: 'env' },
 			deviceId: 'device-1',
 			refreshToken: { configured: true, source: 'kv' }
 		});
@@ -259,40 +266,44 @@ describe('settings.remote staff guards', () => {
 		}
 	);
 
-	// Neither field is ever rendered with its current value, so an untouched one
-	// submits empty. Writing that through would empty the credential the lock
-	// authenticates with — a save on the Device ID field would break the door.
-	it.each(['clientSecret', 'refreshToken'])(
-		'a blank %s leaves the stored one alone rather than clearing it',
-		async (field) => {
-			requireCapability.mockResolvedValue(undefined);
-			await settings.updateIntegrationSettings({
-				clientId: 'utec-client',
-				clientSecret: 'untouched',
-				deviceId: 'device-1',
-				refreshToken: 'untouched',
-				[field]: ''
-			});
-
-			const keys = updateSiteConfigs.mock.calls[0][0]!.map((c) => c.key);
-			expect(keys).not.toContain(`integration.utec.${field}`);
-		}
-	);
-
-	it.each(['clientSecret', 'refreshToken'])('a submitted %s is written through', async (field) => {
+	// The other half of the guard: the client secret must not reach KV either.
+	// The form is handed one under that name anyway, because a schema that drops
+	// an unknown field and a handler that writes it look identical from the
+	// browser — only the write list tells them apart. The refresh token is the
+	// deliberate exception, and is asserted present so this cannot pass by the
+	// handler writing nothing at all.
+	it('updateIntegrationSettings writes the refresh token, never the client secret', async () => {
 		requireCapability.mockResolvedValue(undefined);
 		await settings.updateIntegrationSettings({
 			clientId: 'utec-client',
-			clientSecret: '',
 			deviceId: 'device-1',
-			refreshToken: '',
-			[field]: 'rotated'
+			clientSecret: CREDENTIALS.clientSecret,
+			refreshToken: CREDENTIALS.refreshToken
 		});
 
-		expect(updateSiteConfigs.mock.calls[0][0]).toContainEqual({
-			key: `integration.utec.${field}`,
-			value: 'rotated'
+		const writes = updateSiteConfigs.mock.calls[0][0]!;
+		expect(writes.map((c) => c.key)).toEqual([
+			'integration.utec.clientId',
+			'integration.utec.deviceId',
+			'integration.utec.refreshToken'
+		]);
+		expect(JSON.stringify(writes), 'the client secret was written to KV').not.toContain(
+			CREDENTIALS.clientSecret
+		);
+	});
+
+	// The refresh token has a second writer — the OAuth callback — so a save on
+	// the Device ID field must not empty what a Connect just stored.
+	it('a blank refresh token leaves the stored one alone rather than clearing it', async () => {
+		requireCapability.mockResolvedValue(undefined);
+		await settings.updateIntegrationSettings({
+			clientId: 'utec-client',
+			deviceId: 'device-1',
+			refreshToken: ''
 		});
+
+		const keys = updateSiteConfigs.mock.calls[0][0]!.map((c) => c.key);
+		expect(keys).not.toContain('integration.utec.refreshToken');
 	});
 
 	it('the footer and contact queries remain public (rendered for logged-out visitors)', async () => {
