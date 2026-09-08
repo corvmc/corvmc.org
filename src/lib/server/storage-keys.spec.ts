@@ -3,6 +3,7 @@ import {
 	contentDispositionAttachment,
 	documentKey,
 	extensionForType,
+	isDocumentKey,
 	mediaKey,
 	sanitizeFilename
 } from './storage-keys';
@@ -105,5 +106,27 @@ describe('contentDispositionAttachment', () => {
 	it('carries no CR or LF through from the row', () => {
 		const header = contentDispositionAttachment('bad\r\nSet-Cookie: x=1.pdf');
 		expect(header).not.toMatch(/[\r\n]/);
+	});
+});
+
+describe('isDocumentKey', () => {
+	/**
+	 * The orphan sweep reaps only what this recognises, so it must accept
+	 * everything `documentKey` builds and nothing else that could share the
+	 * prefix.
+	 */
+	it('accepts every key documentKey produces', () => {
+		for (const type of ['application/pdf', 'text/csv', 'image/png', 'application/x-unknown']) {
+			expect(isDocumentKey(documentKey('g1', 'f1', type))).toBe(true);
+		}
+	});
+
+	it('rejects another consumer of the same prefix', () => {
+		expect(isDocumentKey('groups/g1/invoices/x.pdf')).toBe(false);
+		expect(isDocumentKey('groups/g1/documents/nested/x.pdf')).toBe(false);
+		expect(isDocumentKey('groups/g1/documents/')).toBe(false);
+		expect(isDocumentKey('groups/g1/documents')).toBe(false);
+		expect(isDocumentKey('contractors/c1/invoices/x.pdf')).toBe(false);
+		expect(isDocumentKey('')).toBe(false);
 	});
 });
