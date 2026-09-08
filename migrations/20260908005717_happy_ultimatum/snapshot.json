@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "071b8c64-5dfd-4fc0-833b-082926d6fbaa",
+  "id": "51118a95-7ef9-413c-8c20-0e0f04e9a3fd",
   "prevIds": [
-    "63c4b1ef-7718-42aa-a5a6-8a8aa46ed8c3"
+    "071b8c64-5dfd-4fc0-833b-082926d6fbaa"
   ],
   "ddl": [
     {
@@ -40,6 +40,14 @@
     },
     {
       "name": "closure",
+      "entityType": "tables"
+    },
+    {
+      "name": "lock_fallback_code",
+      "entityType": "tables"
+    },
+    {
+      "name": "lock_member_code",
       "entityType": "tables"
     },
     {
@@ -1196,6 +1204,176 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "code",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lock_access_id",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "synced_at",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "retired_at",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "lock_fallback_code"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "lock_member_code"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "lock_member_code"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lock_access_id",
+      "entityType": "columns",
+      "table": "lock_member_code"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "code",
+      "entityType": "columns",
+      "table": "lock_member_code"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "label",
+      "entityType": "columns",
+      "table": "lock_member_code"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "granted_by_staff_id",
+      "entityType": "columns",
+      "table": "lock_member_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "synced_at",
+      "entityType": "columns",
+      "table": "lock_member_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "revoked_at",
+      "entityType": "columns",
+      "table": "lock_member_code"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "revoked_reason",
+      "entityType": "columns",
+      "table": "lock_member_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "adopted_at",
+      "entityType": "columns",
+      "table": "lock_member_code"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "lock_member_code"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "reservation"
     },
     {
@@ -1355,6 +1533,26 @@
       "default": null,
       "generated": null,
       "name": "lock_code",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lock_synced_at",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lock_fallback_revealed_at",
       "entityType": "columns",
       "table": "reservation"
     },
@@ -10485,6 +10683,36 @@
     },
     {
       "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_lock_member_code_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "lock_member_code"
+    },
+    {
+      "columns": [
+        "granted_by_staff_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_lock_member_code_granted_by_staff_id_user_id_fk",
+      "entityType": "fks",
+      "table": "lock_member_code"
+    },
+    {
+      "columns": [
         "created_by_user_id"
       ],
       "tableTo": "user",
@@ -13105,6 +13333,24 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "lock_fallback_code_pk",
+      "table": "lock_fallback_code",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "lock_member_code_pk",
+      "table": "lock_member_code",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "reservation_pk",
       "table": "reservation",
       "entityType": "pks"
@@ -13939,6 +14185,56 @@
       "name": "idx_closure_time",
       "entityType": "indexes",
       "table": "closure"
+    },
+    {
+      "columns": [
+        {
+          "value": "retired_at",
+          "isExpression": false
+        },
+        {
+          "value": "synced_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_lock_fallback_active",
+      "entityType": "indexes",
+      "table": "lock_fallback_code"
+    },
+    {
+      "columns": [
+        {
+          "value": "lock_access_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_lock_member_code_access",
+      "entityType": "indexes",
+      "table": "lock_member_code"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "revoked_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_lock_member_code_user",
+      "entityType": "indexes",
+      "table": "lock_member_code"
     },
     {
       "columns": [
