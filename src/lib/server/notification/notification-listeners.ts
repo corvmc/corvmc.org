@@ -252,7 +252,7 @@ export function registerAllNotificationListeners(): void {
 			try {
 				const model = {
 					subject: `${event.eventTitle} has been cancelled`,
-					heading: 'Event Cancelled',
+					heading: 'Event cancelled',
 					greeting: `Hi ${holder.attendeeName},`,
 					paragraphs: [
 						{ text: `Unfortunately this event has been cancelled.` },
@@ -306,11 +306,11 @@ export function registerAllNotificationListeners(): void {
 				model: {
 					subject: `Reservation reminder: ${event.date}`,
 					preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
-					heading: 'Upcoming Reservation',
+					heading: 'Upcoming reservation',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [{ text: 'You have a reservation coming up at the space.' }],
 					details: whenDetails(event.date, event.startTime, event.endTime),
-					cta: { url: `${siteUrl}/member/reservations`, label: 'View My Reservations' }
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -330,13 +330,13 @@ export function registerAllNotificationListeners(): void {
 				model: {
 					subject: `Please confirm your reservation: ${event.date}`,
 					preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
-					heading: 'Please Confirm Your Reservation',
+					heading: 'Please confirm your reservation',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [{ text: 'You have an unconfirmed reservation.' }],
 					details: whenDetails(event.date, event.startTime, event.endTime),
 					footnote:
 						'Please confirm or cancel your reservation to free up the time slot for others.',
-					cta: { url: `${siteUrl}/member/reservations`, label: 'Confirm Now' }
+					cta: { url: `${siteUrl}/member/reservations`, label: 'Confirm now' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -426,7 +426,7 @@ export function registerAllNotificationListeners(): void {
 			model: {
 				subject: `${event.invitedByName} invited you to join ${event.groupName} on CorvMC`,
 				preview_text: `${event.invitedByName} wants you in ${event.groupName}. Your invite link is good for 7 days.`,
-				heading: `You've Been Invited to Join ${event.groupName}`,
+				heading: `You've been invited to join ${event.groupName}`,
 				paragraphs: [
 					{
 						text: `${event.invitedByName} has invited you to join the ${kind} ${event.groupName} as a ${event.role} on CorvMC.`
@@ -454,7 +454,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Recurring reservation skipped: ${event.skippedDate}`,
-					heading: 'Recurring Reservation Skipped',
+					heading: 'Recurring reservation skipped',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{ text: 'One date in your recurring reservation was skipped.' },
@@ -483,7 +483,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Recurring event needs space: ${event.eventTitle} on ${event.date}`,
-					heading: 'Recurring Event Could Not Reserve Space',
+					heading: 'Recurring event could not reserve space',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{
@@ -515,7 +515,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Equipment pickup confirmed: ${event.equipmentName}`,
-					heading: 'Equipment Pickup Confirmed',
+					heading: 'Equipment pickup confirmed',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{ text: 'Your equipment loan has been confirmed.' },
@@ -541,7 +541,7 @@ export function registerAllNotificationListeners(): void {
 			templateAlias: GENERIC_ALIAS,
 			model: {
 				subject: `Equipment request from ${event.userName}`,
-				heading: 'New Equipment Loan Request',
+				heading: 'New equipment loan request',
 				paragraphs: [{ text: `${event.userName} has requested to borrow equipment.` }],
 				details: [
 					{ label: 'Item', value: event.equipmentName ?? 'Free-form request' },
@@ -610,11 +610,11 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Equipment returned: ${event.equipmentName}`,
-					heading: 'Equipment Returned',
+					heading: 'Equipment returned',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [{ text: `Thanks for returning ${event.equipmentName}.` }],
 					details,
-					cta: { url: `${siteUrl}/member/equipment/loans`, label: 'View My Loans' }
+					cta: { url: `${siteUrl}/member/equipment/loans`, label: 'View my loans' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -667,7 +667,7 @@ export function registerAllNotificationListeners(): void {
 						}
 					],
 					details: contributionDetails(event),
-					cta: { url: `${siteUrl}/member/membership`, label: 'View My Membership' }
+					cta: { url: `${siteUrl}/member/membership`, label: 'View my membership' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -693,7 +693,7 @@ export function registerAllNotificationListeners(): void {
 						}
 					],
 					details: contributionDetails(event),
-					cta: { url: `${siteUrl}/member/membership`, label: 'View My Membership' }
+					cta: { url: `${siteUrl}/member/membership`, label: 'View my membership' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -712,8 +712,8 @@ export function registerAllNotificationListeners(): void {
 		// the billing portal. On the one email that asks for an action, the
 		// shorter path wins.
 		const cta = event.hostedInvoiceUrl
-			? { url: event.hostedInvoiceUrl, label: 'Update Payment Method' }
-			: { url: `${siteUrl}/member/membership`, label: 'View My Membership' };
+			? { url: event.hostedInvoiceUrl, label: 'Update payment method' }
+			: { url: `${siteUrl}/member/membership`, label: 'View my membership' };
 
 		await dispatch({
 			type: 'membership_payment_failed',
@@ -772,7 +772,7 @@ export function registerAllNotificationListeners(): void {
 						}
 					],
 					details,
-					cta: { url: `${siteUrl}/member/membership`, label: 'View My Membership' },
+					cta: { url: `${siteUrl}/member/membership`, label: 'View my membership' },
 					footnote: 'Thank you for the time you did support us — it mattered.'
 				} satisfies NotificationEmailModel
 			}
@@ -801,7 +801,7 @@ export function registerAllNotificationListeners(): void {
 							text: 'You are still a member — the space, the calendar and your bookings are all still yours at the standard rate.'
 						}
 					],
-					cta: { url: `${siteUrl}/member/membership`, label: 'Start Contributing Again' },
+					cta: { url: `${siteUrl}/member/membership`, label: 'Start contributing again' },
 					footnote:
 						'Any recurring bookings tied to your member hours have been cancelled. You can rebook them at any time.'
 				} satisfies NotificationEmailModel
@@ -836,11 +836,11 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Reservation cancelled: ${event.date}`,
-					heading: 'Reservation Cancelled',
+					heading: 'Reservation cancelled',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [{ text: 'Your reservation has been cancelled.' }, { text: reasonLine }],
 					details: whenDetails(event.date, event.startTime, event.endTime),
-					cta: { url: `${siteUrl}/member/reservations`, label: 'View My Reservations' }
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -859,7 +859,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Recurring reservation waitlisted: ${event.date}`,
-					heading: 'Recurring Reservation Waitlisted',
+					heading: 'Recurring reservation waitlisted',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{
@@ -868,7 +868,7 @@ export function registerAllNotificationListeners(): void {
 						{ text: "You'll be notified automatically if the slot opens up." }
 					],
 					details: whenDetails(event.date, event.startTime, event.endTime),
-					cta: { url: `${siteUrl}/member/reservations`, label: 'View My Reservations' }
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -888,12 +888,12 @@ export function registerAllNotificationListeners(): void {
 				model: {
 					subject: `Slot available: ${event.date} ${event.startTime}`,
 					preview_text: `${event.date}, ${event.startTime} – confirm within 24 hours or it goes to the next member.`,
-					heading: 'A Slot Has Opened Up',
+					heading: 'A slot has opened up',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [{ text: 'The time slot you were waiting on is now available.' }],
 					details: whenDetails(event.date, event.startTime, event.endTime),
 					footnote: 'You have 24 hours to confirm your reservation before it expires.',
-					cta: { url: event.confirmUrl, label: 'Confirm Reservation' }
+					cta: { url: event.confirmUrl, label: 'Confirm reservation' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -912,7 +912,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Waitlisted reservation expired: ${event.date}`,
-					heading: 'Waitlisted Reservation Expired',
+					heading: 'Waitlisted reservation expired',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{
@@ -920,7 +920,7 @@ export function registerAllNotificationListeners(): void {
 						}
 					],
 					details: whenDetails(event.date, event.startTime, event.endTime),
-					cta: { url: `${siteUrl}/member/reservations`, label: 'View My Reservations' }
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my reservations' }
 				} satisfies NotificationEmailModel
 			}
 		});
@@ -1107,7 +1107,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Your volunteer hours were approved`,
-					heading: 'Volunteer Hours Approved',
+					heading: 'Volunteer hours approved',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{ text: 'Thanks for helping out — your logged hours have been approved.' },
@@ -1139,7 +1139,7 @@ export function registerAllNotificationListeners(): void {
 				alias: GENERIC_ALIAS,
 				model: {
 					subject: `Your volunteer hours need another look`,
-					heading: 'Volunteer Hours Returned',
+					heading: 'Volunteer hours returned',
 					greeting: `Hi ${event.userName},`,
 					paragraphs: [
 						{
