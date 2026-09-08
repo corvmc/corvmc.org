@@ -119,6 +119,7 @@ the way it is, and the workflow guide to find out **what** it does today.
 | [directory-profiles-spec.md](specs/shipped/directory-profiles-spec.md) | ✅     | archived  | Member/band profiles, instruments, genres, visibility   |
 | [membership-page-spec.md](specs/shipped/membership-page-spec.md)       | ✅     | archived  | Sustaining membership UI, credit balance, Stripe portal |
 | [member-dashboard-spec.md](specs/shipped/member-dashboard-spec.md)     | ✅     | archived  | Member landing page                                     |
+| [local-resources-spec.md](specs/local-resources-spec.md)               | 📋     | spec      | Public staff-curated list of local music businesses     |
 
 ### Money & messaging
 
