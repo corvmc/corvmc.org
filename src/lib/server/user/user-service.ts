@@ -319,3 +319,23 @@ export async function getLastLoginAt(userId: string): Promise<Date | null> {
 
 	return row?.createdAt ?? null;
 }
+
+/**
+ * The name and address a notification needs, or null if there is no such user.
+ *
+ * Deliberately not filtered by role: the caller has already decided this person
+ * may receive the thing being sent. `notifyAssignee` used to find its target by
+ * scanning the whole staff list, which was both an O(n) walk to fetch one row
+ * and a second, invisible authorization rule sitting behind a lookup.
+ */
+export async function getUserContact(
+	userId: string
+): Promise<{ id: string; name: string; email: string } | null> {
+	const [row] = await db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+
+	return row ?? null;
+}

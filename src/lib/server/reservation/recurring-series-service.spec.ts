@@ -30,7 +30,7 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/event', () => ({
-	event: { id: 'event.id' }
+	eventListing: { id: 'event.id' }
 }));
 
 vi.mock('$lib/server/db/schema/authentication', () => ({
@@ -199,7 +199,7 @@ describe('recurring-series-service', () => {
 			prototypeStartsAt: new Date('2026-06-01T19:00:00Z')
 		};
 
-		it('builds the rule and inserts a series with prototypeType "event"', async () => {
+		it('builds the rule and inserts a series with prototypeType "event_listing"', async () => {
 			setupBatchMock();
 
 			await svc.createEventSeries(params);
@@ -211,7 +211,7 @@ describe('recurring-series-service', () => {
 			);
 			expect(lastInsert.valuesSpy).toHaveBeenCalledWith(
 				expect.objectContaining({
-					prototypeType: 'event',
+					prototypeType: 'event_listing',
 					prototypeId: 'evt-1',
 					rrule: 'FREQ=WEEKLY;BYDAY=MO'
 				})

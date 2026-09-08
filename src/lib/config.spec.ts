@@ -40,15 +40,24 @@ describe('the capability matrix', () => {
 		}
 	});
 
-	it('still gives staff everything, so the narrowing PRs are inert', () => {
-		// `staff` is transitional and identical to `admin` for the whole
-		// migration: that is exactly what makes a PR swapping 55 guards in one
-		// module change nothing observable. When the narrowing lands, this
-		// assertion flips to `!adminOnlyCapabilities.includes(cap)` — one line of
-		// test beside one line of config, and nothing else moves.
+	it('gives staff everything except the admin-only complement', () => {
+		// The narrowing. `staff` was identical to `admin` for the whole migration —
+		// that is what made sixteen guard-swapping PRs inert — and this is where
+		// that stops. A staff holder can no longer grant themselves admin, purge
+		// an account, or move credit.
+		const withheld = new Set<string>(adminOnlyCapabilities);
 		for (const cap of everyCapability) {
-			expect(grantsCapability(positions.staff, cap), `staff lacks ${cap}`).toBe(true);
+			expect(grantsCapability(positions.staff, cap), `staff/${cap}`).toBe(!withheld.has(cap));
 		}
+	});
+
+	it('withholds from staff only by way of adminOnlyCapabilities', () => {
+		// staffCapabilities is derived, so a NEW capability is granted to staff
+		// automatically and the only way to withhold one is to name it in the
+		// complement. Pinned because the failure direction of a hand-maintained
+		// list is silent: a capability forgotten there is one staff quietly gains.
+		const missing = everyCapability.filter((c) => !grantsCapability(positions.staff, c));
+		expect([...missing].sort()).toEqual([...adminOnlyCapabilities].sort());
 	});
 
 	it('names a complement of real capabilities that admin holds', () => {

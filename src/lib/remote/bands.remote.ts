@@ -84,7 +84,7 @@ export const getStaffBandMembers = query(z.string(), async (bandId) => {
 	return getMembers(bandId);
 });
 
-export const getBandReservations = query(z.string(), async (bandId) => {
+export const getStaffBandReservations = query(z.string(), async (bandId) => {
 	await requireCapability('band.read');
 	return db
 		.select({
@@ -513,7 +513,13 @@ export const updateBand = form(
 // something to validate and the schema comes back.
 export const deleteBand = form(z.object({ bandId: bandIdField }), async (data) => {
 	const { group: band } = await requireGroupRole({ id: data.bandId }, 'owner');
-	await deleteBandService(band.id);
+	try {
+		await deleteBandService(band.id);
+	} catch (err) {
+		// `CannotDeleteProgramError` is a 403 and a rule, not a fault. Unmapped it
+		// reached the client as a 500.
+		mapDomainError(err);
+	}
 	return { success: true };
 });
 
@@ -739,7 +745,7 @@ export const getStaffBandPage = query(z.string(), async (id) => {
 	const [band, members, reservations, emailInvites] = await Promise.all([
 		getStaffBand(id),
 		getStaffBandMembers(id),
-		getBandReservations(id),
+		getStaffBandReservations(id),
 		getStaffEmailInvites(id)
 	]);
 

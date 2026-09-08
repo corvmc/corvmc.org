@@ -72,7 +72,6 @@ const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 async function login(page: Page, email: string, password: string) {
 	await page.goto('/login');
-	// FormField renders a <legend>, not a <label for>, so target inputs by name.
 	await page.locator('input[name="email"]').fill(email);
 	await page.locator('input[name="password"]').fill(password);
 	await page.getByRole('button', { name: 'Sign in' }).click();
@@ -725,7 +724,8 @@ test.describe('volunteering — shifts', () => {
 test.describe('volunteering — shifts and events', () => {
 	test('the event page lists the shifts staffing that show', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production`);
+		// Staffing is the Advance tab's subject on the tabbed console.
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
 
 		const card = page.locator('.card').filter({ hasText: 'Volunteer Shifts' });
 		await expect(card).toBeVisible({ timeout: 15000 });
@@ -738,7 +738,7 @@ test.describe('volunteering — shifts and events', () => {
 
 	test('scheduling from the event page attaches the shift to it', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production`);
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
 
 		const card = page.locator('.card').filter({ hasText: 'Volunteer Shifts' });
 		await expect(card).toBeVisible({ timeout: 15000 });

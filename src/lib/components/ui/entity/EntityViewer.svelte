@@ -17,18 +17,26 @@
 		panel,
 		userId = null,
 		isStaff = false,
+		capabilities = [],
 		bands = [],
 		children
 	}: {
 		panel: Panel;
 		userId?: string | null;
 		isStaff?: boolean;
+		/**
+		 * What this viewer may do, from `layout.remote`. `entity-href` reads it to
+		 * decide which staff routes to offer — `isStaff` alone would offer a
+		 * treasurer links that 403.
+		 */
+		capabilities?: readonly string[];
 		/** Active memberships only — `getMemberLayout` already filters them. */
 		bands?: readonly { id: string }[];
 		children: Snippet;
 	} = $props();
 
 	const bandIds = $derived(new Set(bands.map((b) => b.id)));
+	const capabilitySet = $derived(new Set(capabilities));
 
 	// Getters, not a snapshot: the object identity handed to setContext never
 	// changes, so the link is never broken by a reassignment, while each read
@@ -40,6 +48,9 @@
 		},
 		get isStaff() {
 			return isStaff;
+		},
+		get capabilities() {
+			return capabilitySet;
 		},
 		get bandIds() {
 			return bandIds;

@@ -23,7 +23,6 @@ import { mkdtempSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { applyMigrations } from './migrate-local';
-// @ts-expect-error -- plain .mjs helper, no types
 import { tableOrder } from '../d1-table-order.mjs';
 
 const MIGRATIONS_DIR = join(import.meta.dirname, '..', '..', 'migrations');

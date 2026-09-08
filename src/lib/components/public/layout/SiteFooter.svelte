@@ -18,6 +18,18 @@
 		{ href: resolve('/programs'), label: 'Programs' },
 		{ href: resolve('/events'), label: 'Events' },
 		{ href: resolve('/directory'), label: 'Directory' },
+		// Static, like every row here. The list cannot ask whether any group is
+		// published — a second remote query in this component crashes past kit
+		// 2.64 — so /groups carries its own empty state instead.
+		{ href: resolve('/groups'), label: 'Groups' },
+		// CMC Radio had a row here and it 404'd for every visitor: `getRadioPage`
+		// calls `requireFeature('cmcRadio')`, the flag is off, and production has
+		// no plays to put on the air. /groups could carry an empty state because
+		// its query is ungated; /radio's is not, so the row had to go instead.
+		//
+		// The row was also the way back from a dismissed radio bar. Nothing is
+		// lost: the bar only renders while the flag is on, so with it off there is
+		// nothing to have dismissed. Launching the station puts this row back.
 		{ href: resolve('/local-resources'), label: 'Local Resources' },
 		{ href: resolve('/contribute'), label: 'Contribute' },
 		{ href: resolve('/about/bylaws'), label: 'Bylaws' },

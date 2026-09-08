@@ -14,13 +14,25 @@
 		validationWarnings: string[];
 	};
 
+	/**
+	 * Two lists, two flags — a double-booking is not a late night.
+	 *
+	 * `checkConflicts` already returns the distinction: `conflicts` is typed
+	 * (`type: 'reservation' | 'closure'`, with `label` naming whose booking it
+	 * is) and `validationWarnings` is free text about hours, advance days and
+	 * slot boundaries. This component used to flatten both into one `string[]`
+	 * and collapse that into one boolean, which is why "the space is taken" and
+	 * "that is later than we usually open" wore the same yellow and offered the
+	 * same override.
+	 */
 	let {
 		date,
 		startTime,
 		endTime,
 		checkConflicts,
 		excludeReservationId,
-		hasConflicts = $bindable()
+		hasBlockingConflict = $bindable(),
+		hasAdvisories = $bindable()
 	}: {
 		date: string;
 		startTime: string;
@@ -32,7 +44,10 @@
 			excludeReservationId?: string;
 		}) => Promise<ConflictResult>;
 		excludeReservationId?: string;
-		hasConflicts?: boolean;
+		/** The space is already spoken for — an existing booking or a closure. */
+		hasBlockingConflict?: boolean;
+		/** Bookable, but outside the usual shape: hours, advance days, boundaries. */
+		hasAdvisories?: boolean;
 	} = $props();
 
 	const conflictData = $derived(
@@ -41,42 +56,49 @@
 			: null
 	);
 
-	const warnings = $derived.by(() => {
+	const blockers = $derived.by(() => {
 		if (!conflictData) return [];
-		const msgs: string[] = [];
-
-		for (const c of conflictData.conflicts) {
+		return conflictData.conflicts.map((c) => {
 			const start = typeof c.startsAt === 'string' ? new Date(c.startsAt) : c.startsAt;
 			const end = typeof c.endsAt === 'string' ? new Date(c.endsAt) : c.endsAt;
 			const range = `${formatSlotTime(toLocalTime(start))} – ${formatSlotTime(toLocalTime(end))}`;
+			return c.type === 'reservation'
+				? `Double-books the space: ${c.label} has it ${range}`
+				: `The space is closed: ${c.label}`;
+		});
+	});
 
-			if (c.type === 'reservation') {
-				msgs.push(`Conflicts with reservation: ${c.label}, ${range}`);
-			} else {
-				msgs.push(`Overlaps with closure: ${c.label}`);
-			}
-		}
+	const advisories = $derived(conflictData?.validationWarnings ?? []);
 
-		msgs.push(...conflictData.validationWarnings);
-		return msgs;
+	$effect(() => {
+		const next = blockers.length > 0;
+		if (hasBlockingConflict !== next) hasBlockingConflict = next;
 	});
 
 	$effect(() => {
-		const next = warnings.length > 0;
-		if (hasConflicts !== next) hasConflicts = next;
+		const next = advisories.length > 0;
+		if (hasAdvisories !== next) hasAdvisories = next;
 	});
 </script>
 
 <svelte:boundary>
-	{#if warnings.length > 0}
+	<!-- `data-conflicts` marks the settled state — the answer is in, whether or
+	     not it has anything to say. The wrapper renders unconditionally for that
+	     reason; the alerts inside it do not. -->
+	<div data-conflicts>
 		<div class="space-y-2">
-			{#each warnings as warning, i (i)}
+			{#each blockers as blocker, i (i)}
+				<div class="alert py-2 text-sm alert-error">
+					{blocker}
+				</div>
+			{/each}
+			{#each advisories as advisory, i (i)}
 				<div class="alert py-2 text-sm alert-warning">
-					{warning}
+					{advisory}
 				</div>
 			{/each}
 		</div>
-	{/if}
+	</div>
 
 	{#snippet pending()}
 		<div class="flex items-center gap-2 py-1">

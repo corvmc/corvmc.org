@@ -2,9 +2,13 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { getEventRiderSummaries } from '$lib/server/band/rider-service';
-import { requireStaff, requireUser } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '$lib/server/authorization';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
 import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
+import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venue-service';
+import { getProductionByEvent } from '$lib/server/production/production-service';
+import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
+import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
 import { bandRefColumns, toBandRef, toEventRef, toMemberRef } from '$lib/server/entity/refs';
 import {
 	create,
@@ -22,6 +26,7 @@ import {
 	listUpcoming,
 	listPast,
 	getEventLineup,
+	getEventLineups,
 	setEventLineup,
 	listMemberUpcomingShows,
 	listMemberPastShows,
@@ -75,16 +80,17 @@ import { FREE_TICKETS_PER_EMAIL, TICKET_COLLECTIVE_SHARE_BPS } from '$lib/config
 import { resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
+import { venue } from '$lib/server/db/schema/venue';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
 import {
-	event,
+	eventListing,
 	createEventSchema,
-	eventSources,
 	eventKinds,
 	lineupSchema
 } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
+import { eventSources } from '$lib/config';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
@@ -132,9 +138,14 @@ export const getMemberTickets = query(async () => {
 
 	if (eventIds.length > 0) {
 		const events = await db
-			.select({ id: event.id, title: event.title, startsAt: event.startsAt, endsAt: event.endsAt })
-			.from(event)
-			.where(inArray(event.id, eventIds));
+			.select({
+				id: eventListing.id,
+				title: eventListing.title,
+				startsAt: eventListing.startsAt,
+				endsAt: eventListing.endsAt
+			})
+			.from(eventListing)
+			.where(inArray(eventListing.id, eventIds));
 
 		eventMap = Object.fromEntries(
 			events
@@ -272,6 +283,10 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	}
 
 	const lineup = await getEventLineup(id);
+	// Only a show CMC produces can have a running order, and nine listings in ten
+	// are not one — so the branch keeps a round trip off most detail views. The
+	// rest of the gate (a confirmed production, a downbeat, a credit) is in SQL.
+	const setTimes = evt.source === 'cmc' ? await getPublicSetTimes(id) : [];
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
 	const sold =
 		evt.ticketQuantity != null && remaining != null ? evt.ticketQuantity - remaining : null;
@@ -337,7 +352,11 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 				name: l.name,
 				slug: l.status === 'confirmed' ? l.bandSlug : null,
 				externalUrl: l.status === 'confirmed' && !l.bandSlug ? l.externalUrl : null
-			}))
+			})),
+			// The running order, once the production is confirmed. Empty otherwise,
+			// and separate from `lineup`, which renders for every source and must
+			// not acquire a production gate.
+			setTimes
 		},
 		remaining,
 		sold,
@@ -430,7 +449,7 @@ export const getTicketPurchaseSuccess = query(
 );
 
 export const getStaffCheckIn = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
 	if (!evt.ticketingEnabled) throw error(400, 'Ticketing not enabled for this event');
@@ -465,25 +484,61 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 const staffEventsFilters = z.object({
 	source: z.enum(eventSources).optional(),
 	status: z.enum(eventStatuses).optional(),
+	venueId: z.string().optional(),
+	// Day strings, not timestamps: the picker hands over 'YYYY-MM-DD' and the
+	// bounds are anchored to the app timezone below.
+	dateFrom: z.string().optional(),
+	dateTo: z.string().optional(),
 	page: z.number().optional()
 });
 
+/**
+ * The staff index of CMC work — the Productions page.
+ *
+ * Three SQL statements, one remote round trip. The venue and the production
+ * ride along on `listAll`'s own joins, both 1:1; the lineup summary comes from
+ * `getEventLineups`, the batched helper that exists precisely so a list page
+ * does not fire one query per row. The venue options come back with the rows so
+ * the filter has something to render without a second query — the same trick
+ * `getStaffEventPage` uses for its picker.
+ */
 export const getStaffEvents = query(staffEventsFilters, async (filters) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	const { rows, pagination } = await listAllEvents(
-		{ source: filters.source, status: filters.status },
+		{
+			source: filters.source,
+			status: filters.status,
+			venueId: filters.venueId,
+			from: filters.dateFrom
+				? buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE)
+				: undefined,
+			to: filters.dateTo ? buildDateInTz(filters.dateTo, '23:59', DEFAULT_TIMEZONE) : undefined
+		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);
+
+	const [lineups, venues] = await Promise.all([
+		getEventLineups(rows.map((e) => e.id)),
+		listLiveVenues()
+	]);
+
 	return {
-		rows: rows.map((e) => ({
-			...e,
-			// The listing's own status is the row's and keeps its column, so the
-			// ref carries none — two marks for one fact reads as two facts.
-			ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
-			// `event.groupId` is who manages the listing; the left join is already
-			// here for the byline.
-			band: toBandRef({ id: e.groupId, name: e.bandName, slug: e.bandSlug })
-		})),
+		rows: rows.map((e) => {
+			const bill = lineups.get(e.id) ?? [];
+			return {
+				...e,
+				// The listing's own status is the row's and keeps its column, so the
+				// ref carries none — two marks for one fact reads as two facts.
+				ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
+				// `event.groupId` is who manages the listing; the left join is already
+				// here for the byline.
+				band: toBandRef({ id: e.groupId, name: e.bandName, slug: e.bandSlug }),
+				// Headliner plus a count, not the whole bill: the column is one line
+				// wide and the console is one click away.
+				lineup: { headliner: bill[0]?.name ?? null, count: bill.length }
+			};
+		}),
+		venues: venues.map((v) => ({ id: v.id, name: v.name })),
 		pagination
 	};
 });
@@ -492,9 +547,10 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
  * The statuses the staff calendar will read, and the only ones it will.
  *
  * `draft` is absent on purpose. A CMC draft is production work and belongs on
- * `/staff/events`; a community draft is a member's private working copy that no
- * staffer should read. `listStaffCalendar` excludes the latter again at the
- * service level — this enum is the first of two guards, not the only one.
+ * `/staff/productions`, which is the page scoped to `source: 'cmc'` at every
+ * status; a community draft is a member's private working copy that no staffer
+ * should read. `listStaffCalendar` excludes the latter again at the service
+ * level — this enum is the first of two guards, not the only one.
  */
 const calendarStatuses = ['pending_review', 'published', 'cancelled', 'rejected'] as const;
 
@@ -513,7 +569,7 @@ export const getStaffCalendar = query(
 		page: z.number().optional()
 	}),
 	async (filters) => {
-		await requireStaff();
+		await requireCapability('event.read');
 		// Midnight tonight in venue time, not UTC — the same anchor the public gig
 		// guide uses, so the two agree about which day a late show belongs to.
 		const from = buildDateInTz(
@@ -566,21 +622,21 @@ export const getStaffCalendar = query(
  * events has no business reading it.
  */
 export const searchEvents = query(z.string(), async (q) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	if (!q || q.length < 2) return [];
 
 	const pattern = `%${q}%`;
 	const rows = await db
-		.select({ id: event.id, title: event.title, startsAt: event.startsAt })
-		.from(event)
+		.select({ id: eventListing.id, title: eventListing.title, startsAt: eventListing.startsAt })
+		.from(eventListing)
 		.where(
 			and(
-				like(event.title, pattern),
-				notInArray(event.status, ['cancelled', 'rejected']),
-				not(and(eq(event.source, 'community'), eq(event.status, 'draft'))!)
+				like(eventListing.title, pattern),
+				notInArray(eventListing.status, ['cancelled', 'rejected']),
+				not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
 			)
 		)
-		.orderBy(sql`abs(${event.startsAt} - unixepoch())`)
+		.orderBy(sql`abs(${eventListing.startsAt} - unixepoch())`)
 		.limit(SEARCH_LIMIT);
 
 	// The date arrives as a string because SearchSelect renders its description
@@ -590,7 +646,7 @@ export const searchEvents = query(z.string(), async (q) => {
 });
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('event.read');
 
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
@@ -611,6 +667,23 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			.where(eq(group.id, evt.groupId))
 			.limit(1);
 		if (row) bookingBand = { id: row.id, name: row.name, slug: row.slug };
+	}
+
+	// The one thing the venue row is for: does a show here hold the room? A blank
+	// venue means the room, which is what every event created before the column
+	// meant and still means.
+	let venueName: string | null = null;
+	let venueIsPrimary = true;
+	if (evt.venueId) {
+		const [row] = await db
+			.select({ name: venue.name, isPrimary: venue.isPrimary })
+			.from(venue)
+			.where(eq(venue.id, evt.venueId))
+			.limit(1);
+		if (row) {
+			venueName = row.name;
+			venueIsPrimary = row.isPrimary;
+		}
 	}
 
 	let linkedReservation: { id: string; status: string; startsAt: Date; endsAt: Date } | null = null;
@@ -700,6 +773,10 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			kind: evt.kind,
 			bandId: evt.groupId,
 			location: evt.location,
+			venueId: evt.venueId,
+			venueName,
+			/** True with no venue set at all: that is what an event has always meant. */
+			venueIsPrimary,
 			externalTicketUrl: evt.externalTicketUrl,
 			// What staff already told the member, so a second reviewer does not
 			// repeat a note the first one wrote.
@@ -735,7 +812,7 @@ export const checkConflicts = query(
 		excludeReservationId: z.string().optional()
 	}),
 	async ({ date, startTime, endTime, excludeReservationId }) => {
-		await requireStaff();
+		await requireCapability('event.read');
 		const { startsAt, endsAt } = buildTimeRangeInTz(date, startTime, endTime, DEFAULT_TIMEZONE);
 
 		const conflicts = await getConflictDetails(startsAt, endsAt);
@@ -762,7 +839,7 @@ export const checkRebook = query(
 		newEndsAt: z.string()
 	}),
 	async ({ eventId, newStartsAt, newEndsAt }) => {
-		await requireStaff();
+		await requireCapability('event.read');
 		const result = await checkRebookNeeded(eventId, new Date(newStartsAt), new Date(newEndsAt));
 		return {
 			needed: result.needed,
@@ -783,7 +860,7 @@ export const checkRebook = query(
 // ---------------------------------------------------------------------------
 
 export const createEvent = form(createEventSchema, async (data, issue) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('event.manage');
 
 	const ticketingEnabled = data.ticketingEnabled;
 	const reserveSpace = data.reserveSpace;
@@ -814,6 +891,16 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 	// All-or-nothing, because buildTimeRangeInTz reads an end before the start as
 	// an overnight range: pairing a supplied 23:00 start with a defaulted 22:00
 	// end would roll the end onto the next day and hold the room for 23 hours.
+	// A show somewhere else cannot hold the practice room. Refused rather than
+	// silently ignored: staff who ticked the box asked for something, and the
+	// useful answer is why it is not going to happen — not an event that quietly
+	// came out different from the form.
+	if (reserveSpace && !(await holdsSpace(data.venueId || null))) {
+		invalid(
+			issue.reserveSpace('That venue is not the practice room, so there is no space here to hold.')
+		);
+	}
+
 	const customWindow = !!(data.reservationStartTime && data.reservationEndTime);
 	const reservation = reserveSpace
 		? {
@@ -838,6 +925,8 @@ export const createEvent = form(createEventSchema, async (data, issue) => {
 		ticketingEnabled,
 		ticketPrice: ticketingEnabled ? ticketPrice : undefined,
 		ticketQuantity: ticketingEnabled ? ticketQuantity : undefined,
+		venueId: data.venueId || null,
+		location: data.location || null,
 		createdByUserId: staff.id,
 		reservation
 	});
@@ -891,7 +980,7 @@ export const previewRecurringEvents = query(
  * but on the server where they are a local D1 hop rather than a network one,
  * and the client holds a single query instance with nothing to race.
  *
- * Each callee re-guards; `requireStaff()` here is the boundary for this
+ * Each callee re-guards; the capability check here is the boundary for this
  * function itself, not a substitute for theirs.
  */
 /** The lineup editor posts JSON in a hidden field; a malformed one is ignored. */
@@ -915,13 +1004,21 @@ function parseStaffLineupField(raw: string | undefined) {
  * `[id]/production` is the specialisation, and has its own query below.
  */
 export const getStaffEventPage = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('event.read');
 
 	const detail = await getStaffEventDetail(id);
-	const nearby = await listEventsNear(detail.event.startsAt, { excludeEventId: id });
+	const [nearby, venues, production] = await Promise.all([
+		listEventsNear(detail.event.startsAt, { excludeEventId: id }),
+		venuePickerOptions(),
+		// Only so the header knows whether to offer "Add production". The record
+		// itself is worked on in the console.
+		getProductionByEvent(id)
+	]);
 
 	return {
 		detail,
+		venues,
+		production,
 		nearby: nearby.map((e) => ({
 			id: e.id,
 			startsAt: e.startsAt,
@@ -962,7 +1059,7 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 export const setStaffEventLineup = form(
 	z.object({ eventId: z.string().min(1), lineup: z.string().optional() }),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.manage');
 		const evt = await getById(data.eventId);
 		if (!evt) error(404, 'Event not found');
 
@@ -976,6 +1073,12 @@ export const setStaffEventLineup = form(
 	}
 );
 
+/** Live venues, shaped for the venue picker on the two staff edit forms. */
+async function venuePickerOptions() {
+	const rows = await listLiveVenues();
+	return rows.map((v) => ({ id: v.id, name: v.name, isPrimary: v.isPrimary }));
+}
+
 /** Active duty lists that actually have items on them — the apply picker. */
 async function listApplicableDutyLists() {
 	const lists = await listDutyLists();
@@ -983,28 +1086,62 @@ async function listApplicableDutyLists() {
 }
 
 export const getStaffEventProduction = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('event.read');
 
 	// Duty lists ride along in the page's one load-bearing query rather than
 	// being fetched beside it: awaited remote queries are serial round trips, and
 	// `custom/no-concurrent-remote-queries` exists to stop a page fanning them out.
-	const [detail, recurringSeries, shifts, volunteerRoles, dutyLists, riders] = await Promise.all([
+	const [
+		detail,
+		recurringSeries,
+		shifts,
+		advance,
+		volunteerRoles,
+		dutyLists,
+		venues,
+		riders,
+		production,
+		runOfShow
+	] = await Promise.all([
 		getStaffEventDetail(id),
 		getEventRecurringSeries(id),
 		getShifts({ eventId: id }),
+		// `listShifts` filters `starts_at IS NOT NULL`, so the advance half of an
+		// applied duty list — a `dueOffsetMinutes` item, which is where the
+		// booking work lives — never reached this page. The card said a show was
+		// unstaffed while carrying six open tasks.
+		listOpenWorkOrders({ eventId: id }),
 		getVolunteerRoles(),
 		listApplicableDutyLists(),
+		venuePickerOptions(),
 		// What each act on the bill says it needs. The advance checklist has always
 		// carried a task reading "Collect tech riders and stage plots"; this is the
 		// answer to it, on the page where that work happens.
-		getEventRiderSummaries(id)
+		getEventRiderSummaries(id),
+		// The ops record: load-in through load-out, the producer, the notes.
+		// Null until someone opens one from the event page.
+		getProductionByEvent(id),
+		// Who plays when. Times are derived and written on every mutation, so this
+		// read never recomputes — it only re-checks the warnings.
+		getRunOfShow(id)
 	]);
 
-	return { detail, recurringSeries, shifts, volunteerRoles, dutyLists, riders };
+	return {
+		detail,
+		recurringSeries,
+		shifts,
+		advance,
+		volunteerRoles,
+		dutyLists,
+		venues,
+		riders,
+		production,
+		runOfShow
+	};
 });
 
 export const getEventRecurringSeries = query(z.string(), async (eventId) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	const series = await getByEvent(eventId);
 	if (!series) return null;
 	return getEventSeries(series.id);
@@ -1012,7 +1149,7 @@ export const getEventRecurringSeries = query(z.string(), async (eventId) => {
 
 /** Stop a recurring event series; existing occurrences remain (staff). */
 export const cancelEventSeries = form(z.object({ seriesId: z.string() }), async (data) => {
-	await requireStaff();
+	await requireCapability('event.manage');
 	await cancelSeries(data.seriesId);
 	return { success: true };
 });
@@ -1031,6 +1168,7 @@ export const updateEvent = form(
 		// Band gigs live off these two — without them staff can see a wrong venue
 		// or a dead ticket link on the guide and have no way to fix it.
 		location: z.string().max(SHORT_TEXT_MAX).optional(),
+		venueId: z.string().optional(),
 		externalTicketUrl: z.string().max(500).optional(),
 		ticketingEnabled: z.boolean().optional(),
 		ticketPrice: z.string().optional(),
@@ -1042,7 +1180,7 @@ export const updateEvent = form(
 		overrideConflicts: z.boolean().default(false)
 	}),
 	async (data) => {
-		const staff = await requireStaff();
+		const staff = await requireCapability('event.manage');
 		const tz = DEFAULT_TIMEZONE;
 
 		const ticketingEnabled = data.ticketingEnabled;
@@ -1056,6 +1194,10 @@ export const updateEvent = form(
 		if (data.tags !== undefined) updateParams.tags = data.tags || null;
 		if (data.kind !== undefined) updateParams.kind = data.kind;
 		if (data.location !== undefined) updateParams.location = data.location || null;
+		// An empty string detaches, an absent field leaves it alone — the same
+		// distinction `updateShift` draws for its own event link, and for the same
+		// reason: a form that omits the field must not silently clear it.
+		if (data.venueId !== undefined) updateParams.venueId = data.venueId || null;
 		if (data.externalTicketUrl !== undefined) {
 			updateParams.externalTicketUrl = data.externalTicketUrl || null;
 		}
@@ -1123,7 +1265,7 @@ export const updateEvent = form(
 );
 
 export const publishEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireStaff();
+	await requireCapability('event.publish');
 	await publish(data.id);
 	return { success: true };
 });
@@ -1141,7 +1283,7 @@ export const unpublishEvent = form(
 		notes: z.string().trim().max(1000).optional()
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.publish');
 		// Band-sourced events notify the band's admins — pulling a gig silently is
 		// the one unpublish that needs a word back to whoever posted it.
 		await unpublishWithNotice(data.id, { notes: data.notes });
@@ -1150,7 +1292,7 @@ export const unpublishEvent = form(
 );
 
 export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('event.manage');
 	await cancel(data.id, staff.id);
 	return { success: true };
 });
@@ -1160,12 +1302,12 @@ export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data
  * tell a mistake from a real event before it is gone.
  */
 export const getEventDeletionImpact = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	return getDeletionImpact(id);
 });
 
 export const deleteEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('event.manage');
 	try {
 		await removeEvent(data.id, staff.id);
 	} catch (err) {
@@ -1187,7 +1329,7 @@ export const compTickets = form(
 		quantity: z.string().transform(Number)
 	}),
 	async (data, issue) => {
-		await requireStaff();
+		await requireCapability('event.manageTickets');
 
 		const issues: Parameters<typeof invalid> = [];
 		if (!data.attendeeName) {
@@ -1224,14 +1366,14 @@ export const cancelTicket = form(
 		ticketId: z.string().min(1)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('event.manageTickets');
 		await cancelTicketService(data.ticketId);
 		return { success: true };
 	}
 );
 
 export const checkInTicket = form(z.object({ ticketId: z.string().min(1) }), async (data) => {
-	const staff = await requireStaff();
+	const staff = await requireCapability('event.manageTickets');
 	await checkIn(data.ticketId, staff.id);
 	return { success: true };
 });
@@ -1519,7 +1661,7 @@ export const purchaseTickets = form(
 // ---------------------------------------------------------------------------
 
 export const getUserShows = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	const [upcoming, past, pastCount] = await Promise.all([
 		listMemberUpcomingShows(userId),
 		listMemberPastShows(userId, { limit: 5, offset: 0 }),
@@ -1541,7 +1683,7 @@ function toShowRow(show: MemberShowRow) {
 }
 
 export const getUserTicketsAndRsvps = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('event.read');
 	const [tickets, rsvps] = await Promise.all([getUserTickets(userId), listRsvpsForUser(userId)]);
 	// The row's own status is the ticket's or the RSVP's, which is not the
 	// event's — so the event ref carries no status here and the page keeps its

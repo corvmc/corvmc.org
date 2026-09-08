@@ -28,6 +28,21 @@ export function registerListeners(): void {
 
 	// --- Waitlist promotion on cancellation ---
 	registerWaitlistListeners();
+
+	// --- A member's first booking raises an orientation shift ---
+	registerOrientationGroup();
+}
+
+/**
+ * Orientation lives in its own module rather than inline here, because both of
+ * its listeners are the same feature seen from two ends — a booking raises the
+ * shift, a cancellation stands it down — and splitting them across files is how
+ * the second one gets forgotten.
+ */
+async function registerOrientationGroup(): Promise<void> {
+	const { registerOrientationListeners } =
+		await import('$lib/server/volunteer/orientation-listener');
+	registerOrientationListeners();
 }
 
 // ---------------------------------------------------------------------------
@@ -41,6 +56,7 @@ async function registerCheckoutListeners(): Promise<void> {
 	const { handleReservationCheckout } = await import('$lib/server/reservation/checkout-listener');
 	const { handleTicketCheckout } = await import('$lib/server/ticket/checkout-listener');
 	const { handleBandPremiumCheckout } = await import('$lib/server/band/band-checkout-listener');
+	const { handleAudioCheckout } = await import('$lib/server/audio/checkout-listener');
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleReservationCheckout(event.stripeSession);
@@ -52,6 +68,10 @@ async function registerCheckoutListeners(): Promise<void> {
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleBandPremiumCheckout(event.stripeSession);
+	});
+
+	domainEvents.on('checkout.completed', async ({ data: event }) => {
+		await handleAudioCheckout(event.stripeSession);
 	});
 }
 
@@ -78,16 +98,27 @@ async function registerNotificationListeners(): Promise<void> {
 
 async function registerInboxListeners(): Promise<void> {
 	const { dispatch } = await import('$lib/server/notification/dispatcher');
-	const { listStaffUsers } = await import('$lib/server/authorization');
+	const { listUsersWithCapability } = await import('$lib/server/authorization');
 
 	domainEvents.on('inbox.message_received', async ({ data: event }) => {
+		// A band's booking enquiry goes to the act, not to us. Same handler because
+		// it is the same signal — and this is the one path that covers both ways a
+		// message arrives, the form and the booker's reply routed back in by
+		// Postmark.
+		if (event.channel === 'band') {
+			await notifyBandOfEnquiry(event);
+			return;
+		}
+
 		// Member↔member conversations are not staff's business, and this event
 		// carries `preview` — the first 200 characters of the message. Without
 		// this line, every private message would put its opening words in every
-		// staff member's notification bell.
+		// staff member's notification bell. The same is true of a band thread
+		// above, for the same reason and a different owner.
 		if (event.channel === 'direct') return;
 
-		const staffUsers = await listStaffUsers();
+		// Whoever can read the inbox — the people for whom a new message is work.
+		const staffUsers = await listUsersWithCapability('inbox.read');
 		const contactLabel = event.contactName ?? 'Someone';
 
 		for (const staff of staffUsers) {
@@ -105,6 +136,68 @@ async function registerInboxListeners(): Promise<void> {
 			}
 		}
 	});
+
+	/**
+	 * Tell a band's owner and admins that somebody wrote to them.
+	 *
+	 * The enquiry itself is *not* delivered by email any more — it lives on the
+	 * thread, and the notification is a pointer to it. That is what makes a
+	 * reply possible at all: an emailed enquiry could only ever be answered from
+	 * a personal mailbox, off the record and with the act's own address on it.
+	 *
+	 * `preview` is carried here, unlike on the direct channel, because these
+	 * recipients are the intended readers rather than an audience the message was
+	 * never addressed to.
+	 */
+	async function notifyBandOfEnquiry(event: {
+		threadId: string;
+		contactName: string | null;
+		preview: string;
+	}): Promise<void> {
+		const { bandOfThread } = await import('$lib/server/inbox/band-service');
+		const { getById, listBandAdmins } = await import('$lib/server/band/band-service');
+		const { env } = await import('$env/dynamic/private');
+
+		const groupId = await bandOfThread(event.threadId);
+		if (!groupId) return;
+
+		const [band, admins] = await Promise.all([getById(groupId), listBandAdmins(groupId)]);
+		if (!band || admins.length === 0) return;
+
+		const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
+		const href = `/band/${band.slug}/messages/${event.threadId}`;
+		const from = event.contactName ?? 'Someone';
+
+		for (const admin of admins) {
+			try {
+				await dispatch({
+					type: 'band_enquiry_received',
+					userId: admin.userId,
+					userEmail: admin.userEmail,
+					title: `${from} contacted ${band.name}`,
+					body: event.preview,
+					href,
+					emailTemplate: {
+						alias: 'notification',
+						model: {
+							subject: `New booking enquiry — ${band.name}`,
+							heading: 'New enquiry',
+							greeting: `Hi ${admin.userName},`,
+							paragraphs: [
+								{ text: `${from} used the booking form on ${band.name}'s public page.` }
+							],
+							quote: event.preview,
+							cta: { url: `${siteUrl}${href}`, label: 'Read and reply' },
+							footnote:
+								'Reply on the site — it reaches them by email, and neither of you sees the other’s address.'
+						}
+					}
+				});
+			} catch (err) {
+				console.error(`[inbox] Failed to notify band admin ${admin.userEmail}:`, err);
+			}
+		}
+	}
 
 	domainEvents.on('inbox.message_sent', async ({ data: event }) => {
 		if (event.channel !== 'portal') return;
@@ -176,6 +269,12 @@ async function registerWaitlistListeners(): Promise<void> {
 	const { promoteNextWaitlisted } = await import('$lib/server/reservation/waitlist-service');
 
 	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
+		// `expireWaitlisted()` promotes the next member itself, before it emits
+		// this — it returns the count. Promoting again here would not find that
+		// member (they now have `waitlistNotifiedAt`) but the one behind them,
+		// and hand the same slot to two people.
+		if (event.cause === 'waitlist_expired') return;
+
 		// Parse the original reservation's time range to find waitlisted candidates
 		// We need the raw Date objects — reconstruct from the formatted strings
 		// by looking up the cancelled reservation directly

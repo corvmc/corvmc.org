@@ -5,6 +5,7 @@ import { createNotification } from './in-app-service';
 import { getPreference } from './preference-service';
 import { pushToUser } from './sse';
 import { captureException } from '$lib/server/sentry';
+import { afterResponse } from '$lib/server/after-response';
 import type { NotificationEmailPayload } from '$lib/types/notification-email';
 
 // ---------------------------------------------------------------------------
@@ -62,6 +63,10 @@ export interface DispatchParams {
  * Dispatch a notification through enabled channels.
  * Checks user preferences, creates in-app notification, sends email,
  * and pushes SSE event. Fire-and-forget — errors are logged, not thrown.
+ *
+ * The in-app row is written on the request path because the recipient may be
+ * looking at the bell when it lands; the email is handed to `afterResponse`,
+ * because nobody is waiting on it and Postmark is not fast.
  */
 export async function dispatch(params: DispatchParams): Promise<void> {
 	const pref = await getPreference(params.userId, params.type);
@@ -92,18 +97,21 @@ export async function dispatch(params: DispatchParams): Promise<void> {
 		}
 	}
 
-	// Email
-	if ((pref.email || params.forceEmail) && params.emailTemplate) {
-		try {
-			await sendEmailWithTemplate({
-				to: params.userEmail,
-				templateAlias: params.emailTemplate.alias,
-				model: prepareModel(params.emailTemplate.alias, params.emailTemplate.model, params.type),
-				tag: params.type
-			});
-		} catch (err) {
-			captureException(err, { channel: 'email', type: params.type, to: params.userEmail });
-		}
+	// Email — off the request path. Nothing here is awaited by a caller that
+	// could act on the result, and a Postmark round trip is the slowest thing in
+	// most notification-sending requests.
+	const template = params.emailTemplate;
+	if ((pref.email || params.forceEmail) && template) {
+		await afterResponse(
+			() =>
+				sendEmailWithTemplate({
+					to: params.userEmail,
+					templateAlias: template.alias,
+					model: prepareModel(template.alias, template.model, params.type),
+					tag: params.type
+				}),
+			{ channel: 'email', type: params.type, to: params.userEmail }
+		);
 	}
 }
 
@@ -119,17 +127,17 @@ export async function dispatchEmailOnly(params: {
 	/** Set when the recipient is expected to reply — see SendTemplateParams. */
 	replyTo?: string | null;
 }): Promise<void> {
-	try {
-		await sendEmailWithTemplate({
-			to: params.toEmail,
-			templateAlias: params.templateAlias,
-			// Same per-type policy as dispatch(): this path takes a `type` too, and
-			// leaving it out would make the rule hold on one route and not the other.
-			model: prepareModel(params.templateAlias, params.model, params.type),
-			replyTo: params.replyTo,
-			tag: params.type
-		});
-	} catch (err) {
-		captureException(err, { channel: 'email-only', type: params.type, to: params.toEmail });
-	}
+	await afterResponse(
+		() =>
+			sendEmailWithTemplate({
+				to: params.toEmail,
+				templateAlias: params.templateAlias,
+				// Same per-type policy as dispatch(): this path takes a `type` too, and
+				// leaving it out would make the rule hold on one route and not the other.
+				model: prepareModel(params.templateAlias, params.model, params.type),
+				replyTo: params.replyTo,
+				tag: params.type
+			}),
+		{ channel: 'email-only', type: params.type, to: params.toEmail }
+	);
 }

@@ -30,9 +30,15 @@ import { pendingSites } from './seed/pending';
 import { seedRoles, seedUsers, seedAdminUser, seedUserRoles } from './seed/users';
 import { seedReservations, seedClosures } from './seed/reservations';
 import { seedEvents } from './seed/events';
+import { seedVenues } from './seed/venues';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
+import {
+	GROUP_INVITEE_PERSONA,
+	GROUP_LEADER_PERSONAS,
+	seedGroupLeaders
+} from './seed/group-leaders';
 import { seedGroupDocuments } from './seed/group-documents';
 import { seedDirectoryEntries } from './seed/directory';
 import { seedDirectoryPersonas } from './seed/directory-personas';
@@ -42,8 +48,10 @@ import { seedGroupSessions } from './seed/group-sessions';
 import { seedBandEvents } from './seed/band-events';
 import { seedCommunityEvents } from './seed/community-events';
 import { seedCmcEventLineups } from './seed/lineups';
+import { seedProductions } from './seed/productions';
+import { seedRunOfShow } from './seed/run-of-show';
 import { seedBandReservations } from './seed/band-reservations';
-import { seedBandSites, seedBandPageConfigs } from './seed/band-sites';
+import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
 import { seedRecurringSeries } from './seed/recurring';
 import { seedPaymentRecords } from './seed/payments';
 import { seedTickets } from './seed/tickets';
@@ -55,9 +63,11 @@ import { seedEquipment, seedItemArticles } from './seed/equipment';
 import { seedHelp } from './seed/help';
 import { seedInbox } from './seed/inbox';
 import { seedDirectMessages } from './seed/direct-messages';
+import { seedBandEnquiries } from './seed/band-enquiries';
 import { seedContentFlags } from './seed/content-flags';
 import { seedContractors } from './seed/contractors';
 import { seedDutyLists } from './seed/duty-lists';
+import { seedOrientation } from './seed/orientation';
 import {
 	seedVolunteerRoles,
 	seedVolunteerProfiles,
@@ -70,6 +80,7 @@ import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
 import { seedSuggestions } from './seed/suggestions';
 import { seedProjects } from './seed/projects';
+import { seedAudio } from './seed/audio';
 import { seedRiders } from './seed/rider';
 import { seedPacking } from './seed/packing';
 
@@ -91,13 +102,19 @@ async function main() {
 	const reservations = await seedReservations(allUsers);
 	await seedClosures();
 	const events = await seedEvents(allUsers);
+	// After the events, because it backfills every one of them into the room —
+	// which is where they all were, there being nowhere else until this table.
+	const venues = await seedVenues(events);
 	const bands = await seedBands(allUsers);
 	// Appended rather than folded into `seedBands`: it brings its own persona and
 	// login, and every downstream band seeder either maps over the whole array —
 	// which should include it — or slices the first few, which should not.
 	const soloAct = await seedSoloAct(roles);
 	if (soloAct) bands.push(soloAct);
-	const groups = await seedGroups(allUsers);
+	// Before the groups, which take their leaders from it. Kept out of `allUsers`
+	// for the reason `seedGroupLeaders` gives.
+	const groupLeaders = await seedGroupLeaders(roles);
+	const groups = await seedGroups(allUsers, groupLeaders);
 	// After the bands and before the entries, which is the only window that works:
 	// it reads `pendingTags` to point each persona at data the bulk seed actually
 	// produced, and `seedDirectoryEntries` is what gives these accounts a listing
@@ -115,9 +132,16 @@ async function main() {
 	const bandEvents = await seedBandEvents(bands, allUsers);
 	await seedCommunityEvents(users, adminUser);
 	await seedCmcEventLineups(events, bands);
+	// After the bill, because a production is the ops record for a night that
+	// already has acts on it — and the index shows the two side by side.
+	const productions = await seedProductions(events, allUsers);
+	// After the productions, because a slot hangs off one — and it reads the bill
+	// back rather than being handed it, the way the rider seeder reads a roster.
+	const runOfShow = await seedRunOfShow(productions.rows);
 	const bandReservations = await seedBandReservations(bands);
 	const bandSites = await seedBandSites(bands);
 	const pageConfigs = await seedBandPageConfigs(bands);
+	await seedFreePressKits(bands);
 	const series = await seedRecurringSeries(allUsers);
 	const payments = await seedPaymentRecords(allUsers, reservations);
 	const tickets = await seedTickets(allUsers, events);
@@ -132,6 +156,7 @@ async function main() {
 	const contractors = await seedContractors(adminUser.id);
 	const inbox = await seedInbox(adminUser, users[0]);
 	const directMessages = await seedDirectMessages(users, adminUser);
+	const bandEnquiries = await seedBandEnquiries(bands, allUsers);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
 	// Profiles first, and everything downstream is seeded against the members who
@@ -154,6 +179,9 @@ async function main() {
 	// schedules against the role catalog.
 	const personas = await seedVolunteerPersonas(roles, volunteerRoles, certifications, adminUser);
 	const dutyLists = await seedDutyLists(volunteerRoles, events);
+	// After the duty lists and the reservations both: it seeds a list of its own
+	// and hangs work orders off bookings that already exist.
+	const orientation = await seedOrientation(volunteerRoles, allUsers);
 	// Needs only the role catalog. Kept out of `allUsers` like the volunteer
 	// personas, so nothing that slices or indexes that array shifts under it.
 	const sustainingPersonas = await seedSustainingPersonas(roles);
@@ -161,6 +189,10 @@ async function main() {
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
+	// Needs the bands and somebody to have bought something. Writes real audio
+	// into the local private bucket, so it is the one seeder that does I/O
+	// outside D1 — see its header for why rows alone are not enough.
+	const audio = await seedAudio(bands, allUsers);
 	// After the bands and their rosters: a rider is owned corner by corner, so it
 	// reads the roster back rather than being handed one.
 	const riders = await seedRiders(roles);
@@ -178,10 +210,14 @@ async function main() {
 	console.log(`  ${roles.length} roles`);
 	console.log(`  ${reservations.length} reservations`);
 	console.log(`  ${events.length} CMC events`);
+	console.log(`  ${venues.venues} venues, one of them ours`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(
-		`  ${dutyLists.lists} duty list, ${dutyLists.workOrders} work orders applied to a show`
+		`  ${dutyLists.lists} duty lists (one on the show's own clock), ${dutyLists.workOrders} work orders applied to a show`
+	);
+	console.log(
+		`  ${orientation.lists} orientation list, ${orientation.workOrders} orientation shifts, ${orientation.orientations} member orientations`
 	);
 	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
 	console.log(
@@ -221,6 +257,9 @@ async function main() {
 	console.log(`  ${directoryPersonas.users} directory matching demo personas`);
 	console.log(`  ${inbox.threads} inbox threads, ${inbox.messages} messages, ${inbox.notes} notes`);
 	console.log(
+		`  ${bandEnquiries.threads} band booking enquiries, ${bandEnquiries.messages} messages`
+	);
+	console.log(
 		`  ${directMessages.threads} direct conversations, ${directMessages.blocks} blocks, ${directMessages.standings} messaging standings, 1 member-set messaging preference`
 	);
 	console.log(`  ${flags.length} content flags`);
@@ -237,6 +276,17 @@ async function main() {
 	);
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
+	);
+	console.log(
+		`  ${productions.productions} productions covering every status, ${productions.withoutProduction} CMC shows deliberately without one`
+	);
+	console.log(
+		`  ${runOfShow.slots} run-of-show sets — ${runOfShow.uncredited} on no poster, ${runOfShow.withoutTimes} with no downbeat yet`
+	);
+	console.log(
+		`  ${audio.releases} releases, ${audio.tracks} tracks (${Math.round(audio.bytes / 1024 / 1024)}MB of audio in R2), ` +
+			`${audio.purchases} sales, ${audio.accounts} band Stripe accounts, ` +
+			`${audio.radioEntries} radio entries`
 	);
 	console.log(
 		`  ${riders.riders} tech riders — ${riders.structuredBand ?? '—'} (fits the room), ${riders.oversizedBand ?? '—'} (over it); ${riders.uploadBand ?? '—'} uploaded a PDF; ${riders.emptyBand ?? '—'} has nothing`
@@ -261,6 +311,14 @@ async function main() {
 	console.log('    seeker@corvallismusic.org       wants a band — matched bands on /member');
 	console.log('    bandleader@corvallismusic.org   wants members — matched members on /member');
 	console.log('    undecided@corvallismusic.org    no lookingFor — the empty state');
+
+	console.log('\n  Group leader demo logins (all `password`, none of them staff):');
+	for (const p of GROUP_LEADER_PERSONAS) {
+		console.log(`    ${p.email.padEnd(31)} ${p.joinPolicy} group — /member/groups`);
+	}
+	console.log(
+		`    ${GROUP_INVITEE_PERSONA.email.padEnd(31)} a pending invitation to accept — /member/groups`
+	);
 
 	console.log('\n  Solo-act demo login (`password`):');
 	console.log(

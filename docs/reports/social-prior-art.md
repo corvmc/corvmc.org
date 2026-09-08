@@ -149,7 +149,12 @@ alongside it.
 
 - **Merch** is out of scope by decision — it goes through an outside vendor.
 - **Seven curated themes** against Bandzoogle's hundreds is a choice, not a deficiency.
-  A collective with a design system does not want an unbounded theme gallery.
+  A collective with a design system does not want an unbounded theme gallery. **What it
+  does want is for a theme to be a starting point rather than a skin** — that is a
+  different claim from theme count, and it is the one that shipped: "Start from this
+  theme" copies a theme's rules into the band's own CSS, the sanitizer stops eating the
+  comments that explain them, a band may use its own uploaded photo as a background, and
+  the editor previews the result as you type.
 - **A music player is an opportunity, and a bigger one for us than for them.** See below.
 
 #### The player is a discovery surface, which Bandzoogle structurally cannot build
@@ -250,9 +255,9 @@ directory profile already carries:
 | Music — best tracks or lead single | `links` + `ListenStrip` | —                                       |
 | **Upcoming shows**                 | `ShowsBox`              | **— and it is automatic**               |
 | Contact                            | `contact`               | One field, not three roles              |
-| Press quotes, achievements         | —                       | `band_site.epk`, premium only           |
-| Booking / management / PR contacts | —                       | `band_site.epk`, premium only           |
-| Hi-res photos, logo, video         | `avatarKey` only        | Missing; an avatar is not a press photo |
+| Press quotes, achievements         | ✅ free                 | Closed                                  |
+| Booking / management / PR contacts | ✅ free, package only   | Closed — and deliberately not published |
+| Hi-res photos, logo, video         | ✅ one photo free       | Closed; a gallery and video are premium |
 
 **The standout is shows.** Every EPK guide stresses keeping the schedule current, and it
 is the item bands most reliably let rot. Ours reads from `event-service`, so a band that
@@ -345,24 +350,30 @@ storefront has no reason to build.
 
 Ranked by value, and only things worth acting on:
 
-1. **Name the free tier and give it share affordances.** The Linktree-equivalent is
-   built and unlabelled — a share action, a QR code, and telling bands their subdomain
-   exists is most of the work. Cheapest item here by a wide margin.
-2. **Make completeness a progression toward a named destination.** "5 of 11 EPK sections"
+1. ~~**Name the free tier and give it share affordances.**~~ **Done.** `AddressCard` puts
+   the address and a QR on the dashboard, and the press kit's one-pager carries the same
+   QR into every package a band sends — so a venue that saved the zip can still reach the
+   current shows list.
+1. ~~**Make completeness a progression toward a named destination.**~~ **Done.**
+   `epk-completeness.ts` scores twelve named rungs with the missing ones enumerated and
+   `isProfileComplete` left alone, exactly as this report asked. The whole press kit is
+   free now; premium buys presentation and volume, so the last rungs are a legitimate
+   upsell rather than a paywall on the information a venue needs.
+1. **Make completeness a progression toward a named destination.** "5 of 11 EPK sections"
    with the missing ones enumerated. Leave `isProfileComplete` alone — its low bar is
    correct for the nudge it backs — and add a second measure beside it.
-3. **Match, do not just filter.** Role 1. The intent data exists and is unused; this is a
+1. **Match, do not just filter.** Role 1. The intent data exists and is unused; this is a
    query, not a feature area.
-4. **Build the private bucket.** `R2_PRIVATE` is designed and unbuilt, and three
+1. **Build the private bucket.** `R2_PRIVATE` is designed and unbuilt, and three
    unrelated features queue behind it — group documents, contractor invoices and digital
    sales. Cheap on its own terms, and it unblocks more than its own scope.
-5. **Track uploads, then the store, then the player.** Role 4. One upload and one rights
+1. **Track uploads, then the store, then the player.** Role 4. One upload and one rights
    grant serve all three, originals only. Inter-band discovery Bandzoogle structurally
    cannot copy, and the reward that makes rung 2 something other than a nag.
-6. **Assert the capability matrix in a spec file.** Role 3. The category's own warning is
+1. **Assert the capability matrix in a spec file.** Role 3. The category's own warning is
    that permission configuration rots; `feature-flags.spec.ts` is the pattern we already
    use for exactly this failure mode.
-7. **Decide whether the external act needs an explicit discriminator.** Role 5. Narrow,
+1. **Decide whether the external act needs an explicit discriminator.** Role 5. Narrow,
    and the rest of that design is sound.
 
 Note what is _not_ here: out-featuring Bandzoogle on themes, merch or block count. The

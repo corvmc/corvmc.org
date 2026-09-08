@@ -4,7 +4,8 @@ import {
 	bandSitePath,
 	bandSiteUrl,
 	bandSlugFromHost,
-	baseDomainFromSiteUrl
+	baseDomainFromSiteUrl,
+	isAppDomain
 } from './band-site-url';
 
 describe('bandSiteHref', () => {
@@ -109,5 +110,28 @@ describe('baseDomainFromSiteUrl', () => {
 	it('falls back to production on missing or invalid input', () => {
 		expect(baseDomainFromSiteUrl(undefined)).toBe('corvmc.org');
 		expect(baseDomainFromSiteUrl('not a url')).toBe('corvmc.org');
+	});
+});
+
+describe('isAppDomain', () => {
+	it('accepts the site domain and its subdomains', () => {
+		expect(isAppDomain('corvmc.org', 'https://corvmc.org')).toBe(true);
+		expect(isAppDomain('www.corvmc.org', 'https://corvmc.org')).toBe(true);
+		expect(isAppDomain('the-neons.corvmc.org', 'https://corvmc.org')).toBe(true);
+		expect(isAppDomain('media.corvmc.org', 'https://corvmc.org')).toBe(true);
+	});
+
+	// The `*/*` zone route means the worker also answers premium bands' own
+	// domains as Cloudflare for SaaS custom hostnames. Those are not ours.
+	it('rejects a band custom domain and any unrelated host', () => {
+		expect(isAppDomain('theband.com', 'https://corvmc.org')).toBe(false);
+		expect(isAppDomain('corvmc.org.evil.com', 'https://corvmc.org')).toBe(false);
+		expect(isAppDomain('notcorvmc.org', 'https://corvmc.org')).toBe(false);
+	});
+
+	it('follows PUBLIC_SITE_URL so dev and staging get their own namespace', () => {
+		expect(isAppDomain('localhost', 'http://localhost:5173')).toBe(true);
+		expect(isAppDomain('the-neons.localhost', 'http://localhost:5173')).toBe(true);
+		expect(isAppDomain('corvmc.org', 'http://localhost:5173')).toBe(false);
 	});
 });

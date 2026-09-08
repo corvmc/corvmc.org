@@ -43,7 +43,7 @@
 	let searchText = $state('');
 	let dateFrom = $state('');
 	let dateTo = $state('');
-	let bookerType = $state<'user' | 'group' | 'event' | ''>('');
+	let bookerType = $state<'user' | 'group' | 'event_listing' | ''>('');
 	let page = $state(1);
 
 	let searchDebounced = $state('');
@@ -65,7 +65,7 @@
 	const result = $derived(pageData.then((d) => d.list));
 	const counts = $derived(pageData.then((d) => d.counts));
 	const unresolved = $derived(pageData.then((d) => d.unresolved));
-	const hourlyRate = $derived(pageData.then((d) => d.hourlyRate));
+	const hourlyRates = $derived(pageData.then((d) => d.hourlyRates));
 
 	let resolveOpen = $state(false);
 
@@ -210,7 +210,7 @@
 			<option value="">Anyone</option>
 			<option value="user">Members</option>
 			<option value="group">Bands</option>
-			<option value="event">Events</option>
+			<option value="event_listing">Events</option>
 		</Select>
 	</FilterBar>
 
@@ -307,8 +307,8 @@
 						</td>
 
 						<td class="col-support cell-num">
-							{#await hourlyRate then rate}
-								{#if r.bookerType === 'event'}
+							{#await hourlyRates then rates}
+								{#if r.bookerType === 'event_listing'}
 									<span class="opacity-40">—</span>
 								{:else}
 									{@const state = reservationPaymentState(r)}
@@ -319,7 +319,12 @@
 										     A comped booking never carries credits: once credits are
 										     committed the row reports as `credits`, not `comped`. -->
 										<span class:line-through={state === 'comped'}>
-											{formatPaymentBreakdown(r.startsAt, r.endsAt, rate, r.creditsUsed)}
+											{formatPaymentBreakdown(
+												r.startsAt,
+												r.endsAt,
+												rates[r.bookerType],
+												r.creditsUsed
+											)}
 										</span>
 										<span class="tooltip" data-tip={ps.label}>
 											<ps.icon size={16} class={ps.color} />
@@ -364,6 +369,6 @@
 	</DataList>
 </PageContent>
 
-{#await Promise.all([unresolved, hourlyRate]) then [unresolvedData, rate]}
-	<ResolveModal bind:open={resolveOpen} unresolved={unresolvedData} hourlyRateCents={rate} />
+{#await Promise.all([unresolved, hourlyRates]) then [unresolvedData, rates]}
+	<ResolveModal bind:open={resolveOpen} unresolved={unresolvedData} hourlyRates={rates} />
 {/await}

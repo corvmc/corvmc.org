@@ -200,12 +200,20 @@
 			<LinkListEditor bind:value={links} field={profileFields.links} />
 		</InfoCard>
 
-		<InfoCard title="Directory Contact Info">
-			<p class="mb-3 text-muted">Optional contact details shown on your directory listing.</p>
+		<!-- These used to be printed on the public page as the act's booking
+		     details. They are not any more: a stranger reaches the act through a
+		     form, so nothing is published for a scraper to take. The fields stay
+		     because they still route an enquiry — but the page has to say that,
+		     or a band reads "contact info" and assumes it is on display. -->
+		<InfoCard title="Where enquiries go">
+			<p class="mb-3 text-muted">
+				Never shown publicly. Your page offers a contact form instead, and a message sent through it
+				lands here — or at your press kit's booking contact, if you have set one.
+			</p>
 			<div class="space-y-3">
 				<FormField
 					field={profileFields.contactEmail}
-					label="Display email"
+					label="Email"
 					type="email"
 					value={contact.email ?? ''}
 					placeholder="band@example.com"

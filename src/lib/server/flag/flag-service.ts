@@ -6,7 +6,7 @@ import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
 import type { StandingScope } from '$lib/config';
 import { user } from '$lib/server/db/schema/authentication';
 import { group } from '$lib/server/db/schema/group';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
 import type { InboxMessageDirection } from '$lib/server/db/schema/inbox';
 import { suggestion } from '$lib/server/db/schema/suggestion';
@@ -97,9 +97,9 @@ async function resolveEntityLabel(
 	}
 	if (entityType === 'event') {
 		const [row] = await db
-			.select({ title: event.title })
-			.from(event)
-			.where(eq(event.id, entityId))
+			.select({ title: eventListing.title })
+			.from(eventListing)
+			.where(eq(eventListing.id, entityId))
 			.limit(1);
 		return row?.title ?? null;
 	}
@@ -396,9 +396,9 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 		: [];
 	const eventTitles = eventIds.length
 		? await db
-				.select({ id: event.id, title: event.title })
-				.from(event)
-				.where(inArray(event.id, eventIds))
+				.select({ id: eventListing.id, title: eventListing.title })
+				.from(eventListing)
+				.where(inArray(eventListing.id, eventIds))
 		: [];
 	const suggestionTitles = suggestionIds.length
 		? await db
@@ -651,18 +651,18 @@ export async function getFlag(flagId: string) {
 async function resolveEventContext(eventId: string): Promise<FlaggedEventContext | null> {
 	const [row] = await db
 		.select({
-			title: event.title,
-			startsAt: event.startsAt,
-			location: event.location,
-			status: event.status,
-			source: event.source,
+			title: eventListing.title,
+			startsAt: eventListing.startsAt,
+			location: eventListing.location,
+			status: eventListing.status,
+			source: eventListing.source,
 			bandId: group.id,
 			bandName: group.name,
 			bandSlug: group.slug
 		})
-		.from(event)
-		.leftJoin(group, eq(group.id, event.groupId))
-		.where(eq(event.id, eventId))
+		.from(eventListing)
+		.leftJoin(group, eq(group.id, eventListing.groupId))
+		.where(eq(eventListing.id, eventId))
 		.limit(1);
 
 	if (!row) return null;

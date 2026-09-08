@@ -6,7 +6,7 @@
  * to. Nothing is removed and no behaviour changes: the source columns keep their
  * values and stay authoritative until phase 6 drops them.
  *
- *   event.poster_key   -> slot 'poster'   on attachable_type 'event'
+ *   event_listing.poster_key   -> slot 'poster'   on attachable_type 'event_listing'
  *   group.avatar_key   -> slot 'avatar'   on attachable_type 'group'
  *   user.image         -> slot 'avatar'   on attachable_type 'user'
  *
@@ -165,14 +165,13 @@ function collectSources(): Source[] {
 	const sources: Source[] = [];
 
 	for (const r of d1(
-		`SELECT id, poster_key, title FROM event WHERE poster_key IS NOT NULL AND poster_key != ''`
+		`SELECT id, poster_key, title FROM event_listing WHERE poster_key IS NOT NULL AND poster_key != ''`
 	)) {
 		sources.push({
 			key: String(r.poster_key),
-			attachableType: 'event',
+			attachableType: 'event_listing',
 			attachableId: String(r.id),
 			slot: 'poster',
-			caption: null,
 			sortOrder: 0,
 			label: `event "${r.title}"`
 		});
@@ -186,7 +185,6 @@ function collectSources(): Source[] {
 			attachableType: 'group',
 			attachableId: String(r.id),
 			slot: 'avatar',
-			caption: null,
 			sortOrder: 0,
 			label: `group "${r.name}"`
 		});
@@ -200,7 +198,6 @@ function collectSources(): Source[] {
 			attachableType: 'user',
 			attachableId: String(r.id),
 			slot: 'avatar',
-			caption: null,
 			sortOrder: 0,
 			label: `user "${r.name}"`
 		});

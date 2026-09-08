@@ -1,16 +1,38 @@
 import { describe, it, expect } from 'vitest';
 import { entityHref } from './entity-href';
 import { ANONYMOUS, type Panel, type Viewer } from '$lib/types/entity';
-import { entityTypes } from '$lib/config';
+import { capabilities as CAPS, entityTypes } from '$lib/config';
 import { fakeRef } from '$lib/test/fixtures';
 
-const viewer = (over: Partial<Viewer> = {}): Viewer => ({
-	userId: 'user-1',
-	isStaff: false,
-	bandIds: new Set(),
-	panel: 'member',
-	...over
-});
+/**
+ * Every capability, which is what somebody holding `staff` actually has — the
+ * matrix gives that position everything until the narrowing lands. Written out
+ * rather than hardcoded so a new capability cannot quietly narrow these
+ * fixtures and turn a real regression into a passing test.
+ */
+const ALL_CAPABILITIES = new Set(
+	Object.entries(CAPS).flatMap(([r, actions]) =>
+		(actions as readonly string[]).map((a) => `${r}.${a}`)
+	)
+);
+
+/**
+ * `isStaff` and `capabilities` move together here. entityHref decides the staff
+ * arm per route now, so a fixture that says "is staff" but holds nothing would
+ * assert the behaviour of a position that does not exist.
+ */
+const viewer = (over: Partial<Viewer> = {}): Viewer => {
+	const base: Viewer = {
+		userId: 'user-1',
+		isStaff: false,
+		capabilities: new Set(),
+		bandIds: new Set(),
+		panel: 'member'
+	};
+	const merged = { ...base, ...over };
+	if (merged.isStaff && over.capabilities === undefined) merged.capabilities = ALL_CAPABILITIES;
+	return merged;
+};
 
 const PANELS: Panel[] = ['staff', 'band', 'member', 'public'];
 
@@ -132,5 +154,50 @@ describe('entityHref', () => {
 				'/staff/bands/band-1'
 			);
 		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Per-route staff links.
+//
+// The staff arm used to be one `viewer.isStaff`. That was fine while every
+// elevated user held everything; it stops being fine the moment a treasurer
+// exists, because a blanket staff link offers them a page that 403s. The
+// header above says a mis-derived link is a 403 and never a leak — these pin
+// that it is not a 403 either.
+// ---------------------------------------------------------------------------
+describe('a position that holds only part of the panel', () => {
+	const treasurer = (panel: Panel = 'staff') =>
+		viewer({
+			isStaff: true,
+			// finance.read and credit.read, and nothing that would open a member
+			// record or the volunteer surfaces.
+			capabilities: new Set(['finance.read', 'credit.read', 'user.list']),
+			panel
+		});
+
+	it('is not offered the staff member record it cannot open', () => {
+		const href = entityHref(fakeRef('member', { id: 'm-1' }), treasurer());
+		expect(href).not.toBe('/staff/users/m-1');
+	});
+
+	it('is not offered a staff inventory record either', () => {
+		const href = entityHref(fakeRef('asset', { id: 'a-1' }), treasurer());
+		expect(href ?? '').not.toContain('/staff/inventory');
+	});
+
+	it('still gets the staff record for something it does hold', () => {
+		const withUsers = viewer({
+			isStaff: true,
+			capabilities: new Set(['user.read']),
+			panel: 'staff'
+		});
+		expect(entityHref(fakeRef('member', { id: 'm-1' }), withUsers)).toBe('/staff/users/m-1');
+	});
+
+	it('falls back to a page it can reach rather than returning nothing', () => {
+		// The member arm is still open to them: they are signed in.
+		const href = entityHref(fakeRef('member', { id: 'm-1' }), treasurer('member'));
+		expect(href).toBe('/member/directory/members/m-1');
 	});
 });

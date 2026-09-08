@@ -4,6 +4,7 @@
 	import { Toaster } from 'svelte-sonner';
 	import AppTopbar from './AppTopbar.svelte';
 	import type { PanelTab } from './AppTopbar.svelte';
+	import type { AppChrome } from './chrome';
 	import Sidebar from './Sidebar.svelte';
 	import { IconWorld } from '@tabler/icons-svelte';
 	import logo from '$lib/assets/cmc-compact-logo.svg';
@@ -14,12 +15,15 @@
 		drawerId,
 		panels,
 		activePanel,
+		chrome,
 		navigation: navSnippet,
 		children
 	}: {
 		drawerId: string;
 		panels: PanelTab[];
 		activePanel: string;
+		// The topbar's data, from the panel's own layout query. See `chrome.ts`.
+		chrome: AppChrome;
 		navigation: Snippet;
 		children: Snippet;
 	} = $props();
@@ -36,7 +40,7 @@
 	<input id={drawerId} type="checkbox" class="drawer-toggle" />
 
 	<div class="drawer-content flex h-screen flex-col overflow-hidden">
-		<AppTopbar {drawerId} {panels} {activePanel} />
+		<AppTopbar {drawerId} {panels} {activePanel} {chrome} />
 		<div class="tri-stripe"></div>
 
 		<main class="flex-1 overflow-x-hidden overflow-y-auto p-6 pt-0">

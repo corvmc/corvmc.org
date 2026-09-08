@@ -17,7 +17,7 @@
  * the rendered hour with no error.
  */
 
-import { differenceInCalendarDays } from 'date-fns';
+import { differenceInCalendarDays, isSameWeek } from 'date-fns';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
@@ -151,6 +151,44 @@ export function formatShortMonth(d: Date): string {
 	return venue(d, { month: 'short' }).toUpperCase();
 }
 
+/**
+ * The same two, in the case `Intl` produces: "Tue", "May".
+ *
+ * Siblings rather than a flag on the uppercase pair, which has its own callers
+ * whose layout assumes the shouting.
+ */
+export function formatWeekdayShortCased(d: Date): string {
+	return venue(d, { weekday: 'short' });
+}
+
+export function formatMonthShortCased(d: Date): string {
+	return venue(d, { month: 'short' });
+}
+
+/**
+ * Venue-time answers to "is this today / tomorrow / this week?".
+ *
+ * date-fns's `isToday` and friends compare the viewer's calendar days, so a
+ * booking rolls over to "Tomorrow" at the reader's midnight rather than the
+ * venue's — the same defect `relativeDay` above already avoids, and for the
+ * same reason. Both sides are reduced to a venue calendar date first, so the
+ * comparison is between two calendar days and no zone is involved.
+ *
+ * `isVenueThisWeek` keeps date-fns's "the current calendar week" meaning rather
+ * than quietly becoming "within seven days".
+ */
+export function isVenueToday(d: Date, now = new Date()): boolean {
+	return differenceInCalendarDays(venueCalendarDate(d), venueCalendarDate(now)) === 0;
+}
+
+export function isVenueTomorrow(d: Date, now = new Date()): boolean {
+	return differenceInCalendarDays(venueCalendarDate(d), venueCalendarDate(now)) === 1;
+}
+
+export function isVenueThisWeek(d: Date, now = new Date()): boolean {
+	return isSameWeek(venueCalendarDate(d), venueCalendarDate(now));
+}
+
 /** Date + time combined: "Tue, May 13, 2:30 PM" */
 export function formatDateTime(d: Date): string {
 	return venue(d, {
@@ -266,9 +304,17 @@ export function durationHours(startsAt: Date, endsAt: Date): number {
 	return (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 }
 
-/** Human-readable duration: "1 hour" or "2.5 hours" */
+/**
+ * Human-readable duration: "1 hour" or "2.5 hours".
+ *
+ * Rounded to one decimal, which matters only for rows the booking form could
+ * not have produced — every slot is on a 30-minute boundary — but a legacy
+ * import with an odd end time would otherwise render "1.3333333333333333
+ * hours".
+ */
 export function formatDuration(startsAt: Date, endsAt: Date): string {
-	const h = durationHours(startsAt, endsAt);
+	const raw = durationHours(startsAt, endsAt);
+	const h = Number.isInteger(raw) ? raw : Number(raw.toFixed(1));
 	return `${h} hour${h === 1 ? '' : 's'}`;
 }
 

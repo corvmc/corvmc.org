@@ -145,7 +145,7 @@ export const createReservation = form(staffCreateSchema, async (data, _issue) =>
 - **Remote files** (`src/lib/remote/`) hold the auth guard, the Zod input schema, and thin
   orchestration. They may do simple reads inline, but anything with rules lives in a service.
 - **Services** (`src/lib/server/<domain>/`) hold business logic. Domains: `reservation`,
-  `finance`, `band`, `event`, `ticket`, `equipment`, `marketing`, `notification`, `inbox`,
+  `finance`, `band`, `event_listing`, `ticket`, `equipment`, `marketing`, `notification`, `inbox`,
   `lock`, `directory`, `user`, `help`, `flag`, `site-config`.
 - Services throw typed domain errors (e.g. `ReservationConflictError`); remotes translate
   them to HTTP responses via `mapDomainError()` in `src/lib/server/errors.ts`.
@@ -188,7 +188,9 @@ per-request CPU cap kills it.
 
 Public sign-up is additionally gated by **Cloudflare Turnstile** (bot protection): the
 before-hook in `auth.ts` rejects `/sign-up/email` unless the `x-turnstile-token` header
-verifies (`src/lib/server/turnstile.ts`).
+verifies (`src/lib/server/turnstile.ts`). Verification fails closed — Cloudflare's always-pass
+test secret is reachable only from a local origin, so an unset `TURNSTILE_SECRET_KEY` in
+production rejects submissions instead of accepting everyone.
 
 ### Roles
 
@@ -359,6 +361,36 @@ sweeps. Each job is bracketed with Sentry Crons check-ins (plain HTTP,
 `src/lib/server/cron/sentry-check-in.ts`), so Sentry alerts on failed and missed runs.
 See the cron section of the [operations manual](operations-manual.md) for the runbook.
 
+## Rate limiting: KV, on purpose
+
+`allowRateLimited(key, max, ttlSeconds)` (`src/lib/server/rate-limit.ts`) is a KV counter.
+Its own docstring calls it best-effort, and it is: the read and the write are not atomic,
+so two concurrent requests can both see the old count and both be allowed. Pair it with a
+stronger gate (Turnstile) on anything public.
+
+**Cloudflare's own rate-limiting binding does not fit, and this is not a backlog item.**
+It supports a `period` of 10 or 60 seconds only. Every one of the seven call sites is a
+product quota measured in hours or days, not a flood control measured in seconds:
+
+| Call site                                   | Key                        | Budget      |
+| ------------------------------------------- | -------------------------- | ----------- |
+| `direct-service.requestThread`              | `dm-request:<user>`        | 5 / 24 h    |
+| `direct-service.sendDirectMessage`          | `dm-send:<user>`           | 60 / 1 h    |
+| `community-event-service.publish`           | `community-publish:<user>` | 20 / 1 h    |
+| `band-contact.remote.submitBandContactForm` | `band-contact:<band>:<ip>` | 5 / 1 h     |
+| `suggestions.remote.flagSuggestion`         | `suggestion-flag:<user>`   | 5 / 1 h     |
+| `band-address.remote` slug change           | `band-slug:<band>`         | 3 / 30 days |
+| `/api/audio/track/[id]/stream`              | `audio-stream:<ip>`        | 600 / 5 min |
+
+The shortest window in the table is sixty times the binding's longest. These also aren't
+the same _kind_ of control: the binding is a sliding window sized to absorb a burst,
+whereas "five DM requests a day" is a policy someone chose, and the member is meant to
+feel it. Two of them are additionally per-band or per-user rather than per-IP, which the
+binding's per-colo counting would not preserve.
+
+The one call site the binding would suit is `audio-stream`, and it is also the one where
+the race costs nothing.
+
 ## Configuration: three tiers
 
 1. **`wrangler.toml [vars]`** — non-secret deploy-time config: `ORIGIN`, public URLs, email
@@ -381,7 +413,8 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 	'reservation.operatingHoursEnd': '22:00',
 	'reservation.hourlyRateCents': 1500,
 	'org.timezone': 'America/Los_Angeles',
-	'feature.directMessages': false
+	'feature.directMessages': false,
+	'feature.bandAudio': false
 	// ...
 };
 ```
@@ -390,8 +423,7 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 otherwise the default. **Feature flags** are just `feature.*` config keys, wrapped by
 `src/lib/server/feature-flags.ts` (`isFeatureEnabled`, `getAllFeatureFlags`,
 `requireFeature` — the latter 404s so a disabled feature is indistinguishable from a
-missing page). Current flags: `bandPremium` and `directMessages` — and the whole
-mechanism is being
+missing page). Current flags: `directMessages`, `bandAudio` and `cmcRadio` — and the whole mechanism is being
 retired in favour of feature branches, see
 [the ledger](../plans/feature-flag-retirement.md).
 

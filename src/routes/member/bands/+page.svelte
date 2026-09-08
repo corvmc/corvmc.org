@@ -24,14 +24,17 @@
 	// The sidebar "Create Act" links point here with ?create=1 — open the modal.
 	//
 	// Two constraints, both svelte experimental-async related (still present in
-	// 5.56.8; covered by the band-onboarding e2e test):
+	// 5.57.0; covered by e2e/create-band-modal.e2e.ts):
 	// - This declaration must sit BEFORE the top-level await. Declarations after
 	//   it compile as "blocked" and the modal wiring goes dead.
-	// - No wiring here survives a client-side navigation that lands while the
-	//   member layout's async queries are still settling (init-time effects are
-	//   skipped and an initially-open bits-ui dialog never mounts its portal),
-	//   so the sidebar links carry data-sveltekit-reload and arrive as a full
-	//   document load, which initializes deterministically.
+	// - A client-side navigation landing while the member layout's async queries
+	//   are still settling could strand this page's `$effect`s — including the
+	//   one bits-ui's `Dialog.Portal` uses to mount itself, so no dialog ever
+	//   entered the DOM and the button was dead for the life of the page. That
+	//   is a svelte scheduler bug, not a shape this page can avoid, and it is
+	//   fixed in `patches/svelte@5.57.0.patch` — see the note there. The sidebar
+	//   links still carry data-sveltekit-reload; that is now belt-and-braces
+	//   rather than the mitigation it was.
 	// Deliberately an $effect over $state, NOT a writable $derived. A derived on
 	// `page.url` evaluates against the pre-navigation URL during a fast SPA
 	// navigation and the Modal's `bind:open` pins that stale false: clicking

@@ -35,6 +35,59 @@ export interface NotificationTypeDef {
 
 export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
+		key: 'audio_purchase_receipt',
+		label: 'Music purchase receipt',
+		description: 'Your download link and receipt after buying a release',
+		defaults: { email: true, inApp: true, sms: false },
+		// Mandatory, and not merely as a policy preference: for a buyer with no
+		// account this email carries the ONLY copy of their download link. Letting
+		// it be switched off would let somebody opt out of receiving the thing
+		// they bought.
+		mandatory: true
+	},
+	// --- Membership (sustaining contribution) -----------------------------
+	// A member's contribution is a donation to a nonprofit, so the money types
+	// here are mandatory for the same reason the audio receipt is: they are the
+	// member's record of it. The two that are not mandatory are the ones a
+	// reasonable person might tire of — a monthly renewal notice, and a
+	// confirmation of something they just did themselves.
+	{
+		key: 'membership_receipt',
+		label: 'Membership receipt',
+		description: 'Your receipt when you start a sustaining contribution',
+		defaults: { email: true, inApp: true, sms: false },
+		mandatory: true
+	},
+	{
+		key: 'membership_renewal_receipt',
+		label: 'Monthly contribution receipt',
+		description: 'A receipt each month your contribution renews',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'membership_payment_failed',
+		label: 'Contribution payment failed',
+		description: 'When a card is declined and your membership needs attention',
+		defaults: { email: true, inApp: true, sms: false },
+		// Mandatory because it is the only warning before the membership lapses:
+		// Stripe retries a handful of times and then cancels. Someone who had
+		// switched this off would find out by losing their rehearsal hours.
+		mandatory: true
+	},
+	{
+		key: 'membership_cancellation_scheduled',
+		label: 'Membership cancellation scheduled',
+		description: 'Confirmation of when your membership will end after you cancel',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'membership_ended',
+		label: 'Membership ended',
+		description: 'When your contribution ends and your member credits reset',
+		defaults: { email: true, inApp: true, sms: false },
+		mandatory: true
+	},
+	{
 		key: 'ticket_confirmation',
 		label: 'Ticket purchase confirmation',
 		description: 'Confirmation email with your ticket codes after purchase',
@@ -76,6 +129,12 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		key: 'band_invitation_accepted',
 		label: 'Band invitation accepted',
 		description: 'Notification when someone accepts your band invitation',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'band_enquiry_received',
+		label: 'Booking enquiry',
+		description: 'Notification when someone contacts one of your bands through its booking form',
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
@@ -308,6 +367,17 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		key: 'volunteer_shift_feedback',
 		label: 'How did your shift go?',
 		description: 'A short survey the day after a shift you worked',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'orientation_confirmed',
+		label: 'Someone is meeting you at the space',
+		// Email on, and deliberately not sent when the shift is *created*: "we
+		// hope somebody will meet you" is not information. "Sam is meeting you at
+		// 6:45 on Thursday" is, and it is the only message a first-time member
+		// gets between booking and turning up.
+		description:
+			'Notification when a volunteer is confirmed to show you around on your first booking',
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{

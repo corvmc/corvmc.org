@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error -- plain .mjs script, no types
 import { isProductionBranch } from './ci-migrate.mjs';
 
 // `build` no longer runs this script — it is `vite build`, and the migrate is invoked

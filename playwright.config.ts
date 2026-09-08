@@ -44,6 +44,31 @@ export default defineConfig({
 	// and treat a red mutating test as real rather than waiting on a retry.
 	retries: process.env.CI ? 2 : 0,
 	/**
+	 * What CI can see of a failure from outside the log.
+	 *
+	 * With no reporter configured this took Playwright's default, which prints for
+	 * humans and annotates nothing — so GitHub's annotations API for a failed E2E
+	 * job returned one entry, `Process completed with exit code 1`, and named no
+	 * test. The log is no better as a fallback: its tail is the runner's credential
+	 * teardown, and the actual failure sits ~200 lines up.
+	 *
+	 * Only Playwright needs saying out loud. Vitest adds `github-actions` on its own
+	 * under `GITHUB_ACTIONS`, which is why a failed `Unit tests` job already
+	 * annotated the offending spec and line while a failed `E2E` job annotated
+	 * nothing — so `vite.config.ts` is deliberately left alone.
+	 *
+	 * That gap costs most on a merge-queue rejection. The PR's own checks stay
+	 * green, auto-merge is disarmed, and the session that opened it has ended, so
+	 * the run is the only record of what went wrong —
+	 * `.github/workflows/merge-queue-guard.yml` quotes these annotations into the
+	 * PR for exactly that reason.
+	 *
+	 * `github` emits `::error file=…,line=…` per failed test, which also surfaces
+	 * inline on the diff of an ordinary PR. `list` stays alongside it so the job log
+	 * still reads the way it always has.
+	 */
+	reporter: process.env.CI ? [['github'], ['list']] : 'list',
+	/**
 	 * How long an assertion waits — 15s, not Playwright's 5s.
 	 *
 	 * The suite already disagreed with the default, one assertion at a time: 110
@@ -75,6 +100,26 @@ export default defineConfig({
 	 * failure for a fast useless one.
 	 */
 	timeout: 60_000,
+	/**
+	 * What a failure leaves behind.
+	 *
+	 * Playwright already writes an `error-context.md` per failure and the log
+	 * names its path, but the CI job uploaded nothing, so every path it named led
+	 * nowhere and triage of a red E2E was guesswork against a green laptop. A
+	 * hydration race that reproduces only on a runner is exactly the failure that
+	 * cannot be diagnosed any other way.
+	 *
+	 * `on-first-retry`, not `on`: a trace records the whole run, and this suite is
+	 * already CPU-bound on a runner with a fraction of a laptop's cores. Recording
+	 * one for every passing test would slow every green run to pay for the rare
+	 * red one. On the first retry it costs nothing until something has already
+	 * failed — and since `retries: 2`, a genuine failure always produces one.
+	 * Screenshots are cheap enough to keep unconditional on failure.
+	 */
+	use: {
+		trace: 'on-first-retry',
+		screenshot: 'only-on-failure'
+	},
 	webServer: {
 		// `pnpm`, not `npm`: this repo is pnpm-only and a global prettier 2.8.8
 		// shadows its prettier 3, which is why `npm`/`npx` are blocked everywhere

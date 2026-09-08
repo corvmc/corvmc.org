@@ -6,7 +6,7 @@ import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
 import { mediaKey } from '$lib/server/storage-keys';
 import { getById } from '$lib/server/event/event-service';
 import { db } from '$lib/server/db';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { eq } from 'drizzle-orm';
 
 /** Upload or replace an event poster image. */
@@ -37,7 +37,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	// The previous poster is released, never deleted — a recurring series'
 	// occurrences share one object. See docs/specs/shipped/media-spec.md.
 	await replaceSlot({
-		attachableType: 'event',
+		attachableType: 'event_listing',
 		attachableId: params.id,
 		slot: 'poster',
 		key,
@@ -48,9 +48,9 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	});
 
 	await db
-		.update(event)
+		.update(eventListing)
 		.set({ posterKey: key, updatedAt: new Date() })
-		.where(eq(event.id, params.id));
+		.where(eq(eventListing.id, params.id));
 
 	return json({ posterKey: key });
 };
@@ -65,11 +65,11 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	if (!existing) throw error(404, 'Event not found');
 
 	if (existing.posterKey) {
-		await detachSlot('event', params.id, 'poster');
+		await detachSlot('event_listing', params.id, 'poster');
 		await db
-			.update(event)
+			.update(eventListing)
 			.set({ posterKey: null, updatedAt: new Date() })
-			.where(eq(event.id, params.id));
+			.where(eq(eventListing.id, params.id));
 	}
 
 	return json({ success: true });

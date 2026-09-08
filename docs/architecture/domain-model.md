@@ -8,11 +8,11 @@ event bus, cron; this document is about what the tables _mean_ and which shapes 
 
 **Verticals** — a thing the collective does, with its own screens and its own lifecycle:
 
-| Vertical               | What it is                                         | Modules                                                                                                                                                                         |
-| ---------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`    |
-| **Project management** | Work that has to get done, by someone, by a time   | `project`, `work_order`, `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event` (CMC-produced), `ticket` |
-| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event` (band and community listings)           |
+| Vertical               | What it is                                         | Modules                                                                                                                                                                                 |
+| ---------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`            |
+| **Project management** | Work that has to get done, by someone, by a time   | `project`, `work_order`, `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event_listing` (CMC-produced), `ticket` |
+| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event_listing` (band and community)                    |
 
 **Horizontals** — services every vertical emits into:
 
@@ -30,30 +30,39 @@ membership (social). No vertical owns it.
 room, the amp, and the amp at the repair shop are the same flow over different
 resources, which is why they are one vertical rather than "space" and "gear."
 
-**A show is a project.** `duty_list` stamps work orders onto an event anchored at
+**A show is a project.** `duty_list` stamps work orders onto a listing anchored at
 `doors|start|end`; `work_task` is the checklist; `volunteer_signup` is who claimed it.
 `eventKinds` includes `work_party`, which is a project outright. Volunteering is not a
 separate vertical — it is how a work order gets answered.
 
-## Where `event` sits
+## Where `event_listing` sits
 
-`event` appears in two verticals, and this is deliberate rather than an inconsistency.
-The app already splits the _surfaces_: `/staff/productions` is `source='cmc'` at every
-status including draft, where a show is built; `/staff/events` is the public gig guide
-staff moderate.
+**`event_listing` is the advertisement.** One row is one entry on the calendar — the
+thing a member, band or staffer puts on the gig guide. That is the whole of what the
+table is for, and it is why the table is named for it.
 
-**But the split does not partition the rows.** From `eventKinds`' own comment: _"Work
+The name settles a question the old name `event` kept reopening. A CMC show is a
+listing, _and_ it is a body of work, _and_ it has a back-of-house; the row you are
+looking at is only ever the first of those. From `eventKinds`' own comment: _"Work
 parties and monthly deep cleans need advertising as much as a show does, so they get
-listings too."_ Every CMC event is both a listing and a project. Only
-`source='band'|'community'` rows are listing-only.
+listings too."_ A work party gets a row here for exactly the reason a gig does — it
+needs advertising — not because the table models occasions in general.
+
+The surfaces already read it that way: `/staff/productions` is `source='cmc'` at every
+status including draft, where a show is built; `/staff/events` is the public gig guide
+staff moderate. Both read the same table, at different layers.
 
 Three layers, not two:
 
-| Layer        | What it is                                                                        | Cardinality               |
-| ------------ | --------------------------------------------------------------------------------- | ------------------------- |
-| `project`    | A body of work with a budget and an owner                                         | 0, 1 or many events       |
-| `event`      | The occasion and its public listing                                               | The common case           |
-| `production` | A show's back-of-house — the room hold, doors, ticketing, run of show, settlement | Only `source='cmc'` shows |
+| Layer           | What it is                                                                        | Cardinality               |
+| --------------- | --------------------------------------------------------------------------------- | ------------------------- |
+| `project`       | A body of work with a budget and an owner                                         | 0, 1 or many listings     |
+| `event_listing` | The public advertisement: one entry on the calendar                               | The common case           |
+| `production`    | A show's back-of-house — the room hold, doors, ticketing, run of show, settlement | Only `source='cmc'` shows |
+
+Three of the app's columns store this table's _name_ as data, and so they read
+`'event_listing'` too: `reservation.booker_type`, `media_attachment.attachable_type`
+and `recurring_series.prototype_type`.
 
 See [project-spec.md](../specs/project-spec.md).
 
@@ -97,10 +106,17 @@ They also make opposite calls on _where_ to enforce, each with a stated reason.
 is odd rather than corrupting, since there is still exactly one name." `band_site`'s
 constraint is in the schema precisely so no service rule is needed.
 
-And `band_site` holds what a band **buys**, not what it **is** — which is why `tier` lives
-there rather than on `group`: every band has the row, so reading a tier needs no fallback.
-The row is never deleted while the band lives, because `band_page_config` and `band_media`
-cascade from it and a lapsed card must not take a band's content with it.
+And `band_site` mostly holds what a band **buys**, not what it **is** — which is why `tier`
+lives there rather than on `group`: every band has the row, so reading a tier needs no
+fallback. The row is never deleted while the band lives, because `band_page_config` and
+`band_media` cascade from it and a lapsed card must not take a band's content with it.
+
+**`epk` is the exception, and it is deliberate.** Every band has a press kit, free, so that
+column is not something bought. It sits in this table because the row already has the
+property a free-for-everyone column needs — one per band, created with the band, never
+deleted — and moving it would buy a migration and nothing else. The table's name is a
+naming debt from before that split; it is not a gate. Which half of `epk` a given reader
+may see is decided in `src/lib/server/band/press-kit.ts`, the one module that projects it.
 
 ### Two opposite id decisions, one migration
 
@@ -217,19 +233,24 @@ This is not speculative; it has already happened twice, and the schema says why:
   `event_band`'s credit on the bill.
 - **`project.groupId`** is the next one, and ships in that table's first migration.
 
-**The inbox is the clearest remaining case.** `inbox_thread` has **no owner column at
-all** — `channel` records how a message arrived (contact form, portal, email, SMS,
-Instagram, Messenger), never whose queue it belongs in, so every thread is implicitly
-CMC's. Meanwhile `submitBandContactForm`
-([band-site.remote.ts](../../src/lib/remote/band-site.remote.ts)) already delivers booking
-enquiries "to the band's booking contact, falling back to the band owner" — as email.
-Bands receive this traffic today, into a personal mailbox, unthreaded, with no status, no
-awaiting-reply marker and no record that anyone answered.
+**The inbox was the clearest remaining case, and it has now happened.** `inbox_thread` had
+**no owner column at all** — `channel` records how a message arrived (contact form, portal,
+email, SMS, Instagram, Messenger), never whose queue it belongs in, so every thread was
+implicitly CMC's. Meanwhile `submitBandContactForm`
+([band-contact.remote.ts](../../src/lib/remote/band-contact.remote.ts)) delivered booking
+enquiries "to the band's booking contact, falling back to the band owner" — as email. Bands
+received that traffic into a personal mailbox, unthreaded, with no status, no awaiting-reply
+marker and no record that anyone answered.
 
-One nullable owner column on `inbox_thread` — null meaning CMC, the same shape
-`directory_entry` uses for its two nullable owners — turns one inbox into many.
+`inbox_thread.group_id` is that column: nullable, null meaning CMC, the same shape
+`directory_entry` uses for its two nullable owners. It turned one inbox into many, and
+`docs/specs/shipped/band-chat-spec.md` is what it turned into — including the answer to the
+question groups-spec left open about whether group membership is snapshotted at send time or
+resolved live. It is resolved live, which is why the per-reader cursor moved off
+`inbox_participant` into `inbox_group_read`.
 
-Three things this pattern has to respect, all of which already have working precedent:
+Three things this pattern has to respect, all of which already had working precedent, and all
+three of which band chat now demonstrates rather than promises:
 
 - **Internal notes must not leak.** `/member/messages` is member↔staff on these same
   tables and internal notes are never exposed there, so the isolation is proven in

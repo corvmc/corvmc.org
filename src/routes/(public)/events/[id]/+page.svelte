@@ -40,6 +40,7 @@
 				(evt.ticketQuantity ? data.remaining / evt.ticketQuantity <= 0.15 : false))
 	);
 	const calendarEvt = $derived({
+		id: evt.id,
 		title: evt.title,
 		description: evt.description,
 		location: evt.location,
@@ -288,6 +289,23 @@
 					</div>
 				</div>
 
+				<!--
+					The running order, and only once the production is confirmed with a
+					downbeat set — every part of that gate is in SQL, so an empty list
+					is the honest answer and nothing renders. Additional to the byline
+					above, which speaks for every source and stays ungated.
+				-->
+				{#if evt.setTimes.length > 0}
+					<ul class="edet__settimes">
+						{#each evt.setTimes as slot (slot.name)}
+							<li>
+								<span class="edet__settime">{formatTime(slot.scheduledStartAt)}</span>
+								{slot.name}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+
 				{#if descriptionHtml}
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized rich text (sanitizeHtml) -->
 					<p class="edet__desc">{@html descriptionHtml}</p>
@@ -412,6 +430,20 @@
 
 	.edet__byline a {
 		font-weight: 600;
+	}
+
+	.edet__settimes {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		font-size: 0.95rem;
+	}
+
+	.edet__settime {
+		display: inline-block;
+		min-width: 5.5rem;
+		font-variant-numeric: tabular-nums;
+		color: var(--fg-2);
 	}
 
 	.edet__capacity {

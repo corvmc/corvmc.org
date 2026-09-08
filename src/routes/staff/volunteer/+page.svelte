@@ -26,6 +26,7 @@
 	import HoursToReviewCard from './HoursToReviewCard.svelte';
 	import PendingReviewCard from './PendingReviewCard.svelte';
 	import CloseOutCard from './CloseOutCard.svelte';
+	import NeedsSchedulingCard from './NeedsSchedulingCard.svelte';
 	import LapsingCard from './LapsingCard.svelte';
 	import NewShiftAction from './NewShiftAction.svelte';
 	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
@@ -95,6 +96,10 @@
 
 	{#if work.blockedVolunteers.length > 0}
 		<PendingReviewCard rows={work.blockedVolunteers} />
+	{/if}
+
+	{#if work.unscheduled.length > 0}
+		<NeedsSchedulingCard orders={work.unscheduled} />
 	{/if}
 
 	{#if work.closeOut.length > 0}

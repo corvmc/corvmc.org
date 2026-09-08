@@ -1,49 +1,69 @@
 // ---------------------------------------------------------------------------
-// Timezone utilities — construct and format Dates in a specific IANA timezone
-// using the built-in Intl API for correct DST handling.
+// Timezone utilities — construct and format Dates in a specific IANA timezone.
 // ---------------------------------------------------------------------------
+// Construction goes through `@internationalized/date` (already a dependency,
+// and already what the date pickers in `$lib/components` are built on) rather
+// than hand-rolled offset arithmetic.
+//
+// The reason is the two wall-clock times a named zone cannot answer with a
+// single instant. On the spring-forward Sunday, 02:00–02:59 never happens; on
+// the fall-back Sunday, 01:00–01:59 happens twice. Offset arithmetic has no way
+// to *say* that, so it silently returns whichever instant its correction pass
+// converged on — and for the gap it converged BACKWARDS: 02:00 on 2026-03-08
+// came back as 01:00, an hour earlier than asked for.
+//
+// `.toDate(tz)` takes a `disambiguation` instead of guessing. We use its default,
+// `compatible` — the rule Temporal and every calendar app follow: a nonexistent
+// time shifts forward by the length of the gap, and an ambiguous one takes the
+// earlier of its two readings. `timezone.spec.ts` pins both.
+//
+// Formatting stays on `Intl` — reading an instant back in a zone is unambiguous
+// and needs no help.
+// ---------------------------------------------------------------------------
+
+import { CalendarDate, CalendarDateTime, fromDate, getDayOfWeek } from '@internationalized/date';
+
+/** Calendar and clock components of an instant, in the given timezone. */
+export interface TzParts {
+	year: number;
+	month: number;
+	day: number;
+	hour: number;
+	minute: number;
+	/** JS convention: 0 = Sunday. */
+	weekday: number;
+}
 
 /**
  * Get date/time components for a Date in a specific timezone.
  */
-export function getPartsInTz(
-	date: Date,
-	tz: string
-): { year: number; month: number; day: number; hour: number; minute: number; weekday: number } {
-	const fmt = new Intl.DateTimeFormat('en-US', {
-		timeZone: tz,
-		year: 'numeric',
-		month: 'numeric',
-		day: 'numeric',
-		hour: 'numeric',
-		minute: 'numeric',
-		weekday: 'short',
-		hour12: false
-	});
-	const parts = Object.fromEntries(fmt.formatToParts(date).map((p) => [p.type, p.value]));
-
-	// Intl hour12:false gives "24" for midnight in some engines — normalize to 0
-	const hour = parseInt(parts.hour) % 24;
-
-	// Map weekday abbreviation to JS weekday (0=Sun)
-	const weekdayMap: Record<string, number> = {
-		Sun: 0,
-		Mon: 1,
-		Tue: 2,
-		Wed: 3,
-		Thu: 4,
-		Fri: 5,
-		Sat: 6
-	};
-
+export function getPartsInTz(date: Date, tz: string): TzParts {
+	const zoned = fromDate(date, tz);
 	return {
-		year: parseInt(parts.year),
-		month: parseInt(parts.month),
-		day: parseInt(parts.day),
-		hour,
-		minute: parseInt(parts.minute),
-		weekday: weekdayMap[parts.weekday] ?? 0
+		year: zoned.year,
+		month: zoned.month,
+		day: zoned.day,
+		hour: zoned.hour,
+		minute: zoned.minute,
+		// `en-US` weeks start on Sunday, which is the 0 = Sunday numbering the
+		// callers here use.
+		weekday: getDayOfWeek(zoned, 'en-US')
 	};
+}
+
+/**
+ * Build a Date from wall-clock components in the given timezone.
+ *
+ * The counterpart to `getPartsInTz`. `weekday` is ignored — it is derived from
+ * the date, so a caller that round-trips parts cannot put the two in conflict.
+ */
+export function buildDateTimeInTz(
+	parts: { year: number; month: number; day: number; hour: number; minute: number },
+	tz: string
+): Date {
+	return new CalendarDateTime(parts.year, parts.month, parts.day, parts.hour, parts.minute).toDate(
+		tz
+	);
 }
 
 /**
@@ -57,33 +77,14 @@ export function getPartsInTz(
 export function buildDateInTz(dateStr: string, timeStr: string, tz: string): Date {
 	const [year, month, day] = dateStr.split('-').map(Number);
 	const [hour, minute] = timeStr.split(':').map(Number);
-
-	// Create an approximate Date in UTC, then adjust for the timezone offset.
-	// Use a binary-search-style correction since DST offset depends on the instant.
-	const approx = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
-
-	// Get the offset at this approximate time
-	const offset = getUtcOffsetMinutes(approx, tz);
-	const corrected = new Date(approx.getTime() + offset * 60_000);
-
-	// Verify by re-reading the corrected time in the target timezone
-	const check = getPartsInTz(corrected, tz);
-	if (check.hour !== hour || check.minute !== minute || check.day !== day) {
-		// DST boundary — apply the offset at the corrected time
-		const offset2 = getUtcOffsetMinutes(corrected, tz);
-		return new Date(approx.getTime() + offset2 * 60_000);
-	}
-
-	return corrected;
+	return buildDateTimeInTz({ year, month, day, hour, minute }, tz);
 }
 
-/** Add one calendar day to a "YYYY-MM-DD" string (UTC rollover handles month/year). */
+/** Add one calendar day to a "YYYY-MM-DD" string. */
 export function nextDay(dateStr: string): string {
 	const [year, month, day] = dateStr.split('-').map(Number);
-	const d = new Date(Date.UTC(year, month - 1, day + 1));
-	return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
-		d.getUTCDate()
-	).padStart(2, '0')}`;
+	const next = new CalendarDate(year, month, day).add({ days: 1 });
+	return `${next.year}-${String(next.month).padStart(2, '0')}-${String(next.day).padStart(2, '0')}`;
 }
 
 /**
@@ -113,20 +114,6 @@ export function buildTimeRangeInTz(
 				? buildDateInTz(nextDay(dateStr), endTime, tz)
 				: sameDayEnd
 	};
-}
-
-/**
- * Get the UTC offset in minutes for a timezone at a given instant.
- * Positive = behind UTC, negative = ahead (matching getTimezoneOffset convention).
- */
-function getUtcOffsetMinutes(date: Date, tz: string): number {
-	// Read the wall clock in the target timezone, reinterpret it as UTC, and
-	// diff against the actual instant. Uses full year/month/day so the result
-	// is correct when the local and UTC dates fall in different months/years.
-	const inTz = getPartsInTz(date, tz);
-	const wallClockAsUtc = Date.UTC(inTz.year, inTz.month - 1, inTz.day, inTz.hour, inTz.minute);
-
-	return Math.round((date.getTime() - wallClockAsUtc) / 60_000);
 }
 
 /**

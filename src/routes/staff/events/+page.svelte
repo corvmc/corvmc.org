@@ -10,8 +10,7 @@
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
-	import { goto } from '$app/navigation';
-	import { page as pageState } from '$app/state';
+	import { urlState, oneOf, text, positiveInt } from '$lib/urlState.svelte';
 	import { formatDate } from '$lib/utils/format';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import { getStaffCalendar } from '$lib/remote/events.remote';
@@ -43,32 +42,13 @@
 		all: ['pending_review', 'published', 'cancelled', 'rejected']
 	} as const satisfies Record<View, readonly string[]>;
 
-	// Read once, at mount. A staffer reaches this page from the "listing awaiting
-	// review" notification, which links here with no query string at all, so the
+	// A staffer reaches this page from the "listing awaiting review"
+	// notification, which links here with no query string at all — so the
 	// default has to be the queue rather than the whole calendar.
-	const initial = new URLSearchParams(pageState.url.search);
-	const initialView = (initial.get('view') ?? 'review') as View;
-
-	let view = $state<View>(initialView in STATUSES ? initialView : 'review');
-	let source = $state<'cmc' | 'band' | 'community' | ''>(
-		(initial.get('source') as 'cmc' | 'band' | 'community' | null) ?? ''
-	);
-	let page = $state(1);
-
-	// Writes the URL, never state. `goto(..., { replaceState })` rather than
-	// `replaceState()`: the latter updates neither `page.url` nor the router's
-	// own state, so backing out of an event landed on the wrong filter.
-	$effect(() => {
-		const pairs: [string, string][] = [];
-		if (view !== 'review') pairs.push(['view', view]);
-		if (source) pairs.push(['source', source]);
-		if (page > 1) pairs.push(['page', String(page)]);
-
-		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = `${resolve('/staff/events')}${search ? `?${search}` : ''}`;
-		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
-		}
+	const filters = urlState(resolve('/staff/events'), {
+		view: oneOf(Object.keys(STATUSES) as View[], 'review'),
+		source: text<'cmc' | 'band' | 'community' | ''>(),
+		page: positiveInt(1)
 	});
 
 	// The page's one query, and a promise rather than an await: `DataList`
@@ -77,9 +57,9 @@
 	// `PendingReviewBadge`, which owns its own query for the same reason.
 	const result = $derived(
 		getStaffCalendar({
-			statuses: [...STATUSES[view]],
-			sources: source ? [source] : undefined,
-			page
+			statuses: [...STATUSES[filters.view]],
+			sources: filters.source ? [filters.source] : undefined,
+			page: filters.page
 		})
 	);
 
@@ -98,9 +78,9 @@
 	}
 
 	function clearFilters() {
-		view = 'review';
-		source = '';
-		page = 1;
+		filters.view = 'review';
+		filters.source = '';
+		filters.page = 1;
 	}
 
 	const emptyCopy: Record<View, string> = {
@@ -115,14 +95,27 @@
 	<PendingReviewBadge />
 </PageHeader>
 <PageContent>
-	<FilterBar activeCount={(view === 'review' ? 0 : 1) + (source ? 1 : 0)} onclear={clearFilters}>
-		<Select size="sm" aria-label="Status" bind:value={view} onchange={() => (page = 1)}>
+	<FilterBar
+		activeCount={(filters.view === 'review' ? 0 : 1) + (filters.source ? 1 : 0)}
+		onclear={clearFilters}
+	>
+		<Select
+			size="sm"
+			aria-label="Status"
+			bind:value={filters.view}
+			onchange={() => (filters.page = 1)}
+		>
 			<option value="review">Needs review</option>
 			<option value="calendar">On the calendar</option>
 			<option value="rejected">Turned down</option>
 			<option value="all">Everything</option>
 		</Select>
-		<Select size="sm" aria-label="Source" bind:value={source} onchange={() => (page = 1)}>
+		<Select
+			size="sm"
+			aria-label="Source"
+			bind:value={filters.source}
+			onchange={() => (filters.page = 1)}
+		>
 			<option value="">Every source</option>
 			<option value="cmc">CMC</option>
 			<option value="band">Bands</option>
@@ -130,7 +123,7 @@
 		</Select>
 	</FilterBar>
 
-	<DataList {result} empty={emptyCopy[view]} onpage={(p) => (page = p)}>
+	<DataList {result} empty={emptyCopy[filters.view]} onpage={(p) => (filters.page = p)}>
 		{#snippet children(events)}
 			<!-- No zebra: the bg-base-200 day-group rows are the striping here. -->
 			<Table zebra={false}>

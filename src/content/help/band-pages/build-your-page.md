@@ -1,22 +1,27 @@
 ---
-title: Build Your Page
+title: Arrange Your Page
 slug: build-your-page
 category: band-pages
-summary: Add, reorder, and configure blocks to compose your band page.
+summary: Reorder, hide, and configure the blocks your page already comes with.
 minRole: member
 sortOrder: 3
 ---
 
-## Composing your page
+## Arranging your page
 
-In the **Page Editor**, your page is a stack of blocks. Build it up by:
+Your page arrives already built. Every block is on it from the start, so the
+**Page Editor** is about arranging what's there rather than assembling it:
 
-1. **Adding blocks** — Insert any of the
-   [14 block types](/member/help/page-editor) you want.
+1. **Reordering** — Move blocks up and down to control the page flow.
 2. **Configuring each block** — Open a block to edit its properties (text, items,
    links, and so on).
-3. **Reordering** — Move blocks up and down to control the page flow.
-4. **Removing** — Delete blocks you don't need.
+3. **Hiding** — Hide any block you have nothing for. A hidden block keeps
+   everything you put in it, so you can show it again later.
+
+A block with nothing to show doesn't appear on your live page even when it's
+visible — an empty Merch shelf or a Press section with no quotes yet simply
+isn't rendered. Hiding is for blocks you have content for but don't want
+published.
 
 ## Preview as you go
 

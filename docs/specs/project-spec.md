@@ -19,8 +19,12 @@
 > construction, so the DTO offers no combined total. A specialized role with no
 > rate counts as zero and is surfaced as a gap, never valued at the impact rate.
 >
-> **Not built yet:** the deal shape, the `production` side table, and
-> generate-on-close recurring work. Committee surfaces are read-only; acting on
+> **The `production` side table shipped** in #533 — the row, its status machine
+> `draft → offered → confirmed → completed → settled → closed`, and the console at
+> `/staff/events/[id]/production`. Its run of show, deal, settlement and close-out
+> are milestone 2.0.
+>
+> **Not built yet:** the deal shape and generate-on-close recurring work. Committee surfaces are read-only; acting on
 > a project from one waits on the capability work in
 > [admin-vs-staff-spec.md](admin-vs-staff-spec.md).
 
@@ -215,9 +219,20 @@ case, including two CMC already has:
 | Guarantee against the door | X         | 0          | —      |
 | Versus                     | X         | N          | yes    |
 
-`{ guaranteeCents, percentageBps, versus, againstNet }` **on `event_band`, not
-`event`** — a headliner and a local opener on one bill can have different terms, and
-the lineup row is already what settlement splits across.
+`{ guaranteeCents, percentageBps, versus, againstNet }` **per act, not per show** — a
+headliner and a local opener on one bill can have different terms, and the lineup row is
+already what settlement splits across.
+
+> **Amended 2026-09-07: the columns go on `production_slot`, not `event_band`.** An earlier
+> draft of this section put them on `event_band` for the per-act reason above, which a 1:1
+> child of `event_band` satisfies just as well. `event_band` is joined by the public gig
+> guide, by `/events/[id]` and by every band profile page, and about one `event_listing` row
+> in ten is a CMC show — so five money columns there would be NULL on nine rows in ten of the
+> table the public reads most. It is the same sparsity argument that justified `production`
+> being a separate row from `event_listing`, against the same denominator. The consequence
+> worth noting: a donated set at a _non-CMC_ event has nowhere to be recorded, which is
+> accepted because CMC settles its own shows. See
+> [production-workflow-spec.md](production-workflow-spec.md) — the 2026-09-07 amendment.
 
 A donated set is that shape at zero and zero, flagged as contributed, which is the only
 way the app can currently record that a band played for free or what it was worth.

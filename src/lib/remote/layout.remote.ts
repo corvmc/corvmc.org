@@ -3,11 +3,12 @@ import { error, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
-import { hasAnyRole } from '$lib/server/authorization';
+import { capabilitySet, isElevated, positionsFor } from '$lib/server/authorization';
 import { hasLoanableItems } from '$lib/server/inventory/item-service';
 import { getAllFeatureFlags } from '$lib/server/feature-flags';
 import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
 import { countPortalUnread } from '$lib/server/inbox/portal-service';
+import { countBandUnread } from '$lib/server/inbox/band-service';
 import { countDirectUnread, countPendingRequests } from '$lib/server/inbox/direct-service';
 import { countVolunteerWorkWaiting } from '$lib/server/volunteer/volunteer-signup-service';
 import { countPendingSubmissions } from '$lib/server/event/community-event-service';
@@ -16,8 +17,12 @@ import {
 	countAwaitingResponse,
 	countPendingEdits
 } from '$lib/server/suggestion/suggestion-service';
+import { getForUser, getUnreadCount } from '$lib/server/notification/in-app-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
+
+/** The authenticated caller, as the three layout queries below have already narrowed it. */
+type SignedInUser = NonNullable<App.Locals['user']>;
 
 export const getMe = query(async () => {
 	try {
@@ -47,6 +52,31 @@ function activeOnly<T extends { status: string }>(bands: T[]): T[] {
 	return bands.filter((b) => b.status === 'active');
 }
 
+/**
+ * The topbar's own data, assembled inside whichever layout query is already running.
+ *
+ * `AppTopbar` mounts `NotificationBell` and `AccountDropdown` on every authenticated page, so
+ * the queries they held were two no page could get below (#569). Here they join a `Promise.all`
+ * already awaiting half a dozen others — parallel hops, not round trips of their own. Both
+ * swallow their failure: uncaught, a bell that cannot load would take the whole layout down.
+ */
+async function appChrome(user: SignedInUser) {
+	const [items, unreadCount] = await Promise.all([
+		getForUser(user.id, { limit: 10 }).catch(() => []),
+		getUnreadCount(user.id).catch(() => 0)
+	]);
+
+	return {
+		me: {
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			image: resolveImageUrl(user.image)
+		},
+		notifications: { items, unreadCount }
+	};
+}
+
 export const getMemberLayout = query(async () => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw redirect(302, '/login');
@@ -54,19 +84,21 @@ export const getMemberLayout = query(async () => {
 
 	const [
 		userBands,
-		isStaff,
+		userGroups,
+		positions,
 		features,
 		portalUnread,
 		directUnread,
 		pendingRequests,
-		hasLoanableEquipment
+		hasLoanableEquipment,
+		chrome
 	] = await Promise.all([
 		listForUser(user.id, ['band']).catch(() => []),
-		// Clubs and committees were a sibling list here, feeding a "My Groups" nav
-		// group. The groups module is built but not launched, so the nav entry and
-		// this round trip both went with it — relaunching restores both together.
-		// See docs/plans/feature-flag-retirement.md.
-		hasAnyRole(user.id, ['admin', 'staff']),
+		// A sibling list, not a merge. My Acts keeps its entries, its All link and
+		// its create row exactly as they were; clubs and committees get their own
+		// group beside it, because the two indexes answer different questions.
+		listForUser(user.id, ['club', 'committee']).catch(() => []),
+		positionsFor(user.id),
 		getAllFeatureFlags(),
 		countPortalUnread(user.id).catch(() => 0),
 		countDirectUnread(user.id).catch(() => 0),
@@ -75,7 +107,8 @@ export const getMemberLayout = query(async () => {
 		// lend. Falls back to hidden, which is the harmless direction — a missing
 		// row is a link somebody has to be told about, a row onto an empty
 		// catalogue is a promise the collective is not keeping.
-		hasLoanableItems().catch(() => false)
+		hasLoanableItems().catch(() => false),
+		appChrome(user)
 	]);
 
 	// Requests are deliberately absent from the badge. They show up in the
@@ -86,6 +119,9 @@ export const getMemberLayout = query(async () => {
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
+		// What `AppTopbar` renders. Part of this query rather than two of its own —
+		// see `appChrome`.
+		chrome,
 		userBands: activeOnly(userBands).map((b) => ({
 			id: b.id,
 			name: b.name,
@@ -93,7 +129,20 @@ export const getMemberLayout = query(async () => {
 			avatarUrl: resolveImageUrl(b.avatarKey),
 			role: b.role
 		})),
-		isStaff,
+		// Active only, like the acts above: a pending invitation is not a place
+		// you can go yet, and a nav row that 403s is worse than no row.
+		userGroups: activeOnly(userGroups).map((g) => ({
+			id: g.id,
+			name: g.name,
+			slug: g.slug,
+			avatarUrl: resolveImageUrl(g.avatarKey),
+			role: g.role
+		})),
+		// The viewer's capabilities, not a boolean. `isStaff` is derived from it
+		// (holding any position at all), so the panel switcher keeps working while
+		// entity links and nav rows can ask the sharper question.
+		capabilities: capabilitySet(positions),
+		isStaff: positions.length > 0,
 		features,
 		hasLoanableEquipment,
 		messagesUnread,
@@ -105,14 +154,17 @@ export const getStaffLayout = query(async () => {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw redirect(302, '/login');
 
-	const allowed = await hasAnyRole(locals.user.id, ['admin', 'staff']);
-	if (!allowed) throw redirect(302, '/');
+	// "May you open the panel at all" is not a capability — it is holding any
+	// position — so this stays a position check. The capability set below is what
+	// decides which rows you are offered once you are inside.
+	const positions = await positionsFor(locals.user.id);
+	if (positions.length === 0) throw redirect(302, '/');
 
 	// The staff panel deliberately ignores feature flags — flags gate the
 	// member/band/public surfaces only, so staff can administer a feature
 	// before (and after) it is switched on for everyone else.
 	const user = locals.user;
-	const [userBands, inboxUnread, volunteerPending, listingsPending, suggestionsAwaiting] =
+	const [userBands, inboxUnread, volunteerPending, listingsPending, suggestionsAwaiting, chrome] =
 		await Promise.all([
 			listForUser(user.id, ['band']).catch(() => []),
 			getUnresolvedCount().catch(() => 0),
@@ -127,11 +179,17 @@ export const getStaffLayout = query(async () => {
 			// members while it waits, which is the cost of hiding on a single report.
 			Promise.all([countAwaitingModeration(), countAwaitingResponse(), countPendingEdits()])
 				.then(([m, r, e]) => m + r + e)
-				.catch(() => 0)
+				.catch(() => 0),
+			appChrome(user)
 		]);
 
 	return {
 		user: { id: user.id, name: user.name, email: user.email },
+		// See `appChrome`.
+		chrome,
+		// Which rows this viewer is offered. The redirect above only settled that
+		// they may open the panel at all.
+		capabilities: capabilitySet(positions),
 		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		inboxUnread,
 		volunteerPending,
@@ -178,11 +236,26 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		throw error(404, 'Band not found');
 	}
 
-	const [role, isStaff, userBands, features] = await Promise.all([
+	// A club or committee has no band panel — no press kit, no microsite, no
+	// subscription, and deleting one is staff's. The whole panel was being served
+	// for a program slug, and it was the only place a club leader could invite or
+	// remove anyone. Redirect rather than 404: a bookmark keeps working and lands
+	// where the controls actually live.
+	if (band.kind !== 'band') {
+		redirect(302, `/member/groups/${band.slug}`);
+	}
+
+	const [role, isStaff, userBands, features, messagesUnread, chrome] = await Promise.all([
 		getUserRole(band.id, locals.user.id),
-		hasAnyRole(locals.user.id, ['admin', 'staff']),
+		isElevated(locals.user.id),
 		listForUser(locals.user.id, ['band']).catch(() => []),
-		getAllFeatureFlags()
+		getAllFeatureFlags(),
+		// In the same round trip rather than behind the role check below: one
+		// indexed COUNT is cheaper than the extra await it would take to know
+		// whether to ask. The Messages nav row is owner/admin-only, so the number
+		// simply goes unread for anyone else.
+		countBandUnread(band.id, locals.user.id),
+		appChrome(locals.user)
 	]);
 
 	if (!role && !isStaff) {
@@ -195,6 +268,9 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		isStaff,
 		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		user: { id: locals.user.id, name: locals.user.name, email: locals.user.email },
-		features
+		// See `appChrome`.
+		chrome,
+		features,
+		messagesUnread
 	};
 });

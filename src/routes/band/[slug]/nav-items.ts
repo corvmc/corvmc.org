@@ -14,12 +14,16 @@ import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-na
 
 export type BandNavKey =
 	| 'dashboard'
+	| 'messages'
 	| 'members'
 	| 'rider'
 	| 'announcements'
 	| 'reservations'
 	| 'events'
+	| 'music'
+	| 'payouts'
 	| 'edit'
+	| 'press-kit'
 	| 'page-editor'
 	| 'live-site'
 	| 'subscription'
@@ -32,11 +36,15 @@ export interface BandNavInput {
 	tier: string;
 	userRole: string;
 	isStaff: boolean;
-	features: { bandPremium?: boolean; announcements?: boolean };
+	features: { bandAudio?: boolean };
 }
+
+/** Field names on `getBandLayout()`'s return. */
+export type BandNavBadgeKey = 'messagesUnread';
 
 export interface BandNavItem extends NavNode<BandNavKey> {
 	label: string;
+	badgeKey?: BandNavBadgeKey;
 	/**
 	 * Absolute, inside the panel. An `external` row's href leaves the origin and
 	 * is filled in by the layout, which is the only place that knows the band's
@@ -49,19 +57,37 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	const slug = input.slug;
 	const isOwner = input.userRole === 'owner';
 	const isOwnerOrAdmin = isOwner || input.userRole === 'admin';
-	const premium = !!input.features.bandPremium && input.tier === 'premium';
+	const premium = input.tier === 'premium';
 
 	const items: BandNavItem[] = [
-		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }) },
-		{ key: 'members', label: 'Members', href: resolve('/band/[slug]/members', { slug }) }
+		{ key: 'dashboard', label: 'Dashboard', href: resolve('/band/[slug]', { slug }) }
 	];
 
-	// Announcements used to sit here behind an `announcements` flag, whose comment
-	// said the fan-out behind Publish was unbuilt. It has been built since —
-	// `announcement.published` has a listener with a latch — but the module is not
-	// launched, so the nav entry is absent and the route answers by direct URL
-	// only. Launching is putting this row back; see
-	// docs/plans/feature-flag-retirement.md.
+	// Second, above Members, because it is the only row that can be waiting on
+	// somebody. Owner/admin like Press Kit and Edit Profile: answering an enquiry
+	// commits the act to a date and a price. A member who is not an admin sees no
+	// row, and `getBandConversations` refuses them anyway — the nav is not the
+	// guard, `requireGroupRole` is.
+	if (isOwnerOrAdmin) {
+		items.push({
+			key: 'messages',
+			label: 'Messages',
+			href: resolve('/band/[slug]/messages', { slug }),
+			badgeKey: 'messagesUnread'
+		});
+	}
+
+	items.push({ key: 'members', label: 'Members', href: resolve('/band/[slug]/members', { slug }) });
+
+	// Every member reads announcements; only owner and admin post, which the page
+	// itself gates. It sat behind an `announcements` flag until the module was
+	// launched — a member who cannot see the entry cannot read what the band told
+	// them, which is backwards, so no role is gated here.
+	items.push({
+		key: 'announcements',
+		label: 'Announcements',
+		href: resolve('/band/[slug]/announcements', { slug })
+	});
 
 	// Reservations used to sit behind a `bandReservations` flag, retired on main
 	// in #238's wake — band booking is simply on now.
@@ -72,6 +98,22 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	});
 	items.push({ key: 'events', label: 'Events', href: resolve('/band/[slug]/events', { slug }) });
 
+	// Every member sees the discography; only owner and admin can change it, and
+	// the page decides that from its own `canManage`. Flagged because the
+	// storefront's launch is a Stripe decision rather than a build one — the same
+	// ground `bandPremium` is held on.
+	if (input.features.bandAudio) {
+		items.push({ key: 'music', label: 'Releases', href: resolve('/band/[slug]/music', { slug }) });
+		// Banking setup, so owner-or-admin rather than every member — the same
+		// ground Settings is on, and narrower than Music above it.
+		if (isOwnerOrAdmin) {
+			items.push({
+				key: 'payouts',
+				label: 'Payouts',
+				href: resolve('/band/[slug]/music/payouts', { slug })
+			});
+		}
+	}
 	// Every role, staff included. The rider is the one panel page that is not
 	// owner/admin gated: the person who knows what their amp needs is the person
 	// who owns the amp, and a member who cannot reach the page cannot answer for
@@ -84,6 +126,16 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 			key: 'edit',
 			label: 'Edit Profile',
 			href: resolve('/band/[slug]/edit', { slug })
+		});
+		// Deliberately not premium-gated, and deliberately not folded into Edit
+		// Profile. A press kit is free for every act, and its two halves answer
+		// to different readers: the profile is what the public sees, this is what
+		// a venue is sent. One page per audience is what keeps a phone number
+		// from drifting onto the wrong one.
+		items.push({
+			key: 'press-kit',
+			label: 'Press Kit',
+			href: resolve('/band/[slug]/press-kit', { slug })
 		});
 	}
 
@@ -99,7 +151,7 @@ export function bandNavItems(input: BandNavInput): BandNavItem[] {
 	if (isOwnerOrAdmin) {
 		// Billing is genuinely owner-only — `upgradeToPremium` and friends are
 		// `requireBandOwner` — so unlike Settings this one stays keyed on owner.
-		if (input.features.bandPremium && isOwner) {
+		if (isOwner) {
 			items.push({
 				key: 'subscription',
 				label: 'Subscription',

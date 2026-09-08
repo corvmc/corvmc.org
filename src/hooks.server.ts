@@ -14,13 +14,35 @@ import { captureException } from '$lib/server/sentry';
 import { SENTRY_DSN } from '$lib/sentry-dsn';
 import { isLocalOrigin } from '$lib/sentry-local-origin';
 import { env as publicEnv } from '$env/dynamic/public';
-import { bandSiteUrl, bandSlugFromHost } from '$lib/utils/band-site-url';
+import { bandSiteUrl, bandSlugFromHost, isAppDomain } from '$lib/utils/band-site-url';
 import { groupPublicPath } from '$lib/utils/canonical-address';
 import { resolveBandSubdomain } from '$lib/server/band/band-host-service';
 import { resolveBandSlug } from '$lib/server/band/band-address-service';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
 
+/**
+ * Sessions whose pending group invites have already been resolved.
+ *
+ * Module scope, so it survives between requests the way the isolate does —
+ * which is the point, and was also the bug: nothing removed from it, and a
+ * Worker isolate can live long enough to see a very large number of sessions.
+ *
+ * Cleared wholesale at a ceiling rather than evicted one at a time. An LRU
+ * would be the careful answer if a miss were expensive, and it is not:
+ * `resolvePendingInvites` selects invites that are still `pending` and not yet
+ * expired, and returns 0 before touching anything when there are none. So the
+ * worst a clear costs is one indexed SELECT per session still in flight, and
+ * the whole structure stays four lines.
+ */
+export const RESOLVED_SESSIONS_MAX = 1000;
 const resolvedSessions = new Set<string>();
+
+/** Returns true the first time it sees a session id after each clear. */
+function markSessionResolved(sessionId: string): boolean {
+	if (resolvedSessions.has(sessionId)) return false;
+	if (resolvedSessions.size >= RESOLVED_SESSIONS_MAX) resolvedSessions.clear();
+	resolvedSessions.add(sessionId);
+	return true;
+}
 
 function validateEnv(platform: App.Platform | undefined) {
 	const missing: string[] = [];
@@ -68,8 +90,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 		event.locals.session = session.session;
 		event.locals.user = session.user;
 
-		if (!resolvedSessions.has(session.session.id)) {
-			resolvedSessions.add(session.session.id);
+		if (markSessionResolved(session.session.id)) {
 			resolvePendingInvites(session.user.id, session.user.email).catch(captureException);
 		}
 	}
@@ -104,12 +125,9 @@ const handleBandSubdomain: Handle = async ({ event, resolve }) => {
 	const slug = bandSlugFromHost(event.url.hostname, publicEnv.PUBLIC_SITE_URL);
 	if (!slug) return resolve(event);
 
-	const [host, premiumEnabled] = await Promise.all([
-		resolveBandSubdomain(slug),
-		isFeatureEnabled('bandPremium')
-	]);
+	const host = await resolveBandSubdomain(slug);
 
-	if (host?.servesSite && premiumEnabled) return resolve(event);
+	if (host?.servesSite) return resolve(event);
 
 	// No band holds this subdomain — it may be an address one of them released.
 	// The history lookup only runs on this miss, so the hot path is untouched.
@@ -150,6 +168,44 @@ const handleBandSubdomain: Handle = async ({ event, resolve }) => {
 // drowned out real issues, so drop them before they reach Sentry. The matching
 // 4xx guard in `handleError` covers our explicit captures; this catches anything
 // captured by the request handler itself.
+/**
+ * Security response headers.
+ *
+ * Sits above `handleBetterAuth` in the sequence so it wraps every response the
+ * app produces, including the two redirects `handleBandSubdomain` builds by
+ * hand — those never call `resolve`, so a handler placed below it would let
+ * them out bare.
+ *
+ * The CSP is deliberately not here. It lives in `kit.csp` (svelte.config.js),
+ * because Kit has to nonce the inline hydration script it injects into every
+ * rendered page and only the renderer can do that. Static assets are answered
+ * by the assets binding before this worker runs and are covered by `_headers`.
+ */
+const handleSecurityHeaders: Handle = async ({ event, resolve }) => {
+	const response = await resolve(event);
+
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	// The modern equivalent is `frame-ancestors`, which kit.csp enforces. This is
+	// its companion for browsers that only understand the older header.
+	response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+
+	// HSTS is a promise about a domain, not about a response, and the wildcard
+	// zone route means this worker also answers premium bands' own domains as
+	// Cloudflare for SaaS custom hostnames. Pinning an apex we do not own to
+	// HTTPS would outlive the band leaving CMC, so it is scoped to our own
+	// addresses. `includeSubDomains` covers band subdomains and media.corvmc.org,
+	// which are HTTPS-only already. No `preload`: that is close to irreversible.
+	if (
+		event.url.protocol === 'https:' &&
+		isAppDomain(event.url.hostname, publicEnv.PUBLIC_SITE_URL)
+	) {
+		response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+	}
+
+	return response;
+};
+
 function isNotFoundError(error: unknown): boolean {
 	const message = error instanceof Error ? error.message : String(error ?? '');
 	return message.startsWith('Not found:');
@@ -194,6 +250,9 @@ export const handle: Handle = sequence(
 		enableLogs: true
 	}),
 	Sentry.sentryHandle(),
+	// Above everything below it, so it sees the final response whichever branch
+	// produced it — including the redirects that never reach `resolve`.
+	handleSecurityHeaders,
 	// Must come after handleBetterAuth: that is where initDb() runs, and the
 	// subdomain gate queries the band table.
 	handleBetterAuth,

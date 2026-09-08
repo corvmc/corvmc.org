@@ -58,6 +58,29 @@ export async function uploadFile(
 	return key;
 }
 
+/**
+ * Read an object's bytes back out of the bucket.
+ *
+ * The only reader is the press-kit package, which assembles a zip and therefore
+ * needs the file itself rather than a URL to it. It goes through the binding
+ * rather than fetching `media.corvmc.org`, which would send a Worker request
+ * back out to the internet and through the transform pipeline to get a file
+ * that is already one method call away.
+ *
+ * Returns null for a key the bucket does not hold — a stale `media` row is a
+ * missing file, not a failed request.
+ */
+export async function getObject(
+	key: string
+): Promise<{ bytes: Uint8Array; contentType: string | null } | null> {
+	const object = await getBucket().get(key);
+	if (!object) return null;
+	return {
+		bytes: new Uint8Array(await object.arrayBuffer()),
+		contentType: object.httpMetadata?.contentType ?? null
+	};
+}
+
 export async function deleteObject(key: string): Promise<void> {
 	await getBucket().delete(key);
 }

@@ -154,6 +154,21 @@ export class NotAnActiveBandMemberError extends DomainError {
 	}
 }
 
+/**
+ * Only a band can be deleted by the person who runs it.
+ *
+ * `docs/specs/groups-spec.md:818` is the one place the role table differs by
+ * kind: an appointed program leader runs the program, they do not own it, and
+ * ending a CMC program is a staff decision made in `/staff/groups`.
+ */
+export class CannotDeleteProgramError extends DomainError {
+	readonly httpStatus = 403;
+
+	constructor() {
+		super('A club or committee is ended by staff, not by its leader.');
+	}
+}
+
 export class BandTierManagedByStripeError extends DomainError {
 	readonly httpStatus = 409;
 
@@ -288,6 +303,10 @@ export async function update(bandId: string, data: UpdateBandData) {
 export async function deleteBand(bandId: string) {
 	const [row] = await db.select().from(group).where(eq(group.id, bandId)).limit(1);
 	if (!row) throw new BandNotFoundError();
+	// In the service rather than in `deleteBand`'s remote: the remote is one
+	// caller and this is the invariant's home. The cascade below takes the
+	// announcements, the documents and the roster with it.
+	if (row.kind !== 'band') throw new CannotDeleteProgramError();
 
 	// Cancel all future band reservations
 	const futureReservations = await db
@@ -479,6 +498,32 @@ export function partitionByStatus<T extends { status: GroupMemberStatus }>(
 	>;
 	for (const row of rows) buckets[row.status].push(row);
 	return buckets;
+}
+
+/**
+ * The people who can act for a band: its owner and its admins, active only.
+ *
+ * Pulled out of `acceptInvitation`'s inline query, which built exactly this and
+ * was the only place that knew how. Band chat needs the same list twice — to
+ * notify a roster that an enquiry arrived, and to decide whether the press
+ * kit's booking address already belongs to someone here.
+ */
+export async function listBandAdmins(
+	bandId: string
+): Promise<Array<{ userId: string; userName: string; userEmail: string }>> {
+	const rows = await db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(groupMember)
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.where(
+			and(
+				eq(groupMember.groupId, bandId),
+				inArray(groupMember.role, ['owner', 'admin']),
+				eq(groupMember.status, 'active')
+			)
+		);
+
+	return rows.map((r) => ({ userId: r.id, userName: r.name, userEmail: r.email }));
 }
 
 export async function getMembers(bandId: string) {

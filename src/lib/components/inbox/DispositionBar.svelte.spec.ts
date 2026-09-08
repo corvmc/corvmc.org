@@ -80,6 +80,14 @@ describe('DispositionBar', () => {
 
 	// Snooze drew an `S` for a key that was never bound to anything. Opening the
 	// menu is what the letter has to do — the dates live in there.
+	//
+	// Assert a date and not the trigger's `aria-expanded`. Reaching into the menu
+	// is what caught #507: on a Friday and a Sunday two presets resolved to the
+	// same day, and the rows were keyed by date, so `each_key_duplicate` was thrown
+	// while the portal's content rendered and the whole menu died. `aria-expanded`
+	// read `"true"` throughout — the trigger is not where a broken menu shows up.
+	// `snooze-presets.spec.ts` pins the dates on every weekday; this stays the
+	// proof that they reach the DOM.
 	it('opens the snooze menu on its shortcut', async () => {
 		await render(DispositionBar, { threadId: 'thread-1', status: 'open' });
 

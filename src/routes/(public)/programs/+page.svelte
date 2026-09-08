@@ -15,6 +15,14 @@
 	import Setlist from '$lib/components/illustrations/Setlist.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
+	import { getPublicGroups } from '$lib/remote/groups.remote';
+
+	/**
+	 * The cards below are hand-written copy; `/groups` is the live list. The link
+	 * between them is gated on there being something to land on, because a
+	 * "see all" that opens an empty directory is worse than no link at all.
+	 */
+	const publicGroups = $derived(await getPublicGroups());
 </script>
 
 <svelte:head>
@@ -210,6 +218,11 @@
 			</div>
 		</div>
 	</div>
+	{#if publicGroups.length > 0}
+		<div class="mt-10 text-center">
+			<Button href={resolve('/groups')} variant="primary">See all clubs &amp; committees</Button>
+		</div>
+	{/if}
 </Section>
 
 <!-- Ready to Get Involved -->

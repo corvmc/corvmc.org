@@ -13,7 +13,7 @@
  * Run this before every `pnpm email:push`.
  */
 import 'dotenv/config';
-import { ServerClient } from 'postmark';
+import { Models, ServerClient } from 'postmark';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { FIXTURES } from '../src/lib/server/notification/email/fixtures';
@@ -62,9 +62,15 @@ async function validate(
 		['TextBody', result.TextBody]
 	] as const;
 
+	// Postmark declares `ValidationErrors` as a bare `object`; this is the shape
+	// it actually returns.
+	type ValidationError = { Message: string; Line: number };
+
 	const errors = parts.flatMap(([name, part]) =>
 		part && part.ContentIsValid === false
-			? (part.ValidationErrors ?? []).map((e) => `${name}: ${e.Message} (line ${e.Line})`)
+			? ((part.ValidationErrors ?? []) as ValidationError[]).map(
+					(e) => `${name}: ${e.Message} (line ${e.Line})`
+				)
 			: []
 	);
 
@@ -98,7 +104,7 @@ for (const alias of layoutAliases) {
 			Subject: '',
 			HtmlBody: readFileSync(join(dir, 'content.html'), 'utf8'),
 			TextBody: readFileSync(join(dir, 'content.txt'), 'utf8'),
-			TemplateType: 'Layout',
+			TemplateType: Models.TemplateTypes.Layout,
 			TestRenderModel: model
 		},
 		model
@@ -120,7 +126,7 @@ for (const fixture of FIXTURES) {
 			Subject: meta.Subject ?? '',
 			HtmlBody: existsSync(htmlPath) ? readFileSync(htmlPath, 'utf8') : '',
 			TextBody: readFileSync(join(dir, 'content.txt'), 'utf8'),
-			TemplateType: 'Standard',
+			TemplateType: Models.TemplateTypes.Standard,
 			TestRenderModel: fixture.model
 		},
 		fixture.model

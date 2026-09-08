@@ -234,8 +234,8 @@ describe('the isolate memo', () => {
 	});
 
 	it('exempts feature flags, so a toggle does not compound two caches', async () => {
-		await getSiteConfig('feature.bandPremium');
-		await getSiteConfig('feature.bandPremium');
+		await getSiteConfig('feature.directMessages');
+		await getSiteConfig('feature.directMessages');
 
 		// Nobody watches a room rate take effect. A staff member who toggles a
 		// flag does, so flags pay the read rather than adding this cache on top
@@ -245,7 +245,7 @@ describe('the isolate memo', () => {
 
 	it('gives an exempt key a shorter edge cacheTtl than a memoized one', async () => {
 		await getSiteConfig('reservation.hourlyRateCents');
-		await getSiteConfig('feature.bandPremium');
+		await getSiteConfig('feature.directMessages');
 
 		const [memoized, exempt] = getJson.mock.calls;
 		expect(memoized[1]).toEqual({ cacheTtl: 300 });

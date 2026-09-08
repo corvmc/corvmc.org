@@ -1,8 +1,9 @@
 import { db } from '$lib/server/db';
 import { media, mediaAttachment } from '$lib/server/db/schema/media';
 import type { Media } from '$lib/server/db/schema/media';
-import type { AttachableType, MediaSlot } from '$lib/server/db/schema/media';
-import { event } from '$lib/server/db/schema/event';
+import type { MediaSlot } from '$lib/server/db/schema/media';
+import type { AttachableType } from '$lib/config';
+import { eventListing } from '$lib/server/db/schema/event';
 import { group } from '$lib/server/db/schema/group';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
@@ -245,6 +246,27 @@ export async function listFor(
  * can be unconditional: zero here is what makes an object reapable, not the
  * removal of any one parent.
  */
+/**
+ * Describe the object, not the usage.
+ *
+ * `altText` and `caption` live on `media` rather than on `media_attachment`
+ * because they are facts about the image: the same press photo used on a band's
+ * page and in its press-kit package is one photograph, and describing it twice
+ * would let the two descriptions disagree. Callers own the authorization —
+ * this takes a `mediaId` they have already scoped to a parent they control.
+ */
+export async function setDescription(
+	mediaId: string,
+	input: { altText?: string | null; caption?: string | null }
+): Promise<void> {
+	const updates: Partial<typeof media.$inferInsert> = {};
+	if (input.altText !== undefined) updates.altText = input.altText;
+	if (input.caption !== undefined) updates.caption = input.caption;
+	if (Object.keys(updates).length === 0) return;
+
+	await db.update(media).set(updates).where(eq(media.id, mediaId));
+}
+
 export async function countAttachments(mediaId: string): Promise<number> {
 	const [row] = await db
 		.select({ n: sql<number>`count(*)`.as('n') })
@@ -267,8 +289,8 @@ export async function countAttachments(mediaId: string): Promise<number> {
  */
 export function liveAttachmentCondition(): SQL {
 	return sql`(
-		(${mediaAttachment.attachableType} = 'event'
-			AND EXISTS (SELECT 1 FROM ${event} WHERE ${event.id} = ${mediaAttachment.attachableId}))
+		(${mediaAttachment.attachableType} = 'event_listing'
+			AND EXISTS (SELECT 1 FROM ${eventListing} WHERE ${eventListing.id} = ${mediaAttachment.attachableId}))
 		OR (${mediaAttachment.attachableType} = 'group'
 			AND EXISTS (SELECT 1 FROM ${group} WHERE ${group.id} = ${mediaAttachment.attachableId}))
 		OR (${mediaAttachment.attachableType} = 'user'

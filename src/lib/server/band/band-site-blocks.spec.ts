@@ -80,4 +80,19 @@ describe('prepareBlocksForRender', () => {
 		];
 		expect(prepareBlocksForRender(input)).toEqual(input);
 	});
+
+	it('drops hidden blocks', () => {
+		const out = prepareBlocksForRender([
+			{ id: '1', type: 'events', limit: 5, hidden: true },
+			{ id: '2', type: 'press' }
+		]);
+		expect(out.map((b) => b.id)).toEqual(['2']);
+	});
+
+	it('never ships an unpublished custom_html block’s markup', () => {
+		const out = prepareBlocksForRender([
+			{ id: '1', type: 'custom_html', content: '<p>not live yet</p>', hidden: true }
+		]);
+		expect(out).toEqual([]);
+	});
 });

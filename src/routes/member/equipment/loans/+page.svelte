@@ -8,6 +8,7 @@
 	import { formatDate, formatCents } from '$lib/utils/format';
 	import { CancelLoanAction } from '$lib/components/actions';
 	import Button from '$lib/components/ui/Button.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import {
 		IconHash,
 		IconCalendar,
@@ -26,25 +27,14 @@
 	<Button href="/member/equipment" variant="ghost" size="sm">Browse Catalog</Button>
 </PageHeader>
 <PageContent>
-	<!-- Tabs -->
-	<div role="tablist" class="tabs-bordered tabs">
-		<button
-			role="tab"
-			class="tab"
-			class:tab-active={activeTab === 'active'}
-			onclick={() => (activeTab = 'active')}
-		>
-			Active ({data.active.length})
-		</button>
-		<button
-			role="tab"
-			class="tab"
-			class:tab-active={activeTab === 'past'}
-			onclick={() => (activeTab = 'past')}
-		>
-			Past ({data.past.length})
-		</button>
-	</div>
+	<TabBar
+		tabs={[
+			{ key: 'active', label: 'Active', badge: data.active.length },
+			{ key: 'past', label: 'Past', badge: data.past.length }
+		]}
+		active={activeTab}
+		onchange={(key) => (activeTab = key as 'active' | 'past')}
+	/>
 
 	<!-- Loan Cards -->
 	{#if activeTab === 'active'}

@@ -21,7 +21,7 @@ const mockStaffUsers = vi.fn(async () => [
 	{ id: 'staff-2', name: 'Bo', email: 'bo@test.com' }
 ]);
 vi.mock('$lib/server/authorization', () => ({
-	listStaffUsers: () => mockStaffUsers()
+	listUsersWithCapability: () => mockStaffUsers()
 }));
 
 // Returns null when INBOX_REPLY_ADDRESS is unconfigured, which is a supported
@@ -35,15 +35,31 @@ vi.mock('$env/dynamic/private', () => ({
 	env: { PUBLIC_SITE_URL: 'https://test.corvmc.com', STAFF_CONTACT_EMAIL: 'staff@test.com' }
 }));
 
-// Capture event handlers
-const handlers: Record<string, (...args: any[]) => any> = {};
+// Capture event handlers.
+//
+// A LIST per event, not one slot: emittery allows several listeners on one
+// event and this file registers two on `volunteer.signup_confirmed` — the
+// roster email to the volunteer, and the orientation email to the member they
+// are meeting. A single slot would silently keep only whichever registered last
+// and quietly test the wrong one.
+const handlers: Record<string, ((...args: any[]) => any)[]> = {};
 vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: {
 		on: (event: string, handler: (...args: any[]) => any) => {
-			handlers[event] = handler;
+			(handlers[event] ??= []).push(handler);
 		},
 		emit: vi.fn()
 	}
+}));
+
+// The orientation listener reads the member behind an orientation shift, and
+// looks up their name and address. Null by default: most shifts are not
+// orientations, and that branch returns before it dispatches anything.
+const mockOrientationOwnerOf = vi.fn(
+	async (_shiftId: string): Promise<{ userId: string; name: string; email: string } | null> => null
+);
+vi.mock('$lib/server/volunteer/orientation-service', () => ({
+	orientationOwnerOf: (id: string) => mockOrientationOwnerOf(id)
 }));
 
 const { registerAllNotificationListeners } = await import('./notification-listeners');
@@ -51,7 +67,7 @@ const { registerAllNotificationListeners } = await import('./notification-listen
 // Emittery wraps emitted payloads as `{ name, data }` before invoking
 // listeners. Calling handlers directly in tests must mirror that envelope.
 function emit(event: string, payload: unknown): Promise<unknown> {
-	return handlers[event]({ data: payload });
+	return Promise.all((handlers[event] ?? []).map((h) => h({ data: payload })));
 }
 
 function paragraphText(model: { paragraphs?: { text: string }[] }): string {
@@ -78,6 +94,10 @@ function detailLabels(model: { details?: Detail[] }): string[] {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	// The registry holds a list per event now, and almost every describe
+	// re-registers in its own `beforeEach` — so without this the lists grow and
+	// one emit fans out to every copy registered so far.
+	for (const key of Object.keys(handlers)) delete handlers[key];
 });
 
 // All transactional emails (except ticket-confirmation + inbox-reply) render
@@ -121,10 +141,95 @@ describe('registerAllNotificationListeners', () => {
 			'contact.form_submitted',
 			'volunteer.hours_submitted',
 			'volunteer.hours_approved',
-			'volunteer.hours_rejected'
+			'volunteer.hours_rejected',
+			'membership.started',
+			'membership.renewed',
+			'membership.payment_failed',
+			'membership.cancellation_scheduled',
+			'membership.ended'
 		]) {
 			expect(handlers[event], event).toBeDefined();
 		}
+	});
+});
+
+/**
+ * The member being shown around is told who is meeting them.
+ *
+ * Two listeners sit on `volunteer.signup_confirmed`: the roster email to the
+ * volunteer, and this one. It has to reach the member behind the booking, not
+ * the volunteer in the payload, and it has to stay silent for the ordinary
+ * shifts that make up almost all of that event's traffic.
+ */
+describe('orientation_confirmed handler', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const signup = {
+		signupId: 'sg-1',
+		shiftId: 'wo-1',
+		userId: 'vol-1',
+		userName: 'Sam',
+		userEmail: 'sam@test.com',
+		roleName: 'Rehearsal Orientation',
+		startsAt: '2026-09-06T00:45:00.000Z',
+		endsAt: '2026-09-06T01:30:00.000Z'
+	};
+
+	it('writes to the member being met, not the volunteer doing the meeting', async () => {
+		mockOrientationOwnerOf.mockResolvedValueOnce({
+			userId: 'member-1',
+			name: 'Wren',
+			email: 'wren@test.com'
+		});
+
+		await emit('volunteer.signup_confirmed', signup);
+
+		const call = mockDispatch.mock.calls.find(
+			([a]) => (a as { type: string }).type === 'orientation_confirmed'
+		);
+		expect(call).toBeDefined();
+
+		const arg = call![0] as {
+			userId: string;
+			userEmail: string;
+			title: string;
+			emailTemplate: { alias: string; model: { paragraphs?: { text: string }[] } };
+		};
+		expect(arg.userId).toBe('member-1');
+		expect(arg.userEmail).toBe('wren@test.com');
+		// The volunteer's name is the useful part of the message — "somebody" is
+		// not what makes this worth sending.
+		expect(arg.title).toContain('Sam');
+		expect(arg.emailTemplate.alias).toBe(GENERIC);
+		expect(paragraphText(arg.emailTemplate.model)).toContain('Sam');
+	});
+
+	it('says nothing for an ordinary shift', async () => {
+		// The default: `orientationOwnerOf` returns null for anything that is not
+		// an orientation, which is almost every confirmed signup there is.
+		await emit('volunteer.signup_confirmed', signup);
+
+		expect(
+			mockDispatch.mock.calls.filter(
+				([a]) => (a as { type: string }).type === 'orientation_confirmed'
+			)
+		).toHaveLength(0);
+	});
+
+	it('still sends the volunteer their own roster email', async () => {
+		mockOrientationOwnerOf.mockResolvedValueOnce({
+			userId: 'member-1',
+			name: 'Wren',
+			email: 'wren@test.com'
+		});
+
+		await emit('volunteer.signup_confirmed', signup);
+
+		const roster = mockDispatch.mock.calls.find(
+			([a]) => (a as { type: string }).type === 'volunteer_shift_confirmed'
+		);
+		expect(roster).toBeDefined();
+		expect((roster![0] as { userId: string }).userId).toBe('vol-1');
 	});
 });
 
@@ -529,6 +634,20 @@ describe('reservation.cancelled handler', () => {
 
 		expect(mockDispatch).not.toHaveBeenCalled();
 	});
+
+	it('does NOT email a second time when a waitlist entry ran out of time', async () => {
+		// The expiry path emits both events: `waitlist_expired`, which explains
+		// what happened in the words that fit it, and `reservation.cancelled`, for
+		// the listeners that act on a released slot. Only the first is a letter to
+		// the member.
+		await emit('reservation.cancelled', {
+			...base,
+			cancelledBy: 'system',
+			cause: 'waitlist_expired'
+		});
+
+		expect(mockDispatch).not.toHaveBeenCalled();
+	});
 });
 
 // ---------------------------------------------------------------------------
@@ -766,5 +885,128 @@ describe('every notification-alias model', () => {
 				(normalizeNotificationModel(model as never).preview_text as string);
 			expect(preview?.trim()).toBeTruthy();
 		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Membership
+// ---------------------------------------------------------------------------
+describe('membership notifications', () => {
+	const paid = {
+		userId: 'user-1',
+		userName: 'Ada',
+		userEmail: 'ada@test.com',
+		amountCents: 2500,
+		freeHoursPerMonth: 5,
+		periodEnd: '2026-07-01T00:00:00.000Z',
+		invoiceId: 'inv_1',
+		coveringFees: false
+	};
+
+	beforeEach(() => {
+		registerAllNotificationListeners();
+	});
+
+	function callFor(type: string) {
+		return mockDispatch.mock.calls.find(([p]) => p.type === type)?.[0];
+	}
+
+	it('sends a receipt when a contribution starts', async () => {
+		await emit('membership.started', paid);
+
+		const call = callFor('membership_receipt');
+		expect(call).toBeDefined();
+		expect(call.userEmail).toBe('ada@test.com');
+		expect(call.emailTemplate.alias).toBe(GENERIC);
+		expect(detailText(call.emailTemplate.model)).toContain('$25.00 / month');
+	});
+
+	it('states the hours in hours, not in credits', async () => {
+		// hoursPerReset is stored in 30-minute credits; a receipt that read them
+		// straight would promise double the rehearsal time actually granted.
+		await emit('membership.started', paid);
+
+		expect(detailText(callFor('membership_receipt').emailTemplate.model)).toContain(
+			'5 hours / month'
+		);
+	});
+
+	it('names the fee coverage only when the member opted into it', async () => {
+		await emit('membership.started', paid);
+		expect(detailLabels(callFor('membership_receipt').emailTemplate.model)).not.toContain(
+			'Processing fees'
+		);
+
+		vi.clearAllMocks();
+		await emit('membership.started', { ...paid, coveringFees: true });
+		expect(detailLabels(callFor('membership_receipt').emailTemplate.model)).toContain(
+			'Processing fees'
+		);
+	});
+
+	it('sends the renewal receipt under its own, muteable type', async () => {
+		await emit('membership.renewed', paid);
+
+		// A separate type from the first receipt so a member can silence the
+		// monthly one without losing the record of signing up.
+		expect(callFor('membership_renewal_receipt')).toBeDefined();
+		expect(callFor('membership_receipt')).toBeUndefined();
+	});
+
+	it('points a failed payment at the invoice the member can actually pay', async () => {
+		await emit('membership.payment_failed', {
+			userId: 'user-1',
+			userName: 'Ada',
+			userEmail: 'ada@test.com',
+			amountCents: 2500,
+			invoiceId: 'inv_2',
+			hostedInvoiceUrl: 'https://stripe.test/pay',
+			nextAttemptAt: '2026-07-05T00:00:00.000Z'
+		});
+
+		const call = callFor('membership_payment_failed');
+		expect(call.emailTemplate.model.cta.url).toBe('https://stripe.test/pay');
+		expect(detailLabels(call.emailTemplate.model)).toContain('Next attempt');
+	});
+
+	it('falls back to the membership page when Stripe gave no pay link', async () => {
+		await emit('membership.payment_failed', {
+			userId: 'user-1',
+			userName: 'Ada',
+			userEmail: 'ada@test.com',
+			amountCents: 2500,
+			invoiceId: 'inv_2',
+			hostedInvoiceUrl: null,
+			nextAttemptAt: null
+		});
+
+		const model = callFor('membership_payment_failed').emailTemplate.model;
+		expect(model.cta.url).toContain('/member/membership');
+		expect(detailLabels(model)).not.toContain('Next attempt');
+	});
+
+	it('tells a cancelling member the date their benefits actually stop', async () => {
+		await emit('membership.cancellation_scheduled', {
+			userId: 'user-1',
+			userName: 'Ada',
+			userEmail: 'ada@test.com',
+			endsAt: '2026-07-01T00:00:00.000Z'
+		});
+
+		const model = callFor('membership_cancellation_scheduled').emailTemplate.model;
+		expect(detailLabels(model)).toContain('Benefits run through');
+		expect(paragraphText(model)).toContain('not be charged again');
+	});
+
+	it('says what happened to the recurring bookings when a membership ends', async () => {
+		await emit('membership.ended', {
+			userId: 'user-1',
+			userName: 'Ada',
+			userEmail: 'ada@test.com',
+			endsAt: null
+		});
+
+		const call = callFor('membership_ended');
+		expect(call.emailTemplate.model.footnote).toContain('recurring bookings');
 	});
 });

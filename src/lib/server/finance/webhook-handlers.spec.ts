@@ -38,12 +38,13 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: { emit: mockEmit }
 }));
 
-vi.mock('./webhook-events', () => ({
-	registeredEvents: ['checkout.session.completed', 'invoice.paid', 'customer.subscription.deleted']
-}));
-
 vi.mock('$lib/server/reservation/recurring-series-service', () => ({
 	cancelAllForUser: vi.fn()
+}));
+
+const mockBuildMemberSubscriptionState = vi.fn();
+vi.mock('./subscription-service', () => ({
+	buildMemberSubscriptionState: (...args: unknown[]) => mockBuildMemberSubscriptionState(...args)
 }));
 
 const mockGetStripeProductId = vi.fn().mockResolvedValue('prod_fee');
@@ -51,8 +52,15 @@ vi.mock('./product-config-service', () => ({
 	getStripeProductId: (...args: unknown[]) => mockGetStripeProductId(...args)
 }));
 
-const { handleCheckoutCompleted, handleInvoicePaid, handleSubscriptionDeleted } =
-	await import('./webhook-handlers');
+const {
+	handleCheckoutCompleted,
+	handleInvoicePaid,
+	handleSubscriptionUpdated,
+	handleSubscriptionDeleted,
+	handleInvoicePaymentFailed,
+	handleChargeRefunded
+} = await import('./webhook-handlers');
+const { registeredEvents } = await import('./webhook-events');
 
 // ---------------------------------------------------------------------------
 // handleCheckoutCompleted
@@ -375,5 +383,291 @@ describe('handleSubscriptionDeleted', () => {
 		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('no user found'));
 		expect(mockCreditService.setBalance).not.toHaveBeenCalled();
 		warnSpy.mockRestore();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The registry itself
+// ---------------------------------------------------------------------------
+// This file used to mock `./webhook-events` with a hand-written copy of the
+// array, which had already drifted — it was missing
+// `customer.subscription.updated`. The real module is imported instead, so the
+// registry has one definition and this asserts against it.
+describe('registeredEvents', () => {
+	it('subscribes the events a failed or refunded payment arrives on', () => {
+		// Without invoice.payment_failed a member's card fails, credits stop, and
+		// nobody is told. Without charge.refunded a dashboard refund never
+		// reaches the local record.
+		expect(registeredEvents).toContain('invoice.payment_failed');
+		expect(registeredEvents).toContain('charge.refunded');
+	});
+
+	it('has a handler for every event it subscribes', async () => {
+		const { webhookHandlerMap } = await import('./webhook-handlers');
+		for (const event of registeredEvents) {
+			expect(typeof webhookHandlerMap[event]).toBe('function');
+		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Membership domain events
+// ---------------------------------------------------------------------------
+
+/** A paid contribution invoice with one subscription line. */
+function contributionInvoice(overrides: Record<string, unknown> = {}) {
+	return {
+		id: 'inv_m1',
+		billing_reason: 'subscription_cycle',
+		amount_paid: 2500,
+		hosted_invoice_url: 'https://stripe.test/inv_m1',
+		parent: { subscription_details: { subscription: 'sub_abc' } },
+		customer: 'cus_123',
+		lines: {
+			data: [
+				{
+					parent: { subscription_item_details: { subscription_item: 'si_abc' } },
+					quantity: 5,
+					amount: 2500,
+					period: { end: 1893456000 }
+				}
+			]
+		},
+		...overrides
+	} as unknown as Stripe.Invoice;
+}
+
+describe('membership payment events', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		userQueryResults = [{ id: 'user-1', name: 'Ada', email: 'ada@example.com' }];
+		mockCreditService.allocateMonthlyCredits.mockResolvedValue(10);
+	});
+
+	it('emits membership.started on the first invoice of a subscription', async () => {
+		await handleInvoicePaid(contributionInvoice({ billing_reason: 'subscription_create' }));
+
+		expect(mockEmit).toHaveBeenCalledWith(
+			'membership.started',
+			expect.objectContaining({
+				userId: 'user-1',
+				userName: 'Ada',
+				userEmail: 'ada@example.com',
+				amountCents: 2500,
+				invoiceId: 'inv_m1'
+			})
+		);
+	});
+
+	it('emits membership.renewed on a later cycle', async () => {
+		await handleInvoicePaid(contributionInvoice());
+
+		const events = mockEmit.mock.calls.map(([name]) => name);
+		expect(events).toContain('membership.renewed');
+		expect(events).not.toContain('membership.started');
+	});
+
+	it('reads first-vs-renewal from billing_reason, not from the absent snapshot', async () => {
+		// A member who lapsed and came back has a null `user.subscription`, so
+		// inferring "first payment" from that would mail them the wrong email.
+		// Their invoice still says subscription_cycle.
+		userQueryResults = [
+			{ id: 'user-1', name: 'Ada', email: 'ada@example.com', subscription: null }
+		];
+
+		await handleInvoicePaid(contributionInvoice({ billing_reason: 'subscription_cycle' }));
+
+		const events = mockEmit.mock.calls.map(([name]) => name);
+		expect(events).toContain('membership.renewed');
+		expect(events).not.toContain('membership.started');
+	});
+
+	it('carries the billing period and the hours the contribution buys', async () => {
+		await handleInvoicePaid(contributionInvoice());
+
+		const [, payload] = mockEmit.mock.calls.find(([n]) => n === 'membership.renewed')!;
+		expect(payload).toMatchObject({
+			// quantity 5 → 10 credits → 5 hours. The bus carries hours.
+			freeHoursPerMonth: 5,
+			periodEnd: new Date(1893456000 * 1000).toISOString(),
+			coveringFees: false
+		});
+	});
+
+	it('emits nothing when the Stripe customer matches no local user', async () => {
+		userQueryResults = [];
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		await handleInvoicePaid(contributionInvoice());
+
+		expect(mockEmit).not.toHaveBeenCalled();
+		warnSpy.mockRestore();
+	});
+});
+
+describe('handleInvoicePaymentFailed', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		userQueryResults = [{ id: 'user-1', name: 'Ada', email: 'ada@example.com' }];
+	});
+
+	it('emits membership.payment_failed with the retry date and pay link', async () => {
+		await handleInvoicePaymentFailed({
+			id: 'inv_fail',
+			amount_due: 2500,
+			hosted_invoice_url: 'https://stripe.test/pay',
+			next_payment_attempt: 1893456000,
+			parent: { subscription_details: { subscription: 'sub_abc' } },
+			customer: 'cus_123'
+		} as unknown as Stripe.Invoice);
+
+		expect(mockEmit).toHaveBeenCalledWith('membership.payment_failed', {
+			userId: 'user-1',
+			userName: 'Ada',
+			userEmail: 'ada@example.com',
+			amountCents: 2500,
+			invoiceId: 'inv_fail',
+			hostedInvoiceUrl: 'https://stripe.test/pay',
+			nextAttemptAt: new Date(1893456000 * 1000).toISOString()
+		});
+	});
+
+	it('leaves credits alone — Stripe retries, and a first decline is not a lapse', async () => {
+		await handleInvoicePaymentFailed({
+			id: 'inv_fail',
+			amount_due: 2500,
+			parent: { subscription_details: { subscription: 'sub_abc' } },
+			customer: 'cus_123'
+		} as unknown as Stripe.Invoice);
+
+		expect(mockCreditService.setBalance).not.toHaveBeenCalled();
+		expect(mockCreditService.allocateMonthlyCredits).not.toHaveBeenCalled();
+	});
+
+	it('nulls nextAttemptAt when Stripe has given up retrying', async () => {
+		await handleInvoicePaymentFailed({
+			id: 'inv_fail',
+			amount_due: 2500,
+			parent: { subscription_details: { subscription: 'sub_abc' } },
+			customer: 'cus_123'
+		} as unknown as Stripe.Invoice);
+
+		const [, payload] = mockEmit.mock.calls[0];
+		expect(payload).toMatchObject({ nextAttemptAt: null, hostedInvoiceUrl: null });
+	});
+
+	it('ignores a one-off invoice that is not a subscription', async () => {
+		await handleInvoicePaymentFailed({
+			id: 'inv_oneoff',
+			parent: { subscription_details: null },
+			customer: 'cus_123'
+		} as unknown as Stripe.Invoice);
+
+		expect(mockEmit).not.toHaveBeenCalled();
+	});
+});
+
+describe('handleSubscriptionUpdated', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	const activeSub = {
+		id: 'sub_abc',
+		status: 'active',
+		customer: 'cus_123',
+		metadata: {}
+	} as unknown as Stripe.Subscription;
+
+	it('emits cancellation_scheduled when cancelAtPeriodEnd flips false to true', async () => {
+		userQueryResults = [
+			{
+				id: 'user-1',
+				name: 'Ada',
+				email: 'ada@example.com',
+				subscription: { cancelAtPeriodEnd: false }
+			}
+		];
+		mockBuildMemberSubscriptionState.mockResolvedValue({
+			cancelAtPeriodEnd: true,
+			creditsResetAt: '2027-01-01T00:00:00.000Z'
+		});
+
+		await handleSubscriptionUpdated(activeSub);
+
+		expect(mockEmit).toHaveBeenCalledWith('membership.cancellation_scheduled', {
+			userId: 'user-1',
+			userName: 'Ada',
+			userEmail: 'ada@example.com',
+			endsAt: '2027-01-01T00:00:00.000Z'
+		});
+	});
+
+	it('stays quiet when the cancellation was already scheduled', async () => {
+		// Stripe re-sends `updated` for reasons of its own. Keying on the state
+		// rather than the transition would mail the member on every one.
+		userQueryResults = [
+			{
+				id: 'user-1',
+				name: 'Ada',
+				email: 'ada@example.com',
+				subscription: { cancelAtPeriodEnd: true }
+			}
+		];
+		mockBuildMemberSubscriptionState.mockResolvedValue({
+			cancelAtPeriodEnd: true,
+			creditsResetAt: '2027-01-01T00:00:00.000Z'
+		});
+
+		await handleSubscriptionUpdated(activeSub);
+
+		expect(mockEmit).not.toHaveBeenCalled();
+	});
+
+	it('stays quiet on an ordinary update', async () => {
+		userQueryResults = [
+			{
+				id: 'user-1',
+				name: 'Ada',
+				email: 'ada@example.com',
+				subscription: { cancelAtPeriodEnd: false }
+			}
+		];
+		mockBuildMemberSubscriptionState.mockResolvedValue({ cancelAtPeriodEnd: false });
+
+		await handleSubscriptionUpdated(activeSub);
+
+		expect(mockEmit).not.toHaveBeenCalled();
+	});
+});
+
+describe('handleChargeRefunded', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		userQueryResults = [];
+	});
+
+	it('ignores a charge with no payment intent to match on', async () => {
+		await expect(
+			handleChargeRefunded({ id: 'ch_1', payment_intent: null } as unknown as Stripe.Charge)
+		).resolves.toBeUndefined();
+	});
+
+	it('accepts a payment intent given as an object', async () => {
+		await expect(
+			handleChargeRefunded({
+				id: 'ch_2',
+				payment_intent: { id: 'pi_123' }
+			} as unknown as Stripe.Charge)
+		).resolves.toBeUndefined();
+	});
+
+	it('sends no email — a refund is a record correction, not news', async () => {
+		await handleChargeRefunded({
+			id: 'ch_3',
+			payment_intent: 'pi_123'
+		} as unknown as Stripe.Charge);
+
+		expect(mockEmit).not.toHaveBeenCalled();
 	});
 });

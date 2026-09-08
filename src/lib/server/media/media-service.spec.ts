@@ -139,13 +139,13 @@ describe('attach', () => {
 	it('lets two parents point at one object', async () => {
 		await attach({
 			mediaId: 'media-1',
-			attachableType: 'event',
+			attachableType: 'event_listing',
 			attachableId: 'event-1',
 			slot: 'poster'
 		});
 		await attach({
 			mediaId: 'media-1',
-			attachableType: 'event',
+			attachableType: 'event_listing',
 			attachableId: 'event-2',
 			slot: 'poster'
 		});
@@ -199,7 +199,7 @@ describe('detachSlot', () => {
 
 describe('listFor', () => {
 	it('scopes to the parent, and to the slot when one is given', async () => {
-		await listFor('event', 'event-1', 'poster');
+		await listFor('event_listing', 'event-1', 'poster');
 
 		const cols = collectColumnNames(lastSelect.where);
 		expect(cols).toContain('attachable_type');
@@ -208,7 +208,7 @@ describe('listFor', () => {
 	});
 
 	it('omits the slot predicate when no slot is given', async () => {
-		await listFor('event', 'event-1');
+		await listFor('event_listing', 'event-1');
 
 		const cols = collectColumnNames(lastSelect.where);
 		expect(cols).toContain('attachable_id');
@@ -259,7 +259,7 @@ describe('liveAttachmentCondition', () => {
 
 		// One EXISTS arm per attachable type — a type with no arm would let its
 		// orphans through silently, which is the failure this pins.
-		expect(rendered).toContain('"event"');
+		expect(rendered).toContain('"event_listing"');
 		expect(rendered).toContain('"group"');
 		expect(rendered).toContain('"user"');
 		expect(rendered.match(/exists/gi) ?? []).toHaveLength(3);

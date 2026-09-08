@@ -5,6 +5,10 @@ paths:
 
 # Remote functions
 
+> Before changing a remote function here, check what is already known about it:
+> `gh issue list --state open --label area:platform`. The backlog is GitHub Issues, not a
+> markdown file.
+
 `+page.svelte` → `src/lib/remote/*.remote.ts` → `src/lib/server/<domain>/` → db.
 
 **This file is the security boundary.** Remote functions bypass route and layout loads entirely,

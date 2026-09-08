@@ -22,6 +22,9 @@ export const tableOrder = [
 	// References user twice (subject + granter). No children.
 	'instructor',
 	'reservation',
+	// References nothing; `event.venue_id` references it, so it must precede
+	// `event`. Sits with the other rootless tables rather than beside it.
+	'venue',
 	'equipment_category',
 	'inventory_location',
 	'inventory_item',
@@ -37,7 +40,10 @@ export const tableOrder = [
 	// References contractor, inventory_asset and user, so it clears before none
 	// of them.
 	'contractor_job',
-	'event',
+	'event_listing',
+	// The ops half of one listing. References event_listing and user, so it
+	// clears before both.
+	'production',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
 	// (docs/specs/shipped/media-spec.md), so it constrains nothing else in this order.
@@ -45,11 +51,12 @@ export const tableOrder = [
 	'media_attachment',
 	'campaign',
 	'audience',
+	// Since band chat it also references `group` (nullable owner, null = CorvMC),
+	// which is already well above this line.
 	'inbox_thread',
 	'help_categories',
 	'subscriber',
 	'roles',
-	'permissions',
 	'volunteer_role',
 	'volunteer_certification',
 	// References user. Ahead of work_order because the shift now carries
@@ -57,20 +64,21 @@ export const tableOrder = [
 	'duty_list',
 	// References duty_list and volunteer_role.
 	'duty_list_item',
-	// references volunteer_role + event + duty_list, and is referenced by
-	// volunteer_signup, volunteer_hour_log and work_task, so it sits between them.
+	// references volunteer_role + event + duty_list + reservation, and is
+	// referenced by volunteer_signup, volunteer_hour_log, work_task and
+	// member_orientation, so it sits between them.
 	'work_order',
 	// The checklist inside one work order. References work_order and user.
 	'work_task',
+	// References user, work_order and reservation, so it follows all three.
+	'member_orientation',
 	'volunteer_signup',
 	// independents (no FKs)
 	'closure',
 	'inbox_channel_config',
 	'verification',
 	// leaves
-	'model_has_permissions',
 	'model_has_roles',
-	'role_has_permissions',
 	'directory_tag',
 	'group_slug_history',
 	'campaign_audience',
@@ -96,6 +104,9 @@ export const tableOrder = [
 	'event_rsvp',
 	// The bill: references event and band, so it wipes before either.
 	'event_band',
+	// The run of show: references production and event_band, so it lands after
+	// both. Note it sits well below `production` — its other parent is the bill.
+	'production_slot',
 	// Shared advertising: references event and group, so it wipes before either.
 	'event_group',
 	'group_invite',
@@ -125,6 +136,8 @@ export const tableOrder = [
 	'inbox_message',
 	'inbox_note',
 	'inbox_participant',
+	// The band inbox's per-reader cursor: child of inbox_thread and user.
+	'inbox_group_read',
 	'inbox_thread_tag',
 	// Per-user saved queue filters. After user, like every other row keyed to a
 	// person, and unrelated to inbox_thread — it stores filters, not threads.
@@ -142,7 +155,16 @@ export const tableOrder = [
 	'volunteer_role_interest',
 	'volunteer_shift_feedback',
 	'member_certification',
-	'volunteer_role_certification'
+	'volunteer_role_certification',
+	// A band's Stripe Connect account. Child of group, parent of nothing.
+	'band_stripe_account',
+	// The audio chain, and it is a chain: release → track → radio_play, each
+	// referencing the one above it, so these four keep their relative order.
+	'audio_release',
+	'audio_track',
+	'radio_play',
+	// References audio_release and user, so it clears before either.
+	'release_purchase'
 ];
 
 /**

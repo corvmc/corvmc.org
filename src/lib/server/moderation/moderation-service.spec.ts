@@ -25,6 +25,13 @@ const TABLES = {
 };
 
 let results: unknown[] = [];
+
+/** A birth date `n` years before now, for the age-derived messaging gate. */
+function yearsAgo(n: number): Date {
+	const d = new Date();
+	d.setFullYear(d.getFullYear() - n);
+	return d;
+}
 let inserted: { table: string; values: unknown; conflict: unknown }[] = [];
 let deleted: { table: string; where: unknown }[] = [];
 let updated: { table: string; set: unknown }[] = [];
@@ -250,10 +257,12 @@ describe('canInitiateMessages', () => {
 			triggeringFlagId: null,
 			updatedAt: null
 		});
+		results = [[{ dateOfBirth: null }]];
 		expect(await canInitiateMessages('alice')).toBe(true);
 	});
 
 	it('a restricted member may not start conversations', async () => {
+		results = [[{ dateOfBirth: null }]];
 		getStandingMock.mockResolvedValue({
 			status: 'restricted',
 			reason: null,
@@ -262,14 +271,25 @@ describe('canInitiateMessages', () => {
 		});
 		expect(await canInitiateMessages('alice')).toBe(false);
 	});
+
+	// Age is checked before standing, and answers differently: nobody restricted
+	// this member, so there is no note to quote and nothing to appeal. Before
+	// #556 this was written as a `member_standing` row and was indistinguishable
+	// from the case above.
+	it('a member under 18 may not start conversations either', async () => {
+		results = [[{ dateOfBirth: yearsAgo(16) }]];
+		expect(await canInitiateMessages('alice')).toBe(false);
+	});
 });
 
-describe('messagingIsDisabled — the two halves', () => {
+describe('messagingIsDisabled — the three parts', () => {
 	it('is true when staff switched messaging off', async () => {
-		results = [[{ acceptsDirectMessages: true }]];
+		// The fixture reason is no longer "under 18": that case has its own
+		// mechanism now and is the test below, not a staff decision.
+		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: null }]];
 		getStandingMock.mockResolvedValue({
 			status: 'disabled',
-			reason: 'under 18',
+			reason: 'continued messaging after being asked to stop',
 			triggeringFlagId: null,
 			updatedAt: null
 		});
@@ -281,18 +301,36 @@ describe('messagingIsDisabled — the two halves', () => {
 		expect(await messagingIsDisabled('alice')).toBe(true);
 	});
 
+	// Their standing says `none` throughout — nobody restricted them. Before #556
+	// making this true meant writing a `member_standing` row that said otherwise.
+	it('is true for a member under 18 whose standing is good', async () => {
+		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: yearsAgo(16) }]];
+		getStandingMock.mockResolvedValue({
+			status: 'none',
+			reason: null,
+			triggeringFlagId: null,
+			updatedAt: null
+		});
+		expect(await messagingIsDisabled('alice')).toBe(true);
+	});
+
+	it('is false for a member who has just turned 18', async () => {
+		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: yearsAgo(18) }]];
+		expect(await messagingIsDisabled('alice')).toBe(false);
+	});
+
 	// The caller gets one boolean and cannot tell which half produced it. That is
 	// deliberate: telling a sender would leak either a moderation decision or a
 	// personal preference.
-	it('is false only when neither half says so', async () => {
-		results = [[{ acceptsDirectMessages: true }]];
+	it('is false only when none of the three says so', async () => {
+		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: null }]];
 		expect(await messagingIsDisabled('alice')).toBe(false);
 	});
 
 	it('a report-driven restriction does not make someone unreachable', async () => {
 		// `restricted` is reply-only for the restricted member. Other people can
 		// still write to them — that is what separates it from `disabled`.
-		results = [[{ acceptsDirectMessages: true }]];
+		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: null }]];
 		getStandingMock.mockResolvedValue({
 			status: 'restricted',
 			reason: null,
@@ -328,8 +366,8 @@ describe('setAcceptsDirectMessages', () => {
 });
 
 describe('getMessagingState', () => {
-	it('returns both halves separately, so the account page can show each for what it is', async () => {
-		results = [[{ acceptsDirectMessages: false }]];
+	it('returns all three separately, so the account page can show each for what it is', async () => {
+		results = [[{ acceptsDirectMessages: false }], [{ dateOfBirth: null }]];
 		getStandingMock.mockResolvedValue({
 			status: 'restricted',
 			reason: 'harassment',
@@ -344,12 +382,33 @@ describe('getMessagingState', () => {
 				reason: 'harassment',
 				triggeringFlagId: 'flag-1',
 				updatedAt: null
-			}
+			},
+			ageRestricted: false
 		});
 	});
 
+	/**
+	 * The field the account page needs to word the notice, and the whole of #556
+	 * from the member's side: a 16-year-old must not be shown a staff note, an
+	 * appeal, or "switched off for your account by staff", because nobody
+	 * decided anything about them.
+	 */
+	it('reports a minor as age-restricted, with their standing untouched', async () => {
+		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: yearsAgo(16) }]];
+
+		const state = await getMessagingState('robin');
+		expect(state.ageRestricted).toBe(true);
+		expect(state.standing.status).toBe('none');
+		expect(state.standing.reason).toBeNull();
+	});
+
 	it('defaults to reachable when the row is missing', async () => {
-		results = [[]];
+		results = [[], []];
 		expect((await getMessagingState('ghost')).acceptsDirectMessages).toBe(true);
+	});
+
+	it('does not restrict the members who have given no date, which is most of them', async () => {
+		results = [[{ acceptsDirectMessages: true }], [{ dateOfBirth: null }]];
+		expect((await getMessagingState('alice')).ageRestricted).toBe(false);
 	});
 });

@@ -209,7 +209,7 @@ export async function seedInstructors(users: any[], reviewer: any) {
 		[paused, 'piano']
 	]
 		.map(([u, value]: any) => ({ entryId: entryFor.get(u.id), kind: 'instrument' as const, value }))
-		.filter((t) => t.entryId);
+		.filter((t): t is typeof t & { entryId: string } => Boolean(t.entryId));
 
 	const existing = new Set(
 		(

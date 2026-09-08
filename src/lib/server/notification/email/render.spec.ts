@@ -28,11 +28,23 @@ const isPlaintext = (alias: string) => !readMeta(alias).LayoutTemplate;
 const LAYOUT_FIXTURES = FIXTURES.filter((f) => !isPlaintext(f.alias));
 const PLAINTEXT_FIXTURES = FIXTURES.filter((f) => isPlaintext(f.alias));
 
+/**
+ * An HTML entity reference. Mustachio escapes `{{field}}` in a `.txt` part
+ * exactly as it does in HTML, and nothing on the far side undoes it — so a
+ * double-braced field reaches the reader as `&amp;` or `&#x27;` (#636). Fields
+ * in the text parts are triple-braced for that reason.
+ */
+const ENTITY = /&(?:amp|lt|gt|quot|apos|#[0-9a-fA-Fx]+);/;
+
 describe.each(FIXTURES)('$name', (fixture) => {
 	const { text } = renderTemplate(fixture.alias, fixture.model);
 
 	it('leaves no unresolved template tags in the text part', () => {
 		expect(text).not.toMatch(/\{\{/);
+	});
+
+	it('shows the reader characters, not entity references', () => {
+		expect(text).not.toMatch(ENTITY);
 	});
 });
 
@@ -131,8 +143,27 @@ describe('notification — escaping', () => {
 		expect(html).toContain('&lt;img');
 	});
 
-	it('escapes the text part too', () => {
-		expect(text).not.toContain('<script>');
+	it('leaves the text part unescaped, because nothing there is markup', () => {
+		// A text/plain body is never parsed as HTML, so escaping buys no safety
+		// and costs correctness: the entity is what the reader sees.
+		expect(text).toContain('Ampersand & "quotes"');
+		expect(text).toContain('<script>alert(1)</script>');
+	});
+
+	it('keeps a query-string CTA url usable in the text part', () => {
+		// #636's headline symptom — `&amp;` in a plain-text url is a dead link.
+		expect(text).toContain('https://corvmc.org/member?tab=billing&ref=email');
+		// The href must still escape the separator — asserted on `&` alone, since
+		// engines differ on the rest (Handlebars also escapes `=`). The two parts
+		// diverging here is the point.
+		expect(html).toContain('&amp;ref');
+		expect(html).not.toContain('billing&ref');
+	});
+
+	it('puts the raw quote in the text part and the escaped one in the HTML', () => {
+		const { html: quoteHtml, text: quoteText } = byName('notification-with-quote');
+		expect(quoteText).toContain("I run a small folk trio & we're the ones behind this listing.");
+		expect(quoteHtml).toContain('folk trio &amp; we&#39;re the ones');
 	});
 
 	it('escapes a quote through the normalizer and keeps its line breaks', () => {

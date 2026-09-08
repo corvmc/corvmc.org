@@ -1,7 +1,7 @@
 import { paymentCache as paymentRecord } from '../../src/lib/server/db/schema/finance';
 import { db } from './db';
 import { type SeedReservation, type SeedUser } from './types';
-import { randomInt } from './util';
+import { random, randomInt } from './util';
 import { randomUUID } from 'crypto';
 
 export async function seedPaymentRecords(users: SeedUser[], reservations: SeedReservation[]) {
@@ -15,7 +15,7 @@ export async function seedPaymentRecords(users: SeedUser[], reservations: SeedRe
 	for (const r of payableReservations) {
 		const hours = Math.round(((r.endsAt.getTime() - r.startsAt.getTime()) / 3600000) * 2) / 2;
 		const amountCents = hours * 1500;
-		const method = Math.random() > 0.3 ? 'Cash' : 'Credits';
+		const method = random() > 0.3 ? 'Cash' : 'Credits';
 
 		const [p] = await db
 			.insert(paymentRecord)
@@ -26,9 +26,9 @@ export async function seedPaymentRecords(users: SeedUser[], reservations: SeedRe
 				stripeCustomerId: `cus_seed${randomInt(1000, 9999)}`,
 				amountCents,
 				paymentMethod: method,
-				status: Math.random() > 0.1 ? 'completed' : 'refunded',
+				status: random() > 0.1 ? 'completed' : 'refunded',
 				paidAt: r.startsAt,
-				refundedAt: Math.random() > 0.9 ? new Date() : null
+				refundedAt: random() > 0.9 ? new Date() : null
 			})
 			.returning();
 		rows.push(p);

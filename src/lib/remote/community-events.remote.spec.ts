@@ -22,7 +22,7 @@ vi.mock('$lib/server/authorization', () => ({
 		if (!currentUser) throw new Error('401: Not authenticated');
 		return currentUser;
 	},
-	listStaffUsers: async () => []
+	listUsersWithCapability: async () => []
 }));
 
 // Any service call on a rejected request is a failure — the guard has to run

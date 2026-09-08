@@ -64,14 +64,20 @@ export const VOLUNTEER_PERSONAS = [
 		email: 'minor@corvallismusic.org',
 		name: 'Robin Vance',
 		memberNumber: 93,
-		roles: ['member']
+		roles: ['member'],
+		// Sixteen. Distinct from the `isAdult: false` on their volunteer profile,
+		// which is a one-time onboarding answer with a guardian process behind it:
+		// this is the date the rest of the site derives eligibility from, and it is
+		// what closes direct messages for them without a moderation row. Relative
+		// to the seed run so they never age out of being a minor.
+		ageYears: 16
 	}
 ] as const;
 
 export async function seedVolunteerPersonas(
 	roles: SeedRole[],
 	volunteerRoles: any[],
-	certifications: { deskCert?: any; foodCert?: any },
+	certifications: { deskCert?: any; foodCert?: any; orientationCert?: any },
 	reviewer: any
 ) {
 	console.log('Seeding volunteer personas...');
@@ -95,6 +101,12 @@ export async function seedVolunteerPersonas(
 		return { startsAt, endsAt: new Date(startsAt.getTime() + minutes * 60_000) };
 	};
 
+	const yearsAgo = (years: number) => {
+		const d = new Date(now.getTime());
+		d.setFullYear(d.getFullYear() - years);
+		return d;
+	};
+
 	for (const p of VOLUNTEER_PERSONAS) {
 		await db.insert(user).values({
 			id: p.id,
@@ -102,6 +114,9 @@ export async function seedVolunteerPersonas(
 			email: p.email,
 			emailVerified: true,
 			memberNumber: p.memberNumber,
+			// Only the personas that need one carry a date. Most members have none,
+			// which is the case every gate has to keep answering "not a minor" for.
+			dateOfBirth: 'ageYears' in p ? yearsAgo(p.ageYears) : null,
 			createdAt: ago(400),
 			updatedAt: ago(400)
 		});
@@ -317,7 +332,7 @@ export async function seedVolunteerPersonas(
 		}))
 	);
 
-	const { deskCert, foodCert } = certifications;
+	const { deskCert, foodCert, orientationCert } = certifications;
 	const certRows: any[] = [];
 	if (deskCert) {
 		certRows.push({
@@ -347,6 +362,22 @@ export async function seedVolunteerPersonas(
 			revokedByUserId: reviewer.id
 		});
 	}
+	// Sam holds the orientation clearance and Ellis does not, so the member board
+	// shows both sides of the gate on every seed: one persona who can take an
+	// auto-created orientation shift and one who is shown it with the reason they
+	// cannot.
+	if (orientationCert) {
+		certRows.push({
+			id: 'seed-vol-cert-orientation',
+			userId: 'seed-vol-active',
+			certificationId: orientationCert.id,
+			grantedAt: ago(90),
+			expiresAt: null,
+			grantedByUserId: 'seed-vol-coordinator',
+			notes: 'Shadowed two, ran one with a staffer in the building.'
+		});
+	}
+
 	if (foodCert) {
 		certRows.push({
 			// Expiring inside the 60-day warning window, and Front Desk now requires

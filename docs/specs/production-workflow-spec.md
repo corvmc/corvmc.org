@@ -51,6 +51,147 @@ Everything here is staff-facing and gated behind a `productions` feature flag.
 > Reasoning and prior art:
 > [project-management-prior-art.md](../reports/project-management-prior-art.md).
 
+> ## Amendment, 2026-09-04 — the `production` record shipped, narrower than written
+>
+> Phase 2 landed: the table, the status machine, the console tab set and the absorbed
+> index. What follows is the list of things in the text
+> below that are now **stale**, so nobody builds them from it.
+>
+> **Built.** `production`, 1:1 with `event_listing` on a cascading FK and
+> `uq_production_event`. Columns: `status`, `producerUserId`, `loadInAt`,
+> `soundcheckAt`, `firstSetAt`, `curfewAt`, `loadOutBy`, the three notes fields,
+> `createdByUserId`, timestamps. Status machine
+> `draft → offered → confirmed → completed → settled → closed`, `cancelled` off any
+> pre-completed state, every move an atomic conditional
+> `UPDATE … WHERE id = ? AND status IN (…)` with a row-count check — D1 has no
+> interactive transactions. `settled` and `closed` are in the machine and in
+> `StatusBadge` but have **no button**: the settlement worksheet and the close-out are
+> Phases 5 and 6, and a button that sets a status without doing the work it names is
+> worse than no button. Cancelling a listing pulls its pre-completed production back
+> with it.
+>
+> **Do not build these — they are superseded or wrong:**
+>
+> 1. **`bandSplitPercent` and the 70/30 model.** The pool is `sum(ticket.acts_cents)`
+>    and the deal lives on `event_band`; see amendment 2 above.
+> 2. **The settlement snapshot columns** (`doorCount`, `compCount`, `ticketRevenueCents`,
+>    `doorCashCents`, `otherRevenueCents`, `bandPoolCents`, `totalExpenseCents`,
+>    `totalPayoutCents`, `netCents`, `settledAt/By`, `closedAt/By`). Phase 5/6. Adding
+>    columns nothing reads is what the venue phase deliberately avoided with `backline`
+>    and `links`.
+> 3. **`production.venueId`.** Venue is a public fact about the show and lives on
+>    `event_listing.venueId`. The spec already says so; confirming it so nobody re-adds it.
+> 4. **The `productions` feature flag.** Dead twice: flags were replaced by long-lived
+>    feature branches, and the panel-wide rule is that staff surfaces ignore flags.
+> 5. **`/staff/productions/[id]` and its tab set.** The route collision was settled by
+>    **absorbing**: `/staff/productions` stays the CMC event index and gained the
+>    production status, the venue and a lineup summary as columns, plus venue and
+>    date-range filters — all inside its existing single query. The tab set the spec
+>    describes for that route is what the **console** got, at
+>    `/staff/events/[id]/production`, addressable by `?tab=`.
+> 6. **A `production.*` capability set, and a `production_lead` position.** Reads guard
+>    on `event.read`, writes on `event.manage` — the venue precedent, and it argues
+>    harder here, because a production cannot exist without the listing it hangs off.
+>    Naming a position with no `production.*` capabilities to hold would be naming
+>    nothing.
+> 7. **`production_task` with a `phase` column.** Shipped as
+>    `duty_list` → `work_order` → `work_task` (#405, #407); the spec supersedes itself
+>    on this below.
+> 8. **`band_profile` / member-less `band` rows for touring acts.** The shipped act
+>    record is `directory_entry` and the lineup row is `event_band`. Anything that
+>    re-declares the act, the running order or the confirmation status is a second
+>    answer to a question `event_band` already answers.
+> 9. **A `production.status >= confirmed` gate on the public lineup.** The public lineup
+>    already renders from `event_band` and works.
+> 10. **`StatusBadge`'s `invited` / `performed`.** No vocabulary emits them, and
+>     `StatusBadge.spec.ts` fails on a key that has outlived its vocabulary.
+>
+> Still unbuilt and still belonging here: run of show (`production_slot`, Phase 3), the
+> deal shape (Phase 4), settlement and expenses (Phase 5), close-out (Phase 6).
+
+> ## Amendment, 2026-09-07 — the deal lives on `production_slot`, and `production_slot` is a child of `event_band`
+>
+> Amendment 2 above put `{ guaranteeCents, percentageBps, versus, againstNet }` on
+> **`event_band`**. That is reversed here, and the `production_slot` block at
+> [Production slot](#production-slot-run-of-show) is rewritten with it. Milestone 2.0 settles
+> the listing/production boundary before phases 3–6 are built; this is the outcome.
+>
+> ### The design constant nobody had written down
+>
+> **`event_listing` is a community calendar CMC also appears on — about one row in ten is a
+> CMC show.** Roughly nine in ten are somebody else's gig at somebody else's venue, and the
+> ratio is expected to get _more_ lopsided, not less: the community calendar's remaining work
+> is partner feed imports and `.ics`/RSS syndication, which multiply listings, while CMC
+> produces a fixed few dozen shows a year. The two grow apart, so a column shared between them
+> gets worse with age rather than better.
+>
+> This is the number the sparsity argument for `production` was reaching for. State it, because
+> every boundary below follows from it.
+>
+> ### Where an act's money goes
+>
+> **The clock and the money both go on `production_slot`, keyed 1:1 to `event_band`.
+> `event_band` stays a public table — display name, credit order, consent, and nothing else.**
+> That is what `event_band`'s own doc comment in `src/lib/server/db/schema/event.ts` already
+> says:
+>
+> | Table             | Models                            | Carries                            |
+> | ----------------- | --------------------------------- | ---------------------------------- |
+> | `production_slot` | the run of show for a CMC show    | set times, lengths, **settlement** |
+> | `event_band`      | who played — a credit on the bill | display name, billing, consent     |
+> | `event_group`     | shared advertising                | which pages show it, in what order |
+>
+> Three reasons:
+>
+> 1. **It is the same sparsity argument that justified `production` existing at all, against the
+>    same denominator.** `event_band` is `event_listing`'s companion — joined by the public gig
+>    guide, by `/events/[id]`, and by every band profile page — and it inherits the 90/10 split
+>    exactly. Five money columns there are NULL on nine of every ten lineup rows, on the table
+>    the public reads most.
+> 2. **`setEventLineup` does a bare `db.select().from(eventBand)`**, and the lineup editor lives
+>    on the _listing_ page. Money columns on `event_band` would round-trip deal terms through a
+>    form that has no business touching them, edited by whoever can edit a listing rather than
+>    whoever can settle a show. The terms editor belongs on the console's Run of Show tab, which
+>    keeps "who is credited" and "what they are paid" in the hands they belong to.
+> 3. **Per-act terms survive intact.** That was
+>    [project-spec.md](project-spec.md#the-deal-shape)'s entire reason for preferring `event_band`
+>    over `event` — a headliner and a local opener on one bill have different terms — and a 1:1
+>    child of `event_band` preserves it exactly.
+>
+> **The cost, stated plainly:** a donated performance at a _non-CMC_ event has nowhere to be
+> recorded, because `production_slot` only exists for shows CMC produces. Accepted — CMC settles
+> its own shows, and settlement is a production concern by definition.
+>
+> ### What `production_slot` therefore is
+>
+> Keys on **`eventBandId`** (set-null, so a dropped credit leaves the payout record intact).
+> **Drops `bandProfileId`, `billing` and `status`** — forbidden item 8 already rules them out:
+> anything that re-declares the act, the running order or the confirmation status is a second
+> answer to a question `event_band` already answers. **Drops
+> `production.bandSplitPercent`** with them (forbidden item 1). Keeps `setLengthMinutes`,
+> `changeoverMinutes`, the derived `scheduledStartAt`, `soundcheckAt`, `techNotes`,
+> `backlineNeeds`, `hospitalityNotes`, the per-show contact override, and — now — the deal and
+> the payout.
+>
+> **`sortOrder` stays its own `real` column** rather than reusing `event_band.billingOrder`.
+> They are different facts: billing is who is on the poster and in what size, running order is
+> who plays when, and a headliner going on second is real and unremarkable. Fractional, with no
+> unique constraint, for the reason at
+> [Why `sortOrder` is fractional](#why-sortorder-is-fractional) — which is the load-bearing
+> paragraph of this whole phase.
+>
+> **Slot status does not come back as a column.** Forbidden item 10 deleted `invited` /
+> `performed` from `StatusBadge` because no vocabulary emitted them. If run of show needs them,
+> they return as `event_band.status` values with a `StatusBadge.spec.ts` case.
+>
+> ### One address correction, while here
+>
+> This document and its predecessor describe a `/staff/calendar`. **That route does not exist.**
+> The addresses reversed shortly after the split shipped: `/staff/events` is the Calendar,
+> `/staff/events/[id]` the general view, `/staff/events/[id]/production` the console, and
+> `/staff/productions` the CMC work index. See
+> [staff-events-split-spec.md](shipped/staff-events-split-spec.md) §6.
+
 > **The band/group boundary is defined by [groups-spec.md](groups-spec.md), not here.** That spec
 > splits today's `band` table into `group` (the managed organization: roster, roles, slug,
 > announcements, documents) and `band_profile` (the musical identity: genres, links, tier, EPK).

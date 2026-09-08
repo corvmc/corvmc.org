@@ -5,7 +5,7 @@ import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement } from '$lib/server/group/announcement-fanout';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
 import { captureException } from '$lib/server/sentry';
-import { listStaffUsers } from '$lib/server/authorization';
+import { listUsersWithCapability } from '$lib/server/authorization';
 import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
@@ -154,6 +154,52 @@ export function registerAllNotificationListeners(): void {
 					paragraphs: [{ text: `${event.senderName} sent you a message.` }],
 					cta: { url, label: 'Read it' }
 				}
+			}
+		});
+	});
+
+	// --- Music purchase: the download link, and for a guest the only copy of it ---
+	domainEvents.on('audio.purchased', async ({ data: event }) => {
+		const base = env.PUBLIC_SITE_URL ?? '';
+		const downloadUrl = `${base}/music/download/${event.downloadToken}`;
+		const releaseUrl = `${base}/music/${event.bandSlug}/${event.releaseSlug}`;
+
+		const paid = event.amountPaidCents > 0;
+		const paragraphs: { text: string }[] = [
+			{
+				text: paid
+					? `Thanks for buying ${event.releaseTitle} by ${event.bandName}. Your download is ready.`
+					: `${event.releaseTitle} by ${event.bandName} is yours. Your download is ready.`
+			},
+			// The link is the entitlement for a buyer with no account, so the email
+			// says so rather than assuming they will guess.
+			{ text: 'Keep this email — the link below is how you get the files back later.' }
+		];
+
+		if (paid) {
+			paragraphs.push({
+				text: `${formatCents(event.bandNetCents)} of what you paid goes to the band${
+					event.platformFeeCents > 0
+						? `, and ${formatCents(event.platformFeeCents)} to the Corvallis Music Collective`
+						: ''
+				}.`
+			});
+		}
+
+		// Email-only: buyers may have no account at all, and requiring one to
+		// receive what you already paid for is the wrong trade.
+		await dispatchEmailOnly({
+			type: 'audio_purchase_receipt',
+			toEmail: event.buyerEmail,
+			templateAlias: 'notification',
+			model: {
+				subject: `${event.releaseTitle} — your download`,
+				preview_text: `${event.releaseTitle} by ${event.bandName}`,
+				heading: 'Your download is ready',
+				greeting: 'Hi,',
+				paragraphs,
+				cta: { url: downloadUrl, label: 'Download' },
+				footer_note: `Release page: ${releaseUrl}`
 			}
 		});
 	});
@@ -573,10 +619,205 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Membership: the four moments a contribution touches somebody's money ---
+	// Before these existed a sustaining member's only record was whatever the
+	// Stripe dashboard happened to be configured to send — outside the repo,
+	// outside review, and outside this preference system. All four render
+	// through the generic template; a contribution receipt is a heading, a few
+	// detail rows and a link, which is exactly what that template is.
+
+	function contributionDetails(event: {
+		amountCents: number;
+		freeHoursPerMonth: number;
+		periodEnd: string;
+		coveringFees: boolean;
+	}): NotificationEmailDetail[] {
+		const details: NotificationEmailDetail[] = [
+			{ label: 'Contribution', value: `${formatCents(event.amountCents)} / month` },
+			{ label: 'Free rehearsal hours', value: `${formatHours(event.freeHoursPerMonth)} / month` },
+			{ label: 'Next renewal', value: formatPickupDate(event.periodEnd) }
+		];
+		if (event.coveringFees) {
+			details.push({ label: 'Processing fees', value: 'Covered by you — thank you' });
+		}
+		return details;
+	}
+
+	domainEvents.on('membership.started', async ({ data: event }) => {
+		await dispatch({
+			type: 'membership_receipt',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Thanks for becoming a sustaining member`,
+			body: `${formatCents(event.amountCents)} per month`,
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC sustaining membership',
+					heading: 'Thank you',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your sustaining contribution is set up. It keeps the rehearsal space open and the rates low for everyone who uses it.'
+						},
+						{
+							text: 'This email is your receipt. Itemised invoices for every contribution live in the billing portal, linked from your membership page.'
+						}
+					],
+					details: contributionDetails(event),
+					cta: { url: `${siteUrl}/member/membership`, label: 'View My Membership' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.renewed', async ({ data: event }) => {
+		await dispatch({
+			type: 'membership_renewal_receipt',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `Contribution received — ${formatCents(event.amountCents)}`,
+			body: 'Your monthly contribution renewed',
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: `Your contribution receipt — ${formatCents(event.amountCents)}`,
+					heading: 'Contribution received',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your monthly contribution renewed today. Thank you for keeping this place running.'
+						}
+					],
+					details: contributionDetails(event),
+					cta: { url: `${siteUrl}/member/membership`, label: 'View My Membership' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.payment_failed', async ({ data: event }) => {
+		const details: NotificationEmailDetail[] = [
+			{ label: 'Amount due', value: formatCents(event.amountCents) }
+		];
+		if (event.nextAttemptAt) {
+			details.push({ label: 'Next attempt', value: formatPickupDate(event.nextAttemptAt) });
+		}
+
+		// Stripe's hosted invoice is a card form the member can complete without
+		// signing in anywhere; our membership page can only send them onward to
+		// the billing portal. On the one email that asks for an action, the
+		// shorter path wins.
+		const cta = event.hostedInvoiceUrl
+			? { url: event.hostedInvoiceUrl, label: 'Update Payment Method' }
+			: { url: `${siteUrl}/member/membership`, label: 'View My Membership' };
+
+		await dispatch({
+			type: 'membership_payment_failed',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Your contribution payment did not go through',
+			body: `${formatCents(event.amountCents)} could not be charged`,
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC contribution needs attention',
+					heading: 'Payment did not go through',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{ text: 'We could not charge the card on file for your sustaining contribution.' },
+						{
+							text: event.nextAttemptAt
+								? 'We will try again automatically. Updating your card now saves the retry.'
+								: 'Please update your card to keep your membership active.'
+						}
+					],
+					details,
+					cta,
+					footnote:
+						'Your member benefits are unchanged for now. If the card keeps declining, the membership will end and your free hours will reset.'
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.cancellation_scheduled', async ({ data: event }) => {
+		const details: NotificationEmailDetail[] = event.endsAt
+			? [{ label: 'Benefits run through', value: formatPickupDate(event.endsAt) }]
+			: [];
+
+		await dispatch({
+			type: 'membership_cancellation_scheduled',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Your membership is set to end',
+			body: event.endsAt ? `Benefits run through ${formatPickupDate(event.endsAt)}` : undefined,
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC membership is set to end',
+					heading: 'Cancellation scheduled',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your sustaining contribution is scheduled to stop. You will not be charged again.'
+						},
+						{
+							text: 'Nothing changes until then, and you can start it back up any time from your membership page.'
+						}
+					],
+					details,
+					cta: { url: `${siteUrl}/member/membership`, label: 'View My Membership' },
+					footnote: 'Thank you for the time you did support us — it mattered.'
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
+	domainEvents.on('membership.ended', async ({ data: event }) => {
+		await dispatch({
+			type: 'membership_ended',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Your sustaining membership has ended',
+			body: 'Your member credits have reset',
+			href: '/member/membership',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Your CorvMC membership has ended',
+					heading: 'Membership ended',
+					greeting: `Hi ${event.userName},`,
+					paragraphs: [
+						{
+							text: 'Your sustaining contribution has ended and your free rehearsal hours have reset.'
+						},
+						{
+							text: 'You are still a member — the space, the calendar and your bookings are all still yours at the standard rate.'
+						}
+					],
+					cta: { url: `${siteUrl}/member/membership`, label: 'Start Contributing Again' },
+					footnote:
+						'Any recurring bookings tied to your member hours have been cancelled. You can rebook them at any time.'
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
 	// --- Reservation cancelled (notify member; skip self-cancels) ---
 	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
 		// Members who cancel their own reservation don't need an email about it.
 		if (event.cancelledBy === 'member') return;
+
+		// A waitlist entry that ran out of time is cancelled, and the member has
+		// already had `waitlist_expired` about it — wording that explains why,
+		// against a preference of their own. The generic "cancelled
+		// automatically" note on top of it would be the same news twice.
+		if (event.cause === 'waitlist_expired') return;
 
 		const reasonLine =
 			event.cancelledBy === 'staff'
@@ -724,7 +965,7 @@ export function registerAllNotificationListeners(): void {
 
 	// --- Content flagged (notify all staff, in-app) ---
 	domainEvents.on('content.flagged', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('moderation.reviewFlags');
 		for (const member of staff) {
 			try {
 				await dispatch({
@@ -829,7 +1070,7 @@ export function registerAllNotificationListeners(): void {
 	// Fans out per-staffer rather than to a single STAFF_CONTACT_EMAIL: this is
 	// queue work, so it needs an in-app badge and each staffer's own preference.
 	domainEvents.on('volunteer.hours_submitted', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('volunteer.reviewHours');
 		for (const member of staff) {
 			try {
 				await dispatch({
@@ -923,7 +1164,7 @@ export function registerAllNotificationListeners(): void {
 	// Claimed (notify staff). In-app only, and fanned out per staffer like the hours
 	// queue, because confirming is queue work with a badge rather than news.
 	domainEvents.on('volunteer.signup_claimed', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('volunteer.manageShifts');
 		for (const member of staff) {
 			try {
 				await dispatch({
@@ -974,9 +1215,47 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// An orientation shift being confirmed is the member's news, not the
+	// volunteer's — they are the one who now knows somebody will be at the door.
+	// Deliberately not sent when the shift is created: "we hope somebody will
+	// meet you" is not information.
+	domainEvents.on('volunteer.signup_confirmed', async ({ data: event }) => {
+		const { orientationOwnerOf } = await import('$lib/server/volunteer/orientation-service');
+		const member = await orientationOwnerOf(event.shiftId);
+		if (!member) return;
+
+		const when = formatShiftWhen(event.startsAt, event.endsAt);
+
+		await dispatch({
+			type: 'orientation_confirmed',
+			userId: member.userId,
+			userEmail: member.email,
+			title: `${event.userName} is meeting you at the space`,
+			body: when,
+			href: '/member/reservations',
+			emailTemplate: {
+				alias: GENERIC_ALIAS,
+				model: {
+					subject: 'Someone is meeting you at the space',
+					heading: 'See you there',
+					greeting: `Hi ${member.name},`,
+					paragraphs: [
+						{
+							text: `${event.userName} is meeting you at the space for your first booking, ${when}. They'll show you round — where the gear lives, how the door works, and who to tell when something breaks.`
+						},
+						{
+							text: 'Turn up a few minutes early if you can. Nothing to bring, and no need to reply.'
+						}
+					],
+					cta: { url: `${siteUrl}/member/reservations`, label: 'View my booking' }
+				} satisfies NotificationEmailModel
+			}
+		});
+	});
+
 	// Dropped (notify staff). The useful half is that a place reopened.
 	domainEvents.on('volunteer.signup_cancelled', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('volunteer.manageShifts');
 		for (const member of staff) {
 			try {
 				await dispatch({
@@ -1113,7 +1392,7 @@ export function registerAllNotificationListeners(): void {
 	});
 	// --- Community listing submitted for review (notify staff) ---
 	domainEvents.on('community_event.submitted', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('listing.review');
 		for (const member of staff) {
 			try {
 				await dispatch({
@@ -1138,7 +1417,7 @@ export function registerAllNotificationListeners(): void {
 	// Fires on a resubmit too: a returned application coming back is exactly when
 	// it needs looking at again, and would otherwise sit in the queue unannounced.
 	domainEvents.on('instructor.application_submitted', async ({ data: event }) => {
-		const staff = await listStaffUsers();
+		const staff = await listUsersWithCapability('instructor.review');
 		for (const member of staff) {
 			try {
 				await dispatch({

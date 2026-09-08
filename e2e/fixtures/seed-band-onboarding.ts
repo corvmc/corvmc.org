@@ -18,6 +18,7 @@ import { group } from '../../src/lib/server/db/schema/group';
 import { directoryEntry, directoryTag } from '../../src/lib/server/db/schema/directory';
 import { bandSite } from '../../src/lib/server/db/schema/band-site';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
+import { inboxThread, inboxMessage, inboxGroupRead } from '../../src/lib/server/db/schema/inbox';
 import { scryptHash } from './seed-pay-reservation';
 import { withPlatformEnv } from './platform-db';
 
@@ -100,9 +101,29 @@ export async function seedBandOnboarding(): Promise<void> {
 		// the cause.
 		await (env as { KV?: KVNamespace }).KV?.delete(`rate-limit:band-slug:${SEED_RENAME_BAND_ID}`);
 
+		// The booking form is capped at 5 per band per hour, per IP. Same trap as
+		// above and one run sooner: every e2e run submits one, so the sixth on a
+		// machine would 429 and the failure would say nothing about why.
+		await (env as { KV?: KVNamespace }).KV?.delete(
+			`rate-limit:band-contact:${SEED_PUBLIC_BAND_ID}:unknown`
+		);
+
 		// Clean slate. Delete explicitly (FKs may be disabled on local D1).
 		for (const bandId of BAND_IDS) {
 			await db.delete(groupMember).where(eq(groupMember.groupId, bandId));
+			// Booking enquiries the band-messages test files. `inbox_thread.group_id`
+			// cascades in the schema, but the comment below is why that is not enough
+			// here — and messages and read cursors hang off the thread, so they go
+			// first.
+			const bandThreads = await db
+				.select({ id: inboxThread.id })
+				.from(inboxThread)
+				.where(eq(inboxThread.groupId, bandId));
+			for (const t of bandThreads) {
+				await db.delete(inboxMessage).where(eq(inboxMessage.threadId, t.id));
+				await db.delete(inboxGroupRead).where(eq(inboxGroupRead.threadId, t.id));
+				await db.delete(inboxThread).where(eq(inboxThread.id, t.id));
+			}
 			await db.delete(groupSlugHistory).where(eq(groupSlugHistory.groupId, bandId));
 			// Explicitly, and tags before entries: local D1 may have foreign keys
 			// off, so neither cascade can be relied on here.

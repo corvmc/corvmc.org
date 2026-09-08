@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireGroupRole } from '$lib/server/group/group-context';
-import { requireFeature } from '$lib/server/feature-flags';
 import {
 	getBandSubscription,
 	createBandPremiumCheckout,
@@ -16,7 +15,6 @@ import {
 // ---------------------------------------------------------------------------
 
 export const getBandSubscriptionInfo = query(z.string(), async (slug) => {
-	await requireFeature('bandPremium');
 	// Was `requireUser()` and nothing else, which served any band's tier and its
 	// whole Stripe subscription record to any signed-in account that knew a slug.
 	// Membership, not ownership: the page renders read-only for a non-owner

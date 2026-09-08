@@ -1,5 +1,7 @@
 # Feature flag retirement
 
+> **Why this ledger exists, from `IDEAS.md`:** Nine of the original eleven are gone, and most of those removals were launches rather than cleanups: five flags had no staff toggle at all, so their features had been dark in production since the day they shipped. `docs/plans/feature-flag-retirement.md` is the per-flag ledger — what each one gated, whether it was on in production, and whether removing it went live or only unlinked the nav. Inventory left this list earlier still, as `equipment`, cut in #286.
+
 Feature flags did one job here — let a half-built feature sit on `main` without members seeing it.
 [Long-lived feature branches](../development/conventions.md#long-lived-feature-branches) do that job
 now, so the flags come out. This is the per-flag ledger; it outlives any one session.
@@ -12,8 +14,9 @@ belong to staff, not to whoever is doing the deletion.
 
 `updateFeatureFlag` (`src/lib/remote/settings.remote.ts`) is the only write path to
 `site-config:feature.*` in the codebase, and the staff Features tab drives it by iterating
-`featureMeta` (`src/routes/staff/settings/+page.svelte`), which lists six of the eleven. The other
-five have no toggle anywhere. Unless someone wrote the KV key by hand, they sit at their `DEFAULTS`
+`featureMeta` (`src/routes/staff/settings/feature-meta.ts`), which listed six of the eleven. The other
+five never had a toggle anywhere. `bandPremium` has since left that list by launching, and
+`bandAudio` and `cmcRadio` joined it with the band-audio work. Unless someone wrote the KV key by hand, they sit at their `DEFAULTS`
 value of `false` — which means the entire groups module and member↔member DMs have been dark in
 production since they shipped.
 
@@ -33,17 +36,39 @@ was on in production, so removing its guards is pure cleanup: the `/subscribe` s
 cron and the Postmark webhook keep working exactly as they did, and nothing is unlinked. Unlinking a
 live feature would be a regression, not a deferral.
 
-### `bandPremium` is held, for the opposite reason
+### The groups module was unlinked first, then launched
 
-Confirmed off in production Sep 1 2026, and staying off — but not because it is unfinished. The
-upsell is complete and priced: `/band/[slug]/subscription` renders monthly and yearly cards, the
-page editor and EPK editor both link to it, and `createBandPremiumCheckout` builds a real Stripe
-subscription. Nobody has bought it because the flag has never been on.
+Unlinking is a deferral, not a decision, and this is the case that proves the shape works. #375
+removed the three flags and the entry points together; the module sat complete and URL-only for two
+days, and relaunching it was exactly what this section predicted — a small PR putting the nav
+entries back, with two tests that had been left asserting the absence flipping over to assert the
+presence.
 
-That makes it the one flag where unlinking may be the wrong move: the launch is a pricing decision
-rather than a build, so a flag flip is a cheaper launch than restoring a nav row in a PR. Held
-pending that call. The launch price moved to **$5/mo** (`product-config-service.ts`), which yearly
-derives as $50 — ten months, two free.
+Three entry points went back, one more than the groups spec named: the member panel's "My Groups"
+nav group, the band panel's Announcements row, and a public link to `/groups` that had never
+existed. The public link is gated on `getPublicGroups()` returning rows rather than rendered
+unconditionally, because production has no clubs or committees yet and a "see all" onto an empty
+directory is worse than no link.
+
+### `bandPremium` was launched, not unlinked
+
+Held through Sep 1 2026 as the one flag where unlinking looked wrong: nothing about it was
+unfinished. The upsell was complete and priced — `/band/[slug]/subscription` rendered monthly and
+yearly cards, the page editor and EPK editor both linked to it, and `createBandPremiumCheckout`
+built a real Stripe subscription. Nobody had bought it because the flag had never been on.
+
+**The call came Sep 3 2026: launch.** The guards are out and the nav entries stay, so
+`/band/[slug]/page-editor`, `/band/[slug]/subscription` and `/band-site/**` now answer on
+`band_site.tier` alone. Two derived booleans folded with them: `premiumAvailable` left
+`epk-completeness.ts` entirely, so the three premium rungs are always on the ladder instead of
+being withheld while there was nothing to sell, and `nav-items.ts` lost its `features` argument,
+which nothing else read once `announcements` had gone.
+
+The launch price is **$5/mo** (`product-config-service.ts`), which yearly derives as $50 — ten
+months, two free.
+
+`featureMeta` on `/staff/settings` loses its `bandPremium` row. The tab stays: `bandAudio` and
+`cmcRadio` arrived with the band-audio work and both need switching on.
 
 ### `contentFlags` was launched, not unlinked
 
@@ -79,7 +104,8 @@ scoped API token in the dashboard (Account → Workers KV Storage → Read) and 
 
 Two ways to read a value without any of that:
 
-1. **Staff Settings → Features**, which shows every flag with a `featureMeta` entry.
+1. **Staff Settings → Features**, which shows every flag with a `featureMeta` entry — since #555,
+   that is every flag, and a spec keeps it that way.
 2. **Probe production.** `requireFeature` throws `error(404, 'Not found')`, and a handler-thrown
    404 is distinguishable from an unmatched route: the handler returns
    `content-type: application/json` with `{"message":"Not found"}`, while an unmatched route
@@ -90,26 +116,28 @@ Two ways to read a value without any of that:
    The trap is a surface where both branches 404 identically. `/band-site/[slug]/robots.txt` checks
    the flag and then the tier, and throws the same 404 either way, so it proves nothing.
 
-A flag with no `featureMeta` entry needs no reading at all: `updateFeatureFlag` is the only write
-path in the codebase, so it is provably at its `DEFAULTS` value of `false`.
+A flag with no `featureMeta` entry used to need no reading at all: `updateFeatureFlag` is the only
+write path in the codebase, so an untoggleable flag was provably at its `DEFAULTS` value of `false`.
+That shortcut is gone as of #555, which is the point — it was only ever available because a live
+flag had no way to be switched on.
 
 ## The ledger
 
 Counts are non-spec call sites in `src/`, taken at `63e5890`.
 
-| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod                  | Decision                                             | PR   |
-| ---------------- | ---------------- | ------------------ | ------- | --------------------- | ---------------------------------------------------- | ---- |
-| `staffInbox`     | 0                | 0                  | yes     | n/a                   | ✅ Deleted — gated nothing                           | #373 |
-| `groupFiles`     | 0                | 0                  | **no**  | false                 | ✅ Deleted — gated nothing                           | #373 |
-| `groups`         | 9                | 0                  | **no**  | false                 | ✅ **Unlinked** — nav entry removed, routes URL-only | #375 |
-| `groupEvents`    | 1                | 1                  | **no**  | false                 | ✅ **Unlinked**                                      | #375 |
-| `announcements`  | 3                | 1                  | **no**  | false                 | ✅ **Unlinked** — band nav row removed               | #375 |
-| `helpArticles`   | 5                | 0                  | yes     | **false** (probed)    | ✅ **Unlinked** — footer row removed                 | #376 |
-| `emailMarketing` | 6                | 2                  | yes     | **true** (probed)     | ✅ Flag deleted, feature **stays live**              | #376 |
-| `directMessages` | 7                | 0                  | **no**  | false                 | Unlink — **held**, costs an e2e lifecycle test       |      |
-| `bandPremium`    | 8                | 1                  | yes     | **false** (confirmed) | Unlink — **held**, launch is imminent                |      |
-| `contentFlags`   | 4                | 1                  | yes     | **false**             | ✅ **Launched** — guards out, reporting live         | #381 |
-| `volunteering`   | 19               | 0                  | yes     | **true** (confirmed)  | ✅ Flag deleted, feature **stays live**              | #380 |
+| Flag             | `requireFeature` | `isFeatureEnabled` | Toggle? | Prod                  | Decision                                       | PR   |
+| ---------------- | ---------------- | ------------------ | ------- | --------------------- | ---------------------------------------------- | ---- |
+| `staffInbox`     | 0                | 0                  | yes     | n/a                   | ✅ Deleted — gated nothing                     | #373 |
+| `groupFiles`     | 0                | 0                  | **no**  | false                 | ✅ Deleted — gated nothing                     | #373 |
+| `groups`         | 9                | 0                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
+| `groupEvents`    | 1                | 1                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
+| `announcements`  | 3                | 1                  | **no**  | false                 | ✅ Unlinked #375, then **launched**            | #516 |
+| `helpArticles`   | 5                | 0                  | yes     | **false** (probed)    | ✅ Unlinked #376, then **launched**            | #630 |
+| `emailMarketing` | 6                | 2                  | yes     | **true** (probed)     | ✅ Flag deleted, feature **stays live**        | #376 |
+| `directMessages` | 7                | 0                  | **no**  | false                 | Unlink — **held**, costs an e2e lifecycle test |      |
+| `bandPremium`    | 8                | 1                  | yes     | **false** (confirmed) | ✅ **Launched** — guards out, band sites live  | #494 |
+| `contentFlags`   | 4                | 1                  | yes     | **false**             | ✅ **Launched** — guards out, reporting live   | #381 |
+| `volunteering`   | 19               | 0                  | yes     | **true** (confirmed)  | ✅ Flag deleted, feature **stays live**        | #380 |
 
 ### The two that gate nothing
 
@@ -121,17 +149,16 @@ feature branch, not a flag.
 
 ### What goes live if the guard is removed
 
-| Flag             | Surfaces                                                                                               | Where the guards are                                                                                                                                          |
-| ---------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bandPremium`    | `/band/[slug]/page-editor`, `/band/[slug]/subscription`, `/band-site/**` and its custom-domain routing | `band-page-editor`, `band-subscription`, `band-custom-domain`, `band-site` remotes; `hooks.server.ts`; the band-site `robots.txt` and `sitemap.xml` endpoints |
-| `emailMarketing` | `/subscribe/[slug]`, campaign sends                                                                    | `marketing.remote.ts`; the Postmark event webhook; the `send-campaigns` cron                                                                                  |
-| `helpArticles`   | `/member/help/**` and its nav entry, `/api/help/**`                                                    | `help.remote.ts`; three `api/help` endpoints                                                                                                                  |
-| `contentFlags`   | Report actions on directory profiles, events, DMs and suggestions                                      | `events`, `flags`, `direct-messages`, `suggestions` remotes                                                                                                   |
-| `volunteering`   | `/member/volunteer/**` and its nav entry                                                               | `volunteer.remote.ts` — 19 guards, the largest single surface                                                                                                 |
-| `directMessages` | The member↔member half of `/member/messages`; member↔staff portal chat in the same UI is **not** gated | `direct-messages.remote.ts`, `directory.remote.ts`                                                                                                            |
-| `groups`         | `/member/groups`, `/(public)/groups`, club and committee pages                                         | `groups.remote.ts`                                                                                                                                            |
-| `groupEvents`    | Group-authored events reaching the gig guide                                                           | `group-events.remote.ts`, `groups.remote.ts`                                                                                                                  |
-| `announcements`  | Band and group announcements, incl. the band nav entry                                                 | `announcements.remote.ts`, `groups.remote.ts`                                                                                                                 |
+| Flag             | Surfaces                                                                                               | Where the guards are                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `emailMarketing` | `/subscribe/[slug]`, campaign sends                                                                    | `marketing.remote.ts`; the Postmark event webhook; the `send-campaigns` cron |
+| `helpArticles`   | `/member/help/**` and its nav entry, `/api/help/**` — all live since #630                              | `help.remote.ts`; three `api/help` endpoints                                 |
+| `contentFlags`   | Report actions on directory profiles, events, DMs and suggestions                                      | `events`, `flags`, `direct-messages`, `suggestions` remotes                  |
+| `volunteering`   | `/member/volunteer/**` and its nav entry                                                               | `volunteer.remote.ts` — 19 guards, the largest single surface                |
+| `directMessages` | The member↔member half of `/member/messages`; member↔staff portal chat in the same UI is **not** gated | `direct-messages.remote.ts`, `directory.remote.ts`                           |
+| `groups`         | `/member/groups`, `/(public)/groups`, club and committee pages                                         | `groups.remote.ts`                                                           |
+| `groupEvents`    | Group-authored events reaching the gig guide                                                           | `group-events.remote.ts`, `groups.remote.ts`                                 |
+| `announcements`  | Band and group announcements, incl. the band nav entry                                                 | `announcements.remote.ts`, `groups.remote.ts`                                |
 
 Specs: `bandPremium`, `emailMarketing`, `contentFlags`, `directMessages` and `volunteering` all have
 specs in `docs/specs/shipped/`. `groups`, `groupEvents`, `announcements` and `groupFiles` belong to
@@ -172,6 +199,7 @@ and `.claude/rules/remote-functions.md`. Run `pnpm docs:check`.
 
 Afterwards, delete the orphaned `site-config:feature.*` keys from production KV.
 
-**The e2e suite is the proof.** It seeds five flags on today (`bandPremium`, `directMessages`,
-`groups`, `announcements`, `groupEvents`); with the flags gone those routes must still render, which
-is what demonstrates the guard was the only thing between the route and the user.
+**The e2e suite is the proof.** `ENABLED_FLAGS` is down to `directMessages`; every route a removed
+flag used to gate must still render with nothing seeded for it, which is what demonstrates the guard
+was the only thing between the route and the user. The band-site and subscription specs passing
+after #494 is that proof for `bandPremium`.

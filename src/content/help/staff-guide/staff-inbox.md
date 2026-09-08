@@ -13,6 +13,12 @@ sortOrder: 14
 form, and (where enabled) other channels like email, SMS, Instagram, and
 Messenger. Every channel lands in one list.
 
+On Instagram and Messenger there is a catch worth knowing: Meta only lets us
+answer within **7 days** of the person's last message. Past that the reply box
+is replaced by an internal note, and the only way to reach them is the Instagram
+or Messenger app itself. A reply someone sends from those apps shows up here too,
+so a conversation answered on a phone stops asking to be answered again.
+
 ## Working through messages
 
 The list opens on **Open**, so it reads as a work queue — resolved conversations

@@ -4,10 +4,15 @@
 	import { bandSitePath, bandSiteUrl } from '$lib/utils/band-site-url';
 	import { env } from '$env/dynamic/public';
 	import { page } from '$app/state';
+	import { themeClass } from '$lib/utils/theme-starter';
 
 	let { children } = $props();
 	let data = $derived(await getBandSiteData(page.params.slug!));
-	const themeClass = $derived(`theme-${data.config?.theme ?? 'default'}`);
+	// `custom` means the band took a theme's rules over: no theme class applies
+	// and their own CSS is the whole look.
+	const containerClass = $derived(
+		themeClass(data.config?.theme ?? 'default', data.config?.customCss)
+	);
 
 	const canonicalUrl = $derived(
 		`${bandSiteUrl(page.params.slug!, env.PUBLIC_SITE_URL, data.band.customDomain)}${bandSitePath(page.params.slug!, page.url).replace(/\/$/, '')}`
@@ -36,7 +41,7 @@
 	{/if}
 </svelte:head>
 
-<div class="band-site-container {themeClass} min-h-screen">
+<div class="band-site-container {containerClass} min-h-screen">
 	{@render children()}
 
 	{#if data.config?.customCss}

@@ -1,0 +1,31 @@
+-- No statements, deliberately. This migration exists for its snapshot.
+--
+-- #501 (20260903234845_narrow_vampiro) and #502 (20260903233434_handy_calypso)
+-- were both generated from snapshot ed9340c5 and both merged, so the lineage
+-- forked: two children of one parent, which `drizzle-kit check` rejects and
+-- `drizzle-kit generate` refuses to run against. Every branch that merged `main`
+-- afterwards inherited a red Schema drift job, and nobody could generate a
+-- migration at all.
+--
+-- The two are disjoint in SQL — #502 adds `release_purchase.refunded_at`, #501
+-- adds `inbox_group_read` and `inbox_thread.group_id` — but neither *snapshot*
+-- describes both, and their directory names sort in the opposite order to the
+-- order they merged. So there was no surviving snapshot of the real schema, and
+-- pruning either sibling silently loses half of it.
+--
+-- This migration's snapshot is that missing description: generated from the
+-- schema files, so it carries both changes, and parented on #501 so the chain is
+-- linear again. `drizzle-kit generate` wrote `ALTER TABLE release_purchase ADD
+-- refunded_at` here, because the surviving lineage had lost it — but the column
+-- is already added by #502's own migration, which runs first in directory order
+-- on a fresh database and has already run everywhere else. Emitting it again
+-- would fail with a duplicate column on every existing database and on every
+-- `db:reset`.
+--
+-- Nothing about the schema changes here. What changes is that the history can be
+-- read again.
+
+-- SQLite has no "ADD COLUMN IF NOT EXISTS", and the migration runner needs at
+-- least one executable statement — a comment-only file fails with "statement has
+-- been finalized". So the no-op is spelled out.
+SELECT 1;

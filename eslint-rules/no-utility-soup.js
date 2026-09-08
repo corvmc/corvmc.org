@@ -1,3 +1,5 @@
+/** @typedef {import('./ast.js').RuleNode} RuleNode */
+
 /**
  * Keeps route templates composing components rather than re-deriving them from
  * utility classes. Background and numbers: docs/development/template-audit.md.
@@ -56,6 +58,7 @@ const OPACITY = new Set(['opacity-50', 'opacity-60', 'opacity-70']);
  * This is that decision written where the rule can read it, rather than four
  * warnings advising a migration the page cannot make.
  */
+/** @param {string[]} tokens */
 const SUPPLIES_OWN_SURFACE = (tokens) =>
 	tokens.some((t) => t === 'surface' || /^(bg|border)-[a-z-]+\/\d+$/.test(t));
 
@@ -111,23 +114,26 @@ export default {
 		}
 	},
 	create(context) {
-		const filename = context.filename ?? context.getFilename();
+		const filename = context.filename;
 		if (!filename.endsWith('+page.svelte')) return {};
 		const max = context.options?.[0]?.maxTokens ?? MAX_TOKENS;
 
 		/** The literal text of an attribute, or null when it interpolates. */
+		/** @param {RuleNode} node */
 		function literal(node) {
 			if (!Array.isArray(node.value) || node.value.length !== 1) return null;
 			const only = node.value[0];
 			return only.type === 'SvelteLiteral' ? only.value : null;
 		}
 
+		/** @param {RuleNode} node */
 		function elementName(node) {
 			const el = node.parent?.parent;
 			return el?.name?.name ?? null;
 		}
 
 		return {
+			/** @param {RuleNode} node */
 			SvelteAttribute(node) {
 				const name = node.key?.name;
 				if (name !== 'class' && name !== 'style') return;
@@ -149,16 +155,17 @@ export default {
 						context.report({ node, messageId: 'dead', data: { cls } });
 						continue;
 					}
-					const use = COMPONENTISED[cls];
+					const use = /** @type {Record<string, string | undefined>} */ (COMPONENTISED)[cls];
 					if (!use) continue;
-					if (RAW_OK_FOR[cls]?.includes(el)) continue;
+					if (/** @type {Record<string, string[] | undefined>} */ (RAW_OK_FOR)[cls]?.includes(el))
+						continue;
 					if (cls === 'card' && SUPPLIES_OWN_SURFACE(tokens)) continue;
 					context.report({ node, messageId: 'componentised', data: { cls, use } });
 				}
 
 				for (const size of ['text-sm', 'text-xs']) {
 					if (!set.has(size)) continue;
-					const opacity = tokens.find((t) => OPACITY.has(t));
+					const opacity = tokens.find((/** @type {string} */ t) => OPACITY.has(t));
 					if (!opacity) continue;
 					context.report({
 						node,
@@ -167,7 +174,7 @@ export default {
 					});
 				}
 
-				const counted = tokens.filter((t) => !LAYOUT.test(t));
+				const counted = tokens.filter((/** @type {string} */ t) => !LAYOUT.test(t));
 				if (counted.length > max) {
 					context.report({
 						node,

@@ -44,11 +44,31 @@
 		"panel": "band"
 	},
 	{
+		"route": "/band/[slug]/messages",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/messages/[id]",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/music",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/music/[releaseId]",
+		"panel": "band"
+	},
+	{
+		"route": "/band/[slug]/music/payouts",
+		"panel": "band"
+	},
+	{
 		"route": "/band/[slug]/page-editor",
 		"panel": "band"
 	},
 	{
-		"route": "/band/[slug]/page-editor/epk",
+		"route": "/band/[slug]/press-kit",
 		"panel": "band"
 	},
 	{
@@ -109,6 +129,10 @@
 	},
 	{
 		"route": "/events/[id]/tickets/success",
+		"panel": "public"
+	},
+	{
+		"route": "/forgot-password",
 		"panel": "public"
 	},
 	{
@@ -192,6 +216,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/groups/[slug]/edit",
+		"panel": "member"
+	},
+	{
 		"route": "/member/help",
 		"panel": "member"
 	},
@@ -213,6 +241,10 @@
 	},
 	{
 		"route": "/member/profile",
+		"panel": "member"
+	},
+	{
+		"route": "/member/purchases",
 		"panel": "member"
 	},
 	{
@@ -264,7 +296,23 @@
 		"panel": "member"
 	},
 	{
+		"route": "/music/[bandSlug]/[releaseSlug]",
+		"panel": "public"
+	},
+	{
+		"route": "/music/download/[token]",
+		"panel": "public"
+	},
+	{
 		"route": "/programs",
+		"panel": "public"
+	},
+	{
+		"route": "/radio",
+		"panel": "public"
+	},
+	{
+		"route": "/reset-password",
 		"panel": "public"
 	},
 	{
@@ -452,6 +500,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/music",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/payments",
 		"panel": "staff"
 	},
@@ -501,6 +553,14 @@
 	},
 	{
 		"route": "/staff/users/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/venues",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/venues/[id]",
 		"panel": "staff"
 	},
 	{

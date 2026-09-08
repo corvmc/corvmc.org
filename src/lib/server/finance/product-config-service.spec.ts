@@ -88,7 +88,8 @@ describe('getAllProductConfigs', () => {
 			'fee_coverage',
 			'ticket',
 			'ticket_contribution',
-			'band_premium'
+			'band_premium',
+			'audio_release'
 		]);
 	});
 });

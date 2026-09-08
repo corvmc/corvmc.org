@@ -35,7 +35,7 @@ import { alias } from 'drizzle-orm/sqlite-core';
 
 /** The roster row that defines ownership — see `band-service.ts`. */
 const ownerMember = alias(groupMember, 'owner_member');
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
 import {
@@ -69,16 +69,19 @@ import {
 	markNoShow,
 	recordCashAndComplete,
 	isFirstReservationSql,
+	priorBookingCount,
+	announceWaitlistConfirmed,
+	announceConfirmed,
 	ReservationConflictError,
 	ReservationValidationError
 } from '$lib/server/reservation/reservation-service';
+import { orientationForReservation } from '$lib/server/volunteer/orientation-service';
 import { mapDomainError } from '$lib/server/errors';
 import { isTerminalStatus } from '$lib/utils/reservation-actions';
-import { bookerTypes, type BookerType } from '$lib/server/db/schema/reservation';
+import { bookerTypes, type BookerType } from '$lib/config';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { requireInstructor } from '$lib/server/instructor/instructor-context';
 import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
-import { config } from '$lib/server/site-config/site-config-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import {
 	checkout,
@@ -131,7 +134,9 @@ export const getReservationPayment = query(z.string(), async (id) => {
 	if (row.status !== 'scheduled' && !confirmedUnpaid)
 		throw error(400, 'This reservation is not awaiting payment');
 
-	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
+	// Resolved for who is booking. Reading the config directly quoted an
+	// instructor the $15 drop-in rate on the page they pay from.
+	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
 	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
 	const durationHours = durationMs / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
@@ -168,7 +173,7 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	if (!row) throw error(404, 'Reservation not found');
 	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
 
-	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
+	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
 	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
@@ -279,13 +284,13 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			bandId: group.id,
 			bandName: group.name,
 			bandSlug: group.slug,
-			eventId: event.id,
-			eventTitle: event.title
+			eventId: eventListing.id,
+			eventTitle: eventListing.title
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(group, bandBookerJoin)
-		.leftJoin(event, eventBookerJoin)
+		.leftJoin(eventListing, eventBookerJoin)
 		.where(eq(reservation.id, id))
 		.limit(1);
 
@@ -371,23 +376,17 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		.orderBy(asc(reservation.startsAt))
 		.limit(1);
 
-	// The rule the list renders, restated here so the two pages cannot disagree
-	// about what a first visit is — see `isFirstReservationSql`. Counting only
-	// `completed` rows, which is what this did before, called a member's third
-	// booking their first whenever the earlier two were still `confirmed`.
-	const [priorCount] = await db
-		.select({ count: count() })
-		.from(reservation)
-		.where(
-			and(
-				eq(reservation.createdByUserId, row.createdByUserId),
-				ne(reservation.status, 'cancelled'),
-				or(
-					lt(reservation.startsAt, row.startsAt),
-					and(eq(reservation.startsAt, row.startsAt), lt(reservation.id, id))
-				)
-			)
-		);
+	// The rule the list renders, from the one place that states it — see
+	// `isFirstReservationSql` and its imperative twin. This used to be a third
+	// hand-written copy of the predicate, which is how it came to count only
+	// `completed` rows and call a member's third booking their first whenever the
+	// earlier two were still `confirmed`.
+	const priorCount = await priorBookingCount(row.createdByUserId, row.startsAt, id);
+
+	// The question the first-visit badge raises: has anybody agreed to meet them?
+	// One more read inside this remote rather than a second query fanned out of
+	// the page — see `custom/no-concurrent-remote-queries`.
+	const orientation = await orientationForReservation(id);
 
 	return {
 		reservation: row,
@@ -403,8 +402,12 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		prevId: prevRow?.id ?? null,
 		nextId: nextRow?.id ?? null,
 		isFirstReservation:
-			row.bookerType === 'user' && row.status !== 'cancelled' && priorCount.count === 0,
-		hourlyRateCents: await config<number>('reservation.hourlyRateCents')
+			row.bookerType === 'user' &&
+			row.status !== 'cancelled' &&
+			row.status !== 'waitlisted' &&
+			priorCount === 0,
+		orientation,
+		hourlyRateCents: (await getBookingTerms(row.bookerType)).hourlyRateCents
 	};
 });
 
@@ -819,8 +822,8 @@ const bandBookerJoin = and(eq(reservation.bookerType, 'group'), eq(group.id, res
 
 /** The same shape for the other polymorphic booker: an event holding the room. */
 const eventBookerJoin = and(
-	eq(reservation.bookerType, 'event'),
-	eq(event.id, reservation.bookerId)
+	eq(reservation.bookerType, 'event_listing'),
+	eq(eventListing.id, reservation.bookerId)
 );
 
 /** Staff: paginated, filtered reservation list. */
@@ -868,7 +871,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 				like(user.name, pattern),
 				like(user.email, pattern),
 				like(group.name, pattern),
-				like(event.title, pattern)
+				like(eventListing.title, pattern)
 			)
 		);
 	}
@@ -885,6 +888,10 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			notes: reservation.notes,
 			stripePaymentRecordId: reservation.stripePaymentRecordId,
 			paidAt: reservation.paidAt,
+			// `reservationPaymentState` reads this to tell a refunded booking from a
+			// plain cancellation, and takes it as a required field so a query that
+			// forgets it cannot compile.
+			refundedAt: reservation.refundedAt,
 			cashDueCents: reservation.cashDueCents,
 			creditsUsed: reservation.creditsUsed,
 			createdByUserId: reservation.createdByUserId,
@@ -901,7 +908,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(group, bandBookerJoin)
-		.leftJoin(event, eventBookerJoin)
+		.leftJoin(eventListing, eventBookerJoin)
 		.where(where)
 		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
 		.$dynamic();
@@ -911,7 +918,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(group, bandBookerJoin)
-		.leftJoin(event, eventBookerJoin)
+		.leftJoin(eventListing, eventBookerJoin)
 		.where(where);
 
 	const { rows, pagination } = await paginate(dataQ, countQ, {
@@ -959,7 +966,10 @@ export const getUnresolvedReservations = query(async () => {
 			createdByUserId: reservation.createdByUserId,
 			notes: reservation.notes,
 			member: memberRefColumns(),
-			cashDueCents: reservation.cashDueCents
+			cashDueCents: reservation.cashDueCents,
+			// So the resolve modal can price a row that has no `cashDueCents` yet
+			// at the booker's own rate rather than everyone's at the member one.
+			bookerType: reservation.bookerType
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
@@ -984,10 +994,20 @@ export const getUnresolvedReservations = query(async () => {
 	return rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
 });
 
-/** Staff: current hourly rate for reservation pricing. */
-export const getHourlyRate = query(async () => {
+/**
+ * Staff: the hourly rate for every booker type, for reservation pricing.
+ *
+ * A table rather than a number because the caller is the staff reservations
+ * list, which is mixed: one scalar applied down the rows quoted every
+ * instructor booking at the member rate. There is no booker in scope here to
+ * resolve against, so the page indexes by each row's own `bookerType`.
+ */
+export const getHourlyRates = query(async () => {
 	await requireCapability('reservation.read');
-	return config<number>('reservation.hourlyRateCents');
+	const cfg = await getReservationConfig();
+	return Object.fromEntries(
+		bookerTypes.map((t) => [t, termsFor(t, cfg).hourlyRateCents])
+	) as Record<BookerType, number>;
 });
 
 // ===========================================================================
@@ -1221,6 +1241,8 @@ async function commitCreditsAndSettleIfCovered(opts: {
 			)
 		);
 
+	await announceConfirmed(opts.reservationId);
+
 	return { remainingCents: 0, settled: true };
 }
 
@@ -1294,6 +1316,7 @@ async function payReservationRemainder(opts: {
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, opts.row.id));
+		await announceConfirmed(opts.row.id);
 		return { paid: true };
 	}
 
@@ -1419,6 +1442,9 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 				.update(reservation)
 				.set({ status: 'confirmed', updatedAt: new Date() })
 				.where(eq(reservation.id, res.id));
+			// The settled branch announced it from inside
+			// `commitCreditsAndSettleIfCovered`; this is the other half.
+			await announceConfirmed(res.id);
 		}
 		return { reservationId: res.id, confirmed: true as const };
 	}
@@ -1485,6 +1511,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, res.id));
+
+		await announceConfirmed(res.id);
 
 		return { reservationId: res.id, paid: true as const };
 	}
@@ -2008,20 +2036,62 @@ export const compReservation = form(z.object({ id: z.string() }), async (data, _
 	return { success: true };
 });
 
-/** Staff: refund the payment on a reservation. */
-export const refundReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireCapability('finance.refund');
-
+/**
+ * The row a refund action needs before it commits to anything: who owns the
+ * booking, what there is to refund, and whether it has already been refunded.
+ * Refunding twice is a no-op at the payment layer, but the 400 tells staff why
+ * nothing happened rather than reporting a second success.
+ */
+async function readRefundableReservation(id: string) {
 	const [row] = await db
 		.select({
 			createdByUserId: reservation.createdByUserId,
-			stripePaymentRecordId: reservation.stripePaymentRecordId
+			stripePaymentRecordId: reservation.stripePaymentRecordId,
+			refundedAt: reservation.refundedAt
 		})
 		.from(reservation)
-		.where(eq(reservation.id, data.id))
+		.where(eq(reservation.id, id))
 		.limit(1);
 	if (!row) throw error(404, 'Reservation not found');
 	if (!row.stripePaymentRecordId) throw error(400, 'No payment to refund');
+	if (row.refundedAt) throw error(400, 'Reservation has already been refunded');
+	return row as typeof row & { stripePaymentRecordId: string };
+}
+
+/**
+ * Staff: refund the payment and cancel the booking. Delegates to `cancel()`,
+ * which cancels first and refunds after, and is also what reverses credits,
+ * clears the credit-commit markers and emits `reservation.cancelled` for the
+ * waitlist. Duplicating any of that here would refund twice (#669).
+ */
+export const refundAndCancelReservation = form(
+	z.object({ id: z.string(), reason: z.string().optional() }),
+	async (data, _issue) => {
+		await requireCapability('finance.refund');
+		const currentUser = requireUser();
+		await readRefundableReservation(data.id);
+
+		try {
+			// `staffOverride` unconditionally: the capability check above already
+			// established that, and reading it off the request would let a client
+			// pick its own authority.
+			await cancel(data.id, currentUser.id, data.reason, { staffOverride: true });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
+	}
+);
+
+/**
+ * Staff: refund the payment and leave the booking standing — a comp after the
+ * fact on a session that went ahead. `status` and `paidAt` are deliberately
+ * untouched; `reservationPaymentState` reads `refundedAt` first, so the row
+ * reports as refunded without pretending the session never happened (#669).
+ */
+export const refundOnlyReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
+	await requireCapability('finance.refund');
+	const row = await readRefundableReservation(data.id);
 
 	await refundPayment({
 		userId: row.createdByUserId,
@@ -2030,7 +2100,10 @@ export const refundReservation = form(z.object({ id: z.string() }), async (data,
 	// Reservation free-hour credits live in the ledger (not the payment record's
 	// breakdown), so reverse them explicitly. Idempotent and a no-op when none.
 	await reverseReservationCredits(row.createdByUserId, data.id);
-	await db.update(reservation).set({ refundedAt: new Date() }).where(eq(reservation.id, data.id));
+	await db
+		.update(reservation)
+		.set({ refundedAt: new Date(), updatedAt: new Date() })
+		.where(eq(reservation.id, data.id));
 	return { success: true };
 });
 
@@ -2101,6 +2174,12 @@ export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data,
 		throw error(409, 'Slot is no longer available');
 	}
 
+	// After the race check, never before — the same ordering `create()` keeps.
+	// This is the booking's first announcement: `createWaitlisted()` stayed quiet
+	// while it was only a queue position, so a first-time member who came off the
+	// waitlist gets their orientation shift here.
+	await announceWaitlistConfirmed(data.id);
+
 	return { success: true };
 });
 
@@ -2130,7 +2209,7 @@ export const getReservations = query(
 			// Space a staff member booked for an event is the venue's, not theirs —
 			// it has no member confirm/pay flow, so listing it here offered actions
 			// that don't apply.
-			ne(reservation.bookerType, 'event'),
+			ne(reservation.bookerType, 'event_listing'),
 			after && gt(reservation.endsAt, after),
 			!includeTerminal && inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
 		];
@@ -2229,8 +2308,8 @@ export const getUserRecurringSeries = query(z.string(), async (userId) => {
  * The schedule, whether the band has a sustaining member (which sets the rate the booking form
  * quotes) and the booking contact are all first paint, and the page awaited the three side by
  * side. Past kit 2.64 that renders the error boundary instead of the page; assembled here it is
- * one request. Each callee re-guards — `getBandReservations` in particular does its own slug
- * cross-check, which is the boundary that stops one band reading another's schedule.
+ * one request. Each callee re-guards — `getBandReservations` resolves the band from this slug
+ * through `requireGroupRole`, the boundary that stops one band reading another's schedule.
  */
 export const getBandReservationsPage = query(z.string(), async (slug) => {
 	const [reservations, membership, contact] = await Promise.all([
@@ -2257,14 +2336,14 @@ export const getBandReservationsPage = query(z.string(), async (slug) => {
 export const getStaffReservationsPage = query(staffReservationFiltersSchema, async (filters) => {
 	await requireCapability('reservation.read');
 
-	const [list, counts, unresolved, hourlyRate] = await Promise.all([
+	const [list, counts, unresolved, hourlyRates] = await Promise.all([
 		getStaffReservations(filters),
 		getReservationCounts(),
 		getUnresolvedReservations(),
-		getHourlyRate()
+		getHourlyRates()
 	]);
 
-	return { list, counts, unresolved, hourlyRate };
+	return { list, counts, unresolved, hourlyRates };
 });
 
 /**

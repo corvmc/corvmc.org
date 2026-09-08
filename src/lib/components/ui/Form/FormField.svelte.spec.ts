@@ -359,4 +359,145 @@ describe('FormField', () => {
 			expect(container.querySelector('select')).toBeNull();
 		});
 	});
+
+	// -----------------------------------------------------------------------
+	// label association
+	//
+	// The caption used to be a `<legend>` and nothing pointed at the control, so
+	// every text, email, number, date, time and textarea field in the app was
+	// unlabelled to a screen reader, and the caption was not click-to-focus.
+	// A `<legend>` is still right where the field is a real group of controls;
+	// these pin the single-control half.
+	// -----------------------------------------------------------------------
+
+	describe('label association', () => {
+		// `as const` so each `type` stays a literal and satisfies `InputType`,
+		// which the component does not export.
+		const singleControl = [
+			['text', 'Name'],
+			['email', 'Email'],
+			['tel', 'Phone'],
+			['number', 'Capacity'],
+			['password', 'Password'],
+			['date', 'Release date'],
+			['time', 'Start time'],
+			['datetime-local', 'Starts'],
+			['textarea', 'Description']
+		] as const;
+
+		for (const [type, label] of singleControl) {
+			it(`points the caption at the control for type="${type}"`, async () => {
+				const { container } = await render(FormField, { name: 'subject', type, label });
+
+				const caption = container.querySelector('label.fieldset-legend') as HTMLLabelElement;
+				expect(caption, `type="${type}" rendered no <label> caption`).not.toBeNull();
+				expect(caption.textContent?.trim()).toBe(label);
+
+				const control = container.querySelector(`#${CSS.escape(caption.htmlFor)}`);
+				expect(control, `nothing carries id="${caption.htmlFor}"`).not.toBeNull();
+				expect(control!.getAttribute('name')).toBe('subject');
+			});
+		}
+
+		it('points the caption at the select', async () => {
+			await render(FormField, {
+				name: 'category',
+				type: 'select',
+				label: 'Category',
+				options: [{ value: 'amp', label: 'Amplifier' }]
+			});
+
+			await expect.element(page.getByLabelText('Category')).toHaveValue('amp');
+		});
+
+		it('points the caption at a multi-select', async () => {
+			const { container } = await render(FormField, {
+				name: 'roles',
+				type: 'select',
+				label: 'Roles',
+				multiple: true,
+				value: [],
+				options: [{ value: 'staff', label: 'Staff' }]
+			});
+
+			const caption = container.querySelector('label.fieldset-legend') as HTMLLabelElement;
+			expect(caption).not.toBeNull();
+			expect(container.querySelector('select')!.id).toBe(caption.htmlFor);
+		});
+
+		// The `input` snippet is handed `resolvedId` precisely so the caller can
+		// put it on its control — that is the whole reason the parameter exists.
+		it('points the caption at a custom-input control', async () => {
+			const custom = createRawSnippet((id: () => string) => ({
+				render: () => `<input id="${id()}" name="price" class="input" />`
+			}));
+
+			await render(FormField, { name: 'price', label: 'Price', input: custom });
+
+			await expect.element(page.getByLabelText('Price')).toBeInTheDocument();
+		});
+
+		// A lone checkbox with no inline caption had nothing naming it at all: the
+		// wrapping <label> was empty and the text sat in the <legend>.
+		it('names a checkbox that has no inline label', async () => {
+			await render(FormField, {
+				name: 'reserveRoom',
+				type: 'checkbox',
+				label: 'Hold the practice room'
+			});
+
+			await expect
+				.element(page.getByLabelText('Hold the practice room'))
+				.toHaveAttribute('type', 'checkbox');
+		});
+
+		it('leaves a checkbox with an inline label named once, by that label', async () => {
+			const { container } = await render(FormField, {
+				name: 'coverFees',
+				type: 'checkbox',
+				label: 'Fees',
+				checkboxLabel: 'Cover the processing fee'
+			});
+
+			// Two labels would concatenate into "Fees Cover the processing fee".
+			expect(container.querySelector('label.fieldset-legend')).toBeNull();
+			expect(container.querySelector('legend')).not.toBeNull();
+			await expect.element(page.getByLabelText('Cover the processing fee')).toBeInTheDocument();
+		});
+
+		// These are groups of controls, or caller markup we never handed an id to.
+		// A <label for> pointing at nothing is worse than a <legend>: it claims an
+		// association that does not exist, and clicking it focuses nothing.
+		const groups: Record<string, Record<string, unknown>> = {
+			tags: { type: 'tags', options: [{ id: '1', label: 'admin' }], value: [] },
+			calendar: { type: 'calendar', value: '' },
+			'custom children': {
+				children: createRawSnippet(() => ({ render: () => `<textarea name="bio"></textarea>` }))
+			},
+			readonly: { type: 'text', readonly: true, value: 'Fixed' }
+		};
+
+		for (const [name, props] of Object.entries(groups)) {
+			it(`keeps a fieldset and legend for ${name}`, async () => {
+				const { container } = await render(FormField, { name: 'thing', label: 'Thing', ...props });
+
+				expect(container.querySelector('legend.fieldset-legend')).not.toBeNull();
+				expect(container.querySelector('label.fieldset-legend')).toBeNull();
+			});
+		}
+
+		it('keeps a fieldset and legend for a file field', async () => {
+			const field = create_field_proxy(
+				{},
+				() => ({}),
+				() => {},
+				() => ({}),
+				['posterFile']
+			);
+			const { container } = await render(FormField, { field, type: 'file', label: 'Poster' });
+
+			expect(container.querySelector('legend.fieldset-legend')).not.toBeNull();
+			expect(container.querySelector('label.fieldset-legend')).toBeNull();
+		});
+	});
 });

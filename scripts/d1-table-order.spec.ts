@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'fs';
-// @ts-expect-error -- plain .mjs helper, no types
 import { tableOrder } from './d1-table-order.mjs';
 
 // `tableOrder` is hand-maintained but has to stay in step with the drizzle schema:

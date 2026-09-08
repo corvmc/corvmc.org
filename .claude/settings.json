@@ -1,5 +1,25 @@
 {
 	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash scripts/claude/inject-open-issues.sh"
+					}
+				]
+			},
+			{
+				"matcher": "startup|resume",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"$CLAUDE_PROJECT_DIR\"/scripts/claude/cloud-session-start.sh",
+						"timeout": 600
+					}
+				]
+			}
+		],
 		"PreToolUse": [
 			{
 				"matcher": "Edit|Write|MultiEdit",
@@ -24,6 +44,14 @@
 					{
 						"type": "command",
 						"command": "bash scripts/claude/block-whole-tree-gate.sh"
+					},
+					{
+						"type": "command",
+						"command": "bash scripts/claude/block-forked-migration-merge.sh"
+					},
+					{
+						"type": "command",
+						"command": "bash scripts/claude/require-issue-dedupe.sh"
 					}
 				]
 			}
@@ -42,6 +70,10 @@
 	},
 	"permissions": {
 		"allow": [
+			"Bash(gh issue *)",
+			"Bash(gh search issues*)",
+			"Bash(gh label list*)",
+			"Bash(gh pr *)",
 			"Bash(pnpm check*)",
 			"Bash(pnpm run check*)",
 			"Bash(pnpm svelte-check *)",

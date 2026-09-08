@@ -9,6 +9,10 @@ let selectQueue: unknown[][] = [];
 /** Every where() the call built — the confirmed filter lives in a subquery. */
 const capturedWheres: unknown[] = [];
 const insertedRows: Record<string, unknown>[][] = [];
+/** Every `update().set().where()` the call built, in order. */
+const updatedRows: { set: Record<string, unknown>; where: unknown }[] = [];
+/** Every `delete().where()` clause. */
+const deletedWheres: unknown[] = [];
 let lastUpdateSet: Record<string, unknown> | null = null;
 
 function chain(): unknown {
@@ -41,10 +45,23 @@ vi.mock('$lib/server/db', () => ({
 		update: () => ({
 			set: (vals: Record<string, unknown>) => {
 				lastUpdateSet = vals;
-				return { where: () => Promise.resolve() };
+				return {
+					where: (clause: unknown) => {
+						updatedRows.push({ set: vals, where: clause });
+						return Promise.resolve();
+					}
+				};
 			}
 		}),
-		delete: () => ({ where: () => Promise.resolve() })
+		delete: () => ({
+			where: (clause: unknown) => {
+				deletedWheres.push(clause);
+				return Promise.resolve();
+			}
+		}),
+		// The lineup writer batches its updates. The mock's builders already
+		// resolve, so batching is just awaiting them together.
+		batch: (queries: unknown[]) => Promise.all(queries as Promise<unknown>[])
 	},
 	getRowCount: () => 0
 }));
@@ -72,8 +89,15 @@ import {
 	listMemberUpcomingShows
 } from './event-service';
 
-/** Depth-first search of a drizzle SQL tree for a bound parameter value. */
+/**
+ * Depth-first search of a drizzle SQL tree for a bound parameter value.
+ *
+ * Arrays are walked as well as `queryChunks`, because `inArray` nests its
+ * parameters one level deeper than `eq` does — the delete assertions read a
+ * clause built that way.
+ */
 function containsParam(node: unknown, value: unknown): boolean {
+	if (Array.isArray(node)) return node.some((c) => containsParam(c, value));
 	if (!node || typeof node !== 'object') return false;
 	if ((node as { value?: unknown }).value === value) return true;
 	const chunks = (node as { queryChunks?: unknown[] }).queryChunks;
@@ -126,15 +150,26 @@ function queueLineupState(existing: unknown[] = []) {
 	];
 }
 
-/** The rows setEventLineup wrote, flattened across chunks. */
+/**
+ * The bill as it stands after the write, in billing order.
+ *
+ * Credits that survived the save are UPDATEs and new ones are INSERTs, and most
+ * assertions here are about what the bill says rather than which statement said
+ * it — so both are merged. The tests that care about the distinction read
+ * `updatedRows` / `insertedRows` / `deletedWheres` directly.
+ */
 function writtenLineup() {
-	return insertedRows.flat();
+	return [...updatedRows.map((u) => u.set), ...insertedRows.flat()].sort(
+		(a, b) => (a.billingOrder as number) - (b.billingOrder as number)
+	);
 }
 
 beforeEach(() => {
 	selectQueue = [];
 	capturedWheres.length = 0;
 	insertedRows.length = 0;
+	updatedRows.length = 0;
+	deletedWheres.length = 0;
 	lastUpdateSet = null;
 	mockEmit.mockClear();
 });
@@ -277,6 +312,92 @@ describe('setEventLineup — existing rows', () => {
 		});
 
 		expect(writtenLineup().map((r) => r.directoryEntryId)).toContain(OWNER_ENTRY);
+	});
+
+	// The reason `writeLineup` exists. Delete-and-reinsert gave every credit a
+	// fresh id on every save, so anything pointing at one — a lineup invitation,
+	// and from Phase 3 a `production_slot` — pointed at a row that was gone.
+	it('keeps a surviving credit’s row rather than replacing it', async () => {
+		queueLineupState([
+			{
+				id: 'eb-0',
+				eventId: 'evt-1',
+				name: 'Us',
+				directoryEntryId: OWNER_ENTRY,
+				status: 'confirmed'
+			},
+			{
+				id: 'eb-1',
+				eventId: 'evt-1',
+				name: 'Paper Wolves',
+				directoryEntryId: OTHER_ENTRY,
+				status: 'confirmed'
+			}
+		]);
+
+		await setEventLineup(
+			'evt-1',
+			[
+				{ name: 'Paper Wolves', bandId: OTHER, billingOrder: 0 },
+				{ name: 'Us', bandId: OWNER, billingOrder: 1 }
+			],
+			{ actingBandId: OWNER }
+		);
+
+		expect(insertedRows).toHaveLength(0);
+		expect(updatedRows).toHaveLength(2);
+		expect(deletedWheres).toHaveLength(0);
+		expect(updatedRows.map((u) => u.set.billingOrder).sort()).toEqual([0, 1]);
+	});
+
+	it('deletes only the credit that left the bill', async () => {
+		queueLineupState([
+			{
+				id: 'eb-0',
+				eventId: 'evt-1',
+				name: 'Us',
+				directoryEntryId: OWNER_ENTRY,
+				status: 'confirmed'
+			},
+			{
+				id: 'eb-1',
+				eventId: 'evt-1',
+				name: 'Paper Wolves',
+				directoryEntryId: OTHER_ENTRY,
+				status: 'confirmed'
+			}
+		]);
+
+		await setEventLineup('evt-1', [{ name: 'Us', bandId: OWNER, billingOrder: 0 }], {
+			actingBandId: OWNER
+		});
+
+		expect(deletedWheres).toHaveLength(1);
+		expect(containsParam(deletedWheres[0], 'eb-1')).toBe(true);
+		expect(containsParam(deletedWheres[0], 'eb-0')).toBe(false);
+	});
+
+	// `addedByGroupId` records who put the act on the bill. A later edit by
+	// somebody else did not, and delete-and-reinsert used to overwrite it with
+	// whoever saved last.
+	it('does not rewrite addedByGroupId on a credit that survives', async () => {
+		queueLineupState([
+			{
+				id: 'eb-1',
+				eventId: 'evt-1',
+				name: 'Paper Wolves',
+				directoryEntryId: OTHER_ENTRY,
+				status: 'confirmed',
+				addedByGroupId: OTHER
+			}
+		]);
+
+		await setEventLineup('evt-1', [{ name: 'Paper Wolves', bandId: OTHER, billingOrder: 0 }], {
+			asStaff: true
+		});
+
+		expect(updatedRows).toHaveLength(1);
+		expect(updatedRows[0].set).not.toHaveProperty('addedByGroupId');
 	});
 });
 

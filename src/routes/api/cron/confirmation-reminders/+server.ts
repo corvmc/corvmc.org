@@ -48,7 +48,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		.where(
 			and(
 				eq(reservation.status, 'scheduled'),
-				ne(reservation.bookerType, 'event'),
+				ne(reservation.bookerType, 'event_listing'),
 				gte(reservation.startsAt, now),
 				lt(reservation.startsAt, in24h)
 			)

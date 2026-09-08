@@ -100,9 +100,6 @@ test.describe('staff groups', () => {
 		// The seeded committee is `by_application` and carries one requested row.
 		await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible();
 
-		// By name, not `getByLabel`: `FormField` renders its label as a `<legend>`
-		// inside a `<fieldset>`, which names the group rather than the control, so
-		// no FormField input in this app is reachable by its label text.
 		await expect(page.locator('select[name="joinPolicy"]')).toHaveValue('by_application');
 	});
 });

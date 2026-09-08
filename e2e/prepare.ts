@@ -36,15 +36,20 @@ import { migrateLocal } from '../scripts/db/migrate-local';
 import { acquireE2eLock } from './lock';
 import {
 	checkpointE2eDatabase,
+	checkpointSummary,
 	clearE2eStateDir,
 	e2eStateIsStale,
 	resetE2eDatabase
 } from './reset-db';
 import { seedPayReservation } from './fixtures/seed-pay-reservation';
 import { seedBandOnboarding } from './fixtures/seed-band-onboarding';
+import { seedBandAudio } from './fixtures/seed-band-audio';
 import { seedStaffUser } from './fixtures/seed-staff-user';
+import { seedPasswordReset } from './fixtures/seed-password-reset';
 import { seedInventory } from './fixtures/seed-inventory';
 import { seedStaffEvent } from './fixtures/seed-staff-event';
+import { seedVenues } from './fixtures/seed-venues';
+import { seedProductions } from './fixtures/seed-productions';
 import { seedTicketPurchase } from './fixtures/seed-ticket-purchase';
 import { seedReservationPayments } from './fixtures/seed-reservation-payments';
 import { seedVolunteering } from './fixtures/seed-volunteering';
@@ -97,7 +102,10 @@ resetE2eDatabase();
 
 await seedPayReservation();
 await seedBandOnboarding();
+// After the bands: its releases hang off the public band's id.
+await seedBandAudio();
 await seedStaffUser();
+await seedPasswordReset();
 await seedInventory();
 // After the inventory fixture: it reuses that fixture's category, and seeds
 // its own item and unit so the two suites never mutate the same asset.
@@ -135,8 +143,20 @@ await seedInstructors();
 // into `directory_entry`, which is what the directory reads.
 await seedDirectoryEntries();
 
-// Last, once every seed's miniflare has exited: leave the file with no WAL for
-// the preview server to recover. workerd opens D1 on the first *request*, by
-// which time Playwright's workers are already reading it, and a recovery that
-// collides with those readers kills the server outright. See `reset-db.ts`.
-checkpointE2eDatabase();
+// After every fixture that writes an event, because it backfills all of them
+// into the room. `holdsSpace()` reads a null venue as ours anyway, so this is
+// making the fixture state say what the fallback already means rather than
+// changing behaviour — but a fixture that relies on a fallback is a fixture
+// that stops being true the day the fallback changes.
+await seedVenues();
+
+// After `seedVenues`, and pointedly not before it: this fixture's events name the
+// off-site venue, and the backfill above claims every event with a null one.
+await seedProductions();
+
+// Last, once every seed's miniflare has exited: leave no file with a WAL for the
+// preview server to recover. workerd opens its SQLite on the first *request*, by
+// which time Playwright's workers are already reading, and a recovery that
+// collides with those readers kills the server outright. Reported rather than
+// assumed — a checkpoint that could not take the lock says so. See `reset-db.ts`.
+console.log(checkpointSummary(checkpointE2eDatabase()));

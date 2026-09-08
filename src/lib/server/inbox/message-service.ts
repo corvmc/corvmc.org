@@ -93,6 +93,28 @@ export async function addPeerMessage(params: AddPeerMessageParams) {
 	return message;
 }
 
+/**
+ * The message already filed under this channel's external id, if any.
+ *
+ * Meta redelivers a webhook for up to 36 hours after a non-200, and delivers an
+ * echo of every message the Page sends — including the ones we sent ourselves,
+ * carrying the very `mid` we stored on dispatch. Both arrive as an ordinary
+ * event, so the only thing separating "they wrote again" from "we have seen
+ * this" is the id. Reads the `idx_inbox_message_channel_id` index.
+ *
+ * Not applied to email or SMS: Postmark and Twilio do not redeliver on a 200,
+ * and both of those paths were built before this existed.
+ */
+export async function findMessageByChannelId(channelMessageId: string) {
+	const [message] = await db
+		.select()
+		.from(inboxMessage)
+		.where(eq(inboxMessage.channelMessageId, channelMessageId))
+		.limit(1);
+
+	return message;
+}
+
 export async function addInboundMessage(params: AddInboundMessageParams) {
 	const [message] = await db
 		.insert(inboxMessage)
@@ -146,6 +168,88 @@ export interface AddOutboundMessageParams {
 	authorName: string;
 }
 
+export interface RecordOutboundMessageParams {
+	threadId: string;
+	body: string;
+	authorName: string;
+	/**
+	 * Null when nobody here typed it: a reply staff sent from the Instagram or
+	 * Messenger app, which reaches us as an echo. The message is ours, the
+	 * account behind it is not one of ours.
+	 */
+	authorUserId: string | null;
+	channelMessageId: string | null;
+	/** The thread row, when the caller has already selected it. */
+	thread?: typeof inboxThread.$inferSelect;
+}
+
+/**
+ * File a reply that has already been delivered.
+ *
+ * The half of `addOutboundMessage` that runs after dispatch, extracted because
+ * an echo is a message Meta has *already sent* — routing it back through
+ * `addOutboundMessage` would deliver it a second time. The `lastOutboundAt` and
+ * `awaitingReplySince` rules documented on the schema are subtle enough that a
+ * second copy of them in the Meta handler would drift; this way there is one.
+ */
+export async function recordOutboundMessage(params: RecordOutboundMessageParams) {
+	let thread = params.thread;
+	if (!thread) {
+		[thread] = await db
+			.select()
+			.from(inboxThread)
+			.where(eq(inboxThread.id, params.threadId))
+			.limit(1);
+	}
+
+	if (!thread) throw new Error(`Thread ${params.threadId} not found`);
+
+	const [message] = await db
+		.insert(inboxMessage)
+		.values({
+			threadId: params.threadId,
+			direction: 'outbound',
+			body: params.body,
+			authorName: params.authorName,
+			authorUserId: params.authorUserId,
+			channelMessageId: params.channelMessageId
+		})
+		.returning();
+
+	await db
+		.update(inboxThread)
+		.set({
+			preview: truncatePreview(params.body),
+			messageCount: sql`${inboxThread.messageCount} + 1`,
+			lastMessageAt: new Date(),
+			// Only ever set here. A thread with this null has never been answered,
+			// which is how the queue tells "unanswered" from "they replied".
+			lastOutboundAt: new Date(),
+			// We have said our piece, so the thread is now waiting on them. Read off
+			// the row already selected above rather than a second query. A reply sent
+			// after resolving leaves no marker — the badge only means something on a
+			// thread that is still open.
+			awaitingReplySince: thread.status === 'resolved' ? null : new Date(),
+			updatedAt: new Date()
+		})
+		.where(eq(inboxThread.id, params.threadId));
+
+	// Only for a reply a staff member actually typed here. The lone listener
+	// notifies on `portal` alone — where the message row is the delivery — and an
+	// echo is never portal, so an event carrying a null sender would be a payload
+	// nothing reads and every future listener has to remember to guard.
+	if (params.authorUserId) {
+		domainEvents.emit('inbox.message_sent', {
+			threadId: params.threadId,
+			messageId: message.id,
+			channel: thread.channel,
+			sentByUserId: params.authorUserId
+		});
+	}
+
+	return message;
+}
+
 export async function addOutboundMessage(params: AddOutboundMessageParams) {
 	const [thread] = await db
 		.select()
@@ -155,9 +259,11 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 
 	if (!thread) throw new Error(`Thread ${params.threadId} not found`);
 
-	// Find last inbound message ID for email threading
+	// The last inbound message does two jobs: its id threads the email reply, and
+	// its timestamp is what tells the Meta channels whether the 24-hour messaging
+	// window is still open.
 	const [lastInbound] = await db
-		.select({ channelMessageId: inboxMessage.channelMessageId })
+		.select({ channelMessageId: inboxMessage.channelMessageId, createdAt: inboxMessage.createdAt })
 		.from(inboxMessage)
 		.where(and(eq(inboxMessage.threadId, params.threadId), eq(inboxMessage.direction, 'inbound')))
 		.orderBy(desc(inboxMessage.createdAt))
@@ -183,6 +289,7 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 			(await dispatchReply({
 				channel: thread.channel,
 				threadId: thread.id,
+				groupId: thread.groupId,
 				body: params.body,
 				staffName: params.authorName,
 				contactName: thread.contactName,
@@ -191,6 +298,7 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 				contactExternalId: thread.contactExternalId,
 				subject: thread.subject,
 				lastInboundMessageId: normalizeMessageId(lastInbound?.channelMessageId),
+				lastInboundAt: lastInbound?.createdAt ?? null,
 				references
 			})) ?? null;
 	} catch (err) {
@@ -198,44 +306,14 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 		throw err;
 	}
 
-	const [message] = await db
-		.insert(inboxMessage)
-		.values({
-			threadId: params.threadId,
-			direction: 'outbound',
-			body: params.body,
-			authorName: params.authorName,
-			authorUserId: params.authorUserId,
-			channelMessageId
-		})
-		.returning();
-
-	await db
-		.update(inboxThread)
-		.set({
-			preview: truncatePreview(params.body),
-			messageCount: sql`${inboxThread.messageCount} + 1`,
-			lastMessageAt: new Date(),
-			// Only ever set here. A thread with this null has never been answered,
-			// which is how the queue tells "unanswered" from "they replied".
-			lastOutboundAt: new Date(),
-			// We have said our piece, so the thread is now waiting on them. Read off
-			// the row already selected above rather than a second query. A reply sent
-			// after resolving leaves no marker — the badge only means something on a
-			// thread that is still open.
-			awaitingReplySince: thread.status === 'resolved' ? null : new Date(),
-			updatedAt: new Date()
-		})
-		.where(eq(inboxThread.id, params.threadId));
-
-	domainEvents.emit('inbox.message_sent', {
+	return recordOutboundMessage({
 		threadId: params.threadId,
-		messageId: message.id,
-		channel: thread.channel,
-		sentByUserId: params.authorUserId
+		body: params.body,
+		authorName: params.authorName,
+		authorUserId: params.authorUserId,
+		channelMessageId,
+		thread
 	});
-
-	return message;
 }
 
 export async function addNote(params: { threadId: string; authorUserId: string; body: string }) {

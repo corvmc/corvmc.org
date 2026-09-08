@@ -22,7 +22,7 @@
 import type { BuildAliasTable } from 'drizzle-orm/sqlite-core';
 import { user } from '$lib/server/db/schema/authentication';
 import { group } from '$lib/server/db/schema/group';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { topPositionFor } from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
@@ -144,9 +144,9 @@ export function toBandRef(row: BandRefRow | null | undefined): BandRef {
 // Event
 // ---------------------------------------------------------------------------
 
-type EventTable = typeof event | BuildAliasTable<typeof event, string>;
+type EventTable = typeof eventListing | BuildAliasTable<typeof eventListing, string>;
 
-export function eventRefColumns(e: EventTable = event) {
+export function eventRefColumns(e: EventTable = eventListing) {
 	return { id: e.id, title: e.title, status: e.status, startsAt: e.startsAt, image: e.posterKey };
 }
 
@@ -205,7 +205,7 @@ export function toBookerRef(row: {
 	// own ref rather than silently reporting as a member booking. `id: null`
 	// renders unlinked, so the row stays honest about what it is.
 	if (row.bookerType === 'group') return toBandRef(row.band);
-	if (row.bookerType === 'event') return toEventRef(row.event);
+	if (row.bookerType === 'event_listing') return toEventRef(row.event);
 	if (row.bookerType === 'instructor') return toMemberRef(row.member);
 	return toMemberRef(row.member);
 }
@@ -246,7 +246,7 @@ export interface ReservationRefRow {
  * formatting it on the server changes the string not at all.
  *
  * `band` unlocks the band panel's route, `ownerUserId` the booker's own. A
- * band has no per-reservation page yet (see CHORES), so today the band arm of
+ * band has no per-reservation page yet (#565), so today the band arm of
  * `entityHref` lands on the list — the ref is right either way, and the page
  * appearing is what changes the answer.
  */

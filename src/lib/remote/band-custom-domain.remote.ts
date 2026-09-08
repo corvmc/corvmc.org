@@ -6,7 +6,6 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { bandSite } from '$lib/server/db/schema/band-site';
 import { requireGroupRole } from '$lib/server/group/group-context';
-import { requireFeature } from '$lib/server/feature-flags';
 import {
 	assertDomainUnclaimed,
 	cnameTarget,
@@ -32,7 +31,6 @@ import { forgetCustomDomain } from '$lib/server/band/band-host-service';
 
 /** Owner-only, premium-only. Returns the band alongside its domain state. */
 async function requirePremiumOwner(slug: string) {
-	await requireFeature('bandPremium');
 	const ctx = await requireGroupRole({ slug }, 'owner');
 	if (ctx.group.tier !== 'premium') {
 		throw error(403, 'Custom domains are part of the premium plan.');
@@ -45,7 +43,6 @@ async function requirePremiumOwner(slug: string) {
 // ---------------------------------------------------------------------------
 
 export const getCustomDomain = query(z.string(), async (slug) => {
-	await requireFeature('bandPremium');
 	// Band-private configuration — the verification records below are the band's
 	// own DNS setup, which is why this hand-rolled its own owner check before
 	// there was a guard that took a ref. Not `requirePremiumOwner`: a band that

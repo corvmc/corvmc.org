@@ -156,6 +156,31 @@ To update webhook events later:
 STRIPE_WEBHOOK_ID=we_xxx STRIPE_SECRET_KEY=sk_live_xxx pnpm tsx scripts/sync-webhooks.ts
 ```
 
+### 6a. The Connect endpoint — a second one, with its own secret
+
+Band music sales are Stripe Connect destination charges, so band accounts emit
+`account.updated` on the **connected-account** stream. Stripe delivers those only
+to endpoints created with `connect: true`, and **they are signed with a different
+secret** — verifying one against `STRIPE_WEBHOOK_SECRET` fails every time.
+
+`sync-webhooks.ts` does not manage this endpoint (it models one platform endpoint
+and no `connect` flag), so create it once by hand:
+
+```bash
+stripe webhook_endpoints create \
+  --url https://corvmc.org/api/stripe/connect-webhook \
+  --enabled-events account.updated \
+  --connect
+wrangler secret put STRIPE_CONNECT_WEBHOOK_SECRET
+```
+
+**This failure is silent, which is the reason it is written down.** Nothing
+errors visibly when the secret is wrong or the endpoint is missing: bands
+complete Stripe's onboarding, `band_stripe_account.charges_enabled` never flips
+to true, and every attempt to publish a paid release is refused with a message
+about payouts not being set up. Verify after deploy by completing onboarding on a
+test band and checking the column, not by watching for an error.
+
 ---
 
 ## 7. Custom Domain
@@ -204,9 +229,23 @@ bcrypt-ts silently fails on Cloudflare Workers (returns `false` in 0ms), so bcry
 
 **Check remaining bcrypt hashes:**
 
-```sql
-SELECT count(*) FROM account WHERE provider_id = 'credential' AND password LIKE '$2%';
+```bash
+pnpm auth:hash-census --remote
 ```
+
+Read-only. It breaks the credential accounts down by hash scheme, separates the
+deactivated ones, and says how many of the legacy accounts have ever held a
+session on this app. `--emails` lists the addresses.
+
+The count only falls: a successful bcrypt verify rewrites the hash to scrypt on
+the way through, so an account still on `$2*` is one that has not signed in
+since the migration.
+
+**Password reset is the exit, not a migration script.** A reset never checks the
+old password and writes a scrypt hash, so every account on this list can already
+recover without the Laravel box — the dependency is only on the path where
+somebody types their _old_ password. That is what makes step 4 above a decision
+rather than a risk. See [#623](https://github.com/corvmc/corvmc.org/issues/623).
 
 ---
 

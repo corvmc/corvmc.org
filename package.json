@@ -9,7 +9,8 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo '' && lefthook install",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && pnpm check:tooling",
+		"check:tooling": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.tooling.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "tsx scripts/run-unit-tests.ts",
 		"test:components": "vitest --run --project=client --project=storybook",
@@ -24,9 +25,9 @@
 		"lint": "prettier --cache --check . && eslint . --max-warnings 0",
 		"lint:changed": "bash scripts/lint-changed.sh",
 		"format": "prettier --write .",
-		"db:generate": "drizzle-kit generate && node scripts/db/d1-safe-rebuild.mjs --write && node scripts/db/prune-snapshots.mjs",
+		"db:generate": "drizzle-kit generate && node scripts/db/d1-safe-rebuild.mjs --write && node scripts/db/quote-reserved-refs.mjs --write && node scripts/db/prune-snapshots.mjs",
 		"db:fix-migrations": "node scripts/db/d1-safe-rebuild.mjs --write",
-		"db:check-migrations": "node scripts/db/d1-safe-rebuild.mjs --check",
+		"db:check-migrations": "node scripts/db/d1-safe-rebuild.mjs --check && node scripts/db/quote-reserved-refs.mjs --check",
 		"db:prune-snapshots": "node scripts/db/prune-snapshots.mjs",
 		"db:migrate": "drizzle-kit migrate",
 		"ci:migrate": "node scripts/ci-migrate.mjs",
@@ -37,6 +38,7 @@
 		"db:seed": "tsx scripts/seed-dev.ts",
 		"help:sync": "tsx scripts/sync-help-articles.ts",
 		"volunteer:seed-roles": "tsx scripts/seed-volunteer-roles.ts",
+		"auth:hash-census": "tsx scripts/password-hash-census.ts",
 		"docs:routes": "node scripts/docs/route-inventory.mjs --write",
 		"docs:check": "node scripts/docs/check-docs-drift.mjs",
 		"class-census": "node scripts/class-census.mjs",
@@ -77,6 +79,7 @@
 		"dotenv": "^17.4.2",
 		"drizzle-kit": "1.0.0-rc.3",
 		"drizzle-orm": "1.0.0-rc.3",
+		"drizzle-zod": "1.0.0-beta.14-56703c9",
 		"eslint": "^10.9.1",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-storybook": "^10.5.10",
@@ -120,10 +123,12 @@
 		"daisyui": "^5.7.22",
 		"date-fns": "^4.4.0",
 		"emittery": "^2.0.0",
+		"fflate": "^0.8.3",
 		"marked": "^18.0.11",
 		"postmark": "^5.1.0",
 		"qrcode-svg": "^1.1.0",
 		"stripe": "^22.6.0",
+		"svelte-dnd-action": "^0.9.79",
 		"svelte-sonner": "^1.2.1",
 		"svelte-turnstile": "^0.11.0",
 		"twilio": "^6.1.0",
@@ -148,7 +153,8 @@
 			"undici@<6.27.0": ">=6.27.0"
 		},
 		"patchedDependencies": {
-			"yargs@17.7.2": "patches/yargs@17.7.2.patch"
+			"yargs@17.7.2": "patches/yargs@17.7.2.patch",
+			"svelte@5.57.0": "patches/svelte@5.57.0.patch"
 		}
 	}
 }

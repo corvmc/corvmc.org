@@ -101,6 +101,13 @@ export type Panel = 'staff' | 'band' | 'member' | 'public';
 export interface Viewer {
 	userId: string | null;
 	isStaff: boolean;
+	/**
+	 * What this viewer may do, as `"resource.action"` strings from
+	 * `layout.remote`. `isStaff` (holds any position) still answers "is the staff
+	 * panel yours at all"; this answers "is THIS staff route yours", which stopped
+	 * being the same question once positions exist. Empty for anonymous viewers.
+	 */
+	capabilities: ReadonlySet<string>;
 	/** Bands the viewer is an *active* member of. */
 	bandIds: ReadonlySet<string>;
 	panel: Panel;
@@ -110,6 +117,7 @@ export interface Viewer {
 export const ANONYMOUS: Viewer = {
 	userId: null,
 	isStaff: false,
+	capabilities: new Set(),
 	bandIds: new Set(),
 	panel: 'public'
 };

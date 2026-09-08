@@ -14,14 +14,20 @@ system is designed and built; the user manual (`manual/`) describes how to use i
 | [`checklists/`](#checklists)     | Cross-cutting rollouts tracked to completion                                  | Developers          |
 | [`manual/`](#manual)             | End-user manual manifest & public-site articles                               | End users           |
 
-Two working files live at the repo root rather than in here, because they are edited constantly
-and are as much backlog as documentation. Specs and conventions link to both, so they are listed
-for findability, not because they belong to a folder above:
+The backlog is **[GitHub Issues](https://github.com/corvmc/corvmc.org/issues)**, not a file in
+here. `CHORES.md` and `IDEAS.md` used to sit at the repo root and were retired into the tracker in
+September 2026 — by then `CHORES.md` carried an open item whose own "Done" entry sat eighty lines
+below it, which is the argument for the move. Docs describe how things work; what is _owed_ is an
+issue, because an issue can be searched, labelled, assigned and closed by the PR that fixes it.
 
-| File                        | What's in it                                                                      |
-| --------------------------- | --------------------------------------------------------------------------------- |
-| [`CHORES.md`](../CHORES.md) | Running list of known gaps and cleanup owed — the source for "recorded in CHORES" |
-| [`IDEAS.md`](../IDEAS.md)   | Unbuilt feature ideas and the library table; where a spec starts life             |
+| You want               | Run                                             |
+| ---------------------- | ----------------------------------------------- |
+| Cleanup and known gaps | `gh issue list --label tech-debt`               |
+| Unbuilt feature ideas  | `gh issue list --label enhancement`             |
+| Anything in one area   | `gh issue list --label area:events` (and so on) |
+
+Library evaluations for unbuilt work moved to
+[`reports/library-candidates.md`](reports/library-candidates.md).
 
 **Status legend:** ✅ Current · 🔧 In progress · 📋 Designed, not built · 📦 Historical (shipped) · ⚠️ Action needed
 
@@ -71,6 +77,7 @@ the way it is, and the workflow guide to find out **what** it does today.
 | [bands-spec.md](specs/shipped/bands-spec.md)                       | ✅     | archived  | Band entity, membership, ownership, invitations — superseded in part by `groups-spec.md`                                                                                                                                                             |
 | [staff-bands-spec.md](specs/shipped/staff-bands-spec.md)           | ✅     | archived  | Staff band management & moderation; impersonation deliberately deferred                                                                                                                                                                              |
 | [band-domains-spec.md](specs/shipped/band-domains-spec.md)         | ✅     | archived  | `{slug}.corvmc.org` for every band; custom domains as the premium tier                                                                                                                                                                               |
+| [band-audio-spec.md](specs/shipped/band-audio-spec.md)             | ✅     | archived  | Band releases, the private-bucket storefront, the refusable split, and CMC Radio's materialized timetable                                                                                                                                            |
 | [band-sites-launch.md](specs/shipped/band-sites-launch.md)         | 📦     | archived  | Shipped, then superseded outright by `band-domains-spec.md`                                                                                                                                                                                          |
 | [groups-spec.md](specs/groups-spec.md)                             | 🔧     | spec      | Bands/clubs/committees: `group` + `directory_entry` + `band_site`, roster, announcements, documents. **Phases 0–4 shipped** — the table split, the listing table and `requireGroupRole`. Clubs and committees themselves start at phase 5            |
 | [committees-and-roles-spec.md](specs/committees-and-roles-spec.md) | 📋     | spec      | The six committees and the event roles as user stories, each marked with what serves it today. A requirements map rather than one feature's design; names committee-scoped authority as the prerequisite `admin-vs-staff-spec.md` does not yet cover |
@@ -88,7 +95,7 @@ the way it is, and the workflow guide to find out **what** it does today.
 | [event-moderation-spec.md](specs/shipped/event-moderation-spec.md)         | ✅     | archived  | `contentFlag` coverage for the gig guide; reactive, no pre-approval queue                                                                                                                                                                                                              |
 | [production-workflow-spec.md](specs/production-workflow-spec.md)           | 📋     | spec      | CMC-produced shows: run of show → settlement → close-out; venues, external acts. **Partly superseded** — see the status banner at its top                                                                                                                                              |
 | [project-spec.md](specs/project-spec.md)                                   | 📋     | spec      | `project` as a root entity above events: committee ownership, the suggestion pipeline, derived budget burn, the general deal shape                                                                                                                                                     |
-| [staff-events-split-spec.md](specs/shipped/staff-events-split-spec.md)     | ✅     | archived  | Productions (`/staff/events`, CMC work surface) vs Calendar (`/staff/calendar`, staff view of the public gig guide); why the axis is work-vs-publicity                                                                                                                                 |
+| [staff-events-split-spec.md](specs/shipped/staff-events-split-spec.md)     | ✅     | archived  | Calendar (`/staff/events`, staff view of the public gig guide) vs Productions (`/staff/productions`, the CMC work surface); why the axis is work-vs-publicity, and why the canonical URL got the less privileged view                                                                  |
 
 ### Members & directory
 
@@ -106,6 +113,7 @@ the way it is, and the workflow guide to find out **what** it does today.
 | [email-marketing-spec.md](specs/shipped/email-marketing-spec.md)       | ✅     | archived  | Audiences, campaigns, scheduled sends                                          |
 | [member-portal-chat-spec.md](specs/shipped/member-portal-chat-spec.md) | ✅     | archived  | Member↔staff conversations as an inbox channel (`portal`); `inbox_participant` |
 | [direct-messages-spec.md](specs/shipped/direct-messages-spec.md)       | ✅     | archived  | Member↔member DMs: request/accept consent, silent drops, blocks, reporting     |
+| [band-chat-spec.md](specs/shipped/band-chat-spec.md)                   | ✅     | archived  | Booking enquiries as band-owned threads (`band`); `inbox_thread.group_id`      |
 
 ### Moderation
 
@@ -151,14 +159,14 @@ user-management audit by writing a spec for each. None has been built since.
 Cross-cutting rather than owned by one panel. All six phases shipped; what survives in the spec is
 the design rationale — why the parent link carries no foreign key, and why `file` and `media` are
 two tables. How the layer _behaves_ is in the feature catalog's image-delivery and scheduled-jobs
-sections. Two follow-ups it did not close are in [`CHORES.md`](../CHORES.md): the sweep owes group
+sections. Two follow-ups it did not close are open issues: the sweep owes group
 documents a pass over the private bucket, and a moderation takedown no longer kills the old poster
 URL immediately.
 
 ## plans
 
 Sequenced build plans, kept only while they track something still in motion. A finished plan's
-content is either shipped (git history is the record) or was folded into `CHORES.md` when retired.
+content is either shipped (git history is the record) or was filed as an issue when retired.
 
 | Doc                                                            | Status | Notes                                     |
 | -------------------------------------------------------------- | ------ | ----------------------------------------- |
@@ -166,14 +174,16 @@ content is either shipped (git history is the record) or was folded into `CHORES
 
 ## architecture
 
-| Doc                                                                                   | Status | Notes                                                                                                |
-| ------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
-| [overview.md](architecture/overview.md)                                               | ✅     | **Start here** — how the system is wired (remote functions, auth, event bus, D1, cron, config)       |
-| [domain-model.md](architecture/domain-model.md)                                       | ✅     | What the tables _mean_: three verticals over two horizontals, and the shapes that recur              |
-| [operations-manual.md](architecture/operations-manual.md)                             | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring |
-| [deployment-checklist.md](architecture/deployment-checklist.md)                       | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                              |
-| [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                             | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting  |
-| [U-Tec Api.postman_collection.json](architecture/U-Tec%20Api.postman_collection.json) | 📦     | Vendor API collection for the door-lock integration — reference only, not maintained here            |
+| Doc                                                                                   | Status | Notes                                                                                                                     |
+| ------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------- |
+| [overview.md](architecture/overview.md)                                               | ✅     | **Start here** — how the system is wired (remote functions, auth, event bus, D1, cron, config)                            |
+| [domain-model.md](architecture/domain-model.md)                                       | ✅     | What the tables _mean_: three verticals over two horizontals, and the shapes that recur                                   |
+| [operations-manual.md](architecture/operations-manual.md)                             | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring                      |
+| [deployment-checklist.md](architecture/deployment-checklist.md)                       | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                                                   |
+| [stripe-connect-manual.md](architecture/stripe-connect-manual.md)                     | ✅     | Band payouts: what being a Stripe platform costs, the second webhook, refunds by hand, triage                             |
+| [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                             | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting                       |
+| [meta-inbox-setup.md](architecture/meta-inbox-setup.md)                               | ✅     | Instagram DMs + Messenger as inbox channels: Meta app, permissions, Page subscription, secrets, rollback, troubleshooting |
+| [U-Tec Api.postman_collection.json](architecture/U-Tec%20Api.postman_collection.json) | 📦     | Vendor API collection for the door-lock integration — reference only, not maintained here                                 |
 
 ## development
 
@@ -183,20 +193,23 @@ content is either shipped (git history is the record) or was folded into `CHORES
 | [business-workflows.md](development/business-workflows.md)     | ✅     | The eight core workflows, traced through code, with triage notes                    |
 | [conventions.md](development/conventions.md)                   | ✅     | Feature checklist, layering rules, custom lint rules, script reference              |
 | [working-with-claude.md](development/working-with-claude.md)   | ✅     | Agent-instruction surface: CLAUDE.md vs rules vs skills vs hooks, verification loop |
+| [cloud-sessions.md](development/cloud-sessions.md)             | ✅     | Running Claude Code on claude.ai/code: environment allowlist, setup script, limits  |
 | [ui-patterns.md](development/ui-patterns.md)                   | ✅     | **Read before touching any page** — shared components & composition                 |
 | [component-testing.md](development/component-testing.md)       | ✅     | Stories vs specs, fixtures, mocking the server                                      |
 | [template-audit.md](development/template-audit.md)             | 🔧     | Class-soup census + phased migration to a component-based design system             |
 
 ## reports
 
-| Doc                                                                        | Status | Notes                                                                                        |
-| -------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
-| [feature-catalog.md](reports/feature-catalog.md)                           | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship             |
-| [standardization-audit.md](reports/standardization-audit.md)               | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                     |
-| [inventory-workflow-findings.md](reports/inventory-workflow-findings.md)   | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign           |
-| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md)   | 📦     | The same pass over volunteering; findings complete, the restructure is separate work         |
-| [project-management-prior-art.md](reports/project-management-prior-art.md) | ✅     | Prior art behind the `project` entity — CMMS, venue, makerspace and ERP systems surveyed     |
-| [social-prior-art.md](reports/social-prior-art.md)                         | ✅     | The social vertical by role, against the products that compete with each — and what to steal |
+| Doc                                                                        | Status | Notes                                                                                           |
+| -------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| [feature-catalog.md](reports/feature-catalog.md)                           | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship                |
+| [standardization-audit.md](reports/standardization-audit.md)               | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                        |
+| [inventory-workflow-findings.md](reports/inventory-workflow-findings.md)   | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign              |
+| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md)   | 📦     | The same pass over volunteering; findings complete, the restructure is separate work            |
+| [project-management-prior-art.md](reports/project-management-prior-art.md) | ✅     | Prior art behind the `project` entity — CMMS, venue, makerspace and ERP systems surveyed        |
+| [handoff/press-kit.md](handoff/press-kit.md)                               | ✅     | Screen handoff for the press-kit area — 12 screens at two viewports, with who/what/why each     |
+| [social-prior-art.md](reports/social-prior-art.md)                         | ✅     | The social vertical by role, against the products that compete with each — and what to steal    |
+| [library-candidates.md](reports/library-candidates.md)                     | ✅     | Packages surveyed for unbuilt work, and the ones rejected — split out of the retired `IDEAS.md` |
 
 ## checklists
 

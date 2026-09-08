@@ -7,6 +7,10 @@ paths:
 
 # Tests
 
+> Before changing a test here, check what is already known about it:
+> `gh issue list --state open --label flaky`. The backlog is GitHub Issues, not a
+> markdown file.
+
 Three vitest projects in `vite.config.ts`: `client` (chromium, `*.svelte.{test,spec}.ts`),
 `server` (node, `vmForks` pool), and `storybook`. `expect.requireAssertions` is on globally, so a
 test that asserts nothing fails.

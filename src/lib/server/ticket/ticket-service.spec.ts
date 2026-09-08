@@ -102,7 +102,7 @@ vi.mock('$lib/server/db/schema/ticket', () => ({
 }));
 
 vi.mock('$lib/server/db/schema/event', () => ({
-	event: {
+	eventListing: {
 		id: 'id',
 		ticketQuantity: 'ticket_quantity',
 		title: 'title',

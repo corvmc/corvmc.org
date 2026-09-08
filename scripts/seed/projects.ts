@@ -8,7 +8,7 @@ import {
 } from '../../src/lib/server/db/schema/volunteer';
 import { contractorJob } from '../../src/lib/server/db/schema/contractor';
 import { acquisition, purchaseOrder } from '../../src/lib/server/db/schema/inventory';
-import { event } from '../../src/lib/server/db/schema/event';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { batchInsert, db } from './db';
 import { randomUUID } from 'crypto';
 import { asc, eq, sql } from 'drizzle-orm';
@@ -217,7 +217,7 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		.slice(0, 2)
 		.map((e) => e.id);
 	for (const id of upcoming) {
-		await db.update(event).set({ projectId: ids.festival }).where(eq(event.id, id));
+		await db.update(eventListing).set({ projectId: ids.festival }).where(eq(eventListing.id, id));
 	}
 
 	const [{ attached } = { attached: 0 }] = await db

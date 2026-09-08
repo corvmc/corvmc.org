@@ -8,7 +8,12 @@ any page) and the [architecture overview](../architecture/overview.md).
 
 When building a new feature, work through these phases in order:
 
-0. **Branch** — decide where the work lands before writing any of it. Anything member-facing or
+0. **Branch** — decide where the work lands before writing any of it. **Search the tracker first**
+   (`gh issue list --state open --search '<terms>'`): if an issue already covers this, open the
+   draft PR with `Fixes #<n>` **before** writing the code, so the next session sees the work in
+   flight rather than starting it again. The branch push is what makes that a claim — a second
+   session pushing the same ref is rejected non-fast-forward by the server, which no assignee,
+   label or project-board field can do, all being last-write-wins. Anything member-facing or
    public that takes more than one PR to become usable goes on a long-lived
    [feature branch](#long-lived-feature-branches); phases are PRs into that branch and `main` sees
    the feature once, working. Staff-only surfaces, schema, and refactors still go straight to
@@ -61,6 +66,7 @@ When building a new feature, work through these phases in order:
    [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). If the
    feature had a spec, **retire it now** — see below.
 9. **Land** — descriptive message summarizing what the feature adds. **No co-author lines.**
+   `Fixes #<n>` in the PR body if it answers an issue, so the queue's merge closes it.
    A phase PR targets its feature branch and merges with `gh pr merge --squash`; the finished
    feature targets `main` and is queued with `gh pr merge --auto`. See
    [Long-lived feature branches](#long-lived-feature-branches).
@@ -497,10 +503,40 @@ are not blocked at all; run them yourself when you want them.
 ## Style
 
 - Interfaces/UI: **no gradients**.
-- Match the surrounding code's comment density, naming, and idioms. Comments state
-  constraints the code can't show — this codebase does that well (see
-  `src/lib/server/auth.ts` or `reservation-service.ts` for the house style).
+- Match the surrounding code's naming and idioms.
 - Prettier (with the svelte + tailwind plugins) is the formatter; don't hand-format.
+
+### Comments
+
+**A comment states a constraint the code can't show. It is not a record of how the code got
+here.** That second sentence is the one this repo kept getting wrong: it reached 24% comment by
+line and 28.4% by byte, most of it in blocks long enough to be essays, because the instruction
+that used to live here was "match the surrounding comment density" — which is an instruction to
+reproduce whatever is already there.
+
+- **Eight lines per block, capped and enforced.** `scripts/comment-budget.spec.ts` reddens the
+  **Unit tests** job on a longer block in any file not listed in `scripts/comment-budget.json`.
+  When the reasoning genuinely needs more room it goes in `docs/` or in the PR that made the
+  change, and the code keeps a one-line pointer.
+- **No historical narration.** "This used to delete the object outright", "it was
+  `Record<string, …>` until #527" — that is what git is for, and nothing reddens when a comment's
+  account of the past stops matching the present. If the old behaviour matters, assert the current
+  one in a spec; that version fails when it stops being true.
+- **No PR numbers, phase numbers, or dependency versions** as load-bearing context. They date
+  immediately and cannot be checked from the file that carries them.
+- **Rationale earns its lines only where a reader would otherwise undo the decision**, and gets one
+  or two of them rather than a section. The test to apply: would deleting this comment cause
+  someone to make the change it argues against? If not, delete it.
+
+`comment-budget.json` lists the files that predate the cap, and it only shrinks: prune a file
+below the cap and the gate fails until you delete its line, so the next change cannot quietly spend
+what a prune freed.
+
+**It is a path list rather than a line count, and that is load-bearing in a merge-queue repo.** A
+count is a whole-tree snapshot — any PR merging alongside yours changes the totals, so your branch
+passes its own checks and then fails on the queue's rebased ref for a change that did nothing
+wrong. That happened once and cost a queue slot. Two PRs editing a path list conflict in git
+instead, where a human sees it.
 
 ## pnpm script reference
 
@@ -570,7 +606,32 @@ is in [working-with-claude.md](working-with-claude.md).
 Prefer existing libraries and managed services over new bespoke code — the goal is to
 minimize _maintained_ code, not just initial build effort. Lean on Stripe, Postmark, and
 Cloudflare primitives rather than re-creating vendor features in app code. When adding a
-dependency, note it in `IDEAS.md`'s library table if it's broadly useful.
+dependency, note it in [`docs/reports/library-candidates.md`](../reports/library-candidates.md)
+if it's broadly useful.
+
+### Patched dependencies
+
+`pnpm.patchedDependencies` in `package.json`, sources in `patches/`. Two of them:
+
+- **`yargs@17.7.2`** — drops `"type": "module"` so its CJS entry resolves.
+- **`svelte@5.57.0`** — a two-line fix in `Boundary#resolve`
+  (`src/internal/client/dom/blocks/boundary.js`). Under `experimental.async`, a
+  `<svelte:boundary>` with a `pending` snippet parks `$effect`s created while it is pending, then
+  hands them back to the `Batch` that `increment_pending()` captured when the awaited work
+  started. If that batch was merged into another and discarded in the meantime, the effects land
+  in an unlinked batch — and `Batch#decrement` refuses to flush one, so they never run again. The
+  patch transfers them to a live batch instead.
+
+  Observed as the create-band modal dying after a client-side navigation into `/member/bands`
+  during the turbulent post-login window: `bits-ui`'s `Dialog.Portal` mounts itself from a
+  `$effect`, so a stranded effect means no dialog in the DOM at all, permanently — the button is
+  dead for the life of the page, and a second click does nothing either. ~10% of runs, in CI and
+  locally. `e2e/create-band-modal.e2e.ts` is the regression test; it went from 2/20 failures to
+  40/40 clean with the patch. Nothing in page code triggers or avoids it, so the fix has to be
+  here.
+
+  A `pnpm install` after a Svelte bump will fail loudly if the patch stops applying. When it does,
+  check whether upstream has fixed it before re-rolling the patch.
 
 ### Analytics and reporting tools
 

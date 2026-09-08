@@ -36,6 +36,46 @@ describe('buildDateInTz', () => {
 	});
 });
 
+/**
+ * The two wall-clock times a named zone cannot answer with a single instant.
+ * Both are reachable from real input: a recurring series generates whatever
+ * wall time its prototype had, on every date the rule lands on, including the
+ * two Sundays a year that have a missing hour and a repeated one.
+ *
+ * The rule adopted here is `compatible` — the same disambiguation Temporal and
+ * every calendar app use. Stated as tests rather than left to whatever the
+ * offset arithmetic happens to land on, because "whatever it lands on" was the
+ * previous behaviour and it was not the same answer in both directions.
+ */
+describe('buildDateInTz across a DST discontinuity', () => {
+	// PT jumps 02:00 -> 03:00 on 2026-03-08, so 02:00-02:59 never happens.
+	// `compatible` shifts forward by the length of the gap.
+	it('pushes a nonexistent spring-forward time forward by the gap', () => {
+		expect(roundTrip('2026-03-08', '02:30')).toEqual({ date: '2026-03-08', time: '03:30' });
+	});
+
+	it('pushes the first instant of the gap to the start of the new offset', () => {
+		expect(roundTrip('2026-03-08', '02:00')).toEqual({ date: '2026-03-08', time: '03:00' });
+	});
+
+	it('leaves the hour either side of the gap alone', () => {
+		expect(roundTrip('2026-03-08', '01:30')).toEqual({ date: '2026-03-08', time: '01:30' });
+		expect(roundTrip('2026-03-08', '03:30')).toEqual({ date: '2026-03-08', time: '03:30' });
+	});
+
+	// PT repeats 01:00-01:59 on 2026-11-01. `compatible` takes the FIRST of the
+	// two, which is still PDT (UTC-7) rather than PST (UTC-8).
+	it('resolves an ambiguous fall-back time to the earlier of the two', () => {
+		const d = buildDateInTz('2026-11-01', '01:30', TZ);
+		expect({ date: formatDateInTz(d, TZ), time: formatTimeInTz(d, TZ) }).toEqual({
+			date: '2026-11-01',
+			time: '01:30'
+		});
+		// 01:30 PDT is 08:30 UTC; the later (PST) reading would be 09:30 UTC.
+		expect(d.toISOString()).toBe('2026-11-01T08:30:00.000Z');
+	});
+});
+
 // Regression: events and their reservations are entered as one date plus a start
 // and end time, and both instants were anchored to that one date. A 9 PM – 1 AM
 // show therefore ended eight hours BEFORE it started, and every save of such an

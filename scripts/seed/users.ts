@@ -19,13 +19,28 @@ import {
 	TAGLINES
 } from './pools';
 import { type SeedRole, type SeedUser } from './types';
-import { pick, pickN, randomInt } from './util';
+import { pick, pickN, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 
-export async function seedRoles(): SeedRole[] {
+export async function seedRoles(): Promise<SeedRole[]> {
 	console.log('Seeding roles...');
-	const roles = ['admin', 'staff', 'member', 'volunteer', 'sustaining'];
+	// The named positions are seeded alongside the legacy rows so local dev has
+	// somebody to sign in as for each one. Without them the matrix is only ever
+	// exercised by `staff`, which holds nearly everything, and a narrowed
+	// position is something you can only read about. See positionLabels in
+	// src/lib/config.ts.
+	const roles = [
+		'admin',
+		'staff',
+		'technology_coordinator',
+		'volunteer_coordinator',
+		'site_moderator',
+		'treasurer',
+		'member',
+		'volunteer',
+		'sustaining'
+	];
 	const inserted: SeedRole[] = [];
 	for (const name of roles) {
 		const [r] = await db.insert(role).values({ name, guardName: 'web' }).returning();
@@ -34,7 +49,7 @@ export async function seedRoles(): SeedRole[] {
 	return inserted;
 }
 
-export async function seedUsers(count: number): SeedUser[] {
+export async function seedUsers(count: number): Promise<SeedUser[]> {
 	console.log(`Seeding ${count} users...`);
 	const users: SeedUser[] = [];
 	const usedEmails = new Set<string>();
@@ -55,12 +70,11 @@ export async function seedUsers(count: number): SeedUser[] {
 		const id = randomUUID();
 		const createdAt = new Date(Date.now() - randomInt(7, 365) * 86400000);
 
-		const hasProfile = Math.random() > 0.3;
+		const hasProfile = random() > 0.3;
 		const memberInstruments = hasProfile ? pickN(INSTRUMENTS, randomInt(1, 3)) : [];
 		const memberGenres = hasProfile ? pickN(GENRES, randomInt(1, 3)) : [];
-		const memberLinks =
-			hasProfile && Math.random() > 0.4 ? pickN(SAMPLE_LINKS, randomInt(1, 3)) : null;
-		const visibility = !hasProfile ? 'hidden' : Math.random() > 0.6 ? 'public' : 'members';
+		const memberLinks = hasProfile && random() > 0.4 ? pickN(SAMPLE_LINKS, randomInt(1, 3)) : null;
+		const visibility = !hasProfile ? 'hidden' : random() > 0.6 ? 'public' : 'members';
 
 		const [u] = await db
 			.insert(user)
@@ -70,7 +84,7 @@ export async function seedUsers(count: number): SeedUser[] {
 				email,
 				emailVerified: true,
 				pronouns: pick(PRONOUNS),
-				phone: Math.random() > 0.4 ? `541-555-${String(randomInt(1000, 9999))}` : null,
+				phone: random() > 0.4 ? `541-555-${String(randomInt(1000, 9999))}` : null,
 				creditFreeHours: randomInt(0, 8),
 				creditEquipment: randomInt(0, 3),
 				memberNumber: 100 + i,
@@ -85,10 +99,10 @@ export async function seedUsers(count: number): SeedUser[] {
 			bio: hasProfile ? pick(MEMBER_BIOS) : null,
 			tagline: hasProfile ? pick(TAGLINES) : null,
 			hometown: hasProfile ? pick(HOMETOWNS) : null,
-			lookingFor: hasProfile && Math.random() > 0.7 ? 'band' : null,
-			availableForHire: hasProfile && Math.random() > 0.7,
-			teachesLessons: hasProfile && Math.random() > 0.8,
-			openToCollaboration: hasProfile && Math.random() > 0.5,
+			lookingFor: hasProfile && random() > 0.7 ? 'band' : null,
+			availableForHire: hasProfile && random() > 0.7,
+			teachesLessons: hasProfile && random() > 0.8,
+			openToCollaboration: hasProfile && random() > 0.5,
 			visibility: visibility as DirectoryVisibility,
 			contact: visibility === 'public' ? { email } : null,
 			links: memberLinks
@@ -167,6 +181,27 @@ export async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, role
 		await db.insert(modelHasRole).values({ roleId: staffRole.id, userId: users[i].id });
 	}
 
+	// One persona per named position, so every row of the matrix can be signed
+	// in as. This is the only way anyone reviews the narrowing against a real
+	// screen rather than against a table: a treasurer should reach /staff/payments
+	// and not /staff/settings, a volunteer coordinator should reach the hour
+	// queue and not the role picker on a user.
+	const positionSeeds: Array<[string, number]> = [
+		['technology_coordinator', 5],
+		['volunteer_coordinator', 6],
+		['site_moderator', 7],
+		['treasurer', 8]
+	];
+	for (const [name, index] of positionSeeds) {
+		const positionRole = roles.find((r) => r.name === name);
+		if (!positionRole || !users[index]) continue;
+		await db
+			.insert(modelHasRole)
+			.values({ roleId: positionRole.id, userId: users[index].id })
+			.onConflictDoNothing();
+		console.log(`  ${name}: ${users[index].email}`);
+	}
+
 	for (const u of users) {
 		await db.insert(modelHasRole).values({ roleId: memberRole.id, userId: u.id });
 	}
@@ -201,7 +236,7 @@ export async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, role
 					stripeSubscriptionId: `sub_seed_${randomUUID().slice(0, 8)}`,
 					hoursPerReset,
 					creditsResetAt: creditsResetAt.toISOString(),
-					coveringFees: Math.random() > 0.6,
+					coveringFees: random() > 0.6,
 					cancelAtPeriodEnd: false
 				}
 			})

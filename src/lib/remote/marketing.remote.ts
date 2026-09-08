@@ -4,7 +4,7 @@ import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { error, invalid } from '@sveltejs/kit';
 import { query, form, command, getRequestEvent } from '$app/server';
 import { verifyTurnstile } from '$lib/server/turnstile';
-import { requireStaff } from '$lib/server/authorization';
+import { requireCapability } from '$lib/server/authorization';
 import {
 	listAudiences,
 	getAudience,
@@ -154,7 +154,7 @@ export const confirmUnsubscribeAll = form(
 
 /** List all audiences (staff). Used on audiences index and as audience options. */
 export const getAudiences = query(z.void(), async () => {
-	await requireStaff();
+	await requireCapability('marketing.read');
 	const rows = await listAudiences();
 	return rows.map((a) => ({
 		...a,
@@ -172,19 +172,19 @@ export const getPublicAudiences = query(z.void(), async () => {
 
 /** Single audience detail (staff). */
 export const getAudienceDetail = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('marketing.read');
 	return getAudience(id);
 });
 
 /** List subscribers for an audience. */
 export const getAudienceSubscribers = query(z.string(), async (audienceId) => {
-	await requireStaff();
+	await requireCapability('marketing.read');
 	return listSubscribers(audienceId);
 });
 
 /** List campaigns with optional status filter. */
 export const getCampaigns = query(z.object({ status: z.string().optional() }), async (filters) => {
-	await requireStaff();
+	await requireCapability('marketing.read');
 	const statusFilter = ['draft', 'scheduled', 'sending', 'sent'].includes(filters.status ?? '')
 		? (filters.status as CampaignStatus)
 		: undefined;
@@ -204,13 +204,13 @@ export const getCampaigns = query(z.object({ status: z.string().optional() }), a
 
 /** Single campaign detail (staff). */
 export const getCampaignDetail = query(z.string(), async (id) => {
-	await requireStaff();
+	await requireCapability('marketing.read');
 	return getCampaign(id);
 });
 
 /** Render markdown to campaign HTML preview. */
 export const getPreview = query(z.string(), async (markdown) => {
-	await requireStaff();
+	await requireCapability('marketing.read');
 	if (!markdown.trim()) return '';
 	return renderCampaignPreview(markdown);
 });
@@ -227,7 +227,7 @@ export const createAudience = form(
 		allowOptIn: z.boolean().default(false)
 	}),
 	async (data, issue) => {
-		await requireStaff();
+		await requireCapability('marketing.manageAudiences');
 
 		const name = (data.name as string).trim();
 		if (!name) {
@@ -257,7 +257,7 @@ export const updateAudience = form(
 		allowOptIn: z.boolean().default(false)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('marketing.manageAudiences');
 
 		const id = data.id as string;
 		await updateAudienceService(id, {
@@ -276,7 +276,7 @@ export const deleteAudience = form(
 		id: z.string()
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('marketing.manageAudiences');
 		await deleteAudienceService(data.id as string);
 		void getAudiences().refresh();
 		return { success: true };
@@ -288,7 +288,7 @@ export const bulkAddMembers = form(
 		audienceId: z.string()
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('marketing.manageAudiences');
 		const count = await bulkAddMembersService(data.audienceId as string);
 		void getStaffAudienceDetail(data.audienceId as string).refresh();
 		return { added: count };
@@ -302,7 +302,7 @@ export const addSubscriber = form(
 		name: z.string().max(SHORT_TEXT_MAX).optional()
 	}),
 	async (data, issue) => {
-		await requireStaff();
+		await requireCapability('marketing.manageAudiences');
 
 		const email = (data.email as string).trim();
 		if (!email) {
@@ -323,7 +323,7 @@ export const removeSubscriber = form(
 		subscriberId: z.string()
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('marketing.manageAudiences');
 		await removeSubscriberService(data.audienceId as string, data.subscriberId as string);
 		void getStaffAudienceDetail(data.audienceId as string).refresh();
 		return { success: true };
@@ -341,7 +341,7 @@ export const createDraft = command(
 		audienceIds: z.array(z.string()).min(1).max(20)
 	}),
 	async (data) => {
-		const user = await requireStaff();
+		const user = await requireCapability('marketing.manageCampaigns');
 		const campaign = await createCampaign({
 			...data,
 			sentById: user.id
@@ -357,7 +357,7 @@ export const createAndSend = command(
 		audienceIds: z.array(z.string()).min(1).max(20)
 	}),
 	async (data) => {
-		const user = await requireStaff();
+		const user = await requireCapability('marketing.send');
 		const campaign = await createCampaign({
 			...data,
 			sentById: user.id
@@ -375,7 +375,7 @@ export const createAndSchedule = command(
 		scheduledFor: z.string().transform((s) => new Date(s))
 	}),
 	async (data) => {
-		const user = await requireStaff();
+		const user = await requireCapability('marketing.send');
 		const campaign = await createCampaign({
 			subject: data.subject,
 			markdownBody: data.markdownBody,
@@ -394,7 +394,7 @@ export const saveDraft = command(
 		audienceIds: z.array(z.string()).min(1).max(20)
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('marketing.manageCampaigns');
 		const { params } = getRequestEvent();
 		const id = params.id!;
 		await updateCampaign(id, data);
@@ -404,7 +404,7 @@ export const saveDraft = command(
 );
 
 export const sendCampaignNow = command(z.object({}), async () => {
-	await requireStaff();
+	await requireCapability('marketing.send');
 	const { params } = getRequestEvent();
 	await sendNow(params.id!);
 	return { success: true };
@@ -415,7 +415,7 @@ export const scheduleCampaign = command(
 		scheduledFor: z.string().transform((s) => new Date(s))
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('marketing.send');
 		const { params } = getRequestEvent();
 		await scheduleCampaignService(params.id!, data.scheduledFor);
 		return { success: true };
@@ -423,7 +423,7 @@ export const scheduleCampaign = command(
 );
 
 export const deleteCampaign = command(z.object({}), async () => {
-	await requireStaff();
+	await requireCapability('marketing.manageCampaigns');
 	const { params } = getRequestEvent();
 	await deleteCampaignService(params.id!);
 	return { success: true };
@@ -434,7 +434,7 @@ export const unscheduleCampaign = form(
 		campaignId: z.string()
 	}),
 	async (data) => {
-		await requireStaff();
+		await requireCapability('marketing.manageCampaigns');
 		await unscheduleCampaignService(data.campaignId as string);
 		void getCampaignDetail(data.campaignId as string).refresh();
 		return { success: true };
@@ -449,7 +449,7 @@ export const unscheduleCampaign = form(
 // ---------------------------------------------------------------------------
 
 export const getUserMarketing = query(z.string(), async (userId) => {
-	await requireStaff();
+	await requireCapability('marketing.read');
 	const subscriber = await findSubscriberByUserId(userId);
 	const audiences = subscriber ? await getSubscriptionsForUser(userId) : [];
 	return {

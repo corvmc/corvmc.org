@@ -91,15 +91,17 @@
 		label="Event"
 		description="Optional — work parties and repair days aren't tied to a show."
 	>
-		{#snippet input()}
-			<SearchSelect
-				search={(q) => searchEvents(q)}
-				bind:value={selectedEvent}
-				labelKey="title"
-				descriptionKey="when"
-				placeholder="Search events by title..."
-			/>
-		{/snippet}
+		<!-- Children rather than the `input` snippet: that snippet's argument is the
+		     id of the one control the caption labels, and SearchSelect has no single
+		     control to give it — its combobox input is replaced by a chip as soon as
+		     something is picked. So this field keeps its `<legend>`. -->
+		<SearchSelect
+			search={(q) => searchEvents(q)}
+			bind:value={selectedEvent}
+			labelKey="title"
+			descriptionKey="when"
+			placeholder="Search events by title..."
+		/>
 	</FormField>
 {/if}
 

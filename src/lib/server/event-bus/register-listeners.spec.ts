@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -47,12 +47,28 @@ vi.mock('$lib/server/notification/dispatcher', () => ({
 
 const mockListStaffUsers = vi.fn().mockResolvedValue([]);
 vi.mock('$lib/server/authorization', () => ({
-	listStaffUsers: (...args: unknown[]) => mockListStaffUsers(...args)
+	listUsersWithCapability: (...args: unknown[]) => mockListStaffUsers(...args)
 }));
 
+const mockPromoteNextWaitlisted = vi.fn();
 vi.mock('$lib/server/reservation/waitlist-service', () => ({
-	promoteNextWaitlisted: vi.fn()
+	promoteNextWaitlisted: (...args: unknown[]) => mockPromoteNextWaitlisted(...args)
 }));
+
+// The waitlist listener reads the cancelled reservation's time range back out of
+// the database. One row, whatever it is asked for.
+const cancelledRow = {
+	startsAt: new Date('2026-05-21T17:00:00Z'),
+	endsAt: new Date('2026-05-21T18:00:00Z')
+};
+vi.mock('$lib/server/db', () => ({
+	db: {
+		select: () => ({
+			from: () => ({ where: () => ({ limit: () => Promise.resolve([cancelledRow]) }) })
+		})
+	}
+}));
+vi.mock('$lib/server/db/schema/reservation', () => ({ reservation: {} }));
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -66,8 +82,23 @@ beforeEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
+/**
+ * Pay the module graph's transform cost once, outside any test's 5s budget.
+ *
+ * Every test here imports `./register-listeners` inside itself — it has to,
+ * because `vi.resetModules()` runs between them and registration is a top-level
+ * side effect. That makes the FIRST test the one that pays for compiling the
+ * whole listener tree, and on a cold `.vite` in a wide run that alone exceeded
+ * the timeout. The failure reads as a broken listener registration; it is
+ * nothing of the sort.
+ */
+beforeAll(async () => {
+	await import('./register-listeners');
+	vi.resetModules();
+}, 60_000);
+
 describe('registerListeners', () => {
-	it('registers checkout.completed listeners for reservation, ticket, and band premium fulfillment', async () => {
+	it('registers checkout.completed listeners for reservation, ticket, band premium and music fulfillment', async () => {
 		const { registerListeners } = await import('./register-listeners');
 		registerListeners();
 
@@ -75,7 +106,11 @@ describe('registerListeners', () => {
 		await vi.dynamicImportSettled();
 
 		expect(registeredHandlers['checkout.completed']).toBeDefined();
-		expect(registeredHandlers['checkout.completed'].length).toBe(3);
+		// One per purchasable. Each handler opens with a metadata guard and returns
+		// immediately when the session is not its own, so the count is the whole
+		// contract — a listener that failed to register would simply never fulfil,
+		// silently.
+		expect(registeredHandlers['checkout.completed'].length).toBe(4);
 	});
 
 	it('invokes handleReservationCheckout with stripe session', async () => {
@@ -177,8 +212,44 @@ describe('inbox.message_received — staff fan-out', () => {
 	});
 
 	it('does not even look up the staff list for a direct message', async () => {
-		// Returning early *before* listStaffUsers, not filtering afterwards.
+		// Returning early *before* the capability lookup, not filtering afterwards.
 		await fire(message('direct'));
 		expect(mockListStaffUsers).not.toHaveBeenCalled();
+	});
+});
+
+describe('reservation.cancelled — waitlist promotion', () => {
+	// The expiry path in `waitlist-service` cancels its row and promotes the next
+	// member in the same loop, so that it can return the count. It emits
+	// `reservation.cancelled` all the same, because the row *was* cancelled and
+	// other listeners need to hear it — so this one has to recognise the
+	// cancellation it already handled and stay out of the way. Promoting again
+	// would skip past the member just notified (they now carry
+	// `waitlistNotifiedAt`) and offer the same slot to the one behind them.
+	async function fire(event: Record<string, unknown>) {
+		const { registerListeners } = await import('./register-listeners');
+		registerListeners();
+		await vi.dynamicImportSettled();
+		await registeredHandlers['reservation.cancelled'][0]({
+			name: 'reservation.cancelled',
+			data: event
+		});
+	}
+
+	const cancellation = { reservationId: 'res-1', userId: 'user-1', cancelledBy: 'member' };
+
+	it('promotes the next member when a booking is cancelled', async () => {
+		await fire(cancellation);
+
+		expect(mockPromoteNextWaitlisted).toHaveBeenCalledWith(
+			cancelledRow.startsAt,
+			cancelledRow.endsAt
+		);
+	});
+
+	it('promotes nobody when the waitlist expiry already did', async () => {
+		await fire({ ...cancellation, cancelledBy: 'system', cause: 'waitlist_expired' });
+
+		expect(mockPromoteNextWaitlisted).not.toHaveBeenCalled();
 	});
 });

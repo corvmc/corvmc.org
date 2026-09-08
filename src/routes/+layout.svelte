@@ -6,6 +6,7 @@
 	import { onMount } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
+	import RadioPlayer from '$lib/components/radio/RadioPlayer.svelte';
 
 	let { children } = $props();
 
@@ -66,4 +67,13 @@
 </svelte:head>
 <Tooltip.Provider delayDuration={300}>
 	{@render children()}
+	<!--
+		The station bar lives here and nowhere else. This is the only layout that
+		survives navigation between (public), /member, /band and /staff, so anywhere
+		further down remounts the <audio> element and cuts the song off mid-play.
+
+		It renders nothing at all until it has heard back from the server, and
+		nothing ever when the `cmcRadio` flag is off or the rotation is empty.
+	-->
+	<RadioPlayer />
 </Tooltip.Provider>

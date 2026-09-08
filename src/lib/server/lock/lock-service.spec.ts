@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { DEFAULT_TIMEZONE } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -83,10 +84,14 @@ vi.mock('./ultraloc-client', () => ({
 	removeTemporaryUser: (...args: unknown[]) => mockRemoveTemporaryUser(...args),
 	listLockUsers: (...args: unknown[]) => mockListLockUsers(...args),
 	generateLockCode: (...args: unknown[]) => mockGenerateLockCode(...args),
+	// The real one formats in the lock's local zone; UTC is enough here, and it
+	// keeps the daterange strings the matcher compares deterministic.
+	lockDateTime: (d: Date) => d.toISOString().slice(0, 16).replace('T', ' '),
 	LOCK_GRACE_MINUTES: 30
 }));
 
-const { runDailyLockJob, issueLockSelfTest, revokeLockSelfTest } = await import('./lock-service');
+const { runDailyLockJob, issueLockSelfTest, revokeLockSelfTest, syncAccessWindow } =
+	await import('./lock-service');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -280,5 +285,182 @@ describe('revokeLockSelfTest', () => {
 		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(2);
 		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(4);
 		expect(mockRemoveTemporaryUser).not.toHaveBeenCalledWith(3);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// syncAccessWindow — the door has to follow a booking that moved
+// ---------------------------------------------------------------------------
+
+describe('syncAccessWindow', () => {
+	/**
+	 * "Today" as the service computes it — the calendar day in the app's own
+	 * timezone, not in UTC.
+	 *
+	 * Those are different dates for the seven or eight hours a day when UTC has
+	 * rolled over and Los Angeles has not, and building these timestamps off the
+	 * UTC day put them outside the window the service was checking. It passed
+	 * every daytime run and failed at 00:04 UTC.
+	 *
+	 * `buildDateInTz` is mocked to `${date}T${time}:00Z`, so the boundaries the
+	 * service compares against are that day string at 00:00Z and 23:59Z — which
+	 * is what these have to be built on.
+	 */
+	function appDay(offsetDays = 0) {
+		const d = new Date(Date.now() + offsetDays * 86_400_000);
+		return d.toLocaleDateString('en-CA', { timeZone: DEFAULT_TIMEZONE });
+	}
+	function todayAt(time: string) {
+		return new Date(`${appDay()}T${time}:00Z`);
+	}
+	function tomorrowAt(time: string) {
+		return new Date(`${appDay(1)}T${time}:00Z`);
+	}
+
+	const previousStart = todayAt('18:00');
+	const previousEnd = todayAt('20:00');
+
+	// The bug this exists for: the daily cron runs in the morning and only looks
+	// at codeless rows starting today, so a booking re-timed in the afternoon has
+	// already been passed over.
+	it('provisions a code the daily cron has already gone past', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				status: 'confirmed',
+				startsAt: todayAt('19:00'),
+				endsAt: todayAt('21:00'),
+				lockCode: null,
+				memberName: 'Alice'
+			}
+		]);
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		expect(result.synced).toBe(true);
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
+			expect.objectContaining({ name: 'Alice', code: 4242 })
+		);
+		expect(updateCalls[0]).toMatchObject({ lockCode: '4242' });
+	});
+
+	it('leaves a codeless booking on another day to the cron', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				status: 'confirmed',
+				startsAt: tomorrowAt('19:00'),
+				endsAt: tomorrowAt('21:00'),
+				lockCode: null,
+				memberName: 'Alice'
+			}
+		]);
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		expect(result.synced).toBe(false);
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+	});
+
+	// The lock enforces access through its own copy of the window, so a show
+	// pushed later would stop opening the door at the old end time.
+	it('replaces the stale lock user, keeping the same code', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				status: 'confirmed',
+				startsAt: todayAt('20:00'),
+				endsAt: todayAt('23:00'),
+				lockCode: '1357',
+				memberName: 'Alice'
+			}
+		]);
+		mockListLockUsers.mockResolvedValue([
+			{
+				id: 777,
+				name: 'Alice',
+				type: 2,
+				daterange: [previousStart.toISOString().slice(0, 16).replace('T', ' '), 'x'] as [
+					string,
+					string
+				]
+			},
+			// Someone else's booking, same day. Must survive.
+			{ id: 888, name: 'Bob', type: 2, daterange: ['2999-01-01 18:00', '2999-01-01 20:30'] }
+		]);
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		expect(result.synced).toBe(true);
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(777);
+		expect(mockRemoveTemporaryUser).not.toHaveBeenCalledWith(888);
+		// Same code: staff have already been told what it is.
+		expect(mockCreateTemporaryUser).toHaveBeenCalledWith(
+			expect.objectContaining({
+				code: 1357,
+				startTime: todayAt('20:00'),
+				endTime: todayAt('23:00')
+			})
+		);
+		expect(mockGenerateLockCode).not.toHaveBeenCalled();
+	});
+
+	it('does nothing when the window did not actually move', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				status: 'confirmed',
+				startsAt: previousStart,
+				endsAt: previousEnd,
+				lockCode: '1357',
+				memberName: 'Alice'
+			}
+		]);
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		expect(result.synced).toBe(false);
+		expect(mockListLockUsers).not.toHaveBeenCalled();
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+	});
+
+	it('ignores a booking that is no longer confirmed', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				status: 'cancelled',
+				startsAt: todayAt('20:00'),
+				endsAt: todayAt('23:00'),
+				lockCode: '1357',
+				memberName: 'Alice'
+			}
+		]);
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		expect(result.synced).toBe(false);
+		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();
+	});
+
+	// A duplicate window on the lock is recoverable by the daily cleanup; a
+	// member locked out of the room is not.
+	it('re-adds access even when the stale user cannot be removed', async () => {
+		selectResults.push([
+			{
+				id: 'res-1',
+				status: 'confirmed',
+				startsAt: todayAt('20:00'),
+				endsAt: todayAt('23:00'),
+				lockCode: '1357',
+				memberName: 'Alice'
+			}
+		]);
+		mockListLockUsers.mockRejectedValue(new Error('lock offline'));
+
+		const result = await syncAccessWindow('res-1', previousStart, previousEnd);
+
+		expect(result.synced).toBe(true);
+		expect(result.errors[0]).toContain('lock offline');
+		expect(mockCreateTemporaryUser).toHaveBeenCalled();
 	});
 });

@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { format, formatDistanceToNow } from 'date-fns';
+	import { formatDistanceToNow } from 'date-fns';
+	import {
+		formatMonthDayYear,
+		formatTimeRange,
+		formatDateShortYear,
+		formatDuration
+	} from '$lib/utils/format';
 
 	let {
 		reservation,
@@ -18,22 +24,14 @@
 		member?: { name: string };
 		class?: string;
 	} = $props();
-
-	let durationHours = $derived(
-		(reservation.endsAt.getTime() - reservation.startsAt.getTime()) / (1000 * 60 * 60)
-	);
-
-	function formatHours(h: number): string {
-		const value = Number.isInteger(h) ? h : Number(h.toFixed(1));
-		return `${value} ${value === 1 ? 'hour' : 'hours'}`;
-	}
 </script>
 
 <div class={className}>
-	<p class="font-medium">{format(reservation.startsAt, 'PPP')}</p>
+	<p class="font-medium">{formatMonthDayYear(reservation.startsAt)}</p>
 	<p class="text-muted">
-		{format(reservation.startsAt, 'p')} – {format(reservation.endsAt, 'p')} · {formatHours(
-			durationHours
+		{formatTimeRange(reservation.startsAt, reservation.endsAt)} · {formatDuration(
+			reservation.startsAt,
+			reservation.endsAt
 		)}
 	</p>
 	{#if reservation.price === 0}
@@ -42,15 +40,18 @@
 		<p class="text-muted">
 			{reservation.price.toLocaleString(undefined, { style: 'currency', currency: 'USD' })} ·
 			{#if reservation.refundedAt}
-				Refunded {format(reservation.refundedAt, 'PP')}
+				Refunded {formatDateShortYear(reservation.refundedAt)}
 			{:else if reservation.paidAt}
-				Paid {format(reservation.paidAt, 'PP')}
+				Paid {formatDateShortYear(reservation.paidAt)}
 			{:else if reservation.status === 'cancelled'}
 				Payment Cancelled
 			{:else if reservation.status === 'completed' || reservation.status === 'no_show'}
 				<!-- Session is over but the balance was never settled. -->
 				<span class="font-medium text-error">Overdue</span>
 			{:else}
+				<!-- Stays date-fns: a distance between two instants has no timezone to
+				     get wrong, and there is no venue-time equivalent because there is
+				     nothing to equivalise. -->
 				Due {formatDistanceToNow(reservation.startsAt, { addSuffix: true })}
 			{/if}
 		</p>

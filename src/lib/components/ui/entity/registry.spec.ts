@@ -9,10 +9,15 @@ import {
 	ordinaryStatuses,
 	isNoteworthyStatus
 } from './registry';
-import { entityTypes, entityLabels, flagEntityTypeToEntity, type EntityType } from '$lib/config';
+import {
+	entityTypes,
+	entityLabels,
+	flagEntityTypeToEntity,
+	eventSources,
+	bookerTypes,
+	type EntityType
+} from '$lib/config';
 import { flagEntityTypes } from '$lib/server/db/schema/flag';
-import { eventSources } from '$lib/server/db/schema/event';
-import { bookerTypes } from '$lib/server/db/schema/reservation';
 import { fakeRef } from '$lib/test/fixtures';
 import { variants, badgeClass } from '../StatusBadge.svelte';
 
@@ -162,7 +167,7 @@ describe('entity registry', () => {
 
 		it('resolves a marked record to its own glyph', () => {
 			const sustaining = entityGlyph(fakeRef('member', { subtype: 'sustaining' }));
-			expect(sustaining.icon).toBe(entityKinds.member.subtypes!.sustaining.icon);
+			expect(sustaining.icon).toBe(entityKinds.member.subtypes!.sustaining!.icon);
 			expect(sustaining.label).toBe('Sustaining member');
 		});
 	});
@@ -219,7 +224,7 @@ describe('entity registry', () => {
 			const reservation = fakeRef('reservation', { subtype: 'group' });
 			expect(entityIcon(reservation).icon).toBe(entityKinds.reservation.icon);
 			// ...even though the qualifier for the same ref is the band glyph.
-			expect(entityGlyph(reservation).icon).toBe(entityKinds.reservation.subtypes!.group.icon);
+			expect(entityGlyph(reservation).icon).toBe(entityKinds.reservation.subtypes!.group!.icon);
 		});
 
 		it('always names the type, whatever the subtype', () => {

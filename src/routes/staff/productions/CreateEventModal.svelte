@@ -11,9 +11,19 @@
 	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { checkConflicts, createEvent, previewRecurringEvents } from '$lib/remote/events.remote';
+	import { getVenueOptions } from '$lib/remote/venues.remote';
 	import { responseErrorMessage } from '$lib/api';
 
 	const { fields } = createEvent;
+
+	/**
+	 * Loaded when the modal opens, not with the page.
+	 *
+	 * The page has its own load-bearing query and this is a picker nobody sees
+	 * until they ask for it, so it belongs behind its own boundary here — which
+	 * is what `no-concurrent-remote-queries` asks for rather than a second query
+	 * racing the list.
+	 */
 
 	let { open = $bindable(false) }: { open: boolean } = $props();
 
@@ -25,6 +35,7 @@
 	let eventEndTime = $state('');
 	let doorsTime = $state('');
 	let tags = $state('');
+	let venueId = $state('');
 	let reserveSpace = $state(false);
 	let reservationStartTime = $state('');
 	let reservationEndTime = $state('');
@@ -32,12 +43,31 @@
 	let ticketPriceDollars = $state('');
 	let ticketQuantity = $state('');
 	let posterFile = $state<File | null>(null);
-	let hasConflicts = $state(false);
+	// The space is already taken. Not the same thing as an advisory, and the only
+	// one of the two that gates the submit.
+	let hasBlockingConflict = $state(false);
+	let overrideConflicts = $state(false);
 	let recurring = $state(false);
 	let recurringFrequency = $state('weekly');
 	let monthlyMode = $state('weekday');
 	let recurringEndsAt = $state('');
 	let recurringPreview = $state<{ dates: string[]; totalInWindow: number } | null>(null);
+
+	let venues = $state<{ id: string; name: string; isPrimary: boolean }[]>([]);
+	$effect(() => {
+		if (!open) return;
+		getVenueOptions().then((rows) => (venues = rows));
+	});
+
+	const offSiteVenues = $derived(venues.filter((v) => !v.isPrimary));
+	const isOffSite = $derived(venueId !== '' && !venues.find((v) => v.id === venueId)?.isPrimary);
+
+	// Clearing matters as much as hiding: a box ticked before the venue was
+	// picked would otherwise still be submitted, and the server would refuse a
+	// form that no longer shows the field it is complaining about.
+	$effect(() => {
+		if (isOffSite && reserveSpace) reserveSpace = false;
+	});
 
 	const isMonthly = $derived(recurringFrequency === 'monthly');
 
@@ -116,7 +146,10 @@
 	// `true` would keep the hidden overrideConflicts input in the form and make
 	// the next submission skip the server's double-booking check.
 	$effect(() => {
-		if (!reserveSpace) hasConflicts = false;
+		if (!reserveSpace) {
+			hasBlockingConflict = false;
+			overrideConflicts = false;
+		}
 	});
 
 	function handleFileSelect(e: Event) {
@@ -161,14 +194,16 @@
 		ticketPriceDollars = '';
 		ticketQuantity = '';
 		reserveSpace = false;
+		venueId = '';
 		reservationStartTime = '';
 		reservationEndTime = '';
 		lastEventStartTime = '';
 		lastEventEndTime = '';
-		// This one outlives the form unless cleared here: ConflictWarnings writes it
-		// only while mounted, so a conflict seen before Cancel would arm the
+		// These outlive the form unless cleared here: ConflictWarnings writes the
+		// flag only while mounted, so a conflict seen before Cancel would arm the
 		// override for the next event entered in this modal.
-		hasConflicts = false;
+		hasBlockingConflict = false;
+		overrideConflicts = false;
 		posterFile = null;
 		recurring = false;
 		recurringFrequency = 'weekly';
@@ -249,12 +284,34 @@
 				</Card>
 			{/if}
 
-			<Field
-				name="reserveSpace"
-				type="toggle"
-				bind:value={reserveSpace}
-				checkboxLabel="Reserve practice space"
-			/>
+			{#if offSiteVenues.length > 0}
+				<Field
+					name="venueId"
+					type="select"
+					label="Venue"
+					bind:value={venueId}
+					options={[
+						{ value: '', label: 'The practice room' },
+						...offSiteVenues.map((v) => ({ value: v.id, label: v.name }))
+					]}
+					description="Leave it on the room unless the show is somewhere else."
+				/>
+			{/if}
+
+			<!--
+				A show somewhere else has no space here to hold, so the toggle goes away
+				rather than sitting there to be refused on submit.
+			-->
+			{#if isOffSite}
+				<p class="text-muted">Off-site, so the practice space stays bookable while this runs.</p>
+			{:else}
+				<Field
+					name="reserveSpace"
+					type="toggle"
+					bind:value={reserveSpace}
+					checkboxLabel="Reserve practice space"
+				/>
+			{/if}
 
 			{#if reserveSpace}
 				<Card tone="base-200" class="space-y-4 p-4">
@@ -282,7 +339,7 @@
 						startTime={reservationStartTime}
 						endTime={reservationEndTime}
 						{checkConflicts}
-						bind:hasConflicts
+						bind:hasBlockingConflict
 					/>
 				</Card>
 			{/if}
@@ -350,16 +407,23 @@
 				</Card>
 			{/if}
 
-			{#if hasConflicts}
-				<input {...fields.overrideConflicts.as('hidden', true)} />
+			<!-- A deliberate second action, not a relabelled first one. The submit
+			     used to become "Create with Override" and go yellow, which put
+			     double-booking the space one press away and made an advisory about
+			     opening hours look identical to it. -->
+			{#if hasBlockingConflict}
+				<label class="label cursor-pointer justify-start gap-3">
+					<input type="checkbox" bind:checked={overrideConflicts} class="checkbox checkbox-sm" />
+					<span class="label-text">Book it anyway — I know this double-books the space</span>
+				</label>
+				{#if overrideConflicts}
+					<input {...fields.overrideConflicts.as('hidden', true)} />
+				{/if}
 			{/if}
 
 			<div class="modal-action">
 				<Button type="button" variant="ghost" onclick={() => (open = false)}>Cancel</Button>
-				<SubmitButton
-					label={hasConflicts ? 'Create with Override' : 'Create Event'}
-					class={hasConflicts ? 'btn-warning' : 'btn-primary'}
-				/>
+				<SubmitButton label="Create Event" disabled={hasBlockingConflict && !overrideConflicts} />
 			</div>
 		</Form>
 

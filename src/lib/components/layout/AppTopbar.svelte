@@ -6,6 +6,7 @@
 	import AccountDropdown from './AccountDropdown.svelte';
 	import logo from '$lib/assets/cmc-compact-logo.svg';
 	import ButtonGroup from '../ui/ButtonGroup.svelte';
+	import type { AppChrome } from './chrome';
 
 	export interface PanelTab {
 		key: string;
@@ -17,11 +18,13 @@
 	let {
 		drawerId,
 		panels,
-		activePanel
+		activePanel,
+		chrome
 	}: {
 		drawerId: string;
 		panels: PanelTab[];
 		activePanel: string;
+		chrome: AppChrome;
 	} = $props();
 
 	const primaryPanels = $derived(panels.filter((p) => p.type !== 'band'));
@@ -106,7 +109,10 @@
 
 	<!-- Right: notifications + account -->
 	<div class="flex flex-none items-center gap-1">
-		<NotificationBell />
-		<AccountDropdown />
+		<NotificationBell
+			notifications={chrome.notifications.items}
+			unreadCount={chrome.notifications.unreadCount}
+		/>
+		<AccountDropdown me={chrome.me} />
 	</div>
 </nav>

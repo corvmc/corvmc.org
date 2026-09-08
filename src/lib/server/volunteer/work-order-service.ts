@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { workOrder, volunteerSignup, volunteerRole } from '$lib/server/db/schema/volunteer';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, count, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/errors';
@@ -310,11 +310,9 @@ export interface ShiftWithCounts extends WorkOrder {
 	/**
 	 * How many of those places are actually booked.
 	 *
-	 * Separate from `claimed` because the difference is the whole of
-	 * docs/reports/volunteer-workflow-findings.md#a3: only a confirmed signup gets the
-	 * day-before reminder, auto-completes, and produces an hour log. A shift showing 3/3
-	 * where none are confirmed is not staffed, and a list that prints one number cannot
-	 * say so.
+	 * Separate from `claimed` because only a confirmed signup gets the day-before
+	 * reminder, auto-completes, and produces an hour log. A shift showing 3/3
+	 * where none are confirmed is not staffed.
 	 */
 	confirmed: number;
 	/**
@@ -399,7 +397,7 @@ function shiftRowsQuery() {
 			shift: workOrder,
 			roleName: volunteerRole.name,
 			roleGroup: volunteerRole.group,
-			eventTitle: event.title,
+			eventTitle: eventListing.title,
 			claimed: sql<number>`(
 				select count(*) from "volunteer_signup" vs
 				where vs."shift_id" = ${workOrder.id}
@@ -427,7 +425,7 @@ function shiftRowsQuery() {
 		})
 		.from(workOrder)
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-		.leftJoin(event, eq(event.id, workOrder.eventId));
+		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId));
 }
 
 /**
@@ -512,14 +510,10 @@ export async function scheduleWorkOrder(
 /**
  * The work is finished, which is not the same as anybody having turned up.
  *
- * `completeFinishedShifts` promotes a signup once the clock runs out; that says
- * the volunteer worked and earns their hours. A session can end with the amp
- * still broken, so closure lives on the work row. And because that cron keys on
- * `ends_at`, it can never reach an unscheduled row — so resolving has to
- * complete the signups itself or they sit at `confirmed` forever.
- *
- * Deliberately does not touch the asset or its flags: those are the inventory
- * domain's, and the remote orchestrates the pair.
+ * `completeFinishedShifts` promotes a signup once the clock runs out; a session
+ * can end with the amp still broken, so closure lives on the work row. That cron
+ * keys on `ends_at` and can never reach an unscheduled row, so resolving has to
+ * complete the signups itself. Does not touch the asset or its flags.
  */
 export async function resolveWorkOrder(
 	id: string,
@@ -553,6 +547,17 @@ export async function resolveWorkOrder(
 		.where(eq(workOrder.id, id))
 		.returning();
 
+	// Staff closing an orientation by hand is the other way one gets finished.
+	// The cron path emits `volunteer.shift_completed` per signup and a listener
+	// picks it up there; this path emits nothing, because the shift's clock may
+	// never have run out. `completeOrientation` is `where completed_at is null`,
+	// so the two racing is a no-op rather than a rewrite of who ran it.
+	const { completeOrientation, orientationOwnerOf } = await import('./orientation-service');
+	const member = await orientationOwnerOf(id);
+	if (member) {
+		await completeOrientation(member.userId, { completedByUserId: opts.resolvedByUserId });
+	}
+
 	return row;
 }
 
@@ -562,10 +567,29 @@ export async function resolveWorkOrder(
  * Oldest first, like every queue in this app — the thing that has been sitting
  * a fortnight is the one that has gone wrong.
  */
-export async function listWorkOrders(): Promise<ShiftWithCounts[]> {
+export async function listWorkOrders(
+	filters: {
+		volunteerRoleId?: string;
+		eventId?: string;
+		projectId?: string;
+	} = {}
+): Promise<ShiftWithCounts[]> {
 	const rows = await shiftRowsQuery()
 		.where(
-			and(isNull(workOrder.startsAt), isNull(workOrder.resolvedAt), isNull(workOrder.cancelledAt))
+			and(
+				isNull(workOrder.startsAt),
+				isNull(workOrder.resolvedAt),
+				isNull(workOrder.cancelledAt),
+				// The same optional anchors `listShifts` takes, for the same reason:
+				// the advance half of a duty list lands here carrying the event it is
+				// for, and a show that cannot be asked what it is waiting on shows
+				// nothing at all.
+				filters.volunteerRoleId
+					? eq(workOrder.volunteerRoleId, filters.volunteerRoleId)
+					: undefined,
+				filters.eventId ? eq(workOrder.eventId, filters.eventId) : undefined,
+				filters.projectId ? eq(workOrder.projectId, filters.projectId) : undefined
+			)
 		)
 		.orderBy(asc(workOrder.createdAt));
 
@@ -607,13 +631,10 @@ export async function listShifts(
 /**
  * One shift, with the same trimmings as a list row.
  *
- * Separate from `getShiftById`, which returns the bare table row: the signup
- * service branches on that shape, and widening it there would push the role and
- * event joins onto every claim, confirm and no-show. This is the read for a
- * page that is *showing* a shift to somebody.
- *
- * Cancelled shifts are included. The detail page is exactly where you go to
- * find out what was called off.
+ * Separate from `getShiftById`, which returns the bare table row that the signup
+ * service branches on; widening it there would push the role and event joins
+ * onto every claim, confirm and no-show. Cancelled shifts are included — the
+ * detail page is where you go to find out what was called off.
  */
 export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null> {
 	const rows = await shiftRowsQuery().where(eq(workOrder.id, id)).limit(1);
@@ -623,11 +644,9 @@ export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null
 /**
  * Who called a shift off, by name.
  *
- * Its own lookup rather than a join on `shiftRowsQuery`, because only one page
- * asks and only when the shift is actually cancelled — which is a handful of
- * rows in the table. Putting it on the shared row query would join `user` a
- * second time on every schedule row to answer a question almost none of them
- * have.
+ * Its own lookup rather than a join on `shiftRowsQuery`: only one page asks, and
+ * only when the shift is actually cancelled. On the shared row query it would
+ * join `user` a second time on every schedule row.
  */
 export async function getShiftCancelledByName(shiftId: string): Promise<string | null> {
 	const [row] = await db
@@ -703,7 +722,7 @@ export async function listOpenShiftsForMember(
 			shift: workOrder,
 			roleName: volunteerRole.name,
 			roleGroup: volunteerRole.group,
-			eventTitle: event.title,
+			eventTitle: eventListing.title,
 			claimed: sql<number>`(
 				select count(*) from "volunteer_signup" vs
 				where vs."shift_id" = ${workOrder.id}
@@ -722,7 +741,7 @@ export async function listOpenShiftsForMember(
 		})
 		.from(workOrder)
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-		.leftJoin(event, eq(event.id, workOrder.eventId))
+		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 		.where(and(isNull(workOrder.cancelledAt), gte(workOrder.startsAt, now)))
 		.orderBy(asc(rankSql), asc(workOrder.startsAt))
 		.limit(opts.limit ?? 50);

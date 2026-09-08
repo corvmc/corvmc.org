@@ -18,7 +18,8 @@ member roster, shows, contact form, streaming/social links).
 Premium tier + Stripe billing (`band.tier`, $15/mo, yearly = 10 months), block
 page editor (14 block types, 7 themes, custom CSS sanitizer), EPK editor +
 printable EPK page, `/band-site/[slug]` renderer, subdomain reroute hook, R2
-media upload — all behind the `bandPremium` feature flag (off by default).
+media upload — all behind the `bandPremium` feature flag (off by default). **The flag was
+removed when the tier launched;** every surface below is gated on `band_site.tier` alone now.
 
 ## What this change adds/fixes
 
@@ -70,8 +71,7 @@ media upload — all behind the `bandPremium` feature flag (off by default).
 2. Deploy (zone routes ship with `wrangler deploy`).
 3. Verify `media.corvmc.org` still serves R2 objects (R2 custom-domain routes
    take precedence over Worker routes, but confirm).
-4. Enable the `bandPremium` feature flag (site config).
-5. Smoke-test a premium band's subdomain: images, nav, EPK, contact form,
+4. Smoke-test a premium band's subdomain: images, nav, EPK, contact form,
    robots.txt, sitemap.xml.
 
 ## Deferred / future work

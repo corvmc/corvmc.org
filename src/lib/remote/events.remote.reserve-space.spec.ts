@@ -38,7 +38,7 @@ vi.mock('$lib/server/feature-flags', () => ({
 	requireFeature: vi.fn(async () => undefined)
 }));
 
-// requireStaff() runs a real role query. It now reads role NAMES and keeps
+// The capability guard runs a real role query. It reads role NAMES and keeps
 // only the ones that name a position, so the row has to carry one — a bare
 // row was enough when the guard only counted them.
 function chainable() {

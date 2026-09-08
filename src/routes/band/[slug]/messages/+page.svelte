@@ -1,0 +1,15 @@
+<script lang="ts">
+	/**
+	 * The desktop right pane with nothing open. On a phone this route renders only
+	 * the list — `InboxShell` hides this pane below `lg` — so it is never the whole
+	 * screen, and does not need to be.
+	 */
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+</script>
+
+<div class="flex h-full items-center justify-center">
+	<EmptyState
+		title="No enquiry selected"
+		description="Pick an enquiry on the left to read it and reply."
+	/>
+</div>

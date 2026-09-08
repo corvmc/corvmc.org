@@ -1,6 +1,7 @@
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { creditTransaction } from '../../src/lib/server/db/schema/finance';
+import { notification } from '../../src/lib/server/db/schema/notification';
 import { db } from './db';
 import { scryptHash } from './hash';
 import { type SeedRole } from './types';
@@ -203,6 +204,60 @@ export async function seedSustainingPersonas(roles: SeedRole[]) {
 		creditFreeHours: 0,
 		subscription: null
 	});
+
+	// The billing notifications these personas would have accumulated. Without
+	// them /member/notifications reads empty for exactly the members whose
+	// history is the reason the page exists — and the membership emails would
+	// be reviewable only by triggering real Stripe webhooks.
+	await db.insert(notification).values([
+		{
+			userId: 'seed-sus-active',
+			type: 'membership_receipt',
+			title: 'Thanks for becoming a sustaining member',
+			body: '$25.00 per month',
+			href: '/member/membership',
+			readAt: new Date(now - 200 * day),
+			createdAt: new Date(now - 214 * day)
+		},
+		{
+			userId: 'seed-sus-active',
+			type: 'membership_renewal_receipt',
+			title: 'Contribution received — $25.00',
+			body: 'Your monthly contribution renewed',
+			href: '/member/membership',
+			readAt: null,
+			createdAt: new Date(now - 19 * day)
+		},
+		{
+			userId: 'seed-sus-cancelling',
+			type: 'membership_cancellation_scheduled',
+			title: 'Your membership is set to end',
+			body: 'Benefits run through the end of the period',
+			href: '/member/membership',
+			readAt: null,
+			createdAt: new Date(now - 4 * day)
+		},
+		{
+			// The lapse this persona is the win-back view of: a decline, then the
+			// end. Both, in order, so the sequence is visible.
+			userId: 'seed-sus-lapsed',
+			type: 'membership_payment_failed',
+			title: 'Your contribution payment did not go through',
+			body: '$15.00 could not be charged',
+			href: '/member/membership',
+			readAt: new Date(now - 57 * day),
+			createdAt: new Date(now - 58 * day)
+		},
+		{
+			userId: 'seed-sus-lapsed',
+			type: 'membership_ended',
+			title: 'Your sustaining membership has ended',
+			body: 'Your member credits have reset',
+			href: '/member/membership',
+			readAt: null,
+			createdAt: new Date(now - LAPSED.endedDaysAgo * day)
+		}
+	]);
 
 	return { users: SUSTAINING_PERSONAS.length + 1 };
 }

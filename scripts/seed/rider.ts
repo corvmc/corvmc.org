@@ -2,7 +2,7 @@ import { rider, riderElement, riderInput } from '../../src/lib/server/db/schema/
 import { group, groupMember } from '../../src/lib/server/db/schema/group';
 import { bandSite } from '../../src/lib/server/db/schema/band-site';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
-import { event, eventBand } from '../../src/lib/server/db/schema/event';
+import { eventListing, eventBand } from '../../src/lib/server/db/schema/event';
 import { directoryEntry } from '../../src/lib/server/db/schema/directory';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
@@ -376,7 +376,7 @@ export async function seedRiders(roles: SeedRole[]) {
 	const [bigHead] = await db
 		.insert(rider)
 		.values({
-			groupId: oversized.groupId ?? oversized.id,
+			groupId: oversized.id,
 			monitorFormat: 'iems',
 			notes: 'We can drop the tom mics and the third vocal if the desk is tight.'
 		})
@@ -445,11 +445,11 @@ export async function seedRiders(roles: SeedRole[]) {
 	 * nobody notices is wrong.
 	 */
 	const [bill] = await db
-		.select({ id: event.id })
-		.from(event)
-		.innerJoin(eventBand, eq(eventBand.eventId, event.id))
-		.where(eq(event.source, 'cmc'))
-		.groupBy(event.id)
+		.select({ id: eventListing.id })
+		.from(eventListing)
+		.innerJoin(eventBand, eq(eventBand.eventId, eventListing.id))
+		.where(eq(eventListing.source, 'cmc'))
+		.groupBy(eventListing.id)
 		.orderBy(desc(sql`count(${eventBand.id})`))
 		.limit(1);
 

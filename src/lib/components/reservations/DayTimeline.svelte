@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { BookerType } from '$lib/config';
 	import type { ResolvedPathname } from '$app/types';
 	import BookerTypeIcon from './BookerTypeIcon.svelte';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
@@ -7,7 +8,7 @@
 		id: string;
 		startsAt: Date;
 		endsAt: Date;
-		bookerType: string;
+		bookerType: BookerType;
 		label?: string;
 		href?: ResolvedPathname;
 	};

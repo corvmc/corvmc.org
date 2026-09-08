@@ -166,10 +166,50 @@ export async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				lastMessageAt: new Date(now.getTime() - 9 * day),
 				createdAt: new Date(now.getTime() - 9 * day),
 				updatedAt: new Date(now.getTime() - 9 * day)
+			},
+			{
+				// Instagram. The contact is identified by an opaque IGSID, with the
+				// display name filled in by the profile lookup on first contact —
+				// which is why contactEmail and contactPhone are both null here and
+				// the channel filter is the only way to tell these two apart.
+				id: randomUUID(),
+				channel: 'instagram' as const,
+				status: 'open' as const,
+				preview: '[Replied to your story] is the open mic still on for thursday?',
+				contactName: 'Nia Okafor',
+				contactExternalId: '17841400000000001',
+				messageCount: 3,
+				lastMessageAt: new Date(now.getTime() - 3 * hour),
+				// Answered from the Instagram app rather than from here — the echo
+				// below is what taught the thread about it.
+				lastOutboundAt: new Date(now.getTime() - 4 * hour),
+				createdAt: new Date(now.getTime() - 6 * hour),
+				updatedAt: new Date(now.getTime() - 3 * hour)
+			},
+			{
+				// Messenger, and old enough that Meta's 7-day window has closed: the
+				// composer blocks the Reply tab and falls back to a note. The one
+				// state on this channel a staffer cannot reach by waiting.
+				id: randomUUID(),
+				channel: 'messenger' as const,
+				status: 'open' as const,
+				preview: 'Do you rent the space out for private events?',
+				contactName: 'Marcus Webb',
+				contactExternalId: '61550000000000002',
+				messageCount: 1,
+				lastMessageAt: new Date(now.getTime() - 9 * day),
+				createdAt: new Date(now.getTime() - 9 * day),
+				updatedAt: new Date(now.getTime() - 9 * day)
 			}
 		],
 		4
 	);
+
+	// Named rather than indexed. The array above has grown past the point where
+	// `threads[7]` is readable, and an off-by-one there attaches messages to
+	// someone else's conversation without failing anything.
+	const instagramThread = threads.find((t) => t.channel === 'instagram')!;
+	const messengerThread = threads.find((t) => t.channel === 'messenger')!;
 
 	// Read cursors. The open thread is left unread so the member portal opens
 	// with a badge on the Messages nav item; the resolved one is caught up, which
@@ -292,6 +332,60 @@ export async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				createdAt: new Date(now.getTime() - 3 * day)
 			},
 
+			// Thread 8: Instagram, including a story reply and a reply staff sent
+			// from their phone
+			{
+				id: randomUUID(),
+				threadId: instagramThread.id,
+				direction: 'inbound' as const,
+				body: '[Replied to your story] is the open mic still on for thursday?',
+				authorName: 'Nia Okafor',
+				channelMessageId: 'mid.seed.ig.1',
+				channelMetadata: {
+					timestamp: now.getTime() - 6 * hour,
+					replyTo: { story: { id: 'story-seed-1' } }
+				},
+				createdAt: new Date(now.getTime() - 6 * hour)
+			},
+			{
+				// An echo: filed as outbound with no authorUserId, because Meta does
+				// not say which admin sent it from the app.
+				id: randomUUID(),
+				threadId: instagramThread.id,
+				direction: 'outbound' as const,
+				body: 'Yep! 7pm, signup sheet opens at 6:30.',
+				authorName: 'Sent from Instagram',
+				channelMessageId: 'mid.seed.ig.2',
+				createdAt: new Date(now.getTime() - 4 * hour)
+			},
+			{
+				id: randomUUID(),
+				threadId: instagramThread.id,
+				direction: 'inbound' as const,
+				body: '[Photo]',
+				authorName: 'Nia Okafor',
+				channelMessageId: 'mid.seed.ig.3',
+				channelMetadata: {
+					timestamp: now.getTime() - 3 * hour,
+					attachments: [
+						{ type: 'image', payload: { url: 'https://example.invalid/seed-attachment.jpg' } }
+					]
+				},
+				createdAt: new Date(now.getTime() - 3 * hour)
+			},
+
+			// Thread 9: Messenger, past the 7-day reply window
+			{
+				id: randomUUID(),
+				threadId: messengerThread.id,
+				direction: 'inbound' as const,
+				body: 'Do you rent the space out for private events?',
+				authorName: 'Marcus Webb',
+				channelMessageId: 'mid.seed.fb.1',
+				channelMetadata: { timestamp: now.getTime() - 9 * day },
+				createdAt: new Date(now.getTime() - 9 * day)
+			},
+
 			// Thread 5: SMS about hours
 			{
 				id: randomUUID(),
@@ -411,12 +505,20 @@ export async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 	// Channels default to disabled, so without these rows the seeded SMS thread
 	// opens with a "channel is disabled" banner and a composer that refuses to
 	// send — a dead end on a fresh local database.
+	//
+	// Instagram and Messenger are the deliberate exception: they stay off, as
+	// they are in production until Meta's app review clears. Their threads still
+	// render, and the composer shows the "channel is disabled" banner — which is
+	// the honest local state. Enabling them here would instead give a composer
+	// that accepts a reply and then throws on a missing META_PAGE_ACCESS_TOKEN.
 	await batchInsert(
 		inboxChannelConfig,
 		[
 			{ id: randomUUID(), channel: 'web' as const, enabled: true, config: {} },
 			{ id: randomUUID(), channel: 'email' as const, enabled: true, config: {} },
-			{ id: randomUUID(), channel: 'sms' as const, enabled: true, config: {} }
+			{ id: randomUUID(), channel: 'sms' as const, enabled: true, config: {} },
+			{ id: randomUUID(), channel: 'instagram' as const, enabled: false, config: {} },
+			{ id: randomUUID(), channel: 'messenger' as const, enabled: false, config: {} }
 		],
 		3
 	);

@@ -38,6 +38,10 @@ let selectResult: unknown[] = [];
 let selectResultQueue: unknown[][] = [];
 let updateRowCount = 1;
 
+// Every chain method a select builds, in order, so a spec can assert on the
+// query that was constructed rather than on what the stub returned.
+let selectChainCalls: { method: string; args: unknown[] }[] = [];
+
 function chainable(result?: unknown[]) {
 	const proxy: PromiseLike<unknown[]> = new Proxy(() => proxy, {
 		get(_, prop) {
@@ -49,7 +53,10 @@ function chainable(result?: unknown[]) {
 				};
 			}
 			if (prop === 'meta') return { changes: updateRowCount };
-			return () => proxy;
+			return (...args: unknown[]) => {
+				selectChainCalls.push({ method: String(prop), args });
+				return proxy;
+			};
 		}
 	}) as unknown as PromiseLike<unknown[]>;
 	return proxy;
@@ -116,7 +123,16 @@ const { ReservationConflictError } = vi.hoisted(() => ({
 vi.mock('$lib/server/reservation/reservation-service', () => ({
 	staffCreate: vi.fn().mockResolvedValue({ id: 'res-1' }),
 	cancel: vi.fn().mockResolvedValue(undefined),
+	adjustWindow: vi.fn().mockResolvedValue({
+		previousStartsAt: new Date('2025-07-15T02:00:00Z'),
+		previousEndsAt: new Date('2025-07-15T05:00:00Z')
+	}),
 	ReservationConflictError
+}));
+
+const mockSyncAccessWindow = vi.fn().mockResolvedValue(undefined);
+vi.mock('$lib/server/lock/lock-service', () => ({
+	syncAccessWindow: (...args: unknown[]) => mockSyncAccessWindow(...args)
 }));
 
 vi.mock('$lib/server/reservation/conflict-service', () => ({
@@ -147,11 +163,17 @@ vi.mock('$lib/server/ticket/ticket-service', () => ({
 	getTicketsSold: (...args: unknown[]) => mockTicketsSold(...args)
 }));
 
+const mockCancelProductions = vi.fn().mockResolvedValue(0);
+vi.mock('$lib/server/production/production-service', () => ({
+	cancelProductionsForEvent: (...args: unknown[]) => mockCancelProductions(...args)
+}));
+
 import {
 	create,
 	publish,
 	cancel,
 	update,
+	listAll,
 	checkRebookNeeded,
 	unpublishWithNotice,
 	listPublicUpcomingEvents,
@@ -163,7 +185,8 @@ import {
 } from './event-service';
 import {
 	staffCreate,
-	cancel as cancelReservation
+	cancel as cancelReservation,
+	adjustWindow
 } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { uploadFile, deleteObject, copyObject } from '$lib/server/storage';
@@ -175,6 +198,7 @@ describe('EventService', () => {
 		vi.clearAllMocks();
 		selectResult = [];
 		selectResultQueue = [];
+		selectChainCalls = [];
 		updateRowCount = 1;
 		lastInsertedValues = null;
 		lastUpdateSet = null;
@@ -222,7 +246,7 @@ describe('EventService', () => {
 			// then the event is inserted already linked to it.
 			expect(staffCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
-					bookerType: 'event',
+					bookerType: 'event_listing',
 					bookerId: lastInsertedValues!.id,
 					status: 'confirmed'
 				})
@@ -428,6 +452,16 @@ describe('EventService', () => {
 			});
 		});
 
+		// Without this the productions index would show a `confirmed` production
+		// against a cancelled show — the status column lying on the day it shipped.
+		it('pulls the production back with the listing', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published' }];
+
+			await cancel('evt-1', 'staff-1');
+
+			expect(mockCancelProductions).toHaveBeenCalledWith('evt-1');
+		});
+
 		it('releases the poster slot without deleting the object', async () => {
 			// A recurring series' occurrences share one poster object, so cancelling
 			// one must not take the others' image with it. See media-spec.md.
@@ -435,7 +469,7 @@ describe('EventService', () => {
 
 			await cancel('evt-1', 'staff-1');
 
-			expect(detachSlot).toHaveBeenCalledWith('event', 'evt-1', 'poster');
+			expect(detachSlot).toHaveBeenCalledWith('event_listing', 'evt-1', 'poster');
 			expect(deleteObject).not.toHaveBeenCalled();
 		});
 
@@ -595,7 +629,12 @@ describe('EventService', () => {
 	// -----------------------------------------------------------------------
 
 	describe('update with rebook', () => {
-		it('cancels old reservation and creates new one', async () => {
+		// Rebooking used to cancel the hold and create a replacement. The
+		// replacement carried no `lock_code`, and the only thing that mints one is
+		// a cron that has already run by the afternoon — so re-timing a show on the
+		// day it happens left nobody with a door code. Moving the window on the row
+		// that already has the code is the whole fix.
+		it('moves the existing reservation window instead of replacing the row', async () => {
 			// getById for the update call
 			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
 
@@ -610,26 +649,67 @@ describe('EventService', () => {
 				}
 			});
 
-			expect(cancelReservation).toHaveBeenCalledWith(
+			expect(adjustWindow).toHaveBeenCalledWith(
 				'res-1',
-				'staff-1',
-				'Event times changed — rebooking',
-				{ staffOverride: true }
+				new Date('2025-07-15T00:00:00Z'),
+				new Date('2025-07-15T07:00:00Z'),
+				{ overrideConflicts: false }
 			);
-			expect(staffCreate).toHaveBeenCalledWith(
-				expect.objectContaining({
-					bookerType: 'event',
-					bookerId: 'evt-1',
-					status: 'confirmed' // event-booked space is staff-held, never member-confirmed
+			expect(cancelReservation).not.toHaveBeenCalled();
+			expect(staffCreate).not.toHaveBeenCalled();
+			// Same row, so the event keeps pointing where it pointed.
+			expect(lastUpdateSet?.reservationId).toBeUndefined();
+		});
+
+		// The regression that motivated adjustWindow: same day, code already
+		// provisioned. The lock's temporary user still pins the OLD window, so the
+		// door has to be re-synced — with the same code, because staff have already
+		// been told what it is.
+		it('re-syncs lock access when a show is re-timed on the day it runs', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+
+			await update('evt-1', {
+				rebook: {
+					userId: 'staff-1',
+					reservationStartsAt: new Date('2025-07-15T01:00:00Z'),
+					reservationEndsAt: new Date('2025-07-15T08:00:00Z'),
+					overrideConflicts: false
+				}
+			});
+
+			expect(mockSyncAccessWindow).toHaveBeenCalledWith(
+				'res-1',
+				new Date('2025-07-15T02:00:00Z'),
+				new Date('2025-07-15T05:00:00Z')
+			);
+		});
+
+		// A lock outage must not fail the re-time. The room booking is the
+		// authoritative record; the door code is a convenience derived from it.
+		it('still re-times the event when the lock is unreachable', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+			mockSyncAccessWindow.mockRejectedValueOnce(new Error('lock offline'));
+
+			await expect(
+				update('evt-1', {
+					title: 'New Title',
+					rebook: {
+						userId: 'staff-1',
+						reservationStartsAt: new Date('2025-07-15T01:00:00Z'),
+						reservationEndsAt: new Date('2025-07-15T08:00:00Z'),
+						overrideConflicts: false
+					}
 				})
-			);
+			).resolves.toBeDefined();
+
+			expect(lastUpdateSet?.title).toBe('New Title');
 		});
 
 		// A draft event's space is held the same way a published one's is. Booking
 		// it as `scheduled` made it look like an uncommitted member booking, and
 		// publish() never confirms it, so the unconfirmed sweep released the room.
 		it('creates a confirmed reservation for draft events too', async () => {
-			selectResult = [{ ...mockEventRow, status: 'draft', reservationId: 'res-1' }];
+			selectResult = [{ ...mockEventRow, status: 'draft', reservationId: null }];
 
 			await update('evt-1', {
 				rebook: {
@@ -643,8 +723,28 @@ describe('EventService', () => {
 			expect(staffCreate).toHaveBeenCalledWith(expect.objectContaining({ status: 'confirmed' }));
 		});
 
+		// The conflict check for an existing hold lives in adjustWindow, which
+		// excludes the reservation from its own comparison. This asserts the
+		// rejection reaches the caller rather than being swallowed here.
 		it('throws on conflict when override is false', async () => {
 			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
+			vi.mocked(adjustWindow).mockRejectedValueOnce(new ReservationConflictError());
+
+			await expect(
+				update('evt-1', {
+					rebook: {
+						userId: 'staff-1',
+						reservationStartsAt: new Date('2025-07-15T00:00:00Z'),
+						reservationEndsAt: new Date('2025-07-15T07:00:00Z'),
+						overrideConflicts: false
+					}
+				})
+			).rejects.toThrow(ReservationConflictError);
+		});
+
+		// The create branch has no reservation to defer to, so it checks for itself.
+		it('throws on conflict when booking a first hold', async () => {
+			selectResult = [{ ...mockEventRow, status: 'published', reservationId: null }];
 			vi.mocked(hasConflict).mockResolvedValueOnce(true);
 
 			await expect(
@@ -657,6 +757,8 @@ describe('EventService', () => {
 					}
 				})
 			).rejects.toThrow(ReservationConflictError);
+
+			expect(staffCreate).not.toHaveBeenCalled();
 		});
 
 		it('skips conflict check when override is true', async () => {
@@ -671,8 +773,12 @@ describe('EventService', () => {
 				}
 			});
 
+			// event-service does not run the check itself; adjustWindow is told not
+			// to either, so the override survives the hand-off.
 			expect(hasConflict).not.toHaveBeenCalled();
-			expect(staffCreate).toHaveBeenCalled();
+			expect(adjustWindow).toHaveBeenCalledWith('res-1', expect.any(Date), expect.any(Date), {
+				overrideConflicts: true
+			});
 		});
 
 		// This used to assert the opposite — that an event without a reservation was
@@ -696,7 +802,7 @@ describe('EventService', () => {
 			expect(cancelReservation).not.toHaveBeenCalled();
 			expect(staffCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
-					bookerType: 'event',
+					bookerType: 'event_listing',
 					bookerId: 'evt-1',
 					status: 'confirmed'
 				})
@@ -706,10 +812,11 @@ describe('EventService', () => {
 
 		// The conflict check used to run *after* the cancellation, so a rejected
 		// window released the room and left the event pointing at a cancelled
-		// reservation, with nothing re-created and no compensating write.
+		// reservation, with nothing re-created and no compensating write. Nothing
+		// is released any more, but the guarantee is still worth holding.
 		it('leaves the existing hold intact when the new window conflicts', async () => {
 			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
-			vi.mocked(hasConflict).mockResolvedValueOnce(true);
+			vi.mocked(adjustWindow).mockRejectedValueOnce(new ReservationConflictError());
 
 			await expect(
 				update('evt-1', {
@@ -724,10 +831,13 @@ describe('EventService', () => {
 
 			expect(cancelReservation).not.toHaveBeenCalled();
 			expect(staffCreate).not.toHaveBeenCalled();
+			expect(mockSyncAccessWindow).not.toHaveBeenCalled();
 		});
 
-		// An event must not collide with its own hold when it is only being re-timed.
-		it('excludes the event current reservation from the conflict check', async () => {
+		// An event must not collide with its own hold when it is only being
+		// re-timed. The exclusion is adjustWindow's job now; what this asserts is
+		// that the reservation id reaches it at all.
+		it('hands the existing reservation id to adjustWindow', async () => {
 			selectResult = [{ ...mockEventRow, status: 'published', reservationId: 'res-1' }];
 
 			await update('evt-1', {
@@ -739,13 +849,74 @@ describe('EventService', () => {
 				}
 			});
 
-			expect(hasConflict).toHaveBeenCalledWith(expect.any(Date), expect.any(Date), 'res-1');
+			expect(adjustWindow).toHaveBeenCalledWith(
+				'res-1',
+				expect.any(Date),
+				expect.any(Date),
+				expect.anything()
+			);
+			expect(hasConflict).not.toHaveBeenCalled();
 		});
 	});
 
 	// -----------------------------------------------------------------------
 	// update ticketing fields
 	// -----------------------------------------------------------------------
+
+	// -----------------------------------------------------------------------
+	// listAll — the productions index reads through this
+	// -----------------------------------------------------------------------
+
+	describe('listAll', () => {
+		function joinedTables() {
+			return selectChainCalls
+				.filter((c) => c.method === 'leftJoin')
+				.map((c) => {
+					const t = c.args[0] as { _: { name?: string } } & Record<symbol, unknown>;
+					return (t as any)[Symbol.for('drizzle:Name')] ?? t?._?.name;
+				});
+		}
+		function whereParams() {
+			const call = selectChainCalls.find((c) => c.method === 'where');
+			return new SQLiteSyncDialect().sqlToQuery(call!.args[0] as any).params;
+		}
+
+		// One query, three left joins, all 1:1 — the venue by its FK and the
+		// production by uq_production_event — so the row set does not fan out and
+		// the count query stays single-table over the same predicate.
+		it('joins the venue and the production without fanning the rows out', async () => {
+			await listAll({ source: 'cmc' });
+
+			expect(joinedTables()).toEqual(expect.arrayContaining(['venue', 'production']));
+		});
+
+		it('folds the venue and date filters into the same predicate as the count', async () => {
+			await listAll({
+				source: 'cmc',
+				venueId: 'ven-1',
+				from: new Date('2026-09-01T00:00:00Z'),
+				to: new Date('2026-09-30T23:59:00Z')
+			});
+
+			const wheres = selectChainCalls.filter((c) => c.method === 'where');
+			// dataQ and countQ both get one, and they are the same predicate.
+			expect(wheres).toHaveLength(2);
+			const render = (c: (typeof wheres)[number]) =>
+				new SQLiteSyncDialect().sqlToQuery(c.args[0] as any).params;
+			expect(render(wheres[0])).toEqual(render(wheres[1]));
+			expect(whereParams()).toContain('ven-1');
+		});
+
+		// A member's private working copy is not a staff browsing surface, and the
+		// new filters must not have displaced the exclusion that says so.
+		it('still holds back community drafts', async () => {
+			await listAll({ venueId: 'ven-1' });
+
+			const params = whereParams();
+			expect(params).toContain('community');
+			expect(params).toContain('draft');
+		});
+	});
 
 	describe('unpublishWithNotice', () => {
 		const publishedBandEvent = {
@@ -876,7 +1047,11 @@ describe('EventService', () => {
 			// whether another event still points at that object. The takedown now
 			// depends on the sweep for the old key's removal.
 			expect(replaceSlot).toHaveBeenCalledWith(
-				expect.objectContaining({ attachableType: 'event', attachableId: 'evt-1', slot: 'poster' })
+				expect.objectContaining({
+					attachableType: 'event_listing',
+					attachableId: 'evt-1',
+					slot: 'poster'
+				})
 			);
 			expect(deleteObject).not.toHaveBeenCalled();
 			expect(lastUpdateSet).toMatchObject({
@@ -1015,7 +1190,7 @@ describe('EventService', () => {
 			// This used to delete the object outright, which is what forced every
 			// recurring occurrence to carry its own copy. Detaching is what lets
 			// them share one, and the sweep reclaims it when the last one goes.
-			expect(detachSlot).toHaveBeenCalledWith('event', 'evt-1', 'poster');
+			expect(detachSlot).toHaveBeenCalledWith('event_listing', 'evt-1', 'poster');
 			expect(deleteObject).not.toHaveBeenCalled();
 		});
 
@@ -1071,9 +1246,9 @@ describe('EventService', () => {
 			// The chainable proxy erases the call shape, so assert on the SQL the
 			// filter renders to instead.
 			const { inArray } = await import('drizzle-orm');
-			const { event, publicEventStatuses } = await import('$lib/server/db/schema/event');
+			const { eventListing, publicEventStatuses } = await import('$lib/server/db/schema/event');
 			const { params } = new SQLiteSyncDialect().sqlToQuery(
-				inArray(event.status, [...publicEventStatuses])
+				inArray(eventListing.status, [...publicEventStatuses])
 			);
 			expect(params).toEqual(['published', 'cancelled']);
 		});

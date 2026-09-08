@@ -1,0 +1,1 @@
+ALTER TABLE `release_purchase` ADD `refunded_at` integer;

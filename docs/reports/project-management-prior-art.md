@@ -372,7 +372,7 @@ and nothing models them.
 so any hardcoded figure is wrong within a year and the annual refresh should be a
 settings edit. It is the same shape as `'reservation.hourlyRateCents': 1500` — one
 line in `DEFAULTS` plus a field on the settings page staff already use for the room
-rate. **But not before the site-config read path is fixed** (see `CHORES.md`):
+rate. **But not before the site-config read path is fixed** (#550):
 `getConfigsByPrefix` issues a KV `list()` and then a sequential `get()` per stored key,
 so config is not the free lookup this would otherwise imply.
 

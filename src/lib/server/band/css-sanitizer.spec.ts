@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeCss, hasBlockedPatterns } from './css-sanitizer';
+import { themeStarterCss } from '$lib/utils/theme-starter';
 
 describe('sanitizeCss', () => {
 	it('passes through valid CSS unchanged', () => {
@@ -72,11 +73,31 @@ describe('sanitizeCss', () => {
 		expect(css).not.toContain('-moz-binding');
 	});
 
-	it('strips CSS comments', () => {
-		const input = `.foo { /* hidden injection */ color: red; }`;
-		const { css } = sanitizeCss(input);
-		expect(css).not.toContain('/*');
+	// Comments used to be deleted outright. They are now detected *against* and
+	// kept, because a theme a band starts from is mostly comments explaining
+	// what to change — and stripping them made every starter theme useless after
+	// one save. The protection is unchanged: detection still runs on a
+	// comment-free copy, which is the part that mattered.
+	it('keeps comments in a clean stylesheet', () => {
+		const input = `.foo { /* change this to your colour */ color: red; }`;
+		const { css, warnings } = sanitizeCss(input);
+		expect(css).toContain('change this to your colour');
 		expect(css).toContain('color: red');
+		expect(warnings).toEqual([]);
+	});
+
+	it('still catches a keyword split by a comment', () => {
+		// The reason comments were stripped in the first place: `expr/**/ession(`
+		// slips past a literal regex. Detection runs on a comment-free copy, so
+		// this is caught — and the declaration is neutralised in the output.
+		const { css, warnings } = sanitizeCss(`.foo { width: expr/**/ession(alert(1)); }`);
+		expect(css).not.toMatch(/ession\s*\(/);
+		expect(warnings.length).toBeGreaterThan(0);
+	});
+
+	it('catches javascript: hidden behind a comment', () => {
+		const { css } = sanitizeCss(`.foo { background: java/**/script:alert(1); }`);
+		expect(css).not.toMatch(/script\s*:alert/);
 	});
 
 	it('truncates CSS exceeding 50KB', () => {
@@ -107,5 +128,62 @@ describe('hasBlockedPatterns', () => {
 
 	it('returns false for empty input', () => {
 		expect(hasBlockedPatterns('')).toBe(false);
+	});
+});
+
+describe('themeStarterCss', () => {
+	const SHEET = `
+.theme-default { --bs-bg: #fff; }
+
+/* Punk — high contrast */
+.theme-punk {
+	--bs-bg: #0a0a0a;
+	--bs-accent: #ff2d55;
+	font-family: 'Impact', sans-serif;
+}
+
+.theme-punk .band-site-hero {
+	border-bottom: 4px solid var(--bs-accent);
+}
+
+.theme-punk a {
+	color: var(--bs-accent);
+}
+`;
+
+	it('pulls out only the named theme', () => {
+		const css = themeStarterCss(SHEET, 'punk');
+		expect(css).toContain('#ff2d55');
+		expect(css).not.toContain('#fff');
+	});
+
+	it('rewrites selectors relative to the container', () => {
+		// A band's CSS is injected inside `.band-site-container { … }`, so a rule
+		// they copy must not carry `.theme-punk` — that class is on the container
+		// itself and would never match from inside it.
+		const css = themeStarterCss(SHEET, 'punk');
+		expect(css).not.toContain('.theme-punk');
+		expect(css).toContain('.band-site-hero {');
+		expect(css).toContain('a {');
+	});
+
+	it('names the variables, because nobody can guess them', () => {
+		const css = themeStarterCss(SHEET, 'punk');
+		for (const v of ['--bs-bg', '--bs-text', '--bs-accent', '--bs-surface', '--bs-muted']) {
+			expect(css).toContain(v);
+		}
+	});
+
+	it('survives sanitizing, comments and all', () => {
+		// The whole point. A starter theme is mostly comments, and this is the
+		// round trip that used to destroy them.
+		const { css, warnings } = sanitizeCss(themeStarterCss(SHEET, 'punk'));
+		expect(css).toContain('Starting point');
+		expect(css).toContain('--bs-accent');
+		expect(warnings).toEqual([]);
+	});
+
+	it('returns nothing for a theme with no rules', () => {
+		expect(themeStarterCss(SHEET, 'nonexistent')).toBe('');
 	});
 });

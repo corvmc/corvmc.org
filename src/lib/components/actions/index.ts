@@ -6,7 +6,8 @@ export { default as CancelReservationAction } from './CancelReservationAction.sv
 export { default as NoShowReservationAction } from './NoShowReservationAction.svelte';
 export { default as CashReceivedAction } from './CashReceivedAction.svelte';
 export { default as CompReservationAction } from './CompReservationAction.svelte';
-export { default as RefundReservationAction } from './RefundReservationAction.svelte';
+export { default as RefundAndCancelReservationAction } from './RefundAndCancelReservationAction.svelte';
+export { default as RefundOnlyReservationAction } from './RefundOnlyReservationAction.svelte';
 export { default as PayReservationAction } from './PayReservationAction.svelte';
 
 // Series

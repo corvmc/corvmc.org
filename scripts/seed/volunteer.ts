@@ -11,8 +11,8 @@ import {
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
 import { batchInsert, db } from './db';
-import { type SeedEvent } from './types';
-import { pick, pickN, ptDate, randomInt } from './util';
+import { type SeedEvent, type SeedUser } from './types';
+import { pick, pickN, ptDate, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
 
 // `defaultDurationMinutes` / `defaultCapacity` are what the New Shift form starts
@@ -88,6 +88,15 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		description:
 			'Advance a show in the week before it: confirm the lineup and set times, collect tech riders, confirm backline, and get the poster out.\n\nDone from home, on your own schedule — the work order says when it is due, not when to do it.',
 		displayOrder: 55,
+		defaultCapacity: 1
+	},
+	{
+		name: 'Rehearsal Orientation',
+		group: 'away-from-shows' as const,
+		description:
+			'Meet a member at the door for their first rehearsal. Show them the room, the gear, the door code, and how to report something broken.\n\nForty-five minutes, and the single highest-leverage shift we run — it is the difference between somebody booking once and somebody joining.',
+		displayOrder: 57,
+		defaultDurationMinutes: 45,
 		defaultCapacity: 1
 	},
 	{
@@ -168,7 +177,7 @@ export const VOLUNTEER_AVAILABILITY = [
  * which owns their profiles too — including the two gate states this function
  * cannot produce for a signed-in user (no profile at all, and blocked).
  */
-export async function seedVolunteerProfiles(users: any[], reviewer: any) {
+export async function seedVolunteerProfiles(users: SeedUser[], reviewer: SeedUser) {
 	console.log('Seeding volunteer profiles...');
 	if (users.length < 4) return { rows: [], active: users, blocked: 0 };
 
@@ -187,7 +196,7 @@ export async function seedVolunteerProfiles(users: any[], reviewer: any) {
 	const now = new Date();
 	const day = 86_400_000;
 
-	const rows = onboarded.map((u, i) => {
+	const rows: (typeof volunteerProfile.$inferInsert)[] = onboarded.map((u, i) => {
 		const [first = u.name, ...rest] = String(u.name).trim().split(/\s+/);
 		const isBlockedMinor = blockedMinors.includes(u);
 		const isApprovedMinor = u === approvedMinor;
@@ -232,7 +241,7 @@ export async function seedVolunteerInterests(users: any[], roles: any[]) {
 	if (liveRoles.length === 0 || users.length === 0) return [];
 
 	const rows = users
-		.filter(() => Math.random() < 0.35)
+		.filter(() => random() < 0.35)
 		.flatMap((u: any) =>
 			pickN(liveRoles, randomInt(1, 3)).map((role: any) => ({
 				id: randomUUID(),
@@ -255,7 +264,7 @@ export async function seedCertifications(users: any[], roles: any[]) {
 	const now = new Date();
 	const day = 86_400_000;
 
-	const [deskCert, foodCert] = await batchInsert(volunteerCertification, [
+	const [deskCert, foodCert, orientationCert] = await batchInsert(volunteerCertification, [
 		{
 			id: randomUUID(),
 			name: 'Sound Desk Cleared',
@@ -272,6 +281,17 @@ export async function seedCertifications(users: any[], roles: any[]) {
 			issuedBy: 'Oregon Health Authority',
 			validityMonths: 36,
 			displayOrder: 20
+		},
+		{
+			id: randomUUID(),
+			name: 'Space Orientation Trained',
+			description:
+				'Cleared to walk a new member through the space on their first booking. Shadow one, then run one with a staffer in the building.',
+			// Internal and permanent, like the desk clearance: we taught you the
+			// room, and the room does not expire.
+			issuedBy: null,
+			validityMonths: null,
+			displayOrder: 30
 		}
 	]);
 
@@ -296,6 +316,16 @@ export async function seedCertifications(users: any[], roles: any[]) {
 		await db
 			.insert(volunteerRoleCertification)
 			.values({ volunteerRoleId: deskRole.id, certificationId: foodCert.id });
+	}
+
+	// Rehearsal Orientation requires the orientation clearance. This is the gate
+	// that makes an auto-created orientation shift claimable by the people who
+	// have been shown how rather than by whoever refreshes the board first.
+	const orientationRole = roles.find((r: any) => r.name === 'Rehearsal Orientation');
+	if (orientationRole) {
+		await db
+			.insert(volunteerRoleCertification)
+			.values({ volunteerRoleId: orientationRole.id, certificationId: orientationCert.id });
 	}
 
 	const holders = pickN(users, Math.min(6, users.length));
@@ -332,7 +362,7 @@ export async function seedCertifications(users: any[], roles: any[]) {
 
 	// The certification rows travel out, not just their count: `seedVolunteerPersonas`
 	// grants against these two by id.
-	return { certs: 2, held: held.length, deskCert, foodCert };
+	return { certs: 3, held: held.length, deskCert, foodCert, orientationCert };
 }
 
 /**
@@ -365,7 +395,10 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 	const pastShows = published.filter((e) => e.startsAt < now);
 	const futureShows = published.filter((e) => e.startsAt >= now);
 
-	const shiftRows = await batchInsert(
+	// `startsAt`/`endsAt` are nullable on `work_order` — an undated duty-list job
+	// has no times — but every row built below sets both. Narrowed once here so
+	// the reads downstream do not each need a non-null assertion.
+	const shiftRows = (await batchInsert(
 		workOrder,
 		[-10, -7, -4, -2, 1, 2, 4, 6, 8, 11].map((offset, i) => {
 			// Every third shift is deliberately left unattached.
@@ -399,10 +432,10 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		// One more bound column per row than this insert used to carry, and D1 caps
 		// a statement at 100 parameters.
 		8
-	);
+	)) as (typeof workOrder.$inferSelect & { startsAt: Date; endsAt: Date })[];
 
-	const signupRows: any[] = [];
-	const feedbackRows: any[] = [];
+	const signupRows: (typeof volunteerSignup.$inferInsert)[] = [];
+	const feedbackRows: (typeof volunteerShiftFeedback.$inferInsert)[] = [];
 	// Completed signups travel out to `seedVolunteerHours`, which writes an hour
 	// log against half of them — see the note there.
 	const completions: {
@@ -417,8 +450,8 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 	// The most recent shift that has already finished. Its first claim is left
 	// unconfirmed on purpose — see the note where the status is picked.
 	const strandedShiftId = shiftRows
-		.filter((sh: any) => sh.startsAt < now)
-		.sort((a: any, b: any) => b.startsAt.getTime() - a.startsAt.getTime())[0]?.id;
+		.filter((sh) => sh.startsAt < now)
+		.sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0]?.id;
 
 	for (const [shiftIndex, shift] of shiftRows.entries()) {
 		const isPast = shift.startsAt < now;
@@ -451,7 +484,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 			const status = strandedClaim
 				? 'claimed'
 				: isPast
-					? i === 0 && Math.random() < 0.2
+					? i === 0 && random() < 0.2
 						? 'no_show'
 						: 'completed'
 					: i === 0
@@ -483,14 +516,14 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 					endsAt: shift.endsAt
 				});
 			}
-			if (status === 'completed' && Math.random() < 0.7) {
+			if (status === 'completed' && random() < 0.7) {
 				feedbackRows.push({
 					id: randomUUID(),
 					signupId,
-					rating: 3 + Math.floor(Math.random() * 3),
-					wasSetUp: Math.random() < 0.75,
+					rating: 3 + Math.floor(random() * 3),
+					wasSetUp: random() < 0.75,
 					comment:
-						Math.random() < 0.5
+						random() < 0.5
 							? pick([
 									'Smooth night, good crowd.',
 									'Could use a checklist by the door.',

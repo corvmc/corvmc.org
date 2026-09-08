@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
+		IconReceipt,
 		IconLayoutDashboard,
 		IconStar,
 		IconCalendarEvent,
@@ -9,6 +10,7 @@
 		IconTool,
 		IconPackage,
 		IconPlus,
+		IconSearch,
 		IconHelp,
 		IconMetronome,
 		IconMessages,
@@ -57,6 +59,7 @@
 		events: IconCalendarEvent,
 		'events-submit': IconPlus,
 		directory: IconAddressBook,
+		purchases: IconReceipt,
 		// Matches the staff panel's Inventory glyph, so the same thing looks the
 		// same on both sides.
 		equipment: IconTool,
@@ -115,7 +118,7 @@
 	{/if}
 {/snippet}
 
-<AppShell drawerId="member-drawer" {panels} activePanel="member">
+<AppShell drawerId="member-drawer" {panels} activePanel="member" chrome={layout.chrome}>
 	{#snippet navigation()}
 		{#each mainItems as item (item.key)}
 			{@render row(item)}
@@ -151,11 +154,44 @@
 			</Nav.Item>
 		</Nav.Group>
 
-		<!-- The "My Groups" nav group used to live here, gated on the `groups`
-		     feature flag. The flag is gone and the module is not launched, so the
-		     nav entry is simply absent: /member/groups and the club pages work by
-		     direct URL. Launching is putting this block back — see
-		     docs/plans/feature-flag-retirement.md. -->
+		<!-- A second group rather than a merge. An act is a member's own project
+		     with a panel; a club is a program with a page, and the two indexes
+		     answer different questions.
+		     Rendered whether or not you belong to one, like My Bands above:
+		     /member/groups IS the discovery surface, so hiding the heading while
+		     the list was empty left the people most likely to want it with no
+		     link to it anywhere in the panel. -->
+		<Nav.Group
+			title="My Groups"
+			collapsible
+			persistKey="my-groups"
+			persistScope="member"
+			containsActive={page.url.pathname.startsWith('/member/groups')}
+		>
+			{#snippet action()}
+				<Button href="/member/groups" variant="ghost" size="xs">All</Button>
+			{/snippet}
+			{#each layout.userGroups as group (group.slug)}
+				<Nav.Item href={`/member/groups/${group.slug}`} label={group.name}>
+					{#snippet icon()}
+						<Avatar
+							class="size-8"
+							size="avatar-sm"
+							src={group.avatarUrl ?? undefined}
+							name={group.name}
+						/>
+					{/snippet}
+				</Nav.Item>
+			{/each}
+			{#if layout.userGroups.length === 0}
+				<!-- The row that replaces the heading-over-nothing. It says what the
+				     page is for rather than repeating "All", which reads as a filter
+				     when there is nothing to filter. -->
+				<Nav.Item href={resolve('/member/groups')} label="Find a club">
+					{#snippet icon()}<IconSearch />{/snippet}
+				</Nav.Item>
+			{/if}
+		</Nav.Group>
 
 		<div class="flex grow"></div>
 
@@ -168,6 +204,7 @@
 			panel="member"
 			userId={layout.user.id}
 			isStaff={layout.isStaff}
+			capabilities={layout.capabilities}
 			bands={layout.userBands}
 		>
 			{@render children()}

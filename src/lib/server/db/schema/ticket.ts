@@ -1,7 +1,7 @@
 import { sqliteTable, text, index, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
-import { event } from './event';
+import { eventListing } from './event';
 
 export const ticketStatuses = ['pending', 'valid', 'checked_in', 'cancelled'] as const;
 export type TicketStatus = (typeof ticketStatuses)[number];
@@ -14,7 +14,7 @@ export const ticket = sqliteTable(
 			.$defaultFn(() => crypto.randomUUID()),
 		eventId: text('event_id')
 			.notNull()
-			.references(() => event.id, { onDelete: 'cascade' }),
+			.references(() => eventListing.id, { onDelete: 'cascade' }),
 		purchaseId: text('purchase_id').notNull(),
 		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
 		attendeeName: text('attendee_name').notNull(),

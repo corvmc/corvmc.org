@@ -14,6 +14,7 @@
 	import StatCard from '$lib/components/ui/StatCard.svelte';
 	import AddressCard from '$lib/components/ui/AddressCard.svelte';
 	import { canonicalAddress } from '$lib/utils/canonical-address';
+	import PressKitCard from './PressKitCard.svelte';
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
@@ -43,6 +44,12 @@
 			<AddressCard url={address} title="Your act's address">
 				Put this on a flyer or in a bio — it goes to {band.name}'s page.
 			</AddressCard>
+		{/if}
+
+		{#if isOwnerOrAdmin}
+			<svelte:boundary>
+				<PressKitCard slug={band.slug} />
+			</svelte:boundary>
 		{/if}
 
 		<!-- Act overview -->

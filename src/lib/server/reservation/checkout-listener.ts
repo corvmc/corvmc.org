@@ -2,6 +2,7 @@ import type Stripe from 'stripe';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq } from 'drizzle-orm';
+import { announceConfirmed } from './reservation-service';
 
 // ---------------------------------------------------------------------------
 // Reservation checkout listener
@@ -40,4 +41,6 @@ export async function handleReservationCheckout(session: Stripe.Checkout.Session
 			updatedAt: new Date()
 		})
 		.where(eq(reservation.id, reservationId));
+
+	await announceConfirmed(reservationId);
 }

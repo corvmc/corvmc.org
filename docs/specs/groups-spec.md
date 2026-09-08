@@ -801,6 +801,8 @@ This is why free room time is safe: only staff create clubs and committees, so o
 
 Bands are excluded deliberately. A band event is an off-site gig listing and does not reserve anything; a band rehearsal is private paid time under `bookerType: 'group'`. Neither becomes free, and a band cannot reach the free path by creating an "event" for its own rehearsal.
 
+That exclusion is enforced twice, because for a while it was enforced nowhere (#714). The five session remotes in `group-events.remote.ts` guard with `requireProgramRole`, and `requireProgramGroup` in `src/lib/server/group/group-kind.ts` rejects a band inside `createGroupEvent` and again in the recurring generator, which writes occurrences without going through it.
+
 ---
 
 ## Roles and permissions
@@ -870,7 +872,8 @@ Two pieces of this do not exist yet and are the real work: a `createGroupEvent()
 
 1. Staff enter a name, kind, and description, and pick the member who will lead it.
 2. The service creates the `group` and an owner `group_member` row for that member with `status = 'active'` — appointed, not invited, so there is nothing for them to accept.
-3. Staff set `joinPolicy` and the listing's `visibility`.
+3. Staff set `joinPolicy` and the listing's `visibility`. Both stay staff's for the group's life —
+   the leader's own editor covers name, description, photo and join instructions.
 4. The appointee gets a notification and the group appears under **My Groups** in their sidebar.
 
 The appointee never had to opt in, which is deliberate: staff are recording an arrangement that already exists offline. They can leave or hand off afterwards like any owner.
@@ -1042,8 +1045,14 @@ Not `replaceState()`, which neither updates `page.url` nor survives a client-sid
 _Mute_ writes `group_member.notifyAnnouncements`; both it and _Leave_ are `Action` components.
 The Sessions tab stays hidden until phase 9.
 
-Editing the public face — name, description, photo, visibility, join instructions — gets its own
-child route rather than a modal. A photo upload over five fields is cramped in a dialog.
+Editing the public face — name, description, photo, join instructions — gets its own child route
+rather than a modal. A photo upload over four fields is cramped in a dialog.
+
+**`visibility` and `joinPolicy` are not on it.** They decide whether the program is advertised and
+who may walk in, and the argument that makes free room time safe is that staff alone settle both —
+the same argument as [Room time](#room-time). `updateStaffGroup` is their one writer; the leader's
+form shows the policy read-only and says who to ask. `saveBandProfile`, which writes
+`directoryVisibility`, is band-only for the same reason.
 
 ### What `joinPolicy` gates on the roster tab
 
@@ -1136,18 +1145,18 @@ A non-member reaching `/member/groups/{slug}` — including someone whose applic
 
 Unchanged root, now resolving a **group** slug. Nav splits into two sections so the presentational and managerial halves stop competing for one flat list:
 
-| Section         | Route                          | Page                                          | Access       |
-| --------------- | ------------------------------ | --------------------------------------------- | ------------ |
-| —               | `/band/{slug}`                 | Dashboard                                     | all members  |
-| **Public face** | `/band/{slug}/edit`            | Directory entry — tagline, genres, links, bio | owner, admin |
-| **Public face** | `/band/{slug}/page-editor`     | Premium microsite blocks & theme              | owner, admin |
-| **Public face** | `/band/{slug}/page-editor/epk` | EPK                                           | owner, admin |
-| **Public face** | `/band/{slug}/subscription`    | Premium tier                                  | owner        |
-| **Manage**      | `/band/{slug}/members`         | Roster, invitations, roles                    | all members  |
-| **Manage**      | `/band/{slug}/announcements`   | Announcement list & composer                  | all members  |
-| **Manage**      | `/band/{slug}/events`          | Band events                                   | all members  |
-| **Manage**      | `/band/{slug}/reservations`    | Practice bookings                             | all members  |
-| **Manage**      | `/band/{slug}/settings`        | Delete band, danger zone                      | owner        |
+| Section         | Route                        | Page                                          | Access       |
+| --------------- | ---------------------------- | --------------------------------------------- | ------------ |
+| —               | `/band/{slug}`               | Dashboard                                     | all members  |
+| **Public face** | `/band/{slug}/edit`          | Directory entry — tagline, genres, links, bio | owner, admin |
+| **Public face** | `/band/{slug}/page-editor`   | Premium microsite blocks & theme              | owner, admin |
+| **Public face** | `/band/{slug}/press-kit`     | Press kit — free, not premium                 | owner, admin |
+| **Public face** | `/band/{slug}/subscription`  | Premium tier                                  | owner        |
+| **Manage**      | `/band/{slug}/members`       | Roster, invitations, roles                    | all members  |
+| **Manage**      | `/band/{slug}/announcements` | Announcement list & composer                  | all members  |
+| **Manage**      | `/band/{slug}/events`        | Band events                                   | all members  |
+| **Manage**      | `/band/{slug}/reservations`  | Practice bookings                             | all members  |
+| **Manage**      | `/band/{slug}/settings`      | Delete band, danger zone                      | owner        |
 
 ### Clubs and committees (member panel)
 
@@ -1158,7 +1167,7 @@ the member panel, and three routes replace the seven a panel would have needed:
 | ---------------------------- | -------------------------------------------------------- | ------------ |
 | `/member/groups`             | Your programs, and the ones you could join. **No bands** | member       |
 | `/member/groups/{slug}`      | The club page — tabbed                                   | group member |
-| `/member/groups/{slug}/edit` | Name, description, photo, visibility, join instructions  | owner, admin |
+| `/member/groups/{slug}/edit` | Name, description, photo, join instructions              | owner, admin |
 
 **`/member/bands` is untouched** — it keeps your bands, their invitations and the create-band modal,
 and nothing about it moves or redirects. The two indexes answer different questions and stay
@@ -1401,7 +1410,7 @@ that seam rather than translating it. Everything else passes the `slug` it alrea
 
 ## Feature flags and rollout
 
-**All four flags are retired.** `groups`, `groupEvents` and `announcements` were removed with the rest of the flag system; `groupFiles` was registered for phase 8 and retired unused when phase 8 was deferred. The module was **unlinked rather than launched**: the routes answer unconditionally and the nav entries that reached them — the member panel's "My Groups" group and the band panel's Announcements row — were removed instead. Launching is putting those two entries back. See [the ledger](../plans/feature-flag-retirement.md); Documents gets a feature branch when it is built, not a flag.
+**All four flags are retired, and the module is launched.** `groups`, `groupEvents` and `announcements` were removed with the rest of the flag system; `groupFiles` was registered for phase 8 and retired unused when phase 8 was deferred. The module was first **unlinked rather than launched** — the routes answered unconditionally while the nav entries that reached them were removed — and then relaunched in #516 by putting those entries back: the member panel's "My Groups" group and the band panel's Announcements row. A third went with them, which this spec had not named: nothing had ever linked the public `/groups` directory, so the footer gained a row and `/programs` gained a "see all" that is gated on there being a published group to land on. See [the ledger](../plans/feature-flag-retirement.md); Documents gets a feature branch when it is built, not a flag.
 
 A flag must be registered in **three** places: the `FeatureFlag` union and `ALL_FLAGS`, both in `src/lib/server/feature-flags.ts`, and a `feature.`-prefixed entry in `DEFAULTS` in `src/lib/server/site-config/site-config-service.ts`. Missing the third makes `config()` _throw_ `Unknown site config key`, not return false — but `feature-flags.spec.ts` now asserts the set both ways, so a half-registered flag fails CI rather than reaching production. Register all three and the test is silent.
 
@@ -1553,14 +1562,21 @@ flow; `config.ts` points here for what `by_application` means in the meantime.
 Flat list, so nobody has to guess whether an omission was deliberate.
 
 - **A group as a messaging recipient** — addressing a group in the inbox so a message reaches every
-  member. Wanted, and a follow-up rather than part of this spec. `inbox_participant` already carries
-  multi-party threads with a per-participant read cursor, so the table is not the problem; the design
-  question is whether addressing a group **expands to participant rows at send time** (a snapshot —
-  later joiners never see the thread, leavers stay in it) or **references the group and resolves
-  membership at read time** (live — but the read cursor lives on the participant row, so unread would
-  need rethinking). Note also that a group thread and threaded announcements are nearly the same
-  feature approached from opposite ends: one is two-way to all members, the other is one-way with
-  replies. Decide them together, or the second one built will duplicate the first.
+  member. Still not built, but **the design question below is settled**, by band chat
+  (`docs/specs/shipped/band-chat-spec.md`): a thread references the group through
+  `inbox_thread.group_id` and membership is resolved **live** at read time, because a band's booking
+  history has to follow its roster — a new admin inherits it, someone who leaves loses it. The read
+  cursor moved off the participant row into `inbox_group_read` rather than being rethought in place,
+  which is what lets a group-owned thread carry **zero** `inbox_participant` rows. That absence is
+  load-bearing: every member-side query in `direct-service.ts` and `portal-service.ts` finds its
+  threads by joining that table, so a participant row on a group thread would surface it in
+  `/member/messages`.
+
+  What remains is the _addressing_ half — a member composing to a group, rather than an outsider
+  reaching one through a form. Note also that a group thread and threaded announcements are nearly
+  the same feature approached from opposite ends: one is two-way to all members, the other is one-way
+  with replies. Decide them together, or the second one built will duplicate the first.
+
 - Threaded discussion — replies to announcements, read receipts, unread counts. See above.
 - Group email aliases — an inbound address per group fanning out to members. Distinct from the item
   above: that is internal addressing, this is an external inbound address.

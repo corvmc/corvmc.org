@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { eventRsvp, type EventRsvp } from '$lib/server/db/schema/event-rsvp';
-import { event } from '$lib/server/db/schema/event';
+import { eventListing } from '$lib/server/db/schema/event';
 import { and, desc, eq, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -91,13 +91,13 @@ export async function listRsvpsForUser(userId: string): Promise<MemberRsvp[]> {
 		.select({
 			id: eventRsvp.id,
 			eventId: eventRsvp.eventId,
-			eventTitle: event.title,
-			startsAt: event.startsAt,
-			eventStatus: event.status,
+			eventTitle: eventListing.title,
+			startsAt: eventListing.startsAt,
+			eventStatus: eventListing.status,
 			createdAt: eventRsvp.createdAt
 		})
 		.from(eventRsvp)
-		.innerJoin(event, eq(event.id, eventRsvp.eventId))
+		.innerJoin(eventListing, eq(eventListing.id, eventRsvp.eventId))
 		.where(eq(eventRsvp.userId, userId))
-		.orderBy(desc(event.startsAt));
+		.orderBy(desc(eventListing.startsAt));
 }

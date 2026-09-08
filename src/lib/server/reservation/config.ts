@@ -1,5 +1,5 @@
 import { getConfigsByPrefix } from '$lib/server/site-config/site-config-service';
-import type { BookerType } from '$lib/server/db/schema/reservation';
+import type { BookerType } from '$lib/config';
 
 // ---------------------------------------------------------------------------
 // Defaults — kept as named exports for tests and static references

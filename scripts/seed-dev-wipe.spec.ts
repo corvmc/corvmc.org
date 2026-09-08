@@ -21,7 +21,6 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
-// @ts-expect-error -- plain .mjs helper, no types
 import { deleteOrder } from './d1-table-order.mjs';
 
 const source = readFileSync(new URL('./seed/teardown.ts', import.meta.url), 'utf8');

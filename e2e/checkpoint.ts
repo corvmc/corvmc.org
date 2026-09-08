@@ -27,15 +27,15 @@
  * to recover. It is a no-op when there is no database, so it cannot fail a run
  * that had nothing to checkpoint.
  */
-import { checkpointE2eDatabase } from './reset-db';
+import { checkpointE2eDatabase, checkpointSummary } from './reset-db';
 
 // stderr, not stdout. Playwright forwards a webServer's stderr and ignores its
 // stdout, so a `console.log` here is invisible in exactly the CI logs somebody
 // reads when the suite has died on a server that never started — which is the
 // failure this step exists to prevent, and the one where knowing it ran matters.
-const checkpointed = checkpointE2eDatabase();
-console.error(
-	checkpointed
-		? 'Checkpointed the e2e database after the build.'
-		: 'No e2e database to checkpoint — nothing to do.'
-);
+//
+// The summary names any file whose WAL survived rather than reporting a flat
+// success. `PRAGMA wal_checkpoint(TRUNCATE)` answers `busy: 1` instead of throwing
+// when it cannot take the lock, so "it ran" and "it worked" are different facts,
+// and only the second one predicts a server that will come up.
+console.error(checkpointSummary(checkpointE2eDatabase()));

@@ -12,7 +12,6 @@
 	const members = $derived(data.members);
 	const events = $derived(data.events);
 	const galleryMedia = $derived(data.media.filter((m) => m.slot === 'gallery'));
-	const stagePlot = $derived(data.media.find((m) => m.slot === 'stage_plot'));
 </script>
 
 <svelte:head>
@@ -170,42 +169,6 @@
 					</div>
 				{/each}
 			</div>
-		</section>
-	{/if}
-
-	<!-- Technical Requirements -->
-	{#if epk?.backline && epk.backline.length > 0}
-		<section class="page-break mb-8">
-			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">
-				Technical Requirements
-			</h2>
-
-			{#if stagePlot?.url}
-				<img
-					src={stagePlot.url}
-					alt="Stage Plot"
-					class="mb-4 max-h-64 max-w-full rounded object-contain"
-				/>
-			{/if}
-
-			<table class="w-full text-sm">
-				<thead>
-					<tr class="border-b border-gray-200 text-left">
-						<th class="py-1 font-semibold text-gray-600">Instrument</th>
-						<th class="py-1 font-semibold text-gray-600">Details</th>
-						<th class="py-1 font-semibold text-gray-600">Provided by</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each epk.backline as item (item.instrument)}
-						<tr class="border-b border-gray-100">
-							<td class="py-1 text-gray-700">{item.instrument}</td>
-							<td class="py-1 text-gray-700">{item.details}</td>
-							<td class="py-1 text-gray-500">{item.provided ? 'Act' : 'Venue'}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
 		</section>
 	{/if}
 

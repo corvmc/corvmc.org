@@ -19,7 +19,10 @@
 	} from '$lib/components/directory/profile/CrossRefList.svelte';
 	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
 	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
-	import ContactBox from '$lib/components/directory/profile/ContactBox.svelte';
+	import PressBox from '$lib/components/directory/profile/PressBox.svelte';
+	import PressPhoto from '$lib/components/directory/profile/PressPhoto.svelte';
+	import VideoBox from '$lib/components/directory/profile/VideoBox.svelte';
+	import ContactForm from '$lib/components/directory/profile/ContactForm.svelte';
 	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
 
 	const MEMBERS_BASE = '/member/directory/members';
@@ -32,7 +35,6 @@
 	const band = $derived(data.band);
 	const shows = $derived(data.shows);
 	const canReport = $derived(data.viewer.canReport);
-	const contact = $derived(band.directoryContact ?? {});
 
 	// The band's own address, not this authenticated path — see the public
 	// profile, which shares the same one.
@@ -110,12 +112,15 @@
 				eventBase="/member/events"
 				showByline={false}
 			/>
+			<PressBox quotes={band.pressKit.pressQuotes} achievements={band.pressKit.achievements} />
+			<PressPhoto photos={band.photos} />
+			<VideoBox videos={band.pressKit.videos} />
 		{/snippet}
 		{#snippet side()}
 			<CrossRefList label="Members" items={memberRefs} note={`${band.memberCount} · roles`} />
 			<TagCloud label="Genres · Influences" tags={band.genres} />
 			<LinksBox links={band.links} />
-			<ContactBox label="Booking" {contact} />
+			<ContactForm slug={band.slug} bandName={band.name} />
 		{/snippet}
 	</ProfileGrid>
 </PageContent>

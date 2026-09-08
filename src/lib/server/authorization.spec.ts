@@ -164,10 +164,15 @@ describe('findStaffUserByEmail', () => {
 		expect(renderWhere(0)).toContain('lower(');
 	});
 
-	it('only ever matches admin and staff roles', async () => {
+	it('only ever matches a role that names a position', async () => {
+		// Derived from positionOrder rather than a hardcoded pair, so a new
+		// position is recognised as staff mail without touching this query — and
+		// a legacy `member` row never is.
+		const { positionOrder } = await import('$lib/config');
 		await findStaffUserByEmail('ada@corvmc.org');
 
-		expect(renderWhere(0)).toContain('"roles"."name" in (?, ?)');
+		const placeholders = positionOrder.map(() => '?').join(', ');
+		expect(renderWhere(0)).toContain(`"roles"."name" in (${placeholders})`);
 	});
 
 	it('skips the query entirely for a blank address', async () => {
@@ -243,11 +248,36 @@ describe('can', () => {
 		expect(await can('volunteer.manageRoles')).toBe(false);
 	});
 
-	it('grants staff everything while it is still transitional', async () => {
+	it('no longer lets staff grant a role, purge an account, or move credit', async () => {
+		// The narrowing, seen from the guard rather than the matrix. These three
+		// are the whole behavioural change of the migration: a staff holder could
+		// previously grant themselves admin, which is the defect the spec opens on.
 		asUser();
 		queryResults = [{ name: 'staff' }];
-		expect(await can('user.purge')).toBe(true);
+		expect(await can('user.setRole')).toBe(false);
+		expect(await can('user.purge')).toBe(false);
+		expect(await can('credit.adjust')).toBe(false);
+	});
+
+	it('leaves staff everything else, including settings', async () => {
+		// Narrowing is not demotion. `settings.update` in particular stays: it is
+		// the Technology Coordinator's job description, so by the spec's own rule
+		// (admin-only is the complement of every position's domain) it cannot be
+		// admin-only, whatever the spec's illustrative table said.
+		asUser();
+		queryResults = [{ name: 'staff' }];
 		expect(await can('settings.update')).toBe(true);
+		expect(await can('user.deactivate')).toBe(true);
+		expect(await can('credit.read')).toBe(true);
+		expect(await can('volunteer.reviewHours')).toBe(true);
+	});
+
+	it('still gives admin the complement', async () => {
+		asUser();
+		queryResults = [{ name: 'admin' }];
+		expect(await can('user.setRole')).toBe(true);
+		expect(await can('user.purge')).toBe(true);
+		expect(await can('credit.adjust')).toBe(true);
 	});
 });
 

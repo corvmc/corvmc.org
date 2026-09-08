@@ -224,6 +224,18 @@ export interface SendInboxReplyTemplateParams {
 	to: string;
 	/** Mustachio model: { subject, contactName, staffName, body } — `body` is plain text */
 	model: Record<string, unknown>;
+	/**
+	 * Which template signs the message. Defaults to `inbox-reply`, which signs off
+	 * as the Corvallis Music Collective. A band answering its own booking enquiry
+	 * uses `band-reply`, whose signature and footer name the act instead.
+	 */
+	templateAlias?: string;
+	/**
+	 * The display name on the From address. Defaults to `EMAIL_FROM_NAME`. A band
+	 * reply overrides it with "<Band> via CorvMC" so the booker's mail client shows
+	 * who is writing; the address itself stays ours, which is where DKIM lives.
+	 */
+	fromName?: string;
 	/** Where the recipient's response should go — a plus-addressed thread address */
 	replyTo?: string | null;
 	/** Original Message-ID for In-Reply-To header */
@@ -235,7 +247,7 @@ export interface SendInboxReplyTemplateParams {
 
 export async function sendInboxReply(params: SendInboxReplyTemplateParams): Promise<string> {
 	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
-	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
+	const fromName = params.fromName ?? env.EMAIL_FROM_NAME ?? 'CorvMC';
 	const messageStream = getTransactionalStream();
 
 	const headers: Array<{ Name: string; Value: string }> = [];
@@ -251,9 +263,9 @@ export async function sendInboxReply(params: SendInboxReplyTemplateParams): Prom
 			From: `${fromName} <${fromAddress}>`,
 			To: params.to,
 			ReplyTo: params.replyTo ?? undefined,
-			TemplateAlias: 'inbox-reply',
+			TemplateAlias: params.templateAlias ?? 'inbox-reply',
 			TemplateModel: params.model,
-			Tag: 'inbox-reply',
+			Tag: params.templateAlias ?? 'inbox-reply',
 			Metadata: params.metadata,
 			Headers: headers.length > 0 ? headers : undefined,
 			MessageStream: messageStream

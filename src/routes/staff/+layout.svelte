@@ -5,6 +5,7 @@
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import Nav from '$lib/components/layout/Nav';
 	import {
+		IconDisc,
 		IconSchool,
 		IconBulb,
 		IconUsers,
@@ -38,13 +39,16 @@
 		IconReportAnalytics,
 		IconListDetails,
 		IconCalendarWeek,
-		IconCalendarMonth
+		IconCalendarMonth,
+		IconMapPin
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
 	import {
 		activeNavKey,
 		childHrefsFor,
+		filterNavItems,
+		filterNavSections,
 		sectionHasKey,
 		staffNavSections,
 		staffNavTop,
@@ -56,6 +60,13 @@
 	let { children } = $props();
 
 	let layout = $derived(await getStaffLayout());
+
+	// Only the rows this viewer can use. `getStaffLayout` settled that they may
+	// open the panel; this settles which of it is worth showing them. Hiding a
+	// row is not a guard — the guard is on the remote function behind it — but
+	// offering a treasurer a Volunteering row is offering them a 403.
+	const navTop = $derived(filterNavItems(staffNavTop, layout.capabilities));
+	const navSections = $derived(filterNavSections(staffNavSections, layout.capabilities));
 
 	const panels = $derived(
 		// Staff is unconditional here: `getStaffLayout` has already redirected
@@ -71,6 +82,7 @@
 		inbox: IconInbox,
 		users: IconUsers,
 		bands: IconMusic,
+		music: IconDisc,
 		groups: IconUsersGroup,
 		volunteer: IconHeartHandshake,
 		'volunteer-schedule': IconCalendarWeek,
@@ -95,6 +107,7 @@
 		'contractor-jobs': IconClipboardList,
 		projects: IconFolders,
 		productions: IconCalendarEvent,
+		venues: IconMapPin,
 		calendar: IconCalendarMonth,
 		flags: IconFlag,
 		suggestions: IconBulb,
@@ -147,13 +160,13 @@
 	{/if}
 {/snippet}
 
-<AppShell drawerId="staff-drawer" {panels} activePanel="staff">
+<AppShell drawerId="staff-drawer" {panels} activePanel="staff" chrome={layout.chrome}>
 	{#snippet navigation()}
-		{#each staffNavTop as item (item.key)}
+		{#each navTop as item (item.key)}
 			{@render row(item)}
 		{/each}
 
-		{#each staffNavSections as section (section.key)}
+		{#each navSections as section (section.key)}
 			<Nav.Group
 				title={section.title}
 				collapsible
@@ -169,7 +182,13 @@
 	<ErrorToastBoundary>
 		<!-- `getStaffLayout` redirects anyone without the role, so reaching this
 		     markup is itself the proof that the viewer is staff. -->
-		<EntityViewer panel="staff" userId={layout.user.id} isStaff bands={layout.userBands}>
+		<EntityViewer
+			panel="staff"
+			userId={layout.user.id}
+			isStaff
+			capabilities={layout.capabilities}
+			bands={layout.userBands}
+		>
 			{@render children()}
 		</EntityViewer>
 	</ErrorToastBoundary>

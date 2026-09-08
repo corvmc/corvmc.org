@@ -1,7 +1,7 @@
 import { notification, notificationPreference } from '../../src/lib/server/db/schema/notification';
 import { db } from './db';
 import { type SeedUser } from './types';
-import { pickN, randomInt } from './util';
+import { pickN, random, randomInt } from './util';
 
 export async function seedNotifications(users: SeedUser[]) {
 	console.log('Seeding notifications...');
@@ -59,7 +59,7 @@ export async function seedNotifications(users: SeedUser[]) {
 		for (const n of selected) {
 			const daysAgo = randomInt(0, 14);
 			const createdAt = new Date(Date.now() - daysAgo * 86400000);
-			const isRead = Math.random() > 0.4;
+			const isRead = random() > 0.4;
 
 			const [row] = await db
 				.insert(notification)
@@ -102,8 +102,8 @@ export async function seedNotificationPreferences(users: SeedUser[]) {
 				.values({
 					userId: u.id,
 					notificationType: nt,
-					emailEnabled: Math.random() > 0.3,
-					inAppEnabled: Math.random() > 0.2
+					emailEnabled: random() > 0.3,
+					inAppEnabled: random() > 0.2
 				})
 				.returning();
 			rows.push(row);

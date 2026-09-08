@@ -23,6 +23,7 @@
 		DeleteEventAction
 	} from '$lib/components/actions';
 	import { getStaffEventPage, updateEvent, setStaffEventLineup } from '$lib/remote/events.remote';
+	import { createProduction } from '$lib/remote/productions.remote';
 	import { rejectListing, searchBandsForListing } from '$lib/remote/community-events.remote';
 	import { rowLink } from '$lib/actions/row-link';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
@@ -52,6 +53,7 @@
 	const isCommunityEvent = $derived(evt.source === 'community');
 
 	const rejectFields = rejectListing.fields;
+	const createProductionFields = createProduction.fields;
 	const { fields } = updateEvent;
 
 	function refresh() {
@@ -68,6 +70,7 @@
 	let editTags = $state('');
 	let editKind = $state('show');
 	let editLocation = $state('');
+	let editVenueId = $state('');
 	let editExternalTicketUrl = $state('');
 	let editDate = $state('');
 	let editStartTime = $state('');
@@ -81,6 +84,7 @@
 		editTags = evt.tags ?? '';
 		editKind = evt.kind ?? 'show';
 		editLocation = evt.location ?? '';
+		editVenueId = evt.venueId ?? '';
 		editExternalTicketUrl = evt.externalTicketUrl ?? '';
 		editDate = toLocalDate(evt.startsAt);
 		editStartTime = toLocalTime(evt.startsAt);
@@ -105,6 +109,16 @@
 			<Button href={resolve(`/staff/events/${id}/production`)} variant="default" size="sm" outline>
 				Manage production
 			</Button>
+		{/if}
+
+		{#if isProduction && !data.production}
+			<!-- The only way a production comes into existence. Nothing to fill in,
+			     so a plain form rather than an Action modal: the record opens as a
+			     draft and is worked on in the console. -->
+			<Form remote={createProduction}>
+				<input {...createProductionFields.eventId.as('hidden', evt.id)} />
+				<SubmitButton label="Add production" size="sm" variant="ghost" />
+			</Form>
 		{/if}
 
 		{#if evt.ticketingEnabled}
@@ -248,7 +262,27 @@
 							bind:value={editEndTime}
 						/>
 					</div>
-					<FormField field={fields.location} label="Venue" bind:value={editLocation} />
+					<!--
+						Two fields, not one, and both keep working. `venueId` is what the
+						reservation question reads — a show anywhere but our room holds no
+						space — while `location` stays the free-text line the gig guide has
+						always printed, and the only thing a band listing ever has.
+					-->
+					{#if data.venues.length > 0}
+						<FormField
+							field={fields.venueId}
+							type="select"
+							label="Venue"
+							bind:value={editVenueId}
+							options={[
+								{ value: '', label: 'The practice room' },
+								...data.venues
+									.filter((v) => !v.isPrimary)
+									.map((v) => ({ value: v.id, label: v.name }))
+							]}
+						/>
+					{/if}
+					<FormField field={fields.location} label="Address line" bind:value={editLocation} />
 					<FormField
 						field={fields.externalTicketUrl}
 						label="Ticket link"

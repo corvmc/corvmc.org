@@ -5,11 +5,13 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { mediaAttachment } from '$lib/server/db/schema/media';
 import type { MediaSlot } from '$lib/server/db/schema/media';
-import { eq, and, max } from 'drizzle-orm';
+import { eq, and, max, count } from 'drizzle-orm';
 import { requireGroupRole } from '$lib/server/group/group-context';
-import { uploadFile } from '$lib/server/storage';
+import { uploadFile, resolveImageUrl } from '$lib/server/storage';
 import { extensionForType } from '$lib/server/storage-keys';
 import { attach, detach, record } from '$lib/server/media/media-service';
+import { photoLimitForTier } from '$lib/server/band/press-kit-limits';
+import { bandSite } from '$lib/server/db/schema/band-site';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -34,6 +36,22 @@ const SLOT_FOR_MEDIA_TYPE: Record<(typeof ALLOWED_MEDIA_TYPES)[number], MediaSlo
 	rider: 'rider',
 	stage_plot: 'stage_plot'
 };
+
+/**
+ * The band's tier, defaulting to free.
+ *
+ * A missing `band_site` row means free, not an error: the only way to reach
+ * that state is a band created before the row was, and the honest answer for
+ * one is the free allowance rather than a 500 on a photo upload.
+ */
+async function bandTier(bandId: string): Promise<string> {
+	const [row] = await db
+		.select({ tier: bandSite.tier })
+		.from(bandSite)
+		.where(eq(bandSite.groupId, bandId))
+		.limit(1);
+	return row?.tier ?? 'free';
+}
 
 function allowedTypesFor(mediaType: string): string[] {
 	return mediaType === 'rider' || mediaType === 'stage_plot' ? DOCUMENT_TYPES : IMAGE_TYPES;
@@ -102,9 +120,11 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 	const slot = SLOT_FOR_MEDIA_TYPE[mediaType as (typeof ALLOWED_MEDIA_TYPES)[number]];
 
-	// Current max sortOrder for this band's slot
-	const [maxSort] = await db
-		.select({ maxOrder: max(mediaAttachment.sortOrder) })
+	// Current count and max sortOrder for this band's slot, in one statement —
+	// the count backs the tier cap below and the max backs the ordering, and
+	// asking twice would be two round trips for one row.
+	const [slotStats] = await db
+		.select({ maxOrder: max(mediaAttachment.sortOrder), used: count() })
 		.from(mediaAttachment)
 		.where(
 			and(
@@ -114,9 +134,29 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			)
 		);
 
-	let sortOrder = (maxSort?.maxOrder ?? -1) + 1;
+	// The press-photo allowance, enforced here because this is the only place it
+	// binds. The editor reads the same constant to grey the button out, but a
+	// client-side cap is presentation: this is the rule.
+	//
+	// Only `gallery` is capped. A rider and a stage plot are one file each by the
+	// single-file check above, and every band needs both — they are what a venue
+	// asks for, not what a band buys.
+	if (slot === 'gallery') {
+		const limit = photoLimitForTier(await bandTier(bandId));
+		if (limit !== null && (slotStats?.used ?? 0) + files.length > limit) {
+			throw error(
+				403,
+				`Your act can hold ${limit} press photo${limit === 1 ? '' : 's'}. A band site lifts the limit.`
+			);
+		}
+	}
 
-	const uploaded: Array<{ id: string; key: string; sortOrder: number }> = [];
+	let sortOrder = (slotStats?.maxOrder ?? -1) + 1;
+
+	// The public URL rides along with the key: the page editor now uploads from
+	// inside a block's settings and wants to draw the result in the canvas
+	// immediately, and resolving a key is server-side work.
+	const uploaded: Array<{ id: string; key: string; url: string | null; sortOrder: number }> = [];
 
 	for (const file of files) {
 		const buffer = await file.arrayBuffer();
@@ -149,7 +189,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		// The attachment id, which is what DELETE below takes. This used to return
 		// the uuid embedded in the key — a different value from the row's id, so a
 		// caller that fed it straight back got a 404.
-		uploaded.push({ id: attachment.id, key, sortOrder: sortOrder - 1 });
+		uploaded.push({ id: attachment.id, key, url: resolveImageUrl(key), sortOrder: sortOrder - 1 });
 	}
 
 	return json({ success: true, media: uploaded });
