@@ -6,7 +6,7 @@ import { mockUser } from '$lib/server/db/test-factory';
  *
  * These pin the shape the whole feature's safety rests on: the member-facing
  * writes take no owner and no assignee, so the guard's user is the only thing
- * that can reach the service. Spec: docs/specs/packing-list-spec.md
+ * that can reach the service. Spec: docs/specs/shipped/packing-list-spec.md
  */
 
 class FakeAlreadyClaimed extends Error {
@@ -23,6 +23,7 @@ const serviceMock = {
 	assignItem: vi.fn(async () => undefined),
 	setPacked: vi.fn(async () => undefined),
 	resetPacked: vi.fn(async () => ({ cleared: 3 })),
+	promoteOwnItems: vi.fn(async () => ({ promoted: 1, added: 1 })),
 	PackingAlreadyClaimedError: FakeAlreadyClaimed
 };
 vi.mock('$lib/server/band/packing-service', () => serviceMock);
@@ -172,5 +173,29 @@ describe('resetPackingList', () => {
 		const result = await call(mod.resetPackingList, { bandId: 'band-1' });
 		expect(requireGroupRole).toHaveBeenCalledWith({ id: 'band-1' }, 'member');
 		expect(result).toMatchObject({ success: true, cleared: 3 });
+	});
+});
+
+describe('promotePackingItems', () => {
+	it('promotes for the guard user and passes no owner', async () => {
+		await call(mod.promotePackingItems, { bandId: 'band-1', itemIds: 'item-1,item-2' });
+
+		// No owner in the payload and none in the call. The service scopes by
+		// `(listId, userId)`, so this is what stops a forged id promoting
+		// somebody else's gear onto the rider under their name.
+		expect(serviceMock.promoteOwnItems).toHaveBeenCalledWith('band-1', 'user-member', [
+			'item-1',
+			'item-2'
+		]);
+	});
+
+	it('is guarded at member — promoting is an own-rows verb', async () => {
+		await call(mod.promotePackingItems, { bandId: 'band-1', itemIds: 'item-1' });
+		expect(requireGroupRole).toHaveBeenCalledWith({ id: 'band-1' }, 'member');
+	});
+
+	it('reports how many elements the rider actually gained', async () => {
+		const result = await call(mod.promotePackingItems, { bandId: 'band-1', itemIds: 'item-1' });
+		expect(result).toMatchObject({ success: true, added: 1 });
 	});
 });

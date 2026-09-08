@@ -1,13 +1,13 @@
 # Band packing list — what goes in the van, and who is bringing it
 
-> **Status: phase 1 shipped (tables, vocabulary, service). Phases 2 and 3 in
-> flight on `feature/band-packing-list`.** Tracking issue #729, one sub-issue per
-> phase.
+> **Status: shipped.** All three phases landed from `feature/band-packing-list`
+> under tracking issue #729. Live behavior is described in
+> [business-workflows.md](../../development/business-workflows.md); what survives
+> here is the design rationale — the options weighed and rejected.
 >
-> This file is the design rationale — the options weighed and rejected. The code
-> carries one-line pointers back to the section that argues each decision, because
-> the reasoning is longer than an eight-line comment block and does not belong
-> inline.
+> The code carries one-line pointers back to the section that argues each
+> decision, because the reasoning is longer than an eight-line comment block and
+> does not belong inline.
 
 ## Purpose
 
@@ -218,10 +218,20 @@ not. That was caught by querying the seeded database, not by reading the code.
 
 ## Phases
 
-1. **Tables, vocabulary, service** — shipped, PR #486. Sub-issue #730.
+1. **Tables, vocabulary, service** — PR #486. Sub-issue #730.
 2. **The member-facing list** — route, remote functions, the editor, claim,
-   release, pack, reset. Sub-issue #731.
+   release, pack, reset. PR #753. Sub-issue #731.
 3. **Promotion onto the rider**, plus the finishing steps. Sub-issue #732.
+
+### What promotion had to work around
+
+`replaceElementsForOwner` is a **replacement**, and `rider_input.element_id` is
+`on delete cascade`. A promote that saved only the promoted rows would delete the
+rest of that member's corner and every channel hanging off it — a page they were
+not looking at, in a feature they were not using. `appendOwnElements` reads the
+corner, carries the inputs through, and saves the union; it lives in
+`rider-service.ts` next to the rebuild it guards rather than in the packing
+service that calls it.
 
 ## Not in this spec
 

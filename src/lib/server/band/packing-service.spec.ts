@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * neither unpacks a row nor un-delegates it; a member's save cannot reach
  * another member's rows even though drafts carry ids; owning and carrying are
  * different facts; a claim is a race settled by an `IS NULL` predicate; and a
- * reset clears ticks but leaves assignments. Spec: docs/specs/packing-list-spec.md
+ * reset clears ticks but leaves assignments. Spec: docs/specs/shipped/packing-list-spec.md
  */
 
 let selectResults: unknown[][] = [];
