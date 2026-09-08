@@ -29,6 +29,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # Only for `scripts/queue-guard-failures.mjs`, which renders the "What failed" block far
+      # below — a file rather than more shell because CI YAML cannot be exercised by pushing.
+      # `pull_request` already resolves this workflow from the PR's merge ref, so taking the
+      # script from that same ref extends no trust the workflow file did not already extend.
+      # No `setup-node`: the script is dependency-free ESM and the runner ships a node.
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/queue-guard-failures.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
       - name: Label and comment
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -188,20 +199,20 @@ jobs:
             # Vitest emits them on its own under `GITHUB_ACTIONS`; Playwright does not, so
             # `playwright.config.ts` opts into the `github` reporter explicitly. A cancelled
             # job carries them too — the timed-out E2E on pr-548 named five specs — which is
-            # why this filter matches the run filter rather than `failure` alone. Two messages
-            # name nothing and are dropped: the bare `Process completed with exit code N`, and
-            # the timeout notice already quoted in the heading above.
+            # why this filter matches the run filter rather than `failure` alone.
+            #
+            # Every annotation is handed over, not just the failure-level ones: Playwright
+            # annotates only the first few numbered failures, and its `N failed` total arrives
+            # as a *notice*. Dropping that total is how a run with 250 failures across 39 files
+            # was reported as four band specs, and read as a shared-fixture bug (#794). Which
+            # of them reach the comment, and what the comment says about the ones that do not,
+            # is `scripts/queue-guard-failures.mjs` — where a spec can hold it to a real payload.
             annotations=$(
               jq -r '.jobs[] | select(.conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out") | .databaseId' <<<"$jobs" |
               while read -r job; do
                 [ -n "$job" ] || continue
-                gh api "repos/${GH_REPO}/check-runs/${job}/annotations" \
-                  --jq '.[] | select(.annotation_level == "failure")
-                        | "- `\(.path):\(.start_line)` — \(.message | split("\n")[0])"' 2>/dev/null || true
-              done | {
-                grep -v -e 'Process completed with exit code' \
-                        -e 'exceeded the maximum execution time' || true
-              }
+                gh api "repos/${GH_REPO}/check-runs/${job}/annotations" 2>/dev/null || echo '[]'
+              done | jq -s 'add // []' | node scripts/queue-guard-failures.mjs || true
             )
 
             # `ci.yml`'s E2E job uploads `test-results/` on failure — traces, screenshots and
@@ -217,10 +228,9 @@ jobs:
                 done
             )
 
+            # Heading included — the renderer decides whether there is a section at all.
             if [ -n "$annotations" ]; then
               cat >> comment.md <<EOF
-
-          **What failed**
 
           ${annotations}
           EOF
