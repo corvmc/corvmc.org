@@ -42,6 +42,10 @@ function bubbleFor(body: string) {
 	return page.getByText(body).element().closest('.chat');
 }
 
+function headerFor(body: string) {
+	return bubbleFor(body)?.querySelector('.chat-header')?.textContent ?? '';
+}
+
 describe('ThreadTimeline — member view (viewerUserId given)', () => {
 	it('puts the member’s own message on the right and the staff reply on the left', async () => {
 		await render(ThreadTimeline, { messages, viewerUserId: MEMBER });
@@ -82,6 +86,66 @@ describe('ThreadTimeline — staff view (no viewerUserId)', () => {
 		});
 
 		await expect.element(page.getByText('Checked the locker list.')).toBeInTheDocument();
+	});
+});
+
+/**
+ * Sides say whose message it is; the header says who wrote it. Staff sides
+ * follow direction, so every outbound bubble reads as ours and the header is
+ * the only thing separating one colleague's reply from another's — pinned here
+ * because the orientation tests above cannot see it disappear.
+ */
+describe('ThreadTimeline — author attribution', () => {
+	const unsigned = {
+		id: 'm3',
+		direction: 'outbound' as const,
+		body: 'Unsigned reply.',
+		authorName: null,
+		authorUserId: null,
+		createdAt: new Date('2026-01-01T12:00:00Z')
+	};
+
+	it('names the colleague on an outbound reply in the staff view', async () => {
+		await render(ThreadTimeline, { messages, contactName: 'Robin' });
+
+		expect(headerFor('Yes, through Friday.')).toContain('Ada');
+		expect(headerFor('Is a locker free?')).toContain('Robin');
+	});
+
+	it('labels an outbound reply with no stored name rather than leaving it blank', async () => {
+		await render(ThreadTimeline, { messages: [unsigned], contactName: 'Robin' });
+
+		expect(headerFor('Unsigned reply.')).toContain('Staff');
+	});
+
+	it('names the author in the member view too, since the label is not staff-only', async () => {
+		await render(ThreadTimeline, { messages, viewerUserId: MEMBER });
+
+		expect(headerFor('Yes, through Friday.')).toContain('Ada');
+	});
+
+	it('falls back to “You” and “CorvMC” in the member view, where sides already say whose it is', async () => {
+		// The staff fallback would be wrong on both counts here: the member's own
+		// unsigned message is not from staff, and a nameless reply is the
+		// organisation as the member knows it.
+		await render(ThreadTimeline, {
+			messages: [
+				{
+					id: 'm4',
+					direction: 'inbound' as const,
+					body: 'Mine, unsigned.',
+					authorName: null,
+					authorUserId: MEMBER,
+					createdAt: new Date('2026-01-01T09:00:00Z')
+				},
+				unsigned
+			],
+			viewerUserId: MEMBER
+		});
+
+		expect(headerFor('Mine, unsigned.')).toContain('You');
+		expect(headerFor('Unsigned reply.')).toContain('CorvMC');
+		expect(headerFor('Unsigned reply.')).not.toContain('Staff');
 	});
 });
 

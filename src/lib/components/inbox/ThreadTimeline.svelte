@@ -88,6 +88,9 @@
 			{@const msg = entry.message}
 			{@const own = isOwn(msg)}
 			<div class="chat {own ? 'chat-end' : 'chat-start'}">
+				<!-- The header is the author label. In the staff inbox, where sides
+				     follow direction and every outbound bubble reads as ours, it is
+				     the only thing naming which colleague replied — see #561. -->
 				<div class="chat-header mb-1">
 					{msg.authorName ?? (own ? ownName : otherName)}
 					<time class="ml-2 text-xs opacity-50">{formatDateTime(msg.createdAt)}</time>
