@@ -6,11 +6,9 @@ import ReservationCardShell from './ReservationCardShell.svelte';
 /**
  * The treatment both panels now share (#566).
  *
- * The band panel drew a booking as a plain row with a status badge while the
- * member panel drew a tear-off date block tinted by status, so one record read
- * as two objects. What is pinned here is the part that must survive: the status
- * reaching the root as a class (the tint is `.confirmed .date-block`, so a
- * dropped class silently un-tints every card) and the ribbon rule.
+ * The tint is `.confirmed .date-block`, so the status reaching the root as a
+ * class is load-bearing — drop it and every card silently un-tints, which no
+ * page test would notice.
  */
 
 const card = () => document.querySelector('.reservation-card');

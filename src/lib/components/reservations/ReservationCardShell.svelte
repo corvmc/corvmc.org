@@ -11,14 +11,12 @@
 	import { isTerminalStatus } from '$lib/utils/reservation-actions';
 
 	/**
-	 * A booking as a card: tear-off date block tinted by status, the status word,
-	 * and a body the panel supplies.
+	 * A booking as a card: date block tinted by status, the status word, and a
+	 * body the panel supplies.
 	 *
-	 * The band panel drew the same record as a plain row with a badge while the
-	 * member panel drew this (#566), so one booking read as two objects depending
-	 * on where you stood. The identity and the date block are what converge; the
-	 * action row deliberately does not, because what a band member may do with a
-	 * booking made on the act's behalf is not what its booker may do.
+	 * The identity and the date block are what the two panels share (#566). The
+	 * action row is not: what a bandmate may do with a booking made on the act's
+	 * behalf is not what its booker may do.
 	 */
 	let {
 		startsAt,
