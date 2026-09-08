@@ -123,13 +123,14 @@ the way it is, and the workflow guide to find out **what** it does today.
 
 ### Money & messaging
 
-| Doc                                                                    | Status | Lifecycle | Notes                                                                          |
-| ---------------------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------ |
-| [finance-spec.md](specs/shipped/finance-spec.md)                       | ✅     | archived  | Stripe-first payments, credit wallets / ledger                                 |
-| [email-marketing-spec.md](specs/shipped/email-marketing-spec.md)       | ✅     | archived  | Audiences, campaigns, scheduled sends                                          |
-| [member-portal-chat-spec.md](specs/shipped/member-portal-chat-spec.md) | ✅     | archived  | Member↔staff conversations as an inbox channel (`portal`); `inbox_participant` |
-| [direct-messages-spec.md](specs/shipped/direct-messages-spec.md)       | ✅     | archived  | Member↔member DMs: request/accept consent, silent drops, blocks, reporting     |
-| [band-chat-spec.md](specs/shipped/band-chat-spec.md)                   | ✅     | archived  | Booking enquiries as band-owned threads (`band`); `inbox_thread.group_id`      |
+| Doc                                                                    | Status | Lifecycle | Notes                                                                                                                                            |
+| ---------------------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [finance-spec.md](specs/shipped/finance-spec.md)                       | ✅     | archived  | Stripe-first payments, credit wallets / ledger                                                                                                   |
+| [financial-record-spec.md](specs/financial-record-spec.md)             | 📋     | spec      | Amends the above: Stripe owns settlement, a local `financial_entry` owns accounting — outflow, in-kind and pass-through, which Stripe cannot see |
+| [email-marketing-spec.md](specs/shipped/email-marketing-spec.md)       | ✅     | archived  | Audiences, campaigns, scheduled sends                                                                                                            |
+| [member-portal-chat-spec.md](specs/shipped/member-portal-chat-spec.md) | ✅     | archived  | Member↔staff conversations as an inbox channel (`portal`); `inbox_participant`                                                                   |
+| [direct-messages-spec.md](specs/shipped/direct-messages-spec.md)       | ✅     | archived  | Member↔member DMs: request/accept consent, silent drops, blocks, reporting                                                                       |
+| [band-chat-spec.md](specs/shipped/band-chat-spec.md)                   | ✅     | archived  | Booking enquiries as band-owned threads (`band`); `inbox_thread.group_id`                                                                        |
 
 ### Moderation
 
