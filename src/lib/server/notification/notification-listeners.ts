@@ -4,6 +4,7 @@ import { formatCents } from '$lib/utils/format';
 import { groupKindLabels } from '$lib/config';
 import { fanOutAnnouncement } from '$lib/server/group/announcement-fanout';
 import { dispatch, dispatchEmailOnly } from './dispatcher';
+import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '$lib/server/sentry';
 import { listUsersWithCapability } from '$lib/server/authorization';
 import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
@@ -957,7 +958,10 @@ export function registerAllNotificationListeners(): void {
 				contactEmail: event.email,
 				formSubject: event.subject,
 				replyNote,
-				message: event.message,
+				// `>`-quoted here, not in the template: Mustachio cannot prefix
+				// per line, and the marker has to survive into the staffer's reply
+				// as a quote rather than as literal fence text.
+				message: quoteForPlainText(event.message),
 				threadUrl: `${env.PUBLIC_SITE_URL}/staff/inbox/${event.threadId}`
 			}
 		});
