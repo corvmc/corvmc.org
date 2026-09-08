@@ -4,6 +4,13 @@ import type { Position } from '$lib/config';
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
+	/**
+	 * The Sentry release name for this build — the same string vite.config.ts
+	 * gives the Sentry vite plugin. Replaced at build time by `define`, so it is
+	 * a literal in the bundle, not a lookup; `null` when none could be resolved.
+	 */
+	const __SENTRY_RELEASE_NAME__: string | null;
+
 	namespace App {
 		interface Locals {
 			user?: User;
