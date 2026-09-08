@@ -259,4 +259,37 @@ describe('contact-alert', () => {
 	it('links the thread as a bare URL', () => {
 		expect(text).toContain('https://corvmc.org/staff/inbox/thr-1');
 	});
+
+	it('keeps the thread URL below the delimiter, out of a relayed reply', () => {
+		// The staffer replies to the contact, not to us. Everything internal
+		// sits where a client strips it.
+		const [above, below] = text.split('\n-- \n');
+		expect(above).not.toContain('/staff/inbox/');
+		expect(below).toContain('https://corvmc.org/staff/inbox/thr-1');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Plain-text conventions (#648)
+// ---------------------------------------------------------------------------
+// These three carry no HTML, so typography IS the design. They used to disagree
+// about all of it; the point of asserting it here is that the next one added
+// cannot quietly invent a fourth convention.
+// ---------------------------------------------------------------------------
+describe.each(PLAINTEXT_FIXTURES)('$name plain-text conventions', (fixture) => {
+	const { text } = renderTemplate(fixture.alias, fixture.model);
+
+	it('carries exactly one RFC 3676 signature delimiter', () => {
+		expect(text.split('\n-- \n')).toHaveLength(2);
+	});
+
+	it('quotes with > rather than a fence', () => {
+		expect(text).not.toMatch(/^---+ ?[a-z ]+ ?---+$/m);
+	});
+
+	it('aligns no label into a monospace column', () => {
+		// `From:    x` only lines up in a fixed-width client, and most people
+		// read mail in a proportional font.
+		expect(text).not.toMatch(/^[A-Za-z][A-Za-z ]*: {2,}/m);
+	});
 });

@@ -147,8 +147,13 @@ bucket_name = "corvmc-private"
 binding = "KV"
 id = "fc85459046fe47f9bbfae4f343012041"
 
-# Exposes the deploy version id (on process.env.CF_VERSION_METADATA) so Sentry
-# can tag events with a release. Auto-detected by @sentry/cloudflare >= 10.35.
+# The deploy version id. NOT how Sentry gets its release tag, despite what this
+# comment used to claim: @sentry/cloudflare reads this binding only in
+# `getFinalOptions`, which the `withSentry` wrappers call and
+# `initCloudflareSentryHandle` (what hooks.server.ts uses) does not. The id is a
+# Cloudflare deploy uuid anyway, so it would never match the commit-named
+# release the Sentry vite plugin uploads artifacts under. The release comes from
+# `__SENTRY_RELEASE_NAME__` in vite.config.ts.
 [version_metadata]
 binding = "CF_VERSION_METADATA"
 

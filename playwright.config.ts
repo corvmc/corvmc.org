@@ -1,6 +1,12 @@
 import { defineConfig } from '@playwright/test';
+import { loadEnv } from 'vite';
 import { E2E_PERSIST_PATH, REPO_ROOT } from './e2e/state-dir';
 import { previewPort } from './scripts/lib/checkout-ports';
+import {
+	E2E_STRIPE_SECRET_KEY,
+	E2E_STRIPE_WEBHOOK_SECRET,
+	assertNoTransactableStripeCredentials
+} from './e2e/stripe-guard';
 
 /**
  * The port this checkout's preview server binds, and therefore the one the suite
@@ -10,6 +16,34 @@ import { previewPort } from './scripts/lib/checkout-ports';
  */
 const PORT = previewPort(REPO_ROOT);
 const BASE_URL = `http://localhost:${PORT}`;
+
+/**
+ * Stripe credentials, pinned rather than forwarded.
+ *
+ * These used to be `process.env.X ?? dummy`, so a live key exported in the
+ * shell went straight to the preview server and the suite created real Stripe
+ * customers (#667). Nothing here has any use for a real key, so the shell no
+ * longer gets a vote — and they stay set rather than removed, because an unset
+ * variable falls through to `.env`, which carries a live `rk_live` key.
+ */
+const STRIPE_ENV = {
+	STRIPE_SECRET_KEY: E2E_STRIPE_SECRET_KEY,
+	STRIPE_WEBHOOK_SECRET: E2E_STRIPE_WEBHOOK_SECRET
+};
+
+/**
+ * Fail closed, before the build, on what the preview server will actually see.
+ *
+ * `loadEnv(mode, dir, '')` is the same call SvelteKit's preview server makes to
+ * populate `$env/dynamic/private`, and it layers `process.env` over the `.env`
+ * file — so this resolves the real precedence rather than assuming it. Pinning
+ * the two variables above cannot cover a *third* Stripe credential arriving
+ * from `.env` or the shell, and this is what refuses that.
+ */
+assertNoTransactableStripeCredentials(
+	{ ...loadEnv('production', REPO_ROOT, ''), ...STRIPE_ENV },
+	'the e2e preview server'
+);
 
 export default defineConfig({
 	// Seed the local D1 (member + payable reservation) before any test runs.
@@ -159,8 +193,8 @@ export default defineConfig({
 			PUBLIC_SITE_URL: process.env.PUBLIC_SITE_URL ?? BASE_URL,
 			BETTER_AUTH_SECRET:
 				process.env.BETTER_AUTH_SECRET ?? 'e2e-local-better-auth-secret-not-for-prod',
-			STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? 'sk_test_dummy_e2e',
-			STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? 'whsec_dummy_e2e'
+			// Pinned, not forwarded — see STRIPE_ENV above and #667.
+			...STRIPE_ENV
 		}
 	},
 	testMatch: '**/*.e2e.{ts,js}'

@@ -127,7 +127,7 @@ describe('FormField', () => {
 	});
 
 	// Regression: `value` is destructured into its own prop, so it was not part of
-	// `...rest` and the tags branch never forwarded it to TagInput. The hidden
+	// `...rest` and the tags branch never forwarded it to TagSelect. The hidden
 	// input therefore always serialised `[]`, and on the staff user page every
 	// profile save posted an empty role list — silently deleting the member's
 	// roles (staff/admin included) as a side effect of editing a phone number.

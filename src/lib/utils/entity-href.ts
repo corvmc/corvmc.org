@@ -91,10 +91,10 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 		case 'reservation': {
 			if (can('reservation.read'))
 				out.push({ panel: 'staff', href: resolve(`/staff/reservations/${id}`) });
-			// The band panel books as a band, so the list is the closest thing it
-			// has to a detail page — there is no per-reservation band route.
+			// A band booking has its own page in the band panel now (#565); it shows
+			// the act what the act is entitled to, which is less than the booker's.
 			if (ref.bandSlug && inBand(ref.bandId))
-				out.push({ panel: 'band', href: resolve(`/band/${ref.bandSlug}/reservations`) });
+				out.push({ panel: 'band', href: resolve(`/band/${ref.bandSlug}/reservations/${id}`) });
 			if (viewer.userId && ref.ownerUserId === viewer.userId)
 				out.push({ panel: 'member', href: resolve(`/member/reservations/${id}`) });
 			break;

@@ -357,6 +357,30 @@ export async function listSweepCandidates(cutoff: Date): Promise<{ id: string; k
 		.where(and(isNotNull(file.deletedAt), lt(file.deletedAt, cutoff)));
 }
 
+/**
+ * Which of `keys` this table still has a row for — **live and soft-deleted
+ * alike**.
+ *
+ * The orphan pass's one question, and it is asked positively: an object is
+ * reaped only when its key is proven absent here, never when a row merely looks
+ * unreachable. A soft-deleted row answers "present" so that pass belongs to the
+ * reaper above, which deletes the object and the row together.
+ */
+export async function listExistingKeys(keys: string[]): Promise<Set<string>> {
+	const found = new Set<string>();
+	const CHUNK = 90;
+
+	for (let i = 0; i < keys.length; i += CHUNK) {
+		const rows = await db
+			.select({ key: file.key })
+			.from(file)
+			.where(inArray(file.key, keys.slice(i, i + CHUNK)));
+		for (const row of rows) found.add(row.key);
+	}
+
+	return found;
+}
+
 /** Chunked at 90: D1 caps a statement at 100 bound parameters. */
 export async function deleteRows(ids: string[]): Promise<void> {
 	const CHUNK = 90;

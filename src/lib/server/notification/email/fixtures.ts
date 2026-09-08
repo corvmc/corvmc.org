@@ -25,7 +25,7 @@ export const FIXTURES: Fixture[] = [
 		model: {
 			subject: 'Your reservation was cancelled',
 			preview_text: 'Thursday, December 5 · 7:00 – 9:00 PM',
-			heading: 'Reservation Cancelled'
+			heading: 'Reservation cancelled'
 		}
 	},
 	{
@@ -34,7 +34,7 @@ export const FIXTURES: Fixture[] = [
 		model: {
 			subject: 'Practice space reminder',
 			preview_text: 'Thursday, December 5, 7:00 – 9:00 PM',
-			heading: "You're Booked Thursday",
+			heading: "You're booked Thursday",
 			greeting: 'Hi Maya,',
 			paragraphs: [
 				{ text: 'You have a reservation coming up at the Collective.' },
@@ -48,7 +48,7 @@ export const FIXTURES: Fixture[] = [
 				{ label: 'Band', value: 'Indigo Kiss' },
 				{ label: 'Cost', value: 'Free · 2 of 10 free hours used this month' }
 			],
-			cta: { url: 'https://corvmc.org/member/reservations', label: 'Manage Reservation' },
+			cta: { url: 'https://corvmc.org/member/reservations', label: 'Manage reservation' },
 			footnote: 'Need to cancel? Do it at least 24 hours ahead so someone else can use the room.'
 		}
 	},
@@ -61,7 +61,7 @@ export const FIXTURES: Fixture[] = [
 		model: {
 			subject: 'A band claimed your listing',
 			preview_text: 'Indigo Kiss added a note to their claim',
-			heading: 'Listing Claim Submitted',
+			heading: 'Listing claim submitted',
 			paragraphs: [{ text: 'Indigo Kiss submitted a claim with this note:' }],
 			has_details: true,
 			details: [
@@ -170,9 +170,25 @@ export const FIXTURES: Fixture[] = [
 		}
 	},
 	{
+		name: 'band-reply',
+		alias: 'band-reply',
+		// A distinct shape from `inbox-reply`, not a copy of it: the staffer is
+		// speaking as the act, so the signature names the band and the why-line
+		// points at the band's own booking form.
+		model: {
+			contactName: 'Charlie',
+			subject: 'Re: Booking for your Saturday show',
+			body: "Thanks for asking — we're free that weekend and we'd love to play.\n\nWhat time would you want us on & how long a set?",
+			staffName: 'Rosa',
+			bandName: 'Indigo Kiss'
+		}
+	},
+	{
 		name: 'contact-alert',
 		alias: 'contact-alert',
 		// Text-only: staff reply to this one straight from their mail client.
+		// `message` is the post-`quoteForPlainText` shape the listener passes —
+		// the template cannot prefix per line.
 		model: {
 			subject: 'Contact form: Performance Inquiry',
 			contactName: 'Charlie Rivera',
@@ -181,7 +197,7 @@ export const FIXTURES: Fixture[] = [
 			replyNote:
 				'Reply to this email to answer Charlie Rivera. Your reply is sent from CMC and saved on the conversation in the staff inbox.',
 			message:
-				"Hi there,\n\nI run a small folk trio & we're hoping to play a Saturday in March.\n\nThanks!",
+				"> Hi there,\n>\n> I run a small folk trio & we're hoping to play a Saturday in March.\n>\n> Thanks!",
 			threadUrl: 'https://corvmc.org/staff/inbox/thr-1'
 		}
 	},

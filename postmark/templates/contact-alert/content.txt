@@ -2,14 +2,11 @@
 
 {{{replyNote}}}
 
-From:    {{{contactName}}} <{{{contactEmail}}}>
+From: {{{contactName}}} <{{{contactEmail}}}>
 Subject: {{{formSubject}}}
-
---- message ---
 
 {{{message}}}
 
---- end of message ---
-
+-- 
 Conversation history, internal notes and assignment:
 {{{threadUrl}}}

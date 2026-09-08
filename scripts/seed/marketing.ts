@@ -135,6 +135,24 @@ export async function seedMarketing(users: SeedUser[]) {
 		.set({ suppressedAt: new Date(Date.now() - 3 * 86400000), suppressionReason: 'bounce' })
 		.where(eq(subscriber.id, externalSubs[0].id));
 
+	// #562, both halves. `linkedEarly` joined a list long before the account
+	// existed and opted out along the way: signup links the row by writing
+	// user_id and nothing else, so the opt-out is still in force afterwards.
+	const linkedEarly = subscriberRows[2];
+	await db
+		.update(subscriber)
+		.set({
+			createdAt: new Date(Date.now() - 400 * 86400000),
+			suppressedAt: new Date(Date.now() - 200 * 86400000),
+			suppressionReason: 'unsubscribe'
+		})
+		.where(eq(subscriber.id, linkedEarly.id));
+
+	// The reverse order, caught mid-flight: an account holder who subscribed
+	// while signed out. Their address matches a user but the row is unlinked,
+	// so their account page shows only built-ins until it is claimed.
+	await db.update(subscriber).set({ userId: null }).where(eq(subscriber.id, subscriberRows[3].id));
+
 	const adminUser = users[0];
 
 	const sentCampaigns = [
