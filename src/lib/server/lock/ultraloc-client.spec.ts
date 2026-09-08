@@ -22,7 +22,11 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 	})
 }));
 
+const { env } = await import('$env/dynamic/private');
+const { getConfigsByPrefix } = await import('$lib/server/site-config/site-config-service');
+
 const {
+	clientSecretStatus,
 	generateLockCode,
 	createTemporaryUser,
 	addLockUser,
@@ -354,5 +358,28 @@ describe('exchangeAuthorizationCode', () => {
 		await expect(exchangeAuthorizationCode('c', 'https://corvmc.org/cb')).rejects.toThrow(
 			/no refresh_token/
 		);
+	});
+});
+
+describe('clientSecretStatus', () => {
+	// Asserts on presence and provenance only. A test that pinned the value
+	// would put the secret in the fixture, which is the thing being fixed.
+	it('reports the KV copy, and never the value itself', async () => {
+		expect(await clientSecretStatus()).toEqual({ configured: true, source: 'kv' });
+	});
+
+	it('falls back to the environment when KV holds no secret', async () => {
+		vi.mocked(getConfigsByPrefix).mockResolvedValueOnce({ clientId: 'cid' });
+		env.ULTRALOC_CLIENT_SECRET = 'from-env';
+		try {
+			expect(await clientSecretStatus()).toEqual({ configured: true, source: 'env' });
+		} finally {
+			delete env.ULTRALOC_CLIENT_SECRET;
+		}
+	});
+
+	it('reports not configured when neither source has one', async () => {
+		vi.mocked(getConfigsByPrefix).mockResolvedValueOnce({ clientId: 'cid' });
+		expect(await clientSecretStatus()).toEqual({ configured: false, source: null });
 	});
 });

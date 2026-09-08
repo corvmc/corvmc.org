@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * A form field carrying a JSON-encoded array (hidden inputs written by
- * TagInput and the multi-select fields).
+ * TagSelect and the multi-select fields).
  *
  * `.transform((s) => JSON.parse(s))` looks equivalent but throws on malformed
  * input, and a throw inside a transform escapes validation as a 500 rather than

@@ -81,15 +81,34 @@ pnpm exec drizzle-kit check
   deletes only the directories `origin/main` does not have, and
   `scripts/claude/block-shipped-migration-delete.sh` refuses the rest.
 
-Finish:
+Then:
 
 ```bash
 pnpm db:reset            # not db:migrate:local — migrations are selected by name, with no
                          # timestamp watermark, so an incremental run would apply main's
                          # older migrations after yours and build an order nothing else has.
-pnpm check && pnpm lint:changed && pnpm test:unit -- --run
-git push origin HEAD     # fast-forward. No force, ever.
+BASE_REF=origin/feature/<slug> pnpm lint:changed
 ```
+
+**Landing the merge is a fast-forward push, not a PR merge.** `feature/*` requires status checks
+but has no `pull_request` rule, so the push is allowed once the checks on that exact SHA are green
+— and a PR merge would be _wrong_, because the repo is squash-only and squashing collapses the
+merge commit. `main` then never enters the branch's ancestry, `merge-base` stays at the old fork
+point, and the landing PR renders every one of `main`'s commits as the branch's own. So the merge
+PR exists only to make CI run:
+
+```bash
+git switch -c merge/main-into-<slug>   # carrying the merge commit you just made
+git push -u origin HEAD
+gh pr create --base feature/<slug> --title "Merge main into feature/<slug>"
+# wait for the checks to go green on this head SHA — do NOT merge the PR
+git switch feature/<slug>
+git merge --ff-only merge/main-into-<slug>
+git push origin HEAD                   # fast-forward. No force, ever.
+```
+
+GitHub marks the PR `MERGED` on its own once the base contains its head. Confirmed on #727 and
+#735; both branches carry a real merge commit with `main` as a second parent.
 
 Tell every other worktree on this branch to run
 `git pull --ff-only && pnpm install --frozen-lockfile && pnpm db:reset`. The `--ff-only` is
@@ -105,9 +124,18 @@ gh pr create --base feature/<slug> --title "<spec> phase N: <what it does>"
 ```
 
 CI runs every check on a non-`main` base — `.github/workflows/ci.yml` has no `branches:` filter on
-`pull_request`. Merge with `gh pr merge --squash` (squash is the only method the repo allows). The
-merge queue guards `main` only, so a phase PR merges directly — **read the checks yourself before
-merging**, because no branch protection is stopping you.
+`pull_request`. Merge with `gh pr merge --squash`: squash is the only method the repo allows, and a
+phase adds new work, so squashing it is right and loses nothing. (That is the opposite of a
+merge-`main` PR, which must never be squashed — see **refresh**.)
+
+The `feature/**/*` ruleset requires `E2E`, `Unit tests`, `Schema drift`, `Svelte Check` and
+`Lint (full)`, so a phase PR **cannot** be merged with those red. Two caveats: `Lint (full)` only
+runs on a push, so it reports `skipped` and passes vacuously here, and `Lint (changed)` and
+`Docs integrity` are not required on `feature/*` at all (#762). Read those three yourself.
+
+`merge_queue` is a rule on `main` alone, so `gh pr merge --auto` refuses on a feature base with
+`--merge, --rebase, or --squash required when not running interactively`. Pass `--squash`. Nothing
+about `main` changes: a PR into `main` is still queued with a bare `gh pr merge --auto`.
 
 Run `pnpm lint:changed` locally against the right base:
 

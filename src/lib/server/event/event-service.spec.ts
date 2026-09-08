@@ -155,7 +155,9 @@ vi.mock('$lib/server/storage', () => ({
 vi.mock('$lib/server/media/media-service', () => ({
 	replaceSlot: vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' }),
 	detachSlot: vi.fn().mockResolvedValue(undefined),
-	findByKey: vi.fn().mockResolvedValue({ contentType: 'image/jpeg', byteSize: 4096 })
+	findByKey: vi.fn().mockResolvedValue({ contentType: 'image/jpeg', byteSize: 4096 }),
+	// Nothing else points at a community listing's poster in the common case.
+	isKeyReferenced: vi.fn().mockResolvedValue(false)
 }));
 
 const mockTicketsSold = vi.fn().mockResolvedValue(0);
@@ -190,7 +192,7 @@ import {
 } from '$lib/server/reservation/reservation-service';
 import { hasConflict } from '$lib/server/reservation/conflict-service';
 import { uploadFile, deleteObject, copyObject } from '$lib/server/storage';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
+import { detachSlot, isKeyReferenced, replaceSlot } from '$lib/server/media/media-service';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 
 describe('EventService', () => {
@@ -1026,11 +1028,11 @@ describe('EventService', () => {
 			createdByUserId: 'member-1'
 		};
 
-		// The poster used to be deleted outright here. It has to stop being
-		// reachable at its guessable public key — that was the point — but a
-		// takedown is a moderation decision, not a reason to destroy the member's
-		// artwork. Rotating the key satisfies the first without the second.
-		it('rotates a community listing’s poster to an unguessable key instead of deleting it', async () => {
+		// The poster has to stop being reachable at the key already handed out —
+		// that is the whole control — but a takedown is a moderation decision, not
+		// a reason to destroy the member's artwork. Moving the bytes to a fresh key
+		// and deleting the old object satisfies the first without the second.
+		it('rotates a community listing’s poster to an unguessable key', async () => {
 			selectResultQueue = [
 				[publishedCommunityListing],
 				[{ ...mockEventRow, status: 'published' }],
@@ -1043,9 +1045,6 @@ describe('EventService', () => {
 				/^events\/posters\/withheld\/evt-1-[0-9a-f-]{36}\.jpg$/
 			);
 			expect(copyObject).toHaveBeenCalledWith('events/posters/evt-1.jpg', withheldKey);
-			// The original is detached, not deleted — this request cannot tell
-			// whether another event still points at that object. The takedown now
-			// depends on the sweep for the old key's removal.
 			expect(replaceSlot).toHaveBeenCalledWith(
 				expect.objectContaining({
 					attachableType: 'event_listing',
@@ -1053,11 +1052,95 @@ describe('EventService', () => {
 					slot: 'poster'
 				})
 			);
-			expect(deleteObject).not.toHaveBeenCalled();
 			expect(lastUpdateSet).toMatchObject({
 				posterKey: withheldKey,
 				reviewNotes: 'No venue given'
 			});
+		});
+
+		// The regression this pins: detaching alone left the old URL serving the
+		// poster until the next daily sweep. A takedown is deliberate, so the
+		// grace window that exists to undo an accidental detach does not apply.
+		it('deletes the old object with the takedown rather than leaving it to the sweep', async () => {
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1', { notes: 'No venue given' });
+
+			expect(isKeyReferenced).toHaveBeenCalledWith('events/posters/evt-1.jpg');
+			expect(deleteObject).toHaveBeenCalledWith('events/posters/evt-1.jpg');
+		});
+
+		// Reinstatement: republishing has to bring the poster back, so the copy the
+		// listing now points at is the one thing that must survive a takedown.
+		it('keeps the withheld copy the listing was re-pointed at', async () => {
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1');
+
+			const withheld = (lastUpdateSet as { posterKey: string }).posterKey;
+			expect(withheld).toMatch(/^events\/posters\/withheld\//);
+			expect(deleteObject).not.toHaveBeenCalledWith(withheld);
+			expect(vi.mocked(deleteObject).mock.calls).toEqual([['events/posters/evt-1.jpg']]);
+		});
+
+		// The sweep still owns the case this request cannot decide: a recurring
+		// occurrence sharing the object, or a listing whose column still names it.
+		it('leaves the old object alone when something still references it', async () => {
+			vi.mocked(isKeyReferenced).mockResolvedValueOnce(true);
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1');
+
+			expect(deleteObject).not.toHaveBeenCalled();
+		});
+
+		// The `media` row is deliberately left behind, so a failed delete is
+		// retried by the sweep rather than stranding the object with no record.
+		it('completes the takedown when the delete fails', async () => {
+			vi.mocked(deleteObject).mockRejectedValueOnce(new Error('R2 down'));
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1', { notes: 'No venue given' });
+
+			expect(lastUpdateSet).toMatchObject({ reviewNotes: 'No venue given' });
+			await Promise.resolve();
+			await Promise.resolve();
+			expect(mockEmit).toHaveBeenCalledWith(
+				'community_event.unpublished',
+				expect.objectContaining({ eventId: 'evt-1' })
+			);
+		});
+
+		// Enforcement must not destroy member data: killing the URL is the goal,
+		// erasing what was taken down or who did it is not. The listing, its staff
+		// note and its flag all have to survive an appeal.
+		it('deletes no row — the listing and its record survive the takedown', async () => {
+			selectResultQueue = [
+				[publishedCommunityListing],
+				[{ ...mockEventRow, status: 'published' }],
+				[{ name: 'Ada', email: 'ada@example.com' }]
+			];
+
+			await unpublishWithNotice('evt-1', { notes: 'No venue given' });
+
+			expect(eventDelete).not.toHaveBeenCalled();
+			expect(lastUpdateSet).toMatchObject({ reviewNotes: 'No venue given' });
 		});
 
 		it('nulls posterKey only when the object is already gone', async () => {

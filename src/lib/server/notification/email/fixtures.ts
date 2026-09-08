@@ -25,7 +25,7 @@ export const FIXTURES: Fixture[] = [
 		model: {
 			subject: 'Your reservation was cancelled',
 			preview_text: 'Thursday, December 5 · 7:00 – 9:00 PM',
-			heading: 'Reservation Cancelled'
+			heading: 'Reservation cancelled'
 		}
 	},
 	{
@@ -34,7 +34,7 @@ export const FIXTURES: Fixture[] = [
 		model: {
 			subject: 'Practice space reminder',
 			preview_text: 'Thursday, December 5, 7:00 – 9:00 PM',
-			heading: "You're Booked Thursday",
+			heading: "You're booked Thursday",
 			greeting: 'Hi Maya,',
 			paragraphs: [
 				{ text: 'You have a reservation coming up at the Collective.' },
@@ -48,7 +48,7 @@ export const FIXTURES: Fixture[] = [
 				{ label: 'Band', value: 'Indigo Kiss' },
 				{ label: 'Cost', value: 'Free · 2 of 10 free hours used this month' }
 			],
-			cta: { url: 'https://corvmc.org/member/reservations', label: 'Manage Reservation' },
+			cta: { url: 'https://corvmc.org/member/reservations', label: 'Manage reservation' },
 			footnote: 'Need to cancel? Do it at least 24 hours ahead so someone else can use the room.'
 		}
 	},
@@ -61,7 +61,7 @@ export const FIXTURES: Fixture[] = [
 		model: {
 			subject: 'A band claimed your listing',
 			preview_text: 'Indigo Kiss added a note to their claim',
-			heading: 'Listing Claim Submitted',
+			heading: 'Listing claim submitted',
 			paragraphs: [{ text: 'Indigo Kiss submitted a claim with this note:' }],
 			has_details: true,
 			details: [

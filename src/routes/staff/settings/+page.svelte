@@ -86,7 +86,18 @@
 	// pasted manually). Until then, only the Connect flow makes sense.
 	const utecConnected = $derived(!!integrationSettings.refreshToken);
 	const utecCanConnect = $derived(
-		!!integrationSettings.clientId && !!integrationSettings.clientSecret
+		!!integrationSettings.clientId && integrationSettings.clientSecret.configured
+	);
+
+	// The field renders empty whether or not a secret is stored, so the hint is
+	// the only thing telling a staffer which it is — and that saving blank keeps
+	// what is there rather than wiping the lock's credential.
+	const clientSecretHint = $derived(
+		{
+			kv: 'Saved. Leave blank to keep it, or enter a new one to replace it.',
+			env: 'Set by the ULTRALOC_CLIENT_SECRET environment variable. Saving a value here overrides it.',
+			null: 'Not set. The lock cannot authenticate until this is entered.'
+		}[String(integrationSettings.clientSecret.source)]
 	);
 	const utecRedirectUri = $derived(`${page.url.origin}/api/integrations/utec/callback`);
 
@@ -751,7 +762,8 @@
 								name="clientSecret"
 								label="Client Secret"
 								type="password"
-								value={integrationSettings.clientSecret}
+								value=""
+								description={clientSecretHint}
 							/>
 							<FormField
 								name="deviceId"
