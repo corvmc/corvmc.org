@@ -122,8 +122,82 @@ half-shipped feature is the thing being eliminated. The phase commits stay reach
 branch is deleted, because GitHub keeps `refs/pull/<n>/head` indefinitely:
 `git fetch origin refs/pull/353/head`.
 
-Nothing enforces the branch, and **nothing protects it**: branch protection covers `main` only, so
-a phase PR can be merged with CI red. Read the checks before merging one.
+### What protects the branch
+
+A `feature/*` branch is protected, by a **ruleset** rather than by classic branch protection. It
+carries three rules — and, unlike `main`, no `pull_request` rule and no merge queue:
+
+```bash
+gh api repos/corvmc/corvmc.org/rules/branches/feature%2F<slug> --jq '[.[].type]'
+# ["deletion","non_fast_forward","required_status_checks"]
+```
+
+`gh api repos/corvmc/corvmc.org/branches/feature%2F<slug>/protection` answers
+`404 Branch not protected`. That is not a finding — the endpoint reads classic branch protection,
+which this repo does not use for either `main` or `feature/*`. Only `rules/branches/<ref>` sees a
+ruleset. Read that one, and URL-encode the slash.
+
+What the three rules mean in practice:
+
+- **A phase PR cannot be merged with CI red.** The five checks are required, so the earlier advice
+  to "read the checks before merging" was describing a hazard that does not exist.
+- **The branch cannot be force-pushed or deleted.** `non_fast_forward` and `deletion` cover the
+  thing "never rebase a feature branch" asks for; the server refuses it now.
+- **A direct push is allowed.** Protected here means _checks are required_, not _changes must go
+  through a PR_ — the two get conflated, and only the second would forbid a push. A fast-forward
+  push whose head SHA already has green checks is accepted.
+
+That last one is what makes landing a merge from `main` possible at all; see below.
+
+Two details worth knowing before trusting a green feature branch. The required set is
+`E2E`, `Unit tests`, `Schema drift`, `Svelte Check` and **`Lint (full)`** — but `Lint (full)` is
+`if: github.event_name == 'push'`, so on a PR it reports `skipped`, which rulesets count as passing.
+`Lint (changed)` and `Docs integrity` are required on `main` and **not** on `feature/*`. So lint and
+docs failures reach the branch and surface only at the landing PR. Run them yourself
+(#762 tracks the mismatch).
+
+### Merging `main` in is a push, not a PR
+
+The repo allows **squash only** (`allow_merge_commit` and `allow_rebase_merge` are both false), and
+squashing a merge-`main` PR is actively wrong. It collapses the merge commit into a single new
+commit, so `main`'s commits never enter the branch's ancestry: `merge-base(main, feature)` stays at
+the old fork point, and the eventual landing PR renders every one of `main`'s commits as though the
+branch had authored them, conflicting against anything `main` touched in between. That is the exact
+outcome "merge `main` in, never rebase" exists to prevent, and squash-only leaves the PR route
+unable to honour it.
+
+So the merge PR exists to **run the checks**, not to be merged:
+
+```bash
+git merge origin/main                       # a real merge commit, on a merge/ branch
+git push -u origin HEAD
+gh pr create --base feature/<slug> ...      # CI runs; the checks report on this head SHA
+# wait for green, then, from the worktree that owns the branch:
+git switch feature/<slug> && git merge --ff-only merge/main-into-<slug>
+git push origin HEAD                        # fast-forward. No force, ever.
+```
+
+The push satisfies `required_status_checks` because the checks are already green on that SHA, and
+GitHub marks the PR `MERGED` on its own once the base contains its head. Confirmed on #727
+(`feature/uloc-rework`) and #735 (`feature/band-packing-list`); both branches carry a real merge
+commit with `main` as a second parent.
+
+**Phase PRs are different and unaffected.** They add new work, so `gh pr merge --squash` is right
+and loses nothing.
+
+### `gh pr merge --auto` does not work against a feature base
+
+```
+$ gh pr merge <n> --auto            # base: feature/<slug>
+--merge, --rebase, or --squash required when not running interactively
+```
+
+`merge_queue` is a rule on `main` alone. Without a queue, auto-merge needs an explicit method, and
+`gh` will not guess one. On a phase PR pass `--squash`; on a merge-`main` PR do not open the
+question — fast-forward push it, per the previous section.
+
+**None of this changes `main`.** A finished PR into `main` is still queued with a bare
+`gh pr merge --auto` — no merge method, never `--admin`, never `gh pr update-branch`.
 
 ### Migrations on a branch that outlives a merge from `main`
 
@@ -184,10 +258,11 @@ it across worktrees) and it replays the resolutions.
 | `pnpm-lock.yaml`                    | Never hand-resolve: `git checkout --theirs pnpm-lock.yaml && pnpm install`.                                                                                                                                 |
 | `migrations/`                       | Never conflicts, which is the trap. See above.                                                                                                                                                              |
 
-Never rebase a feature branch and never force-push one. Other worktrees hold it, open phase PRs
-would redisplay every merged phase as new commits, and `allow_force_pushes=false` protects `main`
-only — nothing stops the push. Commit rather than stashing, too: the stash lives in the common
-`.git` and every worktree in this repo shares it.
+Never rebase a feature branch and never force-push one. Other worktrees hold it and open phase PRs
+would redisplay every merged phase as new commits. The `non_fast_forward` rule now refuses the push
+server-side, so this is enforced rather than merely asked for — but it fails _after_ you have
+rewritten your local history, which is the expensive half. Commit rather than stashing, too: the
+stash lives in the common `.git` and every worktree in this repo shares it.
 
 ## Table rebuilds on D1
 
