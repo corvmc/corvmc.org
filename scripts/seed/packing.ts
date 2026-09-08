@@ -7,31 +7,11 @@ import type { PackingCategory } from '../../src/lib/config';
 import type { RiderElementKind } from '../../src/lib/config';
 
 /**
- * Band packing lists.
- *
- * Hung off the **same band the rider seed filled in**, and off its two logins,
- * so one account reaches both features and the promote-to-rider path in phase 3
- * has a real rider to promote into. The band id arrives as an argument rather
- * than being re-derived here; see the note on `seedRiders`' return value.
- *
- * What this fixture is *for* is the three rules a reader would otherwise have to
- * take on faith, each of which needs a row that shows it:
- *
- * - **Owning and carrying are different facts.** There is a row owned by the
- *   admin and assigned to the member, and shared rows (`userId: null`) assigned
- *   to a person. A seed where the two columns always agree is a seed that never
- *   shows why there are two.
- * - **Nobody has this.** Several rows are left unassigned, so the load-in page's
- *   leading section renders with something in it and the claim button has
- *   somewhere to land.
- * - **Anybody may pack anything.** Some packed rows were ticked by somebody who
- *   neither owns nor is bringing them.
- *
- * Plus the three promotion states, which exist to prove `promotedAt` earns its
- * column: on the rider and promoted, promotable and nagging, and promoted but
- * since deleted from the rider — the one that must *not* nag.
- *
- * Nothing is random. Counts on this page are load-bearing.
+ * Band packing lists, hung off the **same band the rider seed filled in** so one
+ * account reaches both features. Covers the rules a reader would otherwise take
+ * on faith: owning and carrying as different facts, rows nobody has, a row
+ * ticked by a third party, and all three promotion states. Nothing is random —
+ * counts here are load-bearing. Rationale: docs/specs/packing-list-spec.md#seed
  */
 
 const ADMIN = 'seed-rider-admin';
@@ -58,25 +38,11 @@ interface Seeded {
 }
 
 /**
- * Every category, every assignment state, and a majority of rows carrying no
- * `riderKind` — because a thing that goes on the rider is the exception on a
- * packing list, and a fixture where most rows are promotable would teach the
- * opposite.
- *
- * Two of the three promotion states are static rows:
- * - "Fender Twin" and "Roland Jazz Chorus" have a kind, no `promotedAt`, and no
- *   matching element on the rider — the nudge.
- * - "Rhodes suitcase" has a kind and a `promotedAt` but still no match:
- *   promoted once, then deliberately deleted from the rider. It must render as
- *   settled rather than nagging forever, and it is the whole reason
- *   `promoted_at` is a bare timestamp and not a foreign key.
- *
- * The third — **on the rider and promoted** — cannot be written statically,
- * because the match is on `(owner, label)` and the rider seed hands its corners
- * out round-robin over a roster this file does not control. Guessing a pair
- * here produced a row that looked settled and silently was not. So it is
- * derived: `settledRows` reads the personas' actual elements back and mirrors
- * them.
+ * Every category, every assignment state, and most rows carrying no `riderKind`.
+ * Two promotion states are static: a kind with no `promotedAt` (the nudge), and
+ * "Rhodes suitcase", promoted then deleted from the rider, which must read as
+ * settled rather than nag forever. The third is derived by `settledRows` — see
+ * the spec's "seed" for why guessing the pair silently failed.
  */
 const ITEMS: Seeded[] = [
 	// ---- backline: the heavy things, and the two-column case ----

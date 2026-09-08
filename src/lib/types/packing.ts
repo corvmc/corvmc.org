@@ -20,18 +20,10 @@ export const packingItemDraftSchema = z.object({
 	/**
 	 * The row this draft replaces, when it replaces one.
 	 *
-	 * **A rider draft carries no id and this one does**, which is the one place
-	 * the rider's precedent is deliberately broken. A rider element holds nothing
-	 * but what the member typed, so deleting and reinserting an owner's rows
-	 * loses nothing. A packing item holds `packed`, `assignedUserId` and
-	 * `promotedAt` — state nobody typed and nobody can retype — so
-	 * delete-and-reinsert would unpack a van and drop whoever agreed to carry the
-	 * box, every time somebody fixed a spelling. Carrying the id lets the save be
-	 * a diff instead.
-	 *
-	 * It is inert against forgery: every write is scoped to
-	 * `(listId, ownerUserId)`, and an id outside that set is rejected rather than
-	 * adopted.
+	 * **A rider draft carries no id and this one does**, so the save can be a
+	 * diff — these rows hold `packed`, `assignedUserId` and `promotedAt`. Inert
+	 * against forgery: writes are scoped to `(listId, ownerUserId)` and an id
+	 * outside that set is rejected, not adopted. Spec: "the save is a diff".
 	 */
 	id: z.string().optional(),
 	category: z.enum(packingCategories),

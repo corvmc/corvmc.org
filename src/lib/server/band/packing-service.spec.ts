@@ -1,25 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * The band packing list.
- *
- * Five things are worth pinning, and they are the five a reader cannot check by
- * eye:
- *
- * - **Editing a row neither unpacks it nor un-delegates it.** The save is a
- *   diff, not the rider's delete-and-reinsert, precisely because these rows
- *   carry `packed`, `assignedUserId` and `promotedAt` — state nobody typed. The
- *   assertions here are on the update payload's *keys*, because the failure mode
- *   is a stray key in a `.set()` rather than a wrong value.
- * - **A member's save cannot reach another member's rows**, even though drafts
- *   now carry ids. The ids are checked against an owner-scoped read and rejected
- *   rather than adopted.
- * - **Owning and carrying are different facts.** `claimItem` writes the guard's
- *   user and takes no assignee; `assignItem` is the separate admin path.
- * - **A claim is a race.** The write carries its own `IS NULL` predicate, so a
- *   claim on a taken row affects nothing and says so.
- * - **A reset clears ticks and leaves assignments alone.** Two verbs, two
- *   lifetimes; "clear everything" is the intuitive and wrong reading.
+ * The band packing list. Five rules a reader cannot check by eye: editing
+ * neither unpacks a row nor un-delegates it; a member's save cannot reach
+ * another member's rows even though drafts carry ids; owning and carrying are
+ * different facts; a claim is a race settled by an `IS NULL` predicate; and a
+ * reset clears ticks but leaves assignments. Spec: docs/specs/packing-list-spec.md
  */
 
 let selectResults: unknown[][] = [];

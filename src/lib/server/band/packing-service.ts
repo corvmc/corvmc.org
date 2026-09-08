@@ -17,29 +17,11 @@ import {
 
 /**
  * A band's packing list — what goes in the van, who is bringing it, and whether
- * it is loaded yet.
+ * it is loaded yet. Three concerns, three permission rules.
  *
- * **Three separate concerns, three separate permission rules**, which is why
- * this module is longer than it looks:
- *
- * | Verb   | Who may                                                    | Lifetime     |
- * | ------ | ---------------------------------------------------------- | ------------ |
- * | edit   | the row's owner, or an admin                               | forever      |
- * | assign | anyone may claim an *unassigned* row for themselves or      | until        |
- * |        | release their own; an admin may assign or reassign anyone   | changed      |
- * | pack   | anyone on the roster, on any row                           | one trip     |
- *
- * The editing rule is the rider's, copied deliberately. The other two are not,
- * and both departures are load-bearing: one person walks the list at load-out
- * and it is not reliably an admin, and "I'll bring the PA" is how a band
- * actually settles this — not by the owner filing a request.
- *
- * **Takes-no-argument is how each rule is enforced, not a role check.**
- * `saveOwnItems` and `claimItem` take no owner and no assignee respectively;
- * they write the caller the guard already resolved. `saveItemsFor` and
- * `assignItem` are the separate admin-guarded paths that name somebody. Two (or
- * three) functions rather than one with a flag, because the flag is the thing
- * that gets passed wrong.
+ * **Takes-no-argument enforces each rule, not a role check** — `saveOwnItems`
+ * takes no owner and `claimItem` no assignee, because the flag is the thing
+ * that gets passed wrong. Rationale: docs/specs/packing-list-spec.md
  */
 
 /** More things than any real band's van, and than one payload should carry. */
@@ -130,13 +112,11 @@ export interface PackingSettingsDraft {
 const categoryRank = new Map(packingCategories.map((c, i) => [c, i]));
 
 /**
- * The order the list reads in: category first, then the owner's own tie-break,
- * then the label.
+ * The order the list reads in: category, then the owner's tie-break, then label.
  *
- * **Category, not `sortOrder`** — the same split, for the same reason,
- * `compareElements` makes on a rider element's `kind`. `sortOrder` is dense
- * *within one owner's rows*, so two members who both have a row at position 0
- * would otherwise interleave by whoever saved last.
+ * **Category, not `sortOrder`.** `sortOrder` is dense *within one owner's rows*,
+ * so two members each holding position 0 would otherwise interleave by whoever
+ * saved last. See the spec's "ordering comes from category".
  */
 export function compareItems(
 	a: Pick<PackingItemView, 'category' | 'sortOrder' | 'label'>,
@@ -287,22 +267,10 @@ export async function getPackingList(groupId: string): Promise<PackingListView> 
 /**
  * Apply one owner's submitted rows as a **diff**, not a replacement.
  *
- * This is the one place the rider's precedent does not transfer.
- * `replaceElementsForOwner` deletes an owner's elements and reinserts them,
- * which is right when the payload is the whole truth — a rider element holds
- * nothing but what the member typed. A packing item holds `packed`,
- * `assignedUserId` and `promotedAt`: state nobody typed and nobody can retype.
- * Delete-and-reinsert would unpack the van and drop whoever agreed to carry the
- * box every time somebody fixed a spelling.
- *
- * So: ids in, and three kinds of statement out. Scoped by
- * `(listId, ownerUserId)` exactly as the rider's is, which is what makes the
- * client-supplied ids safe — an id the owner filter did not return is
- * **rejected, never adopted**, so a forged payload cannot reach into another
- * member's crate or another band's list.
- *
- * `sortOrder` is still re-derived from array position, so no client can post an
- * order.
+ * A packing item holds `packed`, `assignedUserId` and `promotedAt` — state
+ * nobody typed — so a rebuild would unpack the van on every spelling fix. Ids
+ * are scoped by `(listId, ownerUserId)`; one the filter did not return is
+ * rejected, never adopted. See the spec's "the save is a diff".
  */
 async function applyItemsForOwner(
 	listId: string,
@@ -439,16 +407,10 @@ async function requireItem(groupId: string, itemId: string) {
 /**
  * A member taking responsibility for an unclaimed row.
  *
- * **Takes no assignee**, so there is no code path by which a member could put a
- * row on somebody else — the same shape, for the same reason, as
- * `saveOwnItems`.
- *
- * The write carries its own `assigned_user_id IS NULL` predicate and reports
- * zero affected rows as `PackingAlreadyClaimedError`, rather than reading and
- * then writing. Two people tapping "I'll bring it" on the PA at the same moment
- * is the realistic case here, not an edge one, and a read-then-write lets the
- * second silently overwrite the first. It is expected rather than exceptional:
- * the page's answer is "Sam already has this one", not a failure.
+ * **Takes no assignee**, so no code path puts a row on somebody else. The write
+ * carries its own `assigned_user_id IS NULL` predicate and reports zero rows as
+ * `PackingAlreadyClaimedError` — expected, not exceptional, because a
+ * read-then-write loses the first claim. Spec: "claimItem is a conditional write".
  */
 export async function claimItem(groupId: string, callerUserId: string, itemId: string) {
 	const { head } = await requireItem(groupId, itemId);
@@ -530,10 +492,9 @@ export async function assignItem(
  * Tick or untick one row.
  *
  * **Any active member, any row.** `callerUserId` is recorded, not checked
- * against ownership or against the assignment: one person walks the list at
- * load-out and it is not reliably the owner of everything in the van. See the
- * `packed` column comment; this is the rule a later reader would "fix" back to
- * the rider's.
+ * against ownership or assignment: one person walks the list at load-out and is
+ * not reliably the owner of everything in the van. A later reader would "fix"
+ * this back to the rider's rule — see the `packed` column comment.
  */
 export async function setPacked(
 	groupId: string,
@@ -556,17 +517,10 @@ export async function setPacked(
 /**
  * Clear every tick for the next load-in.
  *
- * **Ticks only. Assignments survive.** Who is bringing the PA is not a per-trip
- * fact, and a reset that cleared it too would make the band re-negotiate the
- * load-in from scratch every show — which is the coordination this feature
- * exists to remove. Two verbs, two lifetimes.
- *
- * `db.batch`, never `db.transaction` — the latter is broken on D1 and ESLint
- * errors on it. The parameter count is constant however long the list is, so
- * this is the one write here that the 100-parameter cap has no opinion about.
- * The `packed = true` filter is not an optimisation: it is what lets
- * `idx_packing_item_packed` do the work, and it keeps a no-op reset from
- * rewriting a hundred rows.
+ * **Ticks only. Assignments survive** — two verbs, two lifetimes. `db.batch`,
+ * never `db.transaction`, which is broken on D1. The `packed = true` filter is
+ * not an optimisation: it lets `idx_packing_item_packed` do the work and keeps
+ * a no-op reset from rewriting a hundred rows.
  */
 export async function resetPacked(
 	groupId: string,
