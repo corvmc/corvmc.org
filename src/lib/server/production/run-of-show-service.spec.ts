@@ -83,6 +83,7 @@ const {
 	getPublicSetTimes,
 	setSlotTerms,
 	listBandSlotTerms,
+	PoolOverAllocatedError,
 	SlotExistsError,
 	SlotNotFoundError,
 	TooManySlotsError,
@@ -282,6 +283,9 @@ describe('setSlotTerms', () => {
 	// want different confirmations, and the seam is where a settlement capability
 	// would guard one without splitting the other.
 	it('writes the five deal columns and nothing else', async () => {
+		// Two reads before the write since #832: the slot's own production, then
+		// its siblings' shares, because the pool has to fit in one pool.
+		selectResults = [[{ productionId: 'prod-1' }], [{ bps: 3000 }]];
 		writeResults = [[{ id: 'slot-a' }]];
 
 		await setSlotTerms('slot-a', {
@@ -296,6 +300,40 @@ describe('setSlotTerms', () => {
 		expect(written).toMatchObject({ guaranteeCents: 30000, percentageBps: 7000, versus: true });
 		expect(written).not.toHaveProperty('setLengthMinutes');
 		expect(written).not.toHaveProperty('scheduledStartAt');
+	});
+
+	it('refuses a share the acts\u2019 pool cannot hold', async () => {
+		// Three acts at 7000 each is enterable today and pays out 210% of a pool
+		// that holds 100% — the overspend coming out of the collective's own cut.
+		selectResults = [[{ productionId: 'prod-1' }], [{ bps: 7000 }, { bps: 7000 }]];
+
+		await expect(
+			setSlotTerms('slot-a', {
+				guaranteeCents: null,
+				percentageBps: 7000,
+				versus: false,
+				againstNet: false,
+				contributed: false
+			})
+		).rejects.toThrow(PoolOverAllocatedError);
+
+		expect(updatesTo(productionSlot)).toHaveLength(0);
+	});
+
+	it('does not read siblings when no share is being set', async () => {
+		// A guarantee-only deal touches no percentage, so the pool is not its
+		// business and the extra queries should not run.
+		writeResults = [[{ id: 'slot-a' }]];
+
+		await setSlotTerms('slot-a', {
+			guaranteeCents: 30000,
+			percentageBps: null,
+			versus: false,
+			againstNet: false,
+			contributed: false
+		});
+
+		expect(updatesTo(productionSlot)).toHaveLength(1);
 	});
 
 	// Money cannot move a set time, so nothing recomputes.

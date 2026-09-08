@@ -224,7 +224,15 @@ export const productionSlot = sqliteTable(
 		 * have to anyway.
 		 */
 		guaranteeCents: integer('guarantee_cents'),
-		/** Basis points of the acts' pool. 7000 is the house's opening 70%. */
+		/**
+		 * Basis points **of the acts' pool**, not of the door — the pool is already
+		 * the acts' 70%, and these divide it among them. A solo act is `10000`.
+		 *
+		 * They must sum to `10000` across the bill; `setSlotTerms` refuses a share
+		 * that overspends, because three acts at 7000 each pays out 210% of a pool
+		 * that holds 100% and the overspend comes out of the collective's own cut.
+		 * The default is an equal split — CMC has no house headliner/opener split.
+		 */
 		percentageBps: integer('percentage_bps'),
 		/** Guarantee *or* percentage, whichever is greater — rather than both. */
 		versus: integer('versus', { mode: 'boolean' }).notNull().default(false),
