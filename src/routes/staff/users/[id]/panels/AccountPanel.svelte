@@ -151,7 +151,15 @@
 
 		<Fact label="Member no.">{member.memberNumber ?? '—'}</Fact>
 
-		<Fact label="Email verified">{member.emailVerified ? 'Yes' : 'No'}</Fact>
+		<!-- Nothing is gated on this, so "not confirmed" is not a restriction and
+		     should not read like one. Every account predating #757 shows it. -->
+		<Fact label="Email confirmed">
+			{#if member.emailVerified}
+				Yes
+			{:else}
+				<span class="text-muted">Not yet — full access either way</span>
+			{/if}
+		</Fact>
 
 		<Fact label="Stripe ID" mono>{member.stripeId ?? '—'}</Fact>
 
