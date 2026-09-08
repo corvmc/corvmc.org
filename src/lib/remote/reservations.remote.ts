@@ -290,9 +290,9 @@ export const getBandReservations = query(z.string(), async (slug) => {
  * administer band panels — and the row must belong to this band, 404 otherwise.
  *
  * What it deliberately does not return: the booker's phone or email (a
- * bandmate's contact details are not the act's business), the payment
- * instrument, and the door code to anyone but the member who booked. That last
- * one is the open product decision in #566, not something to settle here.
+ * bandmate's contact details are not the act's business) or the payment
+ * instrument. The door code is not on that list — #756 settled that every
+ * member of the act reads it.
  */
 export const getBandReservationDetail = query(
 	z.object({ slug: z.string().min(1), reservationId: z.string().min(1) }),
@@ -349,9 +349,10 @@ export const getBandReservationDetail = query(
 			refundedAt: res.refundedAt,
 			cashDueCents: res.cashDueCents,
 			creditsUsed: res.creditsUsed,
-			// The booker already reads this on their own detail page. Widening it to
-			// every bandmate is #566's call, so it is withheld rather than guessed at.
-			lockCode: isBooker ? res.lockCode : null,
+			// Every member of the act, not just whoever booked (#756): a band loads
+			// in together and whoever arrives first opens the door. The guard above
+			// is what bounds this — membership in the band the row belongs to.
+			lockCode: res.lockCode,
 			canCancel:
 				(bandAdmin || isBooker) &&
 				res.startsAt.getTime() > Date.now() &&
