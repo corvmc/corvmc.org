@@ -26,7 +26,7 @@ const { env } = await import('$env/dynamic/private');
 const { getConfigsByPrefix } = await import('$lib/server/site-config/site-config-service');
 
 const {
-	clientSecretStatus,
+	credentialStatus,
 	generateLockCode,
 	createTemporaryUser,
 	addLockUser,
@@ -361,25 +361,30 @@ describe('exchangeAuthorizationCode', () => {
 	});
 });
 
-describe('clientSecretStatus', () => {
-	// Asserts on presence and provenance only. A test that pinned the value
-	// would put the secret in the fixture, which is the thing being fixed.
-	it('reports the KV copy, and never the value itself', async () => {
-		expect(await clientSecretStatus()).toEqual({ configured: true, source: 'kv' });
+describe('credentialStatus', () => {
+	// Asserts on presence and provenance only. A test that pinned a value would
+	// put the credential in the fixture, which is the thing being fixed.
+	const CASES = [
+		['clientSecret', 'ULTRALOC_CLIENT_SECRET'],
+		['refreshToken', 'ULTRALOC_REFRESH_TOKEN']
+	] as const;
+
+	it.each(CASES)('%s reports the KV copy, and never the value itself', async (field) => {
+		expect(await credentialStatus(field)).toEqual({ configured: true, source: 'kv' });
 	});
 
-	it('falls back to the environment when KV holds no secret', async () => {
+	it.each(CASES)('%s falls back to the environment when KV holds none', async (field, envVar) => {
 		vi.mocked(getConfigsByPrefix).mockResolvedValueOnce({ clientId: 'cid' });
-		env.ULTRALOC_CLIENT_SECRET = 'from-env';
+		env[envVar] = 'from-env';
 		try {
-			expect(await clientSecretStatus()).toEqual({ configured: true, source: 'env' });
+			expect(await credentialStatus(field)).toEqual({ configured: true, source: 'env' });
 		} finally {
-			delete env.ULTRALOC_CLIENT_SECRET;
+			delete env[envVar];
 		}
 	});
 
-	it('reports not configured when neither source has one', async () => {
+	it.each(CASES)('%s reports not configured when neither source has one', async (field) => {
 		vi.mocked(getConfigsByPrefix).mockResolvedValueOnce({ clientId: 'cid' });
-		expect(await clientSecretStatus()).toEqual({ configured: false, source: null });
+		expect(await credentialStatus(field)).toEqual({ configured: false, source: null });
 	});
 });
