@@ -259,6 +259,23 @@ export const FIXTURES: Fixture[] = [
 		}
 	},
 	{
+		name: 'verify-email',
+		alias: 'verify-email',
+		// Same triple-brace trap as password-reset: better-auth builds
+		// `/verify-email?token=…&callbackURL=…`, so the text part would arrive with
+		// `&amp;` and a dead link if it double-braced the URL. The query string is
+		// kept here on purpose — it is what makes validate, preview and
+		// render.spec.ts prove the brace.
+		model: {
+			greeting: 'Hi Maya,',
+			verifyUrl:
+				'https://corvmc.org/api/auth/verify-email?token=eyJhbGciOiJIUzI1NiJ9.PfQ2rN8xKvT1&callbackURL=%2Fmember%2Faccount',
+			expiresIn: '24 hours',
+			preview_text: 'Confirm this address so we know our email reaches you.',
+			transactional_only: true
+		}
+	},
+	{
 		name: 'notification-password-changed',
 		alias: 'notification',
 		// The other half of the reset flow, and the one shape in the generic

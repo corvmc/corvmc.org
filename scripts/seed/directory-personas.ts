@@ -55,12 +55,13 @@ export async function seedDirectoryPersonas(roles: SeedRole[]) {
 		email: string;
 		name: string;
 		memberNumber: number;
+		emailVerified?: boolean;
 	}) => {
 		await db.insert(user).values({
 			id: p.id,
 			name: p.name,
 			email: p.email,
-			emailVerified: true,
+			emailVerified: p.emailVerified ?? true,
 			memberNumber: p.memberNumber,
 			pronouns: 'they/them',
 			createdAt: now,
@@ -159,11 +160,16 @@ export async function seedDirectoryPersonas(roles: SeedRole[]) {
 	pendingTags.push({ subjectId: LEADER.id, kind: 'instrument', value: 'guitar' });
 
 	// --- the undecided: a finished profile with nothing to match on ----------
+	// The only persona with an unconfirmed address, so the account page's
+	// verification notice, its resend button and the staff panel's "Not yet"
+	// are all reachable by signing in as this one. `seedMarketing` puts an
+	// unclaimed subscriber row under the same address for the refusal (#757).
 	const UNDECIDED = {
 		id: 'seed-dir-undecided',
 		email: 'undecided@corvallismusic.org',
 		name: 'Kit Alvarez',
-		memberNumber: 72
+		memberNumber: 72,
+		emailVerified: false
 	};
 	await insertPersona(UNDECIDED);
 	pendingEntries.set(UNDECIDED.id, {

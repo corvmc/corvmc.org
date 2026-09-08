@@ -115,20 +115,38 @@ export async function findByUserId(userId: string) {
 }
 
 /**
- * Find or create a subscriber for a user account. Uses the user's email
- * to look up / create the subscriber and links it to the userId.
+ * Find or create a subscriber for a user account.
+ *
+ * Three cases, and only the middle one turns on `emailVerified` (#757). A row
+ * this account already holds is returned as-is. A row that exists under the
+ * address but belongs to nobody carries a stranger's audience memberships and
+ * suppression state, so claiming it needs a proven address — unverified,
+ * that returns null rather than handing the row over. No row at all is
+ * created and linked whatever the flag says: a fresh row takes nothing.
  */
 export async function findOrCreateForUser(
 	userId: string,
 	userEmail: string,
-	userName?: string
-): Promise<{ id: string; email: string; name: string | null; userId: string | null }> {
+	userName: string | undefined,
+	options: { emailVerified: boolean }
+): Promise<{ id: string; email: string; name: string | null; userId: string | null } | null> {
+	const own = await findByUserId(userId);
+	if (own) return own;
+
+	const existing = await findByEmail(userEmail);
+	if (existing) {
+		if (existing.userId) return existing.userId === userId ? existing : null;
+		if (!options.emailVerified) return null;
+		await linkToUser(existing.id, userId);
+		return { ...existing, userId };
+	}
+
 	const sub = await findOrCreateByEmail(userEmail, userName);
 	if (!sub.userId) {
 		await linkToUser(sub.id, userId);
 		return { ...sub, userId };
 	}
-	return sub;
+	return sub.userId === userId ? sub : null;
 }
 
 /**

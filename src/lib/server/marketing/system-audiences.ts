@@ -65,6 +65,10 @@ export async function ensureSystemAudiences(): Promise<void> {
  * Two passes, because `subscriber.email` is unique: link rows that already
  * exist under the member's address (a public signup who later joined), then
  * create rows for the rest.
+ *
+ * The linking pass needs a verified address (#757). Bare email equality is not
+ * proof of control, and that row holds a stranger's memberships and suppression
+ * state. Creating a fresh row does not, so it stays unconditional.
  */
 export async function ensureSubscribersForUsers(predicate: SQL): Promise<void> {
 	const unlinked = await db
@@ -72,6 +76,7 @@ export async function ensureSubscribersForUsers(predicate: SQL): Promise<void> {
 			userId: user.id,
 			email: user.email,
 			name: user.name,
+			emailVerified: user.emailVerified,
 			subscriberId: subscriber.id
 		})
 		.from(user)
@@ -82,7 +87,7 @@ export async function ensureSubscribersForUsers(predicate: SQL): Promise<void> {
 
 	// A row already under this address, just not linked to the account yet.
 	for (const u of unlinked) {
-		if (!u.subscriberId) continue;
+		if (!u.subscriberId || !u.emailVerified) continue;
 		await db.update(subscriber).set({ userId: u.userId }).where(eq(subscriber.id, u.subscriberId));
 	}
 

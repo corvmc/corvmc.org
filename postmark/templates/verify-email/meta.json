@@ -1,0 +1,7 @@
+{
+  "Name": "Verify Email",
+  "Alias": "verify-email",
+  "Subject": "Confirm your CorvMC email address",
+  "TemplateType": "Standard",
+  "LayoutTemplate": "corvmc-transactional"
+}
