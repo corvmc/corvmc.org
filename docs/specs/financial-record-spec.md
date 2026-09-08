@@ -222,7 +222,7 @@ changes November's revenue, a figure that may already have been reported. **Reve
 negative entry in January, where the money actually moved. That is simply correct, and it is the
 reason to accept the cost.
 
-Two consequences, both accepted:
+Three consequences, all accepted:
 
 - `sum(amountCents)` is correct over any window with **no status filter**. Nothing has to remember
   to exclude refunds, and the query that forgets cannot over-report.
@@ -290,6 +290,33 @@ point. Subtracting a gross base from a fee-reduced divisible — the obvious fir
 understates the extra by the entire fee and hands 70% of that loss back to the acts, which is the
 same leak as #827 in miniature.
 
+Nothing enforces this today: the split is a percentage of what was actually paid, so a discount is
+divided proportionally and the acts absorb 70% of it. At full price they receive $6.59 rather than
+$7.00, having silently paid 70% of the processing fee. See **#827**, filed and corrected from this
+decision.
+
+Both numbers are recorded, because they are different facts:
+
+| Fact                           | When       | Entry                                                                |
+| ------------------------------ | ---------- | -------------------------------------------------------------------- |
+| What the buyer designated      | Sale time  | `earned` for the collective's share, `pass_through` in for the acts' |
+| What the act was actually paid | Settlement | `pass_through` out                                                   |
+| The difference                 | Settlement | An explicit `spent` entry                                            |
+
+The two do not match by design: #593 pays an act `max(guarantee, door split %)`, so a band with a
+$200 guarantee is paid $200 on a night when buyers designated $140. **That $60 gap is recorded, not
+netted away** — it is the guarantee costing the collective money on a soft night, which is precisely
+the number a programming committee should be able to see.
+
+Recording at sale time also keeps the presale window honest: money designated for an act weeks
+before the show is a liability from the moment it is designated, not from the night of, and a
+revenue report run in between must not count it.
+
+**Changing any of this is a policy decision, and it has to be visible as one.** The reason for
+recording all three numbers rather than only the payout is that a discrepancy between what buyers
+intended and what the act received is a thing someone chose. It must not be resolvable by
+arithmetic that hides it.
+
 ### Every split payment works this way
 
 This is one rule in `split.ts`, not a ticket rule. Music sales follow it too, with the release's
@@ -338,33 +365,6 @@ Two consequences:
   today and would put every sale on that event below `minChargeCents`. Audio already refuses a floor
   between 1¢ and `AUDIO_MIN_PRICE_CENTS`; tickets need the same rule, or a floor in the dead zone
   makes every ticket free. Folded into #827.
-
-Nothing enforces this today: the split is a percentage of what was actually paid, so a discount is
-divided proportionally and the acts absorb 70% of it. At full price they receive $6.59 rather than
-$7.00, having silently paid 70% of the processing fee. See **#827**, filed and corrected from this
-decision.
-
-Both numbers are recorded, because they are different facts:
-
-| Fact                           | When       | Entry                                                                |
-| ------------------------------ | ---------- | -------------------------------------------------------------------- |
-| What the buyer designated      | Sale time  | `earned` for the collective's share, `pass_through` in for the acts' |
-| What the act was actually paid | Settlement | `pass_through` out                                                   |
-| The difference                 | Settlement | An explicit `spent` entry                                            |
-
-The two do not match by design: #593 pays an act `max(guarantee, door split %)`, so a band with a
-$200 guarantee is paid $200 on a night when buyers designated $140. **That $60 gap is recorded, not
-netted away** — it is the guarantee costing the collective money on a soft night, which is precisely
-the number a programming committee should be able to see.
-
-Recording at sale time also keeps the presale window honest: money designated for an act weeks
-before the show is a liability from the moment it is designated, not from the night of, and a
-revenue report run in between must not count it.
-
-**Changing any of this is a policy decision, and it has to be visible as one.** The reason for
-recording all three numbers rather than only the payout is that a discrepancy between what buyers
-intended and what the act received is a thing someone chose. It must not be resolvable by
-arithmetic that hides it.
 
 ## Not in this spec
 
