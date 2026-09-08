@@ -3,8 +3,16 @@ import { production, productionSlot } from '$lib/server/db/schema/production';
 import { eventBand, eventListing } from '$lib/server/db/schema/event';
 import { directoryEntry } from '$lib/server/db/schema/directory';
 import { group } from '$lib/server/db/schema/group';
-import { and, asc, eq, inArray, isNotNull, notInArray } from 'drizzle-orm';
-import { computeSetTimes, orderSlots, runOfShowWarnings, SLOT_MAX } from './run-of-show';
+import { and, asc, eq, inArray, isNotNull, ne, notInArray } from 'drizzle-orm';
+import {
+	POOL_BPS,
+	SLOT_MAX,
+	computeSetTimes,
+	equalPoolShares,
+	orderSlots,
+	poolShareFits,
+	runOfShowWarnings
+} from './run-of-show';
 
 import { DomainError } from '$lib/server/domain-error';
 import type { EventBandStatus } from '$lib/server/db/schema/event';
@@ -62,6 +70,18 @@ export class SlotExistsError extends DomainError {
 	constructor() {
 		super('That act already has a set in the running order');
 		this.name = 'SlotExistsError';
+	}
+}
+
+export class PoolOverAllocatedError extends DomainError {
+	readonly httpStatus = 422;
+	constructor(remainingBps: number) {
+		super(
+			remainingBps <= 0
+				? 'The acts\u2019 pool is fully allocated. Lower another act\u2019s share first.'
+				: `That is more than the pool has left \u2014 ${(remainingBps / 100).toFixed(2)}% remains.`
+		);
+		this.name = 'PoolOverAllocatedError';
 	}
 }
 
@@ -482,6 +502,29 @@ export async function moveSlot(slotId: string, direction: 'up' | 'down'): Promis
  * capability would guard without splitting a form that had already grown.
  */
 export async function setSlotTerms(slotId: string, terms: ActTerms): Promise<void> {
+	// `percentageBps` is basis points of the acts' pool, so the bill's shares have
+	// to fit inside one pool. Checked here rather than in the zod schema because
+	// the schema sees one act and the constraint spans the bill.
+	if (terms.percentageBps != null) {
+		const [self] = await db
+			.select({ productionId: productionSlot.productionId })
+			.from(productionSlot)
+			.where(eq(productionSlot.id, slotId))
+			.limit(1);
+		if (!self) throw new SlotNotFoundError();
+
+		const siblings = await db
+			.select({ bps: productionSlot.percentageBps })
+			.from(productionSlot)
+			.where(
+				and(eq(productionSlot.productionId, self.productionId), ne(productionSlot.id, slotId))
+			);
+		const others = siblings.map((r) => r.bps ?? 0);
+		if (!poolShareFits(others, terms.percentageBps)) {
+			throw new PoolOverAllocatedError(POOL_BPS - others.reduce((sum, bps) => sum + bps, 0));
+		}
+	}
+
 	const [row] = await db
 		.update(productionSlot)
 		.set({
@@ -541,15 +584,22 @@ export async function buildSlotsFromLineup(productionId: string, eventId: string
 		.orderBy(asc(eventBand.billingOrder));
 
 	const room = SLOT_MAX - existing.length;
-	const rows = credits.slice(0, room).map((c, i) => ({
+	const taking = credits.slice(0, room);
+	// The bill divides the acts' pool equally — CMC takes 30% of the door and the
+	// acts split the rest among themselves, with no house headliner split. Seeded
+	// across the whole bill including slots already there, so building from a
+	// lineup twice does not leave the first acts on a stale share.
+	const shares = equalPoolShares(existing.length + taking.length);
+	const rows = taking.map((c, i) => ({
 		productionId,
 		eventBandId: c.id,
 		sortOrder: (existing.length ? existing[existing.length - 1].sortOrder : 0) + i + 1,
-		setLengthMinutes: DEFAULT_SET_MINUTES
+		setLengthMinutes: DEFAULT_SET_MINUTES,
+		percentageBps: shares[existing.length + i]
 	}));
 	if (rows.length === 0) return 0;
 
-	// Four columns a row, so twelve rows is well under D1's 100-parameter cap and
+	// Five columns a row, so twelve rows is well under D1's 100-parameter cap and
 	// a single statement covers the whole bill.
 	await db.insert(productionSlot).values(rows);
 	await recomputeSetTimes(productionId);

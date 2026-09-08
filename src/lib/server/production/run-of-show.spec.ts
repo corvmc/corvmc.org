@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { computeSetTimes, orderSlots, runOfShowWarnings } from './run-of-show';
+import {
+	computeSetTimes,
+	equalPoolShares,
+	orderSlots,
+	POOL_BPS,
+	poolShareFits,
+	runOfShowWarnings,
+	SLOT_MAX
+} from './run-of-show';
 import type { SetTimeSlot, WarnableSlot } from './run-of-show';
 
 /**
@@ -143,5 +151,41 @@ describe('runOfShowWarnings', () => {
 		expect(
 			codes({ firstSetAt: null, slots: [warnable({ id: 'a', setLengthMinutes: 300 })] })
 		).toEqual(['set_too_long']);
+	});
+});
+
+describe('the acts pool divides equally', () => {
+	it.each([
+		[1, [10_000]],
+		[2, [5000, 5000]],
+		[3, [3333, 3333, 3334]],
+		[4, [2500, 2500, 2500, 2500]],
+		[7, [1428, 1428, 1428, 1429, 1429, 1429, 1429]]
+	])('%i acts → %j', (count, expected) => {
+		expect(equalPoolShares(count)).toEqual(expected);
+	});
+
+	it('always sums to the whole pool', () => {
+		for (let n = 1; n <= SLOT_MAX; n++) {
+			expect(equalPoolShares(n).reduce((a, b) => a + b, 0)).toBe(POOL_BPS);
+		}
+	});
+
+	it('gives the remainder to the acts furthest down the bill', () => {
+		// Not a coin toss: the same bill must divide the same way twice.
+		expect(equalPoolShares(3)).toEqual(equalPoolShares(3));
+		expect(equalPoolShares(3)[2]).toBeGreaterThan(equalPoolShares(3)[0]);
+	});
+
+	it('refuses a share that overspends the pool', () => {
+		// Three acts at 7000 each — enterable today, and pays out 210% of the pool.
+		expect(poolShareFits([7000, 1500], 1500)).toBe(true);
+		expect(poolShareFits([7000, 7000], 7000)).toBe(false);
+		expect(poolShareFits([], 10_000)).toBe(true);
+	});
+
+	it('permits a bill that is still being filled in', () => {
+		// Under-allocating is unfinished, not dangerous.
+		expect(poolShareFits([3333], 3333)).toBe(true);
 	});
 });
