@@ -12,6 +12,8 @@ import { drizzle } from 'drizzle-orm/d1';
 // ---------------------------------------------------------------------------
 
 let selectResult: unknown[] = [];
+/** Consumed one select at a time, for the reads that make more than one. */
+let selectResultQueue: unknown[][] = [];
 const writes: { table: string; values: Record<string, unknown> }[] = [];
 const deletes: { table: string; where: unknown }[] = [];
 let lastSelect: { where?: unknown; orderBy?: unknown } = {};
@@ -34,7 +36,9 @@ function selectChain() {
 		innerJoin: step(),
 		where: step((w) => (lastSelect.where = w)),
 		orderBy: step((o) => (lastSelect.orderBy = o)),
-		then: (resolve: (v: unknown[]) => void) => resolve(selectResult)
+		limit: step(),
+		then: (resolve: (v: unknown[]) => void) =>
+			resolve(selectResultQueue.length > 0 ? selectResultQueue.shift()! : selectResult)
 	});
 	return chain;
 }
@@ -69,6 +73,7 @@ const {
 	detachSlot,
 	listFor,
 	countAttachments,
+	isKeyReferenced,
 	liveAttachmentCondition,
 	totalLiveBytes
 } = await import('./media-service');
@@ -97,6 +102,7 @@ beforeEach(() => {
 	writes.length = 0;
 	deletes.length = 0;
 	selectResult = [];
+	selectResultQueue = [];
 	lastSelect = {};
 	vi.clearAllMocks();
 });
@@ -243,6 +249,50 @@ describe('countAttachments', () => {
 	it('coerces the driver’s count to a number', async () => {
 		selectResult = [{ n: '3' }];
 		expect(await countAttachments('media-1')).toBe(3);
+	});
+});
+
+describe('isKeyReferenced', () => {
+	// The predicate a moderation takedown asks before deleting an object inline.
+	// A false positive costs a day's delay; a false negative destroys a poster
+	// another listing is still showing, so every reference has to count.
+
+	it('reports referenced while an attachment points at the object', async () => {
+		selectResultQueue = [[{ id: 'm1', key: 'events/posters/a.jpg' }], [{ n: 1 }]];
+
+		expect(await isKeyReferenced('events/posters/a.jpg')).toBe(true);
+	});
+
+	it('reports referenced when a listing still names the key with no attachment', async () => {
+		// The generated-occurrence gap: `event_listing.poster_key` can hold a key
+		// whose attachment was never written.
+		selectResultQueue = [[{ id: 'm1' }], [{ n: 0 }], [{ id: 'evt-2' }]];
+
+		expect(await isKeyReferenced('events/posters/a.jpg')).toBe(true);
+	});
+
+	it('reports unreferenced when neither an attachment nor a listing names it', async () => {
+		selectResultQueue = [[{ id: 'm1' }], [{ n: 0 }], []];
+
+		expect(await isKeyReferenced('events/posters/a.jpg')).toBe(false);
+	});
+
+	it('still checks listings for a key that was never recorded', async () => {
+		// No `media` row is not proof nothing uses the object — the backfill gap
+		// is exactly the case where only the listing column knows.
+		selectResultQueue = [[], [{ id: 'evt-2' }]];
+
+		expect(await isKeyReferenced('events/posters/a.jpg')).toBe(true);
+	});
+
+	it('answers the question without deleting anything', async () => {
+		// The module's rule survives the new export: only the caller deletes.
+		selectResultQueue = [[{ id: 'm1' }], [{ n: 0 }], []];
+
+		await isKeyReferenced('events/posters/a.jpg');
+
+		expect(deleteObject).not.toHaveBeenCalled();
+		expect(deletes).toHaveLength(0);
 	});
 });
 
