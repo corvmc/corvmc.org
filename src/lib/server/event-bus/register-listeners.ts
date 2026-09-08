@@ -235,7 +235,7 @@ async function registerInboxListeners(): Promise<void> {
 						paragraphs: [{ text: 'A staff member replied to your conversation with CorvMC.' }],
 						// Raw — the dispatcher escapes it and preserves the line breaks.
 						quote: thread.preview ?? '',
-						cta: { label: 'View Conversation' }
+						cta: { label: 'View conversation' }
 					}
 				});
 			} catch (err) {
