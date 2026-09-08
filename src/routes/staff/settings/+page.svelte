@@ -439,7 +439,7 @@
 				<Card>
 					<CardBody>
 						<div class="flex items-center justify-between">
-							<CardTitle size="base">Organization Info</CardTitle>
+							<CardTitle size="base">Location</CardTitle>
 							<SubmitButton
 								label="Save"
 								successLabel="Saved"
@@ -448,48 +448,6 @@
 								size="sm"
 							/>
 						</div>
-
-						<div class="mt-2 grid gap-4 sm:grid-cols-2">
-							<FormField
-								name="name"
-								label="Organization name"
-								type="text"
-								value={String(orgSettings.name ?? 'Corvallis Music Collective')}
-							/>
-							<FormField
-								name="shortName"
-								label="Short name"
-								type="text"
-								value={String(orgSettings.shortName ?? 'CorvMC')}
-								description="Used in navigation and email subjects"
-							/>
-							<FormField
-								name="contactEmail"
-								label="Staff contact email"
-								type="email"
-								value={String(orgSettings.contactEmail ?? 'staff@corvmc.org')}
-							/>
-							<FormField
-								name="timezone"
-								label="Timezone"
-								type="select"
-								value={String(orgSettings.timezone ?? 'America/Los_Angeles')}
-								options={[
-									{ value: 'America/Los_Angeles', label: 'Pacific (Los Angeles)' },
-									{ value: 'America/Denver', label: 'Mountain (Denver)' },
-									{ value: 'America/Chicago', label: 'Central (Chicago)' },
-									{ value: 'America/New_York', label: 'Eastern (New York)' },
-									{ value: 'America/Anchorage', label: 'Alaska (Anchorage)' },
-									{ value: 'Pacific/Honolulu', label: 'Hawaii (Honolulu)' }
-								]}
-							/>
-						</div>
-					</CardBody>
-				</Card>
-
-				<Card>
-					<CardBody>
-						<CardTitle size="base">Location</CardTitle>
 						<p class="text-subtle">Shown in the site footer and on the contact page.</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">

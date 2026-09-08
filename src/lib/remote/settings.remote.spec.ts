@@ -152,7 +152,7 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 	{
 		name: 'updateOrgSettings',
 		cap: 'settings.update',
-		args: [{ name: 'CMC', shortName: 'CMC', contactEmail: 'a@b.co', timezone: 'UTC' }]
+		args: [{ addressStreet: '1 Main St', addressCity: 'Corvallis', addressState: 'OR' }]
 	},
 	// Guarded all along, but unlisted here until the completeness check below
 	// went looking — so the form that flips any feature flag had no test
