@@ -222,7 +222,7 @@ changes November's revenue, a figure that may already have been reported. **Reve
 negative entry in January, where the money actually moved. That is simply correct, and it is the
 reason to accept the cost.
 
-Two consequences, both accepted:
+Three consequences, all accepted:
 
 - `sum(amountCents)` is correct over any window with **no status filter**. Nothing has to remember
   to exclude refunds, and the query that forgets cannot over-report.
@@ -257,12 +257,11 @@ different job and the baseline rows say by how much the reconstruction is off.
 **The acts' share is anchored to the base rate, and the collective is the residual.** The scale is
 an opt-up: a buyer may give the acts more than the deal specifies and may never give them less.
 
-    divisibleCents  = chargeCents − stripeFeeCents
-    otherFloorCents = round(baseCents × (10000 − shareBps) / 10000)
-    surplusCents    = max(0, divisibleCents − baseCents)
-    otherTarget     = otherFloorCents + round(surplusCents × (10000 − shareBps) / 10000)
-    otherCents      = min(divisibleCents, max(otherTarget, buyerOptUpCents))
-    shareCents      = divisibleCents − otherCents        // never below zero
+    divisibleCents = chargeCents − stripeFeeCents
+    otherFloor     = round(baseCents      × (10000 − shareBps) / 10000)
+    otherShare     = round(grossPaidCents × (10000 − shareBps) / 10000)
+    otherCents     = min(divisibleCents, max(otherFloor, otherShare, buyerOptUpCents))
+    shareCents     = divisibleCents − otherCents        // never below zero
 
 `baseCents` is the event's suggested price for a ticket and the release's `priceMinCents` for a
 music sale; `shareBps` is the collective's share of both the base and the surplus.
@@ -274,36 +273,22 @@ proportional — it only falls once the collective's share is already zero.
 
 **Surplus above the base rate is split, not kept.** A buyer paying $15 on a $10 show is not making
 a donation to the collective; they are paying more for the same thing, and the same ratio applies
-to the extra. The `surplusCents` term above is what does that: at 70/30, $4.26 of surplus sends
-$2.98 to the acts and $1.28 to the collective.
+to the extra. There is no surplus term because none is needed: 70% of the gross **is** 70% of the
+base plus 70% of the surplus, so the `otherShare` line does it.
 
-### Every split payment works this way
+Worked, base $10 at 70/30 — note that the collective funds the whole card fee in every row:
 
-This is one rule in `split.ts`, not a ticket rule. Music sales follow it too, with the release's
-`priceMinCents` as the base and `AUDIO_PLATFORM_FEE_BPS` (10%) as the share — so a band has a
-minimum take anchored to the price it set, exactly as an act does at the door.
+| Buyer pays | Fee   | Divisible | Acts                  | Collective |
+| ---------- | ----- | --------- | --------------------- | ---------- |
+| $5.00      | $0.45 | $4.55     | **$4.55** (all of it) | $0         |
+| $7.00      | $0.51 | $6.49     | **$6.49** (all of it) | $0         |
+| $10.00     | $0.59 | $9.41     | **$7.00**             | $2.41      |
+| $15.00     | $0.74 | $14.26    | **$10.50**            | $3.76      |
 
-`audio-split.ts` today argues the opposite in its own doc comment:
-
-> Both sides therefore fund processing in proportion to what they take, and a buyer who drags CMC to
-> nothing leaves the collective with no share of the fee either — so refusing the cut costs CMC
-> nothing rather than costing it money. **That property is why this needs no minimum share to be
-> safe.**
-
-That reasoning is sound and answers a different question. It protects **the collective** from being
-dragged below zero. It says nothing about protecting **the band**, which is what a minimum take is
-for. Both properties are wanted, and the `min(divisibleCents, …)` clamp is what preserves the first:
-the collective's share reaches zero and never goes below it, so absorbing the fee can cost the
-collective its cut but never its own money.
-
-**The consequence to accept: on a small sale the collective's share is structurally zero.** A $2
-music sale carries a ~$0.36 card fee — 18% of the sale against a 10% platform share — so the fee
-consumes the whole cut before the band's minimum is touched. That is the correct outcome under this
-rule and it should surprise nobody later.
-
-One detail left to implementation: whether surplus is measured against the base rate or against the
-base net of its own share of the fee. This spec measures it against the base, because "you paid more
-than the sticker price, and the extra divides the same way" is the sentence a buyer would recognise.
+Measuring the acts' share against the **gross** rather than against the divisible is the whole
+point. Subtracting a gross base from a fee-reduced divisible — the obvious first formulation —
+understates the extra by the entire fee and hands 70% of that loss back to the acts, which is the
+same leak as #827 in miniature.
 
 Nothing enforces this today: the split is a percentage of what was actually paid, so a discount is
 divided proportionally and the acts absorb 70% of it. At full price they receive $6.59 rather than
@@ -331,6 +316,55 @@ revenue report run in between must not count it.
 recording all three numbers rather than only the payout is that a discrepancy between what buyers
 intended and what the act received is a thing someone chose. It must not be resolvable by
 arithmetic that hides it.
+
+### Every split payment works this way
+
+This is one rule in `split.ts`, not a ticket rule. Music sales follow it too, with the release's
+`priceMinCents` as the base and `AUDIO_PLATFORM_FEE_BPS` (10%) as the share — so a band has a
+minimum take anchored to the price it set, exactly as an act does at the door.
+
+`audio-split.ts` today argues the opposite in its own doc comment:
+
+> Both sides therefore fund processing in proportion to what they take, and a buyer who drags CMC to
+> nothing leaves the collective with no share of the fee either — so refusing the cut costs CMC
+> nothing rather than costing it money. **That property is why this needs no minimum share to be
+> safe.**
+
+That reasoning is sound and answers a different question. It protects **the collective** from being
+dragged below zero. It says nothing about protecting **the band**, which is what a minimum take is
+for. Both properties are wanted, and the `min(divisibleCents, …)` clamp is what preserves the first:
+the collective's share reaches zero and never goes below it, so absorbing the fee can cost the
+collective its cut but never its own money.
+
+**The consequence to accept: on a small sale the collective's share is structurally zero.** A $2
+music sale carries a ~$0.36 card fee — 18% of the sale against a 10% platform share — so the fee
+consumes the whole cut before the band's minimum is touched. That is the correct outcome under this
+rule and it should surprise nobody later.
+
+### A split that pays nobody is free, and says so with the numbers
+
+Below `minChargeCents` the card fee takes a share of the sale that makes running it pointless. Today
+`validateSplit` (`split.ts:153`) **rejects** that sale — _"Pay nothing, or at least $2.00."_ A buyer
+offering a dollar is not someone to turn away, and NOTAFLOF means the answer is not an error.
+
+**The sale becomes free.** No charge is made, and the buyer is told **with the actual figures**,
+before submitting, as the amount crosses the threshold — not as an error afterwards:
+
+> Of your **$1.00**, card processing takes **$0.33** and only **$0.67** would reach the acts.
+> **This one is on us** — no charge.
+
+Naming the numbers is the requirement, not a nicety. "Card fees would take most of it" asks the
+buyer to trust an assertion about their own money; $0.33 of $1.00 lets them see it, and it is the
+same arithmetic the split bar is already showing them one row up.
+
+Two consequences:
+
+- **A free sale still writes an entry** — `amountCents: 0`, `settlement: 'none'`. Otherwise free
+  tickets are invisible and "10 tickets, 3 of them free" cannot be distinguished from "7 tickets".
+- **`event.ticketPriceFloorCents` has no validation against the dead zone.** A $1 floor is settable
+  today and would put every sale on that event below `minChargeCents`. Audio already refuses a floor
+  between 1¢ and `AUDIO_MIN_PRICE_CENTS`; tickets need the same rule, or a floor in the dead zone
+  makes every ticket free. Folded into #827.
 
 ## Not in this spec
 
