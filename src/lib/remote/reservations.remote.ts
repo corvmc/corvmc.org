@@ -82,7 +82,7 @@ import { bookerTypes, type BookerType } from '$lib/config';
 import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
 import { requireInstructor } from '$lib/server/instructor/instructor-context';
 import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
-import { revealFallbackCodeFor } from '$lib/server/lock/fallback-code-service';
+import { isInAccessWindow, revealFallbackCodeFor } from '$lib/server/lock/fallback-code-service';
 import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
 import {
 	checkout,
@@ -189,7 +189,11 @@ export const getReservationDetail = query(z.string(), async (id) => {
 		durationHours,
 		totalCents,
 		hourlyRateCents,
-		fallbackCode
+		fallbackCode,
+		// Whether they are at the door right now. Without it a booking with no
+		// working code reads "check back before your session" while they stand
+		// outside during it.
+		inAccessWindow: isInAccessWindow(row)
 	};
 });
 
@@ -292,7 +296,8 @@ export const getBandReservations = query(z.string(), async (slug) => {
  * What it deliberately does not return: the booker's phone or email (a
  * bandmate's contact details are not the act's business) or the payment
  * instrument. The door code is not on that list — #756 settled that every
- * member of the act reads it.
+ * member of the act reads it, and #780 that they read the break-glass code
+ * instead whenever the lock has not confirmed their own.
  */
 export const getBandReservationDetail = query(
 	z.object({ slug: z.string().min(1), reservationId: z.string().min(1) }),
@@ -328,6 +333,11 @@ export const getBandReservationDetail = query(
 		const bandAdmin = role === 'owner' || role === 'admin';
 		const isBooker = res.createdByUserId === currentUser.id;
 
+		// Not a gesture: the break-glass code arrives with the page, the same as on
+		// the member's own booking. Nobody on the act has to ask for what the rest
+		// of them can already read (#780).
+		const fallbackCode = await revealFallbackCodeFor(res);
+
 		return {
 			id: res.id,
 			ref: toReservationRef(row.ref, band),
@@ -353,6 +363,12 @@ export const getBandReservationDetail = query(
 			// in together and whoever arrives first opens the door. The guard above
 			// is what bounds this — membership in the band the row belongs to.
 			lockCode: res.lockCode,
+			// A code we issued is not a code that works: U-tec queues writes in its
+			// cloud and pushes them down only when the lock is reachable, so the
+			// page shows the digits only once the lock has confirmed them (#780).
+			lockSyncedAt: res.lockSyncedAt,
+			fallbackCode,
+			inAccessWindow: isInAccessWindow(res),
 			canCancel:
 				(bandAdmin || isBooker) &&
 				res.startsAt.getTime() > Date.now() &&

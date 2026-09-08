@@ -9,6 +9,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { getReservationDetail } from '$lib/remote/reservations.remote';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	let data = $derived(await getReservationDetail(page.params.id!));
 
@@ -53,6 +54,15 @@
 				<p class="text-muted">
 					We couldn't confirm your usual code reached the door, so this one will get you in for now.
 					Staff know about it. If it doesn't work, call us rather than waiting outside.
+				</p>
+			{:else if data.inAccessWindow}
+				<!-- Their session is running and nothing here opens the door: no
+				     break-glass code is confirmed on the lock right now, which
+				     happens mid-rotation. Standing outside is the failure mode. -->
+				<p class="text-muted">
+					Your code hasn't reached the door and we don't have a backup to give you right now. Don't
+					wait outside — <a class="link" href={resolve('/contact')}>get in touch</a> and someone will
+					let you in.
 				</p>
 			{:else if res.lockCode}
 				<p class="text-muted">
