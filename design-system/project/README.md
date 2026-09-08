@@ -110,8 +110,17 @@ unless the message is genuinely celebratory (open houses, meet-ups).
 **Casing**
 
 - **Title Case** for page titles, section headings, card titles, button labels:
-  *"Upcoming Events"*, *"Get Involved"*, *"Become a Member"*.
-- **Sentence case** in long-form prose, captions, and admonitions.
+  *"Upcoming Events"*, *"Get Involved"*, *"Become a Member"*. Every example is a
+  short noun phrase, and that is the limit of the rule — it does not reach a
+  string that is a sentence.
+- **Sentence case** in long-form prose, captions, and admonitions — and
+  throughout transactional email, headings and button labels included. Mail
+  addresses one person about one thing that just happened, so its headings are
+  sentences and questions (*"How did it go?"*, *"A slot has opened up"*), which
+  Title Case turns into *"How Did It Go?"*. Its subjects and its in-app
+  counterparts were already sentence case; the headings and CTAs drifted, so one
+  notification read two ways at once. `src/lib/server/notification/copy-casing.spec.ts`
+  keeps them agreeing.
 - **UPPERCASE** on posters and "eyebrow" labels — always with widened tracking.
   *"CORVALLIS MUSIC COLLECTIVE"* over a hero illustration; *"HOURLY PRACTICE
   SPACE AVAILABLE"* across the bottom of a flyer.
