@@ -64,6 +64,10 @@
 		"panel": "band"
 	},
 	{
+		"route": "/band/[slug]/packing",
+		"panel": "band"
+	},
+	{
 		"route": "/band/[slug]/page-editor",
 		"panel": "band"
 	},
