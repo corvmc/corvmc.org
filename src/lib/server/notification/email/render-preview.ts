@@ -107,11 +107,14 @@ export function renderTemplate(alias: string, model: Record<string, unknown>): R
 	}
 
 	const ldir = layoutDir(meta.LayoutTemplate);
+	// The sentinel is replaced by a *function*: a string replacement is scanned
+	// for `$&`, `` $` ``, `$'` and `$$`, so a model value carrying one would
+	// splice the layout into itself and the preview would lie.
 	const wrap = (file: string, inner: string) =>
 		compile(
 			readFileSync(join(ldir, file), 'utf8').replaceAll(CONTENT_TAG, CONTENT_SENTINEL),
 			model
-		).replaceAll(CONTENT_SENTINEL, inner);
+		).replaceAll(CONTENT_SENTINEL, () => inner);
 
 	return {
 		// Wrapping an empty body would manufacture an HTML part Postmark never sends.
