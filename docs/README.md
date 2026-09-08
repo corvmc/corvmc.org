@@ -217,16 +217,17 @@ content is either shipped (git history is the record) or was filed as an issue w
 
 ## reports
 
-| Doc                                                                        | Status | Notes                                                                                           |
-| -------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------- |
-| [feature-catalog.md](reports/feature-catalog.md)                           | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship                |
-| [standardization-audit.md](reports/standardization-audit.md)               | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                        |
-| [inventory-workflow-findings.md](reports/inventory-workflow-findings.md)   | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign              |
-| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md)   | 📦     | The same pass over volunteering; findings complete, the restructure is separate work            |
-| [project-management-prior-art.md](reports/project-management-prior-art.md) | ✅     | Prior art behind the `project` entity — CMMS, venue, makerspace and ERP systems surveyed        |
-| [handoff/press-kit.md](handoff/press-kit.md)                               | ✅     | Screen handoff for the press-kit area — 12 screens at two viewports, with who/what/why each     |
-| [social-prior-art.md](reports/social-prior-art.md)                         | ✅     | The social vertical by role, against the products that compete with each — and what to steal    |
-| [library-candidates.md](reports/library-candidates.md)                     | ✅     | Packages surveyed for unbuilt work, and the ones rejected — split out of the retired `IDEAS.md` |
+| Doc                                                                              | Status | Notes                                                                                                   |
+| -------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------- |
+| [feature-catalog.md](reports/feature-catalog.md)                                 | ✅     | Every shipped feature — what it does and where it lives. Add a row when you ship                        |
+| [standardization-audit.md](reports/standardization-audit.md)                     | ⚠️     | Ranked componentization/standardization candidates; 3 correctness issues                                |
+| [inventory-workflow-findings.md](reports/inventory-workflow-findings.md)         | 🔧     | Hands-on pass over inventory, driven as the operator, ahead of a workflow redesign                      |
+| [volunteer-workflow-findings.md](reports/volunteer-workflow-findings.md)         | 📦     | The same pass over volunteering; findings complete, the restructure is separate work                    |
+| [project-management-prior-art.md](reports/project-management-prior-art.md)       | ✅     | Prior art behind the `project` entity — CMMS, venue, makerspace and ERP systems surveyed                |
+| [handoff/press-kit.md](handoff/press-kit.md)                                     | ✅     | Screen handoff for the press-kit area — 12 screens at two viewports, with who/what/why each             |
+| [social-prior-art.md](reports/social-prior-art.md)                               | ✅     | The social vertical by role, against the products that compete with each — and what to steal            |
+| [library-candidates.md](reports/library-candidates.md)                           | ✅     | Packages surveyed for unbuilt work, and the ones rejected — split out of the retired `IDEAS.md`         |
+| [ledger-reconciliation-prior-art.md](reports/ledger-reconciliation-prior-art.md) | ✅     | How four ledger systems associate a pass-through in with its payout — grouping keys, not pairwise links |
 
 ## checklists
 
