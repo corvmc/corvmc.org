@@ -4,6 +4,7 @@ import '../../../routes/layout.css';
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import type { ChromeNotification } from './chrome';
 
 // The notifications arrive as props now (#569); what still needs a live server
 // is the mark-read commands and the EventSource stream, so the remote module is
@@ -113,8 +114,10 @@ describe('NotificationBell rows', () => {
 	}));
 
 	async function openPanel() {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		await render(NotificationBell, { notifications: MIXED as any, unreadCount: 2 });
+		await render(NotificationBell, {
+			notifications: MIXED as ChromeNotification[],
+			unreadCount: 2
+		});
 		await page.getByRole('button', { name: 'Notifications' }).click();
 		return Array.from(document.querySelectorAll<HTMLElement>('.max-h-80 > div > :first-child'));
 	}
