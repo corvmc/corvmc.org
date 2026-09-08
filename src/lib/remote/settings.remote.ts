@@ -110,12 +110,12 @@ export const getIntegrationSettings = query(async () => {
 	await requireCapability('settings.read');
 	const raw = await getConfigsByPrefix('integration.utec');
 
-	// Presence, never the value, for the two that mint an access token.
-	// Everything this query returns is serialised to the browser —
+	// Presence, never the value, for the two that mint an access token — the
+	// refresh token included, which KV still holds so the Connect flow can write
+	// it. Everything this query returns is serialised to the browser, since
 	// `getStaffSettingsPage` folds it into the payload the staff route SSRs into
-	// its HTML — and no reading of `settings.read` makes a shipped bearer
-	// credential the right answer. `clientId` and `deviceId` are not credentials:
-	// see `CREDENTIAL_ENV` in `ultraloc-client.ts`.
+	// its HTML. `clientId` and `deviceId` are not credentials and stay verbatim:
+	// see `CREDENTIALS` in `ultraloc-client.ts`.
 	const [clientSecret, refreshToken] = await Promise.all([
 		credentialStatus('clientSecret'),
 		credentialStatus('refreshToken')
@@ -335,9 +335,10 @@ export const updateVenueSettings = form(venueSettingsSchema, async (raw) => {
 // Forms — Integration settings
 // ---------------------------------------------------------------------------
 
+// No `clientSecret`: the form cannot write one, since it is a `wrangler secret`
+// value and a field saving into KV would save somewhere nothing reads (#745).
 const integrationSettingsSchema = z.object({
 	clientId: z.string().trim(),
-	clientSecret: z.string().trim(),
 	deviceId: z.string().trim(),
 	refreshToken: z.string().trim()
 });
@@ -389,17 +390,15 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
 	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof integrationSettingsSchema>;
 
-	// A blank credential means "unchanged", not "clear it". Neither is rendered
-	// with its current value, so an untouched field submits empty — and a save
-	// that silently emptied one would break the lock at 3am. The refresh token
-	// has a second writer, the OAuth callback, which a wipe here would undo.
-	// Removing either stays deliberate, not a side effect of editing Device ID.
+	// A blank refresh token means "unchanged", not "clear it". The field is never
+	// rendered with its value, so an untouched one submits empty — and the OAuth
+	// callback is a second writer, which a wipe here would silently undo.
 	await updateSiteConfigs([
 		{ key: 'integration.utec.clientId', value: data.clientId },
 		{ key: 'integration.utec.deviceId', value: data.deviceId },
-		...(['clientSecret', 'refreshToken'] as const)
-			.filter((field) => data[field])
-			.map((field) => ({ key: `integration.utec.${field}`, value: data[field] }))
+		...(data.refreshToken
+			? [{ key: 'integration.utec.refreshToken', value: data.refreshToken }]
+			: [])
 	]);
 
 	void getStaffSettingsPage().refresh();

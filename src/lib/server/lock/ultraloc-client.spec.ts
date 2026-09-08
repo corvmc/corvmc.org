@@ -6,6 +6,15 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 // Mocks — credentials + a cached token so no token refresh fetch is needed.
 // ---------------------------------------------------------------------------
 
+// Fixture values, not credentials. `KV_LEFTOVER_SECRET` stands in for the
+// production `integration.utec.clientSecret` entry #745 stopped reading: it
+// outlives the code that wrote it, so the tests assert it reaches nothing.
+const ENV_CREDENTIALS = {
+	ULTRALOC_CLIENT_SECRET: 'env-client-secret-fixture',
+	ULTRALOC_REFRESH_TOKEN: 'env-refresh-token-fixture'
+};
+const KV_LEFTOVER_SECRET = 'kv-client-secret-leftover';
+
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
 
 vi.mock('$lib/server/kv', () => ({
@@ -16,9 +25,9 @@ vi.mock('$lib/server/kv', () => ({
 vi.mock('$lib/server/site-config/site-config-service', () => ({
 	getConfigsByPrefix: vi.fn().mockResolvedValue({
 		clientId: 'cid',
-		clientSecret: 'secret',
 		deviceId: 'DEV-1',
-		refreshToken: 'refresh'
+		clientSecret: 'kv-client-secret-leftover',
+		refreshToken: 'kv-refresh-token'
 	})
 }));
 
@@ -36,6 +45,7 @@ const {
 	getLockUser,
 	queryDeviceHealth,
 	LOCK_GRACE_MINUTES,
+	testConnection,
 	buildAuthorizeUrl,
 	exchangeAuthorizationCode
 } = await import('./ultraloc-client');
@@ -106,6 +116,11 @@ beforeEach(() => {
 	lastBody = null;
 	lastUrl = null;
 	addBody = null;
+
+	// Every lock command resolves the credentials, so the deployed secrets are
+	// the baseline; the tests that care about their absence clear them.
+	for (const key of Object.keys(ENV_CREDENTIALS)) delete env[key];
+	Object.assign(env, ENV_CREDENTIALS);
 });
 
 describe('generateLockCode', () => {
@@ -344,7 +359,23 @@ describe('exchangeAuthorizationCode', () => {
 		expect(url.searchParams.get('code')).toBe('the-code');
 		expect(url.searchParams.get('redirect_uri')).toBe('https://corvmc.org/cb');
 		expect(url.searchParams.get('client_id')).toBe('cid');
-		expect(url.searchParams.get('client_secret')).toBe('secret');
+	});
+
+	// The exchange signs with the deployed secret, not the config read it makes
+	// for the client id — the one place a KV leftover could still slip back in.
+	it('signs the exchange with the deployed secret, never the KV leftover', async () => {
+		mockFetchUrl({ code: 200, data: { refresh_token: 'rt' } });
+		await exchangeAuthorizationCode('c', 'https://corvmc.org/cb');
+
+		expect(lastUrl).not.toContain(KV_LEFTOVER_SECRET);
+		expect(new URL(lastUrl!).searchParams.get('client_secret')).toBeTruthy();
+	});
+
+	it('refuses to exchange when the client secret is not deployed', async () => {
+		delete env.ULTRALOC_CLIENT_SECRET;
+		await expect(exchangeAuthorizationCode('c', 'https://corvmc.org/cb')).rejects.toThrow(
+			/ULTRALOC_CLIENT_SECRET not configured/
+		);
 	});
 
 	it('also accepts an already-flat token response', async () => {
@@ -361,30 +392,54 @@ describe('exchangeAuthorizationCode', () => {
 	});
 });
 
-describe('credentialStatus', () => {
-	// Asserts on presence and provenance only. A test that pinned a value would
-	// put the credential in the fixture, which is the thing being fixed.
-	const CASES = [
-		['clientSecret', 'ULTRALOC_CLIENT_SECRET'],
-		['refreshToken', 'ULTRALOC_REFRESH_TOKEN']
-	] as const;
-
-	it.each(CASES)('%s reports the KV copy, and never the value itself', async (field) => {
-		expect(await credentialStatus(field)).toEqual({ configured: true, source: 'kv' });
+describe('credential resolution', () => {
+	// Presence and provenance only. A test that pinned a value would put a
+	// credential in a fixture, which is the thing #745 was about.
+	//
+	// The two differ on purpose: KV is a source for the refresh token and not
+	// for the client secret, whose site-config key #745 removed.
+	it('reports the client secret from the environment', async () => {
+		expect(await credentialStatus('clientSecret')).toEqual({ configured: true, source: 'env' });
 	});
 
-	it.each(CASES)('%s falls back to the environment when KV holds none', async (field, envVar) => {
-		vi.mocked(getConfigsByPrefix).mockResolvedValueOnce({ clientId: 'cid' });
-		env[envVar] = 'from-env';
-		try {
-			expect(await credentialStatus(field)).toEqual({ configured: true, source: 'env' });
-		} finally {
-			delete env[envVar];
-		}
+	// The regression #745 turns on: the KV mock above still holds a leftover.
+	it('reads the client secret as unset when its secret is, KV leftover or not', async () => {
+		delete env.ULTRALOC_CLIENT_SECRET;
+		expect(await credentialStatus('clientSecret')).toEqual({ configured: false, source: null });
 	});
 
-	it.each(CASES)('%s reports not configured when neither source has one', async (field) => {
+	it('reports the refresh token from KV, which still stores it', async () => {
+		expect(await credentialStatus('refreshToken')).toEqual({ configured: true, source: 'kv' });
+	});
+
+	it('falls the refresh token back to the environment when KV holds none', async () => {
 		vi.mocked(getConfigsByPrefix).mockResolvedValueOnce({ clientId: 'cid' });
-		expect(await credentialStatus(field)).toEqual({ configured: false, source: null });
+		expect(await credentialStatus('refreshToken')).toEqual({ configured: true, source: 'env' });
+	});
+
+	it('reports the refresh token unset when neither source has one', async () => {
+		vi.mocked(getConfigsByPrefix).mockResolvedValueOnce({ clientId: 'cid' });
+		delete env.ULTRALOC_REFRESH_TOKEN;
+		expect(await credentialStatus('refreshToken')).toEqual({ configured: false, source: null });
+	});
+
+	it('signs a token request with the deployed secret, never the KV leftover', async () => {
+		mockFetchUrl({ code: 200, data: { access_token: 'at', expires_in: 3600 } });
+
+		expect(await testConnection()).toEqual({ ok: true });
+
+		expect(lastUrl, 'the KV client secret reached the token request').not.toContain(
+			KV_LEFTOVER_SECRET
+		);
+		// Proves the assertion above looked at a real request, not an empty one.
+		const url = new URL(lastUrl!);
+		expect(url.searchParams.get('client_secret')).toBeTruthy();
+		expect(url.searchParams.get('refresh_token')).toBeTruthy();
+	});
+
+	it('refuses to run on a leftover KV client secret alone', async () => {
+		delete env.ULTRALOC_CLIENT_SECRET;
+
+		await expect(listLockUsers()).rejects.toThrow(/not configured/);
 	});
 });
