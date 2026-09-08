@@ -117,4 +117,29 @@ describe('CreateBandAction', () => {
 			expect(document.querySelector('input[name="ownerId"]')).toBeNull();
 		});
 	});
+
+	/**
+	 * `canSubmit={!!selectedOwner}` only became a real gate in #769; until then it
+	 * fell into `...rest` and a band could be created with no owner at all. The
+	 * absent hidden input above is the other half of that — this is the half a
+	 * person sees before they submit.
+	 */
+	const submit = () =>
+		document.querySelector('[role="dialog"] button[type="submit"]') as HTMLButtonElement;
+
+	it('will not create a band before an owner is chosen', async () => {
+		await open();
+
+		await vi.waitFor(() => expect(submit().disabled).toBe(true));
+	});
+
+	it('creates one once an owner is chosen, and stops again if that is undone', async () => {
+		await open();
+		await pick('Janet Ruiz');
+		await vi.waitFor(() => expect(submit().disabled).toBe(false));
+
+		await page.getByRole('button', { name: 'Clear Janet Ruiz' }).click();
+
+		await vi.waitFor(() => expect(submit().disabled).toBe(true));
+	});
 });
