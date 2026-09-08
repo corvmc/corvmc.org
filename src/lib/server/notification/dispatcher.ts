@@ -2,6 +2,7 @@ import { sendEmailWithTemplate } from './email/postmark-client';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 import { NOTIFICATION_TYPES } from '$lib/server/db/schema/notification';
+import { NOTIFICATION_CATEGORIES } from '$lib/email/notification-category';
 import { createNotification } from './in-app-service';
 import { getPreference } from './preference-service';
 import { pushToUser } from './sse';
@@ -37,6 +38,16 @@ function omitsUserContent(type: string): boolean | undefined {
 	return NOTIFICATION_TYPES.find((t) => t.key === type)?.emailOmitsUserContent;
 }
 
+/**
+ * Same argument as `omitsUserContent`: which bucket a notification falls in is a
+ * property of its type, not something ~40 call sites should each restate. An
+ * unregistered type simply renders no bar.
+ */
+function categoryOf(type: string) {
+	const def = NOTIFICATION_TYPES.find((t) => t.key === type);
+	return def && NOTIFICATION_CATEGORIES[def.category];
+}
+
 /** Declared content → the model Postmark's generic template wants. */
 function genericModel(
 	content: NotificationEmailContent,
@@ -45,7 +56,7 @@ function genericModel(
 ): Record<string, unknown> {
 	return normalizeNotificationModel(
 		buildNotificationEmail(content, { href }) as NotificationEmailPayload,
-		{ omitUserContent: omitsUserContent(type) }
+		{ omitUserContent: omitsUserContent(type), category: categoryOf(type) }
 	);
 }
 
@@ -57,7 +68,8 @@ function templateModel(
 ): Record<string, unknown> {
 	return alias === GENERIC_ALIAS
 		? normalizeNotificationModel(model as unknown as NotificationEmailPayload, {
-				omitUserContent: omitsUserContent(type)
+				omitUserContent: omitsUserContent(type),
+				category: categoryOf(type)
 			})
 		: model;
 }
