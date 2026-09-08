@@ -40,8 +40,6 @@ export const BRAND = {
 	ink: '#1a2330',
 	/** Body copy, muted */
 	muted: '#4a5563',
-	/** Footer fine print */
-	footerMuted: '#7a6248',
 
 	dark: {
 		bg: '#161b22',
@@ -50,7 +48,9 @@ export const BRAND = {
 		text: '#e6dcd0',
 		muted: '#b6b0a6',
 		orange: '#ff8c42',
-		teal: '#3eb5ca'
+		teal: '#3eb5ca',
+		/** Card and rule strokes. Brown itself is 1.6:1 on the dark panel. */
+		stroke: '#9c7355'
 	}
 } as const;
 

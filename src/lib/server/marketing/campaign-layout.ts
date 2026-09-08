@@ -79,12 +79,16 @@ export const CAMPAIGN_LAYOUT = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Tra
       body, .body-bg { background:${BRAND.dark.bg} !important; }
       .surface { background:${BRAND.dark.surface} !important; }
       .header-bg { background:${BRAND.dark.bg} !important; }
+      /* The mark is navy and brown on transparent — 1.5:1 and 1.8:1 on the dark
+         header. It keeps its own cream ground instead of a second asset. */
+      .logo-plate { background:${BRAND.cream} !important; padding:10px 16px !important; }
       .footer-bg { background:${BRAND.dark.panel} !important; }
       .footer-bg a, .footer-bg div { color:${BRAND.dark.muted} !important; }
       .content h1, .content h2, .content h3 { color:${BRAND.dark.text} !important; }
       .content p, .content li, .content blockquote { color:${BRAND.dark.muted} !important; }
       .content a { color:${BRAND.dark.teal} !important; }
-      .content blockquote { background:${BRAND.dark.panel} !important; }
+      .content blockquote { background:${BRAND.dark.panel} !important; border-color:${BRAND.dark.stroke} !important; }
+      .content hr { border-top-color:${BRAND.dark.stroke} !important; }
     }
   </style>
 </head>
@@ -98,9 +102,13 @@ export const CAMPAIGN_LAYOUT = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Tra
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="container" style="max-width:600px; width:100%;">
 
         <tr><td class="header-bg" style="background-color:${BRAND.cream}; padding:24px 32px 18px; text-align:center;">
-          <a href="https://corvmc.org" target="_blank" style="text-decoration:none;">
-            <img src="${EMAIL_LOGO_URL}" width="72" height="35" alt="Corvallis Music Collective" style="display:inline-block;">
-          </a>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;">
+            <tr><td class="logo-plate" style="border-radius:8px;">
+              <a href="https://corvmc.org" target="_blank" style="text-decoration:none;">
+                <img src="${EMAIL_LOGO_URL}" width="72" height="35" alt="Corvallis Music Collective" style="display:inline-block;">
+              </a>
+            </td></tr>
+          </table>
         </td></tr>
 
         <tr><td style="padding:0; font-size:0; line-height:0;">
@@ -123,11 +131,11 @@ export const CAMPAIGN_LAYOUT = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Tra
             <span style="color:${BRAND.brown};">&middot;</span>
             <a href="mailto:contact@corvmc.org" style="${footerLink}">contact@corvmc.org</a>
           </div>
-          <div style="font-family:${FONT}; font-size:11px; line-height:1.6; color:${BRAND.footerMuted};">
+          <div style="font-family:${FONT}; font-size:12px; line-height:1.6; color:${BRAND.brown};">
             Corvallis Music Collective &middot; 501(c)(3) nonprofit<br>
             6775 SW Philomath Blvd, Corvallis, OR 97333
           </div>
-          <div style="margin-top:14px; font-family:${FONT}; font-size:11px; line-height:1.6; color:${BRAND.footerMuted};">
+          <div style="margin-top:14px; font-family:${FONT}; font-size:12px; line-height:1.6; color:${BRAND.brown};">
             {{FOOTER}}
           </div>
         </td></tr>
