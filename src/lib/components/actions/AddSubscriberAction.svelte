@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
+	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { addSubscriber } from '$lib/remote/marketing.remote';
 
@@ -44,28 +45,17 @@
 >
 	{#snippet form()}
 		<input {...fields.audienceId.as('hidden', audienceId)} />
-		<div>
-			<label for="sub-email" class="text-subtle">Email</label>
-			<input
-				id="sub-email"
-				type="email"
-				name="email"
-				bind:value={email}
-				placeholder="email@example.com"
-				class="input w-full"
-				required
-			/>
-		</div>
-		<div>
-			<label for="sub-name" class="text-subtle">Name (optional)</label>
-			<input
-				id="sub-name"
-				type="text"
-				name="name"
-				bind:value={name}
-				placeholder="Name"
-				class="input w-full"
-			/>
-		</div>
+		<!-- Named rather than field-bound: `canSubmit` and the post-success reset
+		     both read these values, and the field spread has no two-way binding.
+		     `FormField` resolves the issues by name through the form context. -->
+		<FormField
+			name="email"
+			type="email"
+			label="Email"
+			bind:value={email}
+			placeholder="email@example.com"
+			required
+		/>
+		<FormField name="name" label="Name (optional)" bind:value={name} placeholder="Name" />
 	{/snippet}
 </Action>
